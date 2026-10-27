@@ -260,10 +260,31 @@ func (s *Staged) flushDir(path string) error {
 		return nil
 	}
 	if err := s.ops.syncDir(filepath.Dir(path)); err != nil {
-		return fmt.Errorf("atomicfile: sync directory of %s: %w", path, err)
+		return &dirFlushError{path: path, err: err}
 	}
 	return nil
 }
+
+// ErrDirNotFlushed is what an error of Replace or Create satisfies, with errors.Is, when the file is already in
+// place and only the flush of its directory failed: the content is published and may not survive a crash.
+var ErrDirNotFlushed = errors.New("atomicfile: the directory was not flushed")
+
+// dirFlushError is a failed flush of the directory after a file was put in place. It reads as it always did,
+// wraps the error of the flush, and is ErrDirNotFlushed.
+type dirFlushError struct {
+	path string
+	err  error
+}
+
+func (e *dirFlushError) Error() string {
+	return fmt.Sprintf("atomicfile: sync directory of %s: %v", e.path, e.err)
+}
+
+// Unwrap is the error of the flush.
+func (e *dirFlushError) Unwrap() error { return e.err }
+
+// Is says the error is ErrDirNotFlushed; the error of the flush is reached through Unwrap.
+func (e *dirFlushError) Is(target error) bool { return target == ErrDirNotFlushed }
 
 // backUp copies the file at path to path+".bak", in the same atomic way and with
 // the same mode as the original. It does not follow a backup name that is a

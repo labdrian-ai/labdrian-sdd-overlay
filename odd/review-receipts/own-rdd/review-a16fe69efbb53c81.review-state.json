@@ -1,0 +1,196 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:1b0ff261195af5bdb08b09ef193f577450eedf2f963586174764943a9c5dccc2",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-a16fe69efbb53c81",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "067ad37c4d96f423098f99fbbdd995c82908ab51",
+      "candidate_tree": "9cf5262a8363af8ebe1b99d409bad4473c2e0f69",
+      "paths_digest": "sha256:92e5fffdc469dbcb3b9448af574a870f4beec4a787a813c3c5881b61b0c41dab",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "CHANGELOG.md",
+        "agents/reviewer.md",
+        "codex/agents/reviewer.toml",
+        "engine/reviewresult/errors.go",
+        "engine/reviewresult/fixtures_test.go",
+        "engine/reviewresult/parse_test.go",
+        "engine/reviewresult/reviewresult.go",
+        "engine/reviewresult/rules.go",
+        "engine/reviewresult/rules_test.go",
+        "engine/reviewresult/wire.go",
+        "odd/review-receipts/own-rdd/review-31348d3c26c8ca94.review-state.json",
+        "odd/review-results/README.md",
+        "odd/tasks/own-rdd.md",
+        "pi/agents/reviewer.md",
+        "roles/reviewer/body.md"
+      ],
+      "identity": "sha256:8490a9d4f9df56907e394446bbadda82a02f962b18c67c214131876bec36133f"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "067ad37c4d96f423098f99fbbdd995c82908ab51",
+      "candidate_tree": "9cf5262a8363af8ebe1b99d409bad4473c2e0f69",
+      "paths_digest": "sha256:92e5fffdc469dbcb3b9448af574a870f4beec4a787a813c3c5881b61b0c41dab",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "CHANGELOG.md",
+        "agents/reviewer.md",
+        "codex/agents/reviewer.toml",
+        "engine/reviewresult/errors.go",
+        "engine/reviewresult/fixtures_test.go",
+        "engine/reviewresult/parse_test.go",
+        "engine/reviewresult/reviewresult.go",
+        "engine/reviewresult/rules.go",
+        "engine/reviewresult/rules_test.go",
+        "engine/reviewresult/wire.go",
+        "odd/review-receipts/own-rdd/review-31348d3c26c8ca94.review-state.json",
+        "odd/review-results/README.md",
+        "odd/tasks/own-rdd.md",
+        "pi/agents/reviewer.md",
+        "roles/reviewer/body.md"
+      ],
+      "identity": "sha256:8490a9d4f9df56907e394446bbadda82a02f962b18c67c214131876bec36133f"
+    },
+    "genesis_paths": [
+      "CHANGELOG.md",
+      "agents/reviewer.md",
+      "codex/agents/reviewer.toml",
+      "engine/reviewresult/errors.go",
+      "engine/reviewresult/fixtures_test.go",
+      "engine/reviewresult/parse_test.go",
+      "engine/reviewresult/reviewresult.go",
+      "engine/reviewresult/rules.go",
+      "engine/reviewresult/rules_test.go",
+      "engine/reviewresult/wire.go",
+      "odd/review-receipts/own-rdd/review-31348d3c26c8ca94.review-state.json",
+      "odd/review-results/README.md",
+      "odd/tasks/own-rdd.md",
+      "pi/agents/reviewer.md",
+      "roles/reviewer/body.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-reliability"
+    ],
+    "original_changed_lines": 686,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "Fix round of reviewresult: reordered the id check after shape checks, refused repeated paths and null array elements, with tests",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:64fe5ef6a2bb7ec3be52cb19623f58e0ab41885d6b40632b9bed9e99d651b7a8",
+    "capture_phase_revision": "sha256:c4b4edb5662dc095f8b3caa8f523691d4fa7c16f45fc57c169d41f5d13300dc7",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "target_identity": "sha256:8490a9d4f9df56907e394446bbadda82a02f962b18c67c214131876bec36133f",
+        "capture_phase_revision": "sha256:c4b4edb5662dc095f8b3caa8f523691d4fa7c16f45fc57c169d41f5d13300dc7",
+        "artifact_digest": "sha256:604f0960dce45fbe403ca8d48a20c5d7dcc109f602d8234887dc7c29a93427e7",
+        "result_hash": "sha256:8e4ede11cf4acb3ef4e99248d3ea77f4a6e93f33e110beefeb29ce1d937daf5b",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:51ad33fd2d164eb69971864e0a6d0b70c788f2d34924641e36b8f14492249e82",
+            "lineage_id": "review-a16fe69efbb53c81",
+            "authority_revision": "sha256:c4b4edb5662dc095f8b3caa8f523691d4fa7c16f45fc57c169d41f5d13300dc7",
+            "target_identity": "sha256:8490a9d4f9df56907e394446bbadda82a02f962b18c67c214131876bec36133f",
+            "base_tree": "067ad37c4d96f423098f99fbbdd995c82908ab51",
+            "candidate_tree": "9cf5262a8363af8ebe1b99d409bad4473c2e0f69",
+            "changed_path_manifest_sha256": "sha256:6d2904425d979d0cac20a386d35d937b0301b30dc9e5b077671949e253ade3c6",
+            "lens": "review-reliability",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:51ad33fd2d164eb69971864e0a6d0b70c788f2d34924641e36b8f14492249e82",
+            "raw_sha256": "sha256:8d375150a6f0ba4f71092d031ccc3e0e714c717e3414e4555b2a2e2b598f65f3",
+            "canonical_sha256": "sha256:885fbff9c1d0e036d19287ae47651b7cf5adc0cfde3a572e4f22782fd880466e",
+            "result_hash": "sha256:8e4ede11cf4acb3ef4e99248d3ea77f4a6e93f33e110beefeb29ce1d937daf5b",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:51ad33fd2d164eb69971864e0a6d0b70c788f2d34924641e36b8f14492249e82",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "CHANGELOG.md",
+                "agents/reviewer.md",
+                "codex/agents/reviewer.toml",
+                "engine/reviewresult/errors.go",
+                "engine/reviewresult/fixtures_test.go",
+                "engine/reviewresult/parse_test.go",
+                "engine/reviewresult/reviewresult.go",
+                "engine/reviewresult/rules.go",
+                "engine/reviewresult/rules_test.go",
+                "engine/reviewresult/wire.go",
+                "odd/review-receipts/own-rdd/review-31348d3c26c8ca94.review-state.json",
+                "odd/review-results/README.md",
+                "odd/tasks/own-rdd.md",
+                "pi/agents/reviewer.md",
+                "roles/reviewer/body.md"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-nullpath-order",
+                "lens": "reliability",
+                "location": "engine/reviewresult/wire.go:106-117",
+                "severity": "SUGGESTION",
+                "claim": "noNullElement for evidence runs before the candidate and inspection objects are looked at, and the inspection.paths null check runs after the inspection object's member checks. This matches the documented order (reply object, then candidate, then inspection), and it is covered by tests. No defect; noted only because the evidence null check precedes the candidate shape check, which the README describes as 'the order the reply holds them' while evidence is the last member in the reply.",
+                "proof_refs": [
+                  "engine/reviewresult/wire.go:106-117",
+                  "odd/review-results/README.md:17"
+                ]
+              }
+            ],
+            "evidence": [
+              "Read all 15 changed paths in the patch.",
+              "Checked wire.go checkShape: the id is now excluded from the shape rules (findingShape), so a missing or null id decodes to an empty string and is refused by checkFindings as ErrMissingID, after the echo, status and paths checks. This matches the new ordering tests.",
+              "Checked rules.go: duplicates() returns sorted duplicates; Binding.check refuses duplicate binding paths as ErrInvalidBinding before the reply is read; checkPaths adds a 'listed more than once' part. Tests cover reply-side and binding-side duplicates with error text assertions.",
+              "Checked noNullElement: a null element in evidence, inspection.paths and proof_refs is ErrUnparseable with the place named; a non-array value is left to type decoding. Tests cover each array and the ordering against unknown members.",
+              "The reviewer prompt gained 'list each inspected path once' in role body and the three generated files, consistent with the new duplicate-path refusal.",
+              "The review-state receipt JSON is an added data file with no behavior; the earlier findings it records (R2-ordering-doc, R3-pathdup, R3-nulluniq) are the ones this candidate addresses.",
+              "No BLOCKER or CRITICAL regression found: public signature and the set of Err values are unchanged, and the stricter language (duplicate paths, null array elements) is the requested change."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "ec7bd3fbeee67eea63032af1c721b16ce989b74de198942002a90db305e531ea",
+    "initial_atomic_start": {
+      "lineage_id": "review-a16fe69efbb53c81",
+      "worktree_identity": "sha256:74dbec52e81a75c58d3377da26ad7d96c9be2237d6ab14020d7f7c4800abcb94",
+      "target_identity": "sha256:8490a9d4f9df56907e394446bbadda82a02f962b18c67c214131876bec36133f",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "067ad37c4d96f423098f99fbbdd995c82908ab51",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-reliability"
+      ],
+      "original_changed_lines": 686,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "Fix round of reviewresult: reordered the id check after shape checks, refused repeated paths and null array elements, with tests"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

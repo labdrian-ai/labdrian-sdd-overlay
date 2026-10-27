@@ -129,6 +129,19 @@ import (
 //     the rules that refuse a reply (the candidate it echoes, its inspection, the paths it read, the enums,
 //     the ids and the proofs of its findings). It reads and writes no file and runs no git: the caller hands
 //     it the candidate as a value, the paths of the diff included.
+//   - review is a domain package (own-rdd T2): what `labdrian review bind` and `review record` bind and
+//     store (the candidate of a review with the digest of its diff, the name of a feature, the names of the
+//     stored results and the worktree of a review, the stored file and the role handoff skeleton). It reads
+//     no file and runs no git: the application hands it the bytes of the diff and the paths.
+//   - review/app holds the use cases of `engine review` (own-rdd T2): Bind and Record, over the Git and
+//     Results ports it owns. It answers with typed values and typed refusals, prints nothing and exits
+//     nowhere; the words a person reads and the exit codes are the command's, in cmd.
+//   - review/gitexec is the adapter of the Git port of review/app (own-rdd T2): it asks the git of the
+//     machine, through a Runner (execrunner), for the commits, the canonical diff, its paths and the
+//     worktree of a review, under an environment it scrubs of every GIT_* variable.
+//   - review/fsstore is the adapter of the Results port of review/app (own-rdd T2): the directory
+//     odd/review-results/<feature>/ of a repository, walked without following a symlink and written on
+//     atomicfile, never over a file that is there.
 //   - repotest is test support: the hand-made repositories the tests of gitfs and cmd share.
 //   - piguard is test support: the `pi` that refuses to run, put first on the PATH of a test
 //     run by a TestMain, so nothing started by accident reaches the real CLI.
@@ -183,6 +196,10 @@ var rings = map[string]archguard.Ring{
 	"propagator/app":            archguard.Application,
 	"propagator/fsstore":        archguard.Adapter,
 	"repotest":                  archguard.Support,
+	"review":                    archguard.Domain,
+	"review/app":                archguard.Application,
+	"review/fsstore":            archguard.Adapter,
+	"review/gitexec":            archguard.Adapter,
 	"reviewreceipt":             archguard.Domain,
 	"reviewreceipt/fsstore":     archguard.Adapter,
 	"reviewreceipt/receipttest": archguard.Support,

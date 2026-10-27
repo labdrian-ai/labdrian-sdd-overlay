@@ -10,7 +10,7 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/overlaytest"
 )
 
-// The overlay forwards the verbs of memory, roles, shaper and workflow to the engine binary
+// The overlay forwards the verbs of memory, roles, review, shaper and workflow to the engine binary
 // verbatim: `labdrian <command> <verb> ...` runs `gentle-ai-overlay <command> <verb> ...`. Each
 // command is a row of the table, and every row is held to the same four things, each run through the
 // real entrypoint under a throwaway HOME whose engine binary is a fake that records its argv, so
@@ -74,6 +74,22 @@ var dispatchRows = []dispatchRow{
 		noEngine:     []string{"roles", "validate", "--file", "/tmp/nonexistent.json"},
 		helpLine:     "data only",
 		otherCommand: "shaper",
+	},
+	{
+		command:      "review",
+		forwarded:    []string{"review", "record", "--feature", "own-rdd", "--base", "main", "--head", "feat x", "--result", "-"},
+		failing:      []string{"review", "record", "--feature", "own-rdd", "--base", "main", "--head", "HEAD"},
+		wantStatus:   2, // the exit status of a reply that is refused
+		noEngine:     []string{"review", "bind", "--base", "main", "--head", "HEAD"},
+		helpLine:     "bind --base REV --head REV",
+		otherCommand: "workflow",
+		helpBlocks: []helpBlock{
+			{
+				// The refusal of a reply is the one exit the parent of the role chain reads apart from a failure.
+				name:  "states the exit codes of record",
+				wants: []string{"record --feature NAME --base REV --head REV [--result FILE|-] [--cwd REPO]", "(exit 0 stored, 2 reply refused, 1 error)"},
+			},
+		},
 	},
 	{
 		command:      "shaper",

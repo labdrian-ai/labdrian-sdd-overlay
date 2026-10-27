@@ -736,3 +736,28 @@ func TestRacingCreatesPublishExactlyOnce(t *testing.T) {
 	}
 	assertOnly(t, dir, "record")
 }
+
+// A Create whose directory cannot be flushed after the link has published the file: the error says so with
+// ErrDirNotFlushed, so a caller does not publish it a second time, and its words are the ones it always had.
+func TestACreateWhoseDirectoryCannotBeFlushedSaysTheFileIsPublished(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "out")
+	s := &spy{failDir: errors.New("no space")}
+	staged, err := stage(s.ops(), dir, []byte("x"), Options{Perm: 0o600, Sync: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer staged.Discard()
+
+	err = staged.Create(path)
+
+	if !errors.Is(err, ErrDirNotFlushed) {
+		t.Fatalf("Create() error = %v, want an error wrapping ErrDirNotFlushed", err)
+	}
+	if want := "atomicfile: sync directory of " + path + ": no space"; err.Error() != want {
+		t.Errorf("Create() error = %q, want %q", err, want)
+	}
+	if got := readFixture(t, path); got != "x" {
+		t.Errorf("target = %q, want the published content", got)
+	}
+}

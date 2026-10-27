@@ -5,6 +5,8 @@ package main
 import (
 	"fmt"
 	"io"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review"
 )
 
 // usage writes the usage text to w.
@@ -153,6 +155,20 @@ func usage(w io.Writer) {
 	fmt.Fprintln(w, "    'gentle-ai review acknowledge-approved', denies (exit 2) on ambiguity or capture failure;")
 	fmt.Fprintln(w, "    with several active changes it allows once every approved receipt is persisted byte for byte")
 	fmt.Fprintln(w, "    under one of them or in a feature folder (capture --change <name> or --feature <name>)")
+	fmt.Fprintln(w, "  engine review bind --base <rev> --head <rev> [--cwd <repo>]")
+	fmt.Fprintln(w, "    binds the candidate of a review to git and prints it as one JSON object: base and head as full object names, diff_sha256 (the sha256 of the canonical")
+	fmt.Fprintln(w, "    diff of base..head, the bytes 'review record' and the delivery check recompute: odd/review-results/README.md names the git command, its flags and its")
+	fmt.Fprintln(w, "    environment), paths (the changed paths, in git's order), worktree, worktree_created, diff_bytes, diff_limit_bytes and over_limit. It makes the detached worktree")
+	fmt.Fprintln(w, "    of head at <repo-parent>/<repo-name>-worktrees/review-<head12> (of the main checkout, never inside the repository; git's hooks do not run) and reuses one already")
+	fmt.Fprintf(w, "    at head; a worktree at another commit, or a path that is not a worktree of this repository, is refused. A diff over %d bytes is bound all the same:\n", review.DiffLimitBytes)
+	fmt.Fprintln(w, "    over_limit is true and note says the parent launches one review per commit. needs git 2.40 or newer; exit 0 bound, 1 usage error, refusal or a binding that could not be written")
+	fmt.Fprintln(w, "  engine review record --feature <name> --base <rev> --head <rev> [--result <file>|-] [--cwd <repo>]")
+	fmt.Fprintln(w, "    recomputes the binding from git (the reply is never trusted for it), validates the reviewer's reply (--result, or stdin) against it, and stores it as")
+	fmt.Fprintln(w, "    odd/review-results/<feature>/<head12>-<n>.json with <n> one more than the highest stored for that head (from 1), never over an existing file; --feature is one safe path segment and no input")
+	fmt.Fprintln(w, "    names a path outside odd/review-results/ (a symbolic link on the way is refused). stdout is the skeleton of the role handoff for 'roles append --stdin':")
+	fmt.Fprintln(w, "    payload_kind review-report, payload_sha256 of the stored file, evidence review-diff and review-result; the parent of the chain fills project_id, goal_id,")
+	fmt.Fprintln(w, "    chain_id, seq, prev_sha256, to_role and context.summary. A reply that does not hold writes nothing and the error names the rule it broke.")
+	fmt.Fprintln(w, "    exit 0 stored, 2 reply refused, 1 usage error or any other failure")
 	fmt.Fprintln(w, "  engine shaper assess --root <abs> --handoff <rel> --goal <rel> [--view]")
 	fmt.Fprintln(w, "    read-only readiness assessment; exit 0 ready, 3 draft, 2 invalid, 1 usage or internal error")
 	fmt.Fprintln(w, "    --view prints exactly the rendered clearance view bytes the Pi dialog displays")

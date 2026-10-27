@@ -1,0 +1,304 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:52b24e4e4de3b1cfdf7ba234c5fc51b6751739fdb74b0f774d4a209c03f7288a",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-1f3710a4e319b8d3",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "6fdb23df05b26a3a0a199b0e41c0a91b513ee080",
+      "candidate_tree": "b920dfe27930f9f95a01b2e7c6a0af99a29e6e1a",
+      "paths_digest": "sha256:68e087807bdddb19b7de42e9e9f190bb52c1b409a9cb35e7cbbf91e62eae5e57",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "bin/labdrian-overlay",
+        "bin/lib/engine_verbs.sh",
+        "bin/lib/usage.sh",
+        "engine/cmd/dispatch.go",
+        "engine/cmd/dispatch_routes_test.go",
+        "engine/cmd/review.go",
+        "engine/cmd/review_test.go",
+        "engine/cmd/usage.go",
+        "engine/shelltest/overlay_dispatch_test.go"
+      ],
+      "identity": "sha256:d9d0950a0466b610593fd34e7e0c27f731c9bc90f567098dab343913ff410734"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "6fdb23df05b26a3a0a199b0e41c0a91b513ee080",
+      "candidate_tree": "b920dfe27930f9f95a01b2e7c6a0af99a29e6e1a",
+      "paths_digest": "sha256:68e087807bdddb19b7de42e9e9f190bb52c1b409a9cb35e7cbbf91e62eae5e57",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "bin/labdrian-overlay",
+        "bin/lib/engine_verbs.sh",
+        "bin/lib/usage.sh",
+        "engine/cmd/dispatch.go",
+        "engine/cmd/dispatch_routes_test.go",
+        "engine/cmd/review.go",
+        "engine/cmd/review_test.go",
+        "engine/cmd/usage.go",
+        "engine/shelltest/overlay_dispatch_test.go"
+      ],
+      "identity": "sha256:d9d0950a0466b610593fd34e7e0c27f731c9bc90f567098dab343913ff410734"
+    },
+    "genesis_paths": [
+      "bin/labdrian-overlay",
+      "bin/lib/engine_verbs.sh",
+      "bin/lib/usage.sh",
+      "engine/cmd/dispatch.go",
+      "engine/cmd/dispatch_routes_test.go",
+      "engine/cmd/review.go",
+      "engine/cmd/review_test.go",
+      "engine/cmd/usage.go",
+      "engine/shelltest/overlay_dispatch_test.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-risk",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 1123,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "CLI wiring engine/cmd/review.go and the shell forwarder: new public verbs review bind/record with flag parsing, stdin/file input and exit codes 0/2/1 (risk, reliability); usage text and dispatch tables others read (readability)",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:93146b7c9bd3e9b8c5ed0a702ff5d7e5f19061fca7c8120427dfc4cbe4bdffaa",
+    "capture_phase_revision": "sha256:0f34f3a67b428faca9e1d52a306d2ae637cd67a593145571f63de84cc3ef5206",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:d9d0950a0466b610593fd34e7e0c27f731c9bc90f567098dab343913ff410734",
+        "capture_phase_revision": "sha256:0f34f3a67b428faca9e1d52a306d2ae637cd67a593145571f63de84cc3ef5206",
+        "artifact_digest": "sha256:36cad329ecb2bd2c982dd2a89fc06e523b42b1eb26e5fb91cac32dfe9d981a0d",
+        "result_hash": "sha256:7108afa2e4073f74a059d30be1b5bf59c0c85aec5ee01e25fccd2bfb9e3fc19d",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:53c9ac029afd755b0b5ca7a21c922b033d0b226e7456dc76c8b582352cf85530",
+            "lineage_id": "review-1f3710a4e319b8d3",
+            "authority_revision": "sha256:0f34f3a67b428faca9e1d52a306d2ae637cd67a593145571f63de84cc3ef5206",
+            "target_identity": "sha256:d9d0950a0466b610593fd34e7e0c27f731c9bc90f567098dab343913ff410734",
+            "base_tree": "6fdb23df05b26a3a0a199b0e41c0a91b513ee080",
+            "candidate_tree": "b920dfe27930f9f95a01b2e7c6a0af99a29e6e1a",
+            "changed_path_manifest_sha256": "sha256:5bace7e37a25e8cba36c0404bb134cd54e2f72d804feeadeeae79ca638f964ac",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:53c9ac029afd755b0b5ca7a21c922b033d0b226e7456dc76c8b582352cf85530",
+            "raw_sha256": "sha256:9f73fab8367b67d81f7a8dd19bab22951b7c0691a0036cf408d989310d4d9b65",
+            "canonical_sha256": "sha256:834fb534671db97cae6999ac1518a78dc753ee9550ca05614155f47bbce907b2",
+            "result_hash": "sha256:7108afa2e4073f74a059d30be1b5bf59c0c85aec5ee01e25fccd2bfb9e3fc19d",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:53c9ac029afd755b0b5ca7a21c922b033d0b226e7456dc76c8b582352cf85530",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "bin/labdrian-overlay",
+                "bin/lib/engine_verbs.sh",
+                "bin/lib/usage.sh",
+                "engine/cmd/dispatch.go",
+                "engine/cmd/dispatch_routes_test.go",
+                "engine/cmd/review.go",
+                "engine/cmd/review_test.go",
+                "engine/cmd/usage.go",
+                "engine/shelltest/overlay_dispatch_test.go"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "Reviewed all 9 changed paths. The new review bind and record verbs are thin wiring in engine/cmd/review.go over review/app, gitexec and fsstore, whose source is outside this candidate and so is not evidence here.",
+              "Input handling in engine/cmd/review.go is strict: parseReviewFlags rejects unknown flags, missing values, duplicate flags and positional arguments; --base, --head and --feature are required.",
+              "Reply reading is bounded: readReviewReply wraps the reader in io.LimitReader at review.MaxReplyBytes+1, and git output is capped at reviewGitMaxOutput with a 5-minute timeout.",
+              "Tests in engine/cmd/review_test.go cover the main exploit paths: option-like revisions (--output=...), path-traversal and unsafe feature names, symlinks at odd, odd/review-results and the feature directory, tampered digest echoes, and oversized replies. They assert that nothing is written outside odd/review-results and that exit code 2 is returned for refused replies.",
+              "The shell forwarder in bin/lib/engine_verbs.sh uses exec with quoted \"$@\", so there is no shell injection. The new dispatch case in bin/labdrian-overlay is additive and does not change existing verbs.",
+              "No secrets or dependency changes are introduced, and no reachable exploit caused by this candidate is demonstrated, so there are no findings."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "selected_order": 1,
+        "target_identity": "sha256:d9d0950a0466b610593fd34e7e0c27f731c9bc90f567098dab343913ff410734",
+        "capture_phase_revision": "sha256:0f34f3a67b428faca9e1d52a306d2ae637cd67a593145571f63de84cc3ef5206",
+        "artifact_digest": "sha256:0398cfeafcd4f84dc4a51786407c73a0a5eefadc01bcec06265853303a910763",
+        "result_hash": "sha256:7b6abf5d9b51dcac9bc23f08baa3f36bdd58a93787a0d79d0504599ec2e3ca8b",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:52e0490609067342d7880a90057b16712dea446576b93c79ad88702cc28d403b",
+            "lineage_id": "review-1f3710a4e319b8d3",
+            "authority_revision": "sha256:0f34f3a67b428faca9e1d52a306d2ae637cd67a593145571f63de84cc3ef5206",
+            "target_identity": "sha256:d9d0950a0466b610593fd34e7e0c27f731c9bc90f567098dab343913ff410734",
+            "base_tree": "6fdb23df05b26a3a0a199b0e41c0a91b513ee080",
+            "candidate_tree": "b920dfe27930f9f95a01b2e7c6a0af99a29e6e1a",
+            "changed_path_manifest_sha256": "sha256:5bace7e37a25e8cba36c0404bb134cd54e2f72d804feeadeeae79ca638f964ac",
+            "lens": "review-readability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:52e0490609067342d7880a90057b16712dea446576b93c79ad88702cc28d403b",
+            "raw_sha256": "sha256:22da5e980ed9674681a85fe71d0781c597d3fde0ad7892bab775e1a3c558e761",
+            "canonical_sha256": "sha256:e982d0ef2c02708308628ce57a1075ef8d863399b6d4c272529f22522d61cf0b",
+            "result_hash": "sha256:7b6abf5d9b51dcac9bc23f08baa3f36bdd58a93787a0d79d0504599ec2e3ca8b",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:52e0490609067342d7880a90057b16712dea446576b93c79ad88702cc28d403b",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "bin/labdrian-overlay",
+                "bin/lib/engine_verbs.sh",
+                "bin/lib/usage.sh",
+                "engine/cmd/dispatch.go",
+                "engine/cmd/dispatch_routes_test.go",
+                "engine/cmd/review.go",
+                "engine/cmd/review_test.go",
+                "engine/cmd/usage.go",
+                "engine/shelltest/overlay_dispatch_test.go"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-001",
+                "lens": "readability",
+                "location": "engine/cmd/usage.go:161",
+                "severity": "SUGGESTION",
+                "claim": "The usage text hardcodes the 150000-byte diff limit as a literal, while review.go reports the limit from review.DiffLimitBytes. If the constant changes, the help text will silently disagree with the actual behavior. review_test.go also asserts the literal \"150000\", so the test would fail on a legitimate constant change instead of tracking it.",
+                "proof_refs": [
+                  "engine/cmd/usage.go:161",
+                  "engine/cmd/review.go:174",
+                  "engine/cmd/review_test.go:229"
+                ]
+              }
+            ],
+            "evidence": [
+              "Read all nine changed paths in full. The review verbs are cleanly structured: parseReviewFlags, require, reviewPath and the two run functions are small and commented, and the exit-code contract (0, 1, 2) is documented consistently across the shell usage, Go usage and tests.",
+              "The only maintainability concern found is the duplicated 150000 literal in the usage text and the test, which can drift from review.DiffLimitBytes. It is low impact and not a defect of behavior."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 2,
+        "target_identity": "sha256:d9d0950a0466b610593fd34e7e0c27f731c9bc90f567098dab343913ff410734",
+        "capture_phase_revision": "sha256:0f34f3a67b428faca9e1d52a306d2ae637cd67a593145571f63de84cc3ef5206",
+        "artifact_digest": "sha256:ada9ce44999e13d4532db0c45a3ed812eeb2927a49af4c395cc39318eedeccc7",
+        "result_hash": "sha256:8520458b5e732de02587db44285445820a68fb7f95087b41a39fe8d3006f2176",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:19af508cb0edd80bab2cb35d8eaf1e338ba92d2bd3feea9ffc86cf5b4312f384",
+            "lineage_id": "review-1f3710a4e319b8d3",
+            "authority_revision": "sha256:0f34f3a67b428faca9e1d52a306d2ae637cd67a593145571f63de84cc3ef5206",
+            "target_identity": "sha256:d9d0950a0466b610593fd34e7e0c27f731c9bc90f567098dab343913ff410734",
+            "base_tree": "6fdb23df05b26a3a0a199b0e41c0a91b513ee080",
+            "candidate_tree": "b920dfe27930f9f95a01b2e7c6a0af99a29e6e1a",
+            "changed_path_manifest_sha256": "sha256:5bace7e37a25e8cba36c0404bb134cd54e2f72d804feeadeeae79ca638f964ac",
+            "lens": "review-reliability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:19af508cb0edd80bab2cb35d8eaf1e338ba92d2bd3feea9ffc86cf5b4312f384",
+            "raw_sha256": "sha256:77d6c9b1e67f9dae965f0c33fd3660052ff12824eb0f12bc16eebcb229eccf7e",
+            "canonical_sha256": "sha256:6a24e46025484ae94f77f862c42ddeea6ec8c5a07c423e067767ee9926e36874",
+            "result_hash": "sha256:8520458b5e732de02587db44285445820a68fb7f95087b41a39fe8d3006f2176",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:19af508cb0edd80bab2cb35d8eaf1e338ba92d2bd3feea9ffc86cf5b4312f384",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "bin/labdrian-overlay",
+                "bin/lib/engine_verbs.sh",
+                "bin/lib/usage.sh",
+                "engine/cmd/dispatch.go",
+                "engine/cmd/dispatch_routes_test.go",
+                "engine/cmd/review.go",
+                "engine/cmd/review_test.go",
+                "engine/cmd/usage.go",
+                "engine/shelltest/overlay_dispatch_test.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-001",
+                "lens": "reliability",
+                "location": "engine/cmd/review.go:262",
+                "severity": "WARNING",
+                "claim": "writeReviewJSON ignores the error from p.stdout.Write and then exits 0. If stdout is closed or broken (for example a closed pipe), 'review bind' or 'review record' reports success, although the caller never received the binding or the handoff skeleton. For 'record', the result file has already been stored at that point. The failure needs an unusual stdout state, so it is a warning.",
+                "proof_refs": [
+                  "engine/cmd/review.go:262-263"
+                ],
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Read all 9 changed paths in full. The Go flag parsing rejects unknown flags, missing values, repeated flags and positional arguments. The tests cover each of these rejections, and they also assert that no worktree directory is created for a refused command line.",
+              "The exit-code contract is observable and tested: 0 on success, 2 for a refused reply (with nothing written), 1 for any other failure. The tests cover unsafe feature names, symlinks on the results path, an unreadable --result file, an unresolvable commit, and a directory outside any repository. The built-binary test exercises bind, record, the numbering of repeated records, a tampered reply, and `roles validate` on the printed skeleton.",
+              "The reply read is capped at MaxReplyBytes+1 bytes, so an oversized reply is refused without being read in full. This is covered by a test.",
+              "The git adapter is built with a timeout and an output cap. A unit test asserts the environment and the deadline that reach it.",
+              "The shell forwarding, the dispatch route, the usage text and the shell dispatch-table row are consistent with each other and tested at the cheapest level.",
+              "The only gap I found is the ignored stdout write error, reported as the warning above."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "36761a2de7f7d70e8205cfb86a55ccf9ab639b94a6a95dc37da60230f60bfe18",
+    "initial_atomic_start": {
+      "lineage_id": "review-1f3710a4e319b8d3",
+      "worktree_identity": "sha256:571cf94da78406a5dee177091311c4fcbbbf61e483d9e6e92803045faa817e42",
+      "target_identity": "sha256:d9d0950a0466b610593fd34e7e0c27f731c9bc90f567098dab343913ff410734",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "6fdb23df05b26a3a0a199b0e41c0a91b513ee080",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "high",
+      "selected_lenses": [
+        "review-risk",
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 1123,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "CLI wiring engine/cmd/review.go and the shell forwarder: new public verbs review bind/record with flag parsing, stdin/file input and exit codes 0/2/1 (risk, reliability); usage text and dispatch tables others read (readability)"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

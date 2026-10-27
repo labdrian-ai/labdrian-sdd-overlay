@@ -1,0 +1,127 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:12d552233a6ddd3c46731e96d526654da3f53cb0004612595d5686cd3d74a428",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-bd06441910b66697",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "40fecae7396fdc0785da9331b1bcf93644de1c42",
+      "candidate_tree": "dde2430ae5477395f7950e2ff29450104043f29e",
+      "paths_digest": "sha256:e1597a6b1483f7aef39d81b00cba436c2b97697bb056fa929aebccf1ca1c7905",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/atomicfile/atomicfile.go",
+        "engine/review/fsstore/held_linux.go"
+      ],
+      "identity": "sha256:ed1273c43c2c10682b9cc585e37f4f7f55c788b0cbcdf7b14b604556c302e532"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "40fecae7396fdc0785da9331b1bcf93644de1c42",
+      "candidate_tree": "dde2430ae5477395f7950e2ff29450104043f29e",
+      "paths_digest": "sha256:e1597a6b1483f7aef39d81b00cba436c2b97697bb056fa929aebccf1ca1c7905",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/atomicfile/atomicfile.go",
+        "engine/review/fsstore/held_linux.go"
+      ],
+      "identity": "sha256:ed1273c43c2c10682b9cc585e37f4f7f55c788b0cbcdf7b14b604556c302e532"
+    },
+    "genesis_paths": [
+      "engine/atomicfile/atomicfile.go",
+      "engine/review/fsstore/held_linux.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-readability"
+    ],
+    "original_changed_lines": 14,
+    "correction_budget": 7,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "comment-only changes in held_linux.go and atomicfile.go explaining error wording and dirFlushError methods (readability)",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:b61c95a210947e0f9e82c79cd9e7ab81a06d9b93b84034312461d24d02bfafd8",
+    "capture_phase_revision": "sha256:3f14edcdaa9ac999b6b3b1ad14f109159ed44475cbf8a7cbc7eaa89e68ee04a4",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "target_identity": "sha256:ed1273c43c2c10682b9cc585e37f4f7f55c788b0cbcdf7b14b604556c302e532",
+        "capture_phase_revision": "sha256:3f14edcdaa9ac999b6b3b1ad14f109159ed44475cbf8a7cbc7eaa89e68ee04a4",
+        "artifact_digest": "sha256:81f12fdab591ce8be08f977fc93e7be52d7ee66cf5dbdb78a28ecd7eaaa2129a",
+        "result_hash": "sha256:abb34a37be74386771460b8ecfbcfd7f8400be5403c6c7e6a26f8878f811ce17",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:7ccf29d1c86a9ccf25b6c44f2e0fa803f0dbfe76f3889f40dd25b330676e9096",
+            "lineage_id": "review-bd06441910b66697",
+            "authority_revision": "sha256:3f14edcdaa9ac999b6b3b1ad14f109159ed44475cbf8a7cbc7eaa89e68ee04a4",
+            "target_identity": "sha256:ed1273c43c2c10682b9cc585e37f4f7f55c788b0cbcdf7b14b604556c302e532",
+            "base_tree": "40fecae7396fdc0785da9331b1bcf93644de1c42",
+            "candidate_tree": "dde2430ae5477395f7950e2ff29450104043f29e",
+            "changed_path_manifest_sha256": "sha256:6c78e45dee7851955d52190a48cdf4aa707b451a1804c45a305b6a9dbb588c72",
+            "lens": "review-readability",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:7ccf29d1c86a9ccf25b6c44f2e0fa803f0dbfe76f3889f40dd25b330676e9096",
+            "raw_sha256": "sha256:c05b64efbe680fb02e8cdb4e516907719515f0195dc252b6fc3af04989ef727d",
+            "canonical_sha256": "sha256:8f181271ff72ebf13b408a1f0fce83ee860262cf750dfbe7863f31173845a768",
+            "result_hash": "sha256:abb34a37be74386771460b8ecfbcfd7f8400be5403c6c7e6a26f8878f811ce17",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:7ccf29d1c86a9ccf25b6c44f2e0fa803f0dbfe76f3889f40dd25b330676e9096",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/atomicfile/atomicfile.go",
+                "engine/review/fsstore/held_linux.go"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [],
+            "evidence": [
+              "Reviewed both patches in full. engine/atomicfile/atomicfile.go only splits two one-line methods onto separate lines and adds doc comments for Unwrap and Is on dirFlushError; behavior is unchanged and the comments accurately describe it.",
+              "engine/review/fsstore/held_linux.go changes only a comment in openBelow. The new wording clarifies that the read/open error wording preserves os.ReadDir's, and that the make/mkdir wording is built elsewhere where mkdirat fails. No code changed, so no maintainability defect or behavior change was introduced."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "f0c48c85e21c87618e14adda4dc01a958123508dad3698addf509a938ee482b2",
+    "initial_atomic_start": {
+      "lineage_id": "review-bd06441910b66697",
+      "worktree_identity": "sha256:571cf94da78406a5dee177091311c4fcbbbf61e483d9e6e92803045faa817e42",
+      "target_identity": "sha256:ed1273c43c2c10682b9cc585e37f4f7f55c788b0cbcdf7b14b604556c302e532",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "40fecae7396fdc0785da9331b1bcf93644de1c42",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-readability"
+      ],
+      "original_changed_lines": 14,
+      "correction_budget": 7,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "comment-only changes in held_linux.go and atomicfile.go explaining error wording and dirFlushError methods (readability)"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

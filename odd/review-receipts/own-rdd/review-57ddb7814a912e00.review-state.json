@@ -1,0 +1,372 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:d1e77e9cdb6e5bdada705c1a78c7c1af333bc2127e117426fe7bde855063ff7d",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-57ddb7814a912e00",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "994c2314f691451d7b4a25a6e5bf1967ebc6a836",
+      "candidate_tree": "6fdb23df05b26a3a0a199b0e41c0a91b513ee080",
+      "paths_digest": "sha256:9fb4ab35da0aeb7b07114a3175c0d4a10172780c8617d135e5f44a6c755f70aa",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/architecture_test.go",
+        "engine/review/gitexec/gitexec.go",
+        "engine/review/gitexec/gitexec_test.go",
+        "engine/review/gitexec/readme_test.go",
+        "engine/review/gitexec/realgit_test.go",
+        "engine/reviewresult/reviewresult.go",
+        "odd/review-results/README.md"
+      ],
+      "identity": "sha256:1d5de469aaf3a34ac97ce77bc9c479b273c9be943e56651bd649de7070d422cd"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "994c2314f691451d7b4a25a6e5bf1967ebc6a836",
+      "candidate_tree": "6fdb23df05b26a3a0a199b0e41c0a91b513ee080",
+      "paths_digest": "sha256:9fb4ab35da0aeb7b07114a3175c0d4a10172780c8617d135e5f44a6c755f70aa",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/architecture_test.go",
+        "engine/review/gitexec/gitexec.go",
+        "engine/review/gitexec/gitexec_test.go",
+        "engine/review/gitexec/readme_test.go",
+        "engine/review/gitexec/realgit_test.go",
+        "engine/reviewresult/reviewresult.go",
+        "odd/review-results/README.md"
+      ],
+      "identity": "sha256:1d5de469aaf3a34ac97ce77bc9c479b273c9be943e56651bd649de7070d422cd"
+    },
+    "genesis_paths": [
+      "engine/architecture_test.go",
+      "engine/review/gitexec/gitexec.go",
+      "engine/review/gitexec/gitexec_test.go",
+      "engine/review/gitexec/readme_test.go",
+      "engine/review/gitexec/realgit_test.go",
+      "engine/reviewresult/reviewresult.go",
+      "odd/review-results/README.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-risk",
+      "review-resilience",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 1624,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "git adapter engine/review/gitexec: refuses revisions read as options, scrubs GIT_* env, adds the worktree with hooks off (risk); timeouts and git failures surface as typed errors (resilience); canonical diff digest pinned against real git (reliability); docs naming the canonical command in reviewresult and odd/review-results/README.md (readability)",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:aaf00a7ef0f5cf4bd46194a348117d99a70a20bf4b5373f3713f64a2de0d1813",
+    "capture_phase_revision": "sha256:11ffaecc5d29f8df25680e91d22aab15c9ac160c9bf2819cc8b4e4bf9ac127ed",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:1d5de469aaf3a34ac97ce77bc9c479b273c9be943e56651bd649de7070d422cd",
+        "capture_phase_revision": "sha256:11ffaecc5d29f8df25680e91d22aab15c9ac160c9bf2819cc8b4e4bf9ac127ed",
+        "artifact_digest": "sha256:badacb609acbaeecb89f5b6ce3f91e7c38e881905f97ffac7f1700a8a931a9e0",
+        "result_hash": "sha256:f79dd1cc11396b2c4ec4db41c0d39ef38f76422b10867b436989cdae7a9bfad9",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:8fd06bba3427870ce3ce40385a06954039a08a0284b9bd2c9a7630724ae05beb",
+            "lineage_id": "review-57ddb7814a912e00",
+            "authority_revision": "sha256:11ffaecc5d29f8df25680e91d22aab15c9ac160c9bf2819cc8b4e4bf9ac127ed",
+            "target_identity": "sha256:1d5de469aaf3a34ac97ce77bc9c479b273c9be943e56651bd649de7070d422cd",
+            "base_tree": "994c2314f691451d7b4a25a6e5bf1967ebc6a836",
+            "candidate_tree": "6fdb23df05b26a3a0a199b0e41c0a91b513ee080",
+            "changed_path_manifest_sha256": "sha256:ed852c486cee4eaae9677369693716e676a0963580a5aff5b7a25de11f77bd0e",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:8fd06bba3427870ce3ce40385a06954039a08a0284b9bd2c9a7630724ae05beb",
+            "raw_sha256": "sha256:d41a5097e2d2539752576ba725c724b4dd7f341f3435a6a40318048cb6399383",
+            "canonical_sha256": "sha256:fd6ba521d632ccf876d428c54df837c6bbaf13a689fcbcda628d112bdda3a814",
+            "result_hash": "sha256:f79dd1cc11396b2c4ec4db41c0d39ef38f76422b10867b436989cdae7a9bfad9",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:8fd06bba3427870ce3ce40385a06954039a08a0284b9bd2c9a7630724ae05beb",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/architecture_test.go",
+                "engine/review/gitexec/gitexec.go",
+                "engine/review/gitexec/gitexec_test.go",
+                "engine/review/gitexec/readme_test.go",
+                "engine/review/gitexec/realgit_test.go",
+                "engine/reviewresult/reviewresult.go",
+                "odd/review-results/README.md"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "Reviewed all 7 changed paths in full for the risk lens and found no reachable exploit caused by this candidate.",
+              "engine/review/gitexec/gitexec.go: revisions are passed to rev-parse after --end-of-options, and are suffixed with ^{commit}. Argument vectors are composed in code and no shell is involved, so there is no command injection or option injection through a revision. The real-git tests also check that '--all' and '-x' are refused.",
+              "engine/review/gitexec/gitexec.go: gitEnvironment removes every GIT_* variable and LC_ALL before git starts, so GIT_DIR, GIT_CONFIG_*, GIT_EXTERNAL_DIFF and GIT_DIFF_OPTS cannot redirect or alter the digest. The diff also passes --no-ext-diff and --no-textconv, and takes its attributes from the empty tree, so a candidate .gitattributes cannot select a user-configured diff driver that runs code.",
+              "engine/review/gitexec/gitexec.go: AddWorktree sets core.hooksPath to the null device, so no repository hook runs on checkout, and realgit_test.go checks this against a real post-checkout hook. Worktree uses Lstat and does not follow symlinks, and it refuses a path that is not a worktree of the same repository.",
+              "The error text quotes git's stderr, but clip bounds it to 2000 bytes. I found no secret exposure.",
+              "The unpinned $GIT_DIR/info/attributes and the zlib dependence are documented in gitexec.go and README.md. A digest mismatch fails closed, so it does not weaken the integrity binding.",
+              "engine/architecture_test.go, engine/reviewresult/reviewresult.go and odd/review-results/README.md only change ring registration, comments and documentation, and add no behavior that touches security."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-resilience",
+        "selected_order": 1,
+        "target_identity": "sha256:1d5de469aaf3a34ac97ce77bc9c479b273c9be943e56651bd649de7070d422cd",
+        "capture_phase_revision": "sha256:11ffaecc5d29f8df25680e91d22aab15c9ac160c9bf2819cc8b4e4bf9ac127ed",
+        "artifact_digest": "sha256:c1453e0f507bd9084a71a3319693d2449a29440f15a9828a1de4d0b05bd3b775",
+        "result_hash": "sha256:e839e03d1ae48ed753762f0cc2cc862cd5959d95b25a5ff2a520511561c56f1c",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:e0804456e83a9cb3a1141865d17de613695aa4c0fc9a2bfd6c546f5b9f0e81a2",
+            "lineage_id": "review-57ddb7814a912e00",
+            "authority_revision": "sha256:11ffaecc5d29f8df25680e91d22aab15c9ac160c9bf2819cc8b4e4bf9ac127ed",
+            "target_identity": "sha256:1d5de469aaf3a34ac97ce77bc9c479b273c9be943e56651bd649de7070d422cd",
+            "base_tree": "994c2314f691451d7b4a25a6e5bf1967ebc6a836",
+            "candidate_tree": "6fdb23df05b26a3a0a199b0e41c0a91b513ee080",
+            "changed_path_manifest_sha256": "sha256:ed852c486cee4eaae9677369693716e676a0963580a5aff5b7a25de11f77bd0e",
+            "lens": "review-resilience",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:e0804456e83a9cb3a1141865d17de613695aa4c0fc9a2bfd6c546f5b9f0e81a2",
+            "raw_sha256": "sha256:19aae69f8d81cf792a49ccda4a1026c9d854307743077e83493ca9067eb69403",
+            "canonical_sha256": "sha256:19aae69f8d81cf792a49ccda4a1026c9d854307743077e83493ca9067eb69403",
+            "result_hash": "sha256:e839e03d1ae48ed753762f0cc2cc862cd5959d95b25a5ff2a520511561c56f1c",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:e0804456e83a9cb3a1141865d17de613695aa4c0fc9a2bfd6c546f5b9f0e81a2",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/architecture_test.go",
+                "engine/review/gitexec/gitexec.go",
+                "engine/review/gitexec/gitexec_test.go",
+                "engine/review/gitexec/readme_test.go",
+                "engine/review/gitexec/realgit_test.go",
+                "engine/reviewresult/reviewresult.go",
+                "odd/review-results/README.md"
+              ]
+            },
+            "lens": "review-resilience",
+            "findings": [],
+            "evidence": [
+              "Reviewed all 7 changed paths from the supplied patch, with the resilience lens applied.",
+              "gitexec.go gives each git start its own context, with a deadline when Options.Timeout is set. Git errors wrap the runner error and carry bounded stderr text (clip, 2000 bytes). Truncated or empty path lists are refused rather than accepted silently.",
+              "The environment is scrubbed of GIT_* and LC_ALL, and is never nil, so a failed start cannot fall back to the process environment. AddWorktree disables hooks and refuses a path that is already taken, so a retry does not overwrite anything.",
+              "Worktree degrades safely: a path that is not a verified worktree of the repository is reported as taken, never reused, and a non-directory is not followed.",
+              "I found no concrete production failure mode or measured impact caused by this candidate. A missing output cap on the Runner in production is decided by the execrunner configuration, which is outside this candidate, so I made no finding on it."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "selected_order": 2,
+        "target_identity": "sha256:1d5de469aaf3a34ac97ce77bc9c479b273c9be943e56651bd649de7070d422cd",
+        "capture_phase_revision": "sha256:11ffaecc5d29f8df25680e91d22aab15c9ac160c9bf2819cc8b4e4bf9ac127ed",
+        "artifact_digest": "sha256:c2e9e21c111f6041d68ebedbf1e8f15da4837b60200872ed399f29ed2afc9d8b",
+        "result_hash": "sha256:b21893f317126421e3743e6a031f0827cd11ecb6ae1646ad8ca3732d587b6d37",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:5cd33931c5ba059c4cc504c4b0819a2722996209173587966e9cf32a18271772",
+            "lineage_id": "review-57ddb7814a912e00",
+            "authority_revision": "sha256:11ffaecc5d29f8df25680e91d22aab15c9ac160c9bf2819cc8b4e4bf9ac127ed",
+            "target_identity": "sha256:1d5de469aaf3a34ac97ce77bc9c479b273c9be943e56651bd649de7070d422cd",
+            "base_tree": "994c2314f691451d7b4a25a6e5bf1967ebc6a836",
+            "candidate_tree": "6fdb23df05b26a3a0a199b0e41c0a91b513ee080",
+            "changed_path_manifest_sha256": "sha256:ed852c486cee4eaae9677369693716e676a0963580a5aff5b7a25de11f77bd0e",
+            "lens": "review-readability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:5cd33931c5ba059c4cc504c4b0819a2722996209173587966e9cf32a18271772",
+            "raw_sha256": "sha256:00c7e961f5b0a54a4e8b8dec94ada924c151b2e53764ef016f5f02f19e6b79d5",
+            "canonical_sha256": "sha256:f1df84701820e97a4049bec3c5654282515406bc5f05e802c0d5249805069df3",
+            "result_hash": "sha256:b21893f317126421e3743e6a031f0827cd11ecb6ae1646ad8ca3732d587b6d37",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:5cd33931c5ba059c4cc504c4b0819a2722996209173587966e9cf32a18271772",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/architecture_test.go",
+                "engine/review/gitexec/gitexec.go",
+                "engine/review/gitexec/gitexec_test.go",
+                "engine/review/gitexec/readme_test.go",
+                "engine/review/gitexec/realgit_test.go",
+                "engine/reviewresult/reviewresult.go",
+                "odd/review-results/README.md"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-001",
+                "lens": "readability",
+                "location": "engine/architecture_test.go:199-205",
+                "severity": "SUGGESTION",
+                "claim": "The rings map entries were reordered so that reviewreceipt entries now precede review entries, breaking the alphabetical order the rest of the map follows. This adds diff noise and makes the map slightly harder to scan; keeping the original order and inserting review/gitexec after review/fsstore would have been a smaller change.",
+                "proof_refs": [
+                  "engine/architecture_test.go:199-205"
+                ]
+              },
+              {
+                "id": "R2-002",
+                "lens": "readability",
+                "location": "engine/review/gitexec/gitexec.go:136-144",
+                "severity": "SUGGESTION",
+                "claim": "emptyTree decides the hash function from the length of head alone, comparing against len(EmptyTreeSHA256). The inference is implicit and only valid for 40 or 64 character names; the reason for keying on head length is not stated at the function. Callers pass already validated full names, so it is not a defect, but a short comment naming that precondition would prevent misuse.",
+                "proof_refs": [
+                  "engine/review/gitexec/gitexec.go:136-144"
+                ]
+              }
+            ],
+            "evidence": [
+              "Reviewed all 7 changed paths in full. The adapter, its fake-runner and real-git tests, and the README are consistent with each other; readme_test.go ties the documented commands to DiffArgs and PathsArgs, which guards against drift.",
+              "No misleading names, dead logic or unexplained constants were found that hide a concrete defect; the 2000-byte maxSaid and the diff limit are named and documented.",
+              "Only minor maintainability suggestions are reported; none is BLOCKER or CRITICAL."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 3,
+        "target_identity": "sha256:1d5de469aaf3a34ac97ce77bc9c479b273c9be943e56651bd649de7070d422cd",
+        "capture_phase_revision": "sha256:11ffaecc5d29f8df25680e91d22aab15c9ac160c9bf2819cc8b4e4bf9ac127ed",
+        "artifact_digest": "sha256:78fd6f88a82d86954ac6cd09b3a136fbb561b8762e295fd1eb448c4719920701",
+        "result_hash": "sha256:fd005b40232200fdd914a6830d0d295478a55745c614c2c3be48420e02a9606e",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:6ddb955421e9205debd9252c88227c2c0f64698b59d5b52a46f5e02218acc154",
+            "lineage_id": "review-57ddb7814a912e00",
+            "authority_revision": "sha256:11ffaecc5d29f8df25680e91d22aab15c9ac160c9bf2819cc8b4e4bf9ac127ed",
+            "target_identity": "sha256:1d5de469aaf3a34ac97ce77bc9c479b273c9be943e56651bd649de7070d422cd",
+            "base_tree": "994c2314f691451d7b4a25a6e5bf1967ebc6a836",
+            "candidate_tree": "6fdb23df05b26a3a0a199b0e41c0a91b513ee080",
+            "changed_path_manifest_sha256": "sha256:ed852c486cee4eaae9677369693716e676a0963580a5aff5b7a25de11f77bd0e",
+            "lens": "review-reliability",
+            "selected_order": 3
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:6ddb955421e9205debd9252c88227c2c0f64698b59d5b52a46f5e02218acc154",
+            "raw_sha256": "sha256:14a38d5a02d8bc05e8554ae166cf306eb365642742accf0ca8c6bc580f100356",
+            "canonical_sha256": "sha256:8eb7266e5246a6dafe3af7820694aab0da9bebe58acdb4e650d41a8f0dfe542e",
+            "result_hash": "sha256:fd005b40232200fdd914a6830d0d295478a55745c614c2c3be48420e02a9606e",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:6ddb955421e9205debd9252c88227c2c0f64698b59d5b52a46f5e02218acc154",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/architecture_test.go",
+                "engine/review/gitexec/gitexec.go",
+                "engine/review/gitexec/gitexec_test.go",
+                "engine/review/gitexec/readme_test.go",
+                "engine/review/gitexec/realgit_test.go",
+                "engine/reviewresult/reviewresult.go",
+                "odd/review-results/README.md"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-001",
+                "lens": "reliability",
+                "location": "engine/review/gitexec/gitexec.go:219-221",
+                "severity": "WARNING",
+                "claim": "Worktree returns a taken state with a nil error when Locate fails for any reason, including a transient failure such as a timeout or git crash, not only 'not a worktree of this repository'. The caller then refuses the path as 'taken' with no indication of the real cause, which may mislead diagnosis. The failure is safe (it refuses rather than accepts) but is not distinguished or surfaced.",
+                "proof_refs": [
+                  "engine/review/gitexec/gitexec.go:219-221"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-002",
+                "lens": "reliability",
+                "location": "engine/review/gitexec/gitexec.go:184-190",
+                "severity": "WARNING",
+                "claim": "The Timeout option uses context.Background() per call, so there is no caller cancellation. A hung git is bounded only if Timeout is non-zero; the zero default means unbounded. Tests cover the deadline but not the zero default's hang risk.",
+                "proof_refs": [
+                  "engine/review/gitexec/gitexec.go:184-190"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Reviewed all seven changed paths in full.",
+              "DiffArgs, PathsArgs, environment scrubbing, NUL path splitting, and commit-name validation are asserted by unit tests with a fake runner and by real-git tests across config, attributes, environment, SHA-1/SHA-256 and worktree scenarios.",
+              "The README-versus-code consistency test ties the documented command to DiffArgs/PathsArgs, preventing silent digest drift.",
+              "No blocker or critical regression found; the package is new and the other changes are documentation and ring registration."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "cc835ef5b7ac9b9ce377ed69fd5062052c150df8d00215f2973118825616fdd1",
+    "initial_atomic_start": {
+      "lineage_id": "review-57ddb7814a912e00",
+      "worktree_identity": "sha256:571cf94da78406a5dee177091311c4fcbbbf61e483d9e6e92803045faa817e42",
+      "target_identity": "sha256:1d5de469aaf3a34ac97ce77bc9c479b273c9be943e56651bd649de7070d422cd",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "994c2314f691451d7b4a25a6e5bf1967ebc6a836",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-risk",
+        "review-resilience",
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 1624,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "git adapter engine/review/gitexec: refuses revisions read as options, scrubs GIT_* env, adds the worktree with hooks off (risk); timeouts and git failures surface as typed errors (resilience); canonical diff digest pinned against real git (reliability); docs naming the canonical command in reviewresult and odd/review-results/README.md (readability)"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

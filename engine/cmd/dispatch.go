@@ -50,6 +50,8 @@ func run(p process, d deps, args []string) {
 		runShaper(p, d, rest)
 	case "roles":
 		runRoles(p, rest)
+	case "review":
+		runReview(p, d, rest)
 	case "memory":
 		runMemory(p, d, rest)
 	case "workflow":

@@ -1,0 +1,204 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:27caf2bc01e0051dd7448ba2084cd186b05d2568e2ce97f0dfb6ae21459c0f03",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-7a5bbc217d3780d4",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "f24a0b1c1adf5f2c11207015490b2dc8f3250205",
+      "candidate_tree": "80cbbe320b137b8a5de334267e9616ac9e240c1f",
+      "paths_digest": "sha256:fd2aeba3ad594e803d8017ed6feb5decbd11ef33358906f607e4d9dfe18a83e4",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/cmd/review.go",
+        "engine/cmd/review_test.go",
+        "engine/cmd/usage.go",
+        "engine/skills/role_chain_artifact_test.go",
+        "skills/role-chain/SKILL.md"
+      ],
+      "identity": "sha256:545f34340e56dc176d610cdd3b1d88a28cb0d43ae2b358cc28cd368c0186908c"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "f24a0b1c1adf5f2c11207015490b2dc8f3250205",
+      "candidate_tree": "80cbbe320b137b8a5de334267e9616ac9e240c1f",
+      "paths_digest": "sha256:fd2aeba3ad594e803d8017ed6feb5decbd11ef33358906f607e4d9dfe18a83e4",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/cmd/review.go",
+        "engine/cmd/review_test.go",
+        "engine/cmd/usage.go",
+        "engine/skills/role_chain_artifact_test.go",
+        "skills/role-chain/SKILL.md"
+      ],
+      "identity": "sha256:545f34340e56dc176d610cdd3b1d88a28cb0d43ae2b358cc28cd368c0186908c"
+    },
+    "genesis_paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/cmd/review.go",
+      "engine/cmd/review_test.go",
+      "engine/cmd/usage.go",
+      "engine/skills/role_chain_artifact_test.go",
+      "skills/role-chain/SKILL.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 210,
+    "correction_budget": 105,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "CLI and docs fix: bind/record exit 1 when stdout cannot be written and say what was done (reliability); usage derives the diff limit from the constant, role-chain exit-2 rule widened, README rewrap (readability)",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:9ab43b4325d933bd36e6a90c971568ba8120e0a1c9efb2d4606ebc64e850894b",
+    "capture_phase_revision": "sha256:523178d6ed95a7899781efd65d887fda36720d451cb2aadb832c6962c664afc2",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "target_identity": "sha256:545f34340e56dc176d610cdd3b1d88a28cb0d43ae2b358cc28cd368c0186908c",
+        "capture_phase_revision": "sha256:523178d6ed95a7899781efd65d887fda36720d451cb2aadb832c6962c664afc2",
+        "artifact_digest": "sha256:cfd7f8e5359d9d67b8a3709dbd75a02f1e435f79e5298f2fbb7440b1cb0e50bf",
+        "result_hash": "sha256:559d9fb9851550f94cc6adee00c5d53af8deacdcdb20e35b1df2446975789e77",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:9bb1180baa7aefd58a023fbed58ce6b74ae0ae4516217472c041ed626a7b1b8b",
+            "lineage_id": "review-7a5bbc217d3780d4",
+            "authority_revision": "sha256:523178d6ed95a7899781efd65d887fda36720d451cb2aadb832c6962c664afc2",
+            "target_identity": "sha256:545f34340e56dc176d610cdd3b1d88a28cb0d43ae2b358cc28cd368c0186908c",
+            "base_tree": "f24a0b1c1adf5f2c11207015490b2dc8f3250205",
+            "candidate_tree": "80cbbe320b137b8a5de334267e9616ac9e240c1f",
+            "changed_path_manifest_sha256": "sha256:8d396821d80dfe9fe7e4a48db4736485f57aa1c73a9dfbcda6fd9261e362c0af",
+            "lens": "review-readability",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:9bb1180baa7aefd58a023fbed58ce6b74ae0ae4516217472c041ed626a7b1b8b",
+            "raw_sha256": "sha256:a5ee93d14455db2e08bf2241ffcba37b6c66b891947ac133a5e31fb0910b6447",
+            "canonical_sha256": "sha256:a5ee93d14455db2e08bf2241ffcba37b6c66b891947ac133a5e31fb0910b6447",
+            "result_hash": "sha256:559d9fb9851550f94cc6adee00c5d53af8deacdcdb20e35b1df2446975789e77",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:9bb1180baa7aefd58a023fbed58ce6b74ae0ae4516217472c041ed626a7b1b8b",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "CHANGELOG.md",
+                "README.md",
+                "engine/cmd/review.go",
+                "engine/cmd/review_test.go",
+                "engine/cmd/usage.go",
+                "engine/skills/role_chain_artifact_test.go",
+                "skills/role-chain/SKILL.md"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [],
+            "evidence": [
+              "Reviewed all 7 changed paths. The writeReviewJSON refactor returns an error and leaves the exit to the caller, and its doc comment says so. The clock wiring is explained at its seam in engine/cmd/review.go. The 150000 literal in usage.go became review.DiffLimitBytes, and the test now uses the constant too. The new tests state their intent in comments. The SKILL.md edits only tighten wording, and the new contract phrase is covered by the artifact test. I found no misleading names, dead or duplicated logic, or unexplained constants caused by this change. One minor note: README.md still hardcodes 150000 while usage.go uses the constant. That is not a concrete defect."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 1,
+        "target_identity": "sha256:545f34340e56dc176d610cdd3b1d88a28cb0d43ae2b358cc28cd368c0186908c",
+        "capture_phase_revision": "sha256:523178d6ed95a7899781efd65d887fda36720d451cb2aadb832c6962c664afc2",
+        "artifact_digest": "sha256:46355d98d3a54d6716642eb983415d603d592efd8f5ad143ea2c083a35af05a7",
+        "result_hash": "sha256:06d77ca1c94cc60b754746978f1ac590ef3e8a00f7f6a1f319d63143b7fd514e",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:aad544716fa60461c13dd2ea3be588a17b6ac9ac5828fe66c06d8ead9f6d1b20",
+            "lineage_id": "review-7a5bbc217d3780d4",
+            "authority_revision": "sha256:523178d6ed95a7899781efd65d887fda36720d451cb2aadb832c6962c664afc2",
+            "target_identity": "sha256:545f34340e56dc176d610cdd3b1d88a28cb0d43ae2b358cc28cd368c0186908c",
+            "base_tree": "f24a0b1c1adf5f2c11207015490b2dc8f3250205",
+            "candidate_tree": "80cbbe320b137b8a5de334267e9616ac9e240c1f",
+            "changed_path_manifest_sha256": "sha256:8d396821d80dfe9fe7e4a48db4736485f57aa1c73a9dfbcda6fd9261e362c0af",
+            "lens": "review-reliability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:aad544716fa60461c13dd2ea3be588a17b6ac9ac5828fe66c06d8ead9f6d1b20",
+            "raw_sha256": "sha256:5da5d277333150dee79902c31dae61eb7be5e934083677d2e36b4da9fb3f4e15",
+            "canonical_sha256": "sha256:5da5d277333150dee79902c31dae61eb7be5e934083677d2e36b4da9fb3f4e15",
+            "result_hash": "sha256:06d77ca1c94cc60b754746978f1ac590ef3e8a00f7f6a1f319d63143b7fd514e",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:aad544716fa60461c13dd2ea3be588a17b6ac9ac5828fe66c06d8ead9f6d1b20",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "CHANGELOG.md",
+                "README.md",
+                "engine/cmd/review.go",
+                "engine/cmd/review_test.go",
+                "engine/cmd/usage.go",
+                "engine/skills/role_chain_artifact_test.go",
+                "skills/role-chain/SKILL.md"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [],
+            "evidence": [
+              "engine/cmd/review.go: bind and record now return the stdout write error from writeReviewJSON and exit 1 with a message naming the worktree or stored result. Success exits 0 only after a successful write. engine/cmd/review_test.go covers both paths with a failing stdout, asserting exit code, exact stderr, empty stdout, and that the worktree or stored file still exists.",
+              "engine/cmd/review.go: reviewServiceOver wires time.Sleep into the review service. TestRecordWaitsOnTheClockOfTheMachineBetweenTriesForANumber injects three name collisions, asserts the fourth number is used, and asserts each retry waited at least 1ms. This is an externally observable check of the backoff wiring.",
+              "engine/cmd/usage.go and engine/cmd/review_test.go: the usage text now takes the 150000 limit from review.DiffLimitBytes and states the new exit-1 case, and the usage test asserts both strings. README.md and skills/role-chain/SKILL.md changes match, and the role-chain artifact test gains the new phrase it requires, which is present in SKILL.md.",
+              "Not verifiable from the patch: the signatures of the local fail closures in runReviewBind and runReviewRecord, and the WithSleep method in review/app. Both sit outside the changed paths, so I treated them as existing base code."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "9f7770a2cf28a09d422a5c3789233d49fe6d994db8ffc333585ae9f8bdf60ec8",
+    "initial_atomic_start": {
+      "lineage_id": "review-7a5bbc217d3780d4",
+      "worktree_identity": "sha256:571cf94da78406a5dee177091311c4fcbbbf61e483d9e6e92803045faa817e42",
+      "target_identity": "sha256:545f34340e56dc176d610cdd3b1d88a28cb0d43ae2b358cc28cd368c0186908c",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "f24a0b1c1adf5f2c11207015490b2dc8f3250205",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 210,
+      "correction_budget": 105,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "CLI and docs fix: bind/record exit 1 when stdout cannot be written and say what was done (reliability); usage derives the diff limit from the constant, role-chain exit-2 rule widened, README rewrap (readability)"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

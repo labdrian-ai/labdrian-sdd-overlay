@@ -1,0 +1,291 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:24d93730041d7542fdc6112482196dc4a7231c629ba82b9512c2639682f309af",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-4469865c516e7dd3",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "f1743b221472745aae717934433d0e14356d9418",
+      "candidate_tree": "40fecae7396fdc0785da9331b1bcf93644de1c42",
+      "paths_digest": "sha256:27665e21587e9c2574ccd131a343038c170cfe649020e8c0dd266f6cb4921909",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/atomicfile/atomicfile.go",
+        "engine/atomicfile/atomicfile_test.go",
+        "engine/cmd/review.go",
+        "engine/review/fsstore/bypath.go",
+        "engine/review/fsstore/changes_internal_test.go",
+        "engine/review/fsstore/held_linux.go"
+      ],
+      "identity": "sha256:bcb9e40e30e58801ba1a10c6916b936158bd9b6d96ebafa4269ab14ffd418443"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "f1743b221472745aae717934433d0e14356d9418",
+      "candidate_tree": "40fecae7396fdc0785da9331b1bcf93644de1c42",
+      "paths_digest": "sha256:27665e21587e9c2574ccd131a343038c170cfe649020e8c0dd266f6cb4921909",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/atomicfile/atomicfile.go",
+        "engine/atomicfile/atomicfile_test.go",
+        "engine/cmd/review.go",
+        "engine/review/fsstore/bypath.go",
+        "engine/review/fsstore/changes_internal_test.go",
+        "engine/review/fsstore/held_linux.go"
+      ],
+      "identity": "sha256:bcb9e40e30e58801ba1a10c6916b936158bd9b6d96ebafa4269ab14ffd418443"
+    },
+    "genesis_paths": [
+      "CHANGELOG.md",
+      "engine/atomicfile/atomicfile.go",
+      "engine/atomicfile/atomicfile_test.go",
+      "engine/cmd/review.go",
+      "engine/review/fsstore/bypath.go",
+      "engine/review/fsstore/changes_internal_test.go",
+      "engine/review/fsstore/held_linux.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-risk",
+      "review-resilience",
+      "review-readability"
+    ],
+    "original_changed_lines": 123,
+    "correction_budget": 62,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "atomicfile gains ErrDirNotFlushed with an unchanged message, shared by eight consumers (risk); by-path store maps it to app.ErrNotFlushed so a retry does not store twice (resilience); single record failure path and openBelow wording comment (readability)",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:71cf6e6b9386c7065633fcc2f5092dc1405f88bc31e70a7d14149e82910efc06",
+    "capture_phase_revision": "sha256:00edd5cc068d1f3c053deadc6c8ae24a0ba91a660a33771314f2a11faa1483d0",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:bcb9e40e30e58801ba1a10c6916b936158bd9b6d96ebafa4269ab14ffd418443",
+        "capture_phase_revision": "sha256:00edd5cc068d1f3c053deadc6c8ae24a0ba91a660a33771314f2a11faa1483d0",
+        "artifact_digest": "sha256:f2ec3116a618bf84b94d3be875c71bfa1f08fd37e7673db9e19af55c3cfb8829",
+        "result_hash": "sha256:054ef20ac749de6fc108b05d19a7ba20fd38cc7e9ab11bac7786ef2fc57dddd0",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:7ea0f8aa0d416457013db1e068d226b6bd93d73a3e5718cbd47e76a9c3fbf890",
+            "lineage_id": "review-4469865c516e7dd3",
+            "authority_revision": "sha256:00edd5cc068d1f3c053deadc6c8ae24a0ba91a660a33771314f2a11faa1483d0",
+            "target_identity": "sha256:bcb9e40e30e58801ba1a10c6916b936158bd9b6d96ebafa4269ab14ffd418443",
+            "base_tree": "f1743b221472745aae717934433d0e14356d9418",
+            "candidate_tree": "40fecae7396fdc0785da9331b1bcf93644de1c42",
+            "changed_path_manifest_sha256": "sha256:434fd93465e61b66d0b8b0a267d476ace38f77636227fc0395788590837ddd39",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:7ea0f8aa0d416457013db1e068d226b6bd93d73a3e5718cbd47e76a9c3fbf890",
+            "raw_sha256": "sha256:dd1c09a6fea332fd3d89a3de64ce2998f277b2398282fa565fc069efc7b9d593",
+            "canonical_sha256": "sha256:45e5ac6980cc9118cc097e3a68ed762338b26ded47434d6f44ac16b9f4be198c",
+            "result_hash": "sha256:054ef20ac749de6fc108b05d19a7ba20fd38cc7e9ab11bac7786ef2fc57dddd0",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:7ea0f8aa0d416457013db1e068d226b6bd93d73a3e5718cbd47e76a9c3fbf890",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "CHANGELOG.md",
+                "engine/atomicfile/atomicfile.go",
+                "engine/atomicfile/atomicfile_test.go",
+                "engine/cmd/review.go",
+                "engine/review/fsstore/bypath.go",
+                "engine/review/fsstore/changes_internal_test.go",
+                "engine/review/fsstore/held_linux.go"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "Reviewed all 7 changed paths in full. The atomicfile change adds a typed dirFlushError that keeps the old message and wraps the underlying error. Its Is method matches only ErrDirNotFlushed, so it introduces no data exposure and does not widen any path handling.",
+              "publishError in engine/review/fsstore/bypath.go checks fs.ErrExist before ErrDirNotFlushed. A failed directory flush therefore cannot be mistaken for a taken name, and a published result is reported as stored (app.ErrNotFlushed) rather than retried and duplicated. The symlink and ErrChanged protections on the by-path store are unchanged.",
+              "The recordFailed refactor in engine/cmd/review.go keeps the exit codes: 2 for a refused reply and 1 for anything else, including a handoff write failure. The change to the handoff-failure path is small, and I found no input that now exits with the wrong code.",
+              "The change to held_linux.go touches only a comment. The CHANGELOG and the tests add no runtime behavior.",
+              "I found no secrets, no unsafe input handling and no dependency changes in this candidate."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-resilience",
+        "selected_order": 1,
+        "target_identity": "sha256:bcb9e40e30e58801ba1a10c6916b936158bd9b6d96ebafa4269ab14ffd418443",
+        "capture_phase_revision": "sha256:00edd5cc068d1f3c053deadc6c8ae24a0ba91a660a33771314f2a11faa1483d0",
+        "artifact_digest": "sha256:c66d0b5d4eeb513dc5cb37e0c1b247eff8938671555471093405e0aad38c3673",
+        "result_hash": "sha256:5f8624970fa8f05c17dfa1a6af33a9b5fbe684c1594021eccc78a1b343d761f4",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:b3458f5a1b68a7e8b81a2a9c4706a2ec1bf79349c9070b696f91ed8ba50e801d",
+            "lineage_id": "review-4469865c516e7dd3",
+            "authority_revision": "sha256:00edd5cc068d1f3c053deadc6c8ae24a0ba91a660a33771314f2a11faa1483d0",
+            "target_identity": "sha256:bcb9e40e30e58801ba1a10c6916b936158bd9b6d96ebafa4269ab14ffd418443",
+            "base_tree": "f1743b221472745aae717934433d0e14356d9418",
+            "candidate_tree": "40fecae7396fdc0785da9331b1bcf93644de1c42",
+            "changed_path_manifest_sha256": "sha256:434fd93465e61b66d0b8b0a267d476ace38f77636227fc0395788590837ddd39",
+            "lens": "review-resilience",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:b3458f5a1b68a7e8b81a2a9c4706a2ec1bf79349c9070b696f91ed8ba50e801d",
+            "raw_sha256": "sha256:b4823c810f805b779987982dec9013339c54e0424f9520ad346ff82b9addc9d6",
+            "canonical_sha256": "sha256:606ac3041e27f923a13afd63de050d36b2fd934a241fda0a843c7f08c0f32079",
+            "result_hash": "sha256:5f8624970fa8f05c17dfa1a6af33a9b5fbe684c1594021eccc78a1b343d761f4",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:b3458f5a1b68a7e8b81a2a9c4706a2ec1bf79349c9070b696f91ed8ba50e801d",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "CHANGELOG.md",
+                "engine/atomicfile/atomicfile.go",
+                "engine/atomicfile/atomicfile_test.go",
+                "engine/cmd/review.go",
+                "engine/review/fsstore/bypath.go",
+                "engine/review/fsstore/changes_internal_test.go",
+                "engine/review/fsstore/held_linux.go"
+              ]
+            },
+            "lens": "review-resilience",
+            "findings": [],
+            "evidence": [
+              "engine/atomicfile/atomicfile.go: dirFlushError keeps the original message text and Unwrap returns the underlying flush error. Is matches ErrDirNotFlushed. Callers that matched the old wrapped error still work, and the new sentinel only adds information.",
+              "engine/review/fsstore/bypath.go: publishError maps a failed directory flush after the link to app.ErrNotFlushed. The fallback platform no longer reports a stored result as a failure, so a retry cannot store a duplicate. The taken-name check runs first, so ErrExist and ErrNotFlushed stay distinct. The test covers both cases plus the generic fallback.",
+              "engine/cmd/review.go: recordFailed is a pure extraction of the earlier closure. A handoff write failure still exits 1, because that error does not wrap a refusal. The stderr text is unchanged.",
+              "engine/review/fsstore/held_linux.go: only a comment changed.",
+              "I found no concrete failure mode introduced by this candidate."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "selected_order": 2,
+        "target_identity": "sha256:bcb9e40e30e58801ba1a10c6916b936158bd9b6d96ebafa4269ab14ffd418443",
+        "capture_phase_revision": "sha256:00edd5cc068d1f3c053deadc6c8ae24a0ba91a660a33771314f2a11faa1483d0",
+        "artifact_digest": "sha256:32c28c70b147ca43f1bce32117d97387db1c6ec42ec568ca37ecc2791b21f5f6",
+        "result_hash": "sha256:2845d350f3d51467f112549325f43fbba7908209a3d1cb2333cb621bc6c6c6de",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:a618eda65bf7296a869a6d9e0298b4d58335667bdd71f72168f1dde1ba81e4d2",
+            "lineage_id": "review-4469865c516e7dd3",
+            "authority_revision": "sha256:00edd5cc068d1f3c053deadc6c8ae24a0ba91a660a33771314f2a11faa1483d0",
+            "target_identity": "sha256:bcb9e40e30e58801ba1a10c6916b936158bd9b6d96ebafa4269ab14ffd418443",
+            "base_tree": "f1743b221472745aae717934433d0e14356d9418",
+            "candidate_tree": "40fecae7396fdc0785da9331b1bcf93644de1c42",
+            "changed_path_manifest_sha256": "sha256:434fd93465e61b66d0b8b0a267d476ace38f77636227fc0395788590837ddd39",
+            "lens": "review-readability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:a618eda65bf7296a869a6d9e0298b4d58335667bdd71f72168f1dde1ba81e4d2",
+            "raw_sha256": "sha256:e455295b8f8a6b4dcd43003fcb1a361cd73feb06cb16dd3771599fc9114c79a1",
+            "canonical_sha256": "sha256:e708387a3ec2d8cd0fdb10bb10093b3575af735d7aa6ce5c4d1c2be5c31057c1",
+            "result_hash": "sha256:2845d350f3d51467f112549325f43fbba7908209a3d1cb2333cb621bc6c6c6de",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:a618eda65bf7296a869a6d9e0298b4d58335667bdd71f72168f1dde1ba81e4d2",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "CHANGELOG.md",
+                "engine/atomicfile/atomicfile.go",
+                "engine/atomicfile/atomicfile_test.go",
+                "engine/cmd/review.go",
+                "engine/review/fsstore/bypath.go",
+                "engine/review/fsstore/changes_internal_test.go",
+                "engine/review/fsstore/held_linux.go"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-1",
+                "lens": "readability",
+                "location": "engine/review/fsstore/held_linux.go:148-151",
+                "severity": "WARNING",
+                "claim": "The rewritten comment sits above a branch that builds the 'read \u003cpath\u003e: open \u003cpath\u003e' wording, but it describes 'make \u003cpath\u003e: mkdir \u003cpath\u003e' as well. That wording is not produced by this branch, which runs only when create is false. A maintainer cannot tell from the comment which code path yields the mkdir wording, so it may mislead edits to the error text that a test pins.",
+                "proof_refs": [
+                  "engine/review/fsstore/held_linux.go:148-151"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-2",
+                "lens": "readability",
+                "location": "engine/atomicfile/atomicfile.go:283-283",
+                "severity": "SUGGESTION",
+                "claim": "dirFlushError.Is returns true only for ErrDirNotFlushed and does not delegate to the wrapped error. This is fine because Unwrap handles the chain. The two one-line methods are packed next to each other with no blank line, which makes the type's contract harder to scan.",
+                "proof_refs": [
+                  "engine/atomicfile/atomicfile.go:282-284"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Reviewed all 7 changed paths in the patch.",
+              "The ErrDirNotFlushed refactor is consistent across atomicfile, the by-path store, and its tests. The recordFailed extraction in review.go removes duplicated exit-code logic and keeps behavior the same.",
+              "The CHANGELOG entry matches the code changes."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "4cccd259f4d9e30f24e7668c22157ff57df73efe8f55070ffa291794c1e82d9d",
+    "initial_atomic_start": {
+      "lineage_id": "review-4469865c516e7dd3",
+      "worktree_identity": "sha256:571cf94da78406a5dee177091311c4fcbbbf61e483d9e6e92803045faa817e42",
+      "target_identity": "sha256:bcb9e40e30e58801ba1a10c6916b936158bd9b6d96ebafa4269ab14ffd418443",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "f1743b221472745aae717934433d0e14356d9418",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-risk",
+        "review-resilience",
+        "review-readability"
+      ],
+      "original_changed_lines": 123,
+      "correction_budget": 62,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "atomicfile gains ErrDirNotFlushed with an unchanged message, shared by eight consumers (risk); by-path store maps it to app.ErrNotFlushed so a retry does not store twice (resilience); single record failure path and openBelow wording comment (readability)"
+    },
+    "runtime_agent": "claude-code"
+  }
+}
