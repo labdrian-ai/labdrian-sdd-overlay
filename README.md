@@ -578,12 +578,15 @@ overlay roles <verb>
     append  --project <id> --goal <id> --chain <id> --stdin                      append one record read only from stdin; refused on identity mismatch,
                                                                                   a broken hash chain, a seq gap, an invalid role transition, or a
                                                                                   completed review-report whose review-diff or review-result evidence is
-                                                                                  missing or differs from the files `review record` and `review verify` stored
+                                                                                  missing or differs from the files `review record` and `review verify` stored,
+                                                                                  or a completed review-exemption whose review-diff or review-exemption
+                                                                                  evidence is missing or differs from the file `review exempt` stored (or
+                                                                                  whose exemption no longer holds)
     match-shaper --root <worktree> --handoff <path>                              report which of a Shaper handoff v3's free-form roles equal a
                                                                                   member of the reusable-role vocabulary, without changing v3 semantics
 
 overlay review <verb>
-    Forward review binding, storage and delivery-check verbs to the engine unchanged. No verb launches an agent or
+    Forward review binding, storage, exemption and delivery-check verbs to the engine unchanged. No verb launches an agent or
     dispatches work: a reviewer's or a verifier's reply is a file somebody else produced. What is stored
     where, and the exact git command whose output `diff_sha256` is the digest of, are in
     odd/review-results/README.md.
@@ -630,15 +633,38 @@ overlay review <verb>
         stores nothing. A reply that breaks a rule writes nothing and the error names the rule. Exit 0
         stored, 2 reply refused, 1 usage error, a spent correction round or any other failure.
     check  --feature <name> [--head <rev>] [--cwd <repo>]
-        Decide whether the head being delivered (--head, default HEAD) was reviewed and nothing the engine
-        stored keeps it from delivery. Each result stored for that head is held to its binding again, the
-        candidate is recomputed from git for the base the result names and that head and the stored binding
-        (base, head, diff_sha256, paths) must equal it, and the findings and the verdict stored beside the
-        result decide whether it blocks. The head is cleared when at least one result binds it and every one
-        is clear; a result that blocks keeps the head blocked whatever was recorded after it, and a check that
-        did not run never passes. stdout is one JSON object (head, outcome, results). Nothing is stored. The
-        delivery role runs it before it closes the feature. Exit 0 cleared, 1 usage error, refusal or any
-        other failure.
+        Decide whether the head being delivered (--head, default HEAD) was reviewed, or exempted from review,
+        and nothing the engine stored keeps it from delivery. Each result stored for that head is held to its
+        binding again, the candidate is recomputed from git for the base the result names and that head and
+        the stored binding (base, head, diff_sha256, paths) must equal it, and the findings and the verdict
+        stored beside the result decide whether it blocks; each exemption stored for the head is held again to
+        the rules it was made under (a declared risk of none, a clear report) and to git in the same way. The
+        head is cleared when at least one result binds it and every one is clear, or when an exemption binds
+        it and no result does; a result that blocks keeps the head blocked whatever was recorded after it and
+        whatever exemption exists, a result with a severe finding no verifier checked is not clear either, and
+        a check that did not run never passes. A result or an exemption that no longer holds refuses the head.
+        stdout is one JSON object (head, outcome, results, and exemptions when one of them cleared the head).
+        Nothing is stored. The delivery role runs it before it closes the feature. Exit 0 cleared, 1 usage
+        error, refusal or any other failure.
+    exempt --feature <name> --base <rev> --head <rev> --risk <none|items> [--cwd <repo>]
+        Exempt a head from review when its work takes none, on the evidence of the verifier and the risk the
+        agent declares. The verifier's report is read from stdin and from nowhere else: one JSON object and no
+        prose, {"checks": [{"command": ..., "result": pass, fail or not-run, "output": ...}]}, the checks it
+        ran in the order it ran them; every member is required, and the report is clear only when it names at
+        least one check and every check passed (a check that did not run never passes). --risk is `none` or
+        the numbers 1 to 6 of the high-risk items of the orchestrator's Task Size list, separated by commas
+        with no space and none written twice (`2,4`): 1 data or irreversible effects, 2 security, 3 contracts
+        others consume, 4 concurrency, 5 delivery or environment, 6 no test would catch a regression. The
+        engine does not compute the risk from the diff: it holds the declaration to this grammar, and a head
+        that names any item is never exempt, because that is what a review is for. Compute the binding from
+        git as `record` does and store the exemption as odd/review-results/<feature>/<head12>-<n>.exempt.json,
+        numbered with the results and the verdicts of the head and never over an existing file; the file holds
+        the binding, the declared risk and the report. stdout is the RoleHandoff skeleton for `roles append
+        --stdin` (from_role reviewer, to_role delivery, payload_kind review-exemption, payload_sha256 of the
+        stored file, evidence review-diff and review-exemption); the parent of the chain fills project_id,
+        goal_id, chain_id, seq, prev_sha256 and context.summary. A declaration or a report that does not hold
+        writes nothing and the error names the rule. `check` clears an exempted head unless a stored result
+        blocks it. Exit 0 stored, 2 report refused, 1 usage error, a risk that is refused or any other failure.
 
 overlay memory <verb>
     Forward memory-directive verbs to the engine unchanged. Read-only: it only plans what memory
