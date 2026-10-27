@@ -20,7 +20,7 @@ Objective: replace gentle-ai's native review with our own mechanically enforced 
 
 - [x] T1 — S1-S2 — delegated — review-result domain package, reviewer `id`, regenerated role files — commit: `38dd14fe` and its successor (roles, pins, docs)
 - [x] T2 — S3 — delegated — `review bind` and `review record` — commit: `20809b6c` (domain), `690e952f` (app), `e6ff12c8` (fsstore), `32a00b30` (gitexec), `1ffd87b3` (CLI), `a03f2277` (docs, role-chain); review fixes `01e7e5de`, `343478ee`, `c70602d7`, `12b5fc05`, `2bac021a`, `1c9ead64` (L8), `43b677a2`, `a5d973ad`, `28ad489f`, `93ca3f10`, `666e2bc0` and its successor (receipts, L9)
-- [x] T3 — S4 — delegated — verifier verdict contract, store, blocks decision, round bound — commit: -
+- [x] T3 — S4 — delegated — verifier verdict contract, store, blocks decision, round bound — commit: 85a46399, f1073401, 28186ed2, f2e20b01, 25cbaa60, e0331540, 14ba5163, 6893cbb0 (lock), 8fdff12d, 19657a0f, a78f4fa8 (review fixes), e7012502, 031a5ea2, 49b3d5ee (receipts)
 - [ ] T4 — S5 — delegated — typed evidence in `roles append`, `review check`, delivery body — commit: -
 - [ ] T5 — S8 — delegated — canonical lens rows, rows recorded, actuals schema — commit: -
 - [ ] T6 — S6 — delegated — our Stop hook, install/status/uninstall — commit: -
