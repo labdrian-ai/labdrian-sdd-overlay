@@ -148,4 +148,15 @@ func TestTheZeroCandidateHasAnEmptyShortName(t *testing.T) {
 	if got := (review.Candidate{}).Short(); got != "" {
 		t.Errorf("Candidate{}.Short() = %q, want \"\"", got)
 	}
+	// A head shorter than 12 characters names nothing either; NewCandidate never builds one.
+	for _, tc := range []struct{ head, want string }{
+		{"1", ""},
+		{"12345678901", ""},
+		{"123456789012", "123456789012"},
+		{"1234567890123", "123456789012"},
+	} {
+		if got := (review.Candidate{Head: tc.head}).Short(); got != tc.want {
+			t.Errorf("Candidate{Head: %q}.Short() = %q, want %q", tc.head, got, tc.want)
+		}
+	}
 }

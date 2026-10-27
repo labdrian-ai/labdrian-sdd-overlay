@@ -256,12 +256,11 @@ func (g Git) Worktree(repo app.Repository, path string) (app.WorktreeState, erro
 	}
 	taken := app.WorktreeState{Present: true}
 	asked := false
-	observer := gitprov.Observer{
-		Run: func(dir string, env []string, args []string) ([]byte, error) {
-			asked = true
-			return g.observe(dir, env, args)
-		},
-		Environ: g.ambient,
+	observer := g.observer()
+	run := observer.Run
+	observer.Run = func(dir string, env []string, args []string) ([]byte, error) {
+		asked = true
+		return run(dir, env, args)
 	}
 	obs, err := observer.Locate(path)
 	if err != nil {
@@ -323,7 +322,8 @@ func (f *failure) Unwrap() error { return f.err }
 
 // answered says whether err, the error of a start of git that ran under ctx, is an answer of git: it ran to an
 // exit status, and its time was not up. A git that could not be started, that a signal ended, or that the
-// deadline stopped answered nothing. It must be called before ctx is cancelled.
+// deadline stopped answered nothing. It must be called before ctx is cancelled. ExitCode is -1 both for a
+// process a signal ended and for an ExitError with no process state, so either reads as no answer.
 func answered(ctx context.Context, err error) bool {
 	var exit *exec.ExitError
 	return ctx.Err() == nil && errors.As(err, &exit) && exit.ExitCode() >= 0
