@@ -54,11 +54,12 @@ func (e *EvidenceError) Error() string {
 
 func (e *EvidenceError) Unwrap() error { return e.Err }
 
-// NeedsEvidence reports whether h is a record that must carry evidence of the stored files: a review-report
-// that is completed. An interrupted one says the review did not run, and a review that did not run stores
-// nothing, so its evidence would have no file to name; a record of any other kind is not about a review.
+// NeedsEvidence reports whether h is a record that must carry evidence of the stored files: a review-report or a
+// review-exemption that is completed. An interrupted one says the review did not run, or the exemption was not
+// made, and what did not run stores nothing, so its evidence would have no file to name; a record of any other kind
+// is not about a review.
 func NeedsEvidence(h roles.RoleHandoff) bool {
-	return h.PayloadKind == PayloadKind && h.Status == roles.StatusCompleted
+	return (h.PayloadKind == PayloadKind || h.PayloadKind == PayloadExemption) && h.Status == roles.StatusCompleted
 }
 
 // OptionalEvidence returns the one piece of evidence of the kind that h carries, and whether it carries one.

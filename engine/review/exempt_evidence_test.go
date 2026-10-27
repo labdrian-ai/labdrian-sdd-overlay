@@ -12,6 +12,35 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/roles"
 )
 
+// A completed review-exemption is held to evidence of the stored files, as a completed review-report is: it says the
+// head was exempted, and an exemption that was made is a file. An interrupted one says it was not made, and any
+// other kind is not about a review.
+func TestNeedsEvidenceIsACompletedReviewExemptionToo(t *testing.T) {
+	interrupted := func(h *roles.RoleHandoff) {
+		reason := "exemption not made: the verifier did not run"
+		h.Status, h.ResumeReason = roles.StatusInterrupted, &reason
+	}
+	for _, tc := range []struct {
+		name string
+		edit func(*roles.RoleHandoff)
+		want bool
+	}{
+		{"a completed review-exemption", func(*roles.RoleHandoff) {}, true},
+		{"an interrupted review-exemption", interrupted, false},
+		{"a kind that differs in case", func(h *roles.RoleHandoff) { h.PayloadKind = "Review-Exemption" }, false},
+		{"a kind with something after it", func(h *roles.RoleHandoff) { h.PayloadKind = "review-exemption-v2" }, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			h := review.ExemptionHandoff(candidate(t), exemptionRef, storedSHA)
+			tc.edit(&h)
+
+			if got := review.NeedsEvidence(h); got != tc.want {
+				t.Errorf("NeedsEvidence() = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
 // Evidence that a record needs and does not carry is refused with the kind named, and says which record needs it:
 // the words for a review-report are the ones they always were, and a review-exemption says its own kind.
 func TestMissingEvidenceSaysWhichRecordNeedsIt(t *testing.T) {

@@ -12,7 +12,8 @@ import (
 // completed review-report, review.NeedsEvidence) carries the range that was reviewed with the digest of its
 // diff, the stored result with its digest and, when the verifier ran, the stored verdict with its digest. The
 // use case reads those files and checks the three; any other record is accepted as it is and nothing is asked
-// of git or of the store.
+// of git or of the store. A completed review-exemption, the record that closes the exemption of a head, is held
+// in the same way to the range and to the stored exemption (checkExemptionEvidence).
 //
 //   - the review-diff and the review-result are both needed, each given once;
 //   - the ref of the review-result is exactly one stored result, review.ResultRef, and its sha256 is the
@@ -33,6 +34,9 @@ import (
 func (s Service) CheckEvidence(dir string, h roles.RoleHandoff) error {
 	if !review.NeedsEvidence(h) {
 		return nil
+	}
+	if h.PayloadKind == review.PayloadExemption {
+		return s.checkExemptionEvidence(dir, h)
 	}
 	diff, err := review.RequiredEvidence(h, review.EvidenceDiff)
 	if err != nil {
@@ -82,6 +86,55 @@ func (s Service) CheckEvidence(dir string, h roles.RoleHandoff) error {
 		return err
 	}
 	return review.CheckFile(verdict, verdictFile)
+}
+
+// checkExemptionEvidence is CheckEvidence for a completed review-exemption, with the same order and the same
+// guarantees: it reads and stores nothing else, and the shape of the record and of its refs is checked before the
+// repository is located.
+//
+//   - the review-diff and the review-exemption are both needed, each given once;
+//   - the ref of the review-exemption is exactly one stored exemption, review.ExemptionRef, and its sha256 is the
+//     digest of the bytes stored now;
+//   - the stored file must still be an exemption (review.DecodeExemption) that holds to the rules it was made under
+//     (review.CheckExemption): a declared risk that names no high-risk item and a report that is clear, so that an
+//     exemption that was edited after the record was made, even with the record's digest changed to match, is
+//     refused for what it now says;
+//   - the review-diff is the range of the binding stored with that exemption, and its sha256 the diff_sha256 of it.
+//     The diff is not computed again here: whether the head being delivered is the one exempted is Check's.
+//
+// An exemption that does not hold is an *review.EvidenceError of the review-exemption that wraps the rule it broke.
+func (s Service) checkExemptionEvidence(dir string, h roles.RoleHandoff) error {
+	diff, err := review.RequiredEvidence(h, review.EvidenceDiff)
+	if err != nil {
+		return err
+	}
+	exemption, err := review.RequiredEvidence(h, review.EvidenceExemption)
+	if err != nil {
+		return err
+	}
+	feature, name, err := review.ExemptionRef(exemption)
+	if err != nil {
+		return err
+	}
+	repo, err := s.git.Locate(dir)
+	if err != nil {
+		return fmt.Errorf("locate the repository of %s: %w", dir, err)
+	}
+	file, err := s.readEvidence(repo, feature, name, exemption)
+	if err != nil {
+		return err
+	}
+	if err := review.CheckFile(exemption, file); err != nil {
+		return err
+	}
+	stored, err := review.DecodeExemption(file)
+	if err == nil {
+		err = review.CheckExemption(stored)
+	}
+	if err != nil {
+		return &review.EvidenceError{Kind: exemption.Kind, Ref: exemption.Ref, Err: err}
+	}
+	return review.CheckRange(diff, stored.Binding)
 }
 
 // readEvidence reads the stored file that e names, and makes nothing. A file that cannot be read is the
