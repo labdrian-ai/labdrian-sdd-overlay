@@ -1,0 +1,188 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:8ad0a64966ccfb7513b971cca73858614a629c9cb4162fe53c04090e654062e8",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-62bdfa20106ce131",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "c38a1530d0cfa0a20ca9b7fe3d9cc28b2eddf5ad",
+      "candidate_tree": "0d89003c1186cbad306bb26cd276358f8c68ea39",
+      "paths_digest": "sha256:2f0977d7291b4a73dc82b568456a8064570bccb0107741d97d430e0723289c45",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/review/check.go",
+        "engine/review/check_test.go",
+        "engine/review/review.go"
+      ],
+      "identity": "sha256:d74d02d280f679956065e8517c85512b6bdd7cf697969a66afd29271978f5446"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "c38a1530d0cfa0a20ca9b7fe3d9cc28b2eddf5ad",
+      "candidate_tree": "0d89003c1186cbad306bb26cd276358f8c68ea39",
+      "paths_digest": "sha256:2f0977d7291b4a73dc82b568456a8064570bccb0107741d97d430e0723289c45",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/review/check.go",
+        "engine/review/check_test.go",
+        "engine/review/review.go"
+      ],
+      "identity": "sha256:d74d02d280f679956065e8517c85512b6bdd7cf697969a66afd29271978f5446"
+    },
+    "genesis_paths": [
+      "engine/review/check.go",
+      "engine/review/check_test.go",
+      "engine/review/review.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-risk",
+      "review-reliability"
+    ],
+    "original_changed_lines": 285,
+    "correction_budget": 143,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "commit 840f1e36 of own-rdd T4: feat(review): rules that clear a head for delivery",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:f198a35352611ae1eb5be1fae720c0f130c960bfdd08bdd8f0656809f16e8b4e",
+    "capture_phase_revision": "sha256:255a96de2fced4b7a160552a28a93a56c2c98fe6cb59e049510d17f60cd30155",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:d74d02d280f679956065e8517c85512b6bdd7cf697969a66afd29271978f5446",
+        "capture_phase_revision": "sha256:255a96de2fced4b7a160552a28a93a56c2c98fe6cb59e049510d17f60cd30155",
+        "artifact_digest": "sha256:753ca35c61c5d9b940f78d6ad5a5d1cccb328fb887d0f34eb5eae129df15adf5",
+        "result_hash": "sha256:ffed40e7b17f8e5ff7535486446646f3a58791bb53969c3693caace4dc09a089",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:9ae75e5d17ed3acc79def54233a1591c6cb330c3bbd2a937842fdfbb20bce590",
+            "lineage_id": "review-62bdfa20106ce131",
+            "authority_revision": "sha256:255a96de2fced4b7a160552a28a93a56c2c98fe6cb59e049510d17f60cd30155",
+            "target_identity": "sha256:d74d02d280f679956065e8517c85512b6bdd7cf697969a66afd29271978f5446",
+            "base_tree": "c38a1530d0cfa0a20ca9b7fe3d9cc28b2eddf5ad",
+            "candidate_tree": "0d89003c1186cbad306bb26cd276358f8c68ea39",
+            "changed_path_manifest_sha256": "sha256:7ead6da3c5f5b5f3289aa17e52341b603e88552b513c46376f89cb96adaeadd6",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:9ae75e5d17ed3acc79def54233a1591c6cb330c3bbd2a937842fdfbb20bce590",
+            "raw_sha256": "sha256:1a1a4a05991fe6ff68aa6449fb8dd32c80257612aed4bb05d61c17e9428497ce",
+            "canonical_sha256": "sha256:8c9e7fd607627609dc7525462d36833d3c249de89da7811537ec6c73b39ae545",
+            "result_hash": "sha256:ffed40e7b17f8e5ff7535486446646f3a58791bb53969c3693caace4dc09a089",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:9ae75e5d17ed3acc79def54233a1591c6cb330c3bbd2a937842fdfbb20bce590",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/check.go",
+                "engine/review/check_test.go",
+                "engine/review/review.go"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "Reviewed all three changed paths. The new code is pure decision logic: it reads no files, runs no commands, handles no secrets, and adds no dependencies.",
+              "Clearance fails closed. An empty result list returns ErrNoResult. Any outcome other than Clear or Blocks, including a zero-value Decision, returns ErrNotClear. A blocking result wins regardless of its order relative to clear results (engine/review/check.go:96-114).",
+              "CheckBinding compares base, head, diff digest and the ordered paths with exact equality, so a stored result cannot bind a different diff (engine/review/check.go:78-93).",
+              "ResultsOfHead requires the name prefix and also CheckResultName acceptance. Names with a verifier suffix, temporary files, or a head too short to yield a prefix are excluded. Matching only the first 12 characters of the head is narrowed by CheckBinding's full-head comparison. The input slice is not mutated, because only the separate results slice is sorted (engine/review/check.go:50-59).",
+              "The review.go change is documentation only."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 1,
+        "target_identity": "sha256:d74d02d280f679956065e8517c85512b6bdd7cf697969a66afd29271978f5446",
+        "capture_phase_revision": "sha256:255a96de2fced4b7a160552a28a93a56c2c98fe6cb59e049510d17f60cd30155",
+        "artifact_digest": "sha256:e59cf8171fbc2f4010d9704ed292a0bd7efc31309e4165d124fed9e220f47bdf",
+        "result_hash": "sha256:6b67ffdbb813350c7143f95ff112749b3a3832447493832f5c45a4b9f2b2b598",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:93bdd46ffd43dbd671a9d17bb4203cd4fb28cc5015ae9bf97d3ca62260264d1c",
+            "lineage_id": "review-62bdfa20106ce131",
+            "authority_revision": "sha256:255a96de2fced4b7a160552a28a93a56c2c98fe6cb59e049510d17f60cd30155",
+            "target_identity": "sha256:d74d02d280f679956065e8517c85512b6bdd7cf697969a66afd29271978f5446",
+            "base_tree": "c38a1530d0cfa0a20ca9b7fe3d9cc28b2eddf5ad",
+            "candidate_tree": "0d89003c1186cbad306bb26cd276358f8c68ea39",
+            "changed_path_manifest_sha256": "sha256:7ead6da3c5f5b5f3289aa17e52341b603e88552b513c46376f89cb96adaeadd6",
+            "lens": "review-reliability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:93bdd46ffd43dbd671a9d17bb4203cd4fb28cc5015ae9bf97d3ca62260264d1c",
+            "raw_sha256": "sha256:b17b70d94c254a65041df1f9a988f3fbc85922325b86b774b28f40ceb93df8c0",
+            "canonical_sha256": "sha256:34cfc14de43a0d802cf3330073a04a0838656bf111dcd7672f56ae781acd9fdc",
+            "result_hash": "sha256:6b67ffdbb813350c7143f95ff112749b3a3832447493832f5c45a4b9f2b2b598",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:93bdd46ffd43dbd671a9d17bb4203cd4fb28cc5015ae9bf97d3ca62260264d1c",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/check.go",
+                "engine/review/check_test.go",
+                "engine/review/review.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [],
+            "evidence": [
+              "Clearance in engine/review/check.go returns ErrNoResult for an empty list, returns ErrBlocked on any blocking result regardless of order, and treats Unverified or an undecided outcome as ErrNotClear. A check that did not run therefore never passes. check_test.go covers each of these orderings.",
+              "CheckBinding in engine/review/check.go compares base, head, diff digest and ordered paths. check_test.go asserts the wrapped error and the differing member and values for each case, including reordered and truncated paths.",
+              "ResultsOfHead in engine/review/check.go filters by head prefix and CheckResultName, then sorts by numeric launch number so 10 follows 2. It does not mutate its input. The tests assert the ordering, the exclusion of verdict, tmp, hidden, zero-padded and other-head names, the empty and too-short head cases, and that the input slice is unchanged.",
+              "The review.go change is documentation only. The test helpers candidate, headSHA, baseSHA and diffSHA are not visible in this candidate and are assumed to exist elsewhere in the package's test files."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "da0e0064020fd7e38a06cd12b3c4dc6aff3cf18adcf16f580235f7728ca7c2ba",
+    "initial_atomic_start": {
+      "lineage_id": "review-62bdfa20106ce131",
+      "worktree_identity": "sha256:571cf94da78406a5dee177091311c4fcbbbf61e483d9e6e92803045faa817e42",
+      "target_identity": "sha256:d74d02d280f679956065e8517c85512b6bdd7cf697969a66afd29271978f5446",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "c38a1530d0cfa0a20ca9b7fe3d9cc28b2eddf5ad",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-risk",
+        "review-reliability"
+      ],
+      "original_changed_lines": 285,
+      "correction_budget": 143,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "commit 840f1e36 of own-rdd T4: feat(review): rules that clear a head for delivery"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

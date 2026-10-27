@@ -231,6 +231,8 @@ func TestReviewResultsConventionSaysWhereAResultIsStoredAndWhatBindsItToARecord(
 		"`reviewverdict.Parse`", "`reviewverdict.Decide`", "the correction round of the candidate was spent",
 		"`binding`", "`reply`", "`binding.head`", "git 2.40 or later", "`diff-tree`", "`--attr-source`",
 		"Exit 0 stored, 2 reply refused",
+		"`labdrian roles append` holds a completed `review-report` record to the files", "the message names the evidence kind and its ref",
+		"`labdrian review check`", "at least one result binds it and every one is clear", "A check that did not run never passes",
 		"check evidence", "never review authority", "`odd/review-receipts/`", "`interrupted`",
 	} {
 		if !strings.Contains(readme, fragment) {

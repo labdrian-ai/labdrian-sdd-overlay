@@ -1,0 +1,200 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:d1163b26ea70beea01f4dc974a44cfdc2ae968713639e0d998610492102b89de",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-2ffd0c2f7c208068",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "ed93405b7554a395a490311cc37a49ca92223258",
+      "candidate_tree": "522c7b10b16a9bf7c0a2c79847b7d3c08241b6ad",
+      "paths_digest": "sha256:d396fd1e84b646fbe612dc3723c1e453adc88ac9a491ce1c6f4fd2cce3f0383d",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/review/exempt.go",
+        "engine/review/exempt_check_test.go",
+        "engine/reviewresult/binding_check_test.go",
+        "engine/reviewresult/reviewresult.go",
+        "engine/reviewresult/rules.go"
+      ],
+      "identity": "sha256:d6462b59b534e4fd987e16378f5ecd426f73a675cdba71ab2a50306446e0b5b3"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "ed93405b7554a395a490311cc37a49ca92223258",
+      "candidate_tree": "522c7b10b16a9bf7c0a2c79847b7d3c08241b6ad",
+      "paths_digest": "sha256:d396fd1e84b646fbe612dc3723c1e453adc88ac9a491ce1c6f4fd2cce3f0383d",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/review/exempt.go",
+        "engine/review/exempt_check_test.go",
+        "engine/reviewresult/binding_check_test.go",
+        "engine/reviewresult/reviewresult.go",
+        "engine/reviewresult/rules.go"
+      ],
+      "identity": "sha256:d6462b59b534e4fd987e16378f5ecd426f73a675cdba71ab2a50306446e0b5b3"
+    },
+    "genesis_paths": [
+      "engine/review/exempt.go",
+      "engine/review/exempt_check_test.go",
+      "engine/reviewresult/binding_check_test.go",
+      "engine/reviewresult/reviewresult.go",
+      "engine/reviewresult/rules.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-risk",
+      "review-reliability"
+    ],
+    "original_changed_lines": 108,
+    "correction_budget": 54,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "commit f31dd996 of own-rdd T4: feat(review): a stored exemption must name a candidate before git is given its base",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:f2717163d6a6858fb317df6a5b6cdca86f989b4b8e32c4ee9701e534365f9e5d",
+    "capture_phase_revision": "sha256:9b160ea9ad2722bf119dd7a9d63faf6113e353789104fcdf08721c3d3c22afff",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:d6462b59b534e4fd987e16378f5ecd426f73a675cdba71ab2a50306446e0b5b3",
+        "capture_phase_revision": "sha256:9b160ea9ad2722bf119dd7a9d63faf6113e353789104fcdf08721c3d3c22afff",
+        "artifact_digest": "sha256:00ed1c7eba3ba33422f9b5c59d66d69a0c8e6db2ef8fdc18ba7fc2d84cde0443",
+        "result_hash": "sha256:7082a0fb21471746df79c3addca116cb46b36c3dc08937249b4f5822de534fd5",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:4029134cf4adc0a7d0da3424cc7f603f3dc34ccb93ff47c13bb15b7324369d09",
+            "lineage_id": "review-2ffd0c2f7c208068",
+            "authority_revision": "sha256:9b160ea9ad2722bf119dd7a9d63faf6113e353789104fcdf08721c3d3c22afff",
+            "target_identity": "sha256:d6462b59b534e4fd987e16378f5ecd426f73a675cdba71ab2a50306446e0b5b3",
+            "base_tree": "ed93405b7554a395a490311cc37a49ca92223258",
+            "candidate_tree": "522c7b10b16a9bf7c0a2c79847b7d3c08241b6ad",
+            "changed_path_manifest_sha256": "sha256:f27462d40ce63ac4ffd6495b2e5ae093160ccd69411518514e2521abe978e640",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:4029134cf4adc0a7d0da3424cc7f603f3dc34ccb93ff47c13bb15b7324369d09",
+            "raw_sha256": "sha256:b63aa2e3760276f3715b6d634f8f348c9745408a9bf120bf67de4597570f6145",
+            "canonical_sha256": "sha256:8ce6d4e482ae3ce74d2fb0bab6c46a1beb8fff6762fcbafce3a0bc071b72dbdf",
+            "result_hash": "sha256:7082a0fb21471746df79c3addca116cb46b36c3dc08937249b4f5822de534fd5",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:4029134cf4adc0a7d0da3424cc7f603f3dc34ccb93ff47c13bb15b7324369d09",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/exempt.go",
+                "engine/review/exempt_check_test.go",
+                "engine/reviewresult/binding_check_test.go",
+                "engine/reviewresult/reviewresult.go",
+                "engine/reviewresult/rules.go"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "Reviewed all 5 changed paths in full. The change exports Binding.Check (renamed from check) in engine/reviewresult/rules.go and adds it as the first step of CheckExemption in engine/review/exempt.go.",
+              "This tightens input handling: a stored exemption whose base is not a full git object name (e.g. an option-shaped value) is now refused before it can reach git. That reduces risk rather than adding it, and the validation is enforced in the backend function itself.",
+              "Exporting Check adds no new data exposure or authorization surface; it is a pure validator that returns an error wrapping ErrInvalidBinding and takes no external input beyond the binding it is called on.",
+              "Parse in engine/reviewresult/reviewresult.go only switches to the exported name, so its behavior is unchanged.",
+              "The new tests in engine/review/exempt_check_test.go and engine/reviewresult/binding_check_test.go cover option-shaped bases, refs, abbreviations, bad digests and duplicate paths. They add no secrets or dependencies, so there is no scanner or dependency evidence to report.",
+              "The added ordering check in CheckExemption could newly reject stored exemptions with an invalid binding. Those are the inputs the change is meant to refuse, and nothing here shows a valid baseline exemption being rejected, so there is no regression."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 1,
+        "target_identity": "sha256:d6462b59b534e4fd987e16378f5ecd426f73a675cdba71ab2a50306446e0b5b3",
+        "capture_phase_revision": "sha256:9b160ea9ad2722bf119dd7a9d63faf6113e353789104fcdf08721c3d3c22afff",
+        "artifact_digest": "sha256:34d21d0d79ad4d326504a4ecda2e53e186060de97fc4612e94dfddb0b3c61a39",
+        "result_hash": "sha256:f62314fcab6ec78346663b1a8051bddd968c863f676d125cfc25a5ca289ca383",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:811950f8fa1647341992ba660e7f05d75e4c41cdb92b4501bd5a07434fda4a9e",
+            "lineage_id": "review-2ffd0c2f7c208068",
+            "authority_revision": "sha256:9b160ea9ad2722bf119dd7a9d63faf6113e353789104fcdf08721c3d3c22afff",
+            "target_identity": "sha256:d6462b59b534e4fd987e16378f5ecd426f73a675cdba71ab2a50306446e0b5b3",
+            "base_tree": "ed93405b7554a395a490311cc37a49ca92223258",
+            "candidate_tree": "522c7b10b16a9bf7c0a2c79847b7d3c08241b6ad",
+            "changed_path_manifest_sha256": "sha256:f27462d40ce63ac4ffd6495b2e5ae093160ccd69411518514e2521abe978e640",
+            "lens": "review-reliability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:811950f8fa1647341992ba660e7f05d75e4c41cdb92b4501bd5a07434fda4a9e",
+            "raw_sha256": "sha256:c9c28ae976348aa0c54c936ae0d937951bca1c45fe428a7c49b30a9a935c4be5",
+            "canonical_sha256": "sha256:f158ecd9d813dced4a5cb49126f3969e1a0ff3a7185c9d5bfb15e1f8ce1a6e1d",
+            "result_hash": "sha256:f62314fcab6ec78346663b1a8051bddd968c863f676d125cfc25a5ca289ca383",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:811950f8fa1647341992ba660e7f05d75e4c41cdb92b4501bd5a07434fda4a9e",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/exempt.go",
+                "engine/review/exempt_check_test.go",
+                "engine/reviewresult/binding_check_test.go",
+                "engine/reviewresult/reviewresult.go",
+                "engine/reviewresult/rules.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [],
+            "evidence": [
+              "Reviewed all 5 changed paths in full. The change exports Binding.Check (renamed from check) and Parse calls it with unchanged behavior, so there is no regression on the reply-parsing path.",
+              "CheckExemption now validates the stored binding first, so a malformed base such as an option-like string is refused with ErrInvalidBinding before git sees it. This matches the stated ordering and the doc comment.",
+              "engine/review/exempt_check_test.go covers option-like base, ref base, abbreviated head, bad digest and duplicate paths. Each case uses a risk and report that would also be refused, and the test asserts that neither ErrHighRisk nor ErrNotClear is returned. That proves the ordering at the observable level.",
+              "engine/reviewresult/binding_check_test.go covers the accepting cases (a valid binding, and an empty path list) and the refusing cases, asserting both that ErrInvalidBinding is wrapped and that the offending member is named.",
+              "Valid stored exemptions with well-formed bindings behave as before, so there is no baseline regression. Existing exemption tests that use well-formed bindings are unaffected by the added check."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "a0c733a97e77a33058a2db781057c92359ffdac6f33e582a422cfa1419c2651f",
+    "initial_atomic_start": {
+      "lineage_id": "review-2ffd0c2f7c208068",
+      "worktree_identity": "sha256:571cf94da78406a5dee177091311c4fcbbbf61e483d9e6e92803045faa817e42",
+      "target_identity": "sha256:d6462b59b534e4fd987e16378f5ecd426f73a675cdba71ab2a50306446e0b5b3",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "ed93405b7554a395a490311cc37a49ca92223258",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-risk",
+        "review-reliability"
+      ],
+      "original_changed_lines": 108,
+      "correction_budget": 54,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "commit f31dd996 of own-rdd T4: feat(review): a stored exemption must name a candidate before git is given its base"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

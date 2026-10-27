@@ -1,0 +1,183 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:bf4ee49ddcd893366bfa5cfe5971fa871c9f8b5777849a9eb57d0f73bf730871",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-0583130449d0a80c",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "562193404626b64bfb0c60fe564ef78a31c8289a",
+      "candidate_tree": "67ad24ad5bb14bd5028317d17aed618b618042ca",
+      "paths_digest": "sha256:aab1638af1734601c59881d316c8068a67c8716f5e96fee7b283387c9f5c8c68",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/review/app/check.go",
+        "engine/review/app/check_test.go"
+      ],
+      "identity": "sha256:2d16b180b460566fd4b8b9f9d545225857348d5aacff2ef199e265787b1cc733"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "562193404626b64bfb0c60fe564ef78a31c8289a",
+      "candidate_tree": "67ad24ad5bb14bd5028317d17aed618b618042ca",
+      "paths_digest": "sha256:aab1638af1734601c59881d316c8068a67c8716f5e96fee7b283387c9f5c8c68",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/review/app/check.go",
+        "engine/review/app/check_test.go"
+      ],
+      "identity": "sha256:2d16b180b460566fd4b8b9f9d545225857348d5aacff2ef199e265787b1cc733"
+    },
+    "genesis_paths": [
+      "engine/review/app/check.go",
+      "engine/review/app/check_test.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-risk",
+      "review-reliability"
+    ],
+    "original_changed_lines": 399,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "commit 45202f2c of own-rdd T4: feat(review): Check use case clears a head on the results stored for it",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:74503458bd593e5c58820d2d9ab5dc849f464007960663db53562c9ba3dab6a1",
+    "capture_phase_revision": "sha256:846b7bcea1b7ce9e8c5bb6f4eeb2a3c77dcecc1dc1609d65675ae6fc24dd281f",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:2d16b180b460566fd4b8b9f9d545225857348d5aacff2ef199e265787b1cc733",
+        "capture_phase_revision": "sha256:846b7bcea1b7ce9e8c5bb6f4eeb2a3c77dcecc1dc1609d65675ae6fc24dd281f",
+        "artifact_digest": "sha256:078d9a448f6beb989ff97938971327fc78bc704cefa21c6c26dda27634a061f8",
+        "result_hash": "sha256:6812db7d5e225ce0f81b3926f0e02d7fe6c5586c698ee4aded71151f5e1e32bd",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:bb574b0ef28941c3a8007c7b8315c590a60b10c392f85d814e457d9074e8444b",
+            "lineage_id": "review-0583130449d0a80c",
+            "authority_revision": "sha256:846b7bcea1b7ce9e8c5bb6f4eeb2a3c77dcecc1dc1609d65675ae6fc24dd281f",
+            "target_identity": "sha256:2d16b180b460566fd4b8b9f9d545225857348d5aacff2ef199e265787b1cc733",
+            "base_tree": "562193404626b64bfb0c60fe564ef78a31c8289a",
+            "candidate_tree": "67ad24ad5bb14bd5028317d17aed618b618042ca",
+            "changed_path_manifest_sha256": "sha256:1650c2151f98ed31571b196262956dd6b6bf7dec37e4a1d4cdde58f0d62c69e9",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:bb574b0ef28941c3a8007c7b8315c590a60b10c392f85d814e457d9074e8444b",
+            "raw_sha256": "sha256:c005fd2a05176368fcb4b4100209e0b3928569a82bfff548a9823968491f9dc2",
+            "canonical_sha256": "sha256:60f853cbf57c2a89e223a6bd5040bc893eb8efbe8bef8f30ada5a0bb4338cf00",
+            "result_hash": "sha256:6812db7d5e225ce0f81b3926f0e02d7fe6c5586c698ee4aded71151f5e1e32bd",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:bb574b0ef28941c3a8007c7b8315c590a60b10c392f85d814e457d9074e8444b",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/app/check.go",
+                "engine/review/app/check_test.go"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "Reviewed both added files in full. Check validates feature and head (review.CheckFeature, review.CheckRev) before any git or store call, so option-like heads and path-traversal features do not reach git or the filesystem; engine/review/app/check_test.go covers both.",
+              "Stored results are re-parsed and held to their binding (judged), the candidate is recomputed from git for the stored base and delivered head, and review.CheckBinding must match. A forged base is rejected as invalid stored before git is asked, per the test TestCheckDoesNotPassAForgedBaseToGit.",
+              "Verdict handling fails closed: only ErrNotFound is treated as no verdict; any other read or parse error is a refusal. Severe findings without a verdict are not clear per the tests.",
+              "Check writes nothing to the store, and all git/store failures are returned as refusals, so no data loss or exposure path is introduced. No secrets or dependency changes appear in the patch."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 1,
+        "target_identity": "sha256:2d16b180b460566fd4b8b9f9d545225857348d5aacff2ef199e265787b1cc733",
+        "capture_phase_revision": "sha256:846b7bcea1b7ce9e8c5bb6f4eeb2a3c77dcecc1dc1609d65675ae6fc24dd281f",
+        "artifact_digest": "sha256:b8e22874443385752f058abd946a1f2dadbcb8bba2625d9b3a98e520e2c49450",
+        "result_hash": "sha256:dde23c263521e61693286ccad04e66106cb9051ab02537cfa6d7efde9277c44e",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:6c1699ebbaa2f14ff899dfcb5ce84bf18e3e0c028e832e2a5947adae653b6068",
+            "lineage_id": "review-0583130449d0a80c",
+            "authority_revision": "sha256:846b7bcea1b7ce9e8c5bb6f4eeb2a3c77dcecc1dc1609d65675ae6fc24dd281f",
+            "target_identity": "sha256:2d16b180b460566fd4b8b9f9d545225857348d5aacff2ef199e265787b1cc733",
+            "base_tree": "562193404626b64bfb0c60fe564ef78a31c8289a",
+            "candidate_tree": "67ad24ad5bb14bd5028317d17aed618b618042ca",
+            "changed_path_manifest_sha256": "sha256:1650c2151f98ed31571b196262956dd6b6bf7dec37e4a1d4cdde58f0d62c69e9",
+            "lens": "review-reliability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:6c1699ebbaa2f14ff899dfcb5ce84bf18e3e0c028e832e2a5947adae653b6068",
+            "raw_sha256": "sha256:c0b4660f677c931dc23405e56d323e88b158358c2a9e98b154312589a42b3a25",
+            "canonical_sha256": "sha256:4dd5d6318f006d6238051c22034f6d1c1b958752ebe2e94918d111d37ac60d0f",
+            "result_hash": "sha256:dde23c263521e61693286ccad04e66106cb9051ab02537cfa6d7efde9277c44e",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:6c1699ebbaa2f14ff899dfcb5ce84bf18e3e0c028e832e2a5947adae653b6068",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/app/check.go",
+                "engine/review/app/check_test.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [],
+            "evidence": [
+              "Check validates the feature and head before any git or store call. Every failure path (locate, resolve head, list, read, parse, bind, binding mismatch, verdict read or parse) returns an error with an empty Checked, so it fails closed. The tests assert this with errors.Is, message content, an empty result and an unchanged store write count.",
+              "A verdict that is missing (ErrNotFound) is distinguished from one that is unreadable or invalid. The unreadable-verdict test and the unknown-ID verdict case cover this.",
+              "Results of a commit whose name shares only the first 12 characters are filtered by the stored Head. The collision test covers this, and the order of launches 2 and 10 is asserted regardless of listing order.",
+              "The forged-base test asserts that git is never given an option-like revision. The git call sequence and store call sequence are asserted exactly for the happy path.",
+              "I found no defect caused by this candidate. Remaining observations are minor: the VerdictName error is returned without path context, and I could not see the fake helpers."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "348ed4784b6b14985f897947b8672918bdfb6a310d91d435c2e9cb3d01c7eb86",
+    "initial_atomic_start": {
+      "lineage_id": "review-0583130449d0a80c",
+      "worktree_identity": "sha256:571cf94da78406a5dee177091311c4fcbbbf61e483d9e6e92803045faa817e42",
+      "target_identity": "sha256:2d16b180b460566fd4b8b9f9d545225857348d5aacff2ef199e265787b1cc733",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "562193404626b64bfb0c60fe564ef78a31c8289a",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-risk",
+        "review-reliability"
+      ],
+      "original_changed_lines": 399,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "commit 45202f2c of own-rdd T4: feat(review): Check use case clears a head on the results stored for it"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

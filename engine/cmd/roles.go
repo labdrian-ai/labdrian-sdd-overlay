@@ -25,13 +25,13 @@ import (
 const rolesAuthorityNote = "Role data carries no execution authority; no roles command launches an agent or dispatches work."
 
 // runRoles implements the 'roles <verb>' subcommand.
-func runRoles(p process, args []string) {
-	runRolesCore(args, p.stdin, p.stdout, p.stderr, p.exit)
+func runRoles(p process, d deps, args []string) {
+	runRolesCore(args, p.stdin, p.stdout, p.stderr, p.exit, reviewEvidenceCheck(d))
 }
 
 // runRolesCore is the testable core of the roles subcommand. Every exit(n)
 // is followed by a return, because tests inject a non-terminating exit.
-func runRolesCore(args []string, stdin io.Reader, stdout, stderr io.Writer, exit func(int)) {
+func runRolesCore(args []string, stdin io.Reader, stdout, stderr io.Writer, exit func(int), evidence evidenceCheck) {
 	if len(args) == 0 {
 		fmt.Fprintln(stderr, "error: roles requires a verb: validate, next, resume, append, match-shaper")
 		exit(1)
@@ -45,7 +45,7 @@ func runRolesCore(args []string, stdin io.Reader, stdout, stderr io.Writer, exit
 	case "resume":
 		runRolesResume(args[1:], stdout, stderr, exit)
 	case "append":
-		runRolesAppend(args[1:], stdin, stdout, stderr, exit)
+		runRolesAppend(args[1:], stdin, stdout, stderr, exit, evidence)
 	case "match-shaper":
 		runRolesMatchShaper(args[1:], stdout, stderr, exit)
 	default:
@@ -247,7 +247,7 @@ func runRolesResume(args []string, stdout, stderr io.Writer, exit func(int)) {
 // runRolesAppend implements 'roles append --project --goal --chain --stdin'.
 // The record is accepted only from stdin, mirroring the shaper clearance
 // record command, so content never arrives through argv.
-func runRolesAppend(args []string, stdin io.Reader, stdout, stderr io.Writer, exit func(int)) {
+func runRolesAppend(args []string, stdin io.Reader, stdout, stderr io.Writer, exit func(int), evidence evidenceCheck) {
 	fail := func(format string, a ...any) {
 		fmt.Fprintf(stderr, "error: roles append: "+format+"\n", a...)
 		exit(1)
@@ -290,6 +290,11 @@ func runRolesAppend(args []string, stdin io.Reader, stdout, stderr io.Writer, ex
 			fail("--%s %q does not match the record's %s %q", strings.TrimSuffix(f.name, "_id"), f.flag, f.name, f.record)
 			return
 		}
+	}
+	// A record that closes a review is held to the files the review stored before anything is written.
+	if err := evidence(h); err != nil {
+		fail("%v", err)
+		return
 	}
 	store, err := newRoleChainStore()
 	if err != nil {

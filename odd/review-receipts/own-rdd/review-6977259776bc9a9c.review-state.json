@@ -1,0 +1,168 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:1eb5fc9ce38a7395e7bb6716ab53c0178887c605fe56e511e0ee4a849a02989d",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-6977259776bc9a9c",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "edfac57d7e1cbeaf5e3b0f38cddbfe39b7964fe5",
+      "candidate_tree": "c38a1530d0cfa0a20ca9b7fe3d9cc28b2eddf5ad",
+      "paths_digest": "sha256:81230e6efed64c1d60e0bea1899cf52d25303a920083043089f408c4eee5735e",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "CHANGELOG.md",
+        "bin/lib/usage.sh",
+        "engine/cmd/roles_evidence_docs_test.go",
+        "engine/cmd/usage.go",
+        "engine/skills/role_chain_artifact_test.go",
+        "odd/review-results/README.md"
+      ],
+      "identity": "sha256:a567bef01e2df7a23a4ee2230c88928d74f0b91477725fe68abcd9a757d140b8"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "edfac57d7e1cbeaf5e3b0f38cddbfe39b7964fe5",
+      "candidate_tree": "c38a1530d0cfa0a20ca9b7fe3d9cc28b2eddf5ad",
+      "paths_digest": "sha256:81230e6efed64c1d60e0bea1899cf52d25303a920083043089f408c4eee5735e",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "CHANGELOG.md",
+        "bin/lib/usage.sh",
+        "engine/cmd/roles_evidence_docs_test.go",
+        "engine/cmd/usage.go",
+        "engine/skills/role_chain_artifact_test.go",
+        "odd/review-results/README.md"
+      ],
+      "identity": "sha256:a567bef01e2df7a23a4ee2230c88928d74f0b91477725fe68abcd9a757d140b8"
+    },
+    "genesis_paths": [
+      "CHANGELOG.md",
+      "bin/lib/usage.sh",
+      "engine/cmd/roles_evidence_docs_test.go",
+      "engine/cmd/usage.go",
+      "engine/skills/role_chain_artifact_test.go",
+      "odd/review-results/README.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-readability"
+    ],
+    "original_changed_lines": 60,
+    "correction_budget": 30,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "commit 6acc6ff9 of own-rdd T4: docs(roles): document the evidence roles append holds a review-report to",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:81049c22ea6bca4e615eccfe209ccda1e6305ca5f3d4c1ecb4306b6260ae184d",
+    "capture_phase_revision": "sha256:f3e9c9f35aaa28172d25a265114eb0bbed111048bc12fe662083a45860c233f6",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "target_identity": "sha256:a567bef01e2df7a23a4ee2230c88928d74f0b91477725fe68abcd9a757d140b8",
+        "capture_phase_revision": "sha256:f3e9c9f35aaa28172d25a265114eb0bbed111048bc12fe662083a45860c233f6",
+        "artifact_digest": "sha256:b57930ebc2123093fae166bb5fac564255e68ce828eb31e4e6c5bb60387ad5b3",
+        "result_hash": "sha256:69249e16a7ceb936710e8e80a80793428da24c9d40afaebd39497a4f49642bbd",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:80e5f7960bd5855cfbb04322e8a9d72a1305f8ff664f503b9c366c89038711e4",
+            "lineage_id": "review-6977259776bc9a9c",
+            "authority_revision": "sha256:f3e9c9f35aaa28172d25a265114eb0bbed111048bc12fe662083a45860c233f6",
+            "target_identity": "sha256:a567bef01e2df7a23a4ee2230c88928d74f0b91477725fe68abcd9a757d140b8",
+            "base_tree": "edfac57d7e1cbeaf5e3b0f38cddbfe39b7964fe5",
+            "candidate_tree": "c38a1530d0cfa0a20ca9b7fe3d9cc28b2eddf5ad",
+            "changed_path_manifest_sha256": "sha256:1414c51c400dec147594a975282e2e7b1d8da2420a176910055835a1736a4a97",
+            "lens": "review-readability",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:80e5f7960bd5855cfbb04322e8a9d72a1305f8ff664f503b9c366c89038711e4",
+            "raw_sha256": "sha256:ab0f7796bc1e02623405e90f2be9070f667be1084232e8647c7ee467b8625c36",
+            "canonical_sha256": "sha256:4777be26faafc89c985af009baa2c6cbe3867d010b6a82df912c2875d45f0f25",
+            "result_hash": "sha256:69249e16a7ceb936710e8e80a80793428da24c9d40afaebd39497a4f49642bbd",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:80e5f7960bd5855cfbb04322e8a9d72a1305f8ff664f503b9c366c89038711e4",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "CHANGELOG.md",
+                "bin/lib/usage.sh",
+                "engine/cmd/roles_evidence_docs_test.go",
+                "engine/cmd/usage.go",
+                "engine/skills/role_chain_artifact_test.go",
+                "odd/review-results/README.md"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-001",
+                "lens": "readability",
+                "location": "engine/cmd/roles_evidence_docs_test.go:22-31",
+                "severity": "WARNING",
+                "claim": "The docs-parity test compares the engine and wrapper help by hard-coded phrase pairs that duplicate the help text. Any rewording of the help in engine/cmd/usage.go or bin/lib/usage.sh requires a matching edit here, and the pairs only spot-check a few phrases, so the two texts can drift elsewhere without the test noticing. The test name and comment suggest the two texts are held equal, which overstates what it checks.",
+                "proof_refs": [
+                  "engine/cmd/roles_evidence_docs_test.go:22-31",
+                  "engine/cmd/usage.go:179-184",
+                  "bin/lib/usage.sh:233-239"
+                ]
+              },
+              {
+                "id": "R2-002",
+                "lens": "readability",
+                "location": "CHANGELOG.md:11",
+                "severity": "SUGGESTION",
+                "claim": "The new changelog entry is a single very long line that packs the whole check, its refusal cases and its internal function names into one paragraph, which makes it hard to review or diff. It follows the style of the neighbouring entries, so this is a minor maintainability point.",
+                "proof_refs": [
+                  "CHANGELOG.md:11"
+                ]
+              }
+            ],
+            "evidence": [
+              "Reviewed all six changed paths in full.",
+              "The documentation, help text and tests agree on the behavior: a completed review-report is held to the stored files, and an interrupted one and other kinds are stored as before.",
+              "The usage text in engine/cmd/usage.go and the wrapper in bin/lib/usage.sh describe the same rules in different wording, and the test only partially ties them together.",
+              "No dead logic, misleading names or unexplained constants were found in the changed lines."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "415b93417cdb8c9c252fb24b4297d7e0909243b385ec8380d3bc7ac45f7fd59e",
+    "initial_atomic_start": {
+      "lineage_id": "review-6977259776bc9a9c",
+      "worktree_identity": "sha256:571cf94da78406a5dee177091311c4fcbbbf61e483d9e6e92803045faa817e42",
+      "target_identity": "sha256:a567bef01e2df7a23a4ee2230c88928d74f0b91477725fe68abcd9a757d140b8",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "edfac57d7e1cbeaf5e3b0f38cddbfe39b7964fe5",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "high",
+      "selected_lenses": [
+        "review-readability"
+      ],
+      "original_changed_lines": 60,
+      "correction_budget": 30,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "commit 6acc6ff9 of own-rdd T4: docs(roles): document the evidence roles append holds a review-report to"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

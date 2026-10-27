@@ -1,0 +1,195 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:0eb7e9f34c0aaa43696178986c2b71073d5b0422d75dacaa2353fee17d53835b",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-1bb7f45b85c089fb",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "f876e19eee87a275a492fd8defcf39c2f47139a5",
+      "candidate_tree": "d428cd682a9c234b76be85666ec32e28c3a91b14",
+      "paths_digest": "sha256:d2a7de8dcb767a52ce204e4f0761effad48356074681237f4bec07f56e7a653c",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/review/app/evidence.go",
+        "engine/review/app/evidence_test.go"
+      ],
+      "identity": "sha256:62aa1a1cc14b6af7f106c74c57790fdd16f8c7e99f67ae0acdc7ccb6bc6382dc"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "f876e19eee87a275a492fd8defcf39c2f47139a5",
+      "candidate_tree": "d428cd682a9c234b76be85666ec32e28c3a91b14",
+      "paths_digest": "sha256:d2a7de8dcb767a52ce204e4f0761effad48356074681237f4bec07f56e7a653c",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/review/app/evidence.go",
+        "engine/review/app/evidence_test.go"
+      ],
+      "identity": "sha256:62aa1a1cc14b6af7f106c74c57790fdd16f8c7e99f67ae0acdc7ccb6bc6382dc"
+    },
+    "genesis_paths": [
+      "engine/review/app/evidence.go",
+      "engine/review/app/evidence_test.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-risk",
+      "review-reliability"
+    ],
+    "original_changed_lines": 435,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "commit e1df3efd of own-rdd T4: feat(review): CheckEvidence use case holds a review-report to the stored files",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:2576e40257fe006d7dbd418ddf9901f6971d34051db0bc3f643ec7d3a8776369",
+    "capture_phase_revision": "sha256:3c17a73fd12721e6eb438ff0f6cc05289e333d3077cc67c00b43a145fb491e5f",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:62aa1a1cc14b6af7f106c74c57790fdd16f8c7e99f67ae0acdc7ccb6bc6382dc",
+        "capture_phase_revision": "sha256:3c17a73fd12721e6eb438ff0f6cc05289e333d3077cc67c00b43a145fb491e5f",
+        "artifact_digest": "sha256:3fdddd15f231f281b2d76558b18605f86281934816f5749d411733fae67db22b",
+        "result_hash": "sha256:5e118ccbd97c6ec52fa602c6062342b2dd84a1cb914458f227459285b3b6b876",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:ac8faeb67e5fbc1f19cfcbd79c753679ea064ff1966ee167057cd52693f2a2fd",
+            "lineage_id": "review-1bb7f45b85c089fb",
+            "authority_revision": "sha256:3c17a73fd12721e6eb438ff0f6cc05289e333d3077cc67c00b43a145fb491e5f",
+            "target_identity": "sha256:62aa1a1cc14b6af7f106c74c57790fdd16f8c7e99f67ae0acdc7ccb6bc6382dc",
+            "base_tree": "f876e19eee87a275a492fd8defcf39c2f47139a5",
+            "candidate_tree": "d428cd682a9c234b76be85666ec32e28c3a91b14",
+            "changed_path_manifest_sha256": "sha256:69525791c9b49f3ae25dfdc7881135f604cd9e8448d9313fcb89f5d115ef1a53",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:ac8faeb67e5fbc1f19cfcbd79c753679ea064ff1966ee167057cd52693f2a2fd",
+            "raw_sha256": "sha256:0e3d66f96bae1cac7693c5569df8e0251a4777861bd4d0f3afea44a475670879",
+            "canonical_sha256": "sha256:e4849b115adc9243832b577ccb9052ead7d8cf04194482c84be32984036816cd",
+            "result_hash": "sha256:5e118ccbd97c6ec52fa602c6062342b2dd84a1cb914458f227459285b3b6b876",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:ac8faeb67e5fbc1f19cfcbd79c753679ea064ff1966ee167057cd52693f2a2fd",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/app/evidence.go",
+                "engine/review/app/evidence_test.go"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "Reviewed both added files in full. CheckEvidence validates the shape of the record and every ref (review.ResultRef, review.VerdictRef) before locating the repository or touching the store, so a ref such as an absolute path or one that climbs out of the results directory is rejected without any read; evidence_test.go covers these cases and asserts that no git or store calls happen.",
+              "File reads go through s.results.Read(repo.Root, feature, name) with feature and name taken from the validated ref parsers, and the doc comment says the store refuses links, non-regular files and paths leaving the results directory. No path is built from raw record input in this candidate.",
+              "Digests are compared against the bytes stored now (review.CheckFile), and the range is checked against the stored binding (review.CheckRange), so a tampered or swapped result or verdict is refused. The function only reads and stores nothing.",
+              "The new function adds no dependency, secret or network access. Non-review-report records return early, which keeps the behavior of other records unchanged. No reachable security, data exposure or data loss impact was found."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 1,
+        "target_identity": "sha256:62aa1a1cc14b6af7f106c74c57790fdd16f8c7e99f67ae0acdc7ccb6bc6382dc",
+        "capture_phase_revision": "sha256:3c17a73fd12721e6eb438ff0f6cc05289e333d3077cc67c00b43a145fb491e5f",
+        "artifact_digest": "sha256:7af5a9afbad05b3667e1ccb512324931fe2f94d01ee00181b3812f55a7ee9033",
+        "result_hash": "sha256:73eb0c5fc9ac47e584c1a3fc7469da0aabd4fb089910358bc31052e213fc5054",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:c3919bc5d68fad19b041039c42416f3358e6f42fd6de1a925348048a5534608a",
+            "lineage_id": "review-1bb7f45b85c089fb",
+            "authority_revision": "sha256:3c17a73fd12721e6eb438ff0f6cc05289e333d3077cc67c00b43a145fb491e5f",
+            "target_identity": "sha256:62aa1a1cc14b6af7f106c74c57790fdd16f8c7e99f67ae0acdc7ccb6bc6382dc",
+            "base_tree": "f876e19eee87a275a492fd8defcf39c2f47139a5",
+            "candidate_tree": "d428cd682a9c234b76be85666ec32e28c3a91b14",
+            "changed_path_manifest_sha256": "sha256:69525791c9b49f3ae25dfdc7881135f604cd9e8448d9313fcb89f5d115ef1a53",
+            "lens": "review-reliability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:c3919bc5d68fad19b041039c42416f3358e6f42fd6de1a925348048a5534608a",
+            "raw_sha256": "sha256:650d58b4c056475f029e9560ba1199f3ebd0ca391606e74c8687afb015a5b38a",
+            "canonical_sha256": "sha256:6b26da08c362131d89506da4ab7487cc74e7dbd6025391eeb0be1d694a28fd2f",
+            "result_hash": "sha256:73eb0c5fc9ac47e584c1a3fc7469da0aabd4fb089910358bc31052e213fc5054",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:c3919bc5d68fad19b041039c42416f3358e6f42fd6de1a925348048a5534608a",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/app/evidence.go",
+                "engine/review/app/evidence_test.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-001",
+                "lens": "reliability",
+                "location": "engine/review/app/evidence.go:79-79",
+                "severity": "WARNING",
+                "claim": "The result is checked against the range via review.CheckRange, but the verdict's relation to the result's content is only digest-checked; a verdict file that is stored but is not a valid verdict (malformed bytes with a matching digest) is accepted, since the verdict content is deliberately not parsed. The test suite proves the not-a-result refusal for results but has no counterpart for a non-verdict file with a matching digest, so that boundary is unproved.",
+                "proof_refs": [
+                  "engine/review/app/evidence.go:79",
+                  "engine/review/app/evidence_test.go:290-300"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Read the complete patch of both added files.",
+              "The happy paths for Record and Verify records, shape refusals before any read, digest mismatches, unreadable files, ref-shape refusals, non-result stored file, passthrough for other records and Locate failure are all asserted through observable errors and recorded git/store calls.",
+              "Not covered: a stored verdict whose bytes are not a verdict but match the recorded digest; the implementation documents that the verdict content is not read again, so this is a documented design choice and not a defect."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "c2c4eb66e7268bc63ea81798cd9638107d3afb2093b9fa311e271e948b676f6b",
+    "initial_atomic_start": {
+      "lineage_id": "review-1bb7f45b85c089fb",
+      "worktree_identity": "sha256:571cf94da78406a5dee177091311c4fcbbbf61e483d9e6e92803045faa817e42",
+      "target_identity": "sha256:62aa1a1cc14b6af7f106c74c57790fdd16f8c7e99f67ae0acdc7ccb6bc6382dc",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "f876e19eee87a275a492fd8defcf39c2f47139a5",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-risk",
+        "review-reliability"
+      ],
+      "original_changed_lines": 435,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "commit e1df3efd of own-rdd T4: feat(review): CheckEvidence use case holds a review-report to the stored files"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

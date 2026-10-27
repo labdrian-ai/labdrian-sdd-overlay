@@ -38,6 +38,7 @@ var fakeRepo = app.Repository{Root: "/work/wt/feature", Main: "/work/main", Comm
 type fakeGit struct {
 	diff          []byte
 	paths         []string
+	parents       map[string]string // the first parent of a commit; none for a commit that is not a key
 	worktree      app.WorktreeState
 	worktreeLater []worktreeAnswer
 	fail          map[string]error
@@ -51,7 +52,7 @@ type worktreeAnswer struct {
 }
 
 func newFakeGit() *fakeGit {
-	return &fakeGit{diff: []byte(diffText), paths: changedPaths, fail: map[string]error{}}
+	return &fakeGit{diff: []byte(diffText), paths: changedPaths, parents: map[string]string{headSHA: baseSHA}, fail: map[string]error{}}
 }
 
 func (g *fakeGit) record(call string) { g.calls = append(g.calls, call) }
@@ -98,6 +99,14 @@ func (g *fakeGit) Commit(repo app.Repository, rev string) (string, error) {
 		return headSHA, nil
 	}
 	return "", fmt.Errorf("fakeGit: unknown revision %q", rev)
+}
+
+func (g *fakeGit) Parent(repo app.Repository, commit string) (string, error) {
+	g.record("Parent " + commit)
+	if err := g.fail["Parent"]; err != nil {
+		return "", err
+	}
+	return g.parents[commit], nil
 }
 
 func (g *fakeGit) Diff(repo app.Repository, base, head string) ([]byte, error) {

@@ -2,10 +2,13 @@
 // makes the detached worktree the reviewer reads, Record holds the reply of the reviewer to the candidate
 // it recomputes and stores it, with that binding, in the results directory of a feature, and Verify holds
 // the reply of the verifier to a stored result, decides whether the review blocks and stores the reply beside
-// the result. They answer with typed values and typed refusals over two ports this package owns: Git, the
-// repository as the use cases ask about it, and Results, the directory where results are stored. The adapters
-// are review/gitexec and review/fsstore, and the words a person reads, the flags and the exit codes are the
-// command's, in cmd.
+// the result. Exempt holds the risk the agent declares and the report of the verifier for a head whose work takes
+// no review, and stores the exemption beside the results. CheckEvidence holds the evidence of the record that
+// closes a review to the files stored, Check holds a head being delivered to the results stored for it, and CheckChain
+// holds the commits from a base to it to an unbroken chain of them. They answer with typed values and typed refusals
+// over two ports this package owns: Git, the repository as the use cases ask about it, and Results, the
+// directory where results are stored. The adapters are review/gitexec and review/fsstore, and the words a
+// person reads, the flags and the exit codes are the command's, in cmd.
 //
 // The package is pure: it reads no file, runs no program, prints nothing and exits nowhere. The vocabulary
 // (the candidate, the names of files and worktrees, the stored file, the skeleton of the record of the role
@@ -14,9 +17,10 @@
 //
 // Two rules the use cases keep, because the commands are what the parent of the role chain trusts:
 //
-//   - the candidate of Bind and Record is computed from git on every call and never taken from a reply or
+//   - the candidate of Bind, Record and Exempt is computed from git on every call and never taken from a reply or
 //     from an earlier call, so what a reply is held to is the repository as it is; Verify takes it from the
-//     stored result, which names the commits in full;
+//     stored result, which names the commits in full; Check computes it again for the commits a stored result
+//     names, in the same way, and holds the stored binding to it;
 //   - a refused reply stores nothing: validation is the last step before the first write, and the write is
 //     one atomic creation of a file that did not exist.
 package app
@@ -58,6 +62,9 @@ type Git interface {
 	Locate(dir string) (Repository, error)
 	// Commit resolves rev to the full object name of the commit it names.
 	Commit(repo Repository, rev string) (string, error)
+	// Parent returns the full object name of the first parent of commit, a full object name, and "" when the commit
+	// has none. For a merge it is the parent the merge was made on, the one a diff of the merge is taken from.
+	Parent(repo Repository, commit string) (string, error)
 	// Diff returns the bytes of the canonical diff from base to head, both full names: the bytes whose
 	// SHA-256 is the diff_sha256 of the binding. They are the same for the same two commits whichever
 	// commit is checked out, whichever user configuration git reads and whatever the environment says.

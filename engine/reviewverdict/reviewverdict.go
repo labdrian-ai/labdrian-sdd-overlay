@@ -21,6 +21,10 @@
 // blocks. The object is the one the delta of roles/verifier/body.md spells out, and tests in engine/skills
 // require Parse to accept it, so the agent's instructions and these rules cannot drift apart.
 //
+// The verifier is launched with no finding to answer when a head is exempted from review instead of reviewed
+// (own-rdd T4, S5): its reply is then the report of the checks it ran, which ParseReport holds to the same kind of
+// rules and Report.Clear decides (report.go), and the delta of roles/verifier/body.md spells that object out too.
+//
 // It is a domain package: pure standard library and reviewresult. It reads no file and runs no command, and
 // the exported types carry no JSON tag; the wire form of a reply stays inside the package.
 package reviewverdict

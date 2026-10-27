@@ -141,7 +141,7 @@ func (s Service) Record(dir, feature, base, head string, reply []byte) (Recorded
 	if err != nil {
 		return Recorded{}, err
 	}
-	number, name, err := s.store(repo.Root, feature, candidate, file)
+	number, name, err := s.store(repo.Root, feature, candidate, review.ResultName, file)
 	var notFlushed error
 	switch {
 	case errors.Is(err, ErrNotFlushed):
@@ -153,10 +153,12 @@ func (s Service) Record(dir, feature, base, head string, reply []byte) (Recorded
 	return Recorded{Candidate: candidate, Path: path, Number: number, SHA256: sum, Handoff: review.Handoff(candidate, path, sum), NotFlushed: notFlushed}, nil
 }
 
-// store takes the next free number of the head in the directory of the feature. A name that is taken by a
-// writer that raced this one is not an error: after a short wait, longer each time, it lists the directory
-// again and takes the next number, up to maxNumberAttempts tries.
-func (s Service) store(root, feature string, c review.Candidate, file []byte) (int, string, error) {
+// store takes the next free number of the head in the directory of the feature and stores file under the name
+// nameOf makes of the candidate and that number (review.ResultName for a result, review.ExemptionName for an
+// exemption): the kinds of file of a head share one numbering. A name that is taken by a writer that raced this
+// one is not an error: after a short wait, longer each time, it lists the directory again and takes the next
+// number, up to maxNumberAttempts tries.
+func (s Service) store(root, feature string, c review.Candidate, nameOf func(review.Candidate, int) string, file []byte) (int, string, error) {
 	wait := numberBackoff
 	for attempt := 1; attempt <= maxNumberAttempts; attempt++ {
 		names, err := s.results.Names(root, feature)
@@ -164,7 +166,7 @@ func (s Service) store(root, feature string, c review.Candidate, file []byte) (i
 			return 0, "", fmt.Errorf("list %s/%s: %w", review.ResultsDir, feature, err)
 		}
 		number := review.NextNumber(names, c)
-		name := review.ResultName(c, number)
+		name := nameOf(c, number)
 		err = s.results.Create(root, feature, name, file)
 		switch {
 		case err == nil, errors.Is(err, ErrNotFlushed):
@@ -199,25 +201,34 @@ func (s Service) candidate(dir, base, head string) (Repository, review.Candidate
 	if err != nil {
 		return Repository{}, review.Candidate{}, fmt.Errorf("locate the repository of %s: %w", dir, err)
 	}
-	baseName, err := s.git.Commit(repo, base)
-	if err != nil {
-		return Repository{}, review.Candidate{}, fmt.Errorf("resolve base %q: %w", base, err)
-	}
-	headName, err := s.git.Commit(repo, head)
-	if err != nil {
-		return Repository{}, review.Candidate{}, fmt.Errorf("resolve head %q: %w", head, err)
-	}
-	diff, err := s.git.Diff(repo, baseName, headName)
-	if err != nil {
-		return Repository{}, review.Candidate{}, fmt.Errorf("diff %s..%s: %w", baseName, headName, err)
-	}
-	paths, err := s.git.Paths(repo, baseName, headName)
-	if err != nil {
-		return Repository{}, review.Candidate{}, fmt.Errorf("list the paths of %s..%s: %w", baseName, headName, err)
-	}
-	c, err := review.NewCandidate(baseName, headName, diff, paths)
+	c, err := s.bind(repo, base, head)
 	if err != nil {
 		return Repository{}, review.Candidate{}, err
 	}
 	return repo, c, nil
+}
+
+// bind computes the candidate of the diff from base to head in repo, both revisions as a person types them and
+// already refused by review.CheckRev when git could read them as an option. It is the one way a candidate is
+// computed: Bind and Record bind the commits a person names, and Check binds the commits a stored result names, so
+// that the binding it compares with the stored one is made from git in the same way as the one the result was
+// stored with.
+func (s Service) bind(repo Repository, base, head string) (review.Candidate, error) {
+	baseName, err := s.git.Commit(repo, base)
+	if err != nil {
+		return review.Candidate{}, fmt.Errorf("resolve base %q: %w", base, err)
+	}
+	headName, err := s.git.Commit(repo, head)
+	if err != nil {
+		return review.Candidate{}, fmt.Errorf("resolve head %q: %w", head, err)
+	}
+	diff, err := s.git.Diff(repo, baseName, headName)
+	if err != nil {
+		return review.Candidate{}, fmt.Errorf("diff %s..%s: %w", baseName, headName, err)
+	}
+	paths, err := s.git.Paths(repo, baseName, headName)
+	if err != nil {
+		return review.Candidate{}, fmt.Errorf("list the paths of %s..%s: %w", baseName, headName, err)
+	}
+	return review.NewCandidate(baseName, headName, diff, paths)
 }

@@ -5,10 +5,15 @@ package main
 // --base <rev> --head <rev> [--result <file>|-] [--cwd <repo>]' holds the reply of a reviewer to the candidate
 // it recomputes and stores it under odd/review-results/<feature>/, and 'review verify --feature <name>
 // --stored <result> [--verdicts <file>|-] [--cwd <repo>]' holds the reply of the verifier to a stored result,
-// decides whether the review blocks and stores the reply beside the result. The rules are the use cases of
-// review/app over the adapters review/gitexec (git) and review/fsstore (the results directory); this file
-// parses the command line, wires them and says what they did. No verb launches an agent or dispatches
-// work: a reply is a file somebody else produced.
+// decides whether the review blocks and stores the reply beside the result. 'review exempt --feature <name>
+// --base <rev> --head <rev> --risk <none|items> [--cwd <repo>]' stores the exemption of a head from review, on the
+// report of the verifier (stdin) and the risk the agent declares. 'review check --feature <name> [--head <rev>]
+// [--base <rev>] [--cwd <repo>]' is the check of the delivery: it recomputes the candidate of the head from git and
+// refuses unless the results stored for it still hold and clear it, or an exemption stored for it still holds and no
+// result blocks it; with --base it asks that of every commit of the chain of reviews from the base to the head. The
+// rules are the use cases of review/app over the adapters review/gitexec (git) and review/fsstore
+// (the results directory); this file parses the command line, wires them and says what they did. No verb launches
+// an agent or dispatches work: a reply is a file somebody else produced.
 
 import (
 	"encoding/json"
@@ -27,6 +32,7 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review/fsstore"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review/gitexec"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/reviewverdict"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/roles"
 )
 
 // reviewGitTimeout stops one git call of the review verbs that runs longer. Every call is local and takes
@@ -43,7 +49,7 @@ const reviewGitMaxOutput = 256 << 20
 // in an exit that ends nothing.
 func runReview(p process, d deps, args []string) {
 	if len(args) == 0 {
-		fmt.Fprintln(p.stderr, "error: review requires a verb: bind, record, verify")
+		fmt.Fprintln(p.stderr, "error: review requires a verb: bind, record, verify, check, exempt")
 		p.exit(1)
 		return
 	}
@@ -54,8 +60,12 @@ func runReview(p process, d deps, args []string) {
 		runReviewRecord(p, d, args[1:])
 	case "verify":
 		runReviewVerify(p, d, args[1:])
+	case "check":
+		runReviewCheck(p, d, args[1:])
+	case "exempt":
+		runReviewExempt(p, d, args[1:])
 	default:
-		fmt.Fprintf(p.stderr, "error: review: unknown verb %q (expected bind, record or verify)\n", args[0])
+		fmt.Fprintf(p.stderr, "error: review: unknown verb %q (expected bind, record, verify, check or exempt)\n", args[0])
 		p.exit(1)
 	}
 }
@@ -87,7 +97,10 @@ func reviewServiceOver(git reviewapp.Git, results reviewapp.Results) reviewapp.S
 
 // reviewFlags are the parsed flags of the review verbs. A verb takes some of them.
 type reviewFlags struct {
-	base, head, feature, result, stored, verdicts, cwd string
+	base, head, feature, result, stored, verdicts, risk, cwd string
+	// given says which flags the command line gave, with whatever value, an empty one included. A flag that is
+	// optional and has a default tells an empty value that was given from one that was not.
+	given map[string]bool
 }
 
 // parseReviewFlags reads args, the flags the verb takes (each with a value, once) and nothing else. It fails
@@ -96,6 +109,7 @@ type reviewFlags struct {
 func parseReviewFlags(args []string, takes ...string) (reviewFlags, error) {
 	var f reviewFlags
 	given := map[string]bool{}
+	f.given = given
 	for i := 0; i < len(args); i++ {
 		a := args[i]
 		if !slices.Contains(takes, a) {
@@ -125,6 +139,8 @@ func parseReviewFlags(args []string, takes ...string) (reviewFlags, error) {
 			f.stored = args[i]
 		case "--verdicts":
 			f.verdicts = args[i]
+		case "--risk":
+			f.risk = args[i]
 		case "--cwd":
 			f.cwd = args[i]
 		}
@@ -132,10 +148,13 @@ func parseReviewFlags(args []string, takes ...string) (reviewFlags, error) {
 	return f, nil
 }
 
+// has reports whether the command line gave the flag.
+func (f reviewFlags) has(name string) bool { return f.given[name] }
+
 // require fails with the first of the named flags that has no value. A name it does not know is a mistake of
 // the caller, and says so rather than reading as a flag that was left out.
 func (f reviewFlags) require(names ...string) error {
-	values := map[string]string{"--base": f.base, "--head": f.head, "--feature": f.feature, "--stored": f.stored}
+	values := map[string]string{"--base": f.base, "--head": f.head, "--feature": f.feature, "--stored": f.stored, "--risk": f.risk}
 	for _, name := range names {
 		value, known := values[name]
 		if !known {
@@ -320,11 +339,7 @@ func reportVerified(p process, v reviewapp.Verified) {
 			fmt.Fprintf(p.stderr, "review verify: %s: %s\n", list.label, strings.Join(list.ids, ", "))
 		}
 	}
-	fills := review.ParentFields() // a new slice: deleting from it changes no other caller's
-	if v.Handoff.ToRole != "" {
-		fills = slices.DeleteFunc(fills, func(field string) bool { return field == "to_role" })
-	}
-	fmt.Fprintf(p.stderr, "review verify: stdout is the skeleton of the record for 'roles append --stdin'; the parent of the chain fills %s\n", strings.Join(fills, ", "))
+	fmt.Fprintf(p.stderr, "review verify: stdout is the skeleton of the record for 'roles append --stdin'; the parent of the chain fills %s\n", parentFills(v.Handoff))
 	if err := writeReviewJSON(p, v.Handoff); err != nil {
 		reviewFailed(p, "verify", fmt.Errorf("the verdict is stored at %s, but the handoff could not be written: %w", v.Path, err))
 		return
@@ -332,8 +347,195 @@ func reportVerified(p process, v reviewapp.Verified) {
 	p.exit(0)
 }
 
-// reviewFailed is how record and verify end on an error: the error on stderr, and exit 2 for a reply that was
-// refused, 1 for anything else.
+// parentFills names the members of the skeleton h that the parent of the chain still fills, in the order of
+// review.ParentFields: to_role is not among them when the skeleton already names the next role.
+func parentFills(h roles.RoleHandoff) string {
+	fills := review.ParentFields() // a new slice: deleting from it changes no other caller's
+	if h.ToRole != "" {
+		fills = slices.DeleteFunc(fills, func(field string) bool { return field == "to_role" })
+	}
+	return strings.Join(fills, ", ")
+}
+
+// runReviewExempt implements 'review exempt --feature --base --head --risk [--cwd]': the report of the verifier is
+// read from stdin and nothing else. A report that is refused is exit 2 and nothing is written; any other failure, a
+// risk that names a high-risk item included, is exit 1.
+func runReviewExempt(p process, d deps, args []string) {
+	fail := func(err error) { reviewFailed(p, "exempt", err) }
+	f, err := parseReviewFlags(args, "--feature", "--base", "--head", "--risk", "--cwd")
+	if err == nil {
+		err = f.require("--feature", "--base", "--head", "--risk")
+	}
+	if err != nil {
+		fail(err)
+		return
+	}
+	dir, err := reviewPath(d, f.cwd)
+	if err != nil {
+		fail(err)
+		return
+	}
+	report, err := readReviewReply(p, d, "")
+	if err != nil {
+		fail(err)
+		return
+	}
+	exempted, err := newReviewService(d).Exempt(dir, f.feature, f.base, f.head, f.risk, report)
+	if err != nil {
+		fail(err)
+		return
+	}
+	reportExempted(p, exempted)
+}
+
+// reportExempted tells what exempt stored and hands the skeleton of the record on stdout. An exemption whose
+// directory could not be flushed is stored all the same, and the person is told not to exempt the head again.
+func reportExempted(p process, e reviewapp.Exemption) {
+	fmt.Fprintf(p.stderr, "review exempt: stored %s (sha256 %s)\n", e.Path, e.SHA256)
+	if e.NotFlushed != nil {
+		fmt.Fprintf(p.stderr, "review exempt: warning: its directory could not be flushed, so the exemption may not survive a crash of the machine; it is stored, do not exempt the head again: %v\n", e.NotFlushed)
+	}
+	fmt.Fprintln(p.stderr, "review exempt: the head is exempted from review: the declared risk is none and the report of the verifier is clear; 'review check' clears it unless a stored result blocks it")
+	fmt.Fprintf(p.stderr, "review exempt: stdout is the skeleton of the record for 'roles append --stdin'; the parent of the chain fills %s\n", parentFills(e.Handoff))
+	if err := writeReviewJSON(p, e.Handoff); err != nil {
+		reviewFailed(p, "exempt", fmt.Errorf("the exemption is stored at %s, but the handoff could not be written: %w", e.Path, err))
+		return
+	}
+	p.exit(0)
+}
+
+// reviewCheckJSON is what 'review check' prints for a head that is cleared for delivery: the head as a full
+// object name, the outcome, the stored results that bind it, by launch (an empty array for a head that is cleared
+// by an exemption alone), and the stored exemptions that bind it, by number, which are left out when there is none.
+// The delivery role is told to name the head, the results it prints and the exemptions when it prints any
+// (roles/delivery/body.md, and the three agent files made from it), so a member renamed in this type, or in
+// reviewRangeJSON, which prints them for each range of a chain, is a line to change there.
+type reviewCheckJSON struct {
+	Head       string               `json:"head"`
+	Outcome    string               `json:"outcome"`
+	Results    []reviewCheckedJSON  `json:"results"`
+	Exemptions []reviewExemptedJSON `json:"exemptions,omitempty"`
+}
+
+// reviewExemptedJSON is one stored exemption that binds the head, with the file used and the base and the digest
+// of the diff that git gave when the check recomputed them, which the stored binding equals.
+type reviewExemptedJSON struct {
+	Exemption  string `json:"exemption"`
+	Base       string `json:"base"`
+	DiffSHA256 string `json:"diff_sha256"`
+}
+
+// reviewCheckedJSON is one stored result that binds the head, with the files used and the base and the digest of
+// the diff that git gave when the check recomputed them, which the stored binding equals. fix and carry are the
+// findings to be fixed before delivery and to be carried as follow-ups; they are left out when there are none.
+type reviewCheckedJSON struct {
+	Result     string   `json:"result"`
+	Verdict    string   `json:"verdict,omitempty"`
+	Base       string   `json:"base"`
+	DiffSHA256 string   `json:"diff_sha256"`
+	Fix        []string `json:"fix,omitempty"`
+	Carry      []string `json:"carry,omitempty"`
+}
+
+// reviewChainJSON is what 'review check --base' prints for a head that is cleared from the base by an unbroken chain of
+// reviews: both as full object names, the outcome and the ranges, from the one that starts at the base to the one that
+// ends at the head, each with the files that clear it.
+type reviewChainJSON struct {
+	Head    string            `json:"head"`
+	Base    string            `json:"base"`
+	Outcome string            `json:"outcome"`
+	Ranges  []reviewRangeJSON `json:"ranges"`
+}
+
+// reviewRangeJSON is one range of the chain: the commit it starts from, the commit it ends at, and the stored results
+// (an empty array when an exemption alone clears it) and exemptions that bind that commit, as 'review check' prints them.
+type reviewRangeJSON struct {
+	Base       string               `json:"base"`
+	Head       string               `json:"head"`
+	Results    []reviewCheckedJSON  `json:"results"`
+	Exemptions []reviewExemptedJSON `json:"exemptions,omitempty"`
+}
+
+// runReviewCheck implements 'review check --feature [--head] [--base] [--cwd]', the check of the delivery. A head that
+// the stored results, or an exemption, clear is exit 0, and stdout names the files used. Anything that keeps a head from
+// delivery, and any failure to tell, is exit 1 with the reason on stderr and nothing on stdout. The head is HEAD
+// when --head is not given; an empty one that was given is not the default. With --base the head is cleared only by
+// an unbroken chain of reviews from that base, and stdout lists the ranges of the chain; without it the check is by
+// head alone, as it always was.
+func runReviewCheck(p process, d deps, args []string) {
+	fail := func(err error) { reviewFailed(p, "check", err) }
+	f, err := parseReviewFlags(args, "--feature", "--head", "--base", "--cwd")
+	if err == nil {
+		err = f.require("--feature")
+	}
+	head := "HEAD"
+	if err == nil && f.has("--head") {
+		head, err = f.head, f.require("--head")
+	}
+	if err != nil {
+		fail(err)
+		return
+	}
+	dir, err := reviewPath(d, f.cwd)
+	if err != nil {
+		fail(err)
+		return
+	}
+	service := newReviewService(d)
+	if f.has("--base") {
+		chained, err := service.CheckChain(dir, f.feature, f.base, head)
+		if err != nil {
+			fail(err)
+			return
+		}
+		reportChained(p, chained)
+		return
+	}
+	checked, err := service.Check(dir, f.feature, head)
+	if err != nil {
+		fail(err)
+		return
+	}
+	reportCleared(p, checkedJSON(checked))
+}
+
+// checkedJSON is what 'review check' prints for a head that is cleared: the files used.
+func checkedJSON(checked reviewapp.Checked) reviewCheckJSON {
+	out := reviewCheckJSON{Head: checked.Head, Outcome: string(reviewverdict.Clear), Results: []reviewCheckedJSON{}}
+	for _, r := range checked.Results {
+		out.Results = append(out.Results, reviewCheckedJSON{
+			Result: r.Result, Verdict: r.Verdict, Base: r.Candidate.Base, DiffSHA256: r.Candidate.DiffSHA256,
+			Fix: r.Decision.Fix, Carry: r.Decision.Carry,
+		})
+	}
+	for _, e := range checked.Exemptions {
+		out.Exemptions = append(out.Exemptions, reviewExemptedJSON{Exemption: e.Exemption, Base: e.Candidate.Base, DiffSHA256: e.Candidate.DiffSHA256})
+	}
+	return out
+}
+
+// reportChained hands the ranges of the chain, with the files each used, on stdout.
+func reportChained(p process, chained reviewapp.Chained) {
+	out := reviewChainJSON{Head: chained.Head, Base: chained.Base, Outcome: string(reviewverdict.Clear), Ranges: []reviewRangeJSON{}}
+	for _, r := range chained.Ranges {
+		files := checkedJSON(r.Checked)
+		out.Ranges = append(out.Ranges, reviewRangeJSON{Base: r.Base, Head: r.Head, Results: files.Results, Exemptions: files.Exemptions})
+	}
+	reportCleared(p, out)
+}
+
+// reportCleared hands the answer for a head that is cleared on stdout. When it cannot be written the parent never
+// received that the head is cleared, and the verb says so with exit 1.
+func reportCleared(p process, answer any) {
+	if err := writeReviewJSON(p, answer); err != nil {
+		reviewFailed(p, "check", fmt.Errorf("the head is cleared, but the answer could not be written: %w", err))
+		return
+	}
+	p.exit(0)
+}
+
+// reviewFailed is how record, verify and check end on an error: the error on stderr, and exit 2 for a reply that
+// was refused, 1 for anything else.
 func reviewFailed(p process, verb string, err error) {
 	code := 1
 	var refused *reviewapp.ReplyRefusedError

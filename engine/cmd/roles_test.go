@@ -19,7 +19,14 @@ type rolesRun struct {
 	stderr string
 }
 
+// runRolesTest runs `roles <args>` with the evidence check of the program over deps that have no environment: a
+// record that is held to no evidence is stored as it always was, and one that needs the repository fails closed.
 func runRolesTest(args []string, stdin string) rolesRun {
+	return runRolesChecked(reviewEvidenceCheck(deps{}), args, stdin)
+}
+
+// runRolesChecked runs `roles <args>` with the given check of the evidence of a record.
+func runRolesChecked(check evidenceCheck, args []string, stdin string) rolesRun {
 	var out, errBuf bytes.Buffer
 	code := -1
 	exited := false
@@ -28,7 +35,7 @@ func runRolesTest(args []string, stdin string) rolesRun {
 			code = c
 			exited = true
 		}
-	})
+	}, check)
 	if !exited {
 		code = 0
 	}

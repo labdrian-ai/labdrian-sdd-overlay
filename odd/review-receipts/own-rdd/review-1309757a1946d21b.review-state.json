@@ -1,0 +1,216 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:03e3cd34c2542f4f7b579dc32764eca5f866ccb50747c2c52ad828f62b213fd5",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-1309757a1946d21b",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "24456f717e1a2446c5d11e9d386133dc3ee769a5",
+      "candidate_tree": "77e9cdcfb5084f74eceb5b4372337fd52eb8f2c1",
+      "paths_digest": "sha256:b7fb05cf32cd036971e2f58a4d2f069ed251dafb2a5d2d788fb7ea787b3ffbbf",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "README.md",
+        "engine/cmd/dispatch.go",
+        "engine/cmd/dispatch_routes_test.go",
+        "engine/cmd/review.go",
+        "engine/cmd/review_test.go",
+        "engine/cmd/roles.go"
+      ],
+      "identity": "sha256:2d8dda30c1b968781c71fbfeb2e47ce96d8d824c92c663282f927d9809e49202"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "24456f717e1a2446c5d11e9d386133dc3ee769a5",
+      "candidate_tree": "77e9cdcfb5084f74eceb5b4372337fd52eb8f2c1",
+      "paths_digest": "sha256:b7fb05cf32cd036971e2f58a4d2f069ed251dafb2a5d2d788fb7ea787b3ffbbf",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "README.md",
+        "engine/cmd/dispatch.go",
+        "engine/cmd/dispatch_routes_test.go",
+        "engine/cmd/review.go",
+        "engine/cmd/review_test.go",
+        "engine/cmd/roles.go"
+      ],
+      "identity": "sha256:2d8dda30c1b968781c71fbfeb2e47ce96d8d824c92c663282f927d9809e49202"
+    },
+    "genesis_paths": [
+      "README.md",
+      "engine/cmd/dispatch.go",
+      "engine/cmd/dispatch_routes_test.go",
+      "engine/cmd/review.go",
+      "engine/cmd/review_test.go",
+      "engine/cmd/roles.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-risk",
+      "review-reliability"
+    ],
+    "original_changed_lines": 32,
+    "correction_budget": 16,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "commit c0dff020 of own-rdd T4: feat(review): route review check and the evidence check through the dispatcher's deps",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:87a39e519acfb7059752eec9271c74af2d88e68b16b442c36fb0155209fbccde",
+    "capture_phase_revision": "sha256:85e656d812ea40c4364d679048ad3643ab37871631b81efb9a71111fbf22ce93",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:2d8dda30c1b968781c71fbfeb2e47ce96d8d824c92c663282f927d9809e49202",
+        "capture_phase_revision": "sha256:85e656d812ea40c4364d679048ad3643ab37871631b81efb9a71111fbf22ce93",
+        "artifact_digest": "sha256:075c743a5994f2ed99914e75224ed98f598d9e37e0be9b2ec34766cf3748d999",
+        "result_hash": "sha256:e3d135fc70717d5a3e606a7edbb947da9aeec7a8caf6911ade1e4847a5cbc26d",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:36bfd8defcd85aa980f9aec640003fb10f05177361c2c7a1ad702ace76fbea2b",
+            "lineage_id": "review-1309757a1946d21b",
+            "authority_revision": "sha256:85e656d812ea40c4364d679048ad3643ab37871631b81efb9a71111fbf22ce93",
+            "target_identity": "sha256:2d8dda30c1b968781c71fbfeb2e47ce96d8d824c92c663282f927d9809e49202",
+            "base_tree": "24456f717e1a2446c5d11e9d386133dc3ee769a5",
+            "candidate_tree": "77e9cdcfb5084f74eceb5b4372337fd52eb8f2c1",
+            "changed_path_manifest_sha256": "sha256:5bbeb4484d881397789b40435b2707bf302ec5a405a7434aa478c6c62cf40116",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:36bfd8defcd85aa980f9aec640003fb10f05177361c2c7a1ad702ace76fbea2b",
+            "raw_sha256": "sha256:9c9a96e050a5a3e5c787a048a395ea04b6b7e251295c6362d3645e88a114e547",
+            "canonical_sha256": "sha256:c5fe83eb592cc212db7c5e3eacec6ef11272e72bcb6009042f93e92c48fc005b",
+            "result_hash": "sha256:e3d135fc70717d5a3e606a7edbb947da9aeec7a8caf6911ade1e4847a5cbc26d",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:36bfd8defcd85aa980f9aec640003fb10f05177361c2c7a1ad702ace76fbea2b",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "README.md",
+                "engine/cmd/dispatch.go",
+                "engine/cmd/dispatch_routes_test.go",
+                "engine/cmd/review.go",
+                "engine/cmd/review_test.go",
+                "engine/cmd/roles.go"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "Reviewed all six changed paths. The code changes are limited to usage and error message text for the review verbs, a README documentation update, and threading the injected deps value into runRoles in place of productionDeps().",
+              "The runRoles change in engine/cmd/roles.go:28-29 passes the dispatcher's deps through to reviewEvidenceCheck. Production main presumably supplies production deps, so the change does not weaken the evidence check. The patch shows no new input handling, no secrets, no new dependencies and no authorization changes.",
+              "The 'check' verb dispatch in engine/cmd/review.go was already present as unchanged context. Only the message strings changed, so no new attack surface is introduced.",
+              "No exploitable security, data exposure or data loss impact is reachable from this candidate."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 1,
+        "target_identity": "sha256:2d8dda30c1b968781c71fbfeb2e47ce96d8d824c92c663282f927d9809e49202",
+        "capture_phase_revision": "sha256:85e656d812ea40c4364d679048ad3643ab37871631b81efb9a71111fbf22ce93",
+        "artifact_digest": "sha256:7ef0d6455d99b80344932883c27e69f475540d380acbccd79def97c91f17daf0",
+        "result_hash": "sha256:ce58ba7e2db0c188694f1f76199a7d822f9e5378344c1248f13b7e894335c737",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:1949e45f05212ada440cc99d0c9256d49fae2ae2d8112972bcf15fcf2826d337",
+            "lineage_id": "review-1309757a1946d21b",
+            "authority_revision": "sha256:85e656d812ea40c4364d679048ad3643ab37871631b81efb9a71111fbf22ce93",
+            "target_identity": "sha256:2d8dda30c1b968781c71fbfeb2e47ce96d8d824c92c663282f927d9809e49202",
+            "base_tree": "24456f717e1a2446c5d11e9d386133dc3ee769a5",
+            "candidate_tree": "77e9cdcfb5084f74eceb5b4372337fd52eb8f2c1",
+            "changed_path_manifest_sha256": "sha256:5bbeb4484d881397789b40435b2707bf302ec5a405a7434aa478c6c62cf40116",
+            "lens": "review-reliability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:1949e45f05212ada440cc99d0c9256d49fae2ae2d8112972bcf15fcf2826d337",
+            "raw_sha256": "sha256:b9e2c222e8f554d1bfda0ef382e2154c84a801ed5c0d609bcd08a9808c2f2b86",
+            "canonical_sha256": "sha256:a5380aeda72646d56138d3e223612ca7ff0b8f020864f70388a3177a28b15720",
+            "result_hash": "sha256:ce58ba7e2db0c188694f1f76199a7d822f9e5378344c1248f13b7e894335c737",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:1949e45f05212ada440cc99d0c9256d49fae2ae2d8112972bcf15fcf2826d337",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "README.md",
+                "engine/cmd/dispatch.go",
+                "engine/cmd/dispatch_routes_test.go",
+                "engine/cmd/review.go",
+                "engine/cmd/review_test.go",
+                "engine/cmd/roles.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-roles-evidence-deps",
+                "lens": "reliability",
+                "location": "engine/cmd/roles.go:28-29",
+                "severity": "WARNING",
+                "claim": "runRoles now builds the review evidence check from the injected deps instead of productionDeps(). This is the right direction for testability, but no test in this candidate exercises roles append through the injected deps. The README claims append refuses a completed review-report whose evidence is missing or differs, and that behavior is not proved by any visible assertion in this change.",
+                "proof_refs": [
+                  "engine/cmd/roles.go:28-29",
+                  "engine/cmd/dispatch.go:52"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Reviewed all 6 changed paths. Changes are the review verb usage and unknown-verb messages (now listing check), the runRoles signature taking deps, the dispatch call site, and README text.",
+              "The review.go and review_test.go message changes are consistent with each other and with the route test expectation in engine/cmd/dispatch_routes_test.go:41.",
+              "The runReview switch already dispatched a check case at the baseline, so only the messages changed; the updated strings are covered by the existing table tests.",
+              "The behavior change in runRoles (deps injection) is a one-line change. In production, run is expected to pass productionDeps(), so behavior is likely unchanged. I could not confirm this from the visible patch."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "b39393285147a456d76a1883738b7bbad87fd3943afe661f030ff1b2388fb8e5",
+    "initial_atomic_start": {
+      "lineage_id": "review-1309757a1946d21b",
+      "worktree_identity": "sha256:571cf94da78406a5dee177091311c4fcbbbf61e483d9e6e92803045faa817e42",
+      "target_identity": "sha256:2d8dda30c1b968781c71fbfeb2e47ce96d8d824c92c663282f927d9809e49202",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "24456f717e1a2446c5d11e9d386133dc3ee769a5",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-risk",
+        "review-reliability"
+      ],
+      "original_changed_lines": 32,
+      "correction_budget": 16,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "commit c0dff020 of own-rdd T4: feat(review): route review check and the evidence check through the dispatcher's deps"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

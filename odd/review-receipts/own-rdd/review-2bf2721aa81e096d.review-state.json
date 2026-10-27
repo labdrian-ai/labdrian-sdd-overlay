@@ -1,0 +1,192 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:0d8bc3bb335b02e67eadb5e9ae98b30f760a345307381eb2eb3ca0ffcadbffe0",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-2bf2721aa81e096d",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "a2d4730d9573c177c61483402a28af60376497f3",
+      "candidate_tree": "ed93405b7554a395a490311cc37a49ca92223258",
+      "paths_digest": "sha256:c21be7f1ac52f08adb027b26f1b4723e25815f7d8cc8a7f7f828f7de7d9956a8",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/review/app/app.go",
+        "engine/review/app/exempt.go",
+        "engine/review/app/exempt_test.go",
+        "engine/review/app/service.go"
+      ],
+      "identity": "sha256:38283ccda66a693023f02e258b57757455a9847ed0a67ee0c32805acb49e037c"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "a2d4730d9573c177c61483402a28af60376497f3",
+      "candidate_tree": "ed93405b7554a395a490311cc37a49ca92223258",
+      "paths_digest": "sha256:c21be7f1ac52f08adb027b26f1b4723e25815f7d8cc8a7f7f828f7de7d9956a8",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/review/app/app.go",
+        "engine/review/app/exempt.go",
+        "engine/review/app/exempt_test.go",
+        "engine/review/app/service.go"
+      ],
+      "identity": "sha256:38283ccda66a693023f02e258b57757455a9847ed0a67ee0c32805acb49e037c"
+    },
+    "genesis_paths": [
+      "engine/review/app/app.go",
+      "engine/review/app/exempt.go",
+      "engine/review/app/exempt_test.go",
+      "engine/review/app/service.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-risk",
+      "review-reliability"
+    ],
+    "original_changed_lines": 459,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "commit 2e6e743a of own-rdd T4: feat(review): the use case that exempts a head from review",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:637d081d2d27bb5e67baa86b3bfb588cc313563aeffbeb5c9dfa1ffea0fc9f95",
+    "capture_phase_revision": "sha256:a9438ff2033ef7d5fea9d39808c8bd01d444f964468b321f7755d46b582fe1e5",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:38283ccda66a693023f02e258b57757455a9847ed0a67ee0c32805acb49e037c",
+        "capture_phase_revision": "sha256:a9438ff2033ef7d5fea9d39808c8bd01d444f964468b321f7755d46b582fe1e5",
+        "artifact_digest": "sha256:b346031d1788ab9702e69eecdc90941b262a925ea86ae964e285b68361d433a3",
+        "result_hash": "sha256:93821bf33ec0bf9fe2c8f916a6ff2663ab8185ea1081fa7b03354f942608ec91",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:708f9f35ceb7e8218c81ad8c1e73735901574cf00c263b025e6299e5244f86b0",
+            "lineage_id": "review-2bf2721aa81e096d",
+            "authority_revision": "sha256:a9438ff2033ef7d5fea9d39808c8bd01d444f964468b321f7755d46b582fe1e5",
+            "target_identity": "sha256:38283ccda66a693023f02e258b57757455a9847ed0a67ee0c32805acb49e037c",
+            "base_tree": "a2d4730d9573c177c61483402a28af60376497f3",
+            "candidate_tree": "ed93405b7554a395a490311cc37a49ca92223258",
+            "changed_path_manifest_sha256": "sha256:fd9e66eaac82f611090c921b0d424587511b15f1ae8ad870e4c822d562914c6d",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:708f9f35ceb7e8218c81ad8c1e73735901574cf00c263b025e6299e5244f86b0",
+            "raw_sha256": "sha256:9e679b6b6cb9c0a9c7aa6a0fa933848672868d6a99a5d8c51551dcea26dfbc53",
+            "canonical_sha256": "sha256:873e6963a81fe8f8d0e5919d784ad6aa20c58ad5f7a92ef4079ff3b1ea3f17d3",
+            "result_hash": "sha256:93821bf33ec0bf9fe2c8f916a6ff2663ab8185ea1081fa7b03354f942608ec91",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:708f9f35ceb7e8218c81ad8c1e73735901574cf00c263b025e6299e5244f86b0",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/app/app.go",
+                "engine/review/app/exempt.go",
+                "engine/review/app/exempt_test.go",
+                "engine/review/app/service.go"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "Exempt in engine/review/app/exempt.go validates the feature as a single safe path segment (review.CheckFeature) and refuses unsafe base/head revisions (review.ErrInvalidRev) before git or the store is touched, so no path traversal or option injection is reachable through the new use case.",
+              "The declared risk is gated by review.CheckRisk so anything other than 'none' is refused (high-risk items and unreadable declarations are refused separately), and the report is size-bounded by review.MaxReplyBytes and held to review.CheckReport requiring a clear report; a check that did not run never passes. Enforcement is in the backend use case, not left to the caller.",
+              "The candidate is computed from git on every call via s.candidate, the same path as Record, and never taken from the report, so the binding cannot be forged by supplied input; exempt_test.go verifies the git calls match Record's.",
+              "service.go changes only parameterize the file-name function passed to store; Record still passes review.ResultName, so its behavior is unchanged. Store still uses exclusive Create with bounded retries and never overwrites an existing file, which exempt_test.go covers.",
+              "No secrets, new dependencies, or unsafe input handling are introduced in the four changed files; app.go changes are comment-only."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 1,
+        "target_identity": "sha256:38283ccda66a693023f02e258b57757455a9847ed0a67ee0c32805acb49e037c",
+        "capture_phase_revision": "sha256:a9438ff2033ef7d5fea9d39808c8bd01d444f964468b321f7755d46b582fe1e5",
+        "artifact_digest": "sha256:40a945359862c9a689ac0b8acc7a1483b2c1124daa59403a510bc6df827b1f72",
+        "result_hash": "sha256:d373d474a67204f948f3f7d7ee6b2c44278fe1657b4726aa32e0b32401da28af",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:3bf2a044b0f21bdd6f66966873f1389f3bb8b0486bebc5a099f8b4e672a0ca6a",
+            "lineage_id": "review-2bf2721aa81e096d",
+            "authority_revision": "sha256:a9438ff2033ef7d5fea9d39808c8bd01d444f964468b321f7755d46b582fe1e5",
+            "target_identity": "sha256:38283ccda66a693023f02e258b57757455a9847ed0a67ee0c32805acb49e037c",
+            "base_tree": "a2d4730d9573c177c61483402a28af60376497f3",
+            "candidate_tree": "ed93405b7554a395a490311cc37a49ca92223258",
+            "changed_path_manifest_sha256": "sha256:fd9e66eaac82f611090c921b0d424587511b15f1ae8ad870e4c822d562914c6d",
+            "lens": "review-reliability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:3bf2a044b0f21bdd6f66966873f1389f3bb8b0486bebc5a099f8b4e672a0ca6a",
+            "raw_sha256": "sha256:f44665627c4832b3ae1610b12ba315e79ff4fda0302609a31d2d8231da49f016",
+            "canonical_sha256": "sha256:f22832f03e4933bab24976e873dd16ee951857ab5a1b9e1094c0766285829c8b",
+            "result_hash": "sha256:d373d474a67204f948f3f7d7ee6b2c44278fe1657b4726aa32e0b32401da28af",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:3bf2a044b0f21bdd6f66966873f1389f3bb8b0486bebc5a099f8b4e672a0ca6a",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/app/app.go",
+                "engine/review/app/exempt.go",
+                "engine/review/app/exempt_test.go",
+                "engine/review/app/service.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [],
+            "evidence": [
+              "Reviewed all four changed paths. The Exempt use case in engine/review/app/exempt.go validates the feature, the risk, the report size and the report content before any git or store access, then reuses the same candidate computation and numbered store path as Record. Record's behavior is unchanged: engine/review/app/service.go only threads a name function (review.ResultName) into store.",
+              "The tests in engine/review/app/exempt_test.go cover the observable behaviors: the stored file, path, digest and handoff; shared numbering across results, verdicts and exemptions; race and exhaustion retries; high-risk and invalid-risk refusals with no git or store calls; unclear reports; the size boundary at exactly MaxReplyBytes and one byte over; unsafe feature and revision values; git and store failures; the not-flushed case; and Record regression coverage next to an existing exemption.",
+              "I found no reliability defect introduced by this candidate. The helpers it depends on (review.CheckRisk, review.CheckReport, review.EncodeExemption, review.ExemptionName, review.ExemptionHandoff) are outside the visible scope, so I did not assess them."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "d80a09aa4942b8e655648c101bced819bba74369c8fbf20319531c5b976109df",
+    "initial_atomic_start": {
+      "lineage_id": "review-2bf2721aa81e096d",
+      "worktree_identity": "sha256:571cf94da78406a5dee177091311c4fcbbbf61e483d9e6e92803045faa817e42",
+      "target_identity": "sha256:38283ccda66a693023f02e258b57757455a9847ed0a67ee0c32805acb49e037c",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "a2d4730d9573c177c61483402a28af60376497f3",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-risk",
+        "review-reliability"
+      ],
+      "original_changed_lines": 459,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "commit 2e6e743a of own-rdd T4: feat(review): the use case that exempts a head from review"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

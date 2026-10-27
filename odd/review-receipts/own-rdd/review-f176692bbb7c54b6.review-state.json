@@ -1,0 +1,226 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:e93091e4d87be1981d92ad7490018ce9fc177fc023227f04780a410199a337ff",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-f176692bbb7c54b6",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "87ff68720b9d371a0abff20568488cbcada2d762",
+      "candidate_tree": "a2d4730d9573c177c61483402a28af60376497f3",
+      "paths_digest": "sha256:9c09b55cd696dc7b977982cf77ab79396264136dad9b1e99fbbb7a736d86a9b8",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/review/check.go",
+        "engine/review/exempt.go",
+        "engine/review/exempt_check_test.go",
+        "engine/review/review.go",
+        "engine/review/stored.go"
+      ],
+      "identity": "sha256:84ae2e7996b309a47edfe2114bf9d54f2c5a3f23ff52d32262bca8e0a2f3cd63"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "87ff68720b9d371a0abff20568488cbcada2d762",
+      "candidate_tree": "a2d4730d9573c177c61483402a28af60376497f3",
+      "paths_digest": "sha256:9c09b55cd696dc7b977982cf77ab79396264136dad9b1e99fbbb7a736d86a9b8",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/review/check.go",
+        "engine/review/exempt.go",
+        "engine/review/exempt_check_test.go",
+        "engine/review/review.go",
+        "engine/review/stored.go"
+      ],
+      "identity": "sha256:84ae2e7996b309a47edfe2114bf9d54f2c5a3f23ff52d32262bca8e0a2f3cd63"
+    },
+    "genesis_paths": [
+      "engine/review/check.go",
+      "engine/review/exempt.go",
+      "engine/review/exempt_check_test.go",
+      "engine/review/review.go",
+      "engine/review/stored.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-risk",
+      "review-reliability"
+    ],
+    "original_changed_lines": 197,
+    "correction_budget": 99,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "commit 42d159c1 of own-rdd T4: feat(review): a head is cleared by an exemption unless a stored result stops it",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:99caebff3e3cdfcd613acefc25108f08d0a780a003eed2caa2184c63ce92a73c",
+    "capture_phase_revision": "sha256:b51a2ff6f48b16a959dcb1ad30290403905d8b57b327d2c00154d9abe490c896",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:84ae2e7996b309a47edfe2114bf9d54f2c5a3f23ff52d32262bca8e0a2f3cd63",
+        "capture_phase_revision": "sha256:b51a2ff6f48b16a959dcb1ad30290403905d8b57b327d2c00154d9abe490c896",
+        "artifact_digest": "sha256:32793a60a27eee9d08981bdb12ba23e326764ec3e7308a1b147ff16211690071",
+        "result_hash": "sha256:b6c06e05ffd5a375a6184d0380d31e5fde8a01f8ddf0fdc22e324ed5e1122b16",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:d4278e3542ef7ecec297d5ebe0ccc63d4b8a48d52908c885f1e74914b8de54e5",
+            "lineage_id": "review-f176692bbb7c54b6",
+            "authority_revision": "sha256:b51a2ff6f48b16a959dcb1ad30290403905d8b57b327d2c00154d9abe490c896",
+            "target_identity": "sha256:84ae2e7996b309a47edfe2114bf9d54f2c5a3f23ff52d32262bca8e0a2f3cd63",
+            "base_tree": "87ff68720b9d371a0abff20568488cbcada2d762",
+            "candidate_tree": "a2d4730d9573c177c61483402a28af60376497f3",
+            "changed_path_manifest_sha256": "sha256:7f354a0b79dc3e08b8d31c80dfc6583e6a4e20f82e3c67749cdd089ee78aa930",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:d4278e3542ef7ecec297d5ebe0ccc63d4b8a48d52908c885f1e74914b8de54e5",
+            "raw_sha256": "sha256:5030eff37776cf72770446417d1dcbf1ca14aeecbb60cdb90c9d62b60964141c",
+            "canonical_sha256": "sha256:d3fe75cea613f5aae8a1cf275806e7b6abde67f6a078744e6d8e19e490452ff4",
+            "result_hash": "sha256:b6c06e05ffd5a375a6184d0380d31e5fde8a01f8ddf0fdc22e324ed5e1122b16",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:d4278e3542ef7ecec297d5ebe0ccc63d4b8a48d52908c885f1e74914b8de54e5",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/check.go",
+                "engine/review/exempt.go",
+                "engine/review/exempt_check_test.go",
+                "engine/review/review.go",
+                "engine/review/stored.go"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [
+              {
+                "id": "R1-001",
+                "lens": "risk",
+                "location": "engine/review/check.go:153-157",
+                "severity": "WARNING",
+                "claim": "Cleared accepts any non-empty exempted slice as clearing a head with no results. It does not itself verify that each Exempted entry passed CheckExemption and CheckBinding; it relies on the caller (review/app Check, not visible here) to filter before passing. If the caller passes unvalidated exemptions, a tampered exemption file could clear a head. This is a contract dependency, not a demonstrated exploit in this candidate.",
+                "proof_refs": [
+                  "engine/review/check.go:45-54",
+                  "engine/review/check.go:141-156"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "unknown"
+              }
+            ],
+            "evidence": [
+              "Reviewed all 5 changed paths. Cleared returns nil only when there are no results and at least one exemption; any result routes to Clearance, so a blocking result always wins, matching the stated intent and the tests.",
+              "CheckExemption re-applies CheckRisk then CheckReport on stored data, so edited exemption files are refused at the pure-rule level.",
+              "The Exempted type carries only the candidate and path, with no validated marker, so the safety of Cleared depends on the unseen caller validating each exemption first.",
+              "No secrets, unsafe input handling, or dependency changes were introduced; review.go and stored.go changes are comment-only."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 1,
+        "target_identity": "sha256:84ae2e7996b309a47edfe2114bf9d54f2c5a3f23ff52d32262bca8e0a2f3cd63",
+        "capture_phase_revision": "sha256:b51a2ff6f48b16a959dcb1ad30290403905d8b57b327d2c00154d9abe490c896",
+        "artifact_digest": "sha256:d4f234362fee5b872a0569d012fa654b83f4033cafc39ba6c5adab878a49de67",
+        "result_hash": "sha256:b889b1b6de17023ebfccd9f8ac5858692e2eae2462fc4afa454469d7b24f5390",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:317f5f4c04ac072334468e7594b8b68c84db3ba7dfacfe9eaaf3216dced63e40",
+            "lineage_id": "review-f176692bbb7c54b6",
+            "authority_revision": "sha256:b51a2ff6f48b16a959dcb1ad30290403905d8b57b327d2c00154d9abe490c896",
+            "target_identity": "sha256:84ae2e7996b309a47edfe2114bf9d54f2c5a3f23ff52d32262bca8e0a2f3cd63",
+            "base_tree": "87ff68720b9d371a0abff20568488cbcada2d762",
+            "candidate_tree": "a2d4730d9573c177c61483402a28af60376497f3",
+            "changed_path_manifest_sha256": "sha256:7f354a0b79dc3e08b8d31c80dfc6583e6a4e20f82e3c67749cdd089ee78aa930",
+            "lens": "review-reliability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:317f5f4c04ac072334468e7594b8b68c84db3ba7dfacfe9eaaf3216dced63e40",
+            "raw_sha256": "sha256:e65c426e170669f9c97d125411d38fd621697519651fbcbf1ddf8f50f08dfaac",
+            "canonical_sha256": "sha256:0b7e04d83cfa3dd963c9008d6ad8956e5ea9d96de6f1cb357eaa222558765a58",
+            "result_hash": "sha256:b889b1b6de17023ebfccd9f8ac5858692e2eae2462fc4afa454469d7b24f5390",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:317f5f4c04ac072334468e7594b8b68c84db3ba7dfacfe9eaaf3216dced63e40",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/check.go",
+                "engine/review/exempt.go",
+                "engine/review/exempt_check_test.go",
+                "engine/review/review.go",
+                "engine/review/stored.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-cleared-exempted-unused",
+                "lens": "reliability",
+                "location": "engine/review/check.go:141-155",
+                "severity": "WARNING",
+                "claim": "Cleared decides only from len(exempted); the Exempted values (including the Candidate they carry) are never inspected. Correctness depends entirely on the caller having already run CheckExemption and CheckBinding on every entry before passing it. No test in this candidate proves that a caller filters out invalid or unbound exemptions, and the use case that does so is outside this candidate, so that contract is unproved here. The doc comment states the precondition, which limits the risk.",
+                "proof_refs": [
+                  "engine/review/check.go:141-155",
+                  "engine/review/exempt_check_test.go:138"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Reviewed all five changed paths in full.",
+              "Cleared: with no results and at least one exemption it returns nil; otherwise it delegates to Clearance, so the no-exemption and any-result paths are unchanged. The tests assert word-for-word equality with Clearance for those cases.",
+              "Tests cover blocking results winning over an exemption, unchecked and undecided results not being bypassed, and the no-result no-exemption refusal.",
+              "CheckExemption checks risk before report, and tests cover the order and the invalid risk and report cases.",
+              "The changes to review.go and stored.go are comment-only and have no behavioral impact."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "107c637944ddcd06d5e8017a46007b962c1b6fb39916feb5983040bbeec8c3be",
+    "initial_atomic_start": {
+      "lineage_id": "review-f176692bbb7c54b6",
+      "worktree_identity": "sha256:571cf94da78406a5dee177091311c4fcbbbf61e483d9e6e92803045faa817e42",
+      "target_identity": "sha256:84ae2e7996b309a47edfe2114bf9d54f2c5a3f23ff52d32262bca8e0a2f3cd63",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "87ff68720b9d371a0abff20568488cbcada2d762",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-risk",
+        "review-reliability"
+      ],
+      "original_changed_lines": 197,
+      "correction_budget": 99,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "commit 42d159c1 of own-rdd T4: feat(review): a head is cleared by an exemption unless a stored result stops it"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

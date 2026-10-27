@@ -9,10 +9,12 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/sha256hex"
 )
 
-// check requires the binding to name a candidate: two full git object names, a SHA-256 digest and the
+// Check requires the binding to name a candidate: two full git object names, a SHA-256 digest and the
 // paths of the diff with one entry per path. A reply is held to the binding, so a binding that is not one
-// holds it to nothing.
-func (b Binding) check() error {
+// holds it to nothing, and Parse asks before it reads a reply. A caller that holds a binding with no reply to
+// hold to it asks the same question: the binding a stored exemption names (own-rdd T4, S5) must be one before
+// its base is handed to git. The error wraps ErrInvalidBinding and names the first member that is not valid.
+func (b Binding) Check() error {
 	if !gitobject.IsName(b.Base) {
 		return fmt.Errorf("%w: base %q is not a full git object name", ErrInvalidBinding, b.Base)
 	}

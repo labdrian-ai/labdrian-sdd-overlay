@@ -1,0 +1,182 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:7b07e772da7db1401603145d15f050a87c06ddbe659c04f4b45eddec23fbcbb3",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-49f31145c129e169",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "c40aaa69e0afe716ed20ce063cebb5926dd5cbab",
+      "candidate_tree": "dd4350c533d7b4856a39e6210c85d08d491ff936",
+      "paths_digest": "sha256:0f1b789493027974b926d0ad1aced8f69e93e51b5121b5915cf11b3cc420a9b6",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/review/exempt.go",
+        "engine/review/exempt_test.go"
+      ],
+      "identity": "sha256:b5b5d0e0a1377ddaeb8ab8662f6a3bb1740d9639eade3e97068248c093de8d79"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "c40aaa69e0afe716ed20ce063cebb5926dd5cbab",
+      "candidate_tree": "dd4350c533d7b4856a39e6210c85d08d491ff936",
+      "paths_digest": "sha256:0f1b789493027974b926d0ad1aced8f69e93e51b5121b5915cf11b3cc420a9b6",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/review/exempt.go",
+        "engine/review/exempt_test.go"
+      ],
+      "identity": "sha256:b5b5d0e0a1377ddaeb8ab8662f6a3bb1740d9639eade3e97068248c093de8d79"
+    },
+    "genesis_paths": [
+      "engine/review/exempt.go",
+      "engine/review/exempt_test.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-risk",
+      "review-reliability"
+    ],
+    "original_changed_lines": 233,
+    "correction_budget": 117,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "commit a7758611 of own-rdd T4: feat(review): the risk an exemption is declared on and the report it is made on",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:b31351ff3612ed36ab00a0802adf9c1f38fcf8eace766b86669ea8eaf9dde2b0",
+    "capture_phase_revision": "sha256:e2e4b2630d0e946282cae1a699cdaf70131edc7477f67ab3e1e79efb9400b7b0",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:b5b5d0e0a1377ddaeb8ab8662f6a3bb1740d9639eade3e97068248c093de8d79",
+        "capture_phase_revision": "sha256:e2e4b2630d0e946282cae1a699cdaf70131edc7477f67ab3e1e79efb9400b7b0",
+        "artifact_digest": "sha256:2f1163ebc9cb7cfb7ad9d8c8d9c3e7391b810effce2d194056a32563d00de523",
+        "result_hash": "sha256:265d2cdf31f0450c230302ef24df003756314a7c3c53ab9319857e6203aa5eda",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:62015fd6f04b1602df4d66667311069971c500824ef19e84212926676a3bd737",
+            "lineage_id": "review-49f31145c129e169",
+            "authority_revision": "sha256:e2e4b2630d0e946282cae1a699cdaf70131edc7477f67ab3e1e79efb9400b7b0",
+            "target_identity": "sha256:b5b5d0e0a1377ddaeb8ab8662f6a3bb1740d9639eade3e97068248c093de8d79",
+            "base_tree": "c40aaa69e0afe716ed20ce063cebb5926dd5cbab",
+            "candidate_tree": "dd4350c533d7b4856a39e6210c85d08d491ff936",
+            "changed_path_manifest_sha256": "sha256:f6a5ba0a56e5c936e9f4ff7c1f45d29f02cb450cf5d1143cd5aed4b05aa607ce",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:62015fd6f04b1602df4d66667311069971c500824ef19e84212926676a3bd737",
+            "raw_sha256": "sha256:b245884464271d879b5214629e92b6bbf6a067e799ee17a20c630f7a5160a4cc",
+            "canonical_sha256": "sha256:dba18041d0aeeb3bbec333c2a51778ac5d3a8ce4804c02cc6eea432d71dced80",
+            "result_hash": "sha256:265d2cdf31f0450c230302ef24df003756314a7c3c53ab9319857e6203aa5eda",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:62015fd6f04b1602df4d66667311069971c500824ef19e84212926676a3bd737",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/exempt.go",
+                "engine/review/exempt_test.go"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "Reviewed both added files in full. CheckRisk is fail-closed: it returns nil only for the exact string 'none'; every other input (empty, case variants, whitespace, multi-digit, duplicates, non-ASCII digits) returns ErrInvalidRisk or ErrHighRisk. riskItem requires a single byte in '1'..'6', so a non-ASCII digit cannot pass, and the seen slice is indexed only after riskItem validates 1..6, so there is no out-of-range access.",
+              "CheckReport delegates to reviewverdict.ParseReport and Clear, and propagates any parse error. It cannot return nil on a parse failure.",
+              "The candidate adds no I/O, no secrets, no dependencies, no network or filesystem access, and no authorization surface. Neither file stores or executes anything. Its stated enforcement point lives in a separate command and delivery check that is not part of this candidate. No reachable exploit or data-exposure path is evidenced, so there are no risk findings."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 1,
+        "target_identity": "sha256:b5b5d0e0a1377ddaeb8ab8662f6a3bb1740d9639eade3e97068248c093de8d79",
+        "capture_phase_revision": "sha256:e2e4b2630d0e946282cae1a699cdaf70131edc7477f67ab3e1e79efb9400b7b0",
+        "artifact_digest": "sha256:fc6faca7131410a79127e91e4cf135277264bc0f3927854305e467c6e8e72e8b",
+        "result_hash": "sha256:dbbde567b9833f61e539678b5d4dabcbf9b876d5ba1de3353987e02491205dd3",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:9760a4498d679f7dccce615e51bb0cd8242d1636945e34c7e3db8cffdfb9cd66",
+            "lineage_id": "review-49f31145c129e169",
+            "authority_revision": "sha256:e2e4b2630d0e946282cae1a699cdaf70131edc7477f67ab3e1e79efb9400b7b0",
+            "target_identity": "sha256:b5b5d0e0a1377ddaeb8ab8662f6a3bb1740d9639eade3e97068248c093de8d79",
+            "base_tree": "c40aaa69e0afe716ed20ce063cebb5926dd5cbab",
+            "candidate_tree": "dd4350c533d7b4856a39e6210c85d08d491ff936",
+            "changed_path_manifest_sha256": "sha256:f6a5ba0a56e5c936e9f4ff7c1f45d29f02cb450cf5d1143cd5aed4b05aa607ce",
+            "lens": "review-reliability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:9760a4498d679f7dccce615e51bb0cd8242d1636945e34c7e3db8cffdfb9cd66",
+            "raw_sha256": "sha256:0b25b6958da774a5742d2285a4b39a833026ee127f3097de31e8e2fb0fe66248",
+            "canonical_sha256": "sha256:9aac2a1b6f6d24d1a608252d4751a25169c8993fa0693fc81fe567d42a11b4f3",
+            "result_hash": "sha256:dbbde567b9833f61e539678b5d4dabcbf9b876d5ba1de3353987e02491205dd3",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:9760a4498d679f7dccce615e51bb0cd8242d1636945e34c7e3db8cffdfb9cd66",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/exempt.go",
+                "engine/review/exempt_test.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [],
+            "evidence": [
+              "CheckRisk returns nil only for the exact string \"none\". An empty string, whitespace, a different case, multi-byte digits, two-digit numbers, repeated items, empty list entries and \"none\" inside a list all fail the single-byte digit check or the duplicate check, so each returns ErrInvalidRisk. This fails closed, and the cases are deterministic and independent of input order.",
+              "Valid item lists always return an error wrapping ErrHighRisk and name each item in the order written. Both error classes are asserted with errors.Is in both directions, so the two cases cannot be confused.",
+              "The upper bound byte('0'+len(highRiskItems)) is a constant expression over an array length, so it compiles and accepts exactly the digits 1 to 6. The tests cover the boundary values 0, 7 and 10.",
+              "CheckReport delegates entirely to reviewverdict.ParseReport and Clear and returns their errors unchanged. The tests assert the wrapped sentinel for each failure class: unparseable, unknown member, outside enum, missing evidence and not clear. I could not see reviewverdict in this candidate, so those sentinels are assumed to exist.",
+              "The tests use no shared mutable state, no time dependence and no parallel subtests, so the map-iteration closures and the order of cases do not make them flaky."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "b0fe4e5a5988b9e67a6f1ae91cb6c4fcc688f5a96ad2eb5843199e7b7c20cc38",
+    "initial_atomic_start": {
+      "lineage_id": "review-49f31145c129e169",
+      "worktree_identity": "sha256:571cf94da78406a5dee177091311c4fcbbbf61e483d9e6e92803045faa817e42",
+      "target_identity": "sha256:b5b5d0e0a1377ddaeb8ab8662f6a3bb1740d9639eade3e97068248c093de8d79",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "c40aaa69e0afe716ed20ce063cebb5926dd5cbab",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-risk",
+        "review-reliability"
+      ],
+      "original_changed_lines": 233,
+      "correction_budget": 117,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "commit a7758611 of own-rdd T4: feat(review): the risk an exemption is declared on and the report it is made on"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

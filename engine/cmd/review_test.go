@@ -196,8 +196,8 @@ func TestReviewRefusesACommandLineItCannotRead(t *testing.T) {
 		args []string
 		want string
 	}{
-		{"no verb", nil, "error: review requires a verb: bind, record, verify\n"},
-		{"an unknown verb", []string{"bogus"}, "error: review: unknown verb \"bogus\" (expected bind, record or verify)\n"},
+		{"no verb", nil, "error: review requires a verb: bind, record, verify, check, exempt\n"},
+		{"an unknown verb", []string{"bogus"}, "error: review: unknown verb \"bogus\" (expected bind, record, verify, check or exempt)\n"},
 		{"verify with no feature", []string{"verify", "--stored", "s.json"}, "error: review verify: --feature is required\n"},
 		{"verify with no stored result", []string{"verify", "--feature", "f"}, "error: review verify: --stored is required\n"},
 		{"verify with a flag of record", []string{"verify", "--feature", "f", "--stored", "s.json", "--head", "h"}, "error: review verify: unknown flag \"--head\"\n"},
@@ -1191,6 +1191,11 @@ func TestWrapperUsageOfReviewVerifySaysWhatTheEngineUsageSays(t *testing.T) {
 		{"delivery when it is clear", "delivery when it is clear"},
 		{"one correction round per candidate", "one correction round per candidate"},
 		{"exit 0 stored, 2 reply refused, 1 usage error", "exit 0 stored, 2 reply refused, 1 error"},
+		{"engine review check --feature <name> [--head <rev>] [--base <rev>] [--cwd <repo>]", "check --feature NAME [--head REV] [--base REV] [--cwd REPO]"},
+		{"each range starting where the one before ended", "each range starting where the one before ended"},
+		{"at least one result binds the head and every one is clear", "one result binds the head and every one is clear"},
+		{"a check that did not run never passes", "a check that did not run never passes"},
+		{"exit 0 cleared, 1 usage error, refusal or any other failure", "exit 0 cleared, 1 refused or error"},
 	} {
 		engine, inWrapper := pair.engine, pair.inWrapper
 		if !strings.Contains(out.String(), engine) {

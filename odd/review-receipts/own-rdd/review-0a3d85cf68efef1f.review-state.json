@@ -1,0 +1,177 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:6ffe378084c4ee17eb38ecc78bc5ff6ffbaaefa64dbfaebb2cda93842afe3835",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-0a3d85cf68efef1f",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "9e3a9b37af973ae4a7fdfe2865fb38774e04d85e",
+      "candidate_tree": "0026dcfbd2050cb9588644e9f44d9224723d34a1",
+      "paths_digest": "sha256:3d5b459676d181b4860f46ddcc0c5618db397f2045ce6bc1fa374de102a8d11b",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/cmd/review_exempt_docs_test.go",
+        "engine/skills/review_exempt_convention_test.go",
+        "odd/review-results/README.md"
+      ],
+      "identity": "sha256:aa70b312539ec9f8a51e419438f9ab25fa2e76a0dac975178e09269c271497bd"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "9e3a9b37af973ae4a7fdfe2865fb38774e04d85e",
+      "candidate_tree": "0026dcfbd2050cb9588644e9f44d9224723d34a1",
+      "paths_digest": "sha256:3d5b459676d181b4860f46ddcc0c5618db397f2045ce6bc1fa374de102a8d11b",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/cmd/review_exempt_docs_test.go",
+        "engine/skills/review_exempt_convention_test.go",
+        "odd/review-results/README.md"
+      ],
+      "identity": "sha256:aa70b312539ec9f8a51e419438f9ab25fa2e76a0dac975178e09269c271497bd"
+    },
+    "genesis_paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/cmd/review_exempt_docs_test.go",
+      "engine/skills/review_exempt_convention_test.go",
+      "odd/review-results/README.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-readability"
+    ],
+    "original_changed_lines": 236,
+    "correction_budget": 118,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "commit 7f0bbb61 of own-rdd T4: docs(review): document review exempt, the check of an exempted head and the review-exemption record",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:9b99b2bf91c13ce6a60d644bf0513cabaae4df72548e92cb014a7f63862c46f0",
+    "capture_phase_revision": "sha256:931f9f168e52ce5f76d006a4f0eef28298e6b2f1370ca5133bbe25e5634e742d",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "target_identity": "sha256:aa70b312539ec9f8a51e419438f9ab25fa2e76a0dac975178e09269c271497bd",
+        "capture_phase_revision": "sha256:931f9f168e52ce5f76d006a4f0eef28298e6b2f1370ca5133bbe25e5634e742d",
+        "artifact_digest": "sha256:ed03e4e7539f275bef592c65717f609ae054ccd95b39c2fcd7829b5ecb1fdfbe",
+        "result_hash": "sha256:6f96942c50c1d99adaeb9d3717c09e2992f420ec4df16a92f57518ebbf43df21",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:548ce2f7844c4eaae5bb897d85f39e78108923fc946544046c68dce7c1fe2819",
+            "lineage_id": "review-0a3d85cf68efef1f",
+            "authority_revision": "sha256:931f9f168e52ce5f76d006a4f0eef28298e6b2f1370ca5133bbe25e5634e742d",
+            "target_identity": "sha256:aa70b312539ec9f8a51e419438f9ab25fa2e76a0dac975178e09269c271497bd",
+            "base_tree": "9e3a9b37af973ae4a7fdfe2865fb38774e04d85e",
+            "candidate_tree": "0026dcfbd2050cb9588644e9f44d9224723d34a1",
+            "changed_path_manifest_sha256": "sha256:2a3809659d0eeb2a7a1e75f66e3967b0cb24c12ddc45185dbf8671fe1f7cb9f9",
+            "lens": "review-readability",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:548ce2f7844c4eaae5bb897d85f39e78108923fc946544046c68dce7c1fe2819",
+            "raw_sha256": "sha256:d772aee3f28a3dca3a9439c20a50c6b71843c7275cb174976380d44ff4522c75",
+            "canonical_sha256": "sha256:a65319716152c628ba8618ac0124297697c03331d7396677a57e8f550be7535f",
+            "result_hash": "sha256:6f96942c50c1d99adaeb9d3717c09e2992f420ec4df16a92f57518ebbf43df21",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:548ce2f7844c4eaae5bb897d85f39e78108923fc946544046c68dce7c1fe2819",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "CHANGELOG.md",
+                "README.md",
+                "engine/cmd/review_exempt_docs_test.go",
+                "engine/skills/review_exempt_convention_test.go",
+                "odd/review-results/README.md"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-001",
+                "lens": "readability",
+                "location": "engine/cmd/review_exempt_docs_test.go:30-31",
+                "severity": "WARNING",
+                "claim": "The test asserts on README text with line breaks and code marks 'taken out' (per its comment), but the expected fragments are matched against docSection output whose normalization is not visible here. Fragments such as \"--risk is none or the numbers 1 to 6\" and \"check clears an exempted head unless a stored result blocks it\" differ from the README source (which has backticks around none and check), so the test passes only if docSection strips backticks and joins wrapped lines exactly. This hidden coupling makes the assertions fragile: a harmless re-wrap or a different normalization silently breaks them, and the failure message does not reveal the cause.",
+                "proof_refs": [
+                  "engine/cmd/review_exempt_docs_test.go:30-31",
+                  "README.md:1"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-002",
+                "lens": "readability",
+                "location": "engine/skills/review_exempt_convention_test.go:16-29",
+                "severity": "SUGGESTION",
+                "claim": "The test checks a long list of exact prose fragments of odd/review-results/README.md in one flat slice, including whole sentences. Any wording edit fails the test with only the missing fragment as message, and the fragments mix headings, identifiers and prose with no grouping. It is hard to tell which documented rule each fragment guards, which makes the test costly to maintain.",
+                "proof_refs": [
+                  "engine/skills/review_exempt_convention_test.go:16-29"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-003",
+                "lens": "readability",
+                "location": "odd/review-results/README.md:218-240",
+                "severity": "SUGGESTION",
+                "claim": "The check section describes the exemption rules in prose across several paragraphs and a table, with some behaviours stated twice (a blocking result wins over an exemption appears in the exemption paragraph, the clearing rule, and the table). Also the table row for 'a result whose decision is unverified ... or none' is unclear about what 'or none' means. Duplicated statements risk drifting apart.",
+                "proof_refs": [
+                  "odd/review-results/README.md:218-240"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Reviewed all five changed paths in the supplied patches; changes are documentation plus two string-matching documentation tests.",
+              "Findings are limited to maintainability of the tests and the documentation; no behavior defect is reported as BLOCKER or CRITICAL."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "f57da9af469a3f5f0d41feb43d22bcc035939806abd182d6bf6535c6c5b68279",
+    "initial_atomic_start": {
+      "lineage_id": "review-0a3d85cf68efef1f",
+      "worktree_identity": "sha256:571cf94da78406a5dee177091311c4fcbbbf61e483d9e6e92803045faa817e42",
+      "target_identity": "sha256:aa70b312539ec9f8a51e419438f9ab25fa2e76a0dac975178e09269c271497bd",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "9e3a9b37af973ae4a7fdfe2865fb38774e04d85e",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-readability"
+      ],
+      "original_changed_lines": 236,
+      "correction_budget": 118,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "commit 7f0bbb61 of own-rdd T4: docs(review): document review exempt, the check of an exempted head and the review-exemption record"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

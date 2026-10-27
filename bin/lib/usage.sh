@@ -230,12 +230,22 @@ Commands:
                                    next --project ID --goal ID --chain ID     read-only: allowed next roles
                                    resume --project ID --goal ID --chain ID   read-only: current role, interrupted?, reason
                                    append --project ID --goal ID --chain ID --stdin
-                                             append one record, read only from stdin
+                                             append one record, read only from stdin; a completed review-report
+                                             record is held to the files review record and verify stored in the
+                                             repository of the working directory: it needs review-diff and
+                                             review-result evidence, the review-result and the verifier-report carry
+                                             the sha256 of the stored files, which must still be a result and a
+                                             verdict of it, and the review-diff the range and the
+                                             diff_sha256 of the stored result; evidence that is missing or differs is
+                                             exit 1, and nothing is stored; a completed review-exemption record is
+                                             held in the same way to the exemption review exempt stored (review-diff
+                                             and review-exemption evidence; the exemption must still hold)
                                    match-shaper --root PATH --handoff PATH    report which Shaper v3 roles match the vocabulary
   review <verb>                    Forward review binding and storage verbs to the engine unchanged.
                                    bind --base REV --head REV [--cwd REPO]
                                              bind a candidate: full SHAs, diff_sha256 and changed paths as JSON; make
-                                             the detached review worktree beside the repository (exit 0 bound, 1 error)
+                                             the detached review worktree beside the repository; a range whose base is
+                                             its head covers no commit and is refused (exit 0 bound, 1 error)
                                    record --feature NAME --base REV --head REV [--result FILE|-] [--cwd REPO]
                                              hold a reviewer's reply to the binding recomputed from git and store it
                                              as odd/review-results/NAME/HEAD12-N.json, never over a file; print the
@@ -246,6 +256,34 @@ Commands:
                                              over a file; print the record skeleton with evidence verifier-report and
                                              to_role filled (builder when it blocks, delivery when it is clear); one
                                              correction round per candidate (exit 0 stored, 2 reply refused, 1 error)
+                                   check --feature NAME [--head REV] [--base REV] [--cwd REPO]
+                                             recompute from git the candidate of each result stored for the head
+                                             (default HEAD), hold the results and verdicts to it, and refuse unless
+                                             one result binds the head and every one is clear: a result that blocks,
+                                             or a severe finding nobody checked, refuses, because a check that did
+                                             not run never passes; an exemption that still holds clears a head that
+                                             has no result; print the files used as JSON, store nothing; with --base
+                                             REV, the integration base of the delivery, check a chain: reviews are
+                                             per commit, so the head is cleared only when clear results or
+                                             exemptions cover REV..head as an unbroken chain, each range starting
+                                             where the one before ended; a gap, a range that is not clear or a walk
+                                             that never reaches REV refuses; print the ranges used as JSON; an
+                                             exemption whose base is not the first parent of the head refuses
+                                             (exit 0 cleared, 1 refused or error)
+                                   exempt --feature NAME --base REV --head REV --risk none|ITEMS [--cwd REPO]
+                                             exempt a head from review on the evidence of the verifier and the risk
+                                             the agent declares; reads the verifier's report from stdin:
+                                             {"checks": [{"command": ..., "result": pass, fail or not-run, "output": ...}]}
+                                             --risk is none or the numbers 1 to 6 of the high-risk items (1 data or
+                                             irreversible effects, 2 security, 3 contracts others consume, 4 concurrency,
+                                             5 delivery or environment, 6 no test would catch a regression) separated
+                                             by commas; a head that names any item is never exempt; a report that is
+                                             missing or not clear is refused, because a check that did not run never
+                                             passes; an exemption is for one commit: --base must be the first parent
+                                             of --head, or it is refused; store HEAD12-N.exempt.json, never over a
+                                             file; print the record skeleton for roles append with payload_kind
+                                             review-exemption; review check clears an exempted head, but a result that
+                                             blocks wins over any exemption (exit 0 stored, 2 report refused, 1 error)
                                    No verb launches an agent or dispatches work.
   memory <verb>                    Forward memory-directive verbs to the engine unchanged.
                                    Read-only: no verb queries or writes memory; query execution

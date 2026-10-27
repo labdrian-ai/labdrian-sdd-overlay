@@ -1,0 +1,202 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:4a732f540cc625c6d78db6343791a2b651bcea352d252fc61834db0d88d23c86",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-c5283a5ce3650909",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "0f31c985f9962239b4bea8577dacb77185079dda",
+      "candidate_tree": "08246268e540313075beb989cb866fce27c2a3c6",
+      "paths_digest": "sha256:a61146fda41769610e888a33241705ae3f2feaf71585697af9fbeb3c2b2f732c",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "bin/lib/usage.sh",
+        "engine/cmd/roles_evidence.go",
+        "engine/cmd/roles_evidence_exempt_test.go",
+        "engine/cmd/usage.go"
+      ],
+      "identity": "sha256:e9fbe892c39683e0ea13ba1ed02b9bd190610ce9d2daa1619eca402c2143e208"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "0f31c985f9962239b4bea8577dacb77185079dda",
+      "candidate_tree": "08246268e540313075beb989cb866fce27c2a3c6",
+      "paths_digest": "sha256:a61146fda41769610e888a33241705ae3f2feaf71585697af9fbeb3c2b2f732c",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "bin/lib/usage.sh",
+        "engine/cmd/roles_evidence.go",
+        "engine/cmd/roles_evidence_exempt_test.go",
+        "engine/cmd/usage.go"
+      ],
+      "identity": "sha256:e9fbe892c39683e0ea13ba1ed02b9bd190610ce9d2daa1619eca402c2143e208"
+    },
+    "genesis_paths": [
+      "bin/lib/usage.sh",
+      "engine/cmd/roles_evidence.go",
+      "engine/cmd/roles_evidence_exempt_test.go",
+      "engine/cmd/usage.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-risk",
+      "review-reliability"
+    ],
+    "original_changed_lines": 232,
+    "correction_budget": 116,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "commit 099abe1f of own-rdd T4: feat(roles): roles append holds a review-exemption record to its stored exemption",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:7292ee8ff3922e782d217f69d2f09f5ef7371e5622e4feb9906b16a57a4750fc",
+    "capture_phase_revision": "sha256:bb26a96258fbb2f82f9e6cc103804abf2274958b483344deab1eb24b4698a0d1",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:e9fbe892c39683e0ea13ba1ed02b9bd190610ce9d2daa1619eca402c2143e208",
+        "capture_phase_revision": "sha256:bb26a96258fbb2f82f9e6cc103804abf2274958b483344deab1eb24b4698a0d1",
+        "artifact_digest": "sha256:e4bd510bb0d84cb61f4ad7e9e7c4df956389a5a43aec2b93f8d5ddbdf19dc169",
+        "result_hash": "sha256:56db3960f9f8c6b40aebcec5c4b33e43a95706c54989465b8892e85af0723b52",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:2ddab263cb192b98cc29eba947f78525f5b45eb2b0e1f0c26ee8277856ce9a3b",
+            "lineage_id": "review-c5283a5ce3650909",
+            "authority_revision": "sha256:bb26a96258fbb2f82f9e6cc103804abf2274958b483344deab1eb24b4698a0d1",
+            "target_identity": "sha256:e9fbe892c39683e0ea13ba1ed02b9bd190610ce9d2daa1619eca402c2143e208",
+            "base_tree": "0f31c985f9962239b4bea8577dacb77185079dda",
+            "candidate_tree": "08246268e540313075beb989cb866fce27c2a3c6",
+            "changed_path_manifest_sha256": "sha256:f8ab0432a4525840a686c0ca7846bf0b688841246690061a3765e0d8a21c10f3",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:2ddab263cb192b98cc29eba947f78525f5b45eb2b0e1f0c26ee8277856ce9a3b",
+            "raw_sha256": "sha256:3e7fd2ebec0af56166fbd112209b39f9513796696683902e80c7fe55ffab7a0e",
+            "canonical_sha256": "sha256:dd45ec600d0499489870d2731ac851fe369129bcff4354a2c579c3013e065632",
+            "result_hash": "sha256:56db3960f9f8c6b40aebcec5c4b33e43a95706c54989465b8892e85af0723b52",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:2ddab263cb192b98cc29eba947f78525f5b45eb2b0e1f0c26ee8277856ce9a3b",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "bin/lib/usage.sh",
+                "engine/cmd/roles_evidence.go",
+                "engine/cmd/roles_evidence_exempt_test.go",
+                "engine/cmd/usage.go"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "The change in engine/cmd/roles_evidence.go only updates comments and makes the error message use h.PayloadKind instead of the hard-coded review-report. The actual enforcement still lives in review/app CheckEvidence, which is outside this candidate, and the visible diff does not weaken it.",
+              "The new tests in engine/cmd/roles_evidence_exempt_test.go cover refusal of missing evidence, digest mismatches, edited exemptions, a high-risk declaration, and a non-clear report. They also cover the unchecked-repository case. This shows backend enforcement for review-exemption records, with no reachable security regression in the diff.",
+              "bin/lib/usage.sh and engine/cmd/usage.go change help text only. I found no secrets, unsafe input handling, data exposure, or dependency changes in the candidate."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 1,
+        "target_identity": "sha256:e9fbe892c39683e0ea13ba1ed02b9bd190610ce9d2daa1619eca402c2143e208",
+        "capture_phase_revision": "sha256:bb26a96258fbb2f82f9e6cc103804abf2274958b483344deab1eb24b4698a0d1",
+        "artifact_digest": "sha256:6b06fcf14a76c6bf1cd994c168c13524e8e5568f5d04c7934c0eb15fc1d1cc2b",
+        "result_hash": "sha256:c97f92322fc75572208bc6c3eec777e58af7fe4abb4066e16bfdbef0b32142e6",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:5a86b15811678061aeeb2b25106c2ec28f33dff699be6c3eeb4b078d831637de",
+            "lineage_id": "review-c5283a5ce3650909",
+            "authority_revision": "sha256:bb26a96258fbb2f82f9e6cc103804abf2274958b483344deab1eb24b4698a0d1",
+            "target_identity": "sha256:e9fbe892c39683e0ea13ba1ed02b9bd190610ce9d2daa1619eca402c2143e208",
+            "base_tree": "0f31c985f9962239b4bea8577dacb77185079dda",
+            "candidate_tree": "08246268e540313075beb989cb866fce27c2a3c6",
+            "changed_path_manifest_sha256": "sha256:f8ab0432a4525840a686c0ca7846bf0b688841246690061a3765e0d8a21c10f3",
+            "lens": "review-reliability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:5a86b15811678061aeeb2b25106c2ec28f33dff699be6c3eeb4b078d831637de",
+            "raw_sha256": "sha256:a69bc08f78d0af6885a91051c42648139ee649e64080bd8f6ff378a4e8ae500a",
+            "canonical_sha256": "sha256:8e24408afa2bbb71e5e220dbd0e85fdbd0f4f1f0a3c309adfdb12466a19e203f",
+            "result_hash": "sha256:c97f92322fc75572208bc6c3eec777e58af7fe4abb4066e16bfdbef0b32142e6",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:5a86b15811678061aeeb2b25106c2ec28f33dff699be6c3eeb4b078d831637de",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "bin/lib/usage.sh",
+                "engine/cmd/roles_evidence.go",
+                "engine/cmd/roles_evidence_exempt_test.go",
+                "engine/cmd/usage.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-001",
+                "lens": "reliability",
+                "location": "engine/cmd/roles_evidence.go:43",
+                "severity": "WARNING",
+                "claim": "The error message now interpolates h.PayloadKind. For a record where PayloadKind is empty or unexpected, the message would read 'the evidence of the  could not be checked'. Only completed review-report and review-exemption records reach this path in practice, so impact is low, and the tests assert the review-exemption wording but not a review-report regression.",
+                "proof_refs": [
+                  "engine/cmd/roles_evidence.go:43"
+                ]
+              }
+            ],
+            "evidence": [
+              "Reviewed all four changed paths. The core evidence-check logic (review/app CheckEvidence) is not part of this candidate; only the message wiring, usage text and tests changed.",
+              "The new tests cover the happy path, missing and mismatched digests, edited exemption content, a failing report, no repository, and an interrupted exemption stored without a repository lookup, all via externally observable exit code, stdout and stderr and chain state.",
+              "The usage test checks that engine and wrapper wording agree.",
+              "The error format for review-report is unchanged when PayloadKind is review-report, so there is no baseline regression. Whether PayloadKind holds that exact string is not visible in this patch, so I flag it only as a low-severity warning."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "1bf532b7ad53cdefe67938aabbb922c448a899ee303572768eb62c1c907781bd",
+    "initial_atomic_start": {
+      "lineage_id": "review-c5283a5ce3650909",
+      "worktree_identity": "sha256:571cf94da78406a5dee177091311c4fcbbbf61e483d9e6e92803045faa817e42",
+      "target_identity": "sha256:e9fbe892c39683e0ea13ba1ed02b9bd190610ce9d2daa1619eca402c2143e208",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "0f31c985f9962239b4bea8577dacb77185079dda",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "high",
+      "selected_lenses": [
+        "review-risk",
+        "review-reliability"
+      ],
+      "original_changed_lines": 232,
+      "correction_budget": 116,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "commit 099abe1f of own-rdd T4: feat(roles): roles append holds a review-exemption record to its stored exemption"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

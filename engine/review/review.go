@@ -31,6 +31,21 @@
 // skeleton binds it as one more piece of evidence and says who is next (VerifiedHandoff). A review is
 // corrected at most once: IsCorrection says which candidate is the correction of which.
 //
+// The stored files are what the rest of the chain is held to (own-rdd T4): the record that closes a review
+// carries evidence that must be the evidence of the files stored (NeedsEvidence, ResultRef, VerdictRef,
+// CheckFile, CheckRange), and a head is delivered only when the results stored for it still bind it and clear
+// it (ResultsOfHead finds them, CheckBinding holds each stored binding to the candidate git gives now, and
+// Clearance decides).
+//
+// A head whose work takes no review may be exempted from it instead (own-rdd T4, S5, L15-L16). The exemption is
+// stored beside the results as <head12>-<n>.exempt.json (ExemptionName, ExemptionsOfHead), numbered with them,
+// and holds the binding, the risk the agent declared and the report of the verifier (EncodeExemption, read back
+// by DecodeExemption). CheckRisk refuses a declared risk that names an item of the high-risk list, CheckReport a
+// report that is not clear, CheckExemption holds a stored exemption to both again, and Cleared lets a head
+// through on an exemption only when no stored result binds it, so a result that blocks always wins. The record
+// that closes it is ExemptionHandoff, and the ref of its evidence names a stored exemption as the ref of a
+// review-report's names a stored result (ExemptionRef, CheckExemptionName).
+//
 // It is a domain package: pure standard library and the domain packages that say what a git object name,
 // a SHA-256 digest, a reviewer reply, a verifier verdict and a role handoff are. It reads no file and runs
 // no git.
@@ -79,6 +94,11 @@ const (
 	EvidenceDiff     = "review-diff"
 	EvidenceResult   = "review-result"
 	EvidenceVerifier = "verifier-report"
+
+	// PayloadExemption is the payload_kind of the record that closes the exemption of a head from review, and
+	// EvidenceExemption the kind of the evidence that binds that record to the stored bytes of the exemption.
+	PayloadExemption  = "review-exemption"
+	EvidenceExemption = "review-exemption"
 )
 
 // The reasons the functions of this package refuse. An error they return wraps exactly one of them, so a
@@ -90,7 +110,7 @@ var (
 	// character.
 	ErrInvalidRev = errors.New("review: invalid revision")
 	// ErrInvalidCandidate is a candidate that names nothing: commits that are not full object names of one
-	// length, or paths that cannot be bound one by one.
+	// length, the same commit as base and as head, or paths that cannot be bound one by one.
 	ErrInvalidCandidate = errors.New("review: invalid candidate")
 	// ErrReplyTooLarge is a reply of the reviewer above MaxReplyBytes.
 	ErrReplyTooLarge = errors.New("review: reply too large")
@@ -98,6 +118,8 @@ var (
 	ErrReplyNotJSON = errors.New("review: reply is not JSON")
 	// ErrInvalidResultName is a name that is not the name of a stored result, <head12>-<n>.json.
 	ErrInvalidResultName = errors.New("review: invalid result name")
+	// ErrInvalidExemptionName is a name that is not the name of a stored exemption, <head12>-<n>.exempt.json.
+	ErrInvalidExemptionName = errors.New("review: invalid exemption name")
 	// ErrInvalidStored is a stored file that is not one EncodeResult writes.
 	ErrInvalidStored = errors.New("review: invalid stored file")
 )
@@ -116,8 +138,9 @@ type Candidate struct {
 }
 
 // NewCandidate binds the diff of two commits. base and head are full object names of one length (40
-// characters in a SHA-1 repository, 64 in a SHA-256 one), diff is the bytes of the diff and paths the
-// paths it changes. Every path is a non-empty string of valid UTF-8, because the binding is JSON and a
+// characters in a SHA-1 repository, 64 in a SHA-256 one) and are two commits: a range whose base is its head
+// covers no commit, so nothing reviewed or exempted over it clears anything. diff is the bytes of the diff and
+// paths the paths it changes. Every path is a non-empty string of valid UTF-8, because the binding is JSON and a
 // path that JSON cannot carry byte for byte could never be matched by a reviewer; no path is listed twice.
 // It returns the zero Candidate and an error that wraps ErrInvalidCandidate when it cannot.
 func NewCandidate(base, head string, diff []byte, paths []string) (Candidate, error) {
@@ -129,6 +152,9 @@ func NewCandidate(base, head string, diff []byte, paths []string) (Candidate, er
 	}
 	if len(base) != len(head) {
 		return Candidate{}, fmt.Errorf("%w: base has %d characters and head %d, want the same length", ErrInvalidCandidate, len(base), len(head))
+	}
+	if base == head {
+		return Candidate{}, fmt.Errorf("%w: base and head are the same commit %s, so the range covers no commit and clears nothing", ErrInvalidCandidate, head)
 	}
 	seen := make(map[string]bool, len(paths))
 	for _, p := range paths {

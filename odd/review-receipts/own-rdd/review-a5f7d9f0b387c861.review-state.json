@@ -1,0 +1,209 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:10b253b0410a675e1bac47afc44bcce74c8f7eacd00293ce88fe59b25e6b73ad",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-a5f7d9f0b387c861",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "67ad24ad5bb14bd5028317d17aed618b618042ca",
+      "candidate_tree": "2d41a946ee4b497cb4fde74601b7d3cc2b834a80",
+      "paths_digest": "sha256:0f46d6c43cdce230c8f0d48cdbfd97a664d548e8345e62360eee01edf5a68fdf",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/cmd/review.go",
+        "engine/cmd/review_check_test.go"
+      ],
+      "identity": "sha256:061b5487c77cfbb103e980af1563db30f7e1d3dec2fafa9504e32215fbe27770"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "67ad24ad5bb14bd5028317d17aed618b618042ca",
+      "candidate_tree": "2d41a946ee4b497cb4fde74601b7d3cc2b834a80",
+      "paths_digest": "sha256:0f46d6c43cdce230c8f0d48cdbfd97a664d548e8345e62360eee01edf5a68fdf",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/cmd/review.go",
+        "engine/cmd/review_check_test.go"
+      ],
+      "identity": "sha256:061b5487c77cfbb103e980af1563db30f7e1d3dec2fafa9504e32215fbe27770"
+    },
+    "genesis_paths": [
+      "engine/cmd/review.go",
+      "engine/cmd/review_check_test.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-risk",
+      "review-reliability"
+    ],
+    "original_changed_lines": 313,
+    "correction_budget": 157,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "commit 94a73223 of own-rdd T4: feat(review): review check verb",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:93a0e6ffd9509ce2d97395b3bdf2b2749f9516217ac5e68c5c3b086b0fe56b44",
+    "capture_phase_revision": "sha256:5f335b22e242a19f120b5b1e9ded20242fe9bdcf21856f23e759135dd8f92918",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:061b5487c77cfbb103e980af1563db30f7e1d3dec2fafa9504e32215fbe27770",
+        "capture_phase_revision": "sha256:5f335b22e242a19f120b5b1e9ded20242fe9bdcf21856f23e759135dd8f92918",
+        "artifact_digest": "sha256:22b1ecef573529ef62693d5f19446ab3530c1f209f1ca89f96caab677eeca229",
+        "result_hash": "sha256:a2553255771f5971993bce782aedc35756c3644db9f62f49e8c9d97c41230810",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:d6f88748768da9cf5e5c0d5b692291fdc51c3499a45c3e3c3028116632558a8e",
+            "lineage_id": "review-a5f7d9f0b387c861",
+            "authority_revision": "sha256:5f335b22e242a19f120b5b1e9ded20242fe9bdcf21856f23e759135dd8f92918",
+            "target_identity": "sha256:061b5487c77cfbb103e980af1563db30f7e1d3dec2fafa9504e32215fbe27770",
+            "base_tree": "67ad24ad5bb14bd5028317d17aed618b618042ca",
+            "candidate_tree": "2d41a946ee4b497cb4fde74601b7d3cc2b834a80",
+            "changed_path_manifest_sha256": "sha256:55fd33dd82cccdf624aa599326db3b2b96770e7e7458414d02bdf0c3c383176d",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:d6f88748768da9cf5e5c0d5b692291fdc51c3499a45c3e3c3028116632558a8e",
+            "raw_sha256": "sha256:aebee6327a0c490fe809abb68457b4303eb3668d9dfbd5f2413416d2d0a89f0c",
+            "canonical_sha256": "sha256:4b3b0205e84fc0566b34ce387ff58594ec8b44bf166a2ff38c4e59c495a881ce",
+            "result_hash": "sha256:a2553255771f5971993bce782aedc35756c3644db9f62f49e8c9d97c41230810",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:d6f88748768da9cf5e5c0d5b692291fdc51c3499a45c3e3c3028116632558a8e",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/cmd/review.go",
+                "engine/cmd/review_check_test.go"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [
+              {
+                "id": "R1-001",
+                "lens": "risk",
+                "location": "engine/cmd/review.go:62",
+                "severity": "WARNING",
+                "claim": "The unknown-verb error message still says '(expected bind, record or verify)' although 'check' is now a valid verb, so the user-facing message is stale. This is a minor accuracy issue, not a security risk.",
+                "proof_refs": [
+                  "engine/cmd/review.go:59-62"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Reviewed the full diff of engine/cmd/review.go and engine/cmd/review_check_test.go for security, authorization, data exposure, unsafe input handling and secrets.",
+              "The new check verb is read-only: it stores nothing, and the tests assert that the results directory is unchanged after both cleared and refused checks.",
+              "The --head value is validated by the service before git reads it: the test at engine/cmd/review_check_test.go covers a head starting with '-' being refused so git cannot read it as an option, and checks that no file is written. The Check implementation itself is outside this candidate, so this is only verified through the tests.",
+              "The --head flag handling distinguishes a given empty value from the default through the new given map, so an explicit empty head is refused rather than silently falling back to HEAD. This avoids a case where an explicit option is silently ignored.",
+              "The check verb prints only head, base, digest and stored file names, so no secrets or sensitive data are exposed.",
+              "The only issue found is the stale unknown-verb message, which does not affect security. The line I cited (engine/cmd/review.go:62) is not a line this candidate changed, so the finding's introduced disposition is inaccurate and the issue is effectively pre-existing wording that the new verb has made stale."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 1,
+        "target_identity": "sha256:061b5487c77cfbb103e980af1563db30f7e1d3dec2fafa9504e32215fbe27770",
+        "capture_phase_revision": "sha256:5f335b22e242a19f120b5b1e9ded20242fe9bdcf21856f23e759135dd8f92918",
+        "artifact_digest": "sha256:b809737efda8c731f87066ef6f5e3cc77f38f2a0969c26b057f4f5ac69ce9f4f",
+        "result_hash": "sha256:5e3f17050124f5921ce252fb675d0167ed7b56b3da2c18a13266285372211916",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:87274493fc90c19f8fb19befe8b51d9a285f45f8181ae04aa565c20eeb8419e5",
+            "lineage_id": "review-a5f7d9f0b387c861",
+            "authority_revision": "sha256:5f335b22e242a19f120b5b1e9ded20242fe9bdcf21856f23e759135dd8f92918",
+            "target_identity": "sha256:061b5487c77cfbb103e980af1563db30f7e1d3dec2fafa9504e32215fbe27770",
+            "base_tree": "67ad24ad5bb14bd5028317d17aed618b618042ca",
+            "candidate_tree": "2d41a946ee4b497cb4fde74601b7d3cc2b834a80",
+            "changed_path_manifest_sha256": "sha256:55fd33dd82cccdf624aa599326db3b2b96770e7e7458414d02bdf0c3c383176d",
+            "lens": "review-reliability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:87274493fc90c19f8fb19befe8b51d9a285f45f8181ae04aa565c20eeb8419e5",
+            "raw_sha256": "sha256:c0f72be33c0ba118329fe89916843d9da0ff81d0bd3727a6dac5aeed0eb1b3c3",
+            "canonical_sha256": "sha256:72f087ade44d2a5ee3b0334e6adbd43d1ddbe4929d00eafd1838523257db16bb",
+            "result_hash": "sha256:5e3f17050124f5921ce252fb675d0167ed7b56b3da2c18a13266285372211916",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:87274493fc90c19f8fb19befe8b51d9a285f45f8181ae04aa565c20eeb8419e5",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/cmd/review.go",
+                "engine/cmd/review_check_test.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-001",
+                "lens": "reliability",
+                "location": "engine/cmd/review.go:59",
+                "severity": "WARNING",
+                "claim": "The new 'check' verb is dispatched, but the unchanged default branch still reports the unknown-verb error as 'expected bind, record or verify'. A user who mistypes a verb is not told that check exists. This is a stale message, not a failure of the new verb, and no test asserts it.",
+                "proof_refs": [
+                  "engine/cmd/review.go:59"
+                ]
+              }
+            ],
+            "evidence": [
+              "Reviewed the full patch of both manifest paths, engine/cmd/review.go and engine/cmd/review_check_test.go.",
+              "The head-flag handling is sound. An explicit empty --head is rejected through the given map and require, and HEAD is the default only when the flag is absent. That behavior is a deliberate design choice, but no test passes an empty --head, so it is unproved.",
+              "The check tests cover the clear, verdict with fix and carry, and refusal paths. The refusals cover never reviewed, another head, another feature, blocked, unchecked severe finding, tampered digest, and an invalid stored file. They also cover a non-commit head, an option-like head, and --cwd resolution. Each asserts stdout, stderr, exit code and that nothing is stored, so the candidate behavior is largely proved.",
+              "Failure paths exit 1 with a single stderr line and empty stdout. The failure to write stdout after clearing is handled in reportChecked, but no test exercises it.",
+              "I could not check the helpers the tests use (newReviewWorld, recordBlocker, verdictOn, listNames), because they are outside this candidate. I also could not check that the given map in parseReviewFlags is keyed by the flag text. The has method relies on that, and the visible hunk does not show it."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "ae8875de1c7ab7cdbbc7563dabe57694242db9fc07f730083f58167c03f58b76",
+    "initial_atomic_start": {
+      "lineage_id": "review-a5f7d9f0b387c861",
+      "worktree_identity": "sha256:571cf94da78406a5dee177091311c4fcbbbf61e483d9e6e92803045faa817e42",
+      "target_identity": "sha256:061b5487c77cfbb103e980af1563db30f7e1d3dec2fafa9504e32215fbe27770",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "67ad24ad5bb14bd5028317d17aed618b618042ca",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-risk",
+        "review-reliability"
+      ],
+      "original_changed_lines": 313,
+      "correction_budget": 157,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "commit 94a73223 of own-rdd T4: feat(review): review check verb"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

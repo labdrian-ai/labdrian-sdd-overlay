@@ -1,0 +1,183 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:d3f6925d36c40dc57fbfdd079c694f23cf9b7736a75602c449b292937013f70a",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-768b307229f76788",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "a8a6ddd9643b2dd8fa0ed1a360c4de0cff0736d4",
+      "candidate_tree": "f876e19eee87a275a492fd8defcf39c2f47139a5",
+      "paths_digest": "sha256:21a6700f80b7d91da3b481b7ec74e17f7ae541afa6fbb79c6c3752b25ef03f57",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/review/evidence.go",
+        "engine/review/evidence_test.go"
+      ],
+      "identity": "sha256:493cbf7c4c1bba73a55a62fc870449c1c4c3a29214dfe846691600042940220c"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "a8a6ddd9643b2dd8fa0ed1a360c4de0cff0736d4",
+      "candidate_tree": "f876e19eee87a275a492fd8defcf39c2f47139a5",
+      "paths_digest": "sha256:21a6700f80b7d91da3b481b7ec74e17f7ae541afa6fbb79c6c3752b25ef03f57",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/review/evidence.go",
+        "engine/review/evidence_test.go"
+      ],
+      "identity": "sha256:493cbf7c4c1bba73a55a62fc870449c1c4c3a29214dfe846691600042940220c"
+    },
+    "genesis_paths": [
+      "engine/review/evidence.go",
+      "engine/review/evidence_test.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-risk",
+      "review-reliability"
+    ],
+    "original_changed_lines": 401,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "commit f89cbf67 of own-rdd T4: feat(review): rules that hold the evidence of a review-report to the stored files",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:4f08d5bd500eec91df1cc6cd43b7b3c8dd43527ca186012c0256d9954f7912e5",
+    "capture_phase_revision": "sha256:d7195ba47fe9bfab89c2a92c739f46cd31f764fc9ee1fac2bb74898772a5a88e",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:493cbf7c4c1bba73a55a62fc870449c1c4c3a29214dfe846691600042940220c",
+        "capture_phase_revision": "sha256:d7195ba47fe9bfab89c2a92c739f46cd31f764fc9ee1fac2bb74898772a5a88e",
+        "artifact_digest": "sha256:ae892f067847e6578c64824912c812bc049e1baa227553b2bbdce15e040e6f49",
+        "result_hash": "sha256:c9ddf87e2907d94104ff664212a36a68d20b919c4db4dd5d9f24054df59d3a60",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:b7c9015151457275d5814abcc3cec0224fb9a660de89bb997922c0f57cf30946",
+            "lineage_id": "review-768b307229f76788",
+            "authority_revision": "sha256:d7195ba47fe9bfab89c2a92c739f46cd31f764fc9ee1fac2bb74898772a5a88e",
+            "target_identity": "sha256:493cbf7c4c1bba73a55a62fc870449c1c4c3a29214dfe846691600042940220c",
+            "base_tree": "a8a6ddd9643b2dd8fa0ed1a360c4de0cff0736d4",
+            "candidate_tree": "f876e19eee87a275a492fd8defcf39c2f47139a5",
+            "changed_path_manifest_sha256": "sha256:a5b3f4bff328b7d07aad50d48665e8ad47d16b2a9ca3589d48bd7b60592e821e",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:b7c9015151457275d5814abcc3cec0224fb9a660de89bb997922c0f57cf30946",
+            "raw_sha256": "sha256:99b1d6296d8342c1ac5729e3061ba4b524ab69ec7bc4a21039955dffeedfe791",
+            "canonical_sha256": "sha256:7727676da17f9f6f2c1027545abffd057c1ec93c6cd0e20be3a5fdb9fea63393",
+            "result_hash": "sha256:c9ddf87e2907d94104ff664212a36a68d20b919c4db4dd5d9f24054df59d3a60",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:b7c9015151457275d5814abcc3cec0224fb9a660de89bb997922c0f57cf30946",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/evidence.go",
+                "engine/review/evidence_test.go"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "engine/review/evidence.go: ResultRef accepts a ref only after it is cut into exactly \u003cResultsDir\u003e/\u003cfeature\u003e/\u003cname\u003e, with no extra slash. It then validates both segments with CheckFeature and CheckResultName before returning them, so absolute paths, dot-dot segments and nested paths are refused by shape before any file is read. The tests in engine/review/evidence_test.go cover traversal, absolute, backslash, trailing-slash, hidden-feature, temp-file, verdict-name and NUL-suffix refs.",
+              "engine/review/evidence.go: VerdictRef compares the ref for exact equality with the path derived from the result via ResultPath and VerdictName. No arbitrary ref can name a verdict, and the result file itself is refused.",
+              "engine/review/evidence.go: CheckFile and CheckRange compare public digests and refs, not secrets, so there is no timing or secret exposure. Error messages contain only the kind, ref and digests, which are not sensitive.",
+              "The candidate is pure validation code with no file I/O, command execution, new dependencies or secrets. I found no reachable exploit introduced by this change. The behavior of CheckFeature and CheckResultName is outside the candidate, so I treated it as given."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 1,
+        "target_identity": "sha256:493cbf7c4c1bba73a55a62fc870449c1c4c3a29214dfe846691600042940220c",
+        "capture_phase_revision": "sha256:d7195ba47fe9bfab89c2a92c739f46cd31f764fc9ee1fac2bb74898772a5a88e",
+        "artifact_digest": "sha256:4bcca91b0af1d8e29326d5f0064de3af09324d4cb2ff573e5f06b94287e94ba2",
+        "result_hash": "sha256:9b4f386d246fba0a1445380b7b2d876a5f5a552f7b6150c38e158887ce0bbc57",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:775de5aa9f531c9f6f12464efcd63e742b2f380e01f0803fba7869f5df7e2619",
+            "lineage_id": "review-768b307229f76788",
+            "authority_revision": "sha256:d7195ba47fe9bfab89c2a92c739f46cd31f764fc9ee1fac2bb74898772a5a88e",
+            "target_identity": "sha256:493cbf7c4c1bba73a55a62fc870449c1c4c3a29214dfe846691600042940220c",
+            "base_tree": "a8a6ddd9643b2dd8fa0ed1a360c4de0cff0736d4",
+            "candidate_tree": "f876e19eee87a275a492fd8defcf39c2f47139a5",
+            "changed_path_manifest_sha256": "sha256:a5b3f4bff328b7d07aad50d48665e8ad47d16b2a9ca3589d48bd7b60592e821e",
+            "lens": "review-reliability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:775de5aa9f531c9f6f12464efcd63e742b2f380e01f0803fba7869f5df7e2619",
+            "raw_sha256": "sha256:17b896d6463bda395501bfd34a61bfc02c0a616a208a6089f98d247d4fed6dce",
+            "canonical_sha256": "sha256:17b896d6463bda395501bfd34a61bfc02c0a616a208a6089f98d247d4fed6dce",
+            "result_hash": "sha256:9b4f386d246fba0a1445380b7b2d876a5f5a552f7b6150c38e158887ce0bbc57",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:775de5aa9f531c9f6f12464efcd63e742b2f380e01f0803fba7869f5df7e2619",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/evidence.go",
+                "engine/review/evidence_test.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [],
+            "evidence": [
+              "engine/review/evidence.go: ResultRef refuses by shape before any file is read. It rejects a ref without the results-directory prefix, a ref without exactly two segments after it, and a name that contains a slash, and it returns empty values on every refusal path. The feature and name rules are delegated to CheckFeature and CheckResultName, and their errors stay readable through errors.Is.",
+              "engine/review/evidence.go: OptionalEvidence and RequiredEvidence handle the absent, single and repeated cases deterministically. The repeated case wraps ErrEvidenceRepeated, and the missing case wraps ErrEvidenceMissing.",
+              "engine/review/evidence.go: VerdictRef compares the whole ref with the single path derived from the result name, so the result file itself, other results and traversal-shaped refs are all refused.",
+              "engine/review/evidence.go: CheckFile and CheckRange fail closed, since the digest, base, head and range shape must match exactly. A zero Binding yields the range \"..\", which no real ref matches.",
+              "engine/review/evidence_test.go: the tests assert observable results. They check the error sentinel, the EvidenceError Kind and Ref fields, the message content, empty returns on refusal, and the acceptance path for each function. Coverage includes many malformed-ref cases, a wrong-case payload kind, an interrupted review, repeated evidence, and range variants. The fixtures (candidate, storedRef, verdictRef and the SHA constants) are not visible in this candidate. I treated them as pre-existing and found no behavior left unproved by what is shown."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "16268c67a4b85b379f81d0f84ff292b19ff30f6f576a58bc10fe689af724df0f",
+    "initial_atomic_start": {
+      "lineage_id": "review-768b307229f76788",
+      "worktree_identity": "sha256:571cf94da78406a5dee177091311c4fcbbbf61e483d9e6e92803045faa817e42",
+      "target_identity": "sha256:493cbf7c4c1bba73a55a62fc870449c1c4c3a29214dfe846691600042940220c",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "a8a6ddd9643b2dd8fa0ed1a360c4de0cff0736d4",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-risk",
+        "review-reliability"
+      ],
+      "original_changed_lines": 401,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "commit f89cbf67 of own-rdd T4: feat(review): rules that hold the evidence of a review-report to the stored files"
+    },
+    "runtime_agent": "claude-code"
+  }
+}
