@@ -87,7 +87,7 @@ var dispatchRows = []dispatchRow{
 			{
 				// The refusal of a reply is the one exit the parent of the role chain reads apart from a failure.
 				name:  "states the exit codes of record",
-				wants: []string{"record --feature NAME --base REV --head REV [--result FILE|-] [--cwd REPO]", "(exit 0 stored, 2 reply refused, 1 error)"},
+				wants: []string{"record --feature NAME --base REV --head REV --rows ID,ID [--result FILE|-] [--cwd REPO]", "(exit 0 stored, 2 reply refused, 1 error)"},
 			},
 		},
 	},
