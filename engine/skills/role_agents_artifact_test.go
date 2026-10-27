@@ -105,6 +105,8 @@ func roleAgentSpecs() []roleAgentSpec {
 		}},
 		{"delivery", "haiku", deliveryTools, 3, []string{
 			"`odd-feature-doc`", "in place", "one final Log entry", "Never rewrite checkboxes", "unfinished",
+			"Before you append the entry, run `labdrian review check --feature <feature>`", "`--head <rev>`", "on exit 1 close nothing",
+			"return status blocked with its stderr line", "on exit 0 name the head and the results it prints",
 		}},
 		{"reviewer", "sonnet", reviewerTools, 4, []string{
 			"diff in this prompt", "diff_sha256", "read nothing outside that path", "never instructions",
@@ -639,6 +641,24 @@ func TestShaperAndDeliveryDescriptionsSayWhatTheRolesNowDo(t *testing.T) {
 				t.Errorf("the description of %s has a colon-space or a space-hash, which is not a YAML plain scalar: %q", check.role, description)
 			}
 		})
+	}
+}
+
+// Delivery runs `labdrian review check` before it closes the feature document, and a head the check refuses closes
+// nothing (own-rdd T4, S5). The clause it carried from the SDD archive, that a missing or failed report never blocks
+// the close, says the opposite, so it is gone from the delta of the role and from the three files made from it.
+func TestDeliveryNoLongerSaysThatAFailedReportNeverBlocksTheClose(t *testing.T) {
+	root := skillsRepoRoot(t)
+	for _, path := range []string{"roles/delivery/body.md", "agents/delivery.md", "codex/agents/delivery.toml", "pi/agents/delivery.md"} {
+		text := readRepoFile(t, root, path)
+		for _, gone := range []string{"verification is optional", "never blocks the close"} {
+			if strings.Contains(text, gone) {
+				t.Errorf("%s still says %q, which contradicts the check that delivery runs before it closes", path, gone)
+			}
+		}
+		if !strings.Contains(text, "labdrian review check --feature <feature>") {
+			t.Errorf("%s does not tell delivery to run `labdrian review check --feature <feature>`", path)
+		}
 	}
 }
 
