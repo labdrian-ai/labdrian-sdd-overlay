@@ -129,6 +129,10 @@ import (
 //     the rules that refuse a reply (the candidate it echoes, its inspection, the paths it read, the enums,
 //     the ids and the proofs of its findings). It reads and writes no file and runs no git: the caller hands
 //     it the candidate as a value, the paths of the diff included.
+//   - reviewverdict is a domain package (own-rdd T3): the contract of what the verifier role returns about the
+//     findings of a stored result, the rules that refuse a reply (the ids it answers, the enums, the evidence)
+//     and the pure function that decides whether the review blocks. It reads and writes no file and runs no
+//     command.
 //   - review is a domain package (own-rdd T2): what `labdrian review bind` and `review record` bind and
 //     store (the candidate of a review with the digest of its diff, the name of a feature, the names of the
 //     stored results and the worktree of a review, the stored file and the role handoff skeleton). It reads
@@ -204,6 +208,7 @@ var rings = map[string]archguard.Ring{
 	"reviewreceipt/fsstore":     archguard.Adapter,
 	"reviewreceipt/receipttest": archguard.Support,
 	"reviewresult":              archguard.Domain,
+	"reviewverdict":             archguard.Domain,
 	"roles":                     archguard.Domain,
 	"roles/filechain":           archguard.Adapter,
 	"runtime":                   archguard.Adapter,
