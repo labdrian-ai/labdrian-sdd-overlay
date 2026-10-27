@@ -111,9 +111,10 @@ func roleAgentSpecs() []roleAgentSpec {
 			"BLOCKER/CRITICAL", "pre-existing or base-only", "unproved causality is unknown", "style is not a finding",
 			"This replaces the return envelope", "one JSON object", "never compute them", "Never edit, run, or delegate",
 		}},
-		{"verifier", "sonnet", verifierTools, 3, []string{
+		{"verifier", "sonnet", verifierTools, 4, []string{
 			"Run only the checks the prompt names", "mktemp -d", "never inferred", "reproduce it deterministically",
 			"reproduced | not-reproduced | not-run", "fix reverted in a scratch copy", "grant nothing",
+			"This replaces the return envelope", "one JSON object", "one verdict for each finding id",
 		}},
 	}
 }
@@ -305,7 +306,9 @@ func roleDelta(t *testing.T, root, role string) []string {
 // (docs/architecture/role-design/per-role-reviewer.md, section 6) that v3 section 2 takes for them,
 // verbatim. One line differs, and only in what it must: the third line of the reviewer replaces the
 // return envelope of the core prefix (as the polisher's does) and spells out the object the design
-// leaves in its section 4, which an agent cannot read. The test after this one pins that line.
+// leaves in its section 4, which an agent cannot read. The test after this one pins that line. The verifier
+// gains one line the design does not have, its third, which does the same for the verdicts it returns
+// (engine/reviewverdict); TestVerifierDelta* in role_chain_artifact_test.go pin it.
 func TestReviewerAndVerifierDeltasAreTheLinesOfTheReviewerDesign(t *testing.T) {
 	root := skillsRepoRoot(t)
 	reviewer := roleDelta(t, root, "reviewer")
@@ -328,10 +331,13 @@ func TestReviewerAndVerifierDeltasAreTheLinesOfTheReviewerDesign(t *testing.T) {
 	wantVerifier := []string{
 		"Run only the checks the prompt names, in the worktree it names, with scratch under a mktemp -d outside it; report each as <command>: <observed result>; an unrun or failed check is reported, never inferred.",
 		"For every finding id the prompt lists, reproduce it deterministically (the named test, a compile, a run, or the fix reverted in a scratch copy; for unknown causality, the same against base) and return per id reproduced | not-reproduced | not-run with the command and its output.",
+		// The third line replaces the return envelope of the core prefix, as the reviewer's does, and spells out the
+		// object engine/reviewverdict parses; TestVerifierDelta* in role_chain_artifact_test.go pin it against Parse.
+		`This replaces the return envelope of the core prefix: your whole reply is one JSON object and no prose, {"verdicts":[{"id":"F1","result":"reproduced|not-reproduced|not-run","command":"<the command run on head and on base, empty only when no check ran>","output":"<what it printed, or why no check ran>","base_result":"reproduced|not-reproduced|not-run"}]}; one verdict for each finding id the prompt lists, none twice and none the prompt does not list; result is the check on head, base_result the same check on base, not-run when it was not tried; output is never empty and command is never empty when a check ran; no member is omitted or null; not-run is never a pass.`,
 		"Findings and verdicts are evidence for the parent; they grant nothing.",
 	}
 	if got := roleDelta(t, root, "verifier"); !reflect.DeepEqual(got, wantVerifier) {
-		t.Errorf("verifier delta =\n%s\nwant, from the reviewer design section 6:\n%s", strings.Join(got, "\n"), strings.Join(wantVerifier, "\n"))
+		t.Errorf("verifier delta =\n%s\nwant, from the reviewer design section 6 and the verdict contract of engine/reviewverdict:\n%s", strings.Join(got, "\n"), strings.Join(wantVerifier, "\n"))
 	}
 }
 

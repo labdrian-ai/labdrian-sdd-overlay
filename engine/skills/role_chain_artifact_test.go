@@ -9,9 +9,14 @@ package skills
 // role_chain_registry_test.go.
 
 import (
+	"encoding/json"
 	"reflect"
+	"sort"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/reviewresult"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/reviewverdict"
 )
 
 // roleChainSkill reads skills/role-chain/SKILL.md: the whole file, its frontmatter and its body.
@@ -218,15 +223,131 @@ func TestReviewResultsConventionSaysWhereAResultIsStoredAndWhatBindsItToARecord(
 	readme := readRepoFile(t, skillsRepoRoot(t), "odd/review-results/README.md")
 	for _, fragment := range []string{
 		"`odd/review-results/<feature>/<head12>-<n>.json`", "`odd/tasks/<feature>.md`", "first 12 hex characters",
-		"`candidate`", "`inspection`", "`findings`", "`evidence`", "`agents/reviewer.md`", "`<head12>-<n>.verifier.md`",
+		"`candidate`", "`inspection`", "`findings`", "`evidence`", "`agents/reviewer.md`", "`<head12>-<n>.verifier.json`",
 		"`review-report`", "`payload_sha256`", "`review-diff`", "`review-result`", "`verifier-report`", "`<base>..<head>`",
-		"`labdrian review bind`", "`labdrian review record`", "the sha256 of the canonical diff", "trusts the record only on equality",
+		"`labdrian review bind`", "`labdrian review record`", "`labdrian review verify`", "the sha256 of the canonical diff", "trusts the record only on equality",
+		"`reviewverdict.Parse`", "`reviewverdict.Decide`", "the correction round of the candidate was spent",
 		"`binding`", "`reply`", "`binding.head`", "git 2.40 or later", "`diff-tree`", "`--attr-source`",
 		"Exit 0 stored, 2 reply refused",
 		"check evidence", "never review authority", "`odd/review-receipts/`", "`interrupted`",
 	} {
 		if !strings.Contains(readme, fragment) {
 			t.Errorf("odd/review-results/README.md must carry %q", fragment)
+		}
+	}
+}
+
+// verdictObject is the object the third line of the delta of roles/verifier/body.md spells out, decoded, and
+// the one verdict it shows.
+func verdictObject(t *testing.T) (line string, spelled, verdict map[string]any) {
+	t.Helper()
+	line = roleDelta(t, skillsRepoRoot(t), "verifier")[2]
+	start := strings.Index(line, `{"verdicts"`)
+	if start < 0 {
+		t.Fatalf("the third line of the verifier delta spells out no JSON object that starts with \"verdicts\"; got:\n%s", line)
+	}
+	if err := json.NewDecoder(strings.NewReader(line[start:])).Decode(&spelled); err != nil {
+		t.Fatalf("the object the verifier delta spells out is not JSON: %v", err)
+	}
+	if verdicts, _ := spelled["verdicts"].([]any); len(verdicts) == 1 {
+		verdict, _ = verdicts[0].(map[string]any)
+	}
+	if verdict == nil {
+		t.Fatalf("the verifier delta must spell out one verdict, as an object; got %v", spelled["verdicts"])
+	}
+	return line, spelled, verdict
+}
+
+// The verifier's whole reply is one JSON object, and its agent file is the only place it can read the shape of
+// that object: the prompt of the parent lists the finding ids and the checks, not the format. The third line
+// of its delta says it replaces the return envelope of the core prefix (the envelope asks for a status and a
+// summary, which the parent would fail to read as a verdict), and spells the object out with the members
+// engine/reviewverdict requires, the values it lists and the rules it refuses a reply for.
+func TestVerifierDeltaSpellsOutTheVerdictObjectItReturns(t *testing.T) {
+	line, spelled, verdict := verdictObject(t)
+	if !strings.HasPrefix(line, "This replaces the return envelope of the core prefix: ") {
+		t.Errorf("the third line of the verifier delta must start with the replacement of the return envelope; got:\n%s", line)
+	}
+	if len(spelled) != 1 {
+		t.Errorf("the object has %d members, want only verdicts: a verdict is evidence, never a schema, a receipt or an authority", len(spelled))
+	}
+	var members []string
+	for member := range verdict {
+		members = append(members, member)
+	}
+	sort.Strings(members)
+	if want := []string{"base_result", "command", "id", "output", "result"}; !reflect.DeepEqual(members, want) {
+		t.Errorf("a verdict has the members %v, want %v", members, want)
+	}
+	for _, member := range []string{"result", "base_result"} {
+		if verdict[member] != "reproduced|not-reproduced|not-run" {
+			t.Errorf("%s = %v, want the three values of the contract", member, verdict[member])
+		}
+	}
+	// The rules the engine refuses a reply for (engine/reviewverdict), told to the agent that must obey them: a
+	// refused reply is a verification that did not run, and the parent pays for the launch again.
+	for _, rule := range []string{
+		"one verdict for each finding id the prompt lists, none twice and none the prompt does not list",
+		"result is the check on head, base_result the same check on base",
+		"output is never empty and command is never empty when a check ran",
+		"no member is omitted or null",
+		"not-run is never a pass",
+	} {
+		if !strings.Contains(line, rule) {
+			t.Errorf("the third line of the verifier delta must say %q", rule)
+		}
+	}
+}
+
+// The object agents/verifier.md spells out is the object the engine parses, and a drift between the two is a
+// verification that never runs: the agent would reply with a member the parser refuses as unknown, or without
+// one it requires. The test fills the object the delta spells out with a legal value for each member and
+// requires reviewverdict.Parse to accept it for every pair of the values the delta lists for result and
+// base_result. A member the delta gains that this test has no legal value for fails it, and so does one the
+// parser does not know.
+func TestVerifierDeltaObjectIsTheOneTheEngineParses(t *testing.T) {
+	_, _, verdict := verdictObject(t)
+	answered := reviewresult.Result{Findings: []reviewresult.Finding{{ID: "F1"}}}
+	legal := map[string]any{"id": "F1", "command": "go test ./engine/", "output": "--- FAIL: TestGuard"}
+	alternativesOf := func(member string) []string {
+		list, ok := verdict[member].(string)
+		if !ok {
+			t.Fatalf("the verifier delta must list the alternatives of %q as one string; got %v", member, verdict[member])
+		}
+		return strings.Split(list, "|")
+	}
+	want := []string{string(reviewverdict.Reproduced), string(reviewverdict.NotReproduced), string(reviewverdict.NotRun)}
+	for _, member := range []string{"result", "base_result"} {
+		if got := alternativesOf(member); !reflect.DeepEqual(got, want) {
+			t.Fatalf("the verifier delta lists %v for %s, want the values of the contract %v", got, member, want)
+		}
+	}
+	instance := func(result, base string) []byte {
+		filled := map[string]any{}
+		for member := range verdict {
+			value, ok := legal[member]
+			switch member {
+			case "result":
+				value, ok = result, true
+			case "base_result":
+				value, ok = base, true
+			}
+			if !ok {
+				t.Fatalf("the verifier delta names the member %q, and this test has no legal value for it", member)
+			}
+			filled[member] = value
+		}
+		text, err := json.Marshal(map[string]any{"verdicts": []any{filled}})
+		if err != nil {
+			t.Fatalf("setup: %v", err)
+		}
+		return text
+	}
+	for _, result := range want {
+		for _, base := range want {
+			if _, err := reviewverdict.Parse(instance(result, base), answered); err != nil {
+				t.Errorf("reviewverdict.Parse refuses result %q with base_result %q, which the verifier delta lists: %v\n%s", result, base, err, instance(result, base))
+			}
 		}
 	}
 }

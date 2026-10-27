@@ -113,7 +113,7 @@ The chain's records are files at `$XDG_STATE_HOME/labdrian/role-chains/<project>
 Read what the chain left, at the locators the parent named in its prompts (Chain entry). Do NOT modify hop outputs (anything a hop wrote); the one carve-out is Execute item 3. Omit an optional field whose artifact was never named or cannot be read; never guess it.
 
 - **Archive report**: the file the delivery prompt named (the delivery hop's envelope lists it under `artifacts`). Execute item 3 writes into it and cannot be omitted, so confirm it exists BEFORE the first write. If the delivery prompt named no path, or the file is not there, report it and write nothing. It is also the source of `changed_lines` if it records a realized diff-stat total; otherwise compute a diff-stat against the base commit.
-- **Verifier reports**: `<head12>-<n>.verifier.md`, stored beside the review results, when the verifier ran.
+- **Verifier reports**: `<head12>-<n>.verifier.json`, stored beside the review results, when the verifier ran.
 - **Builder's apply-progress** and **shaper's spec** (the spec gives `requirement_count`).
 - **`sdd/{change}/pipeline-state`**: the tier-selection outcome and the ambiguity clarifying question if it fired — the only checkpoints inception-pipeline itself durably records.
 - **Stored review results**: `odd/review-results/<feature>/<head12>-<n>.json`, where `<feature>` is the name of the feature document `odd/tasks/<feature>.md` (`odd/review-results/README.md` spells out the layout). This is the ONLY place `approved_tree` is read from (see t1). A stored result lists no lenses, so record `review_lens_count` only when the closing `review-report` record's `context` states the rows the reviewer was sent.
