@@ -236,7 +236,9 @@ Commands:
                                              review-result evidence, the review-result and the verifier-report carry
                                              the sha256 of the stored files, and the review-diff the range and the
                                              diff_sha256 of the stored result; evidence that is missing or differs is
-                                             exit 1, and nothing is stored
+                                             exit 1, and nothing is stored; a completed review-exemption record is
+                                             held in the same way to the exemption review exempt stored (review-diff
+                                             and review-exemption evidence; the exemption must still hold)
                                    match-shaper --root PATH --handoff PATH    report which Shaper v3 roles match the vocabulary
   review <verb>                    Forward review binding and storage verbs to the engine unchanged.
                                    bind --base REV --head REV [--cwd REPO]
