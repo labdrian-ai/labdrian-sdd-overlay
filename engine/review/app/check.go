@@ -38,9 +38,13 @@ type Checked struct {
 // An exemption is held in the same way, to the rules `review exempt` made it under (review.CheckExemption): the
 // stored file is read as Exempt wrote it, its binding names a candidate before its base is handed to git, its
 // declared risk still names no high-risk item and its report is still clear, so a file that was edited to say
-// something else is refused; and the candidate is recomputed from git for the base it names and the head being
-// delivered, and the stored binding must be equal to it. An exemption that does not hold refuses the head even
-// when another file clears it, as a result that does not hold does.
+// something else is refused; the candidate is recomputed from git for the base it names and the head being
+// delivered, and the stored binding must be equal to it; and its base is still the first parent git gives for the
+// head (review.CheckOneCommit), so an exemption of several commits, which no verb makes, is refused. An exemption
+// that does not hold refuses the head even when another file clears it, as a result that does not hold does.
+//
+// A range whose base is its head covers no commit and clears nothing: the candidate of such a stored result or
+// exemption cannot be bound (review.NewCandidate), so it refuses the head.
 //
 // A result or an exemption is about a commit by its binding and not by its name. The feature and the head are checked
 // before git or the store is asked anything. Whatever cannot be told, because git or the store fails or a file does
@@ -121,6 +125,9 @@ func (s Service) exemptedHead(repo Repository, feature, name, head string) (revi
 		return review.Exempted{}, false, fmt.Errorf("%s: %w", path, err)
 	}
 	if err := review.CheckBinding(stored.Binding, candidate); err != nil {
+		return review.Exempted{}, false, fmt.Errorf("%s: %w", path, err)
+	}
+	if err := s.oneCommit(repo, candidate.Base, candidate.Head); err != nil {
 		return review.Exempted{}, false, fmt.Errorf("%s: %w", path, err)
 	}
 	return review.Exempted{Candidate: candidate, Exemption: path}, true, nil

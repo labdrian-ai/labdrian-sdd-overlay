@@ -599,7 +599,8 @@ overlay review <verb>
         beside the main checkout of the repository and never inside it (git's hooks do not run), or reuse one
         already at head; a worktree of another commit, or a path that is not a worktree of this repository,
         is refused and left as it is. A diff over 150000 bytes is bound all the same: over_limit is true and
-        note says the parent launches one review per commit. Needs git 2.40 or later. Exit 0 bound, 1 usage
+        note says the parent launches one review per commit; a range whose base is its head covers no commit
+        and is refused, by record and exempt too. Needs git 2.40 or later. Exit 0 bound, 1 usage
         error, refusal or a binding that could not be written.
     record --feature <name> --base <rev> --head <rev> [--result <file>|-] [--cwd <repo>]
         Compute the binding again from git (the reply is never trusted for it), hold the reply (read from
@@ -638,7 +639,8 @@ overlay review <verb>
         binding again, the candidate is recomputed from git for the base the result names and that head and
         the stored binding (base, head, diff_sha256, paths) must equal it, and the findings and the verdict
         stored beside the result decide whether it blocks; each exemption stored for the head is held again to
-        the rules it was made under (a declared risk of none, a clear report) and to git in the same way. The
+        the rules it was made under (a declared risk of none, a clear report) and to git in the same way, and
+        its base to the first parent of the head (it is for one commit). The
         head is cleared when at least one result binds it and every one is clear, or when an exemption binds
         it and no result does; a result that blocks keeps the head blocked whatever was recorded after it and
         whatever exemption exists, a result with a severe finding no verifier checked is not clear either, and
@@ -664,7 +666,10 @@ overlay review <verb>
         with no space and none written twice (`2,4`): 1 data or irreversible effects, 2 security, 3 contracts
         others consume, 4 concurrency, 5 delivery or environment, 6 no test would catch a regression. The
         engine does not compute the risk from the diff: it holds the declaration to this grammar, and a head
-        that names any item is never exempt, because that is what a review is for. Compute the binding from
+        that names any item is never exempt, because that is what a review is for. An exemption is for one
+        commit: --base must be the first parent of --head (for a merge, the parent it was made on), and one
+        of several commits, or of a head with no parent, is refused, because a chain from the delivery base
+        would step over the reviews of the commits in between. Compute the binding from
         git as `record` does and store the exemption as odd/review-results/<feature>/<head12>-<n>.exempt.json,
         numbered with the results and the verdicts of the head and never over an existing file; the file holds
         the binding, the declared risk and the report. stdout is the RoleHandoff skeleton for `roles append

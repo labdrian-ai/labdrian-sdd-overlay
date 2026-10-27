@@ -203,6 +203,30 @@ func (g Git) commit(dir, rev string) (string, error) {
 	return name, nil
 }
 
+// Parent returns the first parent of commit, a full object name, and "" when the commit has none. git prints the
+// commit and then its parents on one line, and the first of them is the one a merge was made on; anything else is
+// not an answer to the question and is an error.
+func (g Git) Parent(repo app.Repository, commit string) (string, error) {
+	out, err := g.output(repo.Root, "rev-list", []string{"rev-list", "--parents", "-n", "1", "--end-of-options", commit})
+	if err != nil {
+		return "", err
+	}
+	line, whole := strings.CutSuffix(string(out), "\n")
+	names := strings.Split(line, " ")
+	if !whole || strings.Contains(line, "\n") || names[0] != commit {
+		return "", fmt.Errorf("git rev-list printed %q for %q, want the commit and then its parents on one line", clip(string(out)), commit)
+	}
+	for _, parent := range names[1:] {
+		if !gitobject.IsName(parent) {
+			return "", fmt.Errorf("git rev-list printed the parent %q of %q, want a full object name", clip(parent), commit)
+		}
+	}
+	if len(names) == 1 {
+		return "", nil
+	}
+	return names[1], nil
+}
+
 // Diff returns the bytes of the canonical diff, untouched.
 func (g Git) Diff(repo app.Repository, base, head string) ([]byte, error) {
 	return g.output(repo.Root, "diff-tree", DiffArgs(base, head))

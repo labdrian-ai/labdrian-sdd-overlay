@@ -75,7 +75,7 @@ func (s Service) CheckEvidence(dir string, h roles.RoleHandoff) error {
 	if err != nil {
 		return &review.EvidenceError{Kind: result.Kind, Ref: result.Ref, Err: err}
 	}
-	if err := review.CheckRange(diff, binding); err != nil {
+	if err := review.CheckRange(diff, binding, "result"); err != nil {
 		return err
 	}
 	if !hasVerdict {
@@ -134,7 +134,7 @@ func (s Service) checkExemptionEvidence(dir string, h roles.RoleHandoff) error {
 	if err != nil {
 		return &review.EvidenceError{Kind: exemption.Kind, Ref: exemption.Ref, Err: err}
 	}
-	return review.CheckRange(diff, stored.Binding)
+	return review.CheckRange(diff, stored.Binding, "exemption")
 }
 
 // readEvidence reads the stored file that e names, and makes nothing. A file that cannot be read is the

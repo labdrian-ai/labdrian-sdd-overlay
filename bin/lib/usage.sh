@@ -243,7 +243,8 @@ Commands:
   review <verb>                    Forward review binding and storage verbs to the engine unchanged.
                                    bind --base REV --head REV [--cwd REPO]
                                              bind a candidate: full SHAs, diff_sha256 and changed paths as JSON; make
-                                             the detached review worktree beside the repository (exit 0 bound, 1 error)
+                                             the detached review worktree beside the repository; a range whose base is
+                                             its head covers no commit and is refused (exit 0 bound, 1 error)
                                    record --feature NAME --base REV --head REV [--result FILE|-] [--cwd REPO]
                                              hold a reviewer's reply to the binding recomputed from git and store it
                                              as odd/review-results/NAME/HEAD12-N.json, never over a file; print the
@@ -265,7 +266,8 @@ Commands:
                                              per commit, so the head is cleared only when clear results or
                                              exemptions cover REV..head as an unbroken chain, each range starting
                                              where the one before ended; a gap, a range that is not clear or a walk
-                                             that never reaches REV refuses; print the ranges used as JSON
+                                             that never reaches REV refuses; print the ranges used as JSON; an
+                                             exemption whose base is not the first parent of the head refuses
                                              (exit 0 cleared, 1 refused or error)
                                    exempt --feature NAME --base REV --head REV --risk none|ITEMS [--cwd REPO]
                                              exempt a head from review on the evidence of the verifier and the risk
@@ -276,10 +278,11 @@ Commands:
                                              5 delivery or environment, 6 no test would catch a regression) separated
                                              by commas; a head that names any item is never exempt; a report that is
                                              missing or not clear is refused, because a check that did not run never
-                                             passes; store HEAD12-N.exempt.json, never over a file; print the record
-                                             skeleton for roles append with payload_kind review-exemption; review check
-                                             clears an exempted head, but a result that blocks wins over any exemption
-                                             (exit 0 stored, 2 report refused, 1 error)
+                                             passes; an exemption is for one commit: --base must be the first parent
+                                             of --head, or it is refused; store HEAD12-N.exempt.json, never over a
+                                             file; print the record skeleton for roles append with payload_kind
+                                             review-exemption; review check clears an exempted head, but a result that
+                                             blocks wins over any exemption (exit 0 stored, 2 report refused, 1 error)
                                    No verb launches an agent or dispatches work.
   memory <verb>                    Forward memory-directive verbs to the engine unchanged.
                                    Read-only: no verb queries or writes memory; query execution

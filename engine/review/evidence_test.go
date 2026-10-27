@@ -217,7 +217,7 @@ func TestCheckRangeHoldsTheEvidenceToTheBindingStoredWithTheResult(t *testing.T)
 	binding := candidate(t).Binding()
 	good := roles.Evidence{Kind: review.EvidenceDiff, Ref: baseSHA + ".." + headSHA, SHA256: diffSHA}
 
-	if err := review.CheckRange(good, binding); err != nil {
+	if err := review.CheckRange(good, binding, "result"); err != nil {
 		t.Errorf("CheckRange() of the range and the digest the binding holds: error = %v, want nil", err)
 	}
 
@@ -237,13 +237,30 @@ func TestCheckRangeHoldsTheEvidenceToTheBindingStoredWithTheResult(t *testing.T)
 			e := good
 			tc.edit(&e)
 
-			err := review.CheckRange(e, binding)
+			err := review.CheckRange(e, binding, "result")
 
 			assertEvidenceError(t, err, review.ErrEvidenceDiffers, review.EvidenceDiff, e.Ref)
 		})
 	}
 	// Nothing is taken from the record to complete a binding that names nothing.
-	if err := review.CheckRange(good, reviewresult.Binding{}); !errors.Is(err, review.ErrEvidenceDiffers) {
+	if err := review.CheckRange(good, reviewresult.Binding{}, "result"); !errors.Is(err, review.ErrEvidenceDiffers) {
 		t.Errorf("CheckRange() against a binding that names no commit: error = %v, want one that wraps ErrEvidenceDiffers", err)
+	}
+}
+
+// The message names the stored file the evidence is held to, a result or an exemption, because the record that carries
+// it is the review-report of one or the review-exemption of the other.
+func TestCheckRangeNamesTheStoredFileItHoldsTheEvidenceTo(t *testing.T) {
+	binding := candidate(t).Binding()
+	wrongRange := roles.Evidence{Kind: review.EvidenceDiff, Ref: "main..HEAD", SHA256: diffSHA}
+	wrongDigest := roles.Evidence{Kind: review.EvidenceDiff, Ref: baseSHA + ".." + headSHA, SHA256: strings.Repeat("f", 64)}
+
+	for _, stored := range []string{"result", "exemption"} {
+		if err := review.CheckRange(wrongRange, binding, stored); err == nil || !strings.Contains(err.Error(), "the stored "+stored+" is about the range "+baseSHA+".."+headSHA) {
+			t.Errorf("CheckRange(another range, %q) error = %v, want it to say the stored %s is about the range", stored, err, stored)
+		}
+		if err := review.CheckRange(wrongDigest, binding, stored); err == nil || !strings.Contains(err.Error(), "the diff_sha256 stored with the "+stored+" is "+diffSHA) {
+			t.Errorf("CheckRange(another digest, %q) error = %v, want it to say the diff_sha256 stored with the %s", stored, err, stored)
+		}
 	}
 }

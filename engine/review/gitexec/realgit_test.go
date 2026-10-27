@@ -579,6 +579,41 @@ func TestCommitRefusesWhatIsNotACommit(t *testing.T) {
 	}
 }
 
+// The first parent of a commit is the commit before it; for a merge it is the one the merge was made on and not the one
+// it brought in; and the first commit of a repository has none.
+func TestParentIsTheFirstParentOfACommitAndNothingForARootCommit(t *testing.T) {
+	f := newFixture(t, "sha1")
+	f.write("a.txt", "one\n")
+	f.stage()
+	first := f.snapshot("first")
+	f.write("a.txt", "two\n")
+	f.stage()
+	second := f.snapshot("second")
+	f.git("checkout", "-q", "-b", "side", first)
+	f.write("b.txt", "side\n")
+	f.stage()
+	f.snapshot("side")
+	f.git("checkout", "-q", "main")
+	f.git("merge", "-q", "--no-ff", "-m", "merge", "side")
+	g := f.adapter()
+
+	for _, tc := range []struct{ name, commit, want string }{
+		{"a commit", second, first},
+		{"the first commit", first, ""},
+		{"a merge", f.name("HEAD"), second},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := g.Parent(f.repo(), tc.commit)
+			if err != nil || got != tc.want {
+				t.Errorf("Parent(%s) = %q, %v; want %q", tc.commit, got, err, tc.want)
+			}
+		})
+	}
+	if got, err := g.Parent(f.repo(), strings.Repeat("0", 40)); err == nil {
+		t.Errorf("Parent() of an object that is not there = %q, nil; want an error", got)
+	}
+}
+
 func TestAFailureOfARealGitSaysWhatGitSaid(t *testing.T) {
 	f := newFixture(t, "sha1")
 	_, head := f.history()

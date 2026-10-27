@@ -110,7 +110,7 @@ var (
 	// character.
 	ErrInvalidRev = errors.New("review: invalid revision")
 	// ErrInvalidCandidate is a candidate that names nothing: commits that are not full object names of one
-	// length, or paths that cannot be bound one by one.
+	// length, the same commit as base and as head, or paths that cannot be bound one by one.
 	ErrInvalidCandidate = errors.New("review: invalid candidate")
 	// ErrReplyTooLarge is a reply of the reviewer above MaxReplyBytes.
 	ErrReplyTooLarge = errors.New("review: reply too large")
@@ -138,8 +138,9 @@ type Candidate struct {
 }
 
 // NewCandidate binds the diff of two commits. base and head are full object names of one length (40
-// characters in a SHA-1 repository, 64 in a SHA-256 one), diff is the bytes of the diff and paths the
-// paths it changes. Every path is a non-empty string of valid UTF-8, because the binding is JSON and a
+// characters in a SHA-1 repository, 64 in a SHA-256 one) and are two commits: a range whose base is its head
+// covers no commit, so nothing reviewed or exempted over it clears anything. diff is the bytes of the diff and
+// paths the paths it changes. Every path is a non-empty string of valid UTF-8, because the binding is JSON and a
 // path that JSON cannot carry byte for byte could never be matched by a reviewer; no path is listed twice.
 // It returns the zero Candidate and an error that wraps ErrInvalidCandidate when it cannot.
 func NewCandidate(base, head string, diff []byte, paths []string) (Candidate, error) {
@@ -151,6 +152,9 @@ func NewCandidate(base, head string, diff []byte, paths []string) (Candidate, er
 	}
 	if len(base) != len(head) {
 		return Candidate{}, fmt.Errorf("%w: base has %d characters and head %d, want the same length", ErrInvalidCandidate, len(base), len(head))
+	}
+	if base == head {
+		return Candidate{}, fmt.Errorf("%w: base and head are the same commit %s, so the range covers no commit and clears nothing", ErrInvalidCandidate, head)
 	}
 	seen := make(map[string]bool, len(paths))
 	for _, p := range paths {

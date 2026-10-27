@@ -163,13 +163,14 @@ func CheckFile(e roles.Evidence, data []byte) error {
 
 // CheckRange holds e, evidence over the range that was reviewed, to the binding stored with the result, or with
 // the exemption: its ref must be <base>..<head> of the binding and its sha256 the diff_sha256 of it. The error is
-// an *EvidenceError that wraps ErrEvidenceDiffers and says what the stored file holds instead.
-func CheckRange(e roles.Evidence, b reviewresult.Binding) error {
+// an *EvidenceError that wraps ErrEvidenceDiffers and says what the stored file holds instead. stored is what that
+// file is called in the message, "result" or "exemption".
+func CheckRange(e roles.Evidence, b reviewresult.Binding, stored string) error {
 	if want := b.Base + ".." + b.Head; e.Ref != want {
-		return &EvidenceError{Kind: e.Kind, Ref: e.Ref, Err: fmt.Errorf("%w: the stored result is about the range %s", ErrEvidenceDiffers, want)}
+		return &EvidenceError{Kind: e.Kind, Ref: e.Ref, Err: fmt.Errorf("%w: the stored %s is about the range %s", ErrEvidenceDiffers, stored, want)}
 	}
 	if e.SHA256 != b.DiffSHA256 {
-		return &EvidenceError{Kind: e.Kind, Ref: e.Ref, Err: fmt.Errorf("%w: its sha256 is %s and the diff_sha256 stored with the result is %s", ErrEvidenceDiffers, e.SHA256, b.DiffSHA256)}
+		return &EvidenceError{Kind: e.Kind, Ref: e.Ref, Err: fmt.Errorf("%w: its sha256 is %s and the diff_sha256 stored with the %s is %s", ErrEvidenceDiffers, e.SHA256, stored, b.DiffSHA256)}
 	}
 	return nil
 }

@@ -62,6 +62,9 @@ type Git interface {
 	Locate(dir string) (Repository, error)
 	// Commit resolves rev to the full object name of the commit it names.
 	Commit(repo Repository, rev string) (string, error)
+	// Parent returns the full object name of the first parent of commit, a full object name, and "" when the commit
+	// has none. For a merge it is the parent the merge was made on, the one a diff of the merge is taken from.
+	Parent(repo Repository, commit string) (string, error)
 	// Diff returns the bytes of the canonical diff from base to head, both full names: the bytes whose
 	// SHA-256 is the diff_sha256 of the binding. They are the same for the same two commits whichever
 	// commit is checked out, whichever user configuration git reads and whatever the environment says.

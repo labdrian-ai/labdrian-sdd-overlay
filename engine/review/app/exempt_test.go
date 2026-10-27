@@ -66,7 +66,8 @@ func TestExemptStoresTheExemptionWithTheBindingTheRiskAndTheReport(t *testing.T)
 }
 
 // The binding is computed from git exactly as `review record` computes it: the same calls, in the same order, and
-// no other way to get a diff.
+// no other way to get a diff. The one question more is the first parent of the head, because an exemption is for one
+// commit (own-rdd T4, L21).
 func TestExemptComputesTheBindingFromGitAsRecordDoes(t *testing.T) {
 	gExempt, storeExempt := newFakeGit(), newFakeResults()
 	if _, err := app.New(gExempt, storeExempt).Exempt("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", "none", []byte(exemptReport)); err != nil {
@@ -77,9 +78,36 @@ func TestExemptComputesTheBindingFromGitAsRecordDoes(t *testing.T) {
 		t.Fatalf("setup: Record() error = %v", err)
 	}
 
-	if !reflect.DeepEqual(gExempt.calls, gRecord.calls) {
-		t.Errorf("Exempt asked git %q, Record asked %q; want the same questions in the same order", gExempt.calls, gRecord.calls)
+	if want := append(append([]string(nil), gRecord.calls...), "Parent "+headSHA); !reflect.DeepEqual(gExempt.calls, want) {
+		t.Errorf("Exempt asked git %q, Record asked %q; want the same questions in the same order and then the parent of the head", gExempt.calls, gRecord.calls)
 	}
+}
+
+// Whatever keeps git from saying the first parent of the head keeps the head from being exempted, for the exemption
+// that is made and for the one that is read back: a rule that cannot be checked refuses, and nothing is stored.
+func TestExemptAndCheckRefuseWhenGitCannotSayTheFirstParentOfTheHead(t *testing.T) {
+	broken := errors.New("git: not a repository")
+	t.Run("Exempt", func(t *testing.T) {
+		g, store := newFakeGit(), newFakeResults()
+		g.fail["Parent"] = broken
+
+		_, err := app.New(g, store).Exempt("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", "none", []byte(exemptReport))
+
+		if !errors.Is(err, broken) || store.created() != 0 {
+			t.Errorf("Exempt() error = %v with %d files created; want one that wraps %v and nothing stored", err, store.created(), broken)
+		}
+	})
+	t.Run("Check", func(t *testing.T) {
+		g, store := newFakeGit(), newFakeResults()
+		exempted(t, store, baseSHA, headSHA, 1)
+		g.fail["Parent"] = broken
+
+		got, err := app.New(g, store).Check(evidenceDir, "own-rdd", "HEAD")
+
+		if !errors.Is(err, broken) || len(got.Exemptions) != 0 {
+			t.Errorf("Check() = %+v, %v; want one that wraps %v and no exemption that cleared the head", got, err, broken)
+		}
+	})
 }
 
 // The three kinds of file of a head share one numbering: an exemption takes the next number after the results and

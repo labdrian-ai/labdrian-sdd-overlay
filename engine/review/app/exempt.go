@@ -41,7 +41,10 @@ type Exemption struct {
 //   - the report is at most review.MaxReplyBytes (review.ErrReplyTooLarge), the object of reviewverdict.ParseReport
 //     and clear: a missing, malformed or not clear report is refused with a *ReplyRefusedError, the named error
 //     inside it, exactly as a reply is, and a check that did not run never passes;
-//   - the revisions are ones git cannot read as an option (review.ErrInvalidRev).
+//   - the revisions are ones git cannot read as an option (review.ErrInvalidRev) and are two commits
+//     (review.ErrInvalidCandidate);
+//   - the exemption is for one commit: the base is the first parent of the head, as git gives it
+//     (review.ErrNotOneCommit), so a walk of the chain from a delivery base meets the review of every commit.
 //
 // The candidate is computed from git in the same way as Bind and Record compute it, and is never taken from the
 // report. Whether the head also has a stored result is not looked at here: the check of the delivery lets a result
@@ -63,6 +66,9 @@ func (s Service) Exempt(dir, feature, base, head, risk string, report []byte) (E
 	if err != nil {
 		return Exemption{}, err
 	}
+	if err := s.oneCommit(repo, candidate.Base, candidate.Head); err != nil {
+		return Exemption{}, err
+	}
 	file, err := review.EncodeExemption(candidate, risk, report)
 	if err != nil {
 		return Exemption{}, err
@@ -77,4 +83,16 @@ func (s Service) Exempt(dir, feature, base, head, risk string, report []byte) (E
 	}
 	path, sum := review.ResultPath(feature, name), sha256hex.Sum(file)
 	return Exemption{Candidate: candidate, Path: path, Number: number, SHA256: sum, Handoff: review.ExemptionHandoff(candidate, path, sum), NotFlushed: notFlushed}, nil
+}
+
+// oneCommit holds the range of an exemption, base and head full names, to the one commit it is for: git is asked for
+// the first parent of head and review.CheckOneCommit compares it with base. It is what Exempt asks before it stores and
+// what Check asks of each stored exemption, so a range of several commits is never made and never read as one. Whatever
+// keeps git from saying the parent is a refusal.
+func (s Service) oneCommit(repo Repository, base, head string) error {
+	parent, err := s.git.Parent(repo, head)
+	if err != nil {
+		return fmt.Errorf("find the first parent of %s: %w", head, err)
+	}
+	return review.CheckOneCommit(base, head, parent)
 }

@@ -71,6 +71,7 @@ func TestNewCandidateRefusesAnythingThatDoesNotNameACandidate(t *testing.T) {
 		{"a head in upper case, as long as the base", baseSHA, upperHead, nil, `head "` + upperHead + `" is not a full object name`},
 		{"a head that is empty", baseSHA, "", nil, `head "" is not a full object name`},
 		{"a base of 40 characters and a head of 64", mixedBase, mixedHead, nil, "the same length"},
+		{"a base that is the head", headSHA, headSHA, nil, "base and head are the same commit " + headSHA},
 		{"an empty path", baseSHA, headSHA, []string{"a.go", ""}, "empty path"},
 		{"a path listed twice", baseSHA, headSHA, []string{"a.go", "b.go", "a.go"}, `"a.go"`},
 		{"a path that is not UTF-8", baseSHA, headSHA, []string{"caf\xe9.txt"}, "UTF-8"},

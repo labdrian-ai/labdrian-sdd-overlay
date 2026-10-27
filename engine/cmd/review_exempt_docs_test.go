@@ -29,6 +29,8 @@ func TestReadmeDocumentsReviewExemptWhereItDocumentsTheOtherReviewVerbs(t *testi
 				`{"checks": [{"command": ..., "result": pass, fail or not-run, "output": ...}]}`,
 				"--risk is none or the numbers 1 to 6 of the high-risk items",
 				"a head that names any item is never exempt",
+				"is for one commit: --base must be the first parent of --head",
+				"a range whose base is its head covers no commit and is refused",
 				"<head12>-<n>.exempt.json",
 				"numbered with the results and the verdicts of the head and never over an existing file",
 				"payload_kind review-exemption",

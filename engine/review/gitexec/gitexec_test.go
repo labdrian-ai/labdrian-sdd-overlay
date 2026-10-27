@@ -19,9 +19,10 @@ import (
 var _ app.Git = gitexec.Git{}
 
 const (
-	baseSHA = "1111111111111111111111111111111111111111"
-	headSHA = "2222222222222222222222222222222222222222"
-	root    = "/work/repo"
+	baseSHA  = "1111111111111111111111111111111111111111"
+	headSHA  = "2222222222222222222222222222222222222222"
+	otherSHA = "3333333333333333333333333333333333333333"
+	root     = "/work/repo"
 )
 
 var repo = app.Repository{Root: root, Main: root, CommonDir: root + "/.git"}
@@ -226,6 +227,47 @@ func TestCommitRefusesAnAnswerThatIsNotOneFullName(t *testing.T) {
 			got, err := newGit(&fakeRunner{stdout: []byte(tc.stdout)}).Commit(repo, "HEAD")
 			if err == nil {
 				t.Errorf("Commit() = %q, nil; want an error", got)
+			}
+		})
+	}
+}
+
+// Parent asks git for the parents of one commit, given by its full name after --end-of-options, and reads the first one:
+// git prints the commit and then its parents on one line, and a commit that has none is a line of the commit alone.
+func TestParentAsksForTheParentsOfOneCommitAndReadsTheFirst(t *testing.T) {
+	for _, tc := range []struct{ name, stdout, want string }{
+		{"one parent", headSHA + " " + baseSHA + "\n", baseSHA},
+		{"a merge, whose first parent is the one it was made on", headSHA + " " + baseSHA + " " + otherSHA + "\n", baseSHA},
+		{"no parent", headSHA + "\n", ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			r := &fakeRunner{stdout: []byte(tc.stdout)}
+
+			got, err := newGit(r).Parent(repo, headSHA)
+
+			if err != nil || got != tc.want {
+				t.Errorf("Parent() = %q, %v; want %q and no error", got, err, tc.want)
+			}
+			want := []string{"-C", root, "rev-list", "--parents", "-n", "1", "--end-of-options", headSHA}
+			if c := r.only(t); c.bin != "git" || !reflect.DeepEqual(c.args, want) {
+				t.Errorf("started %q %q, want git %q", c.bin, c.args, want)
+			}
+		})
+	}
+}
+
+func TestParentRefusesAnAnswerThatIsNotTheCommitAndItsParents(t *testing.T) {
+	for _, tc := range []struct{ name, stdout string }{
+		{"nothing", ""},
+		{"another commit", baseSHA + " " + otherSHA + "\n"},
+		{"a parent that is an abbreviation", headSHA + " 1111111\n"},
+		{"two lines", headSHA + " " + baseSHA + "\n" + headSHA + "\n"},
+		{"text", "fatal\n"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := newGit(&fakeRunner{stdout: []byte(tc.stdout)}).Parent(repo, headSHA)
+			if err == nil {
+				t.Errorf("Parent() = %q, nil; want an error", got)
 			}
 		})
 	}

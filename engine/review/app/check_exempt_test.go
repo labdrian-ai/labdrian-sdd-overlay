@@ -52,7 +52,7 @@ func TestCheckClearsTheHeadOfAStoredExemptionAndRecomputesTheCandidateFromGit(t 
 	}
 	wantGit := []string{
 		"Locate " + evidenceDir, "Commit HEAD",
-		"Commit " + baseSHA, "Commit " + headSHA, "Diff " + baseSHA + " " + headSHA, "Paths " + baseSHA + " " + headSHA,
+		"Commit " + baseSHA, "Commit " + headSHA, "Diff " + baseSHA + " " + headSHA, "Paths " + baseSHA + " " + headSHA, "Parent " + headSHA,
 	}
 	if !reflect.DeepEqual(g.calls, wantGit) {
 		t.Errorf("git calls = %q, want %q", g.calls, wantGit)
