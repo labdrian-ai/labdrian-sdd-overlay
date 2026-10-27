@@ -257,7 +257,8 @@ Commands:
                                              (default HEAD), hold the results and verdicts to it, and refuse unless
                                              one result binds the head and every one is clear: a result that blocks,
                                              or a severe finding nobody checked, refuses, because a check that did
-                                             not run never passes; print the files used as JSON, store nothing
+                                             not run never passes; an exemption that still holds clears a head that
+                                             has no result; print the files used as JSON, store nothing
                                              (exit 0 cleared, 1 refused or error)
                                    exempt --feature NAME --base REV --head REV --risk none|ITEMS [--cwd REPO]
                                              exempt a head from review on the evidence of the verifier and the risk

@@ -404,11 +404,21 @@ func reportExempted(p process, e reviewapp.Exemption) {
 }
 
 // reviewCheckJSON is what 'review check' prints for a head that is cleared for delivery: the head as a full
-// object name, the outcome, and the stored results that bind it, by launch.
+// object name, the outcome, the stored results that bind it, by launch (an empty array for a head that is cleared
+// by an exemption alone), and the stored exemptions that bind it, by number, which are left out when there is none.
 type reviewCheckJSON struct {
-	Head    string              `json:"head"`
-	Outcome string              `json:"outcome"`
-	Results []reviewCheckedJSON `json:"results"`
+	Head       string               `json:"head"`
+	Outcome    string               `json:"outcome"`
+	Results    []reviewCheckedJSON  `json:"results"`
+	Exemptions []reviewExemptedJSON `json:"exemptions,omitempty"`
+}
+
+// reviewExemptedJSON is one stored exemption that binds the head, with the file used and the base and the digest
+// of the diff that git gave when the check recomputed them, which the stored binding equals.
+type reviewExemptedJSON struct {
+	Exemption  string `json:"exemption"`
+	Base       string `json:"base"`
+	DiffSHA256 string `json:"diff_sha256"`
 }
 
 // reviewCheckedJSON is one stored result that binds the head, with the files used and the base and the digest of
@@ -424,9 +434,9 @@ type reviewCheckedJSON struct {
 }
 
 // runReviewCheck implements 'review check --feature [--head] [--cwd]', the check of the delivery. A head that the
-// stored results clear is exit 0, and stdout names the files used. Anything that keeps a head from delivery, and
-// any failure to tell, is exit 1 with the reason on stderr and nothing on stdout. The head is HEAD when --head is
-// not given; an empty one that was given is not the default.
+// stored results, or an exemption, clear is exit 0, and stdout names the files used. Anything that keeps a head from
+// delivery, and any failure to tell, is exit 1 with the reason on stderr and nothing on stdout. The head is HEAD
+// when --head is not given; an empty one that was given is not the default.
 func runReviewCheck(p process, d deps, args []string) {
 	fail := func(err error) { reviewFailed(p, "check", err) }
 	f, err := parseReviewFlags(args, "--feature", "--head", "--cwd")
@@ -457,12 +467,15 @@ func runReviewCheck(p process, d deps, args []string) {
 // reportChecked hands the files used on stdout. When they cannot be written the parent never received that the
 // head is cleared, and the verb says so with exit 1.
 func reportChecked(p process, checked reviewapp.Checked) {
-	out := reviewCheckJSON{Head: checked.Head, Outcome: string(reviewverdict.Clear)}
+	out := reviewCheckJSON{Head: checked.Head, Outcome: string(reviewverdict.Clear), Results: []reviewCheckedJSON{}}
 	for _, r := range checked.Results {
 		out.Results = append(out.Results, reviewCheckedJSON{
 			Result: r.Result, Verdict: r.Verdict, Base: r.Candidate.Base, DiffSHA256: r.Candidate.DiffSHA256,
 			Fix: r.Decision.Fix, Carry: r.Decision.Carry,
 		})
+	}
+	for _, e := range checked.Exemptions {
+		out.Exemptions = append(out.Exemptions, reviewExemptedJSON{Exemption: e.Exemption, Base: e.Candidate.Base, DiffSHA256: e.Candidate.DiffSHA256})
 	}
 	if err := writeReviewJSON(p, out); err != nil {
 		reviewFailed(p, "check", fmt.Errorf("the head is cleared, but the answer could not be written: %w", err))
