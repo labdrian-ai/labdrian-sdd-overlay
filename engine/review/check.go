@@ -1,0 +1,129 @@
+package review
+
+import (
+	"errors"
+	"fmt"
+	"slices"
+	"strconv"
+	"strings"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/reviewresult"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/reviewverdict"
+)
+
+// This file is what the delivery of a head is held to (own-rdd T4, S5): that the head was reviewed, by results
+// the engine stored that still hold, and that none of them keeps it from delivery. The use case that reads the
+// files and asks git is review/app's Check; the rules here work on the names and the values it hands over.
+
+// The reasons a head is refused. A refusal wraps exactly one of them, so a caller tells them apart with
+// errors.Is and reads the result and the findings in the message.
+var (
+	// ErrBindingDiffers is a stored result whose binding is not the candidate git gives now for the commits it
+	// names: the diff, and so its digest, is not the one the reviewer read.
+	ErrBindingDiffers = errors.New("review: the stored binding differs from the candidate git gives")
+	// ErrNoResult is a head that no stored result binds: it was not reviewed.
+	ErrNoResult = errors.New("review: no stored result binds the head")
+	// ErrBlocked is a head with a stored result that blocks: a severe finding the diff caused was reproduced.
+	ErrBlocked = errors.New("review: a stored result blocks the head")
+	// ErrNotClear is a head with a stored result that does not block and is not clear either: a finding that
+	// could block was never checked, or nothing decided the outcome. A check that did not run never passes.
+	ErrNotClear = errors.New("review: a stored result is not clear")
+)
+
+// Reviewed is a stored result that binds a head, read back together with what it makes of the review.
+type Reviewed struct {
+	// Candidate is the candidate git gives now for the commits the result names; CheckBinding has held the
+	// stored binding to it.
+	Candidate Candidate
+	// Result is the path of the stored result, relative to the root of the working tree and written with '/'.
+	Result string
+	// Verdict is the path of the verdict stored beside it, and "" when the verifier did not run.
+	Verdict string
+	// Decision is what the findings of the result and the verdicts, when there are any, make of the review
+	// (reviewverdict.Decide). A finding with no verdict counts as a check that did not run.
+	Decision reviewverdict.Decision
+}
+
+// ResultsOfHead is the names, among names, of the stored results of the head: the ones CheckResultName accepts
+// whose <head12> is the first 12 characters of head, by launch number, the first launch first. The verdict
+// stored beside a result, a file being written and any other name are not results. A head too short to name a
+// file has none, because no result name begins with a dash. names is left as it is.
+func ResultsOfHead(names []string, head string) []string {
+	prefix := Candidate{Head: head}.Short() + "-"
+	var results []string
+	for _, name := range names {
+		if strings.HasPrefix(name, prefix) && CheckResultName(name) == nil {
+			results = append(results, name)
+		}
+	}
+	slices.SortFunc(results, func(a, b string) int { return launchNumber(a) - launchNumber(b) })
+	return results
+}
+
+// launchNumber is the <n> of a name that CheckResultName accepts.
+func launchNumber(name string) int {
+	_, number, _ := strings.Cut(strings.TrimSuffix(name, resultSuffix), "-")
+	n, _ := strconv.Atoi(number)
+	return n
+}
+
+// CheckBinding holds the binding a result was stored with to c, the candidate git gives now for the same
+// commits: the base, the head, the digest of the diff and the paths it changes, in the order git prints them,
+// must all be equal. The error wraps ErrBindingDiffers and says the first member that differs with both values.
+func CheckBinding(stored reviewresult.Binding, c Candidate) error {
+	differs := func(member, inResult, inGit string) error {
+		return fmt.Errorf("%w: %s is %s in the result and %s in git", ErrBindingDiffers, member, inResult, inGit)
+	}
+	switch {
+	case stored.Base != c.Base:
+		return differs("base", stored.Base, c.Base)
+	case stored.Head != c.Head:
+		return differs("head", stored.Head, c.Head)
+	case stored.DiffSHA256 != c.DiffSHA256:
+		return differs("diff_sha256", stored.DiffSHA256, c.DiffSHA256)
+	case !slices.Equal(stored.Paths, c.Paths):
+		return fmt.Errorf("%w: the paths are not the ones git lists for %s (the result lists %d, git lists %d)",
+			ErrBindingDiffers, c.Ref(), len(stored.Paths), len(c.Paths))
+	}
+	return nil
+}
+
+// Clearance decides whether the stored results of a head clear it for delivery: reviewed holds every result
+// that binds the head, by launch, and the head is cleared when there is at least one and every one is clear.
+//
+// A result that blocks keeps the head blocked whatever was recorded after it: a verdict that reproduced a
+// severe finding is not undone by another launch on the same head, and a blocked head goes back to the builder
+// and comes back as another head. A result whose outcome is not clear without blocking (a severe finding no
+// verifier checked, or an outcome nobody decided) keeps it from delivery too. The refusal names a result that
+// blocks when there is one, else a result that is not clear. The error wraps ErrNoResult, ErrBlocked or
+// ErrNotClear.
+func Clearance(reviewed []Reviewed) error {
+	if len(reviewed) == 0 {
+		return ErrNoResult
+	}
+	var notClear error
+	for _, r := range reviewed {
+		switch r.Decision.Outcome {
+		case reviewverdict.Clear:
+		case reviewverdict.Blocks:
+			return fmt.Errorf("%w: %s", ErrBlocked, r.describe("blocking findings", r.Decision.Blocking))
+		default:
+			if notClear == nil {
+				notClear = fmt.Errorf("%w: %s", ErrNotClear, r.describe("findings not checked", r.Decision.Unverified))
+			}
+		}
+	}
+	return notClear
+}
+
+// describe names the result and the verdict beside it, then the findings of the kind the label says.
+func (r Reviewed) describe(label string, ids []string) string {
+	verdict := "no verdict of the verifier is stored"
+	if r.Verdict != "" {
+		verdict = "verdict " + r.Verdict
+	}
+	if len(ids) == 0 {
+		return fmt.Sprintf("%s (%s)", r.Result, verdict)
+	}
+	return fmt.Sprintf("%s (%s): %s %s", r.Result, verdict, label, strings.Join(ids, ", "))
+}

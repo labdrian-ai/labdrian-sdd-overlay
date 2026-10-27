@@ -31,6 +31,12 @@
 // skeleton binds it as one more piece of evidence and says who is next (VerifiedHandoff). A review is
 // corrected at most once: IsCorrection says which candidate is the correction of which.
 //
+// The stored files are what the rest of the chain is held to (own-rdd T4): the record that closes a review
+// carries evidence that must be the evidence of the files stored (NeedsEvidence, ResultRef, VerdictRef,
+// CheckFile, CheckRange), and a head is delivered only when the results stored for it still bind it and clear
+// it (ResultsOfHead finds them, CheckBinding holds each stored binding to the candidate git gives now, and
+// Clearance decides).
+//
 // It is a domain package: pure standard library and the domain packages that say what a git object name,
 // a SHA-256 digest, a reviewer reply, a verifier verdict and a role handoff are. It reads no file and runs
 // no git.
