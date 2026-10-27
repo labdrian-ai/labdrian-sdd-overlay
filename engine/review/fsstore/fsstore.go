@@ -34,15 +34,26 @@
 // odd/review-results/<feature> before the store walks to it, and could forge a result without the store at
 // all. The store keeps a result out of a place the repository's own files point to, which is what a checkout
 // of someone else's branch can bring.
+//
+// Read, which the verification of a stored result needs (own-rdd T3), works by path on every platform: the
+// directories are looked at as for any other call, the file is looked at without being followed (a link, a
+// directory or anything else that is not a regular file is refused, ErrNotAFile), opened, compared with what
+// was looked at, read up to review.MaxStoredBytes (ErrTooLarge) and the directories are looked at again
+// (ErrChanged). A read is not a write, so there is nothing to publish into a directory that changed; the
+// bytes are simply not returned.
 package fsstore
 
 import (
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review/app"
 )
 
 // ErrInvalidName is a file name that is not one plain name: empty, a dot name, hidden (the temporary files of
@@ -58,6 +69,13 @@ var ErrNotADirectory = errors.New("review: a directory of the results path is a 
 // by path says it; the store that holds the directories (linux) works in the ones it opened and has nothing to
 // say.
 var ErrChanged = errors.New("review: a directory of the results path changed while the store was using it")
+
+// ErrNotAFile is a file of the results of a feature that Read was asked for and that is a symbolic link, a
+// directory or anything else that is not a regular file.
+var ErrNotAFile = errors.New("review: a result is a link or not a regular file")
+
+// ErrTooLarge is a file of the results of a feature that is above review.MaxStoredBytes.
+var ErrTooLarge = errors.New("review: a stored file is too large")
 
 const (
 	dirPerm  fs.FileMode = 0o755
@@ -75,6 +93,8 @@ const (
 	pointWalked = "walked"
 	// pointLinked: the file was linked into place and the store is about to look at the directories again.
 	pointLinked = "linked"
+	// pointLooked: Read looked at the file and is about to open it.
+	pointLooked = "looked"
 )
 
 // Store is the results directories of the repositories under their roots. It holds no state, and the zero
@@ -135,6 +155,65 @@ func (s Store) Create(root, feature, name string, data []byte) error {
 		return err
 	}
 	return s.create(root, feature, name, data)
+}
+
+// Read returns the bytes of the file called name in the directory of the feature under root, and makes
+// nothing. app.ErrNotFound says the file, its directory or the root is not there. The file must be a regular
+// file that is not a link (ErrNotAFile) of at most review.MaxStoredBytes (ErrTooLarge), and the directories
+// must be the ones the store looked at when the read ends (ErrChanged); with any of those the bytes are not
+// returned.
+func (s Store) Read(root, feature, name string) ([]byte, error) {
+	if err := checkName(name); err != nil {
+		return nil, err
+	}
+	loc, found, err := s.walk(root, feature, false)
+	if err != nil {
+		return nil, err
+	}
+	path := filepath.Join(root, review.ResultsDir, feature, name)
+	if !found {
+		return nil, fmt.Errorf("%w: %s", app.ErrNotFound, path)
+	}
+	s.at(pointWalked, loc.dir)
+	data, err := s.readFile(filepath.Join(loc.dir, name))
+	if err != nil {
+		return nil, err
+	}
+	if err = unchanged(loc.seen); err != nil {
+		return nil, err
+	}
+	return data, nil
+}
+
+// readFile reads the regular file at path: it looks at it without following it, opens it, requires what it
+// opened to be what it looked at, and reads one byte past the limit to know a file is above it.
+func (s Store) readFile(path string) ([]byte, error) {
+	looked, err := os.Lstat(path)
+	switch {
+	case errors.Is(err, fs.ErrNotExist):
+		return nil, fmt.Errorf("%w: %s", app.ErrNotFound, path)
+	case err != nil:
+		return nil, fmt.Errorf("inspect %s: %w", path, err)
+	case !looked.Mode().IsRegular():
+		return nil, fmt.Errorf("%w: %s", ErrNotAFile, path)
+	}
+	s.at(pointLooked, filepath.Dir(path))
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("read %s: %w", path, err)
+	}
+	defer f.Close()
+	if opened, err := f.Stat(); err != nil || !os.SameFile(looked, opened) {
+		return nil, fmt.Errorf("%w: %s is not the file that was looked at", ErrChanged, path)
+	}
+	data, err := io.ReadAll(io.LimitReader(f, review.MaxStoredBytes+1))
+	switch {
+	case err != nil:
+		return nil, fmt.Errorf("read %s: %w", path, err)
+	case len(data) > review.MaxStoredBytes:
+		return nil, fmt.Errorf("%w: %s is above %d bytes", ErrTooLarge, path, review.MaxStoredBytes)
+	}
+	return data, nil
 }
 
 // checkName requires one plain file name.
