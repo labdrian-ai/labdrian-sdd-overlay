@@ -50,7 +50,9 @@ type Verified struct {
 // fix is reviewed against the same base; a verdict that blocks on another head of a base whose stored
 // verdicts already hold one that blocked (review.IsCorrection) is ErrCorrectionSpent, and nothing is stored.
 // The round is recorded by the stored verdict itself: no other file says it, and no counter can drift from
-// the verdicts. What cannot be read to tell is not taken to mean the round is unspent.
+// the verdicts. What cannot be read to tell is not taken to mean the round is unspent. A verdict that blocks
+// is checked and stored under the lock of the directory of the feature (Results.Lock), so two of them on two
+// heads of one base, verified at the same time, cannot both find the round unspent.
 func (s Service) Verify(dir, feature, stored string, reply []byte) (Verified, error) {
 	if err := review.CheckFeature(feature); err != nil {
 		return Verified{}, err
@@ -81,6 +83,11 @@ func (s Service) Verify(dir, feature, stored string, reply []byte) (Verified, er
 	}
 	decision := reviewverdict.Decide(result, verdicts)
 	if decision.Outcome == reviewverdict.Blocks {
+		unlock, err := s.results.Lock(repo.Root, feature)
+		if err != nil {
+			return Verified{}, fmt.Errorf("lock %s/%s: %w", review.ResultsDir, feature, err)
+		}
+		defer unlock()
 		spentBy, err := s.spentRound(repo.Root, feature, stored, binding)
 		if err != nil {
 			return Verified{}, err

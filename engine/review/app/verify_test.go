@@ -303,6 +303,56 @@ func TestVerifyCannotTellWhetherTheRoundWasSpentFromWhatItCannotRead(t *testing.
 	}
 }
 
+// A verdict that blocks is decided and stored under the lock of the directory of the feature, so that two of
+// them on two heads of one base cannot both find the round unspent: the lock is taken before the stored
+// verdicts are listed and given back once the verdict is stored. A verdict that does not block takes none, and
+// a lock that cannot be taken stores nothing.
+func TestVerifyHoldsTheLockOfTheFeatureFromTheRoundCheckToTheStore(t *testing.T) {
+	steps := func(store *fakeResults) []string {
+		var got []string
+		for _, c := range store.calls {
+			if verb, _, _ := strings.Cut(c, " "); verb == "Lock" || verb == "Names" || verb == "Create" || verb == "Unlock" {
+				got = append(got, verb)
+			}
+		}
+		return got
+	}
+	t.Run("a verdict that blocks", func(t *testing.T) {
+		g, store := newFakeGit(), newFakeResults()
+		name := reviewed(t, store, baseSHA, headSHA, 1, finding("F1", "BLOCKER"))
+
+		if _, err := app.New(g, store).Verify("/work/wt/feature", "own-rdd", name, blocking); err != nil {
+			t.Fatalf("Verify() error = %v, want nil", err)
+		}
+		if want := []string{"Lock", "Names", "Create", "Unlock"}; !reflect.DeepEqual(steps(store), want) {
+			t.Errorf("the store was asked %q, want %q", steps(store), want)
+		}
+	})
+	t.Run("a verdict that does not block", func(t *testing.T) {
+		g, store := newFakeGit(), newFakeResults()
+		name := reviewed(t, store, baseSHA, headSHA, 1, finding("F1", "BLOCKER"))
+
+		if _, err := app.New(g, store).Verify("/work/wt/feature", "own-rdd", name, verdictReply(verdict("F1", "not-reproduced"))); err != nil {
+			t.Fatalf("Verify() error = %v, want nil", err)
+		}
+		if want := []string{"Create"}; !reflect.DeepEqual(steps(store), want) {
+			t.Errorf("the store was asked %q, want %q", steps(store), want)
+		}
+	})
+	t.Run("a lock that cannot be taken", func(t *testing.T) {
+		boom := errors.New("boom")
+		g, store := newFakeGit(), newFakeResults()
+		name := reviewed(t, store, baseSHA, headSHA, 1, finding("F1", "BLOCKER"))
+		store.fail["Lock"] = boom
+
+		_, err := app.New(g, store).Verify("/work/wt/feature", "own-rdd", name, blocking)
+
+		if !errors.Is(err, boom) || !reflect.DeepEqual(steps(store), []string{"Lock"}) {
+			t.Errorf("Verify() error = %v after %q, want one that wraps %v and nothing asked after the lock", err, steps(store), boom)
+		}
+	})
+}
+
 // What the store could not do is the error of the command, with the cause, and nothing is created after it.
 func TestVerifyReturnsWhatTheStoreCouldNotDo(t *testing.T) {
 	boom := errors.New("boom")

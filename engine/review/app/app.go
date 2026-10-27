@@ -86,6 +86,10 @@ type Results interface {
 	// file that is not there gives ErrNotFound. It refuses a path that leads outside the results directory,
 	// a name that is not a regular file and a file above review.MaxStoredBytes.
 	Read(root, feature, name string) ([]byte, error)
+	// Lock takes the lock of the directory of the feature, which is there, and waits while another holder has
+	// it; calling the function it returns gives the lock back. It makes nothing: a directory that is not there
+	// gives ErrNotFound. Where the store cannot hold a lock, it says so in its documentation and holds none.
+	Lock(root, feature string) (unlock func(), err error)
 }
 
 // ErrExists is what Results.Create returns, wrapped or not, for a name that is already taken.

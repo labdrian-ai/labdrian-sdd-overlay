@@ -33,6 +33,31 @@ func (s Store) create(root, feature, name string, data []byte) error {
 	return s.createHeld(root, feature, name, data)
 }
 
+// Lock opens the directory of the feature as Names does, without following a link, and takes an exclusive
+// flock(2) on it, waiting while another holder has it. The kernel ties the lock to what was opened, so every
+// call, of this process or of another, waits for the one before; closing the directory gives the lock back,
+// and so does the end of the process that held it.
+func (s Store) Lock(root, feature string) (func(), error) {
+	dir, path, err := s.openHeld(root, feature, false)
+	if err != nil {
+		return nil, err
+	}
+	if dir == nil {
+		return nil, fmt.Errorf("%w: %s", app.ErrNotFound, filepath.Join(root, review.ResultsDir, feature))
+	}
+	for {
+		err = syscall.Flock(int(dir.Fd()), syscall.LOCK_EX)
+		if !errors.Is(err, syscall.EINTR) {
+			break
+		}
+	}
+	if err != nil {
+		dir.Close()
+		return nil, fmt.Errorf("lock %s: %w", path, err)
+	}
+	return func() { dir.Close() }, nil
+}
+
 // openDir is how every directory of the path is opened: for reading, only if it is a directory, and never by
 // following a link in its name (the kernel answers ENOTDIR to a link, to a file and to what is neither).
 const openDir = syscall.O_RDONLY | syscall.O_DIRECTORY | syscall.O_NOFOLLOW | syscall.O_CLOEXEC
