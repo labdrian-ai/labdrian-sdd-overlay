@@ -642,6 +642,47 @@ func TestAbolishedVocabularySweptFromCurrentSections(t *testing.T) {
 	})
 }
 
+// TestReviewLensCountIsCountedFromTheRowsOfTheStoredResults pins what own-rdd T5 (S8) moves: the lens count of the
+// actuals record is no longer the length of `selected_lenses` in the receipt of another tool, it is the number of lens
+// rows our own stored results record (`labdrian review record --rows`, odd/review-results/README.md, "The lens rows of
+// a launch"). Two places say so, and each is pinned where it says it: the description of the property in the schema,
+// and the role-chain skill, which is what tells the parent of the chain to send the rows of the canonical file and to
+// record the ones it sent.
+func TestReviewLensCountIsCountedFromTheRowsOfTheStoredResults(t *testing.T) {
+	repoRoot := actualsInstrumentationRepoRoot(t)
+
+	t.Run("the_schema_counts_the_rows_of_the_stored_results", func(t *testing.T) {
+		schema := decodeActualsSchema(t, readRepoFile(t, repoRoot, actualsSchemaRelPath))
+		description := actualsSchemaPropertyDescription(t, schema, "review_lens_count")
+		for _, want := range []string{
+			"number of `rows` recorded",
+			"stored results of the change",
+			"odd/review-results",
+			"one for each row of each launch",
+		} {
+			if !strings.Contains(description, want) {
+				t.Errorf("review_lens_count description must contain %q, got %q", want, description)
+			}
+		}
+		// A count of rows has no maximum of its own: a change reviewed in two launches of three rows each has six.
+		for _, forbidden := range []string{"selected_lenses", "review-receipt", "up to 4"} {
+			if strings.Contains(description, forbidden) {
+				t.Errorf("review_lens_count description must derive from our stored results and not from another tool's receipt or tier, it contains %q: %q", forbidden, description)
+			}
+		}
+	})
+
+	t.Run("the_role_chain_sends_the_rows_of_the_canonical_file_and_records_them", func(t *testing.T) {
+		_, _, body := roleChainSkill(t)
+		_, under := roleChainSections(body)
+		for _, want := range []string{"roles/reviewer/rows.json", "`--rows R`"} {
+			if !strings.Contains(under["Binding"], want) {
+				t.Errorf("the Binding section of the role-chain skill must carry %q, got:\n%s", want, under["Binding"])
+			}
+		}
+	})
+}
+
 func actualsInstrumentationRepoRoot(t *testing.T) string {
 	t.Helper()
 	repoRoot, err := filepath.Abs(filepath.Join("..", ".."))
