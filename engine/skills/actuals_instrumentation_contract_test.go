@@ -659,6 +659,9 @@ func TestReviewLensCountIsCountedFromTheRowsOfTheStoredResults(t *testing.T) {
 			"stored results of the change",
 			"odd/review-results",
 			"one for each row of each launch",
+			// own-rdd T10 (S13): the validator holds the count to those rows, and the schema says so.
+			"tools/actuals-record-validator",
+			"omits it while a stored result records a row",
 		} {
 			if !strings.Contains(description, want) {
 				t.Errorf("review_lens_count description must contain %q, got %q", want, description)
@@ -681,6 +684,37 @@ func TestReviewLensCountIsCountedFromTheRowsOfTheStoredResults(t *testing.T) {
 			}
 		}
 	})
+}
+
+// TestTheDocumentedCallsOfTheActualsValidatorGiveItTheRepositoryRoot pins what own-rdd T10 (S13) moves in the two
+// places that tell the closing agent how to run the validator. The validator now requires --repo, the root that holds
+// the stored results review_lens_count is held to, and refuses a call without it as a usage error, so a document that
+// leaves it out would stop every closure. Each call is read where its document writes it (the fenced block of the
+// inception-pipeline skill, the inline code of the shared contracts) and must carry the schema, the instance and the
+// root the document already computes for the other two paths.
+func TestTheDocumentedCallsOfTheActualsValidatorGiveItTheRepositoryRoot(t *testing.T) {
+	repoRoot := actualsInstrumentationRepoRoot(t)
+	const start = `go run -C "$root/tools/actuals-record-validator" .`
+	for _, rel := range []string{inceptionPipelineSkillRelPath, "skills/_shared/pre-sdd-contracts.md"} {
+		t.Run(rel, func(t *testing.T) {
+			text := readRepoFile(t, repoRoot, rel)
+			at := strings.Index(text, start)
+			if at < 0 {
+				t.Fatalf("%s no longer shows how to run the validator, want %q", rel, start)
+			}
+			call := text[at:]
+			end := strings.Index(call, "`") // the backtick that closes the inline code or the fence
+			if end < 0 {
+				t.Fatalf("%s: the call of the validator is not closed by a backtick", rel)
+			}
+			call = call[:end]
+			for _, want := range []string{`--schema "$root/skills/_shared/actuals-record.schema.json"`, "--instance", `--repo "$root"`} {
+				if !strings.Contains(call, want) {
+					t.Errorf("%s: the call of the validator must carry %q, got:\n%s", rel, want, call)
+				}
+			}
+		})
+	}
 }
 
 func actualsInstrumentationRepoRoot(t *testing.T) string {
