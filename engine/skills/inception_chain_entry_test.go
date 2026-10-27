@@ -235,7 +235,7 @@ func TestInceptionPipelineClosureInputsAreLocatedByTheChain(t *testing.T) {
 	})
 
 	t.Run("B1_verifier_reports_are_read_where_the_chain_stores_them", func(t *testing.T) {
-		const stored = "`<head12>-<n>.verifier.md`"
+		const stored = "`<head12>-<n>.verifier.json`"
 		section := markdownSectionBody(t, skill, inceptionClosureFeedbackHeading)
 		if !strings.Contains(section, stored) {
 			t.Errorf("the closure-feedback section must read the verifier's report where the chain stores it, %s beside the review result", stored)

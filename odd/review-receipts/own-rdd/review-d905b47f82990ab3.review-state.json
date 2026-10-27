@@ -1,0 +1,280 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:02a0e56fc696a71d49f24cdffdfa4670b59f3ba16af42038971e8e49d574d81a",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-d905b47f82990ab3",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "4ca3f9dd38e25bba3b94d6bb33d984575d456d1f",
+      "candidate_tree": "0d76d5a84ed92ed330529f27944f1cb9cafe2079",
+      "paths_digest": "sha256:4b32e58bd45d4ebf018e7b442207f91b106faed0494de044e2ae3eed65dd163a",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "agents/verifier.md",
+        "codex/agents/verifier.toml",
+        "engine/skills/inception_chain_entry_test.go",
+        "engine/skills/role_agents_artifact_test.go",
+        "engine/skills/role_chain_artifact_test.go",
+        "odd/review-results/README.md",
+        "odd/tasks/own-rdd.md",
+        "pi/agents/verifier.md",
+        "roles/verifier/body.md",
+        "skills/inception-pipeline/SKILL.md"
+      ],
+      "identity": "sha256:513980c2b5c5e904707f8639c05add0703f413b2b46de9c0de7427e438922293"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "4ca3f9dd38e25bba3b94d6bb33d984575d456d1f",
+      "candidate_tree": "0d76d5a84ed92ed330529f27944f1cb9cafe2079",
+      "paths_digest": "sha256:4b32e58bd45d4ebf018e7b442207f91b106faed0494de044e2ae3eed65dd163a",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "agents/verifier.md",
+        "codex/agents/verifier.toml",
+        "engine/skills/inception_chain_entry_test.go",
+        "engine/skills/role_agents_artifact_test.go",
+        "engine/skills/role_chain_artifact_test.go",
+        "odd/review-results/README.md",
+        "odd/tasks/own-rdd.md",
+        "pi/agents/verifier.md",
+        "roles/verifier/body.md",
+        "skills/inception-pipeline/SKILL.md"
+      ],
+      "identity": "sha256:513980c2b5c5e904707f8639c05add0703f413b2b46de9c0de7427e438922293"
+    },
+    "genesis_paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "agents/verifier.md",
+      "codex/agents/verifier.toml",
+      "engine/skills/inception_chain_entry_test.go",
+      "engine/skills/role_agents_artifact_test.go",
+      "engine/skills/role_chain_artifact_test.go",
+      "odd/review-results/README.md",
+      "odd/tasks/own-rdd.md",
+      "pi/agents/verifier.md",
+      "roles/verifier/body.md",
+      "skills/inception-pipeline/SKILL.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 303,
+    "correction_budget": 152,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "U7 changes the verifier prompt mirrored into three agent files (a contract others consume), the documented verdict file name, the skills pins and the docs",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:0d530c30f2e00432a55d2b76085bbce30721c402f90954516d3ddab7fcd8e30e",
+    "capture_phase_revision": "sha256:0e30434523f731fb3265aac74759f834dd5b3324febe0cf9d176122ed09d949f",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "target_identity": "sha256:513980c2b5c5e904707f8639c05add0703f413b2b46de9c0de7427e438922293",
+        "capture_phase_revision": "sha256:0e30434523f731fb3265aac74759f834dd5b3324febe0cf9d176122ed09d949f",
+        "artifact_digest": "sha256:dbf71138d1e8a7218542820e43658119d3ea6e1d2197788a9678db8d8060d151",
+        "result_hash": "sha256:d65357faba4cdde30cc468e8518d040d3c4c52c844a09b2c59d8a65df8d243c8",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:7376012acc16a3236dc5271a08e4ab6205291bf9c508f98cdfa93924bfc01df5",
+            "lineage_id": "review-d905b47f82990ab3",
+            "authority_revision": "sha256:0e30434523f731fb3265aac74759f834dd5b3324febe0cf9d176122ed09d949f",
+            "target_identity": "sha256:513980c2b5c5e904707f8639c05add0703f413b2b46de9c0de7427e438922293",
+            "base_tree": "4ca3f9dd38e25bba3b94d6bb33d984575d456d1f",
+            "candidate_tree": "0d76d5a84ed92ed330529f27944f1cb9cafe2079",
+            "changed_path_manifest_sha256": "sha256:42526576152590e76840eed821b8dbd37c5d8ad28bea9038f90b34bd6bb490d4",
+            "lens": "review-readability",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:7376012acc16a3236dc5271a08e4ab6205291bf9c508f98cdfa93924bfc01df5",
+            "raw_sha256": "sha256:8da979b25b89ac4ee698d7678633b9fd87e124299309b23c394e129a8ee934b0",
+            "canonical_sha256": "sha256:8f813415ad2769a97c7e191e58432bf8aaf7db5491d46cf46268f8f1a22317d8",
+            "result_hash": "sha256:d65357faba4cdde30cc468e8518d040d3c4c52c844a09b2c59d8a65df8d243c8",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:7376012acc16a3236dc5271a08e4ab6205291bf9c508f98cdfa93924bfc01df5",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "CHANGELOG.md",
+                "README.md",
+                "agents/verifier.md",
+                "codex/agents/verifier.toml",
+                "engine/skills/inception_chain_entry_test.go",
+                "engine/skills/role_agents_artifact_test.go",
+                "engine/skills/role_chain_artifact_test.go",
+                "odd/review-results/README.md",
+                "odd/tasks/own-rdd.md",
+                "pi/agents/verifier.md",
+                "roles/verifier/body.md",
+                "skills/inception-pipeline/SKILL.md"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-1",
+                "lens": "readability",
+                "location": "engine/skills/role_chain_artifact_test.go:253",
+                "severity": "WARNING",
+                "claim": "verdictObject selects the verifier delta line by hard-coded index [2]. If a delta line is added, removed, or reordered, the helper reads the wrong line and fails with a misleading message about missing JSON, which obscures the real cause. Locating the line by its leading phrase \"This replaces the return envelope\" would make the coupling explicit and the failure self-explanatory.",
+                "proof_refs": [
+                  "engine/skills/role_chain_artifact_test.go:253"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-2",
+                "lens": "readability",
+                "location": "engine/skills/role_agents_artifact_test.go:316",
+                "severity": "SUGGESTION",
+                "claim": "The verifier delta is spelled out as a long literal in the test and duplicated verbatim across roles/verifier/body.md and three generated agent files. Any wording change must be made in several places, and the 2-line mismatch error prints the whole blob. Since the dedicated tests already pin the structure, the full-text copy adds maintenance cost without extra guard.",
+                "proof_refs": [
+                  "engine/skills/role_agents_artifact_test.go:316",
+                  "roles/verifier/body.md:10"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Reviewed all 12 manifest paths. Docs, changelog, README, and agent file changes are consistent with each other (.verifier.json rename applied in README, inception-pipeline skill, and its pin test).",
+              "The new tests in role_chain_artifact_test.go are well-commented and explain why the delta must match the parser; the only fragility found is the positional index in verdictObject."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 1,
+        "target_identity": "sha256:513980c2b5c5e904707f8639c05add0703f413b2b46de9c0de7427e438922293",
+        "capture_phase_revision": "sha256:0e30434523f731fb3265aac74759f834dd5b3324febe0cf9d176122ed09d949f",
+        "artifact_digest": "sha256:c53a83b2d534d97e1b5137e4cf32ca6d757401e49195ed725e281bdc41343f3c",
+        "result_hash": "sha256:839d43278b599eaf38b0c9264d96b92321610beab6f6e8f68d3c808ea53de4de",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:d044e9e6c205408d86b9f25de1d46f5d25afa6e9c926d1a3bfae24037d764120",
+            "lineage_id": "review-d905b47f82990ab3",
+            "authority_revision": "sha256:0e30434523f731fb3265aac74759f834dd5b3324febe0cf9d176122ed09d949f",
+            "target_identity": "sha256:513980c2b5c5e904707f8639c05add0703f413b2b46de9c0de7427e438922293",
+            "base_tree": "4ca3f9dd38e25bba3b94d6bb33d984575d456d1f",
+            "candidate_tree": "0d76d5a84ed92ed330529f27944f1cb9cafe2079",
+            "changed_path_manifest_sha256": "sha256:42526576152590e76840eed821b8dbd37c5d8ad28bea9038f90b34bd6bb490d4",
+            "lens": "review-reliability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:d044e9e6c205408d86b9f25de1d46f5d25afa6e9c926d1a3bfae24037d764120",
+            "raw_sha256": "sha256:1a39643edac2b80827deeba72ab27e6411dd147608eb1251bdd0edae8c87c2ac",
+            "canonical_sha256": "sha256:3efab99c72e6c598b0baade40340edad4554cffbda076cda9d021ba27d15abfc",
+            "result_hash": "sha256:839d43278b599eaf38b0c9264d96b92321610beab6f6e8f68d3c808ea53de4de",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:d044e9e6c205408d86b9f25de1d46f5d25afa6e9c926d1a3bfae24037d764120",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "CHANGELOG.md",
+                "README.md",
+                "agents/verifier.md",
+                "codex/agents/verifier.toml",
+                "engine/skills/inception_chain_entry_test.go",
+                "engine/skills/role_agents_artifact_test.go",
+                "engine/skills/role_chain_artifact_test.go",
+                "odd/review-results/README.md",
+                "odd/tasks/own-rdd.md",
+                "pi/agents/verifier.md",
+                "roles/verifier/body.md",
+                "skills/inception-pipeline/SKILL.md"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-1",
+                "lens": "reliability",
+                "location": "engine/skills/role_chain_artifact_test.go:240-260",
+                "severity": "WARNING",
+                "claim": "verdictObject indexes the verifier delta at [2] without checking its length. If the delta has fewer than three lines, the test panics with an index-out-of-range error instead of reporting a clear assertion failure. TestReviewerAndVerifierDeltasAreTheLinesOfTheReviewerDesign pins the line count, so the practical risk is low, but the helper's failure mode is unclear.",
+                "proof_refs": [
+                  "engine/skills/role_chain_artifact_test.go:243"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-2",
+                "lens": "reliability",
+                "location": "engine/skills/role_chain_artifact_test.go:300-345",
+                "severity": "SUGGESTION",
+                "claim": "TestVerifierDeltaObjectIsTheOneTheEngineParses checks only the accepted path: every result/base_result pair is parsed with legal values. It does not check that the parser refuses a pair the delta says is illegal, such as command empty when a check ran. The prompt-level rules are pinned only as substring presence in the delta, so a drift between prompt prose and parser refusals is not caught here. The parser's own tests cover the refusals.",
+                "proof_refs": [
+                  "engine/skills/role_chain_artifact_test.go:300-345"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Reviewed all 12 manifest paths. The delta text is identical across roles/verifier/body.md, agents/verifier.md, pi/agents/verifier.md and codex/agents/verifier.toml.",
+              "The README's .verifier.json rename is pinned in role_chain_artifact_test.go and inception_chain_entry_test.go.",
+              "The engine/reviewverdict, review and cmd implementations are not in this candidate; only the docs, prompts and pin tests are visible. Behavior of Parse, Decide and Verify could not be assessed here, though the task log claims mutation and end-to-end coverage for them."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "2e2127a7b8c354f8242bba0b36d61fbb00669d404634eaabfd74c944af7d351b",
+    "initial_atomic_start": {
+      "lineage_id": "review-d905b47f82990ab3",
+      "worktree_identity": "sha256:571cf94da78406a5dee177091311c4fcbbbf61e483d9e6e92803045faa817e42",
+      "target_identity": "sha256:513980c2b5c5e904707f8639c05add0703f413b2b46de9c0de7427e438922293",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "4ca3f9dd38e25bba3b94d6bb33d984575d456d1f",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 303,
+      "correction_budget": 152,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "U7 changes the verifier prompt mirrored into three agent files (a contract others consume), the documented verdict file name, the skills pins and the docs"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

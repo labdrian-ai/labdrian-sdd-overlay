@@ -189,6 +189,26 @@ func (r *fakeResults) Names(root, feature string) ([]string, error) {
 	return names, nil
 }
 
+func (r *fakeResults) Read(root, feature, name string) ([]byte, error) {
+	r.calls = append(r.calls, "Read "+root+" "+feature+" "+name)
+	if err := r.fail["Read"]; err != nil {
+		return nil, err
+	}
+	data, stored := r.files[feature][name]
+	if !stored {
+		return nil, app.ErrNotFound
+	}
+	return data, nil
+}
+
+func (r *fakeResults) Lock(root, feature string) (func(), error) {
+	r.calls = append(r.calls, "Lock "+root+" "+feature)
+	if err := r.fail["Lock"]; err != nil {
+		return nil, err
+	}
+	return func() { r.calls = append(r.calls, "Unlock "+root+" "+feature) }, nil
+}
+
 func (r *fakeResults) Create(root, feature, name string, data []byte) error {
 	r.calls = append(r.calls, "Create "+root+" "+feature+" "+name)
 	if err := r.fail["Create"]; err != nil {

@@ -1,0 +1,449 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:405330eed07330673d42941cad34548b124b7e08c42babfb2149316d472a43a8",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-ad0434acad9f2943",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "9a3f5eab6b4e582d4a9bbd7da08bd690d5249304",
+      "candidate_tree": "b1ba3b205a267e31d4d4b9e4d840f98ee76cd5fd",
+      "paths_digest": "sha256:12d82695745041b6240b7ab9c7cdb8df6b75464dcadd2ffc546a611fe4c5a542",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "CHANGELOG.md",
+        "bin/lib/usage.sh",
+        "engine/cmd/review.go",
+        "engine/cmd/review_test.go",
+        "engine/review/fsstore/fsstore.go",
+        "engine/review/fsstore/held_linux.go",
+        "engine/review/fsstore/lock_bypath.go",
+        "engine/review/fsstore/lock_internal_unix_test.go",
+        "engine/review/fsstore/lock_linux_test.go",
+        "engine/review/fsstore/lock_other.go",
+        "engine/review/fsstore/lock_unix.go",
+        "engine/review/fsstore/portable.go",
+        "engine/review/handoff.go",
+        "engine/review/handoff_test.go",
+        "engine/skills/role_agents_artifact_test.go",
+        "engine/skills/role_chain_artifact_test.go",
+        "odd/review-results/README.md",
+        "odd/tasks/own-rdd.md"
+      ],
+      "identity": "sha256:cf1d2e1dd40f8bc29c3d7c5988b110e419b2ac7df1892e8b1da35b2fe7a3041b"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "9a3f5eab6b4e582d4a9bbd7da08bd690d5249304",
+      "candidate_tree": "b1ba3b205a267e31d4d4b9e4d840f98ee76cd5fd",
+      "paths_digest": "sha256:12d82695745041b6240b7ab9c7cdb8df6b75464dcadd2ffc546a611fe4c5a542",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "CHANGELOG.md",
+        "bin/lib/usage.sh",
+        "engine/cmd/review.go",
+        "engine/cmd/review_test.go",
+        "engine/review/fsstore/fsstore.go",
+        "engine/review/fsstore/held_linux.go",
+        "engine/review/fsstore/lock_bypath.go",
+        "engine/review/fsstore/lock_internal_unix_test.go",
+        "engine/review/fsstore/lock_linux_test.go",
+        "engine/review/fsstore/lock_other.go",
+        "engine/review/fsstore/lock_unix.go",
+        "engine/review/fsstore/portable.go",
+        "engine/review/handoff.go",
+        "engine/review/handoff_test.go",
+        "engine/skills/role_agents_artifact_test.go",
+        "engine/skills/role_chain_artifact_test.go",
+        "odd/review-results/README.md",
+        "odd/tasks/own-rdd.md"
+      ],
+      "identity": "sha256:cf1d2e1dd40f8bc29c3d7c5988b110e419b2ac7df1892e8b1da35b2fe7a3041b"
+    },
+    "genesis_paths": [
+      "CHANGELOG.md",
+      "bin/lib/usage.sh",
+      "engine/cmd/review.go",
+      "engine/cmd/review_test.go",
+      "engine/review/fsstore/fsstore.go",
+      "engine/review/fsstore/held_linux.go",
+      "engine/review/fsstore/lock_bypath.go",
+      "engine/review/fsstore/lock_internal_unix_test.go",
+      "engine/review/fsstore/lock_linux_test.go",
+      "engine/review/fsstore/lock_other.go",
+      "engine/review/fsstore/lock_unix.go",
+      "engine/review/fsstore/portable.go",
+      "engine/review/handoff.go",
+      "engine/review/handoff_test.go",
+      "engine/skills/role_agents_artifact_test.go",
+      "engine/skills/role_chain_artifact_test.go",
+      "odd/review-results/README.md",
+      "odd/tasks/own-rdd.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-risk",
+      "review-resilience",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 516,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "F2 makes the feature-directory lock a flock on every unix with a bounded wait and fail-closed errors (concurrency, a guard, per-platform build files), ties the wrapper usage to the engine's, and hardens test helpers",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:7eba833ecef913c93838ceaeb777fef953b2fb9d637928ab6eb705e9ad2b8b9c",
+    "capture_phase_revision": "sha256:3317446f84c3ec57a7c046d49d992557ca639f001e5591dce4c0ecc76b65037b",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:cf1d2e1dd40f8bc29c3d7c5988b110e419b2ac7df1892e8b1da35b2fe7a3041b",
+        "capture_phase_revision": "sha256:3317446f84c3ec57a7c046d49d992557ca639f001e5591dce4c0ecc76b65037b",
+        "artifact_digest": "sha256:a96663317db24c18070a7ce125de1f397dd444916bff70d71c19ba537a586d1f",
+        "result_hash": "sha256:d893a07476354955497599706adef3f511f1c532949a2461ecda03733414a44e",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:e314857d0f0ec917dbfac0bd75971f9d7c56d6a381b2cfbc10d53baa99e18219",
+            "lineage_id": "review-ad0434acad9f2943",
+            "authority_revision": "sha256:3317446f84c3ec57a7c046d49d992557ca639f001e5591dce4c0ecc76b65037b",
+            "target_identity": "sha256:cf1d2e1dd40f8bc29c3d7c5988b110e419b2ac7df1892e8b1da35b2fe7a3041b",
+            "base_tree": "9a3f5eab6b4e582d4a9bbd7da08bd690d5249304",
+            "candidate_tree": "b1ba3b205a267e31d4d4b9e4d840f98ee76cd5fd",
+            "changed_path_manifest_sha256": "sha256:70c523f788012100cb1ca35dbf59eb78eb9a7802768df2b2bf889b0df2d51452",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:e314857d0f0ec917dbfac0bd75971f9d7c56d6a381b2cfbc10d53baa99e18219",
+            "raw_sha256": "sha256:0d4afd236775384e18653da3918d9e5a074beff891ebc68d6b8cc00c597d4cc3",
+            "canonical_sha256": "sha256:c3df12f9faaea16d41731b9e59b4101d5e6a280753fcb0ef1ad1f813b62b9ca0",
+            "result_hash": "sha256:d893a07476354955497599706adef3f511f1c532949a2461ecda03733414a44e",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:e314857d0f0ec917dbfac0bd75971f9d7c56d6a381b2cfbc10d53baa99e18219",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "CHANGELOG.md",
+                "bin/lib/usage.sh",
+                "engine/cmd/review.go",
+                "engine/cmd/review_test.go",
+                "engine/review/fsstore/fsstore.go",
+                "engine/review/fsstore/held_linux.go",
+                "engine/review/fsstore/lock_bypath.go",
+                "engine/review/fsstore/lock_internal_unix_test.go",
+                "engine/review/fsstore/lock_linux_test.go",
+                "engine/review/fsstore/lock_other.go",
+                "engine/review/fsstore/lock_unix.go",
+                "engine/review/fsstore/portable.go",
+                "engine/review/handoff.go",
+                "engine/review/handoff_test.go",
+                "engine/skills/role_agents_artifact_test.go",
+                "engine/skills/role_chain_artifact_test.go",
+                "odd/review-results/README.md",
+                "odd/tasks/own-rdd.md"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [
+              {
+                "id": "R1-lock-nb-poll",
+                "lens": "risk",
+                "location": "engine/review/fsstore/lock_unix.go:44-60",
+                "severity": "SUGGESTION",
+                "claim": "The lock polls LOCK_NB every 50ms instead of blocking, so waiters are not served in FIFO order and a continuously contending caller could in theory starve. The 30s deadline bounds this and fails closed with ErrLockHeld (nothing stored), so no exploitable round-bypass results.",
+                "proof_refs": [
+                  "engine/review/fsstore/lock_unix.go:44-60"
+                ]
+              }
+            ],
+            "evidence": [
+              "Reviewed all 18 changed paths in the patch.",
+              "The lock falls back safely: on flock errors other than EWOULDBLOCK (ENOLCK, EOPNOTSUPP) it returns an error, so a blocking verdict is not stored without a lock; timeout also fails closed.",
+              "lockByPath opens with O_NOFOLLOW|O_DIRECTORY and verifies os.SameFile against the walked directory, so a symlink swap cannot redirect the lock; the linux Lock path keeps the held-descriptor walk.",
+              "On Windows no lock is held; this is documented, and the baseline had the same behavior for non-linux, so it is not a regression.",
+              "No secrets, dependency changes, or unsafe input handling were introduced; the remaining changes are tests, docs and a defensive require() check."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-resilience",
+        "selected_order": 1,
+        "target_identity": "sha256:cf1d2e1dd40f8bc29c3d7c5988b110e419b2ac7df1892e8b1da35b2fe7a3041b",
+        "capture_phase_revision": "sha256:3317446f84c3ec57a7c046d49d992557ca639f001e5591dce4c0ecc76b65037b",
+        "artifact_digest": "sha256:65274155b71a64a0594624db2517939418c00445c5ccbf948fe71e956707ed5b",
+        "result_hash": "sha256:ed16d4e1724e366f1e85a8d1bc656eb446e5c07ce1e1a82b464d5d800835b54a",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:b8879630e7d46d1fd0700e704419bbbb6b647e672b3dba1a600f65eadf3dbd51",
+            "lineage_id": "review-ad0434acad9f2943",
+            "authority_revision": "sha256:3317446f84c3ec57a7c046d49d992557ca639f001e5591dce4c0ecc76b65037b",
+            "target_identity": "sha256:cf1d2e1dd40f8bc29c3d7c5988b110e419b2ac7df1892e8b1da35b2fe7a3041b",
+            "base_tree": "9a3f5eab6b4e582d4a9bbd7da08bd690d5249304",
+            "candidate_tree": "b1ba3b205a267e31d4d4b9e4d840f98ee76cd5fd",
+            "changed_path_manifest_sha256": "sha256:70c523f788012100cb1ca35dbf59eb78eb9a7802768df2b2bf889b0df2d51452",
+            "lens": "review-resilience",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:b8879630e7d46d1fd0700e704419bbbb6b647e672b3dba1a600f65eadf3dbd51",
+            "raw_sha256": "sha256:f9d18d5fb5173da89e4de30cd0e51a3f424db5f1f70b0ac2c45926ad7fdcc3fc",
+            "canonical_sha256": "sha256:33d21ea613643b274b32332c13b1ce40e5380225e3116566e2e24385d300d384",
+            "result_hash": "sha256:ed16d4e1724e366f1e85a8d1bc656eb446e5c07ce1e1a82b464d5d800835b54a",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:b8879630e7d46d1fd0700e704419bbbb6b647e672b3dba1a600f65eadf3dbd51",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "CHANGELOG.md",
+                "bin/lib/usage.sh",
+                "engine/cmd/review.go",
+                "engine/cmd/review_test.go",
+                "engine/review/fsstore/fsstore.go",
+                "engine/review/fsstore/held_linux.go",
+                "engine/review/fsstore/lock_bypath.go",
+                "engine/review/fsstore/lock_internal_unix_test.go",
+                "engine/review/fsstore/lock_linux_test.go",
+                "engine/review/fsstore/lock_other.go",
+                "engine/review/fsstore/lock_unix.go",
+                "engine/review/fsstore/portable.go",
+                "engine/review/handoff.go",
+                "engine/review/handoff_test.go",
+                "engine/skills/role_agents_artifact_test.go",
+                "engine/skills/role_chain_artifact_test.go",
+                "odd/review-results/README.md",
+                "odd/tasks/own-rdd.md"
+              ]
+            },
+            "lens": "review-resilience",
+            "findings": [],
+            "evidence": [
+              "The new lock polling in engine/review/fsstore/lock_unix.go bounds the wait at 30s and returns ErrLockHeld. An EINTR retries immediately, and any other error such as ENOLCK fails closed, so the blocking verdict is not stored. This replaces the baseline's unbounded blocking flock, so it improves resilience.",
+              "The lock is released by closing the directory descriptor on every error path in held_linux.go and lock_unix.go, so no descriptor leaks. Polling every 50ms under contention is negligible load.",
+              "lockByPath re-checks the opened directory against the one it looked at (SameFile) before locking, so a swap between look and open is refused.",
+              "I found no concrete production failure introduced by this candidate. The other changes are tests, documentation, and a require() guard that fails loudly on an unknown flag name."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "selected_order": 2,
+        "target_identity": "sha256:cf1d2e1dd40f8bc29c3d7c5988b110e419b2ac7df1892e8b1da35b2fe7a3041b",
+        "capture_phase_revision": "sha256:3317446f84c3ec57a7c046d49d992557ca639f001e5591dce4c0ecc76b65037b",
+        "artifact_digest": "sha256:4291429a001bfc8df6b91b650aa17b695f190ab64984592c2ce5483c41e99a30",
+        "result_hash": "sha256:fcda29bb53f6047bb23b5ae27fb346b6a48381fa75f3bc509fd4e1fa7e74f285",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:a4068f0d69b5057620fc8a96e91e5e4d495cb482b4369fcbcbb669ae7714fa6e",
+            "lineage_id": "review-ad0434acad9f2943",
+            "authority_revision": "sha256:3317446f84c3ec57a7c046d49d992557ca639f001e5591dce4c0ecc76b65037b",
+            "target_identity": "sha256:cf1d2e1dd40f8bc29c3d7c5988b110e419b2ac7df1892e8b1da35b2fe7a3041b",
+            "base_tree": "9a3f5eab6b4e582d4a9bbd7da08bd690d5249304",
+            "candidate_tree": "b1ba3b205a267e31d4d4b9e4d840f98ee76cd5fd",
+            "changed_path_manifest_sha256": "sha256:70c523f788012100cb1ca35dbf59eb78eb9a7802768df2b2bf889b0df2d51452",
+            "lens": "review-readability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:a4068f0d69b5057620fc8a96e91e5e4d495cb482b4369fcbcbb669ae7714fa6e",
+            "raw_sha256": "sha256:1952042776eadb6cf34e974d1798038ea6e937845cdf2f2c0bfdf766bce718a9",
+            "canonical_sha256": "sha256:9ac29b4a101f93495b6a926341f155552a71431fb4839842ba8f33622ba42142",
+            "result_hash": "sha256:fcda29bb53f6047bb23b5ae27fb346b6a48381fa75f3bc509fd4e1fa7e74f285",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:a4068f0d69b5057620fc8a96e91e5e4d495cb482b4369fcbcbb669ae7714fa6e",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "CHANGELOG.md",
+                "bin/lib/usage.sh",
+                "engine/cmd/review.go",
+                "engine/cmd/review_test.go",
+                "engine/review/fsstore/fsstore.go",
+                "engine/review/fsstore/held_linux.go",
+                "engine/review/fsstore/lock_bypath.go",
+                "engine/review/fsstore/lock_internal_unix_test.go",
+                "engine/review/fsstore/lock_linux_test.go",
+                "engine/review/fsstore/lock_other.go",
+                "engine/review/fsstore/lock_unix.go",
+                "engine/review/fsstore/portable.go",
+                "engine/review/handoff.go",
+                "engine/review/handoff_test.go",
+                "engine/skills/role_agents_artifact_test.go",
+                "engine/skills/role_chain_artifact_test.go",
+                "odd/review-results/README.md",
+                "odd/tasks/own-rdd.md"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-001",
+                "lens": "readability",
+                "location": "engine/review/fsstore/fsstore.go:114-118",
+                "severity": "SUGGESTION",
+                "claim": "The comment on the new Store fields says they are used 'instead of lockWait and syscall.Flock', but the zero-value default is the package constant lockWait defined only in lock_unix.go (unix builds). The field and constant share the same name, and on non-unix builds the fields are unused, which makes the field/constant relationship and platform scope easy to misread.",
+                "proof_refs": [
+                  "engine/review/fsstore/fsstore.go:114-118",
+                  "engine/review/fsstore/lock_unix.go:16-22"
+                ],
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-002",
+                "lens": "readability",
+                "location": "engine/cmd/review_test.go:1183-1196",
+                "severity": "SUGGESTION",
+                "claim": "The wrapper/engine usage test uses a map keyed by 'engine' strings with inline alignment-dependent literals. Duplicate-looking pairs (e.g. identical key and value for verifier-report) are fine, but the map iteration order is random so failures are reported in nondeterministic order; a slice of pairs would be easier to maintain.",
+                "proof_refs": [
+                  "engine/cmd/review_test.go:1183-1196"
+                ],
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Reviewed all 18 changed paths from the provided patches.",
+              "Lock logic is cleanly factored: take (shared polling/deadline), lockByPath (non-linux unix), Lock (linux, held_linux.go), and a no-op Lock for non-unix; the unix test set exercises both Lock variants through one table.",
+              "No misleading names, dead logic or unexplained constants found: lockWait and lockPoll are documented with rationale, and CHANGELOG, README and usage text were updated consistently with the 30s wait and the platform scope.",
+              "Only readability suggestions were found; no defects that hide behavior."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 3,
+        "target_identity": "sha256:cf1d2e1dd40f8bc29c3d7c5988b110e419b2ac7df1892e8b1da35b2fe7a3041b",
+        "capture_phase_revision": "sha256:3317446f84c3ec57a7c046d49d992557ca639f001e5591dce4c0ecc76b65037b",
+        "artifact_digest": "sha256:d09c0ce29c8c288a30e8621e7d5dfb9b7df7767a74ea49d2a3e0a29c7d9806ff",
+        "result_hash": "sha256:7d7cd0125018e762be7fed22d6a48d068757e426ce0bb18ec510afad9e4dee6c",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:9d35bb558f91373984bbfa6ceb54e869a9836c20ff5036511a34c32d20cef955",
+            "lineage_id": "review-ad0434acad9f2943",
+            "authority_revision": "sha256:3317446f84c3ec57a7c046d49d992557ca639f001e5591dce4c0ecc76b65037b",
+            "target_identity": "sha256:cf1d2e1dd40f8bc29c3d7c5988b110e419b2ac7df1892e8b1da35b2fe7a3041b",
+            "base_tree": "9a3f5eab6b4e582d4a9bbd7da08bd690d5249304",
+            "candidate_tree": "b1ba3b205a267e31d4d4b9e4d840f98ee76cd5fd",
+            "changed_path_manifest_sha256": "sha256:70c523f788012100cb1ca35dbf59eb78eb9a7802768df2b2bf889b0df2d51452",
+            "lens": "review-reliability",
+            "selected_order": 3
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:9d35bb558f91373984bbfa6ceb54e869a9836c20ff5036511a34c32d20cef955",
+            "raw_sha256": "sha256:b549ec5f23cfed88d67a08cba17d5b79d8929af7c77c522b444b79f0cd46a1ae",
+            "canonical_sha256": "sha256:7fe3f65c387c3f12cef421fde70f7f8feb7f1182762d9de452092cffdb7b3a81",
+            "result_hash": "sha256:7d7cd0125018e762be7fed22d6a48d068757e426ce0bb18ec510afad9e4dee6c",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:9d35bb558f91373984bbfa6ceb54e869a9836c20ff5036511a34c32d20cef955",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "CHANGELOG.md",
+                "bin/lib/usage.sh",
+                "engine/cmd/review.go",
+                "engine/cmd/review_test.go",
+                "engine/review/fsstore/fsstore.go",
+                "engine/review/fsstore/held_linux.go",
+                "engine/review/fsstore/lock_bypath.go",
+                "engine/review/fsstore/lock_internal_unix_test.go",
+                "engine/review/fsstore/lock_linux_test.go",
+                "engine/review/fsstore/lock_other.go",
+                "engine/review/fsstore/lock_unix.go",
+                "engine/review/fsstore/portable.go",
+                "engine/review/handoff.go",
+                "engine/review/handoff_test.go",
+                "engine/skills/role_agents_artifact_test.go",
+                "engine/skills/role_chain_artifact_test.go",
+                "odd/review-results/README.md",
+                "odd/tasks/own-rdd.md"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-lock-unsafe-feature",
+                "lens": "reliability",
+                "location": "engine/review/fsstore/lock_internal_unix_test.go:100-125",
+                "severity": "SUGGESTION",
+                "claim": "The deleted lock_linux_test.go asserted that Lock refuses an unsafe feature name (a traversal segment) with review.ErrInvalidFeature before opening anything. The replacement shared test set covers an absent directory, a symlink and a swapped directory, but not this case. Neither Lock nor lockByPath is now shown rejecting an unsafe feature, so that boundary behavior is no longer proved by a test.",
+                "proof_refs": [
+                  "engine/review/fsstore/lock_linux_test.go:78",
+                  "engine/review/fsstore/lock_internal_unix_test.go:100-125"
+                ]
+              }
+            ],
+            "evidence": [
+              "Inspected all 18 changed paths in the patch.",
+              "The take() loop handles EINTR, EWOULDBLOCK with a deadline, and other errors such as ENOLCK. Its tests cover waiting for the first holder, ErrLockHeld on timeout, and a failing flock. The tests run against both Lock and lockByPath.",
+              "lockByPath checks the opened directory against the one it walked to with SameFile, and a test covers the swapped-directory case.",
+              "The ParentFields, require and wrapper-usage changes each have a test asserting externally observable behavior.",
+              "I could not see imports in held_linux.go after the Flock loop was removed, so I cannot confirm they are still all used. No finding is raised on that."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "d93fd477335268be4e16d7745334669528d350d5509f8ec9bd595aaa1cdfbf9b",
+    "initial_atomic_start": {
+      "lineage_id": "review-ad0434acad9f2943",
+      "worktree_identity": "sha256:571cf94da78406a5dee177091311c4fcbbbf61e483d9e6e92803045faa817e42",
+      "target_identity": "sha256:cf1d2e1dd40f8bc29c3d7c5988b110e419b2ac7df1892e8b1da35b2fe7a3041b",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "9a3f5eab6b4e582d4a9bbd7da08bd690d5249304",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "high",
+      "selected_lenses": [
+        "review-risk",
+        "review-resilience",
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 516,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "F2 makes the feature-directory lock a flock on every unix with a bounded wait and fail-closed errors (concurrency, a guard, per-platform build files), ties the wrapper usage to the engine's, and hardens test helpers"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

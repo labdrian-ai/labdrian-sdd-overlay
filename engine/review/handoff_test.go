@@ -54,6 +54,11 @@ func TestParentFieldsAreTheMembersOnlyTheParentKnows(t *testing.T) {
 	if got := review.ParentFields(); !reflect.DeepEqual(got, want) {
 		t.Errorf("ParentFields() = %v, want %v", got, want)
 	}
+	// Each call returns a new slice: a caller that changes the one it got changes no other caller's.
+	review.ParentFields()[0] = "changed"
+	if got := review.ParentFields(); !reflect.DeepEqual(got, want) {
+		t.Errorf("ParentFields() after a caller changed its slice = %v, want %v", got, want)
+	}
 }
 
 // parentValues are values for the members only the parent knows, as valid as a chain accepts.

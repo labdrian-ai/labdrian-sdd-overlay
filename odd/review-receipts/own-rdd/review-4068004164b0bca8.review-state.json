@@ -1,0 +1,207 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:31779f0a971298ac4f1ddb406d978ff8bc56c670dc0712d90de5d1d77d019547",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-4068004164b0bca8",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "40a1b48c1627bc2b2f39b3fd72a46e8e875fe29d",
+      "candidate_tree": "56c53a721310994cdd48c806cfe42474105b39ea",
+      "paths_digest": "sha256:4c351b1193faf5bc215e0909f0bdbd0d5f43246dac65c038b70cc02a155aadcc",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/reviewverdict/decide.go",
+        "engine/reviewverdict/decide_test.go"
+      ],
+      "identity": "sha256:d473ed4b7c7d52558f5916f704b010835f20e88750054563541e4b541386e417"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "40a1b48c1627bc2b2f39b3fd72a46e8e875fe29d",
+      "candidate_tree": "56c53a721310994cdd48c806cfe42474105b39ea",
+      "paths_digest": "sha256:4c351b1193faf5bc215e0909f0bdbd0d5f43246dac65c038b70cc02a155aadcc",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/reviewverdict/decide.go",
+        "engine/reviewverdict/decide_test.go"
+      ],
+      "identity": "sha256:d473ed4b7c7d52558f5916f704b010835f20e88750054563541e4b541386e417"
+    },
+    "genesis_paths": [
+      "engine/reviewverdict/decide.go",
+      "engine/reviewverdict/decide_test.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 297,
+    "correction_budget": 149,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "U2 adds reviewverdict.Decide, the pure function that decides whether a review blocks from the result and the verdicts; logic that tests must pin",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:802919f478da688c7992b082e001643fba744f8663daa61e46359ba23e650d4b",
+    "capture_phase_revision": "sha256:5ffd91b80078e42c11f364c18be1c286642796be0fb0e01decccb7a4983fd380",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "target_identity": "sha256:d473ed4b7c7d52558f5916f704b010835f20e88750054563541e4b541386e417",
+        "capture_phase_revision": "sha256:5ffd91b80078e42c11f364c18be1c286642796be0fb0e01decccb7a4983fd380",
+        "artifact_digest": "sha256:4394755401909c77af65101e91d5e1a6ad0da27b18e6dd60af048cfe58dd3560",
+        "result_hash": "sha256:a769de3f079dd0eaf4e758cf7c87a0a7f4df96efbb446b798daf6541847601ac",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:b3b624d20d7f0c1b9b6e0444bda889d47eb691a4b548467a16b620098d9b8d55",
+            "lineage_id": "review-4068004164b0bca8",
+            "authority_revision": "sha256:5ffd91b80078e42c11f364c18be1c286642796be0fb0e01decccb7a4983fd380",
+            "target_identity": "sha256:d473ed4b7c7d52558f5916f704b010835f20e88750054563541e4b541386e417",
+            "base_tree": "40a1b48c1627bc2b2f39b3fd72a46e8e875fe29d",
+            "candidate_tree": "56c53a721310994cdd48c806cfe42474105b39ea",
+            "changed_path_manifest_sha256": "sha256:479019c4bececfa82b2995661b6dee971689fa49817ac499cb8cd9c7edab735d",
+            "lens": "review-readability",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:b3b624d20d7f0c1b9b6e0444bda889d47eb691a4b548467a16b620098d9b8d55",
+            "raw_sha256": "sha256:e296fe353b828183fe176d2e91fc5abbcb5843aea41c7f86f2e59334a1aec992",
+            "canonical_sha256": "sha256:5f5b5c8a1a3c9223b6dc2d2caa0912eb367251f2f1dd1b165d2b02aba7a64d0c",
+            "result_hash": "sha256:a769de3f079dd0eaf4e758cf7c87a0a7f4df96efbb446b798daf6541847601ac",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:b3b624d20d7f0c1b9b6e0444bda889d47eb691a4b548467a16b620098d9b8d55",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/reviewverdict/decide.go",
+                "engine/reviewverdict/decide_test.go"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-001",
+                "lens": "readability",
+                "location": "engine/reviewverdict/decide.go:86-89",
+                "severity": "SUGGESTION",
+                "claim": "The unexported fate constants `blocks` and `unchecked` sit beside the exported `Blocks` and `Unverified` outcomes and differ from them only in case or by near-synonym. A reader can easily confuse the per-finding fate with the review-level outcome. `refuted` also has no case in Decide's switch and is dropped silently. Distinct names (for example fateBlocks, fateUnchecked) or a one-line note that refuted is intentionally unlisted would make this clearer. This is a maintainability suggestion, not a defect.",
+                "proof_refs": [
+                  "engine/reviewverdict/decide.go:11",
+                  "engine/reviewverdict/decide.go:61-65",
+                  "engine/reviewverdict/decide.go:86-89"
+                ]
+              }
+            ],
+            "evidence": [
+              "Read both added files in full: decide.go (the rule and the fate helper) and decide_test.go (the table-driven tests).",
+              "The Decide doc comment matches the severeFinding branches for unknown causality: a head NotReproduced is refuted, a base Reproduced is carried, a base NotReproduced falls through to the head decision, and a base NotRun is unverified. The test table in decide_test.go covers the same combinations.",
+              "The empty `case NotReproduced:` in severeFinding relies on control leaving the inner switch and reaching the head switch. It carries an explanatory comment, so it is acceptable.",
+              "The `default` severity branch treats unlisted values as severe, and the code comment says so. There are no unexplained constants and no dead or duplicated logic."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 1,
+        "target_identity": "sha256:d473ed4b7c7d52558f5916f704b010835f20e88750054563541e4b541386e417",
+        "capture_phase_revision": "sha256:5ffd91b80078e42c11f364c18be1c286642796be0fb0e01decccb7a4983fd380",
+        "artifact_digest": "sha256:49b95a8bda38f3402543ddfefad5d344578ad4f25756a197e24c6b6d58388bb8",
+        "result_hash": "sha256:ef9caa3cd35925ece890dabd8a05d065da88ff5cf62fb3ec4b38046a3147ed87",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:892c8c85831d1b5e9f4e91da88d12235c1e460efd1d678a8d48c6a36362722b7",
+            "lineage_id": "review-4068004164b0bca8",
+            "authority_revision": "sha256:5ffd91b80078e42c11f364c18be1c286642796be0fb0e01decccb7a4983fd380",
+            "target_identity": "sha256:d473ed4b7c7d52558f5916f704b010835f20e88750054563541e4b541386e417",
+            "base_tree": "40a1b48c1627bc2b2f39b3fd72a46e8e875fe29d",
+            "candidate_tree": "56c53a721310994cdd48c806cfe42474105b39ea",
+            "changed_path_manifest_sha256": "sha256:479019c4bececfa82b2995661b6dee971689fa49817ac499cb8cd9c7edab735d",
+            "lens": "review-reliability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:892c8c85831d1b5e9f4e91da88d12235c1e460efd1d678a8d48c6a36362722b7",
+            "raw_sha256": "sha256:04395caaa516b1f510cc5e6db35f97fde4d609f5055e129b0a53a3fbed75faaa",
+            "canonical_sha256": "sha256:df7a6a27b254ad98fd71df21f18cccb50a46ffcbf889e2ef70067c5b3dcd9fbe",
+            "result_hash": "sha256:ef9caa3cd35925ece890dabd8a05d065da88ff5cf62fb3ec4b38046a3147ed87",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:892c8c85831d1b5e9f4e91da88d12235c1e460efd1d678a8d48c6a36362722b7",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/reviewverdict/decide.go",
+                "engine/reviewverdict/decide_test.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-001",
+                "lens": "reliability",
+                "location": "engine/reviewverdict/decide_test.go:157-181",
+                "severity": "SUGGESTION",
+                "claim": "The missing-verdict test only covers an introduced BLOCKER. Decide treats a missing verdict as the zero-value Verdict, so the same fail-safe path is taken for unknown-causality findings, but no test proves it there. If the zero value of Reproduction were ever changed to NotReproduced, an unknown-causality finding with no verdict could be silently refuted and the review could report Clear. Also not covered: duplicate verdict IDs (last one wins) and an unlisted severity (read as severe).",
+                "proof_refs": [
+                  "engine/reviewverdict/decide.go:50-62",
+                  "engine/reviewverdict/decide_test.go:168-181"
+                ]
+              }
+            ],
+            "evidence": [
+              "Decide is a pure function, and the tests are table-driven over severity, disposition, head result and base result.",
+              "I traced the unknown-causality branch of severeFinding against its doc comment and against the test table. All nine head/base combinations match, including the head-not-run, base-reproduced case that carries the finding.",
+              "Blocking, Unverified, Fix and Carry are filled in the order of the result, and the outcome precedence is Blocks, then Unverified, then Clear. The ordering test checks both.",
+              "The definition of Verdict and its zero value is not in this candidate, so the missing-verdict behaviour depends on code I cannot see. That is why the suggestion above is not stronger."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "3bb1d0e52c255fcb3015ef035057bfc2b6ffe8b524e5e12e025c349226b6274a",
+    "initial_atomic_start": {
+      "lineage_id": "review-4068004164b0bca8",
+      "worktree_identity": "sha256:571cf94da78406a5dee177091311c4fcbbbf61e483d9e6e92803045faa817e42",
+      "target_identity": "sha256:d473ed4b7c7d52558f5916f704b010835f20e88750054563541e4b541386e417",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "40a1b48c1627bc2b2f39b3fd72a46e8e875fe29d",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 297,
+      "correction_budget": 149,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "U2 adds reviewverdict.Decide, the pure function that decides whether a review blocks from the result and the verdicts; logic that tests must pin"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

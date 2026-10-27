@@ -581,9 +581,10 @@ overlay roles <verb>
                                                                                   member of the reusable-role vocabulary, without changing v3 semantics
 
 overlay review <verb>
-    Forward review binding and storage verbs to the engine unchanged. Neither verb launches an agent or
-    dispatches work: a reviewer's reply is a file somebody else produced. What is stored where, and the exact
-    git command whose output `diff_sha256` is the digest of, are in odd/review-results/README.md.
+    Forward review binding and storage verbs to the engine unchanged. No verb launches an agent or
+    dispatches work: a reviewer's or a verifier's reply is a file somebody else produced. What is stored
+    where, and the exact git command whose output `diff_sha256` is the digest of, are in
+    odd/review-results/README.md.
     bind   --base <rev> --head <rev> [--cwd <repo>]
         Resolve both revisions to full commit names and print one JSON object: base, head, diff_sha256 (the
         sha256 of the canonical diff of base and head: git diff-tree under fixed flags and a fixed environment,
@@ -610,6 +611,22 @@ overlay review <verb>
         context.summary, and `roles validate` refuses the skeleton until it does. A reply that breaks a rule
         writes nothing and the error names the rule. Exit 0 stored, 2 reply refused, 1 usage error or any
         other failure.
+    verify --feature <name> --stored <result> [--verdicts <file>|-] [--cwd <repo>]
+        Hold the verifier's reply (read from --verdicts, or from stdin) to the stored result called <result>
+        (<head12>-<n>.json in the directory of the feature) with the rules of the verifier's contract: one
+        verdict for each finding id of the result, no id the result lacks or twice, each result and
+        base_result reproduced, not-reproduced or not-run, an output always and a command whenever a check
+        ran, a reply above 1 MiB. Decide from the two whether the review blocks (a BLOCKER or CRITICAL the
+        diff caused that the verifier reproduced on head; a check that did not run is unverified, never
+        clear; a WARNING is fixed before delivery, a SUGGESTION or a finding of the base is carried), and
+        store the reply beside the result as odd/review-results/<feature>/<head12>-<n>.verifier.json, never
+        over an existing file. The candidate is the one stored with the result. stdout is the skeleton of
+        `record` for the same result with the evidence verifier-report added and to_role filled (builder
+        when the review blocks, delivery when it is clear, none when a check did not run); stderr says
+        where the verdict is stored and what was decided. A candidate is corrected at most once: a verdict
+        that blocks another head of a base whose review a stored verdict already blocked is refused and
+        stores nothing. A reply that breaks a rule writes nothing and the error names the rule. Exit 0
+        stored, 2 reply refused, 1 usage error, a spent correction round or any other failure.
 
 overlay memory <verb>
     Forward memory-directive verbs to the engine unchanged. Read-only: it only plans what memory

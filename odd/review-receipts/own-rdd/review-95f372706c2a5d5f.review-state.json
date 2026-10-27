@@ -1,0 +1,275 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:0f26f58079bc64628f7cc98d3efa721ca7d89f86edd9d51b0d09546a713dac37",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-95f372706c2a5d5f",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "8c7e3b990997f32a61c7e45b5cd5d0c63c675614",
+      "candidate_tree": "40a1b48c1627bc2b2f39b3fd72a46e8e875fe29d",
+      "paths_digest": "sha256:43b7bc6a3cadc43e836291c18fb14c8ccba70524a0ff193f825ff26449e99446",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/architecture_test.go",
+        "engine/reviewverdict/parse_test.go",
+        "engine/reviewverdict/reviewverdict.go",
+        "engine/reviewverdict/wire.go"
+      ],
+      "identity": "sha256:d1eb37cfdcda4040e1aed46ec5b8d6589aa80e5dc28a5b487a20a01186779168"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "8c7e3b990997f32a61c7e45b5cd5d0c63c675614",
+      "candidate_tree": "40a1b48c1627bc2b2f39b3fd72a46e8e875fe29d",
+      "paths_digest": "sha256:43b7bc6a3cadc43e836291c18fb14c8ccba70524a0ff193f825ff26449e99446",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/architecture_test.go",
+        "engine/reviewverdict/parse_test.go",
+        "engine/reviewverdict/reviewverdict.go",
+        "engine/reviewverdict/wire.go"
+      ],
+      "identity": "sha256:d1eb37cfdcda4040e1aed46ec5b8d6589aa80e5dc28a5b487a20a01186779168"
+    },
+    "genesis_paths": [
+      "engine/architecture_test.go",
+      "engine/reviewverdict/parse_test.go",
+      "engine/reviewverdict/reviewverdict.go",
+      "engine/reviewverdict/wire.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-risk",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 480,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "U1 adds the reviewverdict domain package: the parser of the verifier's reply (a contract others consume), its strict refusals, and its architecture-ring row",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:1532c6091913906e8c73f2a2abb7b5c0e3d72e866c036d9aa5d34b7c05684bdc",
+    "capture_phase_revision": "sha256:5a143131aedb23fa1eae4026f83625f052e1771397281042020be6be216798b0",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:d1eb37cfdcda4040e1aed46ec5b8d6589aa80e5dc28a5b487a20a01186779168",
+        "capture_phase_revision": "sha256:5a143131aedb23fa1eae4026f83625f052e1771397281042020be6be216798b0",
+        "artifact_digest": "sha256:eb20540f2f5287a4a59011d7b5aea90df5171c8f50e66c5b135a02943a417598",
+        "result_hash": "sha256:c0d54a42e9cd0be66d67323660330561ebd266a5d5c013bc3e6eb34db5c30db7",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:20a80fec7ea8c0286d7b911d1ca66df98e88022006bc36349dc9a30a3db044f7",
+            "lineage_id": "review-95f372706c2a5d5f",
+            "authority_revision": "sha256:5a143131aedb23fa1eae4026f83625f052e1771397281042020be6be216798b0",
+            "target_identity": "sha256:d1eb37cfdcda4040e1aed46ec5b8d6589aa80e5dc28a5b487a20a01186779168",
+            "base_tree": "8c7e3b990997f32a61c7e45b5cd5d0c63c675614",
+            "candidate_tree": "40a1b48c1627bc2b2f39b3fd72a46e8e875fe29d",
+            "changed_path_manifest_sha256": "sha256:d73841afc189956007c121fdf13488e2f071ac87975a75c1bb18decdc3fd58ee",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:20a80fec7ea8c0286d7b911d1ca66df98e88022006bc36349dc9a30a3db044f7",
+            "raw_sha256": "sha256:b019e571d0b5726b06599f931ad467aacafa325d17161bc7dfdf56bd114a1f4d",
+            "canonical_sha256": "sha256:157ea1694c9a89321320965d586d66200cadd7573841a3d2801e07cc3c7bf5b4",
+            "result_hash": "sha256:c0d54a42e9cd0be66d67323660330561ebd266a5d5c013bc3e6eb34db5c30db7",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:20a80fec7ea8c0286d7b911d1ca66df98e88022006bc36349dc9a30a3db044f7",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/architecture_test.go",
+                "engine/reviewverdict/parse_test.go",
+                "engine/reviewverdict/reviewverdict.go",
+                "engine/reviewverdict/wire.go"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "Reviewed all four changed paths. The new reviewverdict package is a pure parser: it reads no file, runs no command, and has no network or privilege surface.",
+              "Parse refuses a reply unless it is valid UTF-8, has no duplicate keys, has no unknown members (matched by exact name), has every member non-null, answers each finding id exactly once, uses enum values the contract lists, and carries evidence. Each refusal returns no verdicts, so a refused reply cannot clear a finding. This is fail-closed.",
+              "The ErrUnanswered rule and the NotRun-is-not-NotReproduced distinction stop an unchecked finding from being read as one that did not reproduce. No path in the candidate silently accepts a missing or unverified verdict.",
+              "Untrusted verifier output is handled with strict decoding through jsonstrict, and exact-name checks cover the case-insensitive matching of encoding/json. Error messages quote ids with %q, so there is no injection into logs. No secrets, dependencies, or lockfiles changed.",
+              "engine/architecture_test.go only registers the new package in the Domain ring and adds a comment, so no layering guard is weakened."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "selected_order": 1,
+        "target_identity": "sha256:d1eb37cfdcda4040e1aed46ec5b8d6589aa80e5dc28a5b487a20a01186779168",
+        "capture_phase_revision": "sha256:5a143131aedb23fa1eae4026f83625f052e1771397281042020be6be216798b0",
+        "artifact_digest": "sha256:b7bc60455631a320de9868138f5d7c46cb98f58d648a56ba5ad221c66b48cade",
+        "result_hash": "sha256:50e7c05d24d4316c69d2d09bb70fe2eadc0bac55ff36848aeebaa79be7b178f8",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:e94c770d398d1690ce2bec16e726282ec8364927853673e271951c70f4c5f2d4",
+            "lineage_id": "review-95f372706c2a5d5f",
+            "authority_revision": "sha256:5a143131aedb23fa1eae4026f83625f052e1771397281042020be6be216798b0",
+            "target_identity": "sha256:d1eb37cfdcda4040e1aed46ec5b8d6589aa80e5dc28a5b487a20a01186779168",
+            "base_tree": "8c7e3b990997f32a61c7e45b5cd5d0c63c675614",
+            "candidate_tree": "40a1b48c1627bc2b2f39b3fd72a46e8e875fe29d",
+            "changed_path_manifest_sha256": "sha256:d73841afc189956007c121fdf13488e2f071ac87975a75c1bb18decdc3fd58ee",
+            "lens": "review-readability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:e94c770d398d1690ce2bec16e726282ec8364927853673e271951c70f4c5f2d4",
+            "raw_sha256": "sha256:5d25bcbff0b4c11a96a7ea4dd8dc53e53b4f5659fe2600e7af215e80ddb4b98b",
+            "canonical_sha256": "sha256:6232a6a91304eb1805aa484927a8db4c2f8e765e3616983de74aa7c13f0e7454",
+            "result_hash": "sha256:50e7c05d24d4316c69d2d09bb70fe2eadc0bac55ff36848aeebaa79be7b178f8",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:e94c770d398d1690ce2bec16e726282ec8364927853673e271951c70f4c5f2d4",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/architecture_test.go",
+                "engine/reviewverdict/parse_test.go",
+                "engine/reviewverdict/reviewverdict.go",
+                "engine/reviewverdict/wire.go"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-decide-documented-not-present",
+                "lens": "readability",
+                "location": "engine/reviewverdict/reviewverdict.go:21-24",
+                "severity": "WARNING",
+                "claim": "The package comment documents a Decide function that decides whether the review blocks, and claims that tests in engine/skills keep Parse and the agent instructions in sync. The candidate contains no Decide and no such test. The ring-comment addition in engine/architecture_test.go also says the package holds 'the pure function that decides whether the review blocks'. A maintainer reading the docs will look for, or call, an API that does not exist. They will also assume a drift guard exists when none is visible in this change.",
+                "proof_refs": [
+                  "engine/reviewverdict/reviewverdict.go:21-24",
+                  "engine/architecture_test.go:132-135"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "The exported API visible in the candidate is Parse, Verdict, Reproduction, the constants and the Err values. No Decide function is defined in reviewverdict.go or wire.go.",
+              "The package comment and the architecture comment both describe Decide as present. Either the function lands in a later change and the comment should say so, or the comment should be trimmed.",
+              "Otherwise the code is readable. The error ordering is documented and tested, and the wire format is kept private to wire.go."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 2,
+        "target_identity": "sha256:d1eb37cfdcda4040e1aed46ec5b8d6589aa80e5dc28a5b487a20a01186779168",
+        "capture_phase_revision": "sha256:5a143131aedb23fa1eae4026f83625f052e1771397281042020be6be216798b0",
+        "artifact_digest": "sha256:1203364c06135c879f7f43ad139b287f6acb2f01f5c93be65e612116bbb0df0e",
+        "result_hash": "sha256:4553ac59a66148567ff24b6dace9b6ec371cd8f0749adc5591923c12049e5929",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:73188451050ca93f51e340b8b1640f5fb03cfb89142491d8fe1766047e710676",
+            "lineage_id": "review-95f372706c2a5d5f",
+            "authority_revision": "sha256:5a143131aedb23fa1eae4026f83625f052e1771397281042020be6be216798b0",
+            "target_identity": "sha256:d1eb37cfdcda4040e1aed46ec5b8d6589aa80e5dc28a5b487a20a01186779168",
+            "base_tree": "8c7e3b990997f32a61c7e45b5cd5d0c63c675614",
+            "candidate_tree": "40a1b48c1627bc2b2f39b3fd72a46e8e875fe29d",
+            "changed_path_manifest_sha256": "sha256:d73841afc189956007c121fdf13488e2f071ac87975a75c1bb18decdc3fd58ee",
+            "lens": "review-reliability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:73188451050ca93f51e340b8b1640f5fb03cfb89142491d8fe1766047e710676",
+            "raw_sha256": "sha256:9c46d62dd9dbb196f596354fa8b48616922456b6104a324f73058c972207cd8c",
+            "canonical_sha256": "sha256:ea98c9e2f02ac72fa6290cfb19460bc4de2761a34c520388ce690cd26dc14678",
+            "result_hash": "sha256:4553ac59a66148567ff24b6dace9b6ec371cd8f0749adc5591923c12049e5929",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:73188451050ca93f51e340b8b1640f5fb03cfb89142491d8fe1766047e710676",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/architecture_test.go",
+                "engine/reviewverdict/parse_test.go",
+                "engine/reviewverdict/reviewverdict.go",
+                "engine/reviewverdict/wire.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-decide-missing",
+                "lens": "reliability",
+                "location": "engine/reviewverdict/reviewverdict.go:19-22",
+                "severity": "WARNING",
+                "claim": "The package comment promises a Decide function that decides whether the review blocks, and says tests in engine/skills require Parse to accept the object that roles/verifier/body.md spells out. The candidate defines no Decide, and the changed paths include no skills test. The blocking decision and the drift guard are therefore unimplemented and unproved, and the documentation describes behavior that does not exist. If a later change is meant to add them, the comment should say so now.",
+                "proof_refs": [
+                  "engine/reviewverdict/reviewverdict.go:19-22",
+                  "engine/architecture_test.go:132-135"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Read all four changed paths in full.",
+              "Parse is consistent with its documented rule order. The shape checks run first: UTF-8, duplicate keys, unknown members, then missing or null members. The id, duplicate and enum checks follow, then the evidence check, and the unanswered check last.",
+              "parse_test.go exercises each Err value, each rule-order case, and the success path with its ordering. These tests assert externally observable behavior: the returned error identity through errors.Is, the error message contents, and the nil verdicts on refusal.",
+              "No test covers Decide, and Decide does not exist in the candidate."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "8575c69c6a9bdf9b5bd295f4436f4694259b27762166dc85803b3146abb8d79e",
+    "initial_atomic_start": {
+      "lineage_id": "review-95f372706c2a5d5f",
+      "worktree_identity": "sha256:571cf94da78406a5dee177091311c4fcbbbf61e483d9e6e92803045faa817e42",
+      "target_identity": "sha256:d1eb37cfdcda4040e1aed46ec5b8d6589aa80e5dc28a5b487a20a01186779168",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "8c7e3b990997f32a61c7e45b5cd5d0c63c675614",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-risk",
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 480,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "U1 adds the reviewverdict domain package: the parser of the verifier's reply (a contract others consume), its strict refusals, and its architecture-ring row"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

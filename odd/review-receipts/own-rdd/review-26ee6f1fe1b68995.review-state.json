@@ -1,0 +1,287 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:edd84fe2b80686e2fc6dad5d62ca3abc6b1c97acd089d27ab40901fcbd085502",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-26ee6f1fe1b68995",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "56c53a721310994cdd48c806cfe42474105b39ea",
+      "candidate_tree": "136020ba54c5c4071067bb5b6fc2ec1e673161ef",
+      "paths_digest": "sha256:2e16952ab59414b5f0cc1ce6c539d508f7a316a78e7a93369394e15388d3596d",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/review/handoff.go",
+        "engine/review/names.go",
+        "engine/review/review.go",
+        "engine/review/round.go",
+        "engine/review/stored.go",
+        "engine/review/verdict_test.go"
+      ],
+      "identity": "sha256:9d1e0cf4b90b6bbc38df50330f181563c6c24e4db12b142befd3c3ea0cb9ab6b"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "56c53a721310994cdd48c806cfe42474105b39ea",
+      "candidate_tree": "136020ba54c5c4071067bb5b6fc2ec1e673161ef",
+      "paths_digest": "sha256:2e16952ab59414b5f0cc1ce6c539d508f7a316a78e7a93369394e15388d3596d",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/review/handoff.go",
+        "engine/review/names.go",
+        "engine/review/review.go",
+        "engine/review/round.go",
+        "engine/review/stored.go",
+        "engine/review/verdict_test.go"
+      ],
+      "identity": "sha256:9d1e0cf4b90b6bbc38df50330f181563c6c24e4db12b142befd3c3ea0cb9ab6b"
+    },
+    "genesis_paths": [
+      "engine/review/handoff.go",
+      "engine/review/names.go",
+      "engine/review/review.go",
+      "engine/review/round.go",
+      "engine/review/stored.go",
+      "engine/review/verdict_test.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-risk",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 444,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "U3 adds domain names for the stored verdict file (a path guard and a persisted name others consume), its encoding, the correction-round rule IsCorrection and the verified handoff skeleton",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:31131c6a10d4f034a5a0f1ce53b5d3c5b07c7029c2f5c4a276264ea2eb6ca66f",
+    "capture_phase_revision": "sha256:0ddaa23f9eccda9ae5e0e205171947cc35f6f69efeba92ee886d18da597ec5b1",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:9d1e0cf4b90b6bbc38df50330f181563c6c24e4db12b142befd3c3ea0cb9ab6b",
+        "capture_phase_revision": "sha256:0ddaa23f9eccda9ae5e0e205171947cc35f6f69efeba92ee886d18da597ec5b1",
+        "artifact_digest": "sha256:b542557cd62c9c14b092bdebd1cfa871d1cc03783179597cc30a7053a8e4c37f",
+        "result_hash": "sha256:acc44a748a20bed08f4592577a9dac9ec425f16a12f23d86c851f911b0700c60",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:c94964b9bad94a583f5dc583190bc983dc7a9ab5ad36288fb002157d090a4bc7",
+            "lineage_id": "review-26ee6f1fe1b68995",
+            "authority_revision": "sha256:0ddaa23f9eccda9ae5e0e205171947cc35f6f69efeba92ee886d18da597ec5b1",
+            "target_identity": "sha256:9d1e0cf4b90b6bbc38df50330f181563c6c24e4db12b142befd3c3ea0cb9ab6b",
+            "base_tree": "56c53a721310994cdd48c806cfe42474105b39ea",
+            "candidate_tree": "136020ba54c5c4071067bb5b6fc2ec1e673161ef",
+            "changed_path_manifest_sha256": "sha256:f5f702571f90207752e07d6a3439481d22af9d111efc387028228748cba5680e",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:c94964b9bad94a583f5dc583190bc983dc7a9ab5ad36288fb002157d090a4bc7",
+            "raw_sha256": "sha256:490e9d211d4074485b6a08006f24c02424147cf24e959bb297be691f29aec38e",
+            "canonical_sha256": "sha256:18e6b0de13f4c419f5f689f9ab13430e360f0dd0059c8b1dedb09954a142e703",
+            "result_hash": "sha256:acc44a748a20bed08f4592577a9dac9ec425f16a12f23d86c851f911b0700c60",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:c94964b9bad94a583f5dc583190bc983dc7a9ab5ad36288fb002157d090a4bc7",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/handoff.go",
+                "engine/review/names.go",
+                "engine/review/review.go",
+                "engine/review/round.go",
+                "engine/review/stored.go",
+                "engine/review/verdict_test.go"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "Reviewed all 6 changed paths in full. This is a pure domain package that reads no files and runs no git; the changes add name validation, decode and encode helpers, a handoff builder and a correction predicate.",
+              "CheckResultName in engine/review/names.go requires a 12-character lowercase hex head, a canonical number and the .json suffix. A name with a path separator, traversal segment or newline is therefore refused, and VerdictName and ResultOfVerdict apply the same check. The tests in engine/review/verdict_test.go cover those cases, so no path injection is reachable through these functions.",
+              "DecodeResult in engine/review/stored.go uses strict decoding and duplicate-key checks, and it refuses an unknown member, a wrong version and a missing or null reply. MaxStoredBytes bounds the size that callers read, so there is no unsafe input handling or unbounded read introduced here.",
+              "EncodeVerdict validates the JSON with json.Valid before it indents, so malformed input is refused with ErrReplyNotJSON.",
+              "VerifiedHandoff in engine/review/handoff.go leaves ToRole empty for the Unverified outcome, which the parent record parser refuses. A review that has not been verified therefore cannot be treated as clear, and the test verifies this.",
+              "No secrets, new dependencies or authorization surfaces are introduced."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "selected_order": 1,
+        "target_identity": "sha256:9d1e0cf4b90b6bbc38df50330f181563c6c24e4db12b142befd3c3ea0cb9ab6b",
+        "capture_phase_revision": "sha256:0ddaa23f9eccda9ae5e0e205171947cc35f6f69efeba92ee886d18da597ec5b1",
+        "artifact_digest": "sha256:52c23d18e1e5f58aeda27e37f107d0a58fea5323433789aa35892f81e9e28a64",
+        "result_hash": "sha256:7086e62480d5f8bf318e9d4fb336e83923eab8d4ee19882b2cfc47a34b86a5a5",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:3f1b266417466a63f85c24550ce543eddd7c78fe676a84668241b52394430eaf",
+            "lineage_id": "review-26ee6f1fe1b68995",
+            "authority_revision": "sha256:0ddaa23f9eccda9ae5e0e205171947cc35f6f69efeba92ee886d18da597ec5b1",
+            "target_identity": "sha256:9d1e0cf4b90b6bbc38df50330f181563c6c24e4db12b142befd3c3ea0cb9ab6b",
+            "base_tree": "56c53a721310994cdd48c806cfe42474105b39ea",
+            "candidate_tree": "136020ba54c5c4071067bb5b6fc2ec1e673161ef",
+            "changed_path_manifest_sha256": "sha256:f5f702571f90207752e07d6a3439481d22af9d111efc387028228748cba5680e",
+            "lens": "review-readability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:3f1b266417466a63f85c24550ce543eddd7c78fe676a84668241b52394430eaf",
+            "raw_sha256": "sha256:c98c5044074eb82be5d1934fbcf25eb6958bdd2e38567f69cf017ba3207b6d72",
+            "canonical_sha256": "sha256:b08320add5d7c590ea78afbd9a495ebc18c996976fd062a4f3510b29386b2c0e",
+            "result_hash": "sha256:7086e62480d5f8bf318e9d4fb336e83923eab8d4ee19882b2cfc47a34b86a5a5",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:3f1b266417466a63f85c24550ce543eddd7c78fe676a84668241b52394430eaf",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/handoff.go",
+                "engine/review/names.go",
+                "engine/review/review.go",
+                "engine/review/round.go",
+                "engine/review/stored.go",
+                "engine/review/verdict_test.go"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-lowerhex-precedence",
+                "lens": "readability",
+                "location": "engine/review/names.go:96",
+                "severity": "SUGGESTION",
+                "claim": "The isLowerHex condition mixes || and \u0026\u0026 with no parentheses and leans on operator precedence to express the 'a'..'f' and '0'..'9' ranges. It is correct today, but a later edit could easily break it without anyone noticing. Parenthesize the two ranges, or use a small helper, so the intent is explicit.",
+                "proof_refs": [
+                  "engine/review/names.go:96"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-verifiedhandoff-strings",
+                "lens": "readability",
+                "location": "engine/review/handoff.go:42",
+                "severity": "SUGGESTION",
+                "claim": "VerifiedHandoff takes five consecutive string parameters (resultRef, resultSHA256, verdictRef, verdictSHA256) plus the outcome. Ref/SHA pairs can be swapped silently and the compiler will not catch it. Grouping each pair in a small struct would make call sites self-describing.",
+                "proof_refs": [
+                  "engine/review/handoff.go:42"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Read all six changed paths in full. Names, doc comments and tests agree on the behavior: result and verdict naming, DecodeResult, EncodeVerdict, IsCorrection and VerifiedHandoff.",
+              "I found no dead or duplicated logic and no unexplained constants. MaxStoredBytes and the other new constants carry rationale in comments.",
+              "The two findings are maintainability suggestions only; neither hides a concrete defect."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 2,
+        "target_identity": "sha256:9d1e0cf4b90b6bbc38df50330f181563c6c24e4db12b142befd3c3ea0cb9ab6b",
+        "capture_phase_revision": "sha256:0ddaa23f9eccda9ae5e0e205171947cc35f6f69efeba92ee886d18da597ec5b1",
+        "artifact_digest": "sha256:18d122b867cbe78e93a6d6f57106ea272e2f88b9355721400b6e7e98b9805f36",
+        "result_hash": "sha256:1e077216b717bdc9e6a19e99ca31f67a676de778bc2ba20876e4e181929c1e6d",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:a5e63463683e915e9e320252d68bdd92709fd4952eb842ca7655254a5241c8ba",
+            "lineage_id": "review-26ee6f1fe1b68995",
+            "authority_revision": "sha256:0ddaa23f9eccda9ae5e0e205171947cc35f6f69efeba92ee886d18da597ec5b1",
+            "target_identity": "sha256:9d1e0cf4b90b6bbc38df50330f181563c6c24e4db12b142befd3c3ea0cb9ab6b",
+            "base_tree": "56c53a721310994cdd48c806cfe42474105b39ea",
+            "candidate_tree": "136020ba54c5c4071067bb5b6fc2ec1e673161ef",
+            "changed_path_manifest_sha256": "sha256:f5f702571f90207752e07d6a3439481d22af9d111efc387028228748cba5680e",
+            "lens": "review-reliability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:a5e63463683e915e9e320252d68bdd92709fd4952eb842ca7655254a5241c8ba",
+            "raw_sha256": "sha256:3d85473b06ebe17932b0d7f115f11f3276bd070c2e0d9ae514100298d89a60ca",
+            "canonical_sha256": "sha256:783e16e296ff5decdcd2bfa26df0e6bae7c0e813962799ed90d4fd3af26c6ba3",
+            "result_hash": "sha256:1e077216b717bdc9e6a19e99ca31f67a676de778bc2ba20876e4e181929c1e6d",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:a5e63463683e915e9e320252d68bdd92709fd4952eb842ca7655254a5241c8ba",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/handoff.go",
+                "engine/review/names.go",
+                "engine/review/review.go",
+                "engine/review/round.go",
+                "engine/review/stored.go",
+                "engine/review/verdict_test.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [],
+            "evidence": [
+              "CheckResultName, VerdictName and ResultOfVerdict refuse path-shaped, uppercase, short, long, zero-padded and wrong-suffix names. The tests in engine/review/verdict_test.go exercise those cases and the round trip between result and verdict names.",
+              "NextNumber already matched on the head12-n prefix followed by a dot, so a .verifier.json file counts toward the next number. TestNextNumberCountsAVerdictBesideItsResult covers this.",
+              "DecodeResult rejects invalid input: duplicate keys, unknown members, wrong or missing version, and a missing or null reply. TestDecodeResultRefusesWhatEncodeResultDoesNotWrite covers these, and a round-trip test covers the valid case.",
+              "VerifiedHandoff sets to_role for Blocks and Clear and leaves it empty for Unverified. The test runs the filled record through roles.ParseRoleHandoff to check that an empty to_role is refused and a set one is accepted.",
+              "IsCorrection and EncodeVerdict behave as documented and are covered by table tests. EncodeVerdict refuses non-JSON replies and keeps characters such as \u003c and \u0026 unescaped.",
+              "I found no regressions on baseline behavior and no unproved candidate behavior. Behavior that depends on code outside the patch (canonicalNumber, jsonstrict, Handoff's default to_role) cannot be verified here, and I treat it as unchanged by this candidate."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "ca6567b231f39425429fdc032ee20fa9c16e30036a17ad376dfceb2c1a557bf3",
+    "initial_atomic_start": {
+      "lineage_id": "review-26ee6f1fe1b68995",
+      "worktree_identity": "sha256:571cf94da78406a5dee177091311c4fcbbbf61e483d9e6e92803045faa817e42",
+      "target_identity": "sha256:9d1e0cf4b90b6bbc38df50330f181563c6c24e4db12b142befd3c3ea0cb9ab6b",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "56c53a721310994cdd48c806cfe42474105b39ea",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-risk",
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 444,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "U3 adds domain names for the stored verdict file (a path guard and a persisted name others consume), its encoding, the correction-round rule IsCorrection and the verified handoff skeleton"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

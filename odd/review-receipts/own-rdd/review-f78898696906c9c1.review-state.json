@@ -1,0 +1,239 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:8ff551e731ba6f1bd3844eff401ad215fb53b8603da1a8bb03d65d4a8c572cd1",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-f78898696906c9c1",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "64036fcb593418fab22f217e3787cfb7a906af7c",
+      "candidate_tree": "4cf8099b2acb5dad14acdeabfd81c500922d82a0",
+      "paths_digest": "sha256:c2415c762c06bb6619a6a05a1d0a0ac15ebcb5f441707f13c24a52a389973380",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/review/app/verify.go",
+        "engine/review/app/verify_test.go"
+      ],
+      "identity": "sha256:e44181478567b3536129d4b24cfcd6f98d784eb4de0bdf76116ce0512531da0d"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "64036fcb593418fab22f217e3787cfb7a906af7c",
+      "candidate_tree": "4cf8099b2acb5dad14acdeabfd81c500922d82a0",
+      "paths_digest": "sha256:c2415c762c06bb6619a6a05a1d0a0ac15ebcb5f441707f13c24a52a389973380",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/review/app/verify.go",
+        "engine/review/app/verify_test.go"
+      ],
+      "identity": "sha256:e44181478567b3536129d4b24cfcd6f98d784eb4de0bdf76116ce0512531da0d"
+    },
+    "genesis_paths": [
+      "engine/review/app/verify.go",
+      "engine/review/app/verify_test.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-risk",
+      "review-resilience",
+      "review-reliability"
+    ],
+    "original_changed_lines": 493,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "U5 adds the Verify use case: holds the verifier reply to the stored result, decides, stores the verdict, and enforces one correction round from stored verdicts (a guard and a two-step check then store)",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:9858c908ae41baad4748ebdf3ed18878f794c1746dbec60f4183413c57eda48d",
+    "capture_phase_revision": "sha256:608634271cdc9c8768fb01e630e5ecc5b6fa03f093cb404938c0e22477b99fde",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:e44181478567b3536129d4b24cfcd6f98d784eb4de0bdf76116ce0512531da0d",
+        "capture_phase_revision": "sha256:608634271cdc9c8768fb01e630e5ecc5b6fa03f093cb404938c0e22477b99fde",
+        "artifact_digest": "sha256:9203c5941ca42125395a7a7ee4a0af811b876f40353fbe8d7ebf3c61e355b0aa",
+        "result_hash": "sha256:722872119539a1c626404e72bfd2d947f74fdcf02ebbdf90ff2a27d03870463d",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:eb55e8aaf0404135040070b4bb1f7b2a6abcf2d7c37dbfa5b5c5ad7017005b19",
+            "lineage_id": "review-f78898696906c9c1",
+            "authority_revision": "sha256:608634271cdc9c8768fb01e630e5ecc5b6fa03f093cb404938c0e22477b99fde",
+            "target_identity": "sha256:e44181478567b3536129d4b24cfcd6f98d784eb4de0bdf76116ce0512531da0d",
+            "base_tree": "64036fcb593418fab22f217e3787cfb7a906af7c",
+            "candidate_tree": "4cf8099b2acb5dad14acdeabfd81c500922d82a0",
+            "changed_path_manifest_sha256": "sha256:14640962c9fe891fb129159a79a9ec9a651cd8c48358410adbac6e987d8d2e46",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:eb55e8aaf0404135040070b4bb1f7b2a6abcf2d7c37dbfa5b5c5ad7017005b19",
+            "raw_sha256": "sha256:1d8d5daead7aaeb9b869742131b181ff8deaf307d2c3b6608cb4faccda5a2aaa",
+            "canonical_sha256": "sha256:bfa8cc1ba11d9719fcf847203f4715a2b24df9d12f05098513bc35cb8a0a24c8",
+            "result_hash": "sha256:722872119539a1c626404e72bfd2d947f74fdcf02ebbdf90ff2a27d03870463d",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:eb55e8aaf0404135040070b4bb1f7b2a6abcf2d7c37dbfa5b5c5ad7017005b19",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/app/verify.go",
+                "engine/review/app/verify_test.go"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "engine/review/app/verify.go validates the feature and the stored result name (review.CheckFeature, review.VerdictName) before it asks git or the store for anything. The tests in engine/review/app/verify_test.go cover traversal-style and empty names and check that no call is made. I found no path-injection route.",
+              "The reply size is capped (review.MaxReplyBytes) before parsing, and the reply is parsed against the stored result's binding. A malformed or oversized reply stores nothing.",
+              "The verdict is written through s.results.Create, which reports ErrExists when a file is already there. An existing verdict therefore cannot be overwritten, and ErrAlreadyVerified is returned.",
+              "The correction-round check fails closed. If a stored verdict or the directory listing cannot be read, a blocking verdict is refused rather than allowed. There is a possible race where two concurrent blocking Verify calls on different heads both pass the spentRound check. The effect is only an extra correction round, with no data exposure, authorization bypass or loss, so I report no reachable security impact.",
+              "The change adds no new dependencies and no secrets, and no sensitive data is logged or exposed."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-resilience",
+        "selected_order": 1,
+        "target_identity": "sha256:e44181478567b3536129d4b24cfcd6f98d784eb4de0bdf76116ce0512531da0d",
+        "capture_phase_revision": "sha256:608634271cdc9c8768fb01e630e5ecc5b6fa03f093cb404938c0e22477b99fde",
+        "artifact_digest": "sha256:f1f41eebdb06e5c7301554f4fed20a17e6487c4dbeb87cac842024091f0d210d",
+        "result_hash": "sha256:e2cca4eb1df0335ac5d19e6be61d213daa11e7bc0ecaf3111e38cc0d09f2753e",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:d24c42283903f635b56760e878cc06bc97c447a914fc00322b63a8380faadb93",
+            "lineage_id": "review-f78898696906c9c1",
+            "authority_revision": "sha256:608634271cdc9c8768fb01e630e5ecc5b6fa03f093cb404938c0e22477b99fde",
+            "target_identity": "sha256:e44181478567b3536129d4b24cfcd6f98d784eb4de0bdf76116ce0512531da0d",
+            "base_tree": "64036fcb593418fab22f217e3787cfb7a906af7c",
+            "candidate_tree": "4cf8099b2acb5dad14acdeabfd81c500922d82a0",
+            "changed_path_manifest_sha256": "sha256:14640962c9fe891fb129159a79a9ec9a651cd8c48358410adbac6e987d8d2e46",
+            "lens": "review-resilience",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:d24c42283903f635b56760e878cc06bc97c447a914fc00322b63a8380faadb93",
+            "raw_sha256": "sha256:268529f6dfed198fdcd619ce77020fc45b36f7d4f8167e179b48b7941b84f9a8",
+            "canonical_sha256": "sha256:a32bb01aad5128fa87896f43458b82358aa2f79416d13ebbe43cb328b56aea5f",
+            "result_hash": "sha256:e2cca4eb1df0335ac5d19e6be61d213daa11e7bc0ecaf3111e38cc0d09f2753e",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:d24c42283903f635b56760e878cc06bc97c447a914fc00322b63a8380faadb93",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/app/verify.go",
+                "engine/review/app/verify_test.go"
+              ]
+            },
+            "lens": "review-resilience",
+            "findings": [],
+            "evidence": [
+              "Reviewed both changed paths in full. Verify validates the feature, result name and reply size before calling git or the store, so a bad input fails fast with no side effects.",
+              "The verdict is created through s.results.Create, which reports ErrExists as ErrAlreadyVerified. A retry after a successful store is therefore safe, and the existing verdict is never overwritten (engine/review/app/verify.go:104-114).",
+              "ErrNotFlushed is surfaced in Verified.NotFlushed and the verdict is reported as stored, so a retry is not invited and no duplicate is created.",
+              "spentRound fails closed: an unreadable or unparseable sibling verdict, or a directory that cannot be listed, stops a blocking verdict with a named cause, and nothing is stored. This is documented behavior and covered by tests.",
+              "The extra reads in spentRound are O(number of verdicts in one feature directory) and run only when the decision is Blocks. No measured or realistic latency impact is shown.",
+              "The check in spentRound followed by Create is not atomic across concurrent Verify calls on different results of the same base. I could not show that realistic callers run concurrently, so this is speculation and not a reportable finding."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 2,
+        "target_identity": "sha256:e44181478567b3536129d4b24cfcd6f98d784eb4de0bdf76116ce0512531da0d",
+        "capture_phase_revision": "sha256:608634271cdc9c8768fb01e630e5ecc5b6fa03f093cb404938c0e22477b99fde",
+        "artifact_digest": "sha256:1c5bb9faab75c9e4535ab18a43a9b3ee5f7de0d0a1bd1641346830d157df197b",
+        "result_hash": "sha256:4d12124e50a07a27df5fc2f9a4ea9cc755e951b15717a85adb671905b007b5be",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:3eba4bbc0d9a091a4222a7b6811b1d3de3e96ec8d4d976f45ce854640ae4f782",
+            "lineage_id": "review-f78898696906c9c1",
+            "authority_revision": "sha256:608634271cdc9c8768fb01e630e5ecc5b6fa03f093cb404938c0e22477b99fde",
+            "target_identity": "sha256:e44181478567b3536129d4b24cfcd6f98d784eb4de0bdf76116ce0512531da0d",
+            "base_tree": "64036fcb593418fab22f217e3787cfb7a906af7c",
+            "candidate_tree": "4cf8099b2acb5dad14acdeabfd81c500922d82a0",
+            "changed_path_manifest_sha256": "sha256:14640962c9fe891fb129159a79a9ec9a651cd8c48358410adbac6e987d8d2e46",
+            "lens": "review-reliability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:3eba4bbc0d9a091a4222a7b6811b1d3de3e96ec8d4d976f45ce854640ae4f782",
+            "raw_sha256": "sha256:c9557ec642f84a2bd024121966f843d7e2237fc85f327c0186d7dc15c1b8a23f",
+            "canonical_sha256": "sha256:799e7485a6132b6313266d59b1e2e1167bd6a0ad2584a0b52b78e38589bc08fa",
+            "result_hash": "sha256:4d12124e50a07a27df5fc2f9a4ea9cc755e951b15717a85adb671905b007b5be",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:3eba4bbc0d9a091a4222a7b6811b1d3de3e96ec8d4d976f45ce854640ae4f782",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/app/verify.go",
+                "engine/review/app/verify_test.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [],
+            "evidence": [
+              "Reviewed both added files in full. Verify validates the feature and result name and enforces the reply size limit before any git or store call, and a test asserts that no calls are made for unsafe names.",
+              "Failure paths are covered by tests: a reply that breaks the contract, a missing or corrupt stored result, a failing Read, a failing Create, an existing verdict (ErrAlreadyVerified), and an unflushed directory (reported as stored with NotFlushed set).",
+              "The correction-round logic fails closed. When a blocking verdict cannot read the other stored verdicts (unparseable, missing result, or Names failing), it is refused and nothing is stored. A non-blocking verdict never consults them. Tests cover all three of these cases.",
+              "Test cases cover the correction-round boundaries: same head, different base, an earlier verdict that was unverified or clear, and a current verdict that is clear or unverified.",
+              "Residual, non-blocking observations: the spent-round check and the Create call are not atomic, so two concurrent blocking verifications on different heads of the same base could both pass. The check also runs before the existence check, so a duplicate blocking verdict whose round is spent reports ErrCorrectionSpent rather than ErrAlreadyVerified. Neither is exercised by realistic single-writer use, and neither makes candidate behavior unproved."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "d63894b0530fc22ef16b81ac1997526091841b15a8e7304146ce6cfa0fc26471",
+    "initial_atomic_start": {
+      "lineage_id": "review-f78898696906c9c1",
+      "worktree_identity": "sha256:571cf94da78406a5dee177091311c4fcbbbf61e483d9e6e92803045faa817e42",
+      "target_identity": "sha256:e44181478567b3536129d4b24cfcd6f98d784eb4de0bdf76116ce0512531da0d",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "64036fcb593418fab22f217e3787cfb7a906af7c",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-risk",
+        "review-resilience",
+        "review-reliability"
+      ],
+      "original_changed_lines": 493,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "U5 adds the Verify use case: holds the verifier reply to the stored result, decides, stores the verdict, and enforces one correction round from stored verdicts (a guard and a two-step check then store)"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

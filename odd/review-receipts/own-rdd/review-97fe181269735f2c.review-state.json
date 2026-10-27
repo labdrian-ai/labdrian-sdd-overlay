@@ -1,0 +1,271 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:8c8a133146c85ffb8ec625ae0df9a29665ecbe02f71c2ceb1c32dbf28afe8212",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-97fe181269735f2c",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "b1ba3b205a267e31d4d4b9e4d840f98ee76cd5fd",
+      "candidate_tree": "429cfb110f3fd189043ae52fbca7b26f7a627f6f",
+      "paths_digest": "sha256:00883030f3d082efad92771be473ea88d6bb66767c5cbd58149a37ffa115e7e7",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/cmd/review_test.go",
+        "engine/review/fsstore/fsstore.go",
+        "engine/review/fsstore/lock_internal_unix_test.go",
+        "engine/review/fsstore/lock_unix.go",
+        "engine/review/fsstore/openread_unix.go",
+        "engine/review/fsstore/read_internal_test.go",
+        "engine/reviewverdict/decide.go",
+        "odd/tasks/own-rdd.md"
+      ],
+      "identity": "sha256:c26e9f97d524353dc8b867eb5305ec86cfbe469168cd1642f0c64bd46bea79a3"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "b1ba3b205a267e31d4d4b9e4d840f98ee76cd5fd",
+      "candidate_tree": "429cfb110f3fd189043ae52fbca7b26f7a627f6f",
+      "paths_digest": "sha256:00883030f3d082efad92771be473ea88d6bb66767c5cbd58149a37ffa115e7e7",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/cmd/review_test.go",
+        "engine/review/fsstore/fsstore.go",
+        "engine/review/fsstore/lock_internal_unix_test.go",
+        "engine/review/fsstore/lock_unix.go",
+        "engine/review/fsstore/openread_unix.go",
+        "engine/review/fsstore/read_internal_test.go",
+        "engine/reviewverdict/decide.go",
+        "odd/tasks/own-rdd.md"
+      ],
+      "identity": "sha256:c26e9f97d524353dc8b867eb5305ec86cfbe469168cd1642f0c64bd46bea79a3"
+    },
+    "genesis_paths": [
+      "engine/cmd/review_test.go",
+      "engine/review/fsstore/fsstore.go",
+      "engine/review/fsstore/lock_internal_unix_test.go",
+      "engine/review/fsstore/lock_unix.go",
+      "engine/review/fsstore/openread_unix.go",
+      "engine/review/fsstore/read_internal_test.go",
+      "engine/reviewverdict/decide.go",
+      "odd/tasks/own-rdd.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-risk",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 53,
+    "correction_budget": 27,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "F3 resolves review findings: a unix build tag on a test file, comment rewording, a renamed constant, an ordered test table and one more lock refusal test",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:ed5d84e310f6108e2e2f28475433bb9c43f8a172583c4d3237f23067dd6fcb48",
+    "capture_phase_revision": "sha256:3402c77a8824e32b0c63c5b1c603486abef9c23d015d6c786bac7387c56c25e1",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:c26e9f97d524353dc8b867eb5305ec86cfbe469168cd1642f0c64bd46bea79a3",
+        "capture_phase_revision": "sha256:3402c77a8824e32b0c63c5b1c603486abef9c23d015d6c786bac7387c56c25e1",
+        "artifact_digest": "sha256:4467ec3ddcc182bd5bae98009e55ef65c39ac89c227ffe7b27762077c7a5fc76",
+        "result_hash": "sha256:d42838069d3432649f574ce34d4c8be016d34ef449e651a72c9ac4e89adb4aa7",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:50de5b76fc028a608b5076c4c97a6adcfb541d1eab42580d2cf1b4be3e25cf48",
+            "lineage_id": "review-97fe181269735f2c",
+            "authority_revision": "sha256:3402c77a8824e32b0c63c5b1c603486abef9c23d015d6c786bac7387c56c25e1",
+            "target_identity": "sha256:c26e9f97d524353dc8b867eb5305ec86cfbe469168cd1642f0c64bd46bea79a3",
+            "base_tree": "b1ba3b205a267e31d4d4b9e4d840f98ee76cd5fd",
+            "candidate_tree": "429cfb110f3fd189043ae52fbca7b26f7a627f6f",
+            "changed_path_manifest_sha256": "sha256:c2896b324c49907044796199675a6303ffa09e8c076d7eb5af5b9e768e543f17",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:50de5b76fc028a608b5076c4c97a6adcfb541d1eab42580d2cf1b4be3e25cf48",
+            "raw_sha256": "sha256:09c52fd0f2d3280ebda3b1d0792a4b95ad3b55079c51ea61e7d0c1e29a0d76e7",
+            "canonical_sha256": "sha256:4fa739d961bf0de2abafa8111c88019f05e5fa3d990a928da29587be11884d7a",
+            "result_hash": "sha256:d42838069d3432649f574ce34d4c8be016d34ef449e651a72c9ac4e89adb4aa7",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:50de5b76fc028a608b5076c4c97a6adcfb541d1eab42580d2cf1b4be3e25cf48",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/cmd/review_test.go",
+                "engine/review/fsstore/fsstore.go",
+                "engine/review/fsstore/lock_internal_unix_test.go",
+                "engine/review/fsstore/lock_unix.go",
+                "engine/review/fsstore/openread_unix.go",
+                "engine/review/fsstore/read_internal_test.go",
+                "engine/reviewverdict/decide.go",
+                "odd/tasks/own-rdd.md"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "Reviewed all 8 changed paths. Changes are comment rewording, a rename of the constant lockWait to defaultLockWait (same value, 30s, still used only in take via the s.lockWait fallback), a test loop converted from a map to an ordered slice, a build tag change from !windows to unix on a test file, an added test case asserting an unsafe feature name is refused with ErrInvalidFeature and creates nothing, and a task log entry.",
+              "No production behavior changes: lock_unix.go only renames the constant and updates a comment; openread_unix.go and decide.go change comments only. No new input handling, authorization, secret, data-exposure, or dependency changes are introduced.",
+              "The added test in engine/review/fsstore/lock_internal_unix_test.go strengthens coverage of unsafe feature name rejection; no exploitable risk is introduced."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "selected_order": 1,
+        "target_identity": "sha256:c26e9f97d524353dc8b867eb5305ec86cfbe469168cd1642f0c64bd46bea79a3",
+        "capture_phase_revision": "sha256:3402c77a8824e32b0c63c5b1c603486abef9c23d015d6c786bac7387c56c25e1",
+        "artifact_digest": "sha256:fe8f68eccbc178b4fff332dbd2e83ac6707177301fc75d79ce409dfec557972e",
+        "result_hash": "sha256:8c10bf748082b608dac20797106e7cba5fe05b617bdbed6ab45686f5f07d713c",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:24aa39c7562edea70bf37eb59065e73d915e3bcc8b21c57503db9726b57e892c",
+            "lineage_id": "review-97fe181269735f2c",
+            "authority_revision": "sha256:3402c77a8824e32b0c63c5b1c603486abef9c23d015d6c786bac7387c56c25e1",
+            "target_identity": "sha256:c26e9f97d524353dc8b867eb5305ec86cfbe469168cd1642f0c64bd46bea79a3",
+            "base_tree": "b1ba3b205a267e31d4d4b9e4d840f98ee76cd5fd",
+            "candidate_tree": "429cfb110f3fd189043ae52fbca7b26f7a627f6f",
+            "changed_path_manifest_sha256": "sha256:c2896b324c49907044796199675a6303ffa09e8c076d7eb5af5b9e768e543f17",
+            "lens": "review-readability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:24aa39c7562edea70bf37eb59065e73d915e3bcc8b21c57503db9726b57e892c",
+            "raw_sha256": "sha256:a11636bc33fb0c90e5decd2fdad66b10e7c83b284ab2e829007901836f6b1432",
+            "canonical_sha256": "sha256:032273724f680c45712a9c683346e4c61286bfa2b4544e66b141ec17b97a5316",
+            "result_hash": "sha256:8c10bf748082b608dac20797106e7cba5fe05b617bdbed6ab45686f5f07d713c",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:24aa39c7562edea70bf37eb59065e73d915e3bcc8b21c57503db9726b57e892c",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/cmd/review_test.go",
+                "engine/review/fsstore/fsstore.go",
+                "engine/review/fsstore/lock_internal_unix_test.go",
+                "engine/review/fsstore/lock_unix.go",
+                "engine/review/fsstore/openread_unix.go",
+                "engine/review/fsstore/read_internal_test.go",
+                "engine/reviewverdict/decide.go",
+                "odd/tasks/own-rdd.md"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [],
+            "evidence": [
+              "Reviewed all 8 changed paths for readability. The changes are naming and comment clarifications: lockWait constant renamed to defaultLockWait so it no longer shadows the Store.lockWait field, with the field comment updated to match; the Decide doc comment split into paragraphs; the take doc comment now explains waiter ordering and the 30s bound; the openRead comment explains why O_NONBLOCK stays set.",
+              "The map iteration in the wrapper usage test became an ordered slice of pairs. The local copy `engine, inWrapper := pair.engine, pair.inWrapper` is redundant but harmless.",
+              "The build tag in engine/review/fsstore/read_internal_test.go changed from !windows to unix, matching the Mkfifo use. The added unsafe-feature case in engine/review/fsstore/lock_internal_unix_test.go checks both the error and that nothing was created.",
+              "engine/review/fsstore/fsstore.go and engine/review/fsstore/lock_unix.go have no leftover references to the old constant name within the visible patch, and the log entry in odd/tasks/own-rdd.md accurately describes the changes. No maintainability defect was found that this candidate introduced."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 2,
+        "target_identity": "sha256:c26e9f97d524353dc8b867eb5305ec86cfbe469168cd1642f0c64bd46bea79a3",
+        "capture_phase_revision": "sha256:3402c77a8824e32b0c63c5b1c603486abef9c23d015d6c786bac7387c56c25e1",
+        "artifact_digest": "sha256:eec90db4e34fe6cb7fdfbfc74e7f5b13e582d04bfa71d0ddae381ae28255ae91",
+        "result_hash": "sha256:2bf1f5e6d14cbcabe7b56e1a9ed0002cb55cae32cda13e07fd2f8ab71ada8cbc",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:ccf4bab494f42f4a42a4f48277f65a2504f13baadac8c64bd6e9371ef7cc6f7b",
+            "lineage_id": "review-97fe181269735f2c",
+            "authority_revision": "sha256:3402c77a8824e32b0c63c5b1c603486abef9c23d015d6c786bac7387c56c25e1",
+            "target_identity": "sha256:c26e9f97d524353dc8b867eb5305ec86cfbe469168cd1642f0c64bd46bea79a3",
+            "base_tree": "b1ba3b205a267e31d4d4b9e4d840f98ee76cd5fd",
+            "candidate_tree": "429cfb110f3fd189043ae52fbca7b26f7a627f6f",
+            "changed_path_manifest_sha256": "sha256:c2896b324c49907044796199675a6303ffa09e8c076d7eb5af5b9e768e543f17",
+            "lens": "review-reliability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:ccf4bab494f42f4a42a4f48277f65a2504f13baadac8c64bd6e9371ef7cc6f7b",
+            "raw_sha256": "sha256:200295dcddae900a3518e0a52bc62d3ebf5fc5a4867c0c7df22e59d147e6e84f",
+            "canonical_sha256": "sha256:03d550d36aa583e1673fa774f4cb23fb013d822a61639f1c7354e24c6c51419f",
+            "result_hash": "sha256:2bf1f5e6d14cbcabe7b56e1a9ed0002cb55cae32cda13e07fd2f8ab71ada8cbc",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:ccf4bab494f42f4a42a4f48277f65a2504f13baadac8c64bd6e9371ef7cc6f7b",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/cmd/review_test.go",
+                "engine/review/fsstore/fsstore.go",
+                "engine/review/fsstore/lock_internal_unix_test.go",
+                "engine/review/fsstore/lock_unix.go",
+                "engine/review/fsstore/openread_unix.go",
+                "engine/review/fsstore/read_internal_test.go",
+                "engine/reviewverdict/decide.go",
+                "odd/tasks/own-rdd.md"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [],
+            "evidence": [
+              "engine/review/fsstore/lock_unix.go: the rename of the lockWait constant to defaultLockWait is applied at both uses (declaration and the fallback in take); the Store.lockWait field keeps its name and the zero-value fallback is unchanged, so lock timing behavior is preserved.",
+              "engine/review/fsstore/lock_internal_unix_test.go: the added case asserts an unsafe feature name is refused with review.ErrInvalidFeature and that nothing is created, which gives externally observable coverage of the invalid-input path for both Lock and lockByPath.",
+              "engine/cmd/review_test.go: converting the map to a slice of pairs makes iteration order deterministic and keeps every original pair; the loop variables are copied locally, so the assertions are unchanged.",
+              "engine/review/fsstore/read_internal_test.go: the build constraint changes from !windows to unix, which matches the Mkfifo use and narrows the build set only to platforms where the test could not compile anyway.",
+              "engine/review/fsstore/openread_unix.go, engine/reviewverdict/decide.go, engine/review/fsstore/fsstore.go and odd/tasks/own-rdd.md: comment or documentation changes only, with no behavior change."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "661284b49ac295ebfecec6783f6d62284b3f0af80f2a95375e0acd750e0c0aca",
+    "initial_atomic_start": {
+      "lineage_id": "review-97fe181269735f2c",
+      "worktree_identity": "sha256:571cf94da78406a5dee177091311c4fcbbbf61e483d9e6e92803045faa817e42",
+      "target_identity": "sha256:c26e9f97d524353dc8b867eb5305ec86cfbe469168cd1642f0c64bd46bea79a3",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "b1ba3b205a267e31d4d4b9e4d840f98ee76cd5fd",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-risk",
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 53,
+      "correction_budget": 27,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "F3 resolves review findings: a unix build tag on a test file, comment rewording, a renamed constant, an ordered test table and one more lock refusal test"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

@@ -1,0 +1,228 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:72b9241c6fda0c6a98bb2a83d1970fbf6e4320888e6e084b76b7df3bfb96e09d",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-3661ccb5627b7cbb",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "4cf8099b2acb5dad14acdeabfd81c500922d82a0",
+      "candidate_tree": "4ca3f9dd38e25bba3b94d6bb33d984575d456d1f",
+      "paths_digest": "sha256:5b57460c1bb0111b9f6c5468145deeb5882f075b4951db6c80456ba89792acac",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "bin/lib/usage.sh",
+        "engine/cmd/dispatch_routes_test.go",
+        "engine/cmd/review.go",
+        "engine/cmd/review_test.go",
+        "engine/cmd/usage.go"
+      ],
+      "identity": "sha256:c3fb28331f419ad10a266448a914ec3476c130b3099cd0f65f51a95cd0e8ebd9"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "4cf8099b2acb5dad14acdeabfd81c500922d82a0",
+      "candidate_tree": "4ca3f9dd38e25bba3b94d6bb33d984575d456d1f",
+      "paths_digest": "sha256:5b57460c1bb0111b9f6c5468145deeb5882f075b4951db6c80456ba89792acac",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "bin/lib/usage.sh",
+        "engine/cmd/dispatch_routes_test.go",
+        "engine/cmd/review.go",
+        "engine/cmd/review_test.go",
+        "engine/cmd/usage.go"
+      ],
+      "identity": "sha256:c3fb28331f419ad10a266448a914ec3476c130b3099cd0f65f51a95cd0e8ebd9"
+    },
+    "genesis_paths": [
+      "bin/lib/usage.sh",
+      "engine/cmd/dispatch_routes_test.go",
+      "engine/cmd/review.go",
+      "engine/cmd/review_test.go",
+      "engine/cmd/usage.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 379,
+    "correction_budget": 190,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "U6 wires labdrian review verify into the CLI: a new public verb, its flags, exit codes, stderr/stdout messages and the shared usage text",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:096dc1b5e87d386a43001f0ef4d4365c767fefcef8c083c9e690c8bbaa6a8111",
+    "capture_phase_revision": "sha256:2bf2c37b6588e6edbfae34128f1235b3f97c2941a7ad04dbe36f000851e48b8d",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "target_identity": "sha256:c3fb28331f419ad10a266448a914ec3476c130b3099cd0f65f51a95cd0e8ebd9",
+        "capture_phase_revision": "sha256:2bf2c37b6588e6edbfae34128f1235b3f97c2941a7ad04dbe36f000851e48b8d",
+        "artifact_digest": "sha256:60d0bb35fb9811de6f5e8fe1424b9f9d4dfe054b527fed9c3e6f94a88a8b1be5",
+        "result_hash": "sha256:fb8a619bc03450a645ed9d31b5943a0ed73c40424e79f4799e6c2af342f8cdc2",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:6233d1eebc10a9e5fc58030757ffc7e2d6ea4a8d5ef8f060fe2e18260e6cdeb5",
+            "lineage_id": "review-3661ccb5627b7cbb",
+            "authority_revision": "sha256:2bf2c37b6588e6edbfae34128f1235b3f97c2941a7ad04dbe36f000851e48b8d",
+            "target_identity": "sha256:c3fb28331f419ad10a266448a914ec3476c130b3099cd0f65f51a95cd0e8ebd9",
+            "base_tree": "4cf8099b2acb5dad14acdeabfd81c500922d82a0",
+            "candidate_tree": "4ca3f9dd38e25bba3b94d6bb33d984575d456d1f",
+            "changed_path_manifest_sha256": "sha256:353622cf3f3237ffcec6e34223bb6d88bf73419cf755f1a2e288559bbf99812c",
+            "lens": "review-readability",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:6233d1eebc10a9e5fc58030757ffc7e2d6ea4a8d5ef8f060fe2e18260e6cdeb5",
+            "raw_sha256": "sha256:21aac7a0e216f6d4ec81aae6d5a0c8e73f25e63039fae4c3b35f4b12d3630009",
+            "canonical_sha256": "sha256:4352a6a5e4066e2ae877fc79e3396031bceb00e99b929fd354041be017c4c8cc",
+            "result_hash": "sha256:fb8a619bc03450a645ed9d31b5943a0ed73c40424e79f4799e6c2af342f8cdc2",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:6233d1eebc10a9e5fc58030757ffc7e2d6ea4a8d5ef8f060fe2e18260e6cdeb5",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "bin/lib/usage.sh",
+                "engine/cmd/dispatch_routes_test.go",
+                "engine/cmd/review.go",
+                "engine/cmd/review_test.go",
+                "engine/cmd/usage.go"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-usage-drift",
+                "lens": "readability",
+                "location": "bin/lib/usage.sh:243-246",
+                "severity": "WARNING",
+                "claim": "The shell usage text for 'review verify' is a much shorter paraphrase of the engine usage text and omits the evidence kinds, to_role rule (builder/delivery), and the 'never over an existing file' guarantee. Two hand-maintained descriptions of the same verb can drift; nothing here ties them together.",
+                "proof_refs": [
+                  "bin/lib/usage.sh:243-246",
+                  "engine/cmd/usage.go:172-178"
+                ]
+              },
+              {
+                "id": "R2-fills-mutation",
+                "lens": "readability",
+                "location": "engine/cmd/review.go:310-313",
+                "severity": "SUGGESTION",
+                "claim": "reportVerified calls slices.DeleteFunc on the result of review.ParentFields(). DeleteFunc mutates the slice in place; if ParentFields returns a shared package-level slice rather than a fresh copy, this would corrupt it for later calls. The code does not make the ownership assumption explicit, so a maintainer cannot tell it is safe without reading another package.",
+                "proof_refs": [
+                  "engine/cmd/review.go:310-313"
+                ]
+              },
+              {
+                "id": "R2-require-map",
+                "lens": "readability",
+                "location": "engine/cmd/review.go:137",
+                "severity": "SUGGESTION",
+                "claim": "require builds a name-to-value map that now mixes flags of different verbs (--stored added). A name not in the map (for example a typo in a caller) silently reads as empty and reports 'is required'. This is tolerable but the shared map hides which verb needs which flag.",
+                "proof_refs": [
+                  "engine/cmd/review.go:137"
+                ]
+              }
+            ],
+            "evidence": [
+              "Reviewed all five changed paths in full from the patch sections.",
+              "reportVerified duplicates the stderr/handoff reporting structure of reportRecorded, with a small divergence in the parent-fills list; it is readable and tested, so no finding beyond noting it.",
+              "The rename recordFailed to reviewFailed with a verb parameter keeps the original record message text unchanged, so no output regression was found.",
+              "Tests cover the new verb's usage errors, refusal, spent correction round, stdin/file reading, and the not-flushed warning path."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 1,
+        "target_identity": "sha256:c3fb28331f419ad10a266448a914ec3476c130b3099cd0f65f51a95cd0e8ebd9",
+        "capture_phase_revision": "sha256:2bf2c37b6588e6edbfae34128f1235b3f97c2941a7ad04dbe36f000851e48b8d",
+        "artifact_digest": "sha256:89bf0521b4c50dab9972c1ac7da0ec4dfdef069e2c94ec0c3724d01bd7597adf",
+        "result_hash": "sha256:847229c96cfa3757fb738044c6387aac044cfeb82ab4358a57146ab174a13f0d",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:28b55ec7cbe0e614fb5414909f0c3336c57aaf9b9216167b78f8b89672b0a212",
+            "lineage_id": "review-3661ccb5627b7cbb",
+            "authority_revision": "sha256:2bf2c37b6588e6edbfae34128f1235b3f97c2941a7ad04dbe36f000851e48b8d",
+            "target_identity": "sha256:c3fb28331f419ad10a266448a914ec3476c130b3099cd0f65f51a95cd0e8ebd9",
+            "base_tree": "4cf8099b2acb5dad14acdeabfd81c500922d82a0",
+            "candidate_tree": "4ca3f9dd38e25bba3b94d6bb33d984575d456d1f",
+            "changed_path_manifest_sha256": "sha256:353622cf3f3237ffcec6e34223bb6d88bf73419cf755f1a2e288559bbf99812c",
+            "lens": "review-reliability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:28b55ec7cbe0e614fb5414909f0c3336c57aaf9b9216167b78f8b89672b0a212",
+            "raw_sha256": "sha256:1855ebe876c8391a941a8ba38550094b56f3f29b0a5f4f72f956836f0d7133f2",
+            "canonical_sha256": "sha256:1855ebe876c8391a941a8ba38550094b56f3f29b0a5f4f72f956836f0d7133f2",
+            "result_hash": "sha256:847229c96cfa3757fb738044c6387aac044cfeb82ab4358a57146ab174a13f0d",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:28b55ec7cbe0e614fb5414909f0c3336c57aaf9b9216167b78f8b89672b0a212",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "bin/lib/usage.sh",
+                "engine/cmd/dispatch_routes_test.go",
+                "engine/cmd/review.go",
+                "engine/cmd/review_test.go",
+                "engine/cmd/usage.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [],
+            "evidence": [
+              "Reviewed all five changed paths. The new verify verb is covered by tests of its flag errors (missing, duplicate and foreign flags), its refusal path (exit 2, nothing stored), its spent correction round (exit 1, nothing stored), reading the reply from a file or stdin, and the decision and skeleton output in engine/cmd/review_test.go. The built-program test also checks that roles validate accepts the skeleton.",
+              "The usage-text assertions in engine/cmd/review_test.go match the strings added in engine/cmd/usage.go. The verb-list and unknown-verb messages changed consistently in engine/cmd/review.go, engine/cmd/review_test.go and engine/cmd/dispatch_routes_test.go.",
+              "Residual risk, not reported as a finding: reportVerified in engine/cmd/review.go filters the result of review.ParentFields() with slices.DeleteFunc, which mutates the slice in place. That is only safe if ParentFields returns a fresh slice, and its definition is outside this candidate. The table test in engine/cmd/review_test.go runs a case with to_role removed before a case that expects it, so it would catch a shared slice."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "148711213871e75f05c673e9d7e28aefe4521455659fc4da919c6136b635e1e7",
+    "initial_atomic_start": {
+      "lineage_id": "review-3661ccb5627b7cbb",
+      "worktree_identity": "sha256:571cf94da78406a5dee177091311c4fcbbbf61e483d9e6e92803045faa817e42",
+      "target_identity": "sha256:c3fb28331f419ad10a266448a914ec3476c130b3099cd0f65f51a95cd0e8ebd9",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "4cf8099b2acb5dad14acdeabfd81c500922d82a0",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "high",
+      "selected_lenses": [
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 379,
+      "correction_budget": 190,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "U6 wires labdrian review verify into the CLI: a new public verb, its flags, exit codes, stderr/stdout messages and the shared usage text"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

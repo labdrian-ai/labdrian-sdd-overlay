@@ -21,12 +21,19 @@
 //     anything else: a revision that git could read as an option is refused (CheckRev), and a feature that is
 //     more than one plain segment is refused (CheckFeature).
 //
-// The stored file is the reply with the binding it was validated against (EncodeResult), and the record of
-// the role chain that closes the review is a RoleHandoff skeleton (Handoff) that holds every member the
-// command knows and leaves empty the ones only the parent of the chain knows (ParentFields).
+// The stored file is the reply with the binding it was validated against (EncodeResult, read back by
+// DecodeResult), and the record of the role chain that closes the review is a RoleHandoff skeleton (Handoff)
+// that holds every member the command knows and leaves empty the ones only the parent of the chain knows
+// (ParentFields).
+//
+// When the verifier ran (own-rdd T3), its verdict on the findings of a stored result is stored beside the
+// result with the same <head12>-<n>, as <head12>-<n>.verifier.json (VerdictName, ResultOfVerdict), and the
+// skeleton binds it as one more piece of evidence and says who is next (VerifiedHandoff). A review is
+// corrected at most once: IsCorrection says which candidate is the correction of which.
 //
 // It is a domain package: pure standard library and the domain packages that say what a git object name,
-// a SHA-256 digest, a reviewer reply and a role handoff are. It reads no file and runs no git.
+// a SHA-256 digest, a reviewer reply, a verifier verdict and a role handoff are. It reads no file and runs
+// no git.
 package review
 
 import (
@@ -50,20 +57,28 @@ const (
 	// it is over the limit (Candidate.OverLimit) and the parent splits the candidate.
 	DiffLimitBytes = 150000
 
-	// MaxReplyBytes bounds the reply of a reviewer that `review record` reads: a reply is one JSON object of
-	// findings, a few kilobytes, and 1 MiB is far above any real one. The command reads one byte past it to
-	// know a reply is too large and never the rest.
+	// MaxReplyBytes bounds the reply of a reviewer that `review record` reads, and the one of a verifier that
+	// `review verify` reads: a reply is one JSON object of findings or verdicts, a few kilobytes, and 1 MiB
+	// is far above any real one. The command reads one byte past it to know a reply is too large and never
+	// the rest.
 	MaxReplyBytes = 1 << 20
+
+	// MaxStoredBytes bounds a stored file that a command reads back, a result or a verdict: a reply of at
+	// most MaxReplyBytes with the binding of a candidate whose paths are listed one by one. The store reads
+	// one byte past it, so a file that is not one of ours is never read whole.
+	MaxStoredBytes = 8 << 20
 
 	// StoredVersion is the version of the stored file (EncodeResult).
 	StoredVersion = 1
 
 	// PayloadKind is the payload_kind of the record of the role chain that closes a review.
 	PayloadKind = "review-report"
-	// EvidenceDiff and EvidenceResult are the kinds of the evidence that binds the record to the range it
-	// reviewed and to the stored bytes of the result.
-	EvidenceDiff   = "review-diff"
-	EvidenceResult = "review-result"
+	// EvidenceDiff, EvidenceResult and EvidenceVerifier are the kinds of the evidence that binds the record
+	// to the range it reviewed, to the stored bytes of the result and, when the verifier ran, to the stored
+	// bytes of its verdict.
+	EvidenceDiff     = "review-diff"
+	EvidenceResult   = "review-result"
+	EvidenceVerifier = "verifier-report"
 )
 
 // The reasons the functions of this package refuse. An error they return wraps exactly one of them, so a
@@ -81,6 +96,10 @@ var (
 	ErrReplyTooLarge = errors.New("review: reply too large")
 	// ErrReplyNotJSON is a reply that is not one JSON value, which a JSON file cannot hold.
 	ErrReplyNotJSON = errors.New("review: reply is not JSON")
+	// ErrInvalidResultName is a name that is not the name of a stored result, <head12>-<n>.json.
+	ErrInvalidResultName = errors.New("review: invalid result name")
+	// ErrInvalidStored is a stored file that is not one EncodeResult writes.
+	ErrInvalidStored = errors.New("review: invalid stored file")
 )
 
 // Candidate is what a review is about, as computed from git: the zero Candidate names nothing.

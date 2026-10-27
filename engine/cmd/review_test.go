@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -22,6 +23,7 @@ import (
 	reviewapp "github.com/labdrian-ai/labdrian-sdd-overlay/engine/review/app"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review/fsstore"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review/gitexec"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/reviewverdict"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/roles"
 )
 
@@ -186,7 +188,7 @@ func listNames(t *testing.T, dir string) []string {
 	return names
 }
 
-// The two verbs are routed, and a command line the verbs cannot read is a usage error: exit 1 with one line
+// The three verbs are routed, and a command line the verbs cannot read is a usage error: exit 1 with one line
 // on standard error and nothing made, before git is asked anything.
 func TestReviewRefusesACommandLineItCannotRead(t *testing.T) {
 	for _, tc := range []struct {
@@ -194,8 +196,13 @@ func TestReviewRefusesACommandLineItCannotRead(t *testing.T) {
 		args []string
 		want string
 	}{
-		{"no verb", nil, "error: review requires a verb: bind, record\n"},
-		{"an unknown verb", []string{"bogus"}, "error: review: unknown verb \"bogus\" (expected bind or record)\n"},
+		{"no verb", nil, "error: review requires a verb: bind, record, verify\n"},
+		{"an unknown verb", []string{"bogus"}, "error: review: unknown verb \"bogus\" (expected bind, record or verify)\n"},
+		{"verify with no feature", []string{"verify", "--stored", "s.json"}, "error: review verify: --feature is required\n"},
+		{"verify with no stored result", []string{"verify", "--feature", "f"}, "error: review verify: --stored is required\n"},
+		{"verify with a flag of record", []string{"verify", "--feature", "f", "--stored", "s.json", "--head", "h"}, "error: review verify: unknown flag \"--head\"\n"},
+		{"the verdicts twice", []string{"verify", "--feature", "f", "--stored", "s.json", "--verdicts", "a", "--verdicts", "b"}, "error: review verify: --verdicts given twice\n"},
+		{"the stored result given to record", []string{"record", "--feature", "f", "--base", "b", "--head", "h", "--stored", "s.json"}, "error: review record: unknown flag \"--stored\"\n"},
 		{"an unknown flag", []string{"bind", "--nope"}, "error: review bind: unknown flag \"--nope\"\n"},
 		{"a flag with no value", []string{"bind", "--base"}, "error: review bind: --base requires a value\n"},
 		{"a positional argument", []string{"bind", "extra"}, "error: review bind: unexpected argument \"extra\"\n"},
@@ -905,6 +912,35 @@ func TestReviewVerbsOfTheBuiltProgramBindStoreAndHandOffARecordTheChainAccepts(t
 	if got := listNames(t, w.results("own-rdd")); len(got) != 2 {
 		t.Errorf("results = %q after a refused reply, want the two that were there", got)
 	}
+
+	// A reviewer finds a blocker and the verifier reproduces it: a reply that is not a verdict is refused and
+	// stores nothing, the verdict is stored beside the result, and the skeleton it prints, with the members of the
+	// parent filled, is a record the chain accepts.
+	third := w.head[:12] + "-3.json"
+	if _, errText, code := run(reply(t, b, withBlocker), "review", "record", "--feature", "own-rdd", "--base", "HEAD~1", "--head", "HEAD"); code != 0 {
+		t.Fatalf("record of a blocker: exit %d, stderr %q; want 0", code, errText)
+	}
+	out, errText, code = run("The blocker reproduces.", "review", "verify", "--feature", "own-rdd", "--stored", third)
+	if code != 2 || out != "" || !strings.Contains(errText, "the reply is refused and nothing was stored") {
+		t.Errorf("verify of prose: exit %d, stdout %q, stderr %q; want 2, nothing and the refusal", code, out, errText)
+	}
+	out, errText, code = run(verdictOn("reproduced"), "review", "verify", "--feature", "own-rdd", "--stored", third)
+	if code != 0 || !strings.Contains(errText, "the review blocks") {
+		t.Fatalf("verify: exit %d, stderr %q; want 0 and the decision", code, errText)
+	}
+	if got := listNames(t, w.results("own-rdd")); !slices.Contains(got, w.head[:12]+"-3.verifier.json") || len(got) != 4 {
+		t.Errorf("results = %q, want the three results and the verdict beside the third", got)
+	}
+	if err := json.Unmarshal([]byte(out), &skeleton); err != nil {
+		t.Fatalf("stdout is not the skeleton: %v\n%s", err, out)
+	}
+	filled = skeleton
+	filled.ProjectID, filled.GoalID, filled.ChainID, filled.Seq = "p", "g", "c", 1
+	filled.PrevSHA256 = strings.Repeat("0", 64)
+	filled.Context.Summary = "reviewed, a blocker reproduced"
+	if out, errText, code := run("", "roles", "validate", "--file", write(filled)); code != 0 || filled.ToRole != roles.RoleBuilder {
+		t.Errorf("roles validate refused the skeleton of a blocked review with only the members of the parent filled (to_role %q): exit %d\n%s%s", filled.ToRole, code, out, errText)
+	}
 	if _, errText, code := run("", "review", "bind", "--base", "HEAD~1"); code != 1 || !strings.Contains(errText, "--head is required") {
 		t.Errorf("bind with no head: exit %d, stderr %q; want 1 and the flag named", code, errText)
 	}
@@ -931,5 +967,265 @@ func TestRecordSaysAStoredResultWasNotFlushedAndStillHandsTheSkeleton(t *testing
 		if !strings.Contains(stderr.String(), want) {
 			t.Errorf("stderr = %q, want it to say %q", stderr.String(), want)
 		}
+	}
+}
+
+// withBlocker puts one BLOCKER in the reply of a reviewer: F1, which the diff introduced.
+func withBlocker(o map[string]any) {
+	o["findings"] = []any{map[string]any{
+		"id": "F1", "location": "a.txt:2", "severity": "BLOCKER", "claim": "the second line breaks the first",
+		"evidence_class": "deterministic", "causal_disposition": "introduced", "proof_refs": []any{"a.txt:2"},
+	}}
+}
+
+// verdictOn is the reply of a verifier that answers F1 with result on head.
+func verdictOn(result string) string {
+	return `{"verdicts":[{"id":"F1","result":"` + result + `","command":"go test ./...","output":"--- FAIL: TestFirst","base_result":"not-reproduced"}]}`
+}
+
+// recordBlocker records the reply of a reviewer who found the BLOCKER F1 in the commits from base to head, and
+// returns the binding of the candidate and the name of the stored result.
+func (w *reviewWorld) recordBlocker(base, head string) (reviewBinding, string) {
+	w.t.Helper()
+	stdout, stderr, exits := w.run("", "bind", "--base", base, "--head", head)
+	if !equalInts(exits, []int{0}) {
+		w.t.Fatalf("setup: review bind exit calls = %v, stderr = %q; want [0]", exits, stderr)
+	}
+	b := decodeBinding(w.t, stdout)
+	if _, stderr, exits := w.run(reply(w.t, b, withBlocker), "record", "--feature", "own-rdd", "--base", base, "--head", head); !equalInts(exits, []int{0}) {
+		w.t.Fatalf("setup: review record exit calls = %v, stderr = %q; want [0]", exits, stderr)
+	}
+	return b, head[:12] + "-1.json"
+}
+
+// verify holds the reply of a verifier to the stored result, stores it beside the result, says what it decided
+// and hands the skeleton of the record with the verdict bound as evidence and the builder as the next role.
+func TestVerifyStoresTheVerdictBesideTheResultAndPrintsTheDecisionAndTheSkeleton(t *testing.T) {
+	w := newReviewWorld(t)
+	b, stored := w.recordBlocker(w.base, w.head)
+	result, err := os.ReadFile(filepath.Join(w.results("own-rdd"), stored))
+	if err != nil {
+		t.Fatal(err)
+	}
+	verdicts := verdictOn("reproduced")
+
+	stdout, stderr, exits := w.run(verdicts, "verify", "--feature", "own-rdd", "--stored", stored)
+
+	if !equalInts(exits, []int{0}) {
+		t.Fatalf("exit calls = %v, stderr = %q; want [0]", exits, stderr)
+	}
+	short := w.head[:12]
+	verdictPath := filepath.Join(w.results("own-rdd"), short+"-1.verifier.json")
+	file, err := os.ReadFile(verdictPath)
+	if err != nil {
+		t.Fatalf("the verdict is not stored at %s: %v", verdictPath, err)
+	}
+	if info, _ := os.Stat(verdictPath); info == nil || info.Mode().Perm() != 0o644 {
+		t.Errorf("the stored verdict has mode %v, want 0644", info)
+	}
+	var compact bytes.Buffer
+	if err := json.Compact(&compact, file); err != nil || compact.String() != verdicts {
+		t.Errorf("stored verdict = %s, want the reply that was sent: %s", compact.String(), verdicts)
+	}
+	var skeleton roles.RoleHandoff
+	if err := json.Unmarshal([]byte(stdout), &skeleton); err != nil {
+		t.Fatalf("stdout is not the skeleton of a RoleHandoff: %v\n%s", err, stdout)
+	}
+	dir := "odd/review-results/own-rdd/"
+	wantEvidence := []roles.Evidence{
+		{Kind: "review-diff", Ref: w.base + ".." + w.head, SHA256: b.DiffSHA256},
+		{Kind: "review-result", Ref: dir + stored, SHA256: sum(result)},
+		{Kind: "verifier-report", Ref: dir + short + "-1.verifier.json", SHA256: sum(file)},
+	}
+	if !reflect.DeepEqual(skeleton.Evidence, wantEvidence) || skeleton.PayloadSHA256 != sum(result) || skeleton.ToRole != roles.RoleBuilder || skeleton.FromRole != roles.RoleReviewer {
+		t.Errorf("skeleton = %+v, want the reviewer's review-report of the result, the verdict as evidence %+v, and the builder next", skeleton, wantEvidence)
+	}
+	for _, want := range []string{"stored " + dir + short + "-1.verifier.json", sum(file), "the review blocks", "blocking: F1", "fills project_id, goal_id, chain_id, seq, prev_sha256, context.summary"} {
+		if !strings.Contains(stderr, want) {
+			t.Errorf("stderr = %q, want it to say %q", stderr, want)
+		}
+	}
+}
+
+// What the verb says follows the decision: who is blocking, what is left unchecked, what is fixed before delivery
+// and what is carried, and the members the parent fills, which include to_role only when nobody is next yet. A
+// verdict stored in a directory that could not be flushed is stored all the same.
+func TestVerifyReportsTheDecisionAndNamesWhatTheParentFills(t *testing.T) {
+	notFlushed := fmt.Errorf("%w: sync: input/output error", reviewapp.ErrNotFlushed)
+	for _, tc := range []struct {
+		name string
+		v    reviewapp.Verified
+		want []string
+	}{
+		{"it blocks", reviewapp.Verified{
+			Decision: reviewverdict.Decision{Outcome: reviewverdict.Blocks, Blocking: []string{"F1", "F3"}, Fix: []string{"F2"}, Carry: []string{"F4"}},
+			Handoff:  roles.RoleHandoff{ToRole: roles.RoleBuilder},
+		}, []string{"the review blocks", "blocking: F1, F3", "fix before delivery: F2", "carry: F4", "fills project_id, goal_id, chain_id, seq, prev_sha256, context.summary"}},
+		{"a check did not run", reviewapp.Verified{
+			Decision: reviewverdict.Decision{Outcome: reviewverdict.Unverified, Unverified: []string{"F1"}},
+		}, []string{"the review is not clear", "unverified: F1", "fills project_id, goal_id, chain_id, seq, prev_sha256, to_role, context.summary"}},
+		{"it is clear", reviewapp.Verified{
+			Decision: reviewverdict.Decision{Outcome: reviewverdict.Clear},
+			Handoff:  roles.RoleHandoff{ToRole: roles.RoleDelivery},
+		}, []string{"the review is clear"}},
+		{"its directory was not flushed", reviewapp.Verified{
+			Decision:   reviewverdict.Decision{Outcome: reviewverdict.Clear},
+			NotFlushed: notFlushed,
+		}, []string{"could not be flushed", "do not verify it again"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var stdout, stderr bytes.Buffer
+			code := -1
+			p := process{stdout: &stdout, stderr: &stderr, exit: func(c int) { code = c }}
+			tc.v.Path, tc.v.SHA256 = "odd/review-results/own-rdd/222222222222-1.verifier.json", "abc"
+
+			reportVerified(p, tc.v)
+
+			if code != 0 || stdout.Len() == 0 {
+				t.Errorf("exit code = %d with %d bytes on stdout, want 0 and the skeleton of the record: the verdict is stored", code, stdout.Len())
+			}
+			for _, want := range append([]string{"stored " + tc.v.Path}, tc.want...) {
+				if !strings.Contains(stderr.String(), want) {
+					t.Errorf("stderr = %q, want it to say %q", stderr.String(), want)
+				}
+			}
+		})
+	}
+}
+
+// A reply of the verifier that does not hold to the stored result is exit 2, as a refused reply of the reviewer is,
+// and nothing is stored.
+func TestVerifyRefusesAReplyThatDoesNotHoldAndStoresNothing(t *testing.T) {
+	w := newReviewWorld(t)
+	_, stored := w.recordBlocker(w.base, w.head)
+	before := listNames(t, w.results("own-rdd"))
+
+	for name, verdicts := range map[string]string{
+		"prose":                      "The blocker reproduces.",
+		"an id no finding has":       strings.Replace(verdictOn("reproduced"), `"F1"`, `"F9"`, 1),
+		"a value outside enum":       verdictOn("maybe"),
+		"a verdict without evidence": strings.Replace(verdictOn("reproduced"), `"output":"--- FAIL: TestFirst"`, `"output":""`, 1),
+	} {
+		t.Run(name, func(t *testing.T) {
+			stdout, stderr, exits := w.run(verdicts, "verify", "--feature", "own-rdd", "--stored", stored)
+
+			if stdout != "" || !equalInts(exits, []int{2}) || !strings.HasPrefix(stderr, "error: review verify: the reply is refused and nothing was stored: reviewverdict: ") {
+				t.Errorf("stdout = %q, stderr = %q, exits = %v; want nothing, the refusal of the reply by a named rule, [2]", stdout, stderr, exits)
+			}
+			if got := listNames(t, w.results("own-rdd")); !reflect.DeepEqual(got, before) {
+				t.Errorf("results = %q after a refused reply, want %q", got, before)
+			}
+		})
+	}
+}
+
+// A candidate is corrected once. The second head of a base whose review was blocked, when it is blocked too, is
+// refused with exit 1 and nothing is stored: the owner decides.
+func TestVerifyRefusesASecondBlockingVerdictForTheSameBaseAndStoresNothing(t *testing.T) {
+	w := newReviewWorld(t)
+	_, first := w.recordBlocker(w.base, w.head)
+	if _, stderr, exits := w.run(verdictOn("reproduced"), "verify", "--feature", "own-rdd", "--stored", first); !equalInts(exits, []int{0}) {
+		t.Fatalf("setup: the first verify exit calls = %v, stderr = %q; want [0]", exits, stderr)
+	}
+	overlaytest.WriteFile(t, w.root, "a.txt", "one\ntwo\nthree\n")
+	w.git("add", "-A")
+	w.git("commit", "-q", "-m", "fix")
+	fix := w.name("HEAD")
+	_, second := w.recordBlocker(w.base, fix)
+
+	stdout, stderr, exits := w.run(verdictOn("reproduced"), "verify", "--feature", "own-rdd", "--stored", second)
+
+	if stdout != "" || !equalInts(exits, []int{1}) || !strings.Contains(stderr, "the correction round of the candidate was spent") || !strings.Contains(stderr, w.head[:12]+"-1.verifier.json") {
+		t.Errorf("stdout = %q, stderr = %q, exits = %v; want nothing, an error that names the verdict that spent the round, [1]", stdout, stderr, exits)
+	}
+	if _, err := os.Stat(filepath.Join(w.results("own-rdd"), fix[:12]+"-1.verifier.json")); err == nil {
+		t.Error("the verdict of the second head is stored, want nothing stored")
+	}
+}
+
+// The reply of the verifier is read from the file --verdicts names, a relative one from the working directory
+// of the process, or from stdin when the flag is "-" or absent.
+func TestVerifyReadsTheReplyFromTheFileOfTheFlagOrFromStdin(t *testing.T) {
+	for _, tc := range []struct {
+		name, flag, stdin, file string
+	}{
+		{"a relative file", "verdicts.json", "this is not the reply", verdictOn("reproduced")},
+		{"a dash", "-", verdictOn("reproduced"), "this is not the reply"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			w := newReviewWorld(t)
+			_, stored := w.recordBlocker(w.base, w.head)
+			overlaytest.WriteFile(t, w.root, "verdicts.json", tc.file)
+
+			_, stderr, exits := w.run(tc.stdin, "verify", "--feature", "own-rdd", "--stored", stored, "--verdicts", tc.flag)
+
+			if !equalInts(exits, []int{0}) {
+				t.Fatalf("exit calls = %v, stderr = %q; want [0]", exits, stderr)
+			}
+			file, err := os.ReadFile(filepath.Join(w.results("own-rdd"), w.head[:12]+"-1.verifier.json"))
+			var compact bytes.Buffer
+			if err != nil || json.Compact(&compact, file) != nil || compact.String() != verdictOn("reproduced") {
+				t.Errorf("stored verdict = %q (%v), want the reply that was read: %s", file, err, verdictOn("reproduced"))
+			}
+		})
+	}
+}
+
+// The help of the labdrian wrapper (bin/lib/usage.sh) is shorter than the engine's, and written by hand: it says
+// the same signature, in the wrapper's spelling, and the same facts a caller acts on, so the two cannot drift.
+func TestWrapperUsageOfReviewVerifySaysWhatTheEngineUsageSays(t *testing.T) {
+	wrapper, err := os.ReadFile("../../bin/lib/usage.sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out bytes.Buffer
+	usage(&out)
+	// The wrapper's text wraps at its own width, so its words are compared with the line breaks taken out.
+	flat := strings.Join(strings.Fields(string(wrapper)), " ")
+	for _, pair := range []struct{ engine, inWrapper string }{
+		{"engine review verify --feature <name> --stored <result> [--verdicts <file>|-] [--cwd <repo>]", "verify --feature NAME --stored RESULT [--verdicts FILE|-] [--cwd REPO]"},
+		{"<head12>-<n>.verifier.json", "HEAD12-N.verifier.json"},
+		{"never over an existing file", "never over a file"},
+		{"verifier-report", "verifier-report"},
+		{"to_role filled (builder when", "to_role filled (builder when"},
+		{"delivery when it is clear", "delivery when it is clear"},
+		{"one correction round per candidate", "one correction round per candidate"},
+		{"exit 0 stored, 2 reply refused, 1 usage error", "exit 0 stored, 2 reply refused, 1 error"},
+	} {
+		engine, inWrapper := pair.engine, pair.inWrapper
+		if !strings.Contains(out.String(), engine) {
+			t.Errorf("the engine usage lacks %q", engine)
+		}
+		if !strings.Contains(flat, inWrapper) {
+			t.Errorf("bin/lib/usage.sh lacks %q, which the engine usage says as %q", inWrapper, engine)
+		}
+	}
+}
+
+func TestUsageDocumentsReviewVerify(t *testing.T) {
+	var out bytes.Buffer
+	usage(&out)
+	text := out.String()
+
+	for _, want := range []string{
+		"engine review verify --feature <name> --stored <result> [--verdicts <file>|-] [--cwd <repo>]",
+		"<head12>-<n>.verifier.json", "evidence review-diff, review-result and verifier-report",
+		"at most one correction round per candidate", "exit 0 stored, 2 reply refused, 1 usage error, a spent correction round or any other failure",
+	} {
+		if !strings.Contains(text, want) {
+			t.Errorf("usage lacks %q", want)
+		}
+	}
+}
+
+// require names the first flag that has no value, and refuses a name it does not know instead of reading it
+// as a flag that was left out.
+func TestReviewFlagsRequireRefusesANameItDoesNotKnow(t *testing.T) {
+	f := reviewFlags{feature: "own-rdd"}
+	if err := f.require("--feature", "--stored"); err == nil || err.Error() != "--stored is required" {
+		t.Errorf("require(--feature, --stored) error = %v, want \"--stored is required\"", err)
+	}
+	if err := f.require("--feature", "--sotred"); err == nil || !strings.Contains(err.Error(), "--sotred is not a flag that can be required") {
+		t.Errorf("require(--feature, --sotred) error = %v, want one that says --sotred is not a flag that can be required", err)
 	}
 }
