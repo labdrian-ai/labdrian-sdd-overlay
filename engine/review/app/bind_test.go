@@ -81,6 +81,74 @@ func TestBindReusesTheWorktreeThatIsAtTheHead(t *testing.T) {
 	}
 }
 
+// Two binds of one head at the same moment both find no worktree and both ask git to make it; the one that
+// loses gets git's refusal. It looks at the path again, finds the worktree the other made, at the head, and
+// uses it as it would have used one that was there from the start.
+func TestBindReusesTheWorktreeAConcurrentBindMadeBetweenTheInspectionAndTheAdd(t *testing.T) {
+	g := newFakeGit()
+	g.fail["AddWorktree"] = errors.New("git worktree add: fatal: '" + wantWorktree + "' already exists")
+	g.worktreeLater = []worktreeAnswer{{state: app.WorktreeState{Present: true, OfRepository: true, Head: headSHA}}}
+	svc := app.New(g, newFakeResults())
+
+	got, err := svc.Bind("/work/wt/feature", "HEAD~1", "HEAD")
+	if err != nil {
+		t.Fatalf("Bind() error = %v, want nil: the worktree is there, at the head", err)
+	}
+
+	if got.Worktree != wantWorktree || got.Created {
+		t.Errorf("Worktree = %q (created %v), want %q reused: this bind did not make it", got.Worktree, got.Created, wantWorktree)
+	}
+	if n := g.called("AddWorktree"); n != 1 {
+		t.Errorf("git calls = %q, want exactly one AddWorktree", g.calls)
+	}
+	if n := g.count("Worktree " + wantWorktree); n != 2 {
+		t.Errorf("git calls = %q, want the path inspected twice: before the add and once after it failed", g.calls)
+	}
+}
+
+// When the add fails and what is at the path now is not the worktree of this repository at the head (nothing,
+// another commit, something that is not a worktree, or an answer git could not give), the error of the add is
+// the answer: it is not retried, and no refusal is made up from a second look.
+func TestBindReturnsTheErrorOfTheAddWhenWhatIsThereNowIsNotTheWorktreeItNeeds(t *testing.T) {
+	boom := errors.New("git worktree add: fatal: could not create the worktree")
+	cannotSay := errors.New("git: cannot say what is at the path")
+	for _, tc := range []struct {
+		name  string
+		later []worktreeAnswer
+	}{
+		{"nothing is there", nil},
+		{"a worktree at another commit", []worktreeAnswer{{state: app.WorktreeState{Present: true, OfRepository: true, Head: otherSHA}}}},
+		{"something that is not a worktree of the repository", []worktreeAnswer{{state: app.WorktreeState{Present: true}}}},
+		{"git cannot say", []worktreeAnswer{{err: cannotSay}}},
+		// The state that comes with an error is not an answer, and a Head is the Head of a worktree of the
+		// repository that is there: neither is taken for the worktree the bind needs.
+		{"git cannot say, with a state that looks right", []worktreeAnswer{{state: app.WorktreeState{Present: true, OfRepository: true, Head: headSHA}, err: cannotSay}}},
+		{"something that is not a worktree of the repository, with the head named", []worktreeAnswer{{state: app.WorktreeState{Present: true, Head: headSHA}}}},
+		{"nothing is there, with the rest of a worktree named", []worktreeAnswer{{state: app.WorktreeState{OfRepository: true, Head: headSHA}}}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			g := newFakeGit()
+			g.fail["AddWorktree"] = boom
+			g.worktreeLater = tc.later
+			svc := app.New(g, newFakeResults())
+
+			_, err := svc.Bind("/work/wt/feature", "HEAD~1", "HEAD")
+
+			if !errors.Is(err, boom) {
+				t.Errorf("Bind() error = %v, want the error of the add: %v", err, boom)
+			}
+			for _, other := range []error{app.ErrWorktreeElsewhere, app.ErrWorktreeForeign, cannotSay} {
+				if errors.Is(err, other) {
+					t.Errorf("Bind() error = %v, want it not to be %v: the answer is the error of the add", err, other)
+				}
+			}
+			if n := g.called("AddWorktree"); n != 1 {
+				t.Errorf("git calls = %q, want exactly one AddWorktree: it is not retried", g.calls)
+			}
+		})
+	}
+}
+
 // A worktree checked out at another commit would show the reviewer files that are not the candidate's.
 func TestBindRefusesAWorktreeAtAnotherCommit(t *testing.T) {
 	g := newFakeGit()

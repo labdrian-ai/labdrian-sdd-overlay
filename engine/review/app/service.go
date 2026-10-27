@@ -3,6 +3,7 @@ package app
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/reviewresult"
@@ -15,14 +16,33 @@ import (
 // not a race.
 const maxNumberAttempts = 16
 
+// The wait between two tries: numberBackoff after the first lost race, doubled after each further one up to
+// maxNumberBackoff. Nothing is waited before the first try or after the last, so the sixteen tries of a
+// directory with no free number wait 513ms in all: long enough for the writers that collide to spread out,
+// short enough that a person never sees it.
+const (
+	numberBackoff    = time.Millisecond
+	maxNumberBackoff = 50 * time.Millisecond
+)
+
 // Service is the use cases of `engine review` over the ports.
 type Service struct {
 	git     Git
 	results Results
+	sleep   func(time.Duration)
 }
 
-// New is the Service over git and results.
+// New is the Service over git and results. It never waits between two tries for a result number: the clock
+// is not the application's to read (the architecture guard refuses time.Sleep in this ring), so the one who
+// builds the Service hands it in with WithSleep.
 func New(git Git, results Results) Service { return Service{git: git, results: results} }
+
+// WithSleep is the Service that waits with sleep between two tries for a result number. A nil sleep is no
+// waiting at all, as New makes it.
+func (s Service) WithSleep(sleep func(time.Duration)) Service {
+	s.sleep = sleep
+	return s
+}
 
 // Bound is what Bind made: the candidate, and the worktree that is at its head.
 type Bound struct {
@@ -42,6 +62,11 @@ type Bound struct {
 // directory behind. One that is already there at the head is reused and changed in nothing. One at another
 // commit (ErrWorktreeElsewhere), and anything else at that path (ErrWorktreeForeign), is refused and left as
 // it is.
+//
+// Two binds of one head at the same moment can both find no worktree; the one whose add loses to the other's
+// looks at the path once more, and when the worktree of the repository is there at the head it is reused
+// (Created false) as if it had been there from the start. In any other case the error of the add is the
+// answer.
 func (s Service) Bind(dir, base, head string) (Bound, error) {
 	repo, candidate, err := s.candidate(dir, base, head)
 	if err != nil {
@@ -55,6 +80,9 @@ func (s Service) Bind(dir, base, head string) (Bound, error) {
 	switch {
 	case !state.Present:
 		if err := s.git.AddWorktree(repo, path, candidate.Head); err != nil {
+			if s.isWorktreeAt(repo, path, candidate.Head) {
+				return Bound{Candidate: candidate, Worktree: path}, nil
+			}
 			return Bound{}, fmt.Errorf("make the worktree %s: %w", path, err)
 		}
 		return Bound{Candidate: candidate, Worktree: path, Created: true}, nil
@@ -65,6 +93,13 @@ func (s Service) Bind(dir, base, head string) (Bound, error) {
 			ErrWorktreeElsewhere, path, state.Head, candidate.Head, path)
 	}
 	return Bound{Candidate: candidate, Worktree: path}, nil
+}
+
+// isWorktreeAt says whether what is at path is, now, a worktree of the repository with head checked out. Any
+// other answer, and a path git cannot say anything about, is no.
+func (s Service) isWorktreeAt(repo Repository, path, head string) bool {
+	state, err := s.git.Worktree(repo, path)
+	return err == nil && state.Present && state.OfRepository && state.Head == head
 }
 
 // Recorded is what Record stored.
@@ -112,25 +147,37 @@ func (s Service) Record(dir, feature, base, head string, reply []byte) (Recorded
 }
 
 // store takes the next free number of the head in the directory of the feature. A name that is taken by a
-// writer that raced this one is not an error: it lists the directory again and takes the next number.
-func (s Service) store(root, feature string, c review.Candidate, file []byte) (number int, name string, err error) {
-	for attempt := 0; attempt < maxNumberAttempts; attempt++ {
+// writer that raced this one is not an error: after a short wait, longer each time, it lists the directory
+// again and takes the next number, up to maxNumberAttempts tries.
+func (s Service) store(root, feature string, c review.Candidate, file []byte) (int, string, error) {
+	wait := numberBackoff
+	for attempt := 1; attempt <= maxNumberAttempts; attempt++ {
 		names, err := s.results.Names(root, feature)
 		if err != nil {
 			return 0, "", fmt.Errorf("list %s/%s: %w", review.ResultsDir, feature, err)
 		}
-		number = review.NextNumber(names, c)
-		name = review.ResultName(c, number)
+		number := review.NextNumber(names, c)
+		name := review.ResultName(c, number)
 		err = s.results.Create(root, feature, name, file)
 		switch {
-		case errors.Is(err, ErrExists):
-			continue
-		case err != nil:
+		case err == nil:
+			return number, name, nil
+		case !errors.Is(err, ErrExists):
 			return 0, "", fmt.Errorf("store %s: %w", review.ResultPath(feature, name), err)
 		}
-		return number, name, nil
+		if attempt < maxNumberAttempts {
+			s.pause(wait)
+			wait = min(wait*2, maxNumberBackoff)
+		}
 	}
 	return 0, "", fmt.Errorf("%w: %d tries in %s/%s", ErrNoFreeNumber, maxNumberAttempts, review.ResultsDir, feature)
+}
+
+// pause waits for d with the clock the Service was given, and not at all when it was given none.
+func (s Service) pause(d time.Duration) {
+	if s.sleep != nil {
+		s.sleep(d)
+	}
 }
 
 // candidate locates the repository that holds dir and binds the diff from base to head, both revisions as

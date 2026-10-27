@@ -2,9 +2,11 @@ package app_test
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review/app"
@@ -76,7 +78,7 @@ func TestRecordTakesTheNextFreeNumber(t *testing.T) {
 // Two records racing for one number: the one that lost lists the directory again and takes the next.
 func TestRecordTakesTheNextNumberWhenAnotherWriterTookItFirst(t *testing.T) {
 	g, store := newFakeGit(), newFakeResults()
-	store.raceOnce = true
+	store.races = 1
 	reply := replyFor(t, candidateOf(t, g))
 	svc := app.New(g, store)
 
@@ -88,12 +90,13 @@ func TestRecordTakesTheNextNumberWhenAnotherWriterTookItFirst(t *testing.T) {
 	if want := "odd/review-results/own-rdd/222222222222-2.json"; got.Path != want || got.Number != 2 {
 		t.Errorf("Path = %q, Number = %d; want %q and 2", got.Path, got.Number, want)
 	}
-	if string(store.files["own-rdd"]["222222222222-1.json"]) != "written by the other writer" {
+	if string(store.files["own-rdd"]["222222222222-1.json"]) != otherWriter {
 		t.Errorf("the file of the other writer was changed: %q", store.files["own-rdd"]["222222222222-1.json"])
 	}
 }
 
-// A directory that never has a free number is an error, not a loop.
+// A directory that never has a free number is an error, not a loop, and the number of tries is part of the
+// contract: sixteen, each one listing the directory again.
 func TestRecordGivesUpWhenNoNumberStaysFree(t *testing.T) {
 	g := newFakeGit()
 	store := newFakeResults()
@@ -105,8 +108,148 @@ func TestRecordGivesUpWhenNoNumberStaysFree(t *testing.T) {
 	if !errors.Is(err, app.ErrNoFreeNumber) {
 		t.Fatalf("Record() error = %v, want one that is %v", err, app.ErrNoFreeNumber)
 	}
-	if n := store.created(); n < 2 || n > 100 {
-		t.Errorf("Create was called %d times, want a few tries and a bound", n)
+	if !strings.Contains(err.Error(), "16 tries") {
+		t.Errorf("Record() error = %q, want it to say how many tries were made: 16", err)
+	}
+	if n := store.created(); n != 16 {
+		t.Errorf("Create was called %d times, want exactly 16 tries", n)
+	}
+	if n := store.listed(); n != 16 {
+		t.Errorf("the directory was listed %d times, want once per try (16)", n)
+	}
+}
+
+// A directory in which another writer takes each number just before this one does still gives a free number
+// as long as that happens fewer times than there are tries. Every try lists the directory again, which is how
+// the number moves on, and the files of the other writers are left as they are.
+func TestRecordLandsOnAFreeNumberWhenAnotherWriterTakesEachNumberItTries(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		races  int
+		number int // the number stored; 0 when none stays free
+	}{
+		{"three writers in a row", 3, 4},
+		{"as many writers as the tries allow, but one", 15, 16},
+		{"as many writers as there are tries", 16, 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			g, store := newFakeGit(), newFakeResults()
+			store.races = tc.races
+			svc := app.New(g, store)
+
+			got, err := svc.Record("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", replyFor(t, candidateOf(t, g)))
+
+			stored := store.files["own-rdd"]
+			others := 0
+			for _, content := range stored {
+				if string(content) == otherWriter {
+					others++
+				}
+			}
+			if others != tc.races {
+				t.Errorf("%d files of the other writers are there, want the %d they wrote, untouched", others, tc.races)
+			}
+			if n, want := store.created(), min(tc.races+1, 16); n != want {
+				t.Errorf("Create was called %d times, want %d", n, want)
+			}
+			if store.listed() != store.created() {
+				t.Errorf("the directory was listed %d times for %d tries, want it listed again before each", store.listed(), store.created())
+			}
+			if tc.number == 0 {
+				if !errors.Is(err, app.ErrNoFreeNumber) {
+					t.Fatalf("Record() error = %v, want one that is %v", err, app.ErrNoFreeNumber)
+				}
+				if len(stored) != tc.races {
+					t.Errorf("%d files are stored, want only the %d of the other writers", len(stored), tc.races)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("Record() error = %v, want nil: the number %d is free", err, tc.number)
+			}
+			name := fmt.Sprintf("222222222222-%d.json", tc.number)
+			if got.Number != tc.number || got.Path != "odd/review-results/own-rdd/"+name || len(stored[name]) == 0 || string(stored[name]) == otherWriter {
+				t.Errorf("Number = %d, Path = %q, stored %q; want number %d at %s holding the reply", got.Number, got.Path, stored[name], tc.number, name)
+			}
+		})
+	}
+}
+
+// A writer that lost the race for a number waits before it tries again, and waits longer each time, so that
+// writers that keep colliding do not hammer a directory the others are writing to. The wait is short and its
+// total bounded. There is one between two tries: none before the first, none after the last, which gives up.
+func TestRecordWaitsBetweenTriesAndLongerEachTime(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		races     int  // writers that take the number first
+		noneFree  bool // every number is taken
+		wantTries int
+		wantErr   error
+	}{
+		{"no other writer", 0, false, 1, nil},
+		{"one other writer", 1, false, 2, nil},
+		{"as many writers as the tries allow, but one", 15, false, 16, nil},
+		{"no number stays free", 0, true, 16, app.ErrNoFreeNumber},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			g, store, waits := newFakeGit(), newFakeResults(), &pauses{}
+			store.races = tc.races
+			if tc.noneFree {
+				store.fail["Create"] = app.ErrExists
+			}
+			svc := app.New(g, store).WithSleep(waits.sleep)
+
+			_, err := svc.Record("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", replyFor(t, candidateOf(t, g)))
+
+			if !errors.Is(err, tc.wantErr) {
+				t.Fatalf("Record() error = %v, want one that is %v", err, tc.wantErr)
+			}
+			if n := store.created(); n != tc.wantTries {
+				t.Fatalf("Create was called %d times, want %d", n, tc.wantTries)
+			}
+			if len(waits.asked) != tc.wantTries-1 {
+				t.Fatalf("waited %d times (%v), want %d: one between two tries, none before the first or after the last", len(waits.asked), waits.asked, tc.wantTries-1)
+			}
+			var total time.Duration
+			for i, d := range waits.asked {
+				total += d
+				if d <= 0 || d > 100*time.Millisecond {
+					t.Errorf("wait %d is %v, want a short one: more than nothing and at most 100ms", i+1, d)
+				}
+				if i > 0 && d < waits.asked[i-1] {
+					t.Errorf("wait %d is %v, shorter than the one before it (%v)", i+1, d, waits.asked[i-1])
+				}
+			}
+			if total > time.Second {
+				t.Errorf("waited %v in all, want the total bounded by a second", total)
+			}
+			if n := len(waits.asked); n > 1 && waits.asked[n-1] <= waits.asked[0] {
+				t.Errorf("the last wait is %v and the first %v, want waits that grow", waits.asked[n-1], waits.asked[0])
+			}
+		})
+	}
+}
+
+// The clock is not the application's to read, so it is handed in (the command hands in the real one): a
+// Service that was given none, or was told to wait with nothing, still takes the next number.
+func TestRecordWithoutAClockStillTakesTheNextNumber(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		svc  func(g *fakeGit, store *fakeResults) app.Service
+	}{
+		{"as made", func(g *fakeGit, store *fakeResults) app.Service { return app.New(g, store) }},
+		{"told to wait with nothing", func(g *fakeGit, store *fakeResults) app.Service { return app.New(g, store).WithSleep(nil) }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			g, store := newFakeGit(), newFakeResults()
+			store.races = 2
+
+			got, err := tc.svc(g, store).Record("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", replyFor(t, candidateOf(t, g)))
+
+			if err != nil || got.Number != 3 {
+				t.Errorf("Record() = number %d, error %v; want number 3 and no error after two lost races", got.Number, err)
+			}
+		})
 	}
 }
 

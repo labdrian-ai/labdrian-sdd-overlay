@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review/app"
@@ -24,17 +25,29 @@ const (
 
 var changedPaths = []string{"engine/guard.go", "engine/guard_test.go"}
 
+// otherWriter is what the file of a writer that raced this one holds.
+const otherWriter = "written by the other writer"
+
 // fakeRepo is the repository the fake git locates: a linked worktree of a main checkout.
 var fakeRepo = app.Repository{Root: "/work/wt/feature", Main: "/work/main", CommonDir: "/work/main/.git"}
 
 // fakeGit is the Git port with canned answers. It records every call, in order, as "Name arg ..." so a
 // test says which calls were made and which were not. A method named in fail returns that error.
+// Worktree answers worktree to its first call; worktreeLater are the answers to its second and later calls,
+// in order (a worktree that another process made in between), and worktree again once they run out.
 type fakeGit struct {
-	diff     []byte
-	paths    []string
-	worktree app.WorktreeState
-	fail     map[string]error
-	calls    []string
+	diff          []byte
+	paths         []string
+	worktree      app.WorktreeState
+	worktreeLater []worktreeAnswer
+	fail          map[string]error
+	calls         []string
+}
+
+// worktreeAnswer is one answer of Worktree: what is at the path, or why git could not say.
+type worktreeAnswer struct {
+	state app.WorktreeState
+	err   error
 }
 
 func newFakeGit() *fakeGit {
@@ -108,6 +121,9 @@ func (g *fakeGit) Worktree(repo app.Repository, path string) (app.WorktreeState,
 	if err := g.fail["Worktree"]; err != nil {
 		return app.WorktreeState{}, err
 	}
+	if later := g.count("Worktree "+path) - 2; later >= 0 && later < len(g.worktreeLater) {
+		return g.worktreeLater[later].state, g.worktreeLater[later].err
+	}
 	return g.worktree, nil
 }
 
@@ -117,12 +133,13 @@ func (g *fakeGit) AddWorktree(repo app.Repository, path, head string) error {
 }
 
 // fakeResults is the Results port over a map: the names of a feature's directory and what was created.
-// raceOnce makes the first Create find its name taken, by a writer that got there first.
+// races is how many of the first Create calls find their name taken by another writer that got there a
+// moment before: the fake stores that writer's file under the name, so the next listing shows it.
 type fakeResults struct {
-	files    map[string]map[string][]byte // feature -> name -> content
-	fail     map[string]error
-	calls    []string
-	raceOnce bool
+	files map[string]map[string][]byte // feature -> name -> content
+	fail  map[string]error
+	calls []string
+	races int
 }
 
 func newFakeResults() *fakeResults {
@@ -136,15 +153,25 @@ func (r *fakeResults) put(feature, name string, data []byte) {
 	r.files[feature][name] = data
 }
 
-func (r *fakeResults) created() int {
+// callsTo says how many calls began with prefix.
+func (r *fakeResults) callsTo(prefix string) int {
 	n := 0
 	for _, c := range r.calls {
-		if strings.HasPrefix(c, "Create ") {
+		if strings.HasPrefix(c, prefix) {
 			n++
 		}
 	}
 	return n
 }
+
+func (r *fakeResults) created() int { return r.callsTo("Create ") }
+
+func (r *fakeResults) listed() int { return r.callsTo("Names ") }
+
+// pauses records the waits a Service asks for instead of making them, so that no test sleeps.
+type pauses struct{ asked []time.Duration }
+
+func (p *pauses) sleep(d time.Duration) { p.asked = append(p.asked, d) }
 
 func (r *fakeResults) Names(root, feature string) ([]string, error) {
 	r.calls = append(r.calls, "Names "+root+" "+feature)
@@ -164,9 +191,9 @@ func (r *fakeResults) Create(root, feature, name string, data []byte) error {
 	if err := r.fail["Create"]; err != nil {
 		return err
 	}
-	if r.raceOnce {
-		r.raceOnce = false
-		r.put(feature, name, []byte("written by the other writer"))
+	if r.races > 0 {
+		r.races--
+		r.put(feature, name, []byte(otherWriter))
 		return app.ErrExists
 	}
 	if _, taken := r.files[feature][name]; taken {
