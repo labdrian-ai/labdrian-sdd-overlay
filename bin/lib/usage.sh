@@ -230,7 +230,13 @@ Commands:
                                    next --project ID --goal ID --chain ID     read-only: allowed next roles
                                    resume --project ID --goal ID --chain ID   read-only: current role, interrupted?, reason
                                    append --project ID --goal ID --chain ID --stdin
-                                             append one record, read only from stdin
+                                             append one record, read only from stdin; a completed review-report
+                                             record is held to the files review record and verify stored in the
+                                             repository of the working directory: it needs review-diff and
+                                             review-result evidence, the review-result and the verifier-report carry
+                                             the sha256 of the stored files, and the review-diff the range and the
+                                             diff_sha256 of the stored result; evidence that is missing or differs is
+                                             exit 1, and nothing is stored
                                    match-shaper --root PATH --handoff PATH    report which Shaper v3 roles match the vocabulary
   review <verb>                    Forward review binding and storage verbs to the engine unchanged.
                                    bind --base REV --head REV [--cwd REPO]

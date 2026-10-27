@@ -133,6 +133,15 @@ The record that closes the review is a RoleHandoff appended with `labdrian roles
 | `review-result` | the stored result | its sha256 |
 | `verifier-report` | the stored verdict, when the verifier ran | its sha256 |
 
+`labdrian roles append` holds a completed `review-report` record to the files `record` and `verify` stored, in the repository of its working directory, before it stores the record (`odd/tasks/own-rdd.md`, T4). It refuses the record (exit 1, nothing stored, and the message names the evidence kind and its ref) when:
+
+- it lacks the `review-diff` or the `review-result` evidence, or carries a kind twice, so that none of the pieces is the evidence of its kind (the `verifier-report` is optional: the verifier may not have run);
+- the ref of the `review-result` is not exactly one `odd/review-results/<feature>/<head12>-<n>.json` (no other path, none that leaves the directory, no verdict, no temporary file), or the file is not stored, or its sha256 is not the one of the evidence, or the file is not a result. It is read as `verify` reads it, through the store that refuses a link on the way, a file that is not a regular file and a file above 8 MiB;
+- the `review-diff` is not the range `<base>..<head>` and the `diff_sha256` of the binding stored in that result;
+- the `verifier-report`, when there is one, is not the verdict stored beside that result, `<head12>-<n>.verifier.json`, or its sha256 is not that of the stored file.
+
+Only a completed `review-report` is held to this. One that is `interrupted` stored nothing, and a record of any other kind is not about a review; both are stored as before. This compares the record with the stored files and computes no diff.
+
 Delivery recomputes the sha256 of the canonical diff of the range (`labdrian review bind` prints it) and trusts the record only on equality: other bytes give another digest, and the record does not apply to them.
 
 A review that did not run (a refused launch, an unparseable result, an echo that differs, an incomplete inspection) is recorded `interrupted` with a `resume_reason`, never as approved. `record` stores nothing for it.
