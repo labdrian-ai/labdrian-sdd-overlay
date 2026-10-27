@@ -88,13 +88,24 @@ func writeRecord(t *testing.T, record map[string]any) string {
 // validateRecord validates record in a repository that holds no stored review result.
 func validateRecord(t *testing.T, record map[string]any) (int, string) {
 	t.Helper()
-	return validateRecordIn(t, record, t.TempDir())
+	return validateRecordIn(t, record, newRepo(t))
 }
 
 // validateRecordIn validates record against the stored review results of the repository at repo.
 func validateRecordIn(t *testing.T, record map[string]any, repo string) (int, string) {
 	t.Helper()
 	return runValidator(t, "--schema", schemaPath(t), "--instance", writeRecord(t, record), "--repo", repo)
+}
+
+// newRepo makes the root of a repository as far as the validator can tell: a directory that holds a .git entry. It is
+// the --repo of every test that has no stored result to give it, because a directory that is none is refused.
+func newRepo(t *testing.T) string {
+	t.Helper()
+	repo := t.TempDir()
+	if err := os.Mkdir(filepath.Join(repo, ".git"), 0o755); err != nil {
+		t.Fatalf("make the .git directory: %v", err)
+	}
+	return repo
 }
 
 // storeResults stores in repo, as `labdrian review record` does, one result of the change for each launch given: a
@@ -340,14 +351,14 @@ func TestMalformedInstanceExitsFour(t *testing.T) {
 	if err := os.WriteFile(path, []byte("{ not json"), 0o600); err != nil {
 		t.Fatalf("write: %v", err)
 	}
-	code, output := runValidator(t, "--schema", schemaPath(t), "--instance", path, "--repo", t.TempDir())
+	code, output := runValidator(t, "--schema", schemaPath(t), "--instance", path, "--repo", newRepo(t))
 	if code != exitInstance {
 		t.Fatalf("exit code = %d, want %d; output=%q", code, exitInstance, output)
 	}
 }
 
 func TestMissingSchemaExitsThree(t *testing.T) {
-	code, output := runValidator(t, "--schema", filepath.Join(t.TempDir(), "absent.json"), "--instance", writeRecord(t, validRecord()), "--repo", t.TempDir())
+	code, output := runValidator(t, "--schema", filepath.Join(t.TempDir(), "absent.json"), "--instance", writeRecord(t, validRecord()), "--repo", newRepo(t))
 	if code != exitSchema {
 		t.Fatalf("exit code = %d, want %d; output=%q", code, exitSchema, output)
 	}
@@ -375,7 +386,7 @@ func TestIncompatibleSchemaVersionExitsThree(t *testing.T) {
 	if err := os.WriteFile(path, data, 0o600); err != nil {
 		t.Fatalf("write schema: %v", err)
 	}
-	code, output := runValidator(t, "--schema", path, "--instance", writeRecord(t, validRecord()), "--repo", t.TempDir())
+	code, output := runValidator(t, "--schema", path, "--instance", writeRecord(t, validRecord()), "--repo", newRepo(t))
 	if code != exitSchema {
 		t.Fatalf("exit code = %d, want %d; output=%q", code, exitSchema, output)
 	}
@@ -385,7 +396,7 @@ func TestIncompatibleSchemaVersionExitsThree(t *testing.T) {
 }
 
 func TestUsageErrorExitsTwo(t *testing.T) {
-	if code, output := runValidator(t, "--schema", schemaPath(t), "--repo", t.TempDir()); code != exitUsage {
+	if code, output := runValidator(t, "--schema", schemaPath(t), "--repo", newRepo(t)); code != exitUsage {
 		t.Fatalf("missing --instance: exit code = %d, want %d; output=%q", code, exitUsage, output)
 	}
 }
@@ -421,14 +432,14 @@ func TestCommittedActualsFixturesValidate(t *testing.T) {
 		}
 		claimed, countsLenses := record["review_lens_count"]
 		if !countsLenses {
-			code, output := runValidator(t, "--schema", schemaPath(t), "--instance", path, "--repo", t.TempDir())
+			code, output := runValidator(t, "--schema", schemaPath(t), "--instance", path, "--repo", newRepo(t))
 			if code != exitOK {
 				t.Errorf("%s: exit code = %d, want %d; output=%q", rel, code, exitOK, output)
 			}
 			continue
 		}
 		refusedForItsCount++
-		code, output := runValidator(t, "--schema", schemaPath(t), "--instance", path, "--repo", t.TempDir())
+		code, output := runValidator(t, "--schema", schemaPath(t), "--instance", path, "--repo", newRepo(t))
 		if want := fmt.Sprintf("review_lens_count is %v but", claimed); code != exitSemanticValidation || !strings.Contains(output, want) {
 			t.Errorf("%s: exit code = %d, output=%q; want exit %d and %q: the count was never stored", rel, code, output, exitSemanticValidation, want)
 		}
@@ -456,7 +467,7 @@ func lensRecord(claimed any) map[string]any {
 // launches that were sent two rows and one row make 3, and a record that claims 3 is accepted, with the comparison
 // said on stdout so that a pass is never silent.
 func TestLensCountEqualToTheRowsOfTheStoredResultsIsAccepted(t *testing.T) {
-	repo := storeResults(t, t.TempDir(), "sample-change", []string{"default", "readability"}, []string{"default"})
+	repo := storeResults(t, newRepo(t), "sample-change", []string{"default", "readability"}, []string{"default"})
 
 	code, output := validateRecordIn(t, lensRecord(3), repo)
 
@@ -471,7 +482,7 @@ func TestLensCountEqualToTheRowsOfTheStoredResultsIsAccepted(t *testing.T) {
 // A count that differs from the rows the stored results record is refused whichever way it differs, and the refusal
 // names both numbers: the one the record claims and the one counted.
 func TestLensCountThatDiffersFromTheRowsOfTheStoredResultsIsRefusedNamingBothNumbers(t *testing.T) {
-	repo := storeResults(t, t.TempDir(), "sample-change", []string{"default", "readability"}, []string{"default"})
+	repo := storeResults(t, newRepo(t), "sample-change", []string{"default", "readability"}, []string{"default"})
 	for _, claimed := range []int{2, 5} {
 		code, output := validateRecordIn(t, lensRecord(claimed), repo)
 
@@ -489,9 +500,9 @@ func TestLensCountThatDiffersFromTheRowsOfTheStoredResultsIsRefusedNamingBothNum
 // A change reviewed before the rows were stored has no stored result, and the count it claims has nothing behind it:
 // it is refused, whoever else's results the repository holds, and the refusal says the change has none.
 func TestLensCountOfAChangeWithNoStoredResultIsRefused(t *testing.T) {
-	anotherChangeOnly := storeResults(t, t.TempDir(), "another-change", []string{"default", "readability", "risk-line"})
+	anotherChangeOnly := storeResults(t, newRepo(t), "another-change", []string{"default", "readability", "risk-line"})
 	cases := map[string]string{
-		"an empty repository":                t.TempDir(),
+		"an empty repository":                newRepo(t),
 		"the results of another change only": anotherChangeOnly,
 	}
 	for name, repo := range cases {
@@ -526,7 +537,7 @@ func TestOmittedLensCountOfAChangeWithNoStoredResultPassesAndSaysNothingWasCompa
 // Omitting the count is not a way around the rows: when a stored result of the change records them, a record without
 // the count is refused and the refusal names the number to write.
 func TestOmittedLensCountWhileTheStoredResultsRecordRowsIsRefused(t *testing.T) {
-	repo := storeResults(t, t.TempDir(), "sample-change", []string{"default", "readability"}, []string{"default"})
+	repo := storeResults(t, newRepo(t), "sample-change", []string{"default", "readability"}, []string{"default"})
 
 	code, output := validateRecordIn(t, lensRecord(nil), repo)
 
@@ -584,10 +595,82 @@ func TestRepoThatIsNotADirectoryExitsSeven(t *testing.T) {
 	}
 }
 
+// --repo is an absolute path, as the usage text says: go run -C changes the working directory, so a relative path names
+// whatever the caller's directory was not. It is refused as a usage error before anything is read, even when it names a
+// repository root whose results agree with the count, so that the refusal is about the form and not about the content.
+func TestRelativeRepoExitsTwoAndChecksNothing(t *testing.T) {
+	repo := storeResults(t, newRepo(t), "sample-change", []string{"default"})
+	here, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("working directory: %v", err)
+	}
+	toRepo, err := filepath.Rel(here, repo)
+	if err != nil {
+		t.Fatalf("path from %s to %s: %v", here, repo, err)
+	}
+	cases := []struct{ name, repo string }{
+		{"the working directory", "."},
+		{"a repository root written relative to the working directory", toRepo},
+	}
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			code, output := validateRecordIn(t, lensRecord(1), tt.repo)
+
+			if code != exitUsage {
+				t.Fatalf("exit code = %d, want %d; output=%q", code, exitUsage, output)
+			}
+			if want := "--repo " + tt.repo + " is not an absolute path"; !strings.Contains(output, want) || strings.Contains(output, "ok:") {
+				t.Errorf("output %q must say %q and must not say ok", output, want)
+			}
+		})
+	}
+}
+
+// --repo is the root of the repository that holds the stored results, and a directory that is not one holds none of
+// them: with any directory, or a subdirectory of the repository, an omitted count would pass as "nothing to compare"
+// while the repository records rows. It is exit 7 naming the path, as a --repo that is not a directory is.
+func TestRepoThatIsNotTheRootOfARepositoryExitsSeven(t *testing.T) {
+	repo := storeResults(t, newRepo(t), "sample-change", []string{"default", "readability"}, []string{"default"})
+	cases := []struct{ name, dir string }{
+		{"a directory that holds no repository", t.TempDir()},
+		{"a subdirectory of the repository that holds the results", filepath.Join(repo, "odd")},
+	}
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			code, output := validateRecordIn(t, lensRecord(nil), tt.dir)
+
+			if code != exitUnreadableResults {
+				t.Fatalf("exit code = %d, want %d; output=%q", code, exitUnreadableResults, output)
+			}
+			if !strings.Contains(output, tt.dir) || !strings.Contains(output, ".git") || strings.Contains(output, "ok:") {
+				t.Errorf("output %q must name %s as the directory that is not a repository root, say that it holds no .git, and must not say ok", output, tt.dir)
+			}
+		})
+	}
+}
+
+// A linked worktree is a repository root too, and its .git is a file and not a directory: the root a closing agent in
+// a worktree computes with git rev-parse --show-toplevel is still accepted, and its results are counted.
+func TestRepoThatIsALinkedWorktreeRootIsAccepted(t *testing.T) {
+	repo := storeResults(t, t.TempDir(), "sample-change", []string{"default", "readability"})
+	if err := os.WriteFile(filepath.Join(repo, ".git"), []byte("gitdir: /elsewhere/.git/worktrees/w\n"), 0o644); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+
+	code, output := validateRecordIn(t, lensRecord(2), repo)
+
+	if code != exitOK {
+		t.Fatalf("exit code = %d, want %d; output=%q", code, exitOK, output)
+	}
+	if want := `review_lens_count: 2 equals the 2 rows recorded in 1 stored review results of "sample-change"`; !strings.Contains(output, want) {
+		t.Errorf("output %q does not say what was compared, want it to contain %q", output, want)
+	}
+}
+
 // A file named like a stored result that is not one cannot be counted, and the count is refused whether the record
 // claims a number or omits it: the check runs either way.
 func TestStoredResultThatIsNotAResultExitsSevenNamingTheFile(t *testing.T) {
-	repo := storeResults(t, t.TempDir(), "sample-change", []string{"default"})
+	repo := storeResults(t, newRepo(t), "sample-change", []string{"default"})
 	broken := filepath.Join(repo, "odd", "review-results", "sample-change", "aaaaaaaaaaaa-1.json")
 	if err := os.WriteFile(broken, []byte(`{"version": 1}`), 0o644); err != nil {
 		t.Fatalf("write: %v", err)

@@ -59,7 +59,7 @@ The number is checked when the actuals record is written, not trusted (`odd/task
 
 - `CountLenses` lists `odd/review-results/<change_name>/` under the repository root it is given (the change name of the record is the name of the feature document, and a directory that is not there holds no result), reads each file named like a result as `verify` and `check` read one, and adds the length of the `rows` of each. It returns the number of results and the number of rows. A verdict, an exemption and a file of any other name are not results and are not read. It reads files and asks nothing of git.
 - It refuses what it cannot count, with an error and no number: a change name that is not one safe path segment, a directory that cannot be listed, a file named like a result that cannot be read (a link, a file that is not a regular file, a file above 8 MiB), and one that is not a result any more (`rows` missing or not the rows of a launch, a reply that no longer holds to its binding). A count that left such a file out would be a count of the files that happened to read.
-- The validator takes the repository root as `--repo`, which is required: `go run -C` changes the working directory, so the callers pass an absolute path (`skills/_shared/pre-sdd-contracts.md`, `skills/inception-pipeline/SKILL.md`). Without it the validator exits 2 and checks nothing. The checks of the shape and of the other rules run first, so a record that breaks one of them is refused for it as before.
+- The validator takes the repository root as `--repo`, which is required and is an absolute path: `go run -C` changes the working directory, so the callers pass one (`skills/_shared/pre-sdd-contracts.md`, `skills/inception-pipeline/SKILL.md`). Without it, or with a relative path, the validator exits 2 and checks nothing. It is also the root of a repository, a directory that holds a `.git` entry (a file in a linked worktree): any other directory holds none of the stored results, and an omitted count would pass as "nothing to compare" while the repository records rows, so it is exit 7. The checks of the shape and of the other rules run first, so a record that breaks one of them is refused for it as before.
 
 | the record | the stored results of the change | the validator |
 |---|---|---|
@@ -68,10 +68,10 @@ The number is checked when the actuals record is written, not trusted (`odd/task
 | `review_lens_count` N | none: the directory is missing or holds no result | exit 6, `review_lens_count is N but the stored review results of "<change>" record 0 rows (no stored review result in odd/review-results/<change>): nothing backs a count for this change`, and says to omit it |
 | omitted | record M rows, M above 0 | exit 6, `review_lens_count is omitted but the stored review results of "<change>" record M rows`, and says to write M |
 | omitted | record no row | exit 0, and a second line says that nothing was compared: `review_lens_count: omitted, and no stored review result of "<change>" records a row: there was nothing to compare` |
-| any | cannot be counted (`--repo` is not a directory, or a file named like a result is not one) | exit 7, naming the repository or the file, and that `review_lens_count` cannot be checked |
+| any | cannot be counted (`--repo` is not a directory or holds no `.git` entry, or a file named like a result is not one) | exit 7, naming the repository or the file, and that `review_lens_count` cannot be checked |
 
 - A change reviewed before the rows were stored (a gentle receipt and no stored result: nothing in `odd/review-results/` was ever written for it) has no row to count, so its record omits `review_lens_count`. A count taken from the receipt of another tool is the third row of the table: it is refused and never passed, because the validator cannot tell it from a count that was made up.
-- Exit 7 is new. The exit codes 0, 2, 3, 4, 5 and 6 keep their meanings: 2 is now also a missing `--repo`, and a pass prints one more line than it did.
+- Exit 7 is new. The exit codes 0, 2, 3, 4, 5 and 6 keep their meanings: 2 is now also a missing or relative `--repo`, and a pass prints one more line than it did.
 
 ## The verdict of the verifier
 

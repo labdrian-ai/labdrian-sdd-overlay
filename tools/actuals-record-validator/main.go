@@ -28,8 +28,9 @@
 // never a count of its own) and refuses a record whose number differs, one that
 // claims a count no stored result backs (a change reviewed before the rows were
 // stored), one that omits it while a stored result records a row, and a check
-// that cannot read the results. A check that cannot run refuses; it never
-// passes.
+// that cannot read the results (--repo is not an absolute path to the root of a
+// repository, or a stored result is not one). A check that cannot run refuses;
+// it never passes.
 package main
 
 import (
@@ -39,6 +40,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -131,9 +133,11 @@ then checks the deterministic invariants the schema cannot express.
 Options:
   --schema PATH     Actuals-record schema file
   --instance PATH   Actuals-record JSON instance
-  --repo PATH       Repository root (an absolute path, as go run -C changes the
-                    working directory) that holds the stored review results of
-                    the change, odd/review-results/<change_name>/ (required)
+  --repo PATH       Root of the repository, an absolute path (go run -C changes
+                    the working directory), the directory that holds .git (a
+                    file in a linked worktree). The stored review results of
+                    the change are odd/review-results/<change_name>/ under it
+                    (required)
   --version         Print validator/record version
   --help            Show this help
 
@@ -159,14 +163,14 @@ Semantic invariants (beyond schema shape):
 
 Exit codes:
   0  valid record, help, or version
-  2  invalid command-line usage (--repo is required)
+  2  invalid command-line usage (--repo is required, and is an absolute path)
   3  schema unavailable, malformed, incompatible, or uncompilable
   4  instance unavailable or malformed
   5  JSON Schema validation failed
   6  semantic invariant validation failed
-  7  the stored review results could not be read (--repo is not a directory, or a
-     file named like a stored result is not one), so review_lens_count was not
-     checked
+  7  the stored review results could not be read (--repo is not a directory or
+     holds no .git, or a file named like a stored result is not one), so
+     review_lens_count was not checked
 `
 
 type recordError struct {
@@ -209,6 +213,10 @@ func run(args []string, stdout, stderr io.Writer) int {
 	}
 	if *schemaPath == "" || *instancePath == "" || *repoPath == "" {
 		fmt.Fprintf(stderr, "error: --schema, --instance and --repo are all required\n\n%s", usageText)
+		return exitUsage
+	}
+	if !filepath.IsAbs(*repoPath) {
+		fmt.Fprintf(stderr, "error: --repo %s is not an absolute path: go run -C changes the working directory, so a relative one may name another directory than the caller meant\n\n%s", *repoPath, usageText)
 		return exitUsage
 	}
 
@@ -271,11 +279,7 @@ func checkLensCount(instance any, repo string) (string, error) {
 		return "", err
 	}
 	change := record.ChangeName
-	info, err := os.Stat(repo)
-	if err == nil && !info.IsDir() {
-		err = errors.New("it is not a directory")
-	}
-	if err != nil {
+	if err := checkRepositoryRoot(repo); err != nil {
 		return "", fail(exitReviewResults, "--repo %s cannot be read as the repository root (%v), so the stored review results of %q are unavailable and review_lens_count cannot be checked", repo, err, change)
 	}
 	counted, err := app.CountLenses(fsstore.New(), repo, change)
@@ -298,6 +302,24 @@ func checkLensCount(instance any, repo string) (string, error) {
 			*claimed, change, counted.Lenses, counted.Results, dir, counted.Lenses)
 	}
 	return fmt.Sprintf("review_lens_count: %d equals the %d rows recorded in %d stored review results of %q", *claimed, counted.Lenses, counted.Results, change), nil
+}
+
+// checkRepositoryRoot says why repo cannot be taken for the root of the repository that holds the stored review
+// results: it is not a directory, or it holds no .git entry (a directory in a repository, a file in a linked worktree).
+// Without that test, any directory would do and an omitted review_lens_count would pass as "nothing to compare" while
+// the real repository records rows. Whether the .git entry is a sound repository is for git to say, not for this check.
+func checkRepositoryRoot(repo string) error {
+	info, err := os.Stat(repo)
+	if err != nil {
+		return err
+	}
+	if !info.IsDir() {
+		return errors.New("it is not a directory")
+	}
+	if _, err := os.Stat(filepath.Join(repo, ".git")); err != nil {
+		return fmt.Errorf("it is not the root of a repository, which holds a .git entry: %v", err)
+	}
+	return nil
 }
 
 func readJSON(path string) (any, error) {
