@@ -8,9 +8,10 @@ package main
 // decides whether the review blocks and stores the reply beside the result. 'review exempt --feature <name>
 // --base <rev> --head <rev> --risk <none|items> [--cwd <repo>]' stores the exemption of a head from review, on the
 // report of the verifier (stdin) and the risk the agent declares. 'review check --feature <name> [--head <rev>]
-// [--cwd <repo>]' is the check of the delivery: it recomputes the candidate of the head from git and refuses unless
-// the results stored for it still hold and clear it, or an exemption stored for it still holds and no result
-// blocks it. The rules are the use cases of review/app over the adapters review/gitexec (git) and review/fsstore
+// [--base <rev>] [--cwd <repo>]' is the check of the delivery: it recomputes the candidate of the head from git and
+// refuses unless the results stored for it still hold and clear it, or an exemption stored for it still holds and no
+// result blocks it; with --base it asks that of every commit of the chain of reviews from the base to the head. The
+// rules are the use cases of review/app over the adapters review/gitexec (git) and review/fsstore
 // (the results directory); this file parses the command line, wires them and says what they did. No verb launches
 // an agent or dispatches work: a reply is a file somebody else produced.
 
@@ -433,13 +434,34 @@ type reviewCheckedJSON struct {
 	Carry      []string `json:"carry,omitempty"`
 }
 
-// runReviewCheck implements 'review check --feature [--head] [--cwd]', the check of the delivery. A head that the
-// stored results, or an exemption, clear is exit 0, and stdout names the files used. Anything that keeps a head from
+// reviewChainJSON is what 'review check --base' prints for a head that is cleared from the base by an unbroken chain of
+// reviews: both as full object names, the outcome and the ranges, from the one that starts at the base to the one that
+// ends at the head, each with the files that clear it.
+type reviewChainJSON struct {
+	Head    string            `json:"head"`
+	Base    string            `json:"base"`
+	Outcome string            `json:"outcome"`
+	Ranges  []reviewRangeJSON `json:"ranges"`
+}
+
+// reviewRangeJSON is one range of the chain: the commit it starts from, the commit it ends at, and the stored results
+// (an empty array when an exemption alone clears it) and exemptions that bind that commit, as 'review check' prints them.
+type reviewRangeJSON struct {
+	Base       string               `json:"base"`
+	Head       string               `json:"head"`
+	Results    []reviewCheckedJSON  `json:"results"`
+	Exemptions []reviewExemptedJSON `json:"exemptions,omitempty"`
+}
+
+// runReviewCheck implements 'review check --feature [--head] [--base] [--cwd]', the check of the delivery. A head that
+// the stored results, or an exemption, clear is exit 0, and stdout names the files used. Anything that keeps a head from
 // delivery, and any failure to tell, is exit 1 with the reason on stderr and nothing on stdout. The head is HEAD
-// when --head is not given; an empty one that was given is not the default.
+// when --head is not given; an empty one that was given is not the default. With --base the head is cleared only by
+// an unbroken chain of reviews from that base, and stdout lists the ranges of the chain; without it the check is by
+// head alone, as it always was.
 func runReviewCheck(p process, d deps, args []string) {
 	fail := func(err error) { reviewFailed(p, "check", err) }
-	f, err := parseReviewFlags(args, "--feature", "--head", "--cwd")
+	f, err := parseReviewFlags(args, "--feature", "--head", "--base", "--cwd")
 	if err == nil {
 		err = f.require("--feature")
 	}
@@ -456,17 +478,26 @@ func runReviewCheck(p process, d deps, args []string) {
 		fail(err)
 		return
 	}
-	checked, err := newReviewService(d).Check(dir, f.feature, head)
+	service := newReviewService(d)
+	if f.has("--base") {
+		chained, err := service.CheckChain(dir, f.feature, f.base, head)
+		if err != nil {
+			fail(err)
+			return
+		}
+		reportChained(p, chained)
+		return
+	}
+	checked, err := service.Check(dir, f.feature, head)
 	if err != nil {
 		fail(err)
 		return
 	}
-	reportChecked(p, checked)
+	reportCleared(p, checkedJSON(checked))
 }
 
-// reportChecked hands the files used on stdout. When they cannot be written the parent never received that the
-// head is cleared, and the verb says so with exit 1.
-func reportChecked(p process, checked reviewapp.Checked) {
+// checkedJSON is what 'review check' prints for a head that is cleared: the files used.
+func checkedJSON(checked reviewapp.Checked) reviewCheckJSON {
 	out := reviewCheckJSON{Head: checked.Head, Outcome: string(reviewverdict.Clear), Results: []reviewCheckedJSON{}}
 	for _, r := range checked.Results {
 		out.Results = append(out.Results, reviewCheckedJSON{
@@ -477,7 +508,23 @@ func reportChecked(p process, checked reviewapp.Checked) {
 	for _, e := range checked.Exemptions {
 		out.Exemptions = append(out.Exemptions, reviewExemptedJSON{Exemption: e.Exemption, Base: e.Candidate.Base, DiffSHA256: e.Candidate.DiffSHA256})
 	}
-	if err := writeReviewJSON(p, out); err != nil {
+	return out
+}
+
+// reportChained hands the ranges of the chain, with the files each used, on stdout.
+func reportChained(p process, chained reviewapp.Chained) {
+	out := reviewChainJSON{Head: chained.Head, Base: chained.Base, Outcome: string(reviewverdict.Clear), Ranges: []reviewRangeJSON{}}
+	for _, r := range chained.Ranges {
+		files := checkedJSON(r.Checked)
+		out.Ranges = append(out.Ranges, reviewRangeJSON{Base: r.Base, Head: r.Head, Results: files.Results, Exemptions: files.Exemptions})
+	}
+	reportCleared(p, out)
+}
+
+// reportCleared hands the answer for a head that is cleared on stdout. When it cannot be written the parent never
+// received that the head is cleared, and the verb says so with exit 1.
+func reportCleared(p process, answer any) {
+	if err := writeReviewJSON(p, answer); err != nil {
 		reviewFailed(p, "check", fmt.Errorf("the head is cleared, but the answer could not be written: %w", err))
 		return
 	}

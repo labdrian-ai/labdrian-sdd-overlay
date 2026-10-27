@@ -29,6 +29,9 @@ var (
 	// ErrNotClear is a head with a stored result that does not block and is not clear either: a finding that
 	// could block was never checked, or nothing decided the outcome. A check that did not run never passes.
 	ErrNotClear = errors.New("review: a stored result is not clear")
+	// ErrChainLoops is a chain of stored ranges that leads back to a commit it already passed, so it never reaches
+	// the base of the delivery.
+	ErrChainLoops = errors.New("review: the stored ranges lead back to a commit the chain already passed")
 )
 
 // Reviewed is a stored result that binds a head, read back together with what it makes of the review.

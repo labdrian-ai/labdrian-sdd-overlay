@@ -28,7 +28,7 @@ func TestReviewCheckRefusesACommandLineItCannotRead(t *testing.T) {
 		{"the working directory twice", []string{"check", "--feature", "f", "--cwd", "a", "--cwd", "b"}, "error: review check: --cwd given twice\n"},
 		{"a flag with no value", []string{"check", "--feature"}, "error: review check: --feature requires a value\n"},
 		{"a head with no value", []string{"check", "--feature", "f", "--head"}, "error: review check: --head requires a value\n"},
-		{"the base given to check", []string{"check", "--feature", "f", "--base", "b"}, "error: review check: unknown flag \"--base\"\n"},
+		{"the base twice", []string{"check", "--feature", "f", "--base", "a", "--base", "b"}, "error: review check: --base given twice\n"},
 		{"the stored result given to check", []string{"check", "--feature", "f", "--stored", "s.json"}, "error: review check: unknown flag \"--stored\"\n"},
 		{"a positional argument", []string{"check", "--feature", "f", "extra"}, "error: review check: unexpected argument \"extra\"\n"},
 	} {
@@ -79,8 +79,9 @@ func TestUsageDocumentsReviewCheck(t *testing.T) {
 	text := strings.Join(strings.Fields(out.String()), " ")
 
 	for _, want := range []string{
-		"engine review check --feature <name> [--head <rev>] [--cwd <repo>]",
+		"engine review check --feature <name> [--head <rev>] [--base <rev>] [--cwd <repo>]",
 		"recomputes from git the candidate of the base the result names and that head",
+		"cleared only when clear results or exemptions cover base..head as an unbroken chain",
 		"at least one result binds the head and every one is clear",
 		"a result that blocks keeps the head blocked whatever was recorded after it",
 		"a check that did not run never passes",

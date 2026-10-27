@@ -254,13 +254,18 @@ Commands:
                                              over a file; print the record skeleton with evidence verifier-report and
                                              to_role filled (builder when it blocks, delivery when it is clear); one
                                              correction round per candidate (exit 0 stored, 2 reply refused, 1 error)
-                                   check --feature NAME [--head REV] [--cwd REPO]
+                                   check --feature NAME [--head REV] [--base REV] [--cwd REPO]
                                              recompute from git the candidate of each result stored for the head
                                              (default HEAD), hold the results and verdicts to it, and refuse unless
                                              one result binds the head and every one is clear: a result that blocks,
                                              or a severe finding nobody checked, refuses, because a check that did
                                              not run never passes; an exemption that still holds clears a head that
-                                             has no result; print the files used as JSON, store nothing
+                                             has no result; print the files used as JSON, store nothing; with --base
+                                             REV, the integration base of the delivery, check a chain: reviews are
+                                             per commit, so the head is cleared only when clear results or
+                                             exemptions cover REV..head as an unbroken chain, each range starting
+                                             where the one before ended; a gap, a range that is not clear or a walk
+                                             that never reaches REV refuses; print the ranges used as JSON
                                              (exit 0 cleared, 1 refused or error)
                                    exempt --feature NAME --base REV --head REV --risk none|ITEMS [--cwd REPO]
                                              exempt a head from review on the evidence of the verifier and the risk

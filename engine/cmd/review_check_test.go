@@ -185,19 +185,20 @@ func TestCheckRefusesTheHeadNoStoredResultClearsAndStoresNothing(t *testing.T) {
 	}
 }
 
-// A head that is not a commit, and one git would read as an option, are refused before git reads a thing: the
-// option writes no file.
+// A head that is not a commit, and a head or a base git would read as an option, are refused before git reads a
+// thing: the option writes no file.
 func TestCheckRefusesWhatIsNotACommitAndWhatGitWouldReadAsAnOption(t *testing.T) {
 	w := newReviewWorld(t)
 	w.recordClean()
 	marker := filepath.Join(w.parent, "written-by-an-option")
 
-	for _, tc := range []struct{ name, head, want string }{
-		{"a name that is nothing", "nonesuch", `resolve head "nonesuch"`},
-		{"an option", "--output=" + marker, "starts with '-' and would be read as an option"},
+	for _, tc := range []struct{ name, flag, head, want string }{
+		{"a name that is nothing", "--head", "nonesuch", `resolve head "nonesuch"`},
+		{"an option", "--head", "--output=" + marker, "starts with '-' and would be read as an option"},
+		{"a base that is an option", "--base", "--output=" + marker, "starts with '-' and would be read as an option"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			stdout, stderr, exits := w.run("", "check", "--feature", "own-rdd", "--head", tc.head)
+			stdout, stderr, exits := w.run("", "check", "--feature", "own-rdd", tc.flag, tc.head)
 
 			if stdout != "" || !equalInts(exits, []int{1}) || !strings.Contains(stderr, tc.want) {
 				t.Errorf("stdout = %q, exits = %v, stderr = %q; want nothing, [1] and %q", stdout, exits, stderr, tc.want)

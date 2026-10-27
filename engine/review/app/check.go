@@ -64,9 +64,17 @@ func (s Service) Check(dir, feature, head string) (Checked, error) {
 	if err != nil {
 		return Checked{}, fmt.Errorf("list %s/%s: %w", review.ResultsDir, feature, err)
 	}
+	return s.cleared(repo, feature, names, headName)
+}
+
+// cleared decides whether what is stored for head, a full name, clears it. names is the listing of the directory of the
+// feature; every result and every exemption among them that binds head is read back and held to the files and to git as
+// Check says, and review.Cleared decides. It is what Check answers for one head and what CheckChain asks of each head of
+// a chain.
+func (s Service) cleared(repo Repository, feature string, names []string, head string) (Checked, error) {
 	var reviewed []review.Reviewed
-	for _, name := range review.ResultsOfHead(names, headName) {
-		r, binds, err := s.reviewedResult(repo, feature, name, headName)
+	for _, name := range review.ResultsOfHead(names, head) {
+		r, binds, err := s.reviewedResult(repo, feature, name, head)
 		if err != nil {
 			return Checked{}, err
 		}
@@ -75,8 +83,8 @@ func (s Service) Check(dir, feature, head string) (Checked, error) {
 		}
 	}
 	var exempted []review.Exempted
-	for _, name := range review.ExemptionsOfHead(names, headName) {
-		e, binds, err := s.exemptedHead(repo, feature, name, headName)
+	for _, name := range review.ExemptionsOfHead(names, head) {
+		e, binds, err := s.exemptedHead(repo, feature, name, head)
 		if err != nil {
 			return Checked{}, err
 		}
@@ -85,9 +93,9 @@ func (s Service) Check(dir, feature, head string) (Checked, error) {
 		}
 	}
 	if err := review.Cleared(reviewed, exempted); err != nil {
-		return Checked{}, fmt.Errorf("head %s: %w", headName, err)
+		return Checked{}, fmt.Errorf("head %s: %w", head, err)
 	}
-	return Checked{Head: headName, Results: reviewed, Exemptions: exempted}, nil
+	return Checked{Head: head, Results: reviewed, Exemptions: exempted}, nil
 }
 
 // exemptedHead reads the stored exemption called name and holds it as Check says. It reports false for an exemption

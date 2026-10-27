@@ -210,7 +210,7 @@ A review that did not run (a refused launch, an unparseable result, an echo that
 
 ## The check before delivery
 
-`labdrian review check --feature <name> [--head <rev>] [--cwd <repo>]` decides whether the head being delivered (`--head`, and `HEAD` when it is not given; an empty `--head` is a usage error) was reviewed, or exempted from review, and nothing that was stored keeps it from delivery (`odd/tasks/own-rdd.md`, T4, S5). It stores nothing. The delivery role runs it before it closes the feature (`roles/delivery/body.md`). Exit 0 cleared, 1 usage error, refusal or any other failure.
+`labdrian review check --feature <name> [--head <rev>] [--base <rev>] [--cwd <repo>]` decides whether the head being delivered (`--head`, and `HEAD` when it is not given; an empty `--head` is a usage error) was reviewed, or exempted from review, and nothing that was stored keeps it from delivery (`odd/tasks/own-rdd.md`, T4, S5). With `--base` it decides it for every commit from that base to the head (below). It stores nothing. The delivery role runs it before it closes the feature (`roles/delivery/body.md`). Exit 0 cleared, 1 usage error, refusal or any other failure.
 
 For each result of the feature that is about the head, in the order of its launches:
 
@@ -239,7 +239,17 @@ A result that blocks keeps the head blocked whatever was recorded after it: a ve
 
 On exit 0, stdout is one JSON object: `head` (the full name), `outcome` (`clear`), `results`, one for each result used (an empty array for a head that an exemption alone clears), with `result` (the stored path relative to the repository), `verdict` (the stored verdict, left out when the verifier did not run), `base`, `diff_sha256` and, when there are any, `fix` and `carry`: the ids of the findings to be fixed before delivery and to be carried as follow-ups, and `exemptions`, one for each exemption used, with `exemption` (the stored path relative to the repository), `base` and `diff_sha256` (the member is left out when there is no exemption, so that the output for a head with none is the one it always was).
 
-The check is by head: it takes no `--base`, and the base of each result and of each exemption is the one it names. A candidate that was split into one launch per commit has a result for each head, and the check clears the head it is given by the results, or the exemption, of that head alone.
+Without `--base` the check is by head: the base of each result and of each exemption is the one it names. A candidate that was split into one launch per commit has a result for each head, and the check clears the head it is given by the results, or the exemption, of that head alone.
+
+### The chain of a delivery
+
+Reviews are per commit (`odd/tasks/own-rdd.md`, L18): each result or exemption binds one commit's range, from the head of the last reviewed commit. With `--base <rev>`, the integration base of the delivery (`main`, a tracker branch or a dev branch, which the delivery role chooses to suit the project), the check clears the head only when clear results or exemptions cover `base..head` as an unbroken chain, each range starting where the one before ended. The base should be the commit the first reviewed range starts from, which is the merge base when the integration branch moved on after the branch was made. The walk goes back from the head:
+
+1. The commit is held as a single head is held, by the same code: every result and every exemption that binds it is read from the files and recomputed from git, and `review.Cleared` decides. A commit with no result and no exemption (a gap), a result that blocks or is not clear, a binding that differs and a failure of git or of the store refuse the chain.
+2. The base the range names is the next commit: the base of the first result that binds the commit, or of the first exemption when it has no result. The other results of that commit must be clear too, but they do not choose the way.
+3. The walk is done when that base is `--base`. It is refused when no result or exemption ends at a commit (a range that begins before `--base` ends there as well, and so does a chain that begins after it), and when it comes back to a commit it already passed (`review.ErrChainLoops`): each step takes a commit not passed before, so it always ends.
+
+A refusal is one line on stderr, `error: review check: the chain from <base> to <head>: ` and the refusal of the single-head check for the commit where the walk stopped (`head <commit>: review: no stored result binds the head`). On exit 0, stdout is one JSON object: `head` and `base` (full names), `outcome` (`clear`) and `ranges`, from the range that starts at `--base` to the one that ends at the head, each with `base`, `head`, `results` and `exemptions` as above (`results` is an empty array for a range that an exemption alone clears). Nothing is stored.
 
 ## What a result is not
 

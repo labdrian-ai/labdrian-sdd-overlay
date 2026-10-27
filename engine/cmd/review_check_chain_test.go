@@ -1,0 +1,218 @@
+package main
+
+// What `review check --base` decides about a chain of commits (own-rdd T4, S5, L18). Reviews are per commit: a head is
+// cleared from a delivery base only when clear results or exemptions cover base..head as an unbroken chain, each range
+// starting where the one before ended. The tests run the verb over a repository they make in a temporary directory,
+// with the results the other verbs stored, as review_check_test.go does.
+
+import (
+	"fmt"
+	"reflect"
+	"strings"
+	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/overlaytest"
+)
+
+// commitMore adds a commit on top of the world, so that it holds a chain of commits, and returns its full name.
+func (w *reviewWorld) commitMore(file string) string {
+	w.t.Helper()
+	overlaytest.WriteFile(w.t, w.root, file, file+"\n")
+	w.git("add", "-A")
+	w.git("commit", "-q", "-m", file)
+	return w.name("HEAD")
+}
+
+// bindRange binds the commits from base to head, as `review bind` does, and returns the binding.
+func (w *reviewWorld) bindRange(base, head string) reviewBinding {
+	w.t.Helper()
+	stdout, stderr, exits := w.run("", "bind", "--base", base, "--head", head)
+	if !equalInts(exits, []int{0}) {
+		w.t.Fatalf("setup: review bind exit calls = %v, stderr = %q; want [0]", exits, stderr)
+	}
+	return decodeBinding(w.t, stdout)
+}
+
+// recordRange stores the reply of a reviewer who found nothing in the commits from base to head and returns the
+// binding of the candidate.
+func (w *reviewWorld) recordRange(base, head string) reviewBinding {
+	w.t.Helper()
+	b := w.bindRange(base, head)
+	if _, stderr, exits := w.run(reply(w.t, b, nil), "record", "--feature", "own-rdd", "--base", base, "--head", head); !equalInts(exits, []int{0}) {
+		w.t.Fatalf("setup: review record exit calls = %v, stderr = %q; want [0]", exits, stderr)
+	}
+	return b
+}
+
+// checkChain runs `review check --base base` for HEAD of the world.
+func (w *reviewWorld) checkChain(base string) (stdout, stderr string, exits []int) {
+	w.t.Helper()
+	return w.run("", "check", "--feature", "own-rdd", "--base", base)
+}
+
+// chainAnswer is what `review check --base` prints for a chain that clears head from base, with the ranges given.
+func chainAnswer(head, base string, ranges ...string) string {
+	return fmt.Sprintf("{\n  \"head\": %q,\n  \"base\": %q,\n  \"outcome\": \"clear\",\n  \"ranges\": [\n%s\n  ]\n}\n", head, base, strings.Join(ranges, ",\n"))
+}
+
+// resultRange is a range of the answer that one clean result clears, and exemptedRange one that an exemption clears.
+func resultRange(base, head, digest string) string {
+	return fmt.Sprintf(`    {
+      "base": %[1]q,
+      "head": %[2]q,
+      "results": [
+        {
+          "result": "odd/review-results/own-rdd/%[3]s-1.json",
+          "base": %[1]q,
+          "diff_sha256": %[4]q
+        }
+      ]
+    }`, base, head, head[:12], digest)
+}
+
+func exemptedRange(base, head, digest string) string {
+	return fmt.Sprintf(`    {
+      "base": %[1]q,
+      "head": %[2]q,
+      "results": [],
+      "exemptions": [
+        {
+          "exemption": "odd/review-results/own-rdd/%[3]s-1.exempt.json",
+          "base": %[1]q,
+          "diff_sha256": %[4]q
+        }
+      ]
+    }`, base, head, head[:12], digest)
+}
+
+// wantNoChain fails the test unless `review check --base base` was refused as every refusal of the check is: exit 1,
+// nothing on stdout, one line on stderr that begins with the chain from base to head and says each of say, and
+// nothing stored.
+func (w *reviewWorld) wantNoChain(base, head string, say ...string) {
+	w.t.Helper()
+	before := listNames(w.t, w.results("own-rdd"))
+
+	stdout, stderr, exits := w.checkChain(base)
+
+	prefix := "error: review check: the chain from " + base + " to " + head + ": "
+	if stdout != "" || !equalInts(exits, []int{1}) || !strings.HasPrefix(stderr, prefix) || strings.Count(stderr, "\n") != 1 {
+		w.t.Errorf("stdout = %q, stderr = %q, exits = %v; want nothing, one line that begins %q, [1]", stdout, stderr, exits, prefix)
+	}
+	for _, want := range say {
+		if !strings.Contains(stderr, want) {
+			w.t.Errorf("stderr = %q, want it to say %q", stderr, want)
+		}
+	}
+	if got := listNames(w.t, w.results("own-rdd")); !reflect.DeepEqual(got, before) {
+		w.t.Errorf("results = %q after a refused check, want %q", got, before)
+	}
+}
+
+// A chain of clear ranges that begins at the base and ends at the head clears the head: exit 0, and stdout names the
+// head, the base and the ranges from the one that starts at the base to the one that ends at the head, each with the
+// file it used and what the candidate was recomputed to be. The walk stops at the base: the result of the range below
+// it is not part of the chain. Nothing is stored and nothing is said on stderr.
+func TestCheckBaseClearsAnUnbrokenChainOfClearRangesAndListsThemFromTheBase(t *testing.T) {
+	w := newReviewWorld(t)
+	mid, tip := w.commitMore("d.txt"), w.commitMore("e.txt")
+	w.recordRange(w.base, w.head)
+	first, second := w.recordRange(w.head, mid), w.recordRange(mid, tip)
+	before := listNames(t, w.results("own-rdd"))
+
+	stdout, stderr, exits := w.checkChain(w.head)
+
+	want := chainAnswer(tip, w.head, resultRange(w.head, mid, first.DiffSHA256), resultRange(mid, tip, second.DiffSHA256))
+	if stdout != want || stderr != "" || !equalInts(exits, []int{0}) {
+		t.Errorf("stdout = %q, stderr = %q, exits = %v; want %q, nothing, [0]", stdout, stderr, exits, want)
+	}
+	if got := listNames(t, w.results("own-rdd")); !reflect.DeepEqual(got, before) {
+		t.Errorf("results = %q after the check, want %q: it stores nothing", got, before)
+	}
+}
+
+// A range that an exemption clears is a range of the chain like one that a result clears, and the chain may end in it:
+// the walk reaches the base through the exemption.
+func TestCheckBaseClearsAChainThatEndsInAnExemption(t *testing.T) {
+	w := newReviewWorld(t)
+	tip := w.commitMore("d.txt")
+	exempted := w.bindRange(w.base, w.head)
+	if _, stderr, exits := w.exempt(verifierReport, "none"); !equalInts(exits, []int{0}) {
+		t.Fatalf("setup: review exempt exit calls = %v, stderr = %q; want [0]", exits, stderr)
+	}
+	reviewed := w.recordRange(w.head, tip)
+
+	stdout, stderr, exits := w.checkChain(w.base)
+
+	want := chainAnswer(tip, w.base, exemptedRange(w.base, w.head, exempted.DiffSHA256), resultRange(w.head, tip, reviewed.DiffSHA256))
+	if stdout != want || stderr != "" || !equalInts(exits, []int{0}) {
+		t.Errorf("stdout = %q, stderr = %q, exits = %v; want %q, nothing, [0]", stdout, stderr, exits, want)
+	}
+}
+
+// A commit that no stored result or exemption ends at breaks the chain: the check stops there and says so.
+func TestCheckBaseRefusesAChainWithAGap(t *testing.T) {
+	w := newReviewWorld(t)
+	mid, tip := w.commitMore("d.txt"), w.commitMore("e.txt")
+	w.recordRange(w.base, w.head)
+	w.recordRange(mid, tip) // nothing covers the commits from head to mid
+
+	w.wantNoChain(w.base, tip, "head "+mid+": review: no stored result binds the head")
+}
+
+// A range that is not clear refuses the chain even when the ranges on both sides of it are clear.
+func TestCheckBaseRefusesARangeThatIsNotClear(t *testing.T) {
+	w := newReviewWorld(t)
+	mid, tip := w.commitMore("d.txt"), w.commitMore("e.txt")
+	w.recordRange(w.base, w.head)
+	w.recordBlocker(w.head, mid) // a severe finding nobody checked
+	w.recordRange(mid, tip)
+
+	w.wantNoChain(w.base, tip, "head "+mid+": review: a stored result is not clear",
+		"odd/review-results/own-rdd/"+mid[:12]+"-1.json", "findings not checked F1")
+}
+
+// The walk must reach the base. One that passes it, because a stored range begins before it, and one that comes back
+// to a commit it already passed, never reach it: both are refused, and the second does not loop.
+func TestCheckBaseRefusesAChainThatDoesNotReachTheBase(t *testing.T) {
+	t.Run("a range that begins before the base", func(t *testing.T) {
+		w := newReviewWorld(t)
+		tip := w.commitMore("d.txt")
+		w.recordRange(w.base, tip) // one review of the whole branch, and the delivery base is the commit in the middle
+
+		w.wantNoChain(w.head, tip, "head "+w.base+": review: no stored result binds the head")
+	})
+	t.Run("ranges that lead back to a commit the chain already passed", func(t *testing.T) {
+		w := newReviewWorld(t)
+		tip := w.commitMore("d.txt")
+		w.recordRange(w.head, tip)
+		w.recordRange(tip, w.head) // the same commits reviewed the other way round
+
+		w.wantNoChain(w.base, tip, "lead back to a commit the chain already passed", tip)
+	})
+}
+
+// Without --base the check is by head alone, as it was: the ranges before the head are not looked at, and the answer
+// has neither a base nor ranges.
+func TestCheckWithoutBaseStaysTheCheckOfOneHeadAndAnswersAsBefore(t *testing.T) {
+	w := newReviewWorld(t)
+	tip := w.commitMore("d.txt")
+	reviewed := w.recordRange(w.head, tip) // the range from base to head was never reviewed
+
+	stdout, stderr, exits := w.run("", "check", "--feature", "own-rdd")
+
+	want := fmt.Sprintf(`{
+  "head": %q,
+  "outcome": "clear",
+  "results": [
+    {
+      "result": "odd/review-results/own-rdd/%s-1.json",
+      "base": %q,
+      "diff_sha256": %q
+    }
+  ]
+}
+`, tip, tip[:12], w.head, reviewed.DiffSHA256)
+	if stdout != want || stderr != "" || !equalInts(exits, []int{0}) {
+		t.Errorf("stdout = %q, stderr = %q, exits = %v; want %q, nothing, [0]", stdout, stderr, exits, want)
+	}
+}

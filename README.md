@@ -632,7 +632,7 @@ overlay review <verb>
         that blocks another head of a base whose review a stored verdict already blocked is refused and
         stores nothing. A reply that breaks a rule writes nothing and the error names the rule. Exit 0
         stored, 2 reply refused, 1 usage error, a spent correction round or any other failure.
-    check  --feature <name> [--head <rev>] [--cwd <repo>]
+    check  --feature <name> [--head <rev>] [--base <rev>] [--cwd <repo>]
         Decide whether the head being delivered (--head, default HEAD) was reviewed, or exempted from review,
         and nothing the engine stored keeps it from delivery. Each result stored for that head is held to its
         binding again, the candidate is recomputed from git for the base the result names and that head and
@@ -644,8 +644,16 @@ overlay review <verb>
         whatever exemption exists, a result with a severe finding no verifier checked is not clear either, and
         a check that did not run never passes. A result or an exemption that no longer holds refuses the head.
         stdout is one JSON object (head, outcome, results, and exemptions when one of them cleared the head).
-        Nothing is stored. The delivery role runs it before it closes the feature. Exit 0 cleared, 1 usage
-        error, refusal or any other failure.
+        Nothing is stored. The delivery role runs it before it closes the feature. With --base <rev>, the
+        integration base of the delivery (main, a tracker or a dev branch), the check is by chain: reviews are
+        per commit, so the head is cleared only when clear results or exemptions cover base..head as an
+        unbroken chain, each range starting where the one before ended. It walks back from the head: each
+        commit is held as above, the base its range names is the next commit, and the walk is done at the
+        base. It is refused at a gap (no result or exemption ends at a commit, which is also where a chain
+        that passes the base ends), at a range that is not clear and at a commit it already passed. stdout is
+        then one JSON object (head, base, outcome, and ranges, from the one that starts at the base, each with
+        base, head, results and exemptions). Without --base the check is by head alone. Exit 0 cleared, 1
+        usage error, refusal or any other failure.
     exempt --feature <name> --base <rev> --head <rev> --risk <none|items> [--cwd <repo>]
         Exempt a head from review when its work takes none, on the evidence of the verifier and the risk the
         agent declares. The verifier's report is read from stdin and from nowhere else: one JSON object and no
