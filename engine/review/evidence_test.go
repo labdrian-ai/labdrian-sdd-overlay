@@ -123,6 +123,7 @@ func TestResultRefNamesOnlyAResultStoredInTheResultsDirectory(t *testing.T) {
 		"odd/review-results/own..rdd/222222222222-1.json",
 		`odd\review-results\own-rdd\222222222222-1.json`,
 		"odd/review-results/own-rdd/222222222222-1.verifier.json",
+		"odd/review-results/own-rdd/222222222222-1.exempt.json",
 		"odd/review-results/own-rdd/222222222222-0.json",
 		"odd/review-results/own-rdd/222222222222-01.json",
 		"odd/review-results/own-rdd/notes.json",

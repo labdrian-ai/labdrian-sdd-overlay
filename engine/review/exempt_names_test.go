@@ -101,6 +101,28 @@ func TestAnExemptionIsNeverTakenForAResultOrAVerdictNorTheOtherWayAround(t *test
 	}
 }
 
+// CheckExemptionName accepts the name ExemptionName makes and no other: <head12>-<n>.exempt.json with a head of 12
+// lowercase hexadecimal characters and a number written the way NextNumber counts it. The name of a result, of a
+// verdict, a path and a name that only looks like one are refused with an error that wraps ErrInvalidExemptionName.
+func TestCheckExemptionNameAcceptsOnlyWhatExemptionNameMakes(t *testing.T) {
+	for n := 1; n <= 12; n++ {
+		if name := review.ExemptionName(candidate(t), n); review.CheckExemptionName(name) != nil {
+			t.Errorf("CheckExemptionName(%q) = %v, want nil: it is a name ExemptionName makes", name, review.CheckExemptionName(name))
+		}
+	}
+	for _, name := range []string{
+		"", "222222222222-1.json", "222222222222-1.verifier.json", "222222222222-1.exempt.verifier.json",
+		"222222222222-0.exempt.json", "222222222222-01.exempt.json", "222222222222-x.exempt.json", "222222222222-.exempt.json",
+		"22222222222-1.exempt.json", "2222222222222-1.exempt.json", "22222222222G-1.exempt.json", "22222222222A-1.exempt.json",
+		"222222222222-1.exempt.json.tmp", ".222222222222-1.exempt.json", "222222222222-1.exempt", "own-rdd/222222222222-1.exempt.json",
+		"../222222222222-1.exempt.json", "222222222222-1.exempt.json ", "222222222222-1.exempt.json\n",
+	} {
+		if err := review.CheckExemptionName(name); !errors.Is(err, review.ErrInvalidExemptionName) {
+			t.Errorf("CheckExemptionName(%q) = %v, want an error wrapping ErrInvalidExemptionName", name, err)
+		}
+	}
+}
+
 // The three kinds share one numbering: the number an exemption holds is not given again to a result, a verdict or
 // another exemption of the head, as long as it is the highest, and the number of one deleted is not given again as
 // long as a later one is there.

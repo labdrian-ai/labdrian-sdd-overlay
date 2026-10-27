@@ -43,7 +43,8 @@
 // by DecodeExemption). CheckRisk refuses a declared risk that names an item of the high-risk list, CheckReport a
 // report that is not clear, CheckExemption holds a stored exemption to both again, and Cleared lets a head
 // through on an exemption only when no stored result binds it, so a result that blocks always wins. The record
-// that closes it is ExemptionHandoff.
+// that closes it is ExemptionHandoff, and the ref of its evidence names a stored exemption as the ref of a
+// review-report's names a stored result (ExemptionRef, CheckExemptionName).
 //
 // It is a domain package: pure standard library and the domain packages that say what a git object name,
 // a SHA-256 digest, a reviewer reply, a verifier verdict and a role handoff are. It reads no file and runs
@@ -117,6 +118,8 @@ var (
 	ErrReplyNotJSON = errors.New("review: reply is not JSON")
 	// ErrInvalidResultName is a name that is not the name of a stored result, <head12>-<n>.json.
 	ErrInvalidResultName = errors.New("review: invalid result name")
+	// ErrInvalidExemptionName is a name that is not the name of a stored exemption, <head12>-<n>.exempt.json.
+	ErrInvalidExemptionName = errors.New("review: invalid exemption name")
 	// ErrInvalidStored is a stored file that is not one EncodeResult writes.
 	ErrInvalidStored = errors.New("review: invalid stored file")
 )

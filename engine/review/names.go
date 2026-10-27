@@ -99,6 +99,16 @@ func CheckResultName(name string) error {
 	return nil
 }
 
+// CheckExemptionName refuses a name that ExemptionName does not make: <head12>-<n>.exempt.json, where <head12> is
+// 12 lowercase hexadecimal characters and <n> is written the way NextNumber counts it. The name of a result or of a
+// verdict is not one, and neither is a path. The error wraps ErrInvalidExemptionName.
+func CheckExemptionName(name string) error {
+	if _, _, ok := stem(name, exemptionSuffix); !ok {
+		return fmt.Errorf("%w: %q is not <head12>-<n>.exempt.json", ErrInvalidExemptionName, name)
+	}
+	return nil
+}
+
 // stem cuts suffix from name and splits what is left into <head12> and <n>, and says whether name is
 // <head12>-<n> and suffix, written the way ResultName writes it.
 func stem(name, suffix string) (head, number string, ok bool) {
