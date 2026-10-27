@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/reviewverdict"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/roles"
 )
 
@@ -23,7 +24,8 @@ import (
 //     The diff is not computed again here: the check that the head being delivered is the one reviewed is
 //     Check's;
 //   - the verifier-report, when there is one, is the verdict stored beside that result, review.VerdictRef, and
-//     its sha256 is the digest of the bytes stored now. Its content is not read again: Check decides from it.
+//     its sha256 is the digest of the bytes stored now. The stored file must still be a verdict of that result
+//     (reviewverdict.Parse), as Verify held it; what the verdict makes of the review is Check's to decide.
 //
 // The shape of the record and of every ref is checked before the repository is located, so that a record that
 // is wrong by its shape reads nothing. The files are read through the store, which refuses a path that leads
@@ -71,7 +73,7 @@ func (s Service) CheckEvidence(dir string, h roles.RoleHandoff) error {
 	if err := review.CheckFile(result, resultFile); err != nil {
 		return err
 	}
-	binding, _, err := judged(resultFile)
+	binding, parsed, err := judged(resultFile)
 	if err != nil {
 		return &review.EvidenceError{Kind: result.Kind, Ref: result.Ref, Err: err}
 	}
@@ -85,7 +87,13 @@ func (s Service) CheckEvidence(dir string, h roles.RoleHandoff) error {
 	if err != nil {
 		return err
 	}
-	return review.CheckFile(verdict, verdictFile)
+	if err := review.CheckFile(verdict, verdictFile); err != nil {
+		return err
+	}
+	if _, err := reviewverdict.Parse(verdictFile, parsed); err != nil {
+		return &review.EvidenceError{Kind: verdict.Kind, Ref: verdict.Ref, Err: err}
+	}
+	return nil
 }
 
 // checkExemptionEvidence is CheckEvidence for a completed review-exemption, with the same order and the same

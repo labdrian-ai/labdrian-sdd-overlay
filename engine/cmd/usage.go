@@ -206,7 +206,7 @@ func usage(w io.Writer) {
 	fmt.Fprintln(w, "  engine roles append --project <id> --goal <id> --chain <id> --stdin")
 	fmt.Fprintln(w, "    appends one record, read only from stdin, to the role chain of the goal. A completed review-report record is held to the files 'review record' and 'review verify' stored in the")
 	fmt.Fprintln(w, "    repository of the working directory before it is stored: it needs one review-diff and one review-result piece of evidence, and carries at most one verifier-report. The review-result is a stored")
-	fmt.Fprintln(w, "    odd/review-results/<feature>/<head12>-<n>.json and the verifier-report the verdict stored beside it, each carrying the sha256 of the stored file, and the review-diff the <base>..<head> range")
+	fmt.Fprintln(w, "    odd/review-results/<feature>/<head12>-<n>.json and the verifier-report the verdict stored beside it, each carrying the sha256 of the stored file, which must still be a result and a verdict of that result, and the review-diff the <base>..<head> range")
 	fmt.Fprintln(w, "    and the diff_sha256 of the stored result. Evidence that is missing, repeated or different from the stored files, a ref that is not such a file, or a repository that cannot be found is exit 1,")
 	fmt.Fprintln(w, "    the message names the evidence kind and its ref, and nothing is stored. A completed review-exemption record, the one 'review exempt' prints, is held in the same way to the exemption it stored: it needs one")
 	fmt.Fprintln(w, "    review-diff and one review-exemption piece of evidence, the review-exemption is a stored odd/review-results/<feature>/<head12>-<n>.exempt.json carrying the sha256 of the stored file, and the exemption must still hold")

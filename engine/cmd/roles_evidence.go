@@ -40,6 +40,8 @@ func reviewEvidenceCheck(d deps) evidenceCheck {
 		}
 		var evidence *review.EvidenceError
 		if err != nil && !errors.As(err, &evidence) {
+			// h is a completed review-report or review-exemption: review.NeedsEvidence admits no other kind, so the
+			// kind this names is never empty or unexpected.
 			return fmt.Errorf("the evidence of the %s could not be checked: %w", h.PayloadKind, err)
 		}
 		return err

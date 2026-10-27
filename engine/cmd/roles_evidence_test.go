@@ -268,6 +268,18 @@ func TestRolesAppendRefusesAReviewReportWhoseEvidenceIsNotTheStoredFiles(t *test
 			}
 		}, review.EvidenceResult, "differs from the stored file"},
 		{"its verifier-report has the digest of another file", (*reviewWorld).verifiedSkeleton, flipDigest(review.EvidenceVerifier), review.EvidenceVerifier, "differs from the stored file"},
+		{"its stored verdict is not a verdict, and the record carries the digest of that file", (*reviewWorld).verifiedSkeleton, func(w *reviewWorld, h *roles.RoleHandoff) {
+			notAVerdict := []byte("this is not a verdict")
+			path := filepath.Join(w.root, filepath.FromSlash(evidenceOf(w.t, *h, review.EvidenceVerifier).Ref))
+			if err := os.WriteFile(path, notAVerdict, 0o644); err != nil {
+				w.t.Fatal(err)
+			}
+			for i := range h.Evidence {
+				if h.Evidence[i].Kind == review.EvidenceVerifier {
+					h.Evidence[i].SHA256 = sum(notAVerdict)
+				}
+			}
+		}, review.EvidenceVerifier, "unparseable reply"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			rolesTestStateHome(t)
@@ -313,6 +325,44 @@ func TestRolesAppendStoresAnInterruptedReviewReportWithoutAskingTheRepository(t 
 
 	if r.code != 0 || r.stderr != "" || !strings.Contains(r.stdout, "roles append: stored record at") {
 		t.Errorf("code = %d, stdout = %q, stderr = %q; want the interrupted record stored", r.code, r.stdout, r.stderr)
+	}
+}
+
+// The dispatcher builds the evidence check of `roles append` from the deps it was handed, as it does the other
+// verbs: the repository is the one that holds the working directory of those deps, not the program's own. From the
+// directory of the world the record whose evidence is the stored files is stored, and from a directory that holds
+// no repository the same record is refused for want of one, with nothing stored.
+func TestRunHandsRolesAppendTheDepsItWasHanded(t *testing.T) {
+	rolesTestStateHome(t)
+	w := newReviewWorld(t)
+	prev := reviewerChain(t, reviewEvidenceCheck(deps{}), "chain-1")
+	record := rolesRecordJSON(t, fillSkeleton(w.recordedSkeleton(), "chain-1", prev))
+	appendFrom := func(dir string) *capturedProcess {
+		d := w.rolesDeps()
+		d.getwd = func() (string, error) { return dir, nil }
+		p := newCapturedProcess()
+		p.stdin = strings.NewReader(record)
+		run(p.process, d, append([]string{"roles"}, rolesAppendArgs("chain-1")...))
+		return p
+	}
+	outside := t.TempDir()
+
+	refused := appendFrom(outside)
+
+	if !equalInts(refused.exits, []int{1}) || refused.out.String() != "" || !strings.Contains(refused.err.String(), "locate the repository of "+outside) {
+		t.Errorf("from %s: exits = %v, stdout = %q, stderr = %q; want exit 1 and the repository of the deps' directory looked for", outside, refused.exits, refused.out.String(), refused.err.String())
+	}
+	if at := rolesAt(t, "chain-1"); at != string(roles.RoleReviewer) {
+		t.Fatalf("the chain is at %q after the refusal, want the reviewer: nothing was stored", at)
+	}
+
+	stored := appendFrom(w.root)
+
+	if len(stored.exits) != 0 || stored.err.String() != "" || !strings.Contains(stored.out.String(), "roles append: stored record at") {
+		t.Errorf("from %s: exits = %v, stdout = %q, stderr = %q; want the record stored", w.root, stored.exits, stored.out.String(), stored.err.String())
+	}
+	if at := rolesAt(t, "chain-1"); at != string(roles.RoleDelivery) {
+		t.Errorf("the chain is at %q, want the delivery", at)
 	}
 }
 

@@ -234,7 +234,8 @@ Commands:
                                              record is held to the files review record and verify stored in the
                                              repository of the working directory: it needs review-diff and
                                              review-result evidence, the review-result and the verifier-report carry
-                                             the sha256 of the stored files, and the review-diff the range and the
+                                             the sha256 of the stored files, which must still be a result and a
+                                             verdict of it, and the review-diff the range and the
                                              diff_sha256 of the stored result; evidence that is missing or differs is
                                              exit 1, and nothing is stored; a completed review-exemption record is
                                              held in the same way to the exemption review exempt stored (review-diff

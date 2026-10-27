@@ -168,7 +168,10 @@ func TestCheckLetsAStoredResultThatDoesNotClearTheHeadWinOverAnExemption(t *test
 // An exemption that no longer holds never clears the head, and is a refusal that names the file and the reason, and
 // stores nothing: the file is read back and held to its rules and to git again, and nothing is taken from what an
 // earlier command said. A file that was edited to name no risk, to say a check passed that did not, or to be about a
-// diff the head no longer has is refused; so is what cannot be read, because what cannot be checked is not cleared.
+// diff the head no longer has is refused, and so is one whose base is not the first parent of the head, which is the
+// three checks the head is held to (CheckExemption, CheckBinding and CheckOneCommit): none of them can be skipped by an
+// exemption that is not what `exempt` wrote. What cannot be read is refused too, because what cannot be checked is
+// not cleared.
 func TestCheckRefusesAnExemptionThatNoLongerHoldsAndStoresNothing(t *testing.T) {
 	boom := errors.New("boom")
 	edit := func(t *testing.T, store *fakeResults, name, from, to string) {
@@ -216,6 +219,10 @@ func TestCheckRefusesAnExemptionThatNoLongerHoldsAndStoresNothing(t *testing.T) 
 			exempted(t, store, baseSHA, headSHA, 1)
 			g.paths = changedPaths[:1]
 		}, []error{review.ErrBindingDiffers}, []string{wantFirstExemptionPath, "paths"}},
+		{"the base the exemption names is not the first parent of the head", func(t *testing.T, g *fakeGit, store *fakeResults) {
+			exempted(t, store, baseSHA, headSHA, 1)
+			g.parents[headSHA] = otherSHA
+		}, []error{review.ErrNotOneCommit}, []string{wantFirstExemptionPath, "first parent"}},
 		{"git does not know the base the exemption names", func(t *testing.T, _ *fakeGit, store *fakeResults) {
 			exempted(t, store, fourSHA, headSHA, 1)
 		}, nil, []string{wantFirstExemptionPath, "resolve base"}},

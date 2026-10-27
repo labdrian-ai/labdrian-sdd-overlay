@@ -48,7 +48,10 @@ type Reviewed struct {
 	Decision reviewverdict.Decision
 }
 
-// Exempted is a stored exemption that binds a head, read back after CheckExemption and CheckBinding held it.
+// Exempted is a stored exemption that binds a head, read back after CheckExemption, CheckBinding and CheckOneCommit
+// held it. Only the use case that reads the exemptions of a head back (review/app's exemptedHead) builds one, and only
+// after those three checks: Cleared counts the values it is given and does not look inside them, so an Exempted made
+// any other way would clear a head it has not earned.
 type Exempted struct {
 	// Candidate is the candidate git gives now for the commits the exemption names; CheckBinding has held the
 	// stored binding to it.
@@ -142,7 +145,9 @@ func Clearance(reviewed []Reviewed) error {
 }
 
 // Cleared decides whether what is stored for a head clears it for delivery: reviewed holds every result that binds
-// the head and exempted every exemption that does, each by number.
+// the head and exempted every exemption that does, each by number. Both are values the caller has already held to the
+// files and to git (see Reviewed and Exempted): Cleared decides from how many there are and from the decision of each
+// result, and verifies nothing itself, so a value that was not held must never reach it.
 //
 // A head with no result is cleared by an exemption, one is enough, and with neither it is refused as Clearance
 // refuses it (ErrNoResult). A head with a result is decided by its results alone, as Clearance decides, and an

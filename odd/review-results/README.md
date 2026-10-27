@@ -18,7 +18,7 @@ The parent of the role chain (`skills/role-chain/SKILL.md`) binds a review to it
 - When the verifier ran, its verdict is stored beside the result it answers, under the same `<head12>-<n>`, as `<head12>-<n>.verifier.json`: the reply of the verifier exactly as it gave it (white space aside), one JSON object (see "The verdict of the verifier" below). A result has one verdict, and `verify` never writes over a file.
 - When a head is exempted from review, the exemption is stored under the next number of the head as `<head12>-<n>.exempt.json`: one JSON object, `version` 1, with the `binding`, the `risk` that was declared and the `report` of the verifier exactly as it gave it (white space aside); see "The exemption of a head from review" below. `exempt` never writes over a file either.
 
-## The commands that bind and store
+## The commands `bind`, `record` and `verify`
 
 `labdrian review bind --base <rev> --head <rev> [--cwd <repo>]` resolves both revisions to full commit names and prints one JSON object: `base`, `head`, `diff_sha256` and `paths` (the binding, defined below), `worktree`, `worktree_created`, `diff_bytes`, `diff_limit_bytes`, `over_limit` and, when the diff is over the limit, `note`. It writes nothing but the worktree.
 
@@ -94,7 +94,7 @@ The rules are applied in this order, and the first one broken is the refusal, wi
 2. The declared risk is `none`. `--risk` is `none` or a list of the numbers 1 to 6 of the high-risk items of the orchestrator's Task Size list, separated by commas with no space and none written twice (`2,4`): 1 data or irreversible effects, 2 security, 3 contracts others consume, 4 concurrency, 5 delivery or environment, 6 no test would catch a regression. The engine does not compute the risk from the diff: it holds the declaration to this grammar, and a head that names any item is never exempt, because that is what a review is for (`review.ErrHighRisk`; the error names every item written). A declaration that is anything else (an empty one, `None`, a number outside the list, a space after a comma, an item written twice) is not taken for the absence of risk: it is refused as one the engine cannot read (`review.ErrInvalidRisk`). A declaration is not a report, so both refusals are exit 1.
 3. The report is the object below and is clear. A report that is missing, is not that object or is not clear is refused with exit 2.
 4. The revisions are ones git can read and are two commits (a range whose base is its head is refused, above), and the binding is the candidate git gives for them.
-5. The exemption is for one commit: `--base` is the first parent of `--head` as git gives it (`review.CheckOneCommit`; for a merge, the parent it was made on). A base that is further back, a base that is not an ancestor, or a head with no parent is refused (`review.ErrNotOneCommit`, exit 1, `an exemption is for one commit, so its base must be the first parent of its head`, naming both commits) and nothing is stored. Reviews are per commit, and a chain walks back from the head over the base of the exemption that binds each commit: one that spanned several commits would step over their reviews, a blocked one included, and a blocking review wins over any exemption. A result is not held to this: the fix of a commit whose review blocked is reviewed against the same base as that review (one correction round, above), so its range may hold the commit and the fix.
+5. The exemption is for one commit: `--base` is the first parent of `--head` as git gives it (`review.CheckOneCommit`; for a merge, the parent it was made on). A base that is further back, a base that is not an ancestor, or a head with no parent is refused (`review.ErrNotOneCommit`, exit 1, `an exemption is for one commit, so its base must be the first parent of its head`, naming both commits) and nothing is stored. Reviews are per commit, and a chain walks back from the head over the base of the exemption that binds each commit: one that spanned several commits would step over their reviews, a blocked one included. A result is not held to this: the fix of a commit whose review blocked is reviewed against the same base as that review (one correction round, above), so its range may hold the commit and the fix.
 
 The report is the verifier's, one JSON object and no prose, with the checks it ran in the order it ran them (`agents/verifier.md` spells it out):
 
@@ -128,7 +128,7 @@ The `risk` is the declaration that was made and the `report` the report exactly 
 - stderr says where the exemption was stored and the sha256 of the stored file, says that the head is exempted from review because the declared risk is `none` and the report is clear, and names the members of the skeleton below that the parent fills.
 - stdout is the skeleton of the record that closes the exemption, for `labdrian roles append --stdin`: `from_role` `reviewer`, `to_role` `delivery`, `payload_kind` `review-exemption`, `payload_sha256` the sha256 of the stored file, `status` `completed`, and the evidence `review-diff` (`<base>..<head>`, `diff_sha256`) and `review-exemption` (the stored path relative to the repository, the sha256 of the stored file). The members only the parent of the chain knows are left empty: `project_id`, `goal_id`, `chain_id`, `seq`, `prev_sha256` and `context.summary`. `labdrian roles validate` refuses the skeleton, naming the first of them, until they are filled, so it is never appended by accident.
 
-An exemption grants nothing by itself. It is evidence that a head was checked and a risk was declared; `labdrian review check` is what clears a head (below), and it holds the exemption to the file and to git again every time. A result that blocks wins over any exemption, and `exempt` does not look at the results of the head: the precedence is the check's.
+An exemption grants nothing by itself. It is evidence that a head was checked and a risk was declared; `labdrian review check` is what clears a head (below), and it holds the exemption to the file and to git again every time. `exempt` does not look at the results of the head: which of the two stands is the check's to say (below).
 
 ## The digest and the paths of a candidate
 
@@ -186,7 +186,7 @@ The record that closes the review is a RoleHandoff appended with `labdrian roles
 - it lacks the `review-diff` or the `review-result` evidence, or carries a kind twice, so that none of the pieces is the evidence of its kind (the `verifier-report` is optional: the verifier may not have run);
 - the ref of the `review-result` is not exactly one `odd/review-results/<feature>/<head12>-<n>.json` (no other path, none that leaves the directory, no verdict, no temporary file), or the file is not stored, or its sha256 is not the one of the evidence, or the file is not a result. It is read as `verify` reads it, through the store that refuses a link on the way, a file that is not a regular file and a file above 8 MiB;
 - the `review-diff` is not the range `<base>..<head>` and the `diff_sha256` of the binding stored in that result;
-- the `verifier-report`, when there is one, is not the verdict stored beside that result, `<head12>-<n>.verifier.json`, or its sha256 is not that of the stored file.
+- the `verifier-report`, when there is one, is not the verdict stored beside that result, `<head12>-<n>.verifier.json`, or its sha256 is not that of the stored file, or the file is not a verdict of that result (`reviewverdict.Parse`, as `verify` holds it). What the verdict makes of the review is not decided here: `check` decides.
 
 Only a completed `review-report` is held to this, and a completed `review-exemption` to the exemption (below). One that is `interrupted` stored nothing, and a record of any other kind is not about a review; both are stored as before. This compares the record with the stored files and computes no diff.
 
@@ -231,8 +231,8 @@ The head is cleared when at least one result binds it and every one is clear, or
 | the head has | the error says |
 |---|---|
 | no result and no exemption: it was neither reviewed nor exempted, or only another head or another feature was | `no stored result binds the head` |
-| a result whose decision is `blocks`, with an exemption or not | `a stored result blocks the head` |
-| a result whose decision is `unverified` (a check did not run), or none, with an exemption or not | `a stored result is not clear` |
+| a result whose decision is `blocks` | `a stored result blocks the head` |
+| a result that is neither `clear` nor `blocks`: its decision is `unverified` (a check did not run) or none at all (nobody decided it) | `a stored result is not clear` |
 | a result whose `base`, `head`, `diff_sha256` or `paths` are not what git gives now | `the stored binding differs from the candidate git gives` |
 | an exemption whose `binding` differs from what git gives now | `the stored binding differs from the candidate git gives` |
 | an exemption whose `risk` names an item | `a change that names a high-risk item is never exempt from review` |

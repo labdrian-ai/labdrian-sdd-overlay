@@ -407,6 +407,9 @@ func reportExempted(p process, e reviewapp.Exemption) {
 // reviewCheckJSON is what 'review check' prints for a head that is cleared for delivery: the head as a full
 // object name, the outcome, the stored results that bind it, by launch (an empty array for a head that is cleared
 // by an exemption alone), and the stored exemptions that bind it, by number, which are left out when there is none.
+// The delivery role is told to name the head, the results it prints and the exemptions when it prints any
+// (roles/delivery/body.md, and the three agent files made from it), so a member renamed in this type, or in
+// reviewRangeJSON, which prints them for each range of a chain, is a line to change there.
 type reviewCheckJSON struct {
 	Head       string               `json:"head"`
 	Outcome    string               `json:"outcome"`

@@ -7,7 +7,6 @@ package main
 // (rolesTestStateHome), as the tests of the evidence of a review-report do.
 
 import (
-	"bytes"
 	"os"
 	"path/filepath"
 	"slices"
@@ -175,29 +174,17 @@ func TestRolesAppendSaysItCouldNotCheckTheEvidenceOfAReviewExemption(t *testing.
 	}
 }
 
-// The help of `roles append` says what the verb holds a review-exemption to, in the engine and in the wrapper, and
-// the two say the same.
+// The help of `roles append` states, in the engine and in the wrapper, what the verb holds a review-exemption to, and
+// in the engine what the exemption it holds it to is and which records are stored as before.
 func TestUsageDocumentsTheEvidenceRolesAppendChecksOfAReviewExemption(t *testing.T) {
-	wrapper, err := os.ReadFile("../../bin/lib/usage.sh")
-	if err != nil {
-		t.Fatal(err)
-	}
-	var out bytes.Buffer
-	usage(&out)
-	// Both texts wrap at their own width, so their words are compared with the line breaks taken out.
-	engineText, wrapperText := strings.Join(strings.Fields(out.String()), " "), strings.Join(strings.Fields(string(wrapper)), " ")
-	for _, pair := range []struct{ engine, inWrapper string }{
-		{"A completed review-exemption record, the one 'review exempt' prints, is held in the same way to the exemption it stored", "a completed review-exemption record is held in the same way to the exemption review exempt stored"},
-		{"it needs one review-diff and one review-exemption piece of evidence", "review-diff and review-exemption evidence"},
-		{"the exemption must still hold to the rules it was made under", "the exemption must still hold"},
-	} {
-		if !strings.Contains(engineText, pair.engine) {
-			t.Errorf("the engine usage lacks %q", pair.engine)
-		}
-		if !strings.Contains(wrapperText, pair.inWrapper) {
-			t.Errorf("bin/lib/usage.sh lacks %q, which the engine usage says as %q", pair.inWrapper, pair.engine)
-		}
-	}
+	engineText := requireHelpFacts(t, []helpFact{
+		{"what a completed review-exemption is held to",
+			"A completed review-exemption record, the one 'review exempt' prints, is held in the same way to the exemption it stored", "a completed review-exemption record is held in the same way to the exemption review exempt stored"},
+		{"the evidence a review-exemption needs",
+			"it needs one review-diff and one review-exemption piece of evidence", "review-diff and review-exemption evidence"},
+		{"that the exemption must still hold",
+			"the exemption must still hold to the rules it was made under", "the exemption must still hold"},
+	})
 	for _, want := range []string{
 		"the review-exemption is a stored odd/review-results/<feature>/<head12>-<n>.exempt.json carrying the sha256 of the stored file",
 		"a review-report or a review-exemption that is interrupted, is stored as before",

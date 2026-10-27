@@ -9,6 +9,7 @@ import (
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review/app"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/reviewverdict"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/roles"
 )
 
@@ -299,6 +300,31 @@ func TestCheckEvidenceRefusesAStoredFileThatIsNotAResult(t *testing.T) {
 	_, _, err := check(kept.store, record)
 
 	assertEvidence(t, err, review.ErrInvalidStored, review.EvidenceResult, wantFirstPath)
+}
+
+// A file with the digest the record gives is evidence of a verdict only when it is a verdict of the result it sits
+// beside, as a result is evidence only when it is a result: bytes that are not a verdict, and a verdict of a finding
+// the result does not have, are refused with the kind and the ref named. What the verdict makes of the review is
+// Check's.
+func TestCheckEvidenceRefusesAStoredFileThatIsNotAVerdictOfItsResult(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		stored   []byte
+		sentinel error
+	}{
+		{"bytes that are not a verdict", []byte("this is not a verdict"), reviewverdict.ErrUnparseable},
+		{"a verdict of a finding the result does not have", verdictReply(verdict("F9", "not-reproduced")), reviewverdict.ErrUnknownID},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			kept := keptReviews(t)
+			kept.store.put("own-rdd", "222222222222-2.verifier.json", tc.stored)
+			record := edited(kept.verifyRecord, review.EvidenceVerifier, func(e *roles.Evidence) { e.SHA256 = sha256Of(tc.stored) })
+
+			_, _, err := check(kept.store, record)
+
+			assertEvidence(t, err, tc.sentinel, review.EvidenceVerifier, wantSecondVerdict)
+		})
+	}
 }
 
 // A record of any other kind, and a review-report that says the review did not run, is not held to evidence: it
