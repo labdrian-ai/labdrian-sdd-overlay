@@ -1,0 +1,16 @@
+{
+  "rows": [
+    {
+      "id": "default",
+      "sentence": "Inspect behavior, tests, boundaries, invalid inputs, failure paths, determinism, and regressions; then failure handling, retry safety, graceful degradation, and load; then the risk line: secrets, permissions, path escapes, and exec or net imports. Require externally observable assertions at the cheapest useful test level, a concrete failure mode, and a reachable impact; do not report speculation."
+    },
+    {
+      "id": "readability",
+      "sentence": "Inspect maintainability defects that obscure behavior: misleading names, duplicated or dead logic, unexplained business constants, unsafe complexity, and missing change context. Report style only when it hides a concrete defect or makes the change unsafe to maintain."
+    },
+    {
+      "id": "risk-line",
+      "sentence": "You are a second, blind launch: nothing from an earlier review is shown to you. Inspect first the high-risk items (data or irreversible effects, security, contracts others consume, concurrency, delivery or environment, a change no test would catch), starting with the one the Risk line in this prompt names, and report only a reachable impact with concrete evidence."
+    }
+  ]
+}
