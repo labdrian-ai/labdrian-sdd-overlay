@@ -46,23 +46,35 @@ type Reviewed struct {
 
 // ResultsOfHead is the names, among names, of the stored results of the head: the ones CheckResultName accepts
 // whose <head12> is the first 12 characters of head, by launch number, the first launch first. The verdict
-// stored beside a result, a file being written and any other name are not results. A head too short to name a
-// file has none, because no result name begins with a dash. names is left as it is.
-func ResultsOfHead(names []string, head string) []string {
-	prefix := Candidate{Head: head}.Short() + "-"
-	var results []string
-	for _, name := range names {
-		if strings.HasPrefix(name, prefix) && CheckResultName(name) == nil {
-			results = append(results, name)
-		}
-	}
-	slices.SortFunc(results, func(a, b string) int { return launchNumber(a) - launchNumber(b) })
-	return results
+// stored beside a result, the exemption of a head, a file being written and any other name are not results. A
+// head too short to name a file has none, because no result name begins with a dash. names is left as it is.
+func ResultsOfHead(names []string, head string) []string { return ofHead(names, head, resultSuffix) }
+
+// ExemptionsOfHead is the names, among names, of the stored exemptions of the head: <head12>-<n>.exempt.json
+// where <head12> is the first 12 characters of head, by number, the first one first. A result, a verdict, a
+// file being written and any other name are not exemptions. A head too short to name a file has none. names is
+// left as it is.
+func ExemptionsOfHead(names []string, head string) []string {
+	return ofHead(names, head, exemptionSuffix)
 }
 
-// launchNumber is the <n> of a name that CheckResultName accepts.
-func launchNumber(name string) int {
-	_, number, _ := strings.Cut(strings.TrimSuffix(name, resultSuffix), "-")
+// ofHead is the names that are <head12>-<n> and suffix, written the way ResultName writes them, for the head,
+// by number.
+func ofHead(names []string, head, suffix string) []string {
+	prefix := Candidate{Head: head}.Short() + "-"
+	var found []string
+	for _, name := range names {
+		if _, _, ok := stem(name, suffix); ok && strings.HasPrefix(name, prefix) {
+			found = append(found, name)
+		}
+	}
+	slices.SortFunc(found, func(a, b string) int { return launchNumber(a, suffix) - launchNumber(b, suffix) })
+	return found
+}
+
+// launchNumber is the <n> of a name that stem accepts with suffix.
+func launchNumber(name, suffix string) int {
+	_, number, _ := stem(name, suffix)
 	n, _ := strconv.Atoi(number)
 	return n
 }
