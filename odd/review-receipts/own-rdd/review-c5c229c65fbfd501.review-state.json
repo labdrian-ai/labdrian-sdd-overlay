@@ -1,0 +1,334 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:6a3139dc597dca7bf5438cff639da269cd450ae38598d3c4b2231a459f26863b",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-c5c229c65fbfd501",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "0d76d5a84ed92ed330529f27944f1cb9cafe2079",
+      "candidate_tree": "40b0e803f9d44bea705a5371a3c49003415767ee",
+      "paths_digest": "sha256:da42afaf46ce39cff1f25a18ea74f945d4457fced1e423204e9c536675595d9e",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/review/app/app.go",
+        "engine/review/app/fakes_test.go",
+        "engine/review/app/verify.go",
+        "engine/review/app/verify_test.go",
+        "engine/review/fsstore/held_linux.go",
+        "engine/review/fsstore/lock_linux_test.go",
+        "engine/review/fsstore/portable.go",
+        "odd/review-results/README.md",
+        "odd/tasks/own-rdd.md"
+      ],
+      "identity": "sha256:e10bc9f3ce97e03b17562dfbf376eab3263b9003ed8ca22f0c343401c665cc9e"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "0d76d5a84ed92ed330529f27944f1cb9cafe2079",
+      "candidate_tree": "40b0e803f9d44bea705a5371a3c49003415767ee",
+      "paths_digest": "sha256:da42afaf46ce39cff1f25a18ea74f945d4457fced1e423204e9c536675595d9e",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/review/app/app.go",
+        "engine/review/app/fakes_test.go",
+        "engine/review/app/verify.go",
+        "engine/review/app/verify_test.go",
+        "engine/review/fsstore/held_linux.go",
+        "engine/review/fsstore/lock_linux_test.go",
+        "engine/review/fsstore/portable.go",
+        "odd/review-results/README.md",
+        "odd/tasks/own-rdd.md"
+      ],
+      "identity": "sha256:e10bc9f3ce97e03b17562dfbf376eab3263b9003ed8ca22f0c343401c665cc9e"
+    },
+    "genesis_paths": [
+      "CHANGELOG.md",
+      "engine/review/app/app.go",
+      "engine/review/app/fakes_test.go",
+      "engine/review/app/verify.go",
+      "engine/review/app/verify_test.go",
+      "engine/review/fsstore/held_linux.go",
+      "engine/review/fsstore/lock_linux_test.go",
+      "engine/review/fsstore/portable.go",
+      "odd/review-results/README.md",
+      "odd/tasks/own-rdd.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-risk",
+      "review-resilience",
+      "review-reliability"
+    ],
+    "original_changed_lines": 202,
+    "correction_budget": 101,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "U8 adds Results.Lock and an exclusive flock(2) on the feature directory held from the correction-round check to the store of a blocking verdict: concurrency and a guard",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:96197f00d36579746552f1fb059e4cae734e38d6aa61be4240127f98c09cfeaa",
+    "capture_phase_revision": "sha256:b58a67ec78f016c09ef6e36ff63067ce68a2ce3bff1d81114eaa32275c8ed35c",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:e10bc9f3ce97e03b17562dfbf376eab3263b9003ed8ca22f0c343401c665cc9e",
+        "capture_phase_revision": "sha256:b58a67ec78f016c09ef6e36ff63067ce68a2ce3bff1d81114eaa32275c8ed35c",
+        "artifact_digest": "sha256:908486cb45598bd468f302618facc449e852a85e9d6a4b297057cde6b62da4fb",
+        "result_hash": "sha256:6442dd0dabc5d5eb8070a450116e5796ebbb9063ecda44449a6698e505e9cd41",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:6d26aeb140ae6143d63002d7488e7b244bbd5f60385e70f552559985fad3f1d4",
+            "lineage_id": "review-c5c229c65fbfd501",
+            "authority_revision": "sha256:b58a67ec78f016c09ef6e36ff63067ce68a2ce3bff1d81114eaa32275c8ed35c",
+            "target_identity": "sha256:e10bc9f3ce97e03b17562dfbf376eab3263b9003ed8ca22f0c343401c665cc9e",
+            "base_tree": "0d76d5a84ed92ed330529f27944f1cb9cafe2079",
+            "candidate_tree": "40b0e803f9d44bea705a5371a3c49003415767ee",
+            "changed_path_manifest_sha256": "sha256:65ffad03a7b4e0f4ec623c803bae89847f28d0d06cda97886f0157d4b59f9b5c",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:6d26aeb140ae6143d63002d7488e7b244bbd5f60385e70f552559985fad3f1d4",
+            "raw_sha256": "sha256:2b5d9e4802da396b984f184e1ebedb21356006f2be11a90015e74291787e0d24",
+            "canonical_sha256": "sha256:6fd6771b03b93330c842c4bf17c91658007ccd622aa9121857ced6473f58f114",
+            "result_hash": "sha256:6442dd0dabc5d5eb8070a450116e5796ebbb9063ecda44449a6698e505e9cd41",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:6d26aeb140ae6143d63002d7488e7b244bbd5f60385e70f552559985fad3f1d4",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "CHANGELOG.md",
+                "engine/review/app/app.go",
+                "engine/review/app/fakes_test.go",
+                "engine/review/app/verify.go",
+                "engine/review/app/verify_test.go",
+                "engine/review/fsstore/held_linux.go",
+                "engine/review/fsstore/lock_linux_test.go",
+                "engine/review/fsstore/portable.go",
+                "odd/review-results/README.md",
+                "odd/tasks/own-rdd.md"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [
+              {
+                "id": "R1-001",
+                "lens": "risk",
+                "location": "engine/review/fsstore/portable.go:24-36",
+                "severity": "WARNING",
+                "claim": "On non-linux platforms Lock holds no real lock, so the one-correction-round rule can still be bypassed by two concurrent blocking verify calls on two heads of one base. The limitation is documented in the code, README and CHANGELOG, and the race existed at baseline, so it is not a regression.",
+                "proof_refs": [
+                  "engine/review/fsstore/portable.go:24-36",
+                  "odd/review-results/README.md:81"
+                ],
+                "causal_disposition": "pre-existing"
+              }
+            ],
+            "evidence": [
+              "Linux Lock in engine/review/fsstore/held_linux.go opens the feature directory through openHeld (no symlink followed, nothing created), takes an exclusive flock retried on EINTR, and releases it by closing the descriptor. On error the descriptor is closed, so there is no descriptor leak.",
+              "Verify takes the lock only for a blocking verdict, before the stored verdicts are listed, and defers the unlock until after the verdict is stored. This closes the check-then-store race and adds no new path-traversal or symlink exposure, since Lock goes through the same walk as Names.",
+              "The feature name is validated by review.CheckFeature before Lock is reached, and the new test covers an unsafe name, a symlinked directory and an absent directory.",
+              "No secrets, new dependencies or unsafe input handling are introduced. The remaining items are docs and tests."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-resilience",
+        "selected_order": 1,
+        "target_identity": "sha256:e10bc9f3ce97e03b17562dfbf376eab3263b9003ed8ca22f0c343401c665cc9e",
+        "capture_phase_revision": "sha256:b58a67ec78f016c09ef6e36ff63067ce68a2ce3bff1d81114eaa32275c8ed35c",
+        "artifact_digest": "sha256:af0137578e28048026f6a8bf730f83123c3770a1196283dc4b63ce9498ccec1f",
+        "result_hash": "sha256:50ccd5ebffae758f5bddbcaeeab47cf33dab7a24f59d8785bd4d0076404b3ac9",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:69a9f2f40cae2c11895f547205006420fdf0a7d02211143dcacc5346620a1477",
+            "lineage_id": "review-c5c229c65fbfd501",
+            "authority_revision": "sha256:b58a67ec78f016c09ef6e36ff63067ce68a2ce3bff1d81114eaa32275c8ed35c",
+            "target_identity": "sha256:e10bc9f3ce97e03b17562dfbf376eab3263b9003ed8ca22f0c343401c665cc9e",
+            "base_tree": "0d76d5a84ed92ed330529f27944f1cb9cafe2079",
+            "candidate_tree": "40b0e803f9d44bea705a5371a3c49003415767ee",
+            "changed_path_manifest_sha256": "sha256:65ffad03a7b4e0f4ec623c803bae89847f28d0d06cda97886f0157d4b59f9b5c",
+            "lens": "review-resilience",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:69a9f2f40cae2c11895f547205006420fdf0a7d02211143dcacc5346620a1477",
+            "raw_sha256": "sha256:240a77eb97945a69f312464bc7602843c927154828baa564ad45d7edf79115ba",
+            "canonical_sha256": "sha256:4c84b89955f5444f0976b6d68ae495b1f921023dfa571ed7e717c67d69e56ef1",
+            "result_hash": "sha256:50ccd5ebffae758f5bddbcaeeab47cf33dab7a24f59d8785bd4d0076404b3ac9",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:69a9f2f40cae2c11895f547205006420fdf0a7d02211143dcacc5346620a1477",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "CHANGELOG.md",
+                "engine/review/app/app.go",
+                "engine/review/app/fakes_test.go",
+                "engine/review/app/verify.go",
+                "engine/review/app/verify_test.go",
+                "engine/review/fsstore/held_linux.go",
+                "engine/review/fsstore/lock_linux_test.go",
+                "engine/review/fsstore/portable.go",
+                "odd/review-results/README.md",
+                "odd/tasks/own-rdd.md"
+              ]
+            },
+            "lens": "review-resilience",
+            "findings": [
+              {
+                "id": "R4-lock-unbounded-wait",
+                "lens": "resilience",
+                "location": "engine/review/fsstore/held_linux.go:48-53",
+                "severity": "WARNING",
+                "claim": "Lock blocks in flock(LOCK_EX) with no timeout or cancellation. If a holder process hangs between taking the lock and storing the verdict (for example a stalled filesystem), every other blocking verify on that feature waits indefinitely with no diagnostic. The lock is released on process exit, so a crash is safe, but a hang is not. The window is small because the held section only lists names and creates one file, so this is a robustness gap rather than a demonstrated failure.",
+                "proof_refs": [
+                  "engine/review/fsstore/held_linux.go:48-53",
+                  "engine/review/app/verify.go:86-90"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Reviewed all 10 changed paths. The lock is taken only for blocking verdicts, released via defer on every return path in Verify, and acquired before the stored verdicts are listed, which closes the race the change targets. EINTR is retried, the directory is closed on flock failure, and the unlock closes the descriptor. A missing directory returns ErrNotFound without creating anything, and a symlink is refused through openHeld.",
+              "The portable fallback holds no lock and documents it in the code comment, README and CHANGELOG, so the degradation is disclosed rather than silent.",
+              "The tests cover lock ordering (Lock, Names, Create, Unlock), a failed lock storing nothing, mutual exclusion on linux, and refusal of absent, linked and unsafe feature directories."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 2,
+        "target_identity": "sha256:e10bc9f3ce97e03b17562dfbf376eab3263b9003ed8ca22f0c343401c665cc9e",
+        "capture_phase_revision": "sha256:b58a67ec78f016c09ef6e36ff63067ce68a2ce3bff1d81114eaa32275c8ed35c",
+        "artifact_digest": "sha256:19775ada165280262e55e4d1aa0e99ebb06a7008b2c05ac1865cf36e4779b13f",
+        "result_hash": "sha256:8833e1a14171de5cb2db3529de011f5059b922bdbdadb9ba74a86b1d8731ba66",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:5c352076a3114161ca03723b8590454e15ba934b17ae34e5b8e26d69332d79aa",
+            "lineage_id": "review-c5c229c65fbfd501",
+            "authority_revision": "sha256:b58a67ec78f016c09ef6e36ff63067ce68a2ce3bff1d81114eaa32275c8ed35c",
+            "target_identity": "sha256:e10bc9f3ce97e03b17562dfbf376eab3263b9003ed8ca22f0c343401c665cc9e",
+            "base_tree": "0d76d5a84ed92ed330529f27944f1cb9cafe2079",
+            "candidate_tree": "40b0e803f9d44bea705a5371a3c49003415767ee",
+            "changed_path_manifest_sha256": "sha256:65ffad03a7b4e0f4ec623c803bae89847f28d0d06cda97886f0157d4b59f9b5c",
+            "lens": "review-reliability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:5c352076a3114161ca03723b8590454e15ba934b17ae34e5b8e26d69332d79aa",
+            "raw_sha256": "sha256:864c076551a6e5714a98fff234083af2a6721fc9f1710b998030abee5233911f",
+            "canonical_sha256": "sha256:8e464336c97f3e2e602011c8f4d7bd1f810ffbd99f97cb080e34921ad6229b65",
+            "result_hash": "sha256:8833e1a14171de5cb2db3529de011f5059b922bdbdadb9ba74a86b1d8731ba66",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:5c352076a3114161ca03723b8590454e15ba934b17ae34e5b8e26d69332d79aa",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "CHANGELOG.md",
+                "engine/review/app/app.go",
+                "engine/review/app/fakes_test.go",
+                "engine/review/app/verify.go",
+                "engine/review/app/verify_test.go",
+                "engine/review/fsstore/held_linux.go",
+                "engine/review/fsstore/lock_linux_test.go",
+                "engine/review/fsstore/portable.go",
+                "odd/review-results/README.md",
+                "odd/tasks/own-rdd.md"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-001",
+                "lens": "reliability",
+                "location": "engine/review/fsstore/held_linux.go:36-59",
+                "severity": "WARNING",
+                "claim": "Lock on linux is a flock on a directory fd opened O_RDONLY; flock is advisory and only serializes callers that also call Lock. Create called from non-blocking Verify paths (or from record) does not take the lock, so concurrent record runs are not serialized with verify. This is within the stated scope (verify vs verify), so it is only a note. Also, on filesystems where flock is unsupported (some NFS configurations) the error is returned and verify of a blocking verdict fails closed rather than degrading, which is acceptable but untested.",
+                "proof_refs": [
+                  "engine/review/fsstore/held_linux.go:36-59"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-002",
+                "lens": "reliability",
+                "location": "engine/review/fsstore/portable.go:24-36",
+                "severity": "WARNING",
+                "claim": "On non-linux platforms Lock holds no lock, so the race fixed on linux remains; this is documented in the code, README and CHANGELOG, and the commit scope is explicit. No test covers the portable Lock (not-found and found paths), leaving that branch unproved.",
+                "proof_refs": [
+                  "engine/review/fsstore/portable.go:24-36"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Reviewed all 10 manifest paths in the candidate patch.",
+              "verify.go takes the lock only for blocking verdicts, before spentRound lists stored verdicts, and defers unlock until after the store; the app test asserts the order Lock, Names, Create, Unlock, no lock for non-blocking, and no further store calls when Lock fails.",
+              "The linux Lock retries on EINTR, closes the fd on flock failure, and releases by closing; the tests prove mutual exclusion between two Lock calls, not-found without creating directories, symlink refusal, and unsafe feature refusal.",
+              "No blocker found: the change adds locking without altering behavior for non-blocking verdicts, and the lock-failure path stores nothing."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "68ffcc494e08248ff8428f9ed3cab2568ab994da1271fec287d5c978a1d43520",
+    "initial_atomic_start": {
+      "lineage_id": "review-c5c229c65fbfd501",
+      "worktree_identity": "sha256:571cf94da78406a5dee177091311c4fcbbbf61e483d9e6e92803045faa817e42",
+      "target_identity": "sha256:e10bc9f3ce97e03b17562dfbf376eab3263b9003ed8ca22f0c343401c665cc9e",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "0d76d5a84ed92ed330529f27944f1cb9cafe2079",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-risk",
+        "review-resilience",
+        "review-reliability"
+      ],
+      "original_changed_lines": 202,
+      "correction_budget": 101,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "U8 adds Results.Lock and an exclusive flock(2) on the feature directory held from the correction-round check to the store of a blocking verdict: concurrency and a guard"
+    },
+    "runtime_agent": "claude-code"
+  }
+}
