@@ -240,6 +240,10 @@ Commands:
                                              hold a reviewer's reply to the binding recomputed from git and store it
                                              as odd/review-results/NAME/HEAD12-N.json, never over a file; print the
                                              record skeleton for roles append (exit 0 stored, 2 reply refused, 1 error)
+                                   verify --feature NAME --stored RESULT [--verdicts FILE|-] [--cwd REPO]
+                                             hold a verifier's reply to the stored result, decide whether the review
+                                             blocks and store it beside the result as HEAD12-N.verifier.json; one
+                                             correction round per candidate (exit 0 stored, 2 reply refused, 1 error)
                                    No verb launches an agent or dispatches work.
   memory <verb>                    Forward memory-directive verbs to the engine unchanged.
                                    Read-only: no verb queries or writes memory; query execution

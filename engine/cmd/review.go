@@ -1,11 +1,13 @@
 package main
 
 // review subcommand: 'review bind --base <rev> --head <rev> [--cwd <repo>]' computes the candidate of a
-// review from git and makes the detached worktree a reviewer reads, and 'review record --feature <name>
+// review from git and makes the detached worktree a reviewer reads, 'review record --feature <name>
 // --base <rev> --head <rev> [--result <file>|-] [--cwd <repo>]' holds the reply of a reviewer to the candidate
-// it recomputes and stores it under odd/review-results/<feature>/. The rules are the use cases of
+// it recomputes and stores it under odd/review-results/<feature>/, and 'review verify --feature <name>
+// --stored <result> [--verdicts <file>|-] [--cwd <repo>]' holds the reply of the verifier to a stored result,
+// decides whether the review blocks and stores the reply beside the result. The rules are the use cases of
 // review/app over the adapters review/gitexec (git) and review/fsstore (the results directory); this file
-// parses the command line, wires them and says what they did. Neither verb launches an agent or dispatches
+// parses the command line, wires them and says what they did. No verb launches an agent or dispatches
 // work: a reply is a file somebody else produced.
 
 import (
@@ -24,6 +26,7 @@ import (
 	reviewapp "github.com/labdrian-ai/labdrian-sdd-overlay/engine/review/app"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review/fsstore"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review/gitexec"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/reviewverdict"
 )
 
 // reviewGitTimeout stops one git call of the review verbs that runs longer. Every call is local and takes
@@ -40,7 +43,7 @@ const reviewGitMaxOutput = 256 << 20
 // in an exit that ends nothing.
 func runReview(p process, d deps, args []string) {
 	if len(args) == 0 {
-		fmt.Fprintln(p.stderr, "error: review requires a verb: bind, record")
+		fmt.Fprintln(p.stderr, "error: review requires a verb: bind, record, verify")
 		p.exit(1)
 		return
 	}
@@ -49,8 +52,10 @@ func runReview(p process, d deps, args []string) {
 		runReviewBind(p, d, args[1:])
 	case "record":
 		runReviewRecord(p, d, args[1:])
+	case "verify":
+		runReviewVerify(p, d, args[1:])
 	default:
-		fmt.Fprintf(p.stderr, "error: review: unknown verb %q (expected bind or record)\n", args[0])
+		fmt.Fprintf(p.stderr, "error: review: unknown verb %q (expected bind, record or verify)\n", args[0])
 		p.exit(1)
 	}
 }
@@ -82,7 +87,7 @@ func reviewServiceOver(git reviewapp.Git, results reviewapp.Results) reviewapp.S
 
 // reviewFlags are the parsed flags of the review verbs. A verb takes some of them.
 type reviewFlags struct {
-	base, head, feature, result, cwd string
+	base, head, feature, result, stored, verdicts, cwd string
 }
 
 // parseReviewFlags reads args, the flags the verb takes (each with a value, once) and nothing else. It fails
@@ -116,6 +121,10 @@ func parseReviewFlags(args []string, takes ...string) (reviewFlags, error) {
 			f.feature = args[i]
 		case "--result":
 			f.result = args[i]
+		case "--stored":
+			f.stored = args[i]
+		case "--verdicts":
+			f.verdicts = args[i]
 		case "--cwd":
 			f.cwd = args[i]
 		}
@@ -125,7 +134,7 @@ func parseReviewFlags(args []string, takes ...string) (reviewFlags, error) {
 
 // require fails with the first of the named flags that has no value.
 func (f reviewFlags) require(names ...string) error {
-	values := map[string]string{"--base": f.base, "--head": f.head, "--feature": f.feature}
+	values := map[string]string{"--base": f.base, "--head": f.head, "--feature": f.feature, "--stored": f.stored}
 	for _, name := range names {
 		if values[name] == "" {
 			return fmt.Errorf("%s is required", name)
@@ -209,7 +218,7 @@ func runReviewBind(p process, d deps, args []string) {
 // runReviewRecord implements 'review record --feature --base --head [--result] [--cwd]'. A reply that is
 // refused is exit 2 and nothing is written; any other failure is exit 1.
 func runReviewRecord(p process, d deps, args []string) {
-	fail := func(err error) { recordFailed(p, err) }
+	fail := func(err error) { reviewFailed(p, "record", err) }
 	f, err := parseReviewFlags(args, "--feature", "--base", "--head", "--result", "--cwd")
 	if err == nil {
 		err = f.require("--feature", "--base", "--head")
@@ -246,27 +255,93 @@ func reportRecorded(p process, recorded reviewapp.Recorded) {
 	fmt.Fprintf(p.stderr, "review record: stdout is the skeleton of the record for 'roles append --stdin'; the parent of the chain fills %s\n",
 		strings.Join(review.ParentFields(), ", "))
 	if err := writeReviewJSON(p, recorded.Handoff); err != nil {
-		recordFailed(p, fmt.Errorf("the result is stored at %s, but the handoff could not be written: %w", recorded.Path, err))
+		reviewFailed(p, "record", fmt.Errorf("the result is stored at %s, but the handoff could not be written: %w", recorded.Path, err))
 		return
 	}
 	p.exit(0)
 }
 
-// recordFailed is how record ends on an error: the error on stderr, and exit 2 for a reply that was refused, 1
-// for anything else.
-func recordFailed(p process, err error) {
+// runReviewVerify implements 'review verify --feature --stored [--verdicts] [--cwd]'. A reply that is refused
+// is exit 2 and nothing is written; any other failure, a spent correction round included, is exit 1.
+func runReviewVerify(p process, d deps, args []string) {
+	fail := func(err error) { reviewFailed(p, "verify", err) }
+	f, err := parseReviewFlags(args, "--feature", "--stored", "--verdicts", "--cwd")
+	if err == nil {
+		err = f.require("--feature", "--stored")
+	}
+	if err != nil {
+		fail(err)
+		return
+	}
+	dir, err := reviewPath(d, f.cwd)
+	if err != nil {
+		fail(err)
+		return
+	}
+	reply, err := readReviewReply(p, d, f.verdicts)
+	if err != nil {
+		fail(err)
+		return
+	}
+	verified, err := newReviewService(d).Verify(dir, f.feature, f.stored, reply)
+	if err != nil {
+		fail(err)
+		return
+	}
+	reportVerified(p, verified)
+}
+
+// decisionSays is what verify says of each outcome of the verdicts.
+var decisionSays = map[reviewverdict.Outcome]string{
+	reviewverdict.Blocks:     "the review blocks: the record goes to the builder, and the fix is reviewed against the same base (one correction round)",
+	reviewverdict.Unverified: "the review is not clear: a check did not run, so nobody is next yet",
+	reviewverdict.Clear:      "the review is clear: the record goes to the delivery",
+}
+
+// reportVerified tells what verify stored and decided, and hands the skeleton of the record on stdout. A
+// verdict whose directory could not be flushed is stored all the same, and the person is told not to verify it
+// again.
+func reportVerified(p process, v reviewapp.Verified) {
+	fmt.Fprintf(p.stderr, "review verify: stored %s (sha256 %s)\n", v.Path, v.SHA256)
+	if v.NotFlushed != nil {
+		fmt.Fprintf(p.stderr, "review verify: warning: its directory could not be flushed, so the verdict may not survive a crash of the machine; it is stored, do not verify it again: %v\n", v.NotFlushed)
+	}
+	fmt.Fprintf(p.stderr, "review verify: %s\n", decisionSays[v.Decision.Outcome])
+	for _, list := range []struct {
+		label string
+		ids   []string
+	}{{"blocking", v.Decision.Blocking}, {"unverified", v.Decision.Unverified}, {"fix before delivery", v.Decision.Fix}, {"carry", v.Decision.Carry}} {
+		if len(list.ids) > 0 {
+			fmt.Fprintf(p.stderr, "review verify: %s: %s\n", list.label, strings.Join(list.ids, ", "))
+		}
+	}
+	fills := review.ParentFields()
+	if v.Handoff.ToRole != "" {
+		fills = slices.DeleteFunc(fills, func(field string) bool { return field == "to_role" })
+	}
+	fmt.Fprintf(p.stderr, "review verify: stdout is the skeleton of the record for 'roles append --stdin'; the parent of the chain fills %s\n", strings.Join(fills, ", "))
+	if err := writeReviewJSON(p, v.Handoff); err != nil {
+		reviewFailed(p, "verify", fmt.Errorf("the verdict is stored at %s, but the handoff could not be written: %w", v.Path, err))
+		return
+	}
+	p.exit(0)
+}
+
+// reviewFailed is how record and verify end on an error: the error on stderr, and exit 2 for a reply that was
+// refused, 1 for anything else.
+func reviewFailed(p process, verb string, err error) {
 	code := 1
 	var refused *reviewapp.ReplyRefusedError
 	if errors.As(err, &refused) {
 		code = 2
 	}
-	fmt.Fprintf(p.stderr, "error: review record: %v\n", err)
+	fmt.Fprintf(p.stderr, "error: review %s: %v\n", verb, err)
 	p.exit(code)
 }
 
-// readReviewReply reads the reply of the reviewer from the file at path, or from stdin when path is empty or
-// "-". It reads at most one byte past review.MaxReplyBytes, which is enough for the use case to refuse a reply
-// that is too large, and never the rest.
+// readReviewReply reads the reply of the reviewer or of the verifier from the file at path, or from stdin when
+// path is empty or "-". It reads at most one byte past review.MaxReplyBytes, which is enough for the use case
+// to refuse a reply that is too large, and never the rest.
 func readReviewReply(p process, d deps, path string) ([]byte, error) {
 	var r io.Reader = p.stdin
 	if path != "" && path != "-" {
