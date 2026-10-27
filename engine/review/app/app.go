@@ -2,8 +2,10 @@
 // makes the detached worktree the reviewer reads, Record holds the reply of the reviewer to the candidate
 // it recomputes and stores it, with that binding, in the results directory of a feature, and Verify holds
 // the reply of the verifier to a stored result, decides whether the review blocks and stores the reply beside
-// the result. CheckEvidence holds the evidence of the record that closes a review to the files stored, and Check
-// holds a head being delivered to the results stored for it. They answer with typed values and typed refusals
+// the result. Exempt holds the risk the agent declares and the report of the verifier for a head whose work takes
+// no review, and stores the exemption beside the results. CheckEvidence holds the evidence of the record that
+// closes a review to the files stored, and Check holds a head being delivered to the results stored for it. They
+// answer with typed values and typed refusals
 // over two ports this package owns: Git, the repository as the use cases ask about it, and Results, the
 // directory where results are stored. The adapters are review/gitexec and review/fsstore, and the words a
 // person reads, the flags and the exit codes are the command's, in cmd.
@@ -15,7 +17,7 @@
 //
 // Two rules the use cases keep, because the commands are what the parent of the role chain trusts:
 //
-//   - the candidate of Bind and Record is computed from git on every call and never taken from a reply or
+//   - the candidate of Bind, Record and Exempt is computed from git on every call and never taken from a reply or
 //     from an earlier call, so what a reply is held to is the repository as it is; Verify takes it from the
 //     stored result, which names the commits in full; Check computes it again for the commits a stored result
 //     names, in the same way, and holds the stored binding to it;
