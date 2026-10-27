@@ -717,6 +717,71 @@ func TestTheDocumentedCallsOfTheActualsValidatorGiveItTheRepositoryRoot(t *testi
 	}
 }
 
+// TestTheCIStepOfTheCommittedActualsRecordsGivesTheValidatorItsRootAndDropsTheCount pins what own-rdd T10 (S13, advisory
+// A5) moves in the third caller of the validator, the step "Committed actuals records validate" of
+// .github/workflows/ci.yml. The validator requires --repo, the root of the checkout that holds the stored results, and
+// refuses a call without it as a usage error, so a step that leaves it out fails CI. And one committed record
+// (corrected-actuals-skills-validate-ondisk-gate.json) mirrors a live record that counts the lenses of another tool's
+// receipt: the validator refuses that count by design, the fixture is not edited, so the step validates a copy of each
+// record without the member, through jq, and gives the validator that copy. The workflow is read as text, as the other
+// tests of CI do; each fragment is read where the step writes it, the call of the validator and the lines before it.
+func TestTheCIStepOfTheCommittedActualsRecordsGivesTheValidatorItsRootAndDropsTheCount(t *testing.T) {
+	workflow := readRepoFile(t, actualsInstrumentationRepoRoot(t), ".github/workflows/ci.yml")
+	const name = "Committed actuals records validate"
+	step := ciWorkflowStep(t, workflow, name)
+
+	const validator = `"$RUNNER_TEMP/actuals-record-validator"`
+	at := -1
+	for i, line := range step {
+		if strings.HasPrefix(strings.TrimSpace(line), validator) {
+			at = i
+			break
+		}
+	}
+	if at < 0 {
+		t.Fatalf("the step %q no longer runs the validator it builds, want a line that starts with %s:\n%s", name, validator, strings.Join(step, "\n"))
+	}
+	call := step[at]
+	for i := at; i+1 < len(step) && strings.HasSuffix(strings.TrimSpace(step[i]), `\`); i++ {
+		call += "\n" + step[i+1]
+	}
+	before := strings.Join(step[:at], "\n")
+
+	if want := `--repo "$PWD"`; !strings.Contains(call, want) {
+		t.Errorf("the validator in the step %q must be given the root of the checkout with %s, got:\n%s", name, want, call)
+	}
+	if want := `jq 'del(.review_lens_count)'`; !strings.Contains(before, want) {
+		t.Errorf("the step %q must validate each record without its review_lens_count, with %s before the call, got:\n%s", name, want, before)
+	}
+	const copyOfTheRecord = `"$RUNNER_TEMP/actuals-record.json"`
+	if !strings.Contains(before, "> "+copyOfTheRecord) || !strings.Contains(call, "--instance "+copyOfTheRecord) {
+		t.Errorf("the step %q must write the record without its count to %s and give the validator that file as --instance:\n%s", name, copyOfTheRecord, strings.Join(step, "\n"))
+	}
+}
+
+// ciWorkflowStep is the lines of the step named name in a workflow, read as text: from its "- name:" line to the line
+// before the next one that is not indented deeper than the dash (the next step, or the next job).
+func ciWorkflowStep(t *testing.T, workflow, name string) []string {
+	t.Helper()
+	lines := strings.Split(workflow, "\n")
+	indentation := func(line string) int { return len(line) - len(strings.TrimLeft(line, " ")) }
+	for i, line := range lines {
+		if strings.TrimSpace(line) != "- name: "+name {
+			continue
+		}
+		end := len(lines)
+		for j := i + 1; j < len(lines); j++ {
+			if strings.TrimSpace(lines[j]) != "" && indentation(lines[j]) <= indentation(line) {
+				end = j
+				break
+			}
+		}
+		return lines[i:end]
+	}
+	t.Fatalf(".github/workflows/ci.yml has no step named %q", name)
+	return nil
+}
+
 func actualsInstrumentationRepoRoot(t *testing.T) string {
 	t.Helper()
 	repoRoot, err := filepath.Abs(filepath.Join("..", ".."))
