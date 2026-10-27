@@ -1,0 +1,367 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:d6887595ad81f425a9d958f3860567d2ae94c329dbf2e6748268cc827fd6e2e6",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-dda16bddb8ccdfda",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "6199872c10e38238eca5265c69be862d8962b15b",
+      "candidate_tree": "5161adc40dd5daef86e9141049e208a6637c8488",
+      "paths_digest": "sha256:23a339add14696b7e74e1eeadb16af9aa9fe71f373607eda99f511f8f4604bcf",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        ".github/workflows/ci.yml",
+        "CHANGELOG.md",
+        "engine/skills/actuals_instrumentation_contract_test.go",
+        "odd/review-results/README.md",
+        "odd/tasks/own-rdd.md",
+        "skills/_shared/actuals-record.schema.json",
+        "skills/_shared/pre-sdd-contracts.md",
+        "skills/inception-pipeline/SKILL.md",
+        "tools/actuals-record-validator/go.mod",
+        "tools/actuals-record-validator/main.go",
+        "tools/actuals-record-validator/main_test.go"
+      ],
+      "identity": "sha256:b44ca555bfd242f5b3a6c2049f26b9d362989b7ed53bc0472d3253c8765bc1d5"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "6199872c10e38238eca5265c69be862d8962b15b",
+      "candidate_tree": "5161adc40dd5daef86e9141049e208a6637c8488",
+      "paths_digest": "sha256:23a339add14696b7e74e1eeadb16af9aa9fe71f373607eda99f511f8f4604bcf",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        ".github/workflows/ci.yml",
+        "CHANGELOG.md",
+        "engine/skills/actuals_instrumentation_contract_test.go",
+        "odd/review-results/README.md",
+        "odd/tasks/own-rdd.md",
+        "skills/_shared/actuals-record.schema.json",
+        "skills/_shared/pre-sdd-contracts.md",
+        "skills/inception-pipeline/SKILL.md",
+        "tools/actuals-record-validator/go.mod",
+        "tools/actuals-record-validator/main.go",
+        "tools/actuals-record-validator/main_test.go"
+      ],
+      "identity": "sha256:b44ca555bfd242f5b3a6c2049f26b9d362989b7ed53bc0472d3253c8765bc1d5"
+    },
+    "genesis_paths": [
+      ".github/workflows/ci.yml",
+      "CHANGELOG.md",
+      "engine/skills/actuals_instrumentation_contract_test.go",
+      "odd/review-results/README.md",
+      "odd/tasks/own-rdd.md",
+      "skills/_shared/actuals-record.schema.json",
+      "skills/_shared/pre-sdd-contracts.md",
+      "skills/inception-pipeline/SKILL.md",
+      "tools/actuals-record-validator/go.mod",
+      "tools/actuals-record-validator/main.go",
+      "tools/actuals-record-validator/main_test.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-risk",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 488,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "own-rdd T10 slice 2: the actuals validator now requires --repo, imports the engine module through a replace directive and refuses a review_lens_count that differs from the stored rows; CI step and docs updated",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:1191ee499b9a2bb1e48efb125cf322238c226d57e75d0863f09e900a1cabe9c8",
+    "capture_phase_revision": "sha256:57059e1d4b68d0d89ed725d2b4748a18205929488de77765b775784e196cd421",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:b44ca555bfd242f5b3a6c2049f26b9d362989b7ed53bc0472d3253c8765bc1d5",
+        "capture_phase_revision": "sha256:57059e1d4b68d0d89ed725d2b4748a18205929488de77765b775784e196cd421",
+        "artifact_digest": "sha256:85b3c8a610cbf7c5e7b795e722a0543e6e884599e774367b7909cef7af29c0aa",
+        "result_hash": "sha256:547339737e5dec3588a9c9d8c205df2f62511be2c2e7db57991518175a29943b",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:2fb93081ba7d8382b4c24e2313d5ca24f54eda20c4e5257247c539957f86298f",
+            "lineage_id": "review-dda16bddb8ccdfda",
+            "authority_revision": "sha256:57059e1d4b68d0d89ed725d2b4748a18205929488de77765b775784e196cd421",
+            "target_identity": "sha256:b44ca555bfd242f5b3a6c2049f26b9d362989b7ed53bc0472d3253c8765bc1d5",
+            "base_tree": "6199872c10e38238eca5265c69be862d8962b15b",
+            "candidate_tree": "5161adc40dd5daef86e9141049e208a6637c8488",
+            "changed_path_manifest_sha256": "sha256:0a414276e96642eebdf61f47c7e1582ef5602c9825fcaae652100750992e5181",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:2fb93081ba7d8382b4c24e2313d5ca24f54eda20c4e5257247c539957f86298f",
+            "raw_sha256": "sha256:d978418077be3d9c6a1c2c7ce3ffd0ef75f8e07a6782d1aae5977660941868c6",
+            "canonical_sha256": "sha256:c14974d1b5b35f9e203e983fc56817862e6faec387a1c3aeb8910c15b17dc0a9",
+            "result_hash": "sha256:547339737e5dec3588a9c9d8c205df2f62511be2c2e7db57991518175a29943b",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:2fb93081ba7d8382b4c24e2313d5ca24f54eda20c4e5257247c539957f86298f",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                ".github/workflows/ci.yml",
+                "CHANGELOG.md",
+                "engine/skills/actuals_instrumentation_contract_test.go",
+                "odd/review-results/README.md",
+                "odd/tasks/own-rdd.md",
+                "skills/_shared/actuals-record.schema.json",
+                "skills/_shared/pre-sdd-contracts.md",
+                "skills/inception-pipeline/SKILL.md",
+                "tools/actuals-record-validator/go.mod",
+                "tools/actuals-record-validator/main.go",
+                "tools/actuals-record-validator/main_test.go"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [
+              {
+                "id": "R1-001",
+                "lens": "risk",
+                "location": "CHANGELOG.md:17",
+                "severity": "SUGGESTION",
+                "claim": "The changelog entry says the CI step 'Committed actuals records validate' still calls the validator without --repo and fails until patched. This candidate's own .github/workflows/ci.yml change already applies that patch, so the sentence is stale. This is a documentation inaccuracy, not a security risk.",
+                "proof_refs": [
+                  "CHANGELOG.md:17",
+                  ".github/workflows/ci.yml:235-257"
+                ]
+              }
+            ],
+            "evidence": [
+              "Reviewed all 11 changed paths for security, data exposure, unsafe input handling and dependency risk.",
+              "The validator takes --repo and change_name from the caller and the record. The change name is passed to app.CountLenses, which the patch notes say refuses any name that is not one safe path segment, and it reads only files named like results. Stat, read and parse failures all exit non-zero (exit 7 for unreadable results). I found no reachable traversal or fail-open path in the visible code.",
+              "The go.mod change adds a local replace to ../../engine and no third-party module, so it adds no dependency-vulnerability surface.",
+              "The CI change runs jq 'del(.review_lens_count)' on committed fixtures into a RUNNER_TEMP file, with quoted variables and no untrusted input. The member is removed only for the committed legacy fixture, which the Go test pins as refused by design, so it adds no exploitable weakening.",
+              "Missing --repo now exits 2 and an unreadable repository or result exits 7, so the check refuses instead of passing when it cannot run."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "selected_order": 1,
+        "target_identity": "sha256:b44ca555bfd242f5b3a6c2049f26b9d362989b7ed53bc0472d3253c8765bc1d5",
+        "capture_phase_revision": "sha256:57059e1d4b68d0d89ed725d2b4748a18205929488de77765b775784e196cd421",
+        "artifact_digest": "sha256:022a7a4565f765edda1c8721144e5c648137d37447b77dc1ce31f109b14eecf6",
+        "result_hash": "sha256:c6e23e8abc3d80703a1ba1ab76a59ebfe97b0800ec7048b228744e0d0873d743",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:104cac1b28d7f68570dc985365cc98ceeb58092dc9281c108b0eeac28b076741",
+            "lineage_id": "review-dda16bddb8ccdfda",
+            "authority_revision": "sha256:57059e1d4b68d0d89ed725d2b4748a18205929488de77765b775784e196cd421",
+            "target_identity": "sha256:b44ca555bfd242f5b3a6c2049f26b9d362989b7ed53bc0472d3253c8765bc1d5",
+            "base_tree": "6199872c10e38238eca5265c69be862d8962b15b",
+            "candidate_tree": "5161adc40dd5daef86e9141049e208a6637c8488",
+            "changed_path_manifest_sha256": "sha256:0a414276e96642eebdf61f47c7e1582ef5602c9825fcaae652100750992e5181",
+            "lens": "review-readability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:104cac1b28d7f68570dc985365cc98ceeb58092dc9281c108b0eeac28b076741",
+            "raw_sha256": "sha256:7abac652153302ff5aab5fc6aeb2937c0bc2a011f33a40722fb8abe441958c0b",
+            "canonical_sha256": "sha256:04406e08c8e5f807cff0f3bc170f2fdbe0bb26b0ac7f533af99c8e3518de40ee",
+            "result_hash": "sha256:c6e23e8abc3d80703a1ba1ab76a59ebfe97b0800ec7048b228744e0d0873d743",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:104cac1b28d7f68570dc985365cc98ceeb58092dc9281c108b0eeac28b076741",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                ".github/workflows/ci.yml",
+                "CHANGELOG.md",
+                "engine/skills/actuals_instrumentation_contract_test.go",
+                "odd/review-results/README.md",
+                "odd/tasks/own-rdd.md",
+                "skills/_shared/actuals-record.schema.json",
+                "skills/_shared/pre-sdd-contracts.md",
+                "skills/inception-pipeline/SKILL.md",
+                "tools/actuals-record-validator/go.mod",
+                "tools/actuals-record-validator/main.go",
+                "tools/actuals-record-validator/main_test.go"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-001",
+                "lens": "readability",
+                "location": "CHANGELOG.md:17",
+                "severity": "WARNING",
+                "claim": "The changelog entry says the ci.yml step calls the validator without --repo and fails until patched, and that the workflow is outside the edit surface. This candidate itself patches ci.yml, so the sentence is stale and misleading for a maintainer reading the changelog.",
+                "proof_refs": [
+                  "CHANGELOG.md:17",
+                  ".github/workflows/ci.yml:238-256"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-002",
+                "lens": "readability",
+                "location": "tools/actuals-record-validator/main.go:279-300",
+                "severity": "SUGGESTION",
+                "claim": "checkLensCount has a switch with order-dependent cases. The 'nothing backs a count' case is guarded by `*claimed != counted.Lenses \u0026\u0026 counted.Results == 0`. A claimed 0 with no results falls through to the success branch and prints '0 equals the 0 rows', which is an undocumented edge that only the task log mentions. A short comment at the switch would make the intent explicit.",
+                "proof_refs": [
+                  "tools/actuals-record-validator/main.go:279-300"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Reviewed all 11 changed paths in the supplied patches.",
+              "The ci.yml change deletes review_lens_count from fixtures via jq so the committed pre-S8 fixture passes; the rationale is documented in the workflow comment.",
+              "main.go reuses decodeRecord between validateSemantics and checkLensCount, avoiding duplicated decoding.",
+              "The exit code 7 constant is deliberately duplicated as a literal in the tests, with the reason stated in a comment."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 2,
+        "target_identity": "sha256:b44ca555bfd242f5b3a6c2049f26b9d362989b7ed53bc0472d3253c8765bc1d5",
+        "capture_phase_revision": "sha256:57059e1d4b68d0d89ed725d2b4748a18205929488de77765b775784e196cd421",
+        "artifact_digest": "sha256:f2686b8746bc0a1f9475d571a6bf83ea33512238229accf02d30b1ded4f3cdc9",
+        "result_hash": "sha256:deb50d26b90e46af94e9c90520c526ade51fed9f334fc9e8df6ab4f34f840865",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:e13f8e86b4a9c3563e983406020d47b20dfac860fed35e6d4257addfed679b62",
+            "lineage_id": "review-dda16bddb8ccdfda",
+            "authority_revision": "sha256:57059e1d4b68d0d89ed725d2b4748a18205929488de77765b775784e196cd421",
+            "target_identity": "sha256:b44ca555bfd242f5b3a6c2049f26b9d362989b7ed53bc0472d3253c8765bc1d5",
+            "base_tree": "6199872c10e38238eca5265c69be862d8962b15b",
+            "candidate_tree": "5161adc40dd5daef86e9141049e208a6637c8488",
+            "changed_path_manifest_sha256": "sha256:0a414276e96642eebdf61f47c7e1582ef5602c9825fcaae652100750992e5181",
+            "lens": "review-reliability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:e13f8e86b4a9c3563e983406020d47b20dfac860fed35e6d4257addfed679b62",
+            "raw_sha256": "sha256:81af48679c3bdba89ce5f1654af232b3348c69e4b1810f5ade71e32c2a39137a",
+            "canonical_sha256": "sha256:eaebf4cff8430a4477b3642ff281bd56d30a0d840c90e12c71d9b3f8de007dd0",
+            "result_hash": "sha256:deb50d26b90e46af94e9c90520c526ade51fed9f334fc9e8df6ab4f34f840865",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:e13f8e86b4a9c3563e983406020d47b20dfac860fed35e6d4257addfed679b62",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                ".github/workflows/ci.yml",
+                "CHANGELOG.md",
+                "engine/skills/actuals_instrumentation_contract_test.go",
+                "odd/review-results/README.md",
+                "odd/tasks/own-rdd.md",
+                "skills/_shared/actuals-record.schema.json",
+                "skills/_shared/pre-sdd-contracts.md",
+                "skills/inception-pipeline/SKILL.md",
+                "tools/actuals-record-validator/go.mod",
+                "tools/actuals-record-validator/main.go",
+                "tools/actuals-record-validator/main_test.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-ci-stale-changelog",
+                "lens": "reliability",
+                "location": "CHANGELOG.md:17",
+                "severity": "WARNING",
+                "claim": "The new changelog entry says the CI step 'Committed actuals records validate' calls the validator without --repo and fails until patched, but this same candidate already patches that step in .github/workflows/ci.yml. The entry is therefore inaccurate about the shipped state.",
+                "proof_refs": [
+                  ".github/workflows/ci.yml:235-257",
+                  "CHANGELOG.md:17"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-ci-jq-bypass",
+                "lens": "reliability",
+                "location": ".github/workflows/ci.yml:249-254",
+                "severity": "WARNING",
+                "claim": "CI deletes review_lens_count from every committed fixture before validating. Any future fixture that carries a count is validated without its count check, so the step no longer proves the shipped binary accepts the data as written. The Go test does pin the current fixture, which limits the exposure.",
+                "proof_refs": [
+                  ".github/workflows/ci.yml:249-254",
+                  "tools/actuals-record-validator/main_test.go:398-446"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-no-fsstore-ordering-test",
+                "lens": "reliability",
+                "location": "tools/actuals-record-validator/main.go:262-300",
+                "severity": "SUGGESTION",
+                "claim": "checkLensCount runs after all schema and semantic checks, and the tests cover the exit 7 paths and the exit 6 outcomes. No test shows that a record failing a semantic rule still exits 6, not 7, when --repo is invalid. The README states that order, so it is only weakly proved.",
+                "proof_refs": [
+                  "tools/actuals-record-validator/main.go:262-300",
+                  "tools/actuals-record-validator/main_test.go:545-570"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Read all 11 changed paths in full from the patches.",
+              "Checked the validator outcome matrix (match, mismatch, no backing results, omitted with and without rows, missing --repo, non-directory --repo, broken stored result) against the tests. Each outcome has an externally observable exit-code and message assertion.",
+              "The sample-change name in the tests comes from validRecord, which I could not see. I assume it sets change_name to sample-change."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "45691d2b0c6c7a59172be9b09a3ba016f9d05ffc71198a2dec55ba87dda65fd0",
+    "initial_atomic_start": {
+      "lineage_id": "review-dda16bddb8ccdfda",
+      "worktree_identity": "sha256:8fc88933f0661084356082a349530571a6f0e1e9f48ca938a456c158467d2794",
+      "target_identity": "sha256:b44ca555bfd242f5b3a6c2049f26b9d362989b7ed53bc0472d3253c8765bc1d5",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "6199872c10e38238eca5265c69be862d8962b15b",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "high",
+      "selected_lenses": [
+        "review-risk",
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 488,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "own-rdd T10 slice 2: the actuals validator now requires --repo, imports the engine module through a replace directive and refuses a review_lens_count that differs from the stored rows; CI step and docs updated"
+    },
+    "runtime_agent": "claude-code"
+  }
+}
