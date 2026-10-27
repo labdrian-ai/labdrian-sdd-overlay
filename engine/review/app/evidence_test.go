@@ -147,6 +147,22 @@ func TestCheckEvidenceAcceptsTheRecordsThatRecordAndVerifyPrint(t *testing.T) {
 	}
 }
 
+// The stored verdict is parsed against its own result, the one the record names: a result of two findings whose
+// verdict answers both is accepted, so the parse is held to that result's findings and not to another reply's.
+func TestCheckEvidenceAcceptsAVerdictOfEveryFindingOfItsResult(t *testing.T) {
+	g, store := newFakeGit(), newFakeResults()
+	stored := reviewed(t, store, baseSHA, headSHA, 1, finding("F1", "BLOCKER"), finding("F2", "WARNING"))
+	verified, err := app.New(g, store).Verify(evidenceDir, "own-rdd", stored,
+		verdictReply(verdict("F1", "not-reproduced"), verdict("F2", "not-reproduced")))
+	if err != nil {
+		t.Fatalf("setup: Verify() error = %v", err)
+	}
+
+	if _, _, err := check(store, verified.Handoff); err != nil {
+		t.Errorf("CheckEvidence() of a verdict that answers both findings of its result error = %v, want nil", err)
+	}
+}
+
 // A record that closes a review that ran carries the range with the digest of its diff and the stored result;
 // the verdict is optional. One that lacks a needed piece, or gives a kind twice so that neither piece is the
 // evidence of its kind, is refused with the kind named, and before any file is read.

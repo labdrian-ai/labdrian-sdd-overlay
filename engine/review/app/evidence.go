@@ -90,6 +90,8 @@ func (s Service) CheckEvidence(dir string, h roles.RoleHandoff) error {
 	if err := review.CheckFile(verdict, verdictFile); err != nil {
 		return err
 	}
+	// Parsed only to be validated: a verdict that is not a verdict of this result is refused, and its value is
+	// not needed here (review check decides from it).
 	if _, err := reviewverdict.Parse(verdictFile, parsed); err != nil {
 		return &review.EvidenceError{Kind: verdict.Kind, Ref: verdict.Ref, Err: err}
 	}

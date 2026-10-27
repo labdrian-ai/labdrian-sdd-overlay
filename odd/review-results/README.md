@@ -232,7 +232,7 @@ The head is cleared when at least one result binds it and every one is clear, or
 |---|---|
 | no result and no exemption: it was neither reviewed nor exempted, or only another head or another feature was | `no stored result binds the head` |
 | a result whose decision is `blocks` | `a stored result blocks the head` |
-| a result that is neither `clear` nor `blocks`: its decision is `unverified` (a check did not run) or none at all (nobody decided it) | `a stored result is not clear` |
+| a result that is neither `clear` nor `blocks`, with an exemption or not: its decision is `unverified` (a check did not run), or it has severe findings and no verdict was stored for it | `a stored result is not clear` |
 | a result whose `base`, `head`, `diff_sha256` or `paths` are not what git gives now | `the stored binding differs from the candidate git gives` |
 | an exemption whose `binding` differs from what git gives now | `the stored binding differs from the candidate git gives` |
 | an exemption whose `risk` names an item | `a change that names a high-risk item is never exempt from review` |
