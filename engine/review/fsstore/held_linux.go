@@ -138,11 +138,15 @@ func (s Store) openBelow(parent *os.File, path, name string, create bool) (*os.F
 		case err == nil:
 			made = true
 		case !errors.Is(err, fs.ErrExist):
-			return nil, fmt.Errorf("make %s: %w", path, err)
+			return nil, fmt.Errorf("make %s: %w", path, &fs.PathError{Op: "mkdir", Path: path, Err: err})
 		}
 		fd, err = openat(int(parent.Fd()), name, openDir, 0)
 	}
 	if err != nil {
+		if !create && !errors.Is(err, syscall.ENOTDIR) && !errors.Is(err, syscall.ELOOP) {
+			// Names: the words os.ReadDir gave before the store held its directories open.
+			return nil, fmt.Errorf("read %s: %w", path, &fs.PathError{Op: "open", Path: path, Err: err})
+		}
 		return nil, notADirectory(path, err)
 	}
 	dir := os.NewFile(uintptr(fd), path)

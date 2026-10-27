@@ -377,3 +377,44 @@ func TestCreateFailsWhenTheDirectoryCannotBeWritten(t *testing.T) {
 		t.Errorf("the directory holds %v, want nothing left", entries)
 	}
 }
+
+// A directory the store may not read or make is reported in the words of the standard library, as it was
+// before the store held its directories open: what failed (read, make), then the call and the path.
+func TestTheStoreNamesAPermissionFailureByTheCallThatFailed(t *testing.T) {
+	if runtime.GOOS == "windows" || os.Geteuid() == 0 {
+		t.Skip("a closed directory stops nobody who is root, and windows has other modes")
+	}
+	t.Run("names of an unreadable feature directory", func(t *testing.T) {
+		root := t.TempDir()
+		dir := featureDir(root, "own-rdd")
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Chmod(dir, 0o000); err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { _ = os.Chmod(dir, 0o755) })
+		_, err := (fsstore.Store{}).Names(root, "own-rdd")
+		want := "read " + dir + ": open " + dir + ": permission denied"
+		if err == nil || err.Error() != want {
+			t.Errorf("Names() error = %v, want %q", err, want)
+		}
+	})
+	t.Run("create under a results directory that cannot be written", func(t *testing.T) {
+		root := t.TempDir()
+		dir := featureDir(root, "own-rdd")
+		parent := filepath.Dir(dir)
+		if err := os.MkdirAll(parent, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Chmod(parent, 0o555); err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { _ = os.Chmod(parent, 0o755) })
+		err := (fsstore.Store{}).Create(root, "own-rdd", resultName, []byte("x"))
+		want := "make " + dir + ": mkdir " + dir + ": permission denied"
+		if err == nil || err.Error() != want {
+			t.Errorf("Create() error = %v, want %q", err, want)
+		}
+	})
+}
