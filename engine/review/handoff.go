@@ -1,6 +1,10 @@
 package review
 
-import "github.com/labdrian-ai/labdrian-sdd-overlay/engine/roles"
+import (
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/reviewresult"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/reviewverdict"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/roles"
+)
 
 // Handoff is the skeleton of the RoleHandoff record that closes a review, for `labdrian roles append
 // --stdin`: the members the command knows are filled, and the ones only the parent of the chain knows are
@@ -29,11 +33,29 @@ func Handoff(c Candidate, storedRef, storedSHA256 string) roles.RoleHandoff {
 	}
 }
 
+// VerifiedHandoff is the skeleton of the record that closes a review the verifier has run on, for the same
+// `labdrian roles append --stdin`. It is the one Handoff makes for the range b binds and the stored result
+// (resultRef and resultSHA256), with the stored verdict bound as one more piece of evidence
+// (EvidenceVerifier), and with who is next filled from the outcome of the verdict: the builder when a finding
+// blocks, the delivery when the review is clear. When a check did not run (reviewverdict.Unverified) it says
+// nobody, and the parent fills to_role once the check has run: the review is not clear, and not blocked.
+func VerifiedHandoff(b reviewresult.Binding, resultRef, resultSHA256, verdictRef, verdictSHA256 string, outcome reviewverdict.Outcome) roles.RoleHandoff {
+	h := Handoff(Candidate{Base: b.Base, Head: b.Head, DiffSHA256: b.DiffSHA256}, resultRef, resultSHA256)
+	h.Evidence = append(h.Evidence, roles.Evidence{Kind: EvidenceVerifier, Ref: verdictRef, SHA256: verdictSHA256})
+	switch outcome {
+	case reviewverdict.Blocks:
+		h.ToRole = roles.RoleBuilder
+	case reviewverdict.Clear:
+		h.ToRole = roles.RoleDelivery
+	}
+	return h
+}
+
 // ParentFields are the members of the skeleton only the parent of the chain knows, by their names in the
 // record: the identity of the chain it appends to (project_id, goal_id, chain_id), the place of the record
 // in it (seq, prev_sha256), who gets the work next (to_role: builder when a severe finding blocks,
-// delivery otherwise, per skills/role-chain/SKILL.md) and the narrative (context.summary). Every other
-// member the record needs, Handoff has filled.
+// delivery otherwise, per skills/role-chain/SKILL.md, which VerifiedHandoff fills once the verifier has
+// run) and the narrative (context.summary). Every other member the record needs, Handoff has filled.
 func ParentFields() []string {
 	return []string{"project_id", "goal_id", "chain_id", "seq", "prev_sha256", "to_role", "context.summary"}
 }

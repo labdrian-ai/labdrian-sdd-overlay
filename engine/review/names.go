@@ -66,10 +66,58 @@ func CheckRev(rev string) error {
 	return nil
 }
 
+// The endings of the files stored for a head: a result ends in .json, and the verdict of the verifier on it,
+// stored beside it, in .verifier.json.
+const (
+	resultSuffix  = ".json"
+	verdictSuffix = ".verifier.json"
+)
+
 // ResultName is the name of the file that holds the nth launch stored for the head of c: <head12>-<n>.json.
 // n counts from 1; NextNumber says which one is next.
 func ResultName(c Candidate, n int) string {
-	return c.Short() + "-" + strconv.Itoa(n) + ".json"
+	return c.Short() + "-" + strconv.Itoa(n) + resultSuffix
+}
+
+// CheckResultName refuses a name that ResultName does not make: <head12>-<n>.json, where <head12> is 12
+// lowercase hexadecimal characters and <n> is written the way NextNumber counts it. The name of a verdict
+// is not one, and neither is a path. The error wraps ErrInvalidResultName.
+func CheckResultName(name string) error {
+	stem, ok := strings.CutSuffix(name, resultSuffix)
+	head, number, dash := strings.Cut(stem, "-")
+	if !ok || !dash || len(head) != shortLength || !isLowerHex(head) || !canonicalNumber(number) {
+		return fmt.Errorf("%w: %q is not <head12>-<n>.json", ErrInvalidResultName, name)
+	}
+	return nil
+}
+
+func isLowerHex(s string) bool {
+	for i := 0; i < len(s); i++ {
+		if c := s[i]; c < '0' || c > '9' && c < 'a' || c > 'f' {
+			return false
+		}
+	}
+	return true
+}
+
+// VerdictName is the name of the file that holds the verdict of the verifier on the result called result,
+// stored beside it: the <head12>-<n> of the result, then .verifier.json. It refuses a result that
+// CheckResultName refuses.
+func VerdictName(result string) (string, error) {
+	if err := CheckResultName(result); err != nil {
+		return "", err
+	}
+	return strings.TrimSuffix(result, resultSuffix) + verdictSuffix, nil
+}
+
+// ResultOfVerdict is the name of the result that a verdict stored under name is beside, or "" and false when
+// name is not the name of a verdict.
+func ResultOfVerdict(name string) (string, bool) {
+	stem, ok := strings.CutSuffix(name, verdictSuffix)
+	if !ok || CheckResultName(stem+resultSuffix) != nil {
+		return "", false
+	}
+	return stem + resultSuffix, true
 }
 
 // ResultPath is the path, relative to the root of the repository and written with '/', of the file called
@@ -86,8 +134,8 @@ const maxNumberDigits = 9
 // NextNumber is the number of the next launch stored for the head of c, given the names in the results
 // directory of the feature: one more than the highest number any of them holds, and 1 when none does. A
 // name holds a number when it is <head12>-<n> followed by '.', where <n> is written the way ResultName
-// writes it (digits, no leading zero), so a result and the verifier report stored beside it
-// (<head12>-<n>.verifier.md) both do, and the number of a deleted launch is not given again as long as a
+// writes it (digits, no leading zero), so a result and the verdict of the verifier stored beside it
+// (<head12>-<n>.verifier.json) both do, and the number of a deleted launch is not given again as long as a
 // later one is there. Any other name, a temporary file included, holds none.
 func NextNumber(names []string, c Candidate) int {
 	prefix := c.Short() + "-"
