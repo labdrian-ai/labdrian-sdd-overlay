@@ -200,6 +200,32 @@ func TestParseRefusesAVerdictWithoutEvidence(t *testing.T) {
 	})
 }
 
+// The refusals of the shape of a reply say the member and the place, in the words they always did. The same check
+// of the shape serves the report of an exemption (report.go), and what it says of a reply of verdicts must not
+// change with it.
+func TestParseKeepsTheWordsOfTheRefusalsOfTheShapeOfAReply(t *testing.T) {
+	for _, tc := range []struct {
+		name, data string
+		want       error
+		say        string
+	}{
+		{"no verdicts member", `{}`, reviewverdict.ErrUnparseable, `reply has no "verdicts" member`},
+		{"a null verdicts member", `{"verdicts":null}`, reviewverdict.ErrUnparseable, `reply has a null "verdicts" member`},
+		{"verdicts that is an object", `{"verdicts":{}}`, reviewverdict.ErrUnparseable, `verdicts is not an array`},
+		{"a verdict that is not an object", `{"verdicts":["F1"]}`, reviewverdict.ErrUnparseable, `verdicts[0] is not a JSON object`},
+		{"a verdict with no output", `{"verdicts":[` + entry("F1", "reproduced", "c", "o", "not-run") + `,{"id":"F2","result":"not-run","command":"","base_result":"not-run"}]}`, reviewverdict.ErrUnparseable, `verdicts[1] has no "output" member`},
+		{"a null member of a verdict", `{"verdicts":[{"id":"F1","result":null,"command":"c","output":"o","base_result":"not-run"}]}`, reviewverdict.ErrUnparseable, `verdicts[0] has a null "result" member`},
+		{"a member of the reply", `{"verdicts":[],"schema":"v1"}`, reviewverdict.ErrUnknownMember, `unknown reply field "schema"`},
+		{"a member of a verdict", `{"verdicts":[{"id":"F1","result":"reproduced","command":"c","output":"o","base_result":"not-run","note":"x"}]}`, reviewverdict.ErrUnknownMember, `unknown verdicts[0] field "note"`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if message := refused(t, tc.data, tc.want); !strings.Contains(message, tc.say) {
+				t.Errorf("error = %q, want it to say %q", message, tc.say)
+			}
+		})
+	}
+}
+
 // A reply that breaks several rules is refused for the first one in the order of the package comment, so the
 // same reply is always refused for the same reason.
 func TestParseRefusesForTheFirstRuleABrokenReplyBreaks(t *testing.T) {
