@@ -63,14 +63,14 @@ The number is checked when the actuals record is written, not trusted (`odd/task
 
 | the record | the stored results of the change | the validator |
 |---|---|---|
-| `review_lens_count` N | record N rows | exit 0, and a second line says what was compared: `review_lens_count: N equals the N rows recorded in K stored review results of "<change>"` |
-| `review_lens_count` N | record M rows, M other than N | exit 6, `review_lens_count is N but the stored review results of "<change>" record M rows (K stored results in odd/review-results/<change>)`, and says to write M |
-| `review_lens_count` N | none: the directory is missing or holds no result | exit 6, `review_lens_count is N but the stored review results of "<change>" record 0 rows (no stored review result in odd/review-results/<change>): nothing backs a count for this change`, and says to omit it |
+| `review_lens_count` N, above 0 | record N rows | exit 0, and a second line says what was compared: `review_lens_count: N equals the N rows recorded in K stored review results of "<change>"` |
+| `review_lens_count` N | record M rows, M above 0 and other than N | exit 6, `review_lens_count is N but the stored review results of "<change>" record M rows (K stored results in odd/review-results/<change>)`, and says to write M |
+| `review_lens_count` N, 0 included | none: the directory is missing or holds no result | exit 6, `review_lens_count is N but the stored review results of "<change>" record 0 rows (no stored review result in odd/review-results/<change>): nothing backs a count for this change`, and says to omit it |
 | omitted | record M rows, M above 0 | exit 6, `review_lens_count is omitted but the stored review results of "<change>" record M rows`, and says to write M |
 | omitted | record no row | exit 0, and a second line says that nothing was compared: `review_lens_count: omitted, and no stored review result of "<change>" records a row: there was nothing to compare` |
 | any | cannot be counted (`--repo` is not a directory or holds no `.git` entry, or a file named like a result is not one) | exit 7, naming the repository or the file, and that `review_lens_count` cannot be checked |
 
-- A change reviewed before the rows were stored (a gentle receipt and no stored result: nothing in `odd/review-results/` was ever written for it) has no row to count, so its record omits `review_lens_count`. A count taken from the receipt of another tool is the third row of the table: it is refused and never passed, because the validator cannot tell it from a count that was made up.
+- A change reviewed before the rows were stored (a gentle receipt and no stored result: nothing in `odd/review-results/` was ever written for it) has no row to count, so its record omits `review_lens_count`. A count taken from the receipt of another tool is the third row of the table: it is refused and never passed, because the validator cannot tell it from a count that was made up. A count of 0 is a count like any other: with no stored result it is the third row too, and only omitting the field is the outcome for such a change.
 - Exit 7 is new. The exit codes 0, 2, 3, 4, 5 and 6 keep their meanings: 2 is now also a missing or relative `--repo`, and a pass prints one more line than it did.
 
 ## The verdict of the verifier

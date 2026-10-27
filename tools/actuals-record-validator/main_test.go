@@ -521,6 +521,34 @@ func TestLensCountOfAChangeWithNoStoredResultIsRefused(t *testing.T) {
 	}
 }
 
+// A count of 0 is a count like any other: no stored result backs it either, so it is refused as 4 is, and the refusal
+// says to omit it. Only omitting the count is the explicit outcome of a change without stored results; a 0 that passed
+// because it does not differ from 0 rows would be the claim of a count nothing backs.
+func TestLensCountOfZeroForAChangeWithNoStoredResultIsRefused(t *testing.T) {
+	anotherChangeOnly := storeResults(t, newRepo(t), "another-change", []string{"default"})
+	cases := map[string]string{
+		"an empty repository":                newRepo(t),
+		"the results of another change only": anotherChangeOnly,
+	}
+	for name, repo := range cases {
+		t.Run(name, func(t *testing.T) {
+			code, output := validateRecordIn(t, lensRecord(0), repo)
+
+			if code != exitSemanticValidation {
+				t.Fatalf("exit code = %d, want %d; output=%q", code, exitSemanticValidation, output)
+			}
+			for _, want := range []string{"review_lens_count is 0 but", `of "sample-change" record 0 rows`, "no stored review result", "omit review_lens_count"} {
+				if !strings.Contains(output, want) {
+					t.Errorf("output %q does not contain %q", output, want)
+				}
+			}
+			if strings.Contains(output, "ok:") {
+				t.Errorf("output %q must not say ok", output)
+			}
+		})
+	}
+}
+
 // A record that omits the count says that no stored result records a row, and with none stored there is nothing to
 // compare: it passes, and says so instead of passing in silence.
 func TestOmittedLensCountOfAChangeWithNoStoredResultPassesAndSaysNothingWasCompared(t *testing.T) {

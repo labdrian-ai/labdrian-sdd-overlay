@@ -27,10 +27,10 @@
 // through the engine's one function for that number (review/app CountLenses,
 // never a count of its own) and refuses a record whose number differs, one that
 // claims a count no stored result backs (a change reviewed before the rows were
-// stored), one that omits it while a stored result records a row, and a check
-// that cannot read the results (--repo is not an absolute path to the root of a
-// repository, or a stored result is not one). A check that cannot run refuses;
-// it never passes.
+// stored; a count of 0 too), one that omits it while a stored result records a
+// row, and a check that cannot read the results (--repo is not an absolute path
+// to the root of a repository, or a stored result is not one). A check that
+// cannot run refuses; it never passes.
 package main
 
 import (
@@ -155,11 +155,11 @@ Semantic invariants (beyond schema shape):
   * review_lens_count is the number of lens rows the stored review results of the
     change record, one for each row of each launch, counted by the engine
     (review/app CountLenses) from odd/review-results/<change_name>/ under --repo.
-    A different count is refused naming both numbers; so is a count for a change
-    with no stored result (a change reviewed before the rows were stored, whose
-    count came from another tool's receipt) and an omitted count while a stored
-    result records a row. A record that omits it for a change with no stored
-    result passes and says that nothing was compared.
+    A different count is refused naming both numbers; so is a count, 0 too, for
+    a change with no stored result (a change reviewed before the rows were
+    stored, whose count came from another tool's receipt) and an omitted count
+    while a stored result records a row. A record that omits it for a change
+    with no stored result passes and says that nothing was compared.
 
 Exit codes:
   0  valid record, help, or version
@@ -271,8 +271,9 @@ func validate(schemaPath, instancePath, repoPath string) (string, error) {
 // checkLensCount holds review_lens_count to the rows the stored review results of the change record (own-rdd S13). The
 // number is counted by the engine (app.CountLenses) from odd/review-results/<change_name>/ under repo, and the
 // validator compares it with the record and never makes a count of its own. It returns the sentence that says what was
-// compared, or the refusal: a different count, a count nothing backs, an omitted count while a stored result records a
-// row (exit 6), and a check that cannot read the results, which is no pass either (exit 7).
+// compared, or the refusal: a different count, a count nothing backs (no stored result behind it, whatever the number,
+// 0 too), an omitted count while a stored result records a row (exit 6), and a check that cannot read the results, which
+// is no pass either (exit 7).
 func checkLensCount(instance any, repo string) (string, error) {
 	record, err := decodeRecord(instance)
 	if err != nil {
@@ -294,7 +295,9 @@ func checkLensCount(instance any, repo string) (string, error) {
 	case claimed == nil:
 		return "", fail(exitSemanticValidation, "review_lens_count is omitted but the stored review results of %q record %d rows (%d stored results in %s): write review_lens_count %d, the number of rows they record, one for each row of each launch",
 			change, counted.Lenses, counted.Results, dir, counted.Lenses)
-	case *claimed != counted.Lenses && counted.Results == 0:
+	case counted.Results == 0:
+		// Whatever the count claimed, 0 too: with no stored result there is nothing it counts, and a 0 that passed because
+		// it does not differ from 0 rows would be a count nothing backs. Only omitting it is the outcome for this change.
 		return "", fail(exitSemanticValidation, "review_lens_count is %d but the stored review results of %q record %d rows (no stored review result in %s): nothing backs a count for this change, as for one reviewed before the rows were stored, whose count came from another tool's receipt; omit review_lens_count",
 			*claimed, change, counted.Lenses, dir)
 	case *claimed != counted.Lenses:
