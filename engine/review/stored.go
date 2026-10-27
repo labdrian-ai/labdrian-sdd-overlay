@@ -123,9 +123,9 @@ func (b storedBinding) binding() reviewresult.Binding {
 //
 // The report is the verifier's, member for member and character for character (white space aside); the risk is the
 // declaration the agent made; the binding is the candidate the command computed from git. Together they let any
-// later reader hold the risk and the report to the rules they were made under again (CheckRisk, CheckReport) and
-// compare the binding with the one it computes for the same commits (CheckBinding), without asking the verifier
-// or the parent for anything.
+// later reader hold the exemption to the rules it was made under again (CheckExemption) and compare the binding
+// with the one it computes for the same commits (CheckBinding), without asking the verifier or the parent for
+// anything.
 type storedExemptionFile struct {
 	Version int             `json:"version"`
 	Binding storedBinding   `json:"binding"`
@@ -158,7 +158,7 @@ type StoredExemption struct {
 }
 
 // DecodeExemption reads a file that EncodeExemption wrote. It reads the file as it is: it does not hold the risk
-// or the report to their rules again (CheckRisk and CheckReport do), and the binding is not recomputed from git
+// or the report to their rules again (CheckExemption does), and the binding is not recomputed from git
 // (CheckBinding compares it). A file that is not one EncodeExemption writes (not one JSON object, a key written
 // twice, a member it does not have, another version, no risk, no report, the file of a result) is refused with an
 // error that wraps ErrInvalidStored.

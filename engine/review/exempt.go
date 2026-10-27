@@ -18,8 +18,8 @@ import (
 //     declaration names any item, because a change that names one is exactly what a review is for;
 //   - the report of the verifier is the object reviewverdict.ParseReport reads and it is clear (CheckReport).
 //
-// An exemption is evidence that a head was checked and a risk was declared. It grants nothing by itself: the check of
-// the delivery is what lets a head through, and a stored result that blocks always wins over an exemption.
+// An exemption is evidence that a head was checked and a risk was declared. It grants nothing by itself: Cleared is
+// what lets a head through, and a stored result that blocks always wins over an exemption.
 
 // NoRisk is the only declaration an exemption is made on: the Risk line of a change that names no item of the
 // high-risk list.
@@ -86,4 +86,15 @@ func CheckReport(report []byte) error {
 		return err
 	}
 	return parsed.Clear()
+}
+
+// CheckExemption holds a stored exemption to the rules it was made under, again: its declared risk names no
+// high-risk item (CheckRisk), checked first, and its report is clear (CheckReport). The engine decides from what the
+// file stores and never from the file existing, so an exemption that was edited to say something else is refused. The
+// binding is not looked at: CheckBinding holds it to the candidate git gives.
+func CheckExemption(e StoredExemption) error {
+	if err := CheckRisk(e.Risk); err != nil {
+		return err
+	}
+	return CheckReport(e.Report)
 }

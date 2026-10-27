@@ -37,6 +37,14 @@
 // it (ResultsOfHead finds them, CheckBinding holds each stored binding to the candidate git gives now, and
 // Clearance decides).
 //
+// A head whose work takes no review may be exempted from it instead (own-rdd T4, S5, L15-L16). The exemption is
+// stored beside the results as <head12>-<n>.exempt.json (ExemptionName, ExemptionsOfHead), numbered with them,
+// and holds the binding, the risk the agent declared and the report of the verifier (EncodeExemption, read back
+// by DecodeExemption). CheckRisk refuses a declared risk that names an item of the high-risk list, CheckReport a
+// report that is not clear, CheckExemption holds a stored exemption to both again, and Cleared lets a head
+// through on an exemption only when no stored result binds it, so a result that blocks always wins. The record
+// that closes it is ExemptionHandoff.
+//
 // It is a domain package: pure standard library and the domain packages that say what a git object name,
 // a SHA-256 digest, a reviewer reply, a verifier verdict and a role handoff are. It reads no file and runs
 // no git.

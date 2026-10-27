@@ -12,7 +12,8 @@ import (
 )
 
 // This file is what the delivery of a head is held to (own-rdd T4, S5): that the head was reviewed, by results
-// the engine stored that still hold, and that none of them keeps it from delivery. The use case that reads the
+// the engine stored that still hold, and that none of them keeps it from delivery, or that it was exempted from
+// review by an exemption the engine stored that still holds and no result blocks it. The use case that reads the
 // files and asks git is review/app's Check; the rules here work on the names and the values it hands over.
 
 // The reasons a head is refused. A refusal wraps exactly one of them, so a caller tells them apart with
@@ -42,6 +43,15 @@ type Reviewed struct {
 	// Decision is what the findings of the result and the verdicts, when there are any, make of the review
 	// (reviewverdict.Decide). A finding with no verdict counts as a check that did not run.
 	Decision reviewverdict.Decision
+}
+
+// Exempted is a stored exemption that binds a head, read back after CheckExemption and CheckBinding held it.
+type Exempted struct {
+	// Candidate is the candidate git gives now for the commits the exemption names; CheckBinding has held the
+	// stored binding to it.
+	Candidate Candidate
+	// Exemption is the path of the stored exemption, relative to the root of the working tree and written with '/'.
+	Exemption string
 }
 
 // ResultsOfHead is the names, among names, of the stored results of the head: the ones CheckResultName accepts
@@ -126,6 +136,22 @@ func Clearance(reviewed []Reviewed) error {
 		}
 	}
 	return notClear
+}
+
+// Cleared decides whether what is stored for a head clears it for delivery: reviewed holds every result that binds
+// the head and exempted every exemption that does, each by number.
+//
+// A head with no result is cleared by an exemption, one is enough, and with neither it is refused as Clearance
+// refuses it (ErrNoResult). A head with a result is decided by its results alone, as Clearance decides, and an
+// exemption changes nothing: a result that blocks wins over any exemption, and a result that does not block and is
+// not clear either (a finding no verifier checked, or an outcome nobody decided) keeps the head from delivery
+// too, because an exemption is for work that takes no review and is not a way around a review that left something
+// unchecked. The error is the one Clearance gives, so a head with no exemption is answered exactly as before.
+func Cleared(reviewed []Reviewed, exempted []Exempted) error {
+	if len(reviewed) == 0 && len(exempted) > 0 {
+		return nil
+	}
+	return Clearance(reviewed)
 }
 
 // describe names the result and the verdict beside it, then the findings of the kind the label says.
