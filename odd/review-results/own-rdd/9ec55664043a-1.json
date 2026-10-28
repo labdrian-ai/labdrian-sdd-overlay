@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "2c65fdbd4f4d38ea298e23df69d21debecb55af2",
+    "head": "9ec55664043a687ec4a214885f180e56dc2554f9",
+    "diff_sha256": "9a7f892e2f0e6643fd8fa7fff3f2a4d9a9f63152480ff052c5b9e386572e287f",
+    "paths": [
+      "engine/oddtask/app/guard.go",
+      "engine/oddtask/app/guard_test.go",
+      "engine/oddtask/file.go",
+      "engine/oddtask/fsdoc/fsdoc.go",
+      "engine/oddtask/fsdoc/fsdoc_test.go"
+    ]
+  },
+  "rows": [
+    "default"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "2c65fdbd4f4d38ea298e23df69d21debecb55af2",
+      "head": "9ec55664043a687ec4a214885f180e56dc2554f9",
+      "diff_sha256": "9a7f892e2f0e6643fd8fa7fff3f2a4d9a9f63152480ff052c5b9e386572e287f"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/oddtask/app/guard.go",
+        "engine/oddtask/app/guard_test.go",
+        "engine/oddtask/file.go",
+        "engine/oddtask/fsdoc/fsdoc.go",
+        "engine/oddtask/fsdoc/fsdoc_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the full diff.",
+      "Checked in the worktree that the oddtask constants and types the diff uses exist: MaxDocumentBytes (8<<20), the Cause* constants, ReadError and UnreadableReason.",
+      "Checked that ParseCitation already enforces the odd/tasks/<feature>.md path shape (oddtask.go documentShape), so fsdoc does not need to repeat it.",
+      "fsdoc.Read order of checks: Lstat refuses a link as the last component, a non-regular file and an oversized file before any open, so a FIFO cannot block the read.",
+      "fsdoc.Read then opens the file and refuses it unless os.SameFile matches the Lstat result, which covers a swap between the two calls.",
+      "fsdoc.Read reads at most MaxDocumentBytes+1 bytes, so a file that grew past the bound after Lstat is still caught.",
+      "The app use case reads no document when the citation is invalid, and it maps both ReadError and other errors to a denial reason.",
+      "Tests assert the exact reason strings and the arguments passed to the port. They cover the exact bound versus bound+1, a link as the last component versus a linked directory, a directory, a missing file, and a relative path with no cwd.",
+      "Nothing was run; this review was by reading only. No exec or net imports were added.",
+      "The head in the candidate field is now the full sha from the coordinator's message; my first reply used the short one."
+    ]
+  }
+}

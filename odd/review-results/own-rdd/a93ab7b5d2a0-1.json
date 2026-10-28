@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "1c9d7694c7e2eaa98965a5dfad1fef792af4a56d",
+    "head": "a93ab7b5d2a03bff0ebf409e362d99e880497b03",
+    "diff_sha256": "6aa2a1ca10b4b8fdd785ae9fec5a70a17a33f32611f3f85ea54ad5b98dffb1ce",
+    "paths": [
+      "engine/architecture_test.go",
+      "engine/cmd/usage.go"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "1c9d7694c7e2eaa98965a5dfad1fef792af4a56d",
+      "head": "a93ab7b5d2a03bff0ebf409e362d99e880497b03",
+      "diff_sha256": "6aa2a1ca10b4b8fdd785ae9fec5a70a17a33f32611f3f85ea54ad5b98dffb1ce"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/architecture_test.go",
+        "engine/cmd/usage.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the full diff: three new ring entries (oddtask Domain, oddtask/app Application, oddtask/fsdoc Adapter) and their doc comment in engine/architecture_test.go, plus one usage block for `roles builder-guard` in engine/cmd/usage.go.",
+      "The ring layers match the descriptions in the added comment: a pure domain package, a use case, and a file-system adapter.",
+      "The verb exists in engine/cmd/roles_builder_guard.go (`rolesBuilderGuardVerb = \"builder-guard\"`). It takes no arguments and reads stdin, which matches the usage text (exit 0 always, 1 usage error).",
+      "The 4194304 byte limit in the usage text equals `MaxAgentCallBytes = 4 << 20` in engine/hookwire/hookwire.go.",
+      "The `shaped: L<n>` mark and the shaper Log entry wording in the usage text match the strings in engine/oddtask/reason.go and its tests.",
+      "Not run: I did not run the architecture test or any other test, as the contract forbids running commands. I did not read the S14 section of odd/tasks/own-rdd.md.",
+      "The candidate binding now uses the full SHAs from the coordinator. The diff_sha256 is unchanged, so the inspection and findings above stand as before."
+    ]
+  }
+}

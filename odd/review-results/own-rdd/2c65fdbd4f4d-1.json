@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "6e8d59537198d69cde9b722dd613505081a4e528",
+    "head": "2c65fdbd4f4d38ea298e23df69d21debecb55af2",
+    "diff_sha256": "548120fd0f6947eaa43b4d6fd3aad3510b4e7c07ccd53853b24df3e58dc1d591",
+    "paths": [
+      "engine/oddtask/oddtask.go",
+      "engine/oddtask/oddtask_test.go",
+      "engine/oddtask/reason.go"
+    ]
+  },
+  "rows": [
+    "default"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "6e8d59537198d69cde9b722dd613505081a4e528",
+      "head": "2c65fdbd4f4d38ea298e23df69d21debecb55af2",
+      "diff_sha256": "548120fd0f6947eaa43b4d6fd3aad3510b4e7c07ccd53853b24df3e58dc1d591"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/oddtask/oddtask.go",
+        "engine/oddtask/oddtask_test.go",
+        "engine/oddtask/reason.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the full diff in /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/15c935df-3f01-47c7-ae48-2ead4edc387e/scratchpad/rv-own-2c65fdbd.diff. I did not run any code or tests, and I did not read odd/tasks/own-rdd.md S14, so I did not check the code against criteria (a)-(d).",
+      "The package imports only fmt, path, regexp, strconv and strings. It has no exec, net or file I/O, so the declared Risk: none holds for the diff.",
+      "Invalid and adversarial inputs all fail closed to a denial reason. This covers no or many Spec lines, malformed items, paths that clean out of the odd/tasks shape, leading zeros, L0, duplicate or doubled shaped marks, and shaped marks outside the Tasks section. It also covers shaper Log entries outside the Log section, duplicate shaper Log entries, and a numeric overflow, which parses as 0 and is denied.",
+      "The behavior is deterministic and has no shared state.",
+      "The tests assert exact reasons and the exact denial message through the public interface. They cover prefix confusion (T11 against T11a), subheadings, and the carriage-return handling."
+    ]
+  }
+}
