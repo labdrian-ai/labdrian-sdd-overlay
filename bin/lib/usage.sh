@@ -299,6 +299,24 @@ Commands:
                                              file; print the record skeleton for roles append with payload_kind
                                              review-exemption; review check clears an exempted head, but a result that
                                              blocks wins over any exemption (exit 0 stored, 2 report refused, 1 error)
+                                   sweep --feature NAME --base REV --head REV [--cwd REPO]
+                                             run the checks T1 to T3 of the sweeper once on the one commit REV..head
+                                             (--base must be the first parent of --head) and store the findings as
+                                             HEAD12-N.sweep.json, never over a file: T1 the paths the commit deleted
+                                             or renamed and the removed names the head still mentions, T2 the new lines
+                                             of deadcode, staticcheck and shellcheck over copies of the base and the
+                                             head kept under the state home, T3 the working tree's git status; a tool
+                                             that cannot run stores nothing; a second sweep of the repository while one
+                                             runs is refused; print outcome (clean or fired), path, sha256 and the
+                                             candidates the sweeper answers for as JSON
+                                             (exit 0 stored, 2 refused or a check that did not run, 1 usage error)
+                                   record --role sweeper|polisher --feature NAME --base REV --head REV [--result FILE|-] [--cwd REPO]
+                                             store the sweeper's report (it must answer once for each candidate of a
+                                             fired sweep of the head) as HEAD12-N.sweeper.json, or one polisher judge's
+                                             findings as HEAD12-N.polisher.json, for the one commit REV..head; print the
+                                             path and sha256 as JSON, with no skeleton for roles append; --rows with
+                                             another role is a usage error; --role reviewer is the default and is the
+                                             record verb above (exit 0 stored, 2 report refused, 1 error)
                                    stop-hook
                                              not run by a person: the Claude Code Stop hook that install-hooks wires
                                              (the review stop-hook). On a branch other than the default one, it blocks

@@ -690,6 +690,36 @@ overlay review <verb>
         goal_id, chain_id, seq, prev_sha256 and context.summary. A declaration or a report that does not hold
         writes nothing and the error names the rule. `check` clears an exempted head unless a stored result
         blocks it. Exit 0 stored, 2 report refused, 1 usage error, a risk that is refused or any other failure.
+    sweep  --feature <name> --base <rev> --head <rev> [--cwd <repo>]
+        Run the checks T1 to T3 of the sweeper (skills/role-chain/SKILL.md) once on the one commit from --base
+        to --head (--base must be the first parent of --head, as for `exempt`) and store their findings as
+        odd/review-results/<feature>/<head12>-<n>.sweep.json, numbered with the other files of the head and never
+        over an existing one. T1: the paths the commit deleted or renamed, and the names its removed lines
+        declared that the head still mentions outside the diff. T2: `deadcode -test ./...` over each Go module
+        the commit changes, `staticcheck` over the packages of its changed .go files and `shellcheck` over its
+        changed .sh files, each on a copy of the base and a copy of the head kept under
+        $XDG_STATE_HOME/labdrian/review-sweep/ (default ~/.local/state), outside the working tree; a line is a
+        finding when it occurs more times at the head than at the base. T3: `git status` of the working tree
+        as it is, but for the records under odd/review-results/. A tool that is not found, or that fails
+        without printing a finding, is a check that did not run: nothing is stored and the error names the
+        tool (it needs deadcode, staticcheck and shellcheck on PATH). A second sweep of the repository while
+        one runs is refused at once: another review sweep of this repository is running. stdout is one JSON
+        object: outcome (`clean`, or `fired` when any check found something), the path and sha256 of the
+        stored record, and the candidates the sweeper answers for. Exit 0 stored (clean or fired), 2 refused or
+        a check that did not run, 1 usage error.
+    record --role sweeper|polisher --feature <name> --base <rev> --head <rev> [--result <file>|-] [--cwd <repo>]
+        Store the report of the sweeper, or the findings of one polisher judge (read from --result, or from
+        stdin), for the one commit from --base to --head, with the binding computed from git. The sweeper's
+        report, {"commit": "<full sha>"|null, "candidates": [{"candidate": ..., "disposition": removed,
+        corrected, live or finding, "evidence": ...}]}, must answer once for each candidate of the latest fired
+        sweep of the head and for no other; a commit it names must have --head as its first parent and a subject
+        that starts `chore(sweep)`, and it may not be null while a candidate is removed or corrected. It is
+        stored as <head12>-<n>.sweeper.json with the name of the sweep it answers for. A polisher judge's
+        findings are one JSON object with a `findings` array of objects, each with an `evidence` array of
+        non-empty strings, stored as <head12>-<n>.polisher.json; no finding blocks. stdout is the path and
+        sha256 of the stored file, with no skeleton for `roles append`. `--rows` with another role is a usage
+        error, and `--role reviewer` is the default and the `record` verb above. Exit 0 stored, 2 report
+        refused, 1 usage error or any other failure.
     stop-hook
         Not run by a person: the Claude Code Stop hook that `install-hooks` wires (the review stop-hook, described
         below as `gentle-ai-overlay review stop-hook`). It asks the agent, once for each session and commit, to
