@@ -557,3 +557,37 @@ func TestCheckChainRefusesTheCommitThatEndsARangeWithTheFirstThingItLacks(t *tes
 		}
 	})
 }
+
+// While the trailer of a commit fails, a role record that does not read back or hold counts as absent: the commit is
+// refused with the error of its trailer, which review.Needs lists first, and the record's own refusal is met once the
+// trailer holds (own-rdd T6b5a, S6 f, L66).
+func TestCheckRefusesAFailingTrailerBeforeARoleRecordThatDoesNotHold(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		setup func(g *fakeGit, store *fakeResults)
+		path  string
+	}{
+		{"a sweep record that does not decode", func(g *fakeGit, store *fakeResults) {
+			delete(g.messages, headSHA)
+			store.put("own-rdd", "222222222222-1.sweep.json", []byte("not json"))
+		}, recordPath("222222222222-1.sweep.json")},
+		{"a sweeper record of the first parent of a sweep commit that does not decode", func(g *fakeGit, store *fakeResults) {
+			g.messages[headSHA] = "chore(sweep): remove the dead helper"
+			store.put("own-rdd", "111111111111-1.sweeper.json", []byte("not json"))
+		}, recordPath("111111111111-1.sweeper.json")},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			g, store := newFakeGit(), newFakeResults()
+			tc.setup(g, store)
+
+			got, err := app.New(g, store).Check(evidenceDir, "own-rdd", "HEAD")
+
+			if !errors.Is(err, review.ErrRiskTrailer) || !reflect.DeepEqual(got, app.Checked{}) {
+				t.Fatalf("Check() = %+v, %v; want a refusal that wraps %v", got, err, review.ErrRiskTrailer)
+			}
+			if strings.Contains(err.Error(), tc.path) {
+				t.Errorf("message %q names the record %s, want the trailer's error alone", err, tc.path)
+			}
+		})
+	}
+}

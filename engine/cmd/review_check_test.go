@@ -316,6 +316,24 @@ func TestCheckAsksForWhatTheCommitNeedsInTheOrderOfTheDesign(t *testing.T) {
 
 		w.wantCheckRefused("commit "+w.head+`: it has no "Risk:" trailer in the final trailer block of its message`, true)
 	})
+	t.Run("the risk trailer comes before a sweep record that does not decode", func(t *testing.T) {
+		w := newReviewWorld(t)
+		dir := filepath.Join(w.root, "odd", "review-results", "own-rdd")
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatalf("setup: %v", err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, w.head[:12]+"-1.sweep.json"), []byte("not json"), 0o644); err != nil {
+			t.Fatalf("setup: %v", err)
+		}
+
+		stdout, stderr, exits := w.run("", "check", "--feature", "own-rdd")
+
+		want := "error: review check: review: the commit does not declare its risk in a Risk trailer: commit " + w.head +
+			`: it has no "Risk:" trailer in the final trailer block of its message` + "\n"
+		if stdout != "" || stderr != want || !equalInts(exits, []int{1}) {
+			t.Errorf("stdout = %q, stderr = %q, exits = %v; want nothing, %q, [1]", stdout, stderr, exits, want)
+		}
+	})
 	t.Run("the sweep, the sweeper and then the review", func(t *testing.T) {
 		w := newCheckedWorld(t)
 		state := t.TempDir()

@@ -114,3 +114,20 @@ func TestDeclaredRiskFailsFourWaysAndNamesTheCommit(t *testing.T) {
 		}
 	}
 }
+
+// RiskValue writes the items of a trailer as the trailer writes them, so what ParseRisk reads from a valid value is
+// written back as that value (own-rdd T6b5a, S6 d, L66).
+func TestRiskValueWritesBackWhatParseRiskReads(t *testing.T) {
+	for _, value := range []string{"none", "3", "5,3", "1,2,3,4,5,6"} {
+		items, err := review.ParseRisk(value)
+		if err != nil {
+			t.Fatalf("setup: ParseRisk(%q): %v", value, err)
+		}
+		if got := review.RiskValue(items); got != value {
+			t.Errorf("RiskValue(ParseRisk(%q)) = %q, want %q", value, got, value)
+		}
+	}
+	if got := review.RiskValue(nil); got != "none" {
+		t.Errorf("RiskValue(nil) = %q, want %q", got, "none")
+	}
+}

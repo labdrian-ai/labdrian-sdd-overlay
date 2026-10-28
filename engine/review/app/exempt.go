@@ -107,7 +107,7 @@ func (s Service) declaresNoRisk(repo Repository, commit string) error {
 		return err
 	}
 	if len(items) > 0 {
-		return fmt.Errorf("commit %s: %w", commit, review.CheckRisk(riskValue(items)))
+		return fmt.Errorf("commit %s: %w", commit, review.CheckRisk(review.RiskValue(items)))
 	}
 	return nil
 }

@@ -2,7 +2,6 @@ package app
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review"
@@ -15,8 +14,10 @@ import (
 //
 // A role record is held to git again as a reader holds a result (heldRole), and one that cannot be read, is not that
 // kind of record, binds another diff or is not for one commit is an error naming its path, never a record passed over.
-// A passive commit is read no further than its paths: it needs no record. A commit whose trailer fails is read for its
-// sweep only, since what else it needs depends on the risk it declares. Nothing is stored.
+// A passive commit is read no further than its paths: it needs no record. While the trailer of a commit fails, a role
+// record that does not read back or hold counts as absent and its error is dropped (lenient): review.Needs lists the
+// failing trailer first and stops, so no pass follows, and the record's own refusal is met once the trailer holds.
+// Nothing is stored.
 func (s Service) commitFacts(repo Repository, feature string, names []string, commit string) (review.Facts, string, error) {
 	parent, err := s.git.Parent(repo, commit)
 	if err != nil {
@@ -50,11 +51,11 @@ func (s Service) commitFacts(repo Repository, feature string, names []string, co
 	}
 	subject, _, _ := strings.Cut(message, "\n")
 	if parent != "" && review.CheckSweepCommit(parent, commit, parent, subject) == nil {
-		if facts.SweepCommit, err = s.namedBySweeper(repo, feature, names, parent, commit); err != nil {
+		if facts.SweepCommit, err = s.namedBySweeper(repo, feature, names, parent, commit, riskErr != nil); err != nil {
 			return review.Facts{}, "", err
 		}
 	}
-	if err := s.readRoles(repo, feature, names, commit, &facts); err != nil {
+	if err := s.readRoles(repo, feature, names, commit, &facts, riskErr != nil); err != nil {
 		return review.Facts{}, "", err
 	}
 	return facts, parent, nil
@@ -62,8 +63,8 @@ func (s Service) commitFacts(repo Repository, feature string, names []string, co
 
 // readRoles fills in what the records of the roles say about commit: the latest sweep that holds and whether it fired,
 // whether a sweeper record that holds answers it, and whether a polisher record that holds binds the commit when its
-// trailer names an item.
-func (s Service) readRoles(repo Repository, feature string, names []string, commit string, facts *review.Facts) error {
+// trailer names an item. A record that does not read back or hold counts as absent when lenient is true.
+func (s Service) readRoles(repo Repository, feature string, names []string, commit string, facts *review.Facts, lenient bool) error {
 	var latest string
 	for _, name := range review.SweepsOfHead(names, commit) {
 		var stored review.StoredSweep
@@ -73,6 +74,9 @@ func (s Service) readRoles(repo Repository, feature string, names []string, comm
 			return stored.Binding, err
 		})
 		if err != nil {
+			if lenient {
+				continue
+			}
 			return err
 		}
 		if binds {
@@ -80,7 +84,7 @@ func (s Service) readRoles(repo Repository, feature string, names []string, comm
 		}
 	}
 	if len(facts.Risk) > 0 {
-		polished, err := s.polisherRecorded(repo, feature, names, commit)
+		polished, err := s.polisherRecorded(repo, feature, names, commit, lenient)
 		if err != nil {
 			return err
 		}
@@ -99,6 +103,9 @@ func (s Service) readRoles(repo Repository, feature string, names []string, comm
 				return stored.Binding, err
 			})
 			if err != nil {
+				if lenient {
+					continue
+				}
 				return err
 			}
 			if binds && stored.Sweep == latest {
@@ -110,8 +117,8 @@ func (s Service) readRoles(repo Repository, feature string, names []string, comm
 }
 
 // polisherRecorded says whether a polisher record that holds binds commit. It is asked only of a commit whose trailer
-// names an item.
-func (s Service) polisherRecorded(repo Repository, feature string, names []string, commit string) (bool, error) {
+// names an item. A record that does not read back or hold counts as absent when lenient is true.
+func (s Service) polisherRecorded(repo Repository, feature string, names []string, commit string, lenient bool) (bool, error) {
 	found := false
 	for _, name := range review.PolishersOfHead(names, commit) {
 		binds, err := s.heldRole(repo, feature, name, commit, func(file []byte) (review.RecordBinding, error) {
@@ -119,6 +126,9 @@ func (s Service) polisherRecorded(repo Repository, feature string, names []strin
 			return stored.Binding, err
 		})
 		if err != nil {
+			if lenient {
+				continue
+			}
 			return false, err
 		}
 		found = found || binds
@@ -127,8 +137,9 @@ func (s Service) polisherRecorded(repo Repository, feature string, names []strin
 }
 
 // namedBySweeper says whether a sweeper record of parent, the first parent of commit, names commit as the commit of its
-// change: the record that makes commit a sweep commit.
-func (s Service) namedBySweeper(repo Repository, feature string, names []string, parent, commit string) (bool, error) {
+// change: the record that makes commit a sweep commit. A record that does not read back or hold counts as absent when
+// lenient is true.
+func (s Service) namedBySweeper(repo Repository, feature string, names []string, parent, commit string, lenient bool) (bool, error) {
 	named := false
 	for _, name := range review.SweepersOfHead(names, parent) {
 		var stored review.StoredSweeper
@@ -138,6 +149,9 @@ func (s Service) namedBySweeper(repo Repository, feature string, names []string,
 			return stored.Binding, err
 		})
 		if err != nil {
+			if lenient {
+				continue
+			}
 			return false, err
 		}
 		if binds && stored.Report.Commit != nil && *stored.Report.Commit == commit {
@@ -176,13 +190,4 @@ func (s Service) heldRole(repo Repository, feature, name, head string, decode fu
 		return false, fmt.Errorf("%s: %w", path, err)
 	}
 	return true, nil
-}
-
-// riskValue is the items of a trailer as the trailer writes them: "3,5".
-func riskValue(items []int) string {
-	written := make([]string, len(items))
-	for i, item := range items {
-		written[i] = strconv.Itoa(item)
-	}
-	return strings.Join(written, ",")
 }

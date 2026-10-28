@@ -32,7 +32,7 @@ func (w *reviewWorld) exemptedSkeleton() roles.RoleHandoff {
 // verb stored, and the record goes from the reviewer to the delivery.
 func TestRolesAppendStoresTheRecordThatReviewExemptPrints(t *testing.T) {
 	rolesTestStateHome(t)
-	w := newReviewWorld(t)
+	w := newCheckedWorld(t)
 	check := reviewEvidenceCheck(w.rolesDeps())
 	record := w.exemptedSkeleton()
 	var kinds []string
@@ -115,7 +115,7 @@ func TestRolesAppendRefusesAReviewExemptionWhoseEvidenceIsNotTheStoredExemption(
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			rolesTestStateHome(t)
-			w := newReviewWorld(t)
+			w := newCheckedWorld(t)
 			check := reviewEvidenceCheck(w.rolesDeps())
 			record := w.exemptedSkeleton()
 			named := evidenceOf(t, record, tc.kind) // the piece the message must name, as the skeleton has it
@@ -148,7 +148,7 @@ func TestRolesAppendRefusesAReviewExemptionWhoseEvidenceIsNotTheStoredExemption(
 // says the exemption was not made names no file, so it is stored as it always was, and the repository is not asked.
 func TestRolesAppendSaysItCouldNotCheckTheEvidenceOfAReviewExemption(t *testing.T) {
 	rolesTestStateHome(t)
-	w := newReviewWorld(t)
+	w := newCheckedWorld(t)
 	record := w.exemptedSkeleton()
 	outside := t.TempDir()
 	w.cwd = outside

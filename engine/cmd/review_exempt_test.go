@@ -27,14 +27,10 @@ func (w *reviewWorld) exemptArgs(risk string) []string {
 	return []string{"exempt", "--feature", "own-rdd", "--base", w.base, "--head", w.head, "--risk", risk}
 }
 
-// exempt exempts the head of the world with the report on stdin and returns what the verb wrote. A head that declares no
-// risk yet (the world of the tests of the other verbs makes it with a message of one word) is given the trailer
-// "Risk: none" first, because `review exempt` reads it (own-rdd T6b5, S6 f); a head that is not HEAD is left as it is.
+// exempt exempts the head of the world with the report on stdin and returns what the verb wrote. `review exempt` reads
+// the trailer of the head (own-rdd T6b5, S6 f), so a world that exempts is made with newCheckedWorld.
 func (w *reviewWorld) exempt(report, risk string) (stdout, stderr string, exits []int) {
 	w.t.Helper()
-	if w.head == w.name("HEAD") && strings.TrimSpace(w.git("log", "-1", "--format=%(trailers:key=Risk,valueonly)")) == "" {
-		w.declaresRisk("none")
-	}
 	return w.run(report, w.exemptArgs(risk)...)
 }
 
@@ -359,6 +355,9 @@ func TestUsageDocumentsReviewExempt(t *testing.T) {
 	var out bytes.Buffer
 	usage(&out)
 	engineText, wrapperText := strings.Join(strings.Fields(out.String()), " "), strings.Join(strings.Fields(string(wrapper)), " ")
+	if want := "The head's own Risk trailer must be 'Risk: none'"; !strings.Contains(engineText, want) {
+		t.Errorf("the engine usage lacks %q", want)
+	}
 	for _, pair := range []struct{ engine, inWrapper string }{
 		{"engine review exempt --feature <name> --base <rev> --head <rev> --risk <none|items> [--cwd <repo>]", "exempt --feature NAME --base REV --head REV --risk none|ITEMS [--cwd REPO]"},
 		{"reads the verifier's report from stdin", "reads the verifier's report from stdin"},

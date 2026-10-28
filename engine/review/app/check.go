@@ -105,7 +105,7 @@ func (s Service) cleared(repo Repository, feature string, names []string, f revi
 		}
 		if binds {
 			if len(f.Risk) > 0 {
-				return Checked{}, fmt.Errorf("%s: commit %s: %w", e.Exemption, head, review.CheckRisk(riskValue(f.Risk)))
+				return Checked{}, fmt.Errorf("%s: commit %s: %w", e.Exemption, head, review.CheckRisk(review.RiskValue(f.Risk)))
 			}
 			exempted = append(exempted, e)
 		}

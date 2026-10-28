@@ -154,3 +154,27 @@ func TestTheSentinelsOfTheNeedsAreOneEachAndNamedLikeTheReasonsOfCheck(t *testin
 		t.Error("the sentinels are not distinct")
 	}
 }
+
+// A sweep commit that has a sweep record of its own is held to it: when that record fired and no sweeper record answers
+// it, the sweep commit lacks the sweeper alone; one whose trailer fails lacks its risk alone (own-rdd T6b5a, S6 d, L66).
+func TestNeedsHoldsASweepCommitToTheSweepRecordItHas(t *testing.T) {
+	sweepPath := "odd/review-results/own-rdd/222222222222-3.sweep.json"
+	f := ready()
+	f.SweepCommit, f.SweepFired, f.Answered = true, true, false
+
+	needs := review.Needs(f)
+
+	if got := kinds(needs); !reflect.DeepEqual(got, []review.Missing{review.MissingSweeper}) {
+		t.Fatalf("Needs() of a sweep commit with an unanswered fired sweep = %v, want only MissingSweeper", got)
+	}
+	want := "commit " + needsCommit + ": review: no sweeper record answers the fired sweep record: " + sweepPath
+	if needs[0].Err.Error() != want || !errors.Is(needs[0].Err, review.ErrNoSweeper) {
+		t.Errorf("reason = %q, want %q wrapping ErrNoSweeper", needs[0].Err, want)
+	}
+
+	g := ready()
+	g.SweepCommit, g.Sweep, g.RiskErr, g.Risk = true, "", errors.New("trailer failed"), nil
+	if got := kinds(review.Needs(g)); !reflect.DeepEqual(got, []review.Missing{review.MissingRisk}) {
+		t.Errorf("Needs() of a sweep commit whose trailer fails = %v, want only MissingRisk", got)
+	}
+}

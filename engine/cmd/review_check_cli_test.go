@@ -87,6 +87,9 @@ func TestUsageDocumentsReviewCheck(t *testing.T) {
 		"a result that blocks keeps the head blocked whatever was recorded after it",
 		"a check that did not run never passes",
 		"The delivery role runs it before it closes the feature",
+		"the first thing it lacks refuses it, naming the commit",
+		"a sweeper record that answers it",
+		"needs no record and is a link of the chain from its first parent",
 		"exit 0 cleared, 1 usage error, refusal or any other failure",
 	} {
 		if !strings.Contains(text, want) {

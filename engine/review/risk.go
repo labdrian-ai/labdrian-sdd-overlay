@@ -3,6 +3,7 @@ package review
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -45,6 +46,20 @@ func ParseRisk(declared string) ([]int, error) {
 		items = append(items, item)
 	}
 	return items, nil
+}
+
+// RiskValue writes the items of a trailer as the trailer writes them: joined by "," with no space, in the order given
+// ("3,5"), and NoRisk for no item. It is the one writer of the items in the texts that name a declared risk, so what
+// ParseRisk reads from a valid value is written back as that value.
+func RiskValue(items []int) string {
+	if len(items) == 0 {
+		return NoRisk
+	}
+	written := make([]string, len(items))
+	for i, item := range items {
+		written[i] = strconv.Itoa(item)
+	}
+	return strings.Join(written, ",")
 }
 
 // riskItem reads one entry of a declaration: the number of an item of the list, written as one digit.

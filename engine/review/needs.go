@@ -3,7 +3,6 @@ package review
 import (
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 )
 
@@ -123,11 +122,7 @@ func Needs(f Facts) []Need {
 		needs = append(needs, Need{Missing: MissingSweeper, Err: fmt.Errorf("commit %s: %w: %s", f.Commit, ErrNoSweeper, f.Sweep)})
 	}
 	if len(f.Risk) > 0 && !f.Polished {
-		items := make([]string, len(f.Risk))
-		for i, item := range f.Risk {
-			items[i] = strconv.Itoa(item)
-		}
-		needs = append(needs, Need{Missing: MissingPolisher, Err: fmt.Errorf("commit %s: %w: Risk: %s", f.Commit, ErrNoPolisher, strings.Join(items, ","))})
+		needs = append(needs, Need{Missing: MissingPolisher, Err: fmt.Errorf("commit %s: %w: Risk: %s", f.Commit, ErrNoPolisher, RiskValue(f.Risk))})
 	}
 	if f.AskCoverage && f.Coverage != nil {
 		needs = append(needs, Need{Missing: MissingReview, Err: f.Coverage})
