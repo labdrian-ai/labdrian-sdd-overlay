@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "d4e45e8a61747a29732df738387b3f038a1b93d5",
+    "head": "47c0384dcbdfe3770dbafb2d729620bd7c90e149",
+    "diff_sha256": "540ac9bc362359a74e5ef9be1391638f8ff4aac07c3b124f5876c51642e086b8",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/cmd/review.go",
+      "engine/review/gitexec/archive_test.go"
+    ]
+  },
+  "rows": [
+    "default"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "d4e45e8a61747a29732df738387b3f038a1b93d5",
+      "head": "47c0384dcbdfe3770dbafb2d729620bd7c90e149",
+      "diff_sha256": "540ac9bc362359a74e5ef9be1391638f8ff4aac07c3b124f5876c51642e086b8"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/cmd/review.go",
+        "engine/review/gitexec/archive_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "CHANGELOG.md:10",
+        "claim": "The new clause says a tree whose blobs pass 256 MiB is refused. The bound applies to the whole `git cat-file --batch` stdout, which also carries one header line per blob, so the effective ceiling is slightly below 256 MiB of blob bytes. The wording is approximate but not misleading in a user-impacting way.",
+        "severity": "SUGGESTION",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/gitexec/gitexec.go:662",
+          "engine/execrunner/execrunner.go:42-45"
+        ]
+      }
+    ],
+    "evidence": [
+      "The exit-2 claim holds. It rests on a chain of calls, listed here.",
+      "`Archive` calls `g.outputStdin` (engine/review/gitexec/gitexec.go:662), which wraps the runner error with `%w` (gitexec.go:901-907). A runner error is `ErrOutputTooLarge` when the bound is passed (engine/execrunner/execrunner.go:126).",
+      "`Service.fillCopy` wraps the `Archive` error with `%w` (engine/review/app/sweep.go:279-281). `sweepT2` returns it unchanged (sweep.go:221-228) and `Service.Sweep` returns it unchanged (sweep.go:85-87).",
+      "`runReviewSweep` sends any `Sweep` error to `refused`, which exits 2 (engine/cmd/review_sweep.go:84-87, 62-65).",
+      "The runner used by the review verbs is `execrunner.New().WithMaxOutput(reviewGitMaxOutput)` with 256<<20 (engine/cmd/review.go:91). `newSweepService` builds on `newReviewService`, so it uses the same git (review_sweep.go:31-41).",
+      "Nothing is stored, because `EncodeSweep` and `store` come after the failing step in `Sweep` (sweep.go:94-98). `Archive` writes no file before the `cat-file` answer arrives; the writes happen in the loop at gitexec.go:666-674.",
+      "The new real-git test goes through the public `Archive` method. It asserts `errors.Is(err, ErrOutputTooLarge)` and an empty target dir over the bound, and success with the 4001-byte `big.txt` under the bound. At a 2000-byte bound the small `ls-tree` listing passes and the `cat-file` answer (about 4.1 KB) is the one refused, so the test hits the intended path.",
+      "The fixture isolates state. It uses `t.TempDir()` for the repo, HOME and XDG_CONFIG_HOME, `GIT_ATTR_NOSYSTEM=1` and `LC_ALL=C` (realgit_test.go:40-56, 215-217). The tests use no network or clock.",
+      "The two new stub-runner tests also go through `Archive`. Their short-answer cases and the extra-bytes case match the error paths in `nextBlob` and in the check after the loop at gitexec.go:675-677. I read the first part of `nextBlob`, up to gitexec.go:734, but not the rest of it. I did not run any tests (not run).",
+      "`engine/cmd/review.go` changes only a doc comment. The CHANGELOG change is one appended clause.",
+      "Parent note: the reviewer's reply carried head 47c0384dcbdf3770dbafb2d729620bd7c90e149 (39 chars, one 'e' dropped); the parent restored the bound full SHA, the diff_sha256 matches the bind."
+    ]
+  }
+}

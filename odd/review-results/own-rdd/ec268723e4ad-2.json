@@ -1,0 +1,86 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "64e595bd045aca2049d87595ef4f813cea9240ee",
+    "head": "ec268723e4ade33cd09e2d66a670bfdbdb0627e2",
+    "diff_sha256": "43445ad169417bc52e6ec3a160b6dc5bd15930acaee032c64f099ed9ab01167b",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/cmd/review_check_chain_test.go",
+      "engine/cmd/review_check_cli_test.go",
+      "engine/cmd/review_check_test.go",
+      "engine/cmd/review_exempt_check_test.go",
+      "engine/cmd/review_exempt_range_test.go",
+      "engine/review/app/chain.go",
+      "engine/review/app/check.go",
+      "engine/review/app/check_exempt_test.go",
+      "engine/review/app/check_test.go",
+      "engine/review/app/fakes_test.go",
+      "engine/review/app/needs.go",
+      "engine/review/app/needs_test.go"
+    ]
+  },
+  "rows": [
+    "default",
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "64e595bd045aca2049d87595ef4f813cea9240ee",
+      "head": "ec268723e4ade33cd09e2d66a670bfdbdb0627e2",
+      "diff_sha256": "43445ad169417bc52e6ec3a160b6dc5bd15930acaee032c64f099ed9ab01167b"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/cmd/review_check_chain_test.go",
+        "engine/cmd/review_check_cli_test.go",
+        "engine/cmd/review_check_test.go",
+        "engine/cmd/review_exempt_check_test.go",
+        "engine/cmd/review_exempt_range_test.go",
+        "engine/review/app/chain.go",
+        "engine/review/app/check.go",
+        "engine/review/app/check_exempt_test.go",
+        "engine/review/app/check_test.go",
+        "engine/review/app/fakes_test.go",
+        "engine/review/app/needs.go",
+        "engine/review/app/needs_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/review/app/needs.go:1109-1136",
+        "severity": "SUGGESTION",
+        "claim": "A commit whose Risk trailer fails is still read for its role records (commitFacts falls through to readRoles). A sweep record that cannot be read, or that does not hold, will then fail with that record's error. The spec says the first thing a commit lacks is reported, in this order, with the trailer first. For such a commit the trailer error would be hidden behind the sweep-record error. The comment says it is read for its sweep only, but the code does not stop at the trailer error. Only the case of a trailer error combined with a corrupt sweep record is affected. Needs would return the trailer error first if readRoles were skipped on a RiskErr. The sweep is only needed to decide whether to add the second item.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/app/needs.go:1109-1133 in the diff",
+          "engine/review/needs.go:112-117 in the worktree (Needs returns the trailer error first)"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/cmd/usage.go:182-206",
+        "severity": "SUGGESTION",
+        "claim": "The help text of `review check` is unchanged. Line 206 still describes clearing only by results and exemptions. The command now also refuses a head that has no valid Risk trailer, sweep record, sweeper answer, or polisher record, and it clears a passive head with no record. The ODD protocol asks for help text to be updated when a command's messages change. The CHANGELOG covers the new behaviour. This may be deferred to T6b7, which is the docs task.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/usage.go:182,206 in the worktree",
+          "odd/tasks/own-rdd.md L40: T6b7 covers roles, skill and docs"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff (1830 lines): app/chain.go, app/check.go, the new app/needs.go, and all test files, including needs_test.go and the cmd tests.",
+      "Read engine/review/needs.go in the worktree. Needs returns nothing for a passive commit and returns the trailer error first. AskCoverage is never set by commitFacts, so the review item is left to review.Cleared. This keeps the text of a commit that lacks only its review unchanged.",
+      "Risk line: declared item 3 (contracts others consume). I judge it right. `review check` now refuses heads it accepted before: those with no Risk trailer, no sweep record, or no sweeper or polisher record. The CHANGELOG documents this and the delivery role consumes it. The diff changes no persisted format, no concurrency, no installer, and no credentials, and tests pin each new refusal. No other item applies, so the line is right.",
+      "chain.go: the loop check moved earlier but gives the same error. insideRange adds a walk over the commits inside a range and refuses a walk that reaches a commit with no parent.",
+      "I ran no commands. This was a read-only inspection and nothing was executed."
+    ]
+  }
+}

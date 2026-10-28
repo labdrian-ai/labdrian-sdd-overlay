@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ac8adaf9f59600dfdda5a72b96974b57cf1bad2c",
+    "head": "64e595bd045aca2049d87595ef4f813cea9240ee",
+    "diff_sha256": "d9023a51deef90383df5d3feffb050d507fa9d418b5d53a3909b21cabea40eed",
+    "paths": [
+      "engine/review/needs.go",
+      "engine/review/needs_test.go"
+    ]
+  },
+  "rows": [
+    "default",
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "ac8adaf9f59600dfdda5a72b96974b57cf1bad2c",
+      "head": "64e595bd045aca2049d87595ef4f813cea9240ee",
+      "diff_sha256": "d9023a51deef90383df5d3feffb050d507fa9d418b5d53a3909b21cabea40eed"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/review/needs.go",
+        "engine/review/needs_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/review/needs.go:1-146",
+        "severity": "SUGGESTION",
+        "claim": "The declared Risk 3 overstates this diff. The diff only adds two new files: a pure Needs/IsPassive function and its tests. At head nothing outside needs_test.go references Needs or IsPassive. The diff does not touch `review check` or `review exempt`, so no existing output, flag or acceptance rule changes. The behavior change the Risk line describes (those commands refusing heads they accept today) is not in this diff. Judged on this diff alone, `Risk: none` would be accurate, since adding new exported identifiers is not a change to a consumed contract. Item 3 fits the later commits that wire the function in (ec268723, c07b6b28, which are not part of this diff). Over-declaring is the safe direction and causes no user-facing defect. The cost is a Risk line that names an item with no matching hunk here, which can trigger the high-risk verification for no change in this commit.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/needs.go (new file, 140 lines)",
+          "engine/review/needs_test.go (new file)",
+          "Grep for Needs( and IsPassive( over *.go at head: matches only needs.go and needs_test.go"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff, both new files: engine/review/needs.go and engine/review/needs_test.go.",
+      "Grepped the worktree for callers of Needs and IsPassive. Only needs.go and needs_test.go match, so the function is not yet wired in.",
+      "Checked the Needs ordering, the passive-prefix check, sentinel wrapping and the table tests against the S6(d) description in the code comments. Found no logic defect.",
+      "Grepped odd/tasks/own-rdd.md for T6b5 and L63. The forecast line says T6b5 and T6b6 change installed outputs on purpose. This commit contains no such change.",
+      "I did not run tests or git commands."
+    ]
+  }
+}

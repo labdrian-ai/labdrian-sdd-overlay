@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "c07b6b284095884656c0589a3b6f0f5a856163d1",
+    "head": "1372416243aa6b443307c1dcbc45904fc800b474",
+    "diff_sha256": "2648f6e4a3943aa7e41393d0407838cf1fa005d6c04e7df898ccbe30cdcbc56b",
+    "paths": [
+      "odd/tasks/own-rdd.md"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git diff --check 13724162~1 13724162",
+        "result": "pass",
+        "output": "exit=0"
+      }
+    ]
+  }
+}

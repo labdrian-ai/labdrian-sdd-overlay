@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ec268723e4ade33cd09e2d66a670bfdbdb0627e2",
+    "head": "c07b6b284095884656c0589a3b6f0f5a856163d1",
+    "diff_sha256": "d1acca8a8f18c347e85a06eef34ffa003b30495cffba2133e5b42a9e95f29be0",
+    "paths": [
+      "engine/cmd/review_exempt_test.go",
+      "engine/review/app/exempt.go",
+      "engine/review/app/exempt_test.go"
+    ]
+  },
+  "rows": [
+    "default"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "ec268723e4ade33cd09e2d66a670bfdbdb0627e2",
+      "head": "c07b6b284095884656c0589a3b6f0f5a856163d1",
+      "diff_sha256": "d1acca8a8f18c347e85a06eef34ffa003b30495cffba2133e5b42a9e95f29be0"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/review/app/exempt.go",
+        "engine/review/app/exempt_test.go",
+        "engine/cmd/review_exempt_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/cmd/review_exempt_test.go:30-38",
+        "claim": "The `w.exempt` helper amends HEAD to add `Risk: none` when the trailer is missing. That changes `w.head` and the commit SHA. A test that calls `w.bind()` before `w.exempt` on a `newReviewWorld` would hold a stale binding. The helper does not hide the new refusal: the new tests call `w.run(..., w.exemptArgs(...))` directly, and the missing-trailer and names-items cases are asserted with exact stderr and exit 1. Every test in this file that goes through the helper now uses `newCheckedWorld`, so the amend branch does not fire in them.",
+        "severity": "SUGGESTION",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/review_exempt_test.go:27-38",
+          "engine/cmd/review_exempt_test.go:81-117",
+          "engine/cmd/review_check_test.go:21-34"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff.",
+      "Read review.DeclaredRisk (engine/review/risk.go:63-84) and review.CheckRisk (engine/review/exempt.go:58-68) in the worktree. declaresNoRisk returns a trailer failure as the wrapped ErrRiskTrailer, and an item list as `commit <sha>: ` plus the ErrHighRisk error. Neither is a ReplyRefusedError, so both exit 1.",
+      "The check runs after oneCommit and before EncodeExemption and the store write. The app test asserts that nothing is stored and that a multi-commit range is refused first.",
+      "Read the declaresRisk and newCheckedWorld test helpers.",
+      "I did not run the tests."
+    ]
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "64e595bd045aca2049d87595ef4f813cea9240ee",
+    "head": "ec268723e4ade33cd09e2d66a670bfdbdb0627e2",
+    "diff_sha256": "43445ad169417bc52e6ec3a160b6dc5bd15930acaee032c64f099ed9ab01167b",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/cmd/review_check_chain_test.go",
+      "engine/cmd/review_check_cli_test.go",
+      "engine/cmd/review_check_test.go",
+      "engine/cmd/review_exempt_check_test.go",
+      "engine/cmd/review_exempt_range_test.go",
+      "engine/review/app/chain.go",
+      "engine/review/app/check.go",
+      "engine/review/app/check_exempt_test.go",
+      "engine/review/app/check_test.go",
+      "engine/review/app/fakes_test.go",
+      "engine/review/app/needs.go",
+      "engine/review/app/needs_test.go"
+    ]
+  },
+  "rows": [
+    "default"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "64e595bd045aca2049d87595ef4f813cea9240ee",
+      "head": "ec268723e4ade33cd09e2d66a670bfdbdb0627e2",
+      "diff_sha256": "43445ad169417bc52e6ec3a160b6dc5bd15930acaee032c64f099ed9ab01167b"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/cmd/review_check_chain_test.go",
+        "engine/cmd/review_check_cli_test.go",
+        "engine/cmd/review_check_test.go",
+        "engine/cmd/review_exempt_check_test.go",
+        "engine/cmd/review_exempt_range_test.go",
+        "engine/review/app/chain.go",
+        "engine/review/app/check.go",
+        "engine/review/app/check_exempt_test.go",
+        "engine/review/app/check_test.go",
+        "engine/review/app/fakes_test.go",
+        "engine/review/app/needs.go",
+        "engine/review/app/needs_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/review/app/needs.go:1109-1136",
+        "claim": "A commit whose Risk trailer fails is still read for its role records (sweep, sweeper and polisher-adjacent reads) before review.Needs runs. If one of those records is unreadable or does not hold, commitFacts returns that record error instead of the trailer error. S6 (d) puts the trailer first, and the doc comment says such a commit is read for its sweep only. The case needs a bad record on a commit that also has a bad trailer. The tests do not cover it, and the result is still a refusal with exit 1. Only the reason shown can differ from the pinned order.",
+        "severity": "SUGGESTION",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/app/needs.go:1109-1133",
+          "engine/review/needs.go:112-117"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff, except the tail of needs_test.go (from about line 1400).",
+      "Read engine/review/needs.go in the worktree (Needs, IsPassive, Facts) and engine/review/exempt.go CheckRisk.",
+      "Refusal order in Needs is trailer, sweep, sweeper, polisher. Review is last: cleared returns the first need before it reads results or exemptions.",
+      "CheckChain: a passive link starts from its first parent. A passive commit with no result or exemption returns Checked{Head} and prints \"results\": []. A passive commit that has a result or exemption is still held by review.Cleared.",
+      "insideRange holds the commits a range covers to review.Needs, walking first parents from the range's end down to its start. A walk that reaches a parentless commit is refused. The loop check on start runs before insideRange and is equivalent to the old check at the next iteration.",
+      "The exemption of a commit with a declared item is refused with CheckRisk's text, even when a result also binds it. CheckRisk returns a non-nil error for any non-empty item list, so the %w wrapping is safe.",
+      "heldRole holds each role record to the head by 12-character name and full Head, to the candidate git gives now (CheckRecordBinding), and to one commit (oneCommit). A bad record gives an error naming its path.",
+      "Existing check tests moved to newCheckedWorld and sweepAll. Their expectations changed only where a sweep takes a number or the head changes, and the exit codes and streams are as before. I did not run any tests (not run)."
+    ]
+  }
+}

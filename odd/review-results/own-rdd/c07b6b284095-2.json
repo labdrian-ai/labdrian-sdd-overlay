@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ec268723e4ade33cd09e2d66a670bfdbdb0627e2",
+    "head": "c07b6b284095884656c0589a3b6f0f5a856163d1",
+    "diff_sha256": "d1acca8a8f18c347e85a06eef34ffa003b30495cffba2133e5b42a9e95f29be0",
+    "paths": [
+      "engine/cmd/review_exempt_test.go",
+      "engine/review/app/exempt.go",
+      "engine/review/app/exempt_test.go"
+    ]
+  },
+  "rows": [
+    "default",
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "ec268723e4ade33cd09e2d66a670bfdbdb0627e2",
+      "head": "c07b6b284095884656c0589a3b6f0f5a856163d1",
+      "diff_sha256": "d1acca8a8f18c347e85a06eef34ffa003b30495cffba2133e5b42a9e95f29be0"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/review_exempt_test.go",
+        "engine/review/app/exempt.go",
+        "engine/review/app/exempt_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "I read the whole diff of the three changed files. I ran no commands or tests.",
+      "engine/review/app/exempt.go: Exempt now calls declaresNoRisk after oneCommit and before EncodeExemption and the store. A failing trailer returns the review.DeclaredRisk error, which wraps ErrRiskTrailer. A trailer that names an item returns `commit <sha>: ` plus the review.CheckRisk error, which wraps ErrHighRisk. Both are plain errors, not ReplyRefusedError, so the exit stays 1. The report check still runs first and keeps exit 2. The fake-git test pins the order Parent, Message, Trailers.",
+      "The helpers it uses exist in the worktree with the signatures the diff assumes. They are review.DeclaredRisk in engine/review/risk.go:63, review.CheckRisk in engine/review/exempt.go:58, and riskValue in engine/review/app/needs.go:182. riskValue rebuilds the item list in the form CheckRisk reads, so the message matches the one a --risk that names an item gives.",
+      "engine/cmd/review_exempt_test.go: the exempt helper now declares `Risk: none` on HEAD when the trailer is empty. The new cmd test builds its worlds with newReviewWorld (no trailer) and newCheckedWorld plus declaresRisk(\"3,5\") (names items). It calls w.run directly, so the helper does not mask the refusal. The cmd test asserts the exact stderr, exit 1, no results directory, and that a report that is not clear still gives exit 2.",
+      "The app test covers a missing trailer, a trailer outside the grammar, a trailer that names items, a message git cannot read, and trailers git cannot parse. Each case expects a plain error and nothing stored. A separate test pins that a multi-commit range is refused with ErrNotOneCommit before the message is read.",
+      "Declared Risk 3 (contracts others consume) is right for this diff. `review exempt` now refuses heads it accepted before: those with no Risk trailer, a malformed one, or one that names an item. That changes the refusal contract of an existing CLI verb, and it was requested by S6 f. It is not a data, security, concurrency, or delivery change, so I would not name another item. I found no differing behaviour in code shared with other verbs. The only shared pieces are existing pure helpers, called as `review check` calls them."
+    ]
+  }
+}
