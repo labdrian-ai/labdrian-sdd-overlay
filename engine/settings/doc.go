@@ -11,7 +11,8 @@
 // token inside hooks[].command, never by position or by an outer key. The families are the
 // minimalism pair, the anti-generic-design pair, the SessionEnd sync-trigger entry, the
 // PreToolUse/Bash review-receipt entry, the shaper clearance guard (with its permissions.deny
-// rule), the workflow projection family, the skills approve guard and the Stop entry of the review stop-hook.
+// rule), the workflow projection family, the skills approve guard, the Stop entry of the review stop-hook and the PreToolUse/Agent
+// entry of the builder guard.
 //
 // VERIFIED HOOK ENTRY SHAPE (Claude Code 2.1.185 / docs):
 //

@@ -471,6 +471,133 @@ func TestClaudeUninstallRemovesTheReviewStopHookAndKeepsForeignStopEntries(t *te
 	}
 }
 
+// The builder guard (own-rdd T11d, S14 g) is the PreToolUse entry on the Agent tool that denies a builder launch whose
+// task the shaper did not design. The adapter owns it as it owns every family: install writes it, status is partial
+// until install-hooks is run again on a machine that installed before it, update repairs a drift, and uninstall takes it
+// off and leaves the entries of other programs on the same matcher.
+
+// builderGuardEntries returns the entries under PreToolUse that are the builder guard's, for the adapter's hook command.
+func builderGuardEntries(root map[string]interface{}, hookCommand string) []interface{} {
+	hooks, _ := root["hooks"].(map[string]interface{})
+	entries, _ := hooks["PreToolUse"].([]interface{})
+	var ours []interface{}
+	for _, e := range entries {
+		if hasHookEntryForIdentity(e, hookCommand, settings.LabdrianBuilderGuardIdentity) {
+			ours = append(ours, e)
+		}
+	}
+	return ours
+}
+
+func TestClaudeInstallWritesTheBuilderGuard(t *testing.T) {
+	root := t.TempDir()
+	adapter := newClaudeAdapter(root)
+	hookCommand := filepath.Join(root, "bin", "gentle-ai-overlay")
+
+	if result := adapter.Install(); result.Status != core.CapabilityRestartRequired {
+		t.Fatalf("Install() = %#v", result)
+	}
+
+	ours := builderGuardEntries(parseClaudeSettingsFile(t, filepath.Join(root, "settings.json")), hookCommand)
+	if len(ours) != 1 {
+		t.Fatalf("builder guard entries under PreToolUse = %v, want exactly one", ours)
+	}
+	if matcher := ours[0].(map[string]interface{})["matcher"]; matcher != "Agent" {
+		t.Errorf("the PreToolUse entry matcher is %v, want Agent", matcher)
+	}
+	if got := mustMarshal(t, ours[0]); !strings.Contains(got, hookCommand+" roles builder-guard") {
+		t.Errorf("the PreToolUse entry = %s, want it to run 'roles builder-guard'", got)
+	}
+	if status := adapter.Status(); status.Status != core.CapabilitySupported {
+		t.Errorf("Status() after install = %#v", status)
+	}
+}
+
+func TestClaudeStatusIsPartialUntilInstallHooksIsRerunForTheBuilderGuard(t *testing.T) {
+	root := t.TempDir()
+	settingsPath := filepath.Join(root, "settings.json")
+	hookCommand := filepath.Join(root, "bin", "gentle-ai-overlay")
+	adapter := newClaudeAdapter(root)
+	if result := adapter.Install(); result.Status != core.CapabilityRestartRequired {
+		t.Fatalf("Install() = %#v", result)
+	}
+
+	// An install made before the builder guard existed.
+	older, _ := dropEntriesWithIdentity(parseClaudeSettingsFile(t, settingsPath), "PreToolUse", hookCommand, settings.LabdrianBuilderGuardIdentity)
+	writeClaudeSettings(t, settingsPath, older)
+
+	status := adapter.Status()
+	if status.Status != core.CapabilityPartial {
+		t.Fatalf("status without the builder guard = %#v, want partial", status)
+	}
+	if !strings.Contains(status.Message, "labdrian install-hooks") {
+		t.Errorf("partial message must name the fix: %q", status.Message)
+	}
+
+	if result := adapter.Install(); result.Status != core.CapabilityRestartRequired {
+		t.Fatalf("re-run Install() = %#v", result)
+	}
+	if status := adapter.Status(); status.Status != core.CapabilitySupported {
+		t.Errorf("status after re-running install = %#v, want supported", status)
+	}
+	if ours := builderGuardEntries(parseClaudeSettingsFile(t, settingsPath), hookCommand); len(ours) != 1 {
+		t.Errorf("builder guard entries after re-running install = %v, want exactly one", ours)
+	}
+}
+
+func TestClaudeStatusIsPartialWhenTheBuilderGuardEntryDrifted(t *testing.T) {
+	root := t.TempDir()
+	settingsPath := filepath.Join(root, "settings.json")
+	hookCommand := filepath.Join(root, "bin", "gentle-ai-overlay")
+	adapter := newClaudeAdapter(root)
+	if result := adapter.Install(); result.Status != core.CapabilityRestartRequired {
+		t.Fatalf("Install() = %#v", result)
+	}
+	drifted := parseClaudeSettingsFile(t, settingsPath)
+	for _, e := range builderGuardEntries(drifted, hookCommand) {
+		inner := e.(map[string]interface{})["hooks"].([]interface{})[0].(map[string]interface{})
+		inner["command"] = inner["command"].(string) + " # edited"
+	}
+	writeClaudeSettings(t, settingsPath, drifted)
+
+	if status := adapter.Status(); status.Status != core.CapabilityPartial {
+		t.Fatalf("status with an edited builder guard = %#v, want partial", status)
+	}
+	if result := adapter.Update(); result.Status != core.CapabilityRestartRequired {
+		t.Fatalf("Update() = %#v", result)
+	}
+	if status := adapter.Status(); status.Status != core.CapabilitySupported {
+		t.Errorf("status after Update = %#v, want supported", status)
+	}
+	if ours := builderGuardEntries(parseClaudeSettingsFile(t, settingsPath), hookCommand); len(ours) != 1 {
+		t.Errorf("builder guard entries after Update = %v, want exactly one", ours)
+	}
+}
+
+func TestClaudeUninstallRemovesTheBuilderGuardAndKeepsForeignAgentEntries(t *testing.T) {
+	root := t.TempDir()
+	settingsPath := filepath.Join(root, "settings.json")
+	hookCommand := filepath.Join(root, "bin", "gentle-ai-overlay")
+	adapter := newClaudeAdapter(root)
+	foreign := map[string]interface{}{"matcher": "Agent", "hooks": []interface{}{map[string]interface{}{"type": "command", "command": "/opt/other/agent-hook"}}}
+	writeClaudeSettings(t, settingsPath, map[string]interface{}{"hooks": map[string]interface{}{"PreToolUse": []interface{}{foreign}}})
+
+	if result := adapter.Install(); result.Status != core.CapabilityRestartRequired {
+		t.Fatalf("Install() = %#v", result)
+	}
+	if result := adapter.Uninstall(); result.Status != core.CapabilityRestartRequired {
+		t.Fatalf("Uninstall() = %#v", result)
+	}
+	after := parseClaudeSettingsFile(t, settingsPath)
+	if ours := builderGuardEntries(after, hookCommand); len(ours) != 0 {
+		t.Errorf("builder guard entries survive Uninstall: %v", ours)
+	}
+	entries, _ := after["hooks"].(map[string]interface{})["PreToolUse"].([]interface{})
+	if len(entries) != 1 || mustMarshal(t, entries[0]) != mustMarshal(t, foreign) {
+		t.Errorf("PreToolUse after Uninstall = %v, want only the foreign entry", entries)
+	}
+}
+
 // NOTE (Phase 4, PR-3): the injectDesignHookPair test-fixture workaround that
 // previously lived here has been removed now that the settings merge installs
 // the real anti-generic-design pair — tests exercise the real Install()/
