@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "eb0a553d3794cb846f547c2475388dcffa3db450",
+    "head": "d9787c8c8399c411fd33a7ced347c07f64804ec7",
+    "diff_sha256": "ecf1a91cbb01ec929de0448eeb483ec1b360c4aa5221185fad6ab7e5e4fc3723",
+    "paths": [
+      "odd/review-results/own-rdd/50a2b30102c6-1.json",
+      "odd/review-results/own-rdd/50a2b30102c6-2.json",
+      "odd/review-results/own-rdd/eb0a553d3794-1.exempt.json",
+      "odd/review-results/own-rdd/f94f17dddaac-1.exempt.json",
+      "skills/role-chain/.approval.json"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git diff --name-only eb0a553d d9787c8c",
+        "result": "pass",
+        "output": "only the owner approval record skills/role-chain/.approval.json and four odd/review-results/own-rdd records changed"
+      }
+    ]
+  }
+}

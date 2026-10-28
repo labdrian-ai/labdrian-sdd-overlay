@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "d9787c8c8399c411fd33a7ced347c07f64804ec7",
+    "head": "7f451d854751387e79df13e896232251c41cc52f",
+    "diff_sha256": "470da7da292511bbdcefb010f52769d498875cb17f6d349e9e59dc2fcbfd5e34",
+    "paths": [
+      "engine/cmd/review_stop_hook_test.go"
+    ]
+  },
+  "rows": [
+    "default"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "d9787c8c8399c411fd33a7ced347c07f64804ec7",
+      "head": "7f451d854751387e79df13e896232251c41cc52f",
+      "diff_sha256": "470da7da292511bbdcefb010f52769d498875cb17f6d349e9e59dc2fcbfd5e34"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/review_stop_hook_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the full diff: one new test, TestReviewStopHookNeverAsksAPassiveCommitBelowAnUnreviewedOne, in engine/cmd/review_stop_hook_test.go.",
+      "Read the helpers it uses (newStopWorldWith, requireReason, blockReasonOf, reviewLine, exemptClause, asked) in the worktree. The names, signatures and field uses match.",
+      "The test asserts the exact block reason (base is the passive commit c3, head is c4). It asserts the one remembered question key, c3[:12]-c4[:12]-review. It asserts that no result record is stored under the passive commit's prefix.",
+      "The setup runs the sweep before the untracked task document is written, so the sweep is not fired by it.",
+      "The commit changes only a test file, so no secrets, permission, path-escape, exec or net risk applies.",
+      "Not run: I did not execute the test, so whether it passes is unconfirmed. I did not read odd/tasks/own-rdd.md (S6 (e), T6b7b, L75) and judged the test only against the commit's own description."
+    ]
+  }
+}
