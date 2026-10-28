@@ -155,6 +155,8 @@ func (g *fakeGit) Standing(repo app.Repository) (app.Standing, error) {
 // moment before: the fake stores that writer's file under the name, so the next listing shows it.
 type fakeResults struct {
 	files map[string]map[string][]byte // feature -> name -> content
+	// tasks says that the tree has odd/tasks, which makes it one that keeps features even with no result stored.
+	tasks bool
 	fail  map[string]error
 	calls []string
 	races int
@@ -205,6 +207,19 @@ func (r *fakeResults) Names(root, feature string) ([]string, error) {
 	}
 	sort.Strings(names)
 	return names, nil
+}
+
+func (r *fakeResults) Features(root string) (app.Features, error) {
+	r.calls = append(r.calls, "Features "+root)
+	if err := r.fail["Features"]; err != nil {
+		return app.Features{}, err
+	}
+	features := app.Features{Tracked: r.tasks || len(r.files) > 0}
+	for name := range r.files {
+		features.Names = append(features.Names, name)
+	}
+	sort.Strings(features.Names)
+	return features, nil
 }
 
 func (r *fakeResults) Read(root, feature, name string) ([]byte, error) {

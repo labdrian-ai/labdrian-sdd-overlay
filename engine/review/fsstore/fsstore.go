@@ -35,6 +35,9 @@
 // all. The store keeps a result out of a place the repository's own files point to, which is what a checkout
 // of someone else's branch can bring.
 //
+// Features, which the stop hook needs to read a tree before it asks git anything (own-rdd T6a), lists the directories
+// of odd/review-results that are a feature, by path, and follows no link (features.go).
+//
 // Read, which the verification of a stored result needs (own-rdd T3), works by path on every platform: the
 // directories are looked at as for any other call, the file is looked at without being followed (a link, a
 // directory or anything else that is not a regular file is refused, ErrNotAFile), opened, compared with what

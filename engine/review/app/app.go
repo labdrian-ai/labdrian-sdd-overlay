@@ -97,6 +97,15 @@ type Git interface {
 	Standing(repo Repository) (Standing, error)
 }
 
+// Features is what a working tree says of the features whose reviews it keeps, as the stop hook asks (own-rdd T6a, S6).
+type Features struct {
+	// Tracked says that the tree keeps features at all: odd/tasks or odd/review-results is a directory in it. The
+	// stop hook is installed for every repository of the machine and has nothing to say in one that is not.
+	Tracked bool
+	// Names are the features that have a results directory, sorted: every one of them holds reviews of the branch.
+	Names []string
+}
+
 // Results is the directory where the results of the reviews of a feature are stored, odd/review-results/
 // <feature>/, under the root of a working tree.
 type Results interface {
@@ -115,6 +124,10 @@ type Results interface {
 	// it; calling the function it returns gives the lock back. It makes nothing: a directory that is not there
 	// gives ErrNotFound. Where the store cannot hold a lock, it says so in its documentation and holds none.
 	Lock(root, feature string) (unlock func(), err error)
+	// Features says whether the working tree under root keeps features and which of them have a results directory.
+	// It makes nothing, follows no link, and lists only the directories whose names are a feature
+	// (review.CheckFeature); a link or a file where odd or odd/review-results should be a directory gives an error.
+	Features(root string) (Features, error)
 }
 
 // ErrExists is what Results.Create returns, wrapped or not, for a name that is already taken.
