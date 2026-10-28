@@ -332,15 +332,16 @@ func eventCommand(event string) string {
 	return settings.LabdrianProjectionIdentity + " --event " + event
 }
 
-// withoutTheEventEntries is text, a settings.json the program wrote, without every entry of the
-// projection family under event, and how many it took out. It cuts text, not parsed JSON, because
+// withoutTheEventEntries is text, a settings.json the program wrote, without every entry under event
+// whose command runs command (the command of a projection entry, eventCommand, or the identity of
+// the review stop-hook), and how many it took out. It cuts text, not parsed JSON, because
 // what remains is compared byte for byte with a recording, formatting included, as
 // withoutEntriesAddedSinceTheRecording does. The hook list sits at an indent of four spaces and its
 // entries at six in the program's output: the entries are cut one at a time, and the last one of
 // the list goes with its key; either way with the comma beside it.
-func withoutTheEventEntries(t *testing.T, label, event, text string) (string, int) {
+func withoutTheEventEntries(t *testing.T, label, event, command, text string) (string, int) {
 	t.Helper()
-	listStart, command := "\n    \""+event+"\": [", eventCommand(event)
+	listStart := "\n    \"" + event + "\": ["
 	const listEnd, entryStart, entryEnd = "\n    ]", "\n      {", "\n      }"
 	for removed := 0; ; removed++ {
 		start := strings.Index(text, listStart)
@@ -383,14 +384,15 @@ func cutWithComma(t *testing.T, what, text string, from, to int) string {
 }
 
 // withoutEntriesAddedSinceTheRecording is text, a settings.json the program wrote, without the
-// projection entries of addedProjectionMatchers. An entry of the PreToolUse list sits at an indent of
+// projection entries of addedProjectionMatchers, those of SessionStart and PostToolUse, and the Stop
+// entry of the review stop-hook. An entry of the PreToolUse list sits at an indent of
 // six spaces in the program's output; the entry is cut with the comma that separates it from its
 // neighbor, so the list reads as the program wrote it before.
 func withoutEntriesAddedSinceTheRecording(t *testing.T, label, text string, merged bool) string {
 	t.Helper()
 	// The PostToolUse entries of C23 M7 repeat the memory-read matchers, so they go first, before
 	// the PreToolUse entries are counted by matcher.
-	text, posts := withoutTheEventEntries(t, label, "PostToolUse", text)
+	text, posts := withoutTheEventEntries(t, label, "PostToolUse", eventCommand("PostToolUse"), text)
 	const open, close = "\n      {", "\n      }"
 	owned := func(block string) bool { return strings.Contains(block, settings.LabdrianProjectionIdentity) }
 	count := func(matcher string) int {
@@ -438,12 +440,18 @@ func withoutEntriesAddedSinceTheRecording(t *testing.T, label, text string, merg
 			t.Errorf("%s: %d projection entries of matcher %q, want one per query entry (%d)", label, removed, matcher, queries)
 		}
 	}
-	text, removed := withoutTheEventEntries(t, label, "SessionStart", text)
+	text, removed := withoutTheEventEntries(t, label, "SessionStart", eventCommand("SessionStart"), text)
 	if merged && removed != queries {
 		t.Errorf("%s: %d SessionStart projection entries, want one per query entry (%d)", label, removed, queries)
 	}
 	if want := (1 + len(addedProjectionMatchers)) * queries; merged && posts != want {
 		t.Errorf("%s: %d PostToolUse projection entries, want one per memory-read matcher per query entry (%d)", label, posts, want)
+	}
+	// The Stop entry of the review stop-hook (own-rdd T6a) is not in the recording either: a file a merge just wrote holds
+	// it once, and the Stop entries of other programs stay as they were.
+	text, stops := withoutTheEventEntries(t, label, "Stop", settings.LabdrianReviewStopIdentity, text)
+	if merged && stops != 1 {
+		t.Errorf("%s: %d review stop-hook entries, want the one a merge writes", label, stops)
 	}
 	return text
 }

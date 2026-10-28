@@ -1210,10 +1210,11 @@ func withShaperGuardFamily(root map[string]interface{}, hookCommand string) map[
 }
 
 // TestHasSupportedClaudeLifecycleState_RequiresEveryOwnedFamily asserts the
-// lifecycle-state check returns true only once all seven owned families
+// lifecycle-state check returns true only once all eight owned families
 // (minimalism pair, design pair, SessionEnd sync-trigger, PreToolUse/Bash
-// review-receipt, shaper clearance guard, projection, approve guard) are
-// present: it adds them one at a time and requires false until the last.
+// review-receipt, shaper clearance guard, projection, approve guard, Stop
+// review stop-hook) are present: it adds them one at a time and requires
+// false until the last.
 func TestHasSupportedClaudeLifecycleState_RequiresEveryOwnedFamily(t *testing.T) {
 	twoFamilies := buildRootWithPairs(testHookCommand, true, true)
 	if settings.HasSupportedClaudeLifecycleState(twoFamilies, testHookCommand) {
@@ -1241,8 +1242,13 @@ func TestHasSupportedClaudeLifecycleState_RequiresEveryOwnedFamily(t *testing.T)
 	}
 
 	allSeven := withApproveGuardFamily(allSix, testHookCommand)
-	if !settings.HasSupportedClaudeLifecycleState(allSeven, testHookCommand) {
-		t.Error("HasSupportedClaudeLifecycleState: expected true once all seven families exist")
+	if settings.HasSupportedClaudeLifecycleState(allSeven, testHookCommand) {
+		t.Error("HasSupportedClaudeLifecycleState: expected false with seven families (review stop-hook missing)")
+	}
+
+	allEight := withReviewStopFamily(allSeven, testHookCommand)
+	if !settings.HasSupportedClaudeLifecycleState(allEight, testHookCommand) {
+		t.Error("HasSupportedClaudeLifecycleState: expected true once all eight families exist")
 	}
 }
 
@@ -1489,8 +1495,9 @@ func buildForeignSessionEndStopFixture() map[string]interface{} {
 
 // TestMerge_AddsSessionEndSyncTrigger_CoexistsWithForeign asserts Install
 // adds our SessionEnd sync-trigger entry alongside a pre-existing
-// foreign-owned SessionEnd entry, and never touches Stop at all (per the
-// requirement: "MUST NOT install any entry on Stop").
+// foreign-owned SessionEnd entry, never puts the sync-trigger on Stop (per the
+// requirement: "MUST NOT install any entry on Stop" for it), and puts on Stop
+// only the entry of the review stop-hook (own-rdd T6a), beside the foreign ones.
 func TestMerge_AddsSessionEndSyncTrigger_CoexistsWithForeign(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "settings.json")
@@ -1523,8 +1530,8 @@ func TestMerge_AddsSessionEndSyncTrigger_CoexistsWithForeign(t *testing.T) {
 		t.Fatal("hooks map should exist")
 	}
 	stopEntries, ok := hooks["Stop"].([]interface{})
-	if !ok || len(stopEntries) != 2 {
-		t.Fatalf("Stop entries should remain untouched (2 foreign entries); got %v", hooks["Stop"])
+	if !ok || len(stopEntries) != 3 {
+		t.Fatalf("Stop entries should be the 2 foreign entries and the review stop-hook; got %v", hooks["Stop"])
 	}
 	if !containsInnerCommand(root, "Stop", "moshi-hook stop") {
 		t.Error("foreign Stop entry (moshi-hook) should be preserved")
@@ -1532,8 +1539,11 @@ func TestMerge_AddsSessionEndSyncTrigger_CoexistsWithForeign(t *testing.T) {
 	if !containsInnerCommand(root, "Stop", "gentle-ai review-stop") {
 		t.Error("foreign Stop entry (gentle-ai) should be preserved")
 	}
-	if n := countOurHooks(root, "Stop", testHookCommand); n != 0 {
-		t.Errorf("no owned entry should ever be installed on Stop; got %d", n)
+	if settings.HasLabdrianSyncTriggerHook(root, "Stop", testHookCommand) {
+		t.Error("the sync-trigger should never be installed on Stop")
+	}
+	if n := countOurHooks(root, "Stop", testHookCommand); n != 1 {
+		t.Errorf("exactly one owned entry, the review stop-hook, should be installed on Stop; got %d", n)
 	}
 }
 
@@ -1562,6 +1572,9 @@ func TestUninstall_RemovesSessionEndSyncTrigger_LeavesForeign(t *testing.T) {
 	if n := countOurHooks(before, "SessionEnd", testHookCommand); n != 1 {
 		t.Fatalf("precondition: expected 1 owned SessionEnd entry after Install, got %d", n)
 	}
+	if n := countOurHooks(before, "Stop", testHookCommand); n != 1 {
+		t.Fatalf("precondition: expected 1 owned Stop entry (the review stop-hook) after Install, got %d", n)
+	}
 
 	if err := m.Uninstall(); err != nil {
 		t.Fatalf("Uninstall: %v", err)
@@ -1571,6 +1584,9 @@ func TestUninstall_RemovesSessionEndSyncTrigger_LeavesForeign(t *testing.T) {
 
 	if n := countOurHooks(root, "SessionEnd", testHookCommand); n != 0 {
 		t.Errorf("owned SessionEnd entry should be removed after Uninstall; got %d", n)
+	}
+	if n := countOurHooks(root, "Stop", testHookCommand); n != 0 {
+		t.Errorf("owned Stop entry should be removed after Uninstall; got %d", n)
 	}
 	if !containsInnerCommand(root, "SessionEnd", "moshi-hook session-end") {
 		t.Error("foreign SessionEnd entry (moshi-hook) should survive Uninstall")
