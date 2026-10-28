@@ -86,6 +86,7 @@ func TestStatusCoreWritesTheWholeReportOfTheServiceAndAnswersItsOutcome(t *testi
 		"guard: shaper clearance record (PreToolUse + permissions.deny)",
 		"hooks: projection (SessionStart + UserPromptSubmit + PreToolUse gates + PostToolUse read evidence)",
 		"guard: skills approve (PreToolUse Bash + file tools)",
+		"hook: Stop (review stop-hook)",
 	} {
 		want += "[FAIL] " + label + unreadable
 	}

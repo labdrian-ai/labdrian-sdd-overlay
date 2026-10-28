@@ -32,6 +32,8 @@ const (
 	labelShaper     = "guard: shaper clearance record (PreToolUse + permissions.deny)"
 	labelProj       = "hooks: projection (SessionStart + UserPromptSubmit + PreToolUse gates + PostToolUse read evidence)"
 	labelApprove    = "guard: skills approve (PreToolUse Bash + file tools)"
+	labelStop       = "hook: Stop (review stop-hook)"
+	wantStopAdvice  = "the agent is not asked to review its commits when it stops"
 	labelContract   = "contract: " + contractPath
 	labelRegistry   = "registry: " + registryPath
 	bothBlocksText  = "# R\n" + minimalismBegin + "\n" + minimalismEnd + "\n" + designBegin + "\n" + designEnd + "\n"
@@ -235,7 +237,7 @@ func commandsOf(entry interface{}) string {
 
 func TestACompleteInstallIsHealthyAndReportsEveryCheckInOrder(t *testing.T) {
 	report := complete(t).check()
-	want := []string{labelBinary, labelPrompt, labelAgent, labelSession, labelReceipt, labelShaper, labelProj, labelApprove, labelContract, labelRegistry}
+	want := []string{labelBinary, labelPrompt, labelAgent, labelSession, labelReceipt, labelShaper, labelProj, labelApprove, labelStop, labelContract, labelRegistry}
 	if got := report.labels(); strings.Join(got, "\n") != strings.Join(want, "\n") {
 		t.Fatalf("checks\n got: %q\nwant: %q", got, want)
 	}
@@ -247,6 +249,7 @@ func TestACompleteInstallIsHealthyAndReportsEveryCheckInOrder(t *testing.T) {
 	wantCheck(t, report.named(t, labelShaper), OK, "installed; "+wantSpeedBump)
 	wantCheck(t, report.named(t, labelProj), OK, "installed; "+restart+" if this session started earlier")
 	wantCheck(t, report.named(t, labelApprove), OK, "installed; "+wantSpeedBump+"; "+restart+" if this session started earlier")
+	wantCheck(t, report.named(t, labelStop), OK, "installed; "+restart+" if this session started earlier")
 	wantCheck(t, report.named(t, labelRegistry), OK, "not present (project may not use the overlay)")
 	if report.Outcome() != Healthy {
 		t.Errorf("Outcome = %v, want Healthy", report.Outcome())
@@ -362,7 +365,7 @@ func TestSettingsThatCannotBeReadFailEveryCheckThatLooksAtThem(t *testing.T) {
 	w.settings.errs[settingsPath] = errors.New("invalid JSON: boom")
 	report := w.check()
 	note := "cannot read " + settingsPath + ": invalid JSON: boom"
-	for _, label := range []string{labelPrompt, labelAgent, labelSession, labelReceipt, labelShaper, labelProj, labelApprove} {
+	for _, label := range []string{labelPrompt, labelAgent, labelSession, labelReceipt, labelShaper, labelProj, labelApprove, labelStop} {
 		wantCheck(t, report.named(t, label), Fail, note)
 	}
 	wantCheck(t, report.named(t, labelBinary), OK, "")
@@ -383,6 +386,7 @@ func TestSettingsWithNothingInThemFailTheTwoBaseHooksAndWarnOfTheOthers(t *testi
 	wantCheck(t, report.named(t, labelShaper), Warn, absent+"; clearance recording is unguarded ("+wantSpeedBump+"); "+wantRemediation)
 	wantCheck(t, report.named(t, labelProj), Warn, absent+"; "+wantRemediation+"; "+restart)
 	wantCheck(t, report.named(t, labelApprove), Warn, absent+"; the agent can run skills approve unguarded ("+wantSpeedBump+"); "+wantRemediation+"; "+restart)
+	wantCheck(t, report.named(t, labelStop), Warn, absent+"; "+wantStopAdvice+"; "+wantRemediation+"; "+restart)
 	if report.Outcome() != Failed {
 		t.Errorf("Outcome = %v, want Failed", report.Outcome())
 	}
@@ -626,6 +630,33 @@ func TestTheApproveGuardNamesWhatIsMissingOrDriftedAndTheLimitOfAGuard(t *testin
 	}
 }
 
+func TestTheReviewStopHookNamesWhatIsMissingOrDriftedAndAsksForARestart(t *testing.T) {
+	for name, strip := range map[string]func(root map[string]interface{}){
+		"missing": func(root map[string]interface{}) { delete(root["hooks"].(map[string]interface{}), "Stop") },
+		"drifted: the command was edited": func(root map[string]interface{}) {
+			for _, e := range root["hooks"].(map[string]interface{})["Stop"].([]interface{}) {
+				e.(map[string]interface{})["hooks"].([]interface{})[0].(map[string]interface{})["command"] = commandsOf(e) + " # edited"
+			}
+		},
+		"the entry of another program on Stop is not ours": func(root map[string]interface{}) {
+			root["hooks"].(map[string]interface{})["Stop"] = []interface{}{
+				map[string]interface{}{"hooks": []interface{}{map[string]interface{}{"type": "command", "command": "/usr/bin/other " + settings.LabdrianReviewStopIdentity}}},
+			}
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			w := complete(t)
+			w.editSettings(t, strip)
+			parts := settings.MissingReviewStopHookParts(w.settings.docs[settingsPath].Root(), binaryPath)
+			if len(parts) == 0 {
+				t.Fatal("the settings are missing nothing; the case proves nothing")
+			}
+			wantCheck(t, w.check().named(t, labelStop), Warn,
+				"missing or drifted: "+strings.Join(parts, ", ")+"; "+wantStopAdvice+"; "+wantRemediation+"; "+restart)
+		})
+	}
+}
+
 func TestEveryHookIsMatchedByTheInstalledPathAndNotByTheIdentityAlone(t *testing.T) {
 	w := complete(t)
 	w.settings.docs["/other/.claude/settings.json"] = w.settings.docs[settingsPath]
@@ -641,6 +672,9 @@ func TestEveryHookIsMatchedByTheInstalledPathAndNotByTheIdentityAlone(t *testing
 	}
 	if report.named(t, "guard: skills approve (PreToolUse Bash + file tools)").Level != Warn {
 		t.Error("the approve guard of another binary was taken for this one's")
+	}
+	if report.named(t, labelStop).Level != Warn {
+		t.Error("the review stop-hook of another binary was taken for this one's")
 	}
 }
 

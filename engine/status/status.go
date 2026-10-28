@@ -177,8 +177,10 @@ const (
 )
 
 // Check makes every check, in the order a report lists them: the binary; the two base hooks,
-// whose absence is a failure; the four families added later, whose absence is a warning; the
-// contract; and, when the request names a directory, the registry of the project there.
+// whose absence is a failure; the families added later (the sync-trigger, the review receipt, the
+// shaper clearance guard, the projection hooks, the approve guard, and the review stop-hook), whose
+// absence is a warning; the contract; and, when the request names a directory, the registry of the
+// project there.
 //
 // Both ports and the blocks are required: a Service without one is a wiring mistake and Check panics
 // saying which, rather than answering a report that hides it.
@@ -206,6 +208,7 @@ func (s Service) Check(req Request) Report {
 		checkShaperClearanceGuard(loaded, binaryPath),
 		checkProjectionHooks(loaded, binaryPath),
 		checkApproveGuard(loaded, binaryPath),
+		checkReviewStopHook(loaded, binaryPath),
 		CheckContract(contractPath, s.Files),
 	}
 	if check := s.codexHook(req, binaryPath); check != nil {
@@ -381,6 +384,24 @@ func checkApproveGuard(s loadedSettings, binaryPath string) Check {
 			Note: "missing or drifted: " + strings.Join(missing, ", ") + "; the agent can run skills approve unguarded (" + speedBump + "); " + remediation + "; " + restartNote}
 	}
 	return Check{Label: label, Level: OK, Note: "installed; " + speedBump + "; " + restartNote + " if this session started earlier"}
+}
+
+// checkReviewStopHook reports whether the review stop-hook (the one Stop entry that runs 'review
+// stop-hook') is exactly in place. It is judged as checkProjectionHooks is: an entry that is missing
+// or drifted warns with the remediation, settings that cannot be read fail, and the note asks for a
+// restart, because Claude Code loads its hooks when it starts. What a missing hook costs is said in
+// the note: the agent stops without being asked for the review of its commits.
+func checkReviewStopHook(s loadedSettings, binaryPath string) Check {
+	label := "hook: Stop (review stop-hook)"
+	const cost = "the agent is not asked to review its commits when it stops"
+	if c, done := s.beforeEntries(label, Warn, "; "+cost+"; "+remediation+"; "+restartNote); done {
+		return c
+	}
+	if missing := settings.MissingReviewStopHookParts(s.root, binaryPath); len(missing) > 0 {
+		return Check{Label: label, Level: Warn,
+			Note: "missing or drifted: " + strings.Join(missing, ", ") + "; " + cost + "; " + remediation + "; " + restartNote}
+	}
+	return Check{Label: label, Level: OK, Note: "installed; " + restartNote + " if this session started earlier"}
 }
 
 // CheckContract verifies the contract at path is readable and its frontmatter parses.

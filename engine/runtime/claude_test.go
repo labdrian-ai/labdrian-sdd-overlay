@@ -344,6 +344,133 @@ func dropEntriesWithIdentity(root map[string]interface{}, key, hookCommand, iden
 	return root, nil
 }
 
+// The review stop-hook (own-rdd T6a, S6) is the Stop entry that asks the agent to review the next commit no review
+// covers. The adapter owns it as it owns every family: install writes it, status is partial until install-hooks is
+// run again on a machine that installed before it, update repairs a drift, and uninstall takes it off and leaves the
+// Stop entries of other programs.
+
+// reviewStopEntries returns the entries under Stop that are the review stop-hook's, for the adapter's hook command.
+func reviewStopEntries(root map[string]interface{}, hookCommand string) []interface{} {
+	hooks, _ := root["hooks"].(map[string]interface{})
+	entries, _ := hooks["Stop"].([]interface{})
+	var ours []interface{}
+	for _, e := range entries {
+		if hasHookEntryForIdentity(e, hookCommand, settings.LabdrianReviewStopIdentity) {
+			ours = append(ours, e)
+		}
+	}
+	return ours
+}
+
+func TestClaudeInstallWritesTheReviewStopHook(t *testing.T) {
+	root := t.TempDir()
+	adapter := newClaudeAdapter(root)
+	hookCommand := filepath.Join(root, "bin", "gentle-ai-overlay")
+
+	if result := adapter.Install(); result.Status != core.CapabilityRestartRequired {
+		t.Fatalf("Install() = %#v", result)
+	}
+
+	ours := reviewStopEntries(parseClaudeSettingsFile(t, filepath.Join(root, "settings.json")), hookCommand)
+	if len(ours) != 1 {
+		t.Fatalf("review stop-hook entries under Stop = %v, want exactly one", ours)
+	}
+	if _, hasMatcher := ours[0].(map[string]interface{})["matcher"]; hasMatcher {
+		t.Errorf("the Stop entry has a matcher, and Stop has none: %v", ours[0])
+	}
+	if got := mustMarshal(t, ours[0]); !strings.Contains(got, hookCommand+" review stop-hook") {
+		t.Errorf("the Stop entry = %s, want it to run 'review stop-hook'", got)
+	}
+	if status := adapter.Status(); status.Status != core.CapabilitySupported {
+		t.Errorf("Status() after install = %#v", status)
+	}
+}
+
+func TestClaudeStatusIsPartialUntilInstallHooksIsRerunForTheReviewStopHook(t *testing.T) {
+	root := t.TempDir()
+	settingsPath := filepath.Join(root, "settings.json")
+	hookCommand := filepath.Join(root, "bin", "gentle-ai-overlay")
+	adapter := newClaudeAdapter(root)
+	if result := adapter.Install(); result.Status != core.CapabilityRestartRequired {
+		t.Fatalf("Install() = %#v", result)
+	}
+
+	// An install made before the review stop-hook existed.
+	older, _ := dropEntriesWithIdentity(parseClaudeSettingsFile(t, settingsPath), "Stop", hookCommand, settings.LabdrianReviewStopIdentity)
+	writeClaudeSettings(t, settingsPath, older)
+
+	status := adapter.Status()
+	if status.Status != core.CapabilityPartial {
+		t.Fatalf("status without the review stop-hook = %#v, want partial", status)
+	}
+	if !strings.Contains(status.Message, "labdrian install-hooks") {
+		t.Errorf("partial message must name the fix: %q", status.Message)
+	}
+
+	if result := adapter.Install(); result.Status != core.CapabilityRestartRequired {
+		t.Fatalf("re-run Install() = %#v", result)
+	}
+	if status := adapter.Status(); status.Status != core.CapabilitySupported {
+		t.Errorf("status after re-running install = %#v, want supported", status)
+	}
+	if ours := reviewStopEntries(parseClaudeSettingsFile(t, settingsPath), hookCommand); len(ours) != 1 {
+		t.Errorf("review stop-hook entries after re-running install = %v, want exactly one", ours)
+	}
+}
+
+func TestClaudeStatusIsPartialWhenTheReviewStopHookEntryDrifted(t *testing.T) {
+	root := t.TempDir()
+	settingsPath := filepath.Join(root, "settings.json")
+	hookCommand := filepath.Join(root, "bin", "gentle-ai-overlay")
+	adapter := newClaudeAdapter(root)
+	if result := adapter.Install(); result.Status != core.CapabilityRestartRequired {
+		t.Fatalf("Install() = %#v", result)
+	}
+	drifted := parseClaudeSettingsFile(t, settingsPath)
+	for _, e := range reviewStopEntries(drifted, hookCommand) {
+		inner := e.(map[string]interface{})["hooks"].([]interface{})[0].(map[string]interface{})
+		inner["command"] = inner["command"].(string) + " # edited"
+	}
+	writeClaudeSettings(t, settingsPath, drifted)
+
+	if status := adapter.Status(); status.Status != core.CapabilityPartial {
+		t.Fatalf("status with an edited review stop-hook = %#v, want partial", status)
+	}
+	if result := adapter.Update(); result.Status != core.CapabilityRestartRequired {
+		t.Fatalf("Update() = %#v", result)
+	}
+	if status := adapter.Status(); status.Status != core.CapabilitySupported {
+		t.Errorf("status after Update = %#v, want supported", status)
+	}
+	if ours := reviewStopEntries(parseClaudeSettingsFile(t, settingsPath), hookCommand); len(ours) != 1 {
+		t.Errorf("review stop-hook entries after Update = %v, want exactly one", ours)
+	}
+}
+
+func TestClaudeUninstallRemovesTheReviewStopHookAndKeepsForeignStopEntries(t *testing.T) {
+	root := t.TempDir()
+	settingsPath := filepath.Join(root, "settings.json")
+	hookCommand := filepath.Join(root, "bin", "gentle-ai-overlay")
+	adapter := newClaudeAdapter(root)
+	foreign := map[string]interface{}{"hooks": []interface{}{map[string]interface{}{"type": "command", "command": "/opt/other/stop-hook"}}}
+	writeClaudeSettings(t, settingsPath, map[string]interface{}{"hooks": map[string]interface{}{"Stop": []interface{}{foreign}}})
+
+	if result := adapter.Install(); result.Status != core.CapabilityRestartRequired {
+		t.Fatalf("Install() = %#v", result)
+	}
+	if result := adapter.Uninstall(); result.Status != core.CapabilityRestartRequired {
+		t.Fatalf("Uninstall() = %#v", result)
+	}
+	after := parseClaudeSettingsFile(t, settingsPath)
+	if ours := reviewStopEntries(after, hookCommand); len(ours) != 0 {
+		t.Errorf("review stop-hook entries survive Uninstall: %v", ours)
+	}
+	entries, _ := after["hooks"].(map[string]interface{})["Stop"].([]interface{})
+	if len(entries) != 1 || mustMarshal(t, entries[0]) != mustMarshal(t, foreign) {
+		t.Errorf("Stop after Uninstall = %v, want only the foreign entry", entries)
+	}
+}
+
 // NOTE (Phase 4, PR-3): the injectDesignHookPair test-fixture workaround that
 // previously lived here has been removed now that the settings merge installs
 // the real anti-generic-design pair — tests exercise the real Install()/
