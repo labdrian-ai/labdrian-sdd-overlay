@@ -124,8 +124,9 @@ type Git interface {
 	// Status returns the lines of `git status --porcelain` of the working tree of repo, with every untracked file listed on
 	// its own line. A clean tree gives none.
 	Status(repo Repository) ([]string, error)
-	// Archive fills dir, an absolute path to a directory that is there and empty, with the tree of commit, a full object
-	// name, as `git archive` would (modes and links kept).
+	// Archive fills dir, an absolute path to a directory that is there and empty, with the exact bytes of the tree of
+	// commit, a full object name: no attribute, filter or end-of-line setting changes a byte of it. Files keep their
+	// mode, links their target, and submodules are skipped.
 	Archive(repo Repository, commit, dir string) error
 }
 

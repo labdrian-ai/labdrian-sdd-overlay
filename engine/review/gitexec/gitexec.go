@@ -57,7 +57,6 @@
 package gitexec
 
 import (
-	"archive/tar"
 	"bytes"
 	"context"
 	"errors"
@@ -69,6 +68,7 @@ import (
 	"path"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -100,6 +100,8 @@ const DefaultTimeout = 5 * time.Minute
 // output and on its standard error, apart. The process adapter is execrunner.Runner.
 type Runner interface {
 	Output(ctx context.Context, env []string, bin string, args ...string) (stdout, stderr []byte, err error)
+	// OutputStdin is Output for a program that reads its standard input: it is handed exactly stdin.
+	OutputStdin(ctx context.Context, env []string, stdin []byte, bin string, args ...string) (stdout, stderr []byte, err error)
 }
 
 // Options are what the adapter needs of the process it runs in.
@@ -621,9 +623,13 @@ func (g Git) Status(repo app.Repository) ([]string, error) {
 	return strings.Split(text, "\n"), nil
 }
 
-// Archive fills dir with the tree of commit. git writes the archive to a file of the temporary directory of the process,
-// never in the repository, and the adapter unpacks it and removes it: a plain unpack that makes the directories, the
-// files with their modes and the links, and refuses a name that leads out of dir and a file whose directory is a link.
+// Archive fills dir with the exact bytes of the tree of commit, built from the objects and not from an export: no
+// attribute, filter or end-of-line setting, in the tree, the repository or the configuration, changes a byte of it. The
+// listing comes from `git ls-tree -r -z -l --full-tree` and the bytes of every blob from one `git cat-file --batch`,
+// asked for the names of the blobs in the order of the listing. A file of mode 100644 or 100755 is written with that
+// mode, a 120000 entry as a link whose target is the blob, and a 160000 entry (a submodule) is skipped; any other mode,
+// a path that is not local to dir, a file whose directory is a link, a listing or an answer of git that is not as
+// described, and a blob whose size is not the one the listing gives are refused.
 func (g Git) Archive(repo app.Repository, commit, dir string) error {
 	if !filepath.IsAbs(dir) {
 		return fmt.Errorf("the directory %q to unpack into is not an absolute path", dir)
@@ -638,62 +644,120 @@ func (g Git) Archive(repo app.Repository, commit, dir string) error {
 	if len(entries) != 0 {
 		return fmt.Errorf("the directory %s to unpack into is not empty", dir)
 	}
-	tmp, err := os.CreateTemp("", "labdrian-archive-*.tar")
-	if err != nil {
-		return fmt.Errorf("make the file git writes the archive to: %w", err)
-	}
-	defer os.Remove(tmp.Name())
-	if err := tmp.Close(); err != nil {
-		return err
-	}
-	if _, err := g.output(repo.Root, "archive", []string{"archive", "--format=tar", "--output=" + tmp.Name(), commit}); err != nil {
-		return err
-	}
-	file, err := os.Open(tmp.Name())
+	listing, err := g.output(repo.Root, "ls-tree", []string{"ls-tree", "-r", "-z", "-l", "--full-tree", commit})
 	if err != nil {
 		return err
 	}
-	defer file.Close()
-	return unpack(tar.NewReader(file), dir)
-}
-
-// unpack writes the entries of r under dir.
-func unpack(r *tar.Reader, dir string) error {
-	for {
-		hdr, err := r.Next()
-		if errors.Is(err, io.EOF) {
-			return nil
-		}
-		if err != nil {
-			return fmt.Errorf("read the archive: %w", err)
-		}
-		if hdr.Typeflag == tar.TypeXGlobalHeader {
-			continue
-		}
-		name := path.Clean(hdr.Name)
-		if !filepath.IsLocal(filepath.FromSlash(name)) {
-			return fmt.Errorf("the archive holds %q, a name that leads out of the directory", hdr.Name)
-		}
-		target := filepath.Join(dir, filepath.FromSlash(name))
-		if err := noLinkBelow(dir, filepath.Dir(target)); err != nil {
+	files, err := parseListing(listing)
+	if err != nil {
+		return err
+	}
+	if len(files) == 0 {
+		return nil
+	}
+	var asked strings.Builder
+	for _, file := range files {
+		asked.WriteString(file.object + "\n")
+	}
+	answers, err := g.outputStdin(repo.Root, "cat-file --batch", []byte(asked.String()), []string{"cat-file", "--batch"})
+	if err != nil {
+		return err
+	}
+	for _, file := range files {
+		var content []byte
+		if content, answers, err = nextBlob(answers, file); err != nil {
 			return err
 		}
-		switch hdr.Typeflag {
-		case tar.TypeDir:
-			err = os.MkdirAll(target, 0o755)
-		case tar.TypeReg:
-			err = writeEntry(target, hdr.FileInfo().Mode().Perm(), r)
-		case tar.TypeSymlink:
-			if err = os.MkdirAll(filepath.Dir(target), 0o755); err == nil {
-				err = os.Symlink(hdr.Linkname, target)
-			}
-		default:
-			err = fmt.Errorf("the archive holds %q of type %q, which is neither a directory, a file nor a link", hdr.Name, hdr.Typeflag)
-		}
-		if err != nil {
-			return fmt.Errorf("unpack %s: %w", name, err)
+		if err := writeFile(dir, file, content); err != nil {
+			return err
 		}
 	}
+	if len(answers) != 0 {
+		return fmt.Errorf("git cat-file --batch printed %q after the last blob asked for", clip(string(answers)))
+	}
+	return nil
+}
+
+// treeFile is an entry of the listing that is written to the copy: a file or a link.
+type treeFile struct {
+	mode, object, path string
+	size               int64
+}
+
+// parseListing reads the NUL-terminated entries `<mode> SP <type> SP <object> SP <size> TAB <path>` of
+// `git ls-tree -r -z -l`, drops the submodules and refuses an entry of a mode other than 100644, 100755 and 120000, one
+// that is not a blob, a name that is not a full object name, a size that is not a number, and a path that is not local.
+func parseListing(listing []byte) ([]treeFile, error) {
+	var files []treeFile
+	for rest := listing; len(rest) > 0; {
+		record, after, ok := bytes.Cut(rest, []byte{0})
+		if !ok {
+			return nil, fmt.Errorf("git ls-tree printed %q, want entries each ended by a NUL byte", clip(string(rest)))
+		}
+		rest = after
+		meta, p, ok := strings.Cut(string(record), "\t")
+		fields := strings.Fields(meta)
+		if !ok || len(fields) != 4 || p == "" {
+			return nil, fmt.Errorf("git ls-tree printed %q, want <mode> <type> <object> <size> TAB <path>", clip(string(record)))
+		}
+		mode, kind, object, shown := fields[0], fields[1], fields[2], fields[3]
+		switch mode {
+		case "160000":
+			continue
+		case "100644", "100755", "120000":
+		default:
+			return nil, fmt.Errorf("the tree holds %q with the mode %s, which is neither a file, a link nor a submodule", p, mode)
+		}
+		size, err := strconv.ParseInt(shown, 10, 64)
+		if kind != "blob" || !gitobject.IsName(object) || err != nil || size < 0 {
+			return nil, fmt.Errorf("git ls-tree printed %q, want a blob with a full object name and a size", clip(string(record)))
+		}
+		if !filepath.IsLocal(filepath.FromSlash(path.Clean(p))) {
+			return nil, fmt.Errorf("the tree holds %q, a name that leads out of the directory", p)
+		}
+		files = append(files, treeFile{mode: mode, object: object, path: p, size: size})
+	}
+	return files, nil
+}
+
+// nextBlob takes the answer for file, `<object> blob <size>` LF, the bytes and LF, off the front of answers and returns
+// the bytes and what is left. The answer must name the object asked, be a blob, and have the size the listing gives.
+func nextBlob(answers []byte, file treeFile) (content, rest []byte, err error) {
+	header, rest, ok := bytes.Cut(answers, []byte{'\n'})
+	if !ok {
+		return nil, nil, fmt.Errorf("git cat-file --batch printed %q for %s, want a header line", clip(string(answers)), file.object)
+	}
+	want := fmt.Sprintf("%s blob %d", file.object, file.size)
+	if string(header) != want {
+		return nil, nil, fmt.Errorf("git cat-file --batch printed %q for %q, want %q: the object, the kind or the size is not the one the listing gives", clip(string(header)), file.path, want)
+	}
+	if int64(len(rest)) < file.size+1 || rest[file.size] != '\n' {
+		return nil, nil, fmt.Errorf("git cat-file --batch printed less than the %d bytes and the line feed of %q", file.size, file.path)
+	}
+	return rest[:file.size], rest[file.size+1:], nil
+}
+
+// writeFile writes file, with the bytes content, under dir.
+func writeFile(dir string, file treeFile, content []byte) error {
+	target := filepath.Join(dir, filepath.FromSlash(path.Clean(file.path)))
+	if err := noLinkBelow(dir, filepath.Dir(target)); err != nil {
+		return fmt.Errorf("%s: %w", file.path, err)
+	}
+	var err error
+	switch file.mode {
+	case "100644":
+		err = writeEntry(target, 0o644, bytes.NewReader(content))
+	case "100755":
+		err = writeEntry(target, 0o755, bytes.NewReader(content))
+	default: // 120000: parseListing let nothing else through
+		if err = os.MkdirAll(filepath.Dir(target), 0o755); err == nil {
+			err = os.Symlink(string(content), target)
+		}
+	}
+	if err != nil {
+		return fmt.Errorf("write %s: %w", file.path, err)
+	}
+	return nil
 }
 
 // writeEntry makes the file at target, which must not exist, with the bytes of r.
@@ -732,7 +796,7 @@ func noLinkBelow(root, dir string) error {
 		case err != nil:
 			return err
 		case info.Mode()&fs.ModeSymlink != 0:
-			return fmt.Errorf("%s is a link, and an entry of the archive would be written through it", current)
+			return fmt.Errorf("%s is a link, and an entry of the tree would be written through it", current)
 		}
 	}
 	return nil
@@ -827,6 +891,17 @@ func (g Git) output(dir, label string, args []string) ([]byte, error) {
 	ctx, cancel := g.context()
 	defer cancel()
 	stdout, stderr, err := g.runner.Output(ctx, g.env, gitProgram, append([]string{"-C", dir}, args...)...)
+	if err != nil {
+		return nil, fmt.Errorf("git %s: %w%s", label, err, said(stderr))
+	}
+	return stdout, nil
+}
+
+// outputStdin is output for a git that reads its standard input: it is handed exactly stdin.
+func (g Git) outputStdin(dir, label string, stdin []byte, args []string) ([]byte, error) {
+	ctx, cancel := g.context()
+	defer cancel()
+	stdout, stderr, err := g.runner.OutputStdin(ctx, g.env, stdin, gitProgram, append([]string{"-C", dir}, args...)...)
 	if err != nil {
 		return nil, fmt.Errorf("git %s: %w%s", label, err, said(stderr))
 	}
