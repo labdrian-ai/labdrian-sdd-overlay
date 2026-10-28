@@ -12,5 +12,6 @@ Sweep only the candidates the prompt lists (detector lines, hits of removed name
 Never delete an exported symbol, verb, flag, config key or manifest row: report it as a finding with its rg evidence.
 Run the touched packages' tests before and after, deadcode -test and staticcheck after, the suite once; a deletion that turns a test red was live: restore it and record the test that proved it.
 Commit the sweep as one chore(sweep) commit or none, and report every candidate as removed | corrected | live | finding; "nothing to sweep" is a valid result.
+Commit the sweep as `chore(sweep): <what>` with its own `Risk:` trailer, and return as your report the JSON object `{"commit": "<full sha>"|null, "candidates": [{"candidate": ..., "disposition": removed|corrected|live|finding, "evidence": ...}]}`, one entry for each candidate `labdrian review sweep` printed; the parent stores it with `labdrian review record --role sweeper`.
 """
 model_reasoning_effort = "medium"

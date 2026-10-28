@@ -78,6 +78,23 @@ func TestRoleChainSkillIsWithinTheLintBudget(t *testing.T) {
 	}
 }
 
+// The sweeper trigger of the role-chain skill (own-rdd T6b7a, S6 g) names the three commands the
+// parent runs around the sweeper: the sweep that finds the candidates, and the two records it stores.
+func TestRoleChainSweeperTriggerNamesTheSweepAndTheRecords(t *testing.T) {
+	_, _, body := roleChainSkill(t)
+	const want = "- Sweeper, on the builder's commit (`base` = parent): `labdrian review sweep --feature F --base B --head H` checks T1-T3; when it fires, launch the sweeper with its candidates and store its report with `labdrian review record --role sweeper`; when the commit's `Risk:` trailer names an item, store each polisher judge's findings with `labdrian review record --role polisher`."
+	if _, under := roleChainSections(body); !strings.Contains(under["Triggers"], want+"\n") {
+		t.Errorf("the Triggers section must carry the sweeper line, exactly:\n%s", want)
+	}
+	for _, fragment := range []string{
+		"labdrian review sweep --feature F --base B --head H", "labdrian review record --role sweeper", "labdrian review record --role polisher",
+	} {
+		if !strings.Contains(body, fragment) {
+			t.Errorf("the role-chain skill must name %q", fragment)
+		}
+	}
+}
+
 // The skill opens with the order of the chain, as v3 section 3 gives it: the prototyper, the sweeper
 // and the polisher are optional.
 func TestRoleChainSkillStatesTheOrderOfTheChain(t *testing.T) {
@@ -118,8 +135,7 @@ func roleChainDuties() []roleChainDuty {
 		{"Triggers", []string{
 			"does installed tool X behave as premise P says", "what is number N", "can X be done within the appetite",
 			"back to the asker", "lookup/spike box",
-			"`git diff --diff-filter=DR --name-only base..HEAD`", "`rg -w`", "`deadcode -test`", "`staticcheck`", "`shellcheck`",
-			"`mktemp -d`", "`git status --porcelain --untracked-files=all`",
+			"checks T1-T3",
 			"readability row", "docs, public API, messages or help", "second blind launch", "another `model`", "Risk line",
 		}},
 		{"Worktrees", []string{
