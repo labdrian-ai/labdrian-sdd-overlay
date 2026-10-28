@@ -16,6 +16,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
@@ -38,6 +39,9 @@ func newStopWorld(t *testing.T) *stopWorld {
 	s := &stopWorld{reviewWorld: w, home: t.TempDir()}
 	s.c3 = w.commitMore("c3.txt")
 	s.c4 = w.commitMore("c4.txt")
+	// Each commit carries the trailer Risk: none and a clean sweep, so it lacks only its review (T6b6b). The sweeps run
+	// before the task document is written, which would be an untracked line of the working tree and fire them.
+	w.sweepAll()
 	overlaytest.WriteFile(t, w.root, "odd/tasks/own-rdd.md", "# own-rdd\n")
 	return s
 }
@@ -123,6 +127,7 @@ func bindCommand(base, head string) string {
 // one: the commit after the last that a review reached, here the first of the branch, and not the whole branch.
 func TestReviewStopHookBlocksAStopWhoseNextCommitHasNoReview(t *testing.T) {
 	s := newStopWorld(t)
+	stored := listNames(t, s.results("own-rdd")) // the sweeps the world made
 
 	reason := s.blocked("s1")
 
@@ -140,8 +145,8 @@ func TestReviewStopHookBlocksAStopWhoseNextCommitHasNoReview(t *testing.T) {
 	if got, want := s.asked("s1"), []string{s.head[:12] + "-" + s.c3[:12]}; !reflect.DeepEqual(got, want) {
 		t.Errorf("the questions remembered for the session = %q, want %q", got, want)
 	}
-	if names := listNames(t, s.results("own-rdd")); names != nil {
-		t.Errorf("the results directory holds %q after the hook, want it to store nothing", names)
+	if names := listNames(t, s.results("own-rdd")); !reflect.DeepEqual(names, stored) {
+		t.Errorf("the results directory holds %q after the hook, want it to store nothing and hold %q", names, stored)
 	}
 	if _, err := os.Lstat(filepath.Join(s.parent, "repo-worktrees")); !errors.Is(err, os.ErrNotExist) {
 		t.Errorf("a worktree was made (%v), want the hook to bind nothing: the agent runs the command", err)
@@ -241,7 +246,15 @@ func TestReviewStopHookCountsAnExemptionAsAReview(t *testing.T) {
 // not asked for again.
 func TestReviewStopHookCountsAReviewThatBlocksAsAReview(t *testing.T) {
 	s := newStopWorld(t)
-	_, stored := s.recordBlocker(s.head, s.c3)
+	before := listNames(t, s.results("own-rdd"))
+	s.recordBlocker(s.head, s.c3)
+	// recordBlocker names its result -1, but the sweep of the commit took that number: the result is the new file.
+	var stored string
+	for _, name := range listNames(t, s.results("own-rdd")) {
+		if !slices.Contains(before, name) {
+			stored = name
+		}
+	}
 	if _, stderr, exits := s.run(verdictOn("reproduced"), "verify", "--feature", "own-rdd", "--stored", stored); !equalInts(exits, []int{0}) {
 		t.Fatalf("setup: review verify exit calls = %v, stderr = %q; want [0]", exits, stderr)
 	}

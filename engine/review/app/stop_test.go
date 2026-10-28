@@ -48,14 +48,14 @@ const (
 // The first stop of a session with a commit no review covers is blocked with the question, and is remembered: the same
 // question in the same session is not asked again.
 func TestStopBlocksOncePerSessionAndQuestion(t *testing.T) {
-	g, store := branchWorld()
+	g, store := sweptWorld(t)
 	asked := newFakeAsked()
 	service := app.New(g, store).WithAsked(asked)
 
 	first, err := service.Stop(evidenceDir, "session-1", false)
 	again, againErr := service.Stop(evidenceDir, "session-1", false)
 
-	want := app.Ruling{Block: true, Question: app.Question{Branch: "feat/x", Base: baseSHA, Head: headSHA}}
+	want := app.Ruling{Block: true, Question: reviewMissing(t, baseSHA, headSHA)}
 	if err != nil || !reflect.DeepEqual(first, want) {
 		t.Fatalf("the first Stop() = %+v, %v; want %+v and no error", first, err, want)
 	}
@@ -69,7 +69,7 @@ func TestStopBlocksOncePerSessionAndQuestion(t *testing.T) {
 
 // Another session is asked the same question; and in the same session a new commit to review is a new question.
 func TestStopAsksAgainForAnotherSessionAndForTheNextCommit(t *testing.T) {
-	g, store := branchWorld()
+	g, store := sweptWorld(t)
 	asked := newFakeAsked()
 	service := app.New(g, store).WithAsked(asked)
 	if r, err := service.Stop(evidenceDir, "session-1", false); err != nil || !r.Block {
@@ -83,7 +83,7 @@ func TestStopAsksAgainForAnotherSessionAndForTheNextCommit(t *testing.T) {
 	if otherErr != nil || !other.Block || other.Question.Head != headSHA {
 		t.Errorf("Stop() of another session = %+v, %v; want a block for the first commit", other, otherErr)
 	}
-	wantNext := app.Ruling{Block: true, Question: app.Question{Branch: "feat/x", Base: headSHA, Head: otherSHA}}
+	wantNext := app.Ruling{Block: true, Question: reviewMissing(t, headSHA, otherSHA)}
 	if nextErr != nil || !reflect.DeepEqual(next, wantNext) {
 		t.Errorf("Stop() after the first commit was reviewed = %+v, %v; want %+v", next, nextErr, wantNext)
 	}
@@ -95,12 +95,12 @@ func TestStopAsksAgainForAnotherSessionAndForTheNextCommit(t *testing.T) {
 // A stop hook that made the agent continue is not asked to block again, whatever is left to review: the agent would
 // never stop. Nothing is asked of git or the store, and nothing is remembered.
 func TestStopDoesNotBlockWhileAStopHookIsContinuing(t *testing.T) {
-	g, store := branchWorld()
+	g, store := sweptWorld(t)
 	asked := newFakeAsked()
 
 	got, err := app.New(g, store).WithAsked(asked).Stop(evidenceDir, "session-1", true)
 
-	if err != nil || got != (app.Ruling{}) {
+	if err != nil || !reflect.DeepEqual(got, app.Ruling{}) {
 		t.Errorf("Stop() = %+v, %v; want no block and no error", got, err)
 	}
 	if len(g.calls) != 0 || len(store.calls) != 0 || len(asked.calls) != 0 {
@@ -110,20 +110,20 @@ func TestStopDoesNotBlockWhileAStopHookIsContinuing(t *testing.T) {
 
 // A branch whose commits are all reviewed has nothing to ask, and nothing is remembered.
 func TestStopDoesNotBlockWhenEveryCommitIsReviewed(t *testing.T) {
-	g, store := branchWorld()
+	g, store := sweptWorld(t)
 	reviewed(t, store, baseSHA, otherSHA, 1)
 	asked := newFakeAsked()
 
 	got, err := app.New(g, store).WithAsked(asked).Stop(evidenceDir, "session-1", false)
 
-	if err != nil || got != (app.Ruling{}) || len(asked.put) != 0 {
+	if err != nil || !reflect.DeepEqual(got, app.Ruling{}) || len(asked.put) != 0 {
 		t.Errorf("Stop() = %+v, %v with %v remembered; want no block, no error and nothing remembered", got, err, asked.put)
 	}
 }
 
 // A repository that does not tell its default branch is told once per session, as a question of its own.
 func TestStopSaysOncePerSessionThatTheDefaultBranchCannotBeFound(t *testing.T) {
-	g, store := branchWorld()
+	g, store := sweptWorld(t)
 	g.standing = app.Standing{Branch: "feat/x"}
 	asked := newFakeAsked()
 	service := app.New(g, store).WithAsked(asked)
@@ -154,7 +154,7 @@ func TestStopDoesNotBlockWhatItCannotTellOrRemember(t *testing.T) {
 		{"the store of the questions cannot be written", func(g *fakeGit, asked *fakeAsked) { asked.fail["Add"] = boom }, "boom"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			g, store := branchWorld()
+			g, store := sweptWorld(t)
 			asked := newFakeAsked()
 			tc.setup(g, asked)
 
@@ -169,7 +169,7 @@ func TestStopDoesNotBlockWhatItCannotTellOrRemember(t *testing.T) {
 
 // Without a store of its questions it could not ask each once, so it asks none.
 func TestStopRefusesToRunWithoutAStoreOfItsQuestions(t *testing.T) {
-	g, store := branchWorld()
+	g, store := sweptWorld(t)
 
 	got, err := app.New(g, store).Stop(evidenceDir, "session-1", false)
 

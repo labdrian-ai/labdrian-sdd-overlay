@@ -122,6 +122,8 @@ func (g *fakeGit) Commit(repo app.Repository, rev string) (string, error) {
 		return headSHA, nil
 	case otherSHA:
 		return otherSHA, nil
+	case thirdSHA:
+		return thirdSHA, nil
 	}
 	return "", fmt.Errorf("fakeGit: unknown revision %q", rev)
 }
@@ -472,6 +474,27 @@ func storedWithoutRows(t *testing.T, c review.Candidate) []byte {
 		t.Fatalf("setup: %v", err)
 	}
 	return out
+}
+
+// sweptFor stores a sweep record of the commits from base to head, number n, in a feature, with the given T3 findings
+// (none for a clean sweep), and returns its name.
+func sweptFor(t *testing.T, store *fakeResults, feature, base, head string, n int, t3 ...string) string {
+	t.Helper()
+	c := candidateFor(t, base, head)
+	file, err := review.EncodeSweep(c, review.SweepFindings{T3: t3})
+	if err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+	name := review.SweepName(c, n)
+	store.put(feature, name, file)
+	return name
+}
+
+// sweptBranch stores a clean sweep record of each commit of the branch of branchWorld, in the feature own-rdd.
+func sweptBranch(t *testing.T, store *fakeResults) {
+	t.Helper()
+	sweptFor(t, store, "own-rdd", baseSHA, headSHA, 1)
+	sweptFor(t, store, "own-rdd", headSHA, otherSHA, 1)
 }
 
 // sha256Of is the SHA-256 of data, written without the code under test.
