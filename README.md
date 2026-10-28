@@ -364,9 +364,9 @@ overlay install-hooks
     ~/.claude/settings.json: the deterministic-scoping pairs (minimalism-contract and
     anti-generic-design), a SessionEnd entry that fires a non-blocking longterm-mem
     sync at session close, the review-receipt and shaper clearance guards, the workflow
-    projection hooks, the skills approve guard, the review stop-hook on Stop, and the builder guard on the Agent tool (all
-    below). Backs up settings.json to settings.json.bak before modifying. Run once to
-    activate; inert until then.
+    projection hooks, the skills approve guard, the review stop-hook on Stop, and the
+    builder guard on the Agent tool (each described below). Backs up settings.json to
+    settings.json.bak before modifying. Run once to activate; inert until then.
     Re-run it after an upgrade that adds a hook family, then restart Claude Code, which
     loads hooks only when it starts.
     If CODEX_HOME (default ~/.codex) already exists, also merge three memory hooks into
