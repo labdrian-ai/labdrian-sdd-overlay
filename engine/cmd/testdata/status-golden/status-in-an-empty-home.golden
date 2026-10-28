@@ -11,6 +11,7 @@ exit: 1
 [WARN] hooks: projection (SessionStart + UserPromptSubmit + PreToolUse gates + PostToolUse read evidence) — <WORLD>/home/.claude/settings.json absent or empty; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
 [WARN] guard: skills approve (PreToolUse Bash + file tools) — <WORLD>/home/.claude/settings.json absent or empty; the agent can run skills approve unguarded (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
 [WARN] hook: Stop (review stop-hook) — <WORLD>/home/.claude/settings.json absent or empty; the agent is not asked to review its commits when it stops; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[WARN] hook: PreToolUse matcher="Agent" (builder guard) — <WORLD>/home/.claude/settings.json absent or empty; a builder launch is not checked for a task the shaper designed (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
 [FAIL] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md — not found
 [OK  ] registry: <WORLD>/.atl/skill-registry.md — not present (project may not use the overlay)
 --- stderr ---

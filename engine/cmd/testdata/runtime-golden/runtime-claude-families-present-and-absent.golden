@@ -68,6 +68,13 @@ exit: 1
 [claude] status: partial — Claude lifecycle hooks are not fully owned/installed in <WORLD>/home/.claude/settings.json; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
 --- stderr ---
 
+# no builder guard entry
+$ runtime status --target claude
+exit: 1
+--- stdout ---
+[claude] status: partial — Claude lifecycle hooks are not fully owned/installed in <WORLD>/home/.claude/settings.json; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'
+--- stderr ---
+
 # no gate-task entries
 $ runtime status --target claude
 exit: 1
@@ -97,6 +104,20 @@ exit: 0
 --- stderr ---
 
 # update brings the review stop-hook back
+$ runtime update --target claude
+exit: 0
+--- stdout ---
+[claude] update: restart_required — Claude lifecycle hooks updated; restart Claude to load hook changes
+--- stderr ---
+
+# status after it
+$ runtime status --target claude
+exit: 0
+--- stdout ---
+[claude] status: supported — Claude lifecycle hooks are installed and owned
+--- stderr ---
+
+# update brings the builder guard back
 $ runtime update --target claude
 exit: 0
 --- stdout ---
