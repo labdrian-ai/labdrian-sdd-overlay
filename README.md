@@ -137,9 +137,9 @@ backups the backend cannot confirm is not offered a restore.
 | `restore --target claude\|opencode\|codex [--list] [--backup TIMESTAMP]` | **modifies** | Roll a single target back to one of its retained backups (up to 3, auto-pruned; default: most recent). Refuses `--target all`. `--list` shows retained backups without changing anything. |
 | `targets` | read-only | Print the target catalog, one target per line as `<name><TAB><kind>` (`copy` or `package`), in the order `--target all` expands to. The TUI reads it instead of keeping its own list. |
 | `version` (also: `--version`) | read-only | Print this clone's current release version and each target's recorded deployed version. |
-| `install-hooks` | **modifies** | Build the Go engine binary + wire `UserPromptSubmit`/`PreToolUse`/`Agent` hooks, including the workflow projection family and the skills approve guard, into `~/.claude/settings.json` (backs up to `.bak` first). Run once to activate scoping; re-run it after an upgrade that adds a hook family, then restart Claude Code to load the hooks. If `$CODEX_HOME` (default `~/.codex`) already exists, also merge three Codex memory hooks (`SessionStart`, `PreToolUse`, `PostToolUse`) into `hooks.json`, with a `.bak` backup. Trust each new handler once in the Codex TUI (`/hooks`, key `t`); upgrading from SessionStart alone needs two more trusts, without changing the existing SessionStart trust. Never edits trust state or `config.toml`. |
-| `uninstall-hooks` | **modifies** | Remove the overlay hook entries (the minimalism and design pairs, the SessionEnd sync-trigger, the review-receipt and shaper guard entries, the workflow projection hooks, and the approve guard entries) from `~/.claude/settings.json`, including entries left by contracts retired in earlier versions, and remove our three Codex memory entries from `$CODEX_HOME/hooks.json` (default `~/.codex`). Foreign entries and keys are preserved. |
-| `status-hooks` | read-only | Check engine binary, hooks wired, contracts readable; when Codex's home exists, check all three memory entries and name missing or drifted events with the `install-hooks` remedy. Present never means trusted (`/hooks`, key `t`). No Codex home means no extra line. Exit 0 healthy, 1 failed, 2 warnings alone. |
+| `install-hooks` | **modifies** | Build the Go engine binary + wire `UserPromptSubmit`/`PreToolUse`/`Agent` hooks, including the workflow projection family, the skills approve guard, and the review stop-hook on `Stop`, into `~/.claude/settings.json` (backs up to `.bak` first). Run once to activate scoping; re-run it after an upgrade that adds a hook family, then restart Claude Code to load the hooks. If `$CODEX_HOME` (default `~/.codex`) already exists, also merge three Codex memory hooks (`SessionStart`, `PreToolUse`, `PostToolUse`) into `hooks.json`, with a `.bak` backup. Trust each new handler once in the Codex TUI (`/hooks`, key `t`); upgrading from SessionStart alone needs two more trusts, without changing the existing SessionStart trust. Never edits trust state or `config.toml`. |
+| `uninstall-hooks` | **modifies** | Remove the overlay hook entries (the minimalism and design pairs, the SessionEnd sync-trigger, the review-receipt and shaper guard entries, the workflow projection hooks, the approve guard entries, and the review stop-hook) from `~/.claude/settings.json`, including entries left by contracts retired in earlier versions, and remove our three Codex memory entries from `$CODEX_HOME/hooks.json` (default `~/.codex`). Foreign entries and keys are preserved. |
+| `status-hooks` | read-only | Check engine binary, hooks wired, contracts readable; when Codex's home exists, check all three memory entries and name missing or drifted events with the `install-hooks` remedy. Present never means trusted (`/hooks`, key `t`). No Codex home means no extra line. A missing or drifted review stop-hook is a warning until `install-hooks` is re-run. Exit 0 healthy, 1 failed, 2 warnings alone. |
 | `doctor [--fix]` | read-only | Host-toolchain preflight: go, gentle-ai, discovery tools (bat/rg/fd/sd/eza), engine binary, the skill registry of the project (judged by the engine, with the check `status` makes: absent is fine, empty or unreadable fails, one without a scoped block warns) — plus a per-target version/digest consistency row (WARN only, never fails the exit code). `--fix` best-effort installs missing discovery tools via Homebrew. |
 | `validate-entry-contract --schema PATH --instance PATH` | read-only | Validate a pre-SDD entry candidate against the version-matched schema and deterministic cross-field rules. |
 | `install-alias [name]` | **modifies** | Symlink `labdrian` (or a custom name) into `~/.local/bin`. Run once per machine. |
@@ -364,8 +364,9 @@ overlay install-hooks
     ~/.claude/settings.json: the deterministic-scoping pairs (minimalism-contract and
     anti-generic-design), a SessionEnd entry that fires a non-blocking longterm-mem
     sync at session close, the review-receipt and shaper clearance guards, the workflow
-    projection hooks, and the skills approve guard (below). Backs up settings.json
-    to settings.json.bak before modifying. Run once to activate; inert until then.
+    projection hooks, the skills approve guard, and the review stop-hook on Stop (both
+    below). Backs up settings.json to settings.json.bak before modifying. Run once to
+    activate; inert until then.
     Re-run it after an upgrade that adds a hook family, then restart Claude Code, which
     loads hooks only when it starts.
     If CODEX_HOME (default ~/.codex) already exists, also merge three memory hooks into
@@ -377,9 +378,10 @@ overlay install-hooks
     unchanged. No trust state or config.toml is changed. Never creates a Codex home.
 
 overlay uninstall-hooks
-    Remove every overlay hook entry (each family install-hooks wires, projection and approve
-    guard included) from ~/.claude/settings.json, including entries left by contracts retired
-    in earlier versions, leaving all other keys and hooks intact. Also removes only our Codex
+    Remove every overlay hook entry (each family install-hooks wires, projection, approve
+    guard and review stop-hook included) from ~/.claude/settings.json, including entries left
+    by contracts retired in earlier versions, leaving all other keys and hooks intact (on Stop,
+    only the review stop-hook entry is removed). Also removes only our Codex
     SessionStart, PreToolUse and PostToolUse entries from CODEX_HOME/hooks.json (default
     ~/.codex), if that home exists.
 
@@ -390,6 +392,8 @@ overlay status-hooks
     Checks all three Codex memory entries only when CODEX_HOME (default ~/.codex) exists;
     names missing or drifted events with the install-hooks remedy. Present does not mean
     trusted: each new handler needs human trust in the Codex TUI (/hooks, key t).
+    The review stop-hook is checked like the families added after the first two: a missing or
+    drifted entry is a warning, with the install-hooks remedy and a note to restart Claude Code.
 
 overlay doctor [--fix]
     Read-only host-toolchain preflight: checks go (required), gentle-ai, bat/rg/fd/sd/eza,
@@ -681,6 +685,10 @@ overlay review <verb>
         goal_id, chain_id, seq, prev_sha256 and context.summary. A declaration or a report that does not hold
         writes nothing and the error names the rule. `check` clears an exempted head unless a stored result
         blocks it. Exit 0 stored, 2 report refused, 1 usage error, a risk that is refused or any other failure.
+    stop-hook
+        Not run by a person: the Claude Code Stop hook that `install-hooks` wires (the review stop-hook, described
+        below as `gentle-ai-overlay review stop-hook`). It asks the agent, once for each session and commit, to
+        review the next commit no stored result or exemption binds. Exit 0 always, 1 usage error.
 
 overlay memory <verb>
     Forward memory-directive verbs to the engine unchanged. Read-only: it only plans what memory
@@ -1138,6 +1146,35 @@ gentle-ai-overlay skills guard-hook
     on every Bash and file-edit call). A recovered internal error also shows one short sanitized `systemMessage` naming
     the approve guard and saying the tool call was not checked and was not denied, so a guard that stopped guarding does
     not look like one that allowed; the full error goes to stderr. It is never a permission decision. With the engine binary missing the hook does nothing, and `status-hooks` reports it.
+    Exit 0 always, except 1 on a command line it does not understand.
+
+gentle-ai-overlay review stop-hook
+    Internal hook command: Claude Code is meant to run it each time the agent is about to stop; a person does not.
+    It runs on the installed engine binary, ~/.claude/bin/gentle-ai-overlay. `install-hooks` installs it into Claude
+    Code settings.json (one entry, on Stop); on an existing install, re-run `install-hooks` and restart Claude Code to
+    load it, because Claude Code reads hooks only at start and `status-hooks` reports degraded until the entry is in
+    place. `uninstall-hooks` removes that entry and, on Stop, no other: an entry of another program stays.
+    It asks for the review of the next commit of a branch, one commit and not the whole branch. In a working tree that
+    keeps features (odd/tasks or odd/review-results) with HEAD on a branch other than the default one (origin/HEAD,
+    else main, else master), it finds the first commit of the first-parent line of the branch, from the commit the
+    branch was made on, that no review covers, and blocks the stop with a reason that names the command that binds it,
+    `labdrian review bind --base <last reviewed head> --head <next commit>`, and the steps that follow (record the
+    reviewer's reply and verify it, or exempt a commit whose work takes no review). A commit is reviewed when a stored
+    result or an exemption that binds a commit, of any feature, reads back and holds to git as `review check` holds
+    it, whatever its outcome: a result that blocks counts as a review of the commit, and `review check` is what judges
+    how the reviews turned out. So it asks for the commit after the last one that an unbroken chain of reviews reaches.
+    It does not judge the work of a commit: a commit whose work takes no review is asked for as any other, and
+    `review exempt` is the answer for it.
+    It asks each question once for each session and commit (a repository that does not tell its default branch, once
+    for each session), remembered under $XDG_STATE_HOME/labdrian/review-stop/ (default ~/.local/state), outside the
+    working tree; a session with no session_id counts as one session. It never blocks the stop of an agent that a stop
+    hook is already making continue (stop_hook_active).
+    Input: the hook JSON on stdin, at most 1 MiB (more is input it cannot use). Only session_id, cwd, hook_event_name
+    and stop_hook_active are read, and an event other than Stop is ignored.
+    Output: nothing (the stop happens), or exactly one JSON object, {"decision":"block","reason":"..."}, with exit 0.
+    It never blocks on an error: input it cannot use, a tree with no features, a detached HEAD, the default branch, a
+    state home it cannot find, a git or a store that fails, and a recovered internal error all let the stop happen
+    (an error is one line on stderr). With the engine binary missing the hook does nothing, and `status-hooks` reports it.
     Exit 0 always, except 1 on a command line it does not understand.
 
 overlay --help
