@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "da179f57c47aca09899889f716d25080f5037407",
+    "head": "a001cc91df693527c0b1d3087b6a04fe9020808f",
+    "diff_sha256": "566678c43324759ace627605888e217b89f08ed543e7c64a66169c923e97fc7c",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/cmd/review.go",
+      "engine/cmd/review_record_role_test.go",
+      "engine/cmd/review_sweep.go",
+      "engine/cmd/review_sweep_test.go",
+      "engine/cmd/usage.go",
+      "engine/review/app/recordrole.go",
+      "engine/review/app/recordrole_test.go"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "da179f57c47aca09899889f716d25080f5037407",
+      "head": "a001cc91df693527c0b1d3087b6a04fe9020808f",
+      "diff_sha256": "566678c43324759ace627605888e217b89f08ed543e7c64a66169c923e97fc7c"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/cmd/review.go",
+        "engine/cmd/review_record_role_test.go",
+        "engine/cmd/review_sweep.go",
+        "engine/cmd/review_sweep_test.go",
+        "engine/cmd/usage.go",
+        "engine/review/app/recordrole.go",
+        "engine/review/app/recordrole_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/review/app/recordrole.go:950-964",
+        "claim": "A sweeper report that names a well-formed 40-hex commit which does not exist in the repository fails in git.Parent or git.Message. That is returned as a plain error, so it exits 1 and not 2. The docs say a refused report exits 2 and 'any other failure' exits 1, so a sweeper who names a nonexistent commit is not classed as a refused report. The effect is a wrong exit code only; nothing is stored and there is no security impact.",
+        "severity": "SUGGESTION",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/app/recordrole.go:951-958",
+          "engine/review/rolerecords.go:266 (shape check only)"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff (lines 1-1345) in two pages.",
+      "Read engine/review/rolerecords.go:259-354 in the worktree: the commit is shape-checked with gitobject.IsName, so no flag injection reaches git.",
+      "The default role path in runReviewRecord keeps the order of checks and the required flags (--feature, --base, --head, --rows); only an accepted --role flag is added. TestRecordWithRoleReviewerIsReviewRecordByteForByte covers the unchanged default.",
+      "--rows with a non-reviewer role, unknown or empty roles, and --role on other verbs are all rejected with exit 1, and tests pin each case.",
+      "Sweep and record exit codes match the documented contract (0 stored, 2 refused or a check that did not run, 1 usage). The lock, copies and PATH wiring sit in the composition root. The review path uses no exec or net imports beyond the existing analyzers.",
+      "Tests not run (read-only review)."
+    ]
+  }
+}
