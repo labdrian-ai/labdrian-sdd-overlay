@@ -61,10 +61,11 @@ func (w *reviewWorld) sweepAll(features ...string) {
 func (w *reviewWorld) recordClean() (reviewBinding, string) {
 	w.t.Helper()
 	b := w.bind()
-	if _, stderr, exits := w.run(reply(w.t, b, nil), "record", "--feature", "own-rdd", "--base", w.base, "--head", w.head, "--rows", "default"); !equalInts(exits, []int{0}) {
+	_, stderr, exits := w.run(reply(w.t, b, nil), "record", "--feature", "own-rdd", "--base", w.base, "--head", w.head, "--rows", "default")
+	if !equalInts(exits, []int{0}) {
 		w.t.Fatalf("setup: review record exit calls = %v, stderr = %q; want [0]", exits, stderr)
 	}
-	return b, w.head[:12] + "-1.json"
+	return b, storedName(w.t, stderr)
 }
 
 // withThreeFindings puts three findings in the reply of a reviewer: a BLOCKER, a WARNING and a SUGGESTION.

@@ -16,7 +16,6 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
-	"slices"
 	"strings"
 	"testing"
 
@@ -142,7 +141,7 @@ func TestReviewStopHookBlocksAStopWhoseNextCommitHasNoReview(t *testing.T) {
 			t.Errorf("the reason is %q, want it to say %q", reason, want)
 		}
 	}
-	if got, want := s.asked("s1"), []string{s.head[:12] + "-" + s.c3[:12]}; !reflect.DeepEqual(got, want) {
+	if got, want := s.asked("s1"), []string{s.head[:12] + "-" + s.c3[:12] + "-review"}; !reflect.DeepEqual(got, want) {
 		t.Errorf("the questions remembered for the session = %q, want %q", got, want)
 	}
 	if names := listNames(t, s.results("own-rdd")); !reflect.DeepEqual(names, stored) {
@@ -156,7 +155,7 @@ func TestReviewStopHookBlocksAStopWhoseNextCommitHasNoReview(t *testing.T) {
 // The question is put once for each session: the stop that follows it is not blocked, and another session is asked.
 func TestReviewStopHookAsksEachQuestionOnceForEachSession(t *testing.T) {
 	s := newStopWorld(t)
-	question := []string{s.head[:12] + "-" + s.c3[:12]}
+	question := []string{s.head[:12] + "-" + s.c3[:12] + "-review"}
 
 	first := s.blocked("s1")
 	s.allowed("s1")
@@ -170,6 +169,31 @@ func TestReviewStopHookAsksEachQuestionOnceForEachSession(t *testing.T) {
 			t.Errorf("the questions remembered for %s = %q, want %q", session, got, question)
 		}
 	}
+}
+
+// Each thing a commit misses is asked once for each session (T6b6d, L70): a sweep that fires after the first block makes
+// the commit miss its sweeper, and that is asked in the same session, once.
+func TestReviewStopHookAsksTheSweeperOfACommitInTheSameSessionOnceItsSweepFires(t *testing.T) {
+	s := newStopWorld(t)
+	prefix := s.head[:12] + "-" + s.c3[:12] + "-"
+	if reason := s.blocked("s1"); !strings.Contains(reason, bindCommand(s.head, s.c3)) {
+		t.Fatalf("the first reason is %q, want it to ask for %s", reason, s.c3)
+	}
+
+	// The task document is untracked, so T3 fires.
+	stdout, stderr, exits := s.sweepRun(t.TempDir(), "", "sweep", "--feature", "own-rdd", "--base", s.head, "--head", s.c3)
+	if !equalInts(exits, []int{0}) || decodeSwept(t, stdout).Outcome != "fired" {
+		t.Fatalf("setup: review sweep exit calls = %v, stdout = %q, stderr = %q; want [0] and a fired sweep", exits, stdout, stderr)
+	}
+	reason := s.blocked("s1")
+
+	if want := bindCommand(s.head, s.c3); !strings.Contains(reason, want) {
+		t.Errorf("the second reason is %q, want it to name %q", reason, want)
+	}
+	if got, want := s.asked("s1"), []string{prefix + "review", prefix + "sweeper"}; !reflect.DeepEqual(got, want) {
+		t.Errorf("the questions remembered for the session = %q, want %q", got, want)
+	}
+	s.allowed("s1")
 }
 
 // A stop the agent makes while a stop hook is already keeping it going is never blocked, and it does not use up the
@@ -246,15 +270,7 @@ func TestReviewStopHookCountsAnExemptionAsAReview(t *testing.T) {
 // not asked for again.
 func TestReviewStopHookCountsAReviewThatBlocksAsAReview(t *testing.T) {
 	s := newStopWorld(t)
-	before := listNames(t, s.results("own-rdd"))
-	s.recordBlocker(s.head, s.c3)
-	// recordBlocker names its result -1, but the sweep of the commit took that number: the result is the new file.
-	var stored string
-	for _, name := range listNames(t, s.results("own-rdd")) {
-		if !slices.Contains(before, name) {
-			stored = name
-		}
-	}
+	_, stored := s.recordBlocker(s.head, s.c3)
 	if _, stderr, exits := s.run(verdictOn("reproduced"), "verify", "--feature", "own-rdd", "--stored", stored); !equalInts(exits, []int{0}) {
 		t.Fatalf("setup: review verify exit calls = %v, stderr = %q; want [0]", exits, stderr)
 	}
@@ -327,7 +343,7 @@ func TestReviewStopHookReadsAMissingDirectoryAndAMissingSessionAsTheProcessAndOn
 		t.Errorf("the first stop: stdout = %q, stderr = %q, exits = %v; want the block that names %q", first, firstErr, firstExits, bindCommand(s.head, s.c3))
 	}
 	allowsTheStop(t, second, secondErr, secondExits)
-	if got, want := s.asked(""), []string{s.head[:12] + "-" + s.c3[:12]}; !reflect.DeepEqual(got, want) {
+	if got, want := s.asked(""), []string{s.head[:12] + "-" + s.c3[:12] + "-review"}; !reflect.DeepEqual(got, want) {
 		t.Errorf("the questions remembered for the session with no name = %q, want %q", got, want)
 	}
 }

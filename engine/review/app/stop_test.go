@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review/app"
 )
 
@@ -41,9 +42,83 @@ func (a *fakeAsked) Add(session, key string) error {
 }
 
 const (
-	firstQuestionKey = "111111111111-222222222222" // baseSHA to headSHA
-	nextQuestionKey  = "222222222222-333333333333" // headSHA to otherSHA
+	firstQuestionKey = "111111111111-222222222222-review" // baseSHA to headSHA, the need of its review
+	nextQuestionKey  = "222222222222-333333333333-review" // headSHA to otherSHA, the need of its review
 )
+
+// kinds lists what the needs of a question are.
+func kinds(q app.Question) []review.Missing { return lacks(q) }
+
+// A need that appears after an earlier block of the same commit blocks once more in the same session, and asks for that
+// need alone in the store: the sweeper of a sweep that fired.
+func TestStopAsksANeedThatAppearsLaterForTheSameCommitInTheSameSession(t *testing.T) {
+	g, store := branchWorld()
+	g.declares(headSHA, "none")
+	asked := newFakeAsked()
+	service := app.New(g, store).WithAsked(asked)
+
+	first, err := service.Stop(evidenceDir, "session-1", false)
+	if err != nil || !first.Block || !reflect.DeepEqual(kinds(first.Question), []review.Missing{review.MissingSweep, review.MissingReview}) {
+		t.Fatalf("the first Stop() = %+v, %v; want a block for a sweep and a review", first, err)
+	}
+	wantFirst := []string{
+		"Has session-1 111111111111-222222222222-sweep", "Has session-1 111111111111-222222222222-review",
+		"Add session-1 111111111111-222222222222-sweep", "Add session-1 111111111111-222222222222-review",
+	}
+	if !reflect.DeepEqual(asked.calls, wantFirst) {
+		t.Fatalf("calls of the first Stop() = %q, want %q", asked.calls, wantFirst)
+	}
+
+	fired := swept(t, store, baseSHA, headSHA, 1, "?? stray.txt")
+	asked.calls = nil
+	second, err := service.Stop(evidenceDir, "session-1", false)
+	if err != nil || !second.Block || !reflect.DeepEqual(kinds(second.Question), []review.Missing{review.MissingSweeper, review.MissingReview}) || second.Question.Sweep != review.ResultPath("own-rdd", fired) {
+		t.Fatalf("the second Stop() = %+v, %v; want a block for the sweeper and the review, naming %s", second, err, fired)
+	}
+	wantSecond := []string{
+		"Has session-1 111111111111-222222222222-sweeper", "Has session-1 111111111111-222222222222-review",
+		"Add session-1 111111111111-222222222222-sweeper",
+	}
+	if !reflect.DeepEqual(asked.calls, wantSecond) {
+		t.Errorf("calls of the second Stop() = %q, want %q: only the sweeper is added", asked.calls, wantSecond)
+	}
+
+	answered(t, store, baseSHA, headSHA, 2, fired, nil)
+	asked.calls = nil
+	third, err := service.Stop(evidenceDir, "session-1", false)
+	if err != nil || third.Block {
+		t.Errorf("the third Stop() = %+v, %v; want no block", third, err)
+	}
+	for _, call := range asked.calls {
+		if strings.HasPrefix(call, "Add ") {
+			t.Errorf("the third Stop() added %q, want nothing added", call)
+		}
+	}
+}
+
+// A need already asked is not asked again while the commit misses it, even when the other needs are gone.
+func TestStopDoesNotAskAgainANeedAlreadyAsked(t *testing.T) {
+	g, store := branchWorld()
+	g.declares(headSHA, "none")
+	asked := newFakeAsked()
+	service := app.New(g, store).WithAsked(asked)
+	if r, err := service.Stop(evidenceDir, "session-1", false); err != nil || !r.Block {
+		t.Fatalf("setup: Stop() = %+v, %v; want a block", r, err)
+	}
+
+	swept(t, store, baseSHA, headSHA, 1)
+	asked.calls = nil
+	got, err := service.Stop(evidenceDir, "session-1", false)
+
+	if err != nil || got.Block {
+		t.Errorf("Stop() = %+v, %v; want no block: the review was asked already", got, err)
+	}
+	for _, call := range asked.calls {
+		if strings.HasPrefix(call, "Add ") {
+			t.Errorf("Stop() added %q, want nothing added", call)
+		}
+	}
+}
 
 // The first stop of a session with a commit no review covers is blocked with the question, and is remembered: the same
 // question in the same session is not asked again.

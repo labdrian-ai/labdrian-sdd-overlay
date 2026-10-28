@@ -56,8 +56,15 @@ func TestNextUnreviewedAsksForTheFirstCommitOfABranchNoReviewCovers(t *testing.T
 	if err != nil || !ask || !same(got, want) {
 		t.Fatalf("NextUnreviewed() = %+v, %v, %v; want %+v, true and no error", got, ask, err, want)
 	}
-	if wantGit := []string{"Locate " + evidenceDir, "Standing", "Parent " + headSHA}; len(g.calls) < 3 || !reflect.DeepEqual(g.calls[:3], wantGit) {
-		t.Errorf("git calls = %q, want them to begin with %q", g.calls, wantGit)
+	// The walk of S6 (e), pinned in L66: Locate, Standing, the Parent of the first commit (the base of the chain), then the
+	// git facts of each commit of the branch, oldest first (Parent, Message, Trailers and, for the passive test, Paths and
+	// DeletedOrRenamed), headSHA and then otherSHA.
+	if wantGit := []string{
+		"Locate " + evidenceDir, "Standing", "Parent " + headSHA,
+		"Parent " + headSHA, "Message " + headSHA, "Trailers", "Paths " + baseSHA + " " + headSHA, "DeletedOrRenamed " + baseSHA + " " + headSHA,
+		"Parent " + otherSHA, "Message " + otherSHA, "Trailers", "Paths " + headSHA + " " + otherSHA, "DeletedOrRenamed " + headSHA + " " + otherSHA,
+	}; !reflect.DeepEqual(g.calls, wantGit) {
+		t.Errorf("git calls = %q, want %q", g.calls, wantGit)
 	}
 	if wantStore := []string{"Features " + fakeRepo.Root}; !reflect.DeepEqual(store.calls, wantStore) {
 		t.Errorf("store calls = %q, want %q: it reads and stores nothing else when there is no feature", store.calls, wantStore)
