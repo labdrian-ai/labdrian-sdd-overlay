@@ -288,8 +288,8 @@ func TestMerge_Idempotent(t *testing.T) {
 	if n := countOurHooks(root, "UserPromptSubmit", testHookCommand); n != 3 {
 		t.Errorf("UserPromptSubmit: expected exactly 3 entries (minimalism + design + projection), got %d", n)
 	}
-	if n := countOurHooks(root, "PreToolUse", testHookCommand); n != 12 {
-		t.Errorf("PreToolUse: expected exactly 12 entries (minimalism + design + review-receipt + 2 shaper guard + 5 projection + 2 approve guard), got %d", n)
+	if n := countOurHooks(root, "PreToolUse", testHookCommand); n != 13 {
+		t.Errorf("PreToolUse: expected exactly 13 entries (minimalism + design + review-receipt + 2 shaper guard + 5 projection + 2 approve guard + builder guard), got %d", n)
 	}
 	// Both pairs must be distinguishable: exactly one entry per identity per key.
 	if n := countOurHooks(root, "UserPromptSubmit", settings.LabdrianDesignIdentity); n != 1 {
@@ -781,8 +781,8 @@ func TestUninstall_CountIsZeroAfterInstall(t *testing.T) {
 	if n := countOurHooks(before, "UserPromptSubmit", testHookCommand); n != 3 {
 		t.Fatalf("precondition: expected 3 UserPromptSubmit entries after Install, got %d", n)
 	}
-	if n := countOurHooks(before, "PreToolUse", testHookCommand); n != 12 {
-		t.Fatalf("precondition: expected 12 PreToolUse entries after Install, got %d", n)
+	if n := countOurHooks(before, "PreToolUse", testHookCommand); n != 13 {
+		t.Fatalf("precondition: expected 13 PreToolUse entries after Install, got %d", n)
 	}
 
 	if err := m.Uninstall(); err != nil {
@@ -1029,8 +1029,8 @@ func TestSchema_InstallTwice_Idempotent(t *testing.T) {
 	if n := countOurHooks(root, "UserPromptSubmit", testHookCommand); n != 3 {
 		t.Errorf("Install×2: UserPromptSubmit should have exactly 3 entries; got %d", n)
 	}
-	if n := countOurHooks(root, "PreToolUse", testHookCommand); n != 12 {
-		t.Errorf("Install×2: PreToolUse should have exactly 12 entries (3 families + 2 shaper guard + 5 projection + 2 approve guard); got %d", n)
+	if n := countOurHooks(root, "PreToolUse", testHookCommand); n != 13 {
+		t.Errorf("Install×2: PreToolUse should have exactly 13 entries (3 families + 2 shaper guard + 5 projection + 2 approve guard + builder guard); got %d", n)
 	}
 	if n := countOurHooks(root, "SessionEnd", testHookCommand); n != 1 {
 		t.Errorf("Install×2: SessionEnd should have exactly 1 entry; got %d", n)
@@ -1210,11 +1210,11 @@ func withShaperGuardFamily(root map[string]interface{}, hookCommand string) map[
 }
 
 // TestHasSupportedClaudeLifecycleState_RequiresEveryOwnedFamily asserts the
-// lifecycle-state check returns true only once all eight owned families
+// lifecycle-state check returns true only once all nine owned families
 // (minimalism pair, design pair, SessionEnd sync-trigger, PreToolUse/Bash
 // review-receipt, shaper clearance guard, projection, approve guard, Stop
-// review stop-hook) are present: it adds them one at a time and requires
-// false until the last.
+// review stop-hook, PreToolUse/Agent builder guard) are present: it adds them
+// one at a time and requires false until the last.
 func TestHasSupportedClaudeLifecycleState_RequiresEveryOwnedFamily(t *testing.T) {
 	twoFamilies := buildRootWithPairs(testHookCommand, true, true)
 	if settings.HasSupportedClaudeLifecycleState(twoFamilies, testHookCommand) {
@@ -1247,8 +1247,13 @@ func TestHasSupportedClaudeLifecycleState_RequiresEveryOwnedFamily(t *testing.T)
 	}
 
 	allEight := withReviewStopFamily(allSeven, testHookCommand)
-	if !settings.HasSupportedClaudeLifecycleState(allEight, testHookCommand) {
-		t.Error("HasSupportedClaudeLifecycleState: expected true once all eight families exist")
+	if settings.HasSupportedClaudeLifecycleState(allEight, testHookCommand) {
+		t.Error("HasSupportedClaudeLifecycleState: expected false with eight families (builder guard missing)")
+	}
+
+	allNine := withBuilderGuardFamily(allEight, testHookCommand)
+	if !settings.HasSupportedClaudeLifecycleState(allNine, testHookCommand) {
+		t.Error("HasSupportedClaudeLifecycleState: expected true once all nine families exist")
 	}
 }
 

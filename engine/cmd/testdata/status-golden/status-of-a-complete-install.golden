@@ -11,6 +11,7 @@ exit: 0
 [OK  ] hooks: projection (SessionStart + UserPromptSubmit + PreToolUse gates + PostToolUse read evidence) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] guard: skills approve (PreToolUse Bash + file tools) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
 [OK  ] hook: Stop (review stop-hook) — installed; restart Claude Code to load hook changes if this session started earlier
+[OK  ] hook: PreToolUse matcher="Agent" (builder guard) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
 [OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
 [OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
 --- stderr ---
@@ -28,6 +29,7 @@ exit: 0
 [OK  ] hooks: projection (SessionStart + UserPromptSubmit + PreToolUse gates + PostToolUse read evidence) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] guard: skills approve (PreToolUse Bash + file tools) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
 [OK  ] hook: Stop (review stop-hook) — installed; restart Claude Code to load hook changes if this session started earlier
+[OK  ] hook: PreToolUse matcher="Agent" (builder guard) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
 [OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
 [OK  ] registry: <WORLD>/project/deeper/.atl/skill-registry.md — not present (project may not use the overlay)
 --- stderr ---
@@ -45,6 +47,7 @@ exit: 0
 [OK  ] hooks: projection (SessionStart + UserPromptSubmit + PreToolUse gates + PostToolUse read evidence) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] guard: skills approve (PreToolUse Bash + file tools) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
 [OK  ] hook: Stop (review stop-hook) — installed; restart Claude Code to load hook changes if this session started earlier
+[OK  ] hook: PreToolUse matcher="Agent" (builder guard) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
 [OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
 [OK  ] registry: <WORLD>/project/.atl/skill-registry.md — scoped block present
 --- stderr ---

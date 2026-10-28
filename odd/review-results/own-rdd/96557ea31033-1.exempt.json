@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a2186905faf2151dd10e71fa55f34b4e09085bcb",
+    "head": "96557ea31033f3baa910d9663a32de609df30462",
+    "diff_sha256": "5091c0bd656cbd4bb9a3405c496a8a6b22d5e303f961acf06a377588d78d16d7",
+    "paths": [
+      "README.md"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git diff --name-only 96557ea3~1 96557ea3",
+        "result": "pass",
+        "output": "only documentation and review records changed: README.md "
+      }
+    ]
+  }
+}

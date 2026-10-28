@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "7705f81f1a9c6ac2a970957cfcb39a402555521c",
+    "head": "0e56b3ef3b30f875dd8259201086d918ff7798bb",
+    "diff_sha256": "5d630008d7fa735b15c4a071c4d62f8d7b37c35ae640024ab6c57f9044020c68",
+    "paths": [
+      "engine/runtime/claude_test.go",
+      "engine/settings/builder_guard.go",
+      "engine/settings/builder_guard_test.go",
+      "engine/settings/doc.go",
+      "engine/settings/legacy_families_test.go",
+      "engine/settings/merge.go",
+      "engine/settings/settingsfile/builder_guard_test.go",
+      "engine/settings/settingsfile/golden_unix_test.go",
+      "engine/settings/settingsfile/settings_test.go",
+      "engine/settings/status.go"
+    ]
+  },
+  "rows": [
+    "default"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "7705f81f1a9c6ac2a970957cfcb39a402555521c",
+      "head": "0e56b3ef3b30f875dd8259201086d918ff7798bb",
+      "diff_sha256": "5d630008d7fa735b15c4a071c4d62f8d7b37c35ae640024ab6c57f9044020c68"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/runtime/claude_test.go",
+        "engine/settings/builder_guard.go",
+        "engine/settings/builder_guard_test.go",
+        "engine/settings/doc.go",
+        "engine/settings/legacy_families_test.go",
+        "engine/settings/merge.go",
+        "engine/settings/settingsfile/builder_guard_test.go",
+        "engine/settings/settingsfile/golden_unix_test.go",
+        "engine/settings/settingsfile/settings_test.go",
+        "engine/settings/status.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the full diff (852 lines).",
+      "The new family reuses hookFamily, so install, repair and uninstall follow the same ownership rules as the other families. Its own tests pin the identity, binary path and matcher it matches on.",
+      "The hook command is `command -v BIN >/dev/null 2>&1 && BIN roles builder-guard || true`. A missing binary is a no-op and the exit code is always 0, so a hook crash cannot block an Agent call with exit 2. A runnable sh test in the diff covers both cases.",
+      "The new identity \"roles builder-guard\" is not a substring of any other family's identity. TestBuilderGuardIdentityIsItsOwn checks this against the other identities in the diff.",
+      "Foreign entries on the Agent matcher survive install, uninstall and a second install byte for byte. This is tested for a foreign tool, our binary with another verb, and a different binary that mentions the same verb.",
+      "HasSupportedClaudeLifecycleState now requires the guard, so status reads partial on older installs until install-hooks is rerun. The tests cover that transition, drift, and Update repair.",
+      "The PreToolUse entry counts were updated from 12 to 13. The golden replay strips the guard entry and asserts exactly one in merged files.",
+      "In the worktree I confirmed that the `roles builder-guard` verb exists in engine/cmd/roles_builder_guard.go and that the runtime test helpers (dropEntriesWithIdentity, hasHookEntryForIdentity, writeClaudeSettings, mustMarshal) exist.",
+      "I did not read engine/runtime/claude.go, which is not in the diff. Its Install, Update and Uninstall behavior is covered only by the runtime tests in the diff.",
+      "I did not read engine/cmd/roles_builder_guard.go beyond confirming the verb exists. Nothing was run."
+    ]
+  }
+}

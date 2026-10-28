@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "96557ea31033f3baa910d9663a32de609df30462",
+    "head": "12abda07d7e19440110f5627efe7aad2b945244e",
+    "diff_sha256": "7094759a1f8d0ce49db79826021d3a395cd7a4b0fc27e13434933fa79686c2d4",
+    "paths": [
+      "odd/review-results/own-rdd/0e56b3ef3b30-1.json",
+      "odd/review-results/own-rdd/0e56b3ef3b30-2.json",
+      "odd/review-results/own-rdd/7705f81f1a9c-1.exempt.json",
+      "odd/review-results/own-rdd/a2186905faf2-1.json",
+      "odd/review-results/own-rdd/bb60c06e80ec-1.json",
+      "odd/review-results/own-rdd/bb60c06e80ec-2.json",
+      "odd/review-results/own-rdd/c3fbe8ebc240-1.json",
+      "odd/tasks/own-rdd.md"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git diff --name-only 12abda07~1 12abda07",
+        "result": "pass",
+        "output": "only documentation and review records changed: odd/review-results/own-rdd/0e56b3ef3b30-1.json odd/review-results/own-rdd/0e56b3ef3b30-2.json odd/review-results/own-rdd/7705f81f1a9c-1.exempt.json odd/review-results/own-rdd/a2186905faf2-1.json odd/review-results/own-rdd/bb60c06e80ec-1.json odd/review-results/own-rdd/bb60c06e80ec-2.json odd/review-results/own-rdd/c3fbe8ebc240-1.json odd/tasks/own-rdd.md "
+      }
+    ]
+  }
+}

@@ -309,6 +309,14 @@ func statusGoldenCases() []registryGoldenCase {
 					}
 				}
 			})
+			variant("no builder guard entry: WARN", func(r map[string]any) { dropHooks(r, "PreToolUse", "roles builder-guard") })
+			variant("a builder guard entry that was edited", func(r map[string]any) {
+				for _, e := range r["hooks"].(map[string]any)["PreToolUse"].([]any) {
+					if strings.Contains(commandsOf(e), "roles builder-guard") {
+						e.(map[string]any)["hooks"].([]any)[0].(map[string]any)["command"] = commandsOf(e) + " # edited"
+					}
+				}
+			})
 			variant("no gate-task entries for Agent: FAIL", func(r map[string]any) { dropHooks(r, "PreToolUse", "gate-task") })
 			variant("no UserPromptSubmit key at all: FAIL", func(r map[string]any) { delete(r["hooks"].(map[string]any), "UserPromptSubmit") })
 		}},

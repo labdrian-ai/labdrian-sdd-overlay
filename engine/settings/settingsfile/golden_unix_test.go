@@ -334,7 +334,7 @@ func eventCommand(event string) string {
 
 // withoutTheEventEntries is text, a settings.json the program wrote, without every entry under event
 // whose command runs command (the command of a projection entry, eventCommand, or the identity of
-// the review stop-hook), and how many it took out. It cuts text, not parsed JSON, because
+// the review stop-hook or of the builder guard), and how many it took out. It cuts text, not parsed JSON, because
 // what remains is compared byte for byte with a recording, formatting included, as
 // withoutEntriesAddedSinceTheRecording does. The hook list sits at an indent of four spaces and its
 // entries at six in the program's output: the entries are cut one at a time, and the last one of
@@ -384,8 +384,8 @@ func cutWithComma(t *testing.T, what, text string, from, to int) string {
 }
 
 // withoutEntriesAddedSinceTheRecording is text, a settings.json the program wrote, without the
-// projection entries of addedProjectionMatchers, those of SessionStart and PostToolUse, and the Stop
-// entry of the review stop-hook. An entry of the PreToolUse list sits at an indent of
+// projection entries of addedProjectionMatchers, those of SessionStart and PostToolUse, the Stop
+// entry of the review stop-hook and the PreToolUse entry of the builder guard. An entry of the PreToolUse list sits at an indent of
 // six spaces in the program's output; the entry is cut with the comma that separates it from its
 // neighbor, so the list reads as the program wrote it before.
 func withoutEntriesAddedSinceTheRecording(t *testing.T, label, text string, merged bool) string {
@@ -452,6 +452,12 @@ func withoutEntriesAddedSinceTheRecording(t *testing.T, label, text string, merg
 	text, stops := withoutTheEventEntries(t, label, "Stop", settings.LabdrianReviewStopIdentity, text)
 	if merged && stops != 1 {
 		t.Errorf("%s: %d review stop-hook entries, want the one a merge writes", label, stops)
+	}
+	// The PreToolUse entry of the builder guard (own-rdd T11d) is not in the recording either: a file a merge just wrote
+	// holds it once, and the entries of the other families on the same Agent matcher stay as they were.
+	text, guards := withoutTheEventEntries(t, label, "PreToolUse", settings.LabdrianBuilderGuardIdentity, text)
+	if merged && guards != 1 {
+		t.Errorf("%s: %d builder guard entries, want the one a merge writes", label, guards)
 	}
 	return text
 }

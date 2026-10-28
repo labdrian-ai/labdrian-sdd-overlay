@@ -1,0 +1,74 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "0e56b3ef3b30f875dd8259201086d918ff7798bb",
+    "head": "c3fbe8ebc240abd398efe748bc8a321a91106cf7",
+    "diff_sha256": "13db10e62b8fde60c1f84b3d87d627a2b71cf40d7ecb57574c5a779630b815d5",
+    "paths": [
+      "engine/capability/declarations.go",
+      "engine/capability/declarations_test.go",
+      "engine/cmd/runtime_golden_test.go",
+      "engine/cmd/status_command_test.go",
+      "engine/cmd/status_golden_test.go",
+      "engine/cmd/testdata/runtime-golden/runtime-claude-families-present-and-absent.golden",
+      "engine/cmd/testdata/status-golden/status-binary-states.golden",
+      "engine/cmd/testdata/status-golden/status-contract-states.golden",
+      "engine/cmd/testdata/status-golden/status-families-missing-or-drifted.golden",
+      "engine/cmd/testdata/status-golden/status-in-an-empty-home.golden",
+      "engine/cmd/testdata/status-golden/status-of-a-complete-install.golden",
+      "engine/cmd/testdata/status-golden/status-registry-states.golden",
+      "engine/cmd/testdata/status-golden/status-settings-that-are-not-an-object.golden",
+      "engine/cmd/testdata/status-golden/status-settings-without-the-hooks.golden",
+      "engine/cmd/testdata/status-golden/status-with-no-home.golden",
+      "engine/status/codex_test.go",
+      "engine/status/status.go",
+      "engine/status/status_test.go"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "0e56b3ef3b30f875dd8259201086d918ff7798bb",
+      "head": "c3fbe8ebc240abd398efe748bc8a321a91106cf7",
+      "diff_sha256": "13db10e62b8fde60c1f84b3d87d627a2b71cf40d7ecb57574c5a779630b815d5"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/capability/declarations.go",
+        "engine/capability/declarations_test.go",
+        "engine/cmd/runtime_golden_test.go",
+        "engine/cmd/status_command_test.go",
+        "engine/cmd/status_golden_test.go",
+        "engine/cmd/testdata/runtime-golden/runtime-claude-families-present-and-absent.golden",
+        "engine/cmd/testdata/status-golden/status-binary-states.golden",
+        "engine/cmd/testdata/status-golden/status-contract-states.golden",
+        "engine/cmd/testdata/status-golden/status-families-missing-or-drifted.golden",
+        "engine/cmd/testdata/status-golden/status-in-an-empty-home.golden",
+        "engine/cmd/testdata/status-golden/status-of-a-complete-install.golden",
+        "engine/cmd/testdata/status-golden/status-registry-states.golden",
+        "engine/cmd/testdata/status-golden/status-settings-that-are-not-an-object.golden",
+        "engine/cmd/testdata/status-golden/status-settings-without-the-hooks.golden",
+        "engine/cmd/testdata/status-golden/status-with-no-home.golden",
+        "engine/status/codex_test.go",
+        "engine/status/status.go",
+        "engine/status/status_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the full diff, about 115 KB. I did not open the worktree or odd/tasks/own-rdd.md. I checked only the diff text against the S14(g) criteria in the prompt.",
+      "I did not run any tests, so there is no run result to report. The check covers only the changed code and the goldens in the diff.",
+      "checkBuilderGuard in engine/status/status.go follows the same pattern as checkApproveGuard and checkReviewStopHook. Unreadable settings give FAIL. A missing or drifted entry gives WARN with the remediation and restart note. A healthy install gives OK. It is inserted after the stop-hook check and before the contract check.",
+      "status_test.go asserts the check order, the OK note, and the FAIL result when settings cannot be read. It asserts the WARN note for absent hooks. It also covers four cases of missing or drifted entries: missing, edited command, wrong matcher, and a foreign command on the Agent matcher.",
+      "status_command_test.go and codex_test.go update their expected check counts (11 to 12) and labels.",
+      "The regenerated goldens add the new line consistently. The new variants are 'no builder guard entry' and 'a builder guard entry that was edited' in the status goldens, and the builder-guard variants in the runtime goldens.",
+      "The capability declaration adds the builder guard to the installation claim and lists its tests, and declarations_test.go pins the phrases and test references.",
+      "The declared Risk none is consistent. The changes are a read-only status check, test additions, and docs strings, with no secrets, exec, or path handling added."
+    ]
+  }
+}

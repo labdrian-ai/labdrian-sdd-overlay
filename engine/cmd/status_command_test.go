@@ -87,6 +87,7 @@ func TestStatusCoreWritesTheWholeReportOfTheServiceAndAnswersItsOutcome(t *testi
 		"hooks: projection (SessionStart + UserPromptSubmit + PreToolUse gates + PostToolUse read evidence)",
 		"guard: skills approve (PreToolUse Bash + file tools)",
 		"hook: Stop (review stop-hook)",
+		`hook: PreToolUse matcher="Agent" (builder guard)`,
 	} {
 		want += "[FAIL] " + label + unreadable
 	}

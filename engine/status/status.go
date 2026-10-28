@@ -178,7 +178,7 @@ const (
 
 // Check makes every check, in the order a report lists them: the binary; the two base hooks,
 // whose absence is a failure; the families added later (the sync-trigger, the review receipt, the
-// shaper clearance guard, the projection hooks, the approve guard, and the review stop-hook), whose
+// shaper clearance guard, the projection hooks, the approve guard, the review stop-hook, and the builder guard), whose
 // absence is a warning; the contract; and, when the request names a directory, the registry of the
 // project there.
 //
@@ -209,6 +209,7 @@ func (s Service) Check(req Request) Report {
 		checkProjectionHooks(loaded, binaryPath),
 		checkApproveGuard(loaded, binaryPath),
 		checkReviewStopHook(loaded, binaryPath),
+		checkBuilderGuard(loaded, binaryPath),
 		CheckContract(contractPath, s.Files),
 	}
 	if check := s.codexHook(req, binaryPath); check != nil {
@@ -402,6 +403,26 @@ func checkReviewStopHook(s loadedSettings, binaryPath string) Check {
 			Note: "missing or drifted: " + strings.Join(missing, ", ") + "; " + cost + "; " + remediation + "; " + restartNote}
 	}
 	return Check{Label: label, Level: OK, Note: "installed; " + restartNote + " if this session started earlier"}
+}
+
+// checkBuilderGuard reports whether the builder guard (the one PreToolUse entry on the Agent tool that
+// runs 'roles builder-guard') is exactly in place. It is judged as checkApproveGuard is: an entry that
+// is missing or drifted warns with the remediation, settings that cannot be read fail, the note asks
+// for a restart because Claude Code loads its hooks when it starts, and even installed it is a speed
+// bump, which the note says. What a missing guard costs is said in the note: a builder can be launched
+// on a task the shaper did not design. A missing engine binary also lets the launch through, and the
+// binary check of this report says so (own-rdd S14, L39 D2).
+func checkBuilderGuard(s loadedSettings, binaryPath string) Check {
+	label := `hook: PreToolUse matcher="Agent" (builder guard)`
+	const cost = "a builder launch is not checked for a task the shaper designed"
+	if c, done := s.beforeEntries(label, Warn, "; "+cost+" ("+speedBump+"); "+remediation+"; "+restartNote); done {
+		return c
+	}
+	if missing := settings.MissingBuilderGuardParts(s.root, binaryPath); len(missing) > 0 {
+		return Check{Label: label, Level: Warn,
+			Note: "missing or drifted: " + strings.Join(missing, ", ") + "; " + cost + " (" + speedBump + "); " + remediation + "; " + restartNote}
+	}
+	return Check{Label: label, Level: OK, Note: "installed; " + speedBump + "; " + restartNote + " if this session started earlier"}
 }
 
 // CheckContract verifies the contract at path is readable and its frontmatter parses.

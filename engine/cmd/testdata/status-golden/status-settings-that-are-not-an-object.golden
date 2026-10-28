@@ -11,6 +11,7 @@ exit: 1
 [FAIL] hooks: projection (SessionStart + UserPromptSubmit + PreToolUse gates + PostToolUse read evidence) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
 [FAIL] guard: skills approve (PreToolUse Bash + file tools) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
 [FAIL] hook: Stop (review stop-hook) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
+[FAIL] hook: PreToolUse matcher="Agent" (builder guard) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
 [OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
 [OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
 --- stderr ---
@@ -28,6 +29,7 @@ exit: 1
 [FAIL] hooks: projection (SessionStart + UserPromptSubmit + PreToolUse gates + PostToolUse read evidence) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
 [FAIL] guard: skills approve (PreToolUse Bash + file tools) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
 [FAIL] hook: Stop (review stop-hook) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
+[FAIL] hook: PreToolUse matcher="Agent" (builder guard) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
 [OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
 [OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
 --- stderr ---
@@ -45,6 +47,7 @@ exit: 1
 [FAIL] hooks: projection (SessionStart + UserPromptSubmit + PreToolUse gates + PostToolUse read evidence) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
 [FAIL] guard: skills approve (PreToolUse Bash + file tools) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
 [FAIL] hook: Stop (review stop-hook) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
+[FAIL] hook: PreToolUse matcher="Agent" (builder guard) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
 [OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
 [OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
 --- stderr ---
@@ -62,6 +65,7 @@ exit: 1
 [WARN] hooks: projection (SessionStart + UserPromptSubmit + PreToolUse gates + PostToolUse read evidence) — <WORLD>/home/.claude/settings.json absent or empty; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
 [WARN] guard: skills approve (PreToolUse Bash + file tools) — <WORLD>/home/.claude/settings.json absent or empty; the agent can run skills approve unguarded (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
 [WARN] hook: Stop (review stop-hook) — <WORLD>/home/.claude/settings.json absent or empty; the agent is not asked to review its commits when it stops; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[WARN] hook: PreToolUse matcher="Agent" (builder guard) — <WORLD>/home/.claude/settings.json absent or empty; a builder launch is not checked for a task the shaper designed (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
 [OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
 [OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
 --- stderr ---
@@ -79,6 +83,7 @@ exit: 1
 [FAIL] hooks: projection (SessionStart + UserPromptSubmit + PreToolUse gates + PostToolUse read evidence) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
 [FAIL] guard: skills approve (PreToolUse Bash + file tools) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
 [FAIL] hook: Stop (review stop-hook) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
+[FAIL] hook: PreToolUse matcher="Agent" (builder guard) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
 [OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
 [OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
 --- stderr ---
@@ -96,6 +101,7 @@ exit: 1
 [FAIL] hooks: projection (SessionStart + UserPromptSubmit + PreToolUse gates + PostToolUse read evidence) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
 [FAIL] guard: skills approve (PreToolUse Bash + file tools) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
 [FAIL] hook: Stop (review stop-hook) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
+[FAIL] hook: PreToolUse matcher="Agent" (builder guard) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
 [OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
 [OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
 --- stderr ---
@@ -113,6 +119,7 @@ exit: 1
 [FAIL] hooks: projection (SessionStart + UserPromptSubmit + PreToolUse gates + PostToolUse read evidence) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
 [FAIL] guard: skills approve (PreToolUse Bash + file tools) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
 [FAIL] hook: Stop (review stop-hook) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
+[FAIL] hook: PreToolUse matcher="Agent" (builder guard) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
 [OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
 [OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
 --- stderr ---
@@ -130,6 +137,7 @@ exit: 1
 [FAIL] hooks: projection (SessionStart + UserPromptSubmit + PreToolUse gates + PostToolUse read evidence) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
 [FAIL] guard: skills approve (PreToolUse Bash + file tools) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
 [FAIL] hook: Stop (review stop-hook) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
+[FAIL] hook: PreToolUse matcher="Agent" (builder guard) — cannot read <WORLD>/home/.claude/settings.json: invalid JSON: <JSON ERROR>
 [OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
 [OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
 --- stderr ---
@@ -147,6 +155,7 @@ exit: 1
 [FAIL] hooks: projection (SessionStart + UserPromptSubmit + PreToolUse gates + PostToolUse read evidence) — cannot read <WORLD>/home/.claude/settings.json: read <WORLD>/home/.claude/settings.json: is a directory
 [FAIL] guard: skills approve (PreToolUse Bash + file tools) — cannot read <WORLD>/home/.claude/settings.json: read <WORLD>/home/.claude/settings.json: is a directory
 [FAIL] hook: Stop (review stop-hook) — cannot read <WORLD>/home/.claude/settings.json: read <WORLD>/home/.claude/settings.json: is a directory
+[FAIL] hook: PreToolUse matcher="Agent" (builder guard) — cannot read <WORLD>/home/.claude/settings.json: read <WORLD>/home/.claude/settings.json: is a directory
 [OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
 [OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
 --- stderr ---

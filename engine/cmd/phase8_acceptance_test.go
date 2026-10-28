@@ -266,6 +266,39 @@ func phase8Read(t *testing.T, path string) []byte {
 	return data
 }
 
+// phase8SameEntries reports whether two settings files hold the same entries under every event: the order of a hook list
+// is left out, because a merge that repairs a drifted entry removes it and appends the repaired one at the end of its
+// list, after the entries of the families installed after it (own-rdd T11d: the builder guard comes last).
+func phase8SameEntries(t *testing.T, a, b []byte) bool {
+	t.Helper()
+	canonical := func(data []byte) string {
+		var doc map[string]any
+		if err := json.Unmarshal(data, &doc); err != nil {
+			t.Fatalf("settings are not JSON: %v", err)
+		}
+		hooks, _ := doc["hooks"].(map[string]any)
+		for event, list := range hooks {
+			entries, _ := list.([]any)
+			keys := make([]string, 0, len(entries))
+			for _, e := range entries {
+				k, err := json.Marshal(e)
+				if err != nil {
+					t.Fatal(err)
+				}
+				keys = append(keys, string(k))
+			}
+			sort.Strings(keys)
+			hooks[event] = keys
+		}
+		out, err := json.Marshal(doc)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(out)
+	}
+	return canonical(a) == canonical(b)
+}
+
 // phase8Overlay is the overlay as bytes, leaving out the lock files: a writer's
 // exclusive lock creates the lock file beside the registry even when the verb is then
 // refused, and "writes nothing" is about the registry, the manifest, and the skills.
@@ -1171,8 +1204,8 @@ func phase8ApproveGuard(t *testing.T, binary string) {
 		t.Errorf("status with a drifted entry: %q", line)
 	}
 	merge()
-	if repaired := phase8Read(t, settingsPath); !bytes.Equal(repaired, first) {
-		t.Errorf("the merge did not repair the drift to the installed bytes:\n%s\nvs\n%s", repaired, first)
+	if repaired := phase8Read(t, settingsPath); !phase8SameEntries(t, repaired, first) {
+		t.Errorf("the merge did not repair the drift to the installed entries:\n%s\nvs\n%s", repaired, first)
 	}
 	assertForeignKept("after the repair")
 

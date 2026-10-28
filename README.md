@@ -137,9 +137,9 @@ backups the backend cannot confirm is not offered a restore.
 | `restore --target claude\|opencode\|codex [--list] [--backup TIMESTAMP]` | **modifies** | Roll a single target back to one of its retained backups (up to 3, auto-pruned; default: most recent). Refuses `--target all`. `--list` shows retained backups without changing anything. |
 | `targets` | read-only | Print the target catalog, one target per line as `<name><TAB><kind>` (`copy` or `package`), in the order `--target all` expands to. The TUI reads it instead of keeping its own list. |
 | `version` (also: `--version`) | read-only | Print this clone's current release version and each target's recorded deployed version. |
-| `install-hooks` | **modifies** | Build the Go engine binary + wire `UserPromptSubmit`/`PreToolUse`/`Agent` hooks, including the workflow projection family, the skills approve guard, and the review stop-hook on `Stop`, into `~/.claude/settings.json` (backs up to `.bak` first). Run once to activate scoping; re-run it after an upgrade that adds a hook family, then restart Claude Code to load the hooks. If `$CODEX_HOME` (default `~/.codex`) already exists, also merge three Codex memory hooks (`SessionStart`, `PreToolUse`, `PostToolUse`) into `hooks.json`, with a `.bak` backup. Trust each new handler once in the Codex TUI (`/hooks`, key `t`); upgrading from SessionStart alone needs two more trusts, without changing the existing SessionStart trust. Never edits trust state or `config.toml`. |
-| `uninstall-hooks` | **modifies** | Remove the overlay hook entries (the minimalism and design pairs, the SessionEnd sync-trigger, the review-receipt and shaper guard entries, the workflow projection hooks, the approve guard entries, and the review stop-hook) from `~/.claude/settings.json`, including entries left by contracts retired in earlier versions, and remove our three Codex memory entries from `$CODEX_HOME/hooks.json` (default `~/.codex`). Foreign entries and keys are preserved. |
-| `status-hooks` | read-only | Check engine binary, hooks wired, contracts readable; when Codex's home exists, check all three memory entries and name missing or drifted events with the `install-hooks` remedy. Present never means trusted (`/hooks`, key `t`). No Codex home means no extra line. A missing or drifted review stop-hook is a warning until `install-hooks` is re-run. Exit 0 healthy, 1 failed, 2 warnings alone. |
+| `install-hooks` | **modifies** | Build the Go engine binary + wire `UserPromptSubmit`/`PreToolUse`/`Agent` hooks, including the workflow projection family, the skills approve guard, the review stop-hook on `Stop`, and the builder guard on the `Agent` tool, into `~/.claude/settings.json` (backs up to `.bak` first). Run once to activate scoping; re-run it after an upgrade that adds a hook family, then restart Claude Code to load the hooks. If `$CODEX_HOME` (default `~/.codex`) already exists, also merge three Codex memory hooks (`SessionStart`, `PreToolUse`, `PostToolUse`) into `hooks.json`, with a `.bak` backup. Trust each new handler once in the Codex TUI (`/hooks`, key `t`); upgrading from SessionStart alone needs two more trusts, without changing the existing SessionStart trust. Never edits trust state or `config.toml`. |
+| `uninstall-hooks` | **modifies** | Remove the overlay hook entries (the minimalism and design pairs, the SessionEnd sync-trigger, the review-receipt and shaper guard entries, the workflow projection hooks, the approve guard entries, the review stop-hook, and the builder guard) from `~/.claude/settings.json`, including entries left by contracts retired in earlier versions, and remove our three Codex memory entries from `$CODEX_HOME/hooks.json` (default `~/.codex`). Foreign entries and keys are preserved. |
+| `status-hooks` | read-only | Check engine binary, hooks wired, contracts readable; when Codex's home exists, check all three memory entries and name missing or drifted events with the `install-hooks` remedy. Present never means trusted (`/hooks`, key `t`). No Codex home means no extra line. A missing or drifted review stop-hook or builder guard is a warning until `install-hooks` is re-run. Exit 0 healthy, 1 failed, 2 warnings alone. |
 | `doctor [--fix]` | read-only | Host-toolchain preflight: go, gentle-ai, discovery tools (bat/rg/fd/sd/eza), engine binary, the skill registry of the project (judged by the engine, with the check `status` makes: absent is fine, empty or unreadable fails, one without a scoped block warns) — plus a per-target version/digest consistency row (WARN only, never fails the exit code). `--fix` best-effort installs missing discovery tools via Homebrew. |
 | `validate-entry-contract --schema PATH --instance PATH` | read-only | Validate a pre-SDD entry candidate against the version-matched schema and deterministic cross-field rules. |
 | `install-alias [name]` | **modifies** | Symlink `labdrian` (or a custom name) into `~/.local/bin`. Run once per machine. |
@@ -364,9 +364,9 @@ overlay install-hooks
     ~/.claude/settings.json: the deterministic-scoping pairs (minimalism-contract and
     anti-generic-design), a SessionEnd entry that fires a non-blocking longterm-mem
     sync at session close, the review-receipt and shaper clearance guards, the workflow
-    projection hooks, the skills approve guard, and the review stop-hook on Stop (both
-    below). Backs up settings.json to settings.json.bak before modifying. Run once to
-    activate; inert until then.
+    projection hooks, the skills approve guard, the review stop-hook on Stop, and the
+    builder guard on the Agent tool (each described below). Backs up settings.json to
+    settings.json.bak before modifying. Run once to activate; inert until then.
     Re-run it after an upgrade that adds a hook family, then restart Claude Code, which
     loads hooks only when it starts.
     If CODEX_HOME (default ~/.codex) already exists, also merge three memory hooks into
@@ -379,7 +379,7 @@ overlay install-hooks
 
 overlay uninstall-hooks
     Remove every overlay hook entry (each family install-hooks wires, projection, approve
-    guard and review stop-hook included) from ~/.claude/settings.json, including entries left
+    guard, review stop-hook and builder guard included) from ~/.claude/settings.json, including entries left
     by contracts retired in earlier versions, leaving all other keys and hooks intact (on Stop,
     only the review stop-hook entry is removed). Also removes only our Codex
     SessionStart, PreToolUse and PostToolUse entries from CODEX_HOME/hooks.json (default
@@ -394,6 +394,7 @@ overlay status-hooks
     trusted: each new handler needs human trust in the Codex TUI (/hooks, key t).
     The review stop-hook is checked like the families added after the first two: a missing or
     drifted entry is a warning, with the install-hooks remedy and a note to restart Claude Code.
+    The builder guard is checked the same way, and even installed it is a speed bump.
 
 overlay doctor [--fix]
     Read-only host-toolchain preflight: checks go (required), gentle-ai, bat/rg/fd/sd/eza,
@@ -588,6 +589,10 @@ overlay roles <verb>
                                                                                   whose exemption no longer holds)
     match-shaper --root <worktree> --handoff <path>                              report which of a Shaper handoff v3's free-form roles equal a
                                                                                   member of the reusable-role vocabulary, without changing v3 semantics
+    builder-guard                                                                not run by a person: the Claude Code PreToolUse hook on the Agent tool that
+                                                                                  `install-hooks` wires (the builder guard, described below as
+                                                                                  `gentle-ai-overlay roles builder-guard`). It denies launching the builder
+                                                                                  when its prompt cites no task the shaper designed. Exit 0 always, 1 usage error
 
 overlay review <verb>
     Forward review binding, storage, exemption and delivery-check verbs to the engine unchanged. No verb launches an agent or
@@ -1176,6 +1181,35 @@ gentle-ai-overlay review stop-hook
     state home it cannot find, a git or a store that fails, and a recovered internal error all let the stop happen
     (an error is one line on stderr). With the engine binary missing the hook does nothing, and `status-hooks` reports it.
     Exit 0 always, except 1 on a command line it does not understand.
+
+gentle-ai-overlay roles builder-guard
+    Internal hook command: Claude Code is meant to run it before every Agent call; a person does not. It runs on the
+    installed engine binary, ~/.claude/bin/gentle-ai-overlay. `install-hooks` installs it into Claude Code settings.json
+    (one PreToolUse entry on the Agent tool, beside the minimalism and design entries of gate-task, which it neither
+    claims nor changes); on an existing install, re-run `install-hooks` and restart Claude Code to load it, because
+    Claude Code reads hooks only at start and `status-hooks` reports it as a warning, and `runtime status --target
+    claude` as partial, until the entry is in place. `uninstall-hooks` removes that entry and no other on the Agent
+    matcher: an entry of another program stays.
+    It denies launching the builder (subagent_type "builder") unless its prompt cites a task the shaper designed. The
+    prompt must hold exactly one line `Spec: odd/tasks/<feature>.md, T<n>[, T<n>...][, S<n>...]` (the path is absolute,
+    or relative to the session cwd). Each cited task is the one line of the `## Tasks` section of that document that
+    carries one segment `shaped: L<n>`, and the `## Log` of the document has exactly one entry
+    `- **L<n>** (<date>, shaper)`. The shaper writes both when it designs the task, and reopening a task removes the
+    mark; the builder and delivery never write it. Every builder launch needs a marked task, review fix rounds
+    included. A denial says why and to launch the shaper first, then the builder with the line
+    `Spec: odd/tasks/<feature>.md, T<n>`.
+    Once the call is decoded as a builder launch, every failure denies: a document that cannot be read (not found, not
+    a regular file, a link, over 8 MiB), a prompt that cites nothing, an internal error. Input it cannot decode, or a
+    failing stdin, is allowed with one line on stderr, because denying it would block every Agent call of the session.
+    An Agent call over 4 MiB is denied whatever the agent. Every other agent is allowed untouched, with no output and no
+    file read.
+    Output: nothing, or exactly one JSON object, {"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"..."}},
+    with exit 0 (the JSON decides; exit 2 is never used); an allow prints nothing and never permissionDecision "allow".
+    The installed command never blocks by its exit code, and with the engine binary missing the hook does nothing and
+    `status-hooks` reports it. Exit 0 always, except 1 on a command line it does not understand.
+    Limits: it is a speed bump against forgetting the shaper, not a security boundary. It reads text, so the writer of
+    the document can forge the mark together with a false shaper entry, and it guards Claude Code only: launches of the
+    builder from Codex and Pi are not guarded.
 
 overlay --help
     Show this help.

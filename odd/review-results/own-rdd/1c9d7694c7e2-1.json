@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "9ec55664043a687ec4a214885f180e56dc2554f9",
+    "head": "1c9d7694c7e2eaa98965a5dfad1fef792af4a56d",
+    "diff_sha256": "9af691fb26d10eb3da39cc74e3d50c99154ad88cdc6448b34bfe11274f2bcc10",
+    "paths": [
+      "engine/cmd/roles.go",
+      "engine/cmd/roles_builder_guard.go",
+      "engine/cmd/roles_builder_guard_test.go",
+      "odd/review-results/own-rdd/6e8d59537198-1.exempt.json",
+      "odd/review-results/own-rdd/8ac65ed233c8-1.exempt.json",
+      "odd/tasks/own-rdd.md"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "9ec55664043a687ec4a214885f180e56dc2554f9",
+      "head": "1c9d7694c7e2eaa98965a5dfad1fef792af4a56d",
+      "diff_sha256": "9af691fb26d10eb3da39cc74e3d50c99154ad88cdc6448b34bfe11274f2bcc10"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/roles.go",
+        "engine/cmd/roles_builder_guard.go",
+        "engine/cmd/roles_builder_guard_test.go",
+        "odd/review-results/own-rdd/6e8d59537198-1.exempt.json",
+        "odd/review-results/own-rdd/8ac65ed233c8-1.exempt.json",
+        "odd/tasks/own-rdd.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The candidate now echoes the full base and full head SHAs from your correction, and the diff_sha256 you gave. I did not compute or check them myself.",
+      "The inspection is unchanged and found no defects. I read the full diff, and in the worktree I checked that hookwire.DecodeAgentCall, ErrTooLarge and MaxAgentCallBytes (4 MiB), oddtask.TooLargeReason and projection.PanicText exist.",
+      "The verb reads MaxAgentCallBytes+1 bytes from stdin and denies any over-bound call, whatever the agent. It denies a builder launch on panic, on a document it cannot read, or on a prompt that cites nothing.",
+      "Every other agent is allowed with no output. Input it cannot decode, or a stdin read that fails, is allowed with one line on stderr. Exit is 0 everywhere except 1 for an unexpected argument.",
+      "I did not run any tests or commands."
+    ]
+  }
+}

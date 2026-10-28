@@ -65,10 +65,12 @@ Commands:
                                    or a requested fetch failed) -- other checks still complete.
   install-hooks                    Build + deploy the engine binary, then wire the
                                    deterministic-scoping hooks, the workflow projection
-                                   hooks, the skills approve guard, and the review
+                                   hooks, the skills approve guard, the review
                                    stop-hook (on Stop: asks the agent once for each
                                    session and commit to review the next commit no
-                                   review covers) into
+                                   review covers), and the builder guard (on the Agent
+                                   tool: denies launching the builder on a task the
+                                   shaper did not design) into
                                    ~/.claude/settings.json. Re-run it after an
                                    upgrade that adds a hook family, then restart Claude Code
                                    to load the hooks.
@@ -82,14 +84,15 @@ Commands:
                                    eza) via Homebrew so agents never hit the silent-empty
                                    footgun. Set OVERLAY_SKIP_TOOL_INSTALL=1 to opt out.
   uninstall-hooks                  Remove our hook entries from ~/.claude/settings.json
-                                   (the review stop-hook on Stop among them),
+                                   (the review stop-hook on Stop and the builder guard
+                                   on Agent among them),
                                    and our Codex SessionStart hook from CODEX_HOME/hooks.json
                                    (default ~/.codex), leaving foreign bytes intact.
   status-hooks                     Read-only check of overlay installation health: binary
                                    present, hooks wired, contract readable. Exits 0 if all
                                    OK, 1 if any check fails, 2 for warnings alone (a missing
-                                   or drifted review stop-hook is one, until install-hooks
-                                   is re-run).
+                                   or drifted review stop-hook or builder guard is one,
+                                   until install-hooks is re-run).
                                    Codex is reported only if its home exists; presence
                                    does not prove trust (/hooks, key t). Read-only.
   doctor [--fix]                   Read-only host-toolchain preflight: checks go (required),
@@ -247,6 +250,10 @@ Commands:
                                              held in the same way to the exemption review exempt stored (review-diff
                                              and review-exemption evidence; the exemption must still hold)
                                    match-shaper --root PATH --handoff PATH    report which Shaper v3 roles match the vocabulary
+                                   builder-guard                              not run by a person: the Claude Code hook on the Agent tool
+                                             that install-hooks wires (the builder guard); it denies launching
+                                             the builder on a prompt that cites no task the shaper designed
+                                             (exit 0 always, 1 usage error)
   review <verb>                    Forward review binding and storage verbs to the engine unchanged.
                                    bind --base REV --head REV [--cwd REPO]
                                              bind a candidate: full SHAs, diff_sha256 and changed paths as JSON; make

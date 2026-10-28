@@ -285,6 +285,38 @@ func TestClaudeInstallationClaimNamesTheReviewStopHook(t *testing.T) {
 	}
 }
 
+// TestClaudeInstallationClaimNamesTheBuilderGuard pins that the installation claim of Claude Code says the builder guard
+// is one of the lifecycle hook families it installs, says what it is not (it checks text, so it is a speed bump), and
+// names the tests that prove it: it is installed on the Agent tool, status is partial until install-hooks is run again on
+// a machine that installed before it, a drift is repaired, uninstall takes it off and leaves the entries of other
+// programs on the same matcher, and the status check names what is missing (own-rdd T11e, S14 g).
+func TestClaudeInstallationClaimNamesTheBuilderGuard(t *testing.T) {
+	d, err := capability.Declare(capability.TargetClaude)
+	if err != nil {
+		t.Fatal(err)
+	}
+	claim := d.Claims[0]
+	if claim.Capability != capability.Installation {
+		t.Fatalf("first claim is %s, want installation", claim.Capability)
+	}
+	for _, phrase := range []string{"the builder guard", "the Agent tool", "task the shaper designed", "speed bump", "restart_required"} {
+		if !strings.Contains(claim.Detail, phrase) {
+			t.Errorf("installation detail %q does not state %q", claim.Detail, phrase)
+		}
+	}
+	for _, ref := range []string{
+		"runtime:TestClaudeInstallWritesTheBuilderGuard",
+		"runtime:TestClaudeStatusIsPartialUntilInstallHooksIsRerunForTheBuilderGuard",
+		"runtime:TestClaudeStatusIsPartialWhenTheBuilderGuardEntryDrifted",
+		"runtime:TestClaudeUninstallRemovesTheBuilderGuardAndKeepsForeignAgentEntries",
+		"status:TestTheBuilderGuardNamesWhatIsMissingOrDriftedAndTheLimitOfAGuard",
+	} {
+		if !slices.Contains(claim.Tests, ref) {
+			t.Errorf("installation claim does not name the test %q", ref)
+		}
+	}
+}
+
 func skillsClaim(t *testing.T, target string) capability.Claim {
 	t.Helper()
 	d, err := capability.Declare(target)

@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "c3fbe8ebc240abd398efe748bc8a321a91106cf7",
+    "head": "bb60c06e80ec2a38a58ff507d85d616092250d4f",
+    "diff_sha256": "f23ce6aedd12b3d975c74b3fa4a45375231a4d82a18ad994aa39fabfeec9182a",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "agents/shaper.md",
+      "bin/lib/hooks.sh",
+      "bin/lib/usage.sh",
+      "codex/agents/shaper.toml",
+      "engine/cmd/roles_builder_guard_docs_test.go",
+      "engine/cmd/usage.go",
+      "engine/skills/odd_role_skills_artifact_test.go",
+      "pi/agents/shaper.md",
+      "roles/shaper/body.md",
+      "skills/odd-feature-doc/SKILL.md"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "c3fbe8ebc240abd398efe748bc8a321a91106cf7",
+      "head": "bb60c06e80ec2a38a58ff507d85d616092250d4f",
+      "diff_sha256": "f23ce6aedd12b3d975c74b3fa4a45375231a4d82a18ad994aa39fabfeec9182a"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "agents/shaper.md",
+        "bin/lib/hooks.sh",
+        "bin/lib/usage.sh",
+        "codex/agents/shaper.toml",
+        "engine/cmd/roles_builder_guard_docs_test.go",
+        "engine/cmd/usage.go",
+        "engine/skills/odd_role_skills_artifact_test.go",
+        "pi/agents/shaper.md",
+        "roles/shaper/body.md",
+        "skills/odd-feature-doc/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the full diff at the scratchpad path.",
+      "Checked that the shaper sentence is byte-identical in roles/shaper/body.md, agents/shaper.md, pi/agents/shaper.md and codex/agents/shaper.toml.",
+      "Checked that the new tests use helpers that already exist in the worktree: docSection, readRepositoryFile, overlaytest.ScriptText.",
+      "docSection returns normalized text. The README line has the backticked form `re-run `install-hooks``, but existing tests such as TestDocsDescribeTheReviewStopHook assert 're-run install-hooks' on the same style of text. I did not read normalizeDocText, so I assumed it strips the backticks and the new assertion matches.",
+      "Checked the usage.go string '4194304 bytes' and the phrase 'A speed bump against forgetting the shaper, not a security boundary'. I did not verify the case: the test lowercases nothing, and usage.go has 'A speed bump' while the test asserts 'speed bump against'. That relies on the usage text matching exactly as written, and the line is cut mid-phrase at 'not a' with the rest on the next line, which the normalization joins.",
+      "Compared the skill's mark rules with the README and CHANGELOG wording: the shaper alone writes the mark, reopening a task removes it, and the builder and delivery roles never write it. They agree.",
+      "Tests were not run, per the read-only contract."
+    ]
+  }
+}

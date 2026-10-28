@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "12abda07d7e19440110f5627efe7aad2b945244e",
+    "head": "9dfe2541f8d1a4457e20dbab618178c921f24492",
+    "diff_sha256": "42b5d164568fe5b68169094bc16a243127d5ad8858e66069e27c609b60205672",
+    "paths": [
+      "odd/review-results/own-rdd/12abda07d7e1-1.exempt.json",
+      "odd/review-results/own-rdd/3f1387c6b27d-1.exempt.json",
+      "odd/review-results/own-rdd/96557ea31033-1.exempt.json",
+      "odd/tasks/own-rdd.md"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git diff --name-only 9dfe2541~1 9dfe2541",
+        "result": "pass",
+        "output": "only odd/ changed: odd/tasks/own-rdd.md and odd/review-results/own-rdd/ records"
+      }
+    ]
+  }
+}

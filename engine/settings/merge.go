@@ -12,6 +12,7 @@ var installedFamilies = []hookFamily{
 	projectionFamily,
 	approveGuardFamily,
 	reviewStopFamily,
+	builderGuardFamily,
 }
 
 // retiredFamilies are the hook pairs this overlay used to install and no longer does
