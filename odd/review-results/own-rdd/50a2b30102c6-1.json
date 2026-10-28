@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f94f17dddaac9aeacbf2af8f691b262405feac8b",
+    "head": "50a2b30102c65403b96304d238a03b30b596f934",
+    "diff_sha256": "d9b8d8ab6eb76b158a9ea5e0b8966bfa21bb8d6f7dda906a0177f9392ade226d",
+    "paths": [
+      "README.md",
+      "agents/sweeper.md",
+      "codex/agents/sweeper.toml",
+      "engine/cmd/review_sweep_test.go",
+      "engine/cmd/usage.go",
+      "engine/review/app/sweep.go",
+      "engine/review/sweep.go",
+      "engine/skills/role_agents_artifact_test.go",
+      "engine/skills/role_chain_artifact_test.go",
+      "pi/agents/sweeper.md",
+      "roles/sweeper/body.md",
+      "skills/role-chain/SKILL.md"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f94f17dddaac9aeacbf2af8f691b262405feac8b",
+      "head": "50a2b30102c65403b96304d238a03b30b596f934",
+      "diff_sha256": "d9b8d8ab6eb76b158a9ea5e0b8966bfa21bb8d6f7dda906a0177f9392ade226d"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "README.md",
+        "agents/sweeper.md",
+        "codex/agents/sweeper.toml",
+        "pi/agents/sweeper.md",
+        "roles/sweeper/body.md",
+        "engine/cmd/review_sweep_test.go",
+        "engine/cmd/usage.go",
+        "engine/review/app/sweep.go",
+        "engine/review/sweep.go",
+        "engine/skills/role_agents_artifact_test.go",
+        "engine/skills/role_chain_artifact_test.go",
+        "skills/role-chain/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the full diff and inspected the worktree at the head.",
+      "Skill line 22 matches the pinned string in role_chain_artifact_test.go:85 and its duty fragment at :138.",
+      "engine/cmd/usage.go:211-218 defines T1, T2 and T3. bin/lib/usage.sh:302-311 and README.md:693-703 define them as well, so the `labdrian --help` pointer lands on a real definition.",
+      "A grep for T1 and the skill pointer found no remaining text that sends the reader to skills/role-chain/SKILL.md for T1-T3. The Go comments in sweep.go and review/sweep.go now say 'of the sweeper'.",
+      "The merged sweeper sentence is identical in roles/sweeper/body.md, agents/sweeper.md, pi/agents/sweeper.md and codex/agents/sweeper.toml.",
+      "The merged sentence keeps 'or none', ties 'nothing to sweep' to commit null, and keeps the Risk trailer, the JSON shape and the record command. The removed sentence's 'removed | corrected | live | finding' rule survives as the disposition enum in the JSON.",
+      "'Commit the sweep as' appears once in each of the four sweeper files.",
+      "The new test TestUsageAndReadmeDefineTheChecksOfReviewSweep asserts substrings that appear in the engine usage, bin/lib/usage.sh and README.md after whitespace flattening, and it rejects the old skill pointer.",
+      "The sweeper line count in role_agents_artifact_test.go went from 5 to 4, which matches the removed line.",
+      "Not run: the Go tests and the diff against the source generator were not executed. Review was by reading only."
+    ]
+  }
+}
