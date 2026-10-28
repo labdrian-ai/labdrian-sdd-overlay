@@ -44,9 +44,10 @@ import (
 // and the verb reports it as a git that could not answer instead of hanging.
 const reviewGitTimeout = 5 * time.Minute
 
-// reviewGitMaxOutput bounds what the program holds of one stream of one git call. The only large answer is
-// the diff of a candidate, and a candidate whose diff does not fit is not one a reviewer reads; 256 MiB stops a
-// runaway before it fills memory.
+// reviewGitMaxOutput bounds what the program holds of one stream of one git call. Two answers are large: the diff of
+// a candidate, and the blobs of a tree that `review sweep` copies in one `git cat-file --batch`. A candidate whose
+// diff does not fit is not one a reviewer reads; a tree whose blobs do not fit is refused by the sweep (exit 2) with
+// nothing written; 256 MiB stops a runaway before it fills memory.
 const reviewGitMaxOutput = 256 << 20
 
 // runReview implements the 'review <verb>' subcommand. Every exit is followed by a return, because tests hand

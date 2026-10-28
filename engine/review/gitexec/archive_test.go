@@ -2,13 +2,16 @@ package gitexec_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/execrunner"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review/gitexec"
 )
 
@@ -56,6 +59,37 @@ func TestArchiveIsTheTreeByteForByteWhateverTheAttributesAndTheLineEndingsSay(t 
 	}
 	if target, err := os.Readlink(filepath.Join(dir, "link.go")); err != nil || target != "a.go" {
 		t.Errorf("link.go = %q, %v, want a link to a.go", target, err)
+	}
+}
+
+// The copy holds every blob in one `git cat-file --batch` answer, so the bound of the runner is the ceiling of a tree
+// a sweep copies (own-rdd T6b4c, S6 b, h): a tree over it is refused loudly with nothing written, the same tree under
+// it is copied.
+func TestArchiveRefusesATreeWhoseBlobsPassTheBoundOfTheRunnerAndCopiesItUnderTheBound(t *testing.T) {
+	f := newFixture(t, "sha1")
+	f.write("big.txt", strings.Repeat("x", 4000)+"\n")
+	f.write("small.txt", "s\n")
+	head := f.snapshotAll("feat: a tree of 4 KB")
+	archive := func(bound int64, dir string) error {
+		runner := execrunner.New().WithMaxOutput(bound)
+		return gitexec.New(runner, gitexec.Options{Environ: f.environ(), Timeout: time.Minute}).Archive(f.repo(), head, dir)
+	}
+
+	over := t.TempDir()
+	err := archive(2000, over)
+	if !errors.Is(err, execrunner.ErrOutputTooLarge) {
+		t.Errorf("Archive error over the bound = %v, want one wrapping execrunner.ErrOutputTooLarge", err)
+	}
+	if entries, _ := os.ReadDir(over); len(entries) != 0 {
+		t.Errorf("the copy holds %v after the refusal, want nothing", entries)
+	}
+
+	under := t.TempDir()
+	if err := archive(1<<20, under); err != nil {
+		t.Fatalf("Archive error under the bound = %v", err)
+	}
+	if got, err := os.ReadFile(filepath.Join(under, "big.txt")); err != nil || len(got) != 4001 {
+		t.Errorf("big.txt = %d bytes, %v, want 4001 bytes", len(got), err)
 	}
 }
 
@@ -184,6 +218,40 @@ func TestArchiveRefusesAnAnswerThatIsNotTheObjectSizeAndOrderTheListingGives(t *
 				t.Errorf("the copy holds %v after a refusal, want nothing", entries)
 			}
 		})
+	}
+}
+
+// The header can be right and the bytes after it wrong: fewer than the size, or no line feed after them.
+func TestArchiveRefusesAnAnswerWhoseBytesAreShorterThanTheSizeOrNotEndedByALineFeed(t *testing.T) {
+	for _, tc := range []struct{ name, answer string }{
+		{"fewer bytes than the size", object(1) + " blob 6\nhel"},
+		{"the size and no line feed", object(1) + " blob 6\nhello!"},
+		{"another byte for the line feed", object(1) + " blob 6\nhello!?"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			w := newArchiveWorld(t)
+			runner := &listingRunner{listing: []byte(entry("100644", object(1), 6, "a.go")), answer: []byte(tc.answer)}
+
+			err := gitexec.New(runner, gitexec.Options{}).Archive(repo, headSHA, w.dir)
+
+			if err == nil || !strings.Contains(err.Error(), "a.go") {
+				t.Errorf("Archive error = %v, want a refusal naming a.go", err)
+			}
+		})
+	}
+}
+
+// An answer that holds more than was asked for is not trusted.
+func TestArchiveRefusesAnAnswerThatPrintsMoreAfterTheLastBlobAskedFor(t *testing.T) {
+	runner := &listingRunner{
+		listing: []byte(entry("100644", object(1), 6, "a.go")),
+		answer:  []byte(blob(object(1), "hello\n") + blob(object(2), "extra\n")),
+	}
+
+	err := gitexec.New(runner, gitexec.Options{}).Archive(repo, headSHA, newArchiveWorld(t).dir)
+
+	if err == nil || !strings.Contains(err.Error(), "after the last blob") {
+		t.Errorf("Archive error = %v, want a refusal that says the answer goes on after the last blob", err)
 	}
 }
 
