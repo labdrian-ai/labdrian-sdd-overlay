@@ -71,6 +71,7 @@ import (
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gitobject"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gitprov"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review/app"
 )
 
@@ -365,6 +366,55 @@ func (g Git) Standing(repo app.Repository) (app.Standing, error) {
 		return app.Standing{}, err
 	}
 	return app.Standing{Branch: branch, Default: name, Commits: commits}, nil
+}
+
+// Message returns the raw message of commit. `git log -1 --format=%B` ends the message with a newline of its own
+// after the one the message ends with; that one is removed, so what comes back is the message as the commit stores it.
+func (g Git) Message(repo app.Repository, commit string) (string, error) {
+	out, err := g.output(repo.Root, "log", []string{"log", "-1", "--no-show-signature", "--format=%B", "--end-of-options", commit})
+	if err != nil {
+		return "", err
+	}
+	message, whole := strings.CutSuffix(string(out), "\n")
+	if !whole {
+		return "", fmt.Errorf("git log printed a message for %q that does not end with a newline (it ends with %q)", commit, clip(string(out[max(0, len(out)-20):])))
+	}
+	return message, nil
+}
+
+// Trailers returns the trailers `git interpret-trailers --parse` finds in message, one per line of its output as
+// "<key>: <value>", split at the first colon. git reads the message from a file the adapter makes in the temporary
+// directory of the process, never in the repository, and removes it. A line without a colon is no trailer and is an
+// error: --parse prints trailers only.
+func (g Git) Trailers(repo app.Repository, message string) ([]review.Trailer, error) {
+	file, err := os.CreateTemp("", "labdrian-message-*")
+	if err != nil {
+		return nil, fmt.Errorf("make the file git reads the message from: %w", err)
+	}
+	defer os.Remove(file.Name())
+	if _, err := file.WriteString(message); err != nil {
+		_ = file.Close()
+		return nil, fmt.Errorf("write the message for git: %w", err)
+	}
+	if err := file.Close(); err != nil {
+		return nil, fmt.Errorf("write the message for git: %w", err)
+	}
+	out, err := g.output(repo.Root, "interpret-trailers", []string{"interpret-trailers", "--parse", file.Name()})
+	if err != nil {
+		return nil, err
+	}
+	var trailers []review.Trailer
+	for _, line := range strings.Split(strings.TrimSuffix(string(out), "\n"), "\n") {
+		if line == "" {
+			continue
+		}
+		key, value, ok := strings.Cut(line, ":")
+		if !ok {
+			return nil, fmt.Errorf("git interpret-trailers printed %q, want <key>: <value>", clip(line))
+		}
+		trailers = append(trailers, review.Trailer{Key: key, Value: strings.TrimSpace(value)})
+	}
+	return trailers, nil
 }
 
 // defaultBranch finds the default branch of the repository in dir and the commits it is at, none when it has none.

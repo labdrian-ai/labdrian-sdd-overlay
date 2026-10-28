@@ -38,8 +38,10 @@ var fakeRepo = app.Repository{Root: "/work/wt/feature", Main: "/work/main", Comm
 type fakeGit struct {
 	diff          []byte
 	paths         []string
-	parents       map[string]string // the first parent of a commit; none for a commit that is not a key
-	standing      app.Standing      // what Standing answers
+	parents       map[string]string           // the first parent of a commit; none for a commit that is not a key
+	standing      app.Standing                // what Standing answers
+	messages      map[string]string           // the raw message of a commit; "" for a commit that is not a key
+	trailers      map[string][]review.Trailer // the trailers of a message; none for a message that is not a key
 	worktree      app.WorktreeState
 	worktreeLater []worktreeAnswer
 	fail          map[string]error
@@ -150,6 +152,22 @@ func (g *fakeGit) Standing(repo app.Repository) (app.Standing, error) {
 		return app.Standing{}, err
 	}
 	return g.standing, nil
+}
+
+func (g *fakeGit) Message(repo app.Repository, commit string) (string, error) {
+	g.record("Message " + commit)
+	if err := g.fail["Message"]; err != nil {
+		return "", err
+	}
+	return g.messages[commit], nil
+}
+
+func (g *fakeGit) Trailers(repo app.Repository, message string) ([]review.Trailer, error) {
+	g.record("Trailers")
+	if err := g.fail["Trailers"]; err != nil {
+		return nil, err
+	}
+	return g.trailers[message], nil
 }
 
 // fakeResults is the Results port over a map: the names of a feature's directory and what was created.

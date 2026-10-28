@@ -30,6 +30,8 @@ package app
 import (
 	"errors"
 	"fmt"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review"
 )
 
 // Repository is the repository a command runs in, as the Git port locates it from a directory.
@@ -96,6 +98,12 @@ type Git interface {
 	// else master, whichever the repository has) and the commits of HEAD the default branch does not have. It asks
 	// no more than it needs: a detached HEAD, and a repository with no default branch, are told without the commits.
 	Standing(repo Repository) (Standing, error)
+	// Message returns the raw message of commit, a full object name, as git stores it, with no trailing newline
+	// added or removed beyond the one git ends a message with (own-rdd T6b1, S6 a).
+	Message(repo Repository, commit string) (string, error)
+	// Trailers returns the trailers git parses from the end of message, in order, each unfolded to one value: what
+	// `git interpret-trailers --parse` prints. A message with no trailer block gives none.
+	Trailers(repo Repository, message string) ([]review.Trailer, error)
 }
 
 // Features is what a working tree says of the features whose reviews it keeps, as the stop hook asks (own-rdd T6a, S6).
