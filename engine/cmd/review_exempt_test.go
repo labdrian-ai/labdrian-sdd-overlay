@@ -205,7 +205,7 @@ func TestExemptTakesTheNextNumberOfTheHeadAndReplacesNothing(t *testing.T) {
 
 	_, stderr, exits := w.exempt(verifierReport, "none")
 	b := w.bind()
-	_, recordErr, recordExits := w.run(reply(t, b, nil), "record", "--feature", "own-rdd", "--base", w.base, "--head", w.head)
+	_, recordErr, recordExits := w.run(reply(t, b, nil), "record", "--feature", "own-rdd", "--base", w.base, "--head", w.head, "--rows", "default")
 
 	if !equalInts(exits, []int{0}) || !strings.Contains(stderr, "odd/review-results/own-rdd/"+w.head[:12]+"-2.exempt.json") {
 		t.Errorf("the second exemption: exits = %v, stderr = %q; want [0] and number 2", exits, stderr)
@@ -279,7 +279,7 @@ func TestRecordAndVerifySayWhatTheParentOfTheChainStillFillsAsBefore(t *testing.
 	w := newReviewWorld(t)
 	b := w.bind()
 
-	_, recorded, recordExits := w.run(reply(t, b, withBlocker), "record", "--feature", "own-rdd", "--base", w.base, "--head", w.head)
+	_, recorded, recordExits := w.run(reply(t, b, withBlocker), "record", "--feature", "own-rdd", "--base", w.base, "--head", w.head, "--rows", "default")
 	_, verified, verifyExits := w.run(verdictOn("reproduced"), "verify", "--feature", "own-rdd", "--stored", w.head[:12]+"-1.json")
 
 	if !equalInts(recordExits, []int{0}) || !strings.HasSuffix(recorded, "review record: "+sentence+withRole) {

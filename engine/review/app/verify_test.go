@@ -44,7 +44,7 @@ func reviewed(t *testing.T, store *fakeResults, base, head string, n int, findin
 	if err != nil {
 		t.Fatalf("setup: %v", err)
 	}
-	file, err := review.EncodeResult(c, reply)
+	file, err := review.EncodeResult(c, []string{"default"}, reply)
 	if err != nil {
 		t.Fatalf("setup: %v", err)
 	}
@@ -154,7 +154,7 @@ func TestVerifyRefusesAReplyThatBreaksTheContractAndStoresNothing(t *testing.T) 
 // store could have written, or whose reply no longer holds to its binding, is refused. A check that cannot run
 // never passes.
 func TestVerifyRefusesWhatIsNotAStoredResult(t *testing.T) {
-	elsewhere, err := review.EncodeResult(candidateOf(t, newFakeGit()), replyWith(t, baseSHA, otherSHA, sha256Of([]byte(diffText)), "completed", changedPaths))
+	elsewhere, err := review.EncodeResult(candidateOf(t, newFakeGit()), []string{"default"}, replyWith(t, baseSHA, otherSHA, sha256Of([]byte(diffText)), "completed", changedPaths))
 	if err != nil {
 		t.Fatalf("setup: %v", err)
 	}
@@ -166,6 +166,7 @@ func TestVerifyRefusesWhatIsNotAStoredResult(t *testing.T) {
 		{"it is not stored", nil, app.ErrNotFound},
 		{"it is not a stored file", []byte("not a result"), review.ErrInvalidStored},
 		{"its reply echoes another head than its binding", elsewhere, review.ErrInvalidStored},
+		{"it records no rows (stored before the rows were recorded)", storedWithoutRows(t, candidateOf(t, newFakeGit())), review.ErrInvalidStored},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			store := newFakeResults()

@@ -115,7 +115,7 @@ func TestCheckRefusesTheHeadAndStoresNothingWhenNoStoredResultClearsIt(t *testin
 			if err != nil {
 				t.Fatalf("setup: %v", err)
 			}
-			file, err := review.EncodeResult(c, replyFor(t, c))
+			file, err := review.EncodeResult(c, []string{"default"}, replyFor(t, c))
 			if err != nil {
 				t.Fatalf("setup: %v", err)
 			}
@@ -132,12 +132,15 @@ func TestCheckRefusesTheHeadAndStoresNothingWhenNoStoredResultClearsIt(t *testin
 		{"the stored file is no longer a result", func(t *testing.T, _ *fakeGit, store *fakeResults) {
 			store.put("own-rdd", "222222222222-1.json", []byte("{}"))
 		}, []error{review.ErrInvalidStored}, []string{wantFirstPath}},
+		{"the stored result records no rows (it was stored before the rows were recorded)", func(t *testing.T, g *fakeGit, store *fakeResults) {
+			store.put("own-rdd", "222222222222-1.json", storedWithoutRows(t, candidateOf(t, g)))
+		}, []error{review.ErrInvalidStored}, []string{wantFirstPath, "rows"}},
 		{"the reply of the stored result no longer holds to its binding", func(t *testing.T, _ *fakeGit, store *fakeResults) {
 			c, err := review.NewCandidate(baseSHA, headSHA, []byte(diffText), changedPaths)
 			if err != nil {
 				t.Fatalf("setup: %v", err)
 			}
-			file, err := review.EncodeResult(c, replyWith(t, baseSHA, otherSHA, c.DiffSHA256, "completed", c.Paths))
+			file, err := review.EncodeResult(c, []string{"default"}, replyWith(t, baseSHA, otherSHA, c.DiffSHA256, "completed", c.Paths))
 			if err != nil {
 				t.Fatalf("setup: %v", err)
 			}

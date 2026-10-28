@@ -14,16 +14,19 @@ import (
 //	{
 //	  "version": 1,
 //	  "binding": {"base": "...", "head": "...", "diff_sha256": "...", "paths": ["..."]},
+//	  "rows": ["default", "readability"],
 //	  "reply": {...the reply of the reviewer, as it gave it...}
 //	}
 //
 // The reply is the reviewer's, member for member and character for character (white space aside); the
-// binding is the candidate the command computed from git and held the reply to. Together they let any
-// later reader hold the reply to its binding again (reviewresult.Parse) and compare the binding with the
-// one it computes for the same commits, without asking the reviewer or the parent for anything.
+// binding is the candidate the command computed from git and held the reply to; the rows are the ids of the lens
+// rows (RowIDs) the launch was sent, as the parent of the chain declared them. Together they let any later reader
+// hold the reply to its binding again (reviewresult.Parse), compare the binding with the one it computes for the same
+// commits, and count the lenses a review ran, without asking the reviewer or the parent for anything.
 type storedFile struct {
 	Version int             `json:"version"`
 	Binding storedBinding   `json:"binding"`
+	Rows    []string        `json:"rows"`
 	Reply   json.RawMessage `json:"reply"`
 }
 
@@ -35,16 +38,22 @@ type storedBinding struct {
 }
 
 // EncodeResult is the content of the file that stores a reply: reply, which must be one JSON value, with the
-// binding of c. It is indented with two spaces, ends in one newline, and writes the characters of the reply
-// as they are (a '<' or an '&' is not escaped for HTML), so that the file reads as the reviewer wrote it.
-// It does not judge the reply; reviewresult.Parse has done so by the time the command calls it.
-func EncodeResult(c Candidate, reply []byte) ([]byte, error) {
+// binding of c and the rows the launch was sent, which must be a list of RowIDs with none written twice (an error
+// that wraps ErrInvalidRows otherwise: the function does not write a file DecodeResult would refuse). It is indented
+// with two spaces, ends in one newline, and writes the characters of the reply as they are (a '<' or an '&' is not
+// escaped for HTML), so that the file reads as the reviewer wrote it. It does not judge the reply;
+// reviewresult.Parse has done so by the time the command calls it.
+func EncodeResult(c Candidate, rows []string, reply []byte) ([]byte, error) {
+	if err := checkRows(rows); err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrInvalidRows, err)
+	}
 	if !json.Valid(reply) {
 		return nil, fmt.Errorf("%w, so it cannot be stored in a JSON file", ErrReplyNotJSON)
 	}
 	return encodeFile("result", storedFile{
 		Version: StoredVersion,
 		Binding: bindingOf(c),
+		Rows:    rows,
 		Reply:   json.RawMessage(bytes.TrimSpace(reply)),
 	})
 }
@@ -82,17 +91,19 @@ func decodeFile(data []byte, what string, file any) error {
 	return nil
 }
 
-// Stored is a stored result as DecodeResult reads it back: the binding the reply was held to and the reply
-// as it was stored.
+// Stored is a stored result as DecodeResult reads it back: the binding the reply was held to, the rows the launch was
+// sent and the reply as it was stored.
 type Stored struct {
 	Binding reviewresult.Binding
+	Rows    []string
 	Reply   []byte
 }
 
 // DecodeResult reads a file that EncodeResult wrote. It reads the file as it is: it does not hold the reply
 // to the binding again (reviewresult.Parse does), and the binding is not recomputed from git. A file that is
 // not one EncodeResult writes (not one JSON object, a key written twice, a member it does not have, another
-// version, no reply) is refused with an error that wraps ErrInvalidStored.
+// version, no reply, rows that are not a list of RowIDs with none written twice, and so no rows at all: the file of
+// a result stored before the rows were recorded) is refused with an error that wraps ErrInvalidStored.
 func DecodeResult(data []byte) (Stored, error) {
 	var file storedFile
 	if err := decodeFile(data, "stored result", &file); err != nil {
@@ -104,7 +115,10 @@ func DecodeResult(data []byte) (Stored, error) {
 	case len(file.Reply) == 0 || string(file.Reply) == "null":
 		return Stored{}, fmt.Errorf("%w: it holds no reply", ErrInvalidStored)
 	}
-	return Stored{Binding: file.Binding.binding(), Reply: file.Reply}, nil
+	if err := checkRows(file.Rows); err != nil {
+		return Stored{}, fmt.Errorf("%w: its rows are not the rows of a launch: %v", ErrInvalidStored, err)
+	}
+	return Stored{Binding: file.Binding.binding(), Rows: file.Rows, Reply: file.Reply}, nil
 }
 
 // binding is the stored binding as reviewresult holds a reply to it.

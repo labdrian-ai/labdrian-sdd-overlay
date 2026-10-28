@@ -51,7 +51,7 @@ type reviewsKept struct {
 func keptReviews(t *testing.T) reviewsKept {
 	t.Helper()
 	g, store := newFakeGit(), newFakeResults()
-	recorded, err := app.New(g, store).Record(evidenceDir, "own-rdd", "HEAD~1", "HEAD", replyFor(t, candidateOf(t, g)))
+	recorded, err := app.New(g, store).Record(evidenceDir, "own-rdd", "HEAD~1", "HEAD", "default", replyFor(t, candidateOf(t, g)))
 	if err != nil {
 		t.Fatalf("setup: Record() error = %v", err)
 	}

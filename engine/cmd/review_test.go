@@ -217,6 +217,12 @@ func TestReviewRefusesACommandLineItCannotRead(t *testing.T) {
 		{"record with a result and no value", []string{"record", "--feature", "f", "--base", "b", "--head", "h", "--result"}, "error: review record: --result requires a value\n"},
 		{"the result twice", []string{"record", "--feature", "f", "--base", "b", "--head", "h", "--result", "a", "--result", "b"}, "error: review record: --result given twice\n"},
 		{"the working directory twice", []string{"record", "--feature", "f", "--base", "b", "--head", "h", "--cwd", "a", "--cwd", "b"}, "error: review record: --cwd given twice\n"},
+		{"record with no rows", []string{"record", "--feature", "f", "--base", "b", "--head", "h"}, "error: review record: --rows is required\n"},
+		{"record with empty rows", []string{"record", "--feature", "f", "--base", "b", "--head", "h", "--rows", ""}, "error: review record: --rows is required\n"},
+		{"the rows given to bind", []string{"bind", "--rows", "default", "--base", "b", "--head", "h"}, "error: review bind: unknown flag \"--rows\"\n"},
+		{"the rows given to verify", []string{"verify", "--feature", "f", "--stored", "s.json", "--rows", "default"}, "error: review verify: unknown flag \"--rows\"\n"},
+		{"the rows given to check", []string{"check", "--feature", "f", "--rows", "default"}, "error: review check: unknown flag \"--rows\"\n"},
+		{"the rows given to exempt", []string{"exempt", "--feature", "f", "--base", "b", "--head", "h", "--risk", "none", "--rows", "default"}, "error: review exempt: unknown flag \"--rows\"\n"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			w := newReviewWorld(t)
@@ -427,7 +433,7 @@ func TestRecordStoresTheReplyUnderTheNextFreeNumberAndPrintsTheSkeletonOfTheReco
 	b := w.bind()
 	ok := reply(t, b, nil)
 
-	stdout, stderr, exits := w.run(ok, "record", "--feature", "own-rdd", "--base", w.base, "--head", w.head)
+	stdout, stderr, exits := w.run(ok, "record", "--feature", "own-rdd", "--base", w.base, "--head", w.head, "--rows", "default")
 
 	if !equalInts(exits, []int{0}) {
 		t.Fatalf("exit calls = %v, stderr = %q; want [0]", exits, stderr)
@@ -508,7 +514,7 @@ func TestRecordNeverReplacesAResultAndTakesTheNextNumberFromAnyReader(t *testing
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			before := listNames(t, w.results("own-rdd"))
-			args := append([]string{"record", "--feature", "own-rdd", "--base", w.base, "--head", w.head}, tc.args...)
+			args := append([]string{"record", "--feature", "own-rdd", "--base", w.base, "--head", w.head, "--rows", "default"}, tc.args...)
 
 			_, stderr, exits := w.run(tc.stdin, args...)
 
@@ -534,7 +540,7 @@ func TestRecordReadsTheRepositoryFromCwdAndARelativeResultFromTheWorkingDirector
 	}
 	w.cwd = w.parent
 
-	_, stderr, exits := w.run("", "record", "--cwd", "repo", "--feature", "own-rdd", "--base", w.base, "--head", w.head, "--result", "reply.json")
+	_, stderr, exits := w.run("", "record", "--cwd", "repo", "--feature", "own-rdd", "--base", w.base, "--head", w.head, "--rows", "default", "--result", "reply.json")
 
 	if !equalInts(exits, []int{0}) {
 		t.Fatalf("exit calls = %v, stderr = %q; want [0]", exits, stderr)
@@ -547,7 +553,7 @@ func TestRecordReadsTheRepositoryFromCwdAndARelativeResultFromTheWorkingDirector
 	}
 
 	other := t.TempDir()
-	_, stderr, exits = w.run(reply(t, b, nil), "record", "--cwd", other, "--feature", "own-rdd", "--base", w.base, "--head", w.head)
+	_, stderr, exits = w.run(reply(t, b, nil), "record", "--cwd", other, "--feature", "own-rdd", "--base", w.base, "--head", w.head, "--rows", "default")
 	if !equalInts(exits, []int{1}) || !strings.HasPrefix(stderr, "error: review record: ") {
 		t.Errorf("outside a repository: exits = %v, stderr = %q; want [1] and an error of review record", exits, stderr)
 	}
@@ -609,7 +615,7 @@ func TestRecordRefusesAReplyThatDoesNotHoldAndWritesNothing(t *testing.T) {
 		{"a reply that is too large", strings.Repeat(" ", review.MaxReplyBytes+1), "review: reply too large"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			stdout, stderr, exits := w.run(tc.reply, "record", "--feature", "own-rdd", "--base", w.base, "--head", w.head)
+			stdout, stderr, exits := w.run(tc.reply, "record", "--feature", "own-rdd", "--base", w.base, "--head", w.head, "--rows", "default")
 
 			if stdout != "" || !equalInts(exits, []int{2}) {
 				t.Errorf("stdout = %q, exits = %v; want nothing and [2]", stdout, exits)
@@ -628,14 +634,14 @@ func TestRecordRefusesAReplyThatDoesNotHoldAndWritesNothing(t *testing.T) {
 func TestRecordLeavesTheStoredResultsAsTheyAreWhenAReplyIsRefused(t *testing.T) {
 	w := newReviewWorld(t)
 	b := w.bind()
-	w.run(reply(t, b, nil), "record", "--feature", "own-rdd", "--base", w.base, "--head", w.head)
+	w.run(reply(t, b, nil), "record", "--feature", "own-rdd", "--base", w.base, "--head", w.head, "--rows", "default")
 	stored := filepath.Join(w.results("own-rdd"), w.head[:12]+"-1.json")
 	before, err := os.ReadFile(stored)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, _, exits := w.run("{}", "record", "--feature", "own-rdd", "--base", w.base, "--head", w.head)
+	_, _, exits := w.run("{}", "record", "--feature", "own-rdd", "--base", w.base, "--head", w.head, "--rows", "default")
 
 	after, _ := os.ReadFile(stored)
 	if !equalInts(exits, []int{2}) || !bytes.Equal(before, after) || len(listNames(t, w.results("own-rdd"))) != 1 {
@@ -653,7 +659,7 @@ func TestRecordRefusesAFeatureThatIsNotOneSafePathSegment(t *testing.T) {
 
 	for _, feature := range []string{"..", "../escape", "a/b", "/etc", "/tmp/escape", ".hidden", "-x", "a b", "a\\b", "a\x00b", "a\nb", strings.Repeat("x", 101), "..a", "a..b"} {
 		t.Run(feature, func(t *testing.T) {
-			stdout, stderr, exits := w.run(ok, "record", "--feature", feature, "--base", w.base, "--head", w.head)
+			stdout, stderr, exits := w.run(ok, "record", "--feature", feature, "--base", w.base, "--head", w.head, "--rows", "default")
 
 			if stdout != "" || !equalInts(exits, []int{1}) || !strings.Contains(stderr, "not a single safe path segment") {
 				t.Errorf("stdout = %q, exits = %v, stderr = %q; want nothing, [1] and a feature refused as unsafe", stdout, exits, stderr)
@@ -692,7 +698,7 @@ func TestRecordWritesNothingThroughASymbolicLink(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			stdout, stderr, exits := w.run(reply(t, b, nil), "record", "--feature", "own-rdd", "--base", w.base, "--head", w.head)
+			stdout, stderr, exits := w.run(reply(t, b, nil), "record", "--feature", "own-rdd", "--base", w.base, "--head", w.head, "--rows", "default")
 
 			if stdout != "" || !equalInts(exits, []int{1}) || !strings.Contains(stderr, "symbolic link") {
 				t.Errorf("stdout = %q, exits = %v, stderr = %q; want nothing, [1] and the link named", stdout, exits, stderr)
@@ -728,7 +734,7 @@ func TestRecordFailsWithExit1WhenTheRepositoryOrTheReplyCannotBeRead(t *testing.
 			if base == "" {
 				base = w.base
 			}
-			args := []string{"record", "--feature", "own-rdd", "--base", base, "--head", w.head}
+			args := []string{"record", "--feature", "own-rdd", "--base", base, "--head", w.head, "--rows", "default"}
 			args = append(args, tc.args...)
 
 			stdout, stderr, exits := w.run(ok, args...)
@@ -753,7 +759,7 @@ func TestRecordFailsWithExit1AndSaysWhereTheResultIsWhenTheHandoffCannotBeWritte
 	p.stdin = strings.NewReader(reply(t, b, nil))
 	p.stdout = brokenStdout{errors.New("broken pipe")}
 
-	w.runOn(p, "record", "--feature", "own-rdd", "--base", w.base, "--head", w.head)
+	w.runOn(p, "record", "--feature", "own-rdd", "--base", w.base, "--head", w.head, "--rows", "default")
 
 	ref := "odd/review-results/own-rdd/" + w.head[:12] + "-1.json"
 	want := "error: review record: the result is stored at " + ref + ", but the handoff could not be written: write to stdout: broken pipe\n"
@@ -803,7 +809,7 @@ func TestRecordWaitsOnTheClockOfTheMachineBetweenTriesForANumber(t *testing.T) {
 	results := &racingResults{Results: fsstore.New(), races: 3}
 	service := reviewServiceOver(newReviewGit(d), results)
 
-	recorded, err := service.Record(w.root, "own-rdd", w.base, w.head, []byte(reply(t, b, nil)))
+	recorded, err := service.Record(w.root, "own-rdd", w.base, w.head, "default", []byte(reply(t, b, nil)))
 
 	if want := "odd/review-results/own-rdd/" + w.head[:12] + "-4.json"; err != nil || recorded.Path != want {
 		t.Fatalf("Record() = %q, %v; want the result stored under the fourth number, %q", recorded.Path, err, want)
@@ -825,10 +831,10 @@ func TestUsageDocumentsTheReviewVerbs(t *testing.T) {
 
 	for _, want := range []string{
 		"engine review bind --base <rev> --head <rev> [--cwd <repo>]",
-		"engine review record --feature <name> --base <rev> --head <rev> [--result <file>|-] [--cwd <repo>]",
+		"engine review record --feature <name> --base <rev> --head <rev> --rows <id,id> [--result <file>|-] [--cwd <repo>]",
 		"diff_sha256", "over_limit", "-worktrees/review-<head12>",
 		"odd/review-results/<feature>/<head12>-<n>.json", "never over an existing file",
-		"exit 0 stored, 2 reply refused",
+		"exit 0 stored, 2 reply refused", "--rows is required", "roles/reviewer/rows.json",
 		"exit 0 bound, 1 usage error, refusal or a binding that could not be written",
 		fmt.Sprintf("A diff over %d bytes is bound all the same", review.DiffLimitBytes),
 	} {
@@ -869,7 +875,7 @@ func TestReviewVerbsOfTheBuiltProgramBindStoreAndHandOffARecordTheChainAccepts(t
 	b := decodeBinding(t, out)
 	ok := reply(t, b, nil)
 
-	out, errText, code = run(ok, "review", "record", "--feature", "own-rdd", "--base", "HEAD~1", "--head", "HEAD")
+	out, errText, code = run(ok, "review", "record", "--feature", "own-rdd", "--base", "HEAD~1", "--head", "HEAD", "--rows", "default")
 	if code != 0 || !strings.Contains(errText, "odd/review-results/own-rdd/"+w.head[:12]+"-1.json") {
 		t.Fatalf("review record: exit %d, stderr %q; want 0 and the stored path named", code, errText)
 	}
@@ -900,12 +906,12 @@ func TestReviewVerbsOfTheBuiltProgramBindStoreAndHandOffARecordTheChainAccepts(t
 		t.Errorf("roles validate refused the skeleton with only the members of the parent filled: exit %d\n%s%s", code, out, errText)
 	}
 
-	_, _, code = run(ok, "review", "record", "--feature", "own-rdd", "--base", "HEAD~1", "--head", "HEAD")
+	_, _, code = run(ok, "review", "record", "--feature", "own-rdd", "--base", "HEAD~1", "--head", "HEAD", "--rows", "default")
 	if got := listNames(t, w.results("own-rdd")); code != 0 || strings.Join(got, ",") != w.head[:12]+"-1.json,"+w.head[:12]+"-2.json" {
 		t.Errorf("second record: exit %d, results %q; want 0 and numbers 1 and 2", code, got)
 	}
 	tampered := reply(t, b, func(o map[string]any) { o["candidate"].(map[string]any)["diff_sha256"] = strings.Repeat("f", 64) })
-	out, errText, code = run(tampered, "review", "record", "--feature", "own-rdd", "--base", "HEAD~1", "--head", "HEAD")
+	out, errText, code = run(tampered, "review", "record", "--feature", "own-rdd", "--base", "HEAD~1", "--head", "HEAD", "--rows", "default")
 	if code != 2 || out != "" || !strings.Contains(errText, "candidate echo differs from the binding") {
 		t.Errorf("tampered record: exit %d, stdout %q, stderr %q; want 2, nothing and the named reason", code, out, errText)
 	}
@@ -917,7 +923,7 @@ func TestReviewVerbsOfTheBuiltProgramBindStoreAndHandOffARecordTheChainAccepts(t
 	// stores nothing, the verdict is stored beside the result, and the skeleton it prints, with the members of the
 	// parent filled, is a record the chain accepts.
 	third := w.head[:12] + "-3.json"
-	if _, errText, code := run(reply(t, b, withBlocker), "review", "record", "--feature", "own-rdd", "--base", "HEAD~1", "--head", "HEAD"); code != 0 {
+	if _, errText, code := run(reply(t, b, withBlocker), "review", "record", "--feature", "own-rdd", "--base", "HEAD~1", "--head", "HEAD", "--rows", "default"); code != 0 {
 		t.Fatalf("record of a blocker: exit %d, stderr %q; want 0", code, errText)
 	}
 	out, errText, code = run("The blocker reproduces.", "review", "verify", "--feature", "own-rdd", "--stored", third)
@@ -992,7 +998,7 @@ func (w *reviewWorld) recordBlocker(base, head string) (reviewBinding, string) {
 		w.t.Fatalf("setup: review bind exit calls = %v, stderr = %q; want [0]", exits, stderr)
 	}
 	b := decodeBinding(w.t, stdout)
-	if _, stderr, exits := w.run(reply(w.t, b, withBlocker), "record", "--feature", "own-rdd", "--base", base, "--head", head); !equalInts(exits, []int{0}) {
+	if _, stderr, exits := w.run(reply(w.t, b, withBlocker), "record", "--feature", "own-rdd", "--base", base, "--head", head, "--rows", "default"); !equalInts(exits, []int{0}) {
 		w.t.Fatalf("setup: review record exit calls = %v, stderr = %q; want [0]", exits, stderr)
 	}
 	return b, head[:12] + "-1.json"

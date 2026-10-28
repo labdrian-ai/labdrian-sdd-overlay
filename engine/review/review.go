@@ -26,6 +26,12 @@
 // that holds every member the command knows and leaves empty the ones only the parent of the chain knows
 // (ParentFields).
 //
+// The lens rows the reviewer is sent (own-rdd T5, S8) are written once, as sentences, in roles/reviewer/rows.json,
+// and the parent of the chain copies the ones a launch needs into the prompt of the reviewer. This package holds the
+// ids of those rows (RowIDs) and the grammar in which a launch declares the ones it was sent (ParseRows). The stored
+// result records them (EncodeResult, DecodeResult), so the number of lenses a review ran is counted from the stored
+// results of the change and not from the receipt of another tool.
+//
 // When the verifier ran (own-rdd T3), its verdict on the findings of a stored result is stored beside the
 // result with the same <head12>-<n>, as <head12>-<n>.verifier.json (VerdictName, ResultOfVerdict), and the
 // skeleton binds it as one more piece of evidence and says who is next (VerifiedHandoff). A review is
@@ -122,6 +128,9 @@ var (
 	ErrInvalidExemptionName = errors.New("review: invalid exemption name")
 	// ErrInvalidStored is a stored file that is not one EncodeResult writes.
 	ErrInvalidStored = errors.New("review: invalid stored file")
+	// ErrInvalidRows is a declaration of the lens rows a launch was sent that is not a list of the rows of
+	// roles/reviewer/rows.json (ParseRows): an empty one, an id nobody wrote, a row written twice.
+	ErrInvalidRows = errors.New("review: invalid rows")
 )
 
 // Candidate is what a review is about, as computed from git: the zero Candidate names nothing.

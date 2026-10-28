@@ -74,7 +74,7 @@ func TestExemptComputesTheBindingFromGitAsRecordDoes(t *testing.T) {
 		t.Fatalf("Exempt() error = %v, want nil", err)
 	}
 	gRecord, storeRecord := newFakeGit(), newFakeResults()
-	if _, err := app.New(gRecord, storeRecord).Record("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", replyFor(t, candidateOf(t, gRecord))); err != nil {
+	if _, err := app.New(gRecord, storeRecord).Record("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", "default", replyFor(t, candidateOf(t, gRecord))); err != nil {
 		t.Fatalf("setup: Record() error = %v", err)
 	}
 
@@ -371,7 +371,7 @@ func TestRecordStillStoresAResultUnderItsOwnNameBesideAnExemption(t *testing.T) 
 	g, store := newFakeGit(), newFakeResults()
 	store.put("own-rdd", "222222222222-1.exempt.json", []byte("an exemption"))
 
-	got, err := app.New(g, store).Record("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", replyFor(t, candidateOf(t, g)))
+	got, err := app.New(g, store).Record("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", "default", replyFor(t, candidateOf(t, g)))
 	if err != nil {
 		t.Fatalf("Record() error = %v, want nil", err)
 	}

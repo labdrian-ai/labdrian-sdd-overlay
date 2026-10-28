@@ -59,7 +59,7 @@
     },
     "review_lens_count": {
       "type": "integer",
-      "description": "Optional. Number of review lenses actually run during the review gate (0, 1, or up to 4 under the 4R tier) — the length of `selected_lenses` in the native `gentle-ai.review-receipt/v2`, if one exists for this change. Recorded for reference; no calibration rate is derived from it. Omit if not available."
+      "description": "Optional. Number of review lenses actually run during the review: the number of `rows` recorded in the stored results of the change (`odd/review-results/<feature>/`), one for each row of each launch, as `labdrian review record --rows` stored them. Recorded for reference; no calibration rate is derived from it. Omit if no stored result records a row."
     },
     "checkpoint_count": {
       "type": "integer",

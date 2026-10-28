@@ -2,8 +2,9 @@ package main
 
 // review subcommand: 'review bind --base <rev> --head <rev> [--cwd <repo>]' computes the candidate of a
 // review from git and makes the detached worktree a reviewer reads, 'review record --feature <name>
-// --base <rev> --head <rev> [--result <file>|-] [--cwd <repo>]' holds the reply of a reviewer to the candidate
-// it recomputes and stores it under odd/review-results/<feature>/, and 'review verify --feature <name>
+// --base <rev> --head <rev> --rows <id,id> [--result <file>|-] [--cwd <repo>]' holds the reply of a reviewer to the
+// candidate it recomputes and stores it, with the lens rows the reviewer was sent (ids of
+// roles/reviewer/rows.json), under odd/review-results/<feature>/, and 'review verify --feature <name>
 // --stored <result> [--verdicts <file>|-] [--cwd <repo>]' holds the reply of the verifier to a stored result,
 // decides whether the review blocks and stores the reply beside the result. 'review exempt --feature <name>
 // --base <rev> --head <rev> --risk <none|items> [--cwd <repo>]' stores the exemption of a head from review, on the
@@ -97,7 +98,7 @@ func reviewServiceOver(git reviewapp.Git, results reviewapp.Results) reviewapp.S
 
 // reviewFlags are the parsed flags of the review verbs. A verb takes some of them.
 type reviewFlags struct {
-	base, head, feature, result, stored, verdicts, risk, cwd string
+	base, head, feature, result, stored, verdicts, risk, rows, cwd string
 	// given says which flags the command line gave, with whatever value, an empty one included. A flag that is
 	// optional and has a default tells an empty value that was given from one that was not.
 	given map[string]bool
@@ -141,6 +142,8 @@ func parseReviewFlags(args []string, takes ...string) (reviewFlags, error) {
 			f.verdicts = args[i]
 		case "--risk":
 			f.risk = args[i]
+		case "--rows":
+			f.rows = args[i]
 		case "--cwd":
 			f.cwd = args[i]
 		}
@@ -154,7 +157,7 @@ func (f reviewFlags) has(name string) bool { return f.given[name] }
 // require fails with the first of the named flags that has no value. A name it does not know is a mistake of
 // the caller, and says so rather than reading as a flag that was left out.
 func (f reviewFlags) require(names ...string) error {
-	values := map[string]string{"--base": f.base, "--head": f.head, "--feature": f.feature, "--stored": f.stored, "--risk": f.risk}
+	values := map[string]string{"--base": f.base, "--head": f.head, "--feature": f.feature, "--stored": f.stored, "--risk": f.risk, "--rows": f.rows}
 	for _, name := range names {
 		value, known := values[name]
 		if !known {
@@ -239,13 +242,14 @@ func runReviewBind(p process, d deps, args []string) {
 	p.exit(0)
 }
 
-// runReviewRecord implements 'review record --feature --base --head [--result] [--cwd]'. A reply that is
-// refused is exit 2 and nothing is written; any other failure is exit 1.
+// runReviewRecord implements 'review record --feature --base --head --rows [--result] [--cwd]'. A reply that is
+// refused is exit 2 and nothing is written; any other failure, rows that are not rows of the canonical file
+// included, is exit 1.
 func runReviewRecord(p process, d deps, args []string) {
 	fail := func(err error) { reviewFailed(p, "record", err) }
-	f, err := parseReviewFlags(args, "--feature", "--base", "--head", "--result", "--cwd")
+	f, err := parseReviewFlags(args, "--feature", "--base", "--head", "--rows", "--result", "--cwd")
 	if err == nil {
-		err = f.require("--feature", "--base", "--head")
+		err = f.require("--feature", "--base", "--head", "--rows")
 	}
 	if err != nil {
 		fail(err)
@@ -261,7 +265,7 @@ func runReviewRecord(p process, d deps, args []string) {
 		fail(err)
 		return
 	}
-	recorded, err := newReviewService(d).Record(dir, f.feature, f.base, f.head, reply)
+	recorded, err := newReviewService(d).Record(dir, f.feature, f.base, f.head, f.rows, reply)
 	if err != nil {
 		fail(err)
 		return

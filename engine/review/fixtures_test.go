@@ -22,6 +22,10 @@ const (
 // changedPaths are the paths of the diff, in the order git prints them.
 func changedPaths() []string { return []string{"engine/guard.go", "engine/guard_test.go"} }
 
+// sentRows are the lens rows the launch of the stored results below was sent: the default row and the readability
+// one, in that order.
+func sentRows() []string { return []string{"default", "readability"} }
+
 // candidate is the candidate of the constants above.
 func candidate(t *testing.T) review.Candidate {
 	t.Helper()

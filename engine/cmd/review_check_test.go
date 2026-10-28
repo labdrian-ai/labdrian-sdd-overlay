@@ -18,7 +18,7 @@ import (
 func (w *reviewWorld) recordClean() (reviewBinding, string) {
 	w.t.Helper()
 	b := w.bind()
-	if _, stderr, exits := w.run(reply(w.t, b, nil), "record", "--feature", "own-rdd", "--base", w.base, "--head", w.head); !equalInts(exits, []int{0}) {
+	if _, stderr, exits := w.run(reply(w.t, b, nil), "record", "--feature", "own-rdd", "--base", w.base, "--head", w.head, "--rows", "default"); !equalInts(exits, []int{0}) {
 		w.t.Fatalf("setup: review record exit calls = %v, stderr = %q; want [0]", exits, stderr)
 	}
 	return b, w.head[:12] + "-1.json"
@@ -69,7 +69,7 @@ func TestCheckClearsTheHeadOfAStoredResultAndPrintsTheFilesItUsed(t *testing.T) 
 func TestCheckNamesTheVerdictAndTheFindingsToFixAndToCarry(t *testing.T) {
 	w := newReviewWorld(t)
 	b := w.bind()
-	if _, stderr, exits := w.run(reply(t, b, withThreeFindings), "record", "--feature", "own-rdd", "--base", w.base, "--head", w.head); !equalInts(exits, []int{0}) {
+	if _, stderr, exits := w.run(reply(t, b, withThreeFindings), "record", "--feature", "own-rdd", "--base", w.base, "--head", w.head, "--rows", "default"); !equalInts(exits, []int{0}) {
 		t.Fatalf("setup: review record exit calls = %v, stderr = %q; want [0]", exits, stderr)
 	}
 	verdicts := `{"verdicts":[` +
@@ -149,6 +149,12 @@ func TestCheckRefusesTheHeadNoStoredResultClearsAndStoresNothing(t *testing.T) {
 			}
 		}, nil, func(w *reviewWorld) []string {
 			return []string{"odd/review-results/own-rdd/" + w.head[:12] + "-1.json", "the stored binding differs from the candidate git gives", "diff_sha256 is " + zeros}
+		}},
+		{"the stored result records no rows (it was stored before the rows were recorded)", func(w *reviewWorld) {
+			_, name := w.recordClean()
+			w.dropRows(name)
+		}, nil, func(w *reviewWorld) []string {
+			return []string{"odd/review-results/own-rdd/" + w.head[:12] + "-1.json", "invalid stored file", "rows"}
 		}},
 		{"the stored file is no longer a result", func(w *reviewWorld) {
 			_, name := w.recordClean()

@@ -4,12 +4,13 @@ The parent of the role chain (`skills/role-chain/SKILL.md`) binds a review to it
 
 - `<feature>` is the name of the feature document, `odd/tasks/<feature>.md`, and one safe path segment: 1 to 100 characters, each a letter or digit of ASCII, `.`, `_` or `-`, the first a letter or a digit, with no `..`. `record` refuses any other name, and refuses to write through a symbolic link on the way to the file, so no input names a path outside `odd/review-results/`.
 - `<head12>` is the first 12 hex characters of the reviewed `head`. `<n>` counts the launches stored for that head, from 1: a second blind launch takes the next number, one more than the highest stored for that head (a verdict and an exemption count). `record` creates the file and never writes over one that exists; the file is published whole or not at all (a temporary file in the same directory, flushed, then linked to its name).
-- The file is one JSON object, `version` 1: the `binding` the reply was held to, and the `reply` exactly as the reviewer gave it (white space aside). `agents/reviewer.md` spells the reply out: `candidate` (`base`, `head`, `diff_sha256`), `inspection`, `findings` (each with an `id`, `F1`, `F2` and so on, unique within the reply, so that the verifier can answer per finding) and `evidence`.
+- The file is one JSON object, `version` 1: the `binding` the reply was held to, the `rows` the launch was sent (see "The lens rows of a launch" below), and the `reply` exactly as the reviewer gave it (white space aside). `agents/reviewer.md` spells the reply out: `candidate` (`base`, `head`, `diff_sha256`), `inspection`, `findings` (each with an `id`, `F1`, `F2` and so on, unique within the reply, so that the verifier can answer per finding) and `evidence`.
 
   ```json
   {
     "version": 1,
     "binding": {"base": "<full sha>", "head": "<full sha>", "diff_sha256": "<64 hex>", "paths": ["<changed path>"]},
+    "rows": ["default", "readability"],
     "reply": {"candidate": {}, "inspection": {}, "findings": [], "evidence": []}
   }
   ```
@@ -26,16 +27,31 @@ The parent of the role chain (`skills/role-chain/SKILL.md`) binds a review to it
 - A diff over 150000 bytes (`diff_limit_bytes`) is bound all the same: `over_limit` is `true` and `note` says so. Splitting the candidate into one launch per commit is the parent's job (`skills/role-chain/SKILL.md`); the command does not fail.
 - A range whose base is its head covers no commit and is refused (exit 1, `base and head are the same commit`, `review.ErrInvalidCandidate`) by `bind`, and so by `record`, `exempt` and `check`, which bind a range in the same way: nothing reviewed or exempted over an empty diff clears a head, and nothing is made for it, not even the worktree.
 
-`labdrian review record --feature <name> --base <rev> --head <rev> [--result <file>|-] [--cwd <repo>]` computes the binding again from git, never from the reply, holds the reply (the file, or stdin) to it with `reviewresult.Parse` (below), and stores it. A reply above 1 MiB is refused. Exit 0 stored, 2 reply refused (the error names the rule, and nothing was written), 1 usage error or any other failure.
+`labdrian review record --feature <name> --base <rev> --head <rev> --rows <id,id> [--result <file>|-] [--cwd <repo>]` computes the binding again from git, never from the reply, holds the reply (the file, or stdin) to it with `reviewresult.Parse` (below), and stores it with the lens rows the reviewer was sent (`--rows`, required, defined in "The lens rows of a launch" below). A reply above 1 MiB is refused. Exit 0 stored, 2 reply refused (the error names the rule, and nothing was written), 1 usage error or any other failure, rows that are not rows of the canonical file included.
 
 - stderr says where the result was stored and the sha256 of the stored file, and names the members of the skeleton below that the parent fills.
 - stdout is the skeleton of the record that closes the review, for `labdrian roles append --stdin`: `from_role` `reviewer`, `payload_kind` `review-report`, `payload_sha256` the sha256 of the stored file, `status` `completed`, and the evidence `review-diff` (`<base>..<head>`, `diff_sha256`) and `review-result` (the stored path relative to the repository, the sha256 of the stored file). The members only the parent of the chain knows are left empty: `project_id`, `goal_id`, `chain_id`, `seq`, `prev_sha256`, `to_role` (`builder` when a severe finding blocks, `delivery` otherwise) and `context.summary`. `labdrian roles validate` refuses the skeleton, naming the first of them, until they are filled, so it is never appended by accident. When the verifier ran, `verify` prints the same skeleton with the `verifier-report` evidence added.
 
 `labdrian review verify --feature <name> --stored <result> [--verdicts <file>|-] [--cwd <repo>]` holds the reply of the verifier (the file, or stdin) to the stored result called `<result>`, the name of a file of `odd/review-results/<feature>/` such as `<head12>-<n>.json`, with `reviewverdict.Parse` (below), decides whether the review blocks (below), and stores the reply beside the result. A reply above 1 MiB is refused. Exit 0 stored, 2 reply refused (the error names the rule, and nothing was written), 1 usage error or any other failure, among them a result that already has a verdict and a correction round that was spent (below).
 
-- The candidate is the one stored with the result, which names both commits in full: git is asked only where the repository is. The result is read as `record` wrote it (one JSON object of `version` 1) and its reply is held to its binding again, so a file that is not a result, a name that is not one of `<head12>-<n>.json`, a file that is not a regular file and a file above 8 MiB are refused before the verdict is looked at.
+- The candidate is the one stored with the result, which names both commits in full: git is asked only where the repository is. The result is read as `record` wrote it (one JSON object of `version` 1) and its reply is held to its binding again, so a file that is not a result (a file whose `rows` are missing or are not a list of the rows of a launch included), a name that is not one of `<head12>-<n>.json`, a file that is not a regular file and a file above 8 MiB are refused before the verdict is looked at.
 - stderr says where the verdict was stored and the sha256 of the stored file, what was decided, which findings are blocking, unverified, to fix before delivery or to carry, and names the members of the skeleton that the parent fills.
 - stdout is the skeleton `record` printed for the same result, with the evidence `verifier-report` (the stored verdict relative to the repository, the sha256 of the stored file) added and `to_role` filled: `builder` when the review blocks, `delivery` when it is clear, and none when a check did not run (the review is neither clear nor blocked, so the parent fills `to_role` once the check has run).
+
+## The lens rows of a launch
+
+The reviewer is sent the lens rows of its launch in its prompt (`agents/reviewer.md`: "Scope is the lens rows in this prompt"). The sentences of the rows are written once, in `roles/reviewer/rows.json`, and the parent of the chain copies the ones a launch needs from there:
+
+| id | the row |
+|---|---|
+| `default` | reliability and resilience, and a risk line (secrets, permissions, path escapes, exec or net imports) |
+| `readability` | added when docs, a public API, messages or help change |
+| `risk-line` | the second blind launch, with another `model`, that a Risk line which names an item asks for |
+
+- `record` takes the rows the launch was sent from `--rows`: their ids separated by commas with no space and none written twice, in the order the parent sent them (`default,readability`). It refuses a list that is empty, that holds an id which is not in the table, or that writes an id twice (exit 1, nothing written, and the error names the ids that are accepted). The table is the program's (`review.RowIDs`), and a test of `engine/review` holds its ids and their order to `roles/reviewer/rows.json`, so a row is added in both.
+- The stored result records them, in the member `rows` and in that order. `verify` and `check` read them back with the result and refuse a stored file whose `rows` are missing or are not such a list, as they refuse any file `record` does not write. A result stored before the rows were recorded must be recorded again with `--rows`; none is kept in this repository, and none was released.
+- The rows are what the parent declares it sent, as the risk of an exemption is what the agent declares: the program cannot see the prompt, so it holds the declaration to the table and nothing more.
+- `review_lens_count` of the actuals record (`skills/_shared/actuals-record.schema.json`) is the number of rows recorded in the stored results of the change, one for each row of each launch, and is omitted when no stored result records one. It is no longer read from the `selected_lenses` of the receipt of another tool.
 
 ## The verdict of the verifier
 
@@ -168,6 +184,8 @@ A result is valid when `reviewresult.Parse` (the package `engine/reviewresult`) 
 10. A `BLOCKER` or `CRITICAL` has at least one `proof_refs` entry that is not blank.
 
 Rules 8 to 10 are applied finding by finding, in the order the reviewer wrote them: a finding is held to all three before the next one is looked at.
+
+The rows of the launch are not part of the reply, so the package does not read them: `record` holds them to the table of the lens rows (above) right after the feature and before it looks at the reply, and a stored file is a valid result for `verify` and `check` only with rows that hold to it too.
 
 `labdrian review record` calls the package before it stores a result (`odd/tasks/own-rdd.md`, T2), and `labdrian review verify` calls `reviewverdict.Parse` before it stores a verdict (T3), so no file of this directory is a reply that broke a rule.
 

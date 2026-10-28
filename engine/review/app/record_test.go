@@ -24,12 +24,12 @@ func TestRecordStoresTheValidatedReplyWithTheBindingItWasHeldTo(t *testing.T) {
 	reply := replyFor(t, c)
 	svc := app.New(g, store)
 
-	got, err := svc.Record("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", reply)
+	got, err := svc.Record("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", "default", reply)
 	if err != nil {
 		t.Fatalf("Record() error = %v, want nil", err)
 	}
 
-	wantFile, err := review.EncodeResult(c, reply)
+	wantFile, err := review.EncodeResult(c, []string{"default"}, reply)
 	if err != nil {
 		t.Fatalf("setup: %v", err)
 	}
@@ -54,6 +54,58 @@ func TestRecordStoresTheValidatedReplyWithTheBindingItWasHeldTo(t *testing.T) {
 	}
 }
 
+// The rows a launch declares are the rows it was sent: the stored file records them as they were declared, in the
+// order they were declared, and a later reader reads them back so.
+func TestRecordStoresTheRowsTheLaunchDeclaredInTheOrderTheyWereDeclared(t *testing.T) {
+	g, store := newFakeGit(), newFakeResults()
+
+	_, err := app.New(g, store).Record("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", "readability,default", replyFor(t, candidateOf(t, g)))
+
+	if err != nil {
+		t.Fatalf("Record() error = %v, want nil", err)
+	}
+	stored, err := review.DecodeResult(store.files["own-rdd"]["222222222222-1.json"])
+	if want := []string{"readability", "default"}; err != nil || !reflect.DeepEqual(stored.Rows, want) {
+		t.Errorf("the stored rows are %q (error %v), want the rows that were declared, in order: %q", stored.Rows, err, want)
+	}
+}
+
+// A declaration of rows that the program cannot read is an argument that is refused, and not a reply that did not
+// hold: it is not a *ReplyRefusedError, and it is refused before git or the store are asked for anything. It is
+// refused after the feature and before the size of the reply, as the risk of an exemption is.
+func TestRecordRefusesRowsThatAreNotRowsBeforeAskingAnyone(t *testing.T) {
+	tooLarge := []byte(strings.Repeat(" ", review.MaxReplyBytes+1))
+	for _, tc := range []struct {
+		name, feature, rows string
+		reply               []byte
+		want                error
+	}{
+		{"no rows", "own-rdd", "", nil, review.ErrInvalidRows},
+		{"a row nobody wrote", "own-rdd", "nope", nil, review.ErrInvalidRows},
+		{"a row twice", "own-rdd", "default,default", nil, review.ErrInvalidRows},
+		{"rows that are not rows and a reply that is too large", "own-rdd", "nope", tooLarge, review.ErrInvalidRows},
+		{"an unsafe feature and rows that are not rows", "../x", "nope", nil, review.ErrInvalidFeature},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			g, store := newFakeGit(), newFakeResults()
+			reply := tc.reply
+			if reply == nil {
+				reply = replyFor(t, candidateOf(t, g))
+			}
+
+			_, err := app.New(g, store).Record("/work/wt/feature", tc.feature, "HEAD~1", "HEAD", tc.rows, reply)
+
+			var refused *app.ReplyRefusedError
+			if !errors.Is(err, tc.want) || errors.As(err, &refused) {
+				t.Errorf("Record() error = %v, want one that is %v and is not a refused reply", err, tc.want)
+			}
+			if len(g.calls) != 0 || len(store.calls) != 0 {
+				t.Errorf("git calls %q and store calls %q, want none", g.calls, store.calls)
+			}
+		})
+	}
+}
+
 // A second launch of the same head takes the next number.
 func TestRecordTakesTheNextFreeNumber(t *testing.T) {
 	g, store := newFakeGit(), newFakeResults()
@@ -62,7 +114,7 @@ func TestRecordTakesTheNextFreeNumber(t *testing.T) {
 	reply := replyFor(t, candidateOf(t, g))
 	svc := app.New(g, store)
 
-	got, err := svc.Record("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", reply)
+	got, err := svc.Record("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", "default", reply)
 	if err != nil {
 		t.Fatalf("Record() error = %v, want nil", err)
 	}
@@ -82,7 +134,7 @@ func TestRecordTakesTheNextNumberWhenAnotherWriterTookItFirst(t *testing.T) {
 	reply := replyFor(t, candidateOf(t, g))
 	svc := app.New(g, store)
 
-	got, err := svc.Record("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", reply)
+	got, err := svc.Record("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", "default", reply)
 	if err != nil {
 		t.Fatalf("Record() error = %v, want nil", err)
 	}
@@ -103,7 +155,7 @@ func TestRecordGivesUpWhenNoNumberStaysFree(t *testing.T) {
 	store.fail["Create"] = app.ErrExists
 	svc := app.New(g, store)
 
-	_, err := svc.Record("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", replyFor(t, candidateOf(t, g)))
+	_, err := svc.Record("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", "default", replyFor(t, candidateOf(t, g)))
 
 	if !errors.Is(err, app.ErrNoFreeNumber) {
 		t.Fatalf("Record() error = %v, want one that is %v", err, app.ErrNoFreeNumber)
@@ -137,7 +189,7 @@ func TestRecordLandsOnAFreeNumberWhenAnotherWriterTakesEachNumberItTries(t *test
 			store.races = tc.races
 			svc := app.New(g, store)
 
-			got, err := svc.Record("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", replyFor(t, candidateOf(t, g)))
+			got, err := svc.Record("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", "default", replyFor(t, candidateOf(t, g)))
 
 			stored := store.files["own-rdd"]
 			others := 0
@@ -199,7 +251,7 @@ func TestRecordWaitsBetweenTriesAndLongerEachTime(t *testing.T) {
 			}
 			svc := app.New(g, store).WithSleep(waits.sleep)
 
-			_, err := svc.Record("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", replyFor(t, candidateOf(t, g)))
+			_, err := svc.Record("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", "default", replyFor(t, candidateOf(t, g)))
 
 			if !errors.Is(err, tc.wantErr) {
 				t.Fatalf("Record() error = %v, want one that is %v", err, tc.wantErr)
@@ -244,7 +296,7 @@ func TestRecordWithoutAClockStillTakesTheNextNumber(t *testing.T) {
 			g, store := newFakeGit(), newFakeResults()
 			store.races = 2
 
-			got, err := tc.svc(g, store).Record("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", replyFor(t, candidateOf(t, g)))
+			got, err := tc.svc(g, store).Record("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", "default", replyFor(t, candidateOf(t, g)))
 
 			if err != nil || got.Number != 3 {
 				t.Errorf("Record() = number %d, error %v; want number 3 and no error after two lost races", got.Number, err)
@@ -274,7 +326,7 @@ func TestRecordRefusesAReplyThatDoesNotHoldToTheBindingAndStoresNothing(t *testi
 			g, store := newFakeGit(), newFakeResults()
 			svc := app.New(g, store)
 
-			_, err := svc.Record("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", tc.reply)
+			_, err := svc.Record("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", "default", tc.reply)
 
 			var refused *app.ReplyRefusedError
 			if !errors.As(err, &refused) {
@@ -299,7 +351,7 @@ func TestRecordRefusesAReplyAboveTheLimit(t *testing.T) {
 	svc := app.New(g, store)
 	reply := []byte(strings.Repeat(" ", review.MaxReplyBytes+1))
 
-	_, err := svc.Record("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", reply)
+	_, err := svc.Record("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", "default", reply)
 
 	var refused *app.ReplyRefusedError
 	if !errors.As(err, &refused) || !errors.Is(err, review.ErrReplyTooLarge) {
@@ -321,7 +373,7 @@ func TestRecordAcceptsAReplyOfExactlyTheLimit(t *testing.T) {
 	}
 	svc := app.New(g, store)
 
-	got, err := svc.Record("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", reply)
+	got, err := svc.Record("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", "default", reply)
 
 	if err != nil {
 		t.Fatalf("Record() error = %v, want nil for a reply of exactly %d bytes", err, review.MaxReplyBytes)
@@ -347,7 +399,7 @@ func TestRecordRefusesAnUnsafeFeatureOrRevisionBeforeAskingAnyone(t *testing.T) 
 			g, store := newFakeGit(), newFakeResults()
 			svc := app.New(g, store)
 
-			_, err := svc.Record("/work/wt/feature", tc.feature, tc.base, tc.head, replyFor(t, candidateOf(t, g)))
+			_, err := svc.Record("/work/wt/feature", tc.feature, tc.base, tc.head, "default", replyFor(t, candidateOf(t, g)))
 
 			if !errors.Is(err, tc.want) {
 				t.Errorf("Record() error = %v, want one that is %v", err, tc.want)
@@ -384,7 +436,7 @@ func TestRecordReturnsWhatGitOrTheStoreCouldNotDo(t *testing.T) {
 			}
 			svc := app.New(g, store)
 
-			_, err := svc.Record("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", replyFor(t, candidateOf(t, g)))
+			_, err := svc.Record("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", "default", replyFor(t, candidateOf(t, g)))
 
 			if !errors.Is(err, boom) {
 				t.Errorf("Record() error = %v, want one that wraps %v", err, boom)
@@ -403,7 +455,7 @@ func TestRecordReportsAStoredResultWhoseDirectoryWasNotFlushedAsStored(t *testin
 	store.unflushed = fmt.Errorf("%w: sync: input/output error", app.ErrNotFlushed)
 	c := candidateOf(t, g)
 
-	got, err := app.New(g, store).Record("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", replyFor(t, c))
+	got, err := app.New(g, store).Record("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", "default", replyFor(t, c))
 
 	if err != nil {
 		t.Fatalf("Record() error = %v, want nil: the result is stored", err)

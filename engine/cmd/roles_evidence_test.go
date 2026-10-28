@@ -47,7 +47,7 @@ func decodeSkeleton(t *testing.T, stdout string) roles.RoleHandoff {
 func (w *reviewWorld) recordedSkeleton() roles.RoleHandoff {
 	w.t.Helper()
 	b := w.bind()
-	stdout, stderr, exits := w.run(reply(w.t, b, nil), "record", "--feature", "own-rdd", "--base", w.base, "--head", w.head)
+	stdout, stderr, exits := w.run(reply(w.t, b, nil), "record", "--feature", "own-rdd", "--base", w.base, "--head", w.head, "--rows", "default")
 	if !equalInts(exits, []int{0}) {
 		w.t.Fatalf("setup: review record exit calls = %v, stderr = %q; want [0]", exits, stderr)
 	}
