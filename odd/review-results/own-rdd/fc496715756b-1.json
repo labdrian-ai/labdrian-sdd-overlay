@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "8dffef5f4efa7de2183366d14b285c39409e754d",
+    "head": "fc496715756b62603d61886118b15359ddc3b2f6",
+    "diff_sha256": "063697a77dbe32d547187cd5294e4485609a5144dcb6e9598d8a0e985af9394d",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/review/rolerecords.go",
+      "engine/review/rolerecords_test.go",
+      "engine/review/sweep.go",
+      "engine/review/sweep_test.go"
+    ]
+  },
+  "rows": [
+    "default"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "8dffef5f4efa7de2183366d14b285c39409e754d",
+      "head": "fc496715756b62603d61886118b15359ddc3b2f6",
+      "diff_sha256": "063697a77dbe32d547187cd5294e4485609a5144dcb6e9598d8a0e985af9394d"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/review/rolerecords.go",
+        "engine/review/rolerecords_test.go",
+        "engine/review/sweep.go",
+        "engine/review/sweep_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "I did not run anything, including the tests. This is a read-only review of the diff and the worktree.",
+      "F1 (Go declarations): the three Go regexes (goFunc, goType, goNames) now start with `^` and no `\\s*`. An indented `var err error` or `const n = 1` inside a function body therefore yields no removed name.",
+      "F1: the shell regexes (shKey, shParen) keep `^\\s*`, so indented shell functions are still read. declaredNames in engine/review/sweep.go:54-79 applies the same patterns to both removed and added lines, so the new rule is symmetric and creates no asymmetry between the two sides.",
+      "F1 tests: sweep_test.go adds cases for an indented Go func, a local var, a local const, a column-0 var that is still read, and an indented shell function that is still read. All of them match the new regexes.",
+      "F2 (polisher size check): ParsePolisherFindings still bounds the input at MaxReplyBytes and now delegates to checkPolisherShape. DecodePolisher calls checkPolisherShape directly, so an indented stored file over 1 MiB is no longer rejected on read.",
+      "F2: EncodePolisher refuses a data length over MaxStoredBytes (8 MiB) with ErrReplyTooLarge and returns nil. fsstore.go:223-228 reads with a limit of MaxStoredBytes+1 and rejects only a file over MaxStoredBytes. The two bounds are consistent, so any record that is stored reads back.",
+      "F2 tests: the near-limit test uses a reply under 1 MiB whose stored file is over 1 MiB and checks that it round-trips. The deep-nesting test (depth 5000) checks that the encoder refuses, returns nil data, and the error wraps ErrReplyTooLarge. Indentation grows quadratically with depth, so at depth 5000 the file passes 8 MiB (my arithmetic, not measured).",
+      "I found no change outside rolerecords.go, sweep.go, their tests and the CHANGELOG. I found no secrets, path, exec or net surface in the diff. Risk none is consistent with that."
+    ]
+  }
+}

@@ -1,0 +1,99 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "eba53994c6a32d87630454cec11589d72dee7abc",
+    "head": "e7e1de17950ce188a844380ff76f027ce6df5cec",
+    "diff_sha256": "212125927113ee9d82e6b360fc1f0c37dafdf6c0245a62f9ff19c305036b16b5",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/architecture_test.go",
+      "engine/review/analyzers/analyzers.go",
+      "engine/review/analyzers/analyzers_test.go",
+      "engine/review/app/app.go",
+      "engine/review/app/fakes_test.go",
+      "engine/review/app/service.go",
+      "engine/review/app/sweep.go",
+      "engine/review/app/sweep_test.go",
+      "engine/review/fsstore/sweepcopy.go",
+      "engine/review/fsstore/sweepcopy_test.go",
+      "engine/review/gitexec/gitexec.go",
+      "engine/review/gitexec/sweep_test.go"
+    ]
+  },
+  "rows": [
+    "default"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "eba53994c6a32d87630454cec11589d72dee7abc",
+      "head": "e7e1de17950ce188a844380ff76f027ce6df5cec",
+      "diff_sha256": "212125927113ee9d82e6b360fc1f0c37dafdf6c0245a62f9ff19c305036b16b5"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/architecture_test.go",
+        "engine/review/analyzers/analyzers.go",
+        "engine/review/analyzers/analyzers_test.go",
+        "engine/review/app/app.go",
+        "engine/review/app/fakes_test.go",
+        "engine/review/app/service.go",
+        "engine/review/app/sweep.go",
+        "engine/review/app/sweep_test.go",
+        "engine/review/fsstore/sweepcopy.go",
+        "engine/review/fsstore/sweepcopy_test.go",
+        "engine/review/gitexec/gitexec.go",
+        "engine/review/gitexec/sweep_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/review/gitexec/gitexec.go:1919",
+        "claim": "Archive uses `git archive`, which honors export-ignore and export-subst in .gitattributes. A repository that marks files export-ignore gets a copy without them. Analyzers then skip a missing changed package or file without error, so the check passes silently instead of refusing. No .gitattributes in this worktree uses these attributes, so it is latent today. Passing `-c core.attributesFile=/dev/null` does not fully fix it, because tree .gitattributes would still apply. A fix is to compare the copy against `git ls-tree` or to archive with attribute processing disabled.",
+        "severity": "SUGGESTION",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": []
+      },
+      {
+        "id": "F2",
+        "location": "engine/review/analyzers/analyzers.go:115",
+        "claim": "New copies `o.Environ` with `append([]string(nil), o.Environ...)`. An empty or nil Environ becomes a nil slice, and exec treats `cmd.Env == nil` as inheriting the whole process environment. That contradicts the documented 'exactly the environment it is given, nothing of the process added'. It only matters if a caller passes an empty environment. Production passes os.Environ(), so there is no reachable impact today.",
+        "severity": "SUGGESTION",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": []
+      },
+      {
+        "id": "F3",
+        "location": "engine/review/analyzers/analyzers.go:149-159",
+        "claim": "Shellcheck passes changed `.sh` paths as bare arguments. A file at the repo root named like `-x.sh` would be read as an option. Paths are not preceded by `--`, and the pathname-derived `./`-prefix protection that Staticcheck patterns have is absent. This is a rare filename, but a hostile or odd name changes the tool's behavior instead of being analyzed.",
+        "severity": "SUGGESTION",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": []
+      },
+      {
+        "id": "F4",
+        "location": "engine/review/app/sweep.go:841",
+        "claim": "T1 runs one `git grep` per removed name, sequentially, while the sweep lock is held. A commit that deletes a large Go or shell file declaring many top-level names costs one full-tree grep each. Each grep is bounded by g.context, but there is no cap on the total, so a large deletion can hold the lock for a long time and make a second sweep return ErrSweepBusy meanwhile. Results stay correct. This is a load concern, not a correctness one.",
+        "severity": "SUGGESTION",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": []
+      }
+    ],
+    "evidence": [
+      "Read the full diff (lines 1-1260, 1456-2013). Skipped the tail of sweep_test.go and the fsstore and gitexec tests.",
+      "Checked the analyzers adapter: a tool that did not run is told apart from one that found something by what it printed. Deadline handling, the output cap (SIGPIPE through the closed pipe), a missing tool and a missing module all produce the documented errors or nothing.",
+      "Checked the lock: Copies.Lock is a no-wait flock taken before Reset and released by defer, and the kernel drops it if the process dies. It lives under the state home in 0700 directories made with statestore.EnsureDirs, and the repo key is the hash of the main root, so worktrees share one lock.",
+      "Checked Archive unpack: names are held to filepath.IsLocal, noLinkBelow refuses a link on the path of any parent, files are opened with O_EXCL, and unsupported entry types are refused. I found no path escape.",
+      "Checked T3 filtering of odd/review-results/ in porcelain lines, T1 filtering of hits to paths outside the diff, and goChanges using the innermost module. No defect found.",
+      "Searched the worktree for export-ignore and export-subst and found none.",
+      "Not run: no command or test was run (read-only review)."
+    ]
+  }
+}
