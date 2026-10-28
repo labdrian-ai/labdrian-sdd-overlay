@@ -104,7 +104,66 @@ type Git interface {
 	// Trailers returns the trailers git parses from the end of message, in order, each unfolded to one value: what
 	// `git interpret-trailers --parse` prints. A message with no trailer block gives none.
 	Trailers(repo Repository, message string) ([]review.Trailer, error)
+	// DeletedOrRenamed returns the paths the diff from base to head removes, once each, in the order git prints them: with
+	// renames not detected, the old path of a rename is a removal (own-rdd T6b3, S6 b, T1).
+	DeletedOrRenamed(repo Repository, base, head string) ([]string, error)
+	// ChangedLines returns the lines the diff from base to head removes and the lines it adds, of the .go and .sh files it
+	// changes, as review.RemovedNames reads them: per path as git prints it, in the order of the paths, each with its
+	// lines without the leading '-' or '+'.
+	ChangedLines(repo Repository, base, head string) (removed, added []review.ChangedLines, err error)
+	// Modules returns the directories, relative to the root of the tree and written with '/', that hold a go.mod at
+	// commit, a full object name; the root is ".". Sorted.
+	Modules(repo Repository, commit string) ([]string, error)
+	// Mentions returns the paths of the tree of commit, a full object name, that hold name as a whole word, matched as a
+	// fixed string, in the order git prints them. Nothing found is none and no error; a search that did not run is an error.
+	Mentions(repo Repository, commit, name string) ([]string, error)
+	// Status returns the lines of `git status --porcelain` of the working tree of repo, with every untracked file listed on
+	// its own line. A clean tree gives none.
+	Status(repo Repository) ([]string, error)
+	// Archive fills dir, an absolute path to a directory that is there and empty, with the tree of commit, a full object
+	// name, as `git archive` would (modes and links kept).
+	Archive(repo Repository, commit, dir string) error
 }
+
+// The two copies a sweep runs the analyzers on (own-rdd T6b3, S6 b): the tree of the base and the tree of the head.
+const (
+	CopyBase = "base"
+	CopyHead = "head"
+)
+
+// Analyzers are the programs of the second check of a sweep, run over a copy of a tree: root is the absolute path of the
+// copy and module the directory in it, relative and written with '/', where the program runs. Each returns the lines the
+// program printed in its finding format and nothing else, in the order it printed them. A program that is not found, that
+// stopped at its deadline, or that exited non-zero without printing a line in its finding format did not run, and the error
+// wraps ErrToolDidNotRun and names the program. The adapter is review/analyzers.
+type Analyzers interface {
+	// Deadcode runs `deadcode -test ./...` over the whole module. A module the copy does not have gives none.
+	Deadcode(root, module string) ([]string, error)
+	// Staticcheck runs staticcheck over packages, patterns like "./a" or "." of the module, leaving out the ones the copy
+	// does not have. None left gives none, and no run. A module the copy does not have gives none.
+	Staticcheck(root, module string, packages []string) ([]string, error)
+	// Shellcheck runs shellcheck over files, paths relative to root, leaving out the ones the copy does not have.
+	Shellcheck(root string, files []string) ([]string, error)
+}
+
+// Copies is where a sweep keeps the two copies and the lock that guards them. Their paths are stable between runs, so the
+// cache of an analyzer keyed by path is reused. The adapter keeps them under the state home of the user, outside every
+// working tree.
+type Copies interface {
+	// Lock takes the lock of the sweep of repo without waiting. A lock another sweep holds gives ErrSweepBusy. Calling the
+	// function it returns gives the lock back.
+	Lock(repo Repository) (unlock func(), err error)
+	// Reset empties the copy called side (CopyBase or CopyHead) of repo, makes it there, and returns its absolute path.
+	Reset(repo Repository, side string) (string, error)
+}
+
+var (
+	// ErrSweepBusy is what Copies.Lock returns, wrapped or not, for a repository whose sweep is running.
+	ErrSweepBusy = errors.New("another review sweep of this repository is running")
+	// ErrToolDidNotRun is what an analyzer returns, wrapped, for a check that did not run: a sweep that cannot run a check
+	// stores nothing (own-rdd S1: a check that cannot run refuses, never passes).
+	ErrToolDidNotRun = errors.New("review: a check of the sweep did not run")
+)
 
 // Features is what a working tree says of the features whose reviews it keeps, as the stop hook asks (own-rdd T6a, S6).
 type Features struct {

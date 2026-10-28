@@ -42,6 +42,12 @@ type fakeGit struct {
 	standing      app.Standing                // what Standing answers
 	messages      map[string]string           // the raw message of a commit; "" for a commit that is not a key
 	trailers      map[string][]review.Trailer // the trailers of a message; none for a message that is not a key
+	deleted       []string                    // what DeletedOrRenamed answers
+	removedLines  []review.ChangedLines       // what ChangedLines answers first
+	addedLines    []review.ChangedLines       // what ChangedLines answers second
+	modules       []string                    // what Modules answers
+	mentions      map[string][]string         // the paths that mention a name; none for a name that is not a key
+	status        []string                    // what Status answers
 	worktree      app.WorktreeState
 	worktreeLater []worktreeAnswer
 	fail          map[string]error
@@ -168,6 +174,108 @@ func (g *fakeGit) Trailers(repo app.Repository, message string) ([]review.Traile
 		return nil, err
 	}
 	return g.trailers[message], nil
+}
+
+func (g *fakeGit) DeletedOrRenamed(repo app.Repository, base, head string) ([]string, error) {
+	g.record("DeletedOrRenamed " + base + " " + head)
+	if err := g.fail["DeletedOrRenamed"]; err != nil {
+		return nil, err
+	}
+	return g.deleted, nil
+}
+
+func (g *fakeGit) ChangedLines(repo app.Repository, base, head string) ([]review.ChangedLines, []review.ChangedLines, error) {
+	g.record("ChangedLines " + base + " " + head)
+	if err := g.fail["ChangedLines"]; err != nil {
+		return nil, nil, err
+	}
+	return g.removedLines, g.addedLines, nil
+}
+
+func (g *fakeGit) Modules(repo app.Repository, commit string) ([]string, error) {
+	g.record("Modules " + commit)
+	if err := g.fail["Modules"]; err != nil {
+		return nil, err
+	}
+	return g.modules, nil
+}
+
+func (g *fakeGit) Mentions(repo app.Repository, commit, name string) ([]string, error) {
+	g.record("Mentions " + commit + " " + name)
+	if err := g.fail["Mentions"]; err != nil {
+		return nil, err
+	}
+	return g.mentions[name], nil
+}
+
+func (g *fakeGit) Status(repo app.Repository) ([]string, error) {
+	g.record("Status")
+	if err := g.fail["Status"]; err != nil {
+		return nil, err
+	}
+	return g.status, nil
+}
+
+func (g *fakeGit) Archive(repo app.Repository, commit, dir string) error {
+	g.record("Archive " + commit + " " + dir)
+	return g.fail["Archive"]
+}
+
+// fakeAnalyzers is the Analyzers port with canned output. Every call is recorded as "Tool root module args"; the
+// output of a call is out[call], and a call named in fail returns that error.
+type fakeAnalyzers struct {
+	out   map[string][]string
+	fail  map[string]error
+	calls []string
+}
+
+func newFakeAnalyzers() *fakeAnalyzers {
+	return &fakeAnalyzers{out: map[string][]string{}, fail: map[string]error{}}
+}
+
+func (a *fakeAnalyzers) answer(tool, call string) ([]string, error) {
+	a.calls = append(a.calls, call)
+	if err := a.fail[tool]; err != nil {
+		return nil, err
+	}
+	return a.out[call], nil
+}
+
+func (a *fakeAnalyzers) Deadcode(root, module string) ([]string, error) {
+	return a.answer("Deadcode", "Deadcode "+root+" "+module)
+}
+
+func (a *fakeAnalyzers) Staticcheck(root, module string, packages []string) ([]string, error) {
+	return a.answer("Staticcheck", "Staticcheck "+root+" "+module+" "+strings.Join(packages, ","))
+}
+
+func (a *fakeAnalyzers) Shellcheck(root string, files []string) ([]string, error) {
+	return a.answer("Shellcheck", "Shellcheck "+root+" "+strings.Join(files, ","))
+}
+
+// fakeCopies is the Copies port: the lock of the sweep and the two directories the copies are made in, which are
+// /state/base and /state/head.
+type fakeCopies struct {
+	fail  map[string]error
+	calls []string
+}
+
+func newFakeCopies() *fakeCopies { return &fakeCopies{fail: map[string]error{}} }
+
+func (c *fakeCopies) Lock(repo app.Repository) (func(), error) {
+	c.calls = append(c.calls, "Lock "+repo.Main)
+	if err := c.fail["Lock"]; err != nil {
+		return nil, err
+	}
+	return func() { c.calls = append(c.calls, "Unlock") }, nil
+}
+
+func (c *fakeCopies) Reset(repo app.Repository, side string) (string, error) {
+	c.calls = append(c.calls, "Reset "+side)
+	if err := c.fail["Reset"]; err != nil {
+		return "", err
+	}
+	return "/state/" + side, nil
 }
 
 // fakeResults is the Results port over a map: the names of a feature's directory and what was created.

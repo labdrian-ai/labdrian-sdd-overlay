@@ -57,13 +57,16 @@
 package gitexec
 
 import (
+	"archive/tar"
 	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -415,6 +418,255 @@ func (g Git) Trailers(repo app.Repository, message string) ([]review.Trailer, er
 		trailers = append(trailers, review.Trailer{Key: key, Value: strings.TrimSpace(value)})
 	}
 	return trailers, nil
+}
+
+// DeletedOrRenamedArgs is the argument vector of the list of the paths the diff from base to head removes: the paths
+// of PathsArgs filtered to the removed ones. Renames are not detected, so the old path of a rename is a removal.
+func DeletedOrRenamedArgs(base, head string) []string {
+	return []string{"diff-tree", "-r", "--name-only", "-z", "--no-renames", "--diff-filter=DR", "--ignore-submodules=none", base, head}
+}
+
+// DeletedOrRenamed returns the paths the diff from base to head removes, in the order git prints them (own-rdd T6b3, S6 b).
+func (g Git) DeletedOrRenamed(repo app.Repository, base, head string) ([]string, error) {
+	out, err := g.output(repo.Root, "diff-tree", DeletedOrRenamedArgs(base, head))
+	if err != nil {
+		return nil, err
+	}
+	return splitPaths(out)
+}
+
+// ChangedLinesArgs is the argument vector of the diff of one path with no context, from base to head. The path is
+// literal: it is never a pattern.
+func ChangedLinesArgs(base, head, file string) []string {
+	return []string{
+		"--literal-pathspecs", "-c", "core.quotePath=false",
+		"diff-tree", "-p", "-r", "-U0", "--no-renames", "--no-color", "--no-ext-diff", "--no-textconv", "--ignore-submodules=none",
+		base, head, "--", file,
+	}
+}
+
+// ChangedLines returns the removed and the added lines of the .go and .sh files the diff from base to head changes,
+// in the order of their paths. It asks for the diff of one path at a time, so the name of a file is the one git listed
+// (Paths) and never read from the header of a diff, where a name with a space or a quote would be ambiguous. Binary
+// files have no lines; a path with no removed line is not in the first list, and one with no added line is not in the
+// second.
+func (g Git) ChangedLines(repo app.Repository, base, head string) (removed, added []review.ChangedLines, err error) {
+	paths, err := g.Paths(repo, base, head)
+	if err != nil {
+		return nil, nil, err
+	}
+	for _, p := range paths {
+		if !strings.HasSuffix(p, ".go") && !strings.HasSuffix(p, ".sh") {
+			continue
+		}
+		out, err := g.output(repo.Root, "diff-tree", ChangedLinesArgs(base, head, p))
+		if err != nil {
+			return nil, nil, err
+		}
+		gone, came := hunkLines(string(out))
+		if len(gone) > 0 {
+			removed = append(removed, review.ChangedLines{Path: p, Lines: gone})
+		}
+		if len(came) > 0 {
+			added = append(added, review.ChangedLines{Path: p, Lines: came})
+		}
+	}
+	return removed, added, nil
+}
+
+// hunkLines is the removed and the added lines of the diff of one file, without the leading '-' and '+'. Everything
+// before the first hunk is the header of the diff and holds none.
+func hunkLines(diff string) (removed, added []string) {
+	inHunk := false
+	for _, line := range strings.Split(diff, "\n") {
+		switch {
+		case strings.HasPrefix(line, "@@"):
+			inHunk = true
+		case !inHunk:
+		case strings.HasPrefix(line, "-"):
+			removed = append(removed, line[1:])
+		case strings.HasPrefix(line, "+"):
+			added = append(added, line[1:])
+		}
+	}
+	return removed, added
+}
+
+// Modules returns the directories that hold a go.mod at commit: the files named go.mod of its tree, by directory, "." for
+// the root, sorted.
+func (g Git) Modules(repo app.Repository, commit string) ([]string, error) {
+	out, err := g.output(repo.Root, "ls-tree", []string{"ls-tree", "-r", "--name-only", "-z", "--end-of-options", commit})
+	if err != nil {
+		return nil, err
+	}
+	files, err := splitPaths(out)
+	if err != nil {
+		return nil, err
+	}
+	var modules []string
+	for _, f := range files {
+		if path.Base(f) == "go.mod" {
+			modules = append(modules, path.Dir(f))
+		}
+	}
+	slices.Sort(modules)
+	return modules, nil
+}
+
+// Mentions returns the paths of the tree of commit that hold name as a whole word, matched as a fixed string, with
+// `git grep -l -w -F` (own-rdd T6b3, S6 b). git exits 1 when nothing matches, which is an answer; any other failure is not.
+func (g Git) Mentions(repo app.Repository, commit, name string) ([]string, error) {
+	ctx, cancel := g.context()
+	defer cancel()
+	args := []string{"-C", repo.Root, "grep", "-I", "-l", "-z", "-w", "-F", "--no-color", "-e", name, commit}
+	stdout, stderr, err := g.runner.Output(ctx, g.env, gitProgram, args...)
+	var exit *exec.ExitError
+	if errors.As(err, &exit) && exit.ExitCode() == 1 && len(stdout) == 0 && strings.TrimSpace(string(stderr)) == "" {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("git grep: %w%s", err, said(stderr))
+	}
+	var found []string
+	for _, entry := range bytes.Split(bytes.TrimSuffix(stdout, []byte{0}), []byte{0}) {
+		p, ok := strings.CutPrefix(string(entry), commit+":")
+		if !ok || p == "" {
+			return nil, fmt.Errorf("git grep printed %q, want <commit>:<path>", clip(string(entry)))
+		}
+		found = append(found, p)
+	}
+	return found, nil
+}
+
+// Status returns the lines of `git status --porcelain` with every untracked file on its own line, as the working tree is.
+// It takes no optional lock, so asking changes nothing in the repository.
+func (g Git) Status(repo app.Repository) ([]string, error) {
+	out, err := g.output(repo.Root, "status", []string{"--no-optional-locks", "-c", "core.quotePath=false", "status", "--porcelain=v1", "--untracked-files=all"})
+	if err != nil {
+		return nil, err
+	}
+	text := strings.TrimSuffix(string(out), "\n")
+	if text == "" {
+		return nil, nil
+	}
+	return strings.Split(text, "\n"), nil
+}
+
+// Archive fills dir with the tree of commit. git writes the archive to a file of the temporary directory of the process,
+// never in the repository, and the adapter unpacks it and removes it: a plain unpack that makes the directories, the
+// files with their modes and the links, and refuses a name that leads out of dir and a file whose directory is a link.
+func (g Git) Archive(repo app.Repository, commit, dir string) error {
+	if !filepath.IsAbs(dir) {
+		return fmt.Errorf("the directory %q to unpack into is not an absolute path", dir)
+	}
+	if !gitobject.IsName(commit) {
+		return fmt.Errorf("%q is not a full object name", commit)
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return fmt.Errorf("read %s: %w", dir, err)
+	}
+	if len(entries) != 0 {
+		return fmt.Errorf("the directory %s to unpack into is not empty", dir)
+	}
+	tmp, err := os.CreateTemp("", "labdrian-archive-*.tar")
+	if err != nil {
+		return fmt.Errorf("make the file git writes the archive to: %w", err)
+	}
+	defer os.Remove(tmp.Name())
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	if _, err := g.output(repo.Root, "archive", []string{"archive", "--format=tar", "--output=" + tmp.Name(), commit}); err != nil {
+		return err
+	}
+	file, err := os.Open(tmp.Name())
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	return unpack(tar.NewReader(file), dir)
+}
+
+// unpack writes the entries of r under dir.
+func unpack(r *tar.Reader, dir string) error {
+	for {
+		hdr, err := r.Next()
+		if errors.Is(err, io.EOF) {
+			return nil
+		}
+		if err != nil {
+			return fmt.Errorf("read the archive: %w", err)
+		}
+		if hdr.Typeflag == tar.TypeXGlobalHeader {
+			continue
+		}
+		name := path.Clean(hdr.Name)
+		if !filepath.IsLocal(filepath.FromSlash(name)) {
+			return fmt.Errorf("the archive holds %q, a name that leads out of the directory", hdr.Name)
+		}
+		target := filepath.Join(dir, filepath.FromSlash(name))
+		if err := noLinkBelow(dir, filepath.Dir(target)); err != nil {
+			return err
+		}
+		switch hdr.Typeflag {
+		case tar.TypeDir:
+			err = os.MkdirAll(target, 0o755)
+		case tar.TypeReg:
+			err = writeEntry(target, hdr.FileInfo().Mode().Perm(), r)
+		case tar.TypeSymlink:
+			if err = os.MkdirAll(filepath.Dir(target), 0o755); err == nil {
+				err = os.Symlink(hdr.Linkname, target)
+			}
+		default:
+			err = fmt.Errorf("the archive holds %q of type %q, which is neither a directory, a file nor a link", hdr.Name, hdr.Typeflag)
+		}
+		if err != nil {
+			return fmt.Errorf("unpack %s: %w", name, err)
+		}
+	}
+}
+
+// writeEntry makes the file at target, which must not exist, with the bytes of r.
+func writeEntry(target string, perm fs.FileMode, r io.Reader) error {
+	if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+		return err
+	}
+	f, err := os.OpenFile(target, os.O_WRONLY|os.O_CREATE|os.O_EXCL, perm|0o600)
+	if err != nil {
+		return err
+	}
+	if _, err := io.Copy(f, r); err != nil {
+		f.Close()
+		return err
+	}
+	return f.Close()
+}
+
+// noLinkBelow refuses a directory below root, up to and including dir, that is a link: a file written through it would
+// land outside root.
+func noLinkBelow(root, dir string) error {
+	rel, err := filepath.Rel(root, dir)
+	if err != nil {
+		return err
+	}
+	current := root
+	for _, part := range strings.Split(rel, string(filepath.Separator)) {
+		if part == "." {
+			continue
+		}
+		current = filepath.Join(current, part)
+		info, err := os.Lstat(current)
+		switch {
+		case errors.Is(err, fs.ErrNotExist):
+			return nil
+		case err != nil:
+			return err
+		case info.Mode()&fs.ModeSymlink != 0:
+			return fmt.Errorf("%s is a link, and an entry of the archive would be written through it", current)
+		}
+	}
+	return nil
 }
 
 // defaultBranch finds the default branch of the repository in dir and the commits it is at, none when it has none.

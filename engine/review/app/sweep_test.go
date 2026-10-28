@@ -1,0 +1,436 @@
+package app_test
+
+import (
+	"errors"
+	"fmt"
+	"reflect"
+	"strings"
+	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review/app"
+)
+
+// sweepRig is a Service wired for Sweep over the fakes. The commit it sweeps changes docs/a.md only, which needs
+// no tool; a test sets what it wants the commit to change.
+type sweepRig struct {
+	t       *testing.T
+	svc     app.Service
+	git     *fakeGit
+	results *fakeResults
+	tools   *fakeAnalyzers
+	copies  *fakeCopies
+}
+
+func newSweepRig(t *testing.T) *sweepRig {
+	t.Helper()
+	g, r, a, c := newFakeGit(), newFakeResults(), newFakeAnalyzers(), newFakeCopies()
+	g.paths = []string{"docs/a.md"}
+	return &sweepRig{t: t, svc: app.New(g, r).WithSweep(a, c), git: g, results: r, tools: a, copies: c}
+}
+
+func (s *sweepRig) sweep() (app.Swept, error) {
+	return s.svc.Sweep("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD")
+}
+
+// mustSweep sweeps and fails the test when the sweep is refused.
+func (s *sweepRig) mustSweep() app.Swept {
+	s.t.Helper()
+	got, err := s.sweep()
+	if err != nil {
+		s.t.Fatalf("Sweep error = %v", err)
+	}
+	return got
+}
+
+// stored is the sweep record stored for the head, read back as a reader would.
+func (s *sweepRig) stored() review.StoredSweep {
+	s.t.Helper()
+	for name, data := range s.results.files["own-rdd"] {
+		if strings.HasSuffix(name, ".sweep.json") {
+			got, err := review.DecodeSweep(data)
+			if err != nil {
+				s.t.Fatalf("the stored sweep %s does not read back: %v", name, err)
+			}
+			return got
+		}
+	}
+	s.t.Fatal("no sweep record is stored")
+	return review.StoredSweep{}
+}
+
+func TestSweepStoresACleanSweepForACommitThatNeedsNoTool(t *testing.T) {
+	s := newSweepRig(t)
+
+	got := s.mustSweep()
+
+	c := candidateOf(t, s.git)
+	name := review.SweepName(c, 1)
+	file := s.results.files["own-rdd"][name]
+	if file == nil {
+		t.Fatalf("no file stored as %s, stored %v", name, s.results.calls)
+	}
+	if !reflect.DeepEqual(got.Candidate, c) || got.Number != 1 || got.Path != review.ResultPath("own-rdd", name) || got.SHA256 != sha256Of(file) || got.Outcome != review.OutcomeClean {
+		t.Errorf("Swept = %+v, want candidate %v, number 1, path %s, sha %s, clean", got, c, review.ResultPath("own-rdd", name), sha256Of(file))
+	}
+	if len(got.Candidates) != 0 {
+		t.Errorf("Candidates = %q, want none for a clean sweep", got.Candidates)
+	}
+	stored := s.stored()
+	if err := review.CheckRecordBinding(stored.Binding, c); err != nil || stored.Fired() {
+		t.Errorf("stored sweep: binding error = %v, fired = %v, want a binding that holds and clean", err, stored.Fired())
+	}
+	if len(s.tools.calls) != 0 || s.git.called("Archive") != 0 {
+		t.Errorf("tools %q and archives %d, want none for a commit with no Go module and no shell file", s.tools.calls, s.git.called("Archive"))
+	}
+	if want := []string{"Lock /work/main", "Unlock"}; !reflect.DeepEqual(s.copies.calls, want) {
+		t.Errorf("copies calls = %q, want %q: the lock is taken and given back", s.copies.calls, want)
+	}
+}
+
+func TestSweepNumbersItsRecordWithTheOtherRecordsOfTheHead(t *testing.T) {
+	s := newSweepRig(t)
+	c := candidateOf(t, s.git)
+	s.results.put("own-rdd", review.ResultName(c, 1), []byte("{}"))
+	s.results.put("own-rdd", review.ExemptionName(c, 2), []byte("{}"))
+
+	got := s.mustSweep()
+
+	if got.Number != 3 || got.Path != review.ResultPath("own-rdd", review.SweepName(c, 3)) {
+		t.Errorf("Swept number = %d, path = %s, want 3 and the sweep name of number 3", got.Number, got.Path)
+	}
+}
+
+func TestSweepFiresOnAPathTheCommitDeletedOrRenamed(t *testing.T) {
+	s := newSweepRig(t)
+	s.git.deleted = []string{"old/a.go", "old/b.sh"}
+
+	got := s.mustSweep()
+
+	stored := s.stored()
+	if !stored.Fired() || !reflect.DeepEqual(stored.Findings.T1.DeletedOrRenamed, s.git.deleted) {
+		t.Errorf("stored sweep fired = %v, t1 paths = %q, want fired with %q", stored.Fired(), stored.Findings.T1.DeletedOrRenamed, s.git.deleted)
+	}
+	want := []string{"T1 path: old/a.go", "T1 path: old/b.sh"}
+	if got.Outcome != review.OutcomeFired || !reflect.DeepEqual(got.Candidates, want) {
+		t.Errorf("Swept outcome = %q, candidates = %q, want fired and %q", got.Outcome, got.Candidates, want)
+	}
+	if want := "DeletedOrRenamed " + baseSHA + " " + headSHA; s.git.count(want) != 1 {
+		t.Errorf("calls = %q, want %q once, with the full names", s.git.calls, want)
+	}
+}
+
+func TestSweepListsTheRemovedNamesThatTheHeadStillMentionsOutsideTheDiff(t *testing.T) {
+	s := newSweepRig(t)
+	s.git.paths = []string{"pkg/a.go", "pkg/b.go"}
+	s.git.removedLines = []review.ChangedLines{{Path: "pkg/a.go", Lines: []string{"func gone() {}", "func movedAway() {}", "func declaredAgain() {}", "func nobodyMentions() {}"}}}
+	s.git.addedLines = []review.ChangedLines{{Path: "pkg/b.go", Lines: []string{"func declaredAgain() {}"}}}
+	s.git.mentions = map[string][]string{
+		"gone":      {"pkg/a.go", "pkg/other.go", "docs/x.md"},
+		"movedAway": {"pkg/a.go", "pkg/b.go"},
+	}
+
+	got := s.mustSweep()
+
+	want := []review.RemovedName{{Name: "gone", Hits: []string{"docs/x.md", "pkg/other.go"}}}
+	if names := s.stored().Findings.T1.RemovedNames; !reflect.DeepEqual(names, want) {
+		t.Errorf("stored removed names = %v, want %v: only the paths outside the diff count, sorted", names, want)
+	}
+	if !reflect.DeepEqual(got.Candidates, []string{"T1 name: gone"}) {
+		t.Errorf("Candidates = %q, want only the name that is still mentioned", got.Candidates)
+	}
+	if n := s.git.count("Mentions " + headSHA + " declaredAgain"); n != 0 {
+		t.Errorf("a name the head declares again was searched %d times, want none", n)
+	}
+	if n := s.git.count("Mentions " + headSHA + " gone"); n != 1 {
+		t.Errorf("gone was searched %d times in the tree of the head, want once", n)
+	}
+}
+
+func TestSweepRunsDeadcodeAndStaticcheckOnTheCopiesOfEveryModuleTheCommitChanges(t *testing.T) {
+	s := newSweepRig(t)
+	s.git.paths = []string{"mod/a/x.go", "mod/a/y.go", "mod/b/z.go", "mod/go.sum", "docs/a.md"}
+	s.git.modules = []string{"mod"}
+	s.tools.out["Deadcode /state/base mod"] = []string{"/state/base/mod/a/x.go:3:1: unreachable func: Same"}
+	s.tools.out["Deadcode /state/head mod"] = []string{"/state/head/mod/a/x.go:9:1: unreachable func: Same", "/state/head/mod/a/x.go:12:1: unreachable func: New"}
+	s.tools.out["Staticcheck /state/head mod ./a,./b"] = []string{"/state/head/mod/b/z.go:4:2: this is wrong (SA1000)"}
+
+	got := s.mustSweep()
+
+	want := []review.SweepT2{
+		{Tool: "deadcode", Module: "mod", New: []string{"mod/a/x.go: unreachable func: New"}},
+		{Tool: "staticcheck", Module: "mod", New: []string{"mod/b/z.go: this is wrong (SA1000)"}},
+	}
+	if t2 := s.stored().Findings.T2; !reflect.DeepEqual(t2, want) {
+		t.Errorf("stored t2 = %v, want %v: the new lines only, without the root of the copy or the position", t2, want)
+	}
+	wantIDs := []string{"T2 deadcode mod: mod/a/x.go: unreachable func: New", "T2 staticcheck mod: mod/b/z.go: this is wrong (SA1000)"}
+	if !reflect.DeepEqual(got.Candidates, wantIDs) {
+		t.Errorf("Candidates = %q, want %q", got.Candidates, wantIDs)
+	}
+	wantTools := []string{
+		"Deadcode /state/base mod", "Deadcode /state/head mod",
+		"Staticcheck /state/base mod ./a,./b", "Staticcheck /state/head mod ./a,./b",
+	}
+	if !reflect.DeepEqual(s.tools.calls, wantTools) {
+		t.Errorf("tool calls = %q, want %q: the whole module for deadcode, the packages of the changed files for staticcheck", s.tools.calls, wantTools)
+	}
+	wantCopies := []string{"Lock /work/main", "Reset base", "Reset head", "Unlock"}
+	if !reflect.DeepEqual(s.copies.calls, wantCopies) {
+		t.Errorf("copies calls = %q, want %q", s.copies.calls, wantCopies)
+	}
+	for _, call := range []string{"Archive " + baseSHA + " /state/base", "Archive " + headSHA + " /state/head"} {
+		if s.git.count(call) != 1 {
+			t.Errorf("calls = %q, want %q once", s.git.calls, call)
+		}
+	}
+}
+
+func TestSweepOfOnlyModuleFilesRunsDeadcodeAndNoStaticcheck(t *testing.T) {
+	s := newSweepRig(t)
+	s.git.paths = []string{"mod/go.mod", "mod/go.sum"}
+	s.git.modules = []string{"mod"}
+
+	s.mustSweep()
+
+	want := []string{"Deadcode /state/base mod", "Deadcode /state/head mod"}
+	if !reflect.DeepEqual(s.tools.calls, want) {
+		t.Errorf("tool calls = %q, want %q: no changed .go file, no package for staticcheck", s.tools.calls, want)
+	}
+}
+
+func TestSweepGivesAChangedFileToTheInnermostModuleOnly(t *testing.T) {
+	s := newSweepRig(t)
+	s.git.paths = []string{"tools/x/y.go", "z.go", "loose/w.go"}
+	s.git.modules = []string{".", "tools/x"}
+
+	s.mustSweep()
+
+	want := []string{
+		"Deadcode /state/base .", "Deadcode /state/head .",
+		"Staticcheck /state/base . .,./loose", "Staticcheck /state/head . .,./loose",
+		"Deadcode /state/base tools/x", "Deadcode /state/head tools/x",
+		"Staticcheck /state/base tools/x .", "Staticcheck /state/head tools/x .",
+	}
+	if !reflect.DeepEqual(s.tools.calls, want) {
+		t.Errorf("tool calls = %q, want %q", s.tools.calls, want)
+	}
+}
+
+func TestSweepRunsNoGoToolForAGoFileOutsideEveryModule(t *testing.T) {
+	s := newSweepRig(t)
+	s.git.paths = []string{"scratch/a.go"}
+	s.git.modules = []string{"mod"}
+
+	s.mustSweep()
+
+	if len(s.tools.calls) != 0 || s.git.called("Archive") != 0 {
+		t.Errorf("tool calls = %q, archives = %d, want none for a file no module holds", s.tools.calls, s.git.called("Archive"))
+	}
+}
+
+func TestSweepRunsShellcheckOnTheChangedShellFiles(t *testing.T) {
+	s := newSweepRig(t)
+	s.git.paths = []string{"scripts/b.sh", "scripts/a.sh", "docs/a.md"}
+	s.tools.out["Shellcheck /state/head scripts/b.sh,scripts/a.sh"] = []string{"/state/head/scripts/a.sh:3:5: warning: quote this [SC2086]"}
+
+	got := s.mustSweep()
+
+	want := []review.SweepT2{{Tool: "shellcheck", Module: ".", New: []string{"scripts/a.sh: warning: quote this [SC2086]"}}}
+	if t2 := s.stored().Findings.T2; !reflect.DeepEqual(t2, want) {
+		t.Errorf("stored t2 = %v, want %v", t2, want)
+	}
+	if !reflect.DeepEqual(got.Candidates, []string{"T2 shellcheck .: scripts/a.sh: warning: quote this [SC2086]"}) {
+		t.Errorf("Candidates = %q", got.Candidates)
+	}
+	if n := len(s.tools.calls); n != 2 {
+		t.Errorf("tool calls = %q, want shellcheck on the base and on the head only", s.tools.calls)
+	}
+}
+
+func TestSweepIsCleanWhenTheHeadAddsNoLineToWhatTheBaseHad(t *testing.T) {
+	s := newSweepRig(t)
+	s.git.paths = []string{"mod/a.go"}
+	s.git.modules = []string{"mod"}
+	s.tools.out["Deadcode /state/base mod"] = []string{"/state/base/a.go:3:1: unreachable func: Old"}
+	s.tools.out["Deadcode /state/head mod"] = []string{"/state/head/a.go:8:1: unreachable func: Old"}
+
+	got := s.mustSweep()
+
+	if got.Outcome != review.OutcomeClean || len(s.stored().Findings.T2) != 0 {
+		t.Errorf("outcome = %q, t2 = %v, want clean with no t2 entry for a finding that was already there", got.Outcome, s.stored().Findings.T2)
+	}
+}
+
+func TestSweepT3IsTheStatusOfTheWorkingTreeWithoutTheRecordsWaitingForTheirCommit(t *testing.T) {
+	s := newSweepRig(t)
+	s.git.status = []string{
+		" M a.txt",
+		"?? odd/review-results/own-rdd/abc123456789-1.json",
+		"?? odd/review-results-extra/x.json",
+		`?? "odd/review-results/caf\303\251/x.json"`,
+		"?? b.txt",
+	}
+
+	got := s.mustSweep()
+
+	want := []string{" M a.txt", "?? odd/review-results-extra/x.json", "?? b.txt"}
+	if t3 := s.stored().Findings.T3; !reflect.DeepEqual(t3, want) {
+		t.Errorf("stored t3 = %q, want %q", t3, want)
+	}
+	if !reflect.DeepEqual(got.Candidates, []string{"T3:  M a.txt", "T3: ?? odd/review-results-extra/x.json", "T3: ?? b.txt"}) {
+		t.Errorf("Candidates = %q", got.Candidates)
+	}
+}
+
+func TestSweepRefusesWhileAnotherSweepOfTheRepositoryRuns(t *testing.T) {
+	s := newSweepRig(t)
+	s.git.paths = []string{"x.go"}
+	s.git.modules = []string{"."}
+	s.copies.fail["Lock"] = app.ErrSweepBusy
+
+	_, err := s.sweep()
+
+	if err == nil || err.Error() != "another review sweep of this repository is running" || !errors.Is(err, app.ErrSweepBusy) {
+		t.Errorf("Sweep error = %v, want ErrSweepBusy: another review sweep of this repository is running", err)
+	}
+	if s.results.created() != 0 || len(s.tools.calls) != 0 || s.git.called("Archive") != 0 || s.git.called("Status") != 0 {
+		t.Errorf("created = %d, tool calls = %q, archives = %d, status = %d, want nothing done while the lock is not held", s.results.created(), s.tools.calls, s.git.called("Archive"), s.git.called("Status"))
+	}
+	if want := []string{"Lock /work/main"}; !reflect.DeepEqual(s.copies.calls, want) {
+		t.Errorf("copies calls = %q, want only the refused lock: a sweep that never held it gives nothing back", s.copies.calls)
+	}
+}
+
+func TestSweepGivesTheLockBackAndStoresNothingWhenAnythingAfterItFails(t *testing.T) {
+	boom := errors.New("boom")
+	cases := []struct {
+		name  string
+		setup func(s *sweepRig)
+	}{
+		{"deleted paths", func(s *sweepRig) { s.git.fail["DeletedOrRenamed"] = boom }},
+		{"changed lines", func(s *sweepRig) { s.git.fail["ChangedLines"] = boom }},
+		{"mentions", func(s *sweepRig) {
+			s.git.removedLines = []review.ChangedLines{{Path: "a.go", Lines: []string{"func gone() {}"}}}
+			s.git.fail["Mentions"] = boom
+		}},
+		{"modules", func(s *sweepRig) { s.git.fail["Modules"] = boom }},
+		{"reset of a copy", func(s *sweepRig) {
+			s.git.paths = []string{"x.go"}
+			s.git.modules = []string{"."}
+			s.copies.fail["Reset"] = boom
+		}},
+		{"archive of a copy", func(s *sweepRig) {
+			s.git.paths = []string{"x.go"}
+			s.git.modules = []string{"."}
+			s.git.fail["Archive"] = boom
+		}},
+		{"deadcode", func(s *sweepRig) {
+			s.git.paths = []string{"x.go"}
+			s.git.modules = []string{"."}
+			s.tools.fail["Deadcode"] = boom
+		}},
+		{"staticcheck", func(s *sweepRig) {
+			s.git.paths = []string{"x.go"}
+			s.git.modules = []string{"."}
+			s.tools.fail["Staticcheck"] = boom
+		}},
+		{"shellcheck", func(s *sweepRig) { s.git.paths = []string{"x.sh"}; s.tools.fail["Shellcheck"] = boom }},
+		{"status", func(s *sweepRig) { s.git.fail["Status"] = boom }},
+		{"the store", func(s *sweepRig) { s.results.fail["Create"] = boom }},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			s := newSweepRig(t)
+			c.setup(s)
+
+			_, err := s.sweep()
+
+			if !errors.Is(err, boom) {
+				t.Errorf("Sweep error = %v, want one wrapping boom", err)
+			}
+			if n := len(s.copies.calls); n == 0 || s.copies.calls[n-1] != "Unlock" {
+				t.Errorf("copies calls = %q, want the lock given back last", s.copies.calls)
+			}
+			if c.name != "the store" && s.results.created() != 0 {
+				t.Errorf("created = %d, want nothing stored", s.results.created())
+			}
+		})
+	}
+}
+
+func TestSweepThatCannotRunACheckNamesTheToolAndStoresNothing(t *testing.T) {
+	s := newSweepRig(t)
+	s.git.paths = []string{"x.go"}
+	s.git.modules = []string{"."}
+	s.tools.fail["Staticcheck"] = fmt.Errorf("%w: staticcheck was not found on the PATH", app.ErrToolDidNotRun)
+
+	_, err := s.sweep()
+
+	if !errors.Is(err, app.ErrToolDidNotRun) || !strings.Contains(err.Error(), "staticcheck") {
+		t.Errorf("Sweep error = %v, want ErrToolDidNotRun naming staticcheck", err)
+	}
+	if s.results.created() != 0 || s.git.called("Status") != 0 {
+		t.Errorf("created = %d, status = %d, want a sweep that stops at the check that did not run", s.results.created(), s.git.called("Status"))
+	}
+}
+
+func TestSweepRefusesBeforeItTakesTheLock(t *testing.T) {
+	cases := []struct {
+		name    string
+		feature string
+		setup   func(s *sweepRig)
+		want    error
+	}{
+		{"a feature that is not a segment", "../x", func(*sweepRig) {}, review.ErrInvalidFeature},
+		{"a base that is not the first parent of the head", "own-rdd", func(s *sweepRig) { s.git.parents[headSHA] = otherSHA }, review.ErrNotOneCommit},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			s := newSweepRig(t)
+			c.setup(s)
+
+			_, err := s.svc.Sweep("/work/wt/feature", c.feature, "HEAD~1", "HEAD")
+
+			if !errors.Is(err, c.want) {
+				t.Errorf("Sweep error = %v, want one wrapping %v", err, c.want)
+			}
+			if len(s.copies.calls) != 0 || s.results.created() != 0 {
+				t.Errorf("copies calls = %q, created = %d, want nothing done", s.copies.calls, s.results.created())
+			}
+		})
+	}
+}
+
+func TestSweepRefusesToRunWithoutBothPortsOfWithSweep(t *testing.T) {
+	cases := []struct {
+		name  string
+		build func(svc app.Service, a *fakeAnalyzers, c *fakeCopies) app.Service
+	}{
+		{"no WithSweep", func(svc app.Service, _ *fakeAnalyzers, _ *fakeCopies) app.Service { return svc }},
+		{"only the analyzers", func(svc app.Service, a *fakeAnalyzers, _ *fakeCopies) app.Service { return svc.WithSweep(a, nil) }},
+		{"only the copies", func(svc app.Service, _ *fakeAnalyzers, c *fakeCopies) app.Service { return svc.WithSweep(nil, c) }},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			g, r := newFakeGit(), newFakeResults()
+			svc := c.build(app.New(g, r), newFakeAnalyzers(), newFakeCopies())
+
+			_, err := svc.Sweep("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD")
+
+			if err == nil || len(g.calls) != 0 || r.created() != 0 {
+				t.Errorf("Sweep error = %v, git calls = %q, created = %d, want a refusal before anything is asked", err, g.calls, r.created())
+			}
+		})
+	}
+}
+
+func TestSweepRunsWithBothPortsOfWithSweep(t *testing.T) {
+	s := newSweepRig(t)
+
+	got := s.mustSweep()
+
+	if got.Outcome != review.OutcomeClean || s.results.created() != 1 {
+		t.Errorf("outcome = %q, created = %d, want a clean sweep stored once", got.Outcome, s.results.created())
+	}
+}
