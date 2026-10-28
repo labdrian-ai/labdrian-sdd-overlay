@@ -20,11 +20,12 @@ import (
 // A head that a stored exemption binds is cleared: exit 0, and stdout names the head, the exemption used and what the
 // candidate was recomputed to be. results is an empty array, not null: the head has none. Nothing is stored.
 func TestCheckClearsTheHeadOfAStoredExemptionAndPrintsTheFileItUsed(t *testing.T) {
-	w := newReviewWorld(t)
+	w := newCheckedWorld(t)
 	b := w.bind()
 	if _, stderr, exits := w.exempt(verifierReport, "none"); !equalInts(exits, []int{0}) {
 		t.Fatalf("setup: review exempt exit calls = %v, stderr = %q; want [0]", exits, stderr)
 	}
+	w.sweepAll()
 	before := listNames(t, w.results("own-rdd"))
 
 	stdout, stderr, exits := w.run("", "check", "--feature", "own-rdd")
@@ -69,11 +70,12 @@ func TestCheckLetsAStoredResultThatDoesNotClearTheHeadWinOverAnExemption(t *test
 			[]string{"a stored result is not clear", "findings not checked F1"}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			w := newReviewWorld(t)
+			w := newCheckedWorld(t)
 			if _, stderr, exits := w.exempt(verifierReport, "none"); !equalInts(exits, []int{0}) {
 				t.Fatalf("setup: review exempt exit calls = %v, stderr = %q; want [0]", exits, stderr)
 			}
 			tc.setup(w)
+			w.sweepAll()
 
 			stdout, stderr, exits := w.run("", "check", "--feature", "own-rdd")
 
@@ -114,8 +116,11 @@ func TestCheckRefusesAnExemptionThatNoLongerHoldsAndAHeadThatWasNeverExempted(t 
 		{"the head was never exempted", func(*reviewWorld) {}, nil, func(w *reviewWorld) []string {
 			return []string{"head " + w.head + ": review: no stored result binds the head"}
 		}},
-		{"another head was exempted", func(w *reviewWorld) { w.exempt(verifierReport, "none") }, []string{"--feature", "own-rdd", "--head", "HEAD~1"}, func(w *reviewWorld) []string {
-			return []string{"head " + w.base + ": review: no stored result binds the head"}
+		{"another head was exempted", func(w *reviewWorld) {
+			w.exempt(verifierReport, "none")
+			w.commitMore("d.txt") // the head to deliver is the commit after the one that was exempted
+		}, nil, func(w *reviewWorld) []string {
+			return []string{"head " + w.name("HEAD") + ": review: no stored result binds the head"}
 		}},
 		{"the risk was edited to name an item", func(w *reviewWorld) {
 			w.exempt(verifierReport, "none")
@@ -146,8 +151,9 @@ func TestCheckRefusesAnExemptionThatNoLongerHoldsAndAHeadThatWasNeverExempted(t 
 		}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			w := newReviewWorld(t)
+			w := newCheckedWorld(t)
 			tc.setup(w)
+			w.sweepAll()
 			before := listNames(t, w.results("own-rdd"))
 			args := tc.args
 			if args == nil {
@@ -199,7 +205,7 @@ func TestUsageDocumentsWhatReviewCheckMakesOfAnExemption(t *testing.T) {
 // The built program: a head is refused until it is exempted, cleared by the exemption, and refused again once the
 // exemption is edited to name a high-risk item. The streams and the exit codes are the ones the delivery role reads.
 func TestReviewExemptOfTheBuiltProgramClearsAnExemptedHeadAndRefusesAnEditedOne(t *testing.T) {
-	w := newReviewWorld(t)
+	w := newCheckedWorld(t)
 	bin := engineBinary(t)
 	run := func(stdin string, args ...string) (stdout, stderr string, code int) {
 		t.Helper()
@@ -219,8 +225,9 @@ func TestReviewExemptOfTheBuiltProgramClearsAnExemptedHeadAndRefusesAnEditedOne(
 		return o.String(), e.String(), code
 	}
 
-	if out, errText, code := run("", "review", "check", "--feature", "own-rdd"); code != 1 || out != "" || !strings.Contains(errText, "no stored result binds the head") {
-		t.Fatalf("check of a head never exempted: exit %d, stdout %q, stderr %q; want 1, nothing and the reason", code, out, errText)
+	// The first thing the head lacks is its sweep (own-rdd T6b5, S6 f): the review is the last of what a commit needs.
+	if out, errText, code := run("", "review", "check", "--feature", "own-rdd"); code != 1 || out != "" || !strings.Contains(errText, "commit "+w.head+": review: no sweep record binds the commit") {
+		t.Fatalf("check of a head never swept: exit %d, stdout %q, stderr %q; want 1, nothing and the reason", code, out, errText)
 	}
 	if out, errText, code := run(verifierReport, "review", "exempt", "--feature", "own-rdd", "--base", "HEAD~1", "--head", "HEAD", "--risk", "5"); code != 1 || out != "" || !strings.Contains(errText, "5 (delivery or environment)") {
 		t.Fatalf("exempt of a head with a declared risk: exit %d, stdout %q, stderr %q; want 1, nothing and the item", code, out, errText)
@@ -235,6 +242,7 @@ func TestReviewExemptOfTheBuiltProgramClearsAnExemptedHeadAndRefusesAnEditedOne(
 	if code != 0 || !strings.Contains(out, `"payload_kind": "review-exemption"`) || !strings.Contains(errText, w.head[:12]+"-1.exempt.json") {
 		t.Fatalf("exempt: exit %d, stdout %q, stderr %q; want 0, the skeleton and the file stored", code, out, errText)
 	}
+	w.sweepAll()
 
 	out, errText, code = run("", "review", "check", "--feature", "own-rdd")
 	var cleared struct {

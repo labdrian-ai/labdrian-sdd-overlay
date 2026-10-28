@@ -41,7 +41,7 @@ func exempted(t *testing.T, store *fakeResults, base, head string, n int) string
 // exemption names, as it is for a result, and the stored binding must be equal to what git gave. The store is
 // listed and the exemption read: no result and no verdict is looked for, and nothing is stored.
 func TestCheckClearsTheHeadOfAStoredExemptionAndRecomputesTheCandidateFromGit(t *testing.T) {
-	g, store := newFakeGit(), newFakeResults()
+	g, store := checkable(t)
 	exempted(t, store, baseSHA, headSHA, 1)
 
 	got, err := app.New(g, store).Check(evidenceDir, "own-rdd", "HEAD")
@@ -50,14 +50,22 @@ func TestCheckClearsTheHeadOfAStoredExemptionAndRecomputesTheCandidateFromGit(t 
 	if err != nil || !reflect.DeepEqual(got, want) {
 		t.Fatalf("Check() = %+v, %v; want %+v and no error", got, err, want)
 	}
-	wantGit := []string{
+	// The head is read first (its first parent, its message and trailers, its paths and what it deletes), then the
+	// sweep that binds it, and then the exemption, with the first parent of the head asked for each of the two.
+	bind := []string{"Commit " + baseSHA, "Commit " + headSHA, "Diff " + baseSHA + " " + headSHA, "Paths " + baseSHA + " " + headSHA, "Parent " + headSHA}
+	wantGit := append([]string{
 		"Locate " + evidenceDir, "Commit HEAD",
-		"Commit " + baseSHA, "Commit " + headSHA, "Diff " + baseSHA + " " + headSHA, "Paths " + baseSHA + " " + headSHA, "Parent " + headSHA,
-	}
+		"Parent " + headSHA, "Message " + headSHA, "Trailers", "Paths " + baseSHA + " " + headSHA, "DeletedOrRenamed " + baseSHA + " " + headSHA,
+	}, bind...)
+	wantGit = append(wantGit, bind...)
 	if !reflect.DeepEqual(g.calls, wantGit) {
 		t.Errorf("git calls = %q, want %q", g.calls, wantGit)
 	}
-	wantStore := []string{"Names " + evidenceDir + " own-rdd", "Read " + evidenceDir + " own-rdd 222222222222-1.exempt.json"}
+	wantStore := []string{
+		"Names " + evidenceDir + " own-rdd",
+		"Read " + evidenceDir + " own-rdd 222222222222-7.sweep.json",
+		"Read " + evidenceDir + " own-rdd 222222222222-1.exempt.json",
+	}
 	if !reflect.DeepEqual(store.calls, wantStore) {
 		t.Errorf("store calls = %q, want %q", store.calls, wantStore)
 	}
@@ -65,7 +73,7 @@ func TestCheckClearsTheHeadOfAStoredExemptionAndRecomputesTheCandidateFromGit(t 
 
 // What Exempt stores is what Check clears, end to end through the two use cases over the same store.
 func TestCheckClearsWhatExemptStored(t *testing.T) {
-	g, store := newFakeGit(), newFakeResults()
+	g, store := checkable(t)
 	exempt, err := app.New(g, store).Exempt(evidenceDir, "own-rdd", "HEAD~1", "HEAD", "none", []byte(exemptReport))
 	if err != nil {
 		t.Fatalf("setup: Exempt() error = %v", err)
@@ -81,7 +89,7 @@ func TestCheckClearsWhatExemptStored(t *testing.T) {
 // Every exemption that binds the head is answered, in the order of their numbers, whatever order the store lists
 // them in: the tenth after the ninth and not after the first.
 func TestCheckAnswersEveryExemptionOfTheHeadInTheOrderOfTheirNumbers(t *testing.T) {
-	g, store := newFakeGit(), newFakeResults()
+	g, store := checkable(t)
 	exempted(t, store, baseSHA, headSHA, 10)
 	exempted(t, store, baseSHA, headSHA, 2)
 
@@ -100,7 +108,7 @@ func TestCheckAnswersEveryExemptionOfTheHeadInTheOrderOfTheirNumbers(t *testing.
 // A head with a clear result and an exemption is cleared, and both are answered: the exemption is not what clears
 // it, and it is not hidden either.
 func TestCheckAnswersTheResultsAndTheExemptionsOfAHeadThatHasBoth(t *testing.T) {
-	g, store := newFakeGit(), newFakeResults()
+	g, store := checkable(t)
 	reviewed(t, store, baseSHA, headSHA, 1)
 	exempted(t, store, baseSHA, headSHA, 2)
 
@@ -144,7 +152,7 @@ func TestCheckLetsAStoredResultThatDoesNotClearTheHeadWinOverAnExemption(t *test
 		}, review.ErrNotClear, []string{wantFirstPath, wantVerdict, "F1"}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			g, store := newFakeGit(), newFakeResults()
+			g, store := checkable(t)
 			tc.setup(t, store)
 			created := store.created()
 
@@ -214,6 +222,7 @@ func TestCheckRefusesAnExemptionThatNoLongerHoldsAndStoresNothing(t *testing.T) 
 		{"the diff of the range is no longer the one the exemption was made on", func(t *testing.T, g *fakeGit, store *fakeResults) {
 			exempted(t, store, baseSHA, headSHA, 1)
 			g.diff = []byte("a diff nobody checked\n")
+			resweep(t, g, store) // the sweep binds the diff git gives now; the exemption does not
 		}, []error{review.ErrBindingDiffers}, []string{wantFirstExemptionPath, "diff_sha256"}},
 		{"git lists other paths for the range", func(t *testing.T, g *fakeGit, store *fakeResults) {
 			exempted(t, store, baseSHA, headSHA, 1)
@@ -222,6 +231,8 @@ func TestCheckRefusesAnExemptionThatNoLongerHoldsAndStoresNothing(t *testing.T) 
 		{"the base the exemption names is not the first parent of the head", func(t *testing.T, g *fakeGit, store *fakeResults) {
 			exempted(t, store, baseSHA, headSHA, 1)
 			g.parents[headSHA] = otherSHA
+			delete(store.files["own-rdd"], "222222222222-7.sweep.json")
+			swept(t, store, otherSHA, headSHA, sweepNo) // the sweep is of the commit the head really follows
 		}, []error{review.ErrNotOneCommit}, []string{wantFirstExemptionPath, "first parent"}},
 		{"git does not know the base the exemption names", func(t *testing.T, _ *fakeGit, store *fakeResults) {
 			exempted(t, store, fourSHA, headSHA, 1)
@@ -229,10 +240,10 @@ func TestCheckRefusesAnExemptionThatNoLongerHoldsAndStoresNothing(t *testing.T) 
 		{"git cannot give the diff of the range", func(t *testing.T, g *fakeGit, store *fakeResults) {
 			exempted(t, store, baseSHA, headSHA, 1)
 			g.fail["Diff"] = boom
-		}, []error{boom}, []string{wantFirstExemptionPath, "diff"}},
+		}, []error{boom}, []string{recordPath("222222222222-7.sweep.json"), "diff"}}, // the sweep is read before the exemption
 		{"the store cannot read the exemption", func(t *testing.T, _ *fakeGit, store *fakeResults) {
 			exempted(t, store, baseSHA, headSHA, 1)
-			store.fail["Read"] = boom
+			store.fail["Read 222222222222-1.exempt.json"] = boom
 		}, []error{boom}, []string{wantFirstExemptionPath}},
 		{"one exemption holds and another does not", func(t *testing.T, _ *fakeGit, store *fakeResults) {
 			exempted(t, store, baseSHA, headSHA, 1)
@@ -244,7 +255,7 @@ func TestCheckRefusesAnExemptionThatNoLongerHoldsAndStoresNothing(t *testing.T) 
 		}, []error{reviewverdict.ErrNotClear}, []string{wantSecondExemptionPath}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			g, store := newFakeGit(), newFakeResults()
+			g, store := checkable(t)
 			tc.setup(t, g, store)
 			created := store.created()
 
@@ -311,7 +322,7 @@ func TestCheckNeverClearsAHeadByTheExemptionOfAnotherHead(t *testing.T) {
 		}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			g, store := newFakeGit(), newFakeResults()
+			g, store := checkable(t)
 			tc.setup(t, store)
 
 			got, err := app.New(g, store).Check(evidenceDir, "own-rdd", "HEAD")
@@ -327,7 +338,7 @@ func TestCheckNeverClearsAHeadByTheExemptionOfAnotherHead(t *testing.T) {
 // contract (a full object name) before it is used, as the binding of a stored result is, so the base is not passed
 // to git, and the file is refused.
 func TestCheckDoesNotPassTheForgedBaseOfAnExemptionToGit(t *testing.T) {
-	g, store := newFakeGit(), newFakeResults()
+	g, store := checkable(t)
 	name := exempted(t, store, baseSHA, headSHA, 1)
 	store.files["own-rdd"][name] = []byte(strings.Replace(string(store.files["own-rdd"][name]), baseSHA, "--output=forged", 1))
 

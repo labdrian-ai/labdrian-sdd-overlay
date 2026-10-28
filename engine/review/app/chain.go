@@ -66,12 +66,22 @@ func (s Service) CheckChain(dir, feature, base, head string) (Chained, error) {
 			return Chained{}, refused(fmt.Errorf("%w: %s", review.ErrChainLoops, point))
 		}
 		passed[point] = true
-		checked, err := s.cleared(repo, feature, names, point)
+		facts, parent, err := s.commitFacts(repo, feature, names, point)
 		if err != nil {
 			return Chained{}, refused(err)
 		}
-		start := checked.start()
+		checked, err := s.cleared(repo, feature, names, facts)
+		if err != nil {
+			return Chained{}, refused(err)
+		}
+		start := checked.start(parent)
 		chain.Ranges = append(chain.Ranges, Range{Base: start, Checked: checked})
+		if start != baseName && passed[start] {
+			return Chained{}, refused(fmt.Errorf("%w: %s", review.ErrChainLoops, start))
+		}
+		if err := s.insideRange(repo, feature, names, parent, start); err != nil {
+			return Chained{}, refused(err)
+		}
 		if start == baseName {
 			slices.Reverse(chain.Ranges)
 			return chain, nil
@@ -80,11 +90,37 @@ func (s Service) CheckChain(dir, feature, base, head string) (Chained, error) {
 	}
 }
 
-// start is the commit the range that clears the head starts from: the base of the first result that binds it, or of the
-// first exemption when it has no result. review.Cleared leaves one of the two for a head it cleared.
-func (c Checked) start() string {
-	if len(c.Results) > 0 {
-		return c.Results[0].Candidate.Base
+// insideRange holds the commits a range covers besides the one it ends at to what a commit needs but its review
+// (own-rdd T6b5, S6 f): from first, the first parent of the commit the range ends at, back to start, the commit the range
+// starts from and which the range does not cover. The commit the range ends at is held with its review by cleared. A
+// commit that lacks something is refused with the first thing it lacks. A walk that reaches a commit with no parent
+// before start is refused.
+func (s Service) insideRange(repo Repository, feature string, names []string, first, start string) error {
+	for commit := first; commit != start; {
+		if commit == "" {
+			return fmt.Errorf("the commits down to %s cannot be walked: the first commit has no parent", start)
+		}
+		facts, parent, err := s.commitFacts(repo, feature, names, commit)
+		if err != nil {
+			return err
+		}
+		if needs := review.Needs(facts); len(needs) > 0 {
+			return needs[0].Err
+		}
+		commit = parent
 	}
-	return c.Exemptions[0].Candidate.Base
+	return nil
+}
+
+// start is the commit the range that clears the commit ends at starts from: the base of the first result that binds it,
+// or of the first exemption when it has no result, and parent, its first parent, when it is a passive commit that nothing
+// binds. review.Cleared leaves a result or an exemption for a commit it cleared that is not that.
+func (c Checked) start(parent string) string {
+	switch {
+	case len(c.Results) > 0:
+		return c.Results[0].Candidate.Base
+	case len(c.Exemptions) > 0:
+		return c.Exemptions[0].Candidate.Base
+	}
+	return parent
 }

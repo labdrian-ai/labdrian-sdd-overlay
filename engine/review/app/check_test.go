@@ -26,7 +26,7 @@ func verified(t *testing.T, store *fakeResults, result string, reply []byte) {
 // diff of the range from the base the result names to the head, and the stored binding must be equal to what it
 // gave. The store is listed and read, the verdict beside the result is looked for, and nothing is stored.
 func TestCheckClearsTheHeadOfAStoredCleanResultAndRecomputesTheCandidateFromGit(t *testing.T) {
-	g, store := newFakeGit(), newFakeResults()
+	g, store := checkable(t)
 	reviewed(t, store, baseSHA, headSHA, 1)
 
 	got, err := app.New(g, store).Check(evidenceDir, "own-rdd", "HEAD")
@@ -37,15 +37,20 @@ func TestCheckClearsTheHeadOfAStoredCleanResultAndRecomputesTheCandidateFromGit(
 	if err != nil || !reflect.DeepEqual(got, want) {
 		t.Fatalf("Check() = %+v, %v; want %+v and no error", got, err, want)
 	}
-	wantGit := []string{
+	// The head is read first (its first parent, its message and trailers, and, as it declares Risk: none, its paths
+	// and what it deletes: it is not passive), then the sweep that binds it, and then the result.
+	bind := []string{"Commit " + baseSHA, "Commit " + headSHA, "Diff " + baseSHA + " " + headSHA, "Paths " + baseSHA + " " + headSHA}
+	wantGit := append([]string{
 		"Locate " + evidenceDir, "Commit HEAD",
-		"Commit " + baseSHA, "Commit " + headSHA, "Diff " + baseSHA + " " + headSHA, "Paths " + baseSHA + " " + headSHA,
-	}
+		"Parent " + headSHA, "Message " + headSHA, "Trailers", "Paths " + baseSHA + " " + headSHA, "DeletedOrRenamed " + baseSHA + " " + headSHA,
+	}, bind...)
+	wantGit = append(append(wantGit, "Parent "+headSHA), bind...)
 	if !reflect.DeepEqual(g.calls, wantGit) {
 		t.Errorf("git calls = %q, want %q", g.calls, wantGit)
 	}
 	wantStore := []string{
 		"Names " + evidenceDir + " own-rdd",
+		"Read " + evidenceDir + " own-rdd 222222222222-7.sweep.json",
 		"Read " + evidenceDir + " own-rdd 222222222222-1.json",
 		"Read " + evidenceDir + " own-rdd 222222222222-1.verifier.json",
 	}
@@ -58,7 +63,7 @@ func TestCheckClearsTheHeadOfAStoredCleanResultAndRecomputesTheCandidateFromGit(
 // severe finding it did not reproduce does not block, a WARNING is to be fixed and a SUGGESTION carried. The
 // answer names the verdict that was used.
 func TestCheckDecidesFromTheVerdictStoredBesideTheResult(t *testing.T) {
-	g, store := newFakeGit(), newFakeResults()
+	g, store := checkable(t)
 	name := reviewed(t, store, baseSHA, headSHA, 1, finding("F1", "BLOCKER"), finding("F2", "WARNING"), finding("F3", "SUGGESTION"))
 	verified(t, store, name, verdictReply(verdict("F1", "not-reproduced"), verdict("F2", "not-run"), verdict("F3", "not-run")))
 
@@ -76,7 +81,7 @@ func TestCheckDecidesFromTheVerdictStoredBesideTheResult(t *testing.T) {
 // Every result that binds the head counts, and they are answered in the order of their launches: the tenth after
 // the ninth, not after the first, whatever order the store lists them in.
 func TestCheckAnswersEveryResultOfTheHeadInTheOrderOfTheirLaunches(t *testing.T) {
-	g, store := newFakeGit(), newFakeResults()
+	g, store := checkable(t)
 	reviewed(t, store, baseSHA, headSHA, 10)
 	reviewed(t, store, baseSHA, headSHA, 2)
 
@@ -124,6 +129,7 @@ func TestCheckRefusesTheHeadAndStoresNothingWhenNoStoredResultClearsIt(t *testin
 		{"the diff of the range is no longer the one the reviewer read", func(t *testing.T, g *fakeGit, store *fakeResults) {
 			reviewed(t, store, baseSHA, headSHA, 1)
 			g.diff = []byte("a diff the reviewer never read\n")
+			resweep(t, g, store) // the sweep binds the diff git gives now; the result does not
 		}, []error{review.ErrBindingDiffers}, []string{wantFirstPath, "diff_sha256"}},
 		{"git lists other paths for the range", func(t *testing.T, g *fakeGit, store *fakeResults) {
 			reviewed(t, store, baseSHA, headSHA, 1)
@@ -173,7 +179,7 @@ func TestCheckRefusesTheHeadAndStoresNothingWhenNoStoredResultClearsIt(t *testin
 		{"git cannot give the diff of the range", func(t *testing.T, g *fakeGit, store *fakeResults) {
 			reviewed(t, store, baseSHA, headSHA, 1)
 			g.fail["Diff"] = boom
-		}, []error{boom}, []string{wantFirstPath, "diff"}},
+		}, []error{boom}, []string{recordPath("222222222222-7.sweep.json"), "diff"}}, // the sweep is read before the result
 		{"git does not know the base the result names", func(t *testing.T, _ *fakeGit, store *fakeResults) {
 			reviewed(t, store, fourSHA, headSHA, 1)
 		}, nil, []string{wantFirstPath, "resolve base"}},
@@ -182,11 +188,11 @@ func TestCheckRefusesTheHeadAndStoresNothingWhenNoStoredResultClearsIt(t *testin
 		}, []error{boom}, []string{"list odd/review-results/own-rdd"}},
 		{"the store cannot read the result", func(t *testing.T, _ *fakeGit, store *fakeResults) {
 			reviewed(t, store, baseSHA, headSHA, 1)
-			store.fail["Read"] = boom
+			store.fail["Read 222222222222-1.json"] = boom
 		}, []error{boom}, []string{wantFirstPath}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			g, store := newFakeGit(), newFakeResults()
+			g, store := checkable(t)
 			tc.setup(t, g, store)
 			created := store.created()
 
@@ -216,7 +222,7 @@ func TestCheckRefusesTheHeadAndStoresNothingWhenNoStoredResultClearsIt(t *testin
 // did not run. If an unreadable verdict were read as no verdict, a result whose block the verifier reproduced
 // would be decided again without it.
 func TestCheckRefusesAVerdictItCannotReadInsteadOfTakingItForNoVerdict(t *testing.T) {
-	g, store := newFakeGit(), newFakeResults()
+	g, store := checkable(t)
 	verified(t, store, reviewed(t, store, baseSHA, headSHA, 1), verdictReply())
 	boom := errors.New("boom")
 
@@ -253,7 +259,7 @@ func TestCheckRefusesWhatGitAndThePathsMustNotReceiveBeforeAskingAnything(t *tes
 		{"an empty head", "own-rdd", "", review.ErrInvalidRev},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			g, store := newFakeGit(), newFakeResults()
+			g, store := checkable(t)
 
 			_, err := app.New(g, store).Check(evidenceDir, tc.feature, tc.head)
 
@@ -267,7 +273,7 @@ func TestCheckRefusesWhatGitAndThePathsMustNotReceiveBeforeAskingAnything(t *tes
 // A result forged with a base git would read as an option never reaches git: the stored binding is held to the
 // contract (a full object name) before it is used, so the base is not passed to git, and the file is refused.
 func TestCheckDoesNotPassAForgedBaseToGit(t *testing.T) {
-	g, store := newFakeGit(), newFakeResults()
+	g, store := checkable(t)
 	name := reviewed(t, store, baseSHA, headSHA, 1)
 	store.files["own-rdd"][name] = []byte(strings.Replace(string(store.files["own-rdd"][name]), baseSHA, "--output=forged", 1))
 

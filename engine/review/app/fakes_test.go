@@ -38,6 +38,7 @@ var fakeRepo = app.Repository{Root: "/work/wt/feature", Main: "/work/main", Comm
 type fakeGit struct {
 	diff          []byte
 	paths         []string
+	pathsOf       map[string][]string         // the paths Paths answers for a head that is a key, instead of paths
 	parents       map[string]string           // the first parent of a commit; none for a commit that is not a key
 	standing      app.Standing                // what Standing answers
 	messages      map[string]string           // the raw message of a commit; "" for a commit that is not a key
@@ -62,7 +63,19 @@ type worktreeAnswer struct {
 }
 
 func newFakeGit() *fakeGit {
-	return &fakeGit{diff: []byte(diffText), paths: changedPaths, parents: map[string]string{headSHA: baseSHA}, fail: map[string]error{}}
+	g := &fakeGit{
+		diff: []byte(diffText), paths: changedPaths, parents: map[string]string{headSHA: baseSHA}, fail: map[string]error{},
+		messages: map[string]string{}, trailers: map[string][]review.Trailer{},
+	}
+	g.declares(headSHA, "none") // the head carries the trailer `review exempt` and `review check` ask of a commit
+	return g
+}
+
+// declares makes the message of commit end with the trailer "Risk: value", as git would parse it.
+func (g *fakeGit) declares(commit, value string) {
+	message := "subject of " + commit[:7] + "\n\nRisk: " + value
+	g.messages[commit] = message
+	g.trailers[message] = []review.Trailer{{Key: "Risk", Value: value}}
 }
 
 func (g *fakeGit) record(call string) { g.calls = append(g.calls, call) }
@@ -133,6 +146,9 @@ func (g *fakeGit) Paths(repo app.Repository, base, head string) ([]string, error
 	g.record("Paths " + base + " " + head)
 	if err := g.fail["Paths"]; err != nil {
 		return nil, err
+	}
+	if own, ok := g.pathsOf[head]; ok {
+		return own, nil
 	}
 	return g.paths, nil
 }
@@ -368,6 +384,9 @@ func (r *fakeResults) Features(root string) (app.Features, error) {
 func (r *fakeResults) Read(root, feature, name string) ([]byte, error) {
 	r.calls = append(r.calls, "Read "+root+" "+feature+" "+name)
 	if err := r.fail["Read"]; err != nil {
+		return nil, err
+	}
+	if err := r.fail["Read "+name]; err != nil { // one file that cannot be read
 		return nil, err
 	}
 	data, stored := r.files[feature][name]

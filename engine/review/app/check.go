@@ -68,14 +68,25 @@ func (s Service) Check(dir, feature, head string) (Checked, error) {
 	if err != nil {
 		return Checked{}, fmt.Errorf("list %s/%s: %w", review.ResultsDir, feature, err)
 	}
-	return s.cleared(repo, feature, names, headName)
+	facts, _, err := s.commitFacts(repo, feature, names, headName)
+	if err != nil {
+		return Checked{}, err
+	}
+	return s.cleared(repo, feature, names, facts)
 }
 
-// cleared decides whether what is stored for head, a full name, clears it. names is the listing of the directory of the
-// feature; every result and every exemption among them that binds head is read back and held to the files and to git as
-// Check says, and review.Cleared decides. It is what Check answers for one head and what CheckChain asks of each head of
-// a chain.
-func (s Service) cleared(repo Repository, feature string, names []string, head string) (Checked, error) {
+// cleared decides whether what is stored for the commit of f clears it (own-rdd T6b5, S6 d and f). The commit must first
+// lack nothing review.Needs lists before its review, and the refusal is the first thing it lacks. Then names is the
+// listing of the directory of the feature; every result and every exemption among them that binds the commit is read
+// back and held to the files and to git as Check says, and review.Cleared decides. A passive commit that no result and no
+// exemption binds is cleared with no record; one that has any is held as every commit is. An exemption of a commit whose
+// trailer names an item is refused with the error `review exempt --risk` gives for that trailer, even when a result
+// also binds it. It is what Check answers for one head and what CheckChain asks of each commit that ends a range.
+func (s Service) cleared(repo Repository, feature string, names []string, f review.Facts) (Checked, error) {
+	if needs := review.Needs(f); len(needs) > 0 {
+		return Checked{}, needs[0].Err
+	}
+	head := f.Commit
 	var reviewed []review.Reviewed
 	for _, name := range review.ResultsOfHead(names, head) {
 		r, binds, err := s.reviewedResult(repo, feature, name, head)
@@ -93,8 +104,14 @@ func (s Service) cleared(repo Repository, feature string, names []string, head s
 			return Checked{}, err
 		}
 		if binds {
+			if len(f.Risk) > 0 {
+				return Checked{}, fmt.Errorf("%s: commit %s: %w", e.Exemption, head, review.CheckRisk(riskValue(f.Risk)))
+			}
 			exempted = append(exempted, e)
 		}
+	}
+	if f.Passive && len(reviewed) == 0 && len(exempted) == 0 {
+		return Checked{Head: head}, nil
 	}
 	if err := review.Cleared(reviewed, exempted); err != nil {
 		return Checked{}, fmt.Errorf("head %s: %w", head, err)
