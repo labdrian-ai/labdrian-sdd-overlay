@@ -11,6 +11,16 @@ import (
 // without it there is no telling which commits of the branch are its own.
 var ErrNoDefaultBranch = errors.New("review: the repository does not tell its default branch")
 
+// NoDefaultBranchError is the refusal NextUnreviewed makes for a repository that does not tell its default branch: it
+// names the branch HEAD is on, and errors.Is reads it as ErrNoDefaultBranch.
+type NoDefaultBranchError struct{ Branch string }
+
+func (e *NoDefaultBranchError) Error() string {
+	return fmt.Sprintf("%v: neither origin/HEAD, main nor master tells which commits of branch %s are its own", ErrNoDefaultBranch, e.Branch)
+}
+
+func (e *NoDefaultBranchError) Unwrap() error { return ErrNoDefaultBranch }
+
 // Question is the next commit of a branch that no review covers: what the stop hook asks for (own-rdd T6a, S6, L18).
 type Question struct {
 	// Branch is the short name of the branch HEAD is on.
@@ -57,7 +67,7 @@ func (s Service) NextUnreviewed(dir string) (Question, bool, error) {
 	case standing.Branch == "":
 		return Question{}, false, nil
 	case standing.Default == "":
-		return Question{}, false, fmt.Errorf("%w: neither origin/HEAD, main nor master tells which commits of branch %s are its own", ErrNoDefaultBranch, standing.Branch)
+		return Question{}, false, &NoDefaultBranchError{Branch: standing.Branch}
 	case len(standing.Commits) == 0:
 		return Question{}, false, nil
 	}
