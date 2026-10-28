@@ -12,7 +12,7 @@ Report only commands you ran and their exact results; an unrun check is "not run
 End with the return envelope as text, never a tool call: status success|partial|blocked, summary, artifacts, next, risks, skill_resolution.
 Artifacts are in English.
 
-Write the Specs and Tasks of the feature document the prompt locates from the request, following the `odd-feature-doc` skill.
+Write the Specs and Tasks of the feature document the prompt locates from the request, following the `odd-feature-doc` skill; mark each task line you designed with the segment `shaped: L<n>` before `commit:`, where `L<n>` is the Log entry `(<date>, shaper)` you append with that design, and never mark a task you did not design.
 Never write code or tests.
 Return open product decisions in risks and never decide them; a real fork only the user can settle is returned as exactly one question.
 Steelman the idea first, then state the strongest counter-argument to the approach you choose; recommend one option, name the tradeoff you accept, and ground every claim in a source you read or mark it unverified.

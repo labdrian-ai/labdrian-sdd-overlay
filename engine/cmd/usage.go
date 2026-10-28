@@ -225,7 +225,7 @@ func usage(w io.Writer) {
 	fmt.Fprintln(w, "    to the rules it was made under (a declared risk that names no high-risk item and a report that is clear), even when the record carries the digest of an exemption that was edited.")
 	fmt.Fprintln(w, "    Any other record, and a review-report or a review-exemption that is interrupted, is stored as before. exit 0 stored, 1 any other outcome")
 	fmt.Fprintln(w, "  engine roles builder-guard")
-	fmt.Fprintln(w, "    internal Claude Code PreToolUse hook command for the Agent tool (not installed yet): reads the hook JSON on stdin and denies launching the builder agent (subagent_type \"builder\") when its prompt")
+	fmt.Fprintln(w, "    internal Claude Code PreToolUse hook command for the Agent tool (install-hooks installs it; on an existing install, re-run install-hooks and restart Claude Code to load it): reads the hook JSON on stdin and denies launching the builder agent (subagent_type \"builder\") when its prompt")
 	fmt.Fprintln(w, "    does not hold one line \"Spec: odd/tasks/<feature>.md, T<n>[, T<n>...][, S<n>...]\" that cites tasks of a feature document whose lines carry the segment \"shaped: L<n>\", written by the shaper, with")
 	fmt.Fprintln(w, "    a ## Log entry \"- **L<n>** (<date>, shaper)\" in the same document. A denial is {\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":...}}")
 	fmt.Fprintln(w, "    with exit 0 and says to launch the shaper first; an allow prints nothing. Once the call is decoded as a builder launch every failure denies (a document that cannot be read, a panic); input it cannot")
