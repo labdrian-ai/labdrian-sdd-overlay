@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "7705f81f1a9c6ac2a970957cfcb39a402555521c",
+    "head": "0e56b3ef3b30f875dd8259201086d918ff7798bb",
+    "diff_sha256": "5d630008d7fa735b15c4a071c4d62f8d7b37c35ae640024ab6c57f9044020c68",
+    "paths": [
+      "engine/runtime/claude_test.go",
+      "engine/settings/builder_guard.go",
+      "engine/settings/builder_guard_test.go",
+      "engine/settings/doc.go",
+      "engine/settings/legacy_families_test.go",
+      "engine/settings/merge.go",
+      "engine/settings/settingsfile/builder_guard_test.go",
+      "engine/settings/settingsfile/golden_unix_test.go",
+      "engine/settings/settingsfile/settings_test.go",
+      "engine/settings/status.go"
+    ]
+  },
+  "rows": [
+    "default",
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "7705f81f1a9c6ac2a970957cfcb39a402555521c",
+      "head": "0e56b3ef3b30f875dd8259201086d918ff7798bb",
+      "diff_sha256": "5d630008d7fa735b15c4a071c4d62f8d7b37c35ae640024ab6c57f9044020c68"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/settings/builder_guard.go",
+        "engine/settings/builder_guard_test.go",
+        "engine/settings/doc.go",
+        "engine/settings/legacy_families_test.go",
+        "engine/settings/merge.go",
+        "engine/settings/status.go",
+        "engine/settings/settingsfile/builder_guard_test.go",
+        "engine/settings/settingsfile/golden_unix_test.go",
+        "engine/settings/settingsfile/settings_test.go",
+        "engine/runtime/claude_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the full diff.",
+      "Read engine/settings/family.go (owns, carries, missingParts) and engine/settings/quote.go (shellQuote) in the worktree.",
+      "The hook command is `command -v BIN >/dev/null 2>&1 && BIN roles builder-guard || true`. A missing binary, a crash or exit code 2 all end in exit 0, so the hook cannot block other Agent calls. A test runs this under sh for both the missing-binary and the exit-2 cases.",
+      "Foreign entries on the Agent matcher are kept byte for byte by install, update and uninstall. Ownership needs both the binary path and the identity token (family.go owns/carries). A test also covers an entry that runs our binary with another verb.",
+      "Status reads partial until install-hooks is re-run, because HasSupportedClaudeLifecycleState now requires HasBuilderGuard. Tests cover the missing, drifted and duplicate cases.",
+      "The target verb `roles builder-guard` exists at head in engine/cmd/roles_builder_guard.go, so the new entry does not point at a missing command.",
+      "I did not run any tests. Everything above comes from reading code and tests."
+    ]
+  }
+}

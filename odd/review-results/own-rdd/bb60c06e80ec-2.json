@@ -1,0 +1,72 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "c3fbe8ebc240abd398efe748bc8a321a91106cf7",
+    "head": "bb60c06e80ec2a38a58ff507d85d616092250d4f",
+    "diff_sha256": "f23ce6aedd12b3d975c74b3fa4a45375231a4d82a18ad994aa39fabfeec9182a",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "agents/shaper.md",
+      "bin/lib/hooks.sh",
+      "bin/lib/usage.sh",
+      "codex/agents/shaper.toml",
+      "engine/cmd/roles_builder_guard_docs_test.go",
+      "engine/cmd/usage.go",
+      "engine/skills/odd_role_skills_artifact_test.go",
+      "pi/agents/shaper.md",
+      "roles/shaper/body.md",
+      "skills/odd-feature-doc/SKILL.md"
+    ]
+  },
+  "rows": [
+    "default",
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "c3fbe8ebc240abd398efe748bc8a321a91106cf7",
+      "head": "bb60c06e80ec2a38a58ff507d85d616092250d4f",
+      "diff_sha256": "f23ce6aedd12b3d975c74b3fa4a45375231a4d82a18ad994aa39fabfeec9182a"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "agents/shaper.md",
+        "bin/lib/hooks.sh",
+        "bin/lib/usage.sh",
+        "codex/agents/shaper.toml",
+        "engine/cmd/roles_builder_guard_docs_test.go",
+        "engine/cmd/usage.go",
+        "engine/skills/odd_role_skills_artifact_test.go",
+        "pi/agents/shaper.md",
+        "roles/shaper/body.md",
+        "skills/odd-feature-doc/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "README.md:35",
+        "severity": "SUGGESTION",
+        "claim": "The edited README sentence for install-hooks opens a parenthesis, '(all', and its closing '(both below)' counterpart is gone. The surrounding text still reads '(all below)' only if the next line continues it, so the wording is awkward. The next line was not checked. This is a documentation nit with no behavioral impact.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "diff hunk README.md @@ -364,7 +364,7 @@"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff.",
+      "Compared the marking rule in the three shaper role files (roles/shaper/body.md, agents/shaper.md, pi/agents/shaper.md, codex/agents/shaper.toml) and in skills/odd-feature-doc/SKILL.md against the guard parser in engine/oddtask/oddtask.go.",
+      "The parser splits task lines on ' — ' and requires the segment to be exactly 'shaped: L<n>'. The skill example '— shaped: L2 — commit: -' matches this.",
+      "The parser matches Log entries with '- **L<n>** (YYYY-MM-DD, shaper)'. This is consistent with the documented '(<date>, shaper)' form.",
+      "The builder and delivery rows in the skill table forbid writing the mark. This matches the guard's intent.",
+      "Not run: the tests and the go build. I did not run anything, only read."
+    ]
+  }
+}

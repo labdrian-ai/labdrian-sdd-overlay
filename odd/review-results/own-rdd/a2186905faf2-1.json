@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "3f1387c6b27d93ebf4b74fb7f70cf3374113ebf7",
+    "head": "a2186905faf2151dd10e71fa55f34b4e09085bcb",
+    "diff_sha256": "9c0043748b0e4078a2267d582734f2fcc9fea4cf416dc5294f32fb495c5cd61f",
+    "paths": [
+      "engine/cmd/main_test.go",
+      "engine/cmd/phase8_acceptance_test.go"
+    ]
+  },
+  "rows": [
+    "default"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "3f1387c6b27d93ebf4b74fb7f70cf3374113ebf7",
+      "head": "a2186905faf2151dd10e71fa55f34b4e09085bcb",
+      "diff_sha256": "9c0043748b0e4078a2267d582734f2fcc9fea4cf416dc5294f32fb495c5cd61f"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/main_test.go",
+        "engine/cmd/phase8_acceptance_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/cmd/phase8_acceptance_test.go:269-300",
+        "claim": "phase8SameEntries sorts each event's hook list, so the repair check at the changed call site no longer notices a duplicated entry's position or a reordered list. It still catches a missing entry, an extra entry, or a changed value, because the sorted keys keep duplicates and every other key in the document is compared. The weakening is deliberate and documented in the helper comment: a repaired entry is re-appended at the end of its list. The loss of order checking is limited to this one assertion. Optionally, if hook order matters at runtime, assert that the repaired list differs from the original only by the position of the repaired entry.",
+        "severity": "SUGGESTION",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/phase8_acceptance_test.go:1207",
+          "diff lines 31-62"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff.",
+      "Confirmed sort, encoding/json and bytes are imported in phase8_acceptance_test.go. The bytes import is still used elsewhere, because the earlier phase8Read helper and the other uses in the file were not touched.",
+      "main_test.go change is a count bump from 12 to 13 plus its comment, consistent with the added builder guard entry.",
+      "The helper marshals the whole document and replaces only the hooks lists with sorted keys, so non-hook keys such as foreign settings stay compared byte-for-byte.",
+      "Not run: no tests were executed, per the read-only contract."
+    ]
+  }
+}
