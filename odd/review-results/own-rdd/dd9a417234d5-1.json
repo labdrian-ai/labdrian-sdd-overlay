@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f45be1e7fd020a4fb0a2b73c5fa292618c3f1fc8",
+    "head": "dd9a417234d59f202777bc36bae48ad3f9043071",
+    "diff_sha256": "7a3bde20ba151b2f756d24d3d2f8d4dd7e5e01bc790541f230873c51dced6168",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/review/app/app.go",
+      "engine/review/app/fakes_test.go",
+      "engine/review/exempt.go",
+      "engine/review/gitexec/gitexec.go",
+      "engine/review/gitexec/trailers_test.go",
+      "engine/review/risk.go",
+      "engine/review/risk_test.go"
+    ]
+  },
+  "rows": [
+    "default"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f45be1e7fd020a4fb0a2b73c5fa292618c3f1fc8",
+      "head": "dd9a417234d59f202777bc36bae48ad3f9043071",
+      "diff_sha256": "7a3bde20ba151b2f756d24d3d2f8d4dd7e5e01bc790541f230873c51dced6168"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/review/app/app.go",
+        "engine/review/app/fakes_test.go",
+        "engine/review/exempt.go",
+        "engine/review/gitexec/gitexec.go",
+        "engine/review/gitexec/trailers_test.go",
+        "engine/review/risk.go",
+        "engine/review/risk_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the full diff. I did not run or execute anything, so the tests are not run and no pass is claimed.",
+      "CheckRisk refactor: ParseRisk keeps the same grammar and the same error text. NoRisk gives an empty list, so CheckRisk returns nil for it as before, and high-risk items are still listed in written order. The new test TestCheckRiskKeepsItsMessagesAfterSharingTheParser pins the invalid and high-risk messages.",
+      "DeclaredRisk: it fails safe in each of the four failure cases (no trailer, more than one, wrapped, bad value), and the key match is case-insensitive. A key such as 'Risk ' with a space does not match, so the commit counts as having no trailer, which is the safe side.",
+      "gitexec.Trailers: the temp file is created outside the repository and removed with defer. The git call goes through the existing output helper, which has a timeout and clipped stderr. A non-trailer line in the --parse output is an error. The trailer is unfolded by --parse, which the oneLine check relies on.",
+      "gitexec.Message: uses --end-of-options and --no-show-signature, removes exactly one trailing newline, and errors when there is none.",
+      "The only implementers of app.Git are gitexec.Git and fakeGit, and both gained Message and Trailers. A grep for '(Standing)' found no other implementer.",
+      "Risk line none holds: nothing reads the new port methods yet, and the only shared code touched is CheckRisk, which has a differential test."
+    ]
+  }
+}

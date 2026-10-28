@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "dd9a417234d59f202777bc36bae48ad3f9043071",
+    "head": "ecd6248c99394108bb1f07e7924830a8ea98c687",
+    "diff_sha256": "2f87d8ab1134583d25280813e096b7cc40074e48993d61118a4cad6da55f5a74",
+    "paths": [
+      "odd/tasks/own-rdd.md"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git diff --name-only ecd6248c~1 ecd6248c",
+        "result": "pass",
+        "output": "only odd/tasks/own-rdd.md (T6b1 check-off, L50)"
+      }
+    ]
+  }
+}
