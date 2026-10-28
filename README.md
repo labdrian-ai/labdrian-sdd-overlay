@@ -691,7 +691,7 @@ overlay review <verb>
         writes nothing and the error names the rule. `check` clears an exempted head unless a stored result
         blocks it. Exit 0 stored, 2 report refused, 1 usage error, a risk that is refused or any other failure.
     sweep  --feature <name> --base <rev> --head <rev> [--cwd <repo>]
-        Run the checks T1 to T3 of the sweeper (skills/role-chain/SKILL.md) once on the one commit from --base
+        Run the checks T1 to T3 of the sweeper once on the one commit from --base
         to --head (--base must be the first parent of --head, as for `exempt`) and store their findings as
         odd/review-results/<feature>/<head12>-<n>.sweep.json, numbered with the other files of the head and never
         over an existing one. T1: the paths the commit deleted or renamed, and the names its removed lines

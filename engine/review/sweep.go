@@ -8,7 +8,7 @@ import (
 
 // This file is what the sweep of a commit computes from text, without git or any tool (own-rdd T6b2, S6 b): the names a
 // diff removed, and the findings of an analyzer that a diff added. `review sweep` hands it the lines and the output
-// of the tools; the checks themselves (T1-T3 of skills/role-chain/SKILL.md) run in the app.
+// of the tools; the checks themselves (T1-T3 of the sweeper) run in the app.
 
 // ChangedLines are the lines of one file that a diff removed, or that it added: the path as git prints it and the
 // lines without the leading '-' or '+'.

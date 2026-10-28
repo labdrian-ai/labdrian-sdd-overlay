@@ -33,7 +33,7 @@ type Swept struct {
 	NotFlushed error
 }
 
-// Sweep runs the checks T1 to T3 of the sweeper (skills/role-chain/SKILL.md) on the one commit from base to head, in the
+// Sweep runs the checks T1 to T3 of the sweeper on the one commit from base to head, in the
 // repository that holds dir (absolute), and stores their findings as the sweep record of the head in the results
 // directory of the feature (own-rdd T6b3, S6 b and c). The candidate is bound from git as Bind and Exempt bind it, and the
 // base is the first parent of the head (review.ErrNotOneCommit).

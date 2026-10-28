@@ -82,7 +82,7 @@ func TestRoleChainSkillIsWithinTheLintBudget(t *testing.T) {
 // parent runs around the sweeper: the sweep that finds the candidates, and the two records it stores.
 func TestRoleChainSweeperTriggerNamesTheSweepAndTheRecords(t *testing.T) {
 	_, _, body := roleChainSkill(t)
-	const want = "- Sweeper, on the builder's commit (`base` = parent): `labdrian review sweep --feature F --base B --head H` checks T1-T3; when it fires, launch the sweeper with its candidates and store its report with `labdrian review record --role sweeper`; when the commit's `Risk:` trailer names an item, store each polisher judge's findings with `labdrian review record --role polisher`."
+	const want = "- Sweeper, on the builder's commit (`base` = parent): `labdrian review sweep --feature F --base B --head H` runs T1-T3 (`labdrian --help`); if it fires, launch the sweeper on its candidates, store its report with `labdrian review record --role sweeper`; if the `Risk:` trailer names an item, store each polisher judge's findings with `labdrian review record --role polisher`."
 	if _, under := roleChainSections(body); !strings.Contains(under["Triggers"], want+"\n") {
 		t.Errorf("the Triggers section must carry the sweeper line, exactly:\n%s", want)
 	}
@@ -135,7 +135,7 @@ func roleChainDuties() []roleChainDuty {
 		{"Triggers", []string{
 			"does installed tool X behave as premise P says", "what is number N", "can X be done within the appetite",
 			"back to the asker", "lookup/spike box",
-			"checks T1-T3",
+			"runs T1-T3 (`labdrian --help`)",
 			"readability row", "docs, public API, messages or help", "second blind launch", "another `model`", "Risk line",
 		}},
 		{"Worktrees", []string{

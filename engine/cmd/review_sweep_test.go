@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"os"
 	"os/exec"
@@ -254,6 +255,53 @@ func TestUsageDocumentsReviewSweepAndTheRolesOfReviewRecord(t *testing.T) {
 	} {
 		if !strings.Contains(text, want) {
 			t.Errorf("usage lacks %q", want)
+		}
+	}
+}
+
+// The three places that define the checks of `review sweep` (own-rdd T6b7c, S6 g) say what T1 to T3
+// are, and none of them sends the reader to the role-chain skill, which does not define them.
+func TestUsageAndReadmeDefineTheChecksOfReviewSweep(t *testing.T) {
+	var out bytes.Buffer
+	usage(&out)
+	engine := strings.Join(strings.Fields(out.String()), " ")
+	flatFile := func(path string) string {
+		raw, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return strings.Join(strings.Fields(string(raw)), " ")
+	}
+	for _, place := range []struct {
+		name, text string
+		holds      []string
+	}{
+		{"the engine usage", engine, []string{
+			"runs the checks T1 to T3 of the sweeper once on the one commit",
+			"T1: the paths the commit deleted or renamed",
+			"T2: deadcode and staticcheck over each Go module the commit changes",
+			"T3: git status of the working tree as it is",
+		}},
+		{"bin/lib/usage.sh", flatFile("../../bin/lib/usage.sh"), []string{
+			"run the checks T1 to T3 of the sweeper once on the one commit",
+			"T1 the paths the commit deleted or renamed",
+			"T2 the new lines of deadcode, staticcheck and shellcheck",
+			"T3 the working tree's git status",
+		}},
+		{"README.md", flatFile("../../README.md"), []string{
+			"Run the checks T1 to T3 of the sweeper once on the one commit",
+			"T1: the paths the commit deleted or renamed",
+			"T2: `deadcode -test ./...` over each Go module",
+			"T3: `git status` of the working tree",
+		}},
+	} {
+		for _, want := range place.holds {
+			if !strings.Contains(place.text, want) {
+				t.Errorf("%s lacks %q", place.name, want)
+			}
+		}
+		if strings.Contains(place.text, "of the sweeper (skills/role-chain/SKILL.md)") {
+			t.Errorf("%s sends the reader to the skill for the definition of T1 to T3", place.name)
 		}
 	}
 }

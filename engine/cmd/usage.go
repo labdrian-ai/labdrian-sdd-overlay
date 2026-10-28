@@ -209,7 +209,7 @@ func usage(w io.Writer) {
 	fmt.Fprintln(w, "    The head's own Risk trailer must be 'Risk: none': a head whose trailer is missing, malformed or names an item is refused (exit 1) and nothing is stored.")
 	fmt.Fprintln(w, "    A declaration or a report that does not hold writes nothing and the error names the rule it broke. exit 0 stored, 2 report refused, 1 usage error, a risk that is refused or any other failure")
 	fmt.Fprintln(w, "  engine review sweep --feature <name> --base <rev> --head <rev> [--cwd <repo>]")
-	fmt.Fprintln(w, "    runs the checks T1 to T3 of the sweeper (skills/role-chain/SKILL.md) once on the one commit from --base to --head (--base must be the first parent of --head) and stores their findings as")
+	fmt.Fprintln(w, "    runs the checks T1 to T3 of the sweeper once on the one commit from --base to --head (--base must be the first parent of --head) and stores their findings as")
 	fmt.Fprintln(w, "    odd/review-results/<feature>/<head12>-<n>.sweep.json, numbered with the results of the head, never over an existing file. T1: the paths the commit deleted or renamed and the names its removed")
 	fmt.Fprintln(w, "    lines declared that its head still mentions outside the diff. T2: deadcode and staticcheck over each Go module the commit changes and shellcheck over the changed .sh files, on a copy of the base and a copy")
 	fmt.Fprintln(w, "    of the head kept under $XDG_STATE_HOME/labdrian/review-sweep/ (default ~/.local/state), a finding being new when its line occurs more times at the head. T3: git status of the working tree as it is, but for")
