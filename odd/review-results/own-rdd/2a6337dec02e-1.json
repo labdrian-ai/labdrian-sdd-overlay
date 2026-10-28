@@ -1,0 +1,82 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "0fc8959ca529758839d731a38c07eebe65f86c7a",
+    "head": "2a6337dec02e6d5ed7f6e330cdea4cf56786db8c",
+    "diff_sha256": "a7ed2252231136fab09e81241c9d7617d6ad0ce7d1f09e19b512e86ffec3c959",
+    "paths": [
+      "agents/builder.md",
+      "agents/sweeper.md",
+      "codex/agents/builder.toml",
+      "codex/agents/sweeper.toml",
+      "engine/skills/role_agents_artifact_test.go",
+      "engine/skills/role_chain_artifact_test.go",
+      "pi/agents/builder.md",
+      "pi/agents/sweeper.md",
+      "roles/builder/body.md",
+      "roles/sweeper/body.md",
+      "skills/role-chain/SKILL.md"
+    ]
+  },
+  "rows": [
+    "default",
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "0fc8959ca529758839d731a38c07eebe65f86c7a",
+      "head": "2a6337dec02e6d5ed7f6e330cdea4cf56786db8c",
+      "diff_sha256": "a7ed2252231136fab09e81241c9d7617d6ad0ce7d1f09e19b512e86ffec3c959"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "agents/builder.md",
+        "agents/sweeper.md",
+        "codex/agents/builder.toml",
+        "codex/agents/sweeper.toml",
+        "engine/skills/role_agents_artifact_test.go",
+        "engine/skills/role_chain_artifact_test.go",
+        "pi/agents/builder.md",
+        "pi/agents/sweeper.md",
+        "roles/builder/body.md",
+        "roles/sweeper/body.md",
+        "skills/role-chain/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "roles/sweeper/body.md:11-12",
+        "claim": "The sweeper prompt now has two consecutive 'Commit the sweep ...' instructions. The old line says 'one chore(sweep) commit or none, and report every candidate as removed | corrected | live | finding'. The new line says the same with a Risk trailer and a JSON report. The two report formats overlap, so the old prose report and the new JSON object could be read as competing, which is mild ambiguity. The same applies in the agents, pi and codex copies. No functional break was shown.",
+        "severity": "SUGGESTION",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "roles/sweeper/body.md:11-12 in the diff"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "skills/role-chain/SKILL.md:22",
+        "claim": "The Sweeper trigger line replaces the inline T1-T3 definitions (git diff --diff-filter=DR, rg -w, deadcode/staticcheck/shellcheck against a mktemp copy, git status --porcelain) with 'checks T1-T3'. T1-T3 are no longer defined anywhere in this skill. The new line also relies on the commands 'labdrian review sweep' and 'labdrian review record --role sweeper|polisher'. I found 'labdrian review sweep' only as a test name and a record kind, not as a verb. I did not confirm it is registered as a CLI verb. The updated test pins only the new wording. If the verb is not wired, the parent orchestrator is told to run a command that does not exist.",
+        "severity": "WARNING",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/role-chain/SKILL.md hunk at line 167 in the diff",
+          "engine/review/names_test.go:179",
+          "engine/review/rolerecords.go:359"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff of all 11 changed paths.",
+      "The builder and sweeper lines are identical across roles/, agents/, pi/agents/ and codex/agents/. The new tests pin the exact text with a count of one in each runtime file.",
+      "Declared Risk: 3 is right. The diff edits role prompts mirrored to three runtimes and a skill the parent orchestrator reads, and it changes what the builder must emit (a mandatory commit trailer, enforced by 'labdrian review check') and what the sweeper must return. That is mirrored prompts or contracts others already consume. No data, security, concurrency or delivery item (1, 2, 4, 5) is touched. Item 6 is not triggered, since the exact-text tests cover the new lines.",
+      "The changes to role_chain_artifact_test.go loosen the old duty fragments for T1-T3 and delete the pins on the individual detector commands. That is consistent with the skill rewrite, but the detector definitions are no longer pinned anywhere in this diff.",
+      "Nothing was run. Tests and the CLI verb registration were not executed or confirmed."
+    ]
+  }
+}

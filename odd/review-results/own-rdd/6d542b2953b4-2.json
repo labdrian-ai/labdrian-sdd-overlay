@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "46d6347782c814bcdc3813e758d26bda53533794",
+    "head": "6d542b2953b45147457f2bce0a8aa8b0c6f16cae",
+    "diff_sha256": "2eadf9483592f95a3891c861fb19e6d5b698f92f6660bacc06740f47fb29d15b",
+    "paths": [
+      "engine/cmd/review_check_test.go",
+      "engine/cmd/review_stop_hook_test.go",
+      "engine/cmd/review_test.go",
+      "engine/cmd/usage.go",
+      "engine/review/app/stop.go",
+      "engine/review/app/stop_test.go",
+      "engine/review/app/unreviewed_test.go",
+      "engine/review/fsstore/asked.go",
+      "engine/settings/review_stop.go"
+    ]
+  },
+  "rows": [
+    "default",
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "46d6347782c814bcdc3813e758d26bda53533794",
+      "head": "6d542b2953b45147457f2bce0a8aa8b0c6f16cae",
+      "diff_sha256": "2eadf9483592f95a3891c861fb19e6d5b698f92f6660bacc06740f47fb29d15b"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/review_check_test.go",
+        "engine/cmd/review_stop_hook_test.go",
+        "engine/cmd/review_test.go",
+        "engine/cmd/usage.go",
+        "engine/review/app/stop.go",
+        "engine/review/app/stop_test.go",
+        "engine/review/app/unreviewed_test.go",
+        "engine/review/fsstore/asked.go",
+        "engine/settings/review_stop.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the full diff of all 9 changed files, tests included. I did not run the code or the tests.",
+      "engine/review/app/stop.go: Stop() now keys markers as <base12>-<head12>-<need> and passes one key per need. once() blocks when any key is unrecorded and records only the missing keys.",
+      "engine/review/app/unreviewed.go:112-128: a Question is returned only when review.Needs(facts[i]) is non-empty. Needs is therefore never empty when ask is true, so the empty-keys case (which would never block) cannot occur.",
+      "engine/review/fsstore/asked.go checkKey: allows lowercase letters, digits and dashes up to 64 bytes. The longest new key is 12+1+12+1+8 = 34 bytes, and the fallback need<n> is also valid, so no key is rejected.",
+      "The noDefaultKey path is unchanged apart from being passed as a one-element slice.",
+      "Risk line: item 3 is correct and sufficient. The installed stop hook can now block again in the same session when a new need appears, such as the sweeper after a sweep fires. Markers under the old <base12>-<head12> key are no longer read, so an existing session is asked once more after upgrade. No stored data format, security surface or concurrency is changed. The keys live in per-session state outside the working tree.",
+      "Tests pin the new behavior: the sweeper is asked in the same session, a need already asked is not asked again, and the Add calls are exact. The storedName helper replaces a hard-coded -1.json name and reads the stored path from the record stderr line. The git-call assertion in unreviewed_test.go is tightened to the full walk."
+    ]
+  }
+}

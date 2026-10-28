@@ -1,0 +1,18 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "rg -c \"^Commit the sweep as\" roles/sweeper/body.md",
+      "output": "2 (head 2a6337de); the base 0fc8959c gives 1",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F2",
+      "result": "not-reproduced",
+      "command": "labdrian review sweep; labdrian review record --role sweeper </dev/null; labdrian review record --role polisher </dev/null; labdrian review nosuchverb (head binary built from 2a6337de, scratch state)",
+      "output": "error: review sweep: --feature is required (rc 1); error: review record: --feature is required (rc 1, both roles); contrast: error: review: unknown verb \"nosuchverb\" (expected bind, record, verify, check, exempt or sweep) (rc 1). sweep and record --role are registered verbs; also engine/cmd/review.go:72 case \"sweep\"",
+      "base_result": "not-run"
+    }
+  ]
+}

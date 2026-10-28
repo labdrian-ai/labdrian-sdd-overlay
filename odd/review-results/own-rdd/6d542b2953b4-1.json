@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "46d6347782c814bcdc3813e758d26bda53533794",
+    "head": "6d542b2953b45147457f2bce0a8aa8b0c6f16cae",
+    "diff_sha256": "2eadf9483592f95a3891c861fb19e6d5b698f92f6660bacc06740f47fb29d15b",
+    "paths": [
+      "engine/cmd/review_check_test.go",
+      "engine/cmd/review_stop_hook_test.go",
+      "engine/cmd/review_test.go",
+      "engine/cmd/usage.go",
+      "engine/review/app/stop.go",
+      "engine/review/app/stop_test.go",
+      "engine/review/app/unreviewed_test.go",
+      "engine/review/fsstore/asked.go",
+      "engine/settings/review_stop.go"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "46d6347782c814bcdc3813e758d26bda53533794",
+      "head": "6d542b2953b45147457f2bce0a8aa8b0c6f16cae",
+      "diff_sha256": "2eadf9483592f95a3891c861fb19e6d5b698f92f6660bacc06740f47fb29d15b"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/review_check_test.go",
+        "engine/cmd/review_stop_hook_test.go",
+        "engine/cmd/review_test.go",
+        "engine/cmd/usage.go",
+        "engine/review/app/stop.go",
+        "engine/review/app/stop_test.go",
+        "engine/review/app/unreviewed_test.go",
+        "engine/review/fsstore/asked.go",
+        "engine/settings/review_stop.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/review/app/stop_test.go:290",
+        "claim": "The test helper `kinds` only forwards to `lacks`, which is defined in unreviewed_test.go. It adds a second name for one thing and no meaning. Calling `lacks` directly would read more clearly.",
+        "severity": "SUGGESTION",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/app/stop_test.go:287-288",
+          "engine/review/app/unreviewed_test.go:180"
+        ]
+      }
+    ],
+    "evidence": [
+      "I read the full diff.",
+      "The `review.Missing` constants in engine/review/needs.go are Risk, Sweep, Sweeper, Polisher and Review. `needKey` maps all five and falls back to `need<n>`.",
+      "The longest key is 12+1+12+1+len(\"polisher\") = 34 bytes. That fits the 64-byte `maxKeyLen` in fsstore/asked.go, and the updated comment says 34.",
+      "`once` checks every key. It returns no block only when all keys are already marked. Otherwise it adds only the missing keys and returns the full `Ruling`, so the block still lists all needs.",
+      "A failing `Add` leaves the keys added before it in place, and the doc comment says so.",
+      "The new tests cover a later-appearing need (the sweeper after a sweep fires) and a need already asked. Their expected store-call lists match the code's order: Has for every key, then Add for the missing ones.",
+      "`recordBlocker` and `recordClean` now return the name `review record` prints on stderr, parsed by `storedName`. The callers still assert what they did. This drops the `slices` workaround in TestReviewStopHookCountsAReviewThatBlocksAsAReview.",
+      "The restored git-call test asserts the whole call list with exact equality, and the list follows the walk described in L66.",
+      "The pinned block texts are not in the diff. The only text changes are the usage line and doc comments, and they read clearly.",
+      "I ran no commands and no tests. This is a read-only review."
+    ]
+  }
+}
