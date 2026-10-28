@@ -331,6 +331,32 @@ func TestReviewStopHookNeverAsksAPassiveCommit(t *testing.T) {
 	s.requireNothingRemembered(t)
 }
 
+// A passive commit below an unreviewed one needs no record and is never asked: the first commit no review reaches is the
+// one above it, and the question names the passive commit as its base (T6b6b, L72).
+func TestReviewStopHookNeverAsksAPassiveCommitBelowAnUnreviewedOne(t *testing.T) {
+	s := newStopWorldWith(t, func(s *stopWorld) {
+		s.git("reset", "-q", "--hard", s.head)
+		overlaytest.WriteFile(s.t, s.root, "odd/tasks/own-rdd.md", "# own-rdd\n")
+		s.git("add", "-A")
+		s.git("commit", "-q", "-m", "docs", "-m", "Risk: none")
+		s.c3 = s.name("HEAD")
+		s.c4 = s.commitMore("c4.txt")
+		stdout, stderr, exits := s.sweepRun(s.t.TempDir(), "", "sweep", "--feature", "own-rdd", "--base", s.c3, "--head", s.c4)
+		if !equalInts(exits, []int{0}) || decodeSwept(s.t, stdout).Outcome != "clean" {
+			s.t.Fatalf("setup: review sweep of %s exit calls = %v, stdout = %q, stderr = %q; want [0] and a clean sweep", s.c4, exits, stdout, stderr)
+		}
+	})
+
+	s.requireReason("s1", blockReasonOf(s.c4, s.c3, reviewLine(s.c3, s.c4, exemptClause)))
+
+	if got, want := s.asked("s1"), []string{s.c3[:12] + "-" + s.c4[:12] + "-review"}; !reflect.DeepEqual(got, want) {
+		t.Errorf("the hook remembers %v, want %v", got, want)
+	}
+	if stored, _ := filepath.Glob(filepath.Join(s.results("own-rdd"), s.c3[:12]+"-*")); len(stored) > 0 {
+		t.Errorf("the passive commit %s has records %v, want none", s.c3, stored)
+	}
+}
+
 // The question of a repository that does not tell its default branch is worded as it always was.
 func TestReviewStopHookWordsTheNoDefaultBranchReasonAsItAlwaysDid(t *testing.T) {
 	s := newStopWorld(t)
