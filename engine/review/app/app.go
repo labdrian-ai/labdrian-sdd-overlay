@@ -54,6 +54,19 @@ type WorktreeState struct {
 	Head string
 }
 
+// Standing is where HEAD stands in its branch, as the stop hook asks about it (own-rdd T6a, S6).
+type Standing struct {
+	// Branch is the short name of the branch HEAD is on, and "" when HEAD is detached, which is all that is told then.
+	Branch string
+	// Default is the short name of the default branch of the repository, and "" when the repository does not tell
+	// which it is, which is all that is told then besides Branch.
+	Default string
+	// Commits are the commits of HEAD that the default branch does not have, whether it is the local branch or the
+	// one the remote keeps: the first-parent line of HEAD down to the commit it was made on, oldest first, each a full
+	// object name. None when HEAD is on the default branch or behind it.
+	Commits []string
+}
+
 // Git is the repository as the use cases ask about it. Every revision it is given has passed
 // review.CheckRev, and every commit it is given after Commit is a full object name. An implementation runs
 // git with an environment of its own and never with a command line a caller composed.
@@ -78,6 +91,10 @@ type Git interface {
 	Worktree(repo Repository, path string) (WorktreeState, error)
 	// AddWorktree makes path a detached worktree of the repository at the commit head.
 	AddWorktree(repo Repository, path, head string) error
+	// Standing says which branch HEAD is on, which branch is the default one (the branch origin/HEAD names, else main,
+	// else master, whichever the repository has) and the commits of HEAD the default branch does not have. It asks
+	// no more than it needs: a detached HEAD, and a repository with no default branch, are told without the commits.
+	Standing(repo Repository) (Standing, error)
 }
 
 // Results is the directory where the results of the reviews of a feature are stored, odd/review-results/

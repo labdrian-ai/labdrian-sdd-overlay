@@ -39,6 +39,7 @@ type fakeGit struct {
 	diff          []byte
 	paths         []string
 	parents       map[string]string // the first parent of a commit; none for a commit that is not a key
+	standing      app.Standing      // what Standing answers
 	worktree      app.WorktreeState
 	worktreeLater []worktreeAnswer
 	fail          map[string]error
@@ -139,6 +140,14 @@ func (g *fakeGit) Worktree(repo app.Repository, path string) (app.WorktreeState,
 func (g *fakeGit) AddWorktree(repo app.Repository, path, head string) error {
 	g.record("AddWorktree " + path + " " + head)
 	return g.fail["AddWorktree"]
+}
+
+func (g *fakeGit) Standing(repo app.Repository) (app.Standing, error) {
+	g.record("Standing")
+	if err := g.fail["Standing"]; err != nil {
+		return app.Standing{}, err
+	}
+	return g.standing, nil
 }
 
 // fakeResults is the Results port over a map: the names of a feature's directory and what was created.
