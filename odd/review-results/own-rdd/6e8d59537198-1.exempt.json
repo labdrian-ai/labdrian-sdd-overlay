@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "8ac65ed233c8ba752ad3ae120baf9ed528cb0061",
+    "head": "6e8d59537198d69cde9b722dd613505081a4e528",
+    "diff_sha256": "08627e35e7c6dfc5f1ce6e389c029f9de4f9f05494889e988bc2b1dd5469d79a",
+    "paths": [
+      "odd/tasks/own-rdd.md"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git diff --name-only 6e8d5953~1 6e8d5953",
+        "result": "pass",
+        "output": "only documentation changed: odd/tasks/own-rdd.md "
+      }
+    ]
+  }
+}
