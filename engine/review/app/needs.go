@@ -19,46 +19,63 @@ import (
 // failing trailer first and stops, so no pass follows, and the record's own refusal is met once the trailer holds.
 // Nothing is stored.
 func (s Service) commitFacts(repo Repository, feature string, names []string, commit string) (review.Facts, string, error) {
+	facts, parent, subject, err := s.gitFacts(repo, commit)
+	if err != nil || facts.Passive {
+		return facts, parent, err
+	}
+	if err := s.roleFacts(repo, feature, names, commit, parent, subject, facts.RiskErr != nil, &facts); err != nil {
+		return review.Facts{}, "", err
+	}
+	return facts, parent, nil
+}
+
+// gitFacts reads what git says of a commit and no record: its Risk trailer, whether it is passive (then Passive is set
+// and its paths are all that was read beyond the message), its first parent, "" when it has none, and its subject. A
+// commit that declares Risk: none and has no parent is refused, as what it changes cannot be told.
+func (s Service) gitFacts(repo Repository, commit string) (review.Facts, string, string, error) {
 	parent, err := s.git.Parent(repo, commit)
 	if err != nil {
-		return review.Facts{}, "", fmt.Errorf("find the first parent of %s: %w", commit, err)
+		return review.Facts{}, "", "", fmt.Errorf("find the first parent of %s: %w", commit, err)
 	}
 	message, err := s.git.Message(repo, commit)
 	if err != nil {
-		return review.Facts{}, "", fmt.Errorf("read the message of %s: %w", commit, err)
+		return review.Facts{}, "", "", fmt.Errorf("read the message of %s: %w", commit, err)
 	}
 	trailers, err := s.git.Trailers(repo, message)
 	if err != nil {
-		return review.Facts{}, "", fmt.Errorf("read the trailers of %s: %w", commit, err)
+		return review.Facts{}, "", "", fmt.Errorf("read the trailers of %s: %w", commit, err)
 	}
 	risk, riskErr := review.DeclaredRisk(commit, message, trailers)
 	facts := review.Facts{Commit: commit, Risk: risk, RiskErr: riskErr}
 	if riskErr == nil && len(risk) == 0 {
 		if parent == "" {
-			return review.Facts{}, "", fmt.Errorf("the commit %s has no parent, so what it changes cannot be told", commit)
+			return review.Facts{}, "", "", fmt.Errorf("the commit %s has no parent, so what it changes cannot be told", commit)
 		}
 		paths, err := s.git.Paths(repo, parent, commit)
 		if err != nil {
-			return review.Facts{}, "", fmt.Errorf("list the paths of %s..%s: %w", parent, commit, err)
+			return review.Facts{}, "", "", fmt.Errorf("list the paths of %s..%s: %w", parent, commit, err)
 		}
 		removed, err := s.git.DeletedOrRenamed(repo, parent, commit)
 		if err != nil {
-			return review.Facts{}, "", fmt.Errorf("list the paths %s deletes or renames: %w", commit, err)
+			return review.Facts{}, "", "", fmt.Errorf("list the paths %s deletes or renames: %w", commit, err)
 		}
-		if facts.Passive = review.IsPassive(risk, riskErr, paths, removed); facts.Passive {
-			return facts, parent, nil
-		}
+		facts.Passive = review.IsPassive(risk, riskErr, paths, removed)
 	}
 	subject, _, _ := strings.Cut(message, "\n")
+	return facts, parent, subject, nil
+}
+
+// roleFacts fills in what the records of one feature say about commit: whether it is a sweep commit, and what readRoles
+// reads. subject and parent come from gitFacts. A record that does not read back or hold counts as absent when lenient is
+// true.
+func (s Service) roleFacts(repo Repository, feature string, names []string, commit, parent, subject string, lenient bool, facts *review.Facts) error {
 	if parent != "" && review.CheckSweepCommit(parent, commit, parent, subject) == nil {
-		if facts.SweepCommit, err = s.namedBySweeper(repo, feature, names, parent, commit, riskErr != nil); err != nil {
-			return review.Facts{}, "", err
+		var err error
+		if facts.SweepCommit, err = s.namedBySweeper(repo, feature, names, parent, commit, lenient); err != nil {
+			return err
 		}
 	}
-	if err := s.readRoles(repo, feature, names, commit, &facts, riskErr != nil); err != nil {
-		return review.Facts{}, "", err
-	}
-	return facts, parent, nil
+	return s.readRoles(repo, feature, names, commit, facts, lenient)
 }
 
 // readRoles fills in what the records of the roles say about commit: the latest sweep that holds and whether it fired,
