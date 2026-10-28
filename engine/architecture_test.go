@@ -146,6 +146,13 @@ import (
 //   - review/fsstore is the adapter of the Results port of review/app (own-rdd T2): the directory
 //     odd/review-results/<feature>/ of a repository, walked without following a symlink and written on
 //     atomicfile, never over a file that is there.
+//   - oddtask is a domain package (own-rdd T11): what the builder guard decides from, the Spec: line a builder
+//     prompt cites and the task lines, shaped marks and shaper Log entries of a feature document, and the pure
+//     rule that says whether the builder may be launched. It reads no file and runs no command.
+//   - oddtask/app is the use case of the builder guard (own-rdd T11): it joins the citation of a prompt, the
+//     feature document it names (the Documents port) and the decision of oddtask.
+//   - oddtask/fsdoc is the adapter of the Documents port of oddtask/app: it reads the feature document from the
+//     file system, as a regular file that is not a link and is at most 8 MiB.
 //   - repotest is test support: the hand-made repositories the tests of gitfs and cmd share.
 //   - piguard is test support: the `pi` that refuses to run, put first on the PATH of a test
 //     run by a TestMain, so nothing started by accident reaches the real CLI.
@@ -186,6 +193,9 @@ var rings = map[string]archguard.Ring{
 	"guardmarkers":              archguard.Domain,
 	"jsonstrict":                archguard.Domain,
 	"memoryscope":               archguard.Domain,
+	"oddtask":                   archguard.Domain,
+	"oddtask/app":               archguard.Application,
+	"oddtask/fsdoc":             archguard.Adapter,
 	"overlaytest":               archguard.Support,
 	"pathguard":                 archguard.Domain,
 	"pathguard/fsresolve":       archguard.Adapter,
