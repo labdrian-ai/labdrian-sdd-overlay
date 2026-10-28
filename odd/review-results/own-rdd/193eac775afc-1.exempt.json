@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "9dfe2541f8d1a4457e20dbab618178c921f24492",
+    "head": "193eac775afc75ce4b851dce36f84a425359e06e",
+    "diff_sha256": "d5a1fed0a30581cbff169a2eea22f591deb46f53966b702aba72ecb47b94da55",
+    "paths": [
+      "odd/review-results/own-rdd/9dfe2541f8d1-1.exempt.json",
+      "skills/odd-feature-doc/.approval.json"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git diff --name-only 193eac77~1 193eac77",
+        "result": "pass",
+        "output": "only the owner approval record skills/odd-feature-doc/.approval.json and one odd/review-results exemption changed"
+      }
+    ]
+  }
+}

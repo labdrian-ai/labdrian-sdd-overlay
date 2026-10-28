@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "acd93c33de6973d6f43979f64a269ee66cff857f",
+    "head": "96cce6a77d2068dd1efd14afb75c22f1197df346",
+    "diff_sha256": "d8ff0c9fb6b18833f548d4db77f2ed5fb2f78746900685cf52a80cb70b00917e",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/cmd/roles_builder_guard_test.go",
+      "engine/oddtask/oddtask.go",
+      "engine/oddtask/oddtask_test.go"
+    ]
+  },
+  "rows": [
+    "default",
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "acd93c33de6973d6f43979f64a269ee66cff857f",
+      "head": "96cce6a77d2068dd1efd14afb75c22f1197df346",
+      "diff_sha256": "d8ff0c9fb6b18833f548d4db77f2ed5fb2f78746900685cf52a80cb70b00917e"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/cmd/roles_builder_guard_test.go",
+        "engine/oddtask/oddtask.go",
+        "engine/oddtask/oddtask_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the full diff. The citation regex `taskID` and the task-line regex `taskLine` are both widened to `T[0-9]+[a-z0-9]*`. Both are consistent with each other.",
+      "Read /home/labdrian/labdrian-sdd-overlay-worktrees/review-96cce6a77d20/engine/oddtask/oddtask.go. The task-line regex requires ` — ` after the id, so the document lookup keys on the whole id and a prefix such as T6b cannot match the line T6b1. The tests pin this in both directions.",
+      "Grepped the worktree outside odd/ for the old grammar `T[0-9]+[a-z]`. No other consumer of the old grammar was found.",
+      "The new tests cover valid ids (T6b1, T1ab) and invalid ones (capital letters, a hyphen, a lowercase t, a bare T, letters before the digits). The widened grammar admits only [a-z0-9] after the digits, so there is no path-escape, injection or exec surface.",
+      "Risk 3: the change only widens what is accepted. Ids that were valid before still match. The old rejection test for T1ab was deliberately replaced by an acceptance test. The guard stays fail-closed because an unknown or prefix id is still denied.",
+      "I did not run any tests (not run)."
+    ]
+  }
+}

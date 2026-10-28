@@ -19,7 +19,8 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/oddtask"
 )
 
-const bgDoc = "## Tasks\n\n- [ ] T1 — S14 — delegated — designed — shaped: L5 — commit: -\n- [ ] T2 — S14 — delegated — not designed — commit: -\n\n" +
+const bgDoc = "## Tasks\n\n- [ ] T1 — S14 — delegated — designed — shaped: L5 — commit: -\n- [ ] T2 — S14 — delegated — not designed — commit: -\n" +
+	"- [ ] T6b1 — S14 — delegated — lettered and numbered — shaped: L5 — commit: -\n- [ ] T6b — S14 — delegated — prefix, not designed — commit: -\n\n" +
 	"## Log\n\n- **L5** (2026-10-28, shaper): design\n"
 
 // bgRepo is a repository whose odd/tasks/f.md is bgDoc; it returns its root.
@@ -65,6 +66,16 @@ func TestBuilderGuardAllowsABuilderLaunchOnATaskTheShaperDesigned(t *testing.T) 
 		"an absolute path": "Spec: " + filepath.Join(root, "odd", "tasks", "f.md") + ", T1",
 	} {
 		assertGuardSilent(t, name, bgRun(bgCall(t, root, "builder", prompt)))
+	}
+}
+
+func TestBuilderGuardAllowsABuilderLaunchCitingATaskIdWithLettersAndDigits(t *testing.T) {
+	root := bgRepo(t)
+	assertGuardSilent(t, "T6b1", bgRun(bgCall(t, root, "builder", "Spec: odd/tasks/f.md, T6b1, S6")))
+	// T6b1 is designed; T6b is its prefix and is not: the lookup is by the whole id.
+	reason := decodeGuardDenial(t, bgRun(bgCall(t, root, "builder", "Spec: odd/tasks/f.md, T6b, S6")))
+	if !strings.Contains(reason, "task T6b of ") || !strings.Contains(reason, "is not marked as designed by the shaper") {
+		t.Fatalf("reason = %q, want T6b refused as not designed", reason)
 	}
 }
 

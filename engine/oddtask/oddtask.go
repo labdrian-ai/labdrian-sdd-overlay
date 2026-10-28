@@ -33,7 +33,7 @@ type Citation struct {
 const specPrefix = "Spec: "
 
 var (
-	taskID      = regexp.MustCompile(`^T[0-9]+[a-z]?$`)
+	taskID      = regexp.MustCompile(`^T[0-9]+[a-z0-9]*$`)
 	specRef     = regexp.MustCompile(`^S[0-9]+(-S[0-9]+)?$`)
 	featureName = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*$`)
 )
@@ -41,7 +41,7 @@ var (
 // ParseCitation reads the "Spec:" line of a prompt: exactly one line that, after its leading white
 // space and a trailing carriage return are dropped, starts "Spec: " and reads
 // "Spec: <path>, <item>[, <item>...]". The path, cleaned, ends in odd/tasks/<feature>.md; an item is a
-// task id (T<digits>[a-z]) or a spec reference (S<digits> or S<digits>-S<digits>), and at least one is
+// task id (T<digits> followed by lowercase letters and digits) or a spec reference (S<digits> or S<digits>-S<digits>), and at least one is
 // a task id. The Reason is empty when the prompt cites tasks.
 func ParseCitation(prompt string) (Citation, Reason) {
 	var line string
@@ -102,7 +102,7 @@ type Document struct {
 }
 
 var (
-	taskLine   = regexp.MustCompile(`^- \[[ x]\] (T[0-9]+[a-z]?) — `)
+	taskLine   = regexp.MustCompile(`^- \[[ x]\] (T[0-9]+[a-z0-9]*) — `)
 	shapedMark = regexp.MustCompile(`^shaped: L([1-9][0-9]*)$`)
 	shaperLog  = regexp.MustCompile(`^- \*\*L([1-9][0-9]*)\*\* \([0-9]{4}-[0-9]{2}-[0-9]{2}, shaper\)`)
 )

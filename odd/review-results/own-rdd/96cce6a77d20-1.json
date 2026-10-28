@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "acd93c33de6973d6f43979f64a269ee66cff857f",
+    "head": "96cce6a77d2068dd1efd14afb75c22f1197df346",
+    "diff_sha256": "d8ff0c9fb6b18833f548d4db77f2ed5fb2f78746900685cf52a80cb70b00917e",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/cmd/roles_builder_guard_test.go",
+      "engine/oddtask/oddtask.go",
+      "engine/oddtask/oddtask_test.go"
+    ]
+  },
+  "rows": [
+    "default"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "acd93c33de6973d6f43979f64a269ee66cff857f",
+      "head": "96cce6a77d2068dd1efd14afb75c22f1197df346",
+      "diff_sha256": "d8ff0c9fb6b18833f548d4db77f2ed5fb2f78746900685cf52a80cb70b00917e"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/cmd/roles_builder_guard_test.go",
+        "engine/oddtask/oddtask.go",
+        "engine/oddtask/oddtask_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the full diff. The citation regex `^T[0-9]+[a-z0-9]*$` is anchored at both ends. The task-line regex `(T[0-9]+[a-z0-9]*) — ` captures the whole id, which the literal ` — ` separator ends. This matches the intended grammar.",
+      "Read the worktree's engine/oddtask/oddtask.go. Both regexes are as in the diff. Task lookup is by the captured whole id, so T6b does not match a T6b1 line. No other use of the old `T[0-9]+[a-z]` pattern remains in code. The only grep hit is a long line in odd/tasks/own-rdd.md, which is documentation.",
+      "The tests cover the widened grammar in both directions: T6b1, T11a, T11 and T1ab cite, while T6B1, T6-b, t6, bare T and Tb1 are refused. T6b and T6b1 are not confused in either direction, in oddtask_test.go and in the guard command test.",
+      "The old test 'a task with two letters' (T1ab refused) was removed and replaced by an accepting case. That matches the intended widening.",
+      "The widening only accepts more ids. A malformed id is still denied, since only a stricter or looser match on the id grammar changes behavior. The guard still reads text only and adds no exec, net or path surface.",
+      "Not run: no tests or commands were executed, because this review is read-only."
+    ]
+  }
+}

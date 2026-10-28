@@ -25,6 +25,10 @@ func TestParseCitationReadsTheSpecLine(t *testing.T) {
 			"\t  Spec: odd/tasks/a.b_c-1.md, T7\r\nrest",
 			oddtask.Citation{Path: "odd/tasks/a.b_c-1.md", Tasks: []string{"T7"}},
 		},
+		"a task id with letters and digits after the number": {
+			"Spec: odd/tasks/f.md, T6b1, T11a, T11, T1ab, S6",
+			oddtask.Citation{Path: "odd/tasks/f.md", Tasks: []string{"T6b1", "T11a", "T11", "T1ab"}},
+		},
 		"a path that is cleaned": {
 			"Spec: /r/odd/x/../tasks/./f.md, T1",
 			oddtask.Citation{Path: "/r/odd/tasks/f.md", Tasks: []string{"T1"}},
@@ -59,8 +63,12 @@ func TestParseCitationRefusesWhatIsNotOneCitation(t *testing.T) {
 		"no item":                                {"Spec: odd/tasks/f.md", bad},
 		"only specs":                             {"Spec: odd/tasks/f.md, S14", bad},
 		"an item that is neither":                {"Spec: odd/tasks/f.md, T1, fix", bad},
-		"a task with two letters":                {"Spec: odd/tasks/f.md, T1ab", bad},
 		"a task in capitals":                     {"Spec: odd/tasks/f.md, T1A", bad},
+		"a capital after the digits":             {"Spec: odd/tasks/f.md, T6B1", bad},
+		"a hyphen after the digits":              {"Spec: odd/tasks/f.md, T6-b", bad},
+		"a lower case t":                         {"Spec: odd/tasks/f.md, t6", bad},
+		"a bare T":                               {"Spec: odd/tasks/f.md, T", bad},
+		"letters before the digits":              {"Spec: odd/tasks/f.md, Tb1", bad},
 		"a spec range without its second S":      {"Spec: odd/tasks/f.md, T1, S1-2", bad},
 		"an empty item":                          {"Spec: odd/tasks/f.md, T1, ", bad},
 		"not a feature document directory":       {"Spec: docs/f.md, T1", bad},
@@ -182,6 +190,28 @@ func TestDecideDoesNotTakeATaskForItsPrefix(t *testing.T) {
 	d := oddtask.ParseDocument(doc([]string{"- [ ] T11a — S1 — x — shaped: L38 — commit: -"}, []string{shaperL38}))
 	if got, want := oddtask.Decide(p, d, []string{"T11"}), oddtask.Reason("task T11 is not in the ## Tasks section of "+p); got != want {
 		t.Fatalf("Decide(T11) = %q, want %q", got, want)
+	}
+}
+
+func TestDecideMatchesATaskByItsWholeIdInBothDirections(t *testing.T) {
+	const p = "/r/odd/tasks/f.md"
+	only6b1 := oddtask.ParseDocument(doc([]string{"- [ ] T6b1 — S1 — x — shaped: L38 — commit: -"}, []string{shaperL38}))
+	only6b := oddtask.ParseDocument(doc([]string{"- [x] T6b — S1 — x — shaped: L38 — commit: -"}, []string{shaperL38}))
+	cases := []struct {
+		name string
+		d    oddtask.Document
+		task string
+		want oddtask.Reason
+	}{
+		{"T6b1 is found by its id", only6b1, "T6b1", ""},
+		{"T6b does not find the line T6b1", only6b1, "T6b", "task T6b is not in the ## Tasks section of " + p},
+		{"T6b1 does not find the line T6b", only6b, "T6b1", "task T6b1 is not in the ## Tasks section of " + p},
+		{"T6b is found by its id", only6b, "T6b", ""},
+	}
+	for _, c := range cases {
+		if got := oddtask.Decide(p, c.d, []string{c.task}); got != c.want {
+			t.Errorf("%s: Decide(%s) = %q, want %q", c.name, c.task, got, c.want)
+		}
 	}
 }
 

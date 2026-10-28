@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "04d5afdbf2efcd3e6db69d92c92d644800714b5c",
+    "head": "acd93c33de6973d6f43979f64a269ee66cff857f",
+    "diff_sha256": "869baec074fe5e6df88abb8c1794dbbca411ea2de0eee175aa0d95599b371c38",
+    "paths": [
+      "odd/review-results/own-rdd/193eac775afc-1.exempt.json",
+      "odd/tasks/own-rdd.md"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git diff --name-only acd93c33~1 acd93c33",
+        "result": "pass",
+        "output": "only odd/ changed: odd/tasks/own-rdd.md (T11g design, L46, L47) and one odd/review-results exemption"
+      }
+    ]
+  }
+}
