@@ -411,6 +411,45 @@ func TestParsePolisherFindingsRefusesWhatIsNotTheObject(t *testing.T) {
 	}
 }
 
+// The size bound holds the input only (S6 c, L52): the stored file is indented, so it can be larger than the reply.
+func TestPolisherRecordOfAReplyNearTheLimitReadsBack(t *testing.T) {
+	findings := `{"findings":[{"evidence":["a"],"note":[` + strings.Repeat(`"a",`, 200000) + `"a"]}]}`
+	if len(findings) > review.MaxReplyBytes {
+		t.Fatalf("the test reply has %d bytes, want at most %d", len(findings), review.MaxReplyBytes)
+	}
+	data, err := review.EncodePolisher(candidate(t), []byte(findings))
+	if err != nil {
+		t.Fatalf("EncodePolisher() error = %v, want nil", err)
+	}
+	if len(data) <= review.MaxReplyBytes {
+		t.Fatalf("the stored file has %d bytes, want more than %d to pin the case", len(data), review.MaxReplyBytes)
+	}
+	got, err := review.DecodePolisher(data)
+	if err != nil {
+		t.Fatalf("DecodePolisher(what EncodePolisher wrote) error = %v, want nil", err)
+	}
+	var back, want any
+	_ = json.Unmarshal(got.Findings, &back)
+	_ = json.Unmarshal([]byte(findings), &want)
+	if !jsonEqual(back, want) {
+		t.Errorf("DecodePolisher() findings differ from the ones stored")
+	}
+}
+
+// Indentation grows with nesting, so a small deep reply can become a file the store refuses to read: it is refused at
+// encode time and nothing is stored.
+func TestEncodePolisherRefusesWhatWouldBeStoredOverTheStoredLimit(t *testing.T) {
+	const depth = 5000
+	findings := `{"findings":[{"evidence":["a"],"note":` + strings.Repeat("[", depth) + strings.Repeat("]", depth) + `}]}`
+	if len(findings) > review.MaxReplyBytes {
+		t.Fatalf("the test reply has %d bytes, want at most %d", len(findings), review.MaxReplyBytes)
+	}
+	data, err := review.EncodePolisher(candidate(t), []byte(findings))
+	if !errors.Is(err, review.ErrReplyTooLarge) || data != nil {
+		t.Errorf("EncodePolisher(deeply nested) = %d bytes, %v, want nothing and an error that is %v", len(data), err, review.ErrReplyTooLarge)
+	}
+}
+
 func TestPolisherRecordIsTheFindingsVerbatimWithTheBinding(t *testing.T) {
 	c := candidate(t)
 	data, err := review.EncodePolisher(c, []byte(polisherFindings))

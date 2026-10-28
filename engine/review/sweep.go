@@ -17,20 +17,24 @@ type ChangedLines struct {
 	Lines []string
 }
 
-// The declarations of a name that RemovedNames reads, one per line, from the start of the line. They are the
-// shapes S6 (b) lists, nothing more: a name declared inside a grouped `const (` or `var (` block, or by a form these
-// do not match, is not found (an assumption of S6 b: the skill's "removed name" is not defined).
+// The declarations of a name that RemovedNames reads, one per line. They are the shapes S6 (b) lists, nothing more.
+// A Go declaration is read only when it starts the line (column 0, where gofmt writes a package-level declaration):
+// a declaration local to a function (`var err error` in a body) and a name inside a grouped `const (` or `var (`
+// block are indented, so they are not read (a known limit of S6 b, L52: a removed grouped name is not swept). A
+// shell declaration may be indented, since a function defined inside another is global once run. A form these do
+// not match is not found either (an assumption of S6 b: the skill's "removed name" is not defined).
 var (
-	goFunc  = regexp.MustCompile(`^\s*func\s+(?:\([^)]*\)\s*)?([A-Za-z_]\w*)`)
-	goType  = regexp.MustCompile(`^\s*type\s+([A-Za-z_]\w*)`)
-	goNames = regexp.MustCompile(`^\s*(?:const|var)\s+([A-Za-z_]\w*(?:\s*,\s*[A-Za-z_]\w*)*)`)
+	goFunc  = regexp.MustCompile(`^func\s+(?:\([^)]*\)\s*)?([A-Za-z_]\w*)`)
+	goType  = regexp.MustCompile(`^type\s+([A-Za-z_]\w*)`)
+	goNames = regexp.MustCompile(`^(?:const|var)\s+([A-Za-z_]\w*(?:\s*,\s*[A-Za-z_]\w*)*)`)
 	shKey   = regexp.MustCompile(`^\s*function\s+([A-Za-z_]\w*)`)
 	shParen = regexp.MustCompile(`^\s*([A-Za-z_]\w*)\s*\(\)`)
 )
 
 // RemovedNames is the names declared on a removed line of a .go or .sh file that no added line of the diff declares
-// again, once each, in alphabetical order: a function (or method), a type, a constant or a variable of Go, and a
-// function of shell (`N()` or `function N`). The blank name `_` is not one. A file of another kind declares nothing.
+// again, once each, in alphabetical order: a function (or method), a type, a constant or a variable of Go declared at
+// column 0 (not a local or a grouped entry), and a function of shell (`N()` or `function N`, possibly indented). The
+// blank name `_` is not one. A file of another kind declares nothing.
 func RemovedNames(removed, added []ChangedLines) []string {
 	again := map[string]bool{}
 	for _, name := range declaredNames(added) {

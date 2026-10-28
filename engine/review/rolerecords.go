@@ -415,11 +415,17 @@ func DecodeSweeper(data []byte) (StoredSweeper, error) {
 // one JSON object with a findings array of objects, each with an evidence that is a non-empty array of non-empty
 // strings. It checks nothing else: the severities are not pinned, so no finding blocks (S6 h). It returns the object
 // as it was given. A reply over MaxReplyBytes is refused with an error that wraps ErrReplyTooLarge, any other that is
-// not the object with one that wraps ErrInvalidPolisherFindings.
+// not the object with one that wraps ErrInvalidPolisherFindings. The size bound holds the input only: a stored file is
+// indented, so DecodePolisher checks the shape alone (checkPolisherShape).
 func ParsePolisherFindings(data []byte) (json.RawMessage, error) {
 	if len(data) > MaxReplyBytes {
 		return nil, fmt.Errorf("%w: %d bytes, at most %d", ErrReplyTooLarge, len(data), MaxReplyBytes)
 	}
+	return checkPolisherShape(data)
+}
+
+// checkPolisherShape is the shape ParsePolisherFindings holds the findings to, without the size bound.
+func checkPolisherShape(data []byte) (json.RawMessage, error) {
 	refuse := func(format string, args ...any) error {
 		return fmt.Errorf("%w: %s", ErrInvalidPolisherFindings, fmt.Sprintf(format, args...))
 	}
@@ -456,13 +462,22 @@ type polisherFile struct {
 }
 
 // EncodePolisher is the content of the file that stores the findings of one polisher judge: the object as it was
-// given, which ParsePolisherFindings must accept, with the binding of c.
+// given, which ParsePolisherFindings must accept, with the binding of c. The file is indented, so it can be larger than
+// the findings (deep nesting most of all): one over MaxStoredBytes is refused with an error that wraps
+// ErrReplyTooLarge and nothing is stored, so a record that is stored always reads back.
 func EncodePolisher(c Candidate, findings []byte) ([]byte, error) {
 	object, err := ParsePolisherFindings(findings)
 	if err != nil {
 		return nil, err
 	}
-	return encodeFile(kindPolisher, polisherFile{Kind: kindPolisher, Base: c.Base, Head: c.Head, DiffSHA256: c.DiffSHA256, Findings: object})
+	data, err := encodeFile(kindPolisher, polisherFile{Kind: kindPolisher, Base: c.Base, Head: c.Head, DiffSHA256: c.DiffSHA256, Findings: object})
+	if err != nil {
+		return nil, err
+	}
+	if len(data) > MaxStoredBytes {
+		return nil, fmt.Errorf("%w: the stored file would be %d bytes, at most %d", ErrReplyTooLarge, len(data), MaxStoredBytes)
+	}
+	return data, nil
 }
 
 // StoredPolisher is stored polisher findings as DecodePolisher reads them back.
@@ -472,7 +487,9 @@ type StoredPolisher struct {
 }
 
 // DecodePolisher reads a file that EncodePolisher wrote, as DecodeSweep reads a sweep: a file that is not one, or
-// whose findings ParsePolisherFindings refuses, is refused with an error that wraps ErrInvalidStored.
+// whose findings are not of the shape ParsePolisherFindings requires, is refused with an error that wraps
+// ErrInvalidStored. The size of the findings is not checked: the stored file is indented and the store bounds the
+// read by MaxStoredBytes.
 func DecodePolisher(data []byte) (StoredPolisher, error) {
 	var file polisherFile
 	if err := decodeFile(data, "stored polisher findings", &file); err != nil {
@@ -481,7 +498,7 @@ func DecodePolisher(data []byte) (StoredPolisher, error) {
 	b := RecordBinding{Base: file.Base, Head: file.Head, DiffSHA256: file.DiffSHA256}
 	err := checkRecordBinding(file.Kind, kindPolisher, b)
 	if err == nil {
-		_, err = ParsePolisherFindings(file.Findings)
+		_, err = checkPolisherShape(file.Findings)
 	}
 	if err != nil {
 		return StoredPolisher{}, fmt.Errorf("%w: stored polisher findings: %v", ErrInvalidStored, err)
