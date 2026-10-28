@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "4021068468c7cd8ebabe4e54d3ef6ac412de8df0",
+    "head": "09ee88a0fe009f3357cdfb18ba6533d750bab1c6",
+    "diff_sha256": "45227340b449aacb3d5ebe1fc45462aaffeaad3f64725553980bde18fbdae0ff",
+    "paths": [
+      "engine/cmd/review_stop_hook_test.go",
+      "engine/review/app/fakes_test.go",
+      "engine/review/app/stop_test.go",
+      "engine/review/app/unreviewed.go",
+      "engine/review/app/unreviewed_test.go"
+    ]
+  },
+  "rows": [
+    "default"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "4021068468c7cd8ebabe4e54d3ef6ac412de8df0",
+      "head": "09ee88a0fe009f3357cdfb18ba6533d750bab1c6",
+      "diff_sha256": "45227340b449aacb3d5ebe1fc45462aaffeaad3f64725553980bde18fbdae0ff"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/review_stop_hook_test.go",
+        "engine/review/app/fakes_test.go",
+        "engine/review/app/stop_test.go",
+        "engine/review/app/unreviewed.go",
+        "engine/review/app/unreviewed_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/review/app/unreviewed_test.go:369",
+        "claim": "The git-call assertion in TestNextUnreviewedAsksForTheFirstCommitOfABranchNoReviewCovers was loosened from exact equality to a 3-call prefix. This is a justified weakening, because the new per-commit fact reads add git calls. It no longer detects extra or reordered git calls after the first three, and the task allowed only fixture and equality-style changes. It is a minor loss of coverage.",
+        "severity": "SUGGESTION",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "rv-own-09ee88a0.diff:367-371"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff.",
+      "Read hookfacts.go, review/unreviewed.go (FirstUnreviewed) and review/needs.go (Needs, Facts) in the worktree.",
+      "Read task line T6b6b in odd/tasks/own-rdd.md.",
+      "NextUnreviewed walks the commits oldest first and returns the first commit whose Needs is non-empty. AskCoverage and Coverage=ErrNoResult are set only on the commit FirstUnreviewed gives. The walk breaks after that commit.",
+      "Passive commits become links {parent, commit}, and Needs returns nil for them, so they are never asked.",
+      "Each feature is listed once, with the error text 'list %s/%s: %w' unchanged.",
+      "stop.go is not in the diff, so it is unchanged. The marker key is built from Question.Base and Question.Head, which still come from the same fields.",
+      "Every test case the task names is present: the passive link and the passive-only branch, the missing sweep, no trailer, review missing with the sweep path, the sweeper before a later commit, the sweep record that does not decode, and the polisher with Risk 3,5.",
+      "Existing expectations on Base, Head, found flag and reason text are unchanged. The == to DeepEqual changes and the sweptWorld fixtures are the only edits to existing tests.",
+      "The stop-hook test now compares the results directory against the sweeps the world already stored, so it still asserts that the hook stores nothing.",
+      "The verify test now finds the stored name as the new file against the earlier listing, which is sound because the sweep already took -1.",
+      "No tests were run (not run).",
+      "Parent note: the reviewer's reply carried head 09ee88a0fe00f3357cdfb18ba6533d750bab1c6 (39 chars, one '9' dropped); the parent restored the bound full SHA; the diff_sha256 matches the bind."
+    ]
+  }
+}

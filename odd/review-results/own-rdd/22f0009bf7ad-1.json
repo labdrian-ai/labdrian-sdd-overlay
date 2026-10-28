@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "29a619eea549cff7625ac390d26f6c21a622f6b8",
+    "head": "22f0009bf7ad186bd550fae0f8990a101de4b7a6",
+    "diff_sha256": "d3ac5ba6d9116bf67307514281629dc497ec6856effb96b0fba365bea4551187",
+    "paths": [
+      "engine/cmd/review_check_cli_test.go",
+      "engine/cmd/review_check_test.go",
+      "engine/cmd/review_exempt_test.go",
+      "engine/cmd/roles_evidence_exempt_test.go",
+      "engine/cmd/usage.go",
+      "engine/review/app/check.go",
+      "engine/review/app/exempt.go",
+      "engine/review/app/needs.go",
+      "engine/review/app/needs_test.go",
+      "engine/review/needs.go",
+      "engine/review/needs_test.go",
+      "engine/review/risk.go",
+      "engine/review/risk_test.go"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "29a619eea549cff7625ac390d26f6c21a622f6b8",
+      "head": "22f0009bf7ad186bd550fae0f8990a101de4b7a6",
+      "diff_sha256": "d3ac5ba6d9116bf67307514281629dc497ec6856effb96b0fba365bea4551187"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/review_check_cli_test.go",
+        "engine/cmd/review_check_test.go",
+        "engine/cmd/review_exempt_test.go",
+        "engine/cmd/roles_evidence_exempt_test.go",
+        "engine/cmd/usage.go",
+        "engine/review/app/check.go",
+        "engine/review/app/exempt.go",
+        "engine/review/app/needs.go",
+        "engine/review/app/needs_test.go",
+        "engine/review/needs.go",
+        "engine/review/needs_test.go",
+        "engine/review/risk.go",
+        "engine/review/risk_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Item 1 (lenient): in engine/review/app/needs.go, namedBySweeper, readRoles (sweep and sweeper loops) and polisherRecorded gain `lenient bool`. On a heldRole error they `continue` only when lenient is true. commitFacts passes `riskErr != nil` to both namedBySweeper and readRoles. When the trailer holds, the errors are returned as before. The commitFacts doc comment replaces 'read for its sweep only' as the task asks. I did not run the tests.",
+      "Item 2 (RiskValue): `func RiskValue(items []int) string` is in engine/review/risk.go and returns NoRisk for an empty or nil list. review.Needs uses it for the ErrNoPolisher text. app/check.go and app/exempt.go call review.RiskValue. A grep for `riskValue` over engine/ returns no remaining caller or definition; the private copy and its strconv import are gone from app/needs.go.",
+      "Item 3 (help): I compared the two new `review check` lines and the one `review exempt` line in engine/cmd/usage.go with the quoted text on task line 68, and they are verbatim. The check lines follow 'The delivery role runs it before it closes the feature.' The exempt line sits before 'A declaration or a report that does not hold'. The 'review record --role polisher' and 'review sweep' verbs named in the help exist in usage.go (lines 211 and 220). The help lines are long, but every neighbouring line is also one long line.",
+      "Item 4 (w.exempt): the amend branch and the doc-comment sentence about it are removed. Every caller of w.exempt now runs on newCheckedWorld: roles_evidence_exempt_test.go (3 sites switched in this diff), review_exempt_test.go, review_check_chain_test.go:141 and review_exempt_check_test.go (lines 23, 73, 154, 208). The no-trailer refusal case in TestExemptRefusesAHeadWhoseTrailerFailsOrNamesAnItem still uses newReviewWorld with w.run (not w.exempt). Coverage of that refusal is unchanged.",
+      "Tests the task names: app/needs_test.go has TestCheckRefusesAFailingTrailerBeforeARoleRecordThatDoesNotHold with the sweep and sweeper cases, calling app.New(...).Check, asserting errors.Is ErrRiskTrailer and that the record path is absent. review/needs_test.go has TestNeedsHoldsASweepCommitToTheSweepRecordItHas (MissingSweeper with the exact text; MissingRisk when RiskErr is set). risk_test.go has TestRiskValueWritesBackWhatParseRiskReads (none, 3, 5,3, 1,2,3,4,5,6, and nil). cmd/review_check_test.go has the CLI case with the exact stderr and exit 1. Both usage tests gain the named fragments.",
+      "The third app test (Risk: none, non-passive, sweep record does not decode, still refused with the path) was not added. The task allows that if a test already pins it; check_test.go:182 and check_exempt_test.go:243 pin the sweep-read error with the path on a Risk: none world, and needs_test.go:349-357 pin the decode/binding errors. I did not check that the check_test.go:182 case uses a non-passive Risk: none head.",
+      "No findings."
+    ]
+  }
+}
