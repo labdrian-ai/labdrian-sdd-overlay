@@ -1,14 +1,15 @@
 # labdrian-sdd-overlay
 
-A customization layer over `gentle-ai` (an SDD-driven, multi-agent dev runtime) that lets your overlaid skills and rules **survive `gentle-ai` updates**, via a two-branch model: `upstream` (pristine vendor baseline) + `main` (your customizations on top).
+An end-to-end harness for solo software engineering and product development with AI agents. One person drives a goal from the idea to a merged, reviewed change. Role agents do the work, a feature document holds the requirements, and hooks enforce the rules mechanically instead of trusting a prompt.
 
-**What it does:**
+**What it gives you:**
 
-- Tracks vendor-managed and custom skills in a git overlay, so `gentle-ai sync`/`upgrade` never silently clobbers your changes.
-- Deploys your overlaid skills to **three agent runtimes**: Claude Code (`~/.claude/skills`), opencode (`~/.config/opencode/skills`), and codex (`~/.codex/skills`).
-- Deploys **agent definitions**: the [role agents](#role-agents--one-source-three-runtimes) of Claude Code to `~/.claude/agents/`, those of Codex to `~/.codex/agents/` as TOML, and those of Pi inside the built package (see [Pi](#pi-via-gentle-pi)); opencode receives none.
-- Adds a **deterministic minimalism-scoping layer**: a Go engine + Claude Code hooks (`UserPromptSubmit` → propagate, `PreToolUse`/`Agent` → gate-task) that inject two managed contracts (minimalism, anti-generic design) **only** into the agents that write code (minimalism into `shaper` and `builder`, anti-generic design into `builder`) and exclude them from the review agents. Deterministic on Claude Code; documented platform limits apply on opencode/codex.
-- Cuts and tracks **named releases** (semver tags via CI) as an additional layer on top of the upstream/main model — versioning, per-target state, and rollback. See [Releases](#releases) below.
+- **Role agents with one job each.** Eight roles (prototyper, shaper, builder, sweeper, polisher, reviewer, verifier, delivery) come from one source, `roles/<role>/body.md`, and are generated for Claude Code, Codex and Pi. The shaper designs; the builder only implements a task the shaper designed; the reviewer and the verifier check. See [How work flows](#how-work-flows).
+- **ODD feature documents.** Every substantial goal lives in `odd/tasks/<feature>.md`: Specs that quote the owner's words, Tasks with their commits, and an append-only Log of decisions and evidence (skill `odd-feature-doc`).
+- **Its own review lifecycle.** `labdrian review bind`, `record`, `exempt` and `check` review each commit on its own, store every result under `odd/review-results/`, and a Stop hook asks for the next commit no review covers. A commit's `Risk:` line decides whether a second, blind reviewer and an independent verifier run.
+- **Mechanical guards in hooks.** The builder guard denies a builder launch that cites no shaped task; gate-task injects the minimalism, OO-quality and anti-generic-design contracts into the agents that write code; the approve guard keeps skill approvals a human act.
+- **One deploy to four runtimes.** `labdrian apply` deploys skills, agents and contracts to Claude Code, Codex, opencode (skills and contracts, no agents) and Pi (as a package), with per-target backups, named releases and rollback.
+- **gentle-ai is a vendor source, on its way to optional.** Its skills are consumed through the `upstream`/`main` overlay, so a `gentle-ai sync` never clobbers local changes. The own review lifecycle (`odd/tasks/own-rdd.md`) is replacing its native review, the last part this project still leans on.
 
 ## Quick start — clone, then `labdrian tui` from anywhere
 
@@ -42,12 +43,29 @@ labdrian tui     # see per-target drift / gentle-ai sync state, and apply update
 
 The TUI shows whether each target is in sync with gentle-ai and lets you re-capture and re-apply your overlay without leaving the dashboard. Prefer the CLI? See [Usage](#usage) below.
 
-## What this is
+## How work flows
 
-`gentle-ai sync` and `upgrade` overwrite `~/.claude/skills/` with pristine vendor files. This repo uses two long-lived git branches to track the vendor baseline and your customizations separately, then merges and deploys with a single command.
+A goal runs through the role chain (`skills/role-chain/SKILL.md`):
+
+```
+[prototyper] → shaper → estimator → builder → [sweeper] → [polisher] → reviewer → delivery
+```
+
+1. **Prototyper** (only for a premise in doubt) answers feasibility questions with throwaway spikes: kill, narrow or continue.
+2. **Shaper** writes the Specs and Tasks of `odd/tasks/<feature>.md` and marks each task it designs `shaped: L<n>`, pointing at its Log entry. Open product decisions go back to the owner, one question at a time.
+3. **Builder** implements one shaped task test-first (RED, GREEN, refactor), commits it with a `Risk:` line, and records its evidence in the Log. It never designs: the builder guard denies a launch whose `Spec: odd/tasks/<feature>.md, T<n>` line names no shaped task, and a point the design left open goes back to the shaper.
+4. **Sweeper** removes what the commit left dead: removed names still mentioned, new analyzer findings, untracked files.
+5. **Reviewer** reads one commit in a detached worktree (`labdrian review bind`) and returns findings as JSON, which `labdrian review record` stores. A commit whose `Risk:` line names a high-risk item gets a second, blind reviewer on another model and an independent **verifier** that reproduces the checks in a scratch copy. Docs-only commits are exempted with `labdrian review exempt`, and `labdrian review check` says whether every commit of a branch is covered.
+6. **Delivery** closes the feature document; push, pull request and merge stay the owner's decisions.
+
+Every finding is resolved: a warning is fixed before delivery, a suggestion is carried to the next batch, and a fix that needs design goes to the shaper first.
+
+### The vendor overlay
+
+`gentle-ai sync` and `upgrade` overwrite `~/.claude/skills/` with pristine vendor files. Two long-lived git branches keep the vendor baseline and the local changes apart, and `labdrian apply` merges and deploys them with one command.
 
 - **`upstream` branch**: pristine vendor baseline extracted from gentle-ai upgrade backups
-- **`main` branch**: your customized overlay — merges on top of each new upstream
+- **`main` branch**: everything this project adds, merged on top of each new upstream
 
 ## Deploy targets
 
@@ -56,8 +74,9 @@ The TUI shows whether each target is in sync with gentle-ai and lets you re-capt
 | `claude` | `~/.claude/skills` |
 | `opencode` | `~/.config/opencode/skills` |
 | `codex` | `~/.codex/skills` |
+| `pi` | a built package, see [Pi](#pi-via-gentle-pi) |
 
-Use `--target <name>` on `apply`, `status`, `capture`, and `sync-check`. Default for `apply`/`status`/`sync-check` is `all` (all three targets, plus `pi` when it is genuinely installed). Default for `capture` is `claude`.
+Use `--target <name>` on `apply`, `status`, `capture`, and `sync-check`. Default for `apply`/`status`/`sync-check` is `all` (the three copy targets, plus `pi` when it is genuinely installed). Default for `capture` is `claude`.
 
 The `agent` route (see [Tracked files](#tracked-files-overlaymanifest)) additionally deploys to `~/.claude/agents` (claude target only), and the `codex-agent` route deploys `codex/agents/<role>.toml` to `~/.codex/agents` (codex target only). `--target opencode` or `--target codex` on an `agent` row, and any other target on a `codex-agent` row, is a no-op — zero applicable targets.
 
@@ -75,14 +94,7 @@ Pi is a **package target**, not a per-file copy target: `--target pi` on `apply`
 
 ## Tracked files (overlay.manifest)
 
-| File | Type |
-|------|------|
-| `sdd-spec/SKILL.md` | managed (vendor+overlay) |
-| `sdd-tasks/SKILL.md` | managed (vendor+overlay) |
-| `sdd-verify/SKILL.md` | managed (vendor+overlay) |
-| `sdd-verify/references/report-format.md` | managed (vendor+overlay) |
-| `sdd-verify/strict-tdd-verify.md` | managed (vendor+overlay) |
-| `requirements-from-transcripts/SKILL.md` | custom (overlay only) |
+`overlay.manifest` lists every tracked file, one per row: 167 rows today, 94 `managed` and 73 `custom`. They cover skills, the shared contracts, the role agents of Claude Code (`agent` route, 8 rows) and Codex (`codex-agent` route, 8 rows), the `longterm-mem` MCP entry (`mcp` route) and engine source files. Read the file itself for the current list; the engine's `manifest routes` verb (see the CLI reference) decides the route of each row.
 
 **managed**: tracked on both `upstream` and `main`. Gets merged when upstream updates.
 **custom**: only on `main`. Never on upstream. Added as a customization with no vendor counterpart.
@@ -130,7 +142,7 @@ backups the backend cannot confirm is not offered a restore.
 |---------|------|--------------|
 | `status` | read-only | Per-file drift between repo and each live target |
 | `sync-check` | read-only | **The compass** — tells you exactly what to do (see verdicts below); VERDICT lines also carry release version and digest-match per target |
-| `apply [--target claude\|opencode\|codex\|all]` | **modifies** | Merge upstream→main, then deploy overlay to target(s). Shows confirmation before mutating. Backs up each target's currently-deployed managed files first. |
+| `apply [--target claude\|opencode\|codex\|pi\|all]` | **modifies** | Merge upstream→main, then deploy overlay to target(s). Shows confirmation before mutating. Backs up each target's currently-deployed managed files first. |
 | `capture [--target claude\|opencode\|codex]` | **modifies** | Pull a gentle-ai update into the `upstream` branch. Single target only. |
 | `self-update` | **modifies** | Fast-forward local `main` (never the current branch) to the latest published release tag — never past it, even if `origin/main` carries untagged commits beyond it. Falls back to raw `origin/main` HEAD convergence before any release tag exists. Refuses on a dirty tracked tree, local-ahead main, or no `origin` remote. |
 | `update` | read-only | Report the latest published release version and each target's recorded version (up-to-date / behind / never deployed). Never mutates anything. |
@@ -147,7 +159,7 @@ backups the backend cannot confirm is not offered a restore.
 ### The 3 workflows
 
 **1. Day-to-day — nothing to do.**
-The hooks run in the background: `UserPromptSubmit` (propagate) keeps skill registries fresh across sessions; `PreToolUse`/`Agent` (gate-task) injects the minimalism and anti-generic-design contracts into the agents their frontmatter names (`shaper`, `builder`) automatically, and, while a workflow is bound to the repository, appends the memory instructions of that workflow to every sub-agent's prompt through the minimalism entry alone (C23 M6), the block `SessionStart` puts into the session itself. Review candidate coverage and skill discovery are handled by gentle-ai itself since v2.7.0; the overlay no longer ships contracts for them.
+The hooks run in the background: `UserPromptSubmit` (propagate) keeps skill registries fresh across sessions; `PreToolUse`/`Agent` (gate-task) injects the minimalism and anti-generic-design contracts into the agents their frontmatter names (`shaper`, `builder`) automatically, and, while a workflow is bound to the repository, appends the memory instructions of that workflow to every sub-agent's prompt through the minimalism entry alone (C23 M6), the block `SessionStart` puts into the session itself. The builder guard checks every builder launch, and the review stop-hook asks for the next commit that no review covers (see [How work flows](#how-work-flows)).
 
 **2. gentle-ai released an update.**
 ```bash
@@ -194,7 +206,7 @@ labdrian status-hooks                       # all green?
 Each VERDICT line also carries `REPO_BEHIND_ORIGIN`, `REPO_BEHIND_RELEASE`, `RECORDED_VERSION`, and `DIGEST_MATCH` — see [Releases](#releases) below.
 
 ```
-VERDICT:claude:UPSTREAM_CHANGED=5 OVERLAY_NOT_DEPLOYED=0 REPO_BEHIND_ORIGIN=0 REPO_BEHIND_RELEASE=0 RECORDED_VERSION=v1.2.0 DIGEST_MATCH=no
+VERDICT:claude:UPSTREAM_CHANGED=5 OVERLAY_NOT_DEPLOYED=0 REPO_BEHIND_ORIGIN=0 REPO_BEHIND_RELEASE=0 RECORDED_VERSION=v3.14.1 DIGEST_MATCH=no
 ACTION:claude: gentle-ai sync detected: run 'overlay capture --target claude' then 'overlay apply'
 ```
 
@@ -250,7 +262,7 @@ An agent cannot do this for you: the approve guard denies it (a speed bump, not 
 - **OVERLAY_NOT_DEPLOYED**: the repo's `main` version of the file differs from (or is missing at) the live target. This means `overlay apply` hasn't been run for this target.
 
 ```bash
-overlay sync-check                    # check all three targets
+overlay sync-check                    # check every target
 overlay sync-check --target claude    # check only ~/.claude/skills
 overlay sync-check --check-origin     # also fetch origin for a live REPO_BEHIND_ORIGIN/REPO_BEHIND_RELEASE count
 ```
@@ -260,7 +272,7 @@ reports `REPO_BEHIND_ORIGIN`, `REPO_BEHIND_RELEASE`, `RECORDED_VERSION`, and `DI
 [Releases](#releases):
 
 ```
-VERDICT:claude:UPSTREAM_CHANGED=5 OVERLAY_NOT_DEPLOYED=0 REPO_BEHIND_ORIGIN=0 REPO_BEHIND_RELEASE=0 RECORDED_VERSION=v1.2.0 DIGEST_MATCH=no
+VERDICT:claude:UPSTREAM_CHANGED=5 OVERLAY_NOT_DEPLOYED=0 REPO_BEHIND_ORIGIN=0 REPO_BEHIND_RELEASE=0 RECORDED_VERSION=v3.14.1 DIGEST_MATCH=no
 ACTION:claude: gentle-ai sync detected: run 'overlay capture --target claude' then 'overlay apply'
 ```
 
