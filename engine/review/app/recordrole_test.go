@@ -190,6 +190,36 @@ func TestRecordSweeperHoldsTheCommitToAChildOfTheHeadWithTheSubjectOfASweep(t *t
 	}
 }
 
+func TestRecordSweeperRefusesACommitGitDoesNotHaveOrThatIsNotACommitBeforeAskingAnythingElseOfIt(t *testing.T) {
+	r := newRoleRig(t)
+	r.fired(1, "?? a.txt")
+	r.git.notCommit = map[string]bool{sweepSHA: true}
+
+	_, err := r.sweeper(report(`"`+sweepSHA+`"`, answer("T3: ?? a.txt", "removed")))
+
+	refusedBy(t, err, review.ErrInvalidSweeperReport)
+	if err == nil || !strings.Contains(err.Error(), sweepSHA) {
+		t.Errorf("error = %v, want it to name the commit", err)
+	}
+	if r.results.created() != 0 || r.git.count("Parent "+sweepSHA) != 0 || r.git.count("Message "+sweepSHA) != 0 {
+		t.Errorf("a refused report stored %d files, calls: %v, want none stored and no question about the parent or the message", r.results.created(), r.git.calls)
+	}
+}
+
+func TestRecordSweeperIsAPlainErrorWhenGitCannotSayWhetherTheCommitIsOne(t *testing.T) {
+	r := newRoleRig(t)
+	r.fired(1, "?? a.txt")
+	boom := errors.New("git is gone")
+	r.git.fail["IsCommit"] = boom
+
+	_, err := r.sweeper(report(`"`+sweepSHA+`"`, answer("T3: ?? a.txt", "removed")))
+
+	var refused *app.ReplyRefusedError
+	if !errors.Is(err, boom) || errors.As(err, &refused) || r.results.created() != 0 {
+		t.Errorf("error = %v, created = %d, want the error of git, not a refusal of the report, and nothing stored", err, r.results.created())
+	}
+}
+
 func TestRecordSweeperReturnsWhatGitCouldNotSayAboutTheCommit(t *testing.T) {
 	r := newRoleRig(t)
 	r.fired(1, "?? a.txt")

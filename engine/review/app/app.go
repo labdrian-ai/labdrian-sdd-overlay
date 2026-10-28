@@ -114,9 +114,13 @@ type Git interface {
 	// Modules returns the directories, relative to the root of the tree and written with '/', that hold a go.mod at
 	// commit, a full object name; the root is ".". Sorted.
 	Modules(repo Repository, commit string) ([]string, error)
-	// Mentions returns the paths of the tree of commit, a full object name, that hold name as a whole word, matched as a
-	// fixed string, in the order git prints them. Nothing found is none and no error; a search that did not run is an error.
-	Mentions(repo Repository, commit, name string) ([]string, error)
+	// Mentions returns, for each of names, the paths of the tree of commit, a full object name, that hold it as a whole
+	// word, matched as a fixed string, once each, in the order git prints them. A name nothing mentions is not a key and
+	// no names is no answer and no error; a search that did not run, or a name that is empty or has a line break, is an error.
+	Mentions(repo Repository, commit string, names []string) (map[string][]string, error)
+	// IsCommit says whether name, a full object name, is an object git has and that object is a commit. An object git
+	// does not have, or one of another kind, is false and no error; git failing to answer is an error.
+	IsCommit(repo Repository, name string) (bool, error)
 	// Status returns the lines of `git status --porcelain` of the working tree of repo, with every untracked file listed on
 	// its own line. A clean tree gives none.
 	Status(repo Repository) ([]string, error)

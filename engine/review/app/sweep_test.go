@@ -139,11 +139,26 @@ func TestSweepListsTheRemovedNamesThatTheHeadStillMentionsOutsideTheDiff(t *test
 	if !reflect.DeepEqual(got.Candidates, []string{"T1 name: gone"}) {
 		t.Errorf("Candidates = %q, want only the name that is still mentioned", got.Candidates)
 	}
-	if n := s.git.count("Mentions " + headSHA + " declaredAgain"); n != 0 {
-		t.Errorf("a name the head declares again was searched %d times, want none", n)
+	var searches []string
+	for _, c := range s.git.calls {
+		if strings.HasPrefix(c, "Mentions ") {
+			searches = append(searches, c)
+		}
 	}
-	if n := s.git.count("Mentions " + headSHA + " gone"); n != 1 {
-		t.Errorf("gone was searched %d times in the tree of the head, want once", n)
+	if want := []string{"Mentions " + headSHA + " gone,movedAway,nobodyMentions"}; !reflect.DeepEqual(searches, want) {
+		t.Errorf("searches = %q, want one for all the names, none for a name the head declares again", searches)
+	}
+}
+
+func TestSweepSearchesNothingWhenTheCommitRemovesNoName(t *testing.T) {
+	s := newSweepRig(t)
+
+	s.mustSweep()
+
+	for _, c := range s.git.calls {
+		if strings.HasPrefix(c, "Mentions ") {
+			t.Errorf("git was asked %q, want no search for no name", c)
+		}
 	}
 }
 

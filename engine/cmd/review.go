@@ -53,7 +53,7 @@ const reviewGitMaxOutput = 256 << 20
 // in an exit that ends nothing.
 func runReview(p process, d deps, args []string) {
 	if len(args) == 0 {
-		fmt.Fprintln(p.stderr, "error: review requires a verb: bind, record, verify, check, exempt")
+		fmt.Fprintln(p.stderr, "error: review requires a verb: bind, record, verify, check, exempt, sweep")
 		p.exit(1)
 		return
 	}
@@ -73,7 +73,7 @@ func runReview(p process, d deps, args []string) {
 	case reviewStopVerb:
 		runReviewStopHook(p, d, args[1:])
 	default:
-		fmt.Fprintf(p.stderr, "error: review: unknown verb %q (expected bind, record, verify, check or exempt)\n", args[0])
+		fmt.Fprintf(p.stderr, "error: review: unknown verb %q (expected bind, record, verify, check, exempt or sweep)\n", args[0])
 		p.exit(1)
 	}
 }

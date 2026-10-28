@@ -1,6 +1,7 @@
 package analyzers_test
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -224,7 +225,68 @@ func TestShellcheckRunsOnTheExistingFilesOnlyInTheRootOfTheCopy(t *testing.T) {
 	if err != nil || errNone != nil || !reflect.DeepEqual(got, want) {
 		t.Errorf("Shellcheck = %q, %v (%v), want %q, nil", got, err, errNone, want)
 	}
-	if ran := calls(t, log); !reflect.DeepEqual(ran, []string{root + "|-f gcc scripts/a.sh"}) {
-		t.Errorf("shellcheck ran as %q, want -f gcc and only the file the copy has", ran)
+	if ran := calls(t, log); !reflect.DeepEqual(ran, []string{root + "|-f gcc -- scripts/a.sh"}) {
+		t.Errorf("shellcheck ran as %q, want -f gcc -- and only the file the copy has", ran)
+	}
+}
+
+func TestShellcheckEndsItsOptionsBeforeTheFilesSoAFileNamedLikeAnOptionIsAFile(t *testing.T) {
+	log := bin(t, map[string]stub{"shellcheck": {}})
+	root := copyOf(t, "-x.sh")
+
+	if _, err := tools(t).Shellcheck(root, []string{"-x.sh", "scripts/a.sh"}); err != nil {
+		t.Fatalf("Shellcheck: %v", err)
+	}
+
+	if ran := calls(t, log); !reflect.DeepEqual(ran, []string{root + "|-f gcc -- -x.sh scripts/a.sh"}) {
+		t.Errorf("shellcheck ran as %q, want -f gcc -- and then the files", ran)
+	}
+}
+
+// probeTool makes a tool named name that appends the variables it was started with to a log, and puts it alone on the PATH.
+func probeTool(t *testing.T, name string) (log string) {
+	t.Helper()
+	dir := t.TempDir()
+	log = filepath.Join(t.TempDir(), "exported.log")
+	script := "#!/bin/sh\nexport -p >> '" + log + "'\nexit 0\n"
+	if err := os.WriteFile(filepath.Join(dir, name), []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", dir)
+	return log
+}
+
+func TestToolsStartedWithNoEnvironmentDoNotInheritTheOneOfTheProcess(t *testing.T) {
+	for name, environ := range map[string][]string{"a nil one": nil, "an empty one": {}} {
+		t.Run(name, func(t *testing.T) {
+			log := probeTool(t, "deadcode")
+			t.Setenv("LABDRIAN_PROBE_LEAK", "leaked")
+			a := analyzers.New(analyzers.ExecRunner{}, analyzers.Options{Environ: environ, Timeout: time.Minute})
+
+			if _, err := a.Deadcode(copyOf(t), "mod"); err != nil {
+				t.Fatalf("Deadcode: %v", err)
+			}
+
+			data, err := os.ReadFile(log)
+			if err != nil || strings.Contains(string(data), "LABDRIAN_PROBE_LEAK") {
+				t.Errorf("the tool read its log with %v and saw the variable of the process: %v, want a start under none of them", err, strings.Contains(string(data), "LABDRIAN_PROBE_LEAK"))
+			}
+		})
+	}
+}
+
+func TestExecRunnerGivenNoEnvironmentDoesNotInheritTheOneOfTheProcess(t *testing.T) {
+	for name, env := range map[string][]string{"a nil one": nil, "an empty one": {}} {
+		t.Run(name, func(t *testing.T) {
+			log := probeTool(t, "probe")
+			t.Setenv("LABDRIAN_PROBE_LEAK", "leaked")
+
+			_, _, err := analyzers.ExecRunner{}.Output(context.Background(), t.TempDir(), env, "probe")
+
+			data, readErr := os.ReadFile(log)
+			if err != nil || readErr != nil || strings.Contains(string(data), "LABDRIAN_PROBE_LEAK") {
+				t.Errorf("Output = %v, log read %v, variable of the process seen: %v, want a start under none of them", err, readErr, strings.Contains(string(data), "LABDRIAN_PROBE_LEAK"))
+			}
+		})
 	}
 }

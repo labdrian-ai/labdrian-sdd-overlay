@@ -117,6 +117,13 @@ func (s Service) firedSweep(repo Repository, feature string, c review.Candidate)
 
 // sweepCommit holds the commit the sweeper names to the facts git gives about it.
 func (s Service) sweepCommit(repo Repository, head, commit string) error {
+	isCommit, err := s.git.IsCommit(repo, commit)
+	if err != nil {
+		return fmt.Errorf("find out whether %s is a commit: %w", commit, err)
+	}
+	if !isCommit {
+		return &ReplyRefusedError{Err: fmt.Errorf("%w: the commit %s is not a commit that git has", review.ErrInvalidSweeperReport, commit)}
+	}
 	parent, err := s.git.Parent(repo, commit)
 	if err != nil {
 		return fmt.Errorf("find the first parent of %s: %w", commit, err)

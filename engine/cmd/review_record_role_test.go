@@ -80,6 +80,23 @@ func TestRecordRoleSweeperIsRefusedWithExitTwoWhenNoFiredSweepBindsTheHead(t *te
 	}
 }
 
+func TestRecordRoleSweeperIsRefusedWithExitTwoForACommitGitDoesNotHave(t *testing.T) {
+	w := newReviewWorld(t)
+	state := t.TempDir()
+	firedSweep(t, w, state)
+	missing := strings.Repeat("a", 40)
+	report := `{"commit":"` + missing + `","candidates":[{"candidate":"T3: ?? stray.txt","disposition":"removed","evidence":"gone"}]}`
+
+	stdout, stderr, exits := w.sweepRun(state, report, "record", "--role", "sweeper", "--feature", "own-rdd", "--base", w.base, "--head", w.head)
+
+	if stdout != "" || !equalInts(exits, []int{2}) || !strings.HasPrefix(stderr, "error: review record: the reply is refused and nothing was stored: ") || !strings.Contains(stderr, missing) {
+		t.Errorf("stdout = %q, stderr = %q, exits = %v; want nothing, a refusal naming the commit, [2]", stdout, stderr, exits)
+	}
+	if names := listNames(t, w.results("own-rdd")); len(names) != 1 || !strings.HasSuffix(names[0], "-1.sweep.json") {
+		t.Errorf("stored %v, want only the sweep", names)
+	}
+}
+
 func TestRecordRolePolisherStoresTheFindingsOfOneJudgeAndReadsAResultFile(t *testing.T) {
 	w := newReviewWorld(t)
 	findings := `{"findings":[{"severity":"nit","evidence":["read it"]}]}`

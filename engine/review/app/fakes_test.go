@@ -47,6 +47,7 @@ type fakeGit struct {
 	addedLines    []review.ChangedLines       // what ChangedLines answers second
 	modules       []string                    // what Modules answers
 	mentions      map[string][]string         // the paths that mention a name; none for a name that is not a key
+	notCommit     map[string]bool             // the object names IsCommit says are not a commit; every other one is
 	status        []string                    // what Status answers
 	worktree      app.WorktreeState
 	worktreeLater []worktreeAnswer
@@ -200,12 +201,26 @@ func (g *fakeGit) Modules(repo app.Repository, commit string) ([]string, error) 
 	return g.modules, nil
 }
 
-func (g *fakeGit) Mentions(repo app.Repository, commit, name string) ([]string, error) {
-	g.record("Mentions " + commit + " " + name)
+func (g *fakeGit) Mentions(repo app.Repository, commit string, names []string) (map[string][]string, error) {
+	g.record("Mentions " + commit + " " + strings.Join(names, ","))
 	if err := g.fail["Mentions"]; err != nil {
 		return nil, err
 	}
-	return g.mentions[name], nil
+	found := map[string][]string{}
+	for _, name := range names {
+		if paths := g.mentions[name]; len(paths) > 0 {
+			found[name] = paths
+		}
+	}
+	return found, nil
+}
+
+func (g *fakeGit) IsCommit(repo app.Repository, name string) (bool, error) {
+	g.record("IsCommit " + name)
+	if err := g.fail["IsCommit"]; err != nil {
+		return false, err
+	}
+	return !g.notCommit[name], nil
 }
 
 func (g *fakeGit) Status(repo app.Repository) ([]string, error) {

@@ -1,6 +1,8 @@
 package gitexec_test
 
 import (
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -134,21 +136,78 @@ func TestMentionsAreThePathsOfTheCommitThatHoldTheNameAsAWholeWord(t *testing.T)
 	// the working tree must not matter: the question is put to the commit
 	f.write("f.go", "package a\n\nvar _ = oldName()\n")
 
-	cases := []struct {
-		name string
-		want []string
-	}{
-		{"oldName", []string{"a.go", "c.txt"}},
-		{"a.b", []string{"d.txt"}},
-		{"-flag", []string{"e.txt"}},
-		{"absent", nil},
+	got, err := f.adapter().Mentions(f.repo(), head, []string{"oldName", "a.b", "-flag", "absent"})
+
+	want := map[string][]string{"oldName": {"a.go", "c.txt"}, "a.b": {"d.txt"}, "-flag": {"e.txt"}}
+	for _, paths := range got {
+		slices.Sort(paths)
 	}
-	for _, c := range cases {
-		got, err := f.adapter().Mentions(f.repo(), head, c.name)
-		slices.Sort(got)
-		if err != nil || !reflect.DeepEqual(got, c.want) {
-			t.Errorf("Mentions(%q) = %q, %v, want %q, nil", c.name, got, err, c.want)
-		}
+	if err != nil || !reflect.DeepEqual(got, want) {
+		t.Errorf("Mentions = %q, %v, want %q, nil: several names in one call, and none for a name nothing mentions", got, err, want)
+	}
+}
+
+func TestMentionsKeepsAPathWithASpaceWholeAndNamesAFileOnceHoweverOftenItHoldsTheName(t *testing.T) {
+	f := newFixture(t, "sha1")
+	f.write("my dir/a file.go", "package a\n\nvar _ = twice(twice(1))\n")
+	f.snapshotAll("feat: head")
+
+	got, err := f.adapter().Mentions(f.repo(), f.name("HEAD"), []string{"twice", "once"})
+
+	want := map[string][]string{"twice": {"my dir/a file.go"}}
+	if err != nil || !reflect.DeepEqual(got, want) {
+		t.Errorf("Mentions = %q, %v, want %q, nil", got, err, want)
+	}
+}
+
+func TestMentionsOfNoNameStartsNothingAndAnswersNothing(t *testing.T) {
+	r := &fakeRunner{}
+
+	got, err := newGit(r).Mentions(repo, headSHA, nil)
+
+	if err != nil || len(got) != 0 || len(r.calls) != 0 {
+		t.Errorf("Mentions = %q, %v after %d starts, want none, nil and no start", got, err, len(r.calls))
+	}
+}
+
+func TestMentionsPutsAtMost256NamesToOneStartOfGit(t *testing.T) {
+	names := make([]string, 257)
+	for i := range names {
+		names[i] = fmt.Sprintf("name%d", i)
+	}
+	r := &fakeRunner{}
+
+	got, err := newGit(r).Mentions(repo, headSHA, names)
+
+	if err != nil || len(got) != 0 {
+		t.Fatalf("Mentions = %q, %v, want none, nil", got, err)
+	}
+	if len(r.calls) != 2 {
+		t.Fatalf("git was started %d times for 257 names, want 2", len(r.calls))
+	}
+	if n := strings.Count(strings.Join(r.calls[0].args, " "), " -e "); n != 256 {
+		t.Errorf("the first start holds %d names, want 256", n)
+	}
+	if args := r.calls[1].args; !slices.Contains(args, "name256") || slices.Contains(args, "name0") {
+		t.Errorf("the second start is %q, want only the last name", args)
+	}
+}
+
+func TestMentionsRefusesAnAnswerThatNamesAThingNobodyAskedFor(t *testing.T) {
+	for name, stdout := range map[string]string{
+		"a name not asked":    headSHA + ":a.go\x00other\n",
+		"a path of no commit": "a.go\x00oldName\n",
+		"a record cut short":  headSHA + ":a.go\x00oldName",
+	} {
+		t.Run(name, func(t *testing.T) {
+			r := &fakeRunner{stdout: []byte(stdout)}
+
+			_, err := newGit(r).Mentions(repo, headSHA, []string{"oldName"})
+
+			if err == nil {
+				t.Error("Mentions gave no error, want one: an answer that is not whole is not an answer")
+			}
+		})
 	}
 }
 
@@ -157,8 +216,58 @@ func TestMentionsRefusesACommitGitDoesNotHave(t *testing.T) {
 	f.write("a.go", "package a\n")
 	f.snapshotAll("feat: head")
 
-	if _, err := f.adapter().Mentions(f.repo(), strings.Repeat("a", 40), "x"); err == nil {
+	if _, err := f.adapter().Mentions(f.repo(), strings.Repeat("a", 40), []string{"x"}); err == nil {
 		t.Error("Mentions of an unknown commit gave no error, want one: a grep that did not run is not an empty answer")
+	}
+}
+
+func TestMentionsRefusesAnEmptyNameAndAnyNameWithALineBreak(t *testing.T) {
+	r := &fakeRunner{}
+	for _, name := range []string{"", "a\nb"} {
+		if _, err := newGit(r).Mentions(repo, headSHA, []string{name}); err == nil {
+			t.Errorf("Mentions(%q) gave no error, want one: git would read it as several patterns or as every line", name)
+		}
+	}
+	if len(r.calls) != 0 {
+		t.Errorf("git was started %d times, want none", len(r.calls))
+	}
+}
+
+func TestIsCommitIsTrueForACommitAndFalseForAWellFormedNameGitDoesNotHaveAndForATree(t *testing.T) {
+	f := newFixture(t, "sha1")
+	f.write("a.go", "package a\n")
+	f.snapshotAll("feat: head")
+	head := f.name("HEAD")
+	tree := f.name("HEAD^{tree}")
+	for name, c := range map[string]struct {
+		object string
+		want   bool
+	}{
+		"a commit":                 {head, true},
+		"a name git does not have": {strings.Repeat("a", 40), false},
+		"a tree":                   {tree, false},
+	} {
+		t.Run(name, func(t *testing.T) {
+			got, err := f.adapter().IsCommit(f.repo(), c.object)
+
+			if err != nil || got != c.want {
+				t.Errorf("IsCommit = %v, %v, want %v, nil", got, err, c.want)
+			}
+		})
+	}
+}
+
+func TestIsCommitIsAnErrorWhenGitDoesNotAnswer(t *testing.T) {
+	for name, r := range map[string]*fakeRunner{
+		"a status and a message":    {stderr: []byte("fatal: boom"), err: exitStatus(t)},
+		"a failure to start":        {err: errors.New("no git")},
+		"an answer that is no kind": {stdout: []byte("banana\n")},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if got, err := newGit(r).IsCommit(repo, headSHA); err == nil || got {
+				t.Errorf("IsCommit = %v, %v, want false and an error", got, err)
+			}
+		})
 	}
 }
 

@@ -123,13 +123,16 @@ func (s Service) sweepT1(repo Repository, c review.Candidate) (review.SweepT1, e
 		return review.SweepT1{}, fmt.Errorf("read the changed lines of %s..%s: %w", c.Base, c.Head, err)
 	}
 	var names []review.RemovedName
-	for _, name := range review.RemovedNames(removed, added) {
-		found, err := s.git.Mentions(repo, c.Head, name)
-		if err != nil {
-			return review.SweepT1{}, fmt.Errorf("search %s for %q: %w", c.Head, name, err)
+	asked := review.RemovedNames(removed, added)
+	var mentioned map[string][]string
+	if len(asked) > 0 {
+		if mentioned, err = s.git.Mentions(repo, c.Head, asked); err != nil {
+			return review.SweepT1{}, fmt.Errorf("search %s for the removed names: %w", c.Head, err)
 		}
+	}
+	for _, name := range asked {
 		var hits []string
-		for _, p := range found {
+		for _, p := range mentioned[name] {
 			if !slices.Contains(c.Paths, p) && !slices.Contains(hits, p) {
 				hits = append(hits, p)
 			}

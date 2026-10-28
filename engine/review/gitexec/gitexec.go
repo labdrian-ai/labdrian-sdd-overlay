@@ -513,29 +513,98 @@ func (g Git) Modules(repo app.Repository, commit string) ([]string, error) {
 	return modules, nil
 }
 
-// Mentions returns the paths of the tree of commit that hold name as a whole word, matched as a fixed string, with
-// `git grep -l -w -F` (own-rdd T6b3, S6 b). git exits 1 when nothing matches, which is an answer; any other failure is not.
-func (g Git) Mentions(repo app.Repository, commit, name string) ([]string, error) {
+// mentionsBatch is how many names one start of `git grep` is asked for: the cost of a sweep grows with the names in
+// steps of this size, and 256 names of the length of an identifier stay far under the limit of the arguments.
+const mentionsBatch = 256
+
+// Mentions returns, for each of names, the paths of the tree of commit that hold it as a whole word, matched as a fixed
+// string, once each, in the order git prints them (own-rdd T6b3 and T6b4a, S6 b). The names go to `git grep -I -z -o -w
+// -F` in batches of mentionsBatch; -o prints the text each match found after the path, and that text is the name. A
+// name nothing mentions is not a key. A name that is inside the match of a longer name at the same place is not
+// reported there, which cannot happen to the identifiers a sweep asks about. git exits 1 when nothing matches, which is
+// an answer; any other failure is not.
+func (g Git) Mentions(repo app.Repository, commit string, names []string) (map[string][]string, error) {
+	for _, name := range names {
+		if name == "" || strings.Contains(name, "\n") {
+			return nil, fmt.Errorf("the name %q to search for is empty or has a line break", name)
+		}
+	}
+	found := map[string][]string{}
+	for start := 0; start < len(names); start += mentionsBatch {
+		batch := names[start:min(start+mentionsBatch, len(names))]
+		if err := g.mentionsOf(repo, commit, batch, found); err != nil {
+			return nil, err
+		}
+	}
+	return found, nil
+}
+
+// mentionsOf puts one batch of names to git and adds what it found to found.
+func (g Git) mentionsOf(repo app.Repository, commit string, batch []string, found map[string][]string) error {
 	ctx, cancel := g.context()
 	defer cancel()
-	args := []string{"-C", repo.Root, "grep", "-I", "-l", "-z", "-w", "-F", "--no-color", "-e", name, commit}
+	args := []string{"-C", repo.Root, "grep", "-I", "-z", "-o", "-w", "-F", "--no-color"}
+	for _, name := range batch {
+		args = append(args, "-e", name)
+	}
+	args = append(args, commit)
 	stdout, stderr, err := g.runner.Output(ctx, g.env, gitProgram, args...)
 	var exit *exec.ExitError
 	if errors.As(err, &exit) && exit.ExitCode() == 1 && len(stdout) == 0 && strings.TrimSpace(string(stderr)) == "" {
-		return nil, nil
+		return nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("git grep: %w%s", err, said(stderr))
+		return fmt.Errorf("git grep: %w%s", err, said(stderr))
 	}
-	var found []string
-	for _, entry := range bytes.Split(bytes.TrimSuffix(stdout, []byte{0}), []byte{0}) {
-		p, ok := strings.CutPrefix(string(entry), commit+":")
-		if !ok || p == "" {
-			return nil, fmt.Errorf("git grep printed %q, want <commit>:<path>", clip(string(entry)))
+	asked := map[string]bool{}
+	for _, name := range batch {
+		asked[name] = true
+	}
+	rest := stdout
+	for len(rest) > 0 {
+		entry, after, ok := bytes.Cut(rest, []byte{0})
+		match, after, okMatch := bytes.Cut(after, []byte{'\n'})
+		p, hasCommit := strings.CutPrefix(string(entry), commit+":")
+		if !ok || !okMatch || !hasCommit || p == "" || !asked[string(match)] {
+			return fmt.Errorf("git grep printed %q, want <commit>:<path>, a NUL byte, a name asked for and a line feed", clip(string(rest)))
 		}
-		found = append(found, p)
+		if !slices.Contains(found[string(match)], p) {
+			found[string(match)] = append(found[string(match)], p)
+		}
+		rest = after
 	}
-	return found, nil
+	return nil
+}
+
+// IsCommit says whether name is a commit git has. `git cat-file -e` exits 1 with nothing printed for an object git does
+// not have, which is false and not an error; `git cat-file -t` then names the kind of the object, and only "commit"
+// is true. Anything else git does, a failure to start, a message or another status, is an error.
+func (g Git) IsCommit(repo app.Repository, name string) (bool, error) {
+	if !gitobject.IsName(name) {
+		return false, fmt.Errorf("%q is not a full object name", name)
+	}
+	ctx, cancel := g.context()
+	defer cancel()
+	stdout, stderr, err := g.runner.Output(ctx, g.env, gitProgram, "-C", repo.Root, "cat-file", "-e", name)
+	var exit *exec.ExitError
+	if errors.As(err, &exit) && exit.ExitCode() == 1 && len(stdout) == 0 && strings.TrimSpace(string(stderr)) == "" {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("git cat-file -e: %w%s", err, said(stderr))
+	}
+	out, err := g.output(repo.Root, "cat-file -t", []string{"cat-file", "-t", name})
+	if err != nil {
+		return false, err
+	}
+	switch kind := strings.TrimSuffix(string(out), "\n"); kind {
+	case "commit":
+		return true, nil
+	case "tree", "blob", "tag":
+		return false, nil
+	default:
+		return false, fmt.Errorf("git cat-file -t printed %q for %q, want the kind of the object", clip(string(out)), name)
+	}
 }
 
 // Status returns the lines of `git status --porcelain` with every untracked file on its own line, as the working tree is.

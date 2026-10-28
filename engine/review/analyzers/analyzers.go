@@ -73,7 +73,7 @@ func New(runner Runner, o Options) Tools {
 	if timeout <= 0 {
 		timeout = DefaultTimeout
 	}
-	return Tools{runner: runner, environ: append([]string(nil), o.Environ...), timeout: timeout}
+	return Tools{runner: runner, environ: append([]string{}, o.Environ...), timeout: timeout}
 }
 
 // Deadcode runs `deadcode -test ./...` in the module of the copy. A module the copy has no go.mod for gives none and
@@ -105,16 +105,16 @@ func (t Tools) Staticcheck(root, module string, packages []string) ([]string, er
 	return t.run("staticcheck", dir, present...)
 }
 
-// Shellcheck runs `shellcheck -f gcc` over the files of the copy, relative to its root, that the copy has. None left
-// gives none and starts nothing.
+// Shellcheck runs `shellcheck -f gcc -- <files>` over the files of the copy, relative to its root, that the copy has;
+// the `--` makes a file named like an option a file. None left gives none and starts nothing.
 func (t Tools) Shellcheck(root string, files []string) ([]string, error) {
-	args := []string{"-f", "gcc"}
+	args := []string{"-f", "gcc", "--"}
 	for _, f := range files {
 		if isFile(filepath.Join(root, filepath.FromSlash(f))) {
 			args = append(args, f)
 		}
 	}
-	if len(args) == 2 {
+	if len(args) == 3 {
 		return nil, nil
 	}
 	return t.run("shellcheck", root, args...)
@@ -175,7 +175,7 @@ type ExecRunner struct{}
 func (ExecRunner) Output(ctx context.Context, dir string, env []string, bin string, args ...string) (stdout, stderr []byte, err error) {
 	cmd := exec.CommandContext(ctx, bin, args...)
 	cmd.Dir = dir
-	cmd.Env = env
+	cmd.Env = append([]string{}, env...) // never nil: a nil Env is the environment of the process
 	cmd.WaitDelay = 2 * time.Second
 	var out, errOut cappedBuffer
 	out.max, errOut.max = maxOutput, maxOutput
