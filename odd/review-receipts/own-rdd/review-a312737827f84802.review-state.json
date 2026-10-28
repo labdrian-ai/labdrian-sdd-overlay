@@ -1,0 +1,192 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:9422cd25510fd82a73163fea7fbf73860a5d248bf6787a287576a6f1e45c7ef9",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-a312737827f84802",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "6470f5401c51bd70310de818e21c5c7c44ccf8d7",
+      "candidate_tree": "e7924e1f58276eb0fdf96b5e1fe9eab2e80e5ce8",
+      "paths_digest": "sha256:377aa65f7b09453f8631996c834ab9576de964e5cc5a5eb79939f859d2459f10",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/hookwire/boundary_test.go",
+        "engine/hookwire/hookwire.go",
+        "engine/hookwire/stop.go",
+        "engine/hookwire/stop_test.go"
+      ],
+      "identity": "sha256:6b0bae70bd3daf5c9a1691c34d461be248678cb0698b908f08dea9659fefcd5e"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "6470f5401c51bd70310de818e21c5c7c44ccf8d7",
+      "candidate_tree": "e7924e1f58276eb0fdf96b5e1fe9eab2e80e5ce8",
+      "paths_digest": "sha256:377aa65f7b09453f8631996c834ab9576de964e5cc5a5eb79939f859d2459f10",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/hookwire/boundary_test.go",
+        "engine/hookwire/hookwire.go",
+        "engine/hookwire/stop.go",
+        "engine/hookwire/stop_test.go"
+      ],
+      "identity": "sha256:6b0bae70bd3daf5c9a1691c34d461be248678cb0698b908f08dea9659fefcd5e"
+    },
+    "genesis_paths": [
+      "engine/hookwire/boundary_test.go",
+      "engine/hookwire/hookwire.go",
+      "engine/hookwire/stop.go",
+      "engine/hookwire/stop_test.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-resilience",
+      "review-reliability"
+    ],
+    "original_changed_lines": 156,
+    "correction_budget": 78,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "new Stop hook JSON codec, bounded input and malformed JSON",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:b3d8a9662a7e1a0e3a9b3f819d2075ebc50f3351bd5b443cb0fd70f81a26979a",
+    "capture_phase_revision": "sha256:ed5c283381ef2dd6a9911137169004ecd7d86a04f122891a3dc27725b8c3e9b8",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-resilience",
+        "target_identity": "sha256:6b0bae70bd3daf5c9a1691c34d461be248678cb0698b908f08dea9659fefcd5e",
+        "capture_phase_revision": "sha256:ed5c283381ef2dd6a9911137169004ecd7d86a04f122891a3dc27725b8c3e9b8",
+        "artifact_digest": "sha256:7bcc219e937e42bc506aae273e6655cc639d90156a636f0782c4766ddf5048ce",
+        "result_hash": "sha256:a31ecc34a36312c6d624901d3f03676db023f5ec61fb1a5fb681b4a4e794f0f9",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:5130298f13eeabef733aa9d846401833e0cc291859aecaef0177fe9b59ab486c",
+            "lineage_id": "review-a312737827f84802",
+            "authority_revision": "sha256:ed5c283381ef2dd6a9911137169004ecd7d86a04f122891a3dc27725b8c3e9b8",
+            "target_identity": "sha256:6b0bae70bd3daf5c9a1691c34d461be248678cb0698b908f08dea9659fefcd5e",
+            "base_tree": "6470f5401c51bd70310de818e21c5c7c44ccf8d7",
+            "candidate_tree": "e7924e1f58276eb0fdf96b5e1fe9eab2e80e5ce8",
+            "changed_path_manifest_sha256": "sha256:e90c90c01b5df08dc282d90027e834eb9072061db396f9a58b5951c42b0e7988",
+            "lens": "review-resilience",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:5130298f13eeabef733aa9d846401833e0cc291859aecaef0177fe9b59ab486c",
+            "raw_sha256": "sha256:6d05aac3fdbf840f38b064a89d97e2a0c6157a8beccb34218e6af99dc54a4402",
+            "canonical_sha256": "sha256:d4f767e930129e0aa9e3f8e4ce14ec71faaaf5700682e17cdad6259d0c90ac02",
+            "result_hash": "sha256:a31ecc34a36312c6d624901d3f03676db023f5ec61fb1a5fb681b4a4e794f0f9",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:5130298f13eeabef733aa9d846401833e0cc291859aecaef0177fe9b59ab486c",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/hookwire/boundary_test.go",
+                "engine/hookwire/hookwire.go",
+                "engine/hookwire/stop.go",
+                "engine/hookwire/stop_test.go"
+              ]
+            },
+            "lens": "review-resilience",
+            "findings": [],
+            "evidence": [
+              "Reviewed all four changed paths in full. The change adds a pure Stop-event decoder and encoder: DecodeStop reuses decodeEnvelope, which enforces the size bound and rejects malformed input, and StopReply.Encode returns no output for an allow and a block with a fallback reason when none is given. Neither function does I/O, retries, or holds state, so no concrete failure mode, rollback hazard, latency, or load impact is introduced.",
+              "The stop_hook_active flag is decoded and exposed as Stop.Continuing, so a caller can avoid an endless block loop. The loop-prevention policy is not part of this candidate, so no finding is raised here.",
+              "Decode errors on wrong-typed fields are returned as errors rather than ignored, and the tests in engine/hookwire/stop_test.go cover the oversize, wrong-type, relative-cwd and fallback-reason paths.",
+              "The edit to engine/hookwire/boundary_test.go only adds stop_hook_active to the protocol tag list and has no runtime effect."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 1,
+        "target_identity": "sha256:6b0bae70bd3daf5c9a1691c34d461be248678cb0698b908f08dea9659fefcd5e",
+        "capture_phase_revision": "sha256:ed5c283381ef2dd6a9911137169004ecd7d86a04f122891a3dc27725b8c3e9b8",
+        "artifact_digest": "sha256:8b0b1e726a1f5121a328b1187381362a54a62bab5b8143a3b0afc747223f6c98",
+        "result_hash": "sha256:26c891852cc4e68f0aa24cee0bf22efd00e8e515386cf942a686df1e80aad6df",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:e6ba048fd826ee99351f03b4dbe2e78ba350eb8140e9fa11d7303cfdeeeccdb6",
+            "lineage_id": "review-a312737827f84802",
+            "authority_revision": "sha256:ed5c283381ef2dd6a9911137169004ecd7d86a04f122891a3dc27725b8c3e9b8",
+            "target_identity": "sha256:6b0bae70bd3daf5c9a1691c34d461be248678cb0698b908f08dea9659fefcd5e",
+            "base_tree": "6470f5401c51bd70310de818e21c5c7c44ccf8d7",
+            "candidate_tree": "e7924e1f58276eb0fdf96b5e1fe9eab2e80e5ce8",
+            "changed_path_manifest_sha256": "sha256:e90c90c01b5df08dc282d90027e834eb9072061db396f9a58b5951c42b0e7988",
+            "lens": "review-reliability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:e6ba048fd826ee99351f03b4dbe2e78ba350eb8140e9fa11d7303cfdeeeccdb6",
+            "raw_sha256": "sha256:37281f8789d80b61c6d4e435f4982036bef5616fc5b30f1757c41972807441a4",
+            "canonical_sha256": "sha256:dc48575e8e1903fc6e899cc6269818f4c3c4f9c299bf47c227b86fb9dd00f6c7",
+            "result_hash": "sha256:26c891852cc4e68f0aa24cee0bf22efd00e8e515386cf942a686df1e80aad6df",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:e6ba048fd826ee99351f03b4dbe2e78ba350eb8140e9fa11d7303cfdeeeccdb6",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/hookwire/boundary_test.go",
+                "engine/hookwire/hookwire.go",
+                "engine/hookwire/stop.go",
+                "engine/hookwire/stop_test.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [],
+            "evidence": [
+              "Reviewed all four changed paths from the provided patches. DecodeStop reuses decodeEnvelope and cleanCwd, which are not visible in the candidate; I take their size bound, single-object and wrong-type error behavior from the stop_test.go cases and the DecodeStop doc comment, not from their source.",
+              "stop_test.go checks the observable behavior: field extraction, a relative cwd read as missing, wrong-type errors, non-object and two-object input, the ErrTooLarge bound, the exact block JSON with \u003c, \u003e and \u0026 kept unescaped, the fallback reason, and no output for a non-blocking reply.",
+              "StopReply.Encode returns nil output when Block is false, and the test asserts this. Reason is ignored without a block, which is documented and tested, so no option is silently dropped.",
+              "The boundary_test.go protocolTags addition of stop_hook_active matches the new json tag in stop.go. No regression to existing behavior was found, since the other changes are additive."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "ab31329097616062945f8daaab58ed7ffc7df5c6f95ba8dd32accc031f979305",
+    "initial_atomic_start": {
+      "lineage_id": "review-a312737827f84802",
+      "worktree_identity": "sha256:8c381e392028a9b671c174ab8c453bf4f14a397b1b43c341469805cf16c6e957",
+      "target_identity": "sha256:6b0bae70bd3daf5c9a1691c34d461be248678cb0698b908f08dea9659fefcd5e",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "6470f5401c51bd70310de818e21c5c7c44ccf8d7",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-resilience",
+        "review-reliability"
+      ],
+      "original_changed_lines": 156,
+      "correction_budget": 78,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "new Stop hook JSON codec, bounded input and malformed JSON"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

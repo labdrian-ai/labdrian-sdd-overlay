@@ -11,6 +11,7 @@ var installedFamilies = []hookFamily{
 	shaperGuardFamily,
 	projectionFamily,
 	approveGuardFamily,
+	reviewStopFamily,
 }
 
 // retiredFamilies are the hook pairs this overlay used to install and no longer does
@@ -90,7 +91,9 @@ func addClearanceDenyRule(root map[string]interface{}) bool {
 // same binary path. SessionEnd, SessionStart and PostToolUse are scanned alongside
 // UserPromptSubmit/PreToolUse so an owned sync-trigger entry, or the projection
 // family's SessionStart (C23 M6) and PostToolUse (C23 M7) entries, is removed the
-// same way; Stop is never scanned because nothing owned is ever installed there.
+// same way. Stop is scanned for the entry of the review stop-hook alone (removable):
+// nothing else was ever installed there, and an entry of another family that an
+// older version left on Stop stays, as it always has.
 func removeHooks(root map[string]interface{}, hookCommand string) bool {
 	hooks, ok := root["hooks"].(map[string]interface{})
 	if !ok {
@@ -98,14 +101,14 @@ func removeHooks(root map[string]interface{}, hookCommand string) bool {
 	}
 
 	changed := false
-	for _, key := range []string{"UserPromptSubmit", "PreToolUse", "SessionEnd", "SessionStart", "PostToolUse"} {
+	for _, key := range []string{"UserPromptSubmit", "PreToolUse", "SessionEnd", "SessionStart", "PostToolUse", "Stop"} {
 		entries, ok := hooks[key].([]interface{})
 		if !ok {
 			continue
 		}
 		var filtered []interface{}
 		for _, e := range entries {
-			if ownedByAFamily(e, hookCommand) {
+			if removable(key, e, hookCommand) {
 				changed = true
 				continue
 			}
@@ -143,6 +146,16 @@ func removeHooks(root map[string]interface{}, hookCommand string) bool {
 
 	root["hooks"] = hooks
 	return changed
+}
+
+// removable reports whether removeHooks takes the entry e out of the list of event: an entry of any
+// family, installed or retired, under the events the overlay has always scanned, and under Stop the
+// entry of the review stop-hook only.
+func removable(event string, e interface{}, hookCommand string) bool {
+	if event == "Stop" {
+		return reviewStopFamily.owns(e, hookCommand)
+	}
+	return ownedByAFamily(e, hookCommand)
 }
 
 // ensureHooksMap retrieves or creates the "hooks" map in root.

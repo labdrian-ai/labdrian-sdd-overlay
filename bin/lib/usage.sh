@@ -65,7 +65,10 @@ Commands:
                                    or a requested fetch failed) -- other checks still complete.
   install-hooks                    Build + deploy the engine binary, then wire the
                                    deterministic-scoping hooks, the workflow projection
-                                   hooks, and the skills approve guard into
+                                   hooks, the skills approve guard, and the review
+                                   stop-hook (on Stop: asks the agent once for each
+                                   session and commit to review the next commit no
+                                   review covers) into
                                    ~/.claude/settings.json. Re-run it after an
                                    upgrade that adds a hook family, then restart Claude Code
                                    to load the hooks.
@@ -78,12 +81,15 @@ Commands:
                                    Also best-effort installs discovery tools (bat rg fd sd
                                    eza) via Homebrew so agents never hit the silent-empty
                                    footgun. Set OVERLAY_SKIP_TOOL_INSTALL=1 to opt out.
-  uninstall-hooks                  Remove our hook entries from ~/.claude/settings.json,
+  uninstall-hooks                  Remove our hook entries from ~/.claude/settings.json
+                                   (the review stop-hook on Stop among them),
                                    and our Codex SessionStart hook from CODEX_HOME/hooks.json
                                    (default ~/.codex), leaving foreign bytes intact.
   status-hooks                     Read-only check of overlay installation health: binary
                                    present, hooks wired, contract readable. Exits 0 if all
-                                   OK, 1 if any check fails, 2 for warnings alone.
+                                   OK, 1 if any check fails, 2 for warnings alone (a missing
+                                   or drifted review stop-hook is one, until install-hooks
+                                   is re-run).
                                    Codex is reported only if its home exists; presence
                                    does not prove trust (/hooks, key t). Read-only.
   doctor [--fix]                   Read-only host-toolchain preflight: checks go (required),
@@ -286,6 +292,13 @@ Commands:
                                              file; print the record skeleton for roles append with payload_kind
                                              review-exemption; review check clears an exempted head, but a result that
                                              blocks wins over any exemption (exit 0 stored, 2 report refused, 1 error)
+                                   stop-hook
+                                             not run by a person: the Claude Code Stop hook that install-hooks wires
+                                             (the review stop-hook). On a branch other than the default one, it blocks
+                                             the stop once for each session and commit with the review bind command for
+                                             the next commit no stored result or exemption binds, and never for the
+                                             whole branch; it lets the stop happen on anything it cannot tell
+                                             (exit 0 always, 1 usage error)
                                    No verb launches an agent or dispatches work.
   memory <verb>                    Forward memory-directive verbs to the engine unchanged.
                                    Read-only: no verb queries or writes memory; query execution

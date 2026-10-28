@@ -14,7 +14,9 @@ package main
 // result blocks it; with --base it asks that of every commit of the chain of reviews from the base to the head. The
 // rules are the use cases of review/app over the adapters review/gitexec (git) and review/fsstore
 // (the results directory); this file parses the command line, wires them and says what they did. No verb launches
-// an agent or dispatches work: a reply is a file somebody else produced.
+// an agent or dispatches work: a reply is a file somebody else produced. 'review stop-hook' is the odd one out: the
+// Claude Code Stop hook that blocks the stop of an agent whose branch has a commit no review covers, which Claude Code
+// starts and a person does not (review_stop_hook.go).
 
 import (
 	"encoding/json"
@@ -65,6 +67,8 @@ func runReview(p process, d deps, args []string) {
 		runReviewCheck(p, d, args[1:])
 	case "exempt":
 		runReviewExempt(p, d, args[1:])
+	case reviewStopVerb:
+		runReviewStopHook(p, d, args[1:])
 	default:
 		fmt.Fprintf(p.stderr, "error: review: unknown verb %q (expected bind, record, verify, check or exempt)\n", args[0])
 		p.exit(1)

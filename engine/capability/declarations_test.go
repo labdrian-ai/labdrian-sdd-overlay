@@ -254,6 +254,37 @@ func TestClaudeCodeSessionClaimsStateTheirScope(t *testing.T) {
 	}
 }
 
+// TestClaudeInstallationClaimNamesTheReviewStopHook pins that the installation claim of Claude Code says the Stop hook is
+// one of the lifecycle hook families it installs, and names the tests that prove it: it is installed, status is partial
+// until install-hooks is run again on a machine that installed before it, a drift is repaired, and uninstall takes it
+// off and leaves the Stop entries of other programs (own-rdd T6a, S6).
+func TestClaudeInstallationClaimNamesTheReviewStopHook(t *testing.T) {
+	d, err := capability.Declare(capability.TargetClaude)
+	if err != nil {
+		t.Fatal(err)
+	}
+	claim := d.Claims[0]
+	if claim.Capability != capability.Installation {
+		t.Fatalf("first claim is %s, want installation", claim.Capability)
+	}
+	for _, phrase := range []string{"lifecycle hook families", "the Stop hook", "once per session and commit", "the next commit no stored review covers", "restart_required"} {
+		if !strings.Contains(claim.Detail, phrase) {
+			t.Errorf("installation detail %q does not state %q", claim.Detail, phrase)
+		}
+	}
+	for _, ref := range []string{
+		"runtime:TestClaudeInstallWritesTheReviewStopHook",
+		"runtime:TestClaudeStatusIsPartialUntilInstallHooksIsRerunForTheReviewStopHook",
+		"runtime:TestClaudeStatusIsPartialWhenTheReviewStopHookEntryDrifted",
+		"runtime:TestClaudeUninstallRemovesTheReviewStopHookAndKeepsForeignStopEntries",
+		"status:TestTheReviewStopHookNamesWhatIsMissingOrDriftedAndAsksForARestart",
+	} {
+		if !slices.Contains(claim.Tests, ref) {
+			t.Errorf("installation claim does not name the test %q", ref)
+		}
+	}
+}
+
 func skillsClaim(t *testing.T, target string) capability.Claim {
 	t.Helper()
 	d, err := capability.Declare(target)

@@ -53,6 +53,9 @@ const (
 	// EventPostToolUse runs after a tool call has run; what it prints as additionalContext is
 	// given to the agent (C23 M7).
 	EventPostToolUse = "PostToolUse"
+	// EventStop runs when the agent is about to stop; a hook can block the stop and give the reason the agent reads
+	// (own-rdd T6a, S6).
+	EventStop = "Stop"
 )
 
 // MaxPostToolUseBytes bounds the input DecodePostToolUse accepts. The input carries the tool's

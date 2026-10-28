@@ -1,0 +1,138 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:115da6a38ec2eeff3744151d3f3937ebf123dcb21df5f930e8973f57a135ebf5",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-e497cfefef9a1024",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "49c7a22b04c0be62c08f3e9e07f50479247eef5d",
+      "candidate_tree": "bb05f28d0860b215f8db17c3b570d17979aebb0a",
+      "paths_digest": "sha256:830dcaf4cc9dec361920a2c14222c6031cadb5ae71d8a0f5efadcdc009ca95fa",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/review/app/service.go",
+        "engine/review/app/stop.go",
+        "engine/review/app/stop_test.go",
+        "engine/review/app/unreviewed.go"
+      ],
+      "identity": "sha256:04b259a76fa5135580a8b3980d812616c396ef6e8a098cb40fe0bae91abaa8a8"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "49c7a22b04c0be62c08f3e9e07f50479247eef5d",
+      "candidate_tree": "bb05f28d0860b215f8db17c3b570d17979aebb0a",
+      "paths_digest": "sha256:830dcaf4cc9dec361920a2c14222c6031cadb5ae71d8a0f5efadcdc009ca95fa",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/review/app/service.go",
+        "engine/review/app/stop.go",
+        "engine/review/app/stop_test.go",
+        "engine/review/app/unreviewed.go"
+      ],
+      "identity": "sha256:04b259a76fa5135580a8b3980d812616c396ef6e8a098cb40fe0bae91abaa8a8"
+    },
+    "genesis_paths": [
+      "engine/review/app/service.go",
+      "engine/review/app/stop.go",
+      "engine/review/app/stop_test.go",
+      "engine/review/app/unreviewed.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-reliability"
+    ],
+    "original_changed_lines": 277,
+    "correction_budget": 139,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "stop decision once per session and question",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:fc63a7bd0ec6ff535027f46f9a34a5c145a89fc18395a5c95d9a71400411317b",
+    "capture_phase_revision": "sha256:8826882a6b37306889ae5f5a6a93dc49cc3d2b35be83fe6f6495c03b0f179218",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "target_identity": "sha256:04b259a76fa5135580a8b3980d812616c396ef6e8a098cb40fe0bae91abaa8a8",
+        "capture_phase_revision": "sha256:8826882a6b37306889ae5f5a6a93dc49cc3d2b35be83fe6f6495c03b0f179218",
+        "artifact_digest": "sha256:fbf9f2bd29e08349b8cb226aedc3693e96ae4414881046e2025c6f86ac50e860",
+        "result_hash": "sha256:86498f867364fd825d5f24bbab89b75c01c49a9813ec5a2fc7076b728d46d56c",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:450b1f3c014ad0b569b195692966a921c9f0b57100353675f67e127f60009e29",
+            "lineage_id": "review-e497cfefef9a1024",
+            "authority_revision": "sha256:8826882a6b37306889ae5f5a6a93dc49cc3d2b35be83fe6f6495c03b0f179218",
+            "target_identity": "sha256:04b259a76fa5135580a8b3980d812616c396ef6e8a098cb40fe0bae91abaa8a8",
+            "base_tree": "49c7a22b04c0be62c08f3e9e07f50479247eef5d",
+            "candidate_tree": "bb05f28d0860b215f8db17c3b570d17979aebb0a",
+            "changed_path_manifest_sha256": "sha256:f24e206d63d66d912b1adb9dbc071dba3b850d3d36e575879faf53b4b254473e",
+            "lens": "review-reliability",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:450b1f3c014ad0b569b195692966a921c9f0b57100353675f67e127f60009e29",
+            "raw_sha256": "sha256:20e40d550a51b97adb8c5a549d5d1e073c3fe7f871857aa38f5b22b4c5f5d9d3",
+            "canonical_sha256": "sha256:08186711aabb5784a3f980783cb6366a74ba62820bb3e6c96fd6598efb693495",
+            "result_hash": "sha256:86498f867364fd825d5f24bbab89b75c01c49a9813ec5a2fc7076b728d46d56c",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:450b1f3c014ad0b569b195692966a921c9f0b57100353675f67e127f60009e29",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/app/service.go",
+                "engine/review/app/stop.go",
+                "engine/review/app/stop_test.go",
+                "engine/review/app/unreviewed.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [],
+            "evidence": [
+              "engine/review/app/stop.go: Stop returns early with no block when the Asked store is missing or when continuing is true, and neither case calls git or the stores. stop_test.go asserts both: TestStopRefusesToRunWithoutAStoreOfItsQuestions and TestStopDoesNotBlockWhileAStopHookIsContinuing.",
+              "engine/review/app/stop.go: once() calls Has before Add, so a block is only returned after the question is recorded. A failure of Has or Add returns an error with no block, which avoids repeated blocking at later stops. TestStopDoesNotBlockWhatItCannotTellOrRemember covers the git, Has and Add failures.",
+              "engine/review/app/unreviewed.go: NoDefaultBranchError keeps the original message text and Unwrap returns ErrNoDefaultBranch, so existing errors.Is callers still work. Stop uses errors.As to branch on the typed error.",
+              "Dedup keys follow the stated design: a per-commit-range key, built from the first 12 characters of the base and head, and a single session-wide key for the no-default-branch case. Tests cover the same session, another session and the next commit.",
+              "Residual gap, not a defect: no test checks that the no-default question is asked once per session across different branches, or the Has/Add error path for that question. The shared once() code covers those paths, so the behavior is still proved at the unit level."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "46fcee3f4db46c90d08bbef345ffe39cb81be1fe1080f2366a2168a1dc3f1e9e",
+    "initial_atomic_start": {
+      "lineage_id": "review-e497cfefef9a1024",
+      "worktree_identity": "sha256:67f737e627d565a76541ca003570b6a3e727d4f6f6ff4aaf9c3f64cff181e682",
+      "target_identity": "sha256:04b259a76fa5135580a8b3980d812616c396ef6e8a098cb40fe0bae91abaa8a8",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "49c7a22b04c0be62c08f3e9e07f50479247eef5d",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-reliability"
+      ],
+      "original_changed_lines": 277,
+      "correction_budget": 139,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "stop decision once per session and question"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

@@ -1,0 +1,142 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:fd3a60ead03eae0aecfefd7ce6cb48598c6a0a2276d5dffc242d1b18d2ced696",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-4d87da69868edf96",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "c996c95b38c110e90120231858dc29e674a47ebb",
+      "candidate_tree": "51f1587f16966b0d9c6da1c7ab9ac0796fa5762e",
+      "paths_digest": "sha256:fb38f56754cbee3df99263382e9384247c8721282bbcd8fb60015a122e1abb18",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/review/app/app.go",
+        "engine/review/app/fakes_test.go",
+        "engine/review/fsstore/features.go",
+        "engine/review/fsstore/features_test.go",
+        "engine/review/fsstore/fsstore.go"
+      ],
+      "identity": "sha256:5b9ccb2c49cfe4baae93a8d05cdc67824afe1a14b3e95b8b9bd519356ee4bef0"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "c996c95b38c110e90120231858dc29e674a47ebb",
+      "candidate_tree": "51f1587f16966b0d9c6da1c7ab9ac0796fa5762e",
+      "paths_digest": "sha256:fb38f56754cbee3df99263382e9384247c8721282bbcd8fb60015a122e1abb18",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/review/app/app.go",
+        "engine/review/app/fakes_test.go",
+        "engine/review/fsstore/features.go",
+        "engine/review/fsstore/features_test.go",
+        "engine/review/fsstore/fsstore.go"
+      ],
+      "identity": "sha256:5b9ccb2c49cfe4baae93a8d05cdc67824afe1a14b3e95b8b9bd519356ee4bef0"
+    },
+    "genesis_paths": [
+      "engine/review/app/app.go",
+      "engine/review/app/fakes_test.go",
+      "engine/review/fsstore/features.go",
+      "engine/review/fsstore/features_test.go",
+      "engine/review/fsstore/fsstore.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-reliability"
+    ],
+    "original_changed_lines": 198,
+    "correction_budget": 99,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "new store listing review feature directories, with tests",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:1968619bd0c78ad12c02f67de238f28673412b12285f09fc809775795fd250dd",
+    "capture_phase_revision": "sha256:a3c7f158653c6da674c07129ce9685ee38fdce3f919c331c257f4f689209ac02",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "target_identity": "sha256:5b9ccb2c49cfe4baae93a8d05cdc67824afe1a14b3e95b8b9bd519356ee4bef0",
+        "capture_phase_revision": "sha256:a3c7f158653c6da674c07129ce9685ee38fdce3f919c331c257f4f689209ac02",
+        "artifact_digest": "sha256:2c0802d9df5d2fbd5329177a083457fd92702315f3245372a4f5a54762529031",
+        "result_hash": "sha256:ffb47d9e1af6490da6b9150a6e15b443bede830a04b41bdb71e211cefc5d7caa",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:f9af2083c394f3a944449bae042bd551c84320b064789f1aab903c2df95d6a81",
+            "lineage_id": "review-4d87da69868edf96",
+            "authority_revision": "sha256:a3c7f158653c6da674c07129ce9685ee38fdce3f919c331c257f4f689209ac02",
+            "target_identity": "sha256:5b9ccb2c49cfe4baae93a8d05cdc67824afe1a14b3e95b8b9bd519356ee4bef0",
+            "base_tree": "c996c95b38c110e90120231858dc29e674a47ebb",
+            "candidate_tree": "51f1587f16966b0d9c6da1c7ab9ac0796fa5762e",
+            "changed_path_manifest_sha256": "sha256:7bd00740e8a9b4a61c3551ea008918db488105222724f238982b04862fe92fc7",
+            "lens": "review-reliability",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:f9af2083c394f3a944449bae042bd551c84320b064789f1aab903c2df95d6a81",
+            "raw_sha256": "sha256:dc3a000e2ac7211fbc7bed022169ad5a778bbd06e5ea1466e121a70259c0c36f",
+            "canonical_sha256": "sha256:dc3a000e2ac7211fbc7bed022169ad5a778bbd06e5ea1466e121a70259c0c36f",
+            "result_hash": "sha256:ffb47d9e1af6490da6b9150a6e15b443bede830a04b41bdb71e211cefc5d7caa",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:f9af2083c394f3a944449bae042bd551c84320b064789f1aab903c2df95d6a81",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/app/app.go",
+                "engine/review/app/fakes_test.go",
+                "engine/review/fsstore/features.go",
+                "engine/review/fsstore/features_test.go",
+                "engine/review/fsstore/fsstore.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [],
+            "evidence": [
+              "engine/review/fsstore/features.go: Features uses Lstat on odd, odd/tasks and odd/review-results, so a link or a file there gives ErrNotADirectory. A missing odd or odd/review-results gives a quiet empty result. This matches the contract documented in engine/review/app/app.go.",
+              "engine/review/fsstore/features.go: the listing keeps only entries where entry.IsDir() is true and review.CheckFeature passes. IsDir comes from the directory entry type, so symlinks are excluded without being followed. os.ReadDir returns entries sorted by name, so the output is deterministic and sorted as the interface requires.",
+              "engine/review/fsstore/features_test.go: the table test asserts the observable Features value for these cases: no odd, an empty odd, odd/tasks only, several features alongside a stray file, and a symlink, hidden directory and invalid name being skipped. The refusal test covers odd as a link and odd/review-results as a file, and asserts ErrNotADirectory with a zero value. That is enough to prove the new behavior at the cheapest level.",
+              "engine/review/app/fakes_test.go: the fake Features records its call, supports failure injection, and returns sorted names, so it stays consistent with the interface contract. It adds only a method and a field, so existing behavior is unchanged.",
+              "Minor, no finding raised: the tests do not cover odd/tasks being a file, and the code path for it is the same shared plainDirectory helper that is already exercised."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "2606bb200a3b56fc6c876a29e5cffc65eebba0b371cc3207445eff6b2c73d999",
+    "initial_atomic_start": {
+      "lineage_id": "review-4d87da69868edf96",
+      "worktree_identity": "sha256:b0e83406ac5ab82f7b5951c1a01fd15037f0257e2d429bebb67048a8fb04637b",
+      "target_identity": "sha256:5b9ccb2c49cfe4baae93a8d05cdc67824afe1a14b3e95b8b9bd519356ee4bef0",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "c996c95b38c110e90120231858dc29e674a47ebb",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-reliability"
+      ],
+      "original_changed_lines": 198,
+      "correction_budget": 99,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "new store listing review feature directories, with tests"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

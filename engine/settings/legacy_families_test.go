@@ -16,6 +16,7 @@ func namedFamilies() map[string]hookFamily {
 		"shaper":     shaperGuardFamily,
 		"projection": projectionFamily,
 		"approve":    approveGuardFamily,
+		"reviewstop": reviewStopFamily,
 	}
 }
 

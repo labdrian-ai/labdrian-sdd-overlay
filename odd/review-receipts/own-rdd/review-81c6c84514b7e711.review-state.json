@@ -1,0 +1,199 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:0f0252f2845ec4b40a2df53a3984fb4276abbfb8c03131720db3e65bcf3dcf7f",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-81c6c84514b7e711",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "e7924e1f58276eb0fdf96b5e1fe9eab2e80e5ce8",
+      "candidate_tree": "49c7a22b04c0be62c08f3e9e07f50479247eef5d",
+      "paths_digest": "sha256:76ffe71e4af08fa9ee427771dba136a46a06f0c5f76dd881264f67f09bb269b4",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/review/fsstore/asked.go",
+        "engine/review/fsstore/asked_test.go"
+      ],
+      "identity": "sha256:f9af3b51d4a8730433c529b9d4ef1d2920c7f45b853c9edff77caf582d3749df"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "e7924e1f58276eb0fdf96b5e1fe9eab2e80e5ce8",
+      "candidate_tree": "49c7a22b04c0be62c08f3e9e07f50479247eef5d",
+      "paths_digest": "sha256:76ffe71e4af08fa9ee427771dba136a46a06f0c5f76dd881264f67f09bb269b4",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/review/fsstore/asked.go",
+        "engine/review/fsstore/asked_test.go"
+      ],
+      "identity": "sha256:f9af3b51d4a8730433c529b9d4ef1d2920c7f45b853c9edff77caf582d3749df"
+    },
+    "genesis_paths": [
+      "engine/review/fsstore/asked.go",
+      "engine/review/fsstore/asked_test.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-resilience",
+      "review-reliability"
+    ],
+    "original_changed_lines": 224,
+    "correction_budget": 112,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "new marker store under the state home, file modes and partial writes",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:a72cedc8f1cf1164314609f0d4edd15f9509c20524103920aea5500cd727b328",
+    "capture_phase_revision": "sha256:c78a0622d1356e2ccef35231c754899f3727f37d0f088b01c03d4ea40d9ad02b",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-resilience",
+        "target_identity": "sha256:f9af3b51d4a8730433c529b9d4ef1d2920c7f45b853c9edff77caf582d3749df",
+        "capture_phase_revision": "sha256:c78a0622d1356e2ccef35231c754899f3727f37d0f088b01c03d4ea40d9ad02b",
+        "artifact_digest": "sha256:557a605cad52c6a5096786b51186d5870a7ce1bf11083c4529f4ff0c994943b8",
+        "result_hash": "sha256:03c453bd1373296cd4be6d8abde095443464020413cc36736d20000c6e5ea035",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:4557b4432d29e7a2430b31f84d677034b83ee1a8c05c94f67694f9783e3a03f2",
+            "lineage_id": "review-81c6c84514b7e711",
+            "authority_revision": "sha256:c78a0622d1356e2ccef35231c754899f3727f37d0f088b01c03d4ea40d9ad02b",
+            "target_identity": "sha256:f9af3b51d4a8730433c529b9d4ef1d2920c7f45b853c9edff77caf582d3749df",
+            "base_tree": "e7924e1f58276eb0fdf96b5e1fe9eab2e80e5ce8",
+            "candidate_tree": "49c7a22b04c0be62c08f3e9e07f50479247eef5d",
+            "changed_path_manifest_sha256": "sha256:256282aecafd41d95525faf6a223485dae1c6407e223e7089d97e0eb89fd2aa2",
+            "lens": "review-resilience",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:4557b4432d29e7a2430b31f84d677034b83ee1a8c05c94f67694f9783e3a03f2",
+            "raw_sha256": "sha256:793ff270f880f36d4d7de268927723672287f0853b8272de9a2d42d2b703b070",
+            "canonical_sha256": "sha256:3aa6bc7eef9b0d40913c9e0ec73c101da96ffa409bd2408ada87c442a0ba04ea",
+            "result_hash": "sha256:03c453bd1373296cd4be6d8abde095443464020413cc36736d20000c6e5ea035",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:4557b4432d29e7a2430b31f84d677034b83ee1a8c05c94f67694f9783e3a03f2",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/fsstore/asked.go",
+                "engine/review/fsstore/asked_test.go"
+              ]
+            },
+            "lens": "review-resilience",
+            "findings": [],
+            "evidence": [
+              "Reviewed both added files in full. Has performs no writes and treats a missing store as absent, so a read-only or never-written state home degrades gracefully. Add is retry-safe because statestore.Publish is documented as idempotent, and the second-Add test covers it. Link and symlink refusals surface as wrapped errors and are tested. Keys are length-bounded and character-restricted, and each operation does one directory check plus one small bounded read or write, so there is no unbounded latency or load. Errors are wrapped with the store name, which gives adequate observability. I found no concrete production failure mode caused by this candidate."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 1,
+        "target_identity": "sha256:f9af3b51d4a8730433c529b9d4ef1d2920c7f45b853c9edff77caf582d3749df",
+        "capture_phase_revision": "sha256:c78a0622d1356e2ccef35231c754899f3727f37d0f088b01c03d4ea40d9ad02b",
+        "artifact_digest": "sha256:be345985f057a9361e08abef169151990f69de8f172fe00c1a446216351303ac",
+        "result_hash": "sha256:8e527cfb3ca550a55d2cad2c6e4483bce9b98d132fadf2b88e74acc7d69a1a55",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:0a6aca655b713149978f375d15755ad49be95c1efba53ef0875035f913f7a7e0",
+            "lineage_id": "review-81c6c84514b7e711",
+            "authority_revision": "sha256:c78a0622d1356e2ccef35231c754899f3727f37d0f088b01c03d4ea40d9ad02b",
+            "target_identity": "sha256:f9af3b51d4a8730433c529b9d4ef1d2920c7f45b853c9edff77caf582d3749df",
+            "base_tree": "e7924e1f58276eb0fdf96b5e1fe9eab2e80e5ce8",
+            "candidate_tree": "49c7a22b04c0be62c08f3e9e07f50479247eef5d",
+            "changed_path_manifest_sha256": "sha256:256282aecafd41d95525faf6a223485dae1c6407e223e7089d97e0eb89fd2aa2",
+            "lens": "review-reliability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:0a6aca655b713149978f375d15755ad49be95c1efba53ef0875035f913f7a7e0",
+            "raw_sha256": "sha256:a5d90a80cc8f6c60b4360d1d9564155740b9fb22f673c34eadad51c37d08e406",
+            "canonical_sha256": "sha256:8f6381eb33ff1dbc896f16f89ba2923a6b91405cba5d9add2617bf90e08aed79",
+            "result_hash": "sha256:8e527cfb3ca550a55d2cad2c6e4483bce9b98d132fadf2b88e74acc7d69a1a55",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:0a6aca655b713149978f375d15755ad49be95c1efba53ef0875035f913f7a7e0",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/fsstore/asked.go",
+                "engine/review/fsstore/asked_test.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-key-boundary",
+                "lens": "reliability",
+                "location": "engine/review/fsstore/asked_test.go:80",
+                "severity": "SUGGESTION",
+                "claim": "The invalid-key test covers an over-long key (65 bytes) and a leading dot, but not the exact boundary: a 64-byte key accepted, and a key with a leading dash rejected. The leading-dash rule in checkKey and the maxKeyLen inclusive limit are therefore unproved by a test. Low risk because the logic is simple.",
+                "proof_refs": [
+                  "engine/review/fsstore/asked.go:90-98",
+                  "engine/review/fsstore/asked_test.go:80"
+                ]
+              },
+              {
+                "id": "R3-markerpresence",
+                "lens": "reliability",
+                "location": "engine/review/fsstore/asked_test.go:44",
+                "severity": "SUGGESTION",
+                "claim": "Has treats any readable file at the marker path as present, including non-regular entries or content that differs from the marker. ReadFile is bounded by marker length plus one, so an oversized file may return an error rather than false. No test covers a corrupted or foreign marker, so that failure path is unproved.",
+                "proof_refs": [
+                  "engine/review/fsstore/asked.go:55-62"
+                ]
+              }
+            ],
+            "evidence": [
+              "Reviewed both added files in full. Core behaviors are asserted through the public API: absent-before and present-after, isolation per key and per session, 0600 and 0700 modes, the session hash used as the directory name, Has creating nothing, idempotent Add, key validation refusing path traversal without creating a store, a symlinked directory refused with ErrSymlink and nothing written through it, and a relative state home refused.",
+              "No BLOCKER or CRITICAL issues were found. The findings are optional boundary-coverage suggestions."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "9b4bd327b666251b6f54a05b0cc64570beda98b594a38da68d3f611dedd23996",
+    "initial_atomic_start": {
+      "lineage_id": "review-81c6c84514b7e711",
+      "worktree_identity": "sha256:d4c7b5b57adc7ccaace58d335e239a8b5b4e5fe01c036df249f52e41edd7beba",
+      "target_identity": "sha256:f9af3b51d4a8730433c529b9d4ef1d2920c7f45b853c9edff77caf582d3749df",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "e7924e1f58276eb0fdf96b5e1fe9eab2e80e5ce8",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-resilience",
+        "review-reliability"
+      ],
+      "original_changed_lines": 224,
+      "correction_budget": 112,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "new marker store under the state home, file modes and partial writes"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

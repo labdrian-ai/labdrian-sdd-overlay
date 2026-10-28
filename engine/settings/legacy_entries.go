@@ -158,7 +158,7 @@ func buildDesignPreToolUseEntry(hookCommand string) map[string]interface{} {
 }
 
 // syncTriggerFamily is the single SessionEnd entry that runs the sync-trigger at session close.
-// Nothing is ever installed on Stop: SessionEnd fires once per session, Stop fires per turn.
+// The sync-trigger is never installed on Stop: SessionEnd fires once per session, Stop fires per turn.
 var syncTriggerFamily = hookFamily{
 	identity: LabdrianSyncTriggerIdentity,
 	specs:    []hookSpec{{event: "SessionEnd"}},

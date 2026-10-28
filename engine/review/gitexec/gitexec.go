@@ -1,5 +1,6 @@
 // Package gitexec is the adapter of the Git port of review/app: it asks the git program of the machine, through
-// a Runner, the questions `labdrian review bind` and `labdrian review record` put about a repository. It
+// a Runner, the questions `labdrian review bind` and `labdrian review record` put about a repository, and the
+// one the stop hook puts about a branch (Standing). It
 // starts git only with an argument vector it composes (a revision is a value after "--end-of-options", never
 // an option) and only under an environment it scrubs, and it reads and writes no file of the repository but
 // the worktree of a review (Worktree, AddWorktree).
@@ -64,6 +65,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -313,6 +315,100 @@ func (g Git) Worktree(repo app.Repository, path string) (app.WorktreeState, erro
 func (g Git) AddWorktree(repo app.Repository, path, head string) error {
 	_, err := g.output(repo.Root, "worktree add", []string{"-c", "core.hooksPath=" + os.DevNull, "worktree", "add", "--detach", path, head})
 	return err
+}
+
+// originRefs is where the branches of the remote called origin are kept.
+const originRefs = "refs/remotes/origin/"
+
+// Standing says which branch HEAD is on, which branch is the default one and the commits of HEAD that the default
+// branch does not have (own-rdd T6a, S6). A detached HEAD ("HEAD" is what git prints for it) and a repository with
+// no default branch are told without the commits.
+//
+// The default branch is the one origin/HEAD names when the repository has it, else main, else master: the first of
+// them that exists as a local branch or as the branch origin keeps. The commits are what
+//
+//	git rev-list --first-parent --reverse --end-of-options <HEAD> ^<tip> ...
+//
+// lists, with a tip for each of the two places the default branch is, so that a local branch behind its remote, and
+// one ahead of it, both leave their commits out; a branch that merged the default branch lists its own line of
+// commits and not the ones merged in.
+func (g Git) Standing(repo app.Repository) (app.Standing, error) {
+	out, err := g.output(repo.Root, "rev-parse", []string{"rev-parse", "--abbrev-ref", "HEAD"})
+	if err != nil {
+		return app.Standing{}, err
+	}
+	branch := strings.TrimSuffix(string(out), "\n")
+	switch {
+	case branch == "HEAD":
+		return app.Standing{}, nil
+	case branch == "" || strings.Contains(branch, "\n"):
+		return app.Standing{}, fmt.Errorf("git rev-parse printed %q for the branch of HEAD, want one branch name", clip(string(out)))
+	}
+	name, tips, err := g.defaultBranch(repo.Root)
+	if err != nil || name == "" {
+		return app.Standing{Branch: branch}, err
+	}
+	head, err := g.commit(repo.Root, "HEAD")
+	if err != nil {
+		return app.Standing{}, err
+	}
+	args := []string{"rev-list", "--first-parent", "--reverse", "--end-of-options", head}
+	for _, tip := range tips {
+		args = append(args, "^"+tip)
+	}
+	out, err = g.output(repo.Root, "rev-list", args)
+	if err != nil {
+		return app.Standing{}, err
+	}
+	commits, err := commitNames("rev-list", out)
+	if err != nil {
+		return app.Standing{}, err
+	}
+	return app.Standing{Branch: branch, Default: name, Commits: commits}, nil
+}
+
+// defaultBranch finds the default branch of the repository in dir and the commits it is at, none when it has none.
+// A branch name that origin/HEAD gives is used only when it holds nothing that git would read as a pattern.
+func (g Git) defaultBranch(dir string) (string, []string, error) {
+	out, err := g.output(dir, "for-each-ref", []string{"for-each-ref", "--format=%(symref)", originRefs + "HEAD"})
+	if err != nil {
+		return "", nil, err
+	}
+	candidates := []string{"main", "master"}
+	if named, ok := strings.CutPrefix(strings.TrimSuffix(string(out), "\n"), originRefs); ok && named != "" && !strings.ContainsAny(named, "*?[\\\n") {
+		candidates = append([]string{named}, candidates...)
+	}
+	for _, name := range candidates {
+		out, err := g.output(dir, "for-each-ref", []string{"for-each-ref", "--format=%(objectname)", "refs/heads/" + name, originRefs + name})
+		if err != nil {
+			return "", nil, err
+		}
+		tips, err := commitNames("for-each-ref", out)
+		if err != nil {
+			return "", nil, err
+		}
+		if len(tips) > 0 {
+			slices.Sort(tips)
+			return name, slices.Compact(tips), nil
+		}
+	}
+	return "", nil, nil
+}
+
+// commitNames reads out, what git printed for command, as a list of full object names, one on each line, and none
+// for no output. A line that is not a full object name is not an answer.
+func commitNames(command string, out []byte) ([]string, error) {
+	if len(out) == 0 {
+		return nil, nil
+	}
+	var names []string
+	for _, line := range strings.Split(strings.TrimSuffix(string(out), "\n"), "\n") {
+		if !gitobject.IsName(line) {
+			return nil, fmt.Errorf("git %s printed %q, want full object names one on each line", command, clip(line))
+		}
+		names = append(names, line)
+	}
+	return names, nil
 }
 
 // observer is gitprov over this adapter's runner and the environment as it was given.

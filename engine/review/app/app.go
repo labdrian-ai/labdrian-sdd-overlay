@@ -5,7 +5,8 @@
 // the result. Exempt holds the risk the agent declares and the report of the verifier for a head whose work takes
 // no review, and stores the exemption beside the results. CheckEvidence holds the evidence of the record that
 // closes a review to the files stored, Check holds a head being delivered to the results stored for it, and CheckChain
-// holds the commits from a base to it to an unbroken chain of them. CountLenses, which needs no git, counts the lens
+// holds the commits from a base to it to an unbroken chain of them, and NextUnreviewed names the next commit of a branch
+// that no stored review covers, which the stop hook asks for. CountLenses, which needs no git, counts the lens
 // rows the stored results of a feature record. They answer with typed values and typed refusals
 // over two ports this package owns: Git, the repository as the use cases ask about it, and Results, the
 // directory where results are stored. The adapters are review/gitexec and review/fsstore, and the words a
@@ -54,6 +55,19 @@ type WorktreeState struct {
 	Head string
 }
 
+// Standing is where HEAD stands in its branch, as the stop hook asks about it (own-rdd T6a, S6).
+type Standing struct {
+	// Branch is the short name of the branch HEAD is on, and "" when HEAD is detached, which is all that is told then.
+	Branch string
+	// Default is the short name of the default branch of the repository, and "" when the repository does not tell
+	// which it is, which is all that is told then besides Branch.
+	Default string
+	// Commits are the commits of HEAD that the default branch does not have, whether it is the local branch or the
+	// one the remote keeps: the first-parent line of HEAD down to the commit it was made on, oldest first, each a full
+	// object name. None when HEAD is on the default branch or behind it.
+	Commits []string
+}
+
 // Git is the repository as the use cases ask about it. Every revision it is given has passed
 // review.CheckRev, and every commit it is given after Commit is a full object name. An implementation runs
 // git with an environment of its own and never with a command line a caller composed.
@@ -78,6 +92,19 @@ type Git interface {
 	Worktree(repo Repository, path string) (WorktreeState, error)
 	// AddWorktree makes path a detached worktree of the repository at the commit head.
 	AddWorktree(repo Repository, path, head string) error
+	// Standing says which branch HEAD is on, which branch is the default one (the branch origin/HEAD names, else main,
+	// else master, whichever the repository has) and the commits of HEAD the default branch does not have. It asks
+	// no more than it needs: a detached HEAD, and a repository with no default branch, are told without the commits.
+	Standing(repo Repository) (Standing, error)
+}
+
+// Features is what a working tree says of the features whose reviews it keeps, as the stop hook asks (own-rdd T6a, S6).
+type Features struct {
+	// Tracked says that the tree keeps features at all: odd/tasks or odd/review-results is a directory in it. The
+	// stop hook is installed for every repository of the machine and has nothing to say in one that is not.
+	Tracked bool
+	// Names are the features that have a results directory, sorted: every one of them holds reviews of the branch.
+	Names []string
 }
 
 // Results is the directory where the results of the reviews of a feature are stored, odd/review-results/
@@ -98,6 +125,10 @@ type Results interface {
 	// it; calling the function it returns gives the lock back. It makes nothing: a directory that is not there
 	// gives ErrNotFound. Where the store cannot hold a lock, it says so in its documentation and holds none.
 	Lock(root, feature string) (unlock func(), err error)
+	// Features says whether the working tree under root keeps features and which of them have a results directory.
+	// It makes nothing, follows no link, and lists only the directories whose names are a feature
+	// (review.CheckFeature); a link or a file where odd or odd/review-results should be a directory gives an error.
+	Features(root string) (Features, error)
 }
 
 // ErrExists is what Results.Create returns, wrapped or not, for a name that is already taken.

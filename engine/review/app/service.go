@@ -30,6 +30,7 @@ type Service struct {
 	git     Git
 	results Results
 	sleep   func(time.Duration)
+	asked   Asked
 }
 
 // New is the Service over git and results. It never waits between two tries for a result number: the clock
@@ -41,6 +42,13 @@ func New(git Git, results Results) Service { return Service{git: git, results: r
 // waiting at all, as New makes it.
 func (s Service) WithSleep(sleep func(time.Duration)) Service {
 	s.sleep = sleep
+	return s
+}
+
+// WithAsked is the Service that keeps the questions of the stop hook in asked, which Stop needs: it asks each question
+// once for a session. Without one Stop refuses to run.
+func (s Service) WithAsked(asked Asked) Service {
+	s.asked = asked
 	return s
 }
 

@@ -39,6 +39,7 @@ type fakeGit struct {
 	diff          []byte
 	paths         []string
 	parents       map[string]string // the first parent of a commit; none for a commit that is not a key
+	standing      app.Standing      // what Standing answers
 	worktree      app.WorktreeState
 	worktreeLater []worktreeAnswer
 	fail          map[string]error
@@ -97,6 +98,8 @@ func (g *fakeGit) Commit(repo app.Repository, rev string) (string, error) {
 		return baseSHA, nil
 	case "HEAD", headSHA:
 		return headSHA, nil
+	case otherSHA:
+		return otherSHA, nil
 	}
 	return "", fmt.Errorf("fakeGit: unknown revision %q", rev)
 }
@@ -141,11 +144,21 @@ func (g *fakeGit) AddWorktree(repo app.Repository, path, head string) error {
 	return g.fail["AddWorktree"]
 }
 
+func (g *fakeGit) Standing(repo app.Repository) (app.Standing, error) {
+	g.record("Standing")
+	if err := g.fail["Standing"]; err != nil {
+		return app.Standing{}, err
+	}
+	return g.standing, nil
+}
+
 // fakeResults is the Results port over a map: the names of a feature's directory and what was created.
 // races is how many of the first Create calls find their name taken by another writer that got there a
 // moment before: the fake stores that writer's file under the name, so the next listing shows it.
 type fakeResults struct {
 	files map[string]map[string][]byte // feature -> name -> content
+	// tasks says that the tree has odd/tasks, which makes it one that keeps features even with no result stored.
+	tasks bool
 	fail  map[string]error
 	calls []string
 	races int
@@ -196,6 +209,19 @@ func (r *fakeResults) Names(root, feature string) ([]string, error) {
 	}
 	sort.Strings(names)
 	return names, nil
+}
+
+func (r *fakeResults) Features(root string) (app.Features, error) {
+	r.calls = append(r.calls, "Features "+root)
+	if err := r.fail["Features"]; err != nil {
+		return app.Features{}, err
+	}
+	features := app.Features{Tracked: r.tasks || len(r.files) > 0}
+	for name := range r.files {
+		features.Names = append(features.Names, name)
+	}
+	sort.Strings(features.Names)
+	return features, nil
 }
 
 func (r *fakeResults) Read(root, feature, name string) ([]byte, error) {
