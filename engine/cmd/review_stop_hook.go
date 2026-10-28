@@ -1,7 +1,8 @@
 package main
 
-// review subcommand, verb 'stop-hook': the Claude Code Stop hook that blocks the stop of an agent, once for each session
-// and question, when a commit of its branch has no review (own-rdd T6a, S6, L18). It is an internal hook command, not one
+// review subcommand, verb 'stop-hook': the Claude Code Stop hook that blocks the stop of an agent, once for each session,
+// commit and need, when a commit of its branch misses anything 'review check' asks of it: a Risk trailer, a sweep record,
+// the sweeper's answer to a fired sweep, a polisher record for a declared item, a review (own-rdd T6a, T6b6, S6, L18). It is an internal hook command, not one
 // a person runs: Claude Code starts it when the agent is about to stop, hands it the event as JSON on stdin, and reads what
 // it prints. `install-hooks` installs it (the settings review stop-hook family); Claude Code loads hook changes only when
 // it starts, so an existing install must re-run install-hooks and restart Claude Code. The tests feed it hook JSON
@@ -28,8 +29,10 @@ package main
 import (
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/hookwire"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review"
 	reviewapp "github.com/labdrian-ai/labdrian-sdd-overlay/engine/review/app"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review/fsstore"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/statestore"
@@ -97,8 +100,11 @@ func stopHookAnswer(p process, d deps) ([]byte, error) {
 	return hookwire.StopReply{Block: true, Reason: stopReason(ruling)}.Encode()
 }
 
-// stopReason words the question of a block for the agent that reads it: what is missing, the exact command that starts to
-// answer it, the way on, and what counts as an answer.
+// stopReason words the question of a block for the agent that reads it (own-rdd T6b6c, S6 e): for the one commit asked,
+// one line for each thing it misses, in the order review.Needs lists them (a Risk trailer, a sweep, the sweeper's answer,
+// the polisher records, the review), each with the exact command that answers it, and what counts as a record. The
+// question of a repository that tells no default branch has its own reason. <feature> is left for the agent to fill, as
+// the hook reads the records of every feature of the tree.
 func stopReason(r reviewapp.Ruling) string {
 	q := r.Question
 	if r.NoDefault {
@@ -106,9 +112,46 @@ func stopReason(r reviewapp.Ruling) string {
 			"so the commits of the branch that need a review cannot be told. Run 'git remote set-head origin --auto' (or make the default branch main) "+
 			"and the stop hook will name the next commit to review. The stop hook asks this once for each session.", q.Branch)
 	}
-	return fmt.Sprintf("Branch %s has a commit that no review covers. Before you stop, review that commit alone, not the whole branch:\n\n"+
-		"  labdrian review bind --base %s --head %s\n\n"+
-		"then follow the role-chain skill: 'labdrian review record' the reply of the reviewer and 'labdrian review verify' it, or, when the work of the commit "+
-		"takes no review, 'labdrian review exempt' it. A commit counts as reviewed once a stored result or exemption binds it, whatever its outcome; "+
-		"'labdrian review check' judges the outcome. The stop hook asks this once for each session and commit.", q.Branch, q.Base, q.Head)
+	lines := make([]string, 0, len(q.Needs))
+	for _, need := range q.Needs {
+		lines = append(lines, needLine(q, need))
+	}
+	return fmt.Sprintf("Commit %s of branch %s is not ready for delivery. Before you stop, for that commit alone (base %s):\n\n%s\n\n"+
+		"<feature> is the feature whose odd/tasks/<feature>.md holds the task of the commit. A record counts once it is stored and binds the commit, "+
+		"whatever its outcome; 'labdrian review check' judges the outcome. The stop hook asks for each thing a commit misses once for each session and commit.",
+		q.Head, q.Branch, q.Base, strings.Join(lines, "\n"))
+}
+
+// needLine is the line of the block for one thing the commit of q misses.
+func needLine(q reviewapp.Question, need review.Need) string {
+	switch need.Missing {
+	case review.MissingRisk:
+		return fmt.Sprintf("- Risk: %s. End the commit message with a final trailer block that holds the one line \"Risk: none\" or \"Risk: <items>\" (for example \"Risk: 3,5\"); "+
+			"when the commit is HEAD: git commit --amend --trailer \"Risk: <none|items>\". The rest of what the commit needs is asked once it declares its risk.", riskCause(q.Head, need.Err))
+	case review.MissingSweep:
+		return fmt.Sprintf("- Sweep: labdrian review sweep --feature <feature> --base %s --head %s", q.Base, q.Head)
+	case review.MissingSweeper:
+		return fmt.Sprintf("- Sweeper: the sweep record %s fired; launch the sweeper with its candidates, then: labdrian review record --role sweeper --feature <feature> --base %s --head %s",
+			q.Sweep, q.Base, q.Head)
+	case review.MissingPolisher:
+		return fmt.Sprintf("- Polisher: the commit declares Risk: %s; launch the polisher judges on the commit and record each: labdrian review record --role polisher --feature <feature> --base %s --head %s",
+			q.Risk, q.Base, q.Head)
+	case review.MissingReview:
+		line := fmt.Sprintf("- Review: labdrian review bind --base %s --head %s, then 'labdrian review record' the reply of the reviewer and 'labdrian review verify' it", q.Base, q.Head)
+		if q.Risk == review.NoRisk {
+			line += "; or, since the commit declares Risk: none, 'labdrian review exempt --risk none' it"
+		}
+		return line
+	}
+	return fmt.Sprintf("- %v", need.Err)
+}
+
+// riskCause is the text of the error of a failing trailer after its first "commit <head>: ", and the whole text when it
+// holds none: the cause as S6 (a) words it.
+func riskCause(head string, err error) string {
+	text := err.Error()
+	if _, after, found := strings.Cut(text, "commit "+head+": "); found {
+		return after
+	}
+	return text
 }

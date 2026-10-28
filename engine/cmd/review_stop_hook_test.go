@@ -31,18 +31,92 @@ type stopWorld struct {
 	c3, c4 string // the two commits of the branch, oldest first; the branch was made on w.head
 }
 
+// newStopWorld is the world where each commit of the branch carries the trailer Risk: none and a clean sweep, so it lacks
+// only its review (T6b6b).
 func newStopWorld(t *testing.T) *stopWorld {
+	t.Helper()
+	return newStopWorldWith(t, func(s *stopWorld) { s.sweepAll() })
+}
+
+// newStopWorldWith makes the branch and its two commits, runs before (nil runs nothing) and then writes the task document,
+// an untracked line of the working tree that fires any sweep run after it (T6b6c, L70). A case builds the state it names
+// in before.
+func newStopWorldWith(t *testing.T, before func(s *stopWorld)) *stopWorld {
 	t.Helper()
 	w := newReviewWorld(t)
 	w.git("switch", "-q", "-c", "feature/stop")
 	s := &stopWorld{reviewWorld: w, home: t.TempDir()}
 	s.c3 = w.commitMore("c3.txt")
 	s.c4 = w.commitMore("c4.txt")
-	// Each commit carries the trailer Risk: none and a clean sweep, so it lacks only its review (T6b6b). The sweeps run
-	// before the task document is written, which would be an untracked line of the working tree and fire them.
-	w.sweepAll()
+	if before != nil {
+		before(s)
+	}
 	overlaytest.WriteFile(t, w.root, "odd/tasks/own-rdd.md", "# own-rdd\n")
 	return s
+}
+
+// recommit replaces the two commits of the branch by a c3 whose message holds the given paragraphs after its subject (none:
+// no trailer) and a c4 that declares Risk: none; s.c3 and s.c4 name the new commits.
+func (s *stopWorld) recommit(trailer ...string) {
+	s.t.Helper()
+	s.git("reset", "-q", "--hard", s.head)
+	overlaytest.WriteFile(s.t, s.root, "c3.txt", "c3.txt\n")
+	s.git("add", "-A")
+	args := []string{"commit", "-q", "-m", "c3.txt"}
+	for _, line := range trailer {
+		args = append(args, "-m", line)
+	}
+	s.git(args...)
+	s.c3 = s.name("HEAD")
+	s.c4 = s.commitMore("c4.txt")
+}
+
+// blockLine is the whole stdout of a hook that blocks a stop for the reason: one JSON object and a line feed, with <, > and
+// & as they are.
+func blockLine(t *testing.T, reason string) string {
+	t.Helper()
+	var b bytes.Buffer
+	enc := json.NewEncoder(&b)
+	enc.SetEscapeHTML(false)
+	if err := enc.Encode(struct {
+		Decision string `json:"decision"`
+		Reason   string `json:"reason"`
+	}{"block", reason}); err != nil {
+		t.Fatal(err)
+	}
+	return b.String()
+}
+
+// requireReason requires the hook to block the stop of the session with exactly the reason: the whole stdout, exit 0 and
+// nothing on stderr.
+func (s *stopWorld) requireReason(session, reason string) {
+	s.t.Helper()
+	stdout, stderr, exits := s.stop(session, false)
+	if want := blockLine(s.t, reason); stdout != want || stderr != "" || !equalInts(exits, []int{0}) {
+		s.t.Errorf("stdout = %q, stderr = %q, exits = %v; want stdout %q, nothing on stderr and [0]", stdout, stderr, exits, want)
+	}
+}
+
+// blockReasonOf is the reason of a block for the commit head after base, with the lines in the order given. The words are the
+// ones S6 (e) gives, written out here and not taken from the code.
+func blockReasonOf(head, base string, lines ...string) string {
+	return "Commit " + head + " of branch feature/stop is not ready for delivery. Before you stop, for that commit alone (base " + base + "):\n\n" +
+		strings.Join(lines, "\n") + "\n\n" +
+		"<feature> is the feature whose odd/tasks/<feature>.md holds the task of the commit. A record counts once it is stored and binds the commit, " +
+		"whatever its outcome; 'labdrian review check' judges the outcome. The stop hook asks for each thing a commit misses once for each session and commit."
+}
+
+const (
+	riskLineNoTrailer = `- Risk: it has no "Risk:" trailer in the final trailer block of its message. End the commit message with a final trailer block that holds the one line "Risk: none" or "Risk: <items>" (for example "Risk: 3,5"); when the commit is HEAD: git commit --amend --trailer "Risk: <none|items>". The rest of what the commit needs is asked once it declares its risk.`
+	exemptClause      = `; or, since the commit declares Risk: none, 'labdrian review exempt --risk none' it`
+)
+
+func sweepLine(base, head string) string {
+	return "- Sweep: labdrian review sweep --feature <feature> --base " + base + " --head " + head
+}
+
+func reviewLine(base, head, clause string) string {
+	return "- Review: labdrian review bind --base " + base + " --head " + head + ", then 'labdrian review record' the reply of the reviewer and 'labdrian review verify' it" + clause
 }
 
 // hookDeps is the deps the hook runs over: the working directory of the world, the environment of its git and the state
@@ -194,6 +268,77 @@ func TestReviewStopHookAsksTheSweeperOfACommitInTheSameSessionOnceItsSweepFires(
 		t.Errorf("the questions remembered for the session = %q, want %q", got, want)
 	}
 	s.allowed("s1")
+}
+
+// The reason lists, for the first commit that misses anything, the line of each thing it misses and nothing else (T6b6c,
+// S6 e, L63, L66, L70). Each case builds the state it names before the task document is written, which is an untracked
+// file: a sweep run in the case fires on it only when the case says so.
+func TestReviewStopHookListsEachThingTheCommitMisses(t *testing.T) {
+	t.Run("a head with no trailer", func(t *testing.T) {
+		s := newStopWorldWith(t, func(s *stopWorld) { s.recommit() })
+
+		s.requireReason("s1", blockReasonOf(s.c3, s.head, riskLineNoTrailer, sweepLine(s.head, s.c3)))
+	})
+	t.Run("a head with Risk: none and no sweep", func(t *testing.T) {
+		s := newStopWorldWith(t, nil)
+
+		s.requireReason("s1", blockReasonOf(s.c3, s.head, sweepLine(s.head, s.c3), reviewLine(s.head, s.c3, exemptClause)))
+	})
+	t.Run("a head whose sweep fired and has no sweeper record", func(t *testing.T) {
+		s := newStopWorldWith(t, func(s *stopWorld) {
+			overlaytest.WriteFile(s.t, s.root, "stray.txt", "stray\n")
+			stdout, stderr, exits := s.sweepRun(s.t.TempDir(), "", "sweep", "--feature", "own-rdd", "--base", s.head, "--head", s.c3)
+			if !equalInts(exits, []int{0}) || decodeSwept(s.t, stdout).Outcome != "fired" {
+				s.t.Fatalf("setup: review sweep exit calls = %v, stdout = %q, stderr = %q; want [0] and a fired sweep", exits, stdout, stderr)
+			}
+			if err := os.Remove(filepath.Join(s.root, "stray.txt")); err != nil {
+				s.t.Fatal(err)
+			}
+		})
+		record := "odd/review-results/own-rdd/" + s.c3[:12] + "-1.sweep.json"
+
+		s.requireReason("s1", blockReasonOf(s.c3, s.head,
+			"- Sweeper: the sweep record "+record+" fired; launch the sweeper with its candidates, then: labdrian review record --role sweeper --feature <feature> --base "+s.head+" --head "+s.c3,
+			reviewLine(s.head, s.c3, exemptClause)))
+	})
+	t.Run("a head declaring Risk: 3,5 with a clean sweep", func(t *testing.T) {
+		s := newStopWorldWith(t, func(s *stopWorld) {
+			s.recommit("Risk: 3,5")
+			s.sweepAll()
+		})
+
+		s.requireReason("s1", blockReasonOf(s.c3, s.head,
+			"- Polisher: the commit declares Risk: 3,5; launch the polisher judges on the commit and record each: labdrian review record --role polisher --feature <feature> --base "+s.head+" --head "+s.c3,
+			reviewLine(s.head, s.c3, "")))
+	})
+	t.Run("a head with everything but its review", func(t *testing.T) {
+		s := newStopWorld(t)
+
+		s.requireReason("s1", blockReasonOf(s.c3, s.head, reviewLine(s.head, s.c3, exemptClause)))
+	})
+}
+
+// A passive commit is never asked: a commit that only adds the task document, above a branch whose commits a review
+// reaches, lets the stop happen.
+func TestReviewStopHookNeverAsksAPassiveCommit(t *testing.T) {
+	s := newStopWorld(t)
+	s.recordRange(s.head, s.c4)
+	s.git("add", "odd/tasks/own-rdd.md")
+	s.git("commit", "-q", "-m", "docs", "-m", "Risk: none")
+
+	s.allowed("s1")
+
+	s.requireNothingRemembered(t)
+}
+
+// The question of a repository that does not tell its default branch is worded as it always was.
+func TestReviewStopHookWordsTheNoDefaultBranchReasonAsItAlwaysDid(t *testing.T) {
+	s := newStopWorld(t)
+	s.git("branch", "-m", "main", "trunk")
+
+	s.requireReason("s1", "The repository does not tell the default branch of branch feature/stop (origin/HEAD is not set, and there is no branch main or master), "+
+		"so the commits of the branch that need a review cannot be told. Run 'git remote set-head origin --auto' (or make the default branch main) "+
+		"and the stop hook will name the next commit to review. The stop hook asks this once for each session.")
 }
 
 // A stop the agent makes while a stop hook is already keeping it going is never blocked, and it does not use up the
@@ -473,7 +618,9 @@ func TestUsageDocumentsReviewStopHook(t *testing.T) {
 		"engine review stop-hook",
 		"internal Claude Code Stop hook command (install-hooks installs it",
 		"blocks the stop with {\"decision\":\"block\",\"reason\":...}",
-		"labdrian review bind --base <last reviewed head> --head <next commit>",
+		"misses anything 'review check' asks of it",
+		"is never asked",
+		"labdrian review sweep",
 		"for one commit and never the whole branch",
 		"whatever its outcome",
 		"once for each session and commit",
