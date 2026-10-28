@@ -35,6 +35,9 @@ func TestReadmeDocumentsReviewExemptWhereItDocumentsTheOtherReviewVerbs(t *testi
 			"--risk is none or the numbers 1 to 6 of the high-risk items",
 			"a head that names any item is never exempt",
 		}},
+		{reviewVerbs, "the head's own Risk trailer (T6b5, S6 f)", []string{
+			"a head whose own Risk trailer is missing, malformed or names an item is refused",
+		}},
 		{reviewVerbs, "an exemption is for one commit", []string{
 			"is for one commit: --base must be the first parent of --head",
 			"a range whose base is its head covers no commit and is refused",

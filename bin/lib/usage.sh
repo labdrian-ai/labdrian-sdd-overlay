@@ -66,9 +66,9 @@ Commands:
   install-hooks                    Build + deploy the engine binary, then wire the
                                    deterministic-scoping hooks, the workflow projection
                                    hooks, the skills approve guard, the review
-                                   stop-hook (on Stop: asks the agent once for each
-                                   session and commit to review the next commit no
-                                   review covers), and the builder guard (on the Agent
+                                   stop-hook (on Stop: asks the agent for each thing
+                                   the first commit not ready for delivery misses,
+                                   once for each session and commit), and the builder guard (on the Agent
                                    tool: denies launching the builder on a task the
                                    shaper did not design) into
                                    ~/.claude/settings.json. Re-run it after an
@@ -320,10 +320,10 @@ Commands:
                                    stop-hook
                                              not run by a person: the Claude Code Stop hook that install-hooks wires
                                              (the review stop-hook). On a branch other than the default one, it blocks
-                                             the stop once for each session and commit with the review bind command for
-                                             the next commit no stored result or exemption binds, and never for the
-                                             whole branch; it lets the stop happen on anything it cannot tell
-                                             (exit 0 always, 1 usage error)
+                                             the stop for the first commit that misses anything review check asks of
+                                             it, with the command for each thing it misses, asking for each thing once
+                                             for each session and commit, and never for the whole branch; it lets the
+                                             stop happen on anything it cannot tell (exit 0 always, 1 usage error)
                                    No verb launches an agent or dispatches work.
   memory <verb>                    Forward memory-directive verbs to the engine unchanged.
                                    Read-only: no verb queries or writes memory; query execution
