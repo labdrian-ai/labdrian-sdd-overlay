@@ -1,0 +1,158 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:2c6ffb6a9728855b0696e162e8b07e0542fa9da30401f4c772ef3a5f39acff4c",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-25c5322746380e77",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "51f1587f16966b0d9c6da1c7ab9ac0796fa5762e",
+      "candidate_tree": "6470f5401c51bd70310de818e21c5c7c44ccf8d7",
+      "paths_digest": "sha256:6a61687969962c8adbba740103f73b2d13bf70a748b26e31825e8aceabf43dc5",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/review/app/app.go",
+        "engine/review/app/fakes_test.go",
+        "engine/review/app/unreviewed.go",
+        "engine/review/app/unreviewed_test.go"
+      ],
+      "identity": "sha256:e0179c28d1ca6b608bc73e5d41902ce6823b53c399a2bc8e93df98d4dbec435c"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "51f1587f16966b0d9c6da1c7ab9ac0796fa5762e",
+      "candidate_tree": "6470f5401c51bd70310de818e21c5c7c44ccf8d7",
+      "paths_digest": "sha256:6a61687969962c8adbba740103f73b2d13bf70a748b26e31825e8aceabf43dc5",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/review/app/app.go",
+        "engine/review/app/fakes_test.go",
+        "engine/review/app/unreviewed.go",
+        "engine/review/app/unreviewed_test.go"
+      ],
+      "identity": "sha256:e0179c28d1ca6b608bc73e5d41902ce6823b53c399a2bc8e93df98d4dbec435c"
+    },
+    "genesis_paths": [
+      "engine/review/app/app.go",
+      "engine/review/app/fakes_test.go",
+      "engine/review/app/unreviewed.go",
+      "engine/review/app/unreviewed_test.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-reliability"
+    ],
+    "original_changed_lines": 326,
+    "correction_budget": 163,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "new use case naming the next unreviewed commit, with tests",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:c45985ade310d1cb411d8aa15072a0b9a651d1cd46e16688a39e8449264879c1",
+    "capture_phase_revision": "sha256:1609cd85d42b86ec4c76127a5983d65375650d9d5d495e5d370f96d4bff8e069",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "target_identity": "sha256:e0179c28d1ca6b608bc73e5d41902ce6823b53c399a2bc8e93df98d4dbec435c",
+        "capture_phase_revision": "sha256:1609cd85d42b86ec4c76127a5983d65375650d9d5d495e5d370f96d4bff8e069",
+        "artifact_digest": "sha256:76cfd3b04caf90503b091dfd2664a6abac9fae9b0757a8fb4fc58f03e93ae6a1",
+        "result_hash": "sha256:8caede7c067639a1cdf7d8a175baffacb6e696372090ddb611c91c4f59311b11",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:d84c7e8c86fd9959f3194ef9997551a36ee0310ed98d6cd5a0e1363ec1a9766e",
+            "lineage_id": "review-25c5322746380e77",
+            "authority_revision": "sha256:1609cd85d42b86ec4c76127a5983d65375650d9d5d495e5d370f96d4bff8e069",
+            "target_identity": "sha256:e0179c28d1ca6b608bc73e5d41902ce6823b53c399a2bc8e93df98d4dbec435c",
+            "base_tree": "51f1587f16966b0d9c6da1c7ab9ac0796fa5762e",
+            "candidate_tree": "6470f5401c51bd70310de818e21c5c7c44ccf8d7",
+            "changed_path_manifest_sha256": "sha256:d742f89ea97767aa98ea06ca69086fb83e66a52dda02a4984296d768932632fc",
+            "lens": "review-reliability",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:d84c7e8c86fd9959f3194ef9997551a36ee0310ed98d6cd5a0e1363ec1a9766e",
+            "raw_sha256": "sha256:7c13b72913fd1291900cf991f64402456e4118f9431f1065b113420446847b5b",
+            "canonical_sha256": "sha256:a41e28ee0097184594c5e0a57afc63201001fc7afa312ae7bf39b54861cb11c3",
+            "result_hash": "sha256:8caede7c067639a1cdf7d8a175baffacb6e696372090ddb611c91c4f59311b11",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:d84c7e8c86fd9959f3194ef9997551a36ee0310ed98d6cd5a0e1363ec1a9766e",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/app/app.go",
+                "engine/review/app/fakes_test.go",
+                "engine/review/app/unreviewed.go",
+                "engine/review/app/unreviewed_test.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-001",
+                "lens": "reliability",
+                "location": "engine/review/app/unreviewed.go:90-105",
+                "severity": "WARNING",
+                "claim": "links() silently discards every error from reviewedResult/exemptedHead (err == nil guard). Transient store or git failures reading a record are treated as 'no review', so the stop hook may re-ask for an already-reviewed commit. This is documented as intended for unreadable or non-holding records, but an I/O failure is not distinguished from a record that does not hold, and no test covers an I/O failure on reading a result file (only malformed content and diff mismatch).",
+                "proof_refs": [
+                  "engine/review/app/unreviewed.go:90-105",
+                  "engine/review/app/unreviewed_test.go:99-125"
+                ]
+              },
+              {
+                "id": "R3-002",
+                "lens": "reliability",
+                "location": "engine/review/app/unreviewed.go:94-103",
+                "severity": "SUGGESTION",
+                "claim": "Work is O(features x commits x names) with a git re-check per candidate record; on long branches the stop hook may be slow. No test bounds or observes this, and duplicate links from multiple records for the same commit are appended without dedup (harmless if FirstUnreviewed tolerates them, but unproved here).",
+                "proof_refs": [
+                  "engine/review/app/unreviewed.go:94-103"
+                ]
+              }
+            ],
+            "evidence": [
+              "Reviewed all four changed paths in full.",
+              "Tests cover the happy path, chain after reviewed commits, cross-feature chain, records that do not hold, nothing-to-ask cases, missing default branch, and git/store failure propagation including no-parent first commit.",
+              "No BLOCKER/CRITICAL found: the change is new code with no baseline behavior regressed; the fakes_test.go addition only extends the Commit switch to accept otherSHA."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "f1ce894ccf8e3d5073125e83545b13afe300281630ffc4b180a9622547f3d48c",
+    "initial_atomic_start": {
+      "lineage_id": "review-25c5322746380e77",
+      "worktree_identity": "sha256:3427e05a3a1d53bd906b61e08037126809b46997ef670fdff5ffcfd8630ee40b",
+      "target_identity": "sha256:e0179c28d1ca6b608bc73e5d41902ce6823b53c399a2bc8e93df98d4dbec435c",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "51f1587f16966b0d9c6da1c7ab9ac0796fa5762e",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-reliability"
+      ],
+      "original_changed_lines": 326,
+      "correction_budget": 163,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "new use case naming the next unreviewed commit, with tests"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

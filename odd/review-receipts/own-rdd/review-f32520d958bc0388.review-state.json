@@ -1,0 +1,203 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:1d42c1ed432b99be586fcb3c61681e2db3aecf6eec34c76f04a9077288875df2",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-f32520d958bc0388",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "bb05f28d0860b215f8db17c3b570d17979aebb0a",
+      "candidate_tree": "701a40d9a9e76dce73e73bc8ef4fc6366c7a0390",
+      "paths_digest": "sha256:ba0c0341d7340b743e1e50ee74a82dad6d2a38f18d027197e5ba1961645ed3a2",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/cmd/review.go",
+        "engine/cmd/review_stop_hook.go",
+        "engine/cmd/review_stop_hook_test.go",
+        "engine/cmd/usage.go"
+      ],
+      "identity": "sha256:02cc1851963bd318e57c54b02bb20893a0fe88a1f92194b49903c4a92733fe93"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "bb05f28d0860b215f8db17c3b570d17979aebb0a",
+      "candidate_tree": "701a40d9a9e76dce73e73bc8ef4fc6366c7a0390",
+      "paths_digest": "sha256:ba0c0341d7340b743e1e50ee74a82dad6d2a38f18d027197e5ba1961645ed3a2",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/cmd/review.go",
+        "engine/cmd/review_stop_hook.go",
+        "engine/cmd/review_stop_hook_test.go",
+        "engine/cmd/usage.go"
+      ],
+      "identity": "sha256:02cc1851963bd318e57c54b02bb20893a0fe88a1f92194b49903c4a92733fe93"
+    },
+    "genesis_paths": [
+      "engine/cmd/review.go",
+      "engine/cmd/review_stop_hook.go",
+      "engine/cmd/review_stop_hook_test.go",
+      "engine/cmd/usage.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 589,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "new CLI verb review stop-hook, its output and usage text",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:7b0e95761eb04b81c77c9739c61153382f131c1774178473ce75171bdebb99cc",
+    "capture_phase_revision": "sha256:441bd35392cc6fcede3b2dc5869abfafedb9523a0241aaaa28f2c14304b35c7a",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "target_identity": "sha256:02cc1851963bd318e57c54b02bb20893a0fe88a1f92194b49903c4a92733fe93",
+        "capture_phase_revision": "sha256:441bd35392cc6fcede3b2dc5869abfafedb9523a0241aaaa28f2c14304b35c7a",
+        "artifact_digest": "sha256:7e16907c8cbb74fced1448165dbc819363f75ce41e74a991148164257ea05107",
+        "result_hash": "sha256:b6ec4ef9b8adef9deed216e5fd4f9a56f74889ddfe761aaa37039179971517d9",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:46adbd112169ae90af9b668d4acee6a9c3b6ed82185d564fa343d4cf2019d443",
+            "lineage_id": "review-f32520d958bc0388",
+            "authority_revision": "sha256:441bd35392cc6fcede3b2dc5869abfafedb9523a0241aaaa28f2c14304b35c7a",
+            "target_identity": "sha256:02cc1851963bd318e57c54b02bb20893a0fe88a1f92194b49903c4a92733fe93",
+            "base_tree": "bb05f28d0860b215f8db17c3b570d17979aebb0a",
+            "candidate_tree": "701a40d9a9e76dce73e73bc8ef4fc6366c7a0390",
+            "changed_path_manifest_sha256": "sha256:1e091000666cbe5da7717317935947246b1ef0402e2ce9cceac59996baa316d6",
+            "lens": "review-readability",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:46adbd112169ae90af9b668d4acee6a9c3b6ed82185d564fa343d4cf2019d443",
+            "raw_sha256": "sha256:a72b5b54c40d9ab107e3f79a2eeb2af5695d2c903b93c607d58f97ded121ae8f",
+            "canonical_sha256": "sha256:12216ec690b3b934b78223b3a835b76bfb8581df2a9d3e84649cc24ae286feeb",
+            "result_hash": "sha256:b6ec4ef9b8adef9deed216e5fd4f9a56f74889ddfe761aaa37039179971517d9",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:46adbd112169ae90af9b668d4acee6a9c3b6ed82185d564fa343d4cf2019d443",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/cmd/review.go",
+                "engine/cmd/review_stop_hook.go",
+                "engine/cmd/review_stop_hook_test.go",
+                "engine/cmd/usage.go"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-mixed-precedence",
+                "lens": "readability",
+                "location": "engine/cmd/review_stop_hook.go:79",
+                "severity": "WARNING",
+                "claim": "The condition `err != nil || in.Event != \"\" \u0026\u0026 in.Event != hookwire.EventStop` mixes || and \u0026\u0026 without parentheses. The meaning, that a decode error or an event that is not Stop means nothing to ask, depends on operator precedence and is easy to misread or break in a later edit. Parenthesising the \u0026\u0026 clause or naming it (for example `otherEvent`) would make the intent explicit.",
+                "proof_refs": [
+                  "engine/cmd/review_stop_hook.go:79"
+                ]
+              }
+            ],
+            "evidence": [
+              "Reviewed all four changed paths in full: engine/cmd/review.go, engine/cmd/review_stop_hook.go, engine/cmd/review_stop_hook_test.go and engine/cmd/usage.go.",
+              "The new code is thoroughly documented, with a contract header, named helper functions and tests that cover the exit-code and silence rules. I found no duplicated or dead logic and no unexplained constants.",
+              "The only maintainability concern is the unparenthesised mixed boolean expression at engine/cmd/review_stop_hook.go:79. It does not change behaviour today."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 1,
+        "target_identity": "sha256:02cc1851963bd318e57c54b02bb20893a0fe88a1f92194b49903c4a92733fe93",
+        "capture_phase_revision": "sha256:441bd35392cc6fcede3b2dc5869abfafedb9523a0241aaaa28f2c14304b35c7a",
+        "artifact_digest": "sha256:2e9f6e997b5f43cbe8ca7937a9a98b6b3219ff45a92a66c832629940f4d7fa72",
+        "result_hash": "sha256:03978312c219788f3379ed82c3b28f361a5dd55a551005b31a62962bea870209",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:a60bcec375f15546d3084c5ddd5a330c1d2d04082654cf06536a5e7c4e10a2dc",
+            "lineage_id": "review-f32520d958bc0388",
+            "authority_revision": "sha256:441bd35392cc6fcede3b2dc5869abfafedb9523a0241aaaa28f2c14304b35c7a",
+            "target_identity": "sha256:02cc1851963bd318e57c54b02bb20893a0fe88a1f92194b49903c4a92733fe93",
+            "base_tree": "bb05f28d0860b215f8db17c3b570d17979aebb0a",
+            "candidate_tree": "701a40d9a9e76dce73e73bc8ef4fc6366c7a0390",
+            "changed_path_manifest_sha256": "sha256:1e091000666cbe5da7717317935947246b1ef0402e2ce9cceac59996baa316d6",
+            "lens": "review-reliability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:a60bcec375f15546d3084c5ddd5a330c1d2d04082654cf06536a5e7c4e10a2dc",
+            "raw_sha256": "sha256:591382a5c1d7583d46d01d00a12cc3a67d58b8c704f3532ac01f11e538f3a066",
+            "canonical_sha256": "sha256:36270735162ff3732c221cedafad693ab4f2f6f254cae8cecb05e7d64ccc0dd5",
+            "result_hash": "sha256:03978312c219788f3379ed82c3b28f361a5dd55a551005b31a62962bea870209",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:a60bcec375f15546d3084c5ddd5a330c1d2d04082654cf06536a5e7c4e10a2dc",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/cmd/review.go",
+                "engine/cmd/review_stop_hook.go",
+                "engine/cmd/review_stop_hook_test.go",
+                "engine/cmd/usage.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [],
+            "evidence": [
+              "engine/cmd/review_stop_hook.go: a command line the hook cannot parse exits 1 before stdin is read. After that, every failure path (unreadable or undecodable input, another event, a missing state home, an unlocatable repository, a store or git error, a panic recovered by the deferred handler) leads to exit 0 with at most one stderr line. Only a ruling with Block set produces stdout output. Exit is called once on each path.",
+              "engine/cmd/review_stop_hook.go: stdin is read through a limit of hookwire.MaxEnvelopeBytes+1, and TestReviewStopHookReadsNoMoreOfItsInputThanTheBound asserts the exact byte count read from an endless input.",
+              "engine/cmd/review_stop_hook_test.go: tests assert the observable outcomes. They cover the block JSON shape and the next-commit-only reason, once-per-session and per-commit asking, and no use-up of the question on a stop_hook_active continuation. They also cover exemption and blocking-result counting as reviewed, and the default branch, detached HEAD and no-features cases. The no-default-branch block, the missing cwd and session case, and unusable input are covered, as are unreadable state-home and repository errors and the panic. Argument rejection and the usage text are covered too.",
+              "engine/cmd/review.go: the change only adds a dispatch case for the new verb. The unknown-verb message is unchanged, so baseline output is preserved.",
+              "Minor residual risk, not a defect: if the stdout write fails after the Asked marker is stored, the question is consumed without the agent seeing it. The code comment states that the stop then happens, and nothing in the candidate makes this realistic to hit."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "bdc9e3392b57d40b47f9cb50dcbee77e36b6fcc7f57de3032fc4113f327e1fb5",
+    "initial_atomic_start": {
+      "lineage_id": "review-f32520d958bc0388",
+      "worktree_identity": "sha256:b7d44371c7db102347087fdb219f0be5425efc1b43b6ca8989f75204d45784f2",
+      "target_identity": "sha256:02cc1851963bd318e57c54b02bb20893a0fe88a1f92194b49903c4a92733fe93",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "bb05f28d0860b215f8db17c3b570d17979aebb0a",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 589,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "new CLI verb review stop-hook, its output and usage text"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

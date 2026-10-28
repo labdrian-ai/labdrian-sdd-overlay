@@ -1,0 +1,171 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:8d61d30cf44fa90f9a23f2c6fb7c5c4c86524fa575a018e6b77ee511be9db2c7",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-cc7ab3278ad61352",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "1cae6e03be32eeae6e91b6efc5d739083ec4bd8e",
+      "candidate_tree": "20dd39dde0cbdd1d70cc47dbfc59e1e1d1e5648c",
+      "paths_digest": "sha256:fbbaa52ddb753afee07b467517104c2d6bb6c75a56189fb54c960050b4ee9ff2",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "bin/lib/hooks.sh",
+        "bin/lib/usage.sh",
+        "engine/cmd/review_stop_hook_docs_test.go",
+        "odd/review-results/README.md"
+      ],
+      "identity": "sha256:9daccce8facbc819c00903d05b8d41f966cc72b999a7178b9269f6c45eb74968"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "1cae6e03be32eeae6e91b6efc5d739083ec4bd8e",
+      "candidate_tree": "20dd39dde0cbdd1d70cc47dbfc59e1e1d1e5648c",
+      "paths_digest": "sha256:fbbaa52ddb753afee07b467517104c2d6bb6c75a56189fb54c960050b4ee9ff2",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "bin/lib/hooks.sh",
+        "bin/lib/usage.sh",
+        "engine/cmd/review_stop_hook_docs_test.go",
+        "odd/review-results/README.md"
+      ],
+      "identity": "sha256:9daccce8facbc819c00903d05b8d41f966cc72b999a7178b9269f6c45eb74968"
+    },
+    "genesis_paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "bin/lib/hooks.sh",
+      "bin/lib/usage.sh",
+      "engine/cmd/review_stop_hook_docs_test.go",
+      "odd/review-results/README.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-readability"
+    ],
+    "original_changed_lines": 201,
+    "correction_budget": 101,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "help text, README and CHANGELOG for the hook",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:ebf5b10cb47c838dd7f26753ffab398fac4d166710841eaa40a1e687d2e402a8",
+    "capture_phase_revision": "sha256:b23fdf940c85831e23949c5aa8b5d6f09d08804f73e70eaee4104e89e6259a0c",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "target_identity": "sha256:9daccce8facbc819c00903d05b8d41f966cc72b999a7178b9269f6c45eb74968",
+        "capture_phase_revision": "sha256:b23fdf940c85831e23949c5aa8b5d6f09d08804f73e70eaee4104e89e6259a0c",
+        "artifact_digest": "sha256:2770687b3bf3daef49e60c78bbe1da0025727f9b1a5f3acd2fbfad06c8a7009d",
+        "result_hash": "sha256:575361ef268b60a8001e11657aa2017ba08da7a3f2bc8db64a6fbb39845fd407",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:9bf06e37bbc3c513ab2f3a9d176b1e93593d0d1c25b4d43a5b0af366ea465dfe",
+            "lineage_id": "review-cc7ab3278ad61352",
+            "authority_revision": "sha256:b23fdf940c85831e23949c5aa8b5d6f09d08804f73e70eaee4104e89e6259a0c",
+            "target_identity": "sha256:9daccce8facbc819c00903d05b8d41f966cc72b999a7178b9269f6c45eb74968",
+            "base_tree": "1cae6e03be32eeae6e91b6efc5d739083ec4bd8e",
+            "candidate_tree": "20dd39dde0cbdd1d70cc47dbfc59e1e1d1e5648c",
+            "changed_path_manifest_sha256": "sha256:f867b02627547263205f5c39f0a9b3a6e031695a2100aa4917a1ac3efff9bc34",
+            "lens": "review-readability",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:9bf06e37bbc3c513ab2f3a9d176b1e93593d0d1c25b4d43a5b0af366ea465dfe",
+            "raw_sha256": "sha256:4fd6e31aa1bdc60d40d7f53b3a7da2a454bb74383c60feff11f18455e414b94a",
+            "canonical_sha256": "sha256:fc0011489aa243f2c245084bc831574dd56a400bafb9d51580fb889e3a19e7f9",
+            "result_hash": "sha256:575361ef268b60a8001e11657aa2017ba08da7a3f2bc8db64a6fbb39845fd407",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:9bf06e37bbc3c513ab2f3a9d176b1e93593d0d1c25b4d43a5b0af366ea465dfe",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "CHANGELOG.md",
+                "README.md",
+                "bin/lib/hooks.sh",
+                "bin/lib/usage.sh",
+                "engine/cmd/review_stop_hook_docs_test.go",
+                "odd/review-results/README.md"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-readme-binary-name",
+                "lens": "readability",
+                "location": "README.md:1151-1178",
+                "severity": "WARNING",
+                "claim": "The new README section is titled and cited inconsistently: the heading uses `gentle-ai-overlay review stop-hook` while the same section tells users to run `labdrian review bind`, and the verb list calls the hook `labdrian review stop-hook` elsewhere. Mixed binary names make it unclear which command a reader or the Stop entry actually invokes. The docs test pins the `gentle-ai-overlay` heading, which locks the inconsistency in.",
+                "proof_refs": [
+                  "README.md:1151",
+                  "README.md:1160",
+                  "engine/cmd/review_stop_hook_docs_test.go:31"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-docs-test-brittle",
+                "lens": "readability",
+                "location": "engine/cmd/review_stop_hook_docs_test.go:68-78",
+                "severity": "WARNING",
+                "claim": "The docs test locates sections by exact literal start/end markers, including column-aligned help text with run-length spaces. A whitespace realignment in the usage text breaks the test with an unrelated failure, and the generic check that each section contains 'review stop-hook' does not verify the section is the intended one. This makes the doc test costly to maintain.",
+                "proof_refs": [
+                  "engine/cmd/review_stop_hook_docs_test.go:68-78"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Reviewed all six manifest paths in full from the provided patches.",
+              "Documentation is largely consistent across CHANGELOG, README, usage.sh and odd/review-results/README.md; the findings concern naming inconsistency and brittleness of the docs test.",
+              "No BLOCKER or CRITICAL findings."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "8da002168246efe3e6cf5b70f1d24336b27e194dc0dcd8f5df9de35d2e03e0a6",
+    "initial_atomic_start": {
+      "lineage_id": "review-cc7ab3278ad61352",
+      "worktree_identity": "sha256:0e35075253a73c252edc168c95bf3e474648415ab817e719b26fe991474cae7c",
+      "target_identity": "sha256:9daccce8facbc819c00903d05b8d41f966cc72b999a7178b9269f6c45eb74968",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "1cae6e03be32eeae6e91b6efc5d739083ec4bd8e",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "high",
+      "selected_lenses": [
+        "review-readability"
+      ],
+      "original_changed_lines": 201,
+      "correction_budget": 101,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "help text, README and CHANGELOG for the hook"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

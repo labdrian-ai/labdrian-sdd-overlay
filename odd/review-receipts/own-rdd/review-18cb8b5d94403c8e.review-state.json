@@ -1,0 +1,122 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:bbeda89fe81db83ed4ed28c6f19defea1898143493b6875b675498c76c21e31b",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-18cb8b5d94403c8e",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "3761ef8b03373b0d130455f7ac8bb3c48499a454",
+      "candidate_tree": "859d4fad97451550c5bc32c19868dffdd10574a8",
+      "paths_digest": "sha256:ae629b124a4a24b02068cc1da61026c14d7564d10340c274d96e1ab91deab5cc",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/settings/legacy_entries.go"
+      ],
+      "identity": "sha256:50e8469e05e6b50a22b062969f0b63f6088fab094b3f84e694c31228cc4dba6a"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "3761ef8b03373b0d130455f7ac8bb3c48499a454",
+      "candidate_tree": "859d4fad97451550c5bc32c19868dffdd10574a8",
+      "paths_digest": "sha256:ae629b124a4a24b02068cc1da61026c14d7564d10340c274d96e1ab91deab5cc",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/settings/legacy_entries.go"
+      ],
+      "identity": "sha256:50e8469e05e6b50a22b062969f0b63f6088fab094b3f84e694c31228cc4dba6a"
+    },
+    "genesis_paths": [
+      "engine/settings/legacy_entries.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-readability"
+    ],
+    "original_changed_lines": 2,
+    "correction_budget": 2,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "one comment reworded",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:4c71ef384e9e9f41b691808851405e60ac59aa004d2164d5dfd7c72cab5e7f63",
+    "capture_phase_revision": "sha256:97bb99bc0f7a2bd97ff8724bed828505e5df130ab18b6e0b74e02a8ee9759cd3",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "target_identity": "sha256:50e8469e05e6b50a22b062969f0b63f6088fab094b3f84e694c31228cc4dba6a",
+        "capture_phase_revision": "sha256:97bb99bc0f7a2bd97ff8724bed828505e5df130ab18b6e0b74e02a8ee9759cd3",
+        "artifact_digest": "sha256:3b902817e2ff8ea4ded46b03449688c012de347dd38c63efe5ded0190ba06d42",
+        "result_hash": "sha256:89e793e9460e62c8b7cedaca0be3c948a791a0070091313455c8cbd6256e2a19",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:9505aa399d87fabf28b10bd1ae6635fcd4010e80ed4b773e4ecda8a43a303d78",
+            "lineage_id": "review-18cb8b5d94403c8e",
+            "authority_revision": "sha256:97bb99bc0f7a2bd97ff8724bed828505e5df130ab18b6e0b74e02a8ee9759cd3",
+            "target_identity": "sha256:50e8469e05e6b50a22b062969f0b63f6088fab094b3f84e694c31228cc4dba6a",
+            "base_tree": "3761ef8b03373b0d130455f7ac8bb3c48499a454",
+            "candidate_tree": "859d4fad97451550c5bc32c19868dffdd10574a8",
+            "changed_path_manifest_sha256": "sha256:dec314baad771ab3e1605f7c5ed784bcd8bd8e8048ebc6ca494983d0c57163e5",
+            "lens": "review-readability",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:9505aa399d87fabf28b10bd1ae6635fcd4010e80ed4b773e4ecda8a43a303d78",
+            "raw_sha256": "sha256:d5765e607e1155b3529d26319d0c132e81abf0b66178026f24791ebe9bb2c63a",
+            "canonical_sha256": "sha256:b6c6d6faa63347d26bf4115b638c106fc00215bdf520b1e4d1dff4ee9650d61e",
+            "result_hash": "sha256:89e793e9460e62c8b7cedaca0be3c948a791a0070091313455c8cbd6256e2a19",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:9505aa399d87fabf28b10bd1ae6635fcd4010e80ed4b773e4ecda8a43a303d78",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/settings/legacy_entries.go"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [],
+            "evidence": [
+              "The candidate changes one comment line in engine/settings/legacy_entries.go (line 161). It rewords 'Nothing is ever installed on Stop' to 'The sync-trigger is never installed on Stop', which scopes the claim to the sync-trigger family the comment describes. No code or behavior changed, and the new wording is clearer and introduces no readability defect."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "175f0040cbd471205f079f07c2e1240434295b2398918227ce7e887198771990",
+    "initial_atomic_start": {
+      "lineage_id": "review-18cb8b5d94403c8e",
+      "worktree_identity": "sha256:41c55f16135572a934a43f7cef092884feabee1438e5af7c863bed39738d81db",
+      "target_identity": "sha256:50e8469e05e6b50a22b062969f0b63f6088fab094b3f84e694c31228cc4dba6a",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "3761ef8b03373b0d130455f7ac8bb3c48499a454",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-readability"
+      ],
+      "original_changed_lines": 2,
+      "correction_budget": 2,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "one comment reworded"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

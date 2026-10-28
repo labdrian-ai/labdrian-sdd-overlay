@@ -1,0 +1,138 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:93f83b0f78124a1dcac011e4b9d45095e77a824cf6be80f622a71381f4fa9a06",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-8097cd3dbd3029b5",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "985877bc1543f0a07d72c5838771df36ce72502b",
+      "candidate_tree": "c996c95b38c110e90120231858dc29e674a47ebb",
+      "paths_digest": "sha256:1a7e1e0d31d3e032610ae10c9b8294215430ffd933ca919e887089c5cb359adc",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/review/app/app.go",
+        "engine/review/app/fakes_test.go",
+        "engine/review/gitexec/gitexec.go",
+        "engine/review/gitexec/standing_test.go"
+      ],
+      "identity": "sha256:c66978b882dbc53097ff60750958c79a977e6c23195a42953b350b4a7c6c1931"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "985877bc1543f0a07d72c5838771df36ce72502b",
+      "candidate_tree": "c996c95b38c110e90120231858dc29e674a47ebb",
+      "paths_digest": "sha256:1a7e1e0d31d3e032610ae10c9b8294215430ffd933ca919e887089c5cb359adc",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/review/app/app.go",
+        "engine/review/app/fakes_test.go",
+        "engine/review/gitexec/gitexec.go",
+        "engine/review/gitexec/standing_test.go"
+      ],
+      "identity": "sha256:c66978b882dbc53097ff60750958c79a977e6c23195a42953b350b4a7c6c1931"
+    },
+    "genesis_paths": [
+      "engine/review/app/app.go",
+      "engine/review/app/fakes_test.go",
+      "engine/review/gitexec/gitexec.go",
+      "engine/review/gitexec/standing_test.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-reliability"
+    ],
+    "original_changed_lines": 257,
+    "correction_budget": 129,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "new git port reading branch standing, with tests",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:c00f86c48f2c318387c5d65263a7af1d90b9f9820a557b60561f30744ced071b",
+    "capture_phase_revision": "sha256:3ecde806e8fadb9a8babdb6e715eb40e4c8be7766787833d7c5e82c20c9fed3c",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "target_identity": "sha256:c66978b882dbc53097ff60750958c79a977e6c23195a42953b350b4a7c6c1931",
+        "capture_phase_revision": "sha256:3ecde806e8fadb9a8babdb6e715eb40e4c8be7766787833d7c5e82c20c9fed3c",
+        "artifact_digest": "sha256:237cbba926ffd57ba8fe6136b055d24b73cb5f30c1e79ef8dca7dc880f28ed37",
+        "result_hash": "sha256:7f7b1e15cbd89678c1409f0839c358b8cd2538e7e11acda114249fb711b77a22",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:fd32516771f4b3e70a8b9d13dd766b8e21753be2e8f2cc31de0bc81e55a24515",
+            "lineage_id": "review-8097cd3dbd3029b5",
+            "authority_revision": "sha256:3ecde806e8fadb9a8babdb6e715eb40e4c8be7766787833d7c5e82c20c9fed3c",
+            "target_identity": "sha256:c66978b882dbc53097ff60750958c79a977e6c23195a42953b350b4a7c6c1931",
+            "base_tree": "985877bc1543f0a07d72c5838771df36ce72502b",
+            "candidate_tree": "c996c95b38c110e90120231858dc29e674a47ebb",
+            "changed_path_manifest_sha256": "sha256:627ea7c42157df8d2532febccc10bae07664eff4c9255399f938b3b0d3dccf5b",
+            "lens": "review-reliability",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:fd32516771f4b3e70a8b9d13dd766b8e21753be2e8f2cc31de0bc81e55a24515",
+            "raw_sha256": "sha256:5bf7b0b6d2a266c218ee019598f84c8993e54764eb9b63940d06227ec74068c3",
+            "canonical_sha256": "sha256:185952b1155f2cad44ee6bea7b56dbd5e89e96ccf8f48422a0c0b7e4268a532e",
+            "result_hash": "sha256:7f7b1e15cbd89678c1409f0839c358b8cd2538e7e11acda114249fb711b77a22",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:fd32516771f4b3e70a8b9d13dd766b8e21753be2e8f2cc31de0bc81e55a24515",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/app/app.go",
+                "engine/review/app/fakes_test.go",
+                "engine/review/gitexec/gitexec.go",
+                "engine/review/gitexec/standing_test.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [],
+            "evidence": [
+              "Reviewed all four changed paths in full. In gitexec.go, Standing handles a detached HEAD, a missing default branch, and malformed git output through explicit paths: it returns a partial result for the first two and an error for malformed output.",
+              "defaultBranch rejects origin/HEAD names containing glob characters. Tips are sorted and deduplicated, so the ^tip exclusions are deterministic.",
+              "standing_test.go covers the main shapes of history: own commits, the default branch itself, merges in both directions, detached HEAD, a master default, no default branch, origin/HEAD naming, and remote-ahead and local-ahead defaults. It also covers malformed git output through a fake runner, and the error text it expects matches the message commitNames produces.",
+              "fakes_test.go adds a Standing fake that honors its failure injection, and the app.go interface addition is consistent with the adapter's signature.",
+              "The only gaps are minor: no test for an unborn HEAD, and none for a shallow clone. Neither leaves the introduced behavior unproved."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "dbe10f15df4cd92e46655b4008b19bcd19925235c9c1d2a8f3a84afb58153540",
+    "initial_atomic_start": {
+      "lineage_id": "review-8097cd3dbd3029b5",
+      "worktree_identity": "sha256:461b23bb69f0b47e67ce38c66575c67eb8431fda09b16f5a87e7ac3213cca465",
+      "target_identity": "sha256:c66978b882dbc53097ff60750958c79a977e6c23195a42953b350b4a7c6c1931",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "985877bc1543f0a07d72c5838771df36ce72502b",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-reliability"
+      ],
+      "original_changed_lines": 257,
+      "correction_budget": 129,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "new git port reading branch standing, with tests"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

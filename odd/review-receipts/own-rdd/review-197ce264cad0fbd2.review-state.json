@@ -1,0 +1,290 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:82fc1f6040fae2756f4104332a4bbbf64b464c956db066f9770a740a935be59a",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-197ce264cad0fbd2",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "2e36957a1087481a463efb901c4a688b6cd07871",
+      "candidate_tree": "1cae6e03be32eeae6e91b6efc5d739083ec4bd8e",
+      "paths_digest": "sha256:61956f8f7f17832b4d1944f447173e1cd1517c36adfd7d64becb6043239a6692",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/capability/declarations.go",
+        "engine/capability/declarations_test.go",
+        "engine/cmd/runtime_golden_test.go",
+        "engine/cmd/status_command_test.go",
+        "engine/cmd/status_golden_test.go",
+        "engine/cmd/testdata/runtime-golden/runtime-claude-families-present-and-absent.golden",
+        "engine/cmd/testdata/status-golden/status-binary-states.golden",
+        "engine/cmd/testdata/status-golden/status-contract-states.golden",
+        "engine/cmd/testdata/status-golden/status-families-missing-or-drifted.golden",
+        "engine/cmd/testdata/status-golden/status-in-an-empty-home.golden",
+        "engine/cmd/testdata/status-golden/status-of-a-complete-install.golden",
+        "engine/cmd/testdata/status-golden/status-registry-states.golden",
+        "engine/cmd/testdata/status-golden/status-settings-that-are-not-an-object.golden",
+        "engine/cmd/testdata/status-golden/status-settings-without-the-hooks.golden",
+        "engine/cmd/testdata/status-golden/status-with-no-home.golden",
+        "engine/runtime/claude_test.go",
+        "engine/status/codex_test.go",
+        "engine/status/status.go",
+        "engine/status/status_test.go"
+      ],
+      "identity": "sha256:e97f8e5d069a4f8cb18d4715d0e9b1d112f6913d69efc36f8822b5baa0a8cd70"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "2e36957a1087481a463efb901c4a688b6cd07871",
+      "candidate_tree": "1cae6e03be32eeae6e91b6efc5d739083ec4bd8e",
+      "paths_digest": "sha256:61956f8f7f17832b4d1944f447173e1cd1517c36adfd7d64becb6043239a6692",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/capability/declarations.go",
+        "engine/capability/declarations_test.go",
+        "engine/cmd/runtime_golden_test.go",
+        "engine/cmd/status_command_test.go",
+        "engine/cmd/status_golden_test.go",
+        "engine/cmd/testdata/runtime-golden/runtime-claude-families-present-and-absent.golden",
+        "engine/cmd/testdata/status-golden/status-binary-states.golden",
+        "engine/cmd/testdata/status-golden/status-contract-states.golden",
+        "engine/cmd/testdata/status-golden/status-families-missing-or-drifted.golden",
+        "engine/cmd/testdata/status-golden/status-in-an-empty-home.golden",
+        "engine/cmd/testdata/status-golden/status-of-a-complete-install.golden",
+        "engine/cmd/testdata/status-golden/status-registry-states.golden",
+        "engine/cmd/testdata/status-golden/status-settings-that-are-not-an-object.golden",
+        "engine/cmd/testdata/status-golden/status-settings-without-the-hooks.golden",
+        "engine/cmd/testdata/status-golden/status-with-no-home.golden",
+        "engine/runtime/claude_test.go",
+        "engine/status/codex_test.go",
+        "engine/status/status.go",
+        "engine/status/status_test.go"
+      ],
+      "identity": "sha256:e97f8e5d069a4f8cb18d4715d0e9b1d112f6913d69efc36f8822b5baa0a8cd70"
+    },
+    "genesis_paths": [
+      "engine/capability/declarations.go",
+      "engine/capability/declarations_test.go",
+      "engine/cmd/runtime_golden_test.go",
+      "engine/cmd/status_command_test.go",
+      "engine/cmd/status_golden_test.go",
+      "engine/cmd/testdata/runtime-golden/runtime-claude-families-present-and-absent.golden",
+      "engine/cmd/testdata/status-golden/status-binary-states.golden",
+      "engine/cmd/testdata/status-golden/status-contract-states.golden",
+      "engine/cmd/testdata/status-golden/status-families-missing-or-drifted.golden",
+      "engine/cmd/testdata/status-golden/status-in-an-empty-home.golden",
+      "engine/cmd/testdata/status-golden/status-of-a-complete-install.golden",
+      "engine/cmd/testdata/status-golden/status-registry-states.golden",
+      "engine/cmd/testdata/status-golden/status-settings-that-are-not-an-object.golden",
+      "engine/cmd/testdata/status-golden/status-settings-without-the-hooks.golden",
+      "engine/cmd/testdata/status-golden/status-with-no-home.golden",
+      "engine/runtime/claude_test.go",
+      "engine/status/codex_test.go",
+      "engine/status/status.go",
+      "engine/status/status_test.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 369,
+    "correction_budget": 185,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "status and runtime report the hook, goldens regenerated",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:657300efb975dafeafbee5c46b6c02ea662d05b12330e196ad6a02cabc2837ed",
+    "capture_phase_revision": "sha256:75db1fda3a86eef0943d141a01b40faef05c9e3fbbb04c71f96b40e9771a8381",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "target_identity": "sha256:e97f8e5d069a4f8cb18d4715d0e9b1d112f6913d69efc36f8822b5baa0a8cd70",
+        "capture_phase_revision": "sha256:75db1fda3a86eef0943d141a01b40faef05c9e3fbbb04c71f96b40e9771a8381",
+        "artifact_digest": "sha256:ab75ac1d888a3aeb53aa97608ca2a7f7ea1ec45003df21811dc2255e868a7e0d",
+        "result_hash": "sha256:80f45a1b160408ec57432c9f7437ef8d8ae73fe155ebae5952802c738098d85b",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:5bcb2424d67a45da435d5914af9ace67bef3eadb975fe5ac808af9f736f3c9da",
+            "lineage_id": "review-197ce264cad0fbd2",
+            "authority_revision": "sha256:75db1fda3a86eef0943d141a01b40faef05c9e3fbbb04c71f96b40e9771a8381",
+            "target_identity": "sha256:e97f8e5d069a4f8cb18d4715d0e9b1d112f6913d69efc36f8822b5baa0a8cd70",
+            "base_tree": "2e36957a1087481a463efb901c4a688b6cd07871",
+            "candidate_tree": "1cae6e03be32eeae6e91b6efc5d739083ec4bd8e",
+            "changed_path_manifest_sha256": "sha256:914e947ac55212de050c2621b4b50151a489517b4b28bfe15b5eb2ab490d6343",
+            "lens": "review-readability",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:5bcb2424d67a45da435d5914af9ace67bef3eadb975fe5ac808af9f736f3c9da",
+            "raw_sha256": "sha256:50113b001305fe0ad05b68fdc3b51bdf8ec54eb3fc8dc7ac34bd2654dbdbf250",
+            "canonical_sha256": "sha256:3602e780192fb1a9964d618e8c8589e00caf98709cc2299b96260bd76e931430",
+            "result_hash": "sha256:80f45a1b160408ec57432c9f7437ef8d8ae73fe155ebae5952802c738098d85b",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:5bcb2424d67a45da435d5914af9ace67bef3eadb975fe5ac808af9f736f3c9da",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/capability/declarations.go",
+                "engine/capability/declarations_test.go",
+                "engine/cmd/runtime_golden_test.go",
+                "engine/cmd/status_command_test.go",
+                "engine/cmd/status_golden_test.go",
+                "engine/cmd/testdata/runtime-golden/runtime-claude-families-present-and-absent.golden",
+                "engine/cmd/testdata/status-golden/status-binary-states.golden",
+                "engine/cmd/testdata/status-golden/status-contract-states.golden",
+                "engine/cmd/testdata/status-golden/status-families-missing-or-drifted.golden",
+                "engine/cmd/testdata/status-golden/status-in-an-empty-home.golden",
+                "engine/cmd/testdata/status-golden/status-of-a-complete-install.golden",
+                "engine/cmd/testdata/status-golden/status-registry-states.golden",
+                "engine/cmd/testdata/status-golden/status-settings-that-are-not-an-object.golden",
+                "engine/cmd/testdata/status-golden/status-settings-without-the-hooks.golden",
+                "engine/cmd/testdata/status-golden/status-with-no-home.golden",
+                "engine/runtime/claude_test.go",
+                "engine/status/codex_test.go",
+                "engine/status/status.go",
+                "engine/status/status_test.go"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-stop-cost-const",
+                "lens": "readability",
+                "location": "engine/status/status.go:393-405",
+                "severity": "SUGGESTION",
+                "claim": "checkReviewStopHook is a near-copy of the checkProjectionHooks / checkApproveGuard pattern (label, beforeEntries, Missing*Parts, OK note). The cost string is a local const while sibling checks inline theirs, and the same sentence is duplicated verbatim in status_test.go as wantStopAdvice. This is a minor maintainability point; if the advice wording changes, two places must be edited, though the test would catch a mismatch.",
+                "proof_refs": [
+                  "engine/status/status.go:393-405",
+                  "engine/status/status_test.go:35"
+                ]
+              },
+              {
+                "id": "R2-stale-check-count",
+                "lens": "readability",
+                "location": "engine/status/codex_test.go:21",
+                "severity": "SUGGESTION",
+                "claim": "The magic number 11 for the check count was bumped from 10 without a named constant or explanation. Every new check will require another silent edit here. Deriving it from the expected labels list would make the intent clear.",
+                "proof_refs": [
+                  "engine/status/codex_test.go:21"
+                ]
+              }
+            ],
+            "evidence": [
+              "Reviewed all 19 changed paths: the production change is small (checkReviewStopHook in status.go plus a declarations.go claim text update); the rest are tests and golden files that consistently add the new Stop check line.",
+              "The doc comment on Check was updated to list the new family and the new check is placed in the documented order, so the change context is present.",
+              "No misleading names, dead logic, or unsafe complexity found. The two items are low-severity maintainability suggestions only."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 1,
+        "target_identity": "sha256:e97f8e5d069a4f8cb18d4715d0e9b1d112f6913d69efc36f8822b5baa0a8cd70",
+        "capture_phase_revision": "sha256:75db1fda3a86eef0943d141a01b40faef05c9e3fbbb04c71f96b40e9771a8381",
+        "artifact_digest": "sha256:06291fa53c68e942b23de0d09165a0245becf92e367e4176ee1099a1d1a75c79",
+        "result_hash": "sha256:b221b613c368eb5a892e7843e5956b5eb5a677791b7e9a3af759276c988339db",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:78322207546f9779592abc8e685d9dee9bba9ae3009a888ed9e3ea31ebbc808d",
+            "lineage_id": "review-197ce264cad0fbd2",
+            "authority_revision": "sha256:75db1fda3a86eef0943d141a01b40faef05c9e3fbbb04c71f96b40e9771a8381",
+            "target_identity": "sha256:e97f8e5d069a4f8cb18d4715d0e9b1d112f6913d69efc36f8822b5baa0a8cd70",
+            "base_tree": "2e36957a1087481a463efb901c4a688b6cd07871",
+            "candidate_tree": "1cae6e03be32eeae6e91b6efc5d739083ec4bd8e",
+            "changed_path_manifest_sha256": "sha256:914e947ac55212de050c2621b4b50151a489517b4b28bfe15b5eb2ab490d6343",
+            "lens": "review-reliability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:78322207546f9779592abc8e685d9dee9bba9ae3009a888ed9e3ea31ebbc808d",
+            "raw_sha256": "sha256:217ed7159d100a69c34c5da722eaf5562bf35af098f586e27c062dfd4325baa0",
+            "canonical_sha256": "sha256:fa260a85d7bae57f436e93c20eb4c78660f71d2c3991499665b2069955772cca",
+            "result_hash": "sha256:b221b613c368eb5a892e7843e5956b5eb5a677791b7e9a3af759276c988339db",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:78322207546f9779592abc8e685d9dee9bba9ae3009a888ed9e3ea31ebbc808d",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/capability/declarations.go",
+                "engine/capability/declarations_test.go",
+                "engine/cmd/runtime_golden_test.go",
+                "engine/cmd/status_command_test.go",
+                "engine/cmd/status_golden_test.go",
+                "engine/cmd/testdata/runtime-golden/runtime-claude-families-present-and-absent.golden",
+                "engine/cmd/testdata/status-golden/status-binary-states.golden",
+                "engine/cmd/testdata/status-golden/status-contract-states.golden",
+                "engine/cmd/testdata/status-golden/status-families-missing-or-drifted.golden",
+                "engine/cmd/testdata/status-golden/status-in-an-empty-home.golden",
+                "engine/cmd/testdata/status-golden/status-of-a-complete-install.golden",
+                "engine/cmd/testdata/status-golden/status-registry-states.golden",
+                "engine/cmd/testdata/status-golden/status-settings-that-are-not-an-object.golden",
+                "engine/cmd/testdata/status-golden/status-settings-without-the-hooks.golden",
+                "engine/cmd/testdata/status-golden/status-with-no-home.golden",
+                "engine/runtime/claude_test.go",
+                "engine/status/codex_test.go",
+                "engine/status/status.go",
+                "engine/status/status_test.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [],
+            "evidence": [
+              "The candidate adds checkReviewStopHook to engine/status/status.go. It reuses the beforeEntries guard, so unreadable settings fail and absent settings warn, the same as the neighbouring family checks. Missing or drifted entries warn and name the fix.",
+              "Status behavior is covered at several levels. The status unit tests cover missing, edited, and foreign-program Stop entries, and a different binary path. The goldens cover the empty-home, no-home, invalid-JSON, directory, and drifted-settings cases.",
+              "Runtime adapter tests cover install, partial status on a pre-existing install, drift repair via Update, and uninstall that keeps foreign Stop entries. A golden covers the runtime status and update flow for a removed Stop entry.",
+              "The declarations test pins the capability claim wording and its referenced test names.",
+              "The patch contains only the status check and test changes. It has no settings.MissingReviewStopHookParts implementation or install and uninstall code, so I could not verify the underlying behavior. This is outside the visible candidate and is not a reliability finding.",
+              "I found no regressions on valid baseline input. The only changes to existing output are the added Stop check line and the updated check count."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "40fafdde59f18763da05ab1b5df9cdf729c9c936438ca966feb612666cbe57cb",
+    "initial_atomic_start": {
+      "lineage_id": "review-197ce264cad0fbd2",
+      "worktree_identity": "sha256:b7759608b5d8992b2d1d5f7c2778032e41d45e0778456b9c2166528c96488522",
+      "target_identity": "sha256:e97f8e5d069a4f8cb18d4715d0e9b1d112f6913d69efc36f8822b5baa0a8cd70",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "2e36957a1087481a463efb901c4a688b6cd07871",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 369,
+      "correction_budget": 185,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "status and runtime report the hook, goldens regenerated"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

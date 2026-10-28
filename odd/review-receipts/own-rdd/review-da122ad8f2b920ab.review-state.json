@@ -1,0 +1,231 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:6cd931eaf029923527fb10458423237bf7dc00459932575a6dad2157a8ca2f55",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-da122ad8f2b920ab",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "701a40d9a9e76dce73e73bc8ef4fc6366c7a0390",
+      "candidate_tree": "2e36957a1087481a463efb901c4a688b6cd07871",
+      "paths_digest": "sha256:1734e273937702f58f7609d65f72403421d31436bf5d37970047ce80ca5c75ff",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/settings/doc.go",
+        "engine/settings/legacy_families_test.go",
+        "engine/settings/merge.go",
+        "engine/settings/review_stop.go",
+        "engine/settings/review_stop_test.go",
+        "engine/settings/settingsfile/golden_unix_test.go",
+        "engine/settings/settingsfile/review_stop_test.go",
+        "engine/settings/settingsfile/settings_test.go",
+        "engine/settings/status.go"
+      ],
+      "identity": "sha256:d054f41dcbed28c60d5ea2301e2615532c5f4a78354372897f29d20d52705b39"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "701a40d9a9e76dce73e73bc8ef4fc6366c7a0390",
+      "candidate_tree": "2e36957a1087481a463efb901c4a688b6cd07871",
+      "paths_digest": "sha256:1734e273937702f58f7609d65f72403421d31436bf5d37970047ce80ca5c75ff",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/settings/doc.go",
+        "engine/settings/legacy_families_test.go",
+        "engine/settings/merge.go",
+        "engine/settings/review_stop.go",
+        "engine/settings/review_stop_test.go",
+        "engine/settings/settingsfile/golden_unix_test.go",
+        "engine/settings/settingsfile/review_stop_test.go",
+        "engine/settings/settingsfile/settings_test.go",
+        "engine/settings/status.go"
+      ],
+      "identity": "sha256:d054f41dcbed28c60d5ea2301e2615532c5f4a78354372897f29d20d52705b39"
+    },
+    "genesis_paths": [
+      "engine/settings/doc.go",
+      "engine/settings/legacy_families_test.go",
+      "engine/settings/merge.go",
+      "engine/settings/review_stop.go",
+      "engine/settings/review_stop_test.go",
+      "engine/settings/settingsfile/golden_unix_test.go",
+      "engine/settings/settingsfile/review_stop_test.go",
+      "engine/settings/settingsfile/settings_test.go",
+      "engine/settings/status.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-risk",
+      "review-reliability"
+    ],
+    "original_changed_lines": 487,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "changes what install-hooks and uninstall-hooks write to the user settings.json on Stop",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:4c77a38c2e9bd2a1992932ebfb9daff4ce0ef1bc42ba8c344dfea1477944595b",
+    "capture_phase_revision": "sha256:3979c329de5c034388d823509daacc44df851d944a6a384b6c5e448e07c5fed1",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:d054f41dcbed28c60d5ea2301e2615532c5f4a78354372897f29d20d52705b39",
+        "capture_phase_revision": "sha256:3979c329de5c034388d823509daacc44df851d944a6a384b6c5e448e07c5fed1",
+        "artifact_digest": "sha256:6ab5d6f164a2a6548d0a9485ddd73dc6ce9ed429709aca01310293a9fd66a3da",
+        "result_hash": "sha256:33620b446fc58854050f427cebf1592c773b99c4f0a0a1663ea3cbe776bcc546",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:93e799052e2fc2f0d57de22c3199d4f52c2a751f256cf981e817848bc46b8b89",
+            "lineage_id": "review-da122ad8f2b920ab",
+            "authority_revision": "sha256:3979c329de5c034388d823509daacc44df851d944a6a384b6c5e448e07c5fed1",
+            "target_identity": "sha256:d054f41dcbed28c60d5ea2301e2615532c5f4a78354372897f29d20d52705b39",
+            "base_tree": "701a40d9a9e76dce73e73bc8ef4fc6366c7a0390",
+            "candidate_tree": "2e36957a1087481a463efb901c4a688b6cd07871",
+            "changed_path_manifest_sha256": "sha256:788e348b809cff70cb5a495c38da3d44ed8a35a3ee1e3287e5c11ecdd545dfbb",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:93e799052e2fc2f0d57de22c3199d4f52c2a751f256cf981e817848bc46b8b89",
+            "raw_sha256": "sha256:b4221f9a194bf361cbb8aba521f7f121f792651655c9f52d6fe40308ace91c5c",
+            "canonical_sha256": "sha256:03d0c049e225156146018d48e4b9bb0cbce6b66a9a6623d8262e650c35ebfc22",
+            "result_hash": "sha256:33620b446fc58854050f427cebf1592c773b99c4f0a0a1663ea3cbe776bcc546",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:93e799052e2fc2f0d57de22c3199d4f52c2a751f256cf981e817848bc46b8b89",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/settings/doc.go",
+                "engine/settings/legacy_families_test.go",
+                "engine/settings/merge.go",
+                "engine/settings/review_stop.go",
+                "engine/settings/review_stop_test.go",
+                "engine/settings/settingsfile/golden_unix_test.go",
+                "engine/settings/settingsfile/review_stop_test.go",
+                "engine/settings/settingsfile/settings_test.go",
+                "engine/settings/status.go"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "Reviewed all 9 changed paths from the immutable patch sections.",
+              "The new Stop hook command uses shellQuote on the binary path for both command -v and execution, with fixed constant arguments, so no injection from untrusted input is reachable.",
+              "The command ends with '|| true', so a crash or failure cannot block a stop; this is covered by a sh-run test in engine/settings/settingsfile/review_stop_test.go.",
+              "Uninstall scanning of Stop is restricted by removable() in engine/settings/merge.go to reviewStopFamily.owns, which requires the binary path plus the identity token. Foreign Stop entries and entries of other families left by older versions are preserved, as the test in engine/settings/review_stop_test.go verifies.",
+              "No secrets, dependency changes, or data-exposure paths are introduced; the changes are settings-file hook installation plus tests."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 1,
+        "target_identity": "sha256:d054f41dcbed28c60d5ea2301e2615532c5f4a78354372897f29d20d52705b39",
+        "capture_phase_revision": "sha256:3979c329de5c034388d823509daacc44df851d944a6a384b6c5e448e07c5fed1",
+        "artifact_digest": "sha256:538e7c0a036e50671b4424d53d3da71d036932b131260fed77fe254671eaec6b",
+        "result_hash": "sha256:a0ab395ca5862a140d7f5df1513881e82cc6667bd15787174d60964490eedb4d",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:0276ed11dac58a2e2d47e775223ff47d54f5f413d05079e54159ede24f61d869",
+            "lineage_id": "review-da122ad8f2b920ab",
+            "authority_revision": "sha256:3979c329de5c034388d823509daacc44df851d944a6a384b6c5e448e07c5fed1",
+            "target_identity": "sha256:d054f41dcbed28c60d5ea2301e2615532c5f4a78354372897f29d20d52705b39",
+            "base_tree": "701a40d9a9e76dce73e73bc8ef4fc6366c7a0390",
+            "candidate_tree": "2e36957a1087481a463efb901c4a688b6cd07871",
+            "changed_path_manifest_sha256": "sha256:788e348b809cff70cb5a495c38da3d44ed8a35a3ee1e3287e5c11ecdd545dfbb",
+            "lens": "review-reliability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:0276ed11dac58a2e2d47e775223ff47d54f5f413d05079e54159ede24f61d869",
+            "raw_sha256": "sha256:ef7b23d5390b71025679653897bc3ca20978f050855140dff3296ba164370d38",
+            "canonical_sha256": "sha256:2b17e644bb10efc5dfdb2d6297adc96c1eb602b318aba2c798e1357ebe66ad99",
+            "result_hash": "sha256:a0ab395ca5862a140d7f5df1513881e82cc6667bd15787174d60964490eedb4d",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:0276ed11dac58a2e2d47e775223ff47d54f5f413d05079e54159ede24f61d869",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/settings/doc.go",
+                "engine/settings/legacy_families_test.go",
+                "engine/settings/merge.go",
+                "engine/settings/review_stop.go",
+                "engine/settings/review_stop_test.go",
+                "engine/settings/settingsfile/golden_unix_test.go",
+                "engine/settings/settingsfile/review_stop_test.go",
+                "engine/settings/settingsfile/settings_test.go",
+                "engine/settings/status.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-001",
+                "lens": "reliability",
+                "location": "engine/settings/merge.go:104",
+                "severity": "WARNING",
+                "claim": "removeHooks now scans Stop. Only the review stop-hook entry is removed, and the unit test covers an older sync-trigger entry plus a foreign entry on Stop. The case where the same list also holds a drifted or older-format review stop-hook entry is not tested: reviewStopFamily.owns decides whether that entry is removed on Uninstall, and no test pins this. Low risk, since the family implementation is shared with the other families.",
+                "proof_refs": [
+                  "engine/settings/merge.go:104",
+                  "engine/settings/review_stop_test.go:84"
+                ]
+              }
+            ],
+            "evidence": [
+              "Reviewed all 9 changed paths in the patch.",
+              "The new family reuses the shared hookFamily implementation. Its tests cover entry shape, a never-blocking sh command (missing binary and exit 2 both give exit 0), identity non-overlap, missing/drifted/duplicate reporting, an empty hook command, foreign Stop entry preservation across Install, re-Install and Uninstall, Stop key cleanup, and upgrade of an older install.",
+              "The change to removeHooks is scoped: Stop removal goes through the family's own ownership check, so entries from other families and other programs on Stop are kept, and a test pins this.",
+              "HasSupportedClaudeLifecycleState now requires the Stop hook, and the lifecycle test adds the families one at a time. This is the requested behavior and not a regression.",
+              "No BLOCKER or CRITICAL findings."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "d595d74cc596012feb95f7522bd1d0e2e02736e014f258f397587c079abff99e",
+    "initial_atomic_start": {
+      "lineage_id": "review-da122ad8f2b920ab",
+      "worktree_identity": "sha256:2add1afc5679a7e32847d01a409ef9798bbadadd9de36a9afccc735dac29f61f",
+      "target_identity": "sha256:d054f41dcbed28c60d5ea2301e2615532c5f4a78354372897f29d20d52705b39",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "701a40d9a9e76dce73e73bc8ef4fc6366c7a0390",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-risk",
+        "review-reliability"
+      ],
+      "original_changed_lines": 487,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "changes what install-hooks and uninstall-hooks write to the user settings.json on Stop"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

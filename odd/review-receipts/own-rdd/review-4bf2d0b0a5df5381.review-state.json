@@ -1,0 +1,128 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:415fad549a965581da561aeb98ddab6e5d0f56fdd5b68b80c25e8e2032e48e43",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-4bf2d0b0a5df5381",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "fd538602e59a3fe8eca39afc40205342a935bc64",
+      "candidate_tree": "985877bc1543f0a07d72c5838771df36ce72502b",
+      "paths_digest": "sha256:0303b0f752de5343aad77a1b1fa4ec01948070949e7c9a2ad1852f6d0712d4ff",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/review/unreviewed.go",
+        "engine/review/unreviewed_test.go"
+      ],
+      "identity": "sha256:6bafa7a7947322e289e21f68b4d1cee46bd75c462fea9d1a9aff3378b429ea11"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "fd538602e59a3fe8eca39afc40205342a935bc64",
+      "candidate_tree": "985877bc1543f0a07d72c5838771df36ce72502b",
+      "paths_digest": "sha256:0303b0f752de5343aad77a1b1fa4ec01948070949e7c9a2ad1852f6d0712d4ff",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/review/unreviewed.go",
+        "engine/review/unreviewed_test.go"
+      ],
+      "identity": "sha256:6bafa7a7947322e289e21f68b4d1cee46bd75c462fea9d1a9aff3378b429ea11"
+    },
+    "genesis_paths": [
+      "engine/review/unreviewed.go",
+      "engine/review/unreviewed_test.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-reliability"
+    ],
+    "original_changed_lines": 94,
+    "correction_budget": 47,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "new pure rule finding the first unreviewed commit, with tests",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:e14421a2d4c05eed7b52dca6db4481a3071847e26962414c41dc330126f3506c",
+    "capture_phase_revision": "sha256:3d2a4824109c09ca99e9e5773c58233041fd04962fcdba5c5da67b396dc695d4",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "target_identity": "sha256:6bafa7a7947322e289e21f68b4d1cee46bd75c462fea9d1a9aff3378b429ea11",
+        "capture_phase_revision": "sha256:3d2a4824109c09ca99e9e5773c58233041fd04962fcdba5c5da67b396dc695d4",
+        "artifact_digest": "sha256:11db2cab72f613ed7b6b4303b64abb9d7035a28296706d509d3b1023373399f0",
+        "result_hash": "sha256:2a7c1fe9b17d607ff20a1c035ce5e6fceefb3f7e652f777471d3651805481ca6",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:e4453472bfe09985d374f17eb93d891de675fb2d026d42c534cbbcb7adb49201",
+            "lineage_id": "review-4bf2d0b0a5df5381",
+            "authority_revision": "sha256:3d2a4824109c09ca99e9e5773c58233041fd04962fcdba5c5da67b396dc695d4",
+            "target_identity": "sha256:6bafa7a7947322e289e21f68b4d1cee46bd75c462fea9d1a9aff3378b429ea11",
+            "base_tree": "fd538602e59a3fe8eca39afc40205342a935bc64",
+            "candidate_tree": "985877bc1543f0a07d72c5838771df36ce72502b",
+            "changed_path_manifest_sha256": "sha256:d3f7a90de8fd732ebdb89e646b52765c8bfef95a4ae1c78f3b762e0b9c72c323",
+            "lens": "review-reliability",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:e4453472bfe09985d374f17eb93d891de675fb2d026d42c534cbbcb7adb49201",
+            "raw_sha256": "sha256:e5213dbb2d1c131c25eb4234a84cbc64669e60ea28a97dbec85824f459beda7d",
+            "canonical_sha256": "sha256:a55adff599f8ba16113a275c0555c3e56228ba97c314a619f94841bda2dfa982",
+            "result_hash": "sha256:2a7c1fe9b17d607ff20a1c035ce5e6fceefb3f7e652f777471d3651805481ca6",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:e4453472bfe09985d374f17eb93d891de675fb2d026d42c534cbbcb7adb49201",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/review/unreviewed.go",
+                "engine/review/unreviewed_test.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [],
+            "evidence": [
+              "engine/review/unreviewed.go: the reachability loop only ever adds to the reached set, so it always terminates, even when links form cycles or run backwards. The result does not depend on link order, because the loop repeats until nothing changes.",
+              "engine/review/unreviewed.go: with no commits, last is -1 and equals len(commits)-1, so the function returns found=false. This matches the empty-branch contract. When no commit is reached, base falls back to from and head is the first commit.",
+              "engine/review/unreviewed_test.go: the table covers no reviews, single and multi-commit reviews, chained reviews, a gap, an unreached start, a backwards link, shuffled link order and full coverage. Each case asserts base, head and found, and the wantNothing logic in the final check is correct. A separate test covers empty commits with a stored link. Together these prove the stated behavior of the candidate."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "36ba87fb081c7ad3699fd66280fa6e881764521aaee11d2dddb11cde437bae9a",
+    "initial_atomic_start": {
+      "lineage_id": "review-4bf2d0b0a5df5381",
+      "worktree_identity": "sha256:c86040829fda00955e2246d79eb5d393f68f5e63eac642dccf2083388b57b129",
+      "target_identity": "sha256:6bafa7a7947322e289e21f68b4d1cee46bd75c462fea9d1a9aff3378b429ea11",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "fd538602e59a3fe8eca39afc40205342a935bc64",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-reliability"
+      ],
+      "original_changed_lines": 94,
+      "correction_budget": 47,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "new pure rule finding the first unreviewed commit, with tests"
+    },
+    "runtime_agent": "claude-code"
+  }
+}
