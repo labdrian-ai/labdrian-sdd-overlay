@@ -98,6 +98,8 @@ func (g *fakeGit) Commit(repo app.Repository, rev string) (string, error) {
 		return baseSHA, nil
 	case "HEAD", headSHA:
 		return headSHA, nil
+	case otherSHA:
+		return otherSHA, nil
 	}
 	return "", fmt.Errorf("fakeGit: unknown revision %q", rev)
 }
