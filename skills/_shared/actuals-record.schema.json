@@ -59,7 +59,7 @@
     },
     "review_lens_count": {
       "type": "integer",
-      "description": "Optional. Number of review lenses actually run during the review: the number of `rows` recorded in the stored results of the change (`odd/review-results/<feature>/`), one for each row of each launch, as `labdrian review record --rows` stored them. Recorded for reference; no calibration rate is derived from it. Omit if no stored result records a row."
+      "description": "Optional. Number of review lenses actually run during the review: the number of `rows` recorded in the stored results of the change (`odd/review-results/<feature>/`), one for each row of each launch, as `labdrian review record --rows` stored them. Recorded for reference; no calibration rate is derived from it. Omit if no stored result records a row. `tools/actuals-record-validator` counts those rows itself and refuses a record whose count differs, one that claims a count when no stored result backs it, and one that omits it while a stored result records a row."
     },
     "checkpoint_count": {
       "type": "integer",

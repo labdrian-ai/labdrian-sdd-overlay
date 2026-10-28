@@ -5,7 +5,8 @@
 // the result. Exempt holds the risk the agent declares and the report of the verifier for a head whose work takes
 // no review, and stores the exemption beside the results. CheckEvidence holds the evidence of the record that
 // closes a review to the files stored, Check holds a head being delivered to the results stored for it, and CheckChain
-// holds the commits from a base to it to an unbroken chain of them. They answer with typed values and typed refusals
+// holds the commits from a base to it to an unbroken chain of them. CountLenses, which needs no git, counts the lens
+// rows the stored results of a feature record. They answer with typed values and typed refusals
 // over two ports this package owns: Git, the repository as the use cases ask about it, and Results, the
 // directory where results are stored. The adapters are review/gitexec and review/fsstore, and the words a
 // person reads, the flags and the exit codes are the command's, in cmd.

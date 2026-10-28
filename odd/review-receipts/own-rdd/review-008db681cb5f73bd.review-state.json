@@ -1,0 +1,193 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:766bd8a8c43a6dccc9d60af6fee407632b95c21173a7517127e8539a5671663f",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-008db681cb5f73bd",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "5161adc40dd5daef86e9141049e208a6637c8488",
+      "candidate_tree": "8c426678a226e91c742702e76f02fc3ce2dfffd1",
+      "paths_digest": "sha256:1a17b52513efd5c2acf2a128ed6a77bd1e8d10bfe1324d175643a5ca4693f7b6",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "CHANGELOG.md",
+        "odd/review-results/README.md",
+        "tools/actuals-record-validator/main.go",
+        "tools/actuals-record-validator/main_test.go"
+      ],
+      "identity": "sha256:99499940b48f80121fa2cce769f9daaf4bce4483a6b873b479ab36134bd9c8e2"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "5161adc40dd5daef86e9141049e208a6637c8488",
+      "candidate_tree": "8c426678a226e91c742702e76f02fc3ce2dfffd1",
+      "paths_digest": "sha256:1a17b52513efd5c2acf2a128ed6a77bd1e8d10bfe1324d175643a5ca4693f7b6",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "CHANGELOG.md",
+        "odd/review-results/README.md",
+        "tools/actuals-record-validator/main.go",
+        "tools/actuals-record-validator/main_test.go"
+      ],
+      "identity": "sha256:99499940b48f80121fa2cce769f9daaf4bce4483a6b873b479ab36134bd9c8e2"
+    },
+    "genesis_paths": [
+      "CHANGELOG.md",
+      "odd/review-results/README.md",
+      "tools/actuals-record-validator/main.go",
+      "tools/actuals-record-validator/main_test.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-risk",
+      "review-reliability"
+    ],
+    "original_changed_lines": 167,
+    "correction_budget": 84,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "the actuals validator refuses a relative --repo and one that is not a repository root",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:056134ae6a800f09ebd7e83662238df8cbde251c0aa97794f00c6b0ba7da9917",
+    "capture_phase_revision": "sha256:bb8f33d187beef59a68c835a1a5f93725111d0a809d20f0494a084b2b15c0e1c",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:99499940b48f80121fa2cce769f9daaf4bce4483a6b873b479ab36134bd9c8e2",
+        "capture_phase_revision": "sha256:bb8f33d187beef59a68c835a1a5f93725111d0a809d20f0494a084b2b15c0e1c",
+        "artifact_digest": "sha256:a887ec2f7ac9f27af8fa6e4b2ef21de453ded319bf2617f9e8a736d6a49fe4cf",
+        "result_hash": "sha256:c507b02d4439599f3b91ae06cb76c3b6ad678a660e916b750999650ddd889869",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:9cc20d3e31269faee7c1d81ad3cf6316a17a00b3380517cf5faf759e33e2b0c1",
+            "lineage_id": "review-008db681cb5f73bd",
+            "authority_revision": "sha256:bb8f33d187beef59a68c835a1a5f93725111d0a809d20f0494a084b2b15c0e1c",
+            "target_identity": "sha256:99499940b48f80121fa2cce769f9daaf4bce4483a6b873b479ab36134bd9c8e2",
+            "base_tree": "5161adc40dd5daef86e9141049e208a6637c8488",
+            "candidate_tree": "8c426678a226e91c742702e76f02fc3ce2dfffd1",
+            "changed_path_manifest_sha256": "sha256:6c7e2809ed87ee6fd46000d6411d075b02f5a690abd0939861cc718fe5787d17",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:9cc20d3e31269faee7c1d81ad3cf6316a17a00b3380517cf5faf759e33e2b0c1",
+            "raw_sha256": "sha256:45701b509aa8ee21d400c195b12b3d2cacdb128e663786904f429f4a171b0572",
+            "canonical_sha256": "sha256:7e95831209ef16b0b18708ac85af1056ba567dafded6b5e58bb0bf6b3e0774c7",
+            "result_hash": "sha256:c507b02d4439599f3b91ae06cb76c3b6ad678a660e916b750999650ddd889869",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:9cc20d3e31269faee7c1d81ad3cf6316a17a00b3380517cf5faf759e33e2b0c1",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "CHANGELOG.md",
+                "odd/review-results/README.md",
+                "tools/actuals-record-validator/main.go",
+                "tools/actuals-record-validator/main_test.go"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "Reviewed all four changed paths in full. The change tightens the validator: --repo must be absolute (exit 2 otherwise) and must hold a .git entry (exit 7 otherwise). Both checks only add refusals and never turn a failure into a pass, so they cannot create a bypass or data exposure.",
+              "checkRepositoryRoot uses os.Stat on caller-supplied paths only to test existence. It reads no content and writes nothing, and the validator is a local CLI tool, so there is no injection or traversal exposure.",
+              "A .git file in a linked worktree is accepted by existence alone, and the change documents that git, not the validator, judges whether the repository is sound. A forged .git entry could only make the validator count results under a directory the caller already chose, so this opens no privilege boundary.",
+              "The new tests (tools/actuals-record-validator/main_test.go) use t.TempDir and fixture strings only. No secrets or dependency changes are introduced, and no new modules are added.",
+              "The CHANGELOG and README edits are documentation that matches the code behavior. No finding is raised."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 1,
+        "target_identity": "sha256:99499940b48f80121fa2cce769f9daaf4bce4483a6b873b479ab36134bd9c8e2",
+        "capture_phase_revision": "sha256:bb8f33d187beef59a68c835a1a5f93725111d0a809d20f0494a084b2b15c0e1c",
+        "artifact_digest": "sha256:5816f3c9ca4bf3d86575f601e08cbc4be79cdd9bb2b2538aa146f28b2552c99f",
+        "result_hash": "sha256:f8d393cdb5ef67473d270f7ef5de6ca313ef6d936286b9c1f21235090b989ca8",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:d29eae891c4a0016263b5832cee6fdb6c235dbfb23c48ea54a81937718ace160",
+            "lineage_id": "review-008db681cb5f73bd",
+            "authority_revision": "sha256:bb8f33d187beef59a68c835a1a5f93725111d0a809d20f0494a084b2b15c0e1c",
+            "target_identity": "sha256:99499940b48f80121fa2cce769f9daaf4bce4483a6b873b479ab36134bd9c8e2",
+            "base_tree": "5161adc40dd5daef86e9141049e208a6637c8488",
+            "candidate_tree": "8c426678a226e91c742702e76f02fc3ce2dfffd1",
+            "changed_path_manifest_sha256": "sha256:6c7e2809ed87ee6fd46000d6411d075b02f5a690abd0939861cc718fe5787d17",
+            "lens": "review-reliability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:d29eae891c4a0016263b5832cee6fdb6c235dbfb23c48ea54a81937718ace160",
+            "raw_sha256": "sha256:92effa6e3e6de090f81c4b5e8a02a577ab827fdc712c1920deb9bbf538a3025c",
+            "canonical_sha256": "sha256:92effa6e3e6de090f81c4b5e8a02a577ab827fdc712c1920deb9bbf538a3025c",
+            "result_hash": "sha256:f8d393cdb5ef67473d270f7ef5de6ca313ef6d936286b9c1f21235090b989ca8",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:d29eae891c4a0016263b5832cee6fdb6c235dbfb23c48ea54a81937718ace160",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "CHANGELOG.md",
+                "odd/review-results/README.md",
+                "tools/actuals-record-validator/main.go",
+                "tools/actuals-record-validator/main_test.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [],
+            "evidence": [
+              "tools/actuals-record-validator/main.go: the new filepath.IsAbs check runs after the required-flag check and before any file is read, so a relative --repo exits 2 with nothing validated. TestRelativeRepoExitsTwoAndChecksNothing covers both '.' and a relative path to a real repository root, and asserts the exit code, the message, and the absence of 'ok:'.",
+              "tools/actuals-record-validator/main.go: checkRepositoryRoot returns an error for a missing path, a non-directory, or a directory without a .git entry. The caller maps all three to exit 7 with the path in the message. os.Stat follows links and accepts a .git file, so linked worktrees and submodules still pass. TestRepoThatIsNotTheRootOfARepositoryExitsSeven covers a plain directory and a subdirectory of a real repository, and TestRepoThatIsALinkedWorktreeRootIsAccepted covers the worktree case. All three assert exit code and path output.",
+              "tools/actuals-record-validator/main_test.go: existing tests now use the newRepo helper, which creates a .git directory, so they keep exercising their original paths (exit 3, 4, 2, and the lens-count cases) rather than hitting the new exit 7.",
+              "The documentation edits in odd/review-results/README.md and CHANGELOG.md match the new behavior: relative --repo gives exit 2, a missing .git gives exit 7, and the usage text agrees. The one behavior change worth noting is that a relative --repo combined with a bad schema or instance now exits 2 instead of 3 or 4. That is a usage-first ordering and is documented as a breaking change for callers."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "db132cdaf582086b428fdfa1415746c82e17686e2429bdde91412ea8b51fd6fb",
+    "initial_atomic_start": {
+      "lineage_id": "review-008db681cb5f73bd",
+      "worktree_identity": "sha256:8ac2a05c6e4f91bf8de685c28ca79fe4dd35518fa2dc6067985b2a90e213180b",
+      "target_identity": "sha256:99499940b48f80121fa2cce769f9daaf4bce4483a6b873b479ab36134bd9c8e2",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "5161adc40dd5daef86e9141049e208a6637c8488",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-risk",
+        "review-reliability"
+      ],
+      "original_changed_lines": 167,
+      "correction_budget": 84,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "the actuals validator refuses a relative --repo and one that is not a repository root"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

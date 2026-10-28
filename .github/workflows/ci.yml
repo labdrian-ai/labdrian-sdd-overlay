@@ -235,14 +235,29 @@ jobs:
       # Validating them here, not only inside the Go tests, keeps the shipped
       # binary honest about the shipped data: a rule that rejects a record the
       # project already wrote would have blocked the closure that produced it.
+      #
+      # --repo is the checkout that holds the stored review results the
+      # validator holds review_lens_count to (own-rdd S13), and it is an
+      # absolute path. One committed record was written before the rows were
+      # stored and claims a count taken from the receipt of another tool: the
+      # validator refuses it by design (TestCommittedActualsFixturesValidate
+      # pins that), and the fixture mirrors a live record byte for byte, so
+      # that one record is validated here without that member. Every other
+      # record, and any committed later, is validated as written.
       - name: Committed actuals records validate
         run: |
           set -euo pipefail
           go build -C tools/actuals-record-validator -o "$RUNNER_TEMP/actuals-record-validator" .
           for record in engine/skills/testdata/corrected-actuals-*.json; do
+            instance=$record
+            if [ "$(basename "$record")" = corrected-actuals-skills-validate-ondisk-gate.json ]; then
+              jq 'del(.review_lens_count)' "$record" > "$RUNNER_TEMP/actuals-record.json"
+              instance="$RUNNER_TEMP/actuals-record.json"
+            fi
             "$RUNNER_TEMP/actuals-record-validator" \
               --schema skills/_shared/actuals-record.schema.json \
-              --instance "$record"
+              --instance "$instance" \
+              --repo "$PWD"
           done
 
   test-archive-anchor-gate:

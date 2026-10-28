@@ -19,6 +19,18 @@
 // structural check while carrying none of the information the field exists to
 // carry, and it was written by the same agent that then attested to it. Shape
 // cannot catch it; these rules can.
+//
+// The other rule that reads outside the record is the lens count (own-rdd S13).
+// `review_lens_count` is the number of lens rows the stored review results of
+// the change record, one for each row of each launch, and it is checked, not
+// trusted: the validator reads `odd/review-results/<change_name>/` under --repo
+// through the engine's one function for that number (review/app CountLenses,
+// never a count of its own) and refuses a record whose number differs, one that
+// claims a count no stored result backs (a change reviewed before the rows were
+// stored; a count of 0 too), one that omits it while a stored result records a
+// row, and a check that cannot read the results (--repo is not an absolute path
+// to the root of a repository, or a stored result is not one). A check that
+// cannot run refuses; it never passes.
 package main
 
 import (
@@ -28,9 +40,13 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review/app"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review/fsstore"
 	"github.com/santhosh-tekuri/jsonschema/v6"
 )
 
@@ -41,6 +57,7 @@ const (
 	exitInstance           = 4
 	exitSchemaValidation   = 5
 	exitSemanticValidation = 6
+	exitReviewResults      = 7
 )
 
 // currentRecordVersion is the actuals-record bundle version this validator
@@ -108,7 +125,7 @@ const (
 	reconstructedStem = "reconstruct"
 )
 
-const usageText = `Usage: actuals-record-validator --schema PATH --instance PATH
+const usageText = `Usage: actuals-record-validator --schema PATH --instance PATH --repo PATH
 
 Validates a closure actuals record with the Draft 2020-12 actuals-record schema,
 then checks the deterministic invariants the schema cannot express.
@@ -116,6 +133,11 @@ then checks the deterministic invariants the schema cannot express.
 Options:
   --schema PATH     Actuals-record schema file
   --instance PATH   Actuals-record JSON instance
+  --repo PATH       Root of the repository, an absolute path (go run -C changes
+                    the working directory), the directory that holds .git (a
+                    file in a linked worktree). The stored review results of
+                    the change are odd/review-results/<change_name>/ under it
+                    (required)
   --version         Print validator/record version
   --help            Show this help
 
@@ -130,14 +152,32 @@ Semantic invariants (beyond schema shape):
     durably observed and which were reconstructed from the closure narrative.
   * A recorded total_wall_clock_hours states in variance_vs_plan whether it was
     measured or reconstructed.
+  * review_lens_count is the number of lens rows the stored review results of the
+    change record, one for each row of each launch, counted by the engine
+    (review/app CountLenses) from odd/review-results/<change_name>/ under --repo.
+    A different count is refused naming both numbers; so is a count, 0 too, for
+    a change with no stored result (a change reviewed before the rows were
+    stored, whose count came from another tool's receipt) and an omitted count
+    while a stored result records a row. A record that omits it for a change
+    with no stored result passes and says that nothing was compared.
+
+Output:
+  A valid record prints two lines on stdout: "ok: actuals record satisfies
+  <schema> and every semantic invariant", then the line that says what the
+  review_lens_count check compared (the count and the rows it equals, or that the
+  field is omitted and there was nothing to compare). A refusal prints its
+  reason on stderr and exits non-zero.
 
 Exit codes:
   0  valid record, help, or version
-  2  invalid command-line usage
+  2  invalid command-line usage (--repo is required, and is an absolute path)
   3  schema unavailable, malformed, incompatible, or uncompilable
   4  instance unavailable or malformed
   5  JSON Schema validation failed
   6  semantic invariant validation failed
+  7  the stored review results could not be read (--repo is not a directory or
+     holds no .git, or a file named like a stored result is not one), so
+     review_lens_count was not checked
 `
 
 type recordError struct {
@@ -161,6 +201,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 	flags.SetOutput(io.Discard)
 	schemaPath := flags.String("schema", "", "actuals-record schema file")
 	instancePath := flags.String("instance", "", "actuals-record JSON instance")
+	repoPath := flags.String("repo", "", "repository root that holds the stored review results of the change")
 	showVersion := flags.Bool("version", false, "print validator/record version")
 	showHelp := flags.Bool("help", false, "show help")
 
@@ -177,12 +218,17 @@ func run(args []string, stdout, stderr io.Writer) int {
 			currentRecordVersion, strings.Join(supportedRecordVersions, ", "))
 		return exitOK
 	}
-	if *schemaPath == "" || *instancePath == "" {
-		fmt.Fprintf(stderr, "error: both --schema and --instance are required\n\n%s", usageText)
+	if *schemaPath == "" || *instancePath == "" || *repoPath == "" {
+		fmt.Fprintf(stderr, "error: --schema, --instance and --repo are all required\n\n%s", usageText)
+		return exitUsage
+	}
+	if !filepath.IsAbs(*repoPath) {
+		fmt.Fprintf(stderr, "error: --repo %s is not an absolute path: go run -C changes the working directory, so a relative one may name another directory than the caller meant\n\n%s", *repoPath, usageText)
 		return exitUsage
 	}
 
-	if err := validate(*schemaPath, *instancePath); err != nil {
+	lensOutcome, err := validate(*schemaPath, *instancePath, *repoPath)
+	if err != nil {
 		var typed *recordError
 		if errors.As(err, &typed) {
 			fmt.Fprintf(stderr, "error: %v\n", typed.err)
@@ -192,36 +238,96 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return exitSemanticValidation
 	}
 	fmt.Fprintf(stdout, "ok: actuals record satisfies %s and every semantic invariant\n", *schemaPath)
+	fmt.Fprintln(stdout, lensOutcome)
 	return exitOK
 }
 
-func validate(schemaPath, instancePath string) error {
+// validate runs every check and, for a record that passes them all, returns the sentence that says what the lens
+// count check compared, so that a pass is never silent about it.
+func validate(schemaPath, instancePath, repoPath string) (string, error) {
 	schemaDoc, err := readJSON(schemaPath)
 	if err != nil {
-		return fail(exitSchema, "reading schema %s: %v", schemaPath, err)
+		return "", fail(exitSchema, "reading schema %s: %v", schemaPath, err)
 	}
 	if err := validateSchemaVersion(schemaDoc); err != nil {
-		return fail(exitSchema, "%v", err)
+		return "", fail(exitSchema, "%v", err)
 	}
 
 	compiler := jsonschema.NewCompiler()
 	if err := compiler.AddResource("actuals-record.schema.json", schemaDoc); err != nil {
-		return fail(exitSchema, "loading schema %s: %v", schemaPath, err)
+		return "", fail(exitSchema, "loading schema %s: %v", schemaPath, err)
 	}
 	compiled, err := compiler.Compile("actuals-record.schema.json")
 	if err != nil {
-		return fail(exitSchema, "compiling schema %s: %v", schemaPath, err)
+		return "", fail(exitSchema, "compiling schema %s: %v", schemaPath, err)
 	}
 
 	instance, err := readJSON(instancePath)
 	if err != nil {
-		return fail(exitInstance, "reading instance %s: %v", instancePath, err)
+		return "", fail(exitInstance, "reading instance %s: %v", instancePath, err)
 	}
 	if err := compiled.Validate(instance); err != nil {
-		return fail(exitSchemaValidation, "schema validation failed: %v", err)
+		return "", fail(exitSchemaValidation, "schema validation failed: %v", err)
 	}
 	if err := validateSemantics(instance); err != nil {
-		return fail(exitSemanticValidation, "%v", err)
+		return "", fail(exitSemanticValidation, "%v", err)
+	}
+	return checkLensCount(instance, repoPath)
+}
+
+// checkLensCount holds review_lens_count to the rows the stored review results of the change record (own-rdd S13). The
+// number is counted by the engine (app.CountLenses) from odd/review-results/<change_name>/ under repo, and the
+// validator compares it with the record and never makes a count of its own. It returns the sentence that says what was
+// compared, or the refusal: a different count, a count nothing backs (no stored result behind it, whatever the number,
+// 0 too), an omitted count while a stored result records a row (exit 6), and a check that cannot read the results, which
+// is no pass either (exit 7).
+func checkLensCount(instance any, repo string) (string, error) {
+	record, err := decodeRecord(instance)
+	if err != nil {
+		return "", err
+	}
+	change := record.ChangeName
+	if err := checkRepositoryRoot(repo); err != nil {
+		return "", fail(exitReviewResults, "--repo %s cannot be read as the repository root (%v), so the stored review results of %q are unavailable and review_lens_count cannot be checked", repo, err, change)
+	}
+	counted, err := app.CountLenses(fsstore.New(), repo, change)
+	if err != nil {
+		return "", fail(exitReviewResults, "the stored review results of %q under %s cannot be counted, so review_lens_count cannot be checked: %v", change, repo, err)
+	}
+	dir := review.ResultsDir + "/" + change
+	claimed := record.ReviewLensCount
+	switch {
+	case claimed == nil && counted.Lenses == 0:
+		return fmt.Sprintf("review_lens_count: omitted, and no stored review result of %q records a row: there was nothing to compare", change), nil
+	case claimed == nil:
+		return "", fail(exitSemanticValidation, "review_lens_count is omitted but the stored review results of %q record %d rows (%d stored results in %s): write review_lens_count %d, the number of rows they record, one for each row of each launch",
+			change, counted.Lenses, counted.Results, dir, counted.Lenses)
+	case counted.Results == 0:
+		// Whatever the count claimed, 0 too: with no stored result there is nothing it counts, and a 0 that passed because
+		// it does not differ from 0 rows would be a count nothing backs. Only omitting it is the outcome for this change.
+		return "", fail(exitSemanticValidation, "review_lens_count is %d but the stored review results of %q record %d rows (no stored review result in %s): nothing backs a count for this change, as for one reviewed before the rows were stored, whose count came from another tool's receipt; omit review_lens_count",
+			*claimed, change, counted.Lenses, dir)
+	case *claimed != counted.Lenses:
+		return "", fail(exitSemanticValidation, "review_lens_count is %d but the stored review results of %q record %d rows (%d stored results in %s): it is the number of rows they record, one for each row of each launch; write %d",
+			*claimed, change, counted.Lenses, counted.Results, dir, counted.Lenses)
+	}
+	return fmt.Sprintf("review_lens_count: %d equals the %d rows recorded in %d stored review results of %q", *claimed, counted.Lenses, counted.Results, change), nil
+}
+
+// checkRepositoryRoot says why repo cannot be taken for the root of the repository that holds the stored review
+// results: it is not a directory, or it holds no .git entry (a directory in a repository, a file in a linked worktree).
+// Without that test, any directory would do and an omitted review_lens_count would pass as "nothing to compare" while
+// the real repository records rows. Whether the .git entry is a sound repository is for git to say, not for this check.
+func checkRepositoryRoot(repo string) error {
+	info, err := os.Stat(repo)
+	if err != nil {
+		return err
+	}
+	if !info.IsDir() {
+		return errors.New("it is not a directory")
+	}
+	if _, err := os.Stat(filepath.Join(repo, ".git")); err != nil {
+		return fmt.Errorf("it is not the root of a repository, which holds a .git entry: %v", err)
 	}
 	return nil
 }
@@ -291,13 +397,22 @@ type actualsRecord struct {
 	CheckpointCount     *int     `json:"checkpoint_count"`
 }
 
-func validateSemantics(instance any) error {
+// decodeRecord reads the fields the semantic checks use out of a record that already passed the schema.
+func decodeRecord(instance any) (actualsRecord, error) {
 	data, err := json.Marshal(instance)
 	if err != nil {
-		return err
+		return actualsRecord{}, err
 	}
 	var record actualsRecord
 	if err := json.Unmarshal(data, &record); err != nil {
+		return actualsRecord{}, err
+	}
+	return record, nil
+}
+
+func validateSemantics(instance any) error {
+	record, err := decodeRecord(instance)
+	if err != nil {
 		return err
 	}
 

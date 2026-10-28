@@ -165,16 +165,17 @@ t1 is `landing_commit`'s committer timestamp, once resolved. The anchor is recor
 2. Validate it with the **deterministic validator**, never by reading it:
 
    ```bash
-   # -C changes the process working directory, so both paths are absolute. Each
+   # -C changes the process working directory, so every path is absolute. Each
    # tool under tools/ is its own Go module; there is no repository-root module.
    root="$(git rev-parse --show-toplevel)"
    go run -C "$root/tools/actuals-record-validator" . \
      --schema "$root/skills/_shared/actuals-record.schema.json" \
-     --instance /absolute/path/to/actuals-candidate.json
+     --instance /absolute/path/to/actuals-candidate.json \
+     --repo "$root"
    ```
 
 3. Exit `0` is the only result that authorises the write. Any non-zero exit is a hard stop, and so is a missing or unbuildable validator, which is not a pass: report it and write nothing. Reading the JSON, checking that the fields look present, or attesting that you were careful is NOT validation; the record's author cannot be its validator.
-4. Beyond schema shape the validator enforces: `approval_decision` inside the closed outcome vocabulary; non-negative hours and counts; the durable-vs-reconstructed disclosure a recorded `checkpoint_count` owes; the measured-vs-reconstructed disclosure a recorded `total_wall_clock_hours` owes; and that `scope_drift_notes` and `variance_vs_plan` carry their own content instead of deferring it to some other section. That last rule exists because it was actually broken: "see the narrative below — this field is summarised there rather than duplicated" satisfies every required-field check JSON Schema can make while recording nothing. Cross-reference in ADDITION to the content, never INSTEAD of it.
+4. Beyond schema shape the validator enforces: `approval_decision` inside the closed outcome vocabulary; non-negative hours and counts; the durable-vs-reconstructed disclosure a recorded `checkpoint_count` owes; the measured-vs-reconstructed disclosure a recorded `total_wall_clock_hours` owes; that `review_lens_count` is the number of rows the stored review results of the change record (it counts `odd/review-results/<change_name>/` under `--repo` with the engine's own function and refuses a different count, a count when no stored result backs it, and an omitted count while a stored result records a row; a change reviewed before the rows were stored omits the field; results it cannot read are exit `7`, never a pass); and that `scope_drift_notes` and `variance_vs_plan` carry their own content instead of deferring it to some other section. That last rule exists because it was actually broken: "see the narrative below — this field is summarised there rather than duplicated" satisfies every required-field check JSON Schema can make while recording nothing. Cross-reference in ADDITION to the content, never INSTEAD of it.
 5. `total_wall_clock_hours` is validly absent when its anchors do not resolve (R-021), and `implementation_hours`, `review_gate_hours`, and `post_review_fix_hours` are validly absent while no durable source exists for them (R-019) — every other resolved field is still required. If validation fails for any other reason, report and STOP — do not partial-write.
 6. The three compute-time fields stay unpopulated (R-019); state why, do not leave it silent. No durable source exists for any of them yet: orchestrator telemetry is session-transient, the `sdd-attempt` ledger has no timestamp fields, and transcripts carry no structured subagent durations. None of the three MAY be filled with `total_wall_clock_hours` or any other elapsed-time proxy while this remains true.
 

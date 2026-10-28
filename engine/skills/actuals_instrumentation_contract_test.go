@@ -659,6 +659,9 @@ func TestReviewLensCountIsCountedFromTheRowsOfTheStoredResults(t *testing.T) {
 			"stored results of the change",
 			"odd/review-results",
 			"one for each row of each launch",
+			// own-rdd T10 (S13): the validator holds the count to those rows, and the schema says so.
+			"tools/actuals-record-validator",
+			"omits it while a stored result records a row",
 		} {
 			if !strings.Contains(description, want) {
 				t.Errorf("review_lens_count description must contain %q, got %q", want, description)
@@ -681,6 +684,109 @@ func TestReviewLensCountIsCountedFromTheRowsOfTheStoredResults(t *testing.T) {
 			}
 		}
 	})
+}
+
+// TestTheDocumentedCallsOfTheActualsValidatorGiveItTheRepositoryRoot pins what own-rdd T10 (S13) moves in the two
+// places that tell the closing agent how to run the validator. The validator now requires --repo, the root that holds
+// the stored results review_lens_count is held to, and refuses a call without it as a usage error, so a document that
+// leaves it out would stop every closure. Each call is read where its document writes it (the fenced block of the
+// inception-pipeline skill, the inline code of the shared contracts) and must carry the schema, the instance and the
+// root the document already computes for the other two paths.
+func TestTheDocumentedCallsOfTheActualsValidatorGiveItTheRepositoryRoot(t *testing.T) {
+	repoRoot := actualsInstrumentationRepoRoot(t)
+	const start = `go run -C "$root/tools/actuals-record-validator" .`
+	for _, rel := range []string{inceptionPipelineSkillRelPath, "skills/_shared/pre-sdd-contracts.md"} {
+		t.Run(rel, func(t *testing.T) {
+			text := readRepoFile(t, repoRoot, rel)
+			at := strings.Index(text, start)
+			if at < 0 {
+				t.Fatalf("%s no longer shows how to run the validator, want %q", rel, start)
+			}
+			call := text[at:]
+			end := strings.Index(call, "`") // the backtick that closes the inline code or the fence
+			if end < 0 {
+				t.Fatalf("%s: the call of the validator is not closed by a backtick", rel)
+			}
+			call = call[:end]
+			for _, want := range []string{`--schema "$root/skills/_shared/actuals-record.schema.json"`, "--instance", `--repo "$root"`} {
+				if !strings.Contains(call, want) {
+					t.Errorf("%s: the call of the validator must carry %q, got:\n%s", rel, want, call)
+				}
+			}
+		})
+	}
+}
+
+// TestTheCIStepOfTheCommittedActualsRecordsGivesTheValidatorItsRootAndDropsTheCount pins what own-rdd T10 (S13, advisory
+// A5) moves in the third caller of the validator, the step "Committed actuals records validate" of
+// .github/workflows/ci.yml. The validator requires --repo, the root of the checkout that holds the stored results, and
+// refuses a call without it as a usage error, so a step that leaves it out fails CI. And one committed record
+// (corrected-actuals-skills-validate-ondisk-gate.json) mirrors a live record that counts the lenses of another tool's
+// receipt: the validator refuses that count by design, the fixture is not edited, so the step validates a copy of each
+// record without the member, through jq, and gives the validator that copy. The workflow is read as text, as the other
+// tests of CI do; each fragment is read where the step writes it, the call of the validator and the lines before it.
+func TestTheCIStepOfTheCommittedActualsRecordsGivesTheValidatorItsRootAndDropsTheCount(t *testing.T) {
+	workflow := readRepoFile(t, actualsInstrumentationRepoRoot(t), ".github/workflows/ci.yml")
+	const name = "Committed actuals records validate"
+	step := ciWorkflowStep(t, workflow, name)
+
+	const validator = `"$RUNNER_TEMP/actuals-record-validator"`
+	at := -1
+	for i, line := range step {
+		if strings.HasPrefix(strings.TrimSpace(line), validator) {
+			at = i
+			break
+		}
+	}
+	if at < 0 {
+		t.Fatalf("the step %q no longer runs the validator it builds, want a line that starts with %s:\n%s", name, validator, strings.Join(step, "\n"))
+	}
+	call := step[at]
+	for i := at; i+1 < len(step) && strings.HasSuffix(strings.TrimSpace(step[i]), `\`); i++ {
+		call += "\n" + step[i+1]
+	}
+	before := strings.Join(step[:at], "\n")
+
+	if want := `--repo "$PWD"`; !strings.Contains(call, want) {
+		t.Errorf("the validator in the step %q must be given the root of the checkout with %s, got:\n%s", name, want, call)
+	}
+	// Only the one record written before the rows were stored loses its count; every other record, and any record
+	// committed later, is validated as written, so its count is held to the stored rows.
+	const legacy = `[ "$(basename "$record")" = corrected-actuals-skills-validate-ondisk-gate.json ]`
+	const drop = `jq 'del(.review_lens_count)' "$record" > "$RUNNER_TEMP/actuals-record.json"`
+	guard := strings.Index(before, legacy)
+	if guard < 0 {
+		t.Errorf("the step %q must drop review_lens_count only from the record written before the rows were stored, guarded by %s, got:\n%s", name, legacy, before)
+	}
+	if strings.Count(before, "del(.review_lens_count)") != 1 || !strings.Contains(before[max(guard, 0):], drop) {
+		t.Errorf("the step %q must drop review_lens_count once, inside that guard, with %s, got:\n%s", name, drop, before)
+	}
+	if !strings.Contains(before, `instance=$record`) || !strings.Contains(call, `--instance "$instance"`) {
+		t.Errorf("the step %q must give the validator the record as written (instance=$record) unless the guard replaced it, as --instance \"$instance\":\n%s", name, strings.Join(step, "\n"))
+	}
+}
+
+// ciWorkflowStep is the lines of the step named name in a workflow, read as text: from its "- name:" line to the line
+// before the next one that is not indented deeper than the dash (the next step, or the next job).
+func ciWorkflowStep(t *testing.T, workflow, name string) []string {
+	t.Helper()
+	lines := strings.Split(workflow, "\n")
+	indentation := func(line string) int { return len(line) - len(strings.TrimLeft(line, " ")) }
+	for i, line := range lines {
+		if strings.TrimSpace(line) != "- name: "+name {
+			continue
+		}
+		end := len(lines)
+		for j := i + 1; j < len(lines); j++ {
+			if strings.TrimSpace(lines[j]) != "" && indentation(lines[j]) <= indentation(line) {
+				end = j
+				break
+			}
+		}
+		return lines[i:end]
+	}
+	t.Fatalf(".github/workflows/ci.yml has no step named %q", name)
+	return nil
 }
 
 func actualsInstrumentationRepoRoot(t *testing.T) string {
