@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "002fce5c6cfff898dd9fe31c7972cd02d6d04e92",
+    "head": "4bdfb16a4b3b3df87422417ef31df772727481d4",
+    "diff_sha256": "375187153c4cc7fd161133deb7fdf52f72d85623a750503bdb8f9a6a7a1b40be",
+    "paths": [
+      "engine/cmd/roles_builder_guard.go",
+      "engine/cmd/roles_builder_guard_test.go",
+      "engine/oddtask/app/guard.go",
+      "engine/oddtask/app/guard_test.go",
+      "engine/oddtask/workflow.go",
+      "engine/oddtask/workflow_test.go"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "002fce5c6cfff898dd9fe31c7972cd02d6d04e92",
+      "head": "4bdfb16a4b3b3df87422417ef31df772727481d4",
+      "diff_sha256": "375187153c4cc7fd161133deb7fdf52f72d85623a750503bdb8f9a6a7a1b40be"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/roles_builder_guard.go",
+        "engine/cmd/roles_builder_guard_test.go",
+        "engine/oddtask/app/guard.go",
+        "engine/oddtask/app/guard_test.go",
+        "engine/oddtask/workflow.go",
+        "engine/oddtask/workflow_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the whole diff (4bd.diff) covering all six changed paths.",
+      "S14 ordering: CheckLaunch calls Check first and returns oddtask.Message(reason) unchanged on a deny. The workflow check runs only after the design checks pass. The tests TestCheckLaunchReadsNoWorkflowWhenTheDesignChecksFail and TestBuilderGuardChecksTheWorkflowOnlyAfterTheDesignAndOnlyForTheBuilder pin both the order and the byte-for-byte S14 wording.",
+      "Fail-closed: a missing port, a Describe error (no repository, unreadable binding store), a chain load error, a verify error and an empty chain each deny. Each case has a test.",
+      "Read engine/projection/app/bind.go:156-171 in the worktree. BindWorkflow.Describe only loads the repo key, the binding and the workflow, and writes nothing. The guard's use of it is side-effect free.",
+      "Unowned binding or workflow, paused status, goal mismatch, no chain and a non-builder role each produce their own reason, and DecideWorkflow's switch order matches S19 (a). Each has a table-test case.",
+      "The only exec, net and path surface added is the read of local state through existing stores. Tests isolate HOME, XDG_STATE_HOME and XDG_CONFIG_HOME in a temp directory.",
+      "Minor observation, not a finding: if Describe returned an owned binding with a nil Workflow, the denial would read 'the workflow  bound ... is , not running'. Describe always sets Workflow for an owned binding (bind.go:166-169), so this is unreachable.",
+      "Not run: no tests or builds were executed (read-only review)."
+    ]
+  }
+}

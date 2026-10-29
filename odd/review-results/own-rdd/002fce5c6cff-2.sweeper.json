@@ -1,0 +1,15 @@
+{
+  "kind": "sweeper",
+  "base": "3c744b7bea4eb9d352de987513b4052a1ed034dd",
+  "head": "002fce5c6cfff898dd9fe31c7972cd02d6d04e92",
+  "diff_sha256": "be25fd826fd1e90a16008b0058cfbf8b3ba4bb2f12a927b8ee3787bd36625de6",
+  "sweep": "002fce5c6cff-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 name: readBounded",
+      "disposition": "live",
+      "evidence": "Ran git grep -n readBounded 002fce5c -- . :!odd, which found nothing (rc=1). At base 3c744b7b the definition sat at engine/cmd/workflow_open.go:98 with callers at lines 86 and 94, so 002fce5c removed the function with its callers. The only remaining mention is the stored review record odd/review-results/own-rdd/9652e498005c-2.json:45, which quotes the old code as immutable evidence and must not be edited. No code reference remains; nothing changed."
+    }
+  ]
+}

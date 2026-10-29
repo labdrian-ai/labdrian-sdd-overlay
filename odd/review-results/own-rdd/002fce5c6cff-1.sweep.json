@@ -1,0 +1,20 @@
+{
+  "kind": "sweep",
+  "base": "3c744b7bea4eb9d352de987513b4052a1ed034dd",
+  "head": "002fce5c6cfff898dd9fe31c7972cd02d6d04e92",
+  "diff_sha256": "be25fd826fd1e90a16008b0058cfbf8b3ba4bb2f12a927b8ee3787bd36625de6",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": [
+      {
+        "name": "readBounded",
+        "hits": [
+          "odd/review-results/own-rdd/9652e498005c-2.json"
+        ]
+      }
+    ]
+  },
+  "t2": [],
+  "t3": []
+}
