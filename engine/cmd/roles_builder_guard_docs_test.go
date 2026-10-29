@@ -82,6 +82,26 @@ func TestDocsDescribeTheWorkflowTheBuilderGuardRequires(t *testing.T) {
 	}
 }
 
+// The help of the engine, the README and the wrapper say the denial of a chain that waits for a hop names the hop,
+// not another workflow (own-rdd T18, S20 c).
+func TestDocsDescribeTheHopRemedyOfTheBuilderGuard(t *testing.T) {
+	var out bytes.Buffer
+	usage(&out)
+	engine := strings.Join(strings.Fields(out.String()), " ")
+	readme := strings.Join(strings.Fields(readRepositoryFile(t, "README.md")), " ")
+	wrapper := strings.Join(strings.Fields(readRepositoryFile(t, "bin/lib/usage.sh")), " ")
+	const hop = "the denial says instead not to open another workflow and to append that hop"
+	for _, doc := range []struct{ name, text, want string }{
+		{"the engine usage of the builder guard", docSection(t, engine, "engine roles builder-guard", "engine shaper assess"), hop},
+		{"the README section of the builder guard", docSection(t, readme, "gentle-ai-overlay roles builder-guard", "overlay --help"), hop},
+		{"the wrapper help", wrapper, "or append the hop the chain waits for"},
+	} {
+		if !strings.Contains(doc.text, doc.want) {
+			t.Errorf("%s does not say %q", doc.name, doc.want)
+		}
+	}
+}
+
 // The guard is installed by install-hooks and run by Claude Code on every Agent call, so the README says what it
 // denies, what the prompt must cite, how the shaper marks a task, what it cannot do, and what a user must do to get it.
 func TestDocsDescribeTheBuilderGuard(t *testing.T) {

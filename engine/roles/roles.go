@@ -125,7 +125,8 @@ func IsKnownRole(r Role) bool {
 // IsValidTransition reports whether a role handoff from from to to is
 // allowed: forward to a later role in canonical order, skipping only
 // optional roles strictly in between, or the single allowed backward
-// transition reviewer -> builder (rework). Delivery is terminal: no
+// transition reviewer -> builder (rework, or the next subtask of the same
+// task after a clear review). Delivery is terminal: no
 // transition begins from delivery. An unknown role on either side is never
 // valid.
 func IsValidTransition(from, to Role) bool {

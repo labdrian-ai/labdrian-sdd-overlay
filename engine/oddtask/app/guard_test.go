@@ -109,6 +109,24 @@ func TestCheckLaunchDeniesWithTheWorkflowMessageNamingTheFeatureAndTheFirstTask(
 	}
 }
 
+// S20 (b): a chain at a role that is neither builder nor delivery gets the hop remedy; delivery keeps the open remedy.
+func TestCheckLaunchDeniesWithTheHopMessageWhenTheChainWaitsForAHop(t *testing.T) {
+	docs := &fakeDocs{file: oddtask.File{Path: "/repo/odd/tasks/f.md", Text: shapedDoc}}
+	view := runningView
+	view.Role = "reviewer"
+	got := app.New(docs).WithWorkflows(&fakeFlows{view: view}).CheckLaunch("Spec: odd/tasks/f.md, T2", "/repo")
+	want := oddtask.HopMessage("the role chain f-t2 of the workflow f-t2 hands the work to reviewer, not to the builder", "f-t2", "f-t2")
+	if got != want {
+		t.Fatalf("CheckLaunch = %q, want %q", got, want)
+	}
+	view.Role = "delivery"
+	got = app.New(docs).WithWorkflows(&fakeFlows{view: view}).CheckLaunch("Spec: odd/tasks/f.md, T2", "/repo")
+	want = oddtask.WorkflowMessage("the role chain f-t2 of the workflow f-t2 hands the work to delivery, not to the builder", "f", "T2")
+	if got != want {
+		t.Fatalf("CheckLaunch at delivery = %q, want %q", got, want)
+	}
+}
+
 func TestCheckLaunchReadsNoWorkflowWhenTheDesignChecksFail(t *testing.T) {
 	docs := &fakeDocs{file: oddtask.File{Path: "/repo/odd/tasks/f.md", Text: shapedDoc}}
 	flows := &fakeFlows{view: runningView}

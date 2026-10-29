@@ -254,7 +254,8 @@ Commands:
                                              that install-hooks wires (the builder guard); it denies launching
                                              the builder on a prompt that cites no task the shaper designed,
                                              or outside the running workflow of the cited feature whose
-                                             role chain hands the work to the builder (run workflow open)
+                                             role chain hands the work to the builder (run workflow open,
+                                             or append the hop the chain waits for)
                                              (exit 0 always, 1 usage error)
   review <verb>                    Forward review binding and storage verbs to the engine unchanged.
                                    bind --base REV --head REV [--cwd REPO]
