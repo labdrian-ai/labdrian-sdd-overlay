@@ -116,7 +116,7 @@ func stopReason(r reviewapp.Ruling) string {
 	for _, need := range q.Needs {
 		lines = append(lines, needLine(q, need))
 	}
-	return fmt.Sprintf("Commit %s of branch %s is not ready for delivery. Before you stop, for that commit alone (base %s):\n\n%s\n\n"+
+	return fmt.Sprintf("Commit %s of branch %s has unfinished review steps. Before you stop, for that commit alone (base %s):\n\n%s\n\n"+
 		"<feature> is the feature whose odd/tasks/<feature>.md holds the task of the commit. A record counts once it is stored and binds the commit, "+
 		"whatever its outcome; 'labdrian review check' judges the outcome. The stop hook asks for each thing a commit misses once for each session and commit.",
 		q.Head, q.Branch, q.Base, strings.Join(lines, "\n"))
