@@ -1,0 +1,28 @@
+{
+  "kind": "polisher",
+  "base": "7df8dca6a6174aa4ff22f3739ee8acc7ae6947da",
+  "head": "29d94c9ac1de6c7a66921189d5700bd4a53ea0df",
+  "diff_sha256": "506b921649ddebb0841ee3546471f105ca3fa8c5bd027bc80c2220cf56998170",
+  "findings": {
+    "findings": [
+      {
+        "severity": "SUGGESTION",
+        "title": "Inserted test separates the duties test from its doc comment",
+        "detail": "In engine/skills/role_chain_artifact_test.go (lines 16-18 of the diff), the new TestRoleChainSkillTellsTheNextSubtaskHopFromRework sits directly under the existing comment 'Each group of duties carries what the design gives it, in its own section...'. That comment now merges with the S20 comment above the new test, and TestRoleChainDutiesCarryWhatTheDesignGivesEachOne has no comment. The new test should go above that comment block, or the old comment should be moved back down. Behaviour is unaffected; only readability suffers.",
+        "introduced_by_target": true,
+        "proof": "The diff adds the new function after the old comment block and before 'func TestRoleChainDutiesCarryWhatTheDesignGivesEachOne', so the old comment now precedes the wrong function.",
+        "evidence": [
+          "The diff adds the new function after the old comment block and before 'func TestRoleChainDutiesCarryWhatTheDesignGivesEachOne', so the old comment now precedes the wrong function."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff, 29d94c9a.diff.",
+      "Read S20 (c) in odd/tasks/own-rdd.md line 77. The added skill line is byte-identical to the spec line, and the change from '(the only backward edge)' to '(rework)' matches the spec.",
+      "Compared the test's literal line with the SKILL.md addition: they match exactly. The test checks for '\\n'+line+'\\n', and the line sits mid-body with a trailing newline.",
+      "The duty-list entry in roleChainDuties was updated to '(rework)'. No other 'the only backward edge' string remains in skills/ or engine/skills. The remaining hits are in docs/ and engine/roles/roles_test.go, which are outside this commit's paths.",
+      "Compared the diff with the T18 row. Commit (2) touches only the two paths it names (skills/role-chain/SKILL.md and engine/skills/role_chain_artifact_test.go).",
+      "Not run: the Go tests, the 700-token lint budget test (TestRoleChainSkillIsWithinTheLintBudget), gofmt and go vet. The review was read-only and used static reading only."
+    ]
+  }
+}

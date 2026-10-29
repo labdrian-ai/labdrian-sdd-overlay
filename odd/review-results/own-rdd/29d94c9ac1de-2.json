@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "7df8dca6a6174aa4ff22f3739ee8acc7ae6947da",
+    "head": "29d94c9ac1de6c7a66921189d5700bd4a53ea0df",
+    "diff_sha256": "506b921649ddebb0841ee3546471f105ca3fa8c5bd027bc80c2220cf56998170",
+    "paths": [
+      "engine/skills/role_chain_artifact_test.go",
+      "skills/role-chain/SKILL.md"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "7df8dca6a6174aa4ff22f3739ee8acc7ae6947da",
+      "head": "29d94c9ac1de6c7a66921189d5700bd4a53ea0df",
+      "diff_sha256": "506b921649ddebb0841ee3546471f105ca3fa8c5bd027bc80c2220cf56998170"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skills/role_chain_artifact_test.go",
+        "skills/role-chain/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/skills/role_chain_artifact_test.go:202-206",
+        "severity": "SUGGESTION",
+        "claim": "The new test and its comment were inserted between the existing comment 'Each group of duties carries what the design gives it, in its own section...' and TestRoleChainDutiesCarryWhatTheDesignGivesEachOne. That comment now sits above the wrong test and merges with the S20 (c) comment into a single doc block. A reader looking for what the duties test checks is told something else, so the context is misleading. Moving the new test above the original comment fixes it.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "diff lines 16-31: original comment at lines 16-17, new comment and test at 18-29, TestRoleChainDutiesCarryWhatTheDesignGivesEachOne at line 31"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/29d94c9a.diff.",
+      "Grepped skills, roles and engine in the worktree for 'backward edge'. The only remaining matches are the new test's comment and its negative assertion, so no stale 'only backward edge' text is left in the role-chain skill.",
+      "The SKILL.md line added in the diff matches the string in the new test, character for character as shown in the diff.",
+      "The duties list in the test was changed to '(rework)', and SKILL.md has the same wording.",
+      "Tests were not run, because I do not run commands. I did not read the T18 row of odd/tasks/own-rdd.md."
+    ]
+  }
+}
