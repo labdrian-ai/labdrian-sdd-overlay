@@ -11,7 +11,6 @@ package app
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
 
@@ -252,10 +251,4 @@ func handoffs(project, feature, chain, task, docPath string, shaped int, payload
 func appendRecord(chains roles.ChainLog, raw []byte) error {
 	_, err := chains.Append(raw)
 	return err
-}
-
-// IsRefusal reports whether err is a refusal made before anything was written.
-func IsRefusal(err error) bool {
-	var refused *RefusedError
-	return errors.As(err, &refused)
 }
