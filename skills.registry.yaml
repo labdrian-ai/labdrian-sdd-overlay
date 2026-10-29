@@ -515,6 +515,18 @@ skills:
         - pi
     lifecycle:
       updateStrategy: overlay-only
+  - id: sweeper
+    path: sweeper
+    source:
+      type: custom
+    install:
+      defaultScope: global
+      targets:
+        - claude
+        - codex
+        - pi
+    lifecycle:
+      updateStrategy: overlay-only
   - id: odd-feature-doc
     path: odd-feature-doc
     source:

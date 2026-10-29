@@ -15,11 +15,12 @@ Chain: `[prototyper] → shaper → estimator → builder → [sweeper] → [pol
 - Pipe records to `labdrian roles append --project P --goal G --chain C --stdin`; `payload_kind`: `exploration`, `feature-doc`, `progress`, `review-report`, `verify-report`, `close-report`.
 - `shaper → estimator`, `estimator → builder`: same payload digest.
 - `partial` or `blocked` envelope: record `interrupted` with `resume_reason`.
+- Before the builder: `labdrian workflow open --feature F --task T`; the builder guard refuses a builder outside it.
 
 ## Triggers
 
 - Prototyper, only for a question of shape: does installed tool X behave as premise P says; what is number N; can X be done within the appetite. No premise: back to the asker. The prompt sets the lookup/spike box.
-- Sweeper, on the builder's commit (`base` = parent): `labdrian review sweep --feature F --base B --head H` runs T1-T3 (`labdrian --help`); if it fires, launch the sweeper on its candidates, store its report with `labdrian review record --role sweeper`; if the `Risk:` trailer names an item, store each polisher judge's findings with `labdrian review record --role polisher`.
+- Sweeper: on the builder's commit, load the `sweeper` skill.
 - Reviewer: add a readability row when docs, public API, messages or help change, a second blind launch (another `model`) when the Risk line names an item.
 
 ## Worktrees

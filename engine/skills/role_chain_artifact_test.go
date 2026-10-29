@@ -61,30 +61,52 @@ func TestRoleChainSkillIsNamedForItsDirectoryAndNotInvokableByTheModel(t *testin
 	}
 }
 
-// The skill is within the lint budget (v3 section 3, lint.go: the hard and the recommended bounds of
-// the body): no hard error and no warning. If the lint ever refuses the size, the design splits the
-// sweeper trigger into skills/sweeper/SKILL.md and nothing else.
+// sweeperSkill reads skills/sweeper/SKILL.md, the sweeper trigger the role-chain skill points to: the
+// whole file, its frontmatter and its body.
+func sweeperSkill(t *testing.T) (whole, frontmatter, body string) {
+	t.Helper()
+	whole = readRepoFile(t, skillsRepoRoot(t), "skills/sweeper/SKILL.md")
+	var err error
+	if frontmatter, body, err = SplitSkillFile([]byte(whole)); err != nil {
+		t.Fatalf("skills/sweeper/SKILL.md: %v", err)
+	}
+	return whole, frontmatter, body
+}
+
+// The role-chain skill and the sweeper skill are each within the lint budget (v3 section 3, lint.go:
+// the hard and the recommended bounds of the body): no hard error and no warning. The sweeper trigger
+// left role-chain for skills/sweeper/SKILL.md when role-chain no longer fit (own-rdd T17c, L91).
 func TestRoleChainSkillIsWithinTheLintBudget(t *testing.T) {
-	whole, _, body := roleChainSkill(t)
-	hard, warnings := LintSkillFile([]byte(whole))
-	for _, err := range hard {
-		t.Errorf("hard lint error: %v", err)
-	}
-	for _, w := range warnings {
-		t.Errorf("lint warning [%s]: %s", w.Rule, w.Msg)
-	}
-	if tokens := EstimateBodyTokens(body); tokens > BodyRecommendedTokens {
-		t.Errorf("the body is an estimated %d tokens, want at most %d", tokens, BodyRecommendedTokens)
+	for name, read := range map[string]func(*testing.T) (string, string, string){"role-chain": roleChainSkill, "sweeper": sweeperSkill} {
+		t.Run(name, func(t *testing.T) {
+			whole, _, body := read(t)
+			hard, warnings := LintSkillFile([]byte(whole))
+			for _, err := range hard {
+				t.Errorf("hard lint error: %v", err)
+			}
+			for _, w := range warnings {
+				t.Errorf("lint warning [%s]: %s", w.Rule, w.Msg)
+			}
+			if tokens := EstimateBodyTokens(body); tokens > BodyRecommendedTokens {
+				t.Errorf("the body is an estimated %d tokens, want at most %d", tokens, BodyRecommendedTokens)
+			}
+		})
 	}
 }
 
-// The sweeper trigger of the role-chain skill (own-rdd T6b7a, S6 g) names the three commands the
+// The sweeper trigger (own-rdd T6b7a, S6 g; in its own skill since T17c) names the three commands the
 // parent runs around the sweeper: the sweep that finds the candidates, and the two records it stores.
+// The role-chain skill points to it from its Triggers section.
 func TestRoleChainSweeperTriggerNamesTheSweepAndTheRecords(t *testing.T) {
-	_, _, body := roleChainSkill(t)
+	_, _, chain := roleChainSkill(t)
+	const pointer = "- Sweeper: on the builder's commit, load the `sweeper` skill."
+	if _, under := roleChainSections(chain); !strings.Contains(under["Triggers"], pointer+"\n") {
+		t.Errorf("the Triggers section of role-chain must carry the pointer, exactly:\n%s", pointer)
+	}
+	_, _, body := sweeperSkill(t)
 	const want = "- Sweeper, on the builder's commit (`base` = parent): `labdrian review sweep --feature F --base B --head H` runs T1-T3 (`labdrian --help`); if it fires, launch the sweeper on its candidates, store its report with `labdrian review record --role sweeper`; if the `Risk:` trailer names an item, store each polisher judge's findings with `labdrian review record --role polisher`."
 	if _, under := roleChainSections(body); !strings.Contains(under["Triggers"], want+"\n") {
-		t.Errorf("the Triggers section must carry the sweeper line, exactly:\n%s", want)
+		t.Errorf("the Triggers section of the sweeper skill must carry the sweeper line, exactly:\n%s", want)
 	}
 	for _, fragment := range []string{
 		"labdrian review sweep --feature F --base B --head H", "labdrian review record --role sweeper", "labdrian review record --role polisher",
@@ -92,6 +114,19 @@ func TestRoleChainSweeperTriggerNamesTheSweepAndTheRecords(t *testing.T) {
 		if !strings.Contains(body, fragment) {
 			t.Errorf("the role-chain skill must name %q", fragment)
 		}
+	}
+}
+
+// The Appends section of the role-chain skill (own-rdd T17c, S19 d) names the command that opens the
+// task's workflow before the builder, since the builder guard refuses a builder outside it.
+func TestRoleChainAppendsNameWorkflowOpenBeforeTheBuilder(t *testing.T) {
+	_, _, body := roleChainSkill(t)
+	const want = "- Before the builder: `labdrian workflow open --feature F --task T`; the builder guard refuses a builder outside it."
+	if _, under := roleChainSections(body); !strings.Contains(under["Appends"], want+"\n") {
+		t.Errorf("the Appends section must carry the workflow open line, exactly:\n%s", want)
+	}
+	if !strings.Contains(body, "labdrian workflow open --feature F --task T") {
+		t.Errorf("the role-chain skill must name %q", "labdrian workflow open --feature F --task T")
 	}
 }
 
@@ -135,7 +170,7 @@ func roleChainDuties() []roleChainDuty {
 		{"Triggers", []string{
 			"does installed tool X behave as premise P says", "what is number N", "can X be done within the appetite",
 			"back to the asker", "lookup/spike box",
-			"runs T1-T3 (`labdrian --help`)",
+			"load the `sweeper` skill",
 			"readability row", "docs, public API, messages or help", "second blind launch", "another `model`", "Risk line",
 		}},
 		{"Worktrees", []string{
@@ -204,32 +239,34 @@ func TestRoleChainSkillConfinesSpikesAndReviewsOutsideTheRepository(t *testing.T
 func TestRoleChainSkillIsDeployedByTheSkillRoutesToClaudeCodexAndPi(t *testing.T) {
 	root := skillsRepoRoot(t)
 	rows := ReadManifestRows([]byte(readRepoFile(t, root, "overlay.manifest")))
-	var found []ManifestRow
-	for _, row := range rows {
-		if row.Path == "role-chain/SKILL.md" {
-			found = append(found, row)
+	for _, path := range []string{"role-chain/SKILL.md", "sweeper/SKILL.md"} {
+		var found []ManifestRow
+		for _, row := range rows {
+			if row.Path == path {
+				found = append(found, row)
+			}
 		}
-	}
-	if want := []ManifestRow{{Path: "role-chain/SKILL.md", Tag: "custom"}}; !reflect.DeepEqual(found, want) {
-		t.Fatalf("rows named role-chain/SKILL.md = %+v, want exactly %+v", found, want)
-	}
-	for _, target := range []string{"claude", "codex", "pi"} {
-		t.Run(target, func(t *testing.T) {
-			routes, err := ResolveRoutes(rows, false, "/o", RouteDestinations{Target: target, SkillsRoot: "/h/skills", AgentsRoot: "/h/agents"})
-			if err != nil {
-				t.Fatalf("ResolveRoutes over the manifest of the repository: %v", err)
-			}
-			want := ResolvedRoute{Path: "role-chain/SKILL.md", Route: RouteSkill, RepoRel: "skills/role-chain/SKILL.md", RepoSource: "/o/skills/role-chain/SKILL.md", Dest: "/h/skills/role-chain/SKILL.md"}
-			for _, r := range routes {
-				if r.Path == want.Path {
-					if r != want {
-						t.Errorf("role-chain/SKILL.md resolves to %+v, want %+v", r, want)
-					}
-					return
+		if want := []ManifestRow{{Path: path, Tag: "custom"}}; !reflect.DeepEqual(found, want) {
+			t.Fatalf("rows named %s = %+v, want exactly %+v", path, found, want)
+		}
+		for _, target := range []string{"claude", "codex", "pi"} {
+			t.Run(path+"/"+target, func(t *testing.T) {
+				routes, err := ResolveRoutes(rows, false, "/o", RouteDestinations{Target: target, SkillsRoot: "/h/skills", AgentsRoot: "/h/agents"})
+				if err != nil {
+					t.Fatalf("ResolveRoutes over the manifest of the repository: %v", err)
 				}
-			}
-			t.Errorf("no route for role-chain/SKILL.md")
-		})
+				want := ResolvedRoute{Path: path, Route: RouteSkill, RepoRel: "skills/" + path, RepoSource: "/o/skills/" + path, Dest: "/h/skills/" + path}
+				for _, r := range routes {
+					if r.Path == want.Path {
+						if r != want {
+							t.Errorf("%s resolves to %+v, want %+v", path, r, want)
+						}
+						return
+					}
+				}
+				t.Errorf("no route for %s", path)
+			})
+		}
 	}
 }
 
