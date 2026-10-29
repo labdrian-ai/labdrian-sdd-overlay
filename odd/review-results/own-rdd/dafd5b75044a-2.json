@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "bd9c076ecd6c52453b9975ca55479cec680f9b6f",
+    "head": "dafd5b75044abf0a652ced406fb6cac24ad5e3b5",
+    "diff_sha256": "1bd6450c9ec83064c8e545654e0bd3104b93217e6f7ceb299757d5182a403c1b",
+    "paths": [
+      "README.md",
+      "bin/lib/hooks.sh",
+      "bin/lib/usage.sh",
+      "engine/capability/declarations.go",
+      "engine/capability/declarations_test.go",
+      "engine/cmd/review_stop_hook_docs_test.go",
+      "engine/cmd/review_sweep_docs_test.go"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "bd9c076ecd6c52453b9975ca55479cec680f9b6f",
+      "head": "dafd5b75044abf0a652ced406fb6cac24ad5e3b5",
+      "diff_sha256": "1bd6450c9ec83064c8e545654e0bd3104b93217e6f7ceb299757d5182a403c1b"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "README.md",
+        "bin/lib/hooks.sh",
+        "bin/lib/usage.sh",
+        "engine/capability/declarations.go",
+        "engine/capability/declarations_test.go",
+        "engine/cmd/review_stop_hook_docs_test.go",
+        "engine/cmd/review_sweep_docs_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/cmd/review_stop_hook.go:119",
+        "severity": "SUGGESTION",
+        "claim": "The docs now call the commit one 'with unfinished review steps', but the reason the hook sends the agent still opens with 'Commit X of branch Y is not ready for delivery.' The user-facing text is now inconsistent with the docs, and the docs tests only guard docs and help text, not this string. This commit does not make the reason wrong. It only leaves the old wording in the one place the agent reads, so a follow-up could align it.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "pre-existing",
+        "proof_refs": [
+          "engine/cmd/review_stop_hook.go:119",
+          "engine/cmd/review_stop_hook_test.go:103"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff: README, hooks.sh and usage.sh help texts, the capability declaration, and the three docs tests. All changes are wording or test assertions, with no logic change.",
+      "Grepped the worktree for 'not ready for delivery' and 'until the copy streams' outside odd/. The only remaining hits are the negative assertions in the new tests and the runtime reason string at review_stop_hook.go:119.",
+      "Checked engine/review/app/unreviewed.go for the HEAD condition. It walks the first-parent line of HEAD's branch and asks for the first commit missing something that review.Needs lists. That matches 'first commit with unfinished review steps'. It does not mention amend, so the README's 'when the commit is HEAD' is a correct restriction: --amend only rewrites HEAD.",
+      "The README re-wrap of the stop-hook and review sweep paragraphs changes line breaks only. The tests compare through normalizeDocText, so the wrapped phrases still match.",
+      "Not run: no tests or builds were executed, because the review is read-only."
+    ]
+  }
+}
