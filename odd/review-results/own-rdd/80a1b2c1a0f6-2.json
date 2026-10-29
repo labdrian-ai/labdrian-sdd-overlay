@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "13aa69e6db9df94e29a786ce5f50009622d64965",
+    "head": "80a1b2c1a0f6612d529ca0f1d4071faec47e6cb9",
+    "diff_sha256": "d54628d5ebf2650c6f186573661481b5ec0c120fedb04d92105b96bc5a6a5d8a",
+    "paths": [
+      "engine/review/app/app.go",
+      "engine/review/app/fakes_test.go",
+      "engine/review/app/landing.go",
+      "engine/review/app/landing_test.go",
+      "engine/review/gitexec/gitexec.go",
+      "engine/review/gitexec/landing_test.go",
+      "engine/review/landing.go",
+      "engine/review/landing_test.go"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "13aa69e6db9df94e29a786ce5f50009622d64965",
+      "head": "80a1b2c1a0f6612d529ca0f1d4071faec47e6cb9",
+      "diff_sha256": "d54628d5ebf2650c6f186573661481b5ec0c120fedb04d92105b96bc5a6a5d8a"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/review/app/app.go",
+        "engine/review/app/fakes_test.go",
+        "engine/review/app/landing.go",
+        "engine/review/app/landing_test.go",
+        "engine/review/gitexec/gitexec.go",
+        "engine/review/gitexec/landing_test.go",
+        "engine/review/landing.go",
+        "engine/review/landing_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the complete diff (/tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/t7a.diff) and S7 (b)-(j) in the worktree's odd/tasks/own-rdd.md.",
+      "The refusal wording in review.MergeHead, OneMergeBase, NoFeatureClears and CheckLandedTree matches the S7 (b), (d) and (e) sentences. The sentinels and function signatures match (g).",
+      "CheckLanding follows the order the spec gives: parents, one merge base, Paths, FeaturesOf, CheckChain for every feature, then the tree check only after a chain clears. Nothing is stored, and every git failure returns an error with an empty Landing.",
+      "gitexec.Parents, MergeBases and Tree pass --end-of-options and validate the shape of the output. MergeBases treats exit 1 with empty stdout and stderr as none, as (g) says, and any other failure as an error.",
+      "The tests cover the refusal paths, a failing git at each step, option-like input (--output=x) refused before any git call, and the existing Check and Parent behavior being unchanged. I did not run any command or test; the behavior comes from reading the diff and the spec only.",
+      "Nothing found at the risk lens (no secrets, permissions, path escapes or new exec/net surface beyond the git calls above) or at the readability lens."
+    ]
+  }
+}
