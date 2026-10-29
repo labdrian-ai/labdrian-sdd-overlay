@@ -13,7 +13,8 @@ package main
 // refuses unless the results stored for it still hold and clear it, or an exemption stored for it still holds and no
 // result blocks it; with --base it asks that of every commit of the chain of reviews from the base to the head. 'review
 // sweep' and 'review record --role sweeper|polisher' are the verbs of the roles that come after the builder
-// (review_sweep.go). The rules are the use cases of review/app over the adapters review/gitexec (git) and review/fsstore
+// (review_sweep.go). 'review anchor --merge <rev> [--cwd <repo>]' decides whether a merge lands a tree that stored
+// reviews cleared (review_anchor.go). The rules are the use cases of review/app over the adapters review/gitexec (git) and review/fsstore
 // (the results directory); this file parses the command line, wires them and says what they did. No verb launches
 // an agent or dispatches work: a reply is a file somebody else produced. 'review stop-hook' is the odd one out: the
 // Claude Code Stop hook that blocks the stop of an agent whose branch has a commit no review covers, which Claude Code
@@ -54,7 +55,7 @@ const reviewGitMaxOutput = 256 << 20
 // in an exit that ends nothing.
 func runReview(p process, d deps, args []string) {
 	if len(args) == 0 {
-		fmt.Fprintln(p.stderr, "error: review requires a verb: bind, record, verify, check, exempt, sweep")
+		fmt.Fprintln(p.stderr, "error: review requires a verb: bind, record, verify, check, exempt, sweep, anchor")
 		p.exit(1)
 		return
 	}
@@ -71,10 +72,12 @@ func runReview(p process, d deps, args []string) {
 		runReviewExempt(p, d, args[1:])
 	case "sweep":
 		runReviewSweep(p, d, args[1:])
+	case "anchor":
+		runReviewAnchor(p, d, args[1:])
 	case reviewStopVerb:
 		runReviewStopHook(p, d, args[1:])
 	default:
-		fmt.Fprintf(p.stderr, "error: review: unknown verb %q (expected bind, record, verify, check, exempt or sweep)\n", args[0])
+		fmt.Fprintf(p.stderr, "error: review: unknown verb %q (expected bind, record, verify, check, exempt, sweep or anchor)\n", args[0])
 		p.exit(1)
 	}
 }
@@ -106,7 +109,7 @@ func reviewServiceOver(git reviewapp.Git, results reviewapp.Results) reviewapp.S
 
 // reviewFlags are the parsed flags of the review verbs. A verb takes some of them.
 type reviewFlags struct {
-	base, head, feature, result, stored, verdicts, risk, rows, role, cwd string
+	base, head, feature, result, stored, verdicts, risk, rows, role, cwd, merge string
 	// given says which flags the command line gave, with whatever value, an empty one included. A flag that is
 	// optional and has a default tells an empty value that was given from one that was not.
 	given map[string]bool
@@ -156,6 +159,8 @@ func parseReviewFlags(args []string, takes ...string) (reviewFlags, error) {
 			f.role = args[i]
 		case "--cwd":
 			f.cwd = args[i]
+		case "--merge":
+			f.merge = args[i]
 		}
 	}
 	return f, nil
@@ -167,7 +172,7 @@ func (f reviewFlags) has(name string) bool { return f.given[name] }
 // require fails with the first of the named flags that has no value. A name it does not know is a mistake of
 // the caller, and says so rather than reading as a flag that was left out.
 func (f reviewFlags) require(names ...string) error {
-	values := map[string]string{"--base": f.base, "--head": f.head, "--feature": f.feature, "--stored": f.stored, "--risk": f.risk, "--rows": f.rows}
+	values := map[string]string{"--base": f.base, "--head": f.head, "--feature": f.feature, "--stored": f.stored, "--risk": f.risk, "--rows": f.rows, "--merge": f.merge}
 	for _, name := range names {
 		value, known := values[name]
 		if !known {

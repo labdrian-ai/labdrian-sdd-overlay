@@ -745,6 +745,27 @@ overlay review <verb>
         sha256 of the stored file, with no skeleton for `roles append`. `--rows` with another role is a usage
         error, and `--role reviewer` is the default and the `record` verb above. Exit 0 stored, 2 report
         refused, 1 usage error or any other failure.
+    anchor --merge <rev> [--cwd <repo>]
+        Decide whether the merge `<rev>` (M) of a pull request lands a tree that stored reviews cleared. CI runs it as
+        `review anchor --merge HEAD` (job `Merge Lands A Reviewed Tree`) on every pull request, where HEAD is the merge
+        GitHub prepares of the pull request into its base, and on every push to `main`. M must have exactly two
+        parents, the first P (the base) and the second H (the head of the pull request), and P and H exactly one
+        merge base B; a squash or rebase landing, or a direct push, is refused, never passed. The features are the
+        `<f>` of the paths `odd/tasks/<f>.md` (directly under `odd/tasks/`) among the paths of B..H, each once; a
+        merge that changes none has no feature and passes with the outcome `no-feature`. Each feature is checked as
+        `review check --feature <f> --base B --head H` checks it, every one also after one clears, and the merge is
+        reviewed when at least one feature's chain clears: a chain that clears covers every commit of B..H. When none
+        clears it is refused with `no feature document the merge changes clears <B>..<H>: <f>: <reason>`, each
+        further feature joined with `; `. Once a chain clears, the tree of the merge must equal the tree of the head:
+        equal is the outcome `verified`; a different tree is refused, because the branch did not hold P when it was
+        merged (bringing the branch up to date adds commits that need their own records). stdout is one JSON object:
+        `merge`, `base` (B), `head`, `tree` (the tree of H, only when verified), `outcome`, and `features` (each
+        `{"feature", "outcome": clear or refused, "reason"}`, `[]` for `no-feature`). Every refusal and any failure of
+        git or of the store is one line `error: review anchor: <reason>` on stderr and nothing on stdout. Nothing is
+        stored. The job refuses a merge only once the owner marks it a required check in the branch protection of the
+        repository, and a pull request whose commits were reviewed only by gentle-ai receipts is refused. The gate
+        for openspec archives (`tools/archive-anchor-gate`) is not changed. Exit 0 verified or no-feature, 1 usage
+        error, refusal or any other failure.
     stop-hook
         Not run by a person: the Claude Code Stop hook that `install-hooks` wires (the review stop-hook, described
         below as `gentle-ai-overlay review stop-hook`). It asks the agent for what the first commit with unfinished
