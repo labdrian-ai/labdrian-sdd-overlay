@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a555694b3fa3998d987e7fb0cce35f8dd8ec6033",
+    "head": "d41a7633a99797161366e48e8600527a04f6e35e",
+    "diff_sha256": "3d6c7073924553539f55fd98962484ecf7e08ff9c38b330ff86bb46bfb6e10a1",
+    "paths": [
+      "odd/goals/own-rdd.json",
+      "odd/tasks/own-rdd.md"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git diff --name-only a555694b d41a7633",
+        "result": "pass",
+        "output": "odd/goals/own-rdd.json\nodd/tasks/own-rdd.md (exit 0)"
+      },
+      {
+        "command": "jq -e . odd/goals/own-rdd.json",
+        "result": "pass",
+        "output": "exit 0 (output discarded; only the exit code was captured)"
+      },
+      {
+        "command": "labdrian memory plan --profile odd --goal odd/goals/own-rdd.json",
+        "result": "pass",
+        "output": "exit 0; the plan ends with write none and omitted_filters [goal_id]"
+      },
+      {
+        "command": "git show d41a7633:odd/goals/own-rdd.json | diff - odd/goals/own-rdd.json",
+        "result": "pass",
+        "output": "no difference (diff exit 0)"
+      }
+    ]
+  }
+}
