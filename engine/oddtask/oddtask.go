@@ -153,6 +153,22 @@ func mark(line string) int {
 	return n
 }
 
+// ValidFeature is whether name is a feature name as a citation spells it: the file name of
+// odd/tasks/<name>.md without its extension.
+func ValidFeature(name string) bool { return featureName.MatchString(name) }
+
+// ValidTask is whether id is a task id as a citation spells it (T<digits> then lowercase letters and digits).
+func ValidTask(id string) bool { return taskID.MatchString(id) }
+
+// ShapedBy is the number n of the Log entry L<n> that marks task as designed by the shaper, read as Decide
+// reads it: the Reason is empty exactly when Decide would allow the builder on task of the document at path.
+func ShapedBy(path string, doc Document, task string) (int, Reason) {
+	if reason := Decide(path, doc, []string{task}); reason != "" {
+		return 0, reason
+	}
+	return mark(doc.tasks[task][0]), ""
+}
+
 // Decide says whether the builder may be launched on tasks of the document at path, the resolved
 // absolute path that its reasons name. Each task must be the one line of the ## Tasks section that
 // begins with its id, carry the one mark "shaped: L<n>", and have exactly one ## Log entry L<n> written

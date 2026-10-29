@@ -155,6 +155,8 @@ import (
 //     feature document it names (the Documents port) and the decision of oddtask.
 //   - oddtask/fsdoc is the adapter of the Documents port of oddtask/app: it reads the feature document from the
 //     file system, as a regular file that is not a link and is at most 8 MiB.
+//   - workflow/app is the application layer of the workflow (own-rdd S19 b): the use case 'workflow open'
+//     composes the role chain log, workflow.Lifecycle and the binding use case, and writes none of their rules.
 //   - repotest is test support: the hand-made repositories the tests of gitfs and cmd share.
 //   - piguard is test support: the `pi` that refuses to run, put first on the PATH of a test
 //     run by a TestMain, so nothing started by accident reaches the real CLI.
@@ -254,6 +256,7 @@ var rings = map[string]archguard.Ring{
 	"synctrigger/osproc":        archguard.Adapter,
 	"testhome":                  archguard.Support,
 	"workflow":                  archguard.Domain,
+	"workflow/app":              archguard.Application,
 	"workflow/filelog":          archguard.Adapter,
 	"workflowprofile":           archguard.Domain,
 }
