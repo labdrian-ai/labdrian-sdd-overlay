@@ -1,0 +1,96 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "42643659d732490201ff41b6b0908c048021dc48",
+    "head": "9652e498005cf2a81a42d620da9bcbc5452cac89",
+    "diff_sha256": "68970875d6f59dc999fbef02350a89c4c28e1462b922644e50d8ad361ba2f7fc",
+    "paths": [
+      "engine/architecture_test.go",
+      "engine/cmd/workflow.go",
+      "engine/cmd/workflow_bind_test.go",
+      "engine/cmd/workflow_open.go",
+      "engine/cmd/workflow_open_test.go",
+      "engine/oddtask/oddtask.go",
+      "engine/workflow/app/open.go"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "42643659d732490201ff41b6b0908c048021dc48",
+      "head": "9652e498005cf2a81a42d620da9bcbc5452cac89",
+      "diff_sha256": "68970875d6f59dc999fbef02350a89c4c28e1462b922644e50d8ad361ba2f7fc"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/architecture_test.go",
+        "engine/cmd/workflow.go",
+        "engine/cmd/workflow_bind_test.go",
+        "engine/cmd/workflow_open.go",
+        "engine/cmd/workflow_open_test.go",
+        "engine/oddtask/oddtask.go",
+        "engine/workflow/app/open.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/cmd/workflow_open.go:212-230",
+        "severity": "SUGGESTION",
+        "claim": "readBounded only checks size with os.Stat, which follows links, and does not require a regular file. The existing oddtask/fsdoc adapter reads the same document only as a regular file that is not a link (architecture_test.go comment, lines 155-156). So 'workflow open' accepts a symlinked odd/tasks/<f>.md or goal file, or a FIFO, that the builder guard's reader would refuse. A FIFO would block in ReadFile. The reading rule is also duplicated in cmd rather than reused. The payload hash and the shaped-mark check both use these bytes.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/workflow_open.go:221-229",
+          "engine/architecture_test.go:155-156 (diff lines 7-8)"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/workflow/app/open.go:854-858",
+        "severity": "SUGGESTION",
+        "claim": "IsRefusal is exported but never used. The command layer classifies errors only with errors.As on StepError and sends every other error to exit 2, so RefusedError is never distinguished by type. This is dead surface.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/workflow_open.go:257-274"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "engine/workflow/app/open.go:769-777",
+        "severity": "SUGGESTION",
+        "claim": "If RecordStage fails partway through the five stages, Done lists 'create, start' and the failing step is 'record the five stages'. The error text names the stage that failed, but Done does not say how many stages were written. This is a small gap against S19 (b), which says the error names the steps done and the step that failed.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/workflow/app/open.go:769-777"
+        ]
+      },
+      {
+        "id": "F4",
+        "location": "engine/workflow/app/open.go:739-760",
+        "severity": "SUGGESTION",
+        "claim": "checkFree (read) and the two chain appends are not atomic. Two concurrent 'workflow open' calls for the same task could both pass the check. Whether the second then fails depends on the chain store's own seq/prev check on Append, which I did not read. The spec assumes no cross-store transaction, so this is a hardening note only.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "engine/workflow/app/open.go:739-760"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff.",
+      "Read S19 (b) in odd/tasks/own-rdd.md. Checked refusals before any write, exit codes 0/1/2, the stdout JSON shape, the chain and workflow name <f>-<t lowercase>, the five stages, and the step-error message. All match.",
+      "Create refactor: workflowProjectIdentity is the removed block moved intact. The only change is the verb in the warning, which is 'create' for create, so create's output and behavior are unchanged.",
+      "Reuse: Open composes roles.ChainLog.Append, Lifecycle Create/Start/RecordStage and the projapp Bind. It validates the handoffs through roles.ParseRoleHandoff and oddtask.ShapedBy, which calls Decide, so the mark is read as the guard reads it. It writes none of their rules.",
+      "Tests cover the happy path, ten refusals with an unchanged-state snapshot, the after-write failure naming its steps, and usage errors.",
+      "I did not run anything (tests not run)."
+    ]
+  }
+}

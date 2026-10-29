@@ -48,7 +48,7 @@ func runWorkflow(p process, d deps, args []string) {
 // directory.
 func runWorkflowCore(d deps, args []string, cwd string, stdout, stderr io.Writer, exit func(int)) {
 	if len(args) == 0 {
-		fmt.Fprintln(stderr, "error: workflow requires a verb: create, start, pause, resume, stage, verify, close, narrow, status, bind, unbind, binding")
+		fmt.Fprintln(stderr, "error: workflow requires a verb: create, start, pause, resume, stage, verify, close, narrow, status, bind, unbind, binding, open")
 		exit(1)
 		return
 	}
@@ -78,8 +78,10 @@ func runWorkflowCore(d deps, args []string, cwd string, stdout, stderr io.Writer
 		runWorkflowUnbind(d, rest, cwd, stdout, stderr, exit)
 	case "binding":
 		runWorkflowBinding(d, rest, cwd, stdout, stderr, exit)
+	case "open":
+		runWorkflowOpen(d, rest, cwd, stdout, stderr, exit)
 	default:
-		fmt.Fprintf(stderr, "error: workflow: unknown verb %q (expected create, start, pause, resume, stage, verify, close, narrow, status, bind, unbind, or binding)\n", verb)
+		fmt.Fprintf(stderr, "error: workflow: unknown verb %q (expected create, start, pause, resume, stage, verify, close, narrow, status, bind, unbind, binding, or open)\n", verb)
 		exit(1)
 	}
 }
@@ -275,24 +277,7 @@ func runWorkflowCreate(d deps, args []string, cwd string, stdout, stderr io.Writ
 		exit(2)
 		return
 	}
-	// The project's shared identity, as the skills verbs and longterm-mem name it (C23 M2): the
-	// memory gate compares a longterm-mem query's project with it. The slug (--project) stays the key
-	// of the workflow's directory. A repository that cannot be read does not stop create, which never
-	// needed one, and an identity the log cannot hold (a control character, too long) is treated the
-	// same way, so the goal/slug check stays create's only new refusal. Either way the workflow
-	// records its slug as its identity, which is what the gate checked before C23 M2: a workflow
-	// recorded with no identity at all is one created before M2, which the gate allows unchecked,
-	// and a workflow created now must not get that lifelong pass from a repository it could not read.
-	// That is said in one line.
-	resolved, err := sharedProjectRules("").Resolve(cwd, "")
-	projectIdentity := resolved.Project
-	if err == nil {
-		err = workflow.ValidateProjectIdentity(projectIdentity)
-	}
-	if err != nil {
-		projectIdentity = o.project
-		fmt.Fprintf(stderr, "warning: workflow create: the project identity could not be resolved (%s), so the workflow records its slug, %s, as its identity\n", strings.NewReplacer("\n", " ", "\r", " ").Replace(err.Error()), o.project)
-	}
+	projectIdentity := workflowProjectIdentity("create", cwd, o.project, stderr)
 	var state workflow.State
 	if handoff != nil {
 		state, err = lc.CreateWithHandoff(o.project, o.workflowID, projectIdentity, g, o.profile, o.roleChain, *handoff)
@@ -305,6 +290,27 @@ func runWorkflowCreate(d deps, args []string, cwd string, stdout, stderr io.Writ
 		return
 	}
 	writeWorkflowState(stdout, stderr, workflow.ClassificationOwned, state, nil, exit)
+}
+
+// workflowProjectIdentity is the project's shared identity, as the skills verbs and longterm-mem name it
+// (C23 M2): the memory gate compares a longterm-mem query's project with it. The slug (--project) stays the
+// key of the workflow's directory. A repository that cannot be read does not stop create or open, which never
+// needed one, and an identity the log cannot hold (a control character, too long) is treated the same way, so
+// the goal/slug check stays create's only new refusal. Either way the workflow records its slug as its
+// identity, which is what the gate checked before C23 M2: a workflow recorded with no identity at all is one
+// created before M2, which the gate allows unchecked, and a workflow created now must not get that lifelong
+// pass from a repository it could not read. That is said in one line, naming verb.
+func workflowProjectIdentity(verb, cwd, slug string, stderr io.Writer) string {
+	resolved, err := sharedProjectRules("").Resolve(cwd, "")
+	projectIdentity := resolved.Project
+	if err == nil {
+		err = workflow.ValidateProjectIdentity(projectIdentity)
+	}
+	if err != nil {
+		projectIdentity = slug
+		fmt.Fprintf(stderr, "warning: workflow %s: the project identity could not be resolved (%s), so the workflow records its slug, %s, as its identity\n", verb, strings.NewReplacer("\n", " ", "\r", " ").Replace(err.Error()), slug)
+	}
+	return projectIdentity
 }
 
 // runWorkflowTransition implements the verbs that need only

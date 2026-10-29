@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "002fce5c6cfff898dd9fe31c7972cd02d6d04e92",
+    "head": "4bdfb16a4b3b3df87422417ef31df772727481d4",
+    "diff_sha256": "375187153c4cc7fd161133deb7fdf52f72d85623a750503bdb8f9a6a7a1b40be",
+    "paths": [
+      "engine/cmd/roles_builder_guard.go",
+      "engine/cmd/roles_builder_guard_test.go",
+      "engine/oddtask/app/guard.go",
+      "engine/oddtask/app/guard_test.go",
+      "engine/oddtask/workflow.go",
+      "engine/oddtask/workflow_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "002fce5c6cfff898dd9fe31c7972cd02d6d04e92",
+      "head": "4bdfb16a4b3b3df87422417ef31df772727481d4",
+      "diff_sha256": "375187153c4cc7fd161133deb7fdf52f72d85623a750503bdb8f9a6a7a1b40be"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/roles_builder_guard.go",
+        "engine/cmd/roles_builder_guard_test.go",
+        "engine/oddtask/app/guard.go",
+        "engine/oddtask/app/guard_test.go",
+        "engine/oddtask/workflow.go",
+        "engine/oddtask/workflow_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Second blind launch on another model (risk-line row). Read the whole diff of the six paths. Describe only loads the repository key, the binding and the workflow, and writes nothing. newBindingStore and newRoleChainStore fail with an error the guard turns into a denial, so unreadable state is denied and tested. Risk item 3: the guard now denies a builder launch outside a running, bound workflow whose chain hands work to the builder, as S19 intends; the denial names the remedy labdrian workflow open; S14 checks run first with their wording pinned. Non-builder agents are untouched. Not run: static inspection only."
+    ]
+  }
+}

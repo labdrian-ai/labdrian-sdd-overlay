@@ -1,0 +1,31 @@
+{
+  "version": 3,
+  "project_id": "labdrian-sdd-overlay",
+  "goal_id": "own-rdd",
+  "objective": "Finish own receipt-driven development: the tasks of odd/tasks/own-rdd.md that are not checked off, so that our review lifecycle stands alone before gentle-ai's review is removed.",
+  "scope": "The specs of odd/tasks/own-rdd.md that those tasks name; one workflow and one role chain for each task.",
+  "constraints": [
+    "Finished tasks of odd/tasks/own-rdd.md are not redone.",
+    "The builder builds only a task the shaper designed (S14).",
+    "Every commit is reviewed or exempted, and labdrian review check clears it (S5, S6)."
+  ],
+  "non_goals": [
+    "Removing gentle-ai review, its hooks, lens agents and engine/reviewreceipt."
+  ],
+  "acceptance_criteria": [
+    "T17, T7, T9, T8 and T12 of odd/tasks/own-rdd.md are checked off, each with its commit.",
+    "labdrian review check --base clears the head of each task's pull request."
+  ],
+  "memory_directive": {
+    "version": 1,
+    "scope": "project",
+    "sources": [
+      "engram",
+      "longterm-mem",
+      "procedural-skills"
+    ],
+    "write": "none"
+  },
+  "runtime_scope": "Claude Code, Codex and Pi, as the specs of odd/tasks/own-rdd.md name them.",
+  "delivery_boundary": "Work-unit commits on the branches of odd/tasks/own-rdd.md; push, pull requests and merges are the owner's decisions."
+}

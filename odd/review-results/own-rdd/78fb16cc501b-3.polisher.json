@@ -1,0 +1,17 @@
+{
+  "kind": "polisher",
+  "base": "cb20de0b1fe089c02077e66f0c2cc7017b3930f8",
+  "head": "78fb16cc501b381fc38c390ef1e65dc843eac658",
+  "diff_sha256": "daa2298668465eed36f54eee0ad7ba1adb62c6da341ab197fa3873c84d3acfeb",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff (/tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/78fb16cc.diff).",
+      "Read skills/role-chain/SKILL.md at the head worktree. The pointer line at line 23 matches the test constant exactly, and the new Appends line at line 18 matches the workflow-open test constant exactly.",
+      "Compared the old sweeper line in the base diff with the line in skills/sweeper/SKILL.md. They are byte-identical, so the move is word for word.",
+      "Checked that the registry entry for sweeper in skills.registry.yaml and the new overlay.manifest row mirror the role-chain ones: global scope, claude, codex and pi targets, overlay-only. The updated tests assert the same shape for both skills.",
+      "Grepped the skills for disable-model-invocation. role-chain and sweeper both set it, and role-chain is already loaded by path ('load skills/role-chain/SKILL.md' in inception-pipeline), so the new pointer is no less reachable than the existing one.",
+      "Not run: the Go tests and the lint (engine/skills/lint.go). I judged the body budget from the diff only. The CHANGELOG states that role-chain is APPROVAL_STALE and sweeper is APPROVAL_MISSING until the owner approves them, so that approval step is documented."
+    ]
+  }
+}

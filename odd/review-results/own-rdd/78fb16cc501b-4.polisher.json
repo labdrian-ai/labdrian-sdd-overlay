@@ -1,0 +1,16 @@
+{
+  "kind": "polisher",
+  "base": "cb20de0b1fe089c02077e66f0c2cc7017b3930f8",
+  "head": "78fb16cc501b381fc38c390ef1e65dc843eac658",
+  "diff_sha256": "daa2298668465eed36f54eee0ad7ba1adb62c6da341ab197fa3873c84d3acfeb",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the whole diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/78fb16cc.diff.",
+      "Read the head frontmatter of skills/role-chain/SKILL.md. It also sets disable-model-invocation: true, so the new sweeper skill loads the same way as role-chain and the pointer adds no new loading gap.",
+      "Grepped engine/skills/role_chain_artifact_test.go at the head. The tests pin the pointer line, the sweeper trigger line word for word, and the workflow open line in Appends. The registry, manifest and route checks cover both skills.",
+      "Compared the sweeper trigger line in the diff: it is identical to the line removed from role-chain.",
+      "Not run: tests, lint or the token budget count. I judged from the diff text only."
+    ]
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "3c744b7bea4eb9d352de987513b4052a1ed034dd",
+    "head": "002fce5c6cfff898dd9fe31c7972cd02d6d04e92",
+    "diff_sha256": "be25fd826fd1e90a16008b0058cfbf8b3ba4bb2f12a927b8ee3787bd36625de6",
+    "paths": [
+      "engine/cmd/workflow_open.go",
+      "engine/cmd/workflow_open_test.go",
+      "engine/workflow/app/open.go",
+      "engine/workflow/app/open_test.go"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "3c744b7bea4eb9d352de987513b4052a1ed034dd",
+      "head": "002fce5c6cfff898dd9fe31c7972cd02d6d04e92",
+      "diff_sha256": "be25fd826fd1e90a16008b0058cfbf8b3ba4bb2f12a927b8ee3787bd36625de6"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/workflow_open.go",
+        "engine/cmd/workflow_open_test.go",
+        "engine/workflow/app/open.go",
+        "engine/workflow/app/open_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the whole diff at 002.diff.",
+      "Read engine/oddtask/fsdoc/fsdoc.go in the worktree. Reader.Read does Lstat, refuses a symlink or a non-regular file, opens the file, checks os.SameFile, and reads at most MaxDocumentBytes+1 bytes. A FIFO is refused at Lstat, before any open, so it cannot block.",
+      "Read engine/oddtask/reason.go. CauseLink is 'a symbolic link' and CauseNotRegular is 'not a regular file', matching the new test substrings. readRegular unwraps *ReadError, so the message becomes '<path> cannot be read (<cause>)'.",
+      "The callers in engine/workflow/app/open.go wrap errors as 'read goal: %v' and 'read feature document: %v'. The existing tests asserting those substrings still match.",
+      "The stage-failure message in open.go builds the recorded-stages list from PreWorkStages[:i], and 'none' when i is 0. The expected strings in open_test.go match: failing on classify gives 'after recording authorize, explore, resolve-uncertainty', and failing on authorize gives 'none'.",
+      "The race test makes LoadChain return nothing while the real store holds the first open's records. A differing document is refused at the shaper-record step with no later step run. An identical document is accepted as a no-op.",
+      "Not run: no tests or builds were executed, because I was not allowed to run commands. This is static review only.",
+      "Risk line: no secrets, exec or net imports, or new path escapes. The only behavior change is stricter reads that follow the guard's existing rule."
+    ]
+  }
+}

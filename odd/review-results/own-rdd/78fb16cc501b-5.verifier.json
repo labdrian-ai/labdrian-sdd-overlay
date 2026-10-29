@@ -1,0 +1,11 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "sd '^name: sweeper$' 'name: sweeperx' skills/sweeper/SKILL.md; cd engine && go test -count=1 ./skills/...; git checkout -- skills/sweeper/SKILL.md",
+      "output": "only TestRegistryLockE2E_ValidateLeavesTheRealTreeUntouched fails, which already fails at the head for the missing approval; no role-chain or sweeper test fails on the wrong name (head 78fb16cc)",
+      "base_result": "not-reproduced"
+    }
+  ]
+}

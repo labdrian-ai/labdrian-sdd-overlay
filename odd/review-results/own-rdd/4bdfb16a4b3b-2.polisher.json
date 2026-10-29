@@ -1,0 +1,12 @@
+{
+  "kind": "polisher",
+  "base": "002fce5c6cfff898dd9fe31c7972cd02d6d04e92",
+  "head": "4bdfb16a4b3b3df87422417ef31df772727481d4",
+  "diff_sha256": "375187153c4cc7fd161133deb7fdf52f72d85623a750503bdb8f9a6a7a1b40be",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Judge A: read the full diff across all six changed paths. Describe in projection/app/bind.go is read-only, so the guard adapter mutates no state. S14 checks run first; a missing Workflows port, a read error and a missing repository all deny (fail closed). The denial text is pinned by wantWorkflowDenial and TestWorkflowMessageIsTheExactTextOfS19 independently of the code. Not run: static read only."
+    ]
+  }
+}

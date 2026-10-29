@@ -31,21 +31,25 @@ func TestRoleChainIsRegisteredAsAGlobalOverlaySkillForClaudeCodexAndPi(t *testin
 	if err != nil {
 		t.Fatalf("parsing the registry of the repository: %v", err)
 	}
-	var found []skills.Entry
-	for _, entry := range reg.Skills {
-		if entry.ID == "role-chain" {
-			found = append(found, entry)
+	// The sweeper skill holds the sweeper trigger that left role-chain (own-rdd T17c) and is
+	// registered the same way.
+	for _, id := range []string{"role-chain", "sweeper"} {
+		var found []skills.Entry
+		for _, entry := range reg.Skills {
+			if entry.ID == id {
+				found = append(found, entry)
+			}
 		}
-	}
-	want := []skills.Entry{{
-		ID:        "role-chain",
-		Path:      "role-chain",
-		Source:    skills.Source{Type: "custom"},
-		Install:   skills.Install{DefaultScope: "global", Targets: []string{"claude", "codex", "pi"}},
-		Lifecycle: skills.Lifecycle{UpdateStrategy: "overlay-only"},
-	}}
-	if !reflect.DeepEqual(found, want) {
-		t.Errorf("registry entries named role-chain = %+v, want exactly %+v", found, want)
+		want := []skills.Entry{{
+			ID:        id,
+			Path:      id,
+			Source:    skills.Source{Type: "custom"},
+			Install:   skills.Install{DefaultScope: "global", Targets: []string{"claude", "codex", "pi"}},
+			Lifecycle: skills.Lifecycle{UpdateStrategy: "overlay-only"},
+		}}
+		if !reflect.DeepEqual(found, want) {
+			t.Errorf("registry entries named %s = %+v, want exactly %+v", id, found, want)
+		}
 	}
 }
 

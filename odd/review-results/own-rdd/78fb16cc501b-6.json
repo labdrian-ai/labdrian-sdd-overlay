@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "cb20de0b1fe089c02077e66f0c2cc7017b3930f8",
+    "head": "78fb16cc501b381fc38c390ef1e65dc843eac658",
+    "diff_sha256": "daa2298668465eed36f54eee0ad7ba1adb62c6da341ab197fa3873c84d3acfeb",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/skills/role_chain_artifact_test.go",
+      "engine/skills/role_chain_registry_test.go",
+      "overlay.manifest",
+      "skills.registry.yaml",
+      "skills/role-chain/SKILL.md",
+      "skills/sweeper/SKILL.md"
+    ]
+  },
+  "rows": [
+    "default",
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "cb20de0b1fe089c02077e66f0c2cc7017b3930f8",
+      "head": "78fb16cc501b381fc38c390ef1e65dc843eac658",
+      "diff_sha256": "daa2298668465eed36f54eee0ad7ba1adb62c6da341ab197fa3873c84d3acfeb"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/skills/role_chain_artifact_test.go",
+        "engine/skills/role_chain_registry_test.go",
+        "overlay.manifest",
+        "skills.registry.yaml",
+        "skills/role-chain/SKILL.md",
+        "skills/sweeper/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the full diff and the head version of skills/role-chain/SKILL.md in the worktree.",
+      "The Appends line matches the criteria text exactly.",
+      "The pointer line `- Sweeper: on the builder's commit, load the `sweeper` skill.` is in Triggers.",
+      "The sweeper trigger text in skills/sweeper/SKILL.md is word for word the old role-chain line.",
+      "The new overlay.manifest row and skills.registry.yaml entry for sweeper mirror role-chain's: custom, global scope, claude/codex/pi targets, overlay-only.",
+      "The updated tests pin the pointer, the Appends line, the registry entry, the manifest routes, and the lint budget for both skills.",
+      "Searched other engine tests for assertions on the old sweeper line in role-chain; the only hits were an unrelated long line in role_agents_artifact_test.go:933 and the `role-chain` mention at line 10, so I found no other test that the move breaks.",
+      "No tests or lint were run, so whether the lint budget test and the rest of the suite pass is not run."
+    ]
+  }
+}

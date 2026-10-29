@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "8e154abae432de4a6dda21ed75ee7de85d140653",
+    "head": "154e7afcacdb7ceb324865ce691cb51aaa3508d3",
+    "diff_sha256": "7a1ca94fc9919f40f1e5771254f06062ac56436d561b11ce2629b46a462a61d8",
+    "paths": [
+      "skills/role-chain/.approval.json",
+      "skills/sweeper/.approval.json"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "cd engine && go test -count=1 -run 'TestRegistryLockE2E|TestRoleChain' ./skills/...",
+        "result": "pass",
+        "output": "ok  \tgithub.com/labdrian-ai/labdrian-sdd-overlay/engine/skills\t5.729s"
+      },
+      {
+        "command": "git diff --name-only 8e154aba 154e7afcacdb7ceb324865ce691cb51aaa3508d3",
+        "result": "pass",
+        "output": "skills/role-chain/.approval.json\nskills/sweeper/.approval.json"
+      }
+    ]
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "kind": "sweep",
+  "base": "42643659d732490201ff41b6b0908c048021dc48",
+  "head": "9652e498005cf2a81a42d620da9bcbc5452cac89",
+  "diff_sha256": "68970875d6f59dc999fbef02350a89c4c28e1462b922644e50d8ad361ba2f7fc",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": []
+  },
+  "t2": [
+    {
+      "tool": "deadcode",
+      "module": "engine",
+      "new": [
+        "workflow/app/open.go: unreachable func: IsRefusal"
+      ]
+    }
+  ],
+  "t3": []
+}

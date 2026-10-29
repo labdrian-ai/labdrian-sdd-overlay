@@ -101,7 +101,8 @@ func TestInstallHooksSummariesNameTheReviewStopHook(t *testing.T) {
 }
 
 // The other texts that describe the hook say what it asks for as the README does (own-rdd T6b7b, S6 e, L70): the help of
-// the wrapper, the README entry of the verb, the install-hooks summary and the claim of the Claude installation say that
+// the wrapper, the README entry of the verb, the install-hooks summary, the records README and the claim of the Claude
+// installation say that
 // it asks for each thing the first commit with unfinished review steps misses, once for each session and commit, and none
 // says any more that it asks for the next commit no review covers, nor that the commit is not ready for delivery.
 func TestOtherTextsOfTheReviewStopHookSayWhatItAsksFor(t *testing.T) {
@@ -116,6 +117,8 @@ func TestOtherTextsOfTheReviewStopHookSayWhatItAsksFor(t *testing.T) {
 			"It asks the agent for what the first commit with unfinished review steps misses, each thing once for each session and commit."},
 		{"bin/lib/hooks.sh", readRepositoryFile(t, "bin/lib/hooks.sh"),
 			"(on Stop, asks the agent for each thing the first commit with unfinished review steps misses, once for each session and commit),"},
+		{"odd/review-results/README.md", readRepositoryFile(t, "odd/review-results/README.md"),
+			"when the agent is about to stop on a branch that has commits with unfinished review steps, the hook blocks the stop and asks for what the first of them misses"},
 	} {
 		text := normalizeDocText(tc.text)
 		if !strings.Contains(text, normalizeDocText(tc.want)) {

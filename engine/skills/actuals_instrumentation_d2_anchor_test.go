@@ -463,8 +463,9 @@ func TestD2HistoryTextKeepsTheArchiveReasonAndNamesTheGitError(t *testing.T) {
 // runGitReadOnly executes git with the given arguments and returns stdout. It
 // is the sole process-invocation point for this file's D2 anchor proof, so
 // the read-only contract (design.md Threat Matrix: only `log`, `show -s`,
-// `cat-file -e` and `rev-parse --verify`) has one place to audit. Test-only: production code in this package must never
-// shell out to git (ADR-15, TestZeroFetchImportAllowlist).
+// `cat-file -e` and `rev-parse --verify`) has one place to audit. Test-only:
+// production code in this package must never shell out to git (ADR-15,
+// TestZeroFetchImportAllowlist).
 func runGitReadOnly(args ...string) (string, error) {
 	cmd := exec.Command("git", args...)
 	var stdout, stderr bytes.Buffer

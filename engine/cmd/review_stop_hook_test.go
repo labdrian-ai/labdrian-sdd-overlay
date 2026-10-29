@@ -100,7 +100,7 @@ func (s *stopWorld) requireReason(session, reason string) {
 // blockReasonOf is the reason of a block for the commit head after base, with the lines in the order given. The words are the
 // ones S6 (e) gives, written out here and not taken from the code.
 func blockReasonOf(head, base string, lines ...string) string {
-	return "Commit " + head + " of branch feature/stop is not ready for delivery. Before you stop, for that commit alone (base " + base + "):\n\n" +
+	return "Commit " + head + " of branch feature/stop has unfinished review steps. Before you stop, for that commit alone (base " + base + "):\n\n" +
 		strings.Join(lines, "\n") + "\n\n" +
 		"<feature> is the feature whose odd/tasks/<feature>.md holds the task of the commit. A record counts once it is stored and binds the commit, " +
 		"whatever its outcome; 'labdrian review check' judges the outcome. The stop hook asks for each thing a commit misses once for each session and commit."
