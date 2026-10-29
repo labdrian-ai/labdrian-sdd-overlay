@@ -12,6 +12,7 @@ package skills
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -21,6 +22,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/reviewresult"
 )
 
@@ -96,6 +98,7 @@ func roleAgentSpecs() []roleAgentSpec {
 		{"polisher", "sonnet", polisherTools, 3, []string{
 			"Modify nothing", "immutable target", `{"findings":[],"evidence":`,
 			"This replaces the return envelope of the line above",
+			"your whole return is one JSON object and no prose", "every finding has at least one non-empty evidence entry",
 		}},
 		{"prototyper", "sonnet", prototypeTools, 4, []string{
 			"spike worktree", "mktemp -d", "positive control", "open_questions", "kill | narrow | continue", "lookup/spike box",
@@ -544,6 +547,135 @@ func TestReviewerDeltaObjectIsTheOneTheEngineParses(t *testing.T) {
 			if _, err := reviewresult.Parse(instance(chosen), bound); err != nil {
 				t.Errorf("reviewresult.Parse refuses %s %q, which the reviewer delta lists: %v", member, alternative, err)
 			}
+		}
+	}
+}
+
+// The object agents/polisher.md spells out is the object labdrian review record --role polisher stores, and a
+// drift between the two is a judge whose whole reply the recorder refuses (the reply of L101 carried proof
+// where the recorder wants evidence). The test fills the object the third line of the polisher delta spells
+// out with a legal value for each member and each alternative of each enumeration, and requires
+// review.ParsePolisherFindings to accept every instance, the clean object the line spells out too; the same
+// object without its finding's evidence is refused, and so is the reply of L101. A member the line gains that
+// this test has no legal value for fails it.
+func TestPolisherDeltaObjectIsTheOneTheEngineRecords(t *testing.T) {
+	line := roleDelta(t, skillsRepoRoot(t), "polisher")[2]
+	start := strings.Index(line, `{"findings":[{`)
+	if start < 0 {
+		t.Fatalf("the third line of the polisher delta spells out no JSON object that starts with %q; got:\n%s", `{"findings":[{`, line)
+	}
+	var spelled map[string]any
+	if err := json.NewDecoder(strings.NewReader(line[start:])).Decode(&spelled); err != nil {
+		t.Fatalf("the object the polisher delta spells out is not JSON: %v", err)
+	}
+	legal := map[string]any{
+		"location": "engine/guard.go:1", "claim": "a claim", "evidence": []string{"the concrete causal proof"},
+	}
+	enumerations := []string{"severity", "evidence_class", "causal_disposition"}
+	instance := func(chosen map[string]string, drop string) []byte {
+		var fill func(value any, member string) any
+		fill = func(value any, member string) any {
+			switch v := value.(type) {
+			case map[string]any:
+				filled := make(map[string]any, len(v))
+				for name, inner := range v {
+					if _, isFinding := v["claim"]; isFinding && name == drop {
+						continue
+					}
+					filled[name] = fill(inner, name)
+				}
+				return filled
+			case []any:
+				if len(v) == 1 {
+					if object, ok := v[0].(map[string]any); ok {
+						return []any{fill(object, member)}
+					}
+				}
+			}
+			if picked, ok := chosen[member]; ok {
+				return picked
+			}
+			if known, ok := legal[member]; ok {
+				return known
+			}
+			t.Fatalf("the polisher delta names the member %q, and this test has no legal value for it", member)
+			return nil
+		}
+		text, err := json.Marshal(fill(spelled, ""))
+		if err != nil {
+			t.Fatalf("setup: %v", err)
+		}
+		return text
+	}
+
+	var finding map[string]any
+	if findings, _ := spelled["findings"].([]any); len(findings) == 1 {
+		finding, _ = findings[0].(map[string]any)
+	}
+	if finding == nil {
+		t.Fatalf("the polisher delta must spell out one finding, as an object; got %v", spelled["findings"])
+	}
+	alternativesOf := func(member string) []string {
+		list, ok := finding[member].(string)
+		if !ok {
+			t.Fatalf("the polisher delta must list the alternatives of %q as one string; got %v", member, finding[member])
+		}
+		return strings.Split(list, "|")
+	}
+	first := map[string]string{}
+	for _, member := range enumerations {
+		first[member] = alternativesOf(member)[0]
+	}
+	if _, err := review.ParsePolisherFindings(instance(first, "")); err != nil {
+		t.Errorf("review.ParsePolisherFindings refuses the object the polisher delta spells out, filled with legal values: %v\n%s", err, instance(first, ""))
+	}
+	for _, member := range enumerations {
+		for _, alternative := range alternativesOf(member) {
+			chosen := map[string]string{}
+			for name, picked := range first {
+				chosen[name] = picked
+			}
+			chosen[member] = alternative
+			if _, err := review.ParsePolisherFindings(instance(chosen, "")); err != nil {
+				t.Errorf("review.ParsePolisherFindings refuses %s %q, which the polisher delta lists: %v", member, alternative, err)
+			}
+		}
+	}
+
+	clean := strings.Index(line, `{"findings":[],`)
+	if clean < 0 {
+		t.Fatalf("the third line of the polisher delta spells out no clean object; got:\n%s", line)
+	}
+	var cleanObject map[string]any
+	if err := json.NewDecoder(strings.NewReader(line[clean:])).Decode(&cleanObject); err != nil {
+		t.Fatalf("the clean object the polisher delta spells out is not JSON: %v", err)
+	}
+	cleanText, _ := json.Marshal(cleanObject)
+	if _, err := review.ParsePolisherFindings(cleanText); err != nil {
+		t.Errorf("review.ParsePolisherFindings refuses the clean object the polisher delta spells out: %v", err)
+	}
+
+	if _, err := review.ParsePolisherFindings(instance(first, "evidence")); !errors.Is(err, review.ErrInvalidPolisherFindings) {
+		t.Errorf("the object without its finding's evidence must be refused with ErrInvalidPolisherFindings; got %v", err)
+	}
+	const l101 = `{"findings":[{"severity":"SUGGESTION","title":"t","detail":"d","introduced_by_target":true,"proof":"p"}]}`
+	const refused = `review: invalid polisher findings: finding 1 has no "evidence" that is a non-empty array of non-empty strings`
+	if _, err := review.ParsePolisherFindings([]byte(l101)); err == nil || err.Error() != refused {
+		t.Errorf("the reply of L101 must be refused with %q; got %v", refused, err)
+	}
+}
+
+// The judge prompt of judgment-day points the judges at the object their agent file spells out, so there
+// is one source of truth for the shape; it names neither the old inline shape (proof_refs, a findings array
+// spelled inline) nor a second copy of it.
+func TestJudgmentDayJudgesReturnThePolisherObject(t *testing.T) {
+	prompts := readRepoFile(t, skillsRepoRoot(t), "skills/judgment-day/references/prompts-and-formats.md")
+	if want := "the object your agent file (polisher) spells out"; !strings.Contains(prompts, want) {
+		t.Errorf("the judge prompt must say %q", want)
+	}
+	for _, gone := range []string{"proof_refs", `"findings":[{`} {
+		if strings.Contains(prompts, gone) {
+			t.Errorf("the judge prompt must not hold %q: the shape is the polisher agent file's", gone)
 		}
 	}
 }
