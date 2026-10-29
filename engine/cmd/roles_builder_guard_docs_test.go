@@ -40,6 +40,48 @@ func TestUsageDocumentsTheBuilderGuardAsInstalled(t *testing.T) {
 	}
 }
 
+// The help of the engine, the wrapper and the README say that the guard also requires the running workflow of the
+// cited feature, and what workflow open, its remedy, does (own-rdd T17c, S19 d).
+func TestDocsDescribeTheWorkflowTheBuilderGuardRequires(t *testing.T) {
+	var out bytes.Buffer
+	usage(&out)
+	engine := strings.Join(strings.Fields(out.String()), " ")
+	readme := strings.Join(strings.Fields(readRepositoryFile(t, "README.md")), " ")
+	wrapper := strings.Join(strings.Fields(readRepositoryFile(t, "bin/lib/usage.sh")), " ")
+
+	for _, doc := range []struct {
+		name, text string
+		wants      []string
+	}{
+		{"the engine usage of the builder guard", docSection(t, engine, "engine roles builder-guard", "engine shaper assess"), []string{
+			"bound to the running workflow of the cited feature", "hands the work to the builder",
+			"labdrian workflow open --feature <feature> --task <T>",
+		}},
+		{"the engine usage of workflow open", docSection(t, engine, "engine workflow open", "engine projection hook"), []string{
+			"--feature <f> --task <T> [--goal <path>]", "odd/goals/<f>.json", "shaped: L<n>", "<f>-<t>",
+			"authorize, explore, resolve-uncertainty, classify and track-if-substantial",
+			`{"workflow":"<f>-<t>","chain":"<f>-<t>","goal":"<f>","project":"<P>","status":"running","bound":true}`,
+			"exit 0 opened, 2 refused, 1 usage error or a failure after a write",
+		}},
+		{"the README section of the builder guard", docSection(t, readme, "gentle-ai-overlay roles builder-guard", "overlay --help"), []string{
+			"to a workflow that is owned and running, whose goal is the cited feature",
+			"Every feature runs inside its workflow: run labdrian workflow open --feature <f> --task <T>",
+		}},
+		{"the README of workflow open", docSection(t, readme, "open --feature <f> --task <T> [--goal <path>]", "The lifecycle verbs print"), []string{
+			"odd/goals/<f>.json", "shaped: L<n>", "<f>-<t>", "exit 0 opened, 2 refused",
+		}},
+		{"the wrapper help", wrapper, []string{
+			"outside the running workflow of the cited feature", "open --feature F --task T [--goal PATH]",
+		}},
+	} {
+		for _, want := range doc.wants {
+			if !strings.Contains(doc.text, want) {
+				t.Errorf("%s does not say %q", doc.name, want)
+			}
+		}
+	}
+}
+
 // The guard is installed by install-hooks and run by Claude Code on every Agent call, so the README says what it
 // denies, what the prompt must cite, how the shaper marks a task, what it cannot do, and what a user must do to get it.
 func TestDocsDescribeTheBuilderGuard(t *testing.T) {

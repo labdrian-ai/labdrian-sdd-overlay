@@ -604,7 +604,8 @@ overlay roles <verb>
     builder-guard                                                                not run by a person: the Claude Code PreToolUse hook on the Agent tool that
                                                                                   `install-hooks` wires (the builder guard, described below as
                                                                                   `gentle-ai-overlay roles builder-guard`). It denies launching the builder
-                                                                                  when its prompt cites no task the shaper designed. Exit 0 always, 1 usage error
+                                                                                  when its prompt cites no task the shaper designed, or outside the running
+                                                                                  workflow of the cited feature (`workflow open`). Exit 0 always, 1 usage error
 
 overlay review <verb>
     Forward review binding, storage, exemption and delivery-check verbs to the engine unchanged. No verb launches an agent or
@@ -795,7 +796,8 @@ overlay memory <verb>
 overlay workflow <verb>
     Forward standalone workflow lifecycle verbs (Phase 6) to the engine unchanged: create,
     start, pause, resume, narrow, stage, verify, close, and status, plus the session-binding verbs bind,
-    unbind, and binding (Phase 7, described after status). A workflow is its own append-only,
+    unbind, and binding (Phase 7, described after status), and open, which opens the workflow of one
+    task of an ODD feature (described after binding). A workflow is its own append-only,
     hash-chained event log stored outside the repository at
     $XDG_STATE_HOME/labdrian/workflows/<project_id>/<workflow_id>.jsonl (or
     $HOME/.local/state/... when XDG_STATE_HOME is unset), keyed by project_id so every git
@@ -878,6 +880,23 @@ overlay workflow <verb>
         unavailable) and, when it is owned, the binding plus the bound workflow's classification
         and status (absent when its log is gone). A workflow store that cannot be read is
         reported in that section as data, not as an error.
+    open --feature <f> --task <T> [--goal <path>]
+        Open the workflow of one task of an ODD feature, from the repository, so the builder guard
+        lets its builder run. The goal is odd/goals/<f>.json under the repository's root unless
+        --goal names another; the project is its project_id and its goal_id must be <f>. The task
+        line of <T> in odd/tasks/<f>.md must carry the shaper's segment `shaped: L<n>`, read as
+        the builder guard reads it. open appends the `shaper → estimator` and `estimator → builder`
+        records of the role chain <f>-<t> (<t> the task id in lower case), each with the sha256 of
+        the feature document's bytes and a summary naming <T> and its mark; then it creates the
+        workflow <f>-<t> with profile odd and that chain, starts it, records the stages authorize,
+        explore, resolve-uncertainty, classify and track-if-substantial, and binds the repository
+        to it. It refuses, before anything is written, a goal that is missing, invalid or of another
+        goal id, a task that is not marked, a chain that already has records and a workflow that
+        already exists. A step that fails after an earlier one wrote leaves what was written, and
+        the error names the steps done and the step that failed (the stores share no transaction).
+        stdout is one JSON object {"workflow":"<f>-<t>","chain":"<f>-<t>","goal":"<f>",
+        "project":"<P>","status":"running","bound":true}; exit 0 opened, 2 refused, 1 a usage
+        error or a failure after a write.
     The lifecycle verbs print the resulting classification and state (or, for status, the
     current one) as JSON on stdout and report errors on stderr. Exit 0 on success, 2 on a
     refused or invalid operation (an illegal transition, a failed verify, non-owned on-disk
@@ -1266,6 +1285,15 @@ gentle-ai-overlay roles builder-guard
     with exit 0 (the JSON decides; exit 2 is never used); an allow prints nothing and never permissionDecision "allow".
     The installed command never blocks by its exit code, and with the engine binary missing the hook does nothing and
     `status-hooks` reports it. Exit 0 always, except 1 on a command line it does not understand.
+    After every check above passes, it also denies the launch unless the git repository of the session's cwd is bound
+    (`workflow binding`) to a workflow that is owned and running, whose goal is the cited feature (the goal id is the
+    feature's name), which follows a role chain that has records, verifies, and hands the work to the builder (its last
+    record's `to_role`). The reason names which of these failed, and a failure to read the binding, the workflow or the
+    chain denies too. The denial is exactly `labdrian builder guard: <reason>. Every feature runs inside its workflow:
+    run labdrian workflow open --feature <f> --task <T> (it records the shaper and estimator hops, then creates,
+    starts and binds the workflow of the task), then launch the builder again. This guard reads text and local state
+    only, so it is a speed bump, not a security boundary.`, `<T>` the first task the prompt cites. The checks of the
+    shaper's mark run first and their denials are unchanged.
     Limits: it is a speed bump against forgetting the shaper, not a security boundary. It reads text, so the writer of
     the document can forge the mark together with a false shaper entry, and it guards Claude Code only: launches of the
     builder from Codex and Pi are not guarded.

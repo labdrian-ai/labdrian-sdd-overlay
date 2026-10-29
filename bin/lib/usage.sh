@@ -252,7 +252,9 @@ Commands:
                                    match-shaper --root PATH --handoff PATH    report which Shaper v3 roles match the vocabulary
                                    builder-guard                              not run by a person: the Claude Code hook on the Agent tool
                                              that install-hooks wires (the builder guard); it denies launching
-                                             the builder on a prompt that cites no task the shaper designed
+                                             the builder on a prompt that cites no task the shaper designed,
+                                             or outside the running workflow of the cited feature whose
+                                             role chain hands the work to the builder (run workflow open)
                                              (exit 0 always, 1 usage error)
   review <verb>                    Forward review binding and storage verbs to the engine unchanged.
                                    bind --base REV --head REV [--cwd REPO]
@@ -359,6 +361,13 @@ Commands:
                                    unbind    remove this repository's binding; idempotent
                                    binding   read-only: show this repository's binding and the bound
                                              workflow's status
+                                   open   --feature F --task T [--goal PATH]
+                                             open the workflow of a task the shaper marked: append the
+                                             shaper and estimator records of the role chain F-t, then
+                                             create, start, record the five pre-work stages and bind the
+                                             workflow F-t (goal odd/goals/F.json unless --goal); refuses
+                                             before writing an invalid goal, an unmarked task, a chain with
+                                             records or an existing workflow (exit 2)
                                    exit 0 success, 2 refused/invalid (illegal transition, verify failure,
                                    non-owned state; for the binding verbs also: no git repository, a
                                    workflow that cannot be bound, a binding file that is not ours or cannot be used
