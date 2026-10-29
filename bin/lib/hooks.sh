@@ -60,7 +60,7 @@ cmd_install_hooks() {
   echo "            the skills approve guard"
   echo "            (denies the agent running 'skills approve'; a speed bump, not a security boundary),"
   echo "            the review stop-hook"
-  echo "            (on Stop, asks the agent for each thing the first commit not ready for delivery misses, once for each session and commit),"
+  echo "            (on Stop, asks the agent for each thing the first commit with unfinished review steps misses, once for each session and commit),"
   echo "            and the builder guard"
   echo "            (on the Agent tool, denies launching the builder on a task the shaper did not design; a speed bump, not a security boundary)."
   echo ""

@@ -2,7 +2,9 @@ package skills
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 	"testing"
@@ -59,6 +61,16 @@ import (
 // does not implement the runtime path.
 func TestD2AnchorIsVerifiableAndUnambiguous(t *testing.T) {
 	repoRoot := actualsInstrumentationRepoRoot(t)
+
+	// The proof reads the history of the repository: the precedent commit and origin/main. A
+	// checkout without it (a git archive, a shallow clone) skips the test, and in CI, which fetches
+	// the whole history, the same text fails it, so a missing history is never a silent pass.
+	if _, err := runGitReadOnly("-C", repoRoot, "cat-file", "-e", d2PrecedentCommit+"^{commit}"); err != nil {
+		d2NeedsHistory(t, err)
+	}
+	if _, err := runGitReadOnly("-C", repoRoot, "rev-parse", "--verify", "--quiet", "origin/main"); err != nil {
+		d2NeedsHistory(t, err)
+	}
 
 	t.Run("recorded_anchor_with_matching_tree_resolves_verified", func(t *testing.T) {
 		// deterministic-verification-evidence's own archive-report records, in
@@ -415,10 +427,43 @@ func resolveTreeToCommitOrAmbiguous(repoRoot, ref, tree string) (sha string, amb
 	}
 }
 
+// d2PrecedentCommit is the commit design.md D2 revision 3 cites as its precedent.
+const d2PrecedentCommit = "be2c3ca46ea5f4f740ecab6b51dc2db3f167f37c"
+
+// d2HistoryText is the reason d2NeedsHistory gives: the text that names the history the test
+// reads and the two usual causes, followed by what git said, since any git error lands here (git
+// missing, no origin remote, a bad root).
+func d2HistoryText(gitErr error) string {
+	return "needs the repository's git history (commit " + d2PrecedentCommit + " and origin/main), which this checkout does not have: a git archive or a shallow clone; git said: " + gitErr.Error()
+}
+
+// d2NeedsHistory skips the test because the checkout lacks the history it reads, or fails it when
+// CI is "true". gitErr is the error of the git probe that found the history missing.
+func d2NeedsHistory(t *testing.T, gitErr error) {
+	t.Helper()
+	text := d2HistoryText(gitErr)
+	if os.Getenv("CI") == "true" {
+		t.Fatal(text)
+	}
+	t.Skip(text)
+}
+
+func TestD2HistoryTextKeepsTheArchiveReasonAndNamesTheGitError(t *testing.T) {
+	gitErr := errors.New("git -C /x cat-file -e abc: exit status 128 (stderr: fatal: not a git repository)")
+	got := d2HistoryText(gitErr)
+	const start = "needs the repository's git history (commit " + d2PrecedentCommit + " and origin/main), which this checkout does not have: a git archive or a shallow clone"
+	if !strings.HasPrefix(got, start) {
+		t.Errorf("d2HistoryText() = %q, want it to start with %q", got, start)
+	}
+	if !strings.Contains(got, gitErr.Error()) {
+		t.Errorf("d2HistoryText() = %q, want it to hold the git error %q", got, gitErr.Error())
+	}
+}
+
 // runGitReadOnly executes git with the given arguments and returns stdout. It
 // is the sole process-invocation point for this file's D2 anchor proof, so
-// the read-only contract (design.md Threat Matrix: only `log`, `show -s`) has
-// one place to audit. Test-only: production code in this package must never
+// the read-only contract (design.md Threat Matrix: only `log`, `show -s`,
+// `cat-file -e` and `rev-parse --verify`) has one place to audit. Test-only: production code in this package must never
 // shell out to git (ADR-15, TestZeroFetchImportAllowlist).
 func runGitReadOnly(args ...string) (string, error) {
 	cmd := exec.Command("git", args...)

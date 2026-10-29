@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "b9a262046b30110f5a800d58972132d10d788af3",
+    "head": "dc0107daffda09469bab03d19b15bf230915e649",
+    "diff_sha256": "e95125865f01d1845b8db2d8d40163fc8ad0a4f0ce200737a445dc7e734ef3f3",
+    "paths": [
+      "engine/jsonstrict/decode_object_test.go",
+      "engine/jsonstrict/jsonstrict.go",
+      "engine/memoryscope/memoryscope.go",
+      "engine/settings/document.go",
+      "engine/settings/parse_bom_test.go"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "b9a262046b30110f5a800d58972132d10d788af3",
+      "head": "dc0107daffda09469bab03d19b15bf230915e649",
+      "diff_sha256": "e95125865f01d1845b8db2d8d40163fc8ad0a4f0ce200737a445dc7e734ef3f3"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/jsonstrict/decode_object_test.go",
+        "engine/jsonstrict/jsonstrict.go",
+        "engine/memoryscope/memoryscope.go",
+        "engine/settings/document.go",
+        "engine/settings/parse_bom_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/settings/document.go:36-44",
+        "severity": "SUGGESTION",
+        "claim": "Parse now short-circuits a BOM-prefixed input with a hard-coded errors.New string, so the error is no longer a *json.SyntaxError and drops the offset. The go1.21 wording is still the observable text. In the repo, the only errors.As on a syntax error is in the new test, so I found no consumer that is affected. The doc comment is also one very long line (line 40). This is the only place that hard-codes the go1.21 text without a type check, so it will not follow if the pinned wording changes.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/settings/document.go:42-44",
+          "grep SyntaxError over engine/: no non-test errors.As consumer"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff.",
+      "Read engine/settings/document.go lines 1-70 at head.",
+      "Read engine/memoryscope/memoryscope.go lines 90-130 at head. jsonstrict is already imported and the encoding/json import was correctly removed.",
+      "Grepped engine/ for other json.Unmarshal into map[string]json.RawMessage. Other sites (hookwire, shaper, roles, workflow and others) are untouched, which is outside this diff's stated scope.",
+      "DecodeObject keeps a null result as a nil map with no error. CheckKnownFields still handles fields == nil on the next line, so behaviour is unchanged.",
+      "DecodeObject wraps only *json.UnmarshalTypeError and unwraps to the original. Syntax errors pass through unchanged.",
+      "Not run: tests, go build, and go1.21 versus go1.27 differential output."
+    ]
+  }
+}

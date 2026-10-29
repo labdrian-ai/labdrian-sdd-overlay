@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "dcfb3e3539c2c86b38f17e2ed1c8ee03d7776d77",
+    "head": "bd9c076ecd6c52453b9975ca55479cec680f9b6f",
+    "diff_sha256": "b6eaf5d5b3993ca5d7730d7790fba437b83fe252cc80a0b25ac86e648a528e2a",
+    "paths": [
+      "engine/settings/document.go",
+      "engine/skills/actuals_instrumentation_d2_anchor_test.go"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "dcfb3e3539c2c86b38f17e2ed1c8ee03d7776d77",
+      "head": "bd9c076ecd6c52453b9975ca55479cec680f9b6f",
+      "diff_sha256": "b6eaf5d5b3993ca5d7730d7790fba437b83fe252cc80a0b25ac86e648a528e2a"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/settings/document.go",
+        "engine/skills/actuals_instrumentation_d2_anchor_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/skills/actuals_instrumentation_d2_anchor_test.go:468-471",
+        "severity": "SUGGESTION",
+        "claim": "The reflowed runGitReadOnly doc comment leaves its second line much longer than the first and the lines around it, so the comment looks unwrapped. This is cosmetic. The commit's own aim was to wrap comments.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "diff lines 79-83"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff.",
+      "Confirmed the `strings` import already exists at line 9 of the test file.",
+      "Confirmed the `errors` import is added in the diff.",
+      "Confirmed all callers of d2NeedsHistory (two) pass the new gitErr argument, and the only other match is its definition.",
+      "The Parse comment change in document.go is a pure re-wrap with no code change.",
+      "The new test pins both the S16(b) prefix and the appended git error.",
+      "Risk: none holds. The changes are test-only, plus a comment.",
+      "I did not run any commands or tests."
+    ]
+  }
+}

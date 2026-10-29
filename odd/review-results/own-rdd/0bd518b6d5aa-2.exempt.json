@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f012779788b930ced4685644276d6e080a74dee3",
+    "head": "0bd518b6d5aaee00a2022cca95d1ab88d71cd235",
+    "diff_sha256": "612cdda95413b454fd04fa2c7a9f062981e53e02bad18b4fdcdd5b2624db3a2d",
+    "paths": [
+      "CHANGELOG.md",
+      "odd/tasks/own-rdd.md"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git -C /home/labdrian/labdrian-sdd-overlay diff --name-only f0127797 0bd518b6",
+        "result": "pass",
+        "output": "CHANGELOG.md\nodd/tasks/own-rdd.md"
+      },
+      {
+        "command": "git -C /home/labdrian/labdrian-sdd-overlay diff f0127797 0bd518b6 -- CHANGELOG.md (claims compared against engine/jsonstrict/jsonstrict.go and engine/settings/document.go at dc0107da, and engine/skills/actuals_instrumentation_d2_anchor_test.go at f0127797)",
+        "result": "pass",
+        "output": "The diff only adds a blank line, a '### Fixed' heading and two prose bullets, with no code. Claim 1 matches the code: DecodeObject (jsonstrict.go:111-118) rewords the *json.UnmarshalTypeError with go1.21 words and wraps the original; CheckKnownFields (jsonstrict.go:145) and memoryscope.ParseDirectiveMember (memoryscope.go:101) call it; settings.Parse (document.go:42-43) refuses a leading EF BB BF with go1.21 words. Claim 2 matches the code: the test checks for commit be2c3ca and origin/main first, skips with a named text, and fails with it when CI is true. Not run: the differential check claim, and the code under go1.27."
+      },
+      {
+        "command": "rg -c $'\\xEF\\xBB\\xBF' CHANGELOG.md (run in /home/labdrian/labdrian-sdd-overlay)",
+        "result": "pass",
+        "output": "No output, exit code 1 (no match): no literal byte order mark in CHANGELOG.md."
+      }
+    ]
+  }
+}

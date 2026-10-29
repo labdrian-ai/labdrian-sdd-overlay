@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "b9a262046b30110f5a800d58972132d10d788af3",
+    "head": "dc0107daffda09469bab03d19b15bf230915e649",
+    "diff_sha256": "e95125865f01d1845b8db2d8d40163fc8ad0a4f0ce200737a445dc7e734ef3f3",
+    "paths": [
+      "engine/jsonstrict/decode_object_test.go",
+      "engine/jsonstrict/jsonstrict.go",
+      "engine/memoryscope/memoryscope.go",
+      "engine/settings/document.go",
+      "engine/settings/parse_bom_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "b9a262046b30110f5a800d58972132d10d788af3",
+      "head": "dc0107daffda09469bab03d19b15bf230915e649",
+      "diff_sha256": "e95125865f01d1845b8db2d8d40163fc8ad0a4f0ce200737a445dc7e734ef3f3"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/jsonstrict/decode_object_test.go",
+        "engine/jsonstrict/jsonstrict.go",
+        "engine/memoryscope/memoryscope.go",
+        "engine/settings/document.go",
+        "engine/settings/parse_bom_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "I read the full diff. I did not run any tests or builds, so no check is reported as passing.",
+      "The new jsonstrict.DecodeObject wraps only *json.UnmarshalTypeError in objectTypeError. It reproduces the go1.21 wording \"json: cannot unmarshal <Value> into Go value of type map[string]json.RawMessage\" and unwraps to the original error. Syntax errors and all other errors pass through unchanged, and a null input still returns a nil map and a nil error. A map[string]json.RawMessage destination cannot raise a nested type error, because RawMessage accepts any value. Only a non-object top-level value can reach the wrapper.",
+      "Grep found no caller that type-asserts a bare *json.UnmarshalTypeError. The only match is engine/hookwire/guard_test.go:65, and it does not go through jsonstrict.",
+      "Callers of jsonstrict.CheckKnownFields: reviewverdict/wire.go, projection/binding.go, goal/goal.go, workflow/workflow.go, roles/handoff.go, reviewresult/wire.go, shaper (clearance.go, shaper.go, handoff_v2.go, handoff_v3.go) and memoryscope.go. They all return or wrap the error as text. The tests that pin the wording are memoryscope/member_test.go:41, goal/goal_v3_test.go:99 and engine/cmd/status_golden_test.go:45. All of them expect the go1.21 text that DecodeObject now produces.",
+      "Callers of memoryscope.ParseDirectiveMember: goal.go:80, shaper/handoff_v4.go:55 and workflow.go:384 and 395. Its only change is that it now calls jsonstrict.DecodeObject, which produces the same go1.21 error text. memoryscope.go already imported jsonstrict at line 78, so there is no new import dependency.",
+      "Callers of settings.Parse: settingsfile/file.go:85, reader.go:26, installer.go:67, the settings tests and status_test.go:144. Parse now short-circuits on an EF BB BF prefix with the go1.21 text \"invalid character 'ï' looking for beginning of value\". Data that starts with a BOM was already refused under go1.21, so only the wording on go1.27 changes and no accepted input changes. No caller strips a BOM first or inspects the error type.",
+      "The Risk line names item 3, contracts others consume. I found no reachable change to behavior or to the error types callers rely on."
+    ]
+  }
+}

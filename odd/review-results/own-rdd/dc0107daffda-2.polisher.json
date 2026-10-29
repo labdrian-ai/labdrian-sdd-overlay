@@ -1,0 +1,15 @@
+{
+  "kind": "polisher",
+  "base": "b9a262046b30110f5a800d58972132d10d788af3",
+  "head": "dc0107daffda09469bab03d19b15bf230915e649",
+  "diff_sha256": "e95125865f01d1845b8db2d8d40163fc8ad0a4f0ce200737a445dc7e734ef3f3",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "The diff file handed to the judge held only null; the judge read engine/jsonstrict/jsonstrict.go and engine/settings/document.go at head instead and ran no tests.",
+      "DecodeObject wraps only *json.UnmarshalTypeError in objectTypeError with go1.21 wording and Unwrap returns the cause, so errors.As still works; syntax errors pass through.",
+      "settings.Parse returns go1.21 text for a leading EF BB BF; no consumer does errors.As on *json.SyntaxError after settings.Parse.",
+      "Not reportable: whitespace before a BOM falls through to the toolchain wording; still a refusal."
+    ]
+  }
+}
