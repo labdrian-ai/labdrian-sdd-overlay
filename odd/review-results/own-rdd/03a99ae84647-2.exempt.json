@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "9652e498005cf2a81a42d620da9bcbc5452cac89",
+    "head": "03a99ae8464791282d28a2e7e88ecec84db7f62b",
+    "diff_sha256": "e54525a5de3a561adeac2f04fc1bd421d9ba3c7b3144f84a471b7d2cec6cdd88",
+    "paths": [
+      "engine/workflow/app/open.go"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git diff --name-only 9652e498 03a99ae8",
+        "result": "pass",
+        "output": "engine/workflow/app/open.go"
+      },
+      {
+        "command": "git diff 9652e498 03a99ae8",
+        "result": "pass",
+        "output": "Only change in engine/workflow/app/open.go: removed the \"errors\" import and deleted the func IsRefusal with its doc comment. Nothing else changed."
+      },
+      {
+        "command": "git grep -n IsRefusal 03a99ae8 -- engine",
+        "result": "pass",
+        "output": "No match; exit=1"
+      },
+      {
+        "command": "git archive 03a99ae8 engine identity into a mktemp -d copy; cd engine; go vet ./workflow/... ./cmd/... && go build ./...",
+        "result": "pass",
+        "output": "exit=0, no vet or build output"
+      }
+    ]
+  }
+}
