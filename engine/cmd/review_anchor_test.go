@@ -272,3 +272,41 @@ func TestUsageReadmeAndWrapperDocumentReviewAnchor(t *testing.T) {
 		}
 	}
 }
+
+// The CI job runs the verb on the merge GitHub prepares and on a push to main, and nowhere else (own-rdd T7b, S7 a, h):
+// the job is the one block below, after the job of the archive gate and before the next job.
+func TestCIJobRunsReviewAnchorOnPullRequestsAndMain(t *testing.T) {
+	raw, err := os.ReadFile("../../.github/workflows/ci.yml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	const job = `  review-anchor:
+    name: Merge Lands A Reviewed Tree
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # The merge base and the chain of reviews read the whole history.
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: engine/go.mod
+
+      - name: The merge lands a reviewed tree
+        working-directory: engine
+        run: go run ./cmd/ review anchor --merge HEAD
+
+`
+	text := string(raw)
+	if !strings.Contains(text, "\n"+job+"  test-archive-reconcile:") {
+		t.Errorf("ci.yml lacks the job review-anchor as S7 (a) gives it, between test-archive-anchor-gate and test-archive-reconcile")
+	}
+	if strings.Index(text, "\n  test-archive-anchor-gate:") > strings.Index(text, "\n  review-anchor:") {
+		t.Errorf("ci.yml puts the job review-anchor before the job test-archive-anchor-gate")
+	}
+}

@@ -304,6 +304,27 @@ jobs:
             --repo "$PWD" \
             --known-gaps known-gaps.txt
 
+  review-anchor:
+    name: Merge Lands A Reviewed Tree
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # The merge base and the chain of reviews read the whole history.
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: engine/go.mod
+
+      - name: The merge lands a reviewed tree
+        working-directory: engine
+        run: go run ./cmd/ review anchor --merge HEAD
+
   test-archive-reconcile:
     name: Archive Reconcile Guard
     runs-on: ubuntu-latest
