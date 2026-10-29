@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "1a6ac8896e681bf94669e5ad529fc8ec7b50e5f8",
+    "head": "f94f17dddaac9aeacbf2af8f691b262405feac8b",
+    "diff_sha256": "8c244c44eee57f0b59a2885aa9eadde2c81c863c07fe65eb8df0ca6ba0e12740",
+    "paths": [
+      "odd/review-results/own-rdd/0fc8959ca529-1.exempt.json",
+      "odd/review-results/own-rdd/1a6ac8896e68-1.exempt.json",
+      "odd/review-results/own-rdd/2a6337dec02e-1.json",
+      "odd/review-results/own-rdd/2a6337dec02e-1.verifier.json",
+      "odd/review-results/own-rdd/2a6337dec02e-2.json",
+      "odd/review-results/own-rdd/319fd855365f-1.json",
+      "odd/review-results/own-rdd/46d6347782c8-1.exempt.json",
+      "odd/review-results/own-rdd/5196723465e7-1.exempt.json",
+      "odd/review-results/own-rdd/6d542b2953b4-1.json",
+      "odd/review-results/own-rdd/6d542b2953b4-2.json",
+      "odd/tasks/own-rdd.md"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git diff --check f94f17dd~1 f94f17dd",
+        "result": "pass",
+        "output": "exit=0"
+      }
+    ]
+  }
+}

@@ -38,8 +38,18 @@ var fakeRepo = app.Repository{Root: "/work/wt/feature", Main: "/work/main", Comm
 type fakeGit struct {
 	diff          []byte
 	paths         []string
-	parents       map[string]string // the first parent of a commit; none for a commit that is not a key
-	standing      app.Standing      // what Standing answers
+	pathsOf       map[string][]string         // the paths Paths answers for a head that is a key, instead of paths
+	parents       map[string]string           // the first parent of a commit; none for a commit that is not a key
+	standing      app.Standing                // what Standing answers
+	messages      map[string]string           // the raw message of a commit; "" for a commit that is not a key
+	trailers      map[string][]review.Trailer // the trailers of a message; none for a message that is not a key
+	deleted       []string                    // what DeletedOrRenamed answers
+	removedLines  []review.ChangedLines       // what ChangedLines answers first
+	addedLines    []review.ChangedLines       // what ChangedLines answers second
+	modules       []string                    // what Modules answers
+	mentions      map[string][]string         // the paths that mention a name; none for a name that is not a key
+	notCommit     map[string]bool             // the object names IsCommit says are not a commit; every other one is
+	status        []string                    // what Status answers
 	worktree      app.WorktreeState
 	worktreeLater []worktreeAnswer
 	fail          map[string]error
@@ -53,7 +63,19 @@ type worktreeAnswer struct {
 }
 
 func newFakeGit() *fakeGit {
-	return &fakeGit{diff: []byte(diffText), paths: changedPaths, parents: map[string]string{headSHA: baseSHA}, fail: map[string]error{}}
+	g := &fakeGit{
+		diff: []byte(diffText), paths: changedPaths, parents: map[string]string{headSHA: baseSHA}, fail: map[string]error{},
+		messages: map[string]string{}, trailers: map[string][]review.Trailer{},
+	}
+	g.declares(headSHA, "none") // the head carries the trailer `review exempt` and `review check` ask of a commit
+	return g
+}
+
+// declares makes the message of commit end with the trailer "Risk: value", as git would parse it.
+func (g *fakeGit) declares(commit, value string) {
+	message := "subject of " + commit[:7] + "\n\nRisk: " + value
+	g.messages[commit] = message
+	g.trailers[message] = []review.Trailer{{Key: "Risk", Value: value}}
 }
 
 func (g *fakeGit) record(call string) { g.calls = append(g.calls, call) }
@@ -100,6 +122,8 @@ func (g *fakeGit) Commit(repo app.Repository, rev string) (string, error) {
 		return headSHA, nil
 	case otherSHA:
 		return otherSHA, nil
+	case thirdSHA:
+		return thirdSHA, nil
 	}
 	return "", fmt.Errorf("fakeGit: unknown revision %q", rev)
 }
@@ -124,6 +148,9 @@ func (g *fakeGit) Paths(repo app.Repository, base, head string) ([]string, error
 	g.record("Paths " + base + " " + head)
 	if err := g.fail["Paths"]; err != nil {
 		return nil, err
+	}
+	if own, ok := g.pathsOf[head]; ok {
+		return own, nil
 	}
 	return g.paths, nil
 }
@@ -150,6 +177,138 @@ func (g *fakeGit) Standing(repo app.Repository) (app.Standing, error) {
 		return app.Standing{}, err
 	}
 	return g.standing, nil
+}
+
+func (g *fakeGit) Message(repo app.Repository, commit string) (string, error) {
+	g.record("Message " + commit)
+	if err := g.fail["Message"]; err != nil {
+		return "", err
+	}
+	return g.messages[commit], nil
+}
+
+func (g *fakeGit) Trailers(repo app.Repository, message string) ([]review.Trailer, error) {
+	g.record("Trailers")
+	if err := g.fail["Trailers"]; err != nil {
+		return nil, err
+	}
+	return g.trailers[message], nil
+}
+
+func (g *fakeGit) DeletedOrRenamed(repo app.Repository, base, head string) ([]string, error) {
+	g.record("DeletedOrRenamed " + base + " " + head)
+	if err := g.fail["DeletedOrRenamed"]; err != nil {
+		return nil, err
+	}
+	return g.deleted, nil
+}
+
+func (g *fakeGit) ChangedLines(repo app.Repository, base, head string) ([]review.ChangedLines, []review.ChangedLines, error) {
+	g.record("ChangedLines " + base + " " + head)
+	if err := g.fail["ChangedLines"]; err != nil {
+		return nil, nil, err
+	}
+	return g.removedLines, g.addedLines, nil
+}
+
+func (g *fakeGit) Modules(repo app.Repository, commit string) ([]string, error) {
+	g.record("Modules " + commit)
+	if err := g.fail["Modules"]; err != nil {
+		return nil, err
+	}
+	return g.modules, nil
+}
+
+func (g *fakeGit) Mentions(repo app.Repository, commit string, names []string) (map[string][]string, error) {
+	g.record("Mentions " + commit + " " + strings.Join(names, ","))
+	if err := g.fail["Mentions"]; err != nil {
+		return nil, err
+	}
+	found := map[string][]string{}
+	for _, name := range names {
+		if paths := g.mentions[name]; len(paths) > 0 {
+			found[name] = paths
+		}
+	}
+	return found, nil
+}
+
+func (g *fakeGit) IsCommit(repo app.Repository, name string) (bool, error) {
+	g.record("IsCommit " + name)
+	if err := g.fail["IsCommit"]; err != nil {
+		return false, err
+	}
+	return !g.notCommit[name], nil
+}
+
+func (g *fakeGit) Status(repo app.Repository) ([]string, error) {
+	g.record("Status")
+	if err := g.fail["Status"]; err != nil {
+		return nil, err
+	}
+	return g.status, nil
+}
+
+func (g *fakeGit) Archive(repo app.Repository, commit, dir string) error {
+	g.record("Archive " + commit + " " + dir)
+	return g.fail["Archive"]
+}
+
+// fakeAnalyzers is the Analyzers port with canned output. Every call is recorded as "Tool root module args"; the
+// output of a call is out[call], and a call named in fail returns that error.
+type fakeAnalyzers struct {
+	out   map[string][]string
+	fail  map[string]error
+	calls []string
+}
+
+func newFakeAnalyzers() *fakeAnalyzers {
+	return &fakeAnalyzers{out: map[string][]string{}, fail: map[string]error{}}
+}
+
+func (a *fakeAnalyzers) answer(tool, call string) ([]string, error) {
+	a.calls = append(a.calls, call)
+	if err := a.fail[tool]; err != nil {
+		return nil, err
+	}
+	return a.out[call], nil
+}
+
+func (a *fakeAnalyzers) Deadcode(root, module string) ([]string, error) {
+	return a.answer("Deadcode", "Deadcode "+root+" "+module)
+}
+
+func (a *fakeAnalyzers) Staticcheck(root, module string, packages []string) ([]string, error) {
+	return a.answer("Staticcheck", "Staticcheck "+root+" "+module+" "+strings.Join(packages, ","))
+}
+
+func (a *fakeAnalyzers) Shellcheck(root string, files []string) ([]string, error) {
+	return a.answer("Shellcheck", "Shellcheck "+root+" "+strings.Join(files, ","))
+}
+
+// fakeCopies is the Copies port: the lock of the sweep and the two directories the copies are made in, which are
+// /state/base and /state/head.
+type fakeCopies struct {
+	fail  map[string]error
+	calls []string
+}
+
+func newFakeCopies() *fakeCopies { return &fakeCopies{fail: map[string]error{}} }
+
+func (c *fakeCopies) Lock(repo app.Repository) (func(), error) {
+	c.calls = append(c.calls, "Lock "+repo.Main)
+	if err := c.fail["Lock"]; err != nil {
+		return nil, err
+	}
+	return func() { c.calls = append(c.calls, "Unlock") }, nil
+}
+
+func (c *fakeCopies) Reset(repo app.Repository, side string) (string, error) {
+	c.calls = append(c.calls, "Reset "+side)
+	if err := c.fail["Reset"]; err != nil {
+		return "", err
+	}
+	return "/state/" + side, nil
 }
 
 // fakeResults is the Results port over a map: the names of a feature's directory and what was created.
@@ -227,6 +386,9 @@ func (r *fakeResults) Features(root string) (app.Features, error) {
 func (r *fakeResults) Read(root, feature, name string) ([]byte, error) {
 	r.calls = append(r.calls, "Read "+root+" "+feature+" "+name)
 	if err := r.fail["Read"]; err != nil {
+		return nil, err
+	}
+	if err := r.fail["Read "+name]; err != nil { // one file that cannot be read
 		return nil, err
 	}
 	data, stored := r.files[feature][name]
@@ -312,6 +474,27 @@ func storedWithoutRows(t *testing.T, c review.Candidate) []byte {
 		t.Fatalf("setup: %v", err)
 	}
 	return out
+}
+
+// sweptFor stores a sweep record of the commits from base to head, number n, in a feature, with the given T3 findings
+// (none for a clean sweep), and returns its name.
+func sweptFor(t *testing.T, store *fakeResults, feature, base, head string, n int, t3 ...string) string {
+	t.Helper()
+	c := candidateFor(t, base, head)
+	file, err := review.EncodeSweep(c, review.SweepFindings{T3: t3})
+	if err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+	name := review.SweepName(c, n)
+	store.put(feature, name, file)
+	return name
+}
+
+// sweptBranch stores a clean sweep record of each commit of the branch of branchWorld, in the feature own-rdd.
+func sweptBranch(t *testing.T, store *fakeResults) {
+	t.Helper()
+	sweptFor(t, store, "own-rdd", baseSHA, headSHA, 1)
+	sweptFor(t, store, "own-rdd", headSHA, otherSHA, 1)
 }
 
 // sha256Of is the SHA-256 of data, written without the code under test.

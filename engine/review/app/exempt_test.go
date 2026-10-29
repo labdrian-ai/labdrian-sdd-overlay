@@ -66,8 +66,8 @@ func TestExemptStoresTheExemptionWithTheBindingTheRiskAndTheReport(t *testing.T)
 }
 
 // The binding is computed from git exactly as `review record` computes it: the same calls, in the same order, and
-// no other way to get a diff. The one question more is the first parent of the head, because an exemption is for one
-// commit (own-rdd T4, L21).
+// no other way to get a diff. The questions more are the first parent of the head, because an exemption is for one
+// commit (own-rdd T4, L21), and then its message and trailers, because it declares its risk (own-rdd T6b5, S6 f).
 func TestExemptComputesTheBindingFromGitAsRecordDoes(t *testing.T) {
 	gExempt, storeExempt := newFakeGit(), newFakeResults()
 	if _, err := app.New(gExempt, storeExempt).Exempt("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", "none", []byte(exemptReport)); err != nil {
@@ -78,8 +78,54 @@ func TestExemptComputesTheBindingFromGitAsRecordDoes(t *testing.T) {
 		t.Fatalf("setup: Record() error = %v", err)
 	}
 
-	if want := append(append([]string(nil), gRecord.calls...), "Parent "+headSHA); !reflect.DeepEqual(gExempt.calls, want) {
-		t.Errorf("Exempt asked git %q, Record asked %q; want the same questions in the same order and then the parent of the head", gExempt.calls, gRecord.calls)
+	if want := append(append([]string(nil), gRecord.calls...), "Parent "+headSHA, "Message "+headSHA, "Trailers"); !reflect.DeepEqual(gExempt.calls, want) {
+		t.Errorf("Exempt asked git %q, Record asked %q; want the same questions in the same order and then the parent, the message and the trailers of the head", gExempt.calls, gRecord.calls)
+	}
+}
+
+// An exemption is for a commit that declares no risk: a trailer that fails and one that names an item are refused as a
+// --risk that names an item is, with a plain error and nothing stored, and only after the range is known to be one
+// commit (own-rdd T6b5, S6 f, D8).
+func TestExemptRefusesAHeadWhoseTrailerFailsOrNamesAnItemAndStoresNothing(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		setup func(g *fakeGit)
+		want  error
+		text  string
+	}{
+		{"no trailer", func(g *fakeGit) { g.messages, g.trailers = map[string]string{}, map[string][]review.Trailer{} }, review.ErrRiskTrailer,
+			`commit ` + headSHA + `: it has no "Risk:" trailer in the final trailer block of its message`},
+		{"a trailer outside the grammar", func(g *fakeGit) { g.declares(headSHA, "none,3") }, review.ErrRiskTrailer, `its "Risk:" trailer "none,3" is not`},
+		{"a trailer that names an item", func(g *fakeGit) { g.declares(headSHA, "3,5") }, review.ErrHighRisk,
+			"commit " + headSHA + ": " + review.CheckRisk("3,5").Error()},
+		{"a message git cannot read", func(g *fakeGit) { g.fail["Message"] = errors.New("boom") }, nil, "read the message of " + headSHA},
+		{"trailers git cannot parse", func(g *fakeGit) { g.fail["Trailers"] = errors.New("boom") }, nil, "read the trailers of " + headSHA},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			g, store := newFakeGit(), newFakeResults()
+			tc.setup(g)
+
+			_, err := app.New(g, store).Exempt("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", "none", []byte(exemptReport))
+
+			var refused *app.ReplyRefusedError
+			if err == nil || errors.As(err, &refused) || (tc.want != nil && !errors.Is(err, tc.want)) || !strings.Contains(err.Error(), tc.text) || store.created() != 0 {
+				t.Errorf("Exempt() error = %v with %d files created; want a plain error that says %q and nothing stored", err, store.created(), tc.text)
+			}
+		})
+	}
+}
+
+// The trailer is asked after the range is held to one commit and before anything is stored, so a range of several commits
+// is refused for that, whatever the trailer says.
+func TestExemptHoldsTheRangeToOneCommitBeforeAskingForTheTrailer(t *testing.T) {
+	g, store := newFakeGit(), newFakeResults()
+	g.parents[headSHA] = otherSHA
+	g.declares(headSHA, "3")
+
+	_, err := app.New(g, store).Exempt("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", "none", []byte(exemptReport))
+
+	if !errors.Is(err, review.ErrNotOneCommit) || g.called("Message") != 0 || store.created() != 0 {
+		t.Errorf("Exempt() error = %v with %d message reads; want ErrNotOneCommit before the trailer is read", err, g.called("Message"))
 	}
 }
 

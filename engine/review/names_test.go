@@ -3,6 +3,7 @@ package review_test
 import (
 	"errors"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -155,5 +156,114 @@ func TestWorktreePathIsInTheWorktreesDirectoryBesideTheMainCheckout(t *testing.T
 	other := filepath.FromSlash("/tmp/x/repo")
 	if got, want := review.WorktreePath(other, c), filepath.FromSlash("/tmp/x/repo-worktrees/review-222222222222"); got != want {
 		t.Errorf("WorktreePath(%q) = %q, want %q", other, got, want)
+	}
+}
+
+// The sweep, the sweeper and the polisher store a record per head beside the results (own-rdd T6b2, S6 c): the
+// ending is the only thing that tells the kinds of file apart, and each ending is one the others do not end in.
+func TestRoleRecordNamesAreTheHeadTheNumberAndTheEnding(t *testing.T) {
+	c := candidate(t)
+	for _, tc := range []struct{ kind, got, want string }{
+		{"sweep", review.SweepName(c, 3), "222222222222-3.sweep.json"},
+		{"sweeper", review.SweeperName(c, 3), "222222222222-3.sweeper.json"},
+		{"polisher", review.PolisherName(c, 12), "222222222222-12.polisher.json"},
+	} {
+		if tc.got != tc.want {
+			t.Errorf("%sName = %q, want %q", tc.kind, tc.got, tc.want)
+		}
+	}
+}
+
+func TestEachRoleRecordCheckAcceptsItsOwnNameOnly(t *testing.T) {
+	names := map[string]string{
+		"sweep":    "222222222222-1.sweep.json",
+		"sweeper":  "222222222222-1.sweeper.json",
+		"polisher": "222222222222-1.polisher.json",
+	}
+	checks := map[string]func(string) error{
+		"sweep": review.CheckSweepName, "sweeper": review.CheckSweeperName, "polisher": review.CheckPolisherName,
+	}
+	errs := map[string]error{
+		"sweep": review.ErrInvalidSweepName, "sweeper": review.ErrInvalidSweeperName, "polisher": review.ErrInvalidPolisherName,
+	}
+	for kind, check := range checks {
+		for other, name := range names {
+			err := check(name)
+			if kind == other {
+				if err != nil {
+					t.Errorf("Check%sName(%q) error = %v, want nil", kind, name, err)
+				}
+				continue
+			}
+			if !errors.Is(err, errs[kind]) {
+				t.Errorf("Check%sName(%q) error = %v, want one that is %v", kind, name, err, errs[kind])
+			}
+		}
+		for _, bad := range []string{"222222222222-1.json", "222222222222-1.exempt.json", "222222222222-01." + kind + ".json", "22222222222-1." + kind + ".json", "dir/222222222222-1." + kind + ".json"} {
+			if err := check(bad); !errors.Is(err, errs[kind]) {
+				t.Errorf("Check%sName(%q) error = %v, want one that is %v", kind, bad, err, errs[kind])
+			}
+		}
+	}
+}
+
+func TestRoleRecordsOfAHeadAreThoseOfThatHeadByLaunchNumber(t *testing.T) {
+	names := []string{
+		"222222222222-10.sweep.json", "222222222222-2.sweep.json", "111111111111-1.sweep.json", "222222222222-1.json",
+		"222222222222-3.sweeper.json", "222222222222-1.sweeper.json", "222222222222-01.sweeper.json",
+		"222222222222-2.polisher.json", "222222222222-1.polisher.json", "222222222222-1.polisher.json.tmp",
+	}
+	for _, tc := range []struct {
+		kind      string
+		got, want []string
+	}{
+		{"sweeps", review.SweepsOfHead(names, headSHA), []string{"222222222222-2.sweep.json", "222222222222-10.sweep.json"}},
+		{"sweepers", review.SweepersOfHead(names, headSHA), []string{"222222222222-1.sweeper.json", "222222222222-3.sweeper.json"}},
+		{"polishers", review.PolishersOfHead(names, headSHA), []string{"222222222222-1.polisher.json", "222222222222-2.polisher.json"}},
+	} {
+		if !slices.Equal(tc.got, tc.want) {
+			t.Errorf("%sOfHead = %q, want %q", tc.kind, tc.got, tc.want)
+		}
+	}
+}
+
+// The numbers are shared: a head with a result, a verdict, an exemption, a sweep, a sweeper and a polisher record
+// takes the next number after the highest of them, so no record is given a number another one holds.
+func TestNextNumberCountsTheRoleRecords(t *testing.T) {
+	c := candidate(t)
+	for _, tc := range []struct {
+		name  string
+		names []string
+		want  int
+	}{
+		{"a sweep", []string{"222222222222-4.sweep.json"}, 5},
+		{"a sweeper", []string{"222222222222-6.sweeper.json"}, 7},
+		{"a polisher", []string{"222222222222-8.polisher.json"}, 9},
+		{"every kind", []string{"222222222222-1.json", "222222222222-2.verifier.json", "222222222222-3.exempt.json", "222222222222-4.sweep.json", "222222222222-5.sweeper.json", "222222222222-6.polisher.json"}, 7},
+		{"another head's records", []string{"333333333333-9.sweep.json"}, 1},
+	} {
+		if got := review.NextNumber(tc.names, c); got != tc.want {
+			t.Errorf("%s: NextNumber(%q) = %d, want %d", tc.name, tc.names, got, tc.want)
+		}
+	}
+}
+
+// What a role record is not: a result. The existing readers of results and exemptions keep reading only their own.
+func TestResultReadersNeverTakeARoleRecordForAResult(t *testing.T) {
+	records := []string{"222222222222-1.sweep.json", "222222222222-1.sweeper.json", "222222222222-1.polisher.json"}
+	for _, name := range records {
+		if err := review.CheckResultName(name); !errors.Is(err, review.ErrInvalidResultName) {
+			t.Errorf("CheckResultName(%q) error = %v, want one that is %v", name, err, review.ErrInvalidResultName)
+		}
+		if err := review.CheckExemptionName(name); !errors.Is(err, review.ErrInvalidExemptionName) {
+			t.Errorf("CheckExemptionName(%q) error = %v, want one that is %v", name, err, review.ErrInvalidExemptionName)
+		}
+	}
+	names := append([]string{"222222222222-1.json", "222222222222-2.exempt.json"}, records...)
+	if got, want := review.ResultsOfHead(names, headSHA), []string{"222222222222-1.json"}; !slices.Equal(got, want) {
+		t.Errorf("ResultsOfHead = %q, want %q", got, want)
+	}
+	if got, want := review.ExemptionsOfHead(names, headSHA), []string{"222222222222-2.exempt.json"}; !slices.Equal(got, want) {
+		t.Errorf("ExemptionsOfHead = %q, want %q", got, want)
 	}
 }

@@ -11,8 +11,9 @@ package main
 // report of the verifier (stdin) and the risk the agent declares. 'review check --feature <name> [--head <rev>]
 // [--base <rev>] [--cwd <repo>]' is the check of the delivery: it recomputes the candidate of the head from git and
 // refuses unless the results stored for it still hold and clear it, or an exemption stored for it still holds and no
-// result blocks it; with --base it asks that of every commit of the chain of reviews from the base to the head. The
-// rules are the use cases of review/app over the adapters review/gitexec (git) and review/fsstore
+// result blocks it; with --base it asks that of every commit of the chain of reviews from the base to the head. 'review
+// sweep' and 'review record --role sweeper|polisher' are the verbs of the roles that come after the builder
+// (review_sweep.go). The rules are the use cases of review/app over the adapters review/gitexec (git) and review/fsstore
 // (the results directory); this file parses the command line, wires them and says what they did. No verb launches
 // an agent or dispatches work: a reply is a file somebody else produced. 'review stop-hook' is the odd one out: the
 // Claude Code Stop hook that blocks the stop of an agent whose branch has a commit no review covers, which Claude Code
@@ -43,16 +44,17 @@ import (
 // and the verb reports it as a git that could not answer instead of hanging.
 const reviewGitTimeout = 5 * time.Minute
 
-// reviewGitMaxOutput bounds what the program holds of one stream of one git call. The only large answer is
-// the diff of a candidate, and a candidate whose diff does not fit is not one a reviewer reads; 256 MiB stops a
-// runaway before it fills memory.
+// reviewGitMaxOutput bounds what the program holds of one stream of one git call. Two answers are large: the diff of
+// a candidate, and the blobs of a tree that `review sweep` copies in one `git cat-file --batch`. A candidate whose
+// diff does not fit is not one a reviewer reads; a tree whose blobs do not fit is refused by the sweep (exit 2) with
+// nothing written; 256 MiB stops a runaway before it fills memory.
 const reviewGitMaxOutput = 256 << 20
 
 // runReview implements the 'review <verb>' subcommand. Every exit is followed by a return, because tests hand
 // in an exit that ends nothing.
 func runReview(p process, d deps, args []string) {
 	if len(args) == 0 {
-		fmt.Fprintln(p.stderr, "error: review requires a verb: bind, record, verify, check, exempt")
+		fmt.Fprintln(p.stderr, "error: review requires a verb: bind, record, verify, check, exempt, sweep")
 		p.exit(1)
 		return
 	}
@@ -67,10 +69,12 @@ func runReview(p process, d deps, args []string) {
 		runReviewCheck(p, d, args[1:])
 	case "exempt":
 		runReviewExempt(p, d, args[1:])
+	case "sweep":
+		runReviewSweep(p, d, args[1:])
 	case reviewStopVerb:
 		runReviewStopHook(p, d, args[1:])
 	default:
-		fmt.Fprintf(p.stderr, "error: review: unknown verb %q (expected bind, record, verify, check or exempt)\n", args[0])
+		fmt.Fprintf(p.stderr, "error: review: unknown verb %q (expected bind, record, verify, check, exempt or sweep)\n", args[0])
 		p.exit(1)
 	}
 }
@@ -102,7 +106,7 @@ func reviewServiceOver(git reviewapp.Git, results reviewapp.Results) reviewapp.S
 
 // reviewFlags are the parsed flags of the review verbs. A verb takes some of them.
 type reviewFlags struct {
-	base, head, feature, result, stored, verdicts, risk, rows, cwd string
+	base, head, feature, result, stored, verdicts, risk, rows, role, cwd string
 	// given says which flags the command line gave, with whatever value, an empty one included. A flag that is
 	// optional and has a default tells an empty value that was given from one that was not.
 	given map[string]bool
@@ -148,6 +152,8 @@ func parseReviewFlags(args []string, takes ...string) (reviewFlags, error) {
 			f.risk = args[i]
 		case "--rows":
 			f.rows = args[i]
+		case "--role":
+			f.role = args[i]
 		case "--cwd":
 			f.cwd = args[i]
 		}
@@ -246,17 +252,28 @@ func runReviewBind(p process, d deps, args []string) {
 	p.exit(0)
 }
 
-// runReviewRecord implements 'review record --feature --base --head --rows [--result] [--cwd]'. A reply that is
-// refused is exit 2 and nothing is written; any other failure, rows that are not rows of the canonical file
-// included, is exit 1.
+// runReviewRecord implements 'review record [--role reviewer|sweeper|polisher] --feature --base --head [--rows]
+// [--result] [--cwd]'. The reviewer, the default, takes --rows and is what the verb always was; the sweeper and the
+// polisher take none (recordRole, review_sweep.go). A reply that is refused is exit 2 and nothing is written; any
+// other failure, rows that are not rows of the canonical file included, is exit 1.
 func runReviewRecord(p process, d deps, args []string) {
 	fail := func(err error) { reviewFailed(p, "record", err) }
-	f, err := parseReviewFlags(args, "--feature", "--base", "--head", "--rows", "--result", "--cwd")
+	f, err := parseReviewFlags(args, "--feature", "--base", "--head", "--rows", "--result", "--role", "--cwd")
 	if err == nil {
-		err = f.require("--feature", "--base", "--head", "--rows")
+		err = checkRecordRole(f)
+	}
+	if err == nil {
+		err = f.require("--feature", "--base", "--head")
+	}
+	if err == nil && recordsAs(f, roleReviewer) {
+		err = f.require("--rows")
 	}
 	if err != nil {
 		fail(err)
+		return
+	}
+	if !recordsAs(f, roleReviewer) {
+		runReviewRecordRole(p, d, f)
 		return
 	}
 	dir, err := reviewPath(d, f.cwd)

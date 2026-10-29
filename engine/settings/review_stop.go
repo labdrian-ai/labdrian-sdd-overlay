@@ -3,8 +3,9 @@ package settings
 import "fmt"
 
 // The review stop-hook family: the one Stop entry that runs the engine's 'review stop-hook', which blocks the stop of an
-// agent whose branch has a commit that no review covers, once for each session and commit, and names the command that
-// binds the next one (own-rdd T6a, S6, L18; see engine/cmd/review_stop_hook.go for the contract with Claude Code).
+// agent whose branch has a commit that misses anything 'review check' asks of it, once for each session, commit and
+// thing it misses, and names the command for each (own-rdd T6a, T6b6, S6, L18; see engine/cmd/review_stop_hook.go for
+// the contract with Claude Code).
 //
 // The family is owned, repaired, and removed as a unit by hookFamily, the same implementation the projection and approve
 // guard families use: the binary path plus one identity token tell its entry from foreign ones, install replaces a

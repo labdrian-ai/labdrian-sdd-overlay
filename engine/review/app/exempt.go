@@ -69,6 +69,9 @@ func (s Service) Exempt(dir, feature, base, head, risk string, report []byte) (E
 	if err := s.oneCommit(repo, candidate.Base, candidate.Head); err != nil {
 		return Exemption{}, err
 	}
+	if err := s.declaresNoRisk(repo, candidate.Head); err != nil {
+		return Exemption{}, err
+	}
 	file, err := review.EncodeExemption(candidate, risk, report)
 	if err != nil {
 		return Exemption{}, err
@@ -83,6 +86,30 @@ func (s Service) Exempt(dir, feature, base, head, risk string, report []byte) (E
 	}
 	path, sum := review.ResultPath(feature, name), sha256hex.Sum(file)
 	return Exemption{Candidate: candidate, Path: path, Number: number, SHA256: sum, Handoff: review.ExemptionHandoff(candidate, path, sum), NotFlushed: notFlushed}, nil
+}
+
+// declaresNoRisk holds the commit an exemption is for, a full object name, to the risk it declares in its Risk trailer
+// (own-rdd T6b5, S6 f): a trailer that fails is refused with the error of review.DeclaredRisk, which wraps
+// review.ErrRiskTrailer, and one that names an item with `commit <sha>: ` then the error review.CheckRisk gives for its
+// value, which wraps review.ErrHighRisk. Both are plain errors, as a --risk that names an item is. A commit declares
+// the risk of its own work, not the verifier's report, which is the only input exit 2 refuses.
+func (s Service) declaresNoRisk(repo Repository, commit string) error {
+	message, err := s.git.Message(repo, commit)
+	if err != nil {
+		return fmt.Errorf("read the message of %s: %w", commit, err)
+	}
+	trailers, err := s.git.Trailers(repo, message)
+	if err != nil {
+		return fmt.Errorf("read the trailers of %s: %w", commit, err)
+	}
+	items, err := review.DeclaredRisk(commit, message, trailers)
+	if err != nil {
+		return err
+	}
+	if len(items) > 0 {
+		return fmt.Errorf("commit %s: %w", commit, review.CheckRisk(review.RiskValue(items)))
+	}
+	return nil
 }
 
 // oneCommit holds the range of an exemption, base and head full names, to the one commit it is for: git is asked for

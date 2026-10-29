@@ -23,9 +23,28 @@ func branchWorld() (*fakeGit, *fakeResults) {
 	g, store := newFakeGit(), newFakeResults()
 	g.standing = app.Standing{Branch: "feat/x", Default: "main", Commits: []string{headSHA, otherSHA}}
 	g.parents = map[string]string{headSHA: baseSHA, otherSHA: headSHA}
+	g.declares(otherSHA, "none")
 	store.tasks = true
 	return g, store
 }
+
+// sweptWorld is branchWorld with a clean sweep record of each of its commits, in the feature own-rdd: a branch whose
+// commits lack nothing but a review.
+func sweptWorld(t *testing.T) (*fakeGit, *fakeResults) {
+	t.Helper()
+	g, store := branchWorld()
+	sweptBranch(t, store)
+	return g, store
+}
+
+// same says got asks for the commit that want names: the branch, the base and the head. What the commit lacks is told
+// apart in the tests that care for it.
+func same(got, want app.Question) bool {
+	return got.Branch == want.Branch && got.Base == want.Base && got.Head == want.Head
+}
+
+// nothing says got is no question.
+func nothing(got app.Question) bool { return reflect.DeepEqual(got, app.Question{}) }
 
 // A branch no review covers is asked for from its first commit, with the commit the branch was made on as the base.
 func TestNextUnreviewedAsksForTheFirstCommitOfABranchNoReviewCovers(t *testing.T) {
@@ -34,10 +53,17 @@ func TestNextUnreviewedAsksForTheFirstCommitOfABranchNoReviewCovers(t *testing.T
 	got, ask, err := app.New(g, store).NextUnreviewed(evidenceDir)
 
 	want := app.Question{Branch: "feat/x", Base: baseSHA, Head: headSHA}
-	if err != nil || !ask || got != want {
+	if err != nil || !ask || !same(got, want) {
 		t.Fatalf("NextUnreviewed() = %+v, %v, %v; want %+v, true and no error", got, ask, err, want)
 	}
-	if wantGit := []string{"Locate " + evidenceDir, "Standing", "Parent " + headSHA}; !reflect.DeepEqual(g.calls, wantGit) {
+	// The walk of S6 (e), pinned in L66: Locate, Standing, the Parent of the first commit (the base of the chain), then the
+	// git facts of each commit of the branch, oldest first (Parent, Message, Trailers and, for the passive test, Paths and
+	// DeletedOrRenamed), headSHA and then otherSHA.
+	if wantGit := []string{
+		"Locate " + evidenceDir, "Standing", "Parent " + headSHA,
+		"Parent " + headSHA, "Message " + headSHA, "Trailers", "Paths " + baseSHA + " " + headSHA, "DeletedOrRenamed " + baseSHA + " " + headSHA,
+		"Parent " + otherSHA, "Message " + otherSHA, "Trailers", "Paths " + headSHA + " " + otherSHA, "DeletedOrRenamed " + headSHA + " " + otherSHA,
+	}; !reflect.DeepEqual(g.calls, wantGit) {
 		t.Errorf("git calls = %q, want %q", g.calls, wantGit)
 	}
 	if wantStore := []string{"Features " + fakeRepo.Root}; !reflect.DeepEqual(store.calls, wantStore) {
@@ -68,13 +94,13 @@ func TestNextUnreviewedAsksForTheCommitAfterTheLastOneReviewed(t *testing.T) {
 		}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			g, store := branchWorld()
+			g, store := sweptWorld(t)
 			tc.store(t, store)
 
 			got, ask, err := app.New(g, store).NextUnreviewed(evidenceDir)
 
 			want := app.Question{Branch: "feat/x", Base: headSHA, Head: otherSHA}
-			if err != nil || !ask || got != want {
+			if err != nil || !ask || !same(got, want) {
 				t.Errorf("NextUnreviewed() = %+v, %v, %v; want %+v, true and no error", got, ask, err, want)
 			}
 		})
@@ -83,7 +109,7 @@ func TestNextUnreviewedAsksForTheCommitAfterTheLastOneReviewed(t *testing.T) {
 
 // The reviews of every feature of the tree count, and the chain may cross from one feature to another.
 func TestNextUnreviewedReadsTheReviewsOfEveryFeature(t *testing.T) {
-	g, store := branchWorld()
+	g, store := sweptWorld(t)
 	reviewed(t, store, baseSHA, headSHA, 1)
 	second := reviewed(t, store, headSHA, otherSHA, 1)
 	store.put("another", second, store.files["own-rdd"][second])
@@ -91,7 +117,7 @@ func TestNextUnreviewedReadsTheReviewsOfEveryFeature(t *testing.T) {
 
 	got, ask, err := app.New(g, store).NextUnreviewed(evidenceDir)
 
-	if err != nil || ask || got != (app.Question{}) {
+	if err != nil || ask || !nothing(got) {
 		t.Errorf("NextUnreviewed() = %+v, %v, %v; want nothing to ask and no error", got, ask, err)
 	}
 }
@@ -119,16 +145,152 @@ func TestNextUnreviewedDoesNotCountARecordThatDoesNotHold(t *testing.T) {
 		}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			g, store := branchWorld()
+			g, store := sweptWorld(t)
 			tc.store(t, g, store)
 
 			got, ask, err := app.New(g, store).NextUnreviewed(evidenceDir)
 
 			want := app.Question{Branch: "feat/x", Base: baseSHA, Head: headSHA}
-			if err != nil || !ask || got != want {
+			if err != nil || !ask || !same(got, want) {
 				t.Errorf("NextUnreviewed() = %+v, %v, %v; want %+v, true and no error", got, ask, err, want)
 			}
 		})
+	}
+}
+
+// thirdSHA is a commit after otherSHA, for the branches of three commits.
+const thirdSHA = "5555555555555555555555555555555555555555"
+
+// sweepPath is the repository-relative path of the first sweep record of the commit after base, in the feature own-rdd.
+func sweepPath(t *testing.T, base, head string) string {
+	t.Helper()
+	return review.ResultPath("own-rdd", review.SweepName(candidateFor(t, base, head), 1))
+}
+
+// reviewMissing is the question for a commit that has everything but the review that covers it.
+func reviewMissing(t *testing.T, base, head string) app.Question {
+	t.Helper()
+	return app.Question{
+		Branch: "feat/x", Base: base, Head: head, Risk: "none", Sweep: sweepPath(t, base, head),
+		Needs: []review.Need{{Missing: review.MissingReview, Err: review.ErrNoResult}},
+	}
+}
+
+// lacks lists what a question says its commit lacks.
+func lacks(q app.Question) []review.Missing {
+	var kinds []review.Missing
+	for _, need := range q.Needs {
+		kinds = append(kinds, need.Missing)
+	}
+	return kinds
+}
+
+// A commit that only changes passive paths is never asked: it is a link of the chain, from its first parent to itself, so
+// a review that starts at it is reached, and a branch of such commits has nothing to ask.
+func TestNextUnreviewedNeverAsksForAPassiveCommit(t *testing.T) {
+	passive := []string{"odd/tasks/own-rdd.md"}
+	t.Run("a passive commit between two reviewed commits", func(t *testing.T) {
+		g, store := newFakeGit(), newFakeResults()
+		g.standing = app.Standing{Branch: "feat/x", Default: "main", Commits: []string{headSHA, otherSHA, thirdSHA}}
+		g.parents = map[string]string{headSHA: baseSHA, otherSHA: headSHA, thirdSHA: otherSHA}
+		g.declares(otherSHA, "none")
+		g.declares(thirdSHA, "none")
+		g.pathsOf = map[string][]string{otherSHA: passive}
+		store.tasks = true
+		sweptFor(t, store, "own-rdd", baseSHA, headSHA, 1)
+		sweptFor(t, store, "own-rdd", otherSHA, thirdSHA, 1)
+		reviewed(t, store, baseSHA, headSHA, 1)
+		reviewed(t, store, otherSHA, thirdSHA, 1)
+
+		got, ask, err := app.New(g, store).NextUnreviewed(evidenceDir)
+
+		if err != nil || ask || !nothing(got) {
+			t.Errorf("NextUnreviewed() = %+v, %v, %v; want nothing to ask and no error", got, ask, err)
+		}
+	})
+	t.Run("a branch of passive commits only", func(t *testing.T) {
+		g, store := branchWorld()
+		g.paths = passive
+
+		got, ask, err := app.New(g, store).NextUnreviewed(evidenceDir)
+
+		if err != nil || ask || !nothing(got) {
+			t.Errorf("NextUnreviewed() = %+v, %v, %v; want nothing to ask and no error", got, ask, err)
+		}
+	})
+}
+
+// A commit a review covers is asked again when it lacks a sweep record, with the commit before it as the base.
+func TestNextUnreviewedAsksAgainForAReviewedCommitWithNoSweepRecord(t *testing.T) {
+	g, store := branchWorld()
+	reviewed(t, store, baseSHA, headSHA, 1)
+	sweptFor(t, store, "own-rdd", headSHA, otherSHA, 1)
+
+	got, ask, err := app.New(g, store).NextUnreviewed(evidenceDir)
+
+	if err != nil || !ask || got.Base != baseSHA || got.Head != headSHA || got.Sweep != "" || got.Risk != "none" || !reflect.DeepEqual(lacks(got), []review.Missing{review.MissingSweep}) {
+		t.Errorf("NextUnreviewed() = %+v, %v, %v; want the reviewed commit asked again for a sweep alone, Risk none and no sweep", got, ask, err)
+	}
+}
+
+// A commit with no trailer lacks the risk and the sweep, and its risk is not told.
+func TestNextUnreviewedAsksForACommitWithNoTrailer(t *testing.T) {
+	g, store := branchWorld()
+	g.messages[headSHA] = "subject with no trailer"
+
+	got, ask, err := app.New(g, store).NextUnreviewed(evidenceDir)
+
+	if err != nil || !ask || got.Head != headSHA || got.Risk != "" || !reflect.DeepEqual(lacks(got), []review.Missing{review.MissingRisk, review.MissingSweep}) {
+		t.Errorf("NextUnreviewed() = %+v, %v, %v; want the commit asked for the risk and the sweep, with no Risk", got, ask, err)
+	}
+}
+
+// The first unreviewed commit that has its sweep lacks the review alone, and the question names the sweep record.
+func TestNextUnreviewedAsksForTheReviewOfACommitThatHasItsSweep(t *testing.T) {
+	g, store := sweptWorld(t)
+
+	got, ask, err := app.New(g, store).NextUnreviewed(evidenceDir)
+
+	if want := reviewMissing(t, baseSHA, headSHA); err != nil || !ask || !reflect.DeepEqual(got, want) {
+		t.Errorf("NextUnreviewed() = %+v, %v, %v; want %+v, true and no error", got, ask, err, want)
+	}
+}
+
+// A reviewed commit whose sweep fired and that has no sweeper record is asked before a later commit nothing reviewed.
+func TestNextUnreviewedAsksForTheSweeperOfAReviewedCommitBeforeALaterOne(t *testing.T) {
+	g, store := branchWorld()
+	reviewed(t, store, baseSHA, headSHA, 1)
+	fired := sweptFor(t, store, "own-rdd", baseSHA, headSHA, 1, "a line of the working tree")
+	sweptFor(t, store, "own-rdd", headSHA, otherSHA, 1)
+
+	got, ask, err := app.New(g, store).NextUnreviewed(evidenceDir)
+
+	if err != nil || !ask || got.Base != baseSHA || got.Head != headSHA || got.Sweep != review.ResultPath("own-rdd", fired) || !reflect.DeepEqual(lacks(got), []review.Missing{review.MissingSweeper}) {
+		t.Errorf("NextUnreviewed() = %+v, %v, %v; want the reviewed commit asked for the sweeper of %s", got, ask, err, fired)
+	}
+}
+
+// A sweep record that does not decode is not counted: the commit lacks its sweep.
+func TestNextUnreviewedDoesNotCountASweepRecordThatDoesNotDecode(t *testing.T) {
+	g, store := sweptWorld(t)
+	store.put("own-rdd", review.SweepName(candidateFor(t, baseSHA, headSHA), 1), []byte("not json"))
+
+	got, ask, err := app.New(g, store).NextUnreviewed(evidenceDir)
+
+	if err != nil || !ask || got.Head != headSHA || got.Sweep != "" || !reflect.DeepEqual(lacks(got), []review.Missing{review.MissingSweep, review.MissingReview}) {
+		t.Errorf("NextUnreviewed() = %+v, %v, %v; want the commit asked for a sweep and a review", got, ask, err)
+	}
+}
+
+// A commit that declares an item lacks the polisher record, listed before the review.
+func TestNextUnreviewedAsksForThePolisherOfACommitThatDeclaresAnItem(t *testing.T) {
+	g, store := sweptWorld(t)
+	g.declares(headSHA, "3,5")
+
+	got, ask, err := app.New(g, store).NextUnreviewed(evidenceDir)
+
+	if err != nil || !ask || got.Head != headSHA || got.Risk != "3,5" || !reflect.DeepEqual(lacks(got), []review.Missing{review.MissingPolisher, review.MissingReview}) {
+		t.Errorf("NextUnreviewed() = %+v, %v, %v; want the commit asked for a polisher and a review, with Risk 3,5", got, ask, err)
 	}
 }
 
@@ -147,8 +309,12 @@ func TestNextUnreviewedHasNothingToAskWhenThereIsNothingToReview(t *testing.T) {
 		{"every commit is reviewed one by one", func(t *testing.T, g *fakeGit, store *fakeResults) {
 			reviewed(t, store, baseSHA, headSHA, 1)
 			exempted(t, store, headSHA, otherSHA, 1)
+			sweptBranch(t, store)
 		}, nil},
-		{"one review covers both commits", func(t *testing.T, g *fakeGit, store *fakeResults) { reviewed(t, store, baseSHA, otherSHA, 1) }, nil},
+		{"one review covers both commits", func(t *testing.T, g *fakeGit, store *fakeResults) {
+			reviewed(t, store, baseSHA, otherSHA, 1)
+			sweptBranch(t, store)
+		}, nil},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			g, store := branchWorld()
@@ -156,7 +322,7 @@ func TestNextUnreviewedHasNothingToAskWhenThereIsNothingToReview(t *testing.T) {
 
 			got, ask, err := app.New(g, store).NextUnreviewed(evidenceDir)
 
-			if err != nil || ask || got != (app.Question{}) {
+			if err != nil || ask || !nothing(got) {
 				t.Errorf("NextUnreviewed() = %+v, %v, %v; want nothing to ask and no error", got, ask, err)
 			}
 			if tc.git != nil && !reflect.DeepEqual(g.calls, tc.git) {
@@ -177,7 +343,7 @@ func TestNextUnreviewedSaysWhenTheDefaultBranchCannotBeFound(t *testing.T) {
 
 	got, ask, err := app.New(g, store).NextUnreviewed(evidenceDir)
 
-	if !errors.Is(err, app.ErrNoDefaultBranch) || !strings.Contains(err.Error(), "feat/x") || ask || got != (app.Question{}) {
+	if !errors.Is(err, app.ErrNoDefaultBranch) || !strings.Contains(err.Error(), "feat/x") || ask || !nothing(got) {
 		t.Errorf("NextUnreviewed() = %+v, %v, %v; want nothing to ask and an error that is ErrNoDefaultBranch and names the branch", got, ask, err)
 	}
 }
@@ -207,7 +373,7 @@ func TestNextUnreviewedReportsWhatItCannotTell(t *testing.T) {
 
 			got, ask, err := app.New(g, store).NextUnreviewed(evidenceDir)
 
-			if err == nil || !strings.Contains(err.Error(), tc.want) || ask || got != (app.Question{}) {
+			if err == nil || !strings.Contains(err.Error(), tc.want) || ask || !nothing(got) {
 				t.Errorf("NextUnreviewed() = %+v, %v, %v; want nothing to ask and an error that says %q", got, ask, err, tc.want)
 			}
 		})

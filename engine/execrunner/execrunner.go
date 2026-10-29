@@ -12,6 +12,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os/exec"
 	"time"
 )
@@ -96,10 +97,24 @@ func (Runner) Run(ctx context.Context, bin string, args ...string) ([]byte, erro
 // exec.Command does. The program is stopped when ctx ends, and the error then wraps the reason;
 // it is stopped too when it prints more than the bound of WithMaxOutput on a stream.
 func (r Runner) Output(ctx context.Context, env []string, bin string, args ...string) (stdout, stderr []byte, err error) {
+	return r.output(ctx, env, nil, bin, args)
+}
+
+// OutputStdin is Output for a program that reads its standard input: it hands the program exactly the bytes of
+// stdin, and the end of its input after them. A nil stdin is an empty one. The environment, the deadline and the
+// bound on what it holds of each stream are those of Output.
+func (r Runner) OutputStdin(ctx context.Context, env []string, stdin []byte, bin string, args ...string) (stdout, stderr []byte, err error) {
+	return r.output(ctx, env, bytes.NewReader(stdin), bin, args)
+}
+
+// output is the run of Output and OutputStdin; a nil in leaves the standard input of the program closed, as Output
+// always did.
+func (r Runner) output(ctx context.Context, env []string, in io.Reader, bin string, args []string) (stdout, stderr []byte, err error) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, bin, args...)
 	cmd.Env = env
+	cmd.Stdin = in
 	cmd.WaitDelay = killGrace
 	out := &cappedBuffer{max: r.maxOutput, cancel: cancel}
 	errOut := &cappedBuffer{max: r.maxOutput, cancel: cancel}

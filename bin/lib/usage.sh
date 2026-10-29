@@ -66,9 +66,9 @@ Commands:
   install-hooks                    Build + deploy the engine binary, then wire the
                                    deterministic-scoping hooks, the workflow projection
                                    hooks, the skills approve guard, the review
-                                   stop-hook (on Stop: asks the agent once for each
-                                   session and commit to review the next commit no
-                                   review covers), and the builder guard (on the Agent
+                                   stop-hook (on Stop: asks the agent for each thing
+                                   the first commit not ready for delivery misses,
+                                   once for each session and commit), and the builder guard (on the Agent
                                    tool: denies launching the builder on a task the
                                    shaper did not design) into
                                    ~/.claude/settings.json. Re-run it after an
@@ -299,13 +299,31 @@ Commands:
                                              file; print the record skeleton for roles append with payload_kind
                                              review-exemption; review check clears an exempted head, but a result that
                                              blocks wins over any exemption (exit 0 stored, 2 report refused, 1 error)
+                                   sweep --feature NAME --base REV --head REV [--cwd REPO]
+                                             run the checks T1 to T3 of the sweeper once on the one commit REV..head
+                                             (--base must be the first parent of --head) and store the findings as
+                                             HEAD12-N.sweep.json, never over a file: T1 the paths the commit deleted
+                                             or renamed and the removed names the head still mentions, T2 the new lines
+                                             of deadcode, staticcheck and shellcheck over copies of the base and the
+                                             head kept under the state home, T3 the working tree's git status; a tool
+                                             that cannot run stores nothing; a second sweep of the repository while one
+                                             runs is refused; print outcome (clean or fired), path, sha256 and the
+                                             candidates the sweeper answers for as JSON
+                                             (exit 0 stored, 2 refused or a check that did not run, 1 usage error)
+                                   record --role sweeper|polisher --feature NAME --base REV --head REV [--result FILE|-] [--cwd REPO]
+                                             store the sweeper's report (it must answer once for each candidate of a
+                                             fired sweep of the head) as HEAD12-N.sweeper.json, or one polisher judge's
+                                             findings as HEAD12-N.polisher.json, for the one commit REV..head; print the
+                                             path and sha256 as JSON, with no skeleton for roles append; --rows with
+                                             another role is a usage error; --role reviewer is the default and is the
+                                             record verb above (exit 0 stored, 2 report refused, 1 error)
                                    stop-hook
                                              not run by a person: the Claude Code Stop hook that install-hooks wires
                                              (the review stop-hook). On a branch other than the default one, it blocks
-                                             the stop once for each session and commit with the review bind command for
-                                             the next commit no stored result or exemption binds, and never for the
-                                             whole branch; it lets the stop happen on anything it cannot tell
-                                             (exit 0 always, 1 usage error)
+                                             the stop for the first commit that misses anything review check asks of
+                                             it, with the command for each thing it misses, asking for each thing once
+                                             for each session and commit, and never for the whole branch; it lets the
+                                             stop happen on anything it cannot tell (exit 0 always, 1 usage error)
                                    No verb launches an agent or dispatches work.
   memory <verb>                    Forward memory-directive verbs to the engine unchanged.
                                    Read-only: no verb queries or writes memory; query execution

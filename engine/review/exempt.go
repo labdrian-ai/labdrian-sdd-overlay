@@ -56,29 +56,15 @@ var highRiskItems = [...]string{
 // names every item in the order it was written; a declaration that is anything else, including an empty one, "None"
 // or a number outside the list, is refused with an error that wraps ErrInvalidRisk and says what is accepted.
 func CheckRisk(declared string) error {
-	if declared == NoRisk {
-		return nil
+	items, err := ParseRisk(declared)
+	if err != nil || len(items) == 0 {
+		return err
 	}
-	seen := make([]bool, len(highRiskItems)+1)
-	var named []string
-	for _, field := range strings.Split(declared, ",") {
-		item, ok := riskItem(field)
-		if !ok || seen[item] {
-			return fmt.Errorf("%w: %q is not %q or a list of the numbers 1 to %d of the high-risk items, separated by commas with no space and none written twice (for example %q)",
-				ErrInvalidRisk, declared, NoRisk, len(highRiskItems), "2,4")
-		}
-		seen[item] = true
+	named := make([]string, 0, len(items))
+	for _, item := range items {
 		named = append(named, fmt.Sprintf("%d (%s)", item, highRiskItems[item-1]))
 	}
 	return fmt.Errorf("%w: the declared risk names %s", ErrHighRisk, strings.Join(named, ", "))
-}
-
-// riskItem reads one entry of a declaration: the number of an item of the list, written as one digit.
-func riskItem(field string) (int, bool) {
-	if len(field) != 1 || field[0] < '1' || field[0] > byte('0'+len(highRiskItems)) {
-		return 0, false
-	}
-	return int(field[0] - '0'), true
 }
 
 // CheckReport holds the report an exemption is made on to its contract: the object reviewverdict.ParseReport reads,

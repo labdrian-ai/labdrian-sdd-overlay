@@ -27,7 +27,8 @@ func (w *reviewWorld) exemptArgs(risk string) []string {
 	return []string{"exempt", "--feature", "own-rdd", "--base", w.base, "--head", w.head, "--risk", risk}
 }
 
-// exempt exempts the head of the world with the report on stdin and returns what the verb wrote.
+// exempt exempts the head of the world with the report on stdin and returns what the verb wrote. `review exempt` reads
+// the trailer of the head (own-rdd T6b5, S6 f), so a world that exempts is made with newCheckedWorld.
 func (w *reviewWorld) exempt(report, risk string) (stdout, stderr string, exits []int) {
 	w.t.Helper()
 	return w.run(report, w.exemptArgs(risk)...)
@@ -59,7 +60,7 @@ func TestReviewExemptRefusesACommandLineItCannotRead(t *testing.T) {
 		{"the risk given to check", []string{"check", "--feature", "f", "--risk", "none"}, "error: review check: unknown flag \"--risk\"\n"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			w := newReviewWorld(t)
+			w := newCheckedWorld(t)
 
 			stdout, stderr, exits := w.run(verifierReport, tc.args...)
 
@@ -73,11 +74,51 @@ func TestReviewExemptRefusesACommandLineItCannotRead(t *testing.T) {
 	}
 }
 
+// An exemption is for a commit that declares no risk (own-rdd T6b5, S6 f): a head whose trailer fails or names an item is
+// refused before anything is stored, as plain errors with exit 1, as a --risk that names an item is. A report that is not
+// clear is still refused first, with exit 2.
+func TestExemptRefusesAHeadWhoseTrailerFailsOrNamesAnItem(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		world func(t *testing.T) *reviewWorld
+		want  func(w *reviewWorld) string
+	}{
+		{"no trailer", func(t *testing.T) *reviewWorld { return newReviewWorld(t) }, func(w *reviewWorld) string {
+			return "error: review exempt: review: the commit does not declare its risk in a Risk trailer: commit " + w.head +
+				": it has no \"Risk:\" trailer in the final trailer block of its message\n"
+		}},
+		{"a trailer that names items", func(t *testing.T) *reviewWorld {
+			w := newCheckedWorld(t)
+			w.declaresRisk("3,5")
+			return w
+		}, func(w *reviewWorld) string {
+			return "error: review exempt: commit " + w.head + ": review: a change that names a high-risk item is never exempt from review: " +
+				"the declared risk names 3 (contracts others consume), 5 (delivery or environment)\n"
+		}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			w := tc.world(t)
+
+			stdout, stderr, exits := w.run(verifierReport, w.exemptArgs("none")...) // not w.exempt, which would declare the risk
+
+			if want := tc.want(w); stdout != "" || stderr != want || !equalInts(exits, []int{1}) {
+				t.Errorf("stdout = %q, stderr = %q, exits = %v; want nothing, %q, [1]", stdout, stderr, exits, want)
+			}
+			if _, err := os.Stat(w.results("own-rdd")); err == nil {
+				t.Error("the results directory was made for an exemption that was refused")
+			}
+			if _, stderr, exits := w.run(`{"checks":[]}`, w.exemptArgs("none")...); !equalInts(exits, []int{2}) || !strings.Contains(stderr, "the report is not clear") {
+				t.Errorf("a report that is not clear: stderr = %q, exits = %v; want it refused first, as before, with exit 2", stderr, exits)
+			}
+		})
+	}
+}
+
 // The verb stores the exemption in the next free number of the head and prints the skeleton of the record of the
 // chain: the stored file has the binding git gives, the declared risk and the report of the verifier, stdout is the
 // record of the reviewer to the delivery with the exemption bound as evidence, and stderr says what was stored.
 func TestExemptStoresTheExemptionAndPrintsTheSkeletonOfTheRecord(t *testing.T) {
-	w := newReviewWorld(t)
+	w := newCheckedWorld(t)
 	b := w.bind()
 
 	stdout, stderr, exits := w.exempt(verifierReport, "none")
@@ -148,7 +189,7 @@ func TestExemptRefusesADeclaredRiskThatIsNotNoneAndStoresNothing(t *testing.T) {
 		{"None", `"None" is not "none" or a list of the numbers 1 to 6`}, {"7", `"7" is not "none" or a list of the numbers 1 to 6`},
 	} {
 		t.Run(tc.risk, func(t *testing.T) {
-			w := newReviewWorld(t)
+			w := newCheckedWorld(t)
 
 			stdout, stderr, exits := w.exempt(verifierReport, tc.risk)
 
@@ -179,7 +220,7 @@ func TestExemptRefusesAReportThatIsMissingOrNotClearAndStoresNothing(t *testing.
 		"a report that says it is ok": `{"outcome":"clear"}`,
 	} {
 		t.Run(name, func(t *testing.T) {
-			w := newReviewWorld(t)
+			w := newCheckedWorld(t)
 
 			stdout, stderr, exits := w.exempt(report, "none")
 
@@ -196,7 +237,7 @@ func TestExemptRefusesAReportThatIsMissingOrNotClearAndStoresNothing(t *testing.
 // The numbering is the head's, shared with its results: the second exemption is number 2, a result recorded after
 // an exemption is the next number, and nothing that is stored is ever replaced.
 func TestExemptTakesTheNextNumberOfTheHeadAndReplacesNothing(t *testing.T) {
-	w := newReviewWorld(t)
+	w := newCheckedWorld(t)
 	w.exempt(verifierReport, "none")
 	first, err := os.ReadFile(filepath.Join(w.results("own-rdd"), w.head[:12]+"-1.exempt.json"))
 	if err != nil {
@@ -225,7 +266,7 @@ func TestExemptTakesTheNextNumberOfTheHeadAndReplacesNothing(t *testing.T) {
 // Standard output is where the verb hands over the skeleton of the record. When it cannot be written the parent never
 // received it, and exit 0 would tell it that it did. The exemption stays stored, and the message says where.
 func TestExemptFailsWithExit1WhenTheSkeletonCannotBeWritten(t *testing.T) {
-	w := newReviewWorld(t)
+	w := newCheckedWorld(t)
 	p := newCapturedProcess()
 	p.stdin = strings.NewReader(verifierReport)
 	p.stdout = brokenStdout{errors.New("broken pipe")}
@@ -245,7 +286,7 @@ func TestExemptFailsWithExit1WhenTheSkeletonCannotBeWritten(t *testing.T) {
 // A revision that is not a commit, and one git would read as an option, are refused before the exemption is stored:
 // the option writes no file.
 func TestExemptRefusesWhatIsNotACommitAndWhatGitWouldReadAsAnOption(t *testing.T) {
-	w := newReviewWorld(t)
+	w := newCheckedWorld(t)
 	marker := filepath.Join(w.parent, "written-by-an-option")
 	for _, tc := range []struct{ name, base, want string }{
 		{"a name that is nothing", "nonesuch", `resolve base "nonesuch"`},
@@ -276,7 +317,7 @@ func TestRecordAndVerifySayWhatTheParentOfTheChainStillFillsAsBefore(t *testing.
 		withRole = "project_id, goal_id, chain_id, seq, prev_sha256, to_role, context.summary\n"
 		noRole   = "project_id, goal_id, chain_id, seq, prev_sha256, context.summary\n"
 	)
-	w := newReviewWorld(t)
+	w := newCheckedWorld(t)
 	b := w.bind()
 
 	_, recorded, recordExits := w.run(reply(t, b, withBlocker), "record", "--feature", "own-rdd", "--base", w.base, "--head", w.head, "--rows", "default")
@@ -292,15 +333,15 @@ func TestRecordAndVerifySayWhatTheParentOfTheChainStillFillsAsBefore(t *testing.
 
 // The words a caller reads when it gives the wrong verb name every verb, the new one included.
 func TestReviewNamesExemptAmongItsVerbs(t *testing.T) {
-	w := newReviewWorld(t)
+	w := newCheckedWorld(t)
 
 	_, noVerb, _ := w.run("")
 	_, unknown, _ := w.run("", "bogus")
 
-	if want := "error: review requires a verb: bind, record, verify, check, exempt\n"; noVerb != want {
+	if want := "error: review requires a verb: bind, record, verify, check, exempt, sweep\n"; noVerb != want {
 		t.Errorf("review with no verb says %q, want %q", noVerb, want)
 	}
-	if want := "error: review: unknown verb \"bogus\" (expected bind, record, verify, check or exempt)\n"; unknown != want {
+	if want := "error: review: unknown verb \"bogus\" (expected bind, record, verify, check, exempt or sweep)\n"; unknown != want {
 		t.Errorf("review with an unknown verb says %q, want %q", unknown, want)
 	}
 }
@@ -314,6 +355,9 @@ func TestUsageDocumentsReviewExempt(t *testing.T) {
 	var out bytes.Buffer
 	usage(&out)
 	engineText, wrapperText := strings.Join(strings.Fields(out.String()), " "), strings.Join(strings.Fields(string(wrapper)), " ")
+	if want := "The head's own Risk trailer must be 'Risk: none'"; !strings.Contains(engineText, want) {
+		t.Errorf("the engine usage lacks %q", want)
+	}
 	for _, pair := range []struct{ engine, inWrapper string }{
 		{"engine review exempt --feature <name> --base <rev> --head <rev> --risk <none|items> [--cwd <repo>]", "exempt --feature NAME --base REV --head REV --risk none|ITEMS [--cwd REPO]"},
 		{"reads the verifier's report from stdin", "reads the verifier's report from stdin"},

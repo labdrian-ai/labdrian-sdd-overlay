@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "c5806344d3a1c995d086def427cdc232dec723ab",
+    "head": "fd3afebe6bc8505f7385ab1f5476a640ae536587",
+    "diff_sha256": "71f02784a13ce46481c2d00149bb1a73ea458fc876aa2fc6932eea2bd776cee3",
+    "paths": [
+      "engine/review/app/export_test.go",
+      "engine/review/app/hookfacts.go",
+      "engine/review/app/hookfacts_test.go",
+      "engine/review/app/needs.go"
+    ]
+  },
+  "rows": [
+    "default"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "c5806344d3a1c995d086def427cdc232dec723ab",
+      "head": "fd3afebe6bc8505f7385ab1f5476a640ae536587",
+      "diff_sha256": "71f02784a13ce46481c2d00149bb1a73ea458fc876aa2fc6932eea2bd776cee3"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/review/app/export_test.go",
+        "engine/review/app/hookfacts.go",
+        "engine/review/app/hookfacts_test.go",
+        "engine/review/app/needs.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "I read the full diff and compared it with the task text for T6b6a in odd/tasks/own-rdd.md line 70. I did not run the tests.",
+      "commitFacts is now gitFacts followed by roleFacts. The error texts are unchanged and keep the same wrapping. The parentless Risk: none refusal sits in the same place. A passive commit returns before roleFacts. lenient is facts.RiskErr != nil, as before. The sweep-commit test and readRoles are unchanged inside roleFacts.",
+      "factsOfAnyFeature calls gitFacts once and returns a passive commit with no record read. It then runs roleFacts with lenient=true on a copy of the facts for each listing. SweepCommit and Polished are OR-ed across listings. Sweep, SweepFired and Answered come from the first listing whose Sweep is non-empty. Answered is read inside the listing of the sweep, so a sweeper record in another feature does not answer it.",
+      "Record errors count as absent because heldRole errors are skipped in readRoles and namedBySweeper when lenient is true. This also covers errors from bind, and the task text and the doc comment both say so.",
+      "All eight cases named in the task have a test: second feature's sweep when the first has none, first clean and second fired, Answered from the sweeper's own feature versus another feature, Polished from a feature with no sweep, SweepCommit from a second-feature sweeper record, undecodable or non-holding records counted as absent, passive with no Read, and a failing Message. The assertions match each claim.",
+      "The fake helpers the tests use (declares, put, callsTo with the 'Read ' prefix, and the fail map) exist in fakes_test.go. The Names calls made while building the listings do not count as 'Read ' calls.",
+      "export_test.go holds only the NewFeatureListing and FactsOfAnyFeature shim."
+    ]
+  }
+}

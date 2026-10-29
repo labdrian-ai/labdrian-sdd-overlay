@@ -61,16 +61,20 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gitobject"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gitprov"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review/app"
 )
 
@@ -96,6 +100,8 @@ const DefaultTimeout = 5 * time.Minute
 // output and on its standard error, apart. The process adapter is execrunner.Runner.
 type Runner interface {
 	Output(ctx context.Context, env []string, bin string, args ...string) (stdout, stderr []byte, err error)
+	// OutputStdin is Output for a program that reads its standard input: it is handed exactly stdin.
+	OutputStdin(ctx context.Context, env []string, stdin []byte, bin string, args ...string) (stdout, stderr []byte, err error)
 }
 
 // Options are what the adapter needs of the process it runs in.
@@ -367,6 +373,435 @@ func (g Git) Standing(repo app.Repository) (app.Standing, error) {
 	return app.Standing{Branch: branch, Default: name, Commits: commits}, nil
 }
 
+// Message returns the raw message of commit. `git log -1 --format=%B` ends the message with a newline of its own
+// after the one the message ends with; that one is removed, so what comes back is the message as the commit stores it.
+func (g Git) Message(repo app.Repository, commit string) (string, error) {
+	out, err := g.output(repo.Root, "log", []string{"log", "-1", "--no-show-signature", "--format=%B", "--end-of-options", commit})
+	if err != nil {
+		return "", err
+	}
+	message, whole := strings.CutSuffix(string(out), "\n")
+	if !whole {
+		return "", fmt.Errorf("git log printed a message for %q that does not end with a newline (it ends with %q)", commit, clip(string(out[max(0, len(out)-20):])))
+	}
+	return message, nil
+}
+
+// Trailers returns the trailers `git interpret-trailers --parse` finds in message, one per line of its output as
+// "<key>: <value>", split at the first colon. git reads the message from a file the adapter makes in the temporary
+// directory of the process, never in the repository, and removes it. A line without a colon is no trailer and is an
+// error: --parse prints trailers only.
+func (g Git) Trailers(repo app.Repository, message string) ([]review.Trailer, error) {
+	file, err := os.CreateTemp("", "labdrian-message-*")
+	if err != nil {
+		return nil, fmt.Errorf("make the file git reads the message from: %w", err)
+	}
+	defer os.Remove(file.Name())
+	if _, err := file.WriteString(message); err != nil {
+		_ = file.Close()
+		return nil, fmt.Errorf("write the message for git: %w", err)
+	}
+	if err := file.Close(); err != nil {
+		return nil, fmt.Errorf("write the message for git: %w", err)
+	}
+	out, err := g.output(repo.Root, "interpret-trailers", []string{"interpret-trailers", "--parse", file.Name()})
+	if err != nil {
+		return nil, err
+	}
+	var trailers []review.Trailer
+	for _, line := range strings.Split(strings.TrimSuffix(string(out), "\n"), "\n") {
+		if line == "" {
+			continue
+		}
+		key, value, ok := strings.Cut(line, ":")
+		if !ok {
+			return nil, fmt.Errorf("git interpret-trailers printed %q, want <key>: <value>", clip(line))
+		}
+		trailers = append(trailers, review.Trailer{Key: key, Value: strings.TrimSpace(value)})
+	}
+	return trailers, nil
+}
+
+// DeletedOrRenamedArgs is the argument vector of the list of the paths the diff from base to head removes: the paths
+// of PathsArgs filtered to the removed ones. Renames are not detected, so the old path of a rename is a removal.
+func DeletedOrRenamedArgs(base, head string) []string {
+	return []string{"diff-tree", "-r", "--name-only", "-z", "--no-renames", "--diff-filter=DR", "--ignore-submodules=none", base, head}
+}
+
+// DeletedOrRenamed returns the paths the diff from base to head removes, in the order git prints them (own-rdd T6b3, S6 b).
+func (g Git) DeletedOrRenamed(repo app.Repository, base, head string) ([]string, error) {
+	out, err := g.output(repo.Root, "diff-tree", DeletedOrRenamedArgs(base, head))
+	if err != nil {
+		return nil, err
+	}
+	return splitPaths(out)
+}
+
+// ChangedLinesArgs is the argument vector of the diff of one path with no context, from base to head. The path is
+// literal: it is never a pattern.
+func ChangedLinesArgs(base, head, file string) []string {
+	return []string{
+		"--literal-pathspecs", "-c", "core.quotePath=false",
+		"diff-tree", "-p", "-r", "-U0", "--no-renames", "--no-color", "--no-ext-diff", "--no-textconv", "--ignore-submodules=none",
+		base, head, "--", file,
+	}
+}
+
+// ChangedLines returns the removed and the added lines of the .go and .sh files the diff from base to head changes,
+// in the order of their paths. It asks for the diff of one path at a time, so the name of a file is the one git listed
+// (Paths) and never read from the header of a diff, where a name with a space or a quote would be ambiguous. Binary
+// files have no lines; a path with no removed line is not in the first list, and one with no added line is not in the
+// second.
+func (g Git) ChangedLines(repo app.Repository, base, head string) (removed, added []review.ChangedLines, err error) {
+	paths, err := g.Paths(repo, base, head)
+	if err != nil {
+		return nil, nil, err
+	}
+	for _, p := range paths {
+		if !strings.HasSuffix(p, ".go") && !strings.HasSuffix(p, ".sh") {
+			continue
+		}
+		out, err := g.output(repo.Root, "diff-tree", ChangedLinesArgs(base, head, p))
+		if err != nil {
+			return nil, nil, err
+		}
+		gone, came := hunkLines(string(out))
+		if len(gone) > 0 {
+			removed = append(removed, review.ChangedLines{Path: p, Lines: gone})
+		}
+		if len(came) > 0 {
+			added = append(added, review.ChangedLines{Path: p, Lines: came})
+		}
+	}
+	return removed, added, nil
+}
+
+// hunkLines is the removed and the added lines of the diff of one file, without the leading '-' and '+'. Everything
+// before the first hunk is the header of the diff and holds none.
+func hunkLines(diff string) (removed, added []string) {
+	inHunk := false
+	for _, line := range strings.Split(diff, "\n") {
+		switch {
+		case strings.HasPrefix(line, "@@"):
+			inHunk = true
+		case !inHunk:
+		case strings.HasPrefix(line, "-"):
+			removed = append(removed, line[1:])
+		case strings.HasPrefix(line, "+"):
+			added = append(added, line[1:])
+		}
+	}
+	return removed, added
+}
+
+// Modules returns the directories that hold a go.mod at commit: the files named go.mod of its tree, by directory, "." for
+// the root, sorted.
+func (g Git) Modules(repo app.Repository, commit string) ([]string, error) {
+	out, err := g.output(repo.Root, "ls-tree", []string{"ls-tree", "-r", "--name-only", "-z", "--end-of-options", commit})
+	if err != nil {
+		return nil, err
+	}
+	files, err := splitPaths(out)
+	if err != nil {
+		return nil, err
+	}
+	var modules []string
+	for _, f := range files {
+		if path.Base(f) == "go.mod" {
+			modules = append(modules, path.Dir(f))
+		}
+	}
+	slices.Sort(modules)
+	return modules, nil
+}
+
+// mentionsBatch is how many names one start of `git grep` is asked for: the cost of a sweep grows with the names in
+// steps of this size, and 256 names of the length of an identifier stay far under the limit of the arguments.
+const mentionsBatch = 256
+
+// Mentions returns, for each of names, the paths of the tree of commit that hold it as a whole word, matched as a fixed
+// string, once each, in the order git prints them (own-rdd T6b3 and T6b4a, S6 b). The names go to `git grep -I -z -o -w
+// -F` in batches of mentionsBatch; -o prints the text each match found after the path, and that text is the name. A
+// name nothing mentions is not a key. A name that is inside the match of a longer name at the same place is not
+// reported there, which cannot happen to the identifiers a sweep asks about. git exits 1 when nothing matches, which is
+// an answer; any other failure is not.
+func (g Git) Mentions(repo app.Repository, commit string, names []string) (map[string][]string, error) {
+	for _, name := range names {
+		if name == "" || strings.Contains(name, "\n") {
+			return nil, fmt.Errorf("the name %q to search for is empty or has a line break", name)
+		}
+	}
+	found := map[string][]string{}
+	for start := 0; start < len(names); start += mentionsBatch {
+		batch := names[start:min(start+mentionsBatch, len(names))]
+		if err := g.mentionsOf(repo, commit, batch, found); err != nil {
+			return nil, err
+		}
+	}
+	return found, nil
+}
+
+// mentionsOf puts one batch of names to git and adds what it found to found.
+func (g Git) mentionsOf(repo app.Repository, commit string, batch []string, found map[string][]string) error {
+	ctx, cancel := g.context()
+	defer cancel()
+	args := []string{"-C", repo.Root, "grep", "-I", "-z", "-o", "-w", "-F", "--no-color"}
+	for _, name := range batch {
+		args = append(args, "-e", name)
+	}
+	args = append(args, commit)
+	stdout, stderr, err := g.runner.Output(ctx, g.env, gitProgram, args...)
+	var exit *exec.ExitError
+	if errors.As(err, &exit) && exit.ExitCode() == 1 && len(stdout) == 0 && strings.TrimSpace(string(stderr)) == "" {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("git grep: %w%s", err, said(stderr))
+	}
+	asked := map[string]bool{}
+	for _, name := range batch {
+		asked[name] = true
+	}
+	rest := stdout
+	for len(rest) > 0 {
+		entry, after, ok := bytes.Cut(rest, []byte{0})
+		match, after, okMatch := bytes.Cut(after, []byte{'\n'})
+		p, hasCommit := strings.CutPrefix(string(entry), commit+":")
+		if !ok || !okMatch || !hasCommit || p == "" || !asked[string(match)] {
+			return fmt.Errorf("git grep printed %q, want <commit>:<path>, a NUL byte, a name asked for and a line feed", clip(string(rest)))
+		}
+		if !slices.Contains(found[string(match)], p) {
+			found[string(match)] = append(found[string(match)], p)
+		}
+		rest = after
+	}
+	return nil
+}
+
+// IsCommit says whether name is a commit git has. `git cat-file -e` exits 1 with nothing printed for an object git does
+// not have, which is false and not an error; `git cat-file -t` then names the kind of the object, and only "commit"
+// is true. Anything else git does, a failure to start, a message or another status, is an error.
+func (g Git) IsCommit(repo app.Repository, name string) (bool, error) {
+	if !gitobject.IsName(name) {
+		return false, fmt.Errorf("%q is not a full object name", name)
+	}
+	ctx, cancel := g.context()
+	defer cancel()
+	stdout, stderr, err := g.runner.Output(ctx, g.env, gitProgram, "-C", repo.Root, "cat-file", "-e", name)
+	var exit *exec.ExitError
+	if errors.As(err, &exit) && exit.ExitCode() == 1 && len(stdout) == 0 && strings.TrimSpace(string(stderr)) == "" {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("git cat-file -e: %w%s", err, said(stderr))
+	}
+	out, err := g.output(repo.Root, "cat-file -t", []string{"cat-file", "-t", name})
+	if err != nil {
+		return false, err
+	}
+	switch kind := strings.TrimSuffix(string(out), "\n"); kind {
+	case "commit":
+		return true, nil
+	case "tree", "blob", "tag":
+		return false, nil
+	default:
+		return false, fmt.Errorf("git cat-file -t printed %q for %q, want the kind of the object", clip(string(out)), name)
+	}
+}
+
+// Status returns the lines of `git status --porcelain` with every untracked file on its own line, as the working tree is.
+// It takes no optional lock, so asking changes nothing in the repository.
+func (g Git) Status(repo app.Repository) ([]string, error) {
+	out, err := g.output(repo.Root, "status", []string{"--no-optional-locks", "-c", "core.quotePath=false", "status", "--porcelain=v1", "--untracked-files=all"})
+	if err != nil {
+		return nil, err
+	}
+	text := strings.TrimSuffix(string(out), "\n")
+	if text == "" {
+		return nil, nil
+	}
+	return strings.Split(text, "\n"), nil
+}
+
+// Archive fills dir with the exact bytes of the tree of commit, built from the objects and not from an export: no
+// attribute, filter or end-of-line setting, in the tree, the repository or the configuration, changes a byte of it. The
+// listing comes from `git ls-tree -r -z -l --full-tree` and the bytes of every blob from one `git cat-file --batch`,
+// asked for the names of the blobs in the order of the listing. A file of mode 100644 or 100755 is written with that
+// mode, a 120000 entry as a link whose target is the blob, and a 160000 entry (a submodule) is skipped; any other mode,
+// a path that is not local to dir, a file whose directory is a link, a listing or an answer of git that is not as
+// described, and a blob whose size is not the one the listing gives are refused.
+func (g Git) Archive(repo app.Repository, commit, dir string) error {
+	if !filepath.IsAbs(dir) {
+		return fmt.Errorf("the directory %q to unpack into is not an absolute path", dir)
+	}
+	if !gitobject.IsName(commit) {
+		return fmt.Errorf("%q is not a full object name", commit)
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return fmt.Errorf("read %s: %w", dir, err)
+	}
+	if len(entries) != 0 {
+		return fmt.Errorf("the directory %s to unpack into is not empty", dir)
+	}
+	listing, err := g.output(repo.Root, "ls-tree", []string{"ls-tree", "-r", "-z", "-l", "--full-tree", commit})
+	if err != nil {
+		return err
+	}
+	files, err := parseListing(listing)
+	if err != nil {
+		return err
+	}
+	if len(files) == 0 {
+		return nil
+	}
+	var asked strings.Builder
+	for _, file := range files {
+		asked.WriteString(file.object + "\n")
+	}
+	answers, err := g.outputStdin(repo.Root, "cat-file --batch", []byte(asked.String()), []string{"cat-file", "--batch"})
+	if err != nil {
+		return err
+	}
+	for _, file := range files {
+		var content []byte
+		if content, answers, err = nextBlob(answers, file); err != nil {
+			return err
+		}
+		if err := writeFile(dir, file, content); err != nil {
+			return err
+		}
+	}
+	if len(answers) != 0 {
+		return fmt.Errorf("git cat-file --batch printed %q after the last blob asked for", clip(string(answers)))
+	}
+	return nil
+}
+
+// treeFile is an entry of the listing that is written to the copy: a file or a link.
+type treeFile struct {
+	mode, object, path string
+	size               int64
+}
+
+// parseListing reads the NUL-terminated entries `<mode> SP <type> SP <object> SP <size> TAB <path>` of
+// `git ls-tree -r -z -l`, drops the submodules and refuses an entry of a mode other than 100644, 100755 and 120000, one
+// that is not a blob, a name that is not a full object name, a size that is not a number, and a path that is not local.
+func parseListing(listing []byte) ([]treeFile, error) {
+	var files []treeFile
+	for rest := listing; len(rest) > 0; {
+		record, after, ok := bytes.Cut(rest, []byte{0})
+		if !ok {
+			return nil, fmt.Errorf("git ls-tree printed %q, want entries each ended by a NUL byte", clip(string(rest)))
+		}
+		rest = after
+		meta, p, ok := strings.Cut(string(record), "\t")
+		fields := strings.Fields(meta)
+		if !ok || len(fields) != 4 || p == "" {
+			return nil, fmt.Errorf("git ls-tree printed %q, want <mode> <type> <object> <size> TAB <path>", clip(string(record)))
+		}
+		mode, kind, object, shown := fields[0], fields[1], fields[2], fields[3]
+		switch mode {
+		case "160000":
+			continue
+		case "100644", "100755", "120000":
+		default:
+			return nil, fmt.Errorf("the tree holds %q with the mode %s, which is neither a file, a link nor a submodule", p, mode)
+		}
+		size, err := strconv.ParseInt(shown, 10, 64)
+		if kind != "blob" || !gitobject.IsName(object) || err != nil || size < 0 {
+			return nil, fmt.Errorf("git ls-tree printed %q, want a blob with a full object name and a size", clip(string(record)))
+		}
+		if !filepath.IsLocal(filepath.FromSlash(path.Clean(p))) {
+			return nil, fmt.Errorf("the tree holds %q, a name that leads out of the directory", p)
+		}
+		files = append(files, treeFile{mode: mode, object: object, path: p, size: size})
+	}
+	return files, nil
+}
+
+// nextBlob takes the answer for file, `<object> blob <size>` LF, the bytes and LF, off the front of answers and returns
+// the bytes and what is left. The answer must name the object asked, be a blob, and have the size the listing gives.
+func nextBlob(answers []byte, file treeFile) (content, rest []byte, err error) {
+	header, rest, ok := bytes.Cut(answers, []byte{'\n'})
+	if !ok {
+		return nil, nil, fmt.Errorf("git cat-file --batch printed %q for %s, want a header line", clip(string(answers)), file.object)
+	}
+	want := fmt.Sprintf("%s blob %d", file.object, file.size)
+	if string(header) != want {
+		return nil, nil, fmt.Errorf("git cat-file --batch printed %q for %q, want %q: the object, the kind or the size is not the one the listing gives", clip(string(header)), file.path, want)
+	}
+	if int64(len(rest)) < file.size+1 || rest[file.size] != '\n' {
+		return nil, nil, fmt.Errorf("git cat-file --batch printed less than the %d bytes and the line feed of %q", file.size, file.path)
+	}
+	return rest[:file.size], rest[file.size+1:], nil
+}
+
+// writeFile writes file, with the bytes content, under dir.
+func writeFile(dir string, file treeFile, content []byte) error {
+	target := filepath.Join(dir, filepath.FromSlash(path.Clean(file.path)))
+	if err := noLinkBelow(dir, filepath.Dir(target)); err != nil {
+		return fmt.Errorf("%s: %w", file.path, err)
+	}
+	var err error
+	switch file.mode {
+	case "100644":
+		err = writeEntry(target, 0o644, bytes.NewReader(content))
+	case "100755":
+		err = writeEntry(target, 0o755, bytes.NewReader(content))
+	default: // 120000: parseListing let nothing else through
+		if err = os.MkdirAll(filepath.Dir(target), 0o755); err == nil {
+			err = os.Symlink(string(content), target)
+		}
+	}
+	if err != nil {
+		return fmt.Errorf("write %s: %w", file.path, err)
+	}
+	return nil
+}
+
+// writeEntry makes the file at target, which must not exist, with the bytes of r.
+func writeEntry(target string, perm fs.FileMode, r io.Reader) error {
+	if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+		return err
+	}
+	f, err := os.OpenFile(target, os.O_WRONLY|os.O_CREATE|os.O_EXCL, perm|0o600)
+	if err != nil {
+		return err
+	}
+	if _, err := io.Copy(f, r); err != nil {
+		f.Close()
+		return err
+	}
+	return f.Close()
+}
+
+// noLinkBelow refuses a directory below root, up to and including dir, that is a link: a file written through it would
+// land outside root.
+func noLinkBelow(root, dir string) error {
+	rel, err := filepath.Rel(root, dir)
+	if err != nil {
+		return err
+	}
+	current := root
+	for _, part := range strings.Split(rel, string(filepath.Separator)) {
+		if part == "." {
+			continue
+		}
+		current = filepath.Join(current, part)
+		info, err := os.Lstat(current)
+		switch {
+		case errors.Is(err, fs.ErrNotExist):
+			return nil
+		case err != nil:
+			return err
+		case info.Mode()&fs.ModeSymlink != 0:
+			return fmt.Errorf("%s is a link, and an entry of the tree would be written through it", current)
+		}
+	}
+	return nil
+}
+
 // defaultBranch finds the default branch of the repository in dir and the commits it is at, none when it has none.
 // A branch name that origin/HEAD gives is used only when it holds nothing that git would read as a pattern.
 func (g Git) defaultBranch(dir string) (string, []string, error) {
@@ -456,6 +891,17 @@ func (g Git) output(dir, label string, args []string) ([]byte, error) {
 	ctx, cancel := g.context()
 	defer cancel()
 	stdout, stderr, err := g.runner.Output(ctx, g.env, gitProgram, append([]string{"-C", dir}, args...)...)
+	if err != nil {
+		return nil, fmt.Errorf("git %s: %w%s", label, err, said(stderr))
+	}
+	return stdout, nil
+}
+
+// outputStdin is output for a git that reads its standard input: it is handed exactly stdin.
+func (g Git) outputStdin(dir, label string, stdin []byte, args []string) ([]byte, error) {
+	ctx, cancel := g.context()
+	defer cancel()
+	stdout, stderr, err := g.runner.OutputStdin(ctx, g.env, stdin, gitProgram, append([]string{"-C", dir}, args...)...)
 	if err != nil {
 		return nil, fmt.Errorf("git %s: %w%s", label, err, said(stderr))
 	}

@@ -31,6 +31,9 @@ type Service struct {
 	results Results
 	sleep   func(time.Duration)
 	asked   Asked
+	// analyzers and copies are the ports of the sweep; WithSweep sets both.
+	analyzers Analyzers
+	copies    Copies
 }
 
 // New is the Service over git and results. It never waits between two tries for a result number: the clock
@@ -49,6 +52,14 @@ func (s Service) WithSleep(sleep func(time.Duration)) Service {
 // once for a session. Without one Stop refuses to run.
 func (s Service) WithAsked(asked Asked) Service {
 	s.asked = asked
+	return s
+}
+
+// WithSweep is the Service that runs the programs of the sweep with analyzers and keeps its copies and its lock in
+// copies, which Sweep needs. Without both Sweep refuses to run.
+func (s Service) WithSweep(analyzers Analyzers, copies Copies) Service {
+	s.analyzers = analyzers
+	s.copies = copies
 	return s
 }
 

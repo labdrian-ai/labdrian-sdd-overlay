@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "4df4b937f3c2cd1ab549c597b64ef242ca17cdd1",
+    "head": "287d506b0aff9d3e939e4b2e030fb3e9ae0cc8f6",
+    "diff_sha256": "1921c68f1952da6baf062c3717d219d07ab2c8096f68bc33f124af2b51d1e99c",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/execrunner/execrunner.go",
+      "engine/execrunner/execrunner_test.go",
+      "engine/review/app/app.go",
+      "engine/review/gitexec/archive_test.go",
+      "engine/review/gitexec/gitexec.go",
+      "engine/review/gitexec/gitexec_test.go"
+    ]
+  },
+  "rows": [
+    "default"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "4df4b937f3c2cd1ab549c597b64ef242ca17cdd1",
+      "head": "287d506b0aff9d3e939e4b2e030fb3e9ae0cc8f6",
+      "diff_sha256": "1921c68f1952da6baf062c3717d219d07ab2c8096f68bc33f124af2b51d1e99c"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/execrunner/execrunner.go",
+        "engine/execrunner/execrunner_test.go",
+        "engine/review/app/app.go",
+        "engine/review/gitexec/archive_test.go",
+        "engine/review/gitexec/gitexec.go",
+        "engine/review/gitexec/gitexec_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/review/gitexec/gitexec.go:644-668",
+        "claim": "Archive now holds the whole tree's blob bytes in memory in one cat-file --batch stdout. The review git runner caps each stream at 256 MiB (reviewGitMaxOutput). A tree over about 256 MiB makes every sweep fail with ErrOutputTooLarge; the old git archive wrote to a temp file and had no such limit. The failure is loud, not silent, and the tree would have to be very large to hit it. A sweep fails on large repositories where it used to work. The doc comment on reviewGitMaxOutput still says the only large answer is a diff.",
+        "severity": "SUGGESTION",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/review.go:47-50,90 (256 MiB cap on each stream of the review git runner)",
+          "engine/review/gitexec/gitexec.go:438 (single outputStdin for all blobs)",
+          "diff lines 416-425 (removed git archive --output temp file)"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff.",
+      "Checked the two earlier findings. F1 (export-ignore/export-subst): TestArchiveIsTheTreeByteForByteWhateverTheAttributesAndTheLineEndingsSay sets export-ignore and export-subst in .gitattributes and .git/info/attributes, plus core.autocrlf and eol=crlf, and compares each file with the cat-file blob. The new path reads blobs only, so none of those settings can change a byte. Resolved. F2 (escape and link refusals): the escape test is table-driven over ../evil.go, /abs.go and sub/../../x.go and asserts nothing was written outside the copy. The link test asserts nothing was written through the link and the error names d/f.go. Both go through the public Archive method. Resolved.",
+      "Read parseListing, nextBlob and writeFile. Mode, kind, object name, size and local-path checks are present. The header must equal '<object> blob <size>', so the object, kind and size are held to the listing. Trailing bytes after the last blob are rejected. Paths are split at the first TAB, which is correct under -z. Submodules are skipped and are not asked for in the batch. Link targets come from blob bytes, and later writes are guarded by noLinkBelow.",
+      "Checked OutputStdin and output in the execrunner. cmd.Stdin is nil for Output, as before. The new tests cover exact bytes, nil input, environment, deadline and bound. Both fake runners in gitexec_test.go gained the new method.",
+      "Not run: I did not run any tests or commands (read-only review)."
+    ]
+  }
+}

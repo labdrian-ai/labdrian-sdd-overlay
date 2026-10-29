@@ -196,8 +196,8 @@ func TestReviewRefusesACommandLineItCannotRead(t *testing.T) {
 		args []string
 		want string
 	}{
-		{"no verb", nil, "error: review requires a verb: bind, record, verify, check, exempt\n"},
-		{"an unknown verb", []string{"bogus"}, "error: review: unknown verb \"bogus\" (expected bind, record, verify, check or exempt)\n"},
+		{"no verb", nil, "error: review requires a verb: bind, record, verify, check, exempt, sweep\n"},
+		{"an unknown verb", []string{"bogus"}, "error: review: unknown verb \"bogus\" (expected bind, record, verify, check, exempt or sweep)\n"},
 		{"verify with no feature", []string{"verify", "--stored", "s.json"}, "error: review verify: --feature is required\n"},
 		{"verify with no stored result", []string{"verify", "--feature", "f"}, "error: review verify: --stored is required\n"},
 		{"verify with a flag of record", []string{"verify", "--feature", "f", "--stored", "s.json", "--head", "h"}, "error: review verify: unknown flag \"--head\"\n"},
@@ -998,10 +998,27 @@ func (w *reviewWorld) recordBlocker(base, head string) (reviewBinding, string) {
 		w.t.Fatalf("setup: review bind exit calls = %v, stderr = %q; want [0]", exits, stderr)
 	}
 	b := decodeBinding(w.t, stdout)
-	if _, stderr, exits := w.run(reply(w.t, b, withBlocker), "record", "--feature", "own-rdd", "--base", base, "--head", head, "--rows", "default"); !equalInts(exits, []int{0}) {
+	_, stderr, exits = w.run(reply(w.t, b, withBlocker), "record", "--feature", "own-rdd", "--base", base, "--head", head, "--rows", "default")
+	if !equalInts(exits, []int{0}) {
 		w.t.Fatalf("setup: review record exit calls = %v, stderr = %q; want [0]", exits, stderr)
 	}
-	return b, head[:12] + "-1.json"
+	return b, storedName(w.t, stderr)
+}
+
+// storedName is the base name of the file that `review record` says it stored: the line `review record: stored <path>
+// (sha256 <sum>)` of its standard error. It is the name wherever a sweep took the number a result would have, which a
+// name built from the head and the number 1 is not.
+func storedName(t *testing.T, stderr string) string {
+	t.Helper()
+	for _, line := range strings.Split(stderr, "\n") {
+		if rest, ok := strings.CutPrefix(line, "review record: stored "); ok {
+			if path, _, found := strings.Cut(rest, " (sha256 "); found {
+				return filepath.Base(path)
+			}
+		}
+	}
+	t.Fatalf("setup: review record stderr = %q; want a line `review record: stored <path> (sha256 <sum>)`", stderr)
+	return ""
 }
 
 // verify holds the reply of a verifier to the stored result, stores it beside the result, says what it decided

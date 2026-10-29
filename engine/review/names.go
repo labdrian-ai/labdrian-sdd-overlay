@@ -1,6 +1,7 @@
 package review
 
 import (
+	"errors"
 	"fmt"
 	"path"
 	"path/filepath"
@@ -108,6 +109,75 @@ func CheckExemptionName(name string) error {
 	}
 	return nil
 }
+
+// The endings of the records of the sweep, the sweeper and the polisher (own-rdd T6b2, S6 c): <head12>-<n> and an
+// ending, numbered with the results, the verdicts and the exemptions of the head. NextNumber counts them, because it
+// cuts the number at the first '.', and CheckResultName, ResultsOfHead and the other readers of an ending never read
+// one as theirs, because each asks for its own ending whole.
+const (
+	sweepSuffix    = ".sweep.json"
+	sweeperSuffix  = ".sweeper.json"
+	polisherSuffix = ".polisher.json"
+)
+
+// SweepName is the name of the file that holds the nth sweep stored for the head of c: <head12>-<n>.sweep.json.
+func SweepName(c Candidate, n int) string { return c.Short() + "-" + strconv.Itoa(n) + sweepSuffix }
+
+// SweeperName is the name of the file that holds the nth report of the sweeper stored for the head of c:
+// <head12>-<n>.sweeper.json.
+func SweeperName(c Candidate, n int) string { return c.Short() + "-" + strconv.Itoa(n) + sweeperSuffix }
+
+// PolisherName is the name of the file that holds the nth findings of a polisher stored for the head of c:
+// <head12>-<n>.polisher.json.
+func PolisherName(c Candidate, n int) string {
+	return c.Short() + "-" + strconv.Itoa(n) + polisherSuffix
+}
+
+// CheckSweepName refuses a name that SweepName does not make. The error wraps ErrInvalidSweepName.
+func CheckSweepName(name string) error {
+	if _, _, ok := stem(name, sweepSuffix); !ok {
+		return fmt.Errorf("%w: %q is not <head12>-<n>.sweep.json", ErrInvalidSweepName, name)
+	}
+	return nil
+}
+
+// CheckSweeperName refuses a name that SweeperName does not make. The error wraps ErrInvalidSweeperName.
+func CheckSweeperName(name string) error {
+	if _, _, ok := stem(name, sweeperSuffix); !ok {
+		return fmt.Errorf("%w: %q is not <head12>-<n>.sweeper.json", ErrInvalidSweeperName, name)
+	}
+	return nil
+}
+
+// CheckPolisherName refuses a name that PolisherName does not make. The error wraps ErrInvalidPolisherName.
+func CheckPolisherName(name string) error {
+	if _, _, ok := stem(name, polisherSuffix); !ok {
+		return fmt.Errorf("%w: %q is not <head12>-<n>.polisher.json", ErrInvalidPolisherName, name)
+	}
+	return nil
+}
+
+// SweepsOfHead is the names, among names, of the stored sweeps of the head, by number, the first one first, as
+// ResultsOfHead is for results. Anything that is not <head12>-<n>.sweep.json of that head is left out.
+func SweepsOfHead(names []string, head string) []string { return ofHead(names, head, sweepSuffix) }
+
+// SweepersOfHead is the names, among names, of the stored reports of the sweeper for the head, by number.
+func SweepersOfHead(names []string, head string) []string { return ofHead(names, head, sweeperSuffix) }
+
+// PolishersOfHead is the names, among names, of the stored findings of the polisher for the head, by number.
+func PolishersOfHead(names []string, head string) []string {
+	return ofHead(names, head, polisherSuffix)
+}
+
+// The reasons the names of the role records are refused, which wrap exactly as the ones of review.go.
+var (
+	// ErrInvalidSweepName is a name that is not the name of a stored sweep, <head12>-<n>.sweep.json.
+	ErrInvalidSweepName = errors.New("review: invalid sweep name")
+	// ErrInvalidSweeperName is a name that is not the name of a stored sweeper report, <head12>-<n>.sweeper.json.
+	ErrInvalidSweeperName = errors.New("review: invalid sweeper name")
+	// ErrInvalidPolisherName is a name that is not the name of stored polisher findings, <head12>-<n>.polisher.json.
+	ErrInvalidPolisherName = errors.New("review: invalid polisher name")
+)
 
 // stem cuts suffix from name and splits what is left into <head12> and <n>, and says whether name is
 // <head12>-<n> and suffix, written the way ResultName writes it.

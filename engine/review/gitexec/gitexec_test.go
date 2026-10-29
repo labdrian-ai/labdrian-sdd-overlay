@@ -49,6 +49,11 @@ func (f *fakeRunner) Output(ctx context.Context, env []string, bin string, args 
 	return f.stdout, f.stderr, f.err
 }
 
+// OutputStdin answers as Output does and records the start; the input is not kept.
+func (f *fakeRunner) OutputStdin(ctx context.Context, env []string, _ []byte, bin string, args ...string) ([]byte, []byte, error) {
+	return f.Output(ctx, env, bin, args...)
+}
+
 func (f *fakeRunner) only(t *testing.T) call {
 	t.Helper()
 	if len(f.calls) != 1 {
@@ -428,6 +433,10 @@ type lateRunner struct{ err error }
 func (l lateRunner) Output(ctx context.Context, env []string, bin string, args ...string) ([]byte, []byte, error) {
 	<-ctx.Done()
 	return nil, nil, l.err
+}
+
+func (l lateRunner) OutputStdin(ctx context.Context, env []string, _ []byte, bin string, args ...string) ([]byte, []byte, error) {
+	return l.Output(ctx, env, bin, args...)
 }
 
 // exitStatus is the error of a real process that ended with a status of 2: the test program, run with a flag

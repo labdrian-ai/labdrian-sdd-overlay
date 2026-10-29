@@ -1,0 +1,87 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "eba53994c6a32d87630454cec11589d72dee7abc",
+    "head": "e7e1de17950ce188a844380ff76f027ce6df5cec",
+    "diff_sha256": "212125927113ee9d82e6b360fc1f0c37dafdf6c0245a62f9ff19c305036b16b5",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/architecture_test.go",
+      "engine/review/analyzers/analyzers.go",
+      "engine/review/analyzers/analyzers_test.go",
+      "engine/review/app/app.go",
+      "engine/review/app/fakes_test.go",
+      "engine/review/app/service.go",
+      "engine/review/app/sweep.go",
+      "engine/review/app/sweep_test.go",
+      "engine/review/fsstore/sweepcopy.go",
+      "engine/review/fsstore/sweepcopy_test.go",
+      "engine/review/gitexec/gitexec.go",
+      "engine/review/gitexec/sweep_test.go"
+    ]
+  },
+  "rows": [
+    "default",
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "eba53994c6a32d87630454cec11589d72dee7abc",
+      "head": "e7e1de17950ce188a844380ff76f027ce6df5cec",
+      "diff_sha256": "212125927113ee9d82e6b360fc1f0c37dafdf6c0245a62f9ff19c305036b16b5"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/architecture_test.go",
+        "engine/review/analyzers/analyzers.go",
+        "engine/review/analyzers/analyzers_test.go",
+        "engine/review/app/app.go",
+        "engine/review/app/fakes_test.go",
+        "engine/review/app/service.go",
+        "engine/review/app/sweep.go",
+        "engine/review/app/sweep_test.go",
+        "engine/review/fsstore/sweepcopy.go",
+        "engine/review/fsstore/sweepcopy_test.go",
+        "engine/review/gitexec/gitexec.go",
+        "engine/review/gitexec/sweep_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/review/analyzers/analyzers.go:149-159",
+        "claim": "Shellcheck passes the changed .sh paths to the program as bare arguments after `-f gcc`, with no `--` separator and no `./` prefix. Staticcheck paths do get a `./` prefix. A committed root-level file whose name starts with '-' and ends in .sh, such as `--rcfile=evil.sh`, would be read by shellcheck as an option instead of a file. That could change the sweep result or make the check fail. A path with a leading '-' is only possible at the repository root, and only for a candidate that adds such a file. The impact is narrow and needs a hostile or odd file name.",
+        "severity": "SUGGESTION",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/analyzers/analyzers.go:150-159",
+          "engine/review/app/sweep.go:924-928"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/review/gitexec/sweep_test.go:2213-2264",
+        "claim": "The tests pin Archive's happy path and its refusal of a relative directory or an unknown commit. They do not exercise the escape and link defences in `unpack` and `noLinkBelow`: a name that leads out of the directory, a non-empty target directory, or an entry written through a symlinked parent. These guards are the path-escape protection for the sweep copies, and a regression in them would not be caught by any test. The code reads as correct today.",
+        "severity": "SUGGESTION",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/gitexec/gitexec.go (diff lines 1930-2009)",
+          "engine/review/gitexec/sweep_test.go (diff lines 2253-2264)"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff, now including the tests: sweep_test.go (app) in full, fsstore/sweepcopy_test.go in full, gitexec/sweep_test.go in full, and the production code.",
+      "The app tests cover the lock being taken and given back on every failure path and the busy lock refusing with nothing done. They also cover no store write when any check fails or cannot run, the innermost-module grouping, the removed-name filter, and the T3 filter for odd/review-results.",
+      "The fsstore tests cover: stable paths per repository key, one key shared by linked worktrees, a side that is not base or head being refused, a symlink where a copy goes being refused with the target untouched, the no-wait lock, a second lock refused, and the lock file at mode 0600 left in place.",
+      "The gitexec tests use a real git on repositories made in temporary directories. They cover whole-word and fixed-string matching, a name starting with '-', an unknown commit being an error, and the archive keeping modes and symlinks.",
+      "Production-code checks from the first pass hold: no path escape in the unpack, tool failure detected by finding lines rather than exit status, and the lock released on every path.",
+      "Not run: I executed no command or test; this review was read-only."
+    ]
+  }
+}

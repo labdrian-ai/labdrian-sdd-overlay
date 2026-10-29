@@ -33,7 +33,7 @@ func TestReviewCheckRefusesACommandLineItCannotRead(t *testing.T) {
 		{"a positional argument", []string{"check", "--feature", "f", "extra"}, "error: review check: unexpected argument \"extra\"\n"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			w := newReviewWorld(t)
+			w := newCheckedWorld(t)
 
 			stdout, stderr, exits := w.run("", tc.args...)
 
@@ -47,7 +47,7 @@ func TestReviewCheckRefusesACommandLineItCannotRead(t *testing.T) {
 // A feature that is not one safe path segment is refused with the rule it breaks, and nothing leaves the results
 // directory.
 func TestCheckRefusesAFeatureThatIsNotOneSafePathSegment(t *testing.T) {
-	w := newReviewWorld(t)
+	w := newCheckedWorld(t)
 
 	stdout, stderr, exits := w.run("", "check", "--feature", "../own-rdd")
 
@@ -59,8 +59,9 @@ func TestCheckRefusesAFeatureThatIsNotOneSafePathSegment(t *testing.T) {
 // Standard output is where the verb hands over the files it used. When it cannot be written (a pipe whose reader
 // has gone) the parent never received that the head is cleared, and exit 0 would tell it that it did.
 func TestCheckFailsWithExit1WhenTheAnswerCannotBeWritten(t *testing.T) {
-	w := newReviewWorld(t)
+	w := newCheckedWorld(t)
 	w.recordClean()
+	w.sweepAll()
 	p := newCapturedProcess()
 	p.stdout = brokenStdout{errors.New("broken pipe")}
 
@@ -86,6 +87,9 @@ func TestUsageDocumentsReviewCheck(t *testing.T) {
 		"a result that blocks keeps the head blocked whatever was recorded after it",
 		"a check that did not run never passes",
 		"The delivery role runs it before it closes the feature",
+		"the first thing it lacks refuses it, naming the commit",
+		"a sweeper record that answers it",
+		"needs no record and is a link of the chain from its first parent",
 		"exit 0 cleared, 1 usage error, refusal or any other failure",
 	} {
 		if !strings.Contains(text, want) {
@@ -98,7 +102,7 @@ func TestUsageDocumentsReviewCheck(t *testing.T) {
 // again once another launch of the same head has a finding nobody checked and once a verifier reproduces it. The
 // streams and the exit codes are the ones the delivery role reads.
 func TestReviewCheckOfTheBuiltProgramClearsAReviewedHeadAndRefusesAWrongOne(t *testing.T) {
-	w := newReviewWorld(t)
+	w := newCheckedWorld(t)
 	bin := engineBinary(t)
 	run := func(stdin string, args ...string) (stdout, stderr string, code int) {
 		t.Helper()
@@ -118,8 +122,9 @@ func TestReviewCheckOfTheBuiltProgramClearsAReviewedHeadAndRefusesAWrongOne(t *t
 		return o.String(), e.String(), code
 	}
 
-	if out, errText, code := run("", "review", "check", "--feature", "own-rdd"); code != 1 || out != "" || !strings.Contains(errText, "no stored result binds the head") {
-		t.Fatalf("check of a head never reviewed: exit %d, stdout %q, stderr %q; want 1, nothing and the reason", code, out, errText)
+	// The first thing the head lacks is its sweep (own-rdd T6b5, S6 f): the review is the last of what a commit needs.
+	if out, errText, code := run("", "review", "check", "--feature", "own-rdd"); code != 1 || out != "" || !strings.Contains(errText, "commit "+w.head+": review: no sweep record binds the commit") {
+		t.Fatalf("check of a head never swept: exit %d, stdout %q, stderr %q; want 1, nothing and the reason", code, out, errText)
 	}
 	out, errText, code := run("", "review", "bind", "--base", "HEAD~1", "--head", "HEAD")
 	if code != 0 {
@@ -129,6 +134,10 @@ func TestReviewCheckOfTheBuiltProgramClearsAReviewedHeadAndRefusesAWrongOne(t *t
 	if _, errText, code := run(reply(t, b, nil), "review", "record", "--feature", "own-rdd", "--base", "HEAD~1", "--head", "HEAD", "--rows", "default"); code != 0 {
 		t.Fatalf("review record: exit %d, stderr %q", code, errText)
 	}
+	if out, errText, code := run("", "review", "check", "--feature", "own-rdd"); code != 1 || out != "" || !strings.Contains(errText, "commit "+w.head+": review: no sweep record binds the commit") {
+		t.Fatalf("check of a reviewed head never swept: exit %d, stdout %q, stderr %q; want 1, nothing and the reason", code, out, errText)
+	}
+	w.sweepAll()
 
 	out, errText, code = run("", "review", "check", "--feature", "own-rdd")
 	var cleared struct {
@@ -157,10 +166,10 @@ func TestReviewCheckOfTheBuiltProgramClearsAReviewedHeadAndRefusesAWrongOne(t *t
 	if out, errText, code := run("", "review", "check", "--feature", "own-rdd"); code != 1 || out != "" || !strings.Contains(errText, "a stored result is not clear") || !strings.Contains(errText, "findings not checked F1") {
 		t.Errorf("check with a finding nobody checked: exit %d, stdout %q, stderr %q; want 1, nothing and the reason", code, out, errText)
 	}
-	if _, errText, code := run(verdictOn("reproduced"), "review", "verify", "--feature", "own-rdd", "--stored", w.head[:12]+"-2.json"); code != 0 {
+	if _, errText, code := run(verdictOn("reproduced"), "review", "verify", "--feature", "own-rdd", "--stored", w.head[:12]+"-3.json"); code != 0 { // the sweep took number 2
 		t.Fatalf("verify: exit %d, stderr %q", code, errText)
 	}
-	if out, errText, code := run("", "review", "check", "--feature", "own-rdd"); code != 1 || out != "" || !strings.Contains(errText, "a stored result blocks the head") || !strings.Contains(errText, w.head[:12]+"-2.verifier.json") {
+	if out, errText, code := run("", "review", "check", "--feature", "own-rdd"); code != 1 || out != "" || !strings.Contains(errText, "a stored result blocks the head") || !strings.Contains(errText, w.head[:12]+"-3.verifier.json") {
 		t.Errorf("check with a blocking verdict: exit %d, stdout %q, stderr %q; want 1, nothing and the reason", code, out, errText)
 	}
 }

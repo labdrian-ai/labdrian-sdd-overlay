@@ -7,6 +7,8 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -14,12 +16,13 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/overlaytest"
 )
 
-// commitMore adds a commit on top of the world, so that it holds a chain of commits, and returns its full name.
+// commitMore adds a commit on top of the world, so that it holds a chain of commits, and returns its full name. The
+// commit declares its risk, "Risk: none", as every commit a builder makes does.
 func (w *reviewWorld) commitMore(file string) string {
 	w.t.Helper()
 	overlaytest.WriteFile(w.t, w.root, file, file+"\n")
 	w.git("add", "-A")
-	w.git("commit", "-q", "-m", file)
+	w.git("commit", "-q", "-m", file, "-m", "Risk: none")
 	return w.name("HEAD")
 }
 
@@ -90,6 +93,7 @@ func exemptedRange(base, head, digest string) string {
 // nothing stored.
 func (w *reviewWorld) wantNoChain(base, head string, say ...string) {
 	w.t.Helper()
+	w.sweepAll()
 	before := listNames(w.t, w.results("own-rdd"))
 
 	stdout, stderr, exits := w.checkChain(base)
@@ -113,10 +117,11 @@ func (w *reviewWorld) wantNoChain(base, head string, say ...string) {
 // file it used and what the candidate was recomputed to be. The walk stops at the base: the result of the range below
 // it is not part of the chain. Nothing is stored and nothing is said on stderr.
 func TestCheckBaseClearsAnUnbrokenChainOfClearRangesAndListsThemFromTheBase(t *testing.T) {
-	w := newReviewWorld(t)
+	w := newCheckedWorld(t)
 	mid, tip := w.commitMore("d.txt"), w.commitMore("e.txt")
 	w.recordRange(w.base, w.head)
 	first, second := w.recordRange(w.head, mid), w.recordRange(mid, tip)
+	w.sweepAll()
 	before := listNames(t, w.results("own-rdd"))
 
 	stdout, stderr, exits := w.checkChain(w.head)
@@ -133,13 +138,14 @@ func TestCheckBaseClearsAnUnbrokenChainOfClearRangesAndListsThemFromTheBase(t *t
 // A range that an exemption clears is a range of the chain like one that a result clears, and the chain may end in it:
 // the walk reaches the base through the exemption.
 func TestCheckBaseClearsAChainThatEndsInAnExemption(t *testing.T) {
-	w := newReviewWorld(t)
+	w := newCheckedWorld(t)
 	tip := w.commitMore("d.txt")
 	exempted := w.bindRange(w.base, w.head)
 	if _, stderr, exits := w.exempt(verifierReport, "none"); !equalInts(exits, []int{0}) {
 		t.Fatalf("setup: review exempt exit calls = %v, stderr = %q; want [0]", exits, stderr)
 	}
 	reviewed := w.recordRange(w.head, tip)
+	w.sweepAll()
 
 	stdout, stderr, exits := w.checkChain(w.base)
 
@@ -151,7 +157,7 @@ func TestCheckBaseClearsAChainThatEndsInAnExemption(t *testing.T) {
 
 // A commit that no stored result or exemption ends at breaks the chain: the check stops there and says so.
 func TestCheckBaseRefusesAChainWithAGap(t *testing.T) {
-	w := newReviewWorld(t)
+	w := newCheckedWorld(t)
 	mid, tip := w.commitMore("d.txt"), w.commitMore("e.txt")
 	w.recordRange(w.base, w.head)
 	w.recordRange(mid, tip) // nothing covers the commits from head to mid
@@ -161,7 +167,7 @@ func TestCheckBaseRefusesAChainWithAGap(t *testing.T) {
 
 // A range that is not clear refuses the chain even when the ranges on both sides of it are clear.
 func TestCheckBaseRefusesARangeThatIsNotClear(t *testing.T) {
-	w := newReviewWorld(t)
+	w := newCheckedWorld(t)
 	mid, tip := w.commitMore("d.txt"), w.commitMore("e.txt")
 	w.recordRange(w.base, w.head)
 	w.recordBlocker(w.head, mid) // a severe finding nobody checked
@@ -175,14 +181,14 @@ func TestCheckBaseRefusesARangeThatIsNotClear(t *testing.T) {
 // to a commit it already passed, never reach it: both are refused, and the second does not loop.
 func TestCheckBaseRefusesAChainThatDoesNotReachTheBase(t *testing.T) {
 	t.Run("a range that begins before the base", func(t *testing.T) {
-		w := newReviewWorld(t)
-		tip := w.commitMore("d.txt")
-		w.recordRange(w.base, tip) // one review of the whole branch, and the delivery base is the commit in the middle
+		w := newCheckedWorld(t)
+		mid, tip := w.commitMore("d.txt"), w.commitMore("e.txt")
+		w.recordRange(w.head, tip) // one review of both commits, and the delivery base is the commit in the middle
 
-		w.wantNoChain(w.head, tip, "head "+w.base+": review: no stored result binds the head")
+		w.wantNoChain(mid, tip, "head "+w.head+": review: no stored result binds the head")
 	})
 	t.Run("ranges that lead back to a commit the chain already passed", func(t *testing.T) {
-		w := newReviewWorld(t)
+		w := newCheckedWorld(t)
 		tip := w.commitMore("d.txt")
 		w.recordRange(w.head, tip)
 		w.recordRange(tip, w.head) // the same commits reviewed the other way round
@@ -191,12 +197,48 @@ func TestCheckBaseRefusesAChainThatDoesNotReachTheBase(t *testing.T) {
 	})
 }
 
+// A passive commit is a link of the chain from its first parent with no record: the range it makes has no result and no
+// exemption, and the chain goes through it to the review below (own-rdd T6b5, S6 d and f).
+func TestCheckBaseTakesAPassiveCommitAsALinkOfTheChainWithNoRecord(t *testing.T) {
+	w := newCheckedWorld(t)
+	reviewed := w.recordRange(w.base, w.head)
+	passive := w.commitPassive("own-rdd.md")
+	w.sweepAll()
+
+	stdout, stderr, exits := w.checkChain(w.base)
+
+	link := fmt.Sprintf("    {\n      \"base\": %q,\n      \"head\": %q,\n      \"results\": []\n    }", w.head, passive)
+	want := chainAnswer(passive, w.base, resultRange(w.base, w.head, reviewed.DiffSHA256), link)
+	if stdout != want || stderr != "" || !equalInts(exits, []int{0}) {
+		t.Errorf("stdout = %q, stderr = %q, exits = %v; want %q, nothing, [0]", stdout, stderr, exits, want)
+	}
+}
+
+// A commit inside a range a review covers needs what a commit needs but its review: the check names it.
+func TestCheckBaseHoldsTheCommitsInsideAReviewedRangeToWhatTheyNeed(t *testing.T) {
+	w := newCheckedWorld(t)
+	mid, tip := w.commitMore("d.txt"), w.commitMore("e.txt")
+	w.recordRange(w.head, tip) // one review of both commits
+	w.sweepAll()
+	if err := os.Remove(filepath.Join(w.results("own-rdd"), mid[:12]+"-1.sweep.json")); err != nil { // mid has no other record, so its sweep is number 1
+		t.Fatalf("setup: %v", err)
+	}
+
+	stdout, stderr, exits := w.checkChain(w.head)
+
+	want := "error: review check: the chain from " + w.head + " to " + tip + ": commit " + mid + ": review: no sweep record binds the commit\n"
+	if stdout != "" || stderr != want || !equalInts(exits, []int{1}) {
+		t.Errorf("stdout = %q, stderr = %q, exits = %v; want nothing, %q, [1]", stdout, stderr, exits, want)
+	}
+}
+
 // Without --base the check is by head alone, as it was: the ranges before the head are not looked at, and the answer
 // has neither a base nor ranges.
 func TestCheckWithoutBaseStaysTheCheckOfOneHeadAndAnswersAsBefore(t *testing.T) {
-	w := newReviewWorld(t)
+	w := newCheckedWorld(t)
 	tip := w.commitMore("d.txt")
 	reviewed := w.recordRange(w.head, tip) // the range from base to head was never reviewed
+	w.sweepAll()
 
 	stdout, stderr, exits := w.run("", "check", "--feature", "own-rdd")
 

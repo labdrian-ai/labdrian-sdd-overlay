@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f94f17dddaac9aeacbf2af8f691b262405feac8b",
+    "head": "50a2b30102c65403b96304d238a03b30b596f934",
+    "diff_sha256": "d9b8d8ab6eb76b158a9ea5e0b8966bfa21bb8d6f7dda906a0177f9392ade226d",
+    "paths": [
+      "README.md",
+      "agents/sweeper.md",
+      "codex/agents/sweeper.toml",
+      "engine/cmd/review_sweep_test.go",
+      "engine/cmd/usage.go",
+      "engine/review/app/sweep.go",
+      "engine/review/sweep.go",
+      "engine/skills/role_agents_artifact_test.go",
+      "engine/skills/role_chain_artifact_test.go",
+      "pi/agents/sweeper.md",
+      "roles/sweeper/body.md",
+      "skills/role-chain/SKILL.md"
+    ]
+  },
+  "rows": [
+    "default",
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f94f17dddaac9aeacbf2af8f691b262405feac8b",
+      "head": "50a2b30102c65403b96304d238a03b30b596f934",
+      "diff_sha256": "d9b8d8ab6eb76b158a9ea5e0b8966bfa21bb8d6f7dda906a0177f9392ade226d"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "README.md",
+        "agents/sweeper.md",
+        "codex/agents/sweeper.toml",
+        "engine/cmd/review_sweep_test.go",
+        "engine/cmd/usage.go",
+        "engine/review/app/sweep.go",
+        "engine/review/sweep.go",
+        "engine/skills/role_agents_artifact_test.go",
+        "engine/skills/role_chain_artifact_test.go",
+        "pi/agents/sweeper.md",
+        "roles/sweeper/body.md",
+        "skills/role-chain/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the full diff at the scratchpad path (all 12 changed files).",
+      "The four sweeper role files (roles/sweeper/body.md, agents/sweeper.md, pi/agents/sweeper.md, codex/agents/sweeper.toml) carry the identical new Commit line. The test now requires exactly one 'Commit the sweep as' line per file. The old duplicate commit line is removed, so the 5-to-4 line count in role_agents_artifact_test.go matches the diff.",
+      "The new skill line points readers to `labdrian --help`. Verified: bin/labdrian-overlay:106 handles `--help` by calling usage, and README.md:95 names `labdrian` as the alias to bin/labdrian-overlay.",
+      "bin/lib/usage.sh:303 already defines the T1 to T3 checks 'of the sweeper'. That file is not in the diff, so the new test's expectations for it hold against unchanged text.",
+      "Declared Risk 3 is right. The diff edits a role file deployed to three runtimes (claude, pi, codex), a skill the parent orchestrator consumes, and the CLI usage and README help text. These are consumed prompts and contracts, and the change is a requested wording fix. No data, security, concurrency or delivery item (1, 2, 4, 5) applies, and pinned tests cover the changed text, so item 6 does not apply either.",
+      "Not run: no tests or commands were executed (read-only review)."
+    ]
+  }
+}

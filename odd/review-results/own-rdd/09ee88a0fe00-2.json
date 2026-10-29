@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "4021068468c7cd8ebabe4e54d3ef6ac412de8df0",
+    "head": "09ee88a0fe009f3357cdfb18ba6533d750bab1c6",
+    "diff_sha256": "45227340b449aacb3d5ebe1fc45462aaffeaad3f64725553980bde18fbdae0ff",
+    "paths": [
+      "engine/cmd/review_stop_hook_test.go",
+      "engine/review/app/fakes_test.go",
+      "engine/review/app/stop_test.go",
+      "engine/review/app/unreviewed.go",
+      "engine/review/app/unreviewed_test.go"
+    ]
+  },
+  "rows": [
+    "default",
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "4021068468c7cd8ebabe4e54d3ef6ac412de8df0",
+      "head": "09ee88a0fe009f3357cdfb18ba6533d750bab1c6",
+      "diff_sha256": "45227340b449aacb3d5ebe1fc45462aaffeaad3f64725553980bde18fbdae0ff"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/review_stop_hook_test.go",
+        "engine/review/app/fakes_test.go",
+        "engine/review/app/stop_test.go",
+        "engine/review/app/unreviewed.go",
+        "engine/review/app/unreviewed_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/review/app/stop.go:56",
+        "severity": "WARNING",
+        "claim": "The stop hook's once-per-session marker is still keyed <base12>-<head12>. NextUnreviewed now asks the same commit for different things over time: a sweep first, then a sweeper answer once the sweep fires, a polisher record, and finally the review. All of these share one base and head, so they share one key. After the first block for a commit, the later ask for that same commit in the same session is silently skipped. Needs of a commit that is not the first unreviewed one never includes the review, so the sequential asks cannot be folded into a single block for it. The task text pins the key as unchanged, so this follows the spec. It still weakens the hook for a long session: an agent can stop with a commit that still lacks a sweeper or polisher record. The intended T6b6c wording (listing everything missing at once) may soften this but cannot cover needs that only appear after earlier ones are met.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/app/stop.go:56",
+          "engine/review/app/unreviewed.go:112-127",
+          "engine/review/needs.go:118-129"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff: unreviewed.go, unreviewed_test.go, fakes_test.go, stop_test.go and cmd/review_stop_hook_test.go.",
+      "Read unreviewed.go, hookfacts.go, stop.go, needs.go (Facts and Needs) and review_stop_hook.go in the worktree.",
+      "Read the T6b6b, T6b6c and T6b6a task lines in odd/tasks/own-rdd.md, which pin the behavior, the marker key and the declared Risk.",
+      "The walk logic matches the spec. Passive commits become links and are never asked. AskCoverage is set only on the first commit the chain does not reach. The walk stops at that commit. Base is the commit's first parent. Earlier commits are asked for everything except the review.",
+      "Risk line: Risk 3 is right for this diff. It changes which commit the stop hook asks for and the shape of the exported Question, which the hook consumes. It also adds new error paths: NextUnreviewed now fails for any branch commit whose git facts cannot be read, where before it needed only links. The task's own Risk: none is the weaker claim, and Risk 3 is the accurate one.",
+      "The helpers the tests use all exist: sweepAll, declares, pathsOf and recordBlocker. The thirdSHA case in fakeGit.Commit is covered by the new passive-commit test.",
+      "I ran no commands and no tests; this is a read-only static review."
+    ]
+  }
+}

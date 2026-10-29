@@ -35,7 +35,12 @@ func TestDocsDescribeTheReviewStopHook(t *testing.T) {
 		"blocks the stop",
 		"once for each session and commit",
 		"labdrian review bind --base",
-		"the next commit",
+		"the first commit that misses anything",
+		"a passive commit is never asked",
+		"labdrian review sweep --feature",
+		"labdrian review record --role sweeper",
+		"labdrian review record --role polisher",
+		"asks for each thing a commit misses once for each session and commit",
 		"not the whole branch",
 		"a stored result or an exemption that binds a commit",
 		"whatever its outcome",
@@ -78,6 +83,33 @@ func TestInstallHooksSummariesNameTheReviewStopHook(t *testing.T) {
 	for _, name := range []string{"README install-hooks", "install-hooks summary", "--help for install-hooks"} {
 		if text := sections[name]; !strings.Contains(text, "Stop") {
 			t.Errorf("%s does not say the hook is wired into Stop", name)
+		}
+	}
+}
+
+// The other texts that describe the hook say what it asks for as the README does (own-rdd T6b7b, S6 e, L70): the help of
+// the wrapper, the README entry of the verb, the install-hooks summary and the claim of the Claude installation say that
+// it asks for each thing the first commit not ready for delivery misses, once for each session and commit, and none says
+// any more that it asks for the next commit no review covers.
+func TestOtherTextsOfTheReviewStopHookSayWhatItAsksFor(t *testing.T) {
+	readme := readRepositoryFile(t, "README.md")
+	for _, tc := range []struct{ name, text, want string }{
+		{"bin/lib/usage.sh", readRepositoryFile(t, "bin/lib/usage.sh"),
+			"not run by a person: the Claude Code Stop hook that install-hooks wires (the review stop-hook). On a branch other than the default one, " +
+				"it blocks the stop for the first commit that misses anything review check asks of it, with the command for each thing it misses, " +
+				"asking for each thing once for each session and commit, and never for the whole branch; " +
+				"it lets the stop happen on anything it cannot tell (exit 0 always, 1 usage error)"},
+		{"the stop-hook entry of README.md", docSection(t, readme, "    stop-hook\n", "overlay memory <verb>"),
+			"It asks the agent for what the first commit not ready for delivery misses, each thing once for each session and commit."},
+		{"bin/lib/hooks.sh", readRepositoryFile(t, "bin/lib/hooks.sh"),
+			"(on Stop, asks the agent for each thing the first commit not ready for delivery misses, once for each session and commit),"},
+	} {
+		text := normalizeDocText(tc.text)
+		if !strings.Contains(text, normalizeDocText(tc.want)) {
+			t.Errorf("%s does not say %q", tc.name, tc.want)
+		}
+		if strings.Contains(text, "no review covers") || strings.Contains(text, "no stored result or exemption binds") {
+			t.Errorf("%s still says that the hook asks for the next commit no review covers", tc.name)
 		}
 	}
 }

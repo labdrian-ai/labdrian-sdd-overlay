@@ -19,7 +19,7 @@ Chain: `[prototyper] → shaper → estimator → builder → [sweeper] → [pol
 ## Triggers
 
 - Prototyper, only for a question of shape: does installed tool X behave as premise P says; what is number N; can X be done within the appetite. No premise: back to the asker. The prompt sets the lookup/spike box.
-- Sweeper, on the builder's commit (`base` = parent), when T1 `git diff --diff-filter=DR --name-only base..HEAD` is non-empty or `rg -w` finds a removed name outside the diff; T2 `deadcode -test`, `staticcheck`, `shellcheck` print lines a `mktemp -d` copy of `base` does not; T3 `git status --porcelain --untracked-files=all` is non-empty.
+- Sweeper, on the builder's commit (`base` = parent): `labdrian review sweep --feature F --base B --head H` runs T1-T3 (`labdrian --help`); if it fires, launch the sweeper on its candidates, store its report with `labdrian review record --role sweeper`; if the `Risk:` trailer names an item, store each polisher judge's findings with `labdrian review record --role polisher`.
 - Reviewer: add a readability row when docs, public API, messages or help change, a second blind launch (another `model`) when the Risk line names an item.
 
 ## Worktrees

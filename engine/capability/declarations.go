@@ -33,7 +33,7 @@ var declarations = []Declaration{
 		Target: TargetClaude,
 		Claims: []Claim{
 			supported(Installation,
-				"Install, update, uninstall, and status of the overlay's lifecycle hook families in Claude Code settings.json, among them the Stop hook that asks, once per session and commit, to review the next commit no stored review covers, and the builder guard on the Agent tool that denies a builder launch without a task the shaper designed (a speed bump). Hook changes load only after a Claude Code restart, so install and update report restart_required.",
+				"Install, update, uninstall, and status of the overlay's lifecycle hook families in Claude Code settings.json, among them the Stop hook that asks for each thing the first commit not ready for delivery misses, once per session and commit, and the builder guard on the Agent tool that denies a builder launch without a task the shaper designed (a speed bump). Hook changes load only after a Claude Code restart, so install and update report restart_required.",
 				"runtime:TestClaudeInstallWritesLifecycleHooksAndReportsSupportedStatus",
 				"runtime:TestClaudeInstallWritesTheBuilderGuard",
 				"runtime:TestClaudeInstallWritesTheReviewStopHook",

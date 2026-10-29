@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ac8adaf9f59600dfdda5a72b96974b57cf1bad2c",
+    "head": "64e595bd045aca2049d87595ef4f813cea9240ee",
+    "diff_sha256": "d9023a51deef90383df5d3feffb050d507fa9d418b5d53a3909b21cabea40eed",
+    "paths": [
+      "engine/review/needs.go",
+      "engine/review/needs_test.go"
+    ]
+  },
+  "rows": [
+    "default"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "ac8adaf9f59600dfdda5a72b96974b57cf1bad2c",
+      "head": "64e595bd045aca2049d87595ef4f813cea9240ee",
+      "diff_sha256": "d9023a51deef90383df5d3feffb050d507fa9d418b5d53a3909b21cabea40eed"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/review/needs.go",
+        "engine/review/needs_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/review/needs.go:109-130",
+        "severity": "SUGGESTION",
+        "claim": "Needs holds a sweep commit that does have a sweep record to the sweeper check (the doc comment says so). S6 (d) and L63 only say a sweep commit needs no sweep record of its own. The behaviour is defensible and probably intended, but the spec does not state it. No test pins it: the cases for a sweep commit never set Sweep to a non-empty path together with SweepFired. Also untested is a sweep commit whose trailer fails (only MissingRisk should be listed).",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/needs.go:128",
+          "engine/review/needs_test.go:213-216",
+          "odd/tasks/own-rdd.md:16"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/review/needs.go:78-80",
+        "severity": "SUGGESTION",
+        "claim": "The ErrNoPolisher text is built from the parsed Risk slice (strconv.Itoa joined by commas). L63 says the hook prints the trailer's value as written, while the check reason says 'Risk: <items>'. For a valid trailer the two forms are the same, because DeclaredRisk accepts only comma-separated numbers with no space. So there is no divergence today, and the 'Risk: 3,5' text is pinned by the test. A later change to the trailer grammar could make the two forms differ.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/needs.go:131-137",
+          "engine/review/risk.go:41"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff: engine/review/needs.go (new, 140 lines) and engine/review/needs_test.go (new, 156 lines).",
+      "Read S6 (d), (e) and (f) and L63 in odd/tasks/own-rdd.md in the worktree.",
+      "Order of the needs matches (d): risk, sweep, sweeper, polisher, review. A failing trailer lists only Risk and Sweep. A passive commit lists nothing. Sweep, sweeper and polisher errors wrap exactly one of the three sentinels with the pinned texts 'commit <sha>: review: no sweep record binds the commit', '...no sweeper record answers the fired sweep record: <path>' and '...no polisher record binds a commit that declares a high-risk item: Risk: <items>'. The trailer error and the coverage error pass through unchanged, so a commit that misses only its review is refused with today's text.",
+      "IsPassive matches (d): Risk: none (DeclaredRisk returns []int{} with a nil error for it, see risk.go:34), no deleted or renamed paths, every path strictly under the three prefixes. Tests cover the prefix lookalike odd/tasks-old/, the bare directory, an item named, a failing trailer, a removal, and an empty change set.",
+      "Tests go through the public package review_test API only. They cover the order, the sentinel uniqueness and the exact texts.",
+      "Nothing beyond the spec was added: the diff has no wiring into review check or review exempt yet, which is expected for the first of three T6b5 commits.",
+      "Not run: go test, go vet and gofmt (read-only review; nothing was executed)."
+    ]
+  }
+}

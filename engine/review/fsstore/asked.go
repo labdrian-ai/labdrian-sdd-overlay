@@ -20,7 +20,8 @@ var errUnsupported = errors.New(storeName + ": unsupported platform")
 // askedMarker is what a marker holds: nothing a reader needs, because the marker is its name.
 var askedMarker = []byte("asked\n")
 
-// maxKeyLen bounds the key of a question, which is <base12>-<head12> or a fixed word.
+// maxKeyLen bounds the key of a question, which is <base12>-<head12>-<need> (at most 34
+// bytes) or a fixed word.
 const maxKeyLen = 64
 
 // Asked is the adapter of the Asked port of review/app: the questions the stop hook has put, as one private marker for

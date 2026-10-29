@@ -85,7 +85,7 @@ type roleAgentSpec struct {
 
 func roleAgentSpecs() []roleAgentSpec {
 	return []roleAgentSpec{
-		{"builder", "sonnet", builderTools, 4, []string{
+		{"builder", "sonnet", builderTools, 5, []string{
 			"Implement only the tasks the prompt names", "[x]", "`odd-feature-doc`", "append its evidence to the Log", "`test-first`",
 			"RED -> GREEN -> REFACTOR evidence table", "confirmed ledger ids", "one focused test per fix",
 		}},
@@ -921,6 +921,27 @@ func TestJudgmentDayProtocolIsUnchanged(t *testing.T) {
 	for _, link := range regexp.MustCompile(`\]\(([^)#]+)\)`).FindAllStringSubmatch(skill, -1) {
 		if _, err := os.Stat(filepath.Join(root, "skills", "judgment-day", link[1])); err != nil {
 			t.Errorf("the skill refers to %s, which is not there: %v", link[1], err)
+		}
+	}
+}
+
+// The builder learns the Risk trailer and the sweeper learns the report it returns (own-rdd T6b7a,
+// S6 g): one line each, the same text in the source and in the file of every runtime.
+func TestBuilderAndSweeperDeltasCarryTheTrailerAndTheSweepReport(t *testing.T) {
+	root := skillsRepoRoot(t)
+	const builderLine = "End every commit message with a final trailer block holding exactly one line `Risk: none` or `Risk: <items>`: the numbers 1 to 6 of the high-risk items the commit's own diff touches, separated by commas with no space (for example `Risk: 3,5`); `labdrian review check` refuses a commit without it."
+	const sweeperLine = "Commit the sweep as one `chore(sweep): <what>` commit with its own `Risk:` trailer, or none, and return as your report the JSON object `{\"commit\": \"<full sha>\"|null, \"candidates\": [{\"candidate\": ..., \"disposition\": removed|corrected|live|finding, \"evidence\": ...}]}`, one entry for each candidate `labdrian review sweep` printed, with `commit` null when you committed nothing (\"nothing to sweep\" is a valid result); the parent stores it with `labdrian review record --role sweeper`."
+	for role, line := range map[string]string{"builder": builderLine, "sweeper": sweeperLine} {
+		for _, path := range []string{"roles/" + role + "/body.md", "agents/" + role + ".md", "pi/agents/" + role + ".md", "codex/agents/" + role + ".toml"} {
+			t.Run(path, func(t *testing.T) {
+				text := readRepoFile(t, root, path)
+				if strings.Count(text, "\n"+line+"\n") != 1 {
+					t.Errorf("%s must carry this line once, exactly:\n%s", path, line)
+				}
+				if role == "sweeper" && strings.Count(text, "Commit the sweep as") != 1 {
+					t.Errorf("%s must hold one line that starts Commit the sweep as, has %d", path, strings.Count(text, "Commit the sweep as"))
+				}
+			})
 		}
 	}
 }

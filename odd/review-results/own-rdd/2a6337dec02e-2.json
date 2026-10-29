@@ -1,0 +1,87 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "0fc8959ca529758839d731a38c07eebe65f86c7a",
+    "head": "2a6337dec02e6d5ed7f6e330cdea4cf56786db8c",
+    "diff_sha256": "a7ed2252231136fab09e81241c9d7617d6ad0ce7d1f09e19b512e86ffec3c959",
+    "paths": [
+      "agents/builder.md",
+      "agents/sweeper.md",
+      "codex/agents/builder.toml",
+      "codex/agents/sweeper.toml",
+      "engine/skills/role_agents_artifact_test.go",
+      "engine/skills/role_chain_artifact_test.go",
+      "pi/agents/builder.md",
+      "pi/agents/sweeper.md",
+      "roles/builder/body.md",
+      "roles/sweeper/body.md",
+      "skills/role-chain/SKILL.md"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "0fc8959ca529758839d731a38c07eebe65f86c7a",
+      "head": "2a6337dec02e6d5ed7f6e330cdea4cf56786db8c",
+      "diff_sha256": "a7ed2252231136fab09e81241c9d7617d6ad0ce7d1f09e19b512e86ffec3c959"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "roles/builder/body.md",
+        "roles/sweeper/body.md",
+        "agents/builder.md",
+        "agents/sweeper.md",
+        "pi/agents/builder.md",
+        "pi/agents/sweeper.md",
+        "codex/agents/builder.toml",
+        "codex/agents/sweeper.toml",
+        "skills/role-chain/SKILL.md",
+        "engine/skills/role_agents_artifact_test.go",
+        "engine/skills/role_chain_artifact_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "roles/sweeper/body.md:11-12",
+        "claim": "The sweeper body now has two sentences that both begin 'Commit the sweep as' and both say how to report. The old one says 'one chore(sweep) commit or none' and 'report every candidate as removed | corrected | live | finding'. The new one says `chore(sweep): <what>` with a Risk trailer and 'return as your report the JSON object ...'. The two do not contradict. The new sentence refines the first: the prefix is the same, 'none' matches `commit: null`, and the dispositions are the same set. A reader still gets two commit instructions and two report instructions in a row. The old sentence could be folded into the new one: drop its report clause and keep 'nothing to sweep' tied to `commit: null`. The test asserts the old sentence's `chore(sweep)` and `nothing to sweep` fragments, so folding means updating that spec entry. The same pair is repeated in the five generated files.",
+        "severity": "SUGGESTION",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "roles/sweeper/body.md:11-12",
+          "agents/sweeper.md:19-20"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "skills/role-chain/SKILL.md:22",
+        "claim": "The sweeper trigger line now says 'checks T1-T3' without saying what T1, T2 and T3 are. Before, the same line spelled them out: removed names, the deadcode/staticcheck/shellcheck diff against a `mktemp -d` copy of base, and `git status --porcelain`. The parent still has every action it must take, and the rule for acting on a fired sweep is intact. The labels T1-T3 are not defined in this skill, so a reader of the skill alone cannot tell what is being checked. A short gloss, or a pointer to `labdrian review sweep` help, would fix that. I could not check this against L73. The task document in this worktree stops at L72, and L73 and L74 are in the later docs commit, which is outside the worktree. The version of this line in task text T6b7a, which L73 re-marks, is longer and spells out T1-T3. The dropped fragments (`git diff --diff-filter`, `rg -w`, `deadcode -test`, `mktemp -d` and the others) match a deliberate shortening, but the shortened wording is not confirmed against L73.",
+        "severity": "SUGGESTION",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/role-chain/SKILL.md:22",
+          "engine/skills/role_chain_artifact_test.go:135-139",
+          "odd/tasks/own-rdd.md:75"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff and /home/labdrian/labdrian-sdd-overlay-worktrees/review-2a6337dec02e/skills/role-chain/SKILL.md.",
+      "Grep for the builder and sweeper lines in roles, agents, pi and codex. Each of the 8 files holds exactly one match, and the diff hunks show identical text in all 8 files (4 builder, 4 sweeper).",
+      "The builder and sweeper lines match the exact texts quoted in T6b7a (own-rdd.md:75) byte for byte. The test constants carry the same text.",
+      "Skill diff touches only line 22. The Appends, Reviewer, Worktrees, Binding and Persistence lines are unchanged.",
+      "Line 22 still carries the parent duties: base = parent, run `labdrian review sweep`, launch the sweeper with its candidates, store its report with `--role sweeper`, and store each polisher judge's findings with `--role polisher` when the `Risk:` trailer names an item.",
+      "Line 22 is not byte-equal to the T6b7a task text. It drops the T1/T2/T3 description and says 'checks T1-T3'. I could not confirm this against L73, which is not in the worktree document, so that part is unverified.",
+      "Duty-test change: five fragments are removed (`git diff --diff-filter=DR --name-only base..HEAD`, `rg -w`, `deadcode -test`, `staticcheck`, `shellcheck`, `mktemp -d`, `git status --porcelain --untracked-files=all`) and 'checks T1-T3' is added. A new test pins the whole line 22 exactly plus the three `labdrian review` fragments, so the rules the parent acts on stay covered.",
+      "Specs: the role agent specs counts go from 4 to 5 for builder and sweeper. The new test checks each line occurs once per file, delimited by newlines, in all four source and generated paths for each of the two roles.",
+      "Not run: no tests or commands were executed."
+    ]
+  }
+}

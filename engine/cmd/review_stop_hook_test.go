@@ -31,15 +31,92 @@ type stopWorld struct {
 	c3, c4 string // the two commits of the branch, oldest first; the branch was made on w.head
 }
 
+// newStopWorld is the world where each commit of the branch carries the trailer Risk: none and a clean sweep, so it lacks
+// only its review (T6b6b).
 func newStopWorld(t *testing.T) *stopWorld {
+	t.Helper()
+	return newStopWorldWith(t, func(s *stopWorld) { s.sweepAll() })
+}
+
+// newStopWorldWith makes the branch and its two commits, runs before (nil runs nothing) and then writes the task document,
+// an untracked line of the working tree that fires any sweep run after it (T6b6c, L70). A case builds the state it names
+// in before.
+func newStopWorldWith(t *testing.T, before func(s *stopWorld)) *stopWorld {
 	t.Helper()
 	w := newReviewWorld(t)
 	w.git("switch", "-q", "-c", "feature/stop")
 	s := &stopWorld{reviewWorld: w, home: t.TempDir()}
 	s.c3 = w.commitMore("c3.txt")
 	s.c4 = w.commitMore("c4.txt")
+	if before != nil {
+		before(s)
+	}
 	overlaytest.WriteFile(t, w.root, "odd/tasks/own-rdd.md", "# own-rdd\n")
 	return s
+}
+
+// recommit replaces the two commits of the branch by a c3 whose message holds the given paragraphs after its subject (none:
+// no trailer) and a c4 that declares Risk: none; s.c3 and s.c4 name the new commits.
+func (s *stopWorld) recommit(trailer ...string) {
+	s.t.Helper()
+	s.git("reset", "-q", "--hard", s.head)
+	overlaytest.WriteFile(s.t, s.root, "c3.txt", "c3.txt\n")
+	s.git("add", "-A")
+	args := []string{"commit", "-q", "-m", "c3.txt"}
+	for _, line := range trailer {
+		args = append(args, "-m", line)
+	}
+	s.git(args...)
+	s.c3 = s.name("HEAD")
+	s.c4 = s.commitMore("c4.txt")
+}
+
+// blockLine is the whole stdout of a hook that blocks a stop for the reason: one JSON object and a line feed, with <, > and
+// & as they are.
+func blockLine(t *testing.T, reason string) string {
+	t.Helper()
+	var b bytes.Buffer
+	enc := json.NewEncoder(&b)
+	enc.SetEscapeHTML(false)
+	if err := enc.Encode(struct {
+		Decision string `json:"decision"`
+		Reason   string `json:"reason"`
+	}{"block", reason}); err != nil {
+		t.Fatal(err)
+	}
+	return b.String()
+}
+
+// requireReason requires the hook to block the stop of the session with exactly the reason: the whole stdout, exit 0 and
+// nothing on stderr.
+func (s *stopWorld) requireReason(session, reason string) {
+	s.t.Helper()
+	stdout, stderr, exits := s.stop(session, false)
+	if want := blockLine(s.t, reason); stdout != want || stderr != "" || !equalInts(exits, []int{0}) {
+		s.t.Errorf("stdout = %q, stderr = %q, exits = %v; want stdout %q, nothing on stderr and [0]", stdout, stderr, exits, want)
+	}
+}
+
+// blockReasonOf is the reason of a block for the commit head after base, with the lines in the order given. The words are the
+// ones S6 (e) gives, written out here and not taken from the code.
+func blockReasonOf(head, base string, lines ...string) string {
+	return "Commit " + head + " of branch feature/stop is not ready for delivery. Before you stop, for that commit alone (base " + base + "):\n\n" +
+		strings.Join(lines, "\n") + "\n\n" +
+		"<feature> is the feature whose odd/tasks/<feature>.md holds the task of the commit. A record counts once it is stored and binds the commit, " +
+		"whatever its outcome; 'labdrian review check' judges the outcome. The stop hook asks for each thing a commit misses once for each session and commit."
+}
+
+const (
+	riskLineNoTrailer = `- Risk: it has no "Risk:" trailer in the final trailer block of its message. End the commit message with a final trailer block that holds the one line "Risk: none" or "Risk: <items>" (for example "Risk: 3,5"); when the commit is HEAD: git commit --amend --trailer "Risk: <none|items>". The rest of what the commit needs is asked once it declares its risk.`
+	exemptClause      = `; or, since the commit declares Risk: none, 'labdrian review exempt --risk none' it`
+)
+
+func sweepLine(base, head string) string {
+	return "- Sweep: labdrian review sweep --feature <feature> --base " + base + " --head " + head
+}
+
+func reviewLine(base, head, clause string) string {
+	return "- Review: labdrian review bind --base " + base + " --head " + head + ", then 'labdrian review record' the reply of the reviewer and 'labdrian review verify' it" + clause
 }
 
 // hookDeps is the deps the hook runs over: the working directory of the world, the environment of its git and the state
@@ -123,6 +200,7 @@ func bindCommand(base, head string) string {
 // one: the commit after the last that a review reached, here the first of the branch, and not the whole branch.
 func TestReviewStopHookBlocksAStopWhoseNextCommitHasNoReview(t *testing.T) {
 	s := newStopWorld(t)
+	stored := listNames(t, s.results("own-rdd")) // the sweeps the world made
 
 	reason := s.blocked("s1")
 
@@ -137,11 +215,11 @@ func TestReviewStopHookBlocksAStopWhoseNextCommitHasNoReview(t *testing.T) {
 			t.Errorf("the reason is %q, want it to say %q", reason, want)
 		}
 	}
-	if got, want := s.asked("s1"), []string{s.head[:12] + "-" + s.c3[:12]}; !reflect.DeepEqual(got, want) {
+	if got, want := s.asked("s1"), []string{s.head[:12] + "-" + s.c3[:12] + "-review"}; !reflect.DeepEqual(got, want) {
 		t.Errorf("the questions remembered for the session = %q, want %q", got, want)
 	}
-	if names := listNames(t, s.results("own-rdd")); names != nil {
-		t.Errorf("the results directory holds %q after the hook, want it to store nothing", names)
+	if names := listNames(t, s.results("own-rdd")); !reflect.DeepEqual(names, stored) {
+		t.Errorf("the results directory holds %q after the hook, want it to store nothing and hold %q", names, stored)
 	}
 	if _, err := os.Lstat(filepath.Join(s.parent, "repo-worktrees")); !errors.Is(err, os.ErrNotExist) {
 		t.Errorf("a worktree was made (%v), want the hook to bind nothing: the agent runs the command", err)
@@ -151,7 +229,7 @@ func TestReviewStopHookBlocksAStopWhoseNextCommitHasNoReview(t *testing.T) {
 // The question is put once for each session: the stop that follows it is not blocked, and another session is asked.
 func TestReviewStopHookAsksEachQuestionOnceForEachSession(t *testing.T) {
 	s := newStopWorld(t)
-	question := []string{s.head[:12] + "-" + s.c3[:12]}
+	question := []string{s.head[:12] + "-" + s.c3[:12] + "-review"}
 
 	first := s.blocked("s1")
 	s.allowed("s1")
@@ -165,6 +243,128 @@ func TestReviewStopHookAsksEachQuestionOnceForEachSession(t *testing.T) {
 			t.Errorf("the questions remembered for %s = %q, want %q", session, got, question)
 		}
 	}
+}
+
+// Each thing a commit misses is asked once for each session (T6b6d, L70): a sweep that fires after the first block makes
+// the commit miss its sweeper, and that is asked in the same session, once.
+func TestReviewStopHookAsksTheSweeperOfACommitInTheSameSessionOnceItsSweepFires(t *testing.T) {
+	s := newStopWorld(t)
+	prefix := s.head[:12] + "-" + s.c3[:12] + "-"
+	if reason := s.blocked("s1"); !strings.Contains(reason, bindCommand(s.head, s.c3)) {
+		t.Fatalf("the first reason is %q, want it to ask for %s", reason, s.c3)
+	}
+
+	// The task document is untracked, so T3 fires.
+	stdout, stderr, exits := s.sweepRun(t.TempDir(), "", "sweep", "--feature", "own-rdd", "--base", s.head, "--head", s.c3)
+	if !equalInts(exits, []int{0}) || decodeSwept(t, stdout).Outcome != "fired" {
+		t.Fatalf("setup: review sweep exit calls = %v, stdout = %q, stderr = %q; want [0] and a fired sweep", exits, stdout, stderr)
+	}
+	reason := s.blocked("s1")
+
+	if want := bindCommand(s.head, s.c3); !strings.Contains(reason, want) {
+		t.Errorf("the second reason is %q, want it to name %q", reason, want)
+	}
+	if got, want := s.asked("s1"), []string{prefix + "review", prefix + "sweeper"}; !reflect.DeepEqual(got, want) {
+		t.Errorf("the questions remembered for the session = %q, want %q", got, want)
+	}
+	s.allowed("s1")
+}
+
+// The reason lists, for the first commit that misses anything, the line of each thing it misses and nothing else (T6b6c,
+// S6 e, L63, L66, L70). Each case builds the state it names before the task document is written, which is an untracked
+// file: a sweep run in the case fires on it only when the case says so.
+func TestReviewStopHookListsEachThingTheCommitMisses(t *testing.T) {
+	t.Run("a head with no trailer", func(t *testing.T) {
+		s := newStopWorldWith(t, func(s *stopWorld) { s.recommit() })
+
+		s.requireReason("s1", blockReasonOf(s.c3, s.head, riskLineNoTrailer, sweepLine(s.head, s.c3)))
+	})
+	t.Run("a head with Risk: none and no sweep", func(t *testing.T) {
+		s := newStopWorldWith(t, nil)
+
+		s.requireReason("s1", blockReasonOf(s.c3, s.head, sweepLine(s.head, s.c3), reviewLine(s.head, s.c3, exemptClause)))
+	})
+	t.Run("a head whose sweep fired and has no sweeper record", func(t *testing.T) {
+		s := newStopWorldWith(t, func(s *stopWorld) {
+			overlaytest.WriteFile(s.t, s.root, "stray.txt", "stray\n")
+			stdout, stderr, exits := s.sweepRun(s.t.TempDir(), "", "sweep", "--feature", "own-rdd", "--base", s.head, "--head", s.c3)
+			if !equalInts(exits, []int{0}) || decodeSwept(s.t, stdout).Outcome != "fired" {
+				s.t.Fatalf("setup: review sweep exit calls = %v, stdout = %q, stderr = %q; want [0] and a fired sweep", exits, stdout, stderr)
+			}
+			if err := os.Remove(filepath.Join(s.root, "stray.txt")); err != nil {
+				s.t.Fatal(err)
+			}
+		})
+		record := "odd/review-results/own-rdd/" + s.c3[:12] + "-1.sweep.json"
+
+		s.requireReason("s1", blockReasonOf(s.c3, s.head,
+			"- Sweeper: the sweep record "+record+" fired; launch the sweeper with its candidates, then: labdrian review record --role sweeper --feature <feature> --base "+s.head+" --head "+s.c3,
+			reviewLine(s.head, s.c3, exemptClause)))
+	})
+	t.Run("a head declaring Risk: 3,5 with a clean sweep", func(t *testing.T) {
+		s := newStopWorldWith(t, func(s *stopWorld) {
+			s.recommit("Risk: 3,5")
+			s.sweepAll()
+		})
+
+		s.requireReason("s1", blockReasonOf(s.c3, s.head,
+			"- Polisher: the commit declares Risk: 3,5; launch the polisher judges on the commit and record each: labdrian review record --role polisher --feature <feature> --base "+s.head+" --head "+s.c3,
+			reviewLine(s.head, s.c3, "")))
+	})
+	t.Run("a head with everything but its review", func(t *testing.T) {
+		s := newStopWorld(t)
+
+		s.requireReason("s1", blockReasonOf(s.c3, s.head, reviewLine(s.head, s.c3, exemptClause)))
+	})
+}
+
+// A passive commit is never asked: a commit that only adds the task document, above a branch whose commits a review
+// reaches, lets the stop happen.
+func TestReviewStopHookNeverAsksAPassiveCommit(t *testing.T) {
+	s := newStopWorld(t)
+	s.recordRange(s.head, s.c4)
+	s.git("add", "odd/tasks/own-rdd.md")
+	s.git("commit", "-q", "-m", "docs", "-m", "Risk: none")
+
+	s.allowed("s1")
+
+	s.requireNothingRemembered(t)
+}
+
+// A passive commit below an unreviewed one needs no record and is never asked: the first commit no review reaches is the
+// one above it, and the question names the passive commit as its base (T6b6b, L72).
+func TestReviewStopHookNeverAsksAPassiveCommitBelowAnUnreviewedOne(t *testing.T) {
+	s := newStopWorldWith(t, func(s *stopWorld) {
+		s.git("reset", "-q", "--hard", s.head)
+		overlaytest.WriteFile(s.t, s.root, "odd/tasks/own-rdd.md", "# own-rdd\n")
+		s.git("add", "-A")
+		s.git("commit", "-q", "-m", "docs", "-m", "Risk: none")
+		s.c3 = s.name("HEAD")
+		s.c4 = s.commitMore("c4.txt")
+		stdout, stderr, exits := s.sweepRun(s.t.TempDir(), "", "sweep", "--feature", "own-rdd", "--base", s.c3, "--head", s.c4)
+		if !equalInts(exits, []int{0}) || decodeSwept(s.t, stdout).Outcome != "clean" {
+			s.t.Fatalf("setup: review sweep of %s exit calls = %v, stdout = %q, stderr = %q; want [0] and a clean sweep", s.c4, exits, stdout, stderr)
+		}
+	})
+
+	s.requireReason("s1", blockReasonOf(s.c4, s.c3, reviewLine(s.c3, s.c4, exemptClause)))
+
+	if got, want := s.asked("s1"), []string{s.c3[:12] + "-" + s.c4[:12] + "-review"}; !reflect.DeepEqual(got, want) {
+		t.Errorf("the hook remembers %v, want %v", got, want)
+	}
+	if stored, _ := filepath.Glob(filepath.Join(s.results("own-rdd"), s.c3[:12]+"-*")); len(stored) > 0 {
+		t.Errorf("the passive commit %s has records %v, want none", s.c3, stored)
+	}
+}
+
+// The question of a repository that does not tell its default branch is worded as it always was.
+func TestReviewStopHookWordsTheNoDefaultBranchReasonAsItAlwaysDid(t *testing.T) {
+	s := newStopWorld(t)
+	s.git("branch", "-m", "main", "trunk")
+
+	s.requireReason("s1", "The repository does not tell the default branch of branch feature/stop (origin/HEAD is not set, and there is no branch main or master), "+
+		"so the commits of the branch that need a review cannot be told. Run 'git remote set-head origin --auto' (or make the default branch main) "+
+		"and the stop hook will name the next commit to review. The stop hook asks this once for each session.")
 }
 
 // A stop the agent makes while a stop hook is already keeping it going is never blocked, and it does not use up the
@@ -314,7 +514,7 @@ func TestReviewStopHookReadsAMissingDirectoryAndAMissingSessionAsTheProcessAndOn
 		t.Errorf("the first stop: stdout = %q, stderr = %q, exits = %v; want the block that names %q", first, firstErr, firstExits, bindCommand(s.head, s.c3))
 	}
 	allowsTheStop(t, second, secondErr, secondExits)
-	if got, want := s.asked(""), []string{s.head[:12] + "-" + s.c3[:12]}; !reflect.DeepEqual(got, want) {
+	if got, want := s.asked(""), []string{s.head[:12] + "-" + s.c3[:12] + "-review"}; !reflect.DeepEqual(got, want) {
 		t.Errorf("the questions remembered for the session with no name = %q, want %q", got, want)
 	}
 }
@@ -444,7 +644,9 @@ func TestUsageDocumentsReviewStopHook(t *testing.T) {
 		"engine review stop-hook",
 		"internal Claude Code Stop hook command (install-hooks installs it",
 		"blocks the stop with {\"decision\":\"block\",\"reason\":...}",
-		"labdrian review bind --base <last reviewed head> --head <next commit>",
+		"misses anything 'review check' asks of it",
+		"is never asked",
+		"labdrian review sweep",
 		"for one commit and never the whole branch",
 		"whatever its outcome",
 		"once for each session and commit",

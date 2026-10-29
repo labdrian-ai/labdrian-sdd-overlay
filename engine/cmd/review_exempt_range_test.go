@@ -67,12 +67,12 @@ func TestExemptRefusesARangeThatIsNotOneCommitAndStoresNothing(t *testing.T) {
 		}
 	}
 	t.Run("the base is further back than the first parent of the head", func(t *testing.T) {
-		w := newReviewWorld(t)
+		w := newCheckedWorld(t)
 		tip := w.commitMore("d.txt")
 		refused(t, w, w.base, tip, "the base is "+w.base, "the first parent of "+tip+" is "+w.head)
 	})
 	t.Run("the head has no parent", func(t *testing.T) {
-		w := newReviewWorld(t)
+		w := newCheckedWorld(t)
 		refused(t, w, w.head, w.base, w.base+" has no parent")
 	})
 }
@@ -81,7 +81,7 @@ func TestExemptRefusesARangeThatIsNotOneCommitAndStoresNothing(t *testing.T) {
 // verifier reproduced, and an exemption of c2..c4 that would step over c3. The exemption is refused, so c4 is cleared by
 // nothing; and when c4 is exempted as the one commit it is, the walk from c0 meets c3 and its blocking result.
 func TestAnExemptionCannotStepOverAReviewThatBlocksACommitInTheMiddleOfTheChain(t *testing.T) {
-	w := newReviewWorld(t)
+	w := newCheckedWorld(t)
 	c := w.blockedAtThirdCommit()
 
 	if _, _, exits := w.exemptRange(c[2], c[4]); !equalInts(exits, []int{1}) {
@@ -99,7 +99,7 @@ func TestAnExemptionCannotStepOverAReviewThatBlocksACommitInTheMiddleOfTheChain(
 // the same base, which is the correction round of the verifier, so a clean result over two commits still clears the head
 // and the chain goes through it. The result that blocked the commit in between is about a head the chain no longer passes.
 func TestACleanResultOverTwoCommitsAfterACorrectionRoundStillClears(t *testing.T) {
-	w := newReviewWorld(t)
+	w := newCheckedWorld(t)
 	first := w.recordRange(w.base, w.head)
 	broken := w.commitMore("c2.txt")
 	_, stored := w.recordBlocker(w.head, broken)
@@ -108,6 +108,7 @@ func TestACleanResultOverTwoCommitsAfterACorrectionRoundStillClears(t *testing.T
 	}
 	fixed := w.commitMore("c3.txt")
 	corrected := w.recordRange(w.head, fixed)
+	w.sweepAll()
 
 	stdout, stderr, exits := w.checkChain(w.base)
 
@@ -121,7 +122,7 @@ func TestACleanResultOverTwoCommitsAfterACorrectionRoundStillClears(t *testing.T
 // holds the base of each exemption it reads to the first parent git gives for its head, for the head alone and for a
 // chain, and the file is named.
 func TestCheckRefusesAStoredExemptionThatCoversMoreThanOneCommit(t *testing.T) {
-	w := newReviewWorld(t)
+	w := newCheckedWorld(t)
 	tip := w.commitMore("d.txt")
 	b := w.bindRange(w.base, tip)
 	file, err := review.EncodeExemption(review.Candidate{Base: b.Base, Head: b.Head, DiffSHA256: b.DiffSHA256, Paths: b.Paths}, review.NoRisk, []byte(verifierReport))
@@ -144,7 +145,7 @@ func TestCheckRefusesAStoredExemptionThatCoversMoreThanOneCommit(t *testing.T) {
 func TestARangeWhoseBaseIsItsHeadCoversNoCommitAndClearsNothing(t *testing.T) {
 	const said = "base and head are the same commit"
 	t.Run("bind, record and exempt refuse it", func(t *testing.T) {
-		w := newReviewWorld(t)
+		w := newCheckedWorld(t)
 		for _, args := range [][]string{
 			{"bind", "--base", w.head, "--head", w.head},
 			{"record", "--feature", "own-rdd", "--base", w.head, "--head", w.head, "--rows", "default"},
@@ -162,7 +163,7 @@ func TestARangeWhoseBaseIsItsHeadCoversNoCommitAndClearsNothing(t *testing.T) {
 		}
 	})
 	t.Run("a stored result over it does not clear the head", func(t *testing.T) {
-		w := newReviewWorld(t)
+		w := newCheckedWorld(t)
 		// A result of the empty diff of the head with itself, whole and consistent: its reply holds to its binding and the
 		// binding is what git gives for the range, so only the range is wrong.
 		empty := reviewBinding{Base: w.head, Head: w.head, DiffSHA256: sum(nil), Paths: []string{}}
@@ -171,6 +172,7 @@ func TestARangeWhoseBaseIsItsHeadCoversNoCommitAndClearsNothing(t *testing.T) {
 			t.Fatal(err)
 		}
 		w.plant(w.head[:12]+"-1.json", file)
+		w.sweepAll()
 
 		stdout, stderr, exits := w.run("", "check", "--feature", "own-rdd")
 
@@ -194,7 +196,7 @@ func TestRolesAppendNamesTheExemptionWhenItsReviewDiffIsNotTheOneItStored(t *tes
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			rolesTestStateHome(t)
-			w := newReviewWorld(t)
+			w := newCheckedWorld(t)
 			check := reviewEvidenceCheck(w.rolesDeps())
 			record := w.exemptedSkeleton()
 			for i := range record.Evidence {

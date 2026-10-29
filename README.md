@@ -669,6 +669,14 @@ overlay review <verb>
         it and no result does; a result that blocks keeps the head blocked whatever was recorded after it and
         whatever exemption exists, a result with a severe finding no verifier checked is not clear either, and
         a check that did not run never passes. A result or an exemption that no longer holds refuses the head.
+        Before its review, every commit it checks must hold what the engine lists for it, in this order: a
+        `Risk:` trailer that reads, a sweep record (`review sweep`), a sweeper record that answers it when the
+        sweep fired, and a polisher record when the trailer names an item; the first thing it lacks refuses it
+        (exit 1, the reason on stderr, nothing on stdout), and a commit that lacks only its review is refused
+        as it always was. A record that cannot be read or does not hold is refused with its path. A passive commit
+        (`Risk: none`, every changed path under `odd/tasks/, odd/review-results/ or odd/review-receipts/`,
+        nothing deleted or renamed) needs no record and is a link of the chain from its first parent; a result
+        or an exemption that binds it is still held as above.
         stdout is one JSON object (head, outcome, results, and exemptions when one of them cleared the head).
         Nothing is stored. The delivery role runs it before it closes the feature. With --base <rev>, the
         integration base of the delivery (main, a tracker or a dev branch), the check is by chain: reviews are
@@ -690,7 +698,9 @@ overlay review <verb>
         with no space and none written twice (`2,4`): 1 data or irreversible effects, 2 security, 3 contracts
         others consume, 4 concurrency, 5 delivery or environment, 6 no test would catch a regression. The
         engine does not compute the risk from the diff: it holds the declaration to this grammar, and a head
-        that names any item is never exempt, because that is what a review is for. An exemption is for one
+        that names any item is never exempt, because that is what a review is for. The commit has to declare
+        its risk as well: a head whose own Risk trailer is missing, malformed or names an item is refused
+        before anything is stored. An exemption is for one
         commit: --base must be the first parent of --head (for a merge, the parent it was made on), and one
         of several commits, or of a head with no parent, is refused, because a chain from the delivery base
         would step over the reviews of the commits in between. Compute the binding from
@@ -702,10 +712,43 @@ overlay review <verb>
         goal_id, chain_id, seq, prev_sha256 and context.summary. A declaration or a report that does not hold
         writes nothing and the error names the rule. `check` clears an exempted head unless a stored result
         blocks it. Exit 0 stored, 2 report refused, 1 usage error, a risk that is refused or any other failure.
+    sweep  --feature <name> --base <rev> --head <rev> [--cwd <repo>]
+        Run the checks T1 to T3 of the sweeper once on the one commit from --base
+        to --head (--base must be the first parent of --head, as for `exempt`) and store their findings as
+        odd/review-results/<feature>/<head12>-<n>.sweep.json, numbered with the other files of the head and never
+        over an existing one. T1: the paths the commit deleted or renamed, and the names its removed lines
+        declared that the head still mentions outside the diff. T2: `deadcode -test ./...` over each Go module
+        the commit changes, `staticcheck` over the packages of its changed .go files and `shellcheck` over its
+        changed .sh files, each on a copy of the base and a copy of the head kept under
+        $XDG_STATE_HOME/labdrian/review-sweep/ (default ~/.local/state), outside the working tree; a line is a
+        finding when it occurs more times at the head than at the base. T3: `git status` of the working tree
+        as it is, but for the records under odd/review-results/. A tool that is not found, or that fails
+        without printing a finding, is a check that did not run: nothing is stored and the error names the
+        tool (it needs deadcode, staticcheck and shellcheck on PATH, so until they are there the delivery stops
+        with it). A tree whose blobs pass 256 MiB in the one `git cat-file --batch` answer that fills the copies
+        cannot be swept: the sweep exits 2 and stores nothing, so the delivery of such a repository stops until
+        the copy streams. A second sweep of the repository while
+        one runs is refused at once: another review sweep of this repository is running. stdout is one JSON
+        object: outcome (`clean`, or `fired` when any check found something), the path and sha256 of the
+        stored record, and the candidates the sweeper answers for. Exit 0 stored (clean or fired), 2 refused or
+        a check that did not run, 1 usage error.
+    record --role sweeper|polisher --feature <name> --base <rev> --head <rev> [--result <file>|-] [--cwd <repo>]
+        Store the report of the sweeper, or the findings of one polisher judge (read from --result, or from
+        stdin), for the one commit from --base to --head, with the binding computed from git. The sweeper's
+        report, {"commit": "<full sha>"|null, "candidates": [{"candidate": ..., "disposition": removed,
+        corrected, live or finding, "evidence": ...}]}, must answer once for each candidate of the latest fired
+        sweep of the head and for no other; a commit it names must have --head as its first parent and a subject
+        that starts `chore(sweep)`, and it may not be null while a candidate is removed or corrected. It is
+        stored as <head12>-<n>.sweeper.json with the name of the sweep it answers for. A polisher judge's
+        findings are one JSON object with a `findings` array of objects, each with an `evidence` array of
+        non-empty strings, stored as <head12>-<n>.polisher.json; no finding blocks. stdout is the path and
+        sha256 of the stored file, with no skeleton for `roles append`. `--rows` with another role is a usage
+        error, and `--role reviewer` is the default and the `record` verb above. Exit 0 stored, 2 report
+        refused, 1 usage error or any other failure.
     stop-hook
         Not run by a person: the Claude Code Stop hook that `install-hooks` wires (the review stop-hook, described
-        below as `gentle-ai-overlay review stop-hook`). It asks the agent, once for each session and commit, to
-        review the next commit no stored result or exemption binds. Exit 0 always, 1 usage error.
+        below as `gentle-ai-overlay review stop-hook`). It asks the agent for what the first commit not ready for
+        delivery misses, each thing once for each session and commit. Exit 0 always, 1 usage error.
 
 overlay memory <verb>
     Forward memory-directive verbs to the engine unchanged. Read-only: it only plans what memory
@@ -1171,19 +1214,24 @@ gentle-ai-overlay review stop-hook
     Code settings.json (one entry, on Stop); on an existing install, re-run `install-hooks` and restart Claude Code to
     load it, because Claude Code reads hooks only at start and `status-hooks` reports degraded until the entry is in
     place. `uninstall-hooks` removes that entry and, on Stop, no other: an entry of another program stays.
-    It asks for the review of the next commit of a branch, one commit and not the whole branch. In a working tree that
-    keeps features (odd/tasks or odd/review-results) with HEAD on a branch other than the default one (origin/HEAD,
-    else main, else master), it finds the first commit of the first-parent line of the branch, from the commit the
-    branch was made on, that no review covers, and blocks the stop with a reason that names the command that binds it,
-    `labdrian review bind --base <last reviewed head> --head <next commit>`, and the steps that follow (record the
-    reviewer's reply and verify it, or exempt a commit whose work takes no review). A commit is reviewed when a stored
-    result or an exemption that binds a commit, of any feature, reads back and holds to git as `review check` holds
-    it, whatever its outcome: a result that blocks counts as a review of the commit, and `review check` is what judges
-    how the reviews turned out. So it asks for the commit after the last one that an unbroken chain of reviews reaches.
-    It does not judge the work of a commit: a commit whose work takes no review is asked for as any other, and
-    `review exempt` is the answer for it.
-    It asks each question once for each session and commit (a repository that does not tell its default branch, once
-    for each session), remembered under $XDG_STATE_HOME/labdrian/review-stop/ (default ~/.local/state), outside the
+    It asks for what the first commit not ready for delivery misses, one commit and not the whole branch. In a working
+    tree that keeps features (odd/tasks or odd/review-results) with HEAD on a branch other than the default one
+    (origin/HEAD, else main, else master), it walks the first-parent line of the branch, from the commit the branch
+    was made on, and blocks the stop for the first commit that misses anything `review check` asks of it. The reason
+    lists each thing the commit misses with the command that answers it: the `Risk:` trailer (`git commit --amend
+    --trailer`), `labdrian review sweep --feature <feature> --base <base> --head <head>`, `labdrian review record
+    --role sweeper` for a sweep that fired, `labdrian review record --role polisher` for a trailer that names an
+    item, and the review, `labdrian review bind --base <base> --head <head>`, then record and verify the reviewer's
+    reply (or, for a commit that declares `Risk: none`, `review exempt`). A passive commit (`Risk: none`, every changed
+    path under odd/tasks/, odd/review-results/ or odd/review-receipts/, nothing deleted or renamed) needs nothing, so a
+    passive commit is never asked. A commit is reviewed when a stored result or an exemption that binds a commit, of
+    any feature, reads back and holds to git as `review check` holds it, whatever its outcome: a result that blocks
+    counts as a review of the commit, and `review check` is what judges how the reviews turned out. So the review is
+    asked for the commit after the last one that an unbroken chain of reviews reaches, and a reviewed commit that misses
+    a record is asked again. It does not judge the work of a commit beyond that: a commit that is not passive but whose
+    work takes no review is asked for as any other, and `review exempt` is the answer for it.
+    It asks for each thing a commit misses once for each session and commit (a repository that does not tell its
+    default branch, once for each session), remembered under $XDG_STATE_HOME/labdrian/review-stop/ (default ~/.local/state), outside the
     working tree; a session with no session_id counts as one session. It never blocks the stop of an agent that a stop
     hook is already making continue (stop_hook_active).
     Input: the hook JSON on stdin, at most 1 MiB (more is input it cannot use). Only session_id, cwd, hook_event_name

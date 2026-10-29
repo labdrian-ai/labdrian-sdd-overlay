@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "38a3a7d12626e79978b5a4604125fd86262fbd8e",
+    "head": "fcf0b5d778d1bffa93d80624990849f8d1196420",
+    "diff_sha256": "ffdf6a83b033712f9789c8ad1cdb7562aeff426c5a02147fe0ee5bf14694a1f3",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/cmd/dispatch_routes_test.go",
+      "engine/cmd/review.go",
+      "engine/cmd/review_exempt_test.go",
+      "engine/cmd/review_record_role_test.go",
+      "engine/cmd/review_test.go",
+      "engine/review/analyzers/analyzers.go",
+      "engine/review/analyzers/analyzers_test.go",
+      "engine/review/app/app.go",
+      "engine/review/app/fakes_test.go",
+      "engine/review/app/recordrole.go",
+      "engine/review/app/recordrole_test.go",
+      "engine/review/app/sweep.go",
+      "engine/review/app/sweep_test.go",
+      "engine/review/gitexec/gitexec.go",
+      "engine/review/gitexec/sweep_test.go"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "38a3a7d12626e79978b5a4604125fd86262fbd8e",
+      "head": "fcf0b5d778d1bffa93d80624990849f8d1196420",
+      "diff_sha256": "ffdf6a83b033712f9789c8ad1cdb7562aeff426c5a02147fe0ee5bf14694a1f3"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/cmd/dispatch_routes_test.go",
+        "engine/cmd/review.go",
+        "engine/cmd/review_exempt_test.go",
+        "engine/cmd/review_record_role_test.go",
+        "engine/cmd/review_test.go",
+        "engine/review/analyzers/analyzers.go",
+        "engine/review/analyzers/analyzers_test.go",
+        "engine/review/app/app.go",
+        "engine/review/app/fakes_test.go",
+        "engine/review/app/recordrole.go",
+        "engine/review/app/recordrole_test.go",
+        "engine/review/app/sweep.go",
+        "engine/review/app/sweep_test.go",
+        "engine/review/gitexec/gitexec.go",
+        "engine/review/gitexec/sweep_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the full diff at the scratchpad path rv-own-fcf0b5d7.diff. I ran nothing.",
+      "IsCommit runs before Parent and Message in sweepCommit, so a missing or non-commit object is a ReplyRefusedError (exit 2). A git failure stays a plain error. The unit tests and the cmd-level test pin both paths. This resolves a001cc91df69-1 F1.",
+      "analyzers.New and ExecRunner.Output now use a non-nil empty slice, so exec no longer inherits the process environment. Tests cover nil and empty environments for both. The callers pass d.environment() (review_sweep.go:40), so production behavior is unchanged. This resolves e7e1de17950c-1 F2.",
+      "shellcheck now gets `-f gcc --` before the files, and the empty check moved from len==2 to len==3. A test uses a file named -x.sh. This resolves e7e1de17950c-1 F3 and the matching e7e1de17950c-2 shellcheck finding (its claim text was omitted in the grep output, so I matched it by location analyzers.go:149-159).",
+      "Mentions is batched at 256 names per `git grep -I -z -o -w -F`. It rejects empty names and names containing a line break up front. It validates every output record (commit prefix, NUL, a name that was asked for, line feed) and deduplicates paths. Tests cover the 257-name split, a path with a space, an empty name list and a malformed answer. This resolves e7e1de17950c-1 F4.",
+      "Overlapping-match risk in `-o`: RemovedNames only yields identifiers matching `[A-Za-z_]\\w*` (engine/review/sweep.go:27-31). A shorter name cannot hide inside a longer one under -w, so no mention is lost.",
+      "sweep.go now skips the Mentions call when no name was removed and reads per-name results from the map. The tests check one batched call and no call for no names.",
+      "Both `review` usage messages now include sweep. The tests, dispatch_routes_test and the CHANGELOG are updated to match."
+    ]
+  }
+}

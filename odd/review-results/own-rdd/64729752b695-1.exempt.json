@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "dba4a474a59e05760768da26bc6ef3837c34f8f2",
+    "head": "64729752b695c20bdedc218bedaa46c59f9a28cc",
+    "diff_sha256": "9b5e77374f6d6670481f507bb551fc09759ba6eee1859b0d61825d68ad26ed3e",
+    "paths": [
+      "odd/tasks/own-rdd.md"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git diff --name-only dba4a474 64729752",
+        "result": "pass",
+        "output": "only odd/tasks/own-rdd.md (T6b7b and T6b7 check-off, L77). Passive feature-document change only."
+      }
+    ]
+  }
+}

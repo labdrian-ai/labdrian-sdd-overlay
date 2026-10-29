@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ecd6248c99394108bb1f07e7924830a8ea98c687",
+    "head": "b685f0c56be2ea90a985d7ee9b31d8d419b34292",
+    "diff_sha256": "f8c6b19b47788171519d1f22ab556742bb7e04d388afa304bc492d3297635360",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/review/names.go",
+      "engine/review/names_test.go",
+      "engine/review/rolerecords.go",
+      "engine/review/rolerecords_test.go",
+      "engine/review/sweep.go",
+      "engine/review/sweep_test.go"
+    ]
+  },
+  "rows": [
+    "default"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "ecd6248c99394108bb1f07e7924830a8ea98c687",
+      "head": "b685f0c56be2ea90a985d7ee9b31d8d419b34292",
+      "diff_sha256": "f8c6b19b47788171519d1f22ab556742bb7e04d388afa304bc492d3297635360"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/review/names.go",
+        "engine/review/names_test.go",
+        "engine/review/rolerecords.go",
+        "engine/review/rolerecords_test.go",
+        "engine/review/sweep.go",
+        "engine/review/sweep_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/review/sweep.go:1215-1217",
+        "claim": "The Go declaration patterns match any indented line that starts with `var` or `const`, including function-local declarations such as `var err error`. A removed local `var err error` yields the removed name `err`, and no added line declares it again if the variable was deleted or renamed. T1 then runs `git grep -w -F` for a very common word, so the sweep fires on trivial commits. Every candidate then has to be answered by the sweeper. This follows S6 (b) literally, which says 'a `const` or `var` name' and does not exclude locals. The consequence is noise at the T6b3 call site, not wrong behavior in this diff. The test 'an indented declaration' pins indented `func`, not locals.",
+        "severity": "SUGGESTION",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/sweep.go:1215-1217",
+          "engine/review/sweep_test.go:1334",
+          "S6 (b) in odd/tasks/own-rdd.md:14"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/review/rolerecords.go:650-721",
+        "claim": "EncodePolisher accepts a reply of up to MaxReplyBytes (1 MiB), then `encodeFile` indents the file with two spaces (stored.go:73). DecodePolisher re-runs ParsePolisherFindings on the stored indented findings, which enforces the same 1 MiB limit again. A compact reply near the limit, for example a large evidence array of short strings, grows past 1 MiB when indented. It is stored successfully, and every later DecodePolisher then fails with ErrInvalidStored (wrapping ErrReplyTooLarge). The record would be unreadable after it was written. The case needs a near-1 MiB polisher reply, so it is unlikely.",
+        "severity": "WARNING",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/rolerecords.go:652",
+          "engine/review/rolerecords.go:715",
+          "engine/review/stored.go:73",
+          "engine/review/review.go:85"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff (1412 lines): names.go, names_test.go, rolerecords.go, rolerecords_test.go, sweep.go, sweep_test.go, CHANGELOG.md.",
+      "Read S6 (b) and (c) (own-rdd.md lines 14-15) and L40 and L41, which fix D1-D8, including D3 (the sweeper always stores a record, with a commit or null), D6 and D7. The code matches them: record names, outcome 'fired' exactly when a list is non-empty, sweeper refusals (missing, repeated or unknown candidate, enum, empty evidence, null commit with removed or corrected, first-parent and `chore(sweep)` subject), and polisher findings checks.",
+      "L51 is not in the worktree at head. L51 sits in the docs commit 4e150415, which is after head b685f0c5. I could not check its assumptions. The only assumption I could check is the one the code comments name, S6 (b)'s own: 'a removed name is a name declared on a removed line...'. The code follows it literally.",
+      "Checked the name boundaries by reading the code. `.sweeper.json` does not end in `.sweep.json`, so the suffixes stay distinct. The `.json` result suffix is rejected for the new names because the number part would be '1.sweep'. NextNumber is not in the diff, so I relied on its test.",
+      "Checked determinism: RemovedNames and NewFindings return sorted output with no map-order dependence. Candidates() is deduplicated in a fixed order. Decoders reject null or missing lists, an outcome that does not match the findings, and unknown members (by test).",
+      "Risk line (secrets, permissions, path escapes, exec or net imports): the new files import only bytes, json, errors, fmt, slices, strings, regexp, gitobject, jsonstrict and reviewresult. There is no exec, net, file I/O or path join. Nothing calls this code yet. I found no risk.",
+      "Not run: no tests, builds or analyzers (read-only review)."
+    ]
+  }
+}

@@ -286,3 +286,57 @@ func TestMaxOutputReportsTheBound(t *testing.T) {
 		t.Errorf("MaxOutput() = %d, want 42", got)
 	}
 }
+
+// OutputStdin hands the program exactly the bytes given, whatever they hold, and nothing more.
+func TestOutputStdinHandsTheProgramExactlyTheInputItIsGiven(t *testing.T) {
+	bin := fakeBinary(t, "git", `/bin/cat; printf 'err' >&2`)
+	input := []byte("a line\n\x00binary\r\nno final break")
+
+	stdout, stderr, err := New().OutputStdin(context.Background(), nil, input, bin)
+
+	if err != nil {
+		t.Fatalf("OutputStdin: %v", err)
+	}
+	if string(stdout) != string(input) || string(stderr) != "err" {
+		t.Errorf("stdout=%q stderr=%q, want the input back on standard output and err on standard error", stdout, stderr)
+	}
+}
+
+// A nil input is an empty one: the program reads the end of its input at once and the call returns.
+func TestOutputStdinWithANilInputGivesAnEmptyOne(t *testing.T) {
+	bin := fakeBinary(t, "git", `/bin/cat; printf 'done'`)
+
+	stdout, _, err := New().OutputStdin(context.Background(), nil, nil, bin)
+
+	if err != nil || string(stdout) != "done" {
+		t.Errorf("OutputStdin = %q, %v, want %q, nil", stdout, err, "done")
+	}
+}
+
+// The environment, the deadline and the bound are those of Output.
+func TestOutputStdinKeepsTheEnvironmentTheDeadlineAndTheBoundOfOutput(t *testing.T) {
+	t.Run("environment", func(t *testing.T) {
+		bin := fakeBinary(t, "git", `printf '%s|%s' "${ASKED-unset}" "${LEAK-unset}"`)
+		t.Setenv("LEAK", "from the process")
+		stdout, _, err := New().OutputStdin(context.Background(), []string{"ASKED=yes"}, []byte("x"), bin)
+		if err != nil || string(stdout) != "yes|unset" {
+			t.Errorf("the program saw %q, %v, want only the variable it was handed", stdout, err)
+		}
+	})
+	t.Run("deadline", func(t *testing.T) {
+		bin := fakeBinary(t, "git", `exec /bin/sleep 30`)
+		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+		defer cancel()
+		_, _, err := New().OutputStdin(ctx, nil, []byte("x"), bin)
+		if !errors.Is(err, context.DeadlineExceeded) {
+			t.Errorf("err = %v, want it to wrap context.DeadlineExceeded", err)
+		}
+	})
+	t.Run("bound", func(t *testing.T) {
+		bin := fakeBinary(t, "git", `/bin/cat`)
+		stdout, _, err := New().WithMaxOutput(5).OutputStdin(context.Background(), nil, []byte("0123456789"), bin)
+		if !errors.Is(err, ErrOutputTooLarge) || string(stdout) != "01234" {
+			t.Errorf("OutputStdin = %q, %v, want exactly 5 bytes and ErrOutputTooLarge", stdout, err)
+		}
+	})
+}

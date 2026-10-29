@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review/app"
 )
 
@@ -41,21 +42,95 @@ func (a *fakeAsked) Add(session, key string) error {
 }
 
 const (
-	firstQuestionKey = "111111111111-222222222222" // baseSHA to headSHA
-	nextQuestionKey  = "222222222222-333333333333" // headSHA to otherSHA
+	firstQuestionKey = "111111111111-222222222222-review" // baseSHA to headSHA, the need of its review
+	nextQuestionKey  = "222222222222-333333333333-review" // headSHA to otherSHA, the need of its review
 )
+
+// kinds lists what the needs of a question are.
+func kinds(q app.Question) []review.Missing { return lacks(q) }
+
+// A need that appears after an earlier block of the same commit blocks once more in the same session, and asks for that
+// need alone in the store: the sweeper of a sweep that fired.
+func TestStopAsksANeedThatAppearsLaterForTheSameCommitInTheSameSession(t *testing.T) {
+	g, store := branchWorld()
+	g.declares(headSHA, "none")
+	asked := newFakeAsked()
+	service := app.New(g, store).WithAsked(asked)
+
+	first, err := service.Stop(evidenceDir, "session-1", false)
+	if err != nil || !first.Block || !reflect.DeepEqual(kinds(first.Question), []review.Missing{review.MissingSweep, review.MissingReview}) {
+		t.Fatalf("the first Stop() = %+v, %v; want a block for a sweep and a review", first, err)
+	}
+	wantFirst := []string{
+		"Has session-1 111111111111-222222222222-sweep", "Has session-1 111111111111-222222222222-review",
+		"Add session-1 111111111111-222222222222-sweep", "Add session-1 111111111111-222222222222-review",
+	}
+	if !reflect.DeepEqual(asked.calls, wantFirst) {
+		t.Fatalf("calls of the first Stop() = %q, want %q", asked.calls, wantFirst)
+	}
+
+	fired := swept(t, store, baseSHA, headSHA, 1, "?? stray.txt")
+	asked.calls = nil
+	second, err := service.Stop(evidenceDir, "session-1", false)
+	if err != nil || !second.Block || !reflect.DeepEqual(kinds(second.Question), []review.Missing{review.MissingSweeper, review.MissingReview}) || second.Question.Sweep != review.ResultPath("own-rdd", fired) {
+		t.Fatalf("the second Stop() = %+v, %v; want a block for the sweeper and the review, naming %s", second, err, fired)
+	}
+	wantSecond := []string{
+		"Has session-1 111111111111-222222222222-sweeper", "Has session-1 111111111111-222222222222-review",
+		"Add session-1 111111111111-222222222222-sweeper",
+	}
+	if !reflect.DeepEqual(asked.calls, wantSecond) {
+		t.Errorf("calls of the second Stop() = %q, want %q: only the sweeper is added", asked.calls, wantSecond)
+	}
+
+	answered(t, store, baseSHA, headSHA, 2, fired, nil)
+	asked.calls = nil
+	third, err := service.Stop(evidenceDir, "session-1", false)
+	if err != nil || third.Block {
+		t.Errorf("the third Stop() = %+v, %v; want no block", third, err)
+	}
+	for _, call := range asked.calls {
+		if strings.HasPrefix(call, "Add ") {
+			t.Errorf("the third Stop() added %q, want nothing added", call)
+		}
+	}
+}
+
+// A need already asked is not asked again while the commit misses it, even when the other needs are gone.
+func TestStopDoesNotAskAgainANeedAlreadyAsked(t *testing.T) {
+	g, store := branchWorld()
+	g.declares(headSHA, "none")
+	asked := newFakeAsked()
+	service := app.New(g, store).WithAsked(asked)
+	if r, err := service.Stop(evidenceDir, "session-1", false); err != nil || !r.Block {
+		t.Fatalf("setup: Stop() = %+v, %v; want a block", r, err)
+	}
+
+	swept(t, store, baseSHA, headSHA, 1)
+	asked.calls = nil
+	got, err := service.Stop(evidenceDir, "session-1", false)
+
+	if err != nil || got.Block {
+		t.Errorf("Stop() = %+v, %v; want no block: the review was asked already", got, err)
+	}
+	for _, call := range asked.calls {
+		if strings.HasPrefix(call, "Add ") {
+			t.Errorf("Stop() added %q, want nothing added", call)
+		}
+	}
+}
 
 // The first stop of a session with a commit no review covers is blocked with the question, and is remembered: the same
 // question in the same session is not asked again.
 func TestStopBlocksOncePerSessionAndQuestion(t *testing.T) {
-	g, store := branchWorld()
+	g, store := sweptWorld(t)
 	asked := newFakeAsked()
 	service := app.New(g, store).WithAsked(asked)
 
 	first, err := service.Stop(evidenceDir, "session-1", false)
 	again, againErr := service.Stop(evidenceDir, "session-1", false)
 
-	want := app.Ruling{Block: true, Question: app.Question{Branch: "feat/x", Base: baseSHA, Head: headSHA}}
+	want := app.Ruling{Block: true, Question: reviewMissing(t, baseSHA, headSHA)}
 	if err != nil || !reflect.DeepEqual(first, want) {
 		t.Fatalf("the first Stop() = %+v, %v; want %+v and no error", first, err, want)
 	}
@@ -69,7 +144,7 @@ func TestStopBlocksOncePerSessionAndQuestion(t *testing.T) {
 
 // Another session is asked the same question; and in the same session a new commit to review is a new question.
 func TestStopAsksAgainForAnotherSessionAndForTheNextCommit(t *testing.T) {
-	g, store := branchWorld()
+	g, store := sweptWorld(t)
 	asked := newFakeAsked()
 	service := app.New(g, store).WithAsked(asked)
 	if r, err := service.Stop(evidenceDir, "session-1", false); err != nil || !r.Block {
@@ -83,7 +158,7 @@ func TestStopAsksAgainForAnotherSessionAndForTheNextCommit(t *testing.T) {
 	if otherErr != nil || !other.Block || other.Question.Head != headSHA {
 		t.Errorf("Stop() of another session = %+v, %v; want a block for the first commit", other, otherErr)
 	}
-	wantNext := app.Ruling{Block: true, Question: app.Question{Branch: "feat/x", Base: headSHA, Head: otherSHA}}
+	wantNext := app.Ruling{Block: true, Question: reviewMissing(t, headSHA, otherSHA)}
 	if nextErr != nil || !reflect.DeepEqual(next, wantNext) {
 		t.Errorf("Stop() after the first commit was reviewed = %+v, %v; want %+v", next, nextErr, wantNext)
 	}
@@ -95,12 +170,12 @@ func TestStopAsksAgainForAnotherSessionAndForTheNextCommit(t *testing.T) {
 // A stop hook that made the agent continue is not asked to block again, whatever is left to review: the agent would
 // never stop. Nothing is asked of git or the store, and nothing is remembered.
 func TestStopDoesNotBlockWhileAStopHookIsContinuing(t *testing.T) {
-	g, store := branchWorld()
+	g, store := sweptWorld(t)
 	asked := newFakeAsked()
 
 	got, err := app.New(g, store).WithAsked(asked).Stop(evidenceDir, "session-1", true)
 
-	if err != nil || got != (app.Ruling{}) {
+	if err != nil || !reflect.DeepEqual(got, app.Ruling{}) {
 		t.Errorf("Stop() = %+v, %v; want no block and no error", got, err)
 	}
 	if len(g.calls) != 0 || len(store.calls) != 0 || len(asked.calls) != 0 {
@@ -110,20 +185,20 @@ func TestStopDoesNotBlockWhileAStopHookIsContinuing(t *testing.T) {
 
 // A branch whose commits are all reviewed has nothing to ask, and nothing is remembered.
 func TestStopDoesNotBlockWhenEveryCommitIsReviewed(t *testing.T) {
-	g, store := branchWorld()
+	g, store := sweptWorld(t)
 	reviewed(t, store, baseSHA, otherSHA, 1)
 	asked := newFakeAsked()
 
 	got, err := app.New(g, store).WithAsked(asked).Stop(evidenceDir, "session-1", false)
 
-	if err != nil || got != (app.Ruling{}) || len(asked.put) != 0 {
+	if err != nil || !reflect.DeepEqual(got, app.Ruling{}) || len(asked.put) != 0 {
 		t.Errorf("Stop() = %+v, %v with %v remembered; want no block, no error and nothing remembered", got, err, asked.put)
 	}
 }
 
 // A repository that does not tell its default branch is told once per session, as a question of its own.
 func TestStopSaysOncePerSessionThatTheDefaultBranchCannotBeFound(t *testing.T) {
-	g, store := branchWorld()
+	g, store := sweptWorld(t)
 	g.standing = app.Standing{Branch: "feat/x"}
 	asked := newFakeAsked()
 	service := app.New(g, store).WithAsked(asked)
@@ -154,7 +229,7 @@ func TestStopDoesNotBlockWhatItCannotTellOrRemember(t *testing.T) {
 		{"the store of the questions cannot be written", func(g *fakeGit, asked *fakeAsked) { asked.fail["Add"] = boom }, "boom"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			g, store := branchWorld()
+			g, store := sweptWorld(t)
 			asked := newFakeAsked()
 			tc.setup(g, asked)
 
@@ -169,7 +244,7 @@ func TestStopDoesNotBlockWhatItCannotTellOrRemember(t *testing.T) {
 
 // Without a store of its questions it could not ask each once, so it asks none.
 func TestStopRefusesToRunWithoutAStoreOfItsQuestions(t *testing.T) {
-	g, store := branchWorld()
+	g, store := sweptWorld(t)
 
 	got, err := app.New(g, store).Stop(evidenceDir, "session-1", false)
 

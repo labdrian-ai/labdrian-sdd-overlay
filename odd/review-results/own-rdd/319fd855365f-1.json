@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "5196723465e7bbb6a33c47d39a10230824b41b5e",
+    "head": "319fd855365fe56a889f637ac5cf4c3fdb8683c9",
+    "diff_sha256": "79b59ff6fce6906769984ebb7d4c753e89eb3e70692c66f040f6f751c1907aef",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/cmd/review_stop_hook.go",
+      "engine/cmd/review_stop_hook_test.go",
+      "engine/cmd/usage.go"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "5196723465e7bbb6a33c47d39a10230824b41b5e",
+      "head": "319fd855365fe56a889f637ac5cf4c3fdb8683c9",
+      "diff_sha256": "79b59ff6fce6906769984ebb7d4c753e89eb3e70692c66f040f6f751c1907aef"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/cmd/review_stop_hook.go",
+        "engine/cmd/review_stop_hook_test.go",
+        "engine/cmd/usage.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the full diff and the S6 (e) text in odd/tasks/own-rdd.md in the worktree, including the L63, L66 and L70 pins.",
+      "Compared the header line, each need line, the exempt clause and the closing paragraph in stopReason and needLine with the pinned text. They match: Risk (cause taken after 'commit <head>: '), Sweep, Sweeper (with the sweep path), Polisher (with the Risk items), Review with the exempt clause only when Risk is none, and the blank-line layout. The exempt clause uses q.Risk == review.NoRisk, and Question.Risk is '' when the trailer fails, so a failing trailer lists only Risk and Sweep.",
+      "The no-default-branch reason was not changed by the hunk.",
+      "Test cases exist for no trailer, Risk none with no sweep, a fired sweep with no sweeper record, Risk 3,5 with a clean sweep, and only the review missing. They also cover a passive commit never asked and the unchanged no-default-branch reason. Each asserts the whole stdout, exit code and empty stderr through blockReasonOf and requireReason, with the words written out in the test and not taken from the code.",
+      "The usage span and the CHANGELOG entry match the new behaviour. The usage sentence 'asks for each thing a commit misses once for each session and commit' (T6b6d) is kept.",
+      "I could not run the tests: I was told not to run anything. The proof is by reading the code and the spec.",
+      "Readability: each line leads with the need and the exact command, <feature> is explained in the closing paragraph, and the lines come in a fixed order. No clarity defect found."
+    ]
+  }
+}
