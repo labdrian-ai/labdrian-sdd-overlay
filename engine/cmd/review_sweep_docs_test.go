@@ -42,6 +42,11 @@ func TestReadmeStatesTheLimitsOfReviewSweep(t *testing.T) {
 			t.Errorf("the README entry of review sweep does not say %q", want)
 		}
 	}
+	// No task makes the copy stream (L63), so the README promises no streaming. It is compared after
+	// normalizeDocText because the phrase wraps across lines.
+	if text := normalizeDocText(readRepositoryFile(t, "README.md")); strings.Contains(text, "until the copy streams") {
+		t.Errorf("the README still says %q", "until the copy streams")
+	}
 }
 
 // The records README names the three role records, the verbs that write them and that `review check` holds them.

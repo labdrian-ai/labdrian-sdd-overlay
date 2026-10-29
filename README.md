@@ -726,12 +726,11 @@ overlay review <verb>
         without printing a finding, is a check that did not run: nothing is stored and the error names the
         tool (it needs deadcode, staticcheck and shellcheck on PATH, so until they are there the delivery stops
         with it). A tree whose blobs pass 256 MiB in the one `git cat-file --batch` answer that fills the copies
-        cannot be swept: the sweep exits 2 and stores nothing, so the delivery of such a repository stops until
-        the copy streams. A second sweep of the repository while
-        one runs is refused at once: another review sweep of this repository is running. stdout is one JSON
-        object: outcome (`clean`, or `fired` when any check found something), the path and sha256 of the
-        stored record, and the candidates the sweeper answers for. Exit 0 stored (clean or fired), 2 refused or
-        a check that did not run, 1 usage error.
+        cannot be swept: the sweep exits 2 and stores nothing, so the delivery of such a repository stops. A
+        second sweep of the repository while one runs is refused at once: another review sweep of this
+        repository is running. stdout is one JSON object: outcome (`clean`, or `fired` when any check found
+        something), the path and sha256 of the stored record, and the candidates the sweeper answers for. Exit 0
+        stored (clean or fired), 2 refused or a check that did not run, 1 usage error.
     record --role sweeper|polisher --feature <name> --base <rev> --head <rev> [--result <file>|-] [--cwd <repo>]
         Store the report of the sweeper, or the findings of one polisher judge (read from --result, or from
         stdin), for the one commit from --base to --head, with the binding computed from git. The sweeper's
@@ -747,8 +746,8 @@ overlay review <verb>
         refused, 1 usage error or any other failure.
     stop-hook
         Not run by a person: the Claude Code Stop hook that `install-hooks` wires (the review stop-hook, described
-        below as `gentle-ai-overlay review stop-hook`). It asks the agent for what the first commit not ready for
-        delivery misses, each thing once for each session and commit. Exit 0 always, 1 usage error.
+        below as `gentle-ai-overlay review stop-hook`). It asks the agent for what the first commit with unfinished
+        review steps misses, each thing once for each session and commit. Exit 0 always, 1 usage error.
 
 overlay memory <verb>
     Forward memory-directive verbs to the engine unchanged. Read-only: it only plans what memory
@@ -1214,22 +1213,22 @@ gentle-ai-overlay review stop-hook
     Code settings.json (one entry, on Stop); on an existing install, re-run `install-hooks` and restart Claude Code to
     load it, because Claude Code reads hooks only at start and `status-hooks` reports degraded until the entry is in
     place. `uninstall-hooks` removes that entry and, on Stop, no other: an entry of another program stays.
-    It asks for what the first commit not ready for delivery misses, one commit and not the whole branch. In a working
-    tree that keeps features (odd/tasks or odd/review-results) with HEAD on a branch other than the default one
-    (origin/HEAD, else main, else master), it walks the first-parent line of the branch, from the commit the branch
-    was made on, and blocks the stop for the first commit that misses anything `review check` asks of it. The reason
-    lists each thing the commit misses with the command that answers it: the `Risk:` trailer (`git commit --amend
-    --trailer`), `labdrian review sweep --feature <feature> --base <base> --head <head>`, `labdrian review record
-    --role sweeper` for a sweep that fired, `labdrian review record --role polisher` for a trailer that names an
+    It asks for what the first commit with unfinished review steps misses, one commit and not the whole branch. In a
+    working tree that keeps features (odd/tasks or odd/review-results) with HEAD on a branch other than the default one
+    (origin/HEAD, else main, else master), it walks the first-parent line of the branch, from the commit the branch was
+    made on, and blocks the stop for the first commit that misses anything `review check` asks of it. The reason lists
+    each thing the commit misses with the command that answers it: the `Risk:` trailer (`git commit --amend --trailer`
+    when the commit is HEAD), `labdrian review sweep --feature <feature> --base <base> --head <head>`, `labdrian review
+    record --role sweeper` for a sweep that fired, `labdrian review record --role polisher` for a trailer that names an
     item, and the review, `labdrian review bind --base <base> --head <head>`, then record and verify the reviewer's
     reply (or, for a commit that declares `Risk: none`, `review exempt`). A passive commit (`Risk: none`, every changed
     path under odd/tasks/, odd/review-results/ or odd/review-receipts/, nothing deleted or renamed) needs nothing, so a
-    passive commit is never asked. A commit is reviewed when a stored result or an exemption that binds a commit, of
-    any feature, reads back and holds to git as `review check` holds it, whatever its outcome: a result that blocks
-    counts as a review of the commit, and `review check` is what judges how the reviews turned out. So the review is
-    asked for the commit after the last one that an unbroken chain of reviews reaches, and a reviewed commit that misses
-    a record is asked again. It does not judge the work of a commit beyond that: a commit that is not passive but whose
-    work takes no review is asked for as any other, and `review exempt` is the answer for it.
+    passive commit is never asked. A commit is reviewed when a stored result or an exemption that binds a commit, of any
+    feature, reads back and holds to git as `review check` holds it, whatever its outcome: a result that blocks counts
+    as a review of the commit, and `review check` is what judges how the reviews turned out. So the review is asked for
+    the commit after the last one that an unbroken chain of reviews reaches, and a reviewed commit that misses a record
+    is asked again. It does not judge the work of a commit beyond that: a commit that is not passive but whose work
+    takes no review is asked for as any other, and `review exempt` is the answer for it.
     It asks for each thing a commit misses once for each session and commit (a repository that does not tell its
     default branch, once for each session), remembered under $XDG_STATE_HOME/labdrian/review-stop/ (default ~/.local/state), outside the
     working tree; a session with no session_id counts as one session. It never blocks the stop of an agent that a stop

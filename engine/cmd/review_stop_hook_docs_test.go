@@ -54,6 +54,19 @@ func TestDocsDescribeTheReviewStopHook(t *testing.T) {
 			t.Errorf("the README section of the review stop-hook does not say %q", want)
 		}
 	}
+	// These are compared after normalizeDocText: the first wraps across lines and the second holds code marks.
+	text := normalizeDocText(section)
+	for _, want := range []string{
+		"the first commit with unfinished review steps",
+		"(`git commit --amend --trailer` when the commit is HEAD)",
+	} {
+		if !strings.Contains(text, normalizeDocText(want)) {
+			t.Errorf("the README section of the review stop-hook does not say %q", want)
+		}
+	}
+	if strings.Contains(text, "not ready for delivery") {
+		t.Errorf("the README section of the review stop-hook still says %q", "not ready for delivery")
+	}
 }
 
 // Every summary of the verbs that manage the hook families names the review stop-hook, with the other families.
@@ -89,8 +102,8 @@ func TestInstallHooksSummariesNameTheReviewStopHook(t *testing.T) {
 
 // The other texts that describe the hook say what it asks for as the README does (own-rdd T6b7b, S6 e, L70): the help of
 // the wrapper, the README entry of the verb, the install-hooks summary and the claim of the Claude installation say that
-// it asks for each thing the first commit not ready for delivery misses, once for each session and commit, and none says
-// any more that it asks for the next commit no review covers.
+// it asks for each thing the first commit with unfinished review steps misses, once for each session and commit, and none
+// says any more that it asks for the next commit no review covers, nor that the commit is not ready for delivery.
 func TestOtherTextsOfTheReviewStopHookSayWhatItAsksFor(t *testing.T) {
 	readme := readRepositoryFile(t, "README.md")
 	for _, tc := range []struct{ name, text, want string }{
@@ -100,9 +113,9 @@ func TestOtherTextsOfTheReviewStopHookSayWhatItAsksFor(t *testing.T) {
 				"asking for each thing once for each session and commit, and never for the whole branch; " +
 				"it lets the stop happen on anything it cannot tell (exit 0 always, 1 usage error)"},
 		{"the stop-hook entry of README.md", docSection(t, readme, "    stop-hook\n", "overlay memory <verb>"),
-			"It asks the agent for what the first commit not ready for delivery misses, each thing once for each session and commit."},
+			"It asks the agent for what the first commit with unfinished review steps misses, each thing once for each session and commit."},
 		{"bin/lib/hooks.sh", readRepositoryFile(t, "bin/lib/hooks.sh"),
-			"(on Stop, asks the agent for each thing the first commit not ready for delivery misses, once for each session and commit),"},
+			"(on Stop, asks the agent for each thing the first commit with unfinished review steps misses, once for each session and commit),"},
 	} {
 		text := normalizeDocText(tc.text)
 		if !strings.Contains(text, normalizeDocText(tc.want)) {
@@ -110,6 +123,9 @@ func TestOtherTextsOfTheReviewStopHookSayWhatItAsksFor(t *testing.T) {
 		}
 		if strings.Contains(text, "no review covers") || strings.Contains(text, "no stored result or exemption binds") {
 			t.Errorf("%s still says that the hook asks for the next commit no review covers", tc.name)
+		}
+		if strings.Contains(text, "not ready for delivery") {
+			t.Errorf("%s still says %q", tc.name, "not ready for delivery")
 		}
 	}
 }

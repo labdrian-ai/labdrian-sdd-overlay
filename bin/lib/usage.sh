@@ -67,8 +67,8 @@ Commands:
                                    deterministic-scoping hooks, the workflow projection
                                    hooks, the skills approve guard, the review
                                    stop-hook (on Stop: asks the agent for each thing
-                                   the first commit not ready for delivery misses,
-                                   once for each session and commit), and the builder guard (on the Agent
+                                   the first commit with unfinished review steps
+                                   misses, once for each session and commit), and the builder guard (on the Agent
                                    tool: denies launching the builder on a task the
                                    shaper did not design) into
                                    ~/.claude/settings.json. Re-run it after an

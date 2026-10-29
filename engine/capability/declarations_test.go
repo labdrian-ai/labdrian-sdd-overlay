@@ -267,10 +267,13 @@ func TestClaudeInstallationClaimNamesTheReviewStopHook(t *testing.T) {
 	if claim.Capability != capability.Installation {
 		t.Fatalf("first claim is %s, want installation", claim.Capability)
 	}
-	for _, phrase := range []string{"lifecycle hook families", "the Stop hook", "once per session and commit", "the first commit not ready for delivery", "restart_required"} {
+	for _, phrase := range []string{"lifecycle hook families", "the Stop hook", "once per session and commit", "the first commit with unfinished review steps", "restart_required"} {
 		if !strings.Contains(claim.Detail, phrase) {
 			t.Errorf("installation detail %q does not state %q", claim.Detail, phrase)
 		}
+	}
+	if strings.Contains(claim.Detail, "not ready for delivery") {
+		t.Errorf("installation detail %q still says \"not ready for delivery\"", claim.Detail)
 	}
 	for _, ref := range []string{
 		"runtime:TestClaudeInstallWritesTheReviewStopHook",
