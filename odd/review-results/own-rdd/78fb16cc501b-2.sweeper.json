@@ -1,0 +1,15 @@
+{
+  "kind": "sweeper",
+  "base": "cb20de0b1fe089c02077e66f0c2cc7017b3930f8",
+  "head": "78fb16cc501b381fc38c390ef1e65dc843eac658",
+  "diff_sha256": "daa2298668465eed36f54eee0ad7ba1adb62c6da341ab197fa3873c84d3acfeb",
+  "sweep": "78fb16cc501b-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T3:  M odd/tasks/own-rdd.md",
+      "disposition": "live",
+      "evidence": "This is the parent's intentional uncommitted bookkeeping: the T17c task row rewritten and Log entry L91 appended. It is not dead code or stale prose left by commit 78fb16cc. The parent commits it separately as docs(odd), so I left it unedited, unstaged and uncommitted. `git status --short` still shows it as ' M', plus three untracked sweep/exempt result files that I did not touch."
+    }
+  ]
+}

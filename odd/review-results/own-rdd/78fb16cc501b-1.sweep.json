@@ -1,0 +1,15 @@
+{
+  "kind": "sweep",
+  "base": "cb20de0b1fe089c02077e66f0c2cc7017b3930f8",
+  "head": "78fb16cc501b381fc38c390ef1e65dc843eac658",
+  "diff_sha256": "daa2298668465eed36f54eee0ad7ba1adb62c6da341ab197fa3873c84d3acfeb",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": []
+  },
+  "t2": [],
+  "t3": [
+    " M odd/tasks/own-rdd.md"
+  ]
+}

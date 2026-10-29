@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "cb20de0b1fe089c02077e66f0c2cc7017b3930f8",
+    "head": "78fb16cc501b381fc38c390ef1e65dc843eac658",
+    "diff_sha256": "daa2298668465eed36f54eee0ad7ba1adb62c6da341ab197fa3873c84d3acfeb",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/skills/role_chain_artifact_test.go",
+      "engine/skills/role_chain_registry_test.go",
+      "overlay.manifest",
+      "skills.registry.yaml",
+      "skills/role-chain/SKILL.md",
+      "skills/sweeper/SKILL.md"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "cb20de0b1fe089c02077e66f0c2cc7017b3930f8",
+      "head": "78fb16cc501b381fc38c390ef1e65dc843eac658",
+      "diff_sha256": "daa2298668465eed36f54eee0ad7ba1adb62c6da341ab197fa3873c84d3acfeb"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/skills/role_chain_artifact_test.go",
+        "engine/skills/role_chain_registry_test.go",
+        "overlay.manifest",
+        "skills.registry.yaml",
+        "skills/role-chain/SKILL.md",
+        "skills/sweeper/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/skills/role_chain_artifact_test.go:51-66",
+        "severity": "SUGGESTION",
+        "claim": "The lint-budget test and the deployment test check the sweeper skill only for lint size, a registry row and a manifest route. Nothing pins its frontmatter: name equal to its directory, which the Pi package build requires, or disable-model-invocation. A wrong name in skills/sweeper/SKILL.md would not fail any test in this diff. The file as committed is correct (name: sweeper, disable-model-invocation: true).",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": []
+      }
+    ],
+    "evidence": [
+      "Read the whole diff (/tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/78fb16cc.diff).",
+      "Read roleChainSkill and roleChainSections in the worktree. roleChainSections splits on H2 headings and appends line+\"\\n\", so the exact-line assertions with \"+\\n\" match the new Appends line, the Triggers pointer and the moved sweeper line.",
+      "Compared the sweeper line in skills/sweeper/SKILL.md with the removed role-chain line and the test's want constant: word for word identical.",
+      "Checked that the registry and manifest rows for sweeper mirror role-chain's (custom, global, claude/codex/pi, overlay-only).",
+      "Checked that the new role-chain Appends line and Triggers pointer match the criteria text exactly.",
+      "The test pins the fragment `labdrian workflow open --feature F --task T`.",
+      "The CHANGELOG change appends the S19 note to the existing T17 entry rather than adding a separate entry, which is consistent with 'one entry for S19'.",
+      "I did not run any tests or lint."
+    ]
+  }
+}

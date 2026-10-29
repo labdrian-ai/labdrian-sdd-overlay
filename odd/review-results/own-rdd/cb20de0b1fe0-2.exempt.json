@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "22237ac9afe90a72c4e2d76fa40f70d4a4d5b6e8",
+    "head": "cb20de0b1fe089c02077e66f0c2cc7017b3930f8",
+    "diff_sha256": "b3cd107a0bd96646c1e1b36f635381c307d0a07a4332a491cf4aea3c63f8e192",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/cmd/roles_builder_guard_docs_test.go",
+      "engine/cmd/usage.go"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "cd engine && HOME=$S XDG_STATE_HOME=$S XDG_CONFIG_HOME=$S go test -count=1 ./cmd/... (S=/tmp/tmp.dVTDWWiXV6)",
+        "result": "pass",
+        "output": "ok  \tgithub.com/labdrian-ai/labdrian-sdd-overlay/engine/cmd\t84.056s"
+      },
+      {
+        "command": "shellcheck bin/lib/usage.sh",
+        "result": "pass",
+        "output": "no output, rc=0"
+      },
+      {
+        "command": "cd engine && gofmt -l cmd",
+        "result": "pass",
+        "output": "empty output, rc=0"
+      },
+      {
+        "command": "rg -n '\\\\u[0-9a-fA-F]{4}' CHANGELOG.md README.md bin/lib/usage.sh engine/cmd/usage.go engine/cmd/roles_builder_guard_docs_test.go",
+        "result": "pass",
+        "output": "no match, rc=1"
+      }
+    ]
+  }
+}
