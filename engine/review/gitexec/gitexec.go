@@ -235,6 +235,66 @@ func (g Git) Parent(repo app.Repository, commit string) (string, error) {
 	return names[1], nil
 }
 
+// Parents returns every parent of commit, a full object name, first parent first, and none for a commit that has none.
+// git prints the commit and then its parents on one line; anything else is not an answer to the question and is an error.
+func (g Git) Parents(repo app.Repository, commit string) ([]string, error) {
+	out, err := g.output(repo.Root, "rev-list", []string{"rev-list", "--parents", "-n", "1", "--end-of-options", commit})
+	if err != nil {
+		return nil, err
+	}
+	line, whole := strings.CutSuffix(string(out), "\n")
+	names := strings.Split(line, " ")
+	if !whole || strings.Contains(line, "\n") || names[0] != commit {
+		return nil, fmt.Errorf("git rev-list printed %q for %q, want the commit and then its parents on one line", clip(string(out)), commit)
+	}
+	for _, parent := range names[1:] {
+		if !gitobject.IsName(parent) {
+			return nil, fmt.Errorf("git rev-list printed the parent %q of %q, want a full object name", clip(parent), commit)
+		}
+	}
+	return names[1:], nil
+}
+
+// MergeBases returns the best common ancestors of a and b. `git merge-base --all` exits 1 with nothing printed for
+// histories that share no commit, which is none and no error; any other failure, and any line that is not a full object
+// name, is an error.
+func (g Git) MergeBases(repo app.Repository, a, b string) ([]string, error) {
+	ctx, cancel := g.context()
+	defer cancel()
+	stdout, stderr, err := g.runner.Output(ctx, g.env, gitProgram, "-C", repo.Root, "merge-base", "--all", "--end-of-options", a, b)
+	var exit *exec.ExitError
+	if errors.As(err, &exit) && exit.ExitCode() == 1 && len(stdout) == 0 && strings.TrimSpace(string(stderr)) == "" {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("git merge-base: %w%s", err, said(stderr))
+	}
+	text, whole := strings.CutSuffix(string(stdout), "\n")
+	if !whole {
+		return nil, fmt.Errorf("git merge-base printed %q for %q and %q, want full object names, one to a line", clip(string(stdout)), a, b)
+	}
+	bases := strings.Split(text, "\n")
+	for _, name := range bases {
+		if !gitobject.IsName(name) {
+			return nil, fmt.Errorf("git merge-base printed %q for %q and %q, want full object names, one to a line", clip(string(stdout)), a, b)
+		}
+	}
+	return bases, nil
+}
+
+// Tree returns the full object name of the tree of commit, a full object name.
+func (g Git) Tree(repo app.Repository, commit string) (string, error) {
+	out, err := g.output(repo.Root, "rev-parse", []string{"rev-parse", "--verify", "--end-of-options", commit + "^{tree}"})
+	if err != nil {
+		return "", err
+	}
+	name := strings.TrimSuffix(string(out), "\n")
+	if !gitobject.IsName(name) {
+		return "", fmt.Errorf("git rev-parse printed %q for the tree of %q, want one full object name", clip(string(out)), commit)
+	}
+	return name, nil
+}
+
 // Diff returns the bytes of the canonical diff, untouched.
 func (g Git) Diff(repo app.Repository, base, head string) ([]byte, error) {
 	return g.output(repo.Root, "diff-tree", DiffArgs(base, head))

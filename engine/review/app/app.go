@@ -82,6 +82,14 @@ type Git interface {
 	// Parent returns the full object name of the first parent of commit, a full object name, and "" when the commit
 	// has none. For a merge it is the parent the merge was made on, the one a diff of the merge is taken from.
 	Parent(repo Repository, commit string) (string, error)
+	// Parents returns the full object names of every parent of commit, a full object name, in the order git records them
+	// (the first is the one a merge was made on), and none for a commit that has no parent (own-rdd T7a, S7 g).
+	Parents(repo Repository, commit string) ([]string, error)
+	// MergeBases returns the full object names of the best common ancestors of a and b, both full object names: none
+	// for histories that share no commit, and no error then.
+	MergeBases(repo Repository, a, b string) ([]string, error)
+	// Tree returns the full object name of the tree of commit, a full object name.
+	Tree(repo Repository, commit string) (string, error)
 	// Diff returns the bytes of the canonical diff from base to head, both full names: the bytes whose
 	// SHA-256 is the diff_sha256 of the binding. They are the same for the same two commits whichever
 	// commit is checked out, whichever user configuration git reads and whatever the environment says.
