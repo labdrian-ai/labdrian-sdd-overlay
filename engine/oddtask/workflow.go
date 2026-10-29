@@ -80,6 +80,32 @@ func DecideWorkflow(cwd, feature string, v WorkflowView) Reason {
 	return ""
 }
 
+// DeliveryRole is the terminal role: a chain handed to it has ended, so no hop can follow.
+const DeliveryRole = "delivery"
+
+// WaitsForHop says whether the only reason DecideWorkflow gives is the role of S19 (a) and the chain's role is not
+// delivery (own-rdd S20 b): the repository is inside the right workflow and its chain waits for a hop, so the
+// remedy is to append that hop and not to open another workflow.
+func WaitsForHop(feature string, v WorkflowView) bool {
+	if v.Role == BuilderRole || v.Role == DeliveryRole {
+		return false
+	}
+	atBuilder := v
+	atBuilder.Role = BuilderRole
+	return DecideWorkflow("", feature, atBuilder) == ""
+}
+
+// HopMessage is the whole text of a denial for a chain that waits for a hop: the reason, and the remedy of
+// appending the hop of the workflow's chain instead of opening another workflow.
+func HopMessage(r Reason, workflow, chain string) string {
+	return fmt.Sprintf("%s%s. The repository is already inside the workflow %s of this feature, so do not open another: "+
+		"append the hop its role chain %s waits for, then launch the builder again; "+
+		"after a clear review, the next subtask of the same task goes back to the builder "+
+		"with a reviewer to builder hop that carries the review (skills/role-chain). "+
+		"This guard reads text and local state only, so it is a speed bump, not a security boundary.",
+		guardPrefix, string(r), workflow, chain)
+}
+
 // WorkflowMessage is the whole text of a denial for a reason of the workflow check: the reason, and the
 // command that opens the workflow of the first task the prompt cites.
 func WorkflowMessage(r Reason, feature, task string) string {

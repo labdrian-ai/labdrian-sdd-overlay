@@ -22,7 +22,8 @@ import (
 )
 
 const bgDoc = "## Tasks\n\n- [ ] T1 — S14 — delegated — designed — shaped: L5 — commit: -\n- [ ] T2 — S14 — delegated — not designed — commit: -\n" +
-	"- [ ] T6b1 — S14 — delegated — lettered and numbered — shaped: L5 — commit: -\n- [ ] T6b — S14 — delegated — prefix, not designed — commit: -\n\n" +
+	"- [ ] T6b1 — S14 — delegated — lettered and numbered — shaped: L5 — commit: -\n- [ ] T6b — S14 — delegated — prefix, not designed — commit: -\n" +
+	"- [ ] T1b — S20 — delegated — second subtask of the shaper entry of T1 — shaped: L5 — commit: -\n\n" +
 	"## Log\n\n- **L5** (2026-10-28, shaper): design\n"
 
 // bgBareRepo is a git repository whose odd/tasks/f.md is bgDoc and odd/goals/f.json is a goal of the feature f,
@@ -398,7 +399,68 @@ func TestBuilderGuardDeniesABuilderLaunchWhenTheChainHandsTheWorkToAnotherRole(t
 	if _, err := store.Append(raw); err != nil {
 		t.Fatal(err)
 	}
-	want := wantWorkflowDenial("the role chain f-t1 of the workflow f-t1 hands the work to reviewer, not to the builder", "f", "T1")
+	want := wantHopDenial("the role chain f-t1 of the workflow f-t1 hands the work to reviewer, not to the builder", "f-t1", "f-t1")
+	if got := bgDenied(t, root); got != want {
+		t.Fatalf("reason = %q, want %q", got, want)
+	}
+}
+
+// wantHopDenial is the exact message of S20 (b) for reason, spelled out here and not built by the code under test.
+func wantHopDenial(reason, workflow, chain string) string {
+	return "labdrian builder guard: " + reason + ". The repository is already inside the workflow " + workflow +
+		" of this feature, so do not open another: append the hop its role chain " + chain +
+		" waits for, then launch the builder again; after a clear review, the next subtask of the same task goes back to the builder " +
+		"with a reviewer to builder hop that carries the review (skills/role-chain). " +
+		"This guard reads text and local state only, so it is a speed bump, not a security boundary."
+}
+
+// bgAppendHop appends a hop from one role to another to the chain f-t1, with the payload kind progress because the
+// guard reads no evidence and a review-report would need stored review files.
+func bgAppendHop(t *testing.T, from, to roles.Role) {
+	t.Helper()
+	store, err := newRoleChainStore()
+	if err != nil {
+		t.Fatal(err)
+	}
+	records, err := store.LoadChain("proj-1", "f", "f-t1")
+	if err != nil || len(records) == 0 {
+		t.Fatalf("chain f-t1: %d records, err=%v", len(records), err)
+	}
+	last := records[len(records)-1]
+	raw, err := json.Marshal(roles.RoleHandoff{
+		Version: roles.HandoffVersion, ProjectID: "proj-1", GoalID: "f", ChainID: "f-t1", Seq: len(records) + 1,
+		FromRole: from, ToRole: to, PrevSHA256: sha256hex.Sum(last.Raw),
+		PayloadKind: "progress", PayloadSHA256: last.Handoff.PayloadSHA256, Evidence: []roles.Evidence{},
+		Context: roles.Context{Summary: "hop", Decisions: []string{}, OpenQuestions: []string{}}, Status: roles.StatusCompleted,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.Append(raw); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// S20 (b): after a reviewer to builder hop the next subtask of the same workflow is launched; before it, the denial
+// names the hop and not another workflow.
+func TestBuilderGuardAllowsTheNextSubtaskAfterAReviewerToBuilderHop(t *testing.T) {
+	root := bgRepo(t)
+	bgAppendHop(t, roles.RoleBuilder, roles.RoleReviewer)
+	call := bgCall(t, root, "builder", "Spec: odd/tasks/f.md, T1b")
+	want := wantHopDenial("the role chain f-t1 of the workflow f-t1 hands the work to reviewer, not to the builder", "f-t1", "f-t1")
+	if got := decodeGuardDenial(t, bgRun(call)); got != want {
+		t.Fatalf("before the hop: reason = %q, want %q", got, want)
+	}
+	bgAppendHop(t, roles.RoleReviewer, roles.RoleBuilder)
+	assertGuardSilent(t, "T1b after a reviewer to builder hop", bgRun(call))
+}
+
+// S20 (b): a chain that was handed to delivery keeps the remedy of S19 (c) whole.
+func TestBuilderGuardKeepsTheOpenRemedyForADeliveredChain(t *testing.T) {
+	root := bgRepo(t)
+	bgAppendHop(t, roles.RoleBuilder, roles.RoleReviewer)
+	bgAppendHop(t, roles.RoleReviewer, roles.RoleDelivery)
+	want := wantWorkflowDenial("the role chain f-t1 of the workflow f-t1 hands the work to delivery, not to the builder", "f", "T1")
 	if got := bgDenied(t, root); got != want {
 		t.Fatalf("reason = %q, want %q", got, want)
 	}

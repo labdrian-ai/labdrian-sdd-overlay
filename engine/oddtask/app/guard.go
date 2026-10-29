@@ -62,6 +62,9 @@ func (g Guard) CheckLaunch(prompt, cwd string) string {
 		return deny(oddtask.WorkflowUnreadableReason(err.Error()))
 	}
 	if reason := oddtask.DecideWorkflow(cwd, feature, view); reason != "" {
+		if oddtask.WaitsForHop(feature, view) {
+			return oddtask.HopMessage(reason, view.Workflow, view.ChainID)
+		}
 		return deny(reason)
 	}
 	return ""

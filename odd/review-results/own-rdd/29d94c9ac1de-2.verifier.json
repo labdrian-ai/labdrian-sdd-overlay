@@ -1,0 +1,11 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "rg -n -B3 \"func TestRoleChainSkillTellsTheNextSubtaskHopFromRework\" engine/skills/role_chain_artifact_test.go",
+      "output": "lines 202-205: the duties-test comment now precedes the new test and merges with its S20 (c) comment",
+      "base_result": "not-reproduced"
+    }
+  ]
+}

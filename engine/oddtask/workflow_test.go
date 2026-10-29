@@ -69,6 +69,56 @@ func TestWorkflowMessageIsTheExactTextOfS19(t *testing.T) {
 	}
 }
 
+// S20 (b): the message of a chain that waits for a hop inside the right workflow.
+func TestHopMessageIsTheExactTextOfS20(t *testing.T) {
+	want := "labdrian builder guard: the role chain f-t1 of the workflow f-t1 hands the work to reviewer, not to the builder. " +
+		"The repository is already inside the workflow f-t1 of this feature, so do not open another: append the hop its role chain f-t1 waits for, " +
+		"then launch the builder again; after a clear review, the next subtask of the same task goes back to the builder " +
+		"with a reviewer to builder hop that carries the review (skills/role-chain). " +
+		"This guard reads text and local state only, so it is a speed bump, not a security boundary."
+	r := oddtask.Reason("the role chain f-t1 of the workflow f-t1 hands the work to reviewer, not to the builder")
+	if got := oddtask.HopMessage(r, "f-t1", "f-t1"); got != want {
+		t.Fatalf("message = %q, want %q", got, want)
+	}
+}
+
+// S20 (b): the hop remedy holds only when the role is the one reason that fails and the chain is not at delivery.
+func TestWaitsForHopOnlyWhenTheChainIsTheOnlyReason(t *testing.T) {
+	at := func(role string) oddtask.WorkflowView {
+		v := running()
+		v.Role = role
+		return v
+	}
+	for _, role := range []string{"reviewer", "sweeper", "polisher", "estimator"} {
+		if !oddtask.WaitsForHop("f", at(role)) {
+			t.Errorf("role %s: WaitsForHop = false, want true", role)
+		}
+	}
+	for _, role := range []string{"builder", "delivery"} {
+		if oddtask.WaitsForHop("f", at(role)) {
+			t.Errorf("role %s: WaitsForHop = true, want false", role)
+		}
+	}
+	earlier := []struct {
+		name string
+		edit func(v *oddtask.WorkflowView)
+	}{
+		{"no binding", func(v *oddtask.WorkflowView) { v.BindingClass = "absent" }},
+		{"a paused workflow", func(v *oddtask.WorkflowView) { v.Status = "paused" }},
+		{"another goal", func(v *oddtask.WorkflowView) { v.GoalID = "g" }},
+		{"no role chain", func(v *oddtask.WorkflowView) { v.ChainID = "" }},
+		{"a chain error", func(v *oddtask.WorkflowView) { v.ChainErr = "boom" }},
+		{"no records", func(v *oddtask.WorkflowView) { v.Records = 0 }},
+	}
+	for _, tc := range earlier {
+		v := at("reviewer")
+		tc.edit(&v)
+		if oddtask.WaitsForHop("f", v) {
+			t.Errorf("reviewer with %s: WaitsForHop = true, want false", tc.name)
+		}
+	}
+}
+
 func TestCitationNamesItsFeature(t *testing.T) {
 	for _, path := range []string{"odd/tasks/f.md", "/repo/odd/tasks/f.md"} {
 		if got := (oddtask.Citation{Path: path}).Feature(); got != "f" {

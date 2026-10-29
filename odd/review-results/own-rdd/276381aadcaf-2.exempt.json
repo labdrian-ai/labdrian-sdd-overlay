@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "0525ec8e3b4dd1ce9c4c8acbdf003360904f3a50",
+    "head": "276381aadcaf35e24ff2bec3cf4e56e92165c858",
+    "diff_sha256": "14dffc423fb365e4bbe10172066c5d367cc098901dbd7d1f0eca871b0201b690",
+    "paths": [
+      "engine/skills/role_chain_artifact_test.go"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "cd engine && go test -count=1 ./skills/",
+        "result": "pass",
+        "output": "ok github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills 8.795s"
+      },
+      {
+        "command": "mutate skills/sweeper/SKILL.md name to sweep, then disable-model-invocation to false; go test -run TestRoleChainSkillIsNamedForItsDirectoryAndNotInvokableByTheModel ./skills/",
+        "result": "pass",
+        "output": "both mutations FAIL the sweeper subtest; restored file passes"
+      }
+    ]
+  }
+}

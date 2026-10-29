@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "7df8dca6a6174aa4ff22f3739ee8acc7ae6947da",
+    "head": "29d94c9ac1de6c7a66921189d5700bd4a53ea0df",
+    "diff_sha256": "506b921649ddebb0841ee3546471f105ca3fa8c5bd027bc80c2220cf56998170",
+    "paths": [
+      "engine/skills/role_chain_artifact_test.go",
+      "skills/role-chain/SKILL.md"
+    ]
+  },
+  "rows": [
+    "default",
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "7df8dca6a6174aa4ff22f3739ee8acc7ae6947da",
+      "head": "29d94c9ac1de6c7a66921189d5700bd4a53ea0df",
+      "diff_sha256": "506b921649ddebb0841ee3546471f105ca3fa8c5bd027bc80c2220cf56998170"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skills/role_chain_artifact_test.go",
+        "skills/role-chain/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "skills/role-chain/.approval.json:4",
+        "severity": "SUGGESTION",
+        "claim": "The commit edits skills/role-chain/SKILL.md but does not touch .approval.json, whose sha256 covers the skill directory's files. Unless the owner re-runs `labdrian skills approve` for role-chain, validate may report the approval as stale. Approval is a deliberate human step that agents may not perform, so this is probably expected. I did not compute the digest or run validate, so I could not confirm the mismatch.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "skills/role-chain/.approval.json:4",
+          "engine/skills/approval_digest.go:43",
+          "engine/cmd/usage.go:139"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff: one-line wording change in SKILL.md (\"the only backward edge\" to \"(rework)\"), a new bullet for the next-subtask hop, and the matching test edits.",
+      "Grepped the worktree for \"backward edge\". The remaining uses are in docs/architecture/role-design drafts (not installed) and in the new test.",
+      "Confirmed the duty-list test string in role_chain_artifact_test.go matches the new SKILL.md wording.",
+      "The new test's expected line matches the added bullet text exactly.",
+      "The contract change is additive: no CLI flag, schema or payload field changed, and the new bullet reuses the existing `reviewer → builder` edge and the `review-report` payload_kind.",
+      "Read skills/role-chain/.approval.json and grepped engine code for how approval records are used.",
+      "Ran no tests or commands."
+    ]
+  }
+}

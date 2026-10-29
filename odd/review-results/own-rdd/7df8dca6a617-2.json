@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "b03b864c0e9c088d605901cdbf0ab05ae96ee99f",
+    "head": "7df8dca6a6174aa4ff22f3739ee8acc7ae6947da",
+    "diff_sha256": "cf13c4658a2b18343d1533c959dbeec45725b91f5d250ce1e4e60001c9003f73",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/cmd/roles_builder_guard_docs_test.go",
+      "engine/cmd/roles_builder_guard_test.go",
+      "engine/cmd/usage.go",
+      "engine/oddtask/app/guard.go",
+      "engine/oddtask/app/guard_test.go",
+      "engine/oddtask/workflow.go",
+      "engine/oddtask/workflow_test.go",
+      "engine/roles/roles.go"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "b03b864c0e9c088d605901cdbf0ab05ae96ee99f",
+      "head": "7df8dca6a6174aa4ff22f3739ee8acc7ae6947da",
+      "diff_sha256": "cf13c4658a2b18343d1533c959dbeec45725b91f5d250ce1e4e60001c9003f73"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/cmd/roles_builder_guard_docs_test.go",
+        "engine/cmd/roles_builder_guard_test.go",
+        "engine/cmd/usage.go",
+        "engine/oddtask/app/guard.go",
+        "engine/oddtask/app/guard_test.go",
+        "engine/oddtask/workflow.go",
+        "engine/oddtask/workflow_test.go",
+        "engine/roles/roles.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/oddtask/workflow.go:237-244",
+        "severity": "SUGGESTION",
+        "claim": "WaitsForHop treats any non-builder, non-delivery role as a chain waiting for a hop, including an empty or unknown v.Role when Records > 0. Such a view would get the hop remedy (append a hop) instead of the open remedy. The allow/deny decision is unchanged, so this only affects the denial text, and it is not reachable with a verified chain. The tests do not cover an empty role.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": []
+      }
+    ],
+    "evidence": [
+      "Read the full diff.",
+      "Read engine/oddtask/app/guard.go CheckLaunch. The new WaitsForHop branch only chooses between HopMessage and deny(reason) inside the existing DecideWorkflow non-empty branch. Allow and deny are unchanged, and an allow still returns an empty string.",
+      "Read DecideWorkflow in engine/oddtask/workflow.go. The role check is the last case, so WaitsForHop (which sets Role to builder and re-runs it) is true only when the role is the sole failing reason.",
+      "Read WorkflowMessage and guardPrefix in the worktree to compare the message format.",
+      "Not run: no tests or commands were executed.",
+      "Tests added in the diff cover the exact HopMessage text, the role matrix of WaitsForHop (builder and delivery false, earlier failures false), the CheckLaunch hop and delivery paths, the next-subtask allow after a reviewer-to-builder hop, and the three docs."
+    ]
+  }
+}

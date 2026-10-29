@@ -1313,8 +1313,15 @@ gentle-ai-overlay roles builder-guard
     chain denies too. The denial is exactly `labdrian builder guard: <reason>. Every feature runs inside its workflow:
     run labdrian workflow open --feature <f> --task <T> (it records the shaper and estimator hops, then creates,
     starts and binds the workflow of the task), then launch the builder again. This guard reads text and local state
-    only, so it is a speed bump, not a security boundary.`, `<T>` the first task the prompt cites. The checks of the
-    shaper's mark run first and their denials are unchanged.
+    only, so it is a speed bump, not a security boundary.`, `<T>` the first task the prompt cites. When the bound
+    workflow is the running one of the feature and its chain verifies but waits for a hop other than to the builder or
+    to delivery, the denial says instead not to open another workflow and to append that hop: after a clear review, the
+    next subtask of the same task is handed back with a reviewer to builder hop that carries the review. That denial is
+    exactly `labdrian builder guard: <reason>. The repository is already inside the workflow <workflow> of this feature,
+    so do not open another: append the hop its role chain <chain> waits for, then launch the builder again; after a
+    clear review, the next subtask of the same task goes back to the builder with a reviewer to builder hop that carries
+    the review (skills/role-chain). This guard reads text and local state only, so it is a speed bump, not a security
+    boundary.` The checks of the shaper's mark run first and their denials are unchanged.
     Limits: it is a speed bump against forgetting the shaper, not a security boundary. It reads text, so the writer of
     the document can forge the mark together with a false shaper entry, and it guards Claude Code only: launches of the
     builder from Codex and Pi are not guarded.

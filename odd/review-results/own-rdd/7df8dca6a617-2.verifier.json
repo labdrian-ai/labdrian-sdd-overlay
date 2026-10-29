@@ -1,0 +1,11 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "not-run",
+      "command": "none",
+      "output": "inferential: an empty or unknown role with Records > 0 needs an unverified chain view, which the guard never builds from a verified chain; only the denial text would differ. Carried as a suggestion.",
+      "base_result": "not-run"
+    }
+  ]
+}

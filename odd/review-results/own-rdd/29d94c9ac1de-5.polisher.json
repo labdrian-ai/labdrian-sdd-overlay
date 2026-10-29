@@ -1,0 +1,27 @@
+{
+  "kind": "polisher",
+  "base": "7df8dca6a6174aa4ff22f3739ee8acc7ae6947da",
+  "head": "29d94c9ac1de6c7a66921189d5700bd4a53ea0df",
+  "diff_sha256": "506b921649ddebb0841ee3546471f105ca3fa8c5bd027bc80c2220cf56998170",
+  "findings": {
+    "findings": [
+      {
+        "severity": "SUGGESTION",
+        "title": "Existing doc comment is now attached to the wrong test",
+        "detail": "The commit inserts TestRoleChainSkillTellsTheNextSubtaskHopFromRework directly below the comment '// Each group of duties carries what the design gives it, in its own section...'. That comment described TestRoleChainDutiesCarryWhatTheDesignGivesEachOne. It now sits above a single combined comment block for the new test and reads as that test's doc. TestRoleChainDutiesCarryWhatTheDesignGivesEachOne lost its doc comment. The fix is to move the new test and its '// own-rdd S20 (c)' comment above the old comment, or after the duties test.",
+        "introduced_by_target": true,
+        "proof": "Diff lines 16-31 of /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/29d94c9a.diff. The old comment is unchanged context at lines 16-17. The new comment and test are added at lines 18-29. The duties test header is context at line 31.",
+        "evidence": [
+          "Diff lines 16-31 of /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/29d94c9a.diff. The old comment is unchanged context at lines 16-17. The new comment and test are added at lines 18-29. The duties test header is context at line 31."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff of 29d94c9a (2 files).",
+      "Read S20 (c) at line 77 of odd/tasks/own-rdd.md in the worktree, and the T18 row at line 128.",
+      "The new SKILL.md line matches the S20 (c) text character for character. The replacement of '(the only backward edge)' with '(rework)' matches the spec. No other skill line changed.",
+      "The dutiesTable string was updated to '(rework)', and the new test refuses 'the only backward edge'. This matches the T18 commit (2) description.",
+      "Not run: TestRoleChainSkillIsWithinTheLintBudget and the body token budget (700). This agent had no shell, so the shaper's estimate of about 690 tokens is unverified."
+    ]
+  }
+}
