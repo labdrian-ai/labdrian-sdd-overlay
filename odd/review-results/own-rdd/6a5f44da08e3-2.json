@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "d49e547aa7c916e43655c025688f10bad2a2091d",
+    "head": "6a5f44da08e39d9f1165225bc98e3f041fec9872",
+    "diff_sha256": "afd284bc440e8ea7b7b497f9a4f65c95f2e55d6e1988b550a117199d8a0804ba",
+    "paths": [
+      "engine/cmd/review_stop_hook.go",
+      "engine/cmd/review_stop_hook_docs_test.go",
+      "engine/cmd/review_stop_hook_test.go",
+      "engine/skills/actuals_instrumentation_d2_anchor_test.go",
+      "odd/review-results/README.md"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "d49e547aa7c916e43655c025688f10bad2a2091d",
+      "head": "6a5f44da08e39d9f1165225bc98e3f041fec9872",
+      "diff_sha256": "afd284bc440e8ea7b7b497f9a4f65c95f2e55d6e1988b550a117199d8a0804ba"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/review_stop_hook.go",
+        "engine/cmd/review_stop_hook_docs_test.go",
+        "engine/cmd/review_stop_hook_test.go",
+        "engine/skills/actuals_instrumentation_d2_anchor_test.go",
+        "odd/review-results/README.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the full diff.",
+      "The only code change is the opening sentence of the block reason in stopReason (review_stop_hook.go:119). The test helper blockReasonOf mirrors it, so the exact-match test stays consistent.",
+      "Searched the worktree, excluding odd/, for the old phrase 'not ready for delivery'. It now appears only in negative assertions in declarations_test.go and review_stop_hook_docs_test.go. Nothing parses or matches on the block reason text.",
+      "The new records README sentence matches the string asserted by the new docs test case.",
+      "The change in the skills test file only rewraps a comment and has no behavioural effect.",
+      "Did not run any tests or commands."
+    ]
+  }
+}
