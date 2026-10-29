@@ -193,7 +193,7 @@ func roleChainDuties() []roleChainDuty {
 			"`odd/review-results/<feature>/<head12>-<n>.json`", "`review-diff`", "`review-result`", "`verifier-report`",
 			"recomputes `diff_sha256`", "only on equality",
 			"introduced, activated or worsened", "reproduced", "(`unknown`: on `base` first)", "`verifier`", "within 3 calls",
-			"`reviewer → builder` (the only backward edge)", "WARNING: fix before delivery", "SUGGESTION: carry", "`reviewer → delivery`",
+			"`reviewer → builder` (rework)", "WARNING: fix before delivery", "SUGGESTION: carry", "`reviewer → delivery`",
 		}},
 		{"Persistence", []string{"prototyper's and sweeper's artifacts", "keep saving"}},
 	}
@@ -201,6 +201,19 @@ func roleChainDuties() []roleChainDuty {
 
 // Each group of duties carries what the design gives it, in its own section: a rule that moved to
 // another section would be read by a parent looking in the wrong place.
+// own-rdd S20 (c): the second use of the backward edge is written down, exactly, and the edge is no longer called the
+// only backward one.
+func TestRoleChainSkillTellsTheNextSubtaskHopFromRework(t *testing.T) {
+	_, _, body := roleChainSkill(t)
+	const line = "- Clear review and a next subtask of the workflow's task: `reviewer → builder`, `payload_kind` `review-report` with that review's evidence, the subtask in the summary; never a second `workflow open`."
+	if !strings.Contains(body, "\n"+line+"\n") {
+		t.Errorf("the body lacks the line of the next subtask hop: %q", line)
+	}
+	if strings.Contains(body, "the only backward edge") {
+		t.Error("the body still calls reviewer → builder the only backward edge")
+	}
+}
+
 func TestRoleChainDutiesCarryWhatTheDesignGivesEachOne(t *testing.T) {
 	_, _, body := roleChainSkill(t)
 	_, under := roleChainSections(body)
