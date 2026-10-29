@@ -10,6 +10,11 @@ package main
 // a builder launch to the use case of engine/oddtask/app, and has hookwire write the denial. It is a speed
 // bump against forgetting the shaper, not a security boundary.
 //
+// After every check of S14 passes, the launch must also be made inside a workflow (own-rdd S19 a): the
+// repository of the session must be bound to the running workflow of the cited feature, whose role chain hands
+// the work to the builder. The state it reads is the binding verbs' and the role-chain store's (boundWorkflows
+// below), the decision is engine/oddtask's, and its denial says to run `labdrian workflow open`.
+//
 // The contract with Claude Code is the approve guard's (skills guard-hook):
 //
 //   - stdout is empty, or exactly one JSON object: to deny, {"hookSpecificOutput":{"hookEventName":
@@ -34,6 +39,9 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/oddtask"
 	oddapp "github.com/labdrian-ai/labdrian-sdd-overlay/engine/oddtask/app"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection"
+	projapp "github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection/app"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/roles"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow"
 )
 
 const (
@@ -86,16 +94,75 @@ func runRolesBuilderGuard(args []string, stdin io.Reader, stdout, stderr io.Writ
 		return
 	}
 	builder = true
-	if reason := oddapp.New(docs).Check(call.Prompt, call.Cwd); reason != "" {
-		denyBuilderLaunch(stdout, reason)
+	// After every check of S14, the launch must be made inside the running workflow of its feature (S19 a).
+	if message := oddapp.New(docs).WithWorkflows(boundWorkflows{}).CheckLaunch(call.Prompt, call.Cwd); message != "" {
+		denyMessage(stdout, message)
 	}
 	exit(0)
 }
 
 // denyBuilderLaunch writes the denial for reason. A write that fails changes nothing: the call goes through.
 func denyBuilderLaunch(stdout io.Writer, reason oddtask.Reason) {
-	out, err := hookwire.PreToolUseReply{Deny: true, Reason: oddtask.Message(reason)}.Encode()
+	denyMessage(stdout, oddtask.Message(reason))
+}
+
+// denyMessage writes the denial that says message.
+func denyMessage(stdout io.Writer, message string) {
+	out, err := hookwire.PreToolUseReply{Deny: true, Reason: message}.Encode()
 	if err == nil {
 		_, _ = stdout.Write(out)
 	}
+}
+
+// boundWorkflows is the adapter of the Workflows port of the builder guard: it reads what the repository that
+// holds a directory is bound to with the binding verbs' use case (projection/app, Describe: the binding store
+// and the workflow log the verbs read), and the role chain the workflow follows with the role-chain store,
+// which verifies the chain as it loads it. It decides nothing and reads no file itself.
+type boundWorkflows struct{}
+
+func (boundWorkflows) Of(cwd string) (oddtask.WorkflowView, error) {
+	bindings, err := newBindingStore()
+	if err != nil {
+		return oddtask.WorkflowView{}, err
+	}
+	described, err := projapp.BindWorkflow{
+		Repositories: newRepoLocator(), Bindings: bindings, Workflows: workflowReader{}, Clock: wallClock{},
+	}.Describe(cwd)
+	if err != nil {
+		return oddtask.WorkflowView{}, errors.New(bindingRefusal(err))
+	}
+	view := oddtask.WorkflowView{BindingClass: string(described.Binding.Classification)}
+	if described.Workflow == nil {
+		return view, nil
+	}
+	bound := described.Binding.Binding
+	view.Workflow = bound.WorkflowID
+	view.WorkflowClass = string(described.Workflow.Classification)
+	if described.Workflow.Classification != workflow.ClassificationOwned {
+		return view, nil
+	}
+	state := described.Workflow.State
+	view.Status, view.GoalID, view.ChainID = string(state.Status), state.GoalID, state.RoleChainID
+	if state.RoleChainID == "" {
+		return view, nil
+	}
+	chains, err := newRoleChainStore()
+	if err != nil {
+		return oddtask.WorkflowView{}, err
+	}
+	records, err := chains.LoadChain(bound.ProjectID, state.GoalID, state.RoleChainID)
+	if err != nil {
+		view.ChainErr = err.Error()
+		return view, nil
+	}
+	view.Records = len(records)
+	if len(records) > 0 {
+		resume, err := roles.Resume(records)
+		if err != nil {
+			view.ChainErr = err.Error()
+			return view, nil
+		}
+		view.Role = string(resume.Role)
+	}
+	return view, nil
 }

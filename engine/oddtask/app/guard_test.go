@@ -69,6 +69,73 @@ func TestCheckDeniesAnUnreadableDocumentWithItsCause(t *testing.T) {
 	}
 }
 
+// fakeFlows answers Of with view or err and counts the questions.
+type fakeFlows struct {
+	view  oddtask.WorkflowView
+	err   error
+	asked int
+	cwd   string
+}
+
+func (f *fakeFlows) Of(cwd string) (oddtask.WorkflowView, error) {
+	f.asked++
+	f.cwd = cwd
+	return f.view, f.err
+}
+
+var runningView = oddtask.WorkflowView{
+	BindingClass: "owned", Workflow: "f-t2", WorkflowClass: "owned", Status: "running", GoalID: "f", ChainID: "f-t2", Records: 2, Role: "builder",
+}
+
+func TestCheckLaunchAllowsADesignedTaskInsideItsRunningWorkflow(t *testing.T) {
+	docs := &fakeDocs{file: oddtask.File{Path: "/repo/odd/tasks/f.md", Text: shapedDoc}}
+	flows := &fakeFlows{view: runningView}
+	if got := app.New(docs).WithWorkflows(flows).CheckLaunch("Spec: odd/tasks/f.md, T2, S1", "/repo"); got != "" {
+		t.Fatalf("CheckLaunch = %q, want allowed", got)
+	}
+	if flows.asked != 1 || flows.cwd != "/repo" {
+		t.Fatalf("workflow asked %d times at %q, want once at the session cwd", flows.asked, flows.cwd)
+	}
+}
+
+func TestCheckLaunchDeniesWithTheWorkflowMessageNamingTheFeatureAndTheFirstTask(t *testing.T) {
+	docs := &fakeDocs{file: oddtask.File{Path: "/repo/odd/tasks/f.md", Text: shapedDoc}}
+	view := runningView
+	view.Status = "paused"
+	got := app.New(docs).WithWorkflows(&fakeFlows{view: view}).CheckLaunch("Spec: /repo/odd/tasks/f.md, S1, T2", "/repo")
+	want := oddtask.WorkflowMessage("the workflow f-t2 bound to the repository is paused, not running", "f", "T2")
+	if got != want {
+		t.Fatalf("CheckLaunch = %q, want %q", got, want)
+	}
+}
+
+func TestCheckLaunchReadsNoWorkflowWhenTheDesignChecksFail(t *testing.T) {
+	docs := &fakeDocs{file: oddtask.File{Path: "/repo/odd/tasks/f.md", Text: shapedDoc}}
+	flows := &fakeFlows{view: runningView}
+	want := oddtask.Message(oddtask.Reason(`task T4 of /repo/odd/tasks/f.md is not marked as designed by the shaper (its line has no "shaped: L<n>")`))
+	if got := app.New(docs).WithWorkflows(flows).CheckLaunch("Spec: odd/tasks/f.md, T4", "/repo"); got != want {
+		t.Fatalf("CheckLaunch = %q, want %q", got, want)
+	}
+	if got := app.New(docs).WithWorkflows(flows).CheckLaunch("build it", "/repo"); got != oddtask.Message(oddtask.ReasonNoCitation) {
+		t.Fatalf("CheckLaunch(no citation) = %q", got)
+	}
+	if flows.asked != 0 {
+		t.Fatalf("the workflow was read %d times, want none", flows.asked)
+	}
+}
+
+func TestCheckLaunchDeniesWhenTheWorkflowCannotBeReadOrHasNoReader(t *testing.T) {
+	docs := &fakeDocs{file: oddtask.File{Path: "/repo/odd/tasks/f.md", Text: shapedDoc}}
+	got := app.New(docs).WithWorkflows(&fakeFlows{err: errors.New("disk")}).CheckLaunch("Spec: odd/tasks/f.md, T2", "/repo")
+	if want := oddtask.WorkflowMessage(oddtask.WorkflowUnreadableReason("disk"), "f", "T2"); got != want {
+		t.Fatalf("CheckLaunch = %q, want %q", got, want)
+	}
+	got = app.New(docs).CheckLaunch("Spec: odd/tasks/f.md, T2", "/repo")
+	if want := oddtask.WorkflowMessage(oddtask.WorkflowUnreadableReason("the guard has no reader of the workflow"), "f", "T2"); got != want {
+		t.Fatalf("CheckLaunch with no port = %q, want %q", got, want)
+	}
+}
+
 func TestCheckDeniesAnErrorThatIsNotAReadError(t *testing.T) {
 	docs := &fakeDocs{err: errors.New("boom")}
 	want := oddtask.Reason("the feature document odd/tasks/f.md cannot be read (boom)")
