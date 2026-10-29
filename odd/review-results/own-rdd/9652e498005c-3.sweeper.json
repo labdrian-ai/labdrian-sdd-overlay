@@ -1,0 +1,15 @@
+{
+  "kind": "sweeper",
+  "base": "42643659d732490201ff41b6b0908c048021dc48",
+  "head": "9652e498005cf2a81a42d620da9bcbc5452cac89",
+  "diff_sha256": "68970875d6f59dc999fbef02350a89c4c28e1462b922644e50d8ad361ba2f7fc",
+  "sweep": "9652e498005c-1.sweep.json",
+  "commit": "03a99ae8464791282d28a2e7e88ecec84db7f62b",
+  "candidates": [
+    {
+      "candidate": "T2 deadcode engine: workflow/app/open.go: unreachable func: IsRefusal",
+      "disposition": "removed",
+      "evidence": "`rg IsRefusal` under engine/ found only its definition at workflow/app/open.go:258. No test, no engine/cmd code and no interface used it. I removed the function and the `errors` import, which only it used. From engine/: `go vet ./...` was clean and `gofmt -l .` listed nothing. `go test -count=1 ./workflow/... ./cmd/...` passed for workflow, workflow/filelog and cmd; workflow/app has no test files. I did not run deadcode -test, staticcheck or the full suite. Committed as 9f3aa337 with a `Risk: none` trailer. The commit was reordered by the parent to sit directly on 9652e498 (cherry-pick, same tree) as 03a99ae8464791282d28a2e7e88ecec84db7f62b."
+    }
+  ]
+}
