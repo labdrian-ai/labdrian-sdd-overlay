@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "dc0107daffda09469bab03d19b15bf230915e649",
+    "head": "f012779788b930ced4685644276d6e080a74dee3",
+    "diff_sha256": "23bc6f7f826ff483aa2360483661f7ea39dfd3273351d4e7c490d69d80434d1f",
+    "paths": [
+      "engine/skills/actuals_instrumentation_d2_anchor_test.go"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "dc0107daffda09469bab03d19b15bf230915e649",
+      "head": "f012779788b930ced4685644276d6e080a74dee3",
+      "diff_sha256": "23bc6f7f826ff483aa2360483661f7ea39dfd3273351d4e7c490d69d80434d1f"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skills/actuals_instrumentation_d2_anchor_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/skills/actuals_instrumentation_d2_anchor_test.go:443-447",
+        "severity": "SUGGESTION",
+        "claim": "The runGitReadOnly doc comment says the read-only contract is only `log` and `show -s`. The commit now also calls it with `cat-file -e` and `rev-parse --verify`. Both are read-only, and the function has no allowlist, so nothing breaks. The comment no longer lists the subcommands in use, which weakens it as the audit point it describes.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/actuals_instrumentation_d2_anchor_test.go:62-72",
+          "engine/skills/actuals_instrumentation_d2_anchor_test.go:443-457"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/skills/actuals_instrumentation_d2_anchor_test.go:436-441",
+        "severity": "SUGGESTION",
+        "claim": "The skip or fail message always says 'a git archive or a shallow clone', but the guard fires on any error from git. That includes git missing from PATH, a bad repoRoot, or a repo with no `origin` remote (for example a local clone whose remote is not named origin). A developer in that case would get a misleading reason. The error from the failed git call is discarded and not included in the message.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/actuals_instrumentation_d2_anchor_test.go:62-72",
+          "engine/skills/actuals_instrumentation_d2_anchor_test.go:434-441"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/5a322105-7275-4579-8cdf-475155a37ce0/scratchpad/f0127797.diff.",
+      "Read the helper definitions and the existing origin/main usage in engine/skills/actuals_instrumentation_d2_anchor_test.go in the worktree, including runGitReadOnly, which has no subcommand allowlist.",
+      "Read the S16 (b) and T13 lines in odd/tasks/own-rdd.md. The grep output showed `(b)` only as the README trailer remedy, and the T13b line itself was omitted from the output, so I could not read the exact T13b acceptance text. I did not compare the change against it.",
+      "The guard is placed before all subtests. It skips locally and fails when CI == \"true\". This avoids a silent pass when the history is missing, and the `Risk: none` line holds because the change is test-only with no secrets, path escapes, or network use.",
+      "Commands run: none. No tests were run."
+    ]
+  }
+}
