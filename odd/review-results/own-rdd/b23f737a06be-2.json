@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a84c93963f147e0ba8b2c7e2973218a96616e828",
+    "head": "b23f737a06bed5a39bde0fe6426ead9d6a146066",
+    "diff_sha256": "f609b83a46ac8fe73837fdce95be1b6ba25ee42c72788cec939084111e6cb104",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/cmd/dispatch_routes_test.go",
+      "engine/cmd/review.go",
+      "engine/cmd/review_anchor.go",
+      "engine/cmd/review_anchor_test.go",
+      "engine/cmd/review_exempt_test.go",
+      "engine/cmd/review_test.go",
+      "engine/cmd/usage.go",
+      "odd/review-results/README.md"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "a84c93963f147e0ba8b2c7e2973218a96616e828",
+      "head": "b23f737a06bed5a39bde0fe6426ead9d6a146066",
+      "diff_sha256": "f609b83a46ac8fe73837fdce95be1b6ba25ee42c72788cec939084111e6cb104"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/cmd/dispatch_routes_test.go",
+        "engine/cmd/review.go",
+        "engine/cmd/review_anchor.go",
+        "engine/cmd/review_anchor_test.go",
+        "engine/cmd/review_exempt_test.go",
+        "engine/cmd/review_test.go",
+        "engine/cmd/usage.go",
+        "odd/review-results/README.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the full diff.",
+      "Read parseReviewFlags, require, reviewPath, reviewFailed, writeReviewJSON and newReviewService in engine/cmd/review.go in the worktree. Duplicate, unknown, valueless and positional flags are refused before any git call. The new --merge flag only affects verbs that list it in `takes`, so the other verbs refuse it as unknown.",
+      "Read the start of CheckLanding in engine/review/app/landing.go, which was already in the base. It validates the rev, locates the repo, resolves the merge, then checks parents and merge bases. review_anchor.go only wires it, prints the result, and exits 1 on any error. I did not read the rest of CheckLanding or review/landing.go, which are T7a and not in this diff.",
+      "The tests cover verified, base-moved, unreviewed-chain, no-feature, non-merge, bad command lines, --cwd, other verbs and the docs. The verb lists in usage text and tests are consistent across review.go, the test files and docs.",
+      "No tests or commands were run (not run)."
+    ]
+  }
+}

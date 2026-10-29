@@ -1,0 +1,16 @@
+{
+  "kind": "polisher",
+  "base": "b23f737a06bed5a39bde0fe6426ead9d6a146066",
+  "head": "516937dc6bed4174f8db8114a66f8bb7ff824208",
+  "diff_sha256": "fa86ecefe71a1d61ec80e30111a6db0654a251ccd6b30710578cbc886356fcd8",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff of 516937dc against b23f737a: the new `review-anchor` job in `.github/workflows/ci.yml` and `TestCIJobRunsReviewAnchorOnPullRequestsAndMain` in `engine/cmd/review_anchor_test.go`. I did not run the test, the job or the verb.",
+      "S7 (a) in odd/tasks/own-rdd.md line 36 says to run `review anchor --merge HEAD` on every `pull_request` event and on every `push` to `main`, and not on pushes to other branches. The job's `if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'` does that. The workflow `on:` block (ci.yml lines 3-9) triggers on push and pull_request for all branches, so the `if` is what excludes other pushes. Under `pull_request`, `github.ref` is `refs/pull/<n>/merge`, so the main branch check cannot match it by accident.",
+      "S7 (h), line 43, says the existing `test-archive-anchor-gate` job, `tools/archive-anchor-gate` and `known-gaps.txt` stay unchanged. The diff only inserts a new job between `test-archive-anchor-gate` and `test-archive-reconcile` and touches none of those.",
+      "The job uses `fetch-depth: 0` as the spec's merge-base and chain-of-reviews reads require. It reads the Go version from `engine/go.mod`, as the other engine jobs do. It sets `working-directory: engine` and runs `go run ./cmd/ review anchor --merge HEAD`, the same form as the other engine jobs. It has no secrets and no write permissions, and it adds no new action beyond the checkout@v4 and setup-go@v5 already used in the file.",
+      "The test pins the exact job text between the archive gate and `test-archive-reconcile`, and checks the ordering of the two jobs. It is brittle against reformatting, but that is intended for a required-check job and is not a user-facing defect."
+    ]
+  }
+}

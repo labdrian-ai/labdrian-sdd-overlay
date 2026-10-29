@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "b23f737a06bed5a39bde0fe6426ead9d6a146066",
+    "head": "516937dc6bed4174f8db8114a66f8bb7ff824208",
+    "diff_sha256": "fa86ecefe71a1d61ec80e30111a6db0654a251ccd6b30710578cbc886356fcd8",
+    "paths": [
+      ".github/workflows/ci.yml",
+      "engine/cmd/review_anchor_test.go"
+    ]
+  },
+  "rows": [
+    "default"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "b23f737a06bed5a39bde0fe6426ead9d6a146066",
+      "head": "516937dc6bed4174f8db8114a66f8bb7ff824208",
+      "diff_sha256": "fa86ecefe71a1d61ec80e30111a6db0654a251ccd6b30710578cbc886356fcd8"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        ".github/workflows/ci.yml",
+        "engine/cmd/review_anchor_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the full diff: a new review-anchor job in ci.yml and a new test, TestCIJobRunsReviewAnchorOnPullRequestsAndMain.",
+      "S7 (a) in odd/tasks/own-rdd.md line 36 asks for a CI job that runs `review anchor --merge HEAD` on every pull_request and on push to main, and not on other branches. The job's `if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'` and `fetch-depth: 0` do that.",
+      "The workflow's `on:` block at ci.yml lines 3-8 has push and pull_request triggers filtered by branches, so the job's `if` condition stays consistent with them.",
+      "Placement is correct: test-archive-anchor-gate is at ci.yml line 263 and the new job sits after it, before test-archive-reconcile.",
+      "S7 (h) is respected: the diff leaves the archive-anchor-gate job and known-gaps.txt unchanged.",
+      "The test pins the job block byte for byte against ci.yml and checks the job order. It is brittle but deterministic, and it matches the diff.",
+      "Not verified: S7 (a) itself marks as unverified the assumption that actions/checkout gives HEAD as the pull-request merge commit. Nothing was run, since no check was allowed."
+    ]
+  }
+}

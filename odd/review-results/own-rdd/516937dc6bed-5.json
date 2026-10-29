@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "b23f737a06bed5a39bde0fe6426ead9d6a146066",
+    "head": "516937dc6bed4174f8db8114a66f8bb7ff824208",
+    "diff_sha256": "fa86ecefe71a1d61ec80e30111a6db0654a251ccd6b30710578cbc886356fcd8",
+    "paths": [
+      ".github/workflows/ci.yml",
+      "engine/cmd/review_anchor_test.go"
+    ]
+  },
+  "rows": [
+    "default",
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "b23f737a06bed5a39bde0fe6426ead9d6a146066",
+      "head": "516937dc6bed4174f8db8114a66f8bb7ff824208",
+      "diff_sha256": "fa86ecefe71a1d61ec80e30111a6db0654a251ccd6b30710578cbc886356fcd8"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        ".github/workflows/ci.yml",
+        "engine/cmd/review_anchor_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the full diff (2827 bytes) at the scratchpad path named in the prompt.",
+      "The new ci.yml job matches S7 (a) in odd/tasks/own-rdd.md line 36. It runs `review anchor --merge HEAD` on every pull_request event and on pushes to refs/heads/main, and it skips pushes to other branches.",
+      "The workflow `on:` block (ci.yml lines 3-9) fires on push and pull_request for all branches. The job's `if:` therefore decides where it runs.",
+      "The job's Go setup (`go-version-file: engine/go.mod`) and its `go run ./cmd/ ...` invocation follow the existing jobs at ci.yml lines 86, 122 and 130. `fetch-depth: 0` is the same as the archive gate at line 273.",
+      "S7 (h) says the archive gate and known-gaps.txt are unchanged. The diff touches neither: it adds a job and a test, and removes nothing.",
+      "The new job is only refused as a merge gate once the owner marks it a required check. S7 (j) records this as a documented limit, not a defect.",
+      "The new test pins the job block verbatim and its order after test-archive-anchor-gate. That is brittle to later edits but not user-impacting.",
+      "Not run: no commands were executed, so the verb itself and the workflow on GitHub are unverified. The assumption in S7 (a) that actions/checkout checks out refs/pull/N/merge is not checked here."
+    ]
+  }
+}
