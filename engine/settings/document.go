@@ -37,7 +37,8 @@ func Empty() Document { return Document{root: map[string]interface{}{}} }
 // error, the one encoding/json reports, so the caller can name the file it came from. Data that
 // starts with a UTF-8 byte order mark (EF BB BF) is refused with the words go1.21 gives for it,
 // "invalid character 'ï' looking for beginning of value", without calling encoding/json: go1.27
-// words the same refusal with the byte order mark itself as the character, and the goldens and tests pin go1.21's text.
+// words the same refusal with the byte order mark itself as the character, and the goldens and
+// tests pin go1.21's text.
 func Parse(data []byte) (Document, error) {
 	if bytes.HasPrefix(data, []byte{0xEF, 0xBB, 0xBF}) {
 		return Document{}, errors.New("invalid character 'ï' looking for beginning of value")
