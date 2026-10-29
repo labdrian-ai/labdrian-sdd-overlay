@@ -3,6 +3,7 @@ package skills
 import (
 	"bytes"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 	"testing"
@@ -59,6 +60,16 @@ import (
 // does not implement the runtime path.
 func TestD2AnchorIsVerifiableAndUnambiguous(t *testing.T) {
 	repoRoot := actualsInstrumentationRepoRoot(t)
+
+	// The proof reads the history of the repository: the precedent commit and origin/main. A
+	// checkout without it (a git archive, a shallow clone) skips the test, and in CI, which fetches
+	// the whole history, the same text fails it, so a missing history is never a silent pass.
+	if _, err := runGitReadOnly("-C", repoRoot, "cat-file", "-e", d2PrecedentCommit+"^{commit}"); err != nil {
+		d2NeedsHistory(t)
+	}
+	if _, err := runGitReadOnly("-C", repoRoot, "rev-parse", "--verify", "--quiet", "origin/main"); err != nil {
+		d2NeedsHistory(t)
+	}
 
 	t.Run("recorded_anchor_with_matching_tree_resolves_verified", func(t *testing.T) {
 		// deterministic-verification-evidence's own archive-report records, in
@@ -413,6 +424,20 @@ func resolveTreeToCommitOrAmbiguous(repoRoot, ref, tree string) (sha string, amb
 	default:
 		return "", true, nil
 	}
+}
+
+// d2PrecedentCommit is the commit design.md D2 revision 3 cites as its precedent.
+const d2PrecedentCommit = "be2c3ca46ea5f4f740ecab6b51dc2db3f167f37c"
+
+// d2NeedsHistory skips the test because the checkout lacks the history it reads, or fails it when
+// CI is "true".
+func d2NeedsHistory(t *testing.T) {
+	t.Helper()
+	const text = "needs the repository's git history (commit " + d2PrecedentCommit + " and origin/main), which this checkout does not have: a git archive or a shallow clone"
+	if os.Getenv("CI") == "true" {
+		t.Fatal(text)
+	}
+	t.Skip(text)
 }
 
 // runGitReadOnly executes git with the given arguments and returns stdout. It
