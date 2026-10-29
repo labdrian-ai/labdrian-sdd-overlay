@@ -199,8 +199,6 @@ func roleChainDuties() []roleChainDuty {
 	}
 }
 
-// Each group of duties carries what the design gives it, in its own section: a rule that moved to
-// another section would be read by a parent looking in the wrong place.
 // own-rdd S20 (c): the second use of the backward edge is written down, exactly, and the edge is no longer called the
 // only backward one.
 func TestRoleChainSkillTellsTheNextSubtaskHopFromRework(t *testing.T) {
@@ -214,6 +212,8 @@ func TestRoleChainSkillTellsTheNextSubtaskHopFromRework(t *testing.T) {
 	}
 }
 
+// Each group of duties carries what the design gives it, in its own section: a rule that moved to
+// another section would be read by a parent looking in the wrong place.
 func TestRoleChainDutiesCarryWhatTheDesignGivesEachOne(t *testing.T) {
 	_, _, body := roleChainSkill(t)
 	_, under := roleChainSections(body)
