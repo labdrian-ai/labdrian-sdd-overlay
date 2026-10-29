@@ -7,7 +7,6 @@ package memoryscope
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -99,8 +98,8 @@ func ParseDirective(data []byte) (Directive, error) {
 // Every record that nests a directive (the Goal v3, the shaper handoff v4, the workflow log) reads
 // it through this one function.
 func ParseDirectiveMember(data []byte, member string) (*Directive, error) {
-	var fields map[string]json.RawMessage
-	if err := json.Unmarshal(data, &fields); err != nil {
+	fields, err := jsonstrict.DecodeObject(data)
+	if err != nil {
 		return nil, err
 	}
 	raw, ok := fields[member]

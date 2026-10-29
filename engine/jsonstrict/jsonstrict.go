@@ -9,6 +9,7 @@ package jsonstrict
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"unicode/utf8"
@@ -100,6 +101,37 @@ func scanJSONValue(dec *json.Decoder) error {
 	return nil
 }
 
+// DecodeObject unmarshals data into a map[string]json.RawMessage, the members of a JSON object, and
+// returns a nil map for the JSON value null. The words of a type error are held to the ones the
+// tests and goldens pin, those of go1.21 (go.mod's go directive): go1.27 names the destination
+// map[string]jsontext.Value instead of map[string]json.RawMessage. So a *json.UnmarshalTypeError
+// (here, a top-level value that is not an object) is returned as an error that says
+// "json: cannot unmarshal <Value> into Go value of type map[string]json.RawMessage" and unwraps to
+// the original, and every other error, a syntax error included, is returned as the toolchain gives it.
+func DecodeObject(data []byte) (map[string]json.RawMessage, error) {
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(data, &fields); err != nil {
+		var typeErr *json.UnmarshalTypeError
+		if errors.As(err, &typeErr) {
+			return nil, &objectTypeError{value: typeErr.Value, cause: err}
+		}
+		return nil, err
+	}
+	return fields, nil
+}
+
+// objectTypeError is the type error of DecodeObject, worded as go1.21 words it.
+type objectTypeError struct {
+	value string
+	cause error
+}
+
+func (e *objectTypeError) Error() string {
+	return "json: cannot unmarshal " + e.value + " into Go value of type map[string]json.RawMessage"
+}
+
+func (e *objectTypeError) Unwrap() error { return e.cause }
+
 // CheckKnownFields unmarshals data as a JSON object and rejects any
 // top-level field name not present in allowedFields. recordName is used in
 // the error message so callers can identify which record rejected the
@@ -110,8 +142,8 @@ func scanJSONValue(dec *json.Decoder) error {
 // bytes, so the same document is refused with the same words every time,
 // whatever order its members were written in.
 func CheckKnownFields(data []byte, recordName string, allowedFields []string) error {
-	var fields map[string]json.RawMessage
-	if err := json.Unmarshal(data, &fields); err != nil {
+	fields, err := DecodeObject(data)
+	if err != nil {
 		return err
 	}
 	if fields == nil {
