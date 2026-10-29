@@ -319,6 +319,19 @@ Commands:
                                              path and sha256 as JSON, with no skeleton for roles append; --rows with
                                              another role is a usage error; --role reviewer is the default and is the
                                              record verb above (exit 0 stored, 2 report refused, 1 error)
+                                   anchor --merge REV [--cwd REPO]
+                                             decide whether the merge REV lands a tree that stored reviews cleared
+                                             (CI runs it as review anchor --merge HEAD on every pull request and
+                                             every push to main): the merge must have exactly two parents, the first
+                                             the base and the second the head of the pull request, and they exactly
+                                             one merge base, or it is refused; the features are the feature documents
+                                             odd/tasks/NAME.md that the commits the pull request adds change, and a
+                                             merge that changes none passes as no-feature; the merge is reviewed when
+                                             one feature's chain clears (checked as review check --base does), and
+                                             then the tree of the merge must equal the tree of the head, or it is
+                                             refused; print the outcome (verified or no-feature) and the features as
+                                             JSON, store nothing
+                                             (exit 0 verified or no-feature, 1 refused or error)
                                    stop-hook
                                              not run by a person: the Claude Code Stop hook that install-hooks wires
                                              (the review stop-hook). On a branch other than the default one, it blocks

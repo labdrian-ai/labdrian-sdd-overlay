@@ -50,6 +50,9 @@ type fakeGit struct {
 	mentions      map[string][]string         // the paths that mention a name; none for a name that is not a key
 	notCommit     map[string]bool             // the object names IsCommit says are not a commit; every other one is
 	status        []string                    // what Status answers
+	allParents    map[string][]string         // every parent of a commit; none for a commit that is not a key
+	mergeBases    map[string][]string         // the merge bases of "<a> <b>"; none for a pair that is not a key
+	trees         map[string]string           // the tree of a commit
 	worktree      app.WorktreeState
 	worktreeLater []worktreeAnswer
 	fail          map[string]error
@@ -134,6 +137,30 @@ func (g *fakeGit) Parent(repo app.Repository, commit string) (string, error) {
 		return "", err
 	}
 	return g.parents[commit], nil
+}
+
+func (g *fakeGit) Parents(repo app.Repository, commit string) ([]string, error) {
+	g.record("Parents " + commit)
+	if err := g.fail["Parents"]; err != nil {
+		return nil, err
+	}
+	return g.allParents[commit], nil
+}
+
+func (g *fakeGit) MergeBases(repo app.Repository, a, b string) ([]string, error) {
+	g.record("MergeBases " + a + " " + b)
+	if err := g.fail["MergeBases"]; err != nil {
+		return nil, err
+	}
+	return g.mergeBases[a+" "+b], nil
+}
+
+func (g *fakeGit) Tree(repo app.Repository, commit string) (string, error) {
+	g.record("Tree " + commit)
+	if err := g.fail["Tree"]; err != nil {
+		return "", err
+	}
+	return g.trees[commit], nil
 }
 
 func (g *fakeGit) Diff(repo app.Repository, base, head string) ([]byte, error) {

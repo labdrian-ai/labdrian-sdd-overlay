@@ -1,0 +1,18 @@
+{
+  "kind": "polisher",
+  "base": "b23f737a06bed5a39bde0fe6426ead9d6a146066",
+  "head": "516937dc6bed4174f8db8114a66f8bb7ff824208",
+  "diff_sha256": "fa86ecefe71a1d61ec80e30111a6db0654a251ccd6b30710578cbc886356fcd8",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff of 516937dc: it adds the review-anchor job to ci.yml and a text-pin test in engine/cmd/review_anchor_test.go.",
+      "Compared the job to S7 (a) (line 36 of odd/tasks/own-rdd.md) and the CI-job part of the T7b row (line 122). The name, if-condition, runs-on, the two steps with their versions and fetch-depth: 0 with its comment, go-version-file, working-directory and run command all match. It sits after test-archive-anchor-gate and before test-archive-reconcile.",
+      "The workflow triggers are push on all branches and pull_request. So `github.event_name == 'pull_request' || github.ref == 'refs/heads/main'` runs the job on pull requests and on pushes to main, and not on pushes to other branches, as S7 (a) says.",
+      "S7 (h): the diff changes no existing job. It only inserts the new block, so the archive-gate job and known-gaps.txt are untouched.",
+      "The test pins the exact job text, the block ending at the next job, and the order after the archive gate. It reads the relative path ../../.github/workflows/ci.yml, which is correct for a test in engine/cmd.",
+      "No security issue. The job has no secrets and no write permissions, and it uses the same pinned action major versions as the other jobs.",
+      "Not run: the tests and the CI job itself. The commit was inspected read-only."
+    ]
+  }
+}
