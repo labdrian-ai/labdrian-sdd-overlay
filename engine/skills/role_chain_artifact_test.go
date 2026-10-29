@@ -48,16 +48,21 @@ func roleChainSections(body string) (headings []string, under map[string]string)
 	return headings, under
 }
 
-// The skill is named for its directory (the Pi package build refuses a name that differs) and the
-// model cannot invoke it by itself: the orchestrator runs it (v3 section 3).
+// The role-chain skill and the sweeper skill are each named for their directory (the Pi package build
+// refuses a name that differs) and the model cannot invoke them by itself: the orchestrator runs them
+// (v3 section 3; the sweeper skill since own-rdd T17c, L91).
 func TestRoleChainSkillIsNamedForItsDirectoryAndNotInvokableByTheModel(t *testing.T) {
-	_, frontmatter, _ := roleChainSkill(t)
-	assertStringValue(t, parseYAMLScalar(t, frontmatter, "name"), "role-chain")
-	assertStringValue(t, parseYAMLScalar(t, frontmatter, "disable-model-invocation"), "true")
-	for _, key := range []string{"description", "license", "author", "version"} {
-		if parseYAMLScalar(t, frontmatter, key) == "" {
-			t.Errorf("the frontmatter key %q is empty", key)
-		}
+	for name, read := range map[string]func(*testing.T) (string, string, string){"role-chain": roleChainSkill, "sweeper": sweeperSkill} {
+		t.Run(name, func(t *testing.T) {
+			_, frontmatter, _ := read(t)
+			assertStringValue(t, parseYAMLScalar(t, frontmatter, "name"), name)
+			assertStringValue(t, parseYAMLScalar(t, frontmatter, "disable-model-invocation"), "true")
+			for _, key := range []string{"description", "license", "author", "version"} {
+				if parseYAMLScalar(t, frontmatter, key) == "" {
+					t.Errorf("the frontmatter key %q is empty", key)
+				}
+			}
+		})
 	}
 }
 
