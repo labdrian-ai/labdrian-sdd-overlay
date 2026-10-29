@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"syscall"
 	"testing"
 )
 
@@ -74,6 +75,34 @@ func (e openEnv) open(args ...string) workflowRun {
 func (e openEnv) write(t *testing.T, rel, content string) {
 	t.Helper()
 	if err := os.WriteFile(filepath.Join(e.repo, filepath.FromSlash(rel)), []byte(content), 0o600); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// replaceWithLink makes the file rel of the repository a symbolic link to a copy of content kept outside it.
+func replaceWithLink(t *testing.T, e openEnv, rel, content string) {
+	t.Helper()
+	target := filepath.Join(t.TempDir(), "real")
+	if err := os.WriteFile(target, []byte(content), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(e.repo, filepath.FromSlash(rel))
+	if err := os.Remove(path); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(target, path); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// replaceWithFIFO makes the file rel of the repository a named pipe, which a read would block on.
+func replaceWithFIFO(t *testing.T, e openEnv, rel string) {
+	t.Helper()
+	path := filepath.Join(e.repo, filepath.FromSlash(rel))
+	if err := os.Remove(path); err != nil {
+		t.Fatal(err)
+	}
+	if err := syscall.Mkfifo(path, 0o600); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -179,6 +208,27 @@ func TestWorkflowOpenRefusesBeforeWritingAnything(t *testing.T) {
 				t.Fatal(err)
 			}
 		}, "read feature document"},
+		{"a feature document that is a symbolic link", []string{"--feature", "f", "--task", "T1"}, func(t *testing.T, e openEnv) {
+			replaceWithLink(t, e, "odd/tasks/f.md", openFeatureDoc)
+		}, "a symbolic link"},
+		{"a feature document that is a FIFO", []string{"--feature", "f", "--task", "T1"}, func(t *testing.T, e openEnv) {
+			replaceWithFIFO(t, e, "odd/tasks/f.md")
+		}, "not a regular file"},
+		{"a goal file that is a symbolic link", []string{"--feature", "f", "--task", "T1"}, func(t *testing.T, e openEnv) {
+			replaceWithLink(t, e, "odd/goals/f.json", memoryTestGoalJSON("proj-1", "f"))
+		}, "a symbolic link"},
+		{"a goal file that is a FIFO", []string{"--feature", "f", "--task", "T1"}, func(t *testing.T, e openEnv) {
+			replaceWithFIFO(t, e, "odd/goals/f.json")
+		}, "not a regular file"},
+		{"--goal naming a symbolic link", []string{"--feature", "f", "--task", "T1", "--goal", "link.json"}, func(t *testing.T, e openEnv) {
+			target := filepath.Join(t.TempDir(), "real.json")
+			if err := os.WriteFile(target, []byte(memoryTestGoalJSON("proj-1", "f")), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.Symlink(target, filepath.Join(e.repo, "link.json")); err != nil {
+				t.Fatal(err)
+			}
+		}, "a symbolic link"},
 		{"a feature name that is a path", []string{"--feature", "../f", "--task", "T1"}, nil, `feature "../f"`},
 		{"a task id that is not one", []string{"--feature", "f", "--task", "t1"}, nil, `task "t1"`},
 		{"a chain that already has records", []string{"--feature", "f", "--task", "T1"}, func(t *testing.T, e openEnv) {

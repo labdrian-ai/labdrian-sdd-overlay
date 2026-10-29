@@ -13,11 +13,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/oddtask"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/oddtask/fsdoc"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow/app"
 )
 
@@ -83,7 +83,7 @@ func (s repositorySources) Goal(feature, override string) ([]byte, error) {
 	case !filepath.IsAbs(path):
 		path = filepath.Join(s.cwd, path)
 	}
-	return readBounded(path)
+	return readRegular(path)
 }
 
 func (s repositorySources) Document(feature string) ([]byte, error) {
@@ -91,19 +91,22 @@ func (s repositorySources) Document(feature string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return readBounded(filepath.Join(root, "odd", "tasks", feature+".md"))
+	return readRegular(filepath.Join(root, "odd", "tasks", feature+".md"))
 }
 
-// readBounded reads a file of at most oddtask.MaxDocumentBytes.
-func readBounded(path string) ([]byte, error) {
-	info, err := os.Stat(path)
+// readRegular reads a file with the rule the builder guard reads the feature document by (oddtask/fsdoc): a
+// regular file of at most oddtask.MaxDocumentBytes whose last component is not a symbolic link, so 'workflow
+// open' refuses what the guard refuses and never blocks on a pipe.
+func readRegular(path string) ([]byte, error) {
+	file, err := fsdoc.Reader{}.Read(path, "")
 	if err != nil {
+		var unreadable *oddtask.ReadError
+		if errors.As(err, &unreadable) {
+			return nil, fmt.Errorf("%s cannot be read (%s)", unreadable.Path, unreadable.Cause)
+		}
 		return nil, err
 	}
-	if info.Size() > oddtask.MaxDocumentBytes {
-		return nil, fmt.Errorf("%s is larger than %d bytes", path, oddtask.MaxDocumentBytes)
-	}
-	return os.ReadFile(path)
+	return []byte(file.Text), nil
 }
 
 // runWorkflowOpen implements 'workflow open --feature --task [--goal]'.

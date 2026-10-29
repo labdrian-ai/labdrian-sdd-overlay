@@ -168,9 +168,13 @@ func (o Open) Open(req OpenRequest) (Opened, error) {
 	if err := step(StepStart, err); err != nil {
 		return Opened{}, err
 	}
-	for _, stage := range PreWorkStages {
+	for i, stage := range PreWorkStages {
 		if state, err = o.Workflows.RecordStage(project, name, stage); err != nil {
-			err = fmt.Errorf("stage %s: %w", stage, err)
+			recorded := "none"
+			if i > 0 {
+				recorded = strings.Join(PreWorkStages[:i], ", ")
+			}
+			err = fmt.Errorf("stage %s failed after recording %s: %w", stage, recorded, err)
 			break
 		}
 	}
