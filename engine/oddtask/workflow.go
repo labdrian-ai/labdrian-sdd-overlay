@@ -3,6 +3,8 @@ package oddtask
 import (
 	"fmt"
 	"strings"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/roles"
 )
 
 // The workflow check of the builder guard (own-rdd S19 a, c): after every check of S14 passes, a builder
@@ -85,8 +87,12 @@ const DeliveryRole = "delivery"
 
 // WaitsForHop says whether the only reason DecideWorkflow gives is the role of S19 (a) and the chain's role is not
 // delivery (own-rdd S20 b): the repository is inside the right workflow and its chain waits for a hop, so the
-// remedy is to append that hop and not to open another workflow.
+// remedy is to append that hop and not to open another workflow. A role the canonical role set does not know never
+// waits for a hop, so its denial keeps the plain reason.
 func WaitsForHop(feature string, v WorkflowView) bool {
+	if !roles.IsKnownRole(roles.Role(v.Role)) {
+		return false
+	}
 	if v.Role == BuilderRole || v.Role == DeliveryRole {
 		return false
 	}

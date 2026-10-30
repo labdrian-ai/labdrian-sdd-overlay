@@ -94,7 +94,7 @@ func TestWaitsForHopOnlyWhenTheChainIsTheOnlyReason(t *testing.T) {
 			t.Errorf("role %s: WaitsForHop = false, want true", role)
 		}
 	}
-	for _, role := range []string{"builder", "delivery"} {
+	for _, role := range []string{"builder", "delivery", "", "bogus", "Reviewer"} {
 		if oddtask.WaitsForHop("f", at(role)) {
 			t.Errorf("role %s: WaitsForHop = true, want false", role)
 		}
