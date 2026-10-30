@@ -1,0 +1,28 @@
+{
+  "kind": "polisher",
+  "base": "50eae04a7d114301729473dece79b0d967ec8d0d",
+  "head": "2681ab4d7b7780f59ca1dcf512b7748bc85ba3da",
+  "diff_sha256": "f5ebaaf5d7fd1731cd7946c1025b5c25dcd59bcb554b8091ac7218164f7d1ea7",
+  "findings": {
+    "findings": [
+      {
+        "location": "engine/review/sweep.go:500-520",
+        "severity": "WARNING",
+        "claim": "TidyFindings reports every removed go.mod line as a requirement the head no longer needs, even when the same diff re-adds that module. A requirement that tidy only moves or rewrites is a false T2 finding. This happens in the case that triggers the check: a commit removes the last direct import of a module that another dependency still needs. Tidy then rewrites `-\\tx v1.2.3` as `+\\tx v1.2.3 // indirect`, and the sweep fires `T2 go-mod-tidy <dir>: go.mod: require x v1.2.3`. A version bump (`-x v1.2.3` / `+x v1.3.0`) and the reverse change from indirect to direct are reported the same way. The sweep records `fired`, which makes the sweeper answer a candidate that is not real. The docs and the CHANGELOG call a finding a module the head no longer needs.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "The loop at sweep.go:509-517 keeps any `-` line inside a go.mod section whose fields are `<path> v<ver>`. It never looks for the same path on a `+` line.",
+          "The only test (sweep_test.go:561-585) adds a different module on the `+` side (`golang.org/x/new`), so the move and bump cases are not covered.",
+          "I read this from the diff and did not run it. Whether tidy moves an entry to the indirect block depends on go's behaviour, which I did not check."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/2681ab4d.diff.",
+      "Read the helpers run, ranToAnExit and said in engine/review/analyzers/analyzers.go at the head worktree.",
+      "Checked tidyPicks and tidyModules (selection of modules to tidy), Tools.Tidy (exit handling and the did-not-run path), RemovesImport (import-spec regexp) and the sweepT2 refactor. Found no other reachable defect.",
+      "Ran no tests or commands. I did not read the T12d row or S15 of odd/tasks/own-rdd.md."
+    ]
+  }
+}

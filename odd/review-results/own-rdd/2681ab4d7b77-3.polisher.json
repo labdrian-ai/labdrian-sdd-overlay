@@ -1,0 +1,30 @@
+{
+  "kind": "polisher",
+  "base": "50eae04a7d114301729473dece79b0d967ec8d0d",
+  "head": "2681ab4d7b7780f59ca1dcf512b7748bc85ba3da",
+  "diff_sha256": "f5ebaaf5d7fd1731cd7946c1025b5c25dcd59bcb554b8091ac7218164f7d1ea7",
+  "findings": {
+    "findings": [
+      {
+        "location": "engine/review/sweep.go:483-491",
+        "severity": "WARNING",
+        "claim": "RemovesImport reads some ordinary removed code lines as imports of a non-standard path. Removing a line such as `return \"config.json\"` or `name \"v1.2\"` makes a commit pick its module for `go mod tidy -diff`. That commit then needs `go` and the module cache, and the sweep exits 2 when they are missing, so the delivery stops over a commit that touched no dependency.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "The regex `^\\s*(?:import\\s+)?(?:[A-Za-z_.][A-Za-z0-9_]*\\s+)?\"([^\"]+)\"\\s*(?://.*)?$` accepts any identifier as the optional import name, and `return` is an identifier.",
+          "The line `return \"config.json\"` therefore matches. Its first path element `config.json` contains a dot, which the code treats as a non-standard module path.",
+          "tidyPicks (engine/review/app/sweep.go:336-349) and tidyModules (:353-372) turn that match into a Tidy run on both copies.",
+          "A Tidy failure returns ErrToolDidNotRun, which sweepT2 propagates, so nothing is stored and the sweep exits 2.",
+          "The tests in engine/review/sweep_test.go:536 do not cover `return \"x.y\"`-style lines.",
+          "Not run: I read the diff and the regex only and did not execute it."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/2681ab4d.diff",
+      "Checked the analyzers environment wiring in the worktree: engine/cmd/review_sweep.go:40 passes d.environment(), which comes from os.Environ, so GOMODCACHE and GOPATH are inherited.",
+      "Reviewed Tidy, tidyPicks, tidyModules, RemovesImport and TidyFindings by reading them. No tests or commands were run."
+    ]
+  }
+}

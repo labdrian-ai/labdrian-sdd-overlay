@@ -1,0 +1,15 @@
+{
+  "kind": "polisher",
+  "base": "423c9e58f2fb5bdb0b0c2f27bbc5d66da532adce",
+  "head": "60003a8c457bd4501d91f159fa8d498e8b6b05ba",
+  "diff_sha256": "85f090f021ab9269db557e965f273b9909be6f6985c9a9476e5d934c453dce0b",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/60003a8c.diff. I did not open the worktree and ran nothing.",
+      "TidyFindings in engine/review/sweep.go: removed and added requirements are now collected separately. A removal is reported only when no added line in the same go.mod diff names the same module path. The version-bump and `// indirect` cases, which the new test covers, are not reported. A plain removal still is. `+++ ` header lines are skipped before the `+` check, so they cannot register as additions. I found no reachable defect.",
+      "RemovesImport: the regex now captures the optional name, and goKeywords rejects it when it is one of the 25 Go keywords. A line with no name gives an empty capture, which is not in the map, so `import \"x.y/z\"` and blocks of bare paths still match. `_`, `.` and ordinary aliases still match. `return \"config.json\"` is now rejected. I found no reachable defect.",
+      "Docs: the Go 1.23 requirement for `go mod tidy -diff` matches the Go release that introduced the flag. The README, usage.go, usage.sh and CHANGELOG text agree with the updated phrases asserted in review_sweep_test.go. Running Go older than 1.23 would fail the tidy with no finding printed, which the existing contract already treats as a check that did not run (exit 2). That is not a new defect."
+    ]
+  }
+}

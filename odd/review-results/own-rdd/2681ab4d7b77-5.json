@@ -1,0 +1,76 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "50eae04a7d114301729473dece79b0d967ec8d0d",
+    "head": "2681ab4d7b7780f59ca1dcf512b7748bc85ba3da",
+    "diff_sha256": "f5ebaaf5d7fd1731cd7946c1025b5c25dcd59bcb554b8091ac7218164f7d1ea7",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/cmd/review_sweep_test.go",
+      "engine/cmd/usage.go",
+      "engine/review/analyzers/analyzers.go",
+      "engine/review/analyzers/analyzers_test.go",
+      "engine/review/app/app.go",
+      "engine/review/app/fakes_test.go",
+      "engine/review/app/sweep.go",
+      "engine/review/app/sweep_test.go",
+      "engine/review/sweep.go",
+      "engine/review/sweep_test.go"
+    ]
+  },
+  "rows": [
+    "default",
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "50eae04a7d114301729473dece79b0d967ec8d0d",
+      "head": "2681ab4d7b7780f59ca1dcf512b7748bc85ba3da",
+      "diff_sha256": "f5ebaaf5d7fd1731cd7946c1025b5c25dcd59bcb554b8091ac7218164f7d1ea7"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/cmd/review_sweep_test.go",
+        "engine/cmd/usage.go",
+        "engine/review/analyzers/analyzers.go",
+        "engine/review/analyzers/analyzers_test.go",
+        "engine/review/app/app.go",
+        "engine/review/app/fakes_test.go",
+        "engine/review/app/sweep.go",
+        "engine/review/app/sweep_test.go",
+        "engine/review/sweep.go",
+        "engine/review/sweep_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/review/sweep.go:500-520",
+        "severity": "SUGGESTION",
+        "claim": "TidyFindings reads every removed `<path> <version>` line of the go.mod diff as a removed requirement. A version bump that tidy makes (`-require x v1.0.0` / `+require x v1.1.0`) or an `// indirect` entry that moves between blocks is reported as a requirement the head no longer needs. These are false positives that the sweeper must answer `live`. The comment documents only the exclude/retract case, not the bump or move cases. No data is lost and the delivery is not blocked.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/sweep.go:509-517",
+          "engine/review/sweep_test.go:561-585 (the test only covers a removal paired with an unrelated added line)"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff (586 lines).",
+      "Read engine/cmd/review_sweep.go:40 via grep. The analyzers' Environ is d.environment(), the process environment, so go gets its caches and HOME as deadcode and staticcheck already do.",
+      "Tidy returns nil and nil when the copy has no go.mod, and ErrToolDidNotRun when go is missing, exits non-zero without a diff, or hits the deadline. This is covered by tests in analyzers_test.go and sweep_test.go.",
+      "Module selection (go.mod or go.sum changed, or a non-stdlib import spec removed from a .go file) reuses innermostModule and the existing ChangedLines call.",
+      "Only lines that occur more times at the head than at the base count as findings, so tidy drift that already existed at the base is filtered out.",
+      "Risk item 5 (delivery or environment): `go mod tidy -diff` needs Go 1.23 or newer and the module cache, otherwise the sweep exits 2 and the delivery stops. This is documented in the usage text, README and CHANGELOG and tested. It is not a defect.",
+      "Not run: no tests or commands, per the read-only constraint."
+    ]
+  }
+}

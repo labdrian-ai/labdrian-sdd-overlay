@@ -1,0 +1,87 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "50eae04a7d114301729473dece79b0d967ec8d0d",
+    "head": "2681ab4d7b7780f59ca1dcf512b7748bc85ba3da",
+    "diff_sha256": "f5ebaaf5d7fd1731cd7946c1025b5c25dcd59bcb554b8091ac7218164f7d1ea7",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/cmd/review_sweep_test.go",
+      "engine/cmd/usage.go",
+      "engine/review/analyzers/analyzers.go",
+      "engine/review/analyzers/analyzers_test.go",
+      "engine/review/app/app.go",
+      "engine/review/app/fakes_test.go",
+      "engine/review/app/sweep.go",
+      "engine/review/app/sweep_test.go",
+      "engine/review/sweep.go",
+      "engine/review/sweep_test.go"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "50eae04a7d114301729473dece79b0d967ec8d0d",
+      "head": "2681ab4d7b7780f59ca1dcf512b7748bc85ba3da",
+      "diff_sha256": "f5ebaaf5d7fd1731cd7946c1025b5c25dcd59bcb554b8091ac7218164f7d1ea7"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/cmd/review_sweep_test.go",
+        "engine/cmd/usage.go",
+        "engine/review/analyzers/analyzers.go",
+        "engine/review/analyzers/analyzers_test.go",
+        "engine/review/app/app.go",
+        "engine/review/app/fakes_test.go",
+        "engine/review/app/sweep.go",
+        "engine/review/app/sweep_test.go",
+        "engine/review/sweep.go",
+        "engine/review/sweep_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/review/sweep.go:500-520",
+        "claim": "TidyFindings reports every '-' line in the go.mod part of the tidy diff that looks like a requirement. It does not check whether the same path is added back in a '+' line. When tidy only rewrites a still-required dependency, for example by adding or removing '// indirect' or by moving the entry between the direct and indirect blocks, the old line is reported as 'go.mod: require <path> <version>' although the requirement stays. This is the common outcome of removing an import of a module that another dependency still needs. It becomes a false T2 go-mod-tidy candidate on the head, and the head has no matching line at the base, so the sweep reports 'fired'. The doc comment says only 'removal-only' and the tests do not cover this case. The cost is a spurious candidate the sweeper must answer 'live', not a wrong delivery.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/sweep.go:504-517",
+          "engine/review/sweep_test.go:561-585 (the test diff only pairs a removed '// indirect' line with an added line for a different module, golang.org/x/new, so the same-path rewrite is never exercised)"
+        ],
+        "severity": "WARNING"
+      },
+      {
+        "id": "F2",
+        "location": "engine/review/analyzers/analyzers.go:162-177",
+        "claim": "Tidy relies on 'go mod tidy -diff', which needs Go 1.23 or later, and on the module cache. On an older go the flag is rejected with a non-zero exit and no diff, so the sweep exits 2 and stores nothing. Unlike the missing-cache case, the usage text, README and CHANGELOG do not name the Go version requirement. Delivery is blocked with a message about a failed 'go mod tidy' and no hint about the version.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/analyzers/analyzers.go:169-176",
+          "README.md and bin/lib/usage.sh changes (they mention only 'go on PATH' and the module cache)"
+        ],
+        "severity": "SUGGESTION"
+      }
+    ],
+    "evidence": [
+      "Read the full diff at the scratchpad path.",
+      "Checked tidyPicks and tidyModules module selection against the tests.",
+      "Checked the Tidy failure rule: exit 0 means no finding, a non-zero exit with a diff is a run, and anything else means the tool did not run.",
+      "Checked RemovesImport against its regex.",
+      "Checked TidyFindings parsing of the unified diff.",
+      "Did not run any code or tests."
+    ]
+  }
+}

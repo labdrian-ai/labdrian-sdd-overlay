@@ -1,0 +1,15 @@
+{
+  "kind": "sweeper",
+  "base": "50eae04a7d114301729473dece79b0d967ec8d0d",
+  "head": "2681ab4d7b7780f59ca1dcf512b7748bc85ba3da",
+  "diff_sha256": "f5ebaaf5d7fd1731cd7946c1025b5c25dcd59bcb554b8091ac7218164f7d1ea7",
+  "sweep": "2681ab4d7b77-1.sweep.json",
+  "commit": "2372774d99589da162610124c2f850e624ea05ec",
+  "candidates": [
+    {
+      "candidate": "T2 staticcheck engine: review/analyzers/analyzers_test.go: this value of log is never used (SA4006)",
+      "disposition": "removed",
+      "evidence": "In TestTidyRanWhenItExitsZeroOrPrintsADiff the first `log := bin(...)` was reassigned by `log = bin(...)` before any read. The first call is now a bare `bin(...)` and `log` is declared at the second call. Afterwards staticcheck ./review/analyzers/ is clean, go vet and gofmt are clean, and go test -count=1 ./review/analyzers/ passes."
+    }
+  ]
+}
