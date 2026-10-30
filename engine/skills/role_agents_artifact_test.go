@@ -1057,6 +1057,24 @@ func TestJudgmentDayProtocolIsUnchanged(t *testing.T) {
 	}
 }
 
+// The sweeper's first delta line names the candidates T12 added (own-rdd T12f, S15 h): the same text
+// in the source and in the file of every runtime, and the delta stays four lines.
+func TestSweeperDeltaLineNamesTheProjectCandidates(t *testing.T) {
+	root := skillsRepoRoot(t)
+	const line = "Sweep only the candidates the prompt lists (detector lines, hits of removed names and flags, stray and leftover paths, orphaned fixtures, unused requirements): delete what is dead, correct or delete prose that names what no longer exists, nothing else; behaviour, public names, CLI output, and the goldens and assertions a test reads stay identical."
+	for _, path := range []string{"roles/sweeper/body.md", "agents/sweeper.md", "pi/agents/sweeper.md", "codex/agents/sweeper.toml"} {
+		t.Run(path, func(t *testing.T) {
+			text := readRepoFile(t, root, path)
+			if strings.Count(text, "\n"+line+"\n") != 1 {
+				t.Errorf("%s must carry this line once, exactly:\n%s", path, line)
+			}
+			if n := strings.Count(text, "Sweep only the candidates"); n != 1 {
+				t.Errorf("%s must hold one line that starts Sweep only the candidates, has %d", path, n)
+			}
+		})
+	}
+}
+
 // The builder learns the Risk trailer and the sweeper learns the report it returns (own-rdd T6b7a,
 // S6 g): one line each, the same text in the source and in the file of every runtime.
 func TestBuilderAndSweeperDeltasCarryTheTrailerAndTheSweepReport(t *testing.T) {

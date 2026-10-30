@@ -109,9 +109,13 @@ func TestRoleChainSweeperTriggerNamesTheSweepAndTheRecords(t *testing.T) {
 		t.Errorf("the Triggers section of role-chain must carry the pointer, exactly:\n%s", pointer)
 	}
 	_, _, body := sweeperSkill(t)
-	const want = "- Sweeper, on the builder's commit (`base` = parent): `labdrian review sweep --feature F --base B --head H` runs T1-T3 (`labdrian --help`); if it fires, launch the sweeper on its candidates, store its report with `labdrian review record --role sweeper`; if the `Risk:` trailer names an item, store each polisher judge's findings with `labdrian review record --role polisher`."
+	const want = "- Sweeper, on the builder's commit (`base` = parent): `labdrian review sweep --feature F --base B --head H` runs T1-T4 (`labdrian --help`); if it fires, launch the sweeper on its candidates, store its report with `labdrian review record --role sweeper`; if the `Risk:` trailer names an item, store each polisher judge's findings with `labdrian review record --role polisher`."
 	if _, under := roleChainSections(body); !strings.Contains(under["Triggers"], want+"\n") {
 		t.Errorf("the Triggers section of the sweeper skill must carry the sweeper line, exactly:\n%s", want)
+	}
+	const proposals = "- After a pull request of the feature merges: `labdrian review proposals` lists merged branches and stale worktrees; relay each to the owner, and run a proposed command only after the owner confirms it."
+	if _, under := roleChainSections(body); !strings.Contains(under["Triggers"], want+"\n"+proposals+"\n") {
+		t.Errorf("the Triggers section of the sweeper skill must carry the proposals line right after the sweeper line, exactly:\n%s", proposals)
 	}
 	for _, fragment := range []string{
 		"labdrian review sweep --feature F --base B --head H", "labdrian review record --role sweeper", "labdrian review record --role polisher",

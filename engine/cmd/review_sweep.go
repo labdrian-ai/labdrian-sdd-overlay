@@ -1,6 +1,6 @@
 package main
 
-// 'review sweep --feature <name> --base <rev> --head <rev> [--cwd <repo>]' runs the checks T1 to T3 of the sweeper on
+// 'review sweep --feature <name> --base <rev> --head <rev> [--cwd <repo>]' runs the checks T1 to T4 of the sweeper on
 // the one commit from base to head and stores their findings as <head12>-<n>.sweep.json, and 'review record --role
 // sweeper|polisher --feature <name> --base <rev> --head <rev> [--result <file>|-] [--cwd <repo>]' stores the report of
 // the sweeper or the findings of one polisher judge (own-rdd T6b4, S6 b and c). The rules are Service.Sweep,
