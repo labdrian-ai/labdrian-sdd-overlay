@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "5b681d6a357f7537cdbca7f01ec4e3738be1246b",
+    "head": "d612fa3339a7c3a19865d5dfc9e57ee4163bfcbf",
+    "diff_sha256": "069fb291011604bf8f481774d58fb996dfbb5d5fcc1b524ca8ae80bd042b9e21",
+    "paths": [
+      "skills/role-chain/.approval.json"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "cd engine && go test -count=1 ./skills/... ./cmd/...",
+        "result": "pass",
+        "output": "every package ok; TestRegistryLockE2E_ValidateLeavesTheRealTreeUntouched passes now that role-chain is approved"
+      }
+    ]
+  }
+}
