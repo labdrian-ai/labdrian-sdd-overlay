@@ -229,10 +229,32 @@ func TestRemovesImportReadsTheImportSpecsOfANonStandardPath(t *testing.T) {
 		{"a commented import", "\t// \"github.com/x/y\"", false},
 		{"a string in a literal", "\t\"github.com/x/y\",", false},
 		{"code", "return nil", false},
+		{"a returned string", "\treturn \"config.json\"", false},
+		{"a keyword before a string", "\tcase \"config.json\":", false},
+		{"a go statement keyword", "\tdefer \"a.b\"", false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			if got := review.RemovesImport([]string{tc.line}); got != tc.want {
 				t.Errorf("RemovesImport(%q) = %v, want %v", tc.line, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestTidyFindingsLeaveOutARequirementTheSameDiffAddsBack(t *testing.T) {
+	head := "diff current/go.mod tidy/go.mod\n--- current/go.mod\n+++ tidy/go.mod\n@@ -1,3 +1,3 @@\n"
+	for _, tc := range []struct {
+		name string
+		body string
+		want []string
+	}{
+		{"a comment added", " require (\n-\tgithub.com/x/y v1.2.3\n+\tgithub.com/x/y v1.2.3 // indirect\n )\n", nil},
+		{"a version bump", "-require github.com/x/y v1.2.3\n+require github.com/x/y v1.3.0\n", nil},
+		{"a plain removal", "-require github.com/x/y v1.2.3\n", []string{"go.mod: require github.com/x/y v1.2.3"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := review.TidyFindings(head + tc.body); !slices.Equal(got, tc.want) {
+				t.Errorf("TidyFindings = %q, want %q", got, tc.want)
 			}
 		})
 	}

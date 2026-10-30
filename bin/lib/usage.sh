@@ -317,8 +317,8 @@ Commands:
                                              tree's git status, T4 the paths the commit changes whose name ends .orig
                                              or .bak and the test fixtures it leaves unread;
                                              a tool that cannot run stores nothing (it needs deadcode, staticcheck,
-                                             shellcheck and go on PATH, and the module cache of a module whose
-                                             dependencies the commit touches); a second sweep of the repository
+                                             shellcheck and go on PATH (Go 1.23 or newer), and the module cache of
+                                             a module whose dependencies the commit touches); a second sweep of the repository
                                              while one runs is refused; print outcome (clean or fired), path, sha256 and the
                                              candidates the sweeper answers for as JSON
                                              (exit 0 stored, 2 refused or a check that did not run, 1 usage error)

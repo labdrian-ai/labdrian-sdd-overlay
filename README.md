@@ -733,7 +733,7 @@ overlay review <verb>
         finding when it occurs more times at the head than at the base. T3: `git status` of the working tree
         as it is, but for the records under odd/review-results/. T4: the paths the commit changes whose name ends .orig or .bak, and the test fixtures it leaves unread. A tool that is not found, or that fails
         without printing a finding, is a check that did not run: nothing is stored and the error names the
-        tool (it needs deadcode, staticcheck and shellcheck on PATH, and go on PATH with the module cache of a module whose dependencies the commit touches, so until they are there the delivery stops
+        tool (it needs deadcode, staticcheck and shellcheck on PATH, and go on PATH (Go 1.23 or newer) with the module cache of a module whose dependencies the commit touches, so until they are there the delivery stops
         with it). A tree whose blobs pass 256 MiB in the one `git cat-file --batch` answer that fills the copies
         cannot be swept: the sweep exits 2 and stores nothing, so the delivery of such a repository stops. A
         second sweep of the repository while one runs is refused at once: another review sweep of this

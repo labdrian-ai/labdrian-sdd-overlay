@@ -308,7 +308,7 @@ func TestUsageAndReadmeDefineTheChecksOfReviewSweep(t *testing.T) {
 			"T4: the paths the commit changes whose name ends .orig or .bak, and the test fixtures it leaves unread.",
 			"T4 leftover: <path>, T4 fixture: <path>",
 			"and go mod tidy -diff over each module whose go.mod or go.sum it changes or whose .go files lose an import, a finding being a required module the head no longer needs",
-			"Needs deadcode, staticcheck, shellcheck and go on PATH, and the module cache of a module whose dependencies the commit touches",
+			"Needs deadcode, staticcheck, shellcheck and go on PATH (Go 1.23 or newer), and the module cache of a module whose dependencies the commit touches",
 		}},
 		{"bin/lib/usage.sh", flatFile("../../bin/lib/usage.sh"), []string{
 			"run the checks T1 to T4 of the sweeper once on the one commit",
@@ -318,7 +318,7 @@ func TestUsageAndReadmeDefineTheChecksOfReviewSweep(t *testing.T) {
 			"T3 the working tree's git status",
 			"T4 the paths the commit changes whose name ends .orig or .bak and the test fixtures it leaves unread",
 			"and go mod tidy -diff over each module whose go.mod or go.sum it changes or whose .go files lose an import, a finding being a required module the head no longer needs",
-			"needs deadcode, staticcheck, shellcheck and go on PATH, and the module cache of a module whose dependencies the commit touches",
+			"needs deadcode, staticcheck, shellcheck and go on PATH (Go 1.23 or newer), and the module cache of a module whose dependencies the commit touches",
 		}},
 		{"README.md", flatFile("../../README.md"), []string{
 			"Run the checks T1 to T4 of the sweeper once on the one commit",
@@ -329,7 +329,7 @@ func TestUsageAndReadmeDefineTheChecksOfReviewSweep(t *testing.T) {
 			"T4: the paths the commit changes whose name ends .orig or .bak, and the test fixtures it leaves unread.",
 			"T4 leftover: <path>, T4 fixture: <path>",
 			"and `go mod tidy -diff` over each module whose go.mod or go.sum it changes or whose .go files lose an import, a finding being a required module the head no longer needs",
-			"and go on PATH with the module cache of a module whose dependencies the commit touches",
+			"and go on PATH (Go 1.23 or newer) with the module cache of a module whose dependencies the commit touches",
 		}},
 	} {
 		for _, want := range place.holds {

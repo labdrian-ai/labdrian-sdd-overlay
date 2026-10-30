@@ -227,14 +227,29 @@ func OrphanedFixtures(files, packages []string, mentioned map[string][]string) [
 }
 
 // importSpec is a line that is an import spec: `import "p"`, `import n "p"`, or an entry `n? "p"` of an import block, with
-// at most a comment after it. A string in a literal is followed by a comma or a brace, so it is not read.
-var importSpec = regexp.MustCompile(`^\s*(?:import\s+)?(?:[A-Za-z_.][A-Za-z0-9_]*\s+)?"([^"]+)"\s*(?://.*)?$`)
+// at most a comment after it. A string in a literal is followed by a comma or a brace, so it is not read. The optional
+// name is `_`, `.`, or an identifier that is not a Go keyword (goKeywords), so `return "config.json"` is not read.
+var importSpec = regexp.MustCompile(`^\s*(?:import\s+)?(?:([A-Za-z_.][A-Za-z0-9_]*)\s+)?"([^"]+)"\s*(?://.*)?$`)
+
+// goKeywords is the 25 keywords of the Go specification.
+var goKeywords = map[string]bool{
+	"break": true, "default": true, "func": true, "interface": true, "select": true,
+	"case": true, "defer": true, "go": true, "map": true, "struct": true,
+	"chan": true, "else": true, "goto": true, "package": true, "switch": true,
+	"const": true, "fallthrough": true, "if": true, "range": true, "type": true,
+	"continue": true, "for": true, "import": true, "return": true, "var": true,
+}
 
 // RemovesImport says whether one of the removed lines of a .go file is an import spec of a path whose first element holds
-// a dot, which is how a path of a module outside the standard library reads (assumption of S15 e, D33).
+// a dot, which is how a path of a module outside the standard library reads (assumption of S15 e, D33). The name of the
+// spec, when there is one, is `_`, `.` or an identifier that is not a Go keyword.
 func RemovesImport(lines []string) bool {
 	for _, line := range lines {
-		if m := importSpec.FindStringSubmatch(line); m != nil && strings.Contains(strings.SplitN(m[1], "/", 2)[0], ".") {
+		m := importSpec.FindStringSubmatch(line)
+		if m == nil || goKeywords[m[1]] {
+			continue
+		}
+		if strings.Contains(strings.SplitN(m[2], "/", 2)[0], ".") {
 			return true
 		}
 	}
@@ -244,9 +259,13 @@ func RemovesImport(lines []string) bool {
 // TidyFindings is the lines `go.mod: require <path> <version>` for the requirements that the go.mod part of the unified
 // diff of `go mod tidy -diff` removes, in the order of the diff: a `require` line, or an entry `<path> <version>` of a
 // block, its `// indirect` comment dropped. A requirement it adds, and the go.sum part, are not findings (removal-only).
+// A removed requirement whose module path also appears on an added requirement line of the go.mod part of the same diff
+// (a version bump, an `// indirect` comment added or dropped) is not a finding: the requirement is kept, not left unused.
 // An entry of the same shape inside an `exclude` or `retract` block cannot be told apart and is read as a requirement.
 func TidyFindings(diff string) []string {
-	var found []string
+	type requirement struct{ path, version string }
+	var removed []requirement
+	added := map[string]bool{}
 	inGoMod := false
 	for _, line := range strings.Split(diff, "\n") {
 		if rest, ok := strings.CutPrefix(line, "--- "); ok {
@@ -254,14 +273,31 @@ func TidyFindings(diff string) []string {
 			inGoMod = path.Base(name) == "go.mod"
 			continue
 		}
-		body, removed := strings.CutPrefix(line, "-")
-		if !inGoMod || !removed {
+		if !inGoMod || strings.HasPrefix(line, "+++ ") {
 			continue
+		}
+		body, isRemoved := strings.CutPrefix(line, "-")
+		if !isRemoved {
+			var isAdded bool
+			if body, isAdded = strings.CutPrefix(line, "+"); !isAdded {
+				continue
+			}
 		}
 		body, _, _ = strings.Cut(body, "//")
 		fields := strings.Fields(strings.TrimPrefix(strings.TrimSpace(body), "require "))
-		if len(fields) == 2 && strings.HasPrefix(fields[1], "v") {
-			found = append(found, "go.mod: require "+fields[0]+" "+fields[1])
+		if len(fields) != 2 || !strings.HasPrefix(fields[1], "v") {
+			continue
+		}
+		if isRemoved {
+			removed = append(removed, requirement{fields[0], fields[1]})
+		} else {
+			added[fields[0]] = true
+		}
+	}
+	var found []string
+	for _, r := range removed {
+		if !added[r.path] {
+			found = append(found, "go.mod: require "+r.path+" "+r.version)
 		}
 	}
 	return found
