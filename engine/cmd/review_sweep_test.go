@@ -282,7 +282,7 @@ func TestUsageDocumentsReviewSweepAndTheRolesOfReviewRecord(t *testing.T) {
 	}
 }
 
-// The three places that define the checks of `review sweep` (own-rdd T6b7c, S6 g) say what T1 to T3
+// The three places that define the checks of `review sweep` (own-rdd T6b7c, S6 g) say what T1 to T4
 // are, and none of them sends the reader to the role-chain skill, which does not define them.
 func TestUsageAndReadmeDefineTheChecksOfReviewSweep(t *testing.T) {
 	var out bytes.Buffer
@@ -338,7 +338,7 @@ func TestUsageAndReadmeDefineTheChecksOfReviewSweep(t *testing.T) {
 			}
 		}
 		if strings.Contains(place.text, "of the sweeper (skills/role-chain/SKILL.md)") {
-			t.Errorf("%s sends the reader to the skill for the definition of T1 to T3", place.name)
+			t.Errorf("%s sends the reader to the skill for the definition of T1 to T4", place.name)
 		}
 	}
 }
