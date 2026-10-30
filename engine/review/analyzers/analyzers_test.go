@@ -294,7 +294,7 @@ func TestExecRunnerGivenNoEnvironmentDoesNotInheritTheOneOfTheProcess(t *testing
 const untidyDiff = "diff current/go.mod tidy/go.mod\n--- current/go.mod\n+++ tidy/go.mod\n@@ -1,4 +1,3 @@\n module example.com/u\n-require github.com/x/y v1.2.3\n"
 
 func TestTidyRanWhenItExitsZeroOrPrintsADiff(t *testing.T) {
-	log := bin(t, map[string]stub{"go": {}})
+	bin(t, map[string]stub{"go": {}})
 	root := copyOf(t)
 
 	got, err := tools(t).Tidy(root, "mod")
@@ -302,7 +302,7 @@ func TestTidyRanWhenItExitsZeroOrPrintsADiff(t *testing.T) {
 	if err != nil || len(got) != 0 {
 		t.Errorf("Tidy = %q, %v, want none, nil for a tidy module", got, err)
 	}
-	log = bin(t, map[string]stub{"go": {exit: 1, stdout: untidyDiff}})
+	log := bin(t, map[string]stub{"go": {exit: 1, stdout: untidyDiff}})
 	got, err = tools(t).Tidy(root, "mod")
 
 	want := []string{"go.mod: require github.com/x/y v1.2.3"}
