@@ -28,12 +28,11 @@ type fakeRunner struct {
 	env   []string
 	stdin []byte
 
-	reply      *string // the content of the last-message file, or none when nil
-	stderr     string
-	err        error
-	untilDone  bool // wait for the deadline instead of answering
-	lastPath   string
-	lastExists func() bool
+	reply     *string // the content of the last-message file, or none when nil
+	stderr    string
+	err       error
+	untilDone bool // wait for the deadline instead of answering
+	lastPath  string
 }
 
 func (f *fakeRunner) OutputStdin(ctx context.Context, env []string, stdin []byte, bin string, args ...string) ([]byte, []byte, error) {
