@@ -29,6 +29,9 @@ func TestReviewCheckRefusesACommandLineItCannotRead(t *testing.T) {
 		{"a flag with no value", []string{"check", "--feature"}, "error: review check: --feature requires a value\n"},
 		{"a head with no value", []string{"check", "--feature", "f", "--head"}, "error: review check: --head requires a value\n"},
 		{"the base twice", []string{"check", "--feature", "f", "--base", "a", "--base", "b"}, "error: review check: --base given twice\n"},
+		{"the onto twice", []string{"check", "--feature", "f", "--onto", "a", "--onto", "b"}, "error: review check: --onto given twice\n"},
+		{"base and onto", []string{"check", "--feature", "f", "--base", "a", "--onto", "b"}, "error: review check: --base and --onto cannot be given together\n"},
+		{"an onto with no value", []string{"check", "--feature", "f", "--onto"}, "error: review check: --onto requires a value\n"},
 		{"the stored result given to check", []string{"check", "--feature", "f", "--stored", "s.json"}, "error: review check: unknown flag \"--stored\"\n"},
 		{"a positional argument", []string{"check", "--feature", "f", "extra"}, "error: review check: unexpected argument \"extra\"\n"},
 	} {
@@ -39,6 +42,22 @@ func TestReviewCheckRefusesACommandLineItCannotRead(t *testing.T) {
 
 			if stdout != "" || stderr != tc.want || !equalInts(exits, []int{1}) {
 				t.Errorf("stdout = %q, stderr = %q, exits = %v; want nothing, %q, [1]", stdout, stderr, exits, tc.want)
+			}
+		})
+	}
+}
+
+// --onto belongs to `review check` alone: every other review verb still refuses it as the flag it does not know.
+func TestOtherReviewVerbsStillRefuseOnto(t *testing.T) {
+	for _, verb := range []string{"bind", "record", "verify", "exempt", "sweep", "anchor"} {
+		t.Run(verb, func(t *testing.T) {
+			w := newCheckedWorld(t)
+
+			stdout, stderr, exits := w.run("", verb, "--onto", "x")
+
+			want := "error: review " + verb + ": unknown flag \"--onto\"\n"
+			if stdout != "" || stderr != want || !equalInts(exits, []int{1}) {
+				t.Errorf("stdout = %q, stderr = %q, exits = %v; want nothing, %q, [1]", stdout, stderr, exits, want)
 			}
 		})
 	}
@@ -80,7 +99,8 @@ func TestUsageDocumentsReviewCheck(t *testing.T) {
 	text := strings.Join(strings.Fields(out.String()), " ")
 
 	for _, want := range []string{
-		"engine review check --feature <name> [--head <rev>] [--base <rev>] [--cwd <repo>]",
+		"engine review check --feature <name> [--head <rev>] [--base <rev> | --onto <rev>] [--cwd <repo>]",
+		"--onto <rev> names the integration branch of the delivery and starts the chain at the one merge base of that branch and the head",
 		"recomputes from git the candidate of the base the result names and that head",
 		"cleared only when clear results or exemptions cover base..head as an unbroken chain",
 		"at least one result binds the head and every one is clear",

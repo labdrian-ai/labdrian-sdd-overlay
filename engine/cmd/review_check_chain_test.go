@@ -258,3 +258,92 @@ func TestCheckWithoutBaseStaysTheCheckOfOneHeadAndAnswersAsBefore(t *testing.T) 
 		t.Errorf("stdout = %q, stderr = %q, exits = %v; want %q, nothing, [0]", stdout, stderr, exits, want)
 	}
 }
+
+// topicOfTwoReviewedCommits makes the branch topic from the head of main, with two commits above it that are reviewed and
+// swept one by one, leaves topic checked out and main where it was, and returns the fork point and the two commits.
+func (w *reviewWorld) topicOfTwoReviewedCommits() (fork, mid, tip string) {
+	w.t.Helper()
+	fork = w.head
+	w.git("checkout", "-q", "-b", "topic")
+	mid, tip = w.commitMore("d.txt"), w.commitMore("e.txt")
+	w.recordRange(fork, mid)
+	w.recordRange(mid, tip)
+	w.sweepAll()
+	return fork, mid, tip
+}
+
+// moveMain adds a commit to main on top of fork, which topic does not have. topic stays checked out: the commit is made
+// with plumbing, so the working tree and the results stored in it are not touched.
+func (w *reviewWorld) moveMain(fork string) {
+	w.t.Helper()
+	moved := strings.TrimSpace(w.git("commit-tree", fork+"^{tree}", "-p", fork, "-m", "main moved on", "-m", "Risk: none"))
+	w.git("branch", "-f", "main", moved)
+}
+
+// --onto names the integration branch of the delivery and the engine starts the chain where the branch was made (own-rdd
+// T9a, S11 a). When main moved on after topic was made, --base main walks to a commit the chain never reaches and is
+// refused, as it always was, while --onto main starts at the fork point and clears, printing what --base <fork point> does.
+func TestCheckOntoClearsTheChainFromWhereTheBranchWasMade(t *testing.T) {
+	w := newCheckedWorld(t)
+	fork, mid, tip := w.topicOfTwoReviewedCommits()
+	w.moveMain(fork)
+
+	_, refusal, exits := w.checkChain("main")
+	if want := "error: review check: the chain from " + w.name("main") + " to " + tip + ": head " + fork + ": review: no stored result binds the head\n"; refusal != want || !equalInts(exits, []int{1}) {
+		t.Fatalf("setup: --base main: stderr = %q, exits = %v; want %q, [1]", refusal, exits, want)
+	}
+	wantOut, wantErr, wantExits := w.checkChain(fork)
+	if wantErr != "" || !equalInts(wantExits, []int{0}) || !strings.Contains(wantOut, mid) {
+		t.Fatalf("setup: --base <fork point>: stdout = %q, stderr = %q, exits = %v; want a cleared chain", wantOut, wantErr, wantExits)
+	}
+
+	stdout, stderr, exits := w.run("", "check", "--feature", "own-rdd", "--onto", "main")
+
+	if stdout != wantOut || stderr != "" || !equalInts(exits, []int{0}) {
+		t.Errorf("--onto main: stdout = %q, stderr = %q, exits = %v; want the stdout of --base %s (%q), nothing, [0]", stdout, stderr, exits, fork, wantOut)
+	}
+}
+
+// When the branch did not move, the merge base is the branch itself and --onto is --base: same stdout, stderr and exit
+// code, for a chain that clears and for one that is refused.
+func TestCheckOntoOfABranchThatDidNotMoveIsCheckBase(t *testing.T) {
+	for _, reviewed := range []bool{true, false} {
+		w := newCheckedWorld(t)
+		if reviewed {
+			w.topicOfTwoReviewedCommits()
+		} else {
+			w.git("checkout", "-q", "-b", "topic")
+			w.commitMore("d.txt")
+			w.sweepAll()
+		}
+		baseOut, baseErr, baseExits := w.checkChain("main")
+
+		ontoOut, ontoErr, ontoExits := w.run("", "check", "--feature", "own-rdd", "--onto", "main")
+
+		if ontoOut != baseOut || ontoErr != baseErr || !reflect.DeepEqual(ontoExits, baseExits) {
+			t.Errorf("reviewed %v: --onto main: stdout = %q, stderr = %q, exits = %v; want those of --base main: %q, %q, %v",
+				reviewed, ontoOut, ontoErr, ontoExits, baseOut, baseErr, baseExits)
+		}
+		if reviewed != equalInts(baseExits, []int{0}) {
+			t.Errorf("reviewed %v: --base main exits = %v; want 0 exactly when the chain is reviewed", reviewed, baseExits)
+		}
+	}
+}
+
+// A branch whose history shares no commit with the head has no merge base: the check says so, stores nothing and
+// prints nothing.
+func TestCheckOntoRefusesHistoriesWithNoMergeBase(t *testing.T) {
+	w := newCheckedWorld(t)
+	w.git("checkout", "-q", "--orphan", "island")
+	w.git("commit", "-q", "--allow-empty", "-m", "island", "-m", "Risk: none")
+	island := w.name("HEAD")
+	w.git("checkout", "-q", "main")
+
+	stdout, stderr, exits := w.run("", "check", "--feature", "own-rdd", "--onto", "island")
+
+	want := "error: review check: " + island + " and " + w.head + " do not have exactly one merge base (they have 0), " +
+		"so the commits the pull request adds cannot be told\n"
+	if stdout != "" || stderr != want || !equalInts(exits, []int{1}) {
+		t.Errorf("stdout = %q, stderr = %q, exits = %v; want nothing, %q, [1]", stdout, stderr, exits, want)
+	}
+}

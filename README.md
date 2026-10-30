@@ -658,7 +658,7 @@ overlay review <verb>
         that blocks another head of a base whose review a stored verdict already blocked is refused and
         stores nothing. A reply that breaks a rule writes nothing and the error names the rule. Exit 0
         stored, 2 reply refused, 1 usage error, a spent correction round or any other failure.
-    check  --feature <name> [--head <rev>] [--base <rev>] [--cwd <repo>]
+    check  --feature <name> [--head <rev>] [--base <rev> | --onto <rev>] [--cwd <repo>]
         Decide whether the head being delivered (--head, default HEAD) was reviewed, or exempted from review,
         and nothing the engine stored keeps it from delivery. Each result stored for that head is held to its
         binding again, the candidate is recomputed from git for the base the result names and that head and
@@ -687,8 +687,13 @@ overlay review <verb>
         base. It is refused at a gap (no result or exemption ends at a commit, which is also where a chain
         that passes the base ends), at a range that is not clear and at a commit it already passed. stdout is
         then one JSON object (head, base, outcome, and ranges, from the one that starts at the base, each with
-        base, head, results and exemptions). Without --base the check is by head alone. Exit 0 cleared, 1
-        usage error, refusal or any other failure.
+        base, head, results and exemptions). Without --base the check is by head alone. `--onto <rev>`
+        names the integration branch of the delivery (main, a tracker or a dev branch) and starts the chain at
+        the one merge base of that branch and the head, which the engine finds, so the role does not compute
+        it when the branch moved on after the head's branch was made: it is the check of `--base <that merge
+        base>` and prints the same, none or several merge bases refuse it, and it cannot be given with
+        `--base`. It is still a revision the caller names: a commit of the head's own branch given as `--onto`
+        shortens the chain, as a wrong `--base` does. Exit 0 cleared, 1 usage error, refusal or any other failure.
     exempt --feature <name> --base <rev> --head <rev> --risk <none|items> [--cwd <repo>]
         Exempt a head from review when its work takes none, on the evidence of the verifier and the risk the
         agent declares. The verifier's report is read from stdin and from nowhere else: one JSON object and no
