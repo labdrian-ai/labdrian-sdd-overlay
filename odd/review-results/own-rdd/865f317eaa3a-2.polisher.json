@@ -1,0 +1,15 @@
+{
+  "kind": "polisher",
+  "base": "71e1bc319456f2d8ef4a93fb418f95d85e3ebda1",
+  "head": "865f317eaa3a9497638996764e9b2ea39157cc35",
+  "diff_sha256": "502a361b5ef84f5fd4dadb64108e1dfcb1edf56daee5415c18f3bdac498a2fa4",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff 865f317e.diff: the Codex launch line, the Worktrees section moved to references/worktrees.md, the new overlay.manifest row, and the test changes.",
+      "In the worktree, the moved lines in skills/role-chain/references/worktrees.md match the removed lines in SKILL.md word for word. The new Codex line follows the review record line in Binding, which the new test pins.",
+      "The manifest row `role-chain/references/worktrees.md custom` matches how other custom reference files are listed. A search of the worktree outside odd/ found no other consumer of the removed Worktrees text; the only remaining mentions are the new reference file, the test, and two design docs.",
+      "Not run: Go tests, the 700-token body budget test, and the skill approval check. skills/role-chain/.approval.json is unchanged, so role-chain still needs the owner re-approval that L121 and L123 already name as a follow-up."
+    ]
+  }
+}
