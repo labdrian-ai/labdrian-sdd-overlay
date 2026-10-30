@@ -725,7 +725,8 @@ overlay review <verb>
         to --head (--base must be the first parent of --head, as for `exempt`) and store their findings as
         odd/review-results/<feature>/<head12>-<n>.sweep.json, numbered with the other files of the head and never
         over an existing one. T1: the paths the commit deleted or renamed, and the names its removed lines
-        declared that the head still mentions outside the diff. T2: `deadcode -test ./...` over each Go module
+        declared and the flags (--name) its removed lines of .go and .sh files held that the head still
+        mentions outside the diff. T2: `deadcode -test ./...` over each Go module
         the commit changes, `staticcheck` over the packages of its changed .go files and `shellcheck` over its
         changed .sh files, each on a copy of the base and a copy of the head kept under
         $XDG_STATE_HOME/labdrian/review-sweep/ (default ~/.local/state), outside the working tree; a line is a

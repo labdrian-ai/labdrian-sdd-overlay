@@ -309,11 +309,11 @@ Commands:
                                              run the checks T1 to T3 of the sweeper once on the one commit REV..head
                                              (--base must be the first parent of --head) and store the findings as
                                              HEAD12-N.sweep.json, never over a file: T1 the paths the commit deleted
-                                             or renamed and the removed names the head still mentions, T2 the new lines
-                                             of deadcode, staticcheck and shellcheck over copies of the base and the
-                                             head kept under the state home, T3 the working tree's git status; a tool
-                                             that cannot run stores nothing; a second sweep of the repository while one
-                                             runs is refused; print outcome (clean or fired), path, sha256 and the
+                                             or renamed and the removed names and flags the head still mentions, T2 the
+                                             new lines of deadcode, staticcheck and shellcheck over copies of the base
+                                             and the head kept under the state home, T3 the working tree's git status;
+                                             a tool that cannot run stores nothing; a second sweep of the repository
+                                             while one runs is refused; print outcome (clean or fired), path, sha256 and the
                                              candidates the sweeper answers for as JSON
                                              (exit 0 stored, 2 refused or a check that did not run, 1 usage error)
                                    record --role sweeper|polisher --feature NAME --base REV --head REV [--result FILE|-] [--cwd REPO]

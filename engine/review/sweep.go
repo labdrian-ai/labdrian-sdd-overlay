@@ -78,6 +78,74 @@ func declaredNames(files []ChangedLines) []string {
 	return names
 }
 
+// RemovedFlags is the flags held by a removed line of a .go or .sh file that no added line of a .go or .sh file holds,
+// once each, in alphabetical order. A flag is `--` and a lowercase letter, then lowercase letters, digits and single
+// hyphens, not ending with a hyphen, with no letter, digit, `_` or `-` right before or after it (S15 d).
+func RemovedFlags(removed, added []ChangedLines) []string {
+	again := map[string]bool{}
+	for _, flag := range flagsOf(added) {
+		again[flag] = true
+	}
+	var gone []string
+	for _, flag := range flagsOf(removed) {
+		if !again[flag] && !slices.Contains(gone, flag) {
+			gone = append(gone, flag)
+		}
+	}
+	slices.Sort(gone)
+	return gone
+}
+
+// flagsOf is every flag on the lines of the .go and .sh files.
+func flagsOf(files []ChangedLines) []string {
+	var flags []string
+	for _, f := range files {
+		if !strings.HasSuffix(f.Path, ".go") && !strings.HasSuffix(f.Path, ".sh") {
+			continue
+		}
+		for _, line := range f.Lines {
+			for i := 0; i+2 < len(line); i++ {
+				if line[i] != '-' || line[i+1] != '-' || (i > 0 && inFlagWord(line[i-1])) {
+					continue
+				}
+				if end := flagEnd(line, i+2); end > 0 {
+					flags = append(flags, line[i:end])
+					i = end - 1
+				}
+			}
+		}
+	}
+	return flags
+}
+
+// flagEnd is where the flag whose name starts at start ends in line, or 0 when no flag starts there.
+func flagEnd(line string, start int) int {
+	if !isLower(line[start]) {
+		return 0
+	}
+	end := start + 1
+	for end < len(line) {
+		c := line[end]
+		if isLower(c) || isDigit(c) || (c == '-' && end+1 < len(line) && (isLower(line[end+1]) || isDigit(line[end+1]))) {
+			end++
+			continue
+		}
+		break
+	}
+	if end < len(line) && inFlagWord(line[end]) {
+		return 0
+	}
+	return end
+}
+
+func isLower(c byte) bool { return c >= 'a' && c <= 'z' }
+func isDigit(c byte) bool { return c >= '0' && c <= '9' }
+
+// inFlagWord is a character that may not touch a flag: a letter, a digit, `_` or `-`.
+func inFlagWord(c byte) bool {
+	return isLower(c) || isDigit(c) || (c >= 'A' && c <= 'Z') || c == '_' || c == '-'
+}
+
 // position is the `:<line>` or `:<line>:<col>` that follows the path at the start of a finding.
 var position = regexp.MustCompile(`^([^\s:]+):\d+(?::\d+)?`)
 

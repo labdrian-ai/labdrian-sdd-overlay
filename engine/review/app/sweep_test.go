@@ -150,6 +150,45 @@ func TestSweepListsTheRemovedNamesThatTheHeadStillMentionsOutsideTheDiff(t *test
 	}
 }
 
+func TestSweepFiresOnARemovedFlagTheHeadStillMentionsOutsideTheDiff(t *testing.T) {
+	s := newSweepRig(t)
+	s.git.paths = []string{"pkg/a.go"}
+	s.git.removedLines = []review.ChangedLines{{Path: "pkg/a.go", Lines: []string{"func gone() {}", `f.has("--onto")`}}}
+	s.git.mentions = map[string][]string{"gone": {"docs/x.md"}, "--onto": {"README.md", "pkg/a.go"}}
+
+	got := s.mustSweep()
+
+	want := []review.RemovedName{{Name: "--onto", Hits: []string{"README.md"}}, {Name: "gone", Hits: []string{"docs/x.md"}}}
+	if names := s.stored().Findings.T1.RemovedNames; !reflect.DeepEqual(names, want) {
+		t.Errorf("stored removed names = %v, want %v: the flag first, hits outside the diff", names, want)
+	}
+	if got.Outcome != review.OutcomeFired || !reflect.DeepEqual(got.Candidates, []string{"T1 name: --onto", "T1 name: gone"}) {
+		t.Errorf("Swept outcome = %q, candidates = %q, want fired with the flag and the name", got.Outcome, got.Candidates)
+	}
+	var searches []string
+	for _, c := range s.git.calls {
+		if strings.HasPrefix(c, "Mentions ") {
+			searches = append(searches, c)
+		}
+	}
+	if want := []string{"Mentions " + headSHA + " gone", "Mentions " + headSHA + " --onto"}; !reflect.DeepEqual(searches, want) {
+		t.Errorf("searches = %q, want the names in one call and the flags in a call of their own", searches)
+	}
+}
+
+func TestSweepIsCleanForAFlagNothingOutsideTheDiffMentions(t *testing.T) {
+	s := newSweepRig(t)
+	s.git.paths = []string{"pkg/a.go"}
+	s.git.removedLines = []review.ChangedLines{{Path: "pkg/a.go", Lines: []string{`f.has("--onto")`}}}
+	s.git.mentions = map[string][]string{"--onto": {"pkg/a.go"}}
+
+	got := s.mustSweep()
+
+	if got.Outcome != review.OutcomeClean || len(s.stored().Findings.T1.RemovedNames) != 0 {
+		t.Errorf("Swept outcome = %q, removed names = %v, want clean: the only hit is inside the diff", got.Outcome, s.stored().Findings.T1.RemovedNames)
+	}
+}
+
 func TestSweepSearchesNothingWhenTheCommitRemovesNoName(t *testing.T) {
 	s := newSweepRig(t)
 

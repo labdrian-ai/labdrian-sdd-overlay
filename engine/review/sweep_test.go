@@ -48,6 +48,44 @@ func TestRemovedNamesAreTheDeclarationsOfRemovedLines(t *testing.T) {
 	}
 }
 
+// T1 also looks for the flags a diff removed (own-rdd T12a, S15 d): a flag held by a removed line of a .go or .sh
+// file that no added line of a .go or .sh file holds.
+func TestRemovedFlagsAreTheFlagsARemovedLineHeldThatNoAddedLineHolds(t *testing.T) {
+	mdLines := []review.ChangedLines{{Path: "docs/a.md", Lines: []string{"use --onto here"}}}
+	for _, tc := range []struct {
+		name           string
+		removed, added []review.ChangedLines
+		want           []string
+	}{
+		{"a flag of a removed Go line", goLines(`if f.has("--onto") {`), nil, []string{"--onto"}},
+		{"a flag of a removed shell line", shLines("--dry-run)"), nil, []string{"--dry-run"}},
+		{"both kinds, sorted", append(goLines(`f.has("--onto")`), shLines("--dry-run)")...), nil, []string{"--dry-run", "--onto"}},
+		{"a flag with digits and single hyphens", goLines(`"--a1-b2-c3"`), nil, []string{"--a1-b2-c3"}},
+		{"two flags on one line", goLines(`"--one --two"`), nil, []string{"--one", "--two"}},
+		{"a flag once, however many lines hold it", goLines(`"--onto"`, `"--onto"`), nil, []string{"--onto"}},
+		{"a flag an added Go line holds again", goLines(`"--onto"`), goLines(`"--onto" // kept`), nil},
+		{"a flag an added line of another Go file holds", goLines(`"--onto"`), []review.ChangedLines{{Path: "b/other.go", Lines: []string{`"--onto"`}}}, nil},
+		{"a flag an added shell line holds", goLines(`"--onto"`), shLines("--onto)"), nil},
+		{"only the flag held again is dropped", goLines(`"--kept --gone"`), goLines(`"--kept"`), []string{"--gone"}},
+		{"a flag an added markdown line holds is still removed", goLines(`"--onto"`), mdLines, []string{"--onto"}},
+		{"three hyphens", goLines(`"---"`), nil, nil},
+		{"two hyphens alone", goLines(`"--"`), nil, nil},
+		{"an uppercase first letter", goLines(`"--X"`), nil, nil},
+		{"a trailing hyphen", goLines(`"--a-"`), nil, nil},
+		{"a double hyphen inside", goLines(`"--a--b"`), nil, nil},
+		{"a letter before", goLines(`x--onto`), nil, nil},
+		{"an underscore after", goLines(`--onto_x`), nil, nil},
+		{"a letter after", goLines(`--ontoX`), nil, nil},
+		{"a flag on a removed markdown line", mdLines, nil, nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := review.RemovedFlags(tc.removed, tc.added); !slices.Equal(got, tc.want) {
+				t.Errorf("RemovedFlags() = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
 func goLines(lines ...string) []review.ChangedLines {
 	return []review.ChangedLines{{Path: "a/file.go", Lines: lines}}
 }

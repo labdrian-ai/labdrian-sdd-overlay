@@ -131,18 +131,36 @@ func (s Service) sweepT1(repo Repository, c review.Candidate) (review.SweepT1, e
 		}
 	}
 	for _, name := range asked {
-		var hits []string
-		for _, p := range mentioned[name] {
-			if !slices.Contains(c.Paths, p) && !slices.Contains(hits, p) {
-				hits = append(hits, p)
-			}
-		}
-		if len(hits) > 0 {
-			slices.Sort(hits)
+		if hits := hitsOutside(c.Paths, mentioned[name]); len(hits) > 0 {
 			names = append(names, review.RemovedName{Name: name, Hits: hits})
 		}
 	}
+	// The flags are asked in a call of their own: a name inside a longer match at the same place is dropped by the search.
+	if flags := review.RemovedFlags(removed, added); len(flags) > 0 {
+		found, err := s.git.Mentions(repo, c.Head, flags)
+		if err != nil {
+			return review.SweepT1{}, fmt.Errorf("search %s for the removed flags: %w", c.Head, err)
+		}
+		for _, flag := range flags {
+			if hits := hitsOutside(c.Paths, found[flag]); len(hits) > 0 {
+				names = append(names, review.RemovedName{Name: flag, Hits: hits})
+			}
+		}
+		slices.SortFunc(names, func(a, b review.RemovedName) int { return strings.Compare(a.Name, b.Name) })
+	}
 	return review.SweepT1{DeletedOrRenamed: deleted, RemovedNames: names}, nil
+}
+
+// hitsOutside is the paths that mention a name and are not paths of the diff, each once, sorted.
+func hitsOutside(diff, mentioned []string) []string {
+	var hits []string
+	for _, p := range mentioned {
+		if !slices.Contains(diff, p) && !slices.Contains(hits, p) {
+			hits = append(hits, p)
+		}
+	}
+	slices.Sort(hits)
+	return hits
 }
 
 // goChange is what a commit changed in one Go module: the module, relative to the root, and the packages of the changed

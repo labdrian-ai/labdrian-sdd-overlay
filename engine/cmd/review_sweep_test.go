@@ -279,18 +279,21 @@ func TestUsageAndReadmeDefineTheChecksOfReviewSweep(t *testing.T) {
 		{"the engine usage", engine, []string{
 			"runs the checks T1 to T3 of the sweeper once on the one commit",
 			"T1: the paths the commit deleted or renamed",
+			"and the flags (--name) its removed lines of .go and .sh files held",
 			"T2: deadcode and staticcheck over each Go module the commit changes",
 			"T3: git status of the working tree as it is",
 		}},
 		{"bin/lib/usage.sh", flatFile("../../bin/lib/usage.sh"), []string{
 			"run the checks T1 to T3 of the sweeper once on the one commit",
 			"T1 the paths the commit deleted or renamed",
+			"the removed names and flags the head still mentions",
 			"T2 the new lines of deadcode, staticcheck and shellcheck",
 			"T3 the working tree's git status",
 		}},
 		{"README.md", flatFile("../../README.md"), []string{
 			"Run the checks T1 to T3 of the sweeper once on the one commit",
 			"T1: the paths the commit deleted or renamed",
+			"and the flags (--name) its removed lines of .go and .sh files held",
 			"T2: `deadcode -test ./...` over each Go module",
 			"T3: `git status` of the working tree",
 		}},
