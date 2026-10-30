@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "fea619c6232ab2dd07a634aa6afadf3ac0b8a598",
+    "head": "ca900da513adf115bb68165382a28bf1c852949c",
+    "diff_sha256": "261677249bd8e83f6c72c8c23ca9b1997ef9d70535a9fff00c64ed020dc76256",
+    "paths": [
+      "CHANGELOG.md",
+      "agents/sweeper.md",
+      "codex/agents/sweeper.toml",
+      "engine/cmd/review_sweep.go",
+      "engine/skills/role_agents_artifact_test.go",
+      "engine/skills/role_chain_artifact_test.go",
+      "pi/agents/sweeper.md",
+      "roles/sweeper/body.md",
+      "skills/sweeper/SKILL.md"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "fea619c6232ab2dd07a634aa6afadf3ac0b8a598",
+      "head": "ca900da513adf115bb68165382a28bf1c852949c",
+      "diff_sha256": "261677249bd8e83f6c72c8c23ca9b1997ef9d70535a9fff00c64ed020dc76256"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "agents/sweeper.md",
+        "codex/agents/sweeper.toml",
+        "engine/cmd/review_sweep.go",
+        "engine/skills/role_agents_artifact_test.go",
+        "engine/skills/role_chain_artifact_test.go",
+        "pi/agents/sweeper.md",
+        "roles/sweeper/body.md",
+        "skills/sweeper/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/skills/role_agents_artifact_test.go:1060-1076",
+        "severity": "SUGGESTION",
+        "claim": "The test comment says the sweeper delta 'stays four lines', but nothing in the test asserts that. The comment overstates what the test pins.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/role_agents_artifact_test.go:1060-1061 (comment), :66-75 (only the line text and the 'Sweep only the candidates' count are asserted)"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "docs/architecture/role-design/per-role-sweeper.md:70",
+        "severity": "SUGGESTION",
+        "claim": "A design doc still says 'T1-T3'. The code, usage text and README now say T1 to T4, and this doc is a stale mention of the check range. It was not changed in this diff. It is a design note about an earlier decision, so it may be intentionally historical.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "pre-existing",
+        "proof_refs": [
+          "docs/architecture/role-design/per-role-sweeper.md:70"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff at the scratchpad path ca900da5.diff.",
+      "Checked that the sweeper delta line is identical in roles/sweeper/body.md, agents/sweeper.md, pi/agents/sweeper.md and codex/agents/sweeper.toml.",
+      "Checked that the new test asserts that line exactly once in each of the four files.",
+      "Checked the skills/sweeper/SKILL.md Triggers change against the new assertion in role_chain_artifact_test.go: the sweeper line is followed directly by the proposals line.",
+      "Grepped the worktree for stale 'T1-T3' and 'T1 to T3' mentions. The usage text, README and sweep.go already say T1 to T4.",
+      "Not run: the Go tests. I did not run the test suite."
+    ]
+  }
+}

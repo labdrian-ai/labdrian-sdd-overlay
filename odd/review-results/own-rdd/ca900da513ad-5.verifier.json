@@ -1,0 +1,11 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "git diff fea619c6 ca900da5 -- roles/sweeper/body.md; rg the T12f row text between double backticks",
+      "output": "the old line said goldens and test assertions stay identical; the new says the goldens and assertions a test reads stay identical; the new line equals the text of the T12f row byte for byte and the test constant",
+      "base_result": "not-run"
+    }
+  ]
+}

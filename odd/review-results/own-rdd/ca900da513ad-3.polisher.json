@@ -1,0 +1,18 @@
+{
+  "kind": "polisher",
+  "base": "fea619c6232ab2dd07a634aa6afadf3ac0b8a598",
+  "head": "ca900da513adf115bb68165382a28bf1c852949c",
+  "diff_sha256": "261677249bd8e83f6c72c8c23ca9b1997ef9d70535a9fff00c64ed020dc76256",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/ca900da5.diff.",
+      "Read the T12f row (line 151) of odd/tasks/own-rdd.md in the worktree.",
+      "The new sweeper delta line in roles/sweeper/body.md, agents/sweeper.md, pi/agents/sweeper.md and codex/agents/sweeper.toml matches the spec's exact text byte for byte. The three runtime files match the source.",
+      "In skills/sweeper/SKILL.md, `T1-T3` became `T1-T4`. The added proposals line matches the spec's exact text byte for byte. Nothing else in the file changed.",
+      "The new pin test in role_agents_artifact_test.go and the new proposals check in role_chain_artifact_test.go use the same strings.",
+      "The CHANGELOG adds one clause. The engine comment in review_sweep.go was updated from T1-T3 to T1-T4.",
+      "Not run: `go test`, gadu-generate --check, and TestRoleChainSkillIsWithinTheLintBudget (the proposals line adds length to the skill). Only the diff and the spec row were compared."
+    ]
+  }
+}
