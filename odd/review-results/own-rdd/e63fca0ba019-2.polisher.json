@@ -1,0 +1,20 @@
+{
+  "kind": "polisher",
+  "base": "ea044728f9c41404870c67ee7f9d93783eb8600c",
+  "head": "e63fca0ba0196e87c516871d8ea3a852f351b10f",
+  "diff_sha256": "726d41a74877f19c8f0af512b4bb104c4ace854540913744f790e0f36666a67c",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff (/tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/e63fca0b.diff).",
+      "Read S21 (a)-(f) in the worktree's odd/tasks/own-rdd.md, lines 79-85.",
+      "Compared the diff with S21 (a): the polisher delta's third line is byte-identical in roles/polisher/body.md, agents/polisher.md, pi/agents/polisher.md and codex/agents/polisher.toml.",
+      "Compared the diff with S21 (b): the judgment-day judge prompt is replaced by the single line, and 'This shape governs' becomes 'The polisher's object governs'.",
+      "Compared the diff with S21 (e): CHANGELOG.md gains one Unreleased clause for (a) and (b).",
+      "Read review.ParsePolisherFindings and checkPolisherShape in engine/review/rolerecords.go:420-451. The recorder is unchanged and checks only each finding's evidence, which fits S21 (f) and D16.",
+      "Read the new tests, TestPolisherDeltaObjectIsTheOneTheEngineRecords and TestJudgmentDayJudgesReturnThePolisherObject, for S21 (c). They cover all enumeration alternatives, the clean object, a finding without evidence, the exact L101 refusal text, and the prompt's required and forbidden strings.",
+      "Grepped the worktree outside odd/ for proof_refs. The remaining hits are the reviewer role's own shape, role-design docs and reviewer tests, none of which this commit touches.",
+      "Not run: go test, overlay gadu-generate, and a byte-for-byte check that the generated agent files match their generator output."
+    ]
+  }
+}

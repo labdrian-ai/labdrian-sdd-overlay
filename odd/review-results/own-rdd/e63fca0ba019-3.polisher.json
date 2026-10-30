@@ -1,0 +1,17 @@
+{
+  "kind": "polisher",
+  "base": "ea044728f9c41404870c67ee7f9d93783eb8600c",
+  "head": "e63fca0ba0196e87c516871d8ea3a852f351b10f",
+  "diff_sha256": "726d41a74877f19c8f0af512b4bb104c4ace854540913744f790e0f36666a67c",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff of e63fca0b (7 files).",
+      "Read S21 (a-c, e, f) in odd/tasks/own-rdd.md. The polisher delta line, the judge-prompt replacement line, the 'The polisher's object governs judgment-day judges only.' edit and the single CHANGELOG clause match the spec text. I compared them by reading; I ran no byte-for-byte diff against the spec.",
+      "The four-way edit is consistent. roles/polisher/body.md, agents/polisher.md, pi/agents/polisher.md and codex/agents/polisher.toml carry an identical third line. I did not run overlay gadu-generate.",
+      "Read review.ParsePolisherFindings/checkPolisherShape in engine/review/rolerecords.go:420-451. It checks only each finding's evidence, so the spelled-out object (with evidence) is accepted and the L101 reply is refused with the exact text the new test pins. The recorder is unchanged (f).",
+      "Read the new tests by hand. TestPolisherDeltaObjectIsTheOneTheEngineRecords fills members and enumeration alternatives correctly. Its drop logic removes evidence only on objects that contain 'claim', so the top-level evidence stays. Decoding line[start:] with a json.Decoder tolerates the trailing prose. TestJudgmentDayJudgesReturnThePolisherObject asserts the pointer phrase and the absence of proof_refs and '\"findings\":[{'.",
+      "Not run: go test, go vet, overlay gadu-generate."
+    ]
+  }
+}

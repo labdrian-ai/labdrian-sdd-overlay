@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ea044728f9c41404870c67ee7f9d93783eb8600c",
+    "head": "e63fca0ba0196e87c516871d8ea3a852f351b10f",
+    "diff_sha256": "726d41a74877f19c8f0af512b4bb104c4ace854540913744f790e0f36666a67c",
+    "paths": [
+      "CHANGELOG.md",
+      "agents/polisher.md",
+      "codex/agents/polisher.toml",
+      "engine/skills/role_agents_artifact_test.go",
+      "pi/agents/polisher.md",
+      "roles/polisher/body.md",
+      "skills/judgment-day/references/prompts-and-formats.md"
+    ]
+  },
+  "rows": [
+    "default",
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "ea044728f9c41404870c67ee7f9d93783eb8600c",
+      "head": "e63fca0ba0196e87c516871d8ea3a852f351b10f",
+      "diff_sha256": "726d41a74877f19c8f0af512b4bb104c4ace854540913744f790e0f36666a67c"
+    },
+    "inspection": {
+      "status": "completed",
+      "reason": "",
+      "paths": [
+        "CHANGELOG.md",
+        "agents/polisher.md",
+        "codex/agents/polisher.toml",
+        "engine/skills/role_agents_artifact_test.go",
+        "pi/agents/polisher.md",
+        "roles/polisher/body.md",
+        "skills/judgment-day/references/prompts-and-formats.md"
+      ]
+    },
+    "findings": [],
+    "evidence": [
+      "Read the full diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/e63fca0b.diff.",
+      "Read checkPolisherShape in engine/review/rolerecords.go:420-451 (worktree). It checks only that each finding has a non-empty `evidence` string array. The new object text names exactly that member, so the stored shape matches the documented one.",
+      "The four polisher files (roles/polisher/body.md, agents/polisher.md, pi/agents/polisher.md, codex/agents/polisher.toml) carry the identical new third line.",
+      "Grepped `proof_refs` under skills/**, agents/**, engine/**/*.go and .claude/**. No consumer of the judgment-day judge prompt still expects `proof_refs`. The remaining hits are the reviewer role (reviewresult package), its tests, and design docs, which are a separate artifact the judge prompt note still distinguishes.",
+      "Not run: no tests or commands were executed (read-only review), so the two new tests, TestPolisherDeltaObjectIsTheOneTheEngineRecords and TestJudgmentDayJudgesReturnThePolisherObject, are unverified by execution. By reading, the first fills the spelled-out object and calls review.ParsePolisherFindings on every enumeration alternative, so it would catch drift between the agent text and the recorder."
+    ]
+  }
+}
