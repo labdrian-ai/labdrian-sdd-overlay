@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "74d99f3f86e7ca92f0bffec23d5e248715326d74",
+    "head": "964f33b7dc51373b61ecb92019dc345b5cf822f3",
+    "diff_sha256": "79a2475fed0d0179ac4a63a686198c31a421b10ff85f67f1f2900c4306e8b33c",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "agents/delivery.md",
+      "bin/lib/usage.sh",
+      "codex/agents/delivery.toml",
+      "engine/cmd/review.go",
+      "engine/cmd/review_check_chain_test.go",
+      "engine/cmd/review_check_cli_test.go",
+      "engine/cmd/review_test.go",
+      "engine/cmd/usage.go",
+      "engine/review/app/onto.go",
+      "engine/review/app/onto_test.go",
+      "engine/skills/role_agents_artifact_test.go",
+      "pi/agents/delivery.md",
+      "roles/delivery/body.md"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "74d99f3f86e7ca92f0bffec23d5e248715326d74",
+      "head": "964f33b7dc51373b61ecb92019dc345b5cf822f3",
+      "diff_sha256": "79a2475fed0d0179ac4a63a686198c31a421b10ff85f67f1f2900c4306e8b33c"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "agents/delivery.md",
+        "bin/lib/usage.sh",
+        "codex/agents/delivery.toml",
+        "engine/cmd/review.go",
+        "engine/cmd/review_check_chain_test.go",
+        "engine/cmd/review_check_cli_test.go",
+        "engine/cmd/review_test.go",
+        "engine/cmd/usage.go",
+        "engine/review/app/onto.go",
+        "engine/review/app/onto_test.go",
+        "engine/skills/role_agents_artifact_test.go",
+        "pi/agents/delivery.md",
+        "roles/delivery/body.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the complete diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/964f33b7.diff. I did not run any tests or commands.",
+      "engine/review/app/onto.go: CheckOnto validates the feature name and both revisions, resolves them, finds the merge bases, requires exactly one, then calls CheckChain with that base. Zero or several merge bases are refused, and git failures are wrapped without being reported as ErrMergeBase.",
+      "engine/cmd/review.go: --onto is added only to the `review check` flag list. `--base` together with `--onto` is refused, and an empty `--onto` is refused through `require`. The default check without either flag is unchanged. Other verbs still reject `--onto` as an unknown flag, and the test TestOtherReviewVerbsStillRefuseOnto covers this.",
+      "Edge case read in engine/review/app/chain.go CheckChain: if the head is already contained in the onto branch, the merge base equals the head. The chain walk still requires a stored result or exemption for the head itself, so this does not bypass the review check.",
+      "The four delivery prompt files carry the same sentence on `--onto`. The artifact test now asserts `--onto <rev>` is present. README, usage.go, bin/lib/usage.sh and the usage tests agree with each other.",
+      "The tests cover: a main that moved on after the branch was made, where `--onto` clears and prints the same output as `--base <fork point>`. A main that did not move, where the output is identical to `--base main`, for both a reviewed and an unreviewed chain. Histories with no merge base. Flag parsing. The application-layer error and call-order paths."
+    ]
+  }
+}

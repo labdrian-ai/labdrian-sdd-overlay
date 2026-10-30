@@ -1,0 +1,17 @@
+{
+  "kind": "polisher",
+  "base": "74d99f3f86e7ca92f0bffec23d5e248715326d74",
+  "head": "964f33b7dc51373b61ecb92019dc345b5cf822f3",
+  "diff_sha256": "79a2475fed0d0179ac4a63a686198c31a421b10ff85f67f1f2900c4306e8b33c",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the whole diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/964f33b7.diff (all 15 paths).",
+      "Read the T9a row (line 145) in odd/tasks/own-rdd.md. Every item it lists is in the diff: onto.go, the flag parse and require changes, the --base/--onto refusal, usage.go, usage.sh, README, CHANGELOG, body.md and the three generated delivery agent files. So are the tests it names: onto_test.go, the three real-git tests, the cli table rows, TestOtherReviewVerbsStillRefuseOnto, the usage pins and the role_agents fragment.",
+      "engine/review/app/onto.go (CheckOnto) validates the feature, then onto and head. It resolves both to commits, takes OneMergeBase, and delegates to CheckChain with the resolved head. The result is the same as --base of that commit, and nothing is stored. In runReviewCheck the --base/--onto refusal and the empty --onto value are handled before the repository path is resolved. A repeated --onto reuses the existing \"given twice\" path.",
+      "Without --onto the CheckChain and by-head-alone paths are unchanged. Every other review verb still gets \"unknown flag\", which TestOtherReviewVerbsStillRefuseOnto pins.",
+      "The delivery body.md and the three generated agent files carry identical text. body.md matches the T9a row and S11 (b) in meaning. The limit in S11 (c), that --onto still names a revision the agent chooses, is stated in the changelog, README, usage and onto.go.",
+      "I ran no commands: tests, gadu-generate --check, the differential and any other check are not run here. This judgment rests on reading only."
+    ]
+  }
+}
