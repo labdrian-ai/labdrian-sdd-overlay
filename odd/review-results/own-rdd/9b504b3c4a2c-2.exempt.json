@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "3cc3e2bca7565585bdf5f58f69e7e71e9bdc045e",
+    "head": "9b504b3c4a2cdc0770d13379519d51d8b09b90cc",
+    "diff_sha256": "73c19292c1f752a2bc3dba5cf47cf23d55b07ec6af06c174758ff9b0ad412487",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/cmd/dispatch_routes_test.go",
+      "engine/cmd/review.go",
+      "engine/cmd/review_exempt_test.go",
+      "engine/cmd/review_proposals.go",
+      "engine/cmd/review_proposals_test.go",
+      "engine/cmd/review_test.go",
+      "engine/cmd/usage.go",
+      "engine/review/app/app.go",
+      "engine/review/app/fakes_test.go",
+      "engine/review/app/proposals.go",
+      "engine/review/app/proposals_test.go",
+      "engine/review/gitexec/gitexec.go",
+      "engine/review/gitexec/proposals_test.go",
+      "engine/review/proposals.go",
+      "engine/review/proposals_test.go"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "cd engine && go vet ./... && gofmt -l . && staticcheck ./review/... ./cmd/...",
+        "result": "pass",
+        "output": "exit=0, no output"
+      },
+      {
+        "command": "cd engine && go test -count=1 . ./review/... ./cmd/...",
+        "result": "pass",
+        "output": "all 8 packages ok"
+      },
+      {
+        "command": "git diff 3cc3e2bc 9b504b3c -- engine/review/gitexec/gitexec.go engine/review/app/proposals.go | rg git subcommands",
+        "result": "pass",
+        "output": "only worktree list, for-each-ref and merge-base --is-ancestor are run: all read-only"
+      }
+    ]
+  }
+}
