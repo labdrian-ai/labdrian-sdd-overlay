@@ -1,0 +1,11 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "cd /home/labdrian/labdrian-sdd-overlay-worktrees/review-66414f3977e0 && rg -n 'fixtures it leaves unread|T4 fixture' engine/cmd/usage.go README.md bin/lib/usage.sh; rg -n 'OrphanedFixtures' engine/review/app/sweep.go engine/review/*.go; git show 3ca9375e:engine/cmd/usage.go | rg -n 'T4'",
+      "output": "The claim text is in engine/cmd/usage.go:220,222, README.md:734,742 and bin/lib/usage.sh:316. engine/review/app/sweep.go never names OrphanedFixtures, and the only non-test assignment (rolerecords.go:281) is an empty slice, so the sweep never finds an unread fixture. At base, engine/cmd/usage.go has no T4 (rg exit 1).",
+      "base_result": "not-reproduced"
+    }
+  ]
+}

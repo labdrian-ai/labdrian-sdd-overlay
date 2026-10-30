@@ -1,0 +1,17 @@
+{
+  "kind": "polisher",
+  "base": "3ca9375e69269f26d2bb936d86f03b96a56eabca",
+  "head": "66414f3977e042fd5300b89e5d1cced3a98db0f0",
+  "diff_sha256": "08513e90e3ba445b01fd5c3613f5ecbb208b8dc66691a007c0cbcd4f624ed912",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/66414f39.diff.",
+      "Read engine/review/rolerecords.go lines 168-280 in the worktree. DecodeSweep embeds sweepFile and adds a depth-0 `T4 json.RawMessage` field. That field shadows the promoted SweepFindings.T4, so a record with no t4 gives a nil RawMessage and decodes as two empty non-nil lists. A present t4 goes through DecodeStrict, which rejects unknown members. A null or missing list is refused by the nil checks in decodeSweepT4. Errors are wrapped in ErrInvalidStored at line 272.",
+      "Read engine/jsonstrict/jsonstrict.go and engine/review/stored.go. decodeFile checks duplicate keys first, then strict decoding, so a duplicate t4 key or a stray member is refused.",
+      "Grepped the engine for readers of the sweep record. DecodeSweep is the only decoder, used at app/recordrole.go:97 and app/needs.go:90, and EncodeSweep is the only encoder. A record stored before T4 keeps its outcome and its candidate ids (Fired is unchanged for old content), and a present t4 is encoded with both lists as arrays.",
+      "Read engine/review/sweep.go Leftovers. It matches on the base name suffix, excludes paths in T1.DeletedOrRenamed, deduplicates, sorts and returns a non-nil slice.",
+      "The imports for json and jsonstrict already exist in rolerecords.go. I did not run any tests or builds."
+    ]
+  }
+}

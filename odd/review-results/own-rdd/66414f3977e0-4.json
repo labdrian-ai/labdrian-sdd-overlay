@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "3ca9375e69269f26d2bb936d86f03b96a56eabca",
+    "head": "66414f3977e042fd5300b89e5d1cced3a98db0f0",
+    "diff_sha256": "08513e90e3ba445b01fd5c3613f5ecbb208b8dc66691a007c0cbcd4f624ed912",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/cmd/review_sweep_test.go",
+      "engine/cmd/usage.go",
+      "engine/review/app/sweep.go",
+      "engine/review/app/sweep_test.go",
+      "engine/review/rolerecords.go",
+      "engine/review/rolerecords_test.go",
+      "engine/review/stored_sweeps_test.go",
+      "engine/review/sweep.go",
+      "engine/review/sweep_test.go",
+      "odd/review-results/README.md"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "3ca9375e69269f26d2bb936d86f03b96a56eabca",
+      "head": "66414f3977e042fd5300b89e5d1cced3a98db0f0",
+      "diff_sha256": "08513e90e3ba445b01fd5c3613f5ecbb208b8dc66691a007c0cbcd4f624ed912"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/cmd/review_sweep_test.go",
+        "engine/cmd/usage.go",
+        "engine/review/app/sweep.go",
+        "engine/review/app/sweep_test.go",
+        "engine/review/rolerecords.go",
+        "engine/review/rolerecords_test.go",
+        "engine/review/stored_sweeps_test.go",
+        "engine/review/sweep.go",
+        "engine/review/sweep_test.go",
+        "odd/review-results/README.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/cmd/usage.go:213-221",
+        "severity": "WARNING",
+        "claim": "The usage text, the README and bin/lib/usage.sh say T4 checks \"the test fixtures it leaves unread\", and list `T4 fixture: <path>` among the candidates the sweeper answers for. In this change T4 only computes leftovers. OrphanedFixtures is never filled in app/sweep.go, which says it stays empty until T12c. A user who reads the help will think orphaned fixtures are checked and that a clean sweep means none exist. The CHANGELOG does say the id is reserved for a later task. The user-facing help has no such caveat.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/app/sweep.go diff hunk: `t4 := review.SweepT4{Leftovers: review.Leftovers(...)}` with a comment that orphaned fixtures stay empty until T12c",
+          "engine/cmd/usage.go diff line 118",
+          "README.md diff line 32",
+          "bin/lib/usage.sh diff lines 61-62"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff.",
+      "Traced DecodeSweep with the embedded sweepFile and the T4 json.RawMessage. The outer T4 field shadows the embedded one. A record stored before T4 decodes to empty lists. A null, partial, unknown-member or duplicate-key t4 is refused by decodeSweepT4 and its tests.",
+      "Leftovers filters on the base name suffix, excludes paths in T1 DeletedOrRenamed, and deduplicates. The result is sorted and never nil.",
+      "Fired(), check(), present() and Candidates() cover T4 consistently, in the order T3, T4 leftover, T4 fixture.",
+      "The test that decodes every stored sweep protects against the record becoming unreadable. The CHANGELOG states the older-binary refusal.",
+      "Not run: no tests were executed, per the read-only constraint."
+    ]
+  }
+}

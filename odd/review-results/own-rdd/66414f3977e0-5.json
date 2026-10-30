@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "3ca9375e69269f26d2bb936d86f03b96a56eabca",
+    "head": "66414f3977e042fd5300b89e5d1cced3a98db0f0",
+    "diff_sha256": "08513e90e3ba445b01fd5c3613f5ecbb208b8dc66691a007c0cbcd4f624ed912",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/cmd/review_sweep_test.go",
+      "engine/cmd/usage.go",
+      "engine/review/app/sweep.go",
+      "engine/review/app/sweep_test.go",
+      "engine/review/rolerecords.go",
+      "engine/review/rolerecords_test.go",
+      "engine/review/stored_sweeps_test.go",
+      "engine/review/sweep.go",
+      "engine/review/sweep_test.go",
+      "odd/review-results/README.md"
+    ]
+  },
+  "rows": [
+    "default",
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "3ca9375e69269f26d2bb936d86f03b96a56eabca",
+      "head": "66414f3977e042fd5300b89e5d1cced3a98db0f0",
+      "diff_sha256": "08513e90e3ba445b01fd5c3613f5ecbb208b8dc66691a007c0cbcd4f624ed912"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/cmd/review_sweep_test.go",
+        "engine/cmd/usage.go",
+        "engine/review/app/sweep.go",
+        "engine/review/app/sweep_test.go",
+        "engine/review/rolerecords.go",
+        "engine/review/rolerecords_test.go",
+        "engine/review/stored_sweeps_test.go",
+        "engine/review/sweep.go",
+        "engine/review/sweep_test.go",
+        "odd/review-results/README.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the full diff file and reviewed it only; I did not open the worktree, run any command or run any test, so no check is reported as passed.",
+      "DecodeSweep (engine/review/rolerecords.go): a record stored before T4 has no t4 member and decodes as both lists empty and non-nil. A present t4 (null, a missing or null list, an unknown member, a duplicate key, an empty path) is refused with ErrInvalidStored. Old records still decode, which covers the persisted-format risk. This is from reading the code and the tests added in the diff.",
+      "Fired() and Candidates() include the T4 lists. T4 ids come after T3 and the existing id order is unchanged. Candidates() still removes duplicate ids.",
+      "Leftovers (engine/review/sweep.go) tests the base name suffix, skips deleted paths, removes duplicates, sorts, and returns an empty slice rather than nil. A directory named x.orig is not matched. Sweep passes candidate.Paths and t1.DeletedOrRenamed to it.",
+      "The added tests assert both the stored record and the candidate ids. A repository-wide test also decodes every stored sweep.json file under odd/review-results.",
+      "Usage text, README and CHANGELOG changes match the tests that pin them. The changelog states that an older binary refuses a record holding t4."
+    ]
+  }
+}
