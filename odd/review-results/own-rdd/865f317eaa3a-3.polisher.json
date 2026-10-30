@@ -1,0 +1,19 @@
+{
+  "kind": "polisher",
+  "base": "71e1bc319456f2d8ef4a93fb418f95d85e3ebda1",
+  "head": "865f317eaa3a9497638996764e9b2ea39157cc35",
+  "diff_sha256": "502a361b5ef84f5fd4dadb64108e1dfcb1edf56daee5415c18f3bdac498a2fa4",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/865f317e.diff.",
+      "The two Worktrees lines in skills/role-chain/references/worktrees.md match the removed lines in SKILL.md character for character. The new test pins both lines.",
+      "The new overlay.manifest row `role-chain/references/worktrees.md custom` follows the existing pattern for reference files (other skills' references/ files have rows at lines 73-100).",
+      "The Codex launch line in SKILL.md names flags `--runtime codex --feature --base --head --rows --model`. These match the flags accepted by engine/cmd/review_launch.go (line 26) and the docs tests in review_launch_docs_test.go.",
+      "The line is inserted directly after the `review record` line of Binding, which is the position the new test pins.",
+      "TestRoleChainSkillConfinesSpikesAndReviewsOutsideTheRepository now reads the skill plus the reference file and asserts a `git worktree add` line exists, so the worktree-confinement check still covers the moved rules.",
+      "Not run: I ran no tests, so none of the new or changed tests are confirmed passing.",
+      "Limits of the check: the pointer is conditional (read before creating or removing one), so the rules now depend on the parent following it. L123 (the owner's choice of this trade-off) was not read."
+    ]
+  }
+}

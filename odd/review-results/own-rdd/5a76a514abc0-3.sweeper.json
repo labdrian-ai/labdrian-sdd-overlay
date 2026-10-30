@@ -1,0 +1,15 @@
+{
+  "kind": "sweeper",
+  "base": "1ac4d72868bd28d48358509eca5c207ed8e3095f",
+  "head": "5a76a514abc064578093930183a87851cba36996",
+  "diff_sha256": "a8afd1969f7c5b36076f9671f6096efdad2fe49df04ed50b90fe355443d01fcb",
+  "sweep": "5a76a514abc0-2.sweep.json",
+  "commit": "e4ba42a895638a157c4973cfce4b1d7ad7a1f92a",
+  "candidates": [
+    {
+      "candidate": "T2 staticcheck engine: review/codexexec/codexexec_test.go: field lastExists is unused (U1000)",
+      "disposition": "removed",
+      "evidence": "field deleted from fakeRunner; go vet, gofmt -l and go test -count=1 ./review/codexexec/ green; staticcheck ./review/codexexec/ clean"
+    }
+  ]
+}

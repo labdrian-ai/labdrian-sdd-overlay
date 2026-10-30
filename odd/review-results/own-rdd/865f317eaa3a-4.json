@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "71e1bc319456f2d8ef4a93fb418f95d85e3ebda1",
+    "head": "865f317eaa3a9497638996764e9b2ea39157cc35",
+    "diff_sha256": "502a361b5ef84f5fd4dadb64108e1dfcb1edf56daee5415c18f3bdac498a2fa4",
+    "paths": [
+      "engine/skills/role_chain_artifact_test.go",
+      "overlay.manifest",
+      "skills/role-chain/SKILL.md",
+      "skills/role-chain/references/worktrees.md"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "71e1bc319456f2d8ef4a93fb418f95d85e3ebda1",
+      "head": "865f317eaa3a9497638996764e9b2ea39157cc35",
+      "diff_sha256": "502a361b5ef84f5fd4dadb64108e1dfcb1edf56daee5415c18f3bdac498a2fa4"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skills/role_chain_artifact_test.go",
+        "overlay.manifest",
+        "skills/role-chain/SKILL.md",
+        "skills/role-chain/references/worktrees.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the full diff: 4 changed paths.",
+      "The Worktrees rules moved verbatim into skills/role-chain/references/worktrees.md. The body keeps one pointer line, and a test pins the pointer and the reference lines.",
+      "The worktree-confinement test now scans the body plus the reference file, so the guard on `git worktree add` lines still covers the moved text. It also asserts that some line adds a worktree.",
+      "The new Codex line in the Binding section matches the real command, `review launch --runtime codex --feature --base --head --rows --model [--cwd]` in engine/cmd/review_launch.go and usage.go. The test checks its position right after the review record line.",
+      "The reference file is registered in overlay.manifest as custom.",
+      "Nothing was run: the tests were read, not executed. Whether the pointer test passes depends on how roleChainSections trims section text, and I did not inspect that function."
+    ]
+  }
+}

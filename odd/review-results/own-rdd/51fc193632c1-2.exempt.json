@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "b61a79e9378071fad6044fadc67037562ea4d1e8",
+    "head": "51fc193632c17004ccc568b43d8cc4c5accf2276",
+    "diff_sha256": "12b214419348208cc3933d867c7fad33492f9130f88f0b4466cb6ebe319bf086",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "bin/lib/usage.sh",
+      "docs/architecture/role-design/per-role-design-v3.md",
+      "engine/cmd/deps.go",
+      "engine/cmd/dispatch_routes_test.go",
+      "engine/cmd/review.go",
+      "engine/cmd/review_exempt_test.go",
+      "engine/cmd/review_launch.go",
+      "engine/cmd/review_launch_docs_test.go",
+      "engine/cmd/review_launch_test.go",
+      "engine/cmd/review_test.go",
+      "engine/cmd/usage.go"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "cd engine && go vet ./... && gofmt -l .",
+        "result": "pass",
+        "output": "no output"
+      },
+      {
+        "command": "cd engine && go test -count=1 . ./cmd/... ./review/... ./skills/... ./agentgen/...",
+        "result": "pass",
+        "output": "every package ok"
+      },
+      {
+        "command": "bin/labdrian-overlay gadu-generate --check",
+        "result": "pass",
+        "output": "OK (committed artifacts match generator output)"
+      }
+    ]
+  }
+}

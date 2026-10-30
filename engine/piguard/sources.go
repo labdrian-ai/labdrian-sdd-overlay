@@ -25,9 +25,9 @@ type Reporter interface {
 
 // CheckTestSources reads the source of the *_test.go files in dir and fails t for a test that can
 // reach the CLI of the machine with the PATH of the run: one that imports the process adapter
-// (engine/execrunner), or starts `pi` itself with exec.Command or exec.CommandContext. The tests
-// of a package that drive the Pi adapter hand it a fake CommandRunner instead. Looking `pi` up
-// (exec.LookPath) starts nothing and is allowed, because the guard's own tests do it.
+// (engine/execrunner), or starts `pi` or `codex` itself with exec.Command or exec.CommandContext. The
+// tests of a package that drive the Pi adapter or the Codex reviewer hand it a fake runner instead.
+// Looking `pi` up (exec.LookPath) starts nothing and is allowed, because the guard's own tests do it.
 // It also fails when dir holds no test file, so a wrong path cannot pass for good.
 //
 // What the scan reads is syntax, and it says what it cannot see. It finds the call under the name
@@ -42,7 +42,7 @@ type Reporter interface {
 // TestCheckTestSourcesReadsAShadowedConstantAsThePackageOne pins the shadowing, so a change that
 // widens the scan shows up as a test to rewrite, not as a silent gap.
 //
-// The first line of defence is the PATH of the run, whose `pi` refuses to run (Install); this
+// The first line of defence is the PATH of the run, whose `pi` and `codex` refuse to run (Install); this
 // scan is the second.
 func CheckTestSources(t Reporter, dir string) {
 	t.Helper()
@@ -105,7 +105,7 @@ func CheckTestSources(t Reporter, dir string) {
 			if nameArg >= len(call.Args) {
 				return true
 			}
-			if started, ok := stringOf(call.Args[nameArg], constants); ok && started == "pi" {
+			if started, ok := stringOf(call.Args[nameArg], constants); ok && (started == "pi" || started == "codex") {
 				t.Errorf("%s:%d: exec.%s(%q) starts the real CLI", name, fset.Position(call.Pos()).Line, sel.Sel.Name, started)
 			}
 			return true

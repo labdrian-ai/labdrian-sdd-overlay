@@ -608,8 +608,9 @@ overlay roles <verb>
                                                                                   workflow of the cited feature (`workflow open`). Exit 0 always, 1 usage error
 
 overlay review <verb>
-    Forward review binding, storage, exemption and delivery-check verbs to the engine unchanged. No verb launches an agent or
-    dispatches work: a reviewer's or a verifier's reply is a file somebody else produced. What is stored
+    Forward review binding, storage, exemption, delivery-check and launch verbs to the engine unchanged. `launch` is the one
+    verb that starts a reviewer, on Codex, read-only; no other verb launches an agent or dispatches work: a reviewer's or a
+    verifier's reply is a file somebody else produced. What is stored
     where, and the exact git command whose output `diff_sha256` is the digest of, are in
     odd/review-results/README.md.
     bind   --base <rev> --head <rev> [--cwd <repo>]
@@ -772,6 +773,26 @@ overlay review <verb>
         repository, and a pull request whose commits were reviewed only by gentle-ai receipts is refused. The gate
         for openspec archives (`tools/archive-anchor-gate`) is not changed. Exit 0 verified or no-feature, 1 usage
         error, refusal or any other failure.
+    launch --runtime codex --feature <name> --base <rev> --head <rev> --rows <id,id> --model <model> [--cwd <repo>]
+        This is the one verb that starts a reviewer, on Codex, read-only. It reads the brief on stdin, binds the candidate as
+        `bind` does (making or reusing the detached worktree) and runs `codex exec --sandbox read-only --model <model>
+        --cd <worktree> --skip-git-repo-check --ephemeral --ignore-user-config` in that worktree, never through a shell,
+        under a deadline of 30 minutes and 64 MiB on each stream. Its stdin is the reviewer instructions of the deployed
+        Codex agent file (`<codex root>/agents/reviewer.toml`, `$CODEX_HOME` or `~/.codex`; a missing one, or one the
+        generator did not write, is an error that says run: labdrian-overlay apply --target codex) and the brief. The
+        last message of codex is recorded as `record --rows` records a reply, so every rule of `record` holds and stdout
+        and stderr are what `record` prints. `--runtime` takes only `codex`: --runtime must be codex: on Claude Code and Pi
+        the parent launches the reviewer agent natively. `--model` is required and passed through, with no default.
+        Refused before codex starts, as exit 1: an unsafe feature, rows that are not rows of `roles/reviewer/rows.json`,
+        a model that is empty, starts with `-` or holds a control character, a candidate over the 150000-byte limit of
+        one launch (split it into one launch per commit), and a brief that is empty, not UTF-8, over the reply limit or
+        that does not name the full base, the full head, the diff_sha256 and the worktree path of the binding. A codex
+        that is not found, exits non-zero, stops at its deadline or leaves no last message is an error that names codex
+        and repeats what it printed on stderr, and nothing is stored. `--ignore-user-config` makes codex skip
+        `~/.codex/config.toml`, so a model provider set only there cannot launch. The check of the brief is textual: a
+        brief that names the binding and asks something else passes it, and the reply is still held to the binding by
+        `record`. Whether the installed Codex enforces `--sandbox read-only` is shown only by a live run. Exit 0 stored,
+        2 reply refused, 1 usage error or any other failure.
     stop-hook
         Not run by a person: the Claude Code Stop hook that `install-hooks` wires (the review stop-hook, described
         below as `gentle-ai-overlay review stop-hook`). It asks the agent for what the first commit with unfinished

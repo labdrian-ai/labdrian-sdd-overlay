@@ -3,8 +3,8 @@
 // test`; since the Pi adapter takes its commands through a port, no test of it starts a process,
 // and this guard is the net under every test that might.
 //
-// Install puts a `pi` first on the PATH of the process. It is a shell script that records its
-// arguments and exits 97, so whatever looks up `pi` finds the guard before any real one, and the
+// Install puts a `pi` and a `codex` first on the PATH of the process. Each is the same shell script, which
+// records its arguments and exits 97, so whatever looks up `pi` or `codex` finds the guard before any real one, and the
 // run can ask afterwards whether anything started it. A TestMain installs it and fails the run
 // when Started reports true.
 //
@@ -20,6 +20,9 @@ import (
 	"path/filepath"
 	"runtime"
 )
+
+// guarded are the programs the guard refuses: the Pi CLI, and the Codex CLI that the review launcher starts.
+var guarded = []string{"pi", "codex"}
 
 // Guard is an installed guard.
 type Guard struct {
@@ -42,9 +45,11 @@ func Install() (*Guard, error) {
 	g.dir = dir
 	g.marker = filepath.Join(dir, "started")
 	script := "#!/bin/sh\nprintf '%s\\n' \"$*\" >> '" + g.marker + "'\nexit 97\n"
-	if err := os.WriteFile(filepath.Join(dir, "pi"), []byte(script), 0o755); err != nil {
-		os.RemoveAll(dir)
-		return nil, err
+	for _, name := range guarded {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(script), 0o755); err != nil {
+			os.RemoveAll(dir)
+			return nil, err
+		}
 	}
 	path := dir
 	if g.previous != "" {
@@ -94,5 +99,5 @@ func (g *Guard) Verdict() (message string, ok bool) {
 	if !g.Started() {
 		return "", true
 	}
-	return fmt.Sprintf("a test started `pi`; the guard refused it. It was started with:\n%s", g.Report()), false
+	return fmt.Sprintf("a test started `pi` or `codex`; the guard refused it. It was started with:\n%s", g.Report()), false
 }

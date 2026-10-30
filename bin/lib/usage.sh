@@ -336,6 +336,23 @@ Commands:
                                              refused; print the outcome (verified or no-feature) and the features as
                                              JSON, store nothing
                                              (exit 0 verified or no-feature, 1 refused or error)
+                                   launch --runtime codex --feature NAME --base REV --head REV --rows ID,ID --model MODEL [--cwd REPO]
+                                             the one verb that starts a reviewer, on Codex, read-only: read the brief
+                                             from stdin, bind the candidate as review bind does and run
+                                             codex exec --sandbox read-only --model <model> --cd <worktree>
+                                             --skip-git-repo-check --ephemeral --ignore-user-config with the reviewer
+                                             instructions of the deployed Codex agent file (a missing one says run:
+                                             labdrian-overlay apply --target codex) and the brief, then record its
+                                             last message as review record does, printing what it prints;
+                                             --runtime must be codex: on Claude Code and Pi the parent launches the
+                                             reviewer agent natively; --model is required; refused before codex
+                                             starts (exit 1): a candidate over the 150000-byte limit of one launch,
+                                             and a brief that is empty, not UTF-8, or that does not name the full
+                                             base, the full head, the diff_sha256 and the worktree path of the
+                                             binding; a codex that fails or leaves no last message is an error that
+                                             names codex and repeats what it printed on stderr, and nothing is
+                                             stored
+                                             (exit 0 stored, 2 reply refused, 1 usage error or any other failure)
                                    stop-hook
                                              not run by a person: the Claude Code Stop hook that install-hooks wires
                                              (the review stop-hook). On a branch other than the default one, it blocks
@@ -343,7 +360,8 @@ Commands:
                                              it, with the command for each thing it misses, asking for each thing once
                                              for each session and commit, and never for the whole branch; it lets the
                                              stop happen on anything it cannot tell (exit 0 always, 1 usage error)
-                                   No verb launches an agent or dispatches work.
+                                   Only launch starts an agent, the reviewer on Codex; no other verb launches an
+                                   agent or dispatches work.
   memory <verb>                    Forward memory-directive verbs to the engine unchanged.
                                    Read-only: no verb queries or writes memory; query execution
                                    belongs to a runtime adapter outside this overlay (Phase 7).

@@ -1,0 +1,17 @@
+{
+  "kind": "polisher",
+  "base": "1ac4d72868bd28d48358509eca5c207ed8e3095f",
+  "head": "5a76a514abc064578093930183a87851cba36996",
+  "diff_sha256": "a8afd1969f7c5b36076f9671f6096efdad2fe49df04ed50b90fe355443d01fcb",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/5a76a514.diff.",
+      "Checked agentgen.CodexInstructions (readMultiline/skipBasic) against the triple-quote escaping of tomlMultiline. The quote-run handling (runs of 3 to 5 close the string, shorter runs are kept) is consistent with the round-trip and refusal tests in the diff. I did not run those tests.",
+      "Checked codexexec.Review. The codex arguments are `exec --sandbox read-only --ephemeral --ignore-user-config --output-last-message`. The scratch directory is removed with defer. The deadline comes from a context timeout. Every failure after the instructions are read wraps app.ErrReviewerDidNotAnswer and carries stderr bounded to 2000 bytes. The reply file read is size-limited.",
+      "Confirmed in the worktree that execrunner.Runner has OutputStdin with the same signature the codexexec Runner interface requires.",
+      "Checked the test guard. piguard now installs a refusing `codex` script next to `pi`, and CheckTestSources flags exec.Command and exec.CommandContext calls that start `codex`. codexexec_test uses a fake runner only, so no test starts the real codex.",
+      "The spec file is over 760 KB and its lines are too long to read through Grep. I only confirmed that the codex flag names appear in it (line 54). I did not read the S9(b) acceptance text itself."
+    ]
+  }
+}

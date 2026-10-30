@@ -52,6 +52,42 @@ func TestInstallPutsAPiThatRefusesFirstOnThePath(t *testing.T) {
 	}
 }
 
+// The guard refuses `codex` as well: the review launcher starts it, and no test may reach the real one.
+func TestInstallPutsACodexThatRefusesFirstOnThePath(t *testing.T) {
+	skipOnWindows(t)
+	t.Setenv("PATH", os.Getenv("PATH"))
+
+	guard, err := piguard.Install()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer guard.Close()
+
+	path, err := exec.LookPath("codex")
+	if err != nil {
+		t.Fatalf("LookPath(codex): %v", err)
+	}
+	if !strings.HasPrefix(path, os.TempDir()) {
+		t.Errorf("codex resolves to %s, want the guard in a temporary directory", path)
+	}
+	if guard.Started() {
+		t.Fatal("the guard reports a start before anything ran it")
+	}
+	out, err := exec.Command(path, "exec", "--sandbox", "read-only").CombinedOutput()
+	if err == nil {
+		t.Fatal("the guard codex exited 0; it must refuse")
+	}
+	if !guard.Started() {
+		t.Error("the guard does not report that it was started")
+	}
+	if !strings.Contains(guard.Report(), "exec --sandbox read-only") {
+		t.Errorf("Report() = %q, want the arguments the guard was started with (output %q)", guard.Report(), out)
+	}
+	if message, ok := guard.Verdict(); ok || !strings.Contains(message, "pi") || !strings.Contains(message, "codex") {
+		t.Errorf("Verdict() = %q, %v; want a refusal that says pi or codex", message, ok)
+	}
+}
+
 func TestCloseRestoresThePathAndRemovesTheGuard(t *testing.T) {
 	skipOnWindows(t)
 	before := os.Getenv("PATH")

@@ -1,6 +1,8 @@
 package agentgen
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -55,5 +57,58 @@ func TestTheTomlFormsRefuseControlCharacters(t *testing.T) {
 	}
 	if _, err := tomlMultiline("a\nb"); err != nil {
 		t.Errorf("a newline in a multi-line string was refused: %v", err)
+	}
+}
+
+// CodexInstructions is the exact inverse of codexFile: for every role, and for a body that holds a
+// backslash, a run of three quotation marks and a run of four, it gives the body back.
+func TestCodexInstructionsIsTheInverseOfTheCodexFile(t *testing.T) {
+	bodies := map[string]string{
+		"a backslash":        "one \\ two \\\\ three\n",
+		"a run of three":     "x\"\"\"y\n",
+		"a run of four":      "x\"\"\"\"y\n",
+		"a quote at the end": "x\"",
+		"two at the end":     "x\"\"",
+		"no body line":       "",
+	}
+	for _, r := range roles {
+		data, err := os.ReadFile(filepath.Join("..", "..", "roles", r.name, "body.md"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		bodies["role "+r.name] = string(data)
+	}
+	for name, body := range bodies {
+		t.Run(name, func(t *testing.T) {
+			file, err := roles[0].codexFile(body)
+			if err != nil {
+				t.Fatal(err)
+			}
+			got, err := CodexInstructions([]byte(file))
+			if err != nil || got != body {
+				t.Errorf("CodexInstructions = %q, %v; want %q", got, err, body)
+			}
+		})
+	}
+}
+
+// A file the generator did not write is refused, and the error says what is not its shape.
+func TestCodexInstructionsRefusesAFileTheGeneratorDidNotWrite(t *testing.T) {
+	const tail = "\nmodel_reasoning_effort = \"high\"\n"
+	head := "name = \"reviewer\"\ndescription = \"d\"\n"
+	for _, c := range []struct{ name, file, want string }{
+		{"no developer_instructions", head + "model_reasoning_effort = \"high\"\n", "developer_instructions"},
+		{"an unterminated string", head + "developer_instructions = \"\"\"\nabc\n", "unterminated"},
+		{"an unknown escape", head + "developer_instructions = \"\"\"\na\\nb\n\"\"\"" + tail, "escape"},
+		{"a fifth key", head + "developer_instructions = \"\"\"\nabc\n\"\"\"" + tail + "model = \"x\"\n", "follows"},
+		{"keys out of order", "description = \"d\"\nname = \"reviewer\"\ndeveloper_instructions = \"\"\"\nabc\n\"\"\"" + tail, "name"},
+		{"an empty file", "", "name"},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			got, err := CodexInstructions([]byte(c.file))
+			if err == nil || !strings.Contains(err.Error(), c.want) || got != "" {
+				t.Errorf("CodexInstructions = %q, %v; want an error naming %q", got, err, c.want)
+			}
+		})
 	}
 }

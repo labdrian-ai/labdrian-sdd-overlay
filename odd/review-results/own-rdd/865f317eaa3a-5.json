@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "71e1bc319456f2d8ef4a93fb418f95d85e3ebda1",
+    "head": "865f317eaa3a9497638996764e9b2ea39157cc35",
+    "diff_sha256": "502a361b5ef84f5fd4dadb64108e1dfcb1edf56daee5415c18f3bdac498a2fa4",
+    "paths": [
+      "engine/skills/role_chain_artifact_test.go",
+      "overlay.manifest",
+      "skills/role-chain/SKILL.md",
+      "skills/role-chain/references/worktrees.md"
+    ]
+  },
+  "rows": [
+    "default",
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "71e1bc319456f2d8ef4a93fb418f95d85e3ebda1",
+      "head": "865f317eaa3a9497638996764e9b2ea39157cc35",
+      "diff_sha256": "502a361b5ef84f5fd4dadb64108e1dfcb1edf56daee5415c18f3bdac498a2fa4"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skills/role_chain_artifact_test.go",
+        "overlay.manifest",
+        "skills/role-chain/SKILL.md",
+        "skills/role-chain/references/worktrees.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the full diff: test changes, manifest line, SKILL.md pointer and Codex launch line, and the new references/worktrees.md.",
+      "The moved Worktrees text is identical in content to the removed lines. New tests pin the pointer line and the verbatim reference lines. The confinement test now scans SKILL.md plus the reference file and asserts that a `git worktree add` line exists.",
+      "engine/cmd/review_launch.go exists and accepts exactly --runtime (codex only), --feature, --base, --head, --rows, --model and --cwd. The new Codex line in Binding matches that flag set.",
+      "overlay.manifest registers role-chain/references/worktrees.md as custom, following the pattern of the other references entries.",
+      "Not run: no tests or builds were executed. This is a read-only review."
+    ]
+  }
+}

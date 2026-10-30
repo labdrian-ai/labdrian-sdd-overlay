@@ -1,0 +1,21 @@
+{
+  "kind": "sweep",
+  "base": "1ac4d72868bd28d48358509eca5c207ed8e3095f",
+  "head": "5a76a514abc064578093930183a87851cba36996",
+  "diff_sha256": "a8afd1969f7c5b36076f9671f6096efdad2fe49df04ed50b90fe355443d01fcb",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": []
+  },
+  "t2": [
+    {
+      "tool": "staticcheck",
+      "module": "engine",
+      "new": [
+        "review/codexexec/codexexec_test.go: field lastExists is unused (U1000)"
+      ]
+    }
+  ],
+  "t3": []
+}
