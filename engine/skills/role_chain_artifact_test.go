@@ -178,11 +178,7 @@ func roleChainDuties() []roleChainDuty {
 			"load the `sweeper` skill",
 			"readability row", "docs, public API, messages or help", "second blind launch", "another `model`", "Risk line",
 		}},
-		{"Worktrees", []string{
-			"`git worktree add --detach ~/labdrian-sdd-overlay-worktrees/spike-<goal>`", "reviews: `review bind` makes it",
-			"Never under the repository or the scratchpad", "remove after the verdict",
-			"the delivery writes only the paths it names", "Engram `project`",
-		}},
+		{"Worktrees", []string{roleChainWorktreesPointer}},
 		{"Binding", []string{
 			"`labdrian review bind --base B --head H`", "`base`", "`head` (full SHAs)", "`diff_sha256`", "`worktree`",
 			"150 KB", "one launch per commit", "never truncated", "S# criteria",
@@ -228,12 +224,45 @@ func TestRoleChainDutiesCarryWhatTheDesignGivesEachOne(t *testing.T) {
 	}
 }
 
+// The Worktrees rules left the body for skills/role-chain/references/worktrees.md (own-rdd T8c, L123: the
+// Codex launch line did not fit the body budget); the body keeps one pointer line under its heading.
+const roleChainWorktreesPointer = "- Worktrees: read `references/worktrees.md` before creating or removing one."
+
+// roleChainWorktrees reads that reference file.
+func roleChainWorktrees(t *testing.T) string {
+	t.Helper()
+	return readRepoFile(t, skillsRepoRoot(t), "skills/role-chain/references/worktrees.md")
+}
+
+func TestRoleChainWorktreesRulesLiveInTheReferenceFile(t *testing.T) {
+	_, _, body := roleChainSkill(t)
+	if _, under := roleChainSections(body); !strings.Contains(under["Worktrees"], roleChainWorktreesPointer+"\n") {
+		t.Errorf("the Worktrees section must carry the pointer, exactly:\n%s", roleChainWorktreesPointer)
+	}
+	reference := roleChainWorktrees(t)
+	if !strings.HasPrefix(reference, "# Worktrees\n") {
+		t.Errorf("the reference file must start with its own heading, got %q", reference)
+	}
+	for _, fragment := range []string{
+		"- Spikes: `git worktree add --detach ~/labdrian-sdd-overlay-worktrees/spike-<goal>`; reviews: `review bind` makes it. Never under the repository or the scratchpad; remove after the verdict.",
+		"- The prompt names one path an agent works in; the delivery writes only the paths it names. Pass Engram `project`.",
+	} {
+		if !strings.Contains(reference, "\n"+fragment+"\n") {
+			t.Errorf("the reference file lacks the line, verbatim: %s", fragment)
+		}
+	}
+}
+
 // Spikes and reviews run in worktrees that git detaches under the owner's worktrees directory, never
 // under the repository or the scratchpad (a worktree there made the stop hook fail on the untracked
 // files of the scratchpad), and no instruction of the skill makes the platform create one for it: the
 // worktree tool and the isolation option put theirs under .claude/worktrees, inside the repository.
 func TestRoleChainSkillConfinesSpikesAndReviewsOutsideTheRepository(t *testing.T) {
-	whole, _, _ := roleChainSkill(t)
+	skill, _, _ := roleChainSkill(t)
+	whole := skill + "\n" + roleChainWorktrees(t)
+	if !strings.Contains(whole, "git worktree add") {
+		t.Error("no line adds a worktree")
+	}
 	for _, line := range strings.Split(whole, "\n") {
 		if !strings.Contains(line, "git worktree add") {
 			continue
@@ -444,5 +473,23 @@ func TestVerifierDeltaObjectIsTheOneTheEngineParses(t *testing.T) {
 			t.Errorf("the verifier delta says %q, and reviewverdict.Parse of a verdict with an empty %s returns %v, want %v", rule.says, rule.member, err, reviewverdict.ErrMissingEvidence)
 		}
 		legal[rule.member] = saved
+	}
+}
+
+// own-rdd S9 (d): on Codex the parent pipes the brief to review launch, never to a native reviewer sub-agent. The line follows
+// the review record line of Binding, exactly.
+func TestRoleChainSkillTellsCodexToLaunchTheReviewerThroughTheEngine(t *testing.T) {
+	_, _, body := roleChainSkill(t)
+	const line = "- On Codex: pipe that brief to `labdrian review launch --runtime codex --feature F --base B --head H --rows R --model M`; it binds, runs the reviewer read-only and records it as `review record` does; never a native reviewer sub-agent."
+	_, under := roleChainSections(body)
+	binding := under["Binding"]
+	record := strings.Index(binding, "\n- `labdrian review record --feature F")
+	if record < 0 {
+		t.Fatal("the Binding section lacks the review record line")
+	}
+	next := strings.Index(binding[record+1:], "\n")
+	rest := binding[record+1+next:]
+	if !strings.HasPrefix(rest, "\n"+line+"\n") {
+		t.Errorf("the line after the review record line of Binding is not %q", line)
 	}
 }
