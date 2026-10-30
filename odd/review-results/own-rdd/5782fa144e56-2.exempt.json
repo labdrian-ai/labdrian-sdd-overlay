@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "d6c935be4690f6f2fbd0755ca9ee64e9e195c8be",
+    "head": "5782fa144e56849ba7288688f28e48b11fb8fd16",
+    "diff_sha256": "2f218ec583a82d288cc7f13ef4b31b7d71a8d9c19fc23c964713d610061ee797",
+    "paths": [
+      "skills/judgment-day/.approval.json"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "cd engine && go test -count=1 -run TestRegistryLockE2E_ValidateLeavesTheRealTreeUntouched ./skills/",
+        "result": "pass",
+        "output": "ok github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
+      },
+      {
+        "command": "cd engine && go test -count=1 ./...",
+        "result": "pass",
+        "output": "every package ok"
+      }
+    ]
+  }
+}
