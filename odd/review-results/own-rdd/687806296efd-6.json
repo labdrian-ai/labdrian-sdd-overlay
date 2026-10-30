@@ -1,0 +1,74 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "3054c952c15d6c33633c6f7016c6ae850a06b6c7",
+    "head": "687806296efd72f0522dcb4d794ef6aa47f216b8",
+    "diff_sha256": "bd60555d990b98bf647665de2700981b5f5a565e2f1354e76c7de459ff502411",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/cmd/review.go",
+      "engine/cmd/review_exempt_test.go",
+      "engine/cmd/roles_evidence_exempt_test.go",
+      "engine/cmd/usage.go",
+      "engine/review/exempt_stored_test.go",
+      "engine/review/handoff.go",
+      "engine/review/review.go",
+      "engine/roles/handoff_test.go",
+      "engine/roles/handoff_validate.go",
+      "engine/roles/roles.go",
+      "engine/roles/roles_test.go"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "3054c952c15d6c33633c6f7016c6ae850a06b6c7",
+      "head": "687806296efd72f0522dcb4d794ef6aa47f216b8",
+      "diff_sha256": "bd60555d990b98bf647665de2700981b5f5a565e2f1354e76c7de459ff502411"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/cmd/review.go",
+        "engine/cmd/review_exempt_test.go",
+        "engine/cmd/roles_evidence_exempt_test.go",
+        "engine/cmd/usage.go",
+        "engine/review/exempt_stored_test.go",
+        "engine/review/handoff.go",
+        "engine/review/review.go",
+        "engine/roles/handoff_test.go",
+        "engine/roles/handoff_validate.go",
+        "engine/roles/roles.go",
+        "engine/roles/roles_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/cmd/review.go:393",
+        "claim": "The deviation from the T9b row is sound. parentFills prepends from_role only when FromRole is empty and PayloadKind is roles.PayloadExemption. The only skeleton that leaves from_role empty is ExemptionHandoff. The record and verify skeletons still print reviewer, so their stderr is unchanged. Gating on kind avoids changing output nobody asked to change. The cost is a hidden coupling: a future skeleton that also leaves from_role empty must be added to this condition by hand.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/review.go:393",
+          "engine/review/app/exempt.go:88"
+        ],
+        "severity": "SUGGESTION"
+      }
+    ],
+    "evidence": [
+      "Read the complete diff.",
+      "Grepped the non-test callers of ExemptionHandoff, PayloadExemption and IsValidTransition in the worktree. SkipsReviewer is called only from checkTransition. IsValidTransition and NextRoles are unchanged. The only non-test callers of ExemptionHandoff are review/app/exempt.go and its definition.",
+      "SkipsReviewer requires ToRole delivery, a from_role that may hand off to the reviewer, a payload_kind of review-exemption and a completed status. The tests cover builder, sweeper and polisher accepted, and refuse an interrupted exemption, other kinds, estimator and shaper. Reviewer to delivery stays valid.",
+      "The chain test shows that from_role reviewer on an exemption is refused by chain continuity when the chain is at the sweeper, and that sweeper to delivery is stored.",
+      "I did not run any tests or commands. I did not read review/evidence.go or app/evidence.go beyond the grep lines, so whether an exemption record from builder, sweeper or polisher passes the delivery-side evidence check is not run."
+    ]
+  }
+}

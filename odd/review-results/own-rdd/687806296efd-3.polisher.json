@@ -1,0 +1,17 @@
+{
+  "kind": "polisher",
+  "base": "3054c952c15d6c33633c6f7016c6ae850a06b6c7",
+  "head": "687806296efd72f0522dcb4d794ef6aa47f216b8",
+  "diff_sha256": "bd60555d990b98bf647665de2700981b5f5a565e2f1354e76c7de459ff502411",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/68780629.diff (all 13 paths). I ran no tests or builds, so no check is reported as passing.",
+      "Read S12 (a) and (b) in the worktree's odd/tasks/own-rdd.md (lines 25-27). I did not read the T9b task row itself; Grep returned only the L109 Log entry that mentions it. The code matches the S12 text, point by point:",
+      "S12 (a) is implemented as specified. roles.SkipsReviewer is true only when ToRole is delivery, IsValidTransition(from, reviewer) holds, payload_kind is the exemption and status is completed. checkTransition applies it as `!IsValidTransition && !SkipsReviewer`, so the refusal text is unchanged for every other skip. IsValidTransition and NextRoles are untouched. The transition test table and the new Validate tests cover a builder with an interrupted exemption, a builder with other payload kinds, and an estimator or shaper with a completed exemption, all refused. They also cover reviewer to delivery staying valid for every kind. review.PayloadExemption now aliases roles.PayloadExemption; review already imported roles in handoff.go, so there is no import cycle.",
+      "S12 (b) is implemented as specified. ExemptionHandoff leaves from_role empty. parentFills inserts from_role first only when FromRole is empty and the payload is an exemption, so the record and verify skeletons are unchanged. The new exempt stderr line matches the spec string exactly, and usage.go and README use the required wording.",
+      "I grepped non-test code for other consumers of an exemption record with from_role reviewer. None remain. The only hits are role-chain and inception-pipeline skill text about reviewer to delivery, which the spec leaves unchanged (D21), and design docs.",
+      "The end-to-end test appends the exemption from the sweeper and ends the chain at delivery. It also confirms that from_role reviewer is refused by the chain's to_role check, with nothing stored."
+    ]
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "kind": "polisher",
+  "base": "3054c952c15d6c33633c6f7016c6ae850a06b6c7",
+  "head": "687806296efd72f0522dcb4d794ef6aa47f216b8",
+  "diff_sha256": "bd60555d990b98bf647665de2700981b5f5a565e2f1354e76c7de459ff502411",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff of commit 68780629 (13 files) in /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/68780629.diff.",
+      "Read the T9b row at odd/tasks/own-rdd.md line 146 in the worktree. The diff matches it: SkipsReviewer, the checkTransition change, PayloadExemption aliased to roles.PayloadExemption, ExemptionHandoff setting FromRole to empty, parentFills inserting from_role, the usage/README/CHANGELOG text, and the listed tests. S12 text was not read separately.",
+      "Grepped non-test code under engine/ for IsValidTransition, SkipsReviewer, FromRole and PayloadExemption. The only transition check for a record is in checkTransition. roles/chain.go (line 59) still requires from_role to equal the previous record's to_role, so a wrong or empty from_role on an exemption is refused by the chain.",
+      "SkipsReviewer requires completed status, payload kind review-exemption, to_role delivery, and a from_role that IsValidTransition allows to reach the reviewer. Interrupted exemptions and other payload kinds keep the old error text. IsValidTransition and NextRoles are unchanged.",
+      "review/review.go already imported roles through handoff.go, so aliasing PayloadExemption adds no new import cycle.",
+      "No tests were run (not run), so this is a static review only."
+    ]
+  }
+}
