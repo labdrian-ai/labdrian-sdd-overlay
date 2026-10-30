@@ -713,9 +713,10 @@ overlay review <verb>
         git as `record` does and store the exemption as odd/review-results/<feature>/<head12>-<n>.exempt.json,
         numbered with the results and the verdicts of the head and never over an existing file; the file holds
         the binding, the declared risk and the report. stdout is the RoleHandoff skeleton for `roles append
-        --stdin` (from_role reviewer, to_role delivery, payload_kind review-exemption, payload_sha256 of the
-        stored file, evidence review-diff and review-exemption); the parent of the chain fills project_id,
-        goal_id, chain_id, seq, prev_sha256 and context.summary. A declaration or a report that does not hold
+        --stdin` (from_role left to the parent, the role the chain is at: builder, sweeper or polisher, because
+        the exemption skips the reviewer; to_role delivery, payload_kind review-exemption, payload_sha256 of the
+        stored file, evidence review-diff and review-exemption); the parent of the chain fills from_role,
+        project_id, goal_id, chain_id, seq, prev_sha256 and context.summary. A declaration or a report that does not hold
         writes nothing and the error names the rule. `check` clears an exempted head unless a stored result
         blocks it. Exit 0 stored, 2 report refused, 1 usage error, a risk that is refused or any other failure.
     sweep  --feature <name> --base <rev> --head <rev> [--cwd <repo>]

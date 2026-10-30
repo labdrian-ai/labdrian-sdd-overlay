@@ -53,7 +53,8 @@ func (h RoleHandoff) checkIdentity() error {
 }
 
 // checkTransition requires both roles to be known, in the order from then to, and the step
-// from one to the other to be one the roles allow.
+// from one to the other to be one the roles allow, or the completed exemption that skips the reviewer
+// (SkipsReviewer).
 func (h RoleHandoff) checkTransition() error {
 	if !IsKnownRole(h.FromRole) {
 		return fmt.Errorf("from_role %q is not a known role", h.FromRole)
@@ -61,7 +62,7 @@ func (h RoleHandoff) checkTransition() error {
 	if !IsKnownRole(h.ToRole) {
 		return fmt.Errorf("to_role %q is not a known role", h.ToRole)
 	}
-	if !IsValidTransition(h.FromRole, h.ToRole) {
+	if !IsValidTransition(h.FromRole, h.ToRole) && !SkipsReviewer(h) {
 		return fmt.Errorf("transition from %q to %q is not allowed", h.FromRole, h.ToRole)
 	}
 	return nil

@@ -381,11 +381,17 @@ func reportVerified(p process, v reviewapp.Verified) {
 }
 
 // parentFills names the members of the skeleton h that the parent of the chain still fills, in the order of
-// review.ParentFields: to_role is not among them when the skeleton already names the next role.
+// review.ParentFields: to_role is not among them when the skeleton already names the next role, and from_role
+// comes first when the skeleton is an exemption that leaves it empty (it skips the reviewer, so the role the chain
+// is at is the parent's to name). The skeletons of 'review record' and 'review verify' carry the reviewer as
+// from_role, and a skeleton of another kind that leaves it empty is not one this names.
 func parentFills(h roles.RoleHandoff) string {
 	fills := review.ParentFields() // a new slice: deleting from it changes no other caller's
 	if h.ToRole != "" {
 		fills = slices.DeleteFunc(fills, func(field string) bool { return field == "to_role" })
+	}
+	if h.FromRole == "" && h.PayloadKind == roles.PayloadExemption {
+		fills = slices.Insert(fills, 0, "from_role")
 	}
 	return strings.Join(fills, ", ")
 }

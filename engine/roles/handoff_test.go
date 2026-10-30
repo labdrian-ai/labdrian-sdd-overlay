@@ -327,3 +327,66 @@ func TestParseRoleHandoffAcceptsInterruptedWithResumeReason(t *testing.T) {
 		t.Fatalf("ResumeReason = %v, want %q", h.ResumeReason, "network was down")
 	}
 }
+
+// exemptionRecord is a valid record from from to to, of payload kind kind and status status; an interrupted one
+// carries a resume reason.
+func exemptionRecord(t *testing.T, from, to Role, kind string, status Status) RoleHandoff {
+	t.Helper()
+	h, err := ParseRoleHandoff([]byte(validHandoffJSON()))
+	if err != nil {
+		t.Fatalf("setup: ParseRoleHandoff() = %v", err)
+	}
+	h.FromRole, h.ToRole, h.PayloadKind, h.Status = from, to, kind, status
+	if status == StatusInterrupted {
+		reason := "the exemption was cut short"
+		h.ResumeReason = &reason
+	}
+	return h
+}
+
+// A completed review-exemption goes to the delivery from every role the reviewer may be skipped from: the head was
+// closed without a review that never ran.
+func TestRoleHandoffValidateAcceptsACompletedExemptionThatSkipsTheReviewer(t *testing.T) {
+	for _, from := range []Role{RoleBuilder, RoleSweeper, RolePolisher} {
+		t.Run(string(from), func(t *testing.T) {
+			h := exemptionRecord(t, from, RoleDelivery, PayloadExemption, StatusCompleted)
+			if err := h.Validate(); err != nil {
+				t.Fatalf("Validate() = %v, want nil", err)
+			}
+		})
+	}
+}
+
+// Every other skip of the reviewer keeps today's refusal, word for word; the reviewer's own handoff to the delivery
+// stays valid for every kind.
+func TestRoleHandoffValidateRefusesEveryOtherSkipOfTheReviewer(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		from     Role
+		kind     string
+		status   Status
+		accepted bool
+	}{
+		{"builder with a progress payload", RoleBuilder, "progress", StatusCompleted, false},
+		{"builder with a review-report payload", RoleBuilder, "review-report", StatusCompleted, false},
+		{"builder with an interrupted exemption", RoleBuilder, PayloadExemption, StatusInterrupted, false},
+		{"estimator with a completed exemption", RoleEstimator, PayloadExemption, StatusCompleted, false},
+		{"shaper with a completed exemption", RoleShaper, PayloadExemption, StatusCompleted, false},
+		{"reviewer with an exemption", RoleReviewer, PayloadExemption, StatusCompleted, true},
+		{"reviewer with a review-report", RoleReviewer, "review-report", StatusCompleted, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := exemptionRecord(t, tc.from, RoleDelivery, tc.kind, tc.status).Validate()
+			if tc.accepted {
+				if err != nil {
+					t.Fatalf("Validate() = %v, want nil", err)
+				}
+				return
+			}
+			want := fmt.Sprintf("transition from %q to \"delivery\" is not allowed", tc.from)
+			if err == nil || err.Error() != want {
+				t.Fatalf("Validate() = %v, want %q", err, want)
+			}
+		})
+	}
+}
