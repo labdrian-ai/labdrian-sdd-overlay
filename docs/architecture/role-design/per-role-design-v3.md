@@ -69,7 +69,7 @@ Order: `[prototyper] → shaper → estimator → builder → [sweeper] → [pol
 | verifier | native; Bash allowed | native | native (`bash` tool) | parent-skill |
 | estimator | skill, all runtimes (skill routes already deploy to claude/codex and into the Pi package) | same | same | same |
 
-**What survives per runtime (honest).** Tools allowlist: enforced on Claude Code and Pi; advisory on Codex. Model choice: per-launch on Claude Code and Pi; file-or-spawn on Codex, and "sonnet" has no meaning there (Codex runs OpenAI models; the refusal history R §5 is Claude-only evidence). Read-only reviewer: enforced on Claude/Pi by tools; on Codex by prose plus the parent's digest/spot-check (R §3) and, if the parent runs `workspace-write`, by the sandbox for paths outside the workspace. Minimalism-contract injection and the memory block: Claude PreToolUse gate only; elsewhere the parent passes the path under `## Skills to load before work` (the registry protocol already does). Worktrees, digests, appends, result files: identical everywhere (CLI + git). Sub-agents on Pi are a **gentle-pi dependency**: compatible mode uses them; standalone Pi is the parent-skill column by construction (roadmap `:93`, "no gentle-pi-only subagent dependency"), which is OD1.
+**What survives per runtime (honest).** Tools allowlist: enforced on Claude Code and Pi; advisory on Codex. Model choice: per-launch on Claude Code and Pi; file-or-spawn on Codex, and "sonnet" has no meaning there (Codex runs OpenAI models; the refusal history R §5 is Claude-only evidence). Read-only reviewer: enforced on Claude/Pi by tools; on Codex by the sandbox of the separate process `labdrian review launch --runtime codex` starts (D11), not by prose; the parent's digest/spot-check (R §3) still applies. Minimalism-contract injection and the memory block: Claude PreToolUse gate only; elsewhere the parent passes the path under `## Skills to load before work` (the registry protocol already does). Worktrees, digests, appends, result files: identical everywhere (CLI + git). Sub-agents on Pi are a **gentle-pi dependency**: compatible mode uses them; standalone Pi is the parent-skill column by construction (roadmap `:93`, "no gentle-pi-only subagent dependency"), which is OD1.
 
 ## 5. One source of truth, projected (reuse, not a new generator)
 
@@ -102,7 +102,7 @@ Each slice: RED test first where a runner exists (routes/pins/generator tests), 
 - Project-scoped agent dirs (`.claude/agents/`, `.codex/agents/`, `.pi/agents/`): rung 3 and tempting for per-repo overrides, but the overlay deploys globally today and no need is recorded → cut.
 - Codex `features.*=false` as a "read-only" proxy: it cannot remove file edits; cut; honesty line instead.
 - Per-runtime copies of the `role-chain` skill: skills already deploy to all three → cut.
-- A `codex exec`-driven reviewer runner (parent shells out to Codex): rung 6; native sub-agents exist → cut.
+- A `codex exec`-driven reviewer runner (parent shells out to Codex): rung 6; native sub-agents exist → cut; adopted by D11 (owner 2026-10-22) and built by own-rdd S9.
 
 ## 8. Open decisions (owner) — RESOLVED 2026-10-22 (see D11-D14); kept for the record
 

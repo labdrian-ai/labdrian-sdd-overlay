@@ -339,10 +339,10 @@ func TestReviewNamesExemptAmongItsVerbs(t *testing.T) {
 	_, noVerb, _ := w.run("")
 	_, unknown, _ := w.run("", "bogus")
 
-	if want := "error: review requires a verb: bind, record, verify, check, exempt, sweep, anchor\n"; noVerb != want {
+	if want := "error: review requires a verb: bind, record, verify, check, exempt, sweep, anchor, launch\n"; noVerb != want {
 		t.Errorf("review with no verb says %q, want %q", noVerb, want)
 	}
-	if want := "error: review: unknown verb \"bogus\" (expected bind, record, verify, check, exempt, sweep or anchor)\n"; unknown != want {
+	if want := "error: review: unknown verb \"bogus\" (expected bind, record, verify, check, exempt, sweep, anchor or launch)\n"; unknown != want {
 		t.Errorf("review with an unknown verb says %q, want %q", unknown, want)
 	}
 }

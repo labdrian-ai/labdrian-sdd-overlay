@@ -16,8 +16,11 @@ package main
 // sweep' and 'review record --role sweeper|polisher' are the verbs of the roles that come after the builder
 // (review_sweep.go). 'review anchor --merge <rev> [--cwd <repo>]' decides whether a merge lands a tree that stored
 // reviews cleared (review_anchor.go). The rules are the use cases of review/app over the adapters review/gitexec (git) and review/fsstore
-// (the results directory); this file parses the command line, wires them and says what they did. No verb launches
-// an agent or dispatches work: a reply is a file somebody else produced. 'review stop-hook' is the odd one out: the
+// (the results directory); this file parses the command line, wires them and says what they did. 'review launch
+// --runtime codex --feature <name> --base <rev> --head <rev> --rows <id,id> --model <model> [--cwd <repo>]' (review_launch.go)
+// binds the candidate, runs the Codex reviewer read-only on the brief on stdin and records its reply as 'review record'
+// does. launch is the one verb that starts a reviewer, on Codex, read-only; no other verb launches an agent or
+// dispatches work: their reply is a file somebody else produced. 'review stop-hook' is the odd one out: the
 // Claude Code Stop hook that blocks the stop of an agent whose branch has a commit no review covers, which Claude Code
 // starts and a person does not (review_stop_hook.go).
 
@@ -56,7 +59,7 @@ const reviewGitMaxOutput = 256 << 20
 // in an exit that ends nothing.
 func runReview(p process, d deps, args []string) {
 	if len(args) == 0 {
-		fmt.Fprintln(p.stderr, "error: review requires a verb: bind, record, verify, check, exempt, sweep, anchor")
+		fmt.Fprintln(p.stderr, "error: review requires a verb: bind, record, verify, check, exempt, sweep, anchor, launch")
 		p.exit(1)
 		return
 	}
@@ -75,10 +78,12 @@ func runReview(p process, d deps, args []string) {
 		runReviewSweep(p, d, args[1:])
 	case "anchor":
 		runReviewAnchor(p, d, args[1:])
+	case "launch":
+		runReviewLaunch(p, d, args[1:])
 	case reviewStopVerb:
 		runReviewStopHook(p, d, args[1:])
 	default:
-		fmt.Fprintf(p.stderr, "error: review: unknown verb %q (expected bind, record, verify, check, exempt, sweep or anchor)\n", args[0])
+		fmt.Fprintf(p.stderr, "error: review: unknown verb %q (expected bind, record, verify, check, exempt, sweep, anchor or launch)\n", args[0])
 		p.exit(1)
 	}
 }
@@ -110,7 +115,7 @@ func reviewServiceOver(git reviewapp.Git, results reviewapp.Results) reviewapp.S
 
 // reviewFlags are the parsed flags of the review verbs. A verb takes some of them.
 type reviewFlags struct {
-	base, onto, head, feature, result, stored, verdicts, risk, rows, role, cwd, merge string
+	base, onto, head, feature, result, stored, verdicts, risk, rows, role, cwd, merge, runtime, model string
 	// given says which flags the command line gave, with whatever value, an empty one included. A flag that is
 	// optional and has a default tells an empty value that was given from one that was not.
 	given map[string]bool
@@ -164,6 +169,10 @@ func parseReviewFlags(args []string, takes ...string) (reviewFlags, error) {
 			f.cwd = args[i]
 		case "--merge":
 			f.merge = args[i]
+		case "--runtime":
+			f.runtime = args[i]
+		case "--model":
+			f.model = args[i]
 		}
 	}
 	return f, nil
@@ -175,7 +184,7 @@ func (f reviewFlags) has(name string) bool { return f.given[name] }
 // require fails with the first of the named flags that has no value. A name it does not know is a mistake of
 // the caller, and says so rather than reading as a flag that was left out.
 func (f reviewFlags) require(names ...string) error {
-	values := map[string]string{"--base": f.base, "--onto": f.onto, "--head": f.head, "--feature": f.feature, "--stored": f.stored, "--risk": f.risk, "--rows": f.rows, "--merge": f.merge}
+	values := map[string]string{"--base": f.base, "--onto": f.onto, "--head": f.head, "--feature": f.feature, "--stored": f.stored, "--risk": f.risk, "--rows": f.rows, "--merge": f.merge, "--runtime": f.runtime, "--model": f.model}
 	for _, name := range names {
 		value, known := values[name]
 		if !known {

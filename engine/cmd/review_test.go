@@ -196,8 +196,8 @@ func TestReviewRefusesACommandLineItCannotRead(t *testing.T) {
 		args []string
 		want string
 	}{
-		{"no verb", nil, "error: review requires a verb: bind, record, verify, check, exempt, sweep, anchor\n"},
-		{"an unknown verb", []string{"bogus"}, "error: review: unknown verb \"bogus\" (expected bind, record, verify, check, exempt, sweep or anchor)\n"},
+		{"no verb", nil, "error: review requires a verb: bind, record, verify, check, exempt, sweep, anchor, launch\n"},
+		{"an unknown verb", []string{"bogus"}, "error: review: unknown verb \"bogus\" (expected bind, record, verify, check, exempt, sweep, anchor or launch)\n"},
 		{"verify with no feature", []string{"verify", "--stored", "s.json"}, "error: review verify: --feature is required\n"},
 		{"verify with no stored result", []string{"verify", "--feature", "f"}, "error: review verify: --stored is required\n"},
 		{"verify with a flag of record", []string{"verify", "--feature", "f", "--stored", "s.json", "--head", "h"}, "error: review verify: unknown flag \"--head\"\n"},

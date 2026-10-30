@@ -6,8 +6,10 @@ import (
 	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/capability/presence"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/execrunner"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection/app"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review/codexexec"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/synctrigger"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/synctrigger/osproc"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow"
@@ -101,6 +103,10 @@ type deps struct {
 	// gives it one that records.
 	now        func() time.Time
 	syncRunner synctrigger.Runner
+
+	// reviewRunner starts codex for 'review launch'; nil, as in the program, is the operating system's
+	// (execrunner). A test that must never start the real codex gives it one that records.
+	reviewRunner codexexec.Runner
 
 	// skillsLockWait is how long a skills verb waits for a taken lock before it gives up with
 	// exit 2. Zero means filelock.DefaultWait (2 s), the bound the workflow binding store uses.
@@ -200,6 +206,17 @@ func (d deps) syncTriggerRunner() synctrigger.Runner {
 		return d.syncRunner
 	}
 	return osproc.Runner{}
+}
+
+// launchMaxOutput bounds what the program holds of one stream of codex.
+const launchMaxOutput = 64 << 20
+
+// launchRunner is the Runner of 'review launch': the deps' own, or the operating system's.
+func (d deps) launchRunner() codexexec.Runner {
+	if d.reviewRunner != nil {
+		return d.reviewRunner
+	}
+	return execrunner.New().WithMaxOutput(launchMaxOutput)
 }
 
 // probeBound is how long one probe run may take: the deps' own timeout when it is positive, and
