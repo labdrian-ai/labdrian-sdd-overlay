@@ -86,6 +86,7 @@ func TestIsValidTransition(t *testing.T) {
 		{"reviewer to delivery", RoleReviewer, RoleDelivery, true},
 		{"reviewer back to builder is the only backward transition", RoleReviewer, RoleBuilder, true},
 		{"builder back to estimator is refused", RoleBuilder, RoleEstimator, false},
+		{"builder cannot skip the reviewer to delivery", RoleBuilder, RoleDelivery, false},
 		{"reviewer back to shaper is refused", RoleReviewer, RoleShaper, false},
 		{"prototyper cannot skip shaper to estimator", RolePrototyper, RoleEstimator, false},
 		{"delivery is terminal: nothing follows it", RoleDelivery, RoleReviewer, false},

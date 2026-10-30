@@ -1,0 +1,11 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "labdrian review check --feature own-rdd --onto 74d99f3f (branch engine) vs --base 74d99f3f vs --onto main",
+      "output": "--onto 74d99f3f: clear, base 74d99f3f, 2 ranges; --base 74d99f3f: clear, base 74d99f3f, 2 ranges; --onto main: clear, base 6957f3f9, 4 ranges",
+      "base_result": "reproduced"
+    }
+  ]
+}

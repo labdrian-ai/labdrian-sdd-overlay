@@ -1,0 +1,17 @@
+{
+  "kind": "polisher",
+  "base": "74d99f3f86e7ca92f0bffec23d5e248715326d74",
+  "head": "964f33b7dc51373b61ecb92019dc345b5cf822f3",
+  "diff_sha256": "79a2475fed0d0179ac4a63a686198c31a421b10ff85f67f1f2900c4306e8b33c",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff, /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/964f33b7.diff, covering all 15 changed paths.",
+      "Read the T9a row (odd/tasks/own-rdd.md:145) in the worktree. The diff matches it: onto.go call order and error wording, the flag plumbing in review.go (parser case, require map, --base with --onto refused before any git work), the usage/README/usage.sh/CHANGELOG text, the delivery body and three regenerated agent files, and the listed tests.",
+      "Read engine/review/app/chain.go CheckChain (lines 37-91) in the worktree. The walk always checks the head before it tests start == base, so a merge base equal to the head (head already on the branch) still requires the head's review and does not clear vacuously.",
+      "CheckOnto resolves the head to its full name and passes it to CheckChain, so its output is the same as --base <merge base>. The cmd tests pin this byte for byte, for both a moved and an unmoved branch.",
+      "The shared flag parser only gains one switch case. A new test checks that bind, record, verify, exempt, sweep and anchor still refuse --onto as an unknown flag, so the other verbs are unchanged.",
+      "Not run: no tests, build or gadu-generate --check, because I am read-only and the review is a diff reading."
+    ]
+  }
+}

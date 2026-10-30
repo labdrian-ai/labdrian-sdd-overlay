@@ -199,19 +199,19 @@ func mustEncodeResult(t *testing.T) []byte {
 	return data
 }
 
-// The skeleton of the record that closes an exemption fills every member the command knows: the reviewer's slot of
-// the chain (the chain has no verifier, and delivery follows only the reviewer), the delivery as next, the kind
-// of the payload and its digest, the two pieces of evidence that bind the range and the stored file, and that it
-// ran.
+// The skeleton of the record that closes an exemption fills every member the command knows: the delivery as next,
+// the kind of the payload and its digest, the two pieces of evidence that bind the range and the stored file, and
+// that it ran. It leaves from_role empty: the exemption skips the reviewer, so the role the chain is at (builder,
+// sweeper or polisher) is the parent's to fill.
 func TestExemptionHandoffFillsWhatTheCommandKnows(t *testing.T) {
 	got := review.ExemptionHandoff(candidate(t), exemptionRef, storedSHA)
 
-	if got.Version != roles.HandoffVersion || got.FromRole != roles.RoleReviewer || got.ToRole != roles.RoleDelivery || got.Status != roles.StatusCompleted {
+	if got.Version != roles.HandoffVersion || got.FromRole != "" || got.ToRole != roles.RoleDelivery || got.Status != roles.StatusCompleted {
 		t.Errorf("version %d, from_role %q, to_role %q, status %q; want %d, %q, %q, %q",
-			got.Version, got.FromRole, got.ToRole, got.Status, roles.HandoffVersion, roles.RoleReviewer, roles.RoleDelivery, roles.StatusCompleted)
+			got.Version, got.FromRole, got.ToRole, got.Status, roles.HandoffVersion, "", roles.RoleDelivery, roles.StatusCompleted)
 	}
-	if got.PayloadKind != "review-exemption" || review.PayloadExemption != "review-exemption" {
-		t.Errorf("payload_kind = %q (PayloadExemption %q), want review-exemption", got.PayloadKind, review.PayloadExemption)
+	if got.PayloadKind != "review-exemption" || review.PayloadExemption != roles.PayloadExemption || roles.PayloadExemption != "review-exemption" {
+		t.Errorf("payload_kind = %q (PayloadExemption %q, roles.PayloadExemption %q), want review-exemption", got.PayloadKind, review.PayloadExemption, roles.PayloadExemption)
 	}
 	if got.PayloadSHA256 != storedSHA {
 		t.Errorf("payload_sha256 = %q, want the digest of the stored file %q", got.PayloadSHA256, storedSHA)
@@ -232,8 +232,9 @@ func TestExemptionHandoffFillsWhatTheCommandKnows(t *testing.T) {
 }
 
 // completedExemption is the skeleton as the parent completes it: JSON, with the members of values set and every
-// other member as the command printed it. skip names one member to leave as printed.
-func completedExemption(t *testing.T, skip string) []byte {
+// other member as the command printed it. from is the role the chain is at, which the parent writes as from_role.
+// skip names one member to leave as printed.
+func completedExemption(t *testing.T, from roles.Role, skip string) []byte {
 	t.Helper()
 	data, err := json.Marshal(review.ExemptionHandoff(candidate(t), exemptionRef, storedSHA))
 	if err != nil {
@@ -253,6 +254,9 @@ func completedExemption(t *testing.T, skip string) []byte {
 		}
 		record[name] = value
 	}
+	if skip != "from_role" {
+		record["from_role"] = string(from)
+	}
 	out, err := json.Marshal(record)
 	if err != nil {
 		t.Fatalf("setup: %v", err)
@@ -263,27 +267,33 @@ func completedExemption(t *testing.T, skip string) []byte {
 // Once the parent fills the members the exemption leaves to it, `roles validate` and `roles append` accept the
 // record: the engine has filled to_role, because an exemption always goes to the delivery.
 func TestExemptionHandoffIsAcceptedOnceTheParentFillsItsMembers(t *testing.T) {
-	record := completedExemption(t, "")
+	for _, from := range []roles.Role{roles.RoleBuilder, roles.RoleSweeper, roles.RolePolisher, roles.RoleReviewer} {
+		t.Run(string(from), func(t *testing.T) {
+			record := completedExemption(t, from, "")
 
-	h, err := roles.ParseRoleHandoff(record)
+			h, err := roles.ParseRoleHandoff(record)
 
-	if err != nil {
-		t.Fatalf("ParseRoleHandoff() error = %v for\n%s", err, record)
-	}
-	if h.ToRole != roles.RoleDelivery || h.PayloadKind != "review-exemption" || len(h.Evidence) != 2 {
-		t.Errorf("parsed record: to_role %q, payload_kind %q, %d evidence; want delivery, review-exemption, 2", h.ToRole, h.PayloadKind, len(h.Evidence))
+			if err != nil {
+				t.Fatalf("ParseRoleHandoff() error = %v for\n%s", err, record)
+			}
+			if h.FromRole != from || h.ToRole != roles.RoleDelivery || h.PayloadKind != "review-exemption" || len(h.Evidence) != 2 {
+				t.Errorf("parsed record: from_role %q, to_role %q, payload_kind %q, %d evidence; want %q, delivery, review-exemption, 2",
+					h.FromRole, h.ToRole, h.PayloadKind, len(h.Evidence), from)
+			}
+		})
 	}
 }
 
 // Each member the parent fills is one the record needs: left as printed, the record is refused and the refusal
-// names it. to_role is not among them, because the skeleton prints it.
+// names it. to_role is not among them, because the skeleton prints it; from_role is, because the skeleton leaves
+// it empty.
 func TestExemptionHandoffIsRefusedWhileAnyMemberOfTheParentIsLeftEmpty(t *testing.T) {
-	for _, field := range review.ParentFields() {
+	for _, field := range append([]string{"from_role"}, review.ParentFields()...) {
 		if field == "to_role" {
 			continue
 		}
 		t.Run(field, func(t *testing.T) {
-			record := completedExemption(t, field)
+			record := completedExemption(t, roles.RoleBuilder, field)
 
 			_, err := roles.ParseRoleHandoff(record)
 

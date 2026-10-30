@@ -274,7 +274,7 @@ Commands:
                                              over a file; print the record skeleton with evidence verifier-report and
                                              to_role filled (builder when it blocks, delivery when it is clear); one
                                              correction round per candidate (exit 0 stored, 2 reply refused, 1 error)
-                                   check --feature NAME [--head REV] [--base REV] [--cwd REPO]
+                                   check --feature NAME [--head REV] [--base REV | --onto REV] [--cwd REPO]
                                              recompute from git the candidate of each result stored for the head
                                              (default HEAD), hold the results and verdicts to it, and refuse unless
                                              one result binds the head and every one is clear: a result that blocks,
@@ -286,7 +286,10 @@ Commands:
                                              exemptions cover REV..head as an unbroken chain, each range starting
                                              where the one before ended; a gap, a range that is not clear or a walk
                                              that never reaches REV refuses; print the ranges used as JSON; an
-                                             exemption whose base is not the first parent of the head refuses
+                                             exemption whose base is not the first parent of the head refuses;
+                                             --onto REV names the integration branch of the delivery and starts
+                                             the chain at the one merge base of REV and the head, as --base of that
+                                             commit does (not with --base; none or several merge bases refuse)
                                              (exit 0 cleared, 1 refused or error)
                                    exempt --feature NAME --base REV --head REV --risk none|ITEMS [--cwd REPO]
                                              exempt a head from review on the evidence of the verifier and the risk

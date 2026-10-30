@@ -59,17 +59,19 @@ func VerifiedHandoff(b reviewresult.Binding, result, verdict FileRef, outcome re
 }
 
 // ExemptionHandoff is the skeleton of the record that closes the exemption of a head from review, for the same
-// `labdrian roles append --stdin`. It fills what the command knows: the reviewer's slot of the chain (the chain
-// has no verifier, and the delivery follows only the reviewer), the delivery as who is next, the kind of the
+// `labdrian roles append --stdin`. It fills what the command knows: the delivery as who is next, the kind of the
 // payload (PayloadExemption) and its digest, which is the digest of the stored file; two pieces of evidence, the
 // range that was exempted with the digest of its diff (EvidenceDiff) and the stored file with its digest
 // (EvidenceExemption), which are what the delivery recomputes to trust the record only on equality; the status
 // (completed: an exemption that was stored is a head that was checked); and the arrays of the context as empty
-// arrays. The members only the parent knows are the ones ParentFields names but to_role, which is filled here.
-// exemptionRef is the path of the stored file relative to the repository, and exemptionSHA256 the SHA-256 of its
-// bytes.
+// arrays. It leaves from_role empty: the exemption skips the reviewer (roles.SkipsReviewer), so the role the
+// chain is at (builder, sweeper or polisher) is the parent's to fill, and roles.VerifyChain holds it to the
+// to_role of the previous record. The members only the parent knows are from_role and the ones ParentFields names
+// but to_role, which is filled here. exemptionRef is the path of the stored file relative to the repository, and
+// exemptionSHA256 the SHA-256 of its bytes.
 func ExemptionHandoff(c Candidate, exemptionRef, exemptionSHA256 string) roles.RoleHandoff {
 	h := Handoff(c, exemptionRef, exemptionSHA256)
+	h.FromRole = ""
 	h.ToRole = roles.RoleDelivery
 	h.PayloadKind = PayloadExemption
 	h.Evidence[1].Kind = EvidenceExemption

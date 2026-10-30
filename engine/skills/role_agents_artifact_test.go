@@ -108,7 +108,7 @@ func roleAgentSpecs() []roleAgentSpec {
 		}},
 		{"delivery", "haiku", deliveryTools, 3, []string{
 			"`odd-feature-doc`", "in place", "one final Log entry", "Never rewrite checkboxes", "unfinished",
-			"Before you append the entry, run `labdrian review check --feature <feature>`", "`--head <rev>`", "on exit 1 close nothing",
+			"Before you append the entry, run `labdrian review check --feature <feature>`", "`--head <rev>`", "`--onto <rev>`", "on exit 1 close nothing",
 			"return status blocked with its stderr line", "on exit 0 name the head and the results it prints",
 			"and the exemptions when it prints any",
 		}},

@@ -1,0 +1,11 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "bat -p -r 385:397 engine/cmd/review.go",
+      "output": "parentFills prepends from_role only when FromRole is empty and PayloadKind is roles.PayloadExemption; its doc comment says a skeleton of another kind that leaves it empty is not one this names, so the coupling is documented where a future skeleton author reads it",
+      "base_result": "not-reproduced"
+    }
+  ]
+}

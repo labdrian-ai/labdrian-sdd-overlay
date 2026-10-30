@@ -18,14 +18,80 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/sha256hex"
 )
 
-// exemptedSkeleton exempts the head of the world on a clear report and returns the skeleton `review exempt` printed.
-func (w *reviewWorld) exemptedSkeleton() roles.RoleHandoff {
+// printedExemption exempts the head of the world on a clear report and returns the skeleton `review exempt` printed,
+// with from_role as the command leaves it: empty, for the parent to fill.
+func (w *reviewWorld) printedExemption() roles.RoleHandoff {
 	w.t.Helper()
 	stdout, stderr, exits := w.exempt(verifierReport, "none")
 	if !equalInts(exits, []int{0}) {
 		w.t.Fatalf("setup: review exempt exit calls = %v, stderr = %q; want [0]", exits, stderr)
 	}
 	return decodeSkeleton(w.t, stdout)
+}
+
+// exemptedSkeleton is that skeleton with from_role filled as the parent of a chain that is at the reviewer fills it
+// (the chain of reviewerChain), so a test of the evidence appends a record the chain accepts.
+func (w *reviewWorld) exemptedSkeleton() roles.RoleHandoff {
+	w.t.Helper()
+	h := w.printedExemption()
+	h.FromRole = roles.RoleReviewer
+	return h
+}
+
+// chainAtSweeper stores the three records that put the work of the chain in the hands of the sweeper (the reviewer
+// never ran) and returns the digest the record that follows them chains to.
+func chainAtSweeper(t *testing.T, check evidenceCheck, chain string) string {
+	t.Helper()
+	prev := roles.EmptyChainDigest
+	for i, hop := range [][2]roles.Role{{roles.RoleShaper, roles.RoleEstimator}, {roles.RoleEstimator, roles.RoleBuilder}, {roles.RoleBuilder, roles.RoleSweeper}} {
+		raw := rolesRecordJSON(t, roles.RoleHandoff{
+			Version: roles.HandoffVersion, ProjectID: rolesProject, GoalID: rolesGoal, ChainID: chain, Seq: i + 1,
+			FromRole: hop[0], ToRole: hop[1], PrevSHA256: prev, PayloadKind: "diff", PayloadSHA256: strings.Repeat("a", 64),
+			Evidence: []roles.Evidence{}, Context: roles.Context{Summary: "s", Decisions: []string{}, OpenQuestions: []string{}},
+			Status: roles.StatusCompleted,
+		})
+		if r := runRolesChecked(check, rolesAppendArgs(chain), raw); r.code != 0 {
+			t.Fatalf("setup: append of seq %d: code=%d stderr=%q", i+1, r.code, r.stderr)
+		}
+		prev = sha256hex.Sum([]byte(raw))
+	}
+	return prev
+}
+
+// An exemption closes a head the reviewer never saw: the skeleton `review exempt` prints leaves from_role to the
+// parent, and once the parent fills it with the role the chain is at (here the sweeper) `roles append` stores the
+// record and the chain ends at the delivery. The reviewer is not the role the chain is at, so the same record with
+// from_role reviewer is refused by the chain and nothing is stored.
+func TestRolesAppendStoresAnExemptionFromTheChainsRoleToTheDelivery(t *testing.T) {
+	rolesTestStateHome(t)
+	w := newCheckedWorld(t)
+	check := reviewEvidenceCheck(w.rolesDeps())
+	printed := w.printedExemption()
+	if printed.FromRole != "" {
+		t.Fatalf("setup: the skeleton has from_role %q, want it empty", printed.FromRole)
+	}
+
+	refused := printed
+	refused.FromRole = roles.RoleReviewer
+	prev := chainAtSweeper(t, check, "chain-2")
+	r := runRolesChecked(check, rolesAppendArgs("chain-2"), rolesRecordJSON(t, fillSkeleton(refused, "chain-2", prev)))
+	if want := "from_role \"reviewer\" must equal seq 3 to_role \"sweeper\""; r.code != 1 || r.stdout != "" || !strings.Contains(r.stderr, want) {
+		t.Errorf("code = %d, stdout = %q, stderr = %q; want exit 1, nothing on stdout, and %q", r.code, r.stdout, r.stderr, want)
+	}
+	if at := rolesAt(t, "chain-2"); at != string(roles.RoleSweeper) {
+		t.Errorf("the chain is at %q, want the sweeper: the refused record must not be stored", at)
+	}
+
+	stored := printed
+	stored.FromRole = roles.RoleSweeper
+	prev = chainAtSweeper(t, check, "chain-1")
+	r = runRolesChecked(check, rolesAppendArgs("chain-1"), rolesRecordJSON(t, fillSkeleton(stored, "chain-1", prev)))
+	if r.code != 0 || r.stderr != "" || !strings.Contains(r.stdout, "roles append: stored record at") {
+		t.Fatalf("code = %d, stdout = %q, stderr = %q; want the exemption stored", r.code, r.stdout, r.stderr)
+	}
+	if at := rolesAt(t, "chain-1"); at != string(roles.RoleDelivery) {
+		t.Errorf("the chain is at %q, want the delivery: the exemption is the last record", at)
+	}
 }
 
 // The record `review exempt` prints is a record `roles append` stores: the evidence it carries is the exemption the

@@ -116,7 +116,8 @@ func TestExemptRefusesAHeadWhoseTrailerFailsOrNamesAnItem(t *testing.T) {
 
 // The verb stores the exemption in the next free number of the head and prints the skeleton of the record of the
 // chain: the stored file has the binding git gives, the declared risk and the report of the verifier, stdout is the
-// record of the reviewer to the delivery with the exemption bound as evidence, and stderr says what was stored.
+// record to the delivery, with from_role left to the parent and the exemption bound as evidence, and stderr says what
+// was stored.
 func TestExemptStoresTheExemptionAndPrintsTheSkeletonOfTheRecord(t *testing.T) {
 	w := newCheckedWorld(t)
 	b := w.bind()
@@ -162,8 +163,8 @@ func TestExemptStoresTheExemptionAndPrintsTheSkeletonOfTheRecord(t *testing.T) {
 	if err := json.Unmarshal([]byte(stdout), &record); err != nil {
 		t.Fatalf("stdout is not the JSON skeleton: %v\n%s", err, stdout)
 	}
-	if record.FromRole != "reviewer" || record.ToRole != "delivery" || record.PayloadKind != "review-exemption" || record.Status != "completed" || record.PayloadSHA256 != sum(file) {
-		t.Errorf("skeleton = %+v, want the reviewer's completed record to the delivery of kind review-exemption with the digest %s", record, sum(file))
+	if record.FromRole != "" || record.ToRole != "delivery" || record.PayloadKind != "review-exemption" || record.Status != "completed" || record.PayloadSHA256 != sum(file) {
+		t.Errorf("skeleton = %+v, want a completed record to the delivery of kind review-exemption with the digest %s and from_role left to the parent", record, sum(file))
 	}
 	if len(record.Evidence) != 2 ||
 		record.Evidence[0].Kind != "review-diff" || record.Evidence[0].Ref != w.base+".."+w.head || record.Evidence[0].SHA256 != b.DiffSHA256 ||
@@ -172,7 +173,7 @@ func TestExemptStoresTheExemptionAndPrintsTheSkeletonOfTheRecord(t *testing.T) {
 	}
 	wantErr := fmt.Sprintf("review exempt: stored %s (sha256 %s)\n"+
 		"review exempt: the head is exempted from review: the declared risk is none and the report of the verifier is clear; 'review check' clears it unless a stored result blocks it\n"+
-		"review exempt: stdout is the skeleton of the record for 'roles append --stdin'; the parent of the chain fills project_id, goal_id, chain_id, seq, prev_sha256, context.summary\n",
+		"review exempt: stdout is the skeleton of the record for 'roles append --stdin'; the parent of the chain fills from_role, project_id, goal_id, chain_id, seq, prev_sha256, context.summary\n",
 		storedRef, sum(file))
 	if stderr != wantErr {
 		t.Errorf("stderr = %q, want %q", stderr, wantErr)

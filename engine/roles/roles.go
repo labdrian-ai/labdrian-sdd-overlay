@@ -151,6 +151,21 @@ func IsValidTransition(from, to Role) bool {
 	return true
 }
 
+// PayloadExemption is the payload_kind of the record that closes the exemption of a head from review.
+const PayloadExemption = "review-exemption"
+
+// SkipsReviewer reports whether h is the one record that goes to the delivery without passing through the
+// reviewer: a completed review-exemption from a role the reviewer may be skipped from (builder, sweeper or
+// polisher: the roles IsValidTransition allows a handoff to the reviewer from). A head closed by an exemption was
+// checked without a review that never ran. An interrupted exemption skips nothing, and every other payload kind
+// still passes through the reviewer. IsValidTransition and NextRoles do not know it, and answer as before.
+func SkipsReviewer(h RoleHandoff) bool {
+	return h.ToRole == RoleDelivery &&
+		IsValidTransition(h.FromRole, RoleReviewer) &&
+		h.PayloadKind == PayloadExemption &&
+		h.Status == StatusCompleted
+}
+
 // NextRoles returns, in canonical order, every role IsValidTransition allows
 // as a next role from from. It returns nil when from is delivery (terminal)
 // or unknown.

@@ -64,6 +64,7 @@ import (
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gitobject"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/reviewresult"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/roles"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/sha256hex"
 )
 
@@ -101,9 +102,10 @@ const (
 	EvidenceResult   = "review-result"
 	EvidenceVerifier = "verifier-report"
 
-	// PayloadExemption is the payload_kind of the record that closes the exemption of a head from review, and
-	// EvidenceExemption the kind of the evidence that binds that record to the stored bytes of the exemption.
-	PayloadExemption  = "review-exemption"
+	// PayloadExemption is the payload_kind of the record that closes the exemption of a head from review (the
+	// one spelling is roles.PayloadExemption, which the record's validation reads), and EvidenceExemption the
+	// kind of the evidence that binds that record to the stored bytes of the exemption.
+	PayloadExemption  = roles.PayloadExemption
 	EvidenceExemption = "review-exemption"
 )
 

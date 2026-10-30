@@ -1,0 +1,79 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "74d99f3f86e7ca92f0bffec23d5e248715326d74",
+    "head": "964f33b7dc51373b61ecb92019dc345b5cf822f3",
+    "diff_sha256": "79a2475fed0d0179ac4a63a686198c31a421b10ff85f67f1f2900c4306e8b33c",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "agents/delivery.md",
+      "bin/lib/usage.sh",
+      "codex/agents/delivery.toml",
+      "engine/cmd/review.go",
+      "engine/cmd/review_check_chain_test.go",
+      "engine/cmd/review_check_cli_test.go",
+      "engine/cmd/review_test.go",
+      "engine/cmd/usage.go",
+      "engine/review/app/onto.go",
+      "engine/review/app/onto_test.go",
+      "engine/skills/role_agents_artifact_test.go",
+      "pi/agents/delivery.md",
+      "roles/delivery/body.md"
+    ]
+  },
+  "rows": [
+    "default",
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "74d99f3f86e7ca92f0bffec23d5e248715326d74",
+      "head": "964f33b7dc51373b61ecb92019dc345b5cf822f3",
+      "diff_sha256": "79a2475fed0d0179ac4a63a686198c31a421b10ff85f67f1f2900c4306e8b33c"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "agents/delivery.md",
+        "bin/lib/usage.sh",
+        "codex/agents/delivery.toml",
+        "engine/cmd/review.go",
+        "engine/cmd/review_check_chain_test.go",
+        "engine/cmd/review_check_cli_test.go",
+        "engine/cmd/review_test.go",
+        "engine/cmd/usage.go",
+        "engine/review/app/onto.go",
+        "engine/review/app/onto_test.go",
+        "engine/skills/role_agents_artifact_test.go",
+        "pi/agents/delivery.md",
+        "roles/delivery/body.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/review/app/onto.go:384-421",
+        "severity": "SUGGESTION",
+        "claim": "--onto is still a revision the caller names, so a commit of the head's own branch given as --onto shortens the chain. This is the same weakness as a wrong --base and the candidate documents it in the README, the help and the changelog. The delivery prompt now has the agent pass the branch name where it used to pass a merge base it computed itself. The shortened chain is therefore no worse than before. No new reachable bypass was found.",
+        "evidence_class": "inferential",
+        "causal_disposition": "pre-existing",
+        "proof_refs": [
+          "engine/review/app/chain.go:37-82: CheckChain checks the head commit itself before looking at the base, so --onto naming a descendant of the head (base equal to head) does not clear an unreviewed head."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff (46 KB) from the scratchpad file.",
+      "Read CheckChain in engine/review/app/chain.go in the worktree (lines 37-82). Both CheckOnto and the existing --base path call it, so --onto adds no new check logic.",
+      "Reviewed the flag parsing in engine/cmd/review.go. --onto is added only to the 'check' verb's accepted flags. The new tests assert that bind, record, verify, exempt, sweep and anchor still refuse it as an unknown flag.",
+      "The --base and --onto conflict is refused before any service call, and an empty --onto value is refused through require.",
+      "CheckOnto validates feature and revisions, then resolves onto and head to commits and takes the single merge base via review.OneMergeBase. Zero or several merge bases are refused with the same error as 'review anchor'. Nothing is written, so there is no data risk.",
+      "The delivery prompt changed identically in roles/delivery/body.md, agents/delivery.md, codex/agents/delivery.toml and pi/agents/delivery.md. The artifact test now also requires the --onto text.",
+      "Not run: I did not run the tests or the engine, and I did not read the T9a row in odd/tasks/own-rdd.md."
+    ]
+  }
+}

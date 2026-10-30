@@ -9,9 +9,10 @@ package main
 // decides whether the review blocks and stores the reply beside the result. 'review exempt --feature <name>
 // --base <rev> --head <rev> --risk <none|items> [--cwd <repo>]' stores the exemption of a head from review, on the
 // report of the verifier (stdin) and the risk the agent declares. 'review check --feature <name> [--head <rev>]
-// [--base <rev>] [--cwd <repo>]' is the check of the delivery: it recomputes the candidate of the head from git and
-// refuses unless the results stored for it still hold and clear it, or an exemption stored for it still holds and no
-// result blocks it; with --base it asks that of every commit of the chain of reviews from the base to the head. 'review
+// [--base <rev> | --onto <rev>] [--cwd <repo>]' is the check of the delivery: it recomputes the candidate of the head
+// from git and refuses unless the results stored for it still hold and clear it, or an exemption stored for it still
+// holds and no result blocks it; with --base it asks that of every commit of the chain of reviews from the base to the
+// head, and with --onto the same from the merge base of the integration branch and the head. 'review
 // sweep' and 'review record --role sweeper|polisher' are the verbs of the roles that come after the builder
 // (review_sweep.go). 'review anchor --merge <rev> [--cwd <repo>]' decides whether a merge lands a tree that stored
 // reviews cleared (review_anchor.go). The rules are the use cases of review/app over the adapters review/gitexec (git) and review/fsstore
@@ -109,7 +110,7 @@ func reviewServiceOver(git reviewapp.Git, results reviewapp.Results) reviewapp.S
 
 // reviewFlags are the parsed flags of the review verbs. A verb takes some of them.
 type reviewFlags struct {
-	base, head, feature, result, stored, verdicts, risk, rows, role, cwd, merge string
+	base, onto, head, feature, result, stored, verdicts, risk, rows, role, cwd, merge string
 	// given says which flags the command line gave, with whatever value, an empty one included. A flag that is
 	// optional and has a default tells an empty value that was given from one that was not.
 	given map[string]bool
@@ -141,6 +142,8 @@ func parseReviewFlags(args []string, takes ...string) (reviewFlags, error) {
 		switch a {
 		case "--base":
 			f.base = args[i]
+		case "--onto":
+			f.onto = args[i]
 		case "--head":
 			f.head = args[i]
 		case "--feature":
@@ -172,7 +175,7 @@ func (f reviewFlags) has(name string) bool { return f.given[name] }
 // require fails with the first of the named flags that has no value. A name it does not know is a mistake of
 // the caller, and says so rather than reading as a flag that was left out.
 func (f reviewFlags) require(names ...string) error {
-	values := map[string]string{"--base": f.base, "--head": f.head, "--feature": f.feature, "--stored": f.stored, "--risk": f.risk, "--rows": f.rows, "--merge": f.merge}
+	values := map[string]string{"--base": f.base, "--onto": f.onto, "--head": f.head, "--feature": f.feature, "--stored": f.stored, "--risk": f.risk, "--rows": f.rows, "--merge": f.merge}
 	for _, name := range names {
 		value, known := values[name]
 		if !known {
@@ -378,11 +381,17 @@ func reportVerified(p process, v reviewapp.Verified) {
 }
 
 // parentFills names the members of the skeleton h that the parent of the chain still fills, in the order of
-// review.ParentFields: to_role is not among them when the skeleton already names the next role.
+// review.ParentFields: to_role is not among them when the skeleton already names the next role, and from_role
+// comes first when the skeleton is an exemption that leaves it empty (it skips the reviewer, so the role the chain
+// is at is the parent's to name). The skeletons of 'review record' and 'review verify' carry the reviewer as
+// from_role, and a skeleton of another kind that leaves it empty is not one this names.
 func parentFills(h roles.RoleHandoff) string {
 	fills := review.ParentFields() // a new slice: deleting from it changes no other caller's
 	if h.ToRole != "" {
 		fills = slices.DeleteFunc(fills, func(field string) bool { return field == "to_role" })
+	}
+	if h.FromRole == "" && h.PayloadKind == roles.PayloadExemption {
+		fills = slices.Insert(fills, 0, "from_role")
 	}
 	return strings.Join(fills, ", ")
 }
@@ -486,21 +495,29 @@ type reviewRangeJSON struct {
 	Exemptions []reviewExemptedJSON `json:"exemptions,omitempty"`
 }
 
-// runReviewCheck implements 'review check --feature [--head] [--base] [--cwd]', the check of the delivery. A head that
-// the stored results, or an exemption, clear is exit 0, and stdout names the files used. Anything that keeps a head from
-// delivery, and any failure to tell, is exit 1 with the reason on stderr and nothing on stdout. The head is HEAD
+// runReviewCheck implements 'review check --feature [--head] [--base | --onto] [--cwd]', the check of the delivery. A head
+// that the stored results, or an exemption, clear is exit 0, and stdout names the files used. Anything that keeps a head
+// from delivery, and any failure to tell, is exit 1 with the reason on stderr and nothing on stdout. The head is HEAD
 // when --head is not given; an empty one that was given is not the default. With --base the head is cleared only by
-// an unbroken chain of reviews from that base, and stdout lists the ranges of the chain; without it the check is by
-// head alone, as it always was.
+// an unbroken chain of reviews from that base, and stdout lists the ranges of the chain; --onto <rev>, the integration
+// branch of the delivery, is the same check from the one merge base of that branch and the head, which the engine finds
+// (it cannot be given with --base); without either the check is by head alone, as it always was.
 func runReviewCheck(p process, d deps, args []string) {
 	fail := func(err error) { reviewFailed(p, "check", err) }
-	f, err := parseReviewFlags(args, "--feature", "--head", "--base", "--cwd")
+	f, err := parseReviewFlags(args, "--feature", "--head", "--base", "--onto", "--cwd")
 	if err == nil {
 		err = f.require("--feature")
 	}
 	head := "HEAD"
 	if err == nil && f.has("--head") {
 		head, err = f.head, f.require("--head")
+	}
+	if err == nil && f.has("--onto") {
+		if f.has("--base") {
+			err = errors.New("--base and --onto cannot be given together")
+		} else {
+			err = f.require("--onto")
+		}
 	}
 	if err != nil {
 		fail(err)
@@ -512,8 +529,13 @@ func runReviewCheck(p process, d deps, args []string) {
 		return
 	}
 	service := newReviewService(d)
-	if f.has("--base") {
-		chained, err := service.CheckChain(dir, f.feature, f.base, head)
+	if f.has("--base") || f.has("--onto") {
+		var chained reviewapp.Chained
+		if f.has("--onto") {
+			chained, err = service.CheckOnto(dir, f.feature, f.onto, head)
+		} else {
+			chained, err = service.CheckChain(dir, f.feature, f.base, head)
+		}
 		if err != nil {
 			fail(err)
 			return
