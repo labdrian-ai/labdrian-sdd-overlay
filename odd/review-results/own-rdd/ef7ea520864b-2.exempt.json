@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "d4be661dbbd992c80510f87a77ad1cd1092668b2",
+    "head": "ef7ea520864bb83e10108cce0197b63cf1a497a1",
+    "diff_sha256": "b24c34dc0dc52fb4f5e27ffb8ac841ad806bd84cc07f2c91c037553376396eae",
+    "paths": [
+      "engine/oddtask/workflow.go",
+      "engine/oddtask/workflow_test.go"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "cd engine && go test -count=1 ./oddtask/ (before the code)",
+        "result": "pass",
+        "output": "RED observed: FAIL TestWaitsForHopOnlyWhenTheChainIsTheOnlyReason, role \"\", bogus and Reviewer: WaitsForHop = true, want false"
+      },
+      {
+        "command": "cd engine && go test -count=1 ./oddtask/",
+        "result": "pass",
+        "output": "ok github.com/labdrian-ai/labdrian-sdd-overlay/engine/oddtask"
+      },
+      {
+        "command": "cd engine && go vet ./... && gofmt -l .",
+        "result": "pass",
+        "output": "no output"
+      },
+      {
+        "command": "cd engine && go test -count=1 . ./oddtask/... ./cmd/... ./roles/...",
+        "result": "pass",
+        "output": "every package ok"
+      }
+    ]
+  }
+}
