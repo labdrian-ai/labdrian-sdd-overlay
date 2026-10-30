@@ -23,7 +23,7 @@ type Swept struct {
 	SHA256 string
 	// Outcome is review.OutcomeClean or review.OutcomeFired.
 	Outcome string
-	// Findings are what the three checks found.
+	// Findings are what the four checks found.
 	Findings review.SweepFindings
 	// Candidates are the ids a sweeper answers for when the sweep fired, in the order of review.StoredSweep.Candidates;
 	// none when it did not.
@@ -33,7 +33,7 @@ type Swept struct {
 	NotFlushed error
 }
 
-// Sweep runs the checks T1 to T3 of the sweeper on the one commit from base to head, in the
+// Sweep runs the checks T1 to T4 of the sweeper on the one commit from base to head, in the
 // repository that holds dir (absolute), and stores their findings as the sweep record of the head in the results
 // directory of the feature (own-rdd T6b3, S6 b and c). The candidate is bound from git as Bind and Exempt bind it, and the
 // base is the first parent of the head (review.ErrNotOneCommit).
@@ -51,7 +51,9 @@ type Swept struct {
 //     files, each on a copy of the base and on a copy of the head; a finding is new when its normalized line occurs more
 //     times at the head (review.NewFindings). A check that cannot run is an error wrapping ErrToolDidNotRun, and nothing
 //     is stored (S1);
-//   - T3: the lines of git status of the working tree as it is, but for the records waiting under odd/review-results/.
+//   - T3: the lines of git status of the working tree as it is, but for the records waiting under odd/review-results/;
+//   - T4: the changed paths ending .orig or .bak that the commit does not delete (review.Leftovers); the orphaned
+//     fixtures stay empty until T12c.
 //
 // A commit that changes no Go module and no shell file makes no copy and runs no tool.
 func (s Service) Sweep(dir, feature, base, head string) (Swept, error) {
@@ -90,7 +92,8 @@ func (s Service) Sweep(dir, feature, base, head string) (Swept, error) {
 	if err != nil {
 		return Swept{}, err
 	}
-	findings := review.SweepFindings{T1: t1, T2: t2, T3: t3}
+	t4 := review.SweepT4{Leftovers: review.Leftovers(candidate.Paths, t1.DeletedOrRenamed)}
+	findings := review.SweepFindings{T1: t1, T2: t2, T3: t3, T4: t4}
 	file, err := review.EncodeSweep(candidate, findings)
 	if err != nil {
 		return Swept{}, err

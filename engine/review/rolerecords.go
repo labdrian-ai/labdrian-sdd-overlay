@@ -95,17 +95,27 @@ type SweepT2 struct {
 	New    []string `json:"new"`
 }
 
-// SweepFindings are the findings of the three checks: T1 the removals the head still mentions, T2 the new lines of the
-// analyzers, T3 the lines of `git status --porcelain` of the working tree when the sweep ran.
+// SweepT4 is what the fourth check found: the leftover files the commit changes (Leftovers) and the test fixtures it
+// leaves unread.
+type SweepT4 struct {
+	Leftovers        []string `json:"leftovers"`
+	OrphanedFixtures []string `json:"orphaned_fixtures"`
+}
+
+// SweepFindings are the findings of the four checks: T1 the removals the head still mentions, T2 the new lines of the
+// analyzers, T3 the lines of `git status --porcelain` of the working tree when the sweep ran, T4 the leftover files and
+// the orphaned fixtures.
 type SweepFindings struct {
 	T1 SweepT1   `json:"t1"`
 	T2 []SweepT2 `json:"t2"`
 	T3 []string  `json:"t3"`
+	T4 SweepT4   `json:"t4"`
 }
 
 // Fired is whether any check found something.
 func (f SweepFindings) Fired() bool {
-	return len(f.T1.DeletedOrRenamed) > 0 || len(f.T1.RemovedNames) > 0 || len(f.T2) > 0 || len(f.T3) > 0
+	return len(f.T1.DeletedOrRenamed) > 0 || len(f.T1.RemovedNames) > 0 || len(f.T2) > 0 || len(f.T3) > 0 ||
+		len(f.T4.Leftovers) > 0 || len(f.T4.OrphanedFixtures) > 0
 }
 
 // check refuses findings that name nothing.
@@ -128,6 +138,9 @@ func (f SweepFindings) check() error {
 	if slices.Contains(f.T3, "") {
 		return fmt.Errorf("%w: t3 lists an empty line", ErrInvalidSweepFindings)
 	}
+	if slices.Contains(f.T4.Leftovers, "") || slices.Contains(f.T4.OrphanedFixtures, "") {
+		return fmt.Errorf("%w: t4 lists an empty path", ErrInvalidSweepFindings)
+	}
 	return nil
 }
 
@@ -137,6 +150,8 @@ func (f SweepFindings) present() SweepFindings {
 	f.T1.RemovedNames = nonNil(f.T1.RemovedNames)
 	f.T2 = nonNil(f.T2)
 	f.T3 = nonNil(f.T3)
+	f.T4.Leftovers = nonNil(f.T4.Leftovers)
+	f.T4.OrphanedFixtures = nonNil(f.T4.OrphanedFixtures)
 	return f
 }
 
@@ -151,7 +166,10 @@ func nonNil[T any](s []T) []T {
 //
 //	{"kind": "sweep", "base": "...", "head": "...", "diff_sha256": "...", "outcome": "clean"|"fired",
 //	 "t1": {"deleted_or_renamed": ["..."], "removed_names": [{"name": "...", "hits": ["..."]}]},
-//	 "t2": [{"tool": "...", "module": "...", "new": ["..."]}], "t3": ["..."]}
+//	 "t2": [{"tool": "...", "module": "...", "new": ["..."]}], "t3": ["..."],
+//	 "t4": {"leftovers": ["..."], "orphaned_fixtures": ["..."]}}
+//
+// A file stored before T4 has no "t4" member (decodeSweepFile).
 type sweepFile struct {
 	Kind       string `json:"kind"`
 	Base       string `json:"base"`
@@ -185,7 +203,8 @@ type StoredSweep struct {
 func (s StoredSweep) Fired() bool { return s.Outcome == OutcomeFired }
 
 // Candidates are what the sweeper of a fired sweep answers for, one for each finding and once each, in the order
-// T1 paths, T1 names, T2, T3: "T1 path: <path>", "T1 name: <name>", "T2 <tool> <module>: <line>" and "T3: <line>".
+// T1 paths, T1 names, T2, T3, T4 leftovers, T4 fixtures: "T1 path: <path>", "T1 name: <name>",
+// "T2 <tool> <module>: <line>", "T3: <line>", "T4 leftover: <path>" and "T4 fixture: <path>".
 func (s StoredSweep) Candidates() []string {
 	var all []string
 	for _, p := range s.Findings.T1.DeletedOrRenamed {
@@ -201,6 +220,12 @@ func (s StoredSweep) Candidates() []string {
 	}
 	for _, line := range s.Findings.T3 {
 		all = append(all, "T3: "+line)
+	}
+	for _, p := range s.Findings.T4.Leftovers {
+		all = append(all, "T4 leftover: "+p)
+	}
+	for _, p := range s.Findings.T4.OrphanedFixtures {
+		all = append(all, "T4 fixture: "+p)
 	}
 	seen := map[string]bool{}
 	unique := all[:0]
@@ -219,12 +244,21 @@ func (s StoredSweep) Candidates() []string {
 // the findings make, a list that is null or missing, findings that name nothing) is refused with an error that wraps
 // ErrInvalidStored.
 func DecodeSweep(data []byte) (StoredSweep, error) {
-	var file sweepFile
-	if err := decodeFile(data, "stored sweep", &file); err != nil {
+	// The t4 member is read raw: a file stored before T4 has none and reads as empty lists, while a t4 that is present
+	// must hold both lists as arrays (S15 f, D37), which a struct field cannot tell from an absent one.
+	var stored struct {
+		sweepFile
+		T4 json.RawMessage `json:"t4"`
+	}
+	if err := decodeFile(data, "stored sweep", &stored); err != nil {
 		return StoredSweep{}, err
 	}
+	file := stored.sweepFile
 	b := RecordBinding{Base: file.Base, Head: file.Head, DiffSHA256: file.DiffSHA256}
 	err := checkRecordBinding(file.Kind, kindSweep, b)
+	if err == nil {
+		file.T4, err = decodeSweepT4(stored.T4)
+	}
 	if err == nil {
 		err = file.check()
 	}
@@ -238,6 +272,22 @@ func DecodeSweep(data []byte) (StoredSweep, error) {
 		return StoredSweep{}, fmt.Errorf("%w: stored sweep: %v", ErrInvalidStored, err)
 	}
 	return StoredSweep{Binding: b, Outcome: file.Outcome, Findings: file.SweepFindings}, nil
+}
+
+// decodeSweepT4 reads the t4 member of a stored sweep: no member (a file stored before T4) is both lists empty, and a
+// member that is present must be an object with both lists as arrays.
+func decodeSweepT4(raw json.RawMessage) (SweepT4, error) {
+	if raw == nil {
+		return SweepT4{Leftovers: []string{}, OrphanedFixtures: []string{}}, nil
+	}
+	var t4 SweepT4
+	if err := jsonstrict.DecodeStrict(raw, "stored sweep t4", &t4); err != nil {
+		return SweepT4{}, err
+	}
+	if t4.Leftovers == nil || t4.OrphanedFixtures == nil {
+		return SweepT4{}, errors.New("a list of the findings is missing or null")
+	}
+	return t4, nil
 }
 
 // SweeperCandidate is the answer of the sweeper about one candidate of the sweep.

@@ -8,7 +8,7 @@ import (
 
 // This file is what the sweep of a commit computes from text, without git or any tool (own-rdd T6b2, S6 b): the names a
 // diff removed, and the findings of an analyzer that a diff added. `review sweep` hands it the lines and the output
-// of the tools; the checks themselves (T1-T3 of the sweeper) run in the app.
+// of the tools; the checks themselves (T1-T4 of the sweeper) run in the app.
 
 // ChangedLines are the lines of one file that a diff removed, or that it added: the path as git prints it and the
 // lines without the leading '-' or '+'.
@@ -144,6 +144,20 @@ func isDigit(c byte) bool { return c >= '0' && c <= '9' }
 // inFlagWord is a character that may not touch a flag: a letter, a digit, `_` or `-`.
 func inFlagWord(c byte) bool {
 	return isLower(c) || isDigit(c) || (c >= 'A' && c <= 'Z') || c == '_' || c == '-'
+}
+
+// Leftovers is the changed paths whose base name ends .orig or .bak and that the commit does not delete, sorted, once
+// each (S15 b). The slice is empty, never nil.
+func Leftovers(paths, deleted []string) []string {
+	left := []string{}
+	for _, p := range paths {
+		name := p[strings.LastIndex(p, "/")+1:]
+		if (strings.HasSuffix(name, ".orig") || strings.HasSuffix(name, ".bak")) && !slices.Contains(deleted, p) && !slices.Contains(left, p) {
+			left = append(left, p)
+		}
+	}
+	slices.Sort(left)
+	return left
 }
 
 // position is the `:<line>` or `:<line>:<col>` that follows the path at the start of a finding.

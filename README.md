@@ -721,7 +721,7 @@ overlay review <verb>
         writes nothing and the error names the rule. `check` clears an exempted head unless a stored result
         blocks it. Exit 0 stored, 2 report refused, 1 usage error, a risk that is refused or any other failure.
     sweep  --feature <name> --base <rev> --head <rev> [--cwd <repo>]
-        Run the checks T1 to T3 of the sweeper once on the one commit from --base
+        Run the checks T1 to T4 of the sweeper once on the one commit from --base
         to --head (--base must be the first parent of --head, as for `exempt`) and store their findings as
         odd/review-results/<feature>/<head12>-<n>.sweep.json, numbered with the other files of the head and never
         over an existing one. T1: the paths the commit deleted or renamed, and the names its removed lines
@@ -731,14 +731,15 @@ overlay review <verb>
         changed .sh files, each on a copy of the base and a copy of the head kept under
         $XDG_STATE_HOME/labdrian/review-sweep/ (default ~/.local/state), outside the working tree; a line is a
         finding when it occurs more times at the head than at the base. T3: `git status` of the working tree
-        as it is, but for the records under odd/review-results/. A tool that is not found, or that fails
+        as it is, but for the records under odd/review-results/. T4: the paths the commit changes whose name ends .orig or .bak, and the test fixtures it leaves unread. A tool that is not found, or that fails
         without printing a finding, is a check that did not run: nothing is stored and the error names the
         tool (it needs deadcode, staticcheck and shellcheck on PATH, so until they are there the delivery stops
         with it). A tree whose blobs pass 256 MiB in the one `git cat-file --batch` answer that fills the copies
         cannot be swept: the sweep exits 2 and stores nothing, so the delivery of such a repository stops. A
         second sweep of the repository while one runs is refused at once: another review sweep of this
         repository is running. stdout is one JSON object: outcome (`clean`, or `fired` when any check found
-        something), the path and sha256 of the stored record, and the candidates the sweeper answers for. Exit 0
+        something), the path and sha256 of the stored record, and the candidates the sweeper answers for (`T1 path: <path>`, `T1 name: <name>`, `T2 <tool> <module>: <line>`, `T3: <line>`,
+        T4 leftover: <path>, T4 fixture: <path>). Exit 0
         stored (clean or fired), 2 refused or a check that did not run, 1 usage error.
     record --role sweeper|polisher --feature <name> --base <rev> --head <rev> [--result <file>|-] [--cwd <repo>]
         Store the report of the sweeper, or the findings of one polisher judge (read from --result, or from

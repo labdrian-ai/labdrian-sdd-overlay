@@ -306,7 +306,7 @@ Besides its review, a commit that is not passive leaves three more kinds of file
 
 | file | written by | holds |
 |---|---|---|
-| `<head12>-<n>.sweep.json` | `labdrian review sweep --feature <name> --base <rev> --head <rev>` | the outcome of the checks T1 to T3 of the sweeper: `clean`, or `fired` with the findings of each check |
+| `<head12>-<n>.sweep.json` | `labdrian review sweep --feature <name> --base <rev> --head <rev>` | the outcome of the checks T1 to T4 of the sweeper: `clean`, or `fired` with the findings of each check (`t1` to `t3`, and `t4` with the `leftovers` and `orphaned_fixtures` lists; a file stored before T4 has no `t4` and reads as both lists empty) |
 | `<head12>-<n>.sweeper.json` | `labdrian review record --role sweeper --feature <name> --base <rev> --head <rev>` | the sweeper's report, one disposition for each candidate of the fired sweep it names, and the `chore(sweep)` commit it made, or `null` |
 | `<head12>-<n>.polisher.json` | `labdrian review record --role polisher --feature <name> --base <rev> --head <rev>` | the findings of one polisher judge, verbatim; no finding blocks delivery |
 

@@ -48,6 +48,19 @@ func TestRemovedNamesAreTheDeclarationsOfRemovedLines(t *testing.T) {
 	}
 }
 
+// T4 lists the leftovers a commit adds (own-rdd T12b, S15 b): a changed path whose base name ends .orig or .bak and
+// that the commit does not delete, sorted, once each.
+func TestLeftoversAreTheChangedPathsEndingOrigOrBak(t *testing.T) {
+	paths := []string{"x.go.orig", "d/y.bak", "x.orig.go", "bak", "z.orig", "d/y.bak", "a/b.orig/c.go", "docs/a.md"}
+	got := review.Leftovers(paths, []string{"z.orig"})
+	if want := []string{"d/y.bak", "x.go.orig"}; !slices.Equal(got, want) {
+		t.Errorf("Leftovers() = %q, want %q", got, want)
+	}
+	if got := review.Leftovers(nil, nil); got == nil || len(got) != 0 {
+		t.Errorf("Leftovers(nil, nil) = %#v, want an empty slice that is not nil", got)
+	}
+}
+
 // T1 also looks for the flags a diff removed (own-rdd T12a, S15 d): a flag held by a removed line of a .go or .sh
 // file that no added line of a .go or .sh file holds.
 func TestRemovedFlagsAreTheFlagsARemovedLineHeldThatNoAddedLineHolds(t *testing.T) {

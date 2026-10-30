@@ -150,6 +150,28 @@ func TestSweepListsTheRemovedNamesThatTheHeadStillMentionsOutsideTheDiff(t *test
 	}
 }
 
+// T4 lists the leftovers a commit adds (own-rdd T12b, S15 b): a changed path ending .orig or .bak that the commit
+// does not delete.
+func TestSweepFiresOnALeftoverTheCommitAdds(t *testing.T) {
+	s := newSweepRig(t)
+	s.git.paths = []string{"docs/a.md", "d/y.bak", "x.go.orig", "gone.orig"}
+	s.git.deleted = []string{"gone.orig"}
+
+	got := s.mustSweep()
+
+	stored := s.stored()
+	if want := []string{"d/y.bak", "x.go.orig"}; !stored.Fired() || !reflect.DeepEqual(stored.Findings.T4.Leftovers, want) {
+		t.Errorf("stored sweep fired = %v, t4 leftovers = %q, want fired with %q", stored.Fired(), stored.Findings.T4.Leftovers, want)
+	}
+	if len(stored.Findings.T4.OrphanedFixtures) != 0 {
+		t.Errorf("t4 orphaned fixtures = %q, want none until T12c", stored.Findings.T4.OrphanedFixtures)
+	}
+	want := []string{"T1 path: gone.orig", "T4 leftover: d/y.bak", "T4 leftover: x.go.orig"}
+	if got.Outcome != review.OutcomeFired || !reflect.DeepEqual(got.Candidates, want) {
+		t.Errorf("Swept outcome = %q, candidates = %q, want fired and %q", got.Outcome, got.Candidates, want)
+	}
+}
+
 func TestSweepFiresOnARemovedFlagTheHeadStillMentionsOutsideTheDiff(t *testing.T) {
 	s := newSweepRig(t)
 	s.git.paths = []string{"pkg/a.go"}

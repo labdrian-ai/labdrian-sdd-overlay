@@ -3,6 +3,7 @@ package review_test
 import (
 	"encoding/json"
 	"errors"
+	"slices"
 	"strings"
 	"testing"
 
@@ -44,8 +45,8 @@ func TestEncodeSweepWritesTheRecordOfS6c(t *testing.T) {
 			t.Errorf("%s = %v, want %v", key, m[key], want)
 		}
 	}
-	if len(m) != 8 {
-		t.Errorf("the record has %d members, want 8 (kind, base, head, diff_sha256, outcome, t1, t2, t3): %v", len(m), m)
+	if len(m) != 9 {
+		t.Errorf("the record has %d members, want 9 (kind, base, head, diff_sha256, outcome, t1, t2, t3, t4): %v", len(m), m)
 	}
 	t1 := m["t1"].(map[string]any)
 	if got := t1["removed_names"].([]any)[0].(map[string]any); got["name"] != "Old" || got["hits"].([]any)[0] != "docs/a.md" {
@@ -72,14 +73,17 @@ func TestEncodeSweepIsCleanExactlyWhenEveryListIsEmpty(t *testing.T) {
 	if m["outcome"] != "clean" {
 		t.Errorf("outcome = %v, want clean", m["outcome"])
 	}
-	if !strings.Contains(string(data), `"t2": []`) || !strings.Contains(string(data), `"t3": []`) || !strings.Contains(string(data), `"deleted_or_renamed": []`) || !strings.Contains(string(data), `"removed_names": []`) {
+	if !strings.Contains(string(data), `"t2": []`) || !strings.Contains(string(data), `"t3": []`) || !strings.Contains(string(data), `"deleted_or_renamed": []`) || !strings.Contains(string(data), `"removed_names": []`) ||
+		!strings.Contains(string(data), `"leftovers": []`) || !strings.Contains(string(data), `"orphaned_fixtures": []`) {
 		t.Errorf("an empty list is not an empty array:\n%s", data)
 	}
 	for name, f := range map[string]review.SweepFindings{
-		"T1 paths": {T1: review.SweepT1{DeletedOrRenamed: []string{"a"}}},
-		"T1 names": {T1: review.SweepT1{RemovedNames: []review.RemovedName{{Name: "N", Hits: []string{"a"}}}}},
-		"T2":       {T2: []review.SweepT2{{Tool: "deadcode", Module: ".", New: []string{"x"}}}},
-		"T3":       {T3: []string{"?? a"}},
+		"T1 paths":    {T1: review.SweepT1{DeletedOrRenamed: []string{"a"}}},
+		"T1 names":    {T1: review.SweepT1{RemovedNames: []review.RemovedName{{Name: "N", Hits: []string{"a"}}}}},
+		"T2":          {T2: []review.SweepT2{{Tool: "deadcode", Module: ".", New: []string{"x"}}}},
+		"T3":          {T3: []string{"?? a"}},
+		"T4 leftover": {T4: review.SweepT4{Leftovers: []string{"a.orig"}}},
+		"T4 fixture":  {T4: review.SweepT4{OrphanedFixtures: []string{"p/testdata/a"}}},
 	} {
 		data, err := review.EncodeSweep(c, f)
 		if err != nil {
@@ -103,6 +107,8 @@ func TestEncodeSweepRefusesFindingsThatNameNothing(t *testing.T) {
 		"a check with no line": {T2: []review.SweepT2{{Tool: "deadcode", Module: "."}}},
 		"an empty line":        {T2: []review.SweepT2{{Tool: "deadcode", Module: ".", New: []string{""}}}},
 		"an empty T3 line":     {T3: []string{""}},
+		"an empty leftover":    {T4: review.SweepT4{Leftovers: []string{""}}},
+		"an empty fixture":     {T4: review.SweepT4{OrphanedFixtures: []string{""}}},
 	} {
 		if _, err := review.EncodeSweep(c, f); !errors.Is(err, review.ErrInvalidSweepFindings) {
 			t.Errorf("%s: EncodeSweep() error = %v, want one that is %v", name, err, review.ErrInvalidSweepFindings)
@@ -131,6 +137,94 @@ func TestDecodeSweepReadsBackWhatEncodeSweepWrote(t *testing.T) {
 		if f.Fired() && (len(got.Findings.T1.RemovedNames) != 1 || got.Findings.T2[0].Tool != "staticcheck" || got.Findings.T3[0] != "?? stray.txt") {
 			t.Errorf("%s: findings = %+v, want the ones stored", name, got.Findings)
 		}
+	}
+}
+
+// A sweep stored before T4 existed has no t4 member: it reads as one with both lists empty, and its candidates keep
+// their text and their place (S15 f).
+func TestDecodeSweepReadsARecordStoredBeforeT4(t *testing.T) {
+	c := candidate(t)
+	old := `{"kind":"sweep","base":"` + c.Base + `","head":"` + c.Head + `","diff_sha256":"` + c.DiffSHA256 + `","outcome":"fired",` +
+		`"t1":{"deleted_or_renamed":["engine/old.go"],"removed_names":[{"name":"Old","hits":["docs/a.md"]}]},` +
+		`"t2":[{"tool":"staticcheck","module":"engine","new":["a.go: unused x"]}],"t3":["?? stray.txt"]}`
+	got, err := review.DecodeSweep([]byte(old))
+	if err != nil {
+		t.Fatalf("DecodeSweep(a record without t4) error = %v, want nil", err)
+	}
+	if !got.Fired() {
+		t.Errorf("Fired() = false, want true: outcome %q", got.Outcome)
+	}
+	if got.Findings.T4.Leftovers == nil || got.Findings.T4.OrphanedFixtures == nil || len(got.Findings.T4.Leftovers)+len(got.Findings.T4.OrphanedFixtures) != 0 {
+		t.Errorf("t4 = %#v, want both lists empty and not nil", got.Findings.T4)
+	}
+	want := []string{"T1 path: engine/old.go", "T1 name: Old", "T2 staticcheck engine: a.go: unused x", "T3: ?? stray.txt"}
+	if ids := got.Candidates(); !slices.Equal(ids, want) {
+		t.Errorf("Candidates() = %q, want today's %q", ids, want)
+	}
+	clean := `{"kind":"sweep","base":"` + c.Base + `","head":"` + c.Head + `","diff_sha256":"` + c.DiffSHA256 + `","outcome":"clean",` +
+		`"t1":{"deleted_or_renamed":[],"removed_names":[]},"t2":[],"t3":[]}`
+	if s, err := review.DecodeSweep([]byte(clean)); err != nil || s.Fired() {
+		t.Errorf("DecodeSweep(a clean record without t4) = fired %v, error %v, want clean and nil", s.Fired(), err)
+	}
+}
+
+// A t4 that is present must hold both lists as arrays (S15 f, D37).
+func TestDecodeSweepRefusesANullOrPartialT4(t *testing.T) {
+	c := candidate(t)
+	head := `{"kind":"sweep","base":"` + c.Base + `","head":"` + c.Head + `","diff_sha256":"` + c.DiffSHA256 + `","outcome":"clean",` +
+		`"t1":{"deleted_or_renamed":[],"removed_names":[]},"t2":[],"t3":[],`
+	if _, err := review.DecodeSweep([]byte(head + `"t4":{"leftovers":[],"orphaned_fixtures":[]}}`)); err != nil {
+		t.Fatalf("setup: DecodeSweep(a whole t4) error = %v, want nil", err)
+	}
+	for name, t4 := range map[string]string{
+		"null":                `null`,
+		"a list missing":      `{"leftovers":[]}`,
+		"the other missing":   `{"orphaned_fixtures":[]}`,
+		"a list null":         `{"leftovers":null,"orphaned_fixtures":[]}`,
+		"the other null":      `{"leftovers":[],"orphaned_fixtures":null}`,
+		"a member it lacks":   `{"leftovers":[],"orphaned_fixtures":[],"extra":1}`,
+		"an empty path":       `{"leftovers":[""],"orphaned_fixtures":[]}`,
+		"an empty fixture":    `{"leftovers":[],"orphaned_fixtures":[""]}`,
+		"a key written twice": `{"leftovers":[],"leftovers":[],"orphaned_fixtures":[]}`,
+	} {
+		_, err := review.DecodeSweep([]byte(head + `"t4":` + t4 + `}`))
+		if !errors.Is(err, review.ErrInvalidStored) {
+			t.Errorf("%s: DecodeSweep() error = %v, want one that is %v", name, err, review.ErrInvalidStored)
+		}
+	}
+}
+
+func TestEncodeSweepWritesT4AndFiresOnIt(t *testing.T) {
+	c := candidate(t)
+	f := review.SweepFindings{T4: review.SweepT4{Leftovers: []string{"a.go.orig"}}}
+	if !f.Fired() {
+		t.Errorf("Fired() = false, want true: a leftover alone fires")
+	}
+	data, err := review.EncodeSweep(c, f)
+	if err != nil {
+		t.Fatalf("EncodeSweep() error = %v, want nil", err)
+	}
+	if got := decodeMap(t, data)["outcome"]; got != "fired" {
+		t.Errorf("outcome = %v, want fired", got)
+	}
+	t4 := decodeMap(t, data)["t4"]
+	b, _ := json.Marshal(t4)
+	if string(b) != `{"leftovers":["a.go.orig"],"orphaned_fixtures":[]}` {
+		t.Errorf("t4 = %s, want {\"leftovers\":[\"a.go.orig\"],\"orphaned_fixtures\":[]}", b)
+	}
+	s, err := review.DecodeSweep(data)
+	if err != nil {
+		t.Fatalf("DecodeSweep() error = %v, want nil", err)
+	}
+	s.Findings.T4.OrphanedFixtures = []string{"p/testdata/a.golden"}
+	s.Findings.T3 = []string{"?? x"}
+	want := []string{"T3: ?? x", "T4 leftover: a.go.orig", "T4 fixture: p/testdata/a.golden"}
+	if ids := s.Candidates(); !slices.Equal(ids, want) {
+		t.Errorf("Candidates() = %q, want %q: T4 leftover, then T4 fixture, after T3", ids, want)
+	}
+	dup := review.StoredSweep{Findings: review.SweepFindings{T4: review.SweepT4{Leftovers: []string{"a.orig", "a.orig"}}}}
+	if ids := dup.Candidates(); len(ids) != 1 {
+		t.Errorf("Candidates() = %q, want each id once", ids)
 	}
 }
 
