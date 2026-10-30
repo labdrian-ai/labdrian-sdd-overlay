@@ -795,6 +795,18 @@ overlay review <verb>
         brief that names the binding and asks something else passes it, and the reply is still held to the binding by
         `record`. Whether the installed Codex enforces `--sandbox read-only` is shown only by a live run. Exit 0 stored,
         2 reply refused, 1 usage error or any other failure.
+    proposals [--cwd <repo>]
+        Prints, and never runs, what the owner may remove: the worktrees of the repository other than the main one and the
+        one of `--cwd`, not locked, that git marks prunable (`git worktree prune`) or whose HEAD is an ancestor of the tip of
+        the default branch (origin/HEAD, else main, else master; `git worktree remove <path>`), then the local branches other
+        than the default one and the one checked out at `--cwd` that are merged into it (`git branch -d <branch>`). stdout is
+        one JSON object `{default, worktrees: [{path, head, reason, command}], branches: [{name, command}]}` with both lists
+        always there and `reason` `merged` or `prunable`; the commands are git's own refusing forms, never `--force` or
+        `-D`. A repository with no default branch is refused (the repository has no default branch (origin/HEAD, main or
+        master), so nothing can be told merged), and so is a detached HEAD at `--cwd`. Nothing is stored and nothing is
+        deleted: the parent relays each proposal to the owner and runs a proposed command only after the owner confirms it.
+        Remote branches are not proposed, and a branch merged by squash or rebase is not. Exit 0 listed, 1 usage error,
+        refusal or any other failure.
     stop-hook
         Not run by a person: the Claude Code Stop hook that `install-hooks` wires (the review stop-hook, described
         below as `gentle-ai-overlay review stop-hook`). It asks the agent for what the first commit with unfinished

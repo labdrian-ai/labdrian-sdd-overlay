@@ -20,7 +20,9 @@ package main
 // --runtime codex --feature <name> --base <rev> --head <rev> --rows <id,id> --model <model> [--cwd <repo>]' (review_launch.go)
 // binds the candidate, runs the Codex reviewer read-only on the brief on stdin and records its reply as 'review record'
 // does. launch is the one verb that starts a reviewer, on Codex, read-only; no other verb launches an agent or
-// dispatches work: their reply is a file somebody else produced. 'review stop-hook' is the odd one out: the
+// dispatches work: their reply is a file somebody else produced. 'review proposals [--cwd <repo>]' prints the worktrees
+// and branches the owner may remove and the git command for each, and deletes and stores nothing (review_proposals.go).
+// 'review stop-hook' is the odd one out: the
 // Claude Code Stop hook that blocks the stop of an agent whose branch has a commit no review covers, which Claude Code
 // starts and a person does not (review_stop_hook.go).
 
@@ -59,7 +61,7 @@ const reviewGitMaxOutput = 256 << 20
 // in an exit that ends nothing.
 func runReview(p process, d deps, args []string) {
 	if len(args) == 0 {
-		fmt.Fprintln(p.stderr, "error: review requires a verb: bind, record, verify, check, exempt, sweep, anchor, launch")
+		fmt.Fprintln(p.stderr, "error: review requires a verb: bind, record, verify, check, exempt, sweep, anchor, launch, proposals")
 		p.exit(1)
 		return
 	}
@@ -80,10 +82,12 @@ func runReview(p process, d deps, args []string) {
 		runReviewAnchor(p, d, args[1:])
 	case "launch":
 		runReviewLaunch(p, d, args[1:])
+	case "proposals":
+		runReviewProposals(p, d, args[1:])
 	case reviewStopVerb:
 		runReviewStopHook(p, d, args[1:])
 	default:
-		fmt.Fprintf(p.stderr, "error: review: unknown verb %q (expected bind, record, verify, check, exempt, sweep, anchor or launch)\n", args[0])
+		fmt.Fprintf(p.stderr, "error: review: unknown verb %q (expected bind, record, verify, check, exempt, sweep, anchor, launch or proposals)\n", args[0])
 		p.exit(1)
 	}
 }

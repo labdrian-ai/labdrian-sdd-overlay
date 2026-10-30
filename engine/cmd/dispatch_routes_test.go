@@ -38,7 +38,7 @@ func TestRunRoutesEachSubcommandThroughTheProcessItWasHanded(t *testing.T) {
 		{"review-receipt", "stderr", "error: review-receipt requires a verb: capture, hook\n", []int{1}},
 		{"shaper", "stderr", "error: shaper requires a verb: assess, clearance, guard-hook\n", []int{1}},
 		{"roles", "stderr", "error: roles requires a verb: validate, next, resume, append, match-shaper\n", []int{1}},
-		{"review", "stderr", "error: review requires a verb: bind, record, verify, check, exempt, sweep, anchor, launch\n", []int{1}},
+		{"review", "stderr", "error: review requires a verb: bind, record, verify, check, exempt, sweep, anchor, launch, proposals\n", []int{1}},
 		{"memory", "stderr", "error: memory requires a verb: plan\n", []int{1}},
 		{"workflow", "stderr", "error: workflow requires a verb: create, start, ", []int{1}},
 		{"projection", "stderr", "error: projection requires an action: hook\n", []int{1}},

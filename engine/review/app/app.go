@@ -132,6 +132,14 @@ type Git interface {
 	// IsCommit says whether name, a full object name, is an object git has and that object is a commit. An object git
 	// does not have, or one of another kind, is false and no error; git failing to answer is an error.
 	IsCommit(repo Repository, name string) (bool, error)
+	// Worktrees returns the working trees of the repository, the main one first, as `git worktree list` tells them. A
+	// record of another shape is an error (own-rdd T12e, S15 g).
+	Worktrees(repo Repository) ([]review.Worktree, error)
+	// MergedBranches returns the short names of the local branches merged into into, a commit or a revision, sorted.
+	MergedBranches(repo Repository, into string) ([]string, error)
+	// IsAncestor says whether a is an ancestor of b, or b itself, both full object names. An object git does not have is
+	// an error.
+	IsAncestor(repo Repository, a, b string) (bool, error)
 	// Status returns the lines of `git status --porcelain` of the working tree of repo, with every untracked file listed on
 	// its own line. A clean tree gives none.
 	Status(repo Repository) ([]string, error)

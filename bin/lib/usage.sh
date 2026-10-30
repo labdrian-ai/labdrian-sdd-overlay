@@ -359,6 +359,18 @@ Commands:
                                              names codex and repeats what it printed on stderr, and nothing is
                                              stored
                                              (exit 0 stored, 2 reply refused, 1 usage error or any other failure)
+                                   proposals [--cwd REPO]
+                                             print, and never run, what the owner may remove: the worktrees other
+                                             than the main one and the one of --cwd, not locked, that git marks
+                                             prunable (git worktree prune) or whose HEAD the default branch has
+                                             (git worktree remove PATH), and the local branches merged into the
+                                             default branch other than it and the one checked out at --cwd
+                                             (git branch -d NAME), as one JSON object {default, worktrees,
+                                             branches}; never --force or -D; a repository with no default branch,
+                                             or a detached HEAD at --cwd, is refused; store and delete nothing:
+                                             the parent relays each proposal to the owner and runs a proposed
+                                             command only after the owner confirms it
+                                             (exit 0 listed, 1 usage error, refusal or any other failure)
                                    stop-hook
                                              not run by a person: the Claude Code Stop hook that install-hooks wires
                                              (the review stop-hook). On a branch other than the default one, it blocks

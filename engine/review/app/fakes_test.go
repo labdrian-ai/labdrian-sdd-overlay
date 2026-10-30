@@ -55,6 +55,10 @@ type fakeGit struct {
 	allParents    map[string][]string            // every parent of a commit; none for a commit that is not a key
 	mergeBases    map[string][]string            // the merge bases of "<a> <b>"; none for a pair that is not a key
 	trees         map[string]string              // the tree of a commit
+	commitOf      map[string]string              // the commit Commit answers for a revision that is a key, before its own table
+	worktrees     []review.Worktree              // what Worktrees answers
+	merged        []string                       // what MergedBranches answers
+	ancestors     map[string]bool                // whether IsAncestor says a head is an ancestor; false for a head that is not a key
 	worktree      app.WorktreeState
 	worktreeLater []worktreeAnswer
 	fail          map[string]error
@@ -119,6 +123,9 @@ func (g *fakeGit) Commit(repo app.Repository, rev string) (string, error) {
 	g.record("Commit " + rev)
 	if err := g.fail["Commit "+rev]; err != nil {
 		return "", err
+	}
+	if commit, ok := g.commitOf[rev]; ok {
+		return commit, nil
 	}
 	switch rev {
 	case "HEAD~1", baseSHA:
@@ -280,6 +287,30 @@ func (g *fakeGit) IsCommit(repo app.Repository, name string) (bool, error) {
 		return false, err
 	}
 	return !g.notCommit[name], nil
+}
+
+func (g *fakeGit) Worktrees(repo app.Repository) ([]review.Worktree, error) {
+	g.record("Worktrees")
+	if err := g.fail["Worktrees"]; err != nil {
+		return nil, err
+	}
+	return g.worktrees, nil
+}
+
+func (g *fakeGit) MergedBranches(repo app.Repository, into string) ([]string, error) {
+	g.record("MergedBranches " + into)
+	if err := g.fail["MergedBranches"]; err != nil {
+		return nil, err
+	}
+	return g.merged, nil
+}
+
+func (g *fakeGit) IsAncestor(repo app.Repository, a, b string) (bool, error) {
+	g.record("IsAncestor " + a + " " + b)
+	if err := g.fail["IsAncestor"]; err != nil {
+		return false, err
+	}
+	return g.ancestors[a], nil
 }
 
 func (g *fakeGit) Status(repo app.Repository) ([]string, error) {
