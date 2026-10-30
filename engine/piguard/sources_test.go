@@ -59,11 +59,15 @@ var _ = exec.Command("pi", "remove", "x")
 import "os/exec"
 var _ = exec.CommandContext(nil, "pi")
 `,
+		"codex_test.go": `package a
+import "os/exec"
+var _ = exec.Command("codex", "exec")
+`,
 	})
 	r := &recordingT{}
 	piguard.CheckTestSources(r, dir)
 	all := strings.Join(r.errors, "\n")
-	for _, want := range []string{"imports_test.go imports", "command_test.go:3: exec.Command(\"pi\")", "context_test.go:3: exec.CommandContext(\"pi\")"} {
+	for _, want := range []string{"imports_test.go imports", "command_test.go:3: exec.Command(\"pi\")", "context_test.go:3: exec.CommandContext(\"pi\")", "codex_test.go:3: exec.Command(\"codex\")"} {
 		if !strings.Contains(all, want) {
 			t.Errorf("missing %q in:\n%s", want, all)
 		}

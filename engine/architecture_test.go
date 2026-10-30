@@ -148,6 +148,8 @@ import (
 //     atomicfile, never over a file that is there.
 //   - review/analyzers is the adapter of the Analyzers port of review/app (own-rdd T6b3): it runs deadcode,
 //     staticcheck and shellcheck on a copy of a tree and returns the finding lines they print.
+//   - review/codexexec is the adapter of the Reviewer port of review/app (own-rdd T8b): it runs the reviewer
+//     through `codex exec --sandbox read-only` with the instructions of the deployed Codex agent file.
 //   - oddtask is a domain package (own-rdd T11): what the builder guard decides from, the Spec: line a builder
 //     prompt cites and the task lines, shaped marks and shaper Log entries of a feature document, and the pure
 //     rule that says whether the builder may be launched. It reads no file and runs no command.
@@ -217,6 +219,7 @@ var rings = map[string]archguard.Ring{
 	"review":                    archguard.Domain,
 	"review/analyzers":          archguard.Adapter,
 	"review/app":                archguard.Application,
+	"review/codexexec":          archguard.Adapter,
 	"review/fsstore":            archguard.Adapter,
 	"review/gitexec":            archguard.Adapter,
 	"reviewreceipt":             archguard.Domain,
