@@ -575,6 +575,16 @@ func (g Git) Modules(repo app.Repository, commit string) ([]string, error) {
 	return modules, nil
 }
 
+// TreeFiles returns every path of the tree of commit, in the order git prints them (own-rdd T12c, S15 c). It asks git what
+// Modules asks.
+func (g Git) TreeFiles(repo app.Repository, commit string) ([]string, error) {
+	out, err := g.output(repo.Root, "ls-tree", []string{"ls-tree", "-r", "--name-only", "-z", "--end-of-options", commit})
+	if err != nil {
+		return nil, err
+	}
+	return splitPaths(out)
+}
+
 // mentionsBatch is how many names one start of `git grep` is asked for: the cost of a sweep grows with the names in
 // steps of this size, and 256 names of the length of an identifier stay far under the limit of the arguments.
 const mentionsBatch = 256

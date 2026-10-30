@@ -123,6 +123,21 @@ func TestModulesAreTheDirectoriesThatHoldAGoModAtTheCommit(t *testing.T) {
 	}
 }
 
+func TestTreeFilesListsEveryPathOfTheTree(t *testing.T) {
+	f := newFixture(t, "sha1")
+	f.write("b.txt", "b\n")
+	f.write("a space.txt", "a\n")
+	f.write("d/e/f.json", "{}\n")
+	f.snapshotAll("feat: head")
+
+	got, err := f.adapter().TreeFiles(f.repo(), f.name("HEAD"))
+
+	want := []string{"a space.txt", "b.txt", "d/e/f.json"}
+	if err != nil || !reflect.DeepEqual(got, want) {
+		t.Errorf("TreeFiles = %q, %v, want %q, nil", got, err, want)
+	}
+}
+
 func TestMentionsAreThePathsOfTheCommitThatHoldTheNameAsAWholeWord(t *testing.T) {
 	f := newFixture(t, "sha1")
 	f.write("a.go", "package a\n\nvar _ = oldName()\n")

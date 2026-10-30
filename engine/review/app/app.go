@@ -122,6 +122,9 @@ type Git interface {
 	// Modules returns the directories, relative to the root of the tree and written with '/', that hold a go.mod at
 	// commit, a full object name; the root is ".". Sorted.
 	Modules(repo Repository, commit string) ([]string, error)
+	// TreeFiles returns every path of the tree of commit, a full object name, written with '/', in the order git prints
+	// them (own-rdd T12c, S15 c).
+	TreeFiles(repo Repository, commit string) ([]string, error)
 	// Mentions returns, for each of names, the paths of the tree of commit, a full object name, that hold it as a whole
 	// word, matched as a fixed string, once each, in the order git prints them. A name nothing mentions is not a key and
 	// no names is no answer and no error; a search that did not run, or a name that is empty or has a line break, is an error.

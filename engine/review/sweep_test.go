@@ -61,6 +61,60 @@ func TestLeftoversAreTheChangedPathsEndingOrigOrBak(t *testing.T) {
 	}
 }
 
+// T4 also lists the fixtures a commit leaves unread (own-rdd T12c, S15 c).
+func TestFixturePackagesAreTheDirectoriesOfTheChangedGoFilesAndAboveTestdata(t *testing.T) {
+	paths := []string{"a/b/x_test.go", "a/testdata/g/v1.json", "testdata/x.json", "docs/a.md", "a/b/y.go", "README.md"}
+	got := review.FixturePackages(paths)
+	if want := []string{".", "a", "a/b"}; !slices.Equal(got, want) {
+		t.Errorf("FixturePackages(%q) = %q, want %q: sorted, each once", paths, got, want)
+	}
+	if got := review.FixturePackages([]string{"docs/a.md", "x.sh"}); len(got) != 0 {
+		t.Errorf("FixturePackages(md and sh) = %q, want none", got)
+	}
+}
+
+func TestFixtureNamesAreTheBaseNameAndEachDirectoryBetweenTestdataAndIt(t *testing.T) {
+	got := review.FixtureNames("a/testdata/g/h/v1.json")
+	if want := []string{"v1.json", "g", "h"}; !slices.Equal(got, want) {
+		t.Errorf("FixtureNames = %q, want %q", got, want)
+	}
+	if got, want := review.FixtureNames("testdata/x.json"), []string{"x.json"}; !slices.Equal(got, want) {
+		t.Errorf("FixtureNames(root) = %q, want %q", got, want)
+	}
+}
+
+func TestOrphanedFixturesAreTheFixturesNoGoFileOfTheirPackageNames(t *testing.T) {
+	files := []string{
+		"a/x_test.go", "a/sub/y_test.go", "b/x_test.go",
+		"a/testdata/read.json",     // named by its base name in a/x_test.go
+		"a/testdata/g/inner.json",  // named only by its directory g in a/x_test.go
+		"a/testdata/only-sub.json", // named only in a/sub/y_test.go
+		"a/testdata/only-b.json",   // named only in b/x_test.go
+		"a/testdata/nobody.json",   // named nowhere
+		"c/testdata/other.json",    // a package nobody asked about
+		"a/testdata/doc.json",      // named only by a markdown file
+	}
+	mentioned := map[string][]string{
+		"read.json":     {"a/x_test.go"},
+		"g":             {"a/x_test.go"},
+		"only-sub.json": {"a/sub/y_test.go"},
+		"only-b.json":   {"b/x_test.go"},
+		"doc.json":      {"a/README.md"},
+	}
+	got := review.OrphanedFixtures(files, []string{"a"}, mentioned)
+	want := []string{"a/testdata/doc.json", "a/testdata/nobody.json", "a/testdata/only-b.json", "a/testdata/only-sub.json"}
+	if !slices.Equal(got, want) {
+		t.Errorf("OrphanedFixtures = %q, want %q", got, want)
+	}
+	if got := review.OrphanedFixtures(files, nil, mentioned); got == nil || len(got) != 0 {
+		t.Errorf("OrphanedFixtures(no package) = %#v, want an empty slice that is not nil", got)
+	}
+	root := review.OrphanedFixtures([]string{"testdata/x.json", "m_test.go"}, []string{"."}, map[string][]string{"x.json": {"m_test.go"}})
+	if len(root) != 0 {
+		t.Errorf("OrphanedFixtures(root package) = %q, want none: m_test.go names x.json", root)
+	}
+}
+
 // T1 also looks for the flags a diff removed (own-rdd T12a, S15 d): a flag held by a removed line of a .go or .sh
 // file that no added line of a .go or .sh file holds.
 func TestRemovedFlagsAreTheFlagsARemovedLineHeldThatNoAddedLineHolds(t *testing.T) {

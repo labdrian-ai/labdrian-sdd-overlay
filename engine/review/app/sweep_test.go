@@ -164,11 +164,79 @@ func TestSweepFiresOnALeftoverTheCommitAdds(t *testing.T) {
 		t.Errorf("stored sweep fired = %v, t4 leftovers = %q, want fired with %q", stored.Fired(), stored.Findings.T4.Leftovers, want)
 	}
 	if len(stored.Findings.T4.OrphanedFixtures) != 0 {
-		t.Errorf("t4 orphaned fixtures = %q, want none until T12c", stored.Findings.T4.OrphanedFixtures)
+		t.Errorf("t4 orphaned fixtures = %q, want none for a commit with no package", stored.Findings.T4.OrphanedFixtures)
 	}
 	want := []string{"T1 path: gone.orig", "T4 leftover: d/y.bak", "T4 leftover: x.go.orig"}
 	if got.Outcome != review.OutcomeFired || !reflect.DeepEqual(got.Candidates, want) {
 		t.Errorf("Swept outcome = %q, candidates = %q, want fired and %q", got.Outcome, got.Candidates, want)
+	}
+}
+
+// T4 lists the fixtures a commit leaves unread (own-rdd T12c, S15 c): orphaned at the head and not at the base.
+func TestSweepFiresOnAFixtureTheCommitLeavesUnread(t *testing.T) {
+	s := newSweepRig(t)
+	s.git.paths = []string{"a/x_test.go"}
+	files := []string{"a/x_test.go", "a/testdata/old.json", "a/testdata/kept.json"}
+	s.git.treeFiles = map[string][]string{baseSHA: files, headSHA: files}
+	s.git.mentionsAt = map[string]map[string][]string{
+		baseSHA: {"old.json": {"a/x_test.go"}, "kept.json": {"a/x_test.go"}},
+		headSHA: {"kept.json": {"a/x_test.go"}},
+	}
+
+	got := s.mustSweep()
+
+	stored := s.stored()
+	if want := []string{"a/testdata/old.json"}; !stored.Fired() || !reflect.DeepEqual(stored.Findings.T4.OrphanedFixtures, want) {
+		t.Errorf("stored sweep fired = %v, t4 fixtures = %q, want fired with %q", stored.Fired(), stored.Findings.T4.OrphanedFixtures, want)
+	}
+	if got.Outcome != review.OutcomeFired || !reflect.DeepEqual(got.Candidates, []string{"T4 fixture: a/testdata/old.json"}) {
+		t.Errorf("Swept outcome = %q, candidates = %q, want fired with the fixture", got.Outcome, got.Candidates)
+	}
+	var searches []string
+	for _, c := range s.git.calls {
+		if strings.HasPrefix(c, "Mentions ") {
+			searches = append(searches, c)
+		}
+	}
+	want := []string{"Mentions " + baseSHA + " kept.json,old.json", "Mentions " + headSHA + " kept.json,old.json"}
+	if !reflect.DeepEqual(searches, want) {
+		t.Errorf("searches = %q, want one per side with the names of the fixtures", searches)
+	}
+}
+
+func TestSweepDoesNotFireOnAFixtureAlreadyUnreadAtTheBase(t *testing.T) {
+	s := newSweepRig(t)
+	s.git.paths = []string{"a/x_test.go"}
+	files := []string{"a/x_test.go", "a/testdata/old.json"}
+	s.git.treeFiles = map[string][]string{baseSHA: files, headSHA: files}
+
+	got := s.mustSweep()
+
+	if got.Outcome != review.OutcomeClean || len(s.stored().Findings.T4.OrphanedFixtures) != 0 {
+		t.Errorf("outcome = %q, fixtures = %q, want clean: the fixture was unread at the base too", got.Outcome, s.stored().Findings.T4.OrphanedFixtures)
+	}
+}
+
+func TestSweepAsksNoFixtureSearchForACommitWithNoPackage(t *testing.T) {
+	s := newSweepRig(t)
+	s.git.paths = []string{"README.md"}
+
+	s.mustSweep()
+
+	if s.git.called("TreeFiles") != 0 {
+		t.Errorf("calls = %q, want no TreeFiles for a commit that changes only README.md", s.git.calls)
+	}
+}
+
+func TestSweepRefusesAndStoresNothingWhenTheFilesOfATreeCannotBeListed(t *testing.T) {
+	s := newSweepRig(t)
+	s.git.paths = []string{"a/x_test.go"}
+	s.git.fail["TreeFiles"] = errors.New("boom")
+
+	_, err := s.sweep()
+
+	if err == nil || !strings.Contains(err.Error(), "list the files of") || len(s.results.files["own-rdd"]) != 0 {
+		t.Errorf("error = %v, stored %v, want a refusal naming the listing and nothing stored", err, s.results.files)
 	}
 }
 

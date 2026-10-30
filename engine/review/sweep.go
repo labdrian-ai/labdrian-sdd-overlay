@@ -1,6 +1,7 @@
 package review
 
 import (
+	"path"
 	"regexp"
 	"slices"
 	"strings"
@@ -158,6 +159,71 @@ func Leftovers(paths, deleted []string) []string {
 	}
 	slices.Sort(left)
 	return left
+}
+
+// FixturePackages is the packages of a commit for the fixture check (S15 c): the directory of each changed .go path and,
+// for a changed path with a testdata element, the directory above the first testdata ("." at the root). Sorted, once
+// each. A path that is neither gives none.
+func FixturePackages(paths []string) []string {
+	var packages []string
+	for _, p := range paths {
+		pkg, ok := "", false
+		if dir, _, found := strings.Cut(p, "/testdata/"); found {
+			pkg, ok = dir, true
+		} else if strings.HasPrefix(p, "testdata/") {
+			pkg, ok = ".", true
+		} else if strings.HasSuffix(p, ".go") {
+			pkg, ok = path.Dir(p), true
+		}
+		if ok && !slices.Contains(packages, pkg) {
+			packages = append(packages, pkg)
+		}
+	}
+	slices.Sort(packages)
+	return packages
+}
+
+// FixtureNames is the names of a fixture, a path of the form <package>/testdata/...: its base name, then each directory
+// between testdata and it, outermost first (S15 c).
+func FixtureNames(fixture string) []string {
+	below, found := strings.CutPrefix(fixture, "testdata/")
+	if !found {
+		_, below, _ = strings.Cut(fixture, "/testdata/")
+	}
+	parts := strings.Split(below, "/")
+	names := []string{parts[len(parts)-1]}
+	return append(names, parts[:len(parts)-1]...)
+}
+
+// OrphanedFixtures is the fixtures of packages among files, the paths of a tree, that no .go file directly in their
+// package names (S15 c): mentioned says, for a name, the paths of the tree that hold it as a whole word. Sorted, once
+// each. The slice is empty, never nil.
+func OrphanedFixtures(files, packages []string, mentioned map[string][]string) []string {
+	orphaned := []string{}
+	for _, pkg := range packages {
+		prefix := "testdata/"
+		if pkg != "." {
+			prefix = pkg + "/testdata/"
+		}
+		for _, f := range files {
+			if !strings.HasPrefix(f, prefix) || slices.Contains(orphaned, f) {
+				continue
+			}
+			read := false
+			for _, name := range FixtureNames(f) {
+				for _, hit := range mentioned[name] {
+					if strings.HasSuffix(hit, ".go") && path.Dir(hit) == pkg {
+						read = true
+					}
+				}
+			}
+			if !read {
+				orphaned = append(orphaned, f)
+			}
+		}
+	}
+	slices.Sort(orphaned)
+	return orphaned
 }
 
 // position is the `:<line>` or `:<line>:<col>` that follows the path at the start of a finding.

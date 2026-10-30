@@ -52,8 +52,9 @@ type Swept struct {
 //     times at the head (review.NewFindings). A check that cannot run is an error wrapping ErrToolDidNotRun, and nothing
 //     is stored (S1);
 //   - T3: the lines of git status of the working tree as it is, but for the records waiting under odd/review-results/;
-//   - T4: the changed paths ending .orig or .bak that the commit does not delete (review.Leftovers); the orphaned
-//     fixtures stay empty until T12c.
+//   - T4: the changed paths ending .orig or .bak that the commit does not delete (review.Leftovers), and the test
+//     fixtures of the packages the commit changes that no .go file of their package names at the head and did at the
+//     base (review.OrphanedFixtures).
 //
 // A commit that changes no Go module and no shell file makes no copy and runs no tool.
 func (s Service) Sweep(dir, feature, base, head string) (Swept, error) {
@@ -92,7 +93,10 @@ func (s Service) Sweep(dir, feature, base, head string) (Swept, error) {
 	if err != nil {
 		return Swept{}, err
 	}
-	t4 := review.SweepT4{Leftovers: review.Leftovers(candidate.Paths, t1.DeletedOrRenamed)}
+	t4, err := s.sweepT4(repo, candidate, t1)
+	if err != nil {
+		return Swept{}, err
+	}
 	findings := review.SweepFindings{T1: t1, T2: t2, T3: t3, T4: t4}
 	file, err := review.EncodeSweep(candidate, findings)
 	if err != nil {
@@ -152,6 +156,64 @@ func (s Service) sweepT1(repo Repository, c review.Candidate) (review.SweepT1, e
 		slices.SortFunc(names, func(a, b review.RemovedName) int { return strings.Compare(a.Name, b.Name) })
 	}
 	return review.SweepT1{DeletedOrRenamed: deleted, RemovedNames: names}, nil
+}
+
+// sweepT4 is the fourth check: the leftovers, and the fixtures the commit leaves unread. A commit that changes no package
+// asks git for no tree.
+func (s Service) sweepT4(repo Repository, c review.Candidate, t1 review.SweepT1) (review.SweepT4, error) {
+	t4 := review.SweepT4{Leftovers: review.Leftovers(c.Paths, t1.DeletedOrRenamed)}
+	packages := review.FixturePackages(c.Paths)
+	if len(packages) == 0 {
+		return t4, nil
+	}
+	base, err := s.orphanedAt(repo, c.Base, packages)
+	if err != nil {
+		return review.SweepT4{}, err
+	}
+	head, err := s.orphanedAt(repo, c.Head, packages)
+	if err != nil {
+		return review.SweepT4{}, err
+	}
+	for _, f := range head {
+		if !slices.Contains(base, f) {
+			t4.OrphanedFixtures = append(t4.OrphanedFixtures, f)
+		}
+	}
+	return t4, nil
+}
+
+// orphanedAt is the fixtures of packages that no .go file of their package names at commit.
+func (s Service) orphanedAt(repo Repository, commit string, packages []string) ([]string, error) {
+	files, err := s.git.TreeFiles(repo, commit)
+	if err != nil {
+		return nil, fmt.Errorf("list the files of %s: %w", commit, err)
+	}
+	var names []string
+	for _, pkg := range packages {
+		prefix := "testdata/"
+		if pkg != "." {
+			prefix = pkg + "/testdata/"
+		}
+		for _, f := range files {
+			if !strings.HasPrefix(f, prefix) {
+				continue
+			}
+			for _, name := range review.FixtureNames(f) {
+				if !slices.Contains(names, name) {
+					names = append(names, name)
+				}
+			}
+		}
+	}
+	if len(names) == 0 {
+		return nil, nil
+	}
+	slices.Sort(names)
+	mentioned, err := s.git.Mentions(repo, commit, names)
+	if err != nil {
+		return nil, fmt.Errorf("search %s for the names of the fixtures: %w", commit, err)
+	}
+	return review.OrphanedFixtures(files, packages, mentioned), nil
 }
 
 // hitsOutside is the paths that mention a name and are not paths of the diff, each once, sorted.
