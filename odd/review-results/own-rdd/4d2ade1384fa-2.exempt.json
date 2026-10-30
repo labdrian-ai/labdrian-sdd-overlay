@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f3030b51d8c621c4d89372c6408ae7fe91961336",
+    "head": "4d2ade1384fac7a8585f9e9f465e74f916466527",
+    "diff_sha256": "5b134c474a0645f1315beeb7bae36b24032e22b95cac2fd0ca45e6fa2f7ef751",
+    "paths": [
+      "engine/review/app/launch.go",
+      "engine/review/app/launch_test.go",
+      "engine/review/app/service.go",
+      "engine/review/launch.go",
+      "engine/review/launch_test.go"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "cd engine && go vet ./... && gofmt -l .",
+        "result": "pass",
+        "output": "no output"
+      },
+      {
+        "command": "cd engine && go test -count=1 . ./review/...",
+        "result": "pass",
+        "output": "ok engine, review, review/analyzers, review/app, review/fsstore, review/gitexec"
+      }
+    ]
+  }
+}
