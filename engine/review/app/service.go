@@ -34,6 +34,8 @@ type Service struct {
 	// analyzers and copies are the ports of the sweep; WithSweep sets both.
 	analyzers Analyzers
 	copies    Copies
+	// reviewer is the port Launch starts a reviewer with; WithReviewer sets it.
+	reviewer Reviewer
 }
 
 // New is the Service over git and results. It never waits between two tries for a result number: the clock
