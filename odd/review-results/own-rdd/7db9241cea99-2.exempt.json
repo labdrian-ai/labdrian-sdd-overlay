@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "7bfde20b06dfd45554bab8bf561c7dd2ef162e94",
+    "head": "7db9241cea99e65d9282ab55062acb6fd76491e7",
+    "diff_sha256": "0e02330654a92757bdd7941bd41d76a2dfe5b0651864b27f97e5068c8a2a17e7",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/review/app/app.go",
+      "engine/review/app/fakes_test.go",
+      "engine/review/app/sweep.go",
+      "engine/review/app/sweep_test.go",
+      "engine/review/gitexec/gitexec.go",
+      "engine/review/gitexec/sweep_test.go",
+      "engine/review/sweep.go",
+      "engine/review/sweep_test.go"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "cd engine && go vet ./... && gofmt -l .",
+        "result": "pass",
+        "output": "exit=0, gofmt printed nothing"
+      },
+      {
+        "command": "cd engine && go test -count=1 . ./review/... ./cmd/...",
+        "result": "pass",
+        "output": "all 8 packages ok, run twice"
+      }
+    ]
+  }
+}
