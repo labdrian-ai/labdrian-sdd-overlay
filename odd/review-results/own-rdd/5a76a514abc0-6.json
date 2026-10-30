@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "1ac4d72868bd28d48358509eca5c207ed8e3095f",
+    "head": "5a76a514abc064578093930183a87851cba36996",
+    "diff_sha256": "a8afd1969f7c5b36076f9671f6096efdad2fe49df04ed50b90fe355443d01fcb",
+    "paths": [
+      "engine/agentgen/toml.go",
+      "engine/agentgen/toml_test.go",
+      "engine/architecture_test.go",
+      "engine/piguard/piguard.go",
+      "engine/piguard/piguard_test.go",
+      "engine/piguard/sources.go",
+      "engine/piguard/sources_test.go",
+      "engine/review/codexexec/codexexec.go",
+      "engine/review/codexexec/codexexec_test.go"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "1ac4d72868bd28d48358509eca5c207ed8e3095f",
+      "head": "5a76a514abc064578093930183a87851cba36996",
+      "diff_sha256": "a8afd1969f7c5b36076f9671f6096efdad2fe49df04ed50b90fe355443d01fcb"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/agentgen/toml.go",
+        "engine/agentgen/toml_test.go",
+        "engine/architecture_test.go",
+        "engine/piguard/piguard.go",
+        "engine/piguard/piguard_test.go",
+        "engine/piguard/sources.go",
+        "engine/piguard/sources_test.go",
+        "engine/review/codexexec/codexexec.go",
+        "engine/review/codexexec/codexexec_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/review/codexexec/codexexec_test.go:543-544",
+        "severity": "SUGGESTION",
+        "claim": "The fakeRunner field lastExists is declared but never set or read, so it is dead code. A later commit (bf46836b) already removes it, so this is resolved on the branch.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "codexexec_test.go:544"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/5a76a514.diff (730 lines). I did not run any command or test, so no test result is claimed.",
+      "Traced CodexInstructions against the escaping of the generator by reading the code. Backslash, the escaped form for three quotation marks, a body ending in quotes (a closing run of 3 to 5 quotes) and a run of six or more all decode correctly. The key order and trailing-content checks reject files the generator did not write.",
+      "codexexec.Review: the reviewer instructions and brief go on stdin, the sandbox is read-only, the scratch directory is removed on every path by defer, and the reply is read with a size limit and an empty-reply check. A runner timeout is wrapped in ErrReviewerDidNotAnswer.",
+      "piguard: the `codex` guard is installed alongside `pi`, and the source scan now also flags exec.Command(\"codex\"). The codexexec package's tests use a fake runner, and TestMain uses testhome.",
+      "I did not read the app.Reviewer caller, so I did not check where an oversize reply is rejected. This package returns up to MaxReplyBytes+1 bytes, which would let the caller detect one."
+    ]
+  }
+}

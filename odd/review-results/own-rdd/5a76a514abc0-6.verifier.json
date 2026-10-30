@@ -1,0 +1,11 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "rg -n lastExists engine/review/codexexec/codexexec_test.go",
+      "output": "36:\tlastExists func() bool ; the field is declared and never read. Removed by the sweep commit e4ba42a8 (recorded as 5a76a514abc0-3.sweeper.json); rg finds no lastExists on the branch head.",
+      "base_result": "not-reproduced"
+    }
+  ]
+}

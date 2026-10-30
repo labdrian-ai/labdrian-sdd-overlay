@@ -1,0 +1,19 @@
+{
+  "kind": "polisher",
+  "base": "1ac4d72868bd28d48358509eca5c207ed8e3095f",
+  "head": "5a76a514abc064578093930183a87851cba36996",
+  "diff_sha256": "a8afd1969f7c5b36076f9671f6096efdad2fe49df04ed50b90fe355443d01fcb",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/5a76a514.diff.",
+      "Read spec S9 (b) (own-rdd.md line 54) and the T8b row (line 151) in the review worktree. The codex argument list in codexexec.go:442-444 matches S9 (b) exactly: exec --sandbox read-only --model --cd --skip-git-repo-check --ephemeral --ignore-user-config --output-last-message <scratch>/last-message.txt -.",
+      "The stdin is the instructions, a blank line and the brief; the environment is the options' environment, and the scratch directory comes from os.MkdirTemp with a deferred os.RemoveAll. The reply read is capped at review.MaxReplyBytes+1. Every failure path after the instructions are read wraps app.ErrReviewerDidNotAnswer, names codex and repeats stderr, bounded to 2000 bytes.",
+      "Traced CodexInstructions/readMultiline by reading the code, against the escapes tomlMultiline writes. Closing runs of 3 to 5 quotes decode correctly, and the tests cover a body ending in one or two quotes, a run of four, and a backslash. The tests were not run, since I am read-only.",
+      "The piguard change writes a refusing codex using the same script and marker as pi. The source scan also refuses exec.Command of codex. The codexexec tests use only a fake runner, and TestNoTestOfThisPackageStartsCodex plus TestMain with testhome pin that.",
+      "engine/architecture_test.go puts review/codexexec in the Adapter ring.",
+      "The only nit is an unused lastExists field in the test's fakeRunner. The next commit removes it.",
+      "Whether the installed Codex honours --sandbox read-only and --ignore-user-config cannot be shown from code or tests. The spec assigns that to the live check S9 (f), so I report no finding for it."
+    ]
+  }
+}
