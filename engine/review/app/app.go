@@ -158,6 +158,9 @@ type Analyzers interface {
 	// Staticcheck runs staticcheck over packages, patterns like "./a" or "." of the module, leaving out the ones the copy
 	// does not have. None left gives none, and no run. A module the copy does not have gives none.
 	Staticcheck(root, module string, packages []string) ([]string, error)
+	// Tidy runs `go mod tidy -diff` in the module and gives the requirements it would remove from go.mod, as
+	// `go.mod: require <path> <version>`. A module the copy does not have gives none.
+	Tidy(root, module string) ([]string, error)
 	// Shellcheck runs shellcheck over files, paths relative to root, leaving out the ones the copy does not have.
 	Shellcheck(root string, files []string) ([]string, error)
 }

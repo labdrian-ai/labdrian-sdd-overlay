@@ -309,6 +309,10 @@ func (s Service) sweepT2(repo Repository, c review.Candidate) ([]review.SweepT2,
 	if err != nil {
 		return nil, err
 	}
+	tidy, err := s.tidyPicks(repo, c, modules, changes)
+	if err != nil {
+		return nil, err
+	}
 	a := s.analyzers
 	var all []review.SweepT2
 	add := func(tool, module string, base, head []string) {
@@ -326,18 +330,28 @@ func (s Service) sweepT2(repo Repository, c review.Candidate) ([]review.SweepT2,
 			return nil, err
 		}
 		add("deadcode", change.module, base, head)
-		if len(change.packages) == 0 {
-			continue
+		if len(change.packages) > 0 {
+			base, err = a.Staticcheck(baseRoot, change.module, change.packages)
+			if err != nil {
+				return nil, err
+			}
+			head, err = a.Staticcheck(headRoot, change.module, change.packages)
+			if err != nil {
+				return nil, err
+			}
+			add("staticcheck", change.module, base, head)
 		}
-		base, err = a.Staticcheck(baseRoot, change.module, change.packages)
-		if err != nil {
-			return nil, err
+		if slices.Contains(tidy, change.module) {
+			base, err = a.Tidy(baseRoot, change.module)
+			if err != nil {
+				return nil, err
+			}
+			head, err = a.Tidy(headRoot, change.module)
+			if err != nil {
+				return nil, err
+			}
+			add("go-mod-tidy", change.module, base, head)
 		}
-		head, err = a.Staticcheck(headRoot, change.module, change.packages)
-		if err != nil {
-			return nil, err
-		}
-		add("staticcheck", change.module, base, head)
 	}
 	if len(shell) > 0 {
 		base, err := a.Shellcheck(baseRoot, shell)
@@ -351,6 +365,46 @@ func (s Service) sweepT2(repo Repository, c review.Candidate) ([]review.SweepT2,
 		add("shellcheck", ".", base, head)
 	}
 	return all, nil
+}
+
+// tidyPicks is the modules `go mod tidy -diff` runs in. The removed lines are read only when a changed .go file lies in a
+// module that go.mod or go.sum has not picked already.
+func (s Service) tidyPicks(repo Repository, c review.Candidate, modules []string, changes []goChange) ([]string, error) {
+	byFile := tidyModules(c.Paths, nil, modules)
+	var removed []review.ChangedLines
+	for _, change := range changes {
+		if len(change.packages) > 0 && !slices.Contains(byFile, change.module) {
+			var err error
+			if removed, _, err = s.git.ChangedLines(repo, c.Base, c.Head); err != nil {
+				return nil, fmt.Errorf("read the changed lines of %s..%s: %w", c.Base, c.Head, err)
+			}
+			break
+		}
+	}
+	return tidyModules(c.Paths, removed, modules), nil
+}
+
+// tidyModules is the modules whose dependencies the commit touches: those whose go.mod or go.sum it changes, and those
+// one of whose .go files lost an import spec of a path outside the standard library (review.RemovesImport).
+func tidyModules(paths []string, removed []review.ChangedLines, modules []string) []string {
+	var picked []string
+	pick := func(p string) {
+		if m, ok := innermostModule(p, modules); ok && !slices.Contains(picked, m) {
+			picked = append(picked, m)
+		}
+	}
+	for _, p := range paths {
+		if base := path.Base(p); base == "go.mod" || base == "go.sum" {
+			pick(p)
+		}
+	}
+	for _, r := range removed {
+		if strings.HasSuffix(r.Path, ".go") && review.RemovesImport(r.Lines) {
+			pick(r.Path)
+		}
+	}
+	slices.Sort(picked)
+	return picked
 }
 
 // fillCopy empties the copy called side and fills it with the tree of commit.

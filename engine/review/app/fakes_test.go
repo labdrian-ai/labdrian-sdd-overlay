@@ -323,6 +323,10 @@ func (a *fakeAnalyzers) Staticcheck(root, module string, packages []string) ([]s
 	return a.answer("Staticcheck", "Staticcheck "+root+" "+module+" "+strings.Join(packages, ","))
 }
 
+func (a *fakeAnalyzers) Tidy(root, module string) ([]string, error) {
+	return a.answer("Tidy", "Tidy "+root+" "+module)
+}
+
 func (a *fakeAnalyzers) Shellcheck(root string, files []string) ([]string, error) {
 	return a.answer("Shellcheck", "Shellcheck "+root+" "+strings.Join(files, ","))
 }

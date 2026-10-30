@@ -311,10 +311,14 @@ Commands:
                                              HEAD12-N.sweep.json, never over a file: T1 the paths the commit deleted
                                              or renamed and the removed names and flags the head still mentions, T2 the
                                              new lines of deadcode, staticcheck and shellcheck over copies of the base
-                                             and the head kept under the state home, T3 the working tree's git status,
-                                             T4 the paths the commit changes whose name ends .orig or .bak and the
-                                             test fixtures it leaves unread;
-                                             a tool that cannot run stores nothing; a second sweep of the repository
+                                             and the head kept under the state home, and go mod tidy -diff over each
+                                             module whose go.mod or go.sum it changes or whose .go files lose an import,
+                                             a finding being a required module the head no longer needs, T3 the working
+                                             tree's git status, T4 the paths the commit changes whose name ends .orig
+                                             or .bak and the test fixtures it leaves unread;
+                                             a tool that cannot run stores nothing (it needs deadcode, staticcheck,
+                                             shellcheck and go on PATH, and the module cache of a module whose
+                                             dependencies the commit touches); a second sweep of the repository
                                              while one runs is refused; print outcome (clean or fired), path, sha256 and the
                                              candidates the sweeper answers for as JSON
                                              (exit 0 stored, 2 refused or a check that did not run, 1 usage error)

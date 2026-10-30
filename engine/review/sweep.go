@@ -226,6 +226,47 @@ func OrphanedFixtures(files, packages []string, mentioned map[string][]string) [
 	return orphaned
 }
 
+// importSpec is a line that is an import spec: `import "p"`, `import n "p"`, or an entry `n? "p"` of an import block, with
+// at most a comment after it. A string in a literal is followed by a comma or a brace, so it is not read.
+var importSpec = regexp.MustCompile(`^\s*(?:import\s+)?(?:[A-Za-z_.][A-Za-z0-9_]*\s+)?"([^"]+)"\s*(?://.*)?$`)
+
+// RemovesImport says whether one of the removed lines of a .go file is an import spec of a path whose first element holds
+// a dot, which is how a path of a module outside the standard library reads (assumption of S15 e, D33).
+func RemovesImport(lines []string) bool {
+	for _, line := range lines {
+		if m := importSpec.FindStringSubmatch(line); m != nil && strings.Contains(strings.SplitN(m[1], "/", 2)[0], ".") {
+			return true
+		}
+	}
+	return false
+}
+
+// TidyFindings is the lines `go.mod: require <path> <version>` for the requirements that the go.mod part of the unified
+// diff of `go mod tidy -diff` removes, in the order of the diff: a `require` line, or an entry `<path> <version>` of a
+// block, its `// indirect` comment dropped. A requirement it adds, and the go.sum part, are not findings (removal-only).
+// An entry of the same shape inside an `exclude` or `retract` block cannot be told apart and is read as a requirement.
+func TidyFindings(diff string) []string {
+	var found []string
+	inGoMod := false
+	for _, line := range strings.Split(diff, "\n") {
+		if rest, ok := strings.CutPrefix(line, "--- "); ok {
+			name, _, _ := strings.Cut(rest, "\t")
+			inGoMod = path.Base(name) == "go.mod"
+			continue
+		}
+		body, removed := strings.CutPrefix(line, "-")
+		if !inGoMod || !removed {
+			continue
+		}
+		body, _, _ = strings.Cut(body, "//")
+		fields := strings.Fields(strings.TrimPrefix(strings.TrimSpace(body), "require "))
+		if len(fields) == 2 && strings.HasPrefix(fields[1], "v") {
+			found = append(found, "go.mod: require "+fields[0]+" "+fields[1])
+		}
+	}
+	return found
+}
+
 // position is the `:<line>` or `:<line>:<col>` that follows the path at the start of a finding.
 var position = regexp.MustCompile(`^([^\s:]+):\d+(?::\d+)?`)
 

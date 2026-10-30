@@ -315,6 +315,7 @@ func TestSweepRunsDeadcodeAndStaticcheckOnTheCopiesOfEveryModuleTheCommitChanges
 	wantTools := []string{
 		"Deadcode /state/base mod", "Deadcode /state/head mod",
 		"Staticcheck /state/base mod ./a,./b", "Staticcheck /state/head mod ./a,./b",
+		"Tidy /state/base mod", "Tidy /state/head mod", // mod/go.sum is changed
 	}
 	if !reflect.DeepEqual(s.tools.calls, wantTools) {
 		t.Errorf("tool calls = %q, want %q: the whole module for deadcode, the packages of the changed files for staticcheck", s.tools.calls, wantTools)
@@ -337,7 +338,7 @@ func TestSweepOfOnlyModuleFilesRunsDeadcodeAndNoStaticcheck(t *testing.T) {
 
 	s.mustSweep()
 
-	want := []string{"Deadcode /state/base mod", "Deadcode /state/head mod"}
+	want := []string{"Deadcode /state/base mod", "Deadcode /state/head mod", "Tidy /state/base mod", "Tidy /state/head mod"}
 	if !reflect.DeepEqual(s.tools.calls, want) {
 		t.Errorf("tool calls = %q, want %q: no changed .go file, no package for staticcheck", s.tools.calls, want)
 	}
@@ -500,6 +501,74 @@ func TestSweepGivesTheLockBackAndStoresNothingWhenAnythingAfterItFails(t *testin
 				t.Errorf("created = %d, want nothing stored", s.results.created())
 			}
 		})
+	}
+}
+
+func TestSweepFiresOnARequirementTheCommitLeavesUnused(t *testing.T) {
+	s := newSweepRig(t)
+	s.git.paths = []string{"engine/x.go"}
+	s.git.modules = []string{"engine"}
+	s.git.removedLines = []review.ChangedLines{{Path: "engine/x.go", Lines: []string{"\t\"github.com/x/y\""}}}
+	s.tools.out["Tidy /state/head engine"] = []string{"go.mod: require github.com/x/y v1.2.3"}
+
+	got := s.mustSweep()
+
+	want := []review.SweepT2{{Tool: "go-mod-tidy", Module: "engine", New: []string{"go.mod: require github.com/x/y v1.2.3"}}}
+	if t2 := s.stored().Findings.T2; !reflect.DeepEqual(t2, want) {
+		t.Errorf("stored t2 = %v, want %v", t2, want)
+	}
+	if got.Outcome != review.OutcomeFired || !reflect.DeepEqual(got.Candidates, []string{"T2 go-mod-tidy engine: go.mod: require github.com/x/y v1.2.3"}) {
+		t.Errorf("outcome = %q, candidates = %q, want fired with the requirement", got.Outcome, got.Candidates)
+	}
+	wantCalls := []string{"Deadcode /state/base engine", "Deadcode /state/head engine", "Staticcheck /state/base engine .", "Staticcheck /state/head engine .", "Tidy /state/base engine", "Tidy /state/head engine"}
+	if !reflect.DeepEqual(s.tools.calls, wantCalls) {
+		t.Errorf("tool calls = %q, want %q: tidy after the other two, on both copies", s.tools.calls, wantCalls)
+	}
+}
+
+func TestSweepRunsTidyForAModuleWhoseGoModOrGoSumTheCommitChanges(t *testing.T) {
+	s := newSweepRig(t)
+	s.git.paths = []string{"mod/go.sum"}
+	s.git.modules = []string{"mod"}
+
+	s.mustSweep()
+
+	if s.git.called("ChangedLines") != 1 {
+		t.Errorf("calls = %q, want the lines read once, by T1 alone: go.sum already picks the module", s.git.calls)
+	}
+	if want := []string{"Tidy /state/base mod", "Tidy /state/head mod"}; len(s.tools.calls) != 4 || !reflect.DeepEqual(s.tools.calls[2:], want) {
+		t.Errorf("tool calls = %q, want tidy on both copies after deadcode", s.tools.calls)
+	}
+}
+
+func TestSweepRunsNoTidyForACommitThatTouchesNoDependency(t *testing.T) {
+	s := newSweepRig(t)
+	s.git.paths = []string{"engine/x.go"}
+	s.git.modules = []string{"engine"}
+	s.git.removedLines = []review.ChangedLines{{Path: "engine/x.go", Lines: []string{"\t\"fmt\"", "func gone() {}"}}}
+
+	s.mustSweep()
+
+	for _, call := range s.tools.calls {
+		if strings.HasPrefix(call, "Tidy") {
+			t.Errorf("tool calls = %q, want no tidy: a .go change with no removed import and no go.mod or go.sum", s.tools.calls)
+		}
+	}
+}
+
+func TestSweepStoresNothingWhenTidyDidNotRun(t *testing.T) {
+	s := newSweepRig(t)
+	s.git.paths = []string{"mod/go.mod"}
+	s.git.modules = []string{"mod"}
+	s.tools.fail["Tidy"] = fmt.Errorf("%w: go mod tidy: exit status 1", app.ErrToolDidNotRun)
+
+	_, err := s.sweep()
+
+	if !errors.Is(err, app.ErrToolDidNotRun) || !strings.Contains(err.Error(), "go mod tidy") {
+		t.Errorf("Sweep error = %v, want ErrToolDidNotRun naming go mod tidy", err)
+	}
+	if s.results.created() != 0 {
+		t.Errorf("created = %d, want nothing stored", s.results.created())
 	}
 }
 

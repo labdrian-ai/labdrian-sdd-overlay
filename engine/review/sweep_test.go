@@ -210,3 +210,56 @@ func TestNewFindingsAreTheNormalizedLinesThatOccurMoreAtTheHead(t *testing.T) {
 		})
 	}
 }
+
+// T2 also runs `go mod tidy -diff` over a module whose dependencies a commit touches (own-rdd T12d, S15 e): a removed
+// import of a path that is not the standard library's is a sign that a requirement may be left unused.
+func TestRemovesImportReadsTheImportSpecsOfANonStandardPath(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		line string
+		want bool
+	}{
+		{"a single import", `import "github.com/x/y"`, true},
+		{"a named single import", `import y "github.com/x/y"`, true},
+		{"a named block entry", "\ty \"golang.org/x/tools/go/packages\"", true},
+		{"a blank block entry", "\t_ \"example.com/z\"", true},
+		{"a block entry with a comment", "\t\"github.com/x/y\" // used for the tests", true},
+		{"a standard package", "\t\"fmt\"", false},
+		{"a nested standard package", "\t\"os/exec\"", false},
+		{"a commented import", "\t// \"github.com/x/y\"", false},
+		{"a string in a literal", "\t\"github.com/x/y\",", false},
+		{"code", "return nil", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := review.RemovesImport([]string{tc.line}); got != tc.want {
+				t.Errorf("RemovesImport(%q) = %v, want %v", tc.line, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestTidyFindingsAreTheRequirementsTheDiffRemovesFromGoMod(t *testing.T) {
+	diff := "diff current/go.mod tidy/go.mod\n" +
+		"--- current/go.mod\n" +
+		"+++ tidy/go.mod\n" +
+		"@@ -1,12 +1,10 @@\n" +
+		" module example.com/u\n" +
+		" \n" +
+		" go 1.21\n" +
+		"-\n" +
+		"-require github.com/x/y v1.2.3\n" +
+		" \n" +
+		" require (\n" +
+		"-\tgolang.org/x/z v0.1.0 // indirect\n" +
+		"+\tgolang.org/x/new v0.2.0\n" +
+		" )\n" +
+		"diff current/go.sum tidy/go.sum\n" +
+		"--- current/go.sum\n" +
+		"+++ tidy/go.sum\n" +
+		"@@ -1,2 +1,1 @@\n" +
+		"-golang.org/x/z v0.1.0 h1:abc=\n"
+	want := []string{"go.mod: require github.com/x/y v1.2.3", "go.mod: require golang.org/x/z v0.1.0"}
+	if got := review.TidyFindings(diff); !slices.Equal(got, want) {
+		t.Errorf("TidyFindings = %q, want %q: the removed requirements of go.mod in the order of the diff, nothing of go.sum, no added requirement", got, want)
+	}
+}

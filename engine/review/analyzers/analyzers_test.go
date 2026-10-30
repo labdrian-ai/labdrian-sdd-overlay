@@ -290,3 +290,60 @@ func TestExecRunnerGivenNoEnvironmentDoesNotInheritTheOneOfTheProcess(t *testing
 		})
 	}
 }
+
+const untidyDiff = "diff current/go.mod tidy/go.mod\n--- current/go.mod\n+++ tidy/go.mod\n@@ -1,4 +1,3 @@\n module example.com/u\n-require github.com/x/y v1.2.3\n"
+
+func TestTidyRanWhenItExitsZeroOrPrintsADiff(t *testing.T) {
+	log := bin(t, map[string]stub{"go": {}})
+	root := copyOf(t)
+
+	got, err := tools(t).Tidy(root, "mod")
+
+	if err != nil || len(got) != 0 {
+		t.Errorf("Tidy = %q, %v, want none, nil for a tidy module", got, err)
+	}
+	log = bin(t, map[string]stub{"go": {exit: 1, stdout: untidyDiff}})
+	got, err = tools(t).Tidy(root, "mod")
+
+	want := []string{"go.mod: require github.com/x/y v1.2.3"}
+	if err != nil || !reflect.DeepEqual(got, want) {
+		t.Errorf("Tidy = %q, %v, want %q, nil: a non-zero exit after a diff is a run", got, err, want)
+	}
+	if ran := calls(t, log); !reflect.DeepEqual(ran, []string{filepath.Join(root, "mod") + "|mod tidy -diff"}) {
+		t.Errorf("go ran as %q, want `go mod tidy -diff` in the module of the copy", ran)
+	}
+}
+
+func TestTidyDidNotRunWhenItFailsWithoutADiff(t *testing.T) {
+	root := copyOf(t)
+	for name, tc := range map[string]struct {
+		tools map[string]stub
+		a     func(t *testing.T) analyzers.Tools
+	}{
+		"not found": {map[string]stub{}, tools},
+		"failed":    {map[string]stub{"go": {exit: 1, stderr: "go: example.com/x@v1.0.0: missing go.sum entry"}}, tools},
+		"the deadline": {map[string]stub{"go": {sleep: true}}, func(*testing.T) analyzers.Tools {
+			return analyzers.New(analyzers.ExecRunner{}, analyzers.Options{Environ: os.Environ(), Timeout: 200 * time.Millisecond})
+		}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			bin(t, tc.tools)
+
+			_, err := tc.a(t).Tidy(root, "mod")
+
+			if !errors.Is(err, app.ErrToolDidNotRun) || !strings.Contains(err.Error(), "go mod tidy") {
+				t.Errorf("error = %v, want ErrToolDidNotRun naming go mod tidy", err)
+			}
+		})
+	}
+}
+
+func TestTidyStartsNothingForAModuleTheCopyLacks(t *testing.T) {
+	log := bin(t, map[string]stub{"go": {exit: 1, stdout: untidyDiff}})
+
+	got, err := tools(t).Tidy(t.TempDir(), "mod")
+
+	if err != nil || len(got) != 0 || len(calls(t, log)) != 0 {
+		t.Errorf("Tidy = %q, %v, calls = %q, want none and no start: the module is new at the other side", got, err, calls(t, log))
+	}
+}

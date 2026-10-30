@@ -1,5 +1,5 @@
-// Package analyzers is the adapter of the Analyzers port of review/app: it runs deadcode, staticcheck and shellcheck, the
-// programs of the second check of `labdrian review sweep` (own-rdd T6b3, S6 b), on a copy of a tree and returns the lines
+// Package analyzers is the adapter of the Analyzers port of review/app: it runs deadcode, staticcheck, shellcheck and
+// `go mod tidy -diff`, the programs of the second check of `labdrian review sweep` (own-rdd T6b3, S6 b), on a copy of a tree and returns the lines
 // they print in their finding format.
 //
 // A finding line is `<path>:<line>[:<col>]: <text>`, which is what all three print: deadcode `file:line:col: unreachable
@@ -28,6 +28,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review/app"
 )
 
@@ -103,6 +104,27 @@ func (t Tools) Staticcheck(root, module string, packages []string) ([]string, er
 		return nil, nil
 	}
 	return t.run("staticcheck", dir, present...)
+}
+
+// Tidy runs `go mod tidy -diff` in the module of the copy and gives the requirements its diff removes from go.mod
+// (review.TidyFindings). Its finding rule is its own, since a diff is not a finding line: exit 0 is no finding, and a
+// non-zero exit after printing a line that starts `--- ` is a run; anything else did not run. A module the copy has no
+// go.mod for gives none and starts nothing.
+func (t Tools) Tidy(root, module string) ([]string, error) {
+	dir := filepath.Join(root, filepath.FromSlash(module))
+	if !isFile(filepath.Join(dir, "go.mod")) {
+		return nil, nil
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), t.timeout)
+	defer cancel()
+	stdout, stderr, err := t.runner.Output(ctx, dir, t.environ, "go", "mod", "tidy", "-diff")
+	if err == nil {
+		return nil, nil
+	}
+	if ranToAnExit(ctx, err) && (bytes.HasPrefix(stdout, []byte("--- ")) || bytes.Contains(stdout, []byte("\n--- "))) {
+		return review.TidyFindings(string(stdout)), nil
+	}
+	return nil, fmt.Errorf("%w: go mod tidy: %v%s", app.ErrToolDidNotRun, err, said(stderr))
 }
 
 // Shellcheck runs `shellcheck -f gcc -- <files>` over the files of the copy, relative to its root, that the copy has;
