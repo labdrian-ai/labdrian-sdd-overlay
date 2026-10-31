@@ -1333,7 +1333,8 @@ gentle-ai-overlay roles builder-guard
     It denies launching the builder (subagent_type "builder") unless its prompt cites a task the shaper designed. The
     prompt must hold exactly one line `Spec: odd/tasks/<feature>.md, T<n>[, T<n>...][, S<n>...]` (the path is absolute,
     or relative to the root of the git worktree that holds the session cwd; a relative path that leaves the worktree,
-    or one with no git repository holding the cwd, is refused). Each cited task is the one line of the `## Tasks` section of that document that
+    or one with no git repository holding the cwd, is refused). Each cited task is the one line of the `## Tasks`
+    section of that document that
     carries one segment `shaped: L<n>`, and the `## Log` of the document has exactly one entry
     `- **L<n>** (<date>, shaper)`. The shaper writes both when it designs the task, and reopening a task removes the
     mark; the builder and delivery never write it. Every builder launch needs a marked task, review fix rounds
