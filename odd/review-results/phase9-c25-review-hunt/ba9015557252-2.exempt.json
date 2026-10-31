@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "4baeee6e37a057ac840c996407223171f8870b60",
+    "head": "ba90155572521be9be24eb9b63f115695d0bae1d",
+    "diff_sha256": "e6b49c057918912fdcefc3675e2e0528f82144551c56d87b8f1c16b4fc0171d0",
+    "paths": [
+      "odd/review-results/phase9-c25-review-hunt/4baeee6e37a0-1.sweep.json",
+      "odd/review-results/phase9-c25-review-hunt/4baeee6e37a0-2.sweeper.json",
+      "odd/review-results/phase9-c25-review-hunt/4baeee6e37a0-3.json",
+      "odd/review-results/phase9-c25-review-hunt/4baeee6e37a0-3.verifier.json",
+      "odd/tasks/phase9-c25-review-hunt.md",
+      "tools/review-bench/scores/gentle.json"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "jq [.[].score]|add scores/gentle.json (L5: 3.5)",
+        "result": "pass",
+        "output": "3.5"
+      },
+      {
+        "command": "jq hold-out score sum (L5: 1.5)",
+        "result": "pass",
+        "output": "1.5"
+      },
+      {
+        "command": "jq length scores/gentle.json (23 real cases)",
+        "result": "pass",
+        "output": "23"
+      },
+      {
+        "command": "rg -c \\\\u escapes",
+        "result": "pass",
+        "output": "none"
+      }
+    ]
+  }
+}
