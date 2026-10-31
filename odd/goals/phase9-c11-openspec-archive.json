@@ -1,0 +1,35 @@
+{
+  "version": 3,
+  "project_id": "labdrian-sdd-overlay",
+  "goal_id": "phase9-c11-openspec-archive",
+  "objective": "Close Phase 9 item C11: the tasks of odd/tasks/phase9-c11-openspec-archive.md, so that the four skill aliases of issue #29 are spec-synced with renumbering and archived, and overlay-versioned-releases is archived as it is.",
+  "scope": "The specs S1-S4 of odd/tasks/phase9-c11-openspec-archive.md; one workflow and one role chain for each task.",
+  "constraints": [
+    "The builder builds only a task the shaper designed.",
+    "The archived folders are moved unedited with git mv (S2, S3).",
+    "Synced text is the source's but for the renumbering and the heading level of L2 (S1).",
+    "Every commit is reviewed or exempted, and labdrian review check clears it (S4 d)."
+  ],
+  "non_goals": [
+    "Composing the delta specs of overlay-versioned-releases into openspec/specs/.",
+    "Rewriting the synced requirements into another format or into current behavior.",
+    "Changing code comments that cite the old requirement numbers."
+  ],
+  "acceptance_criteria": [
+    "T1-T6 of odd/tasks/phase9-c11-openspec-archive.md are checked off, each with its commit.",
+    "At each pull request head the archive-anchor-gate and archive-reconcile CI commands exit 0 and the tool tests pass.",
+    "labdrian review check --onto main clears the head of each task's pull request."
+  ],
+  "memory_directive": {
+    "version": 1,
+    "scope": "project",
+    "sources": [
+      "engram",
+      "longterm-mem",
+      "procedural-skills"
+    ],
+    "write": "none"
+  },
+  "runtime_scope": "Claude Code, as the parent that runs the labdrian workflow and the role agents.",
+  "delivery_boundary": "Work-unit commits on the branches of odd/tasks/phase9-c11-openspec-archive.md; push, pull requests and merges are the owner's decisions."
+}
