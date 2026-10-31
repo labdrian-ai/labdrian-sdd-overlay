@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Bench shim: records the arguments and the byte sizes of stdin and stdout of each reviewer run, then runs the real wrapper.
+set -u
+bench="${BENCH:-$HOME/labdrian-sdd-overlay-worktrees/review-bench}"
+log="$bench/scratch/shim.log"
+in="$(mktemp -p "$bench/scratch")"
+out="$in.out"
+cat > "$in"
+start=$(date +%s.%N)
+"$HOME/bin/claude" "$@" < "$in" > "$out"
+code=$?
+end=$(date +%s.%N)
+printf 'args=%s stdin_bytes=%s stdout_bytes=%s exit=%s secs=%s\n' "$*" "$(wc -c < "$in")" "$(wc -c < "$out")" "$code" "$(echo "$end - $start" | bc)" >> "$log"
+cat "$out"
+exit "$code"
