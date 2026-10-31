@@ -1,0 +1,15 @@
+{
+  "kind": "sweeper",
+  "base": "29ad9f23e43b24c53be66d9e6804a6eb2baa9d23",
+  "head": "4baeee6e37a057ac840c996407223171f8870b60",
+  "diff_sha256": "d1c8b2333a5c8dade3910492ea758010416f027c31e3b247652e1bafb8373b34",
+  "sweep": "4baeee6e37a0-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T3: ?? tools/review-bench/scores/gentle.json",
+      "disposition": "live",
+      "evidence": "Not a leftover of 4baeee6e. It is the score file for the next work-unit commit of T1, the gentle scores the parent commits with the bar entry. Not deleted, moved or committed."
+    }
+  ]
+}

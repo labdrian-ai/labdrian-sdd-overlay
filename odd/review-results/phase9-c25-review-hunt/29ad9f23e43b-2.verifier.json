@@ -1,0 +1,25 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "tools/review-bench/score.sh R5 at head 29ad9f23",
+      "output": "jq: error (at .../out/R5/summary.json:31): Expected JSON value (while parsing ''); no case header printed",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "run-gentle.sh over R1-R8 at head 29ad9f23, then compare out/<id>/final.json with status0.json mtimes",
+      "output": "R3-R8 runs stopped at 'no start command' (exit 3) and left the earlier run's summary.json and final.json in place: final.json older than the new status0.json (STALE) for R3, R4, R5, R6, R7, R8, and a reader of out/<id>/summary.json would score the old findings",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F3",
+      "result": "reproduced",
+      "command": "fd -d1 . $BENCH/scratch -t f | wc -l after the runs at head 29ad9f23",
+      "output": "148 files, the mktemp stdin copies and .out files of every reviewer process left in scratch",
+      "base_result": "not-reproduced"
+    }
+  ]
+}

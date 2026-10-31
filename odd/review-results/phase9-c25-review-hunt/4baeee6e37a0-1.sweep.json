@@ -1,0 +1,19 @@
+{
+  "kind": "sweep",
+  "base": "29ad9f23e43b24c53be66d9e6804a6eb2baa9d23",
+  "head": "4baeee6e37a057ac840c996407223171f8870b60",
+  "diff_sha256": "d1c8b2333a5c8dade3910492ea758010416f027c31e3b247652e1bafb8373b34",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": []
+  },
+  "t2": [],
+  "t3": [
+    "?? tools/review-bench/scores/gentle.json"
+  ],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

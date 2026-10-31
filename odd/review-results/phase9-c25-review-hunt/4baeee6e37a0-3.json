@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "29ad9f23e43b24c53be66d9e6804a6eb2baa9d23",
+    "head": "4baeee6e37a057ac840c996407223171f8870b60",
+    "diff_sha256": "d1c8b2333a5c8dade3910492ea758010416f027c31e3b247652e1bafb8373b34",
+    "paths": [
+      "engine/shelltest/review_bench_test.go",
+      "odd/review-results/phase9-c25-review-hunt/29ad9f23e43b-1.sweep.json",
+      "odd/review-results/phase9-c25-review-hunt/29ad9f23e43b-2.json",
+      "odd/review-results/phase9-c25-review-hunt/29ad9f23e43b-2.verifier.json",
+      "tools/review-bench/run-gentle.sh",
+      "tools/review-bench/score.sh",
+      "tools/review-bench/shim/claude"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "29ad9f23e43b24c53be66d9e6804a6eb2baa9d23",
+      "head": "4baeee6e37a057ac840c996407223171f8870b60",
+      "diff_sha256": "d1c8b2333a5c8dade3910492ea758010416f027c31e3b247652e1bafb8373b34"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/shelltest/review_bench_test.go",
+        "odd/review-results/phase9-c25-review-hunt/29ad9f23e43b-2.json",
+        "odd/review-results/phase9-c25-review-hunt/29ad9f23e43b-2.verifier.json",
+        "odd/review-results/phase9-c25-review-hunt/29ad9f23e43b-1.sweep.json",
+        "tools/review-bench/run-gentle.sh",
+        "tools/review-bench/score.sh",
+        "tools/review-bench/shim/claude"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the full diff and the head versions of tools/review-bench/run-gentle.sh (top 20 lines) and tools/review-bench/shim/claude. Nothing was run: go test, shellcheck, jq, and the live R1-R8 run are not run. The claim that R1-R8 all approved comes from the prompt, not from my own check.",
+      "F1 is resolved on reading. span in score.sh now drops empty parts after split(\"-\"), so \"89-\" becomes from=89 and to=89. The new fixture case R4 and its subtest pin that behavior: a finding at line 92 is located and one at line 93 is not.",
+      "F2 is resolved on reading. run-gentle.sh now runs rm -rf \"$out\" before each run, after the case id is validated, so no stale final.json, cap files, or summary.json survive a rerun. A run that ends without approved or correction_required now exits 4 with a message.",
+      "F3 is resolved on reading. The shim now runs mkdir -p on scratch and sets a trap that removes both temp files on EXIT. The real claude call is not exec'd, so the trap fires, and the output is printed before exit.",
+      "New acknowledgement and new-start paths: acknowledge_pending acts only on the approved_acknowledgement_required reason and runs the provider-returned command. The fallback START is built only after the plain STATUS returns target_already_acknowledged, and the tokens are quoted with printf %q. I found no defect in either path."
+    ]
+  }
+}

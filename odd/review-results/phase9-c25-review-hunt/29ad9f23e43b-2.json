@@ -1,0 +1,84 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "4974d74f990821767f5e6743bb85a2dcf8aa8db6",
+    "head": "29ad9f23e43b24c53be66d9e6804a6eb2baa9d23",
+    "diff_sha256": "c3ec445a2e2625ae6a63b26b76510f349093d78b5328d5d55c665dfc6cbe4469",
+    "paths": [
+      "engine/shelltest/review_bench_test.go",
+      "tools/review-bench/README.md",
+      "tools/review-bench/corpus.json",
+      "tools/review-bench/run-gentle.sh",
+      "tools/review-bench/score.sh",
+      "tools/review-bench/shim/claude"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "4974d74f990821767f5e6743bb85a2dcf8aa8db6",
+      "head": "29ad9f23e43b24c53be66d9e6804a6eb2baa9d23",
+      "diff_sha256": "c3ec445a2e2625ae6a63b26b76510f349093d78b5328d5d55c665dfc6cbe4469"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/shelltest/review_bench_test.go",
+        "tools/review-bench/README.md",
+        "tools/review-bench/corpus.json",
+        "tools/review-bench/run-gentle.sh",
+        "tools/review-bench/score.sh",
+        "tools/review-bench/shim/claude"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "tools/review-bench/score.sh:22",
+        "severity": "WARNING",
+        "claim": "The span helper in score.sh does split(\"-\") | map(tonumber). The committed corpus entry R5 has defect.lines \"89-\" (an open range, corpus.json:18). That splits to [\"89\",\"\"], and tonumber on \"\" is a jq error. So `score.sh R5` aborts with a jq error and exit 1, and prints neither the case header nor any located finding. R5 is one of the 23 real cases, so the committed scorer cannot score it, and the fixture test only uses closed ranges so it does not catch this. Either R5's lines must be a closed range, or span must accept a trailing '-'.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "tools/review-bench/corpus.json: R5 defect.lines \"89-\"",
+          "tools/review-bench/score.sh: def span: split(\"-\") | map(tonumber)",
+          "engine/shelltest/review_bench_test.go: fixtures use only \"17-18\", \"40\", \"5-6\""
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "tools/review-bench/run-gentle.sh:52-66",
+        "severity": "WARNING",
+        "claim": "run-gentle.sh reuses out/<id> across reruns without clearing it. A rerun that ends without an approved or correction_required capture (a status stop, or four rounds without a result) still reads the earlier run's out/final.json and any stale cap<round>-*.json. The summary then pairs the new state with the old lenses and findings, and score.sh would score those stale findings. The script also reports no error when a case ends with an empty state. For a harness whose numbers set the C25 bar this can silently corrupt a recall figure. Fix: remove final.json and cap*.json (or the whole out/<id>) before starting.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "tools/review-bench/run-gentle.sh: mkdir -p \"$out\" with no cleanup; cp \"$f\" \"$out/final.json\" only on a terminal state; final.json is slurped unconditionally in the summary jq"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "tools/review-bench/shim/claude:6-8",
+        "severity": "SUGGESTION",
+        "claim": "The shim creates a mktemp stdin copy and a .out file in $BENCH/scratch for every reviewer process and never removes them. A full corpus run leaves about 46 files of roughly 33-41 KB each plus the outputs. The shim also fails without a clear message when $BENCH/scratch does not exist, because run-gentle.sh creates only out/<id>.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "tools/review-bench/shim/claude: in=\"$(mktemp -p \"$bench/scratch\")\" with no trap or rm"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff (all six paths).",
+      "Read odd/tasks/phase9-c25-review-hunt.md up to and including L4: S1, S2, T1 text, the Selection rule and Scoring rule bullets of L3.",
+      "Checked the corpus chain (R19-R20 base/head consistency, hold-out R14-R23 marked, 23 real cases, diff sizes under 150000 bytes).",
+      "Checked score.sh jq logic against the fixture test expectations (located within +-3, prompt_bytes sum, exit codes).",
+      "Judged the two deliberate deviations: corpus and shim are read from the scripts' own directory, and findings come from review-state.json for correction_required captures. Both are acceptable and consistent with the README.",
+      "Nothing was run (read-only review): go test, shellcheck, jq and the hunk checks are not run."
+    ]
+  }
+}
