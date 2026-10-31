@@ -1,0 +1,12 @@
+{
+  "kind": "polisher",
+  "base": "af266d75e2c3382975f2268594426ac01615f30e",
+  "head": "34e6cbe1a9699c9ff024e56ead27870590ca079d",
+  "diff_sha256": "f1e50dd17dc646c37664d84757ea75b16d0a074af6a9c623bff63c93d9c4dfec",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Judge A: read the full diff; fsdoc.Read refuses an empty cwd, then a non-IsLocal cleaned path, before Root; only two fsdoc.Reader call sites (roles.go guard with Root, workflow_open.go:104 absolute with empty cwd); symlinks in directories followed as before; tests pin subdirectory resolution and both new denials."
+    ]
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "34e6cbe1a9699c9ff024e56ead27870590ca079d",
+    "head": "1f8b075a9e2568c227b7a99014284b2df3d7fe64",
+    "diff_sha256": "8e22c792e219a6f17c1a54a33d886c78131cc1ba6a3caf89e18d5514a88e46b8",
+    "paths": [
+      "README.md"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "go test ./cmd/ -run Docs|Readme|README|BuilderGuard -count=1 (in engine/)",
+        "result": "pass",
+        "output": "ok github.com/labdrian-ai/labdrian-sdd-overlay/engine/cmd 0.448s"
+      },
+      {
+        "command": "awk NR>=1333&&NR<=1341 {print NR: length} README.md",
+        "result": "pass",
+        "output": "1333:117 1334:119 1335:117 1336:113 1337:33 1338:94 1339:116 1340:110 1341:94 "
+      }
+    ]
+  }
+}
