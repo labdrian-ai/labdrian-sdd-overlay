@@ -128,7 +128,7 @@ func TestValidatorAcceptsCurrentBundleContractVersion(t *testing.T) {
 func TestValidatorStillAcceptsSupersededContractVersions(t *testing.T) {
 	instances := []string{
 		fixturePath(t, "valid-entry-contract.json"),
-		realEntryContract(t, "overlay-versioned-releases", "entry.json"),
+		realEntryContract(t, "archive", "2026-10-31-overlay-versioned-releases", "entry.json"),
 		realEntryContract(t, "archive", "2026-08-05-skills-validate-ondisk-gate", "entry.json"),
 	}
 	for _, instance := range instances {

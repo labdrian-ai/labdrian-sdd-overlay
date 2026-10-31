@@ -1,0 +1,75 @@
+{
+  "kind": "sweeper",
+  "base": "24ebcaa35b758ed7b3d26972f6fb03a636e0c7a1",
+  "head": "735992bfa7d1e8bae00966fa540e6d142bc97ca4",
+  "diff_sha256": "8798a6189f8718f1d59ee76b64d4763804b0b17730ed4573e479f1a725e378cd",
+  "sweep": "735992bfa7d1-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 path: openspec/changes/overlay-versioned-releases/design.md",
+      "disposition": "live",
+      "evidence": "Pure rename to openspec/changes/archive/2026-10-31-overlay-versioned-releases/. rg over the repository (excluding the archive, receipts and results) finds no live consumer of the old path; tools/entry-contract-validator/evolution_test.go:131 already reads the archived path. The old path survives only in historical or descriptive records: odd/tasks/phase9-c11-openspec-archive.md (the shaped spec of the move), openspec/project/roadmap.md:200 (generated SDD mirror, left alone per L2), stored review receipts and the sweep record. No edit made."
+    },
+    {
+      "candidate": "T1 path: openspec/changes/overlay-versioned-releases/entry.json",
+      "disposition": "live",
+      "evidence": "Pure rename to openspec/changes/archive/2026-10-31-overlay-versioned-releases/. rg over the repository (excluding the archive, receipts and results) finds no live consumer of the old path; tools/entry-contract-validator/evolution_test.go:131 already reads the archived path. The old path survives only in historical or descriptive records: odd/tasks/phase9-c11-openspec-archive.md (the shaped spec of the move), openspec/project/roadmap.md:200 (generated SDD mirror, left alone per L2), stored review receipts and the sweep record. No edit made."
+    },
+    {
+      "candidate": "T1 path: openspec/changes/overlay-versioned-releases/exploration.md",
+      "disposition": "live",
+      "evidence": "Pure rename to openspec/changes/archive/2026-10-31-overlay-versioned-releases/. rg over the repository (excluding the archive, receipts and results) finds no live consumer of the old path; tools/entry-contract-validator/evolution_test.go:131 already reads the archived path. The old path survives only in historical or descriptive records: odd/tasks/phase9-c11-openspec-archive.md (the shaped spec of the move), openspec/project/roadmap.md:200 (generated SDD mirror, left alone per L2), stored review receipts and the sweep record. No edit made."
+    },
+    {
+      "candidate": "T1 path: openspec/changes/overlay-versioned-releases/proposal.md",
+      "disposition": "live",
+      "evidence": "Pure rename to openspec/changes/archive/2026-10-31-overlay-versioned-releases/. rg over the repository (excluding the archive, receipts and results) finds no live consumer of the old path; tools/entry-contract-validator/evolution_test.go:131 already reads the archived path. The old path survives only in historical or descriptive records: odd/tasks/phase9-c11-openspec-archive.md (the shaped spec of the move), openspec/project/roadmap.md:200 (generated SDD mirror, left alone per L2), stored review receipts and the sweep record. No edit made."
+    },
+    {
+      "candidate": "T1 path: openspec/changes/overlay-versioned-releases/specs/overlay-backup-restore/spec.md",
+      "disposition": "live",
+      "evidence": "Pure rename to openspec/changes/archive/2026-10-31-overlay-versioned-releases/. rg over the repository (excluding the archive, receipts and results) finds no live consumer of the old path; tools/entry-contract-validator/evolution_test.go:131 already reads the archived path. The old path survives only in historical or descriptive records: odd/tasks/phase9-c11-openspec-archive.md (the shaped spec of the move), openspec/project/roadmap.md:200 (generated SDD mirror, left alone per L2), stored review receipts and the sweep record. No edit made."
+    },
+    {
+      "candidate": "T1 path: openspec/changes/overlay-versioned-releases/specs/overlay-release-identity/spec.md",
+      "disposition": "live",
+      "evidence": "Pure rename to openspec/changes/archive/2026-10-31-overlay-versioned-releases/. rg over the repository (excluding the archive, receipts and results) finds no live consumer of the old path; tools/entry-contract-validator/evolution_test.go:131 already reads the archived path. The old path survives only in historical or descriptive records: odd/tasks/phase9-c11-openspec-archive.md (the shaped spec of the move), openspec/project/roadmap.md:200 (generated SDD mirror, left alone per L2), stored review receipts and the sweep record. No edit made."
+    },
+    {
+      "candidate": "T1 path: openspec/changes/overlay-versioned-releases/specs/overlay-release-state/spec.md",
+      "disposition": "live",
+      "evidence": "Pure rename to openspec/changes/archive/2026-10-31-overlay-versioned-releases/. rg over the repository (excluding the archive, receipts and results) finds no live consumer of the old path; tools/entry-contract-validator/evolution_test.go:131 already reads the archived path. The old path survives only in historical or descriptive records: odd/tasks/phase9-c11-openspec-archive.md (the shaped spec of the move), openspec/project/roadmap.md:200 (generated SDD mirror, left alone per L2), stored review receipts and the sweep record. No edit made."
+    },
+    {
+      "candidate": "T1 path: openspec/changes/overlay-versioned-releases/specs/overlay-release-surfacing/spec.md",
+      "disposition": "live",
+      "evidence": "Pure rename to openspec/changes/archive/2026-10-31-overlay-versioned-releases/. rg over the repository (excluding the archive, receipts and results) finds no live consumer of the old path; tools/entry-contract-validator/evolution_test.go:131 already reads the archived path. The old path survives only in historical or descriptive records: odd/tasks/phase9-c11-openspec-archive.md (the shaped spec of the move), openspec/project/roadmap.md:200 (generated SDD mirror, left alone per L2), stored review receipts and the sweep record. No edit made."
+    },
+    {
+      "candidate": "T1 path: openspec/changes/overlay-versioned-releases/specs/overlay-update-check/spec.md",
+      "disposition": "live",
+      "evidence": "Pure rename to openspec/changes/archive/2026-10-31-overlay-versioned-releases/. rg over the repository (excluding the archive, receipts and results) finds no live consumer of the old path; tools/entry-contract-validator/evolution_test.go:131 already reads the archived path. The old path survives only in historical or descriptive records: odd/tasks/phase9-c11-openspec-archive.md (the shaped spec of the move), openspec/project/roadmap.md:200 (generated SDD mirror, left alone per L2), stored review receipts and the sweep record. No edit made."
+    },
+    {
+      "candidate": "T1 path: openspec/changes/overlay-versioned-releases/specs/sync-check-verdicts/spec.md",
+      "disposition": "live",
+      "evidence": "Pure rename to openspec/changes/archive/2026-10-31-overlay-versioned-releases/. rg over the repository (excluding the archive, receipts and results) finds no live consumer of the old path; tools/entry-contract-validator/evolution_test.go:131 already reads the archived path. The old path survives only in historical or descriptive records: odd/tasks/phase9-c11-openspec-archive.md (the shaped spec of the move), openspec/project/roadmap.md:200 (generated SDD mirror, left alone per L2), stored review receipts and the sweep record. No edit made."
+    },
+    {
+      "candidate": "T1 path: openspec/changes/overlay-versioned-releases/specs/tui-self-update/spec.md",
+      "disposition": "live",
+      "evidence": "Pure rename to openspec/changes/archive/2026-10-31-overlay-versioned-releases/. rg over the repository (excluding the archive, receipts and results) finds no live consumer of the old path; tools/entry-contract-validator/evolution_test.go:131 already reads the archived path. The old path survives only in historical or descriptive records: odd/tasks/phase9-c11-openspec-archive.md (the shaped spec of the move), openspec/project/roadmap.md:200 (generated SDD mirror, left alone per L2), stored review receipts and the sweep record. No edit made."
+    },
+    {
+      "candidate": "T1 path: openspec/changes/overlay-versioned-releases/tasks.md",
+      "disposition": "live",
+      "evidence": "Pure rename to openspec/changes/archive/2026-10-31-overlay-versioned-releases/. rg over the repository (excluding the archive, receipts and results) finds no live consumer of the old path; tools/entry-contract-validator/evolution_test.go:131 already reads the archived path. The old path survives only in historical or descriptive records: odd/tasks/phase9-c11-openspec-archive.md (the shaped spec of the move), openspec/project/roadmap.md:200 (generated SDD mirror, left alone per L2), stored review receipts and the sweep record. No edit made."
+    },
+    {
+      "candidate": "T1 path: openspec/changes/overlay-versioned-releases/verify-report.md",
+      "disposition": "live",
+      "evidence": "Pure rename to openspec/changes/archive/2026-10-31-overlay-versioned-releases/. rg over the repository (excluding the archive, receipts and results) finds no live consumer of the old path; tools/entry-contract-validator/evolution_test.go:131 already reads the archived path. The old path survives only in historical or descriptive records: odd/tasks/phase9-c11-openspec-archive.md (the shaped spec of the move), openspec/project/roadmap.md:200 (generated SDD mirror, left alone per L2), stored review receipts and the sweep record. No edit made."
+    }
+  ]
+}

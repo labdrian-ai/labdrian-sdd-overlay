@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "24ebcaa35b758ed7b3d26972f6fb03a636e0c7a1",
+    "head": "735992bfa7d1e8bae00966fa540e6d142bc97ca4",
+    "diff_sha256": "8798a6189f8718f1d59ee76b64d4763804b0b17730ed4573e479f1a725e378cd",
+    "paths": [
+      "openspec/changes/archive/2026-10-31-overlay-versioned-releases/design.md",
+      "openspec/changes/archive/2026-10-31-overlay-versioned-releases/entry.json",
+      "openspec/changes/archive/2026-10-31-overlay-versioned-releases/exploration.md",
+      "openspec/changes/archive/2026-10-31-overlay-versioned-releases/proposal.md",
+      "openspec/changes/archive/2026-10-31-overlay-versioned-releases/specs/overlay-backup-restore/spec.md",
+      "openspec/changes/archive/2026-10-31-overlay-versioned-releases/specs/overlay-release-identity/spec.md",
+      "openspec/changes/archive/2026-10-31-overlay-versioned-releases/specs/overlay-release-state/spec.md",
+      "openspec/changes/archive/2026-10-31-overlay-versioned-releases/specs/overlay-release-surfacing/spec.md",
+      "openspec/changes/archive/2026-10-31-overlay-versioned-releases/specs/overlay-update-check/spec.md",
+      "openspec/changes/archive/2026-10-31-overlay-versioned-releases/specs/sync-check-verdicts/spec.md",
+      "openspec/changes/archive/2026-10-31-overlay-versioned-releases/specs/tui-self-update/spec.md",
+      "openspec/changes/archive/2026-10-31-overlay-versioned-releases/tasks.md",
+      "openspec/changes/archive/2026-10-31-overlay-versioned-releases/verify-report.md",
+      "openspec/changes/overlay-versioned-releases/design.md",
+      "openspec/changes/overlay-versioned-releases/entry.json",
+      "openspec/changes/overlay-versioned-releases/exploration.md",
+      "openspec/changes/overlay-versioned-releases/proposal.md",
+      "openspec/changes/overlay-versioned-releases/specs/overlay-backup-restore/spec.md",
+      "openspec/changes/overlay-versioned-releases/specs/overlay-release-identity/spec.md",
+      "openspec/changes/overlay-versioned-releases/specs/overlay-release-state/spec.md",
+      "openspec/changes/overlay-versioned-releases/specs/overlay-release-surfacing/spec.md",
+      "openspec/changes/overlay-versioned-releases/specs/overlay-update-check/spec.md",
+      "openspec/changes/overlay-versioned-releases/specs/sync-check-verdicts/spec.md",
+      "openspec/changes/overlay-versioned-releases/specs/tui-self-update/spec.md",
+      "openspec/changes/overlay-versioned-releases/tasks.md",
+      "openspec/changes/overlay-versioned-releases/verify-report.md"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git diff --find-renames=100% --name-status 24ebcaa3 735992bf",
+        "result": "pass",
+        "output": "13 lines, all R100, each from openspec/changes/overlay-versioned-releases/<file> to openspec/changes/archive/2026-10-31-overlay-versioned-releases/<file>, nothing else (verifier)."
+      },
+      {
+        "command": "git log -1 --format=%B 735992bf | tail -2",
+        "result": "pass",
+        "output": "Risk: none (parent; the verifier's show --stat | tail -3 could not show the trailer)"
+      }
+    ]
+  }
+}
