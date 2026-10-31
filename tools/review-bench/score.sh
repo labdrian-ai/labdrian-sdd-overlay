@@ -18,7 +18,8 @@ for id in "$@"; do
     continue
   fi
   jq -r --argjson c "$case_json" '
-    def span: split("-") | map(tonumber) | {from: .[0], to: (.[1] // .[0])};
+    # "17-18", "40", or an open "89-" that names its first line only.
+    def span: split("-") | map(select(. != "") | tonumber) | {from: .[0], to: (.[1] // .[0])};
     ($c.defect.file) as $file | ($c.defect.lines | span) as $d
     | def near($loc): ($loc | capture("^(?<f>[^:]+):(?<l>[0-9]+(-[0-9]+)?)")) as $m
         | $m != null and $m.f == $file

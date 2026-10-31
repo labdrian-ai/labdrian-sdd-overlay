@@ -3,8 +3,10 @@
 set -u
 bench="${BENCH:-$HOME/labdrian-sdd-overlay-worktrees/review-bench}"
 log="$bench/scratch/shim.log"
+mkdir -p "$bench/scratch"
 in="$(mktemp -p "$bench/scratch")"
 out="$in.out"
+trap 'rm -f "$in" "$out"' EXIT
 cat > "$in"
 start=$(date +%s.%N)
 "$HOME/bin/claude" "$@" < "$in" > "$out"

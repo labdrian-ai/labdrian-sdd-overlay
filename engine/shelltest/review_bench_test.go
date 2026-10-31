@@ -31,7 +31,9 @@ func benchFixture(t *testing.T, summaries map[string]string) (string, string) {
   {"id": "R2", "head": "dddd", "base": "eeee", "range": "eeee..dddd", "bytes": 1, "fix": "ffff",
    "defect": {"file": "engine/y/y.go", "lines": "40", "text": "error dropped"}},
   {"id": "R3", "head": "gggg", "base": "hhhh", "range": "hhhh..gggg", "bytes": 1, "fix": "iiii",
-   "defect": {"file": "engine/z/z.go", "lines": "5-6", "text": "no summary case"}}
+   "defect": {"file": "engine/z/z.go", "lines": "5-6", "text": "no summary case"}},
+  {"id": "R4", "head": "jjjj", "base": "kkkk", "range": "kkkk..jjjj", "bytes": 1, "fix": "llll",
+   "defect": {"file": "engine/w/w.go", "lines": "89-", "text": "open range"}}
 ], "mutants": []}`
 	if err := os.WriteFile(filepath.Join(tools, "corpus.json"), []byte(corpus), 0600); err != nil {
 		t.Fatal(err)
@@ -116,6 +118,17 @@ func TestReviewBenchScore(t *testing.T) {
 		out, code := runScore(t, script, bench, "R1")
 		if code != 0 || out != "R1 engine/x/x.go:17-18 prompt_bytes=9\n  none located\n" {
 			t.Fatalf("exit %d\n%s", code, out)
+		}
+	})
+
+	t.Run("an open range names its first line", func(t *testing.T) {
+		script, bench := benchFixture(t, map[string]string{"R4": `{"id": "R4", "lenses": [{"lens": "review-risk", "n": 2, "findings": [
+  {"location": "engine/w/w.go:92", "severity": "WARNING", "claim": "near the first line"},
+  {"location": "engine/w/w.go:93", "severity": "WARNING", "claim": "past the first line plus three"}]}], "runs": []}`})
+		out, code := runScore(t, script, bench, "R4")
+		want := "R4 engine/w/w.go:89- prompt_bytes=0\n  finding review-risk WARNING engine/w/w.go:92: near the first line\n"
+		if code != 0 || out != want {
+			t.Fatalf("exit %d\ngot\n%s\nwant\n%s", code, out, want)
 		}
 	})
 
