@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "8d627ed1e1a85be4a0997f9fdcefd6e21552f2fa",
+    "head": "382d8d824dbc22eb58a4309671ca751f6c04000f",
+    "diff_sha256": "09822ee0e2b8ec0eefde3d411a0dd52834c9e295382c102f5601dd98b1924fd7",
+    "paths": [
+      "odd/goals/phase9-c25-review-hunt.json",
+      "odd/tasks/consolidation-phase9.md",
+      "odd/tasks/phase9-c25-review-hunt.md"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "rg -c \"shaped: L3\" odd/tasks/phase9-c25-review-hunt.md; jq . odd/goals/phase9-c25-review-hunt.json; rg -n C25 odd/tasks/consolidation-phase9.md",
+        "result": "pass",
+        "output": "8 lines carry shaped: L3 (T1-T8); the goal parses as JSON; the ledger row C25 sits before C22"
+      }
+    ]
+  }
+}

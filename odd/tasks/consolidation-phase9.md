@@ -100,6 +100,7 @@ Wave 2b — end-to-end memory wiring (added 2026-10-16 at the owner's request, "
 
 Wave 3 — specs and ingestion:
 - [ ] C11 — Archive and spec-sync the four skill aliases with renumbering; archive `overlay-versioned-releases`.
+- [ ] C25 — A review of our own that beats gentle-ai's on recall of real defects at no higher cost, or a return to gentle-ai review (owner, 2026-10-31: "y si necesitamos hacer un review mejor que el de gentle mas barato tambien si no nos sirve"; "si agre"). Shaped in `odd/tasks/phase9-c25-review-hunt.md` (S1-S6, T1-T8); runs before C22.
 - [ ] C22 — Finish `longterm-mem-knowledge-ingestion` as an adapter behind an ingestion port (Q9). The port, the adapter and the guards are done (batch 42, L11); building the extraction (2b) waits for the owner's answer on the `Origin.URI` override.
 
 Wave 4 — skills for the sub-agent team (last):

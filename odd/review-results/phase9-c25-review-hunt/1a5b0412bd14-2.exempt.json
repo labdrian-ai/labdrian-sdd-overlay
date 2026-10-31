@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "2ac95d24205b3fe1bf9f2541e798e4b3c7eaa3ce",
+    "head": "1a5b0412bd14ac5226ca86b1a4a03bd0e3de61d5",
+    "diff_sha256": "4214d9580fe358998966d762c0beb3e2dc8cab30fbb68c116a0fa310d9b2d510",
+    "paths": [
+      "odd/tasks/phase9-c25-review-hunt.md"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git diff --stat",
+        "result": "pass",
+        "output": " 1 file changed, 7 insertions(+), 6 deletions(-)"
+      },
+      {
+        "command": "rg -c \\\\u escapes",
+        "result": "pass",
+        "output": "0"
+      },
+      {
+        "command": "rg -c shaped: L3",
+        "result": "pass",
+        "output": "8"
+      }
+    ]
+  }
+}
