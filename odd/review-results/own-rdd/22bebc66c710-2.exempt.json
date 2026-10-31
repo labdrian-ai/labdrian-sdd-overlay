@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "1341040c6a82fa9d2106b1d16c394ff9e8448482",
+    "head": "22bebc66c710a8a62a494586db7bc34cb11e03d6",
+    "diff_sha256": "7f5397defc3d7340026f090038061a0c7861ab3a2089c800e96f383f7976ce50",
+    "paths": [
+      "engine/cmd/review_sweep_test.go"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "cd engine && go vet ./cmd/ && gofmt -l cmd/",
+        "result": "pass",
+        "output": "exit=0, no output"
+      },
+      {
+        "command": "cd engine && go test -count=1 ./cmd/",
+        "result": "pass",
+        "output": "ok (81.8s)"
+      }
+    ]
+  }
+}

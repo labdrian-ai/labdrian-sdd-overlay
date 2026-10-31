@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "423c9e58f2fb5bdb0b0c2f27bbc5d66da532adce",
+    "head": "60003a8c457bd4501d91f159fa8d498e8b6b05ba",
+    "diff_sha256": "85f090f021ab9269db557e965f273b9909be6f6985c9a9476e5d934c453dce0b",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/cmd/review_sweep_test.go",
+      "engine/cmd/usage.go",
+      "engine/review/sweep.go",
+      "engine/review/sweep_test.go"
+    ]
+  },
+  "rows": [
+    "default",
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "423c9e58f2fb5bdb0b0c2f27bbc5d66da532adce",
+      "head": "60003a8c457bd4501d91f159fa8d498e8b6b05ba",
+      "diff_sha256": "85f090f021ab9269db557e965f273b9909be6f6985c9a9476e5d934c453dce0b"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/cmd/review_sweep_test.go",
+        "engine/cmd/usage.go",
+        "engine/review/sweep.go",
+        "engine/review/sweep_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the full diff; did not read the worktree, S15 or the T12d row, ran nothing.",
+      "RemovesImport: a Go keyword name makes the line skipped; import \"a.b/c\" still matches; a keyword cannot be an import name, so no real import spec is lost.",
+      "TidyFindings: a removal is dropped when the same module path appears on an added go.mod line of the same diff; go, toolchain and replace lines are rejected by the two-field and v prefix test; a plain removal still reports.",
+      "Risk line (item 5): the change only narrows when T2 tidy runs and what it reports; failure to run still exits 2; the Go 1.23 requirement is documented and pinned. No reachable regression."
+    ]
+  }
+}

@@ -139,6 +139,29 @@ func TestReviewSweepRunsTheAnalyzersOnCopiesKeptUnderTheStateHome(t *testing.T) 
 	}
 }
 
+func TestReviewSweepFiresOnARequirementTheTidyOfAChangedModuleWouldRemove(t *testing.T) {
+	w := newReviewWorld(t)
+	overlaytest.WriteFile(t, w.root, "go.mod", "module example.com/m\n\ngo 1.21\n\nrequire github.com/x/y v1.2.3\n")
+	w.git("add", "-A")
+	w.git("commit", "-q", "-m", "module")
+	diff := "diff current/go.mod tidy/go.mod\\n--- current/go.mod\\n+++ tidy/go.mod\\n@@ -1,3 +1,1 @@\\n-require github.com/x/y v1.2.3\\n"
+	onlyThesePrograms(t, map[string]string{
+		"deadcode":    "exit 0",
+		"staticcheck": "exit 0",
+		"go":          `if [ "$*" = "mod tidy -diff" ]; then printf '` + diff + `'; exit 1; fi; exit 2`,
+	})
+
+	stdout, stderr, exits := w.sweepRun(t.TempDir(), "", "sweep", "--feature", "own-rdd", "--base", "HEAD~1", "--head", "HEAD")
+
+	if !equalInts(exits, []int{0}) {
+		t.Fatalf("exit calls = %v, stderr = %q; want [0]", exits, stderr)
+	}
+	got := decodeSwept(t, stdout)
+	if got.Outcome != "fired" || len(got.Candidates) != 1 || got.Candidates[0] != "T2 go-mod-tidy .: go.mod: require github.com/x/y v1.2.3" {
+		t.Errorf("stdout = %+v, want fired with the requirement the tidy would remove", got)
+	}
+}
+
 func TestReviewSweepExitsTwoNamingTheToolThatCannotRunAndStoresNothing(t *testing.T) {
 	w := newReviewWorld(t)
 	overlaytest.WriteFile(t, w.root, "run.sh", "echo hi\n")
@@ -259,7 +282,7 @@ func TestUsageDocumentsReviewSweepAndTheRolesOfReviewRecord(t *testing.T) {
 	}
 }
 
-// The three places that define the checks of `review sweep` (own-rdd T6b7c, S6 g) say what T1 to T3
+// The three places that define the checks of `review sweep` (own-rdd T6b7c, S6 g) say what T1 to T4
 // are, and none of them sends the reader to the role-chain skill, which does not define them.
 func TestUsageAndReadmeDefineTheChecksOfReviewSweep(t *testing.T) {
 	var out bytes.Buffer
@@ -277,22 +300,36 @@ func TestUsageAndReadmeDefineTheChecksOfReviewSweep(t *testing.T) {
 		holds      []string
 	}{
 		{"the engine usage", engine, []string{
-			"runs the checks T1 to T3 of the sweeper once on the one commit",
+			"runs the checks T1 to T4 of the sweeper once on the one commit",
 			"T1: the paths the commit deleted or renamed",
+			"and the flags (--name) its removed lines of .go and .sh files held",
 			"T2: deadcode and staticcheck over each Go module the commit changes",
 			"T3: git status of the working tree as it is",
+			"T4: the paths the commit changes whose name ends .orig or .bak, and the test fixtures it leaves unread.",
+			"T4 leftover: <path>, T4 fixture: <path>",
+			"and go mod tidy -diff over each module whose go.mod or go.sum it changes or whose .go files lose an import, a finding being a required module the head no longer needs",
+			"Needs deadcode, staticcheck, shellcheck and go on PATH (Go 1.23 or newer), and the module cache of a module whose dependencies the commit touches",
 		}},
 		{"bin/lib/usage.sh", flatFile("../../bin/lib/usage.sh"), []string{
-			"run the checks T1 to T3 of the sweeper once on the one commit",
+			"run the checks T1 to T4 of the sweeper once on the one commit",
 			"T1 the paths the commit deleted or renamed",
+			"the removed names and flags the head still mentions",
 			"T2 the new lines of deadcode, staticcheck and shellcheck",
 			"T3 the working tree's git status",
+			"T4 the paths the commit changes whose name ends .orig or .bak and the test fixtures it leaves unread",
+			"and go mod tidy -diff over each module whose go.mod or go.sum it changes or whose .go files lose an import, a finding being a required module the head no longer needs",
+			"needs deadcode, staticcheck, shellcheck and go on PATH (Go 1.23 or newer), and the module cache of a module whose dependencies the commit touches",
 		}},
 		{"README.md", flatFile("../../README.md"), []string{
-			"Run the checks T1 to T3 of the sweeper once on the one commit",
+			"Run the checks T1 to T4 of the sweeper once on the one commit",
 			"T1: the paths the commit deleted or renamed",
+			"and the flags (--name) its removed lines of .go and .sh files held",
 			"T2: `deadcode -test ./...` over each Go module",
 			"T3: `git status` of the working tree",
+			"T4: the paths the commit changes whose name ends .orig or .bak, and the test fixtures it leaves unread.",
+			"T4 leftover: <path>, T4 fixture: <path>",
+			"and `go mod tidy -diff` over each module whose go.mod or go.sum it changes or whose .go files lose an import, a finding being a required module the head no longer needs",
+			"and go on PATH (Go 1.23 or newer) with the module cache of a module whose dependencies the commit touches",
 		}},
 	} {
 		for _, want := range place.holds {
@@ -301,7 +338,7 @@ func TestUsageAndReadmeDefineTheChecksOfReviewSweep(t *testing.T) {
 			}
 		}
 		if strings.Contains(place.text, "of the sweeper (skills/role-chain/SKILL.md)") {
-			t.Errorf("%s sends the reader to the skill for the definition of T1 to T3", place.name)
+			t.Errorf("%s sends the reader to the skill for the definition of T1 to T4", place.name)
 		}
 	}
 }

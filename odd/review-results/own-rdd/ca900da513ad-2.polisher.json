@@ -1,0 +1,18 @@
+{
+  "kind": "polisher",
+  "base": "fea619c6232ab2dd07a634aa6afadf3ac0b8a598",
+  "head": "ca900da513adf115bb68165382a28bf1c852949c",
+  "diff_sha256": "261677249bd8e83f6c72c8c23ca9b1997ef9d70535a9fff00c64ed020dc76256",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/ca900da5.diff.",
+      "Read the T12f row (line 151) of odd/tasks/own-rdd.md in the worktree.",
+      "Compared the new line 8 byte for byte against the row's text. It is identical in roles/sweeper/body.md, agents/sweeper.md, pi/agents/sweeper.md and codex/agents/sweeper.toml, and the pinned constant in role_agents_artifact_test.go has the same text.",
+      "Compared the proposals line against the row's text. It is identical in skills/sweeper/SKILL.md and in the test constant.",
+      "The skill change is only `T1-T3` to `T1-T4` plus the one new line. skills/role-chain/SKILL.md is not in the diff. Lines 9-11 of the role file are unchanged, so the delta stays four lines.",
+      "Grepped the worktree for the sweeper sentence outside odd/. Only the four role files, the test, and docs/architecture/role-design/per-role-sweeper.md hold it, and the last one is not in the diff.",
+      "Nothing was run (no go test, gadu-generate --check, vet, or lint-budget check). I could not run commands in this review, so those checks are not run."
+    ]
+  }
+}

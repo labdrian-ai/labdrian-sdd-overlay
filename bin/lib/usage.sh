@@ -306,14 +306,20 @@ Commands:
                                              review-exemption; review check clears an exempted head, but a result that
                                              blocks wins over any exemption (exit 0 stored, 2 report refused, 1 error)
                                    sweep --feature NAME --base REV --head REV [--cwd REPO]
-                                             run the checks T1 to T3 of the sweeper once on the one commit REV..head
+                                             run the checks T1 to T4 of the sweeper once on the one commit REV..head
                                              (--base must be the first parent of --head) and store the findings as
                                              HEAD12-N.sweep.json, never over a file: T1 the paths the commit deleted
-                                             or renamed and the removed names the head still mentions, T2 the new lines
-                                             of deadcode, staticcheck and shellcheck over copies of the base and the
-                                             head kept under the state home, T3 the working tree's git status; a tool
-                                             that cannot run stores nothing; a second sweep of the repository while one
-                                             runs is refused; print outcome (clean or fired), path, sha256 and the
+                                             or renamed and the removed names and flags the head still mentions, T2 the
+                                             new lines of deadcode, staticcheck and shellcheck over copies of the base
+                                             and the head kept under the state home, and go mod tidy -diff over each
+                                             module whose go.mod or go.sum it changes or whose .go files lose an import,
+                                             a finding being a required module the head no longer needs, T3 the working
+                                             tree's git status, T4 the paths the commit changes whose name ends .orig
+                                             or .bak and the test fixtures it leaves unread;
+                                             a tool that cannot run stores nothing (it needs deadcode, staticcheck,
+                                             shellcheck and go on PATH (Go 1.23 or newer), and the module cache of
+                                             a module whose dependencies the commit touches); a second sweep of the repository
+                                             while one runs is refused; print outcome (clean or fired), path, sha256 and the
                                              candidates the sweeper answers for as JSON
                                              (exit 0 stored, 2 refused or a check that did not run, 1 usage error)
                                    record --role sweeper|polisher --feature NAME --base REV --head REV [--result FILE|-] [--cwd REPO]
@@ -353,6 +359,18 @@ Commands:
                                              names codex and repeats what it printed on stderr, and nothing is
                                              stored
                                              (exit 0 stored, 2 reply refused, 1 usage error or any other failure)
+                                   proposals [--cwd REPO]
+                                             print, and never run, what the owner may remove: the worktrees other
+                                             than the main one and the one of --cwd, not locked, that git marks
+                                             prunable (git worktree prune) or whose HEAD the default branch has
+                                             (git worktree remove PATH), and the local branches merged into the
+                                             default branch other than it and the one checked out at --cwd
+                                             (git branch -d NAME), as one JSON object {default, worktrees,
+                                             branches}; never --force or -D; a repository with no default branch,
+                                             or a detached HEAD at --cwd, is refused; store and delete nothing:
+                                             the parent relays each proposal to the owner and runs a proposed
+                                             command only after the owner confirms it
+                                             (exit 0 listed, 1 usage error, refusal or any other failure)
                                    stop-hook
                                              not run by a person: the Claude Code Stop hook that install-hooks wires
                                              (the review stop-hook). On a branch other than the default one, it blocks

@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "423c9e58f2fb5bdb0b0c2f27bbc5d66da532adce",
+    "head": "60003a8c457bd4501d91f159fa8d498e8b6b05ba",
+    "diff_sha256": "85f090f021ab9269db557e965f273b9909be6f6985c9a9476e5d934c453dce0b",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/cmd/review_sweep_test.go",
+      "engine/cmd/usage.go",
+      "engine/review/sweep.go",
+      "engine/review/sweep_test.go"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "423c9e58f2fb5bdb0b0c2f27bbc5d66da532adce",
+      "head": "60003a8c457bd4501d91f159fa8d498e8b6b05ba",
+      "diff_sha256": "85f090f021ab9269db557e965f273b9909be6f6985c9a9476e5d934c453dce0b"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/cmd/review_sweep_test.go",
+        "engine/cmd/usage.go",
+        "engine/review/sweep.go",
+        "engine/review/sweep_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the full diff; ran no tests or commands, did not open the worktree copy of odd/tasks/own-rdd.md.",
+      "RemovesImport: the optional alias is captured and skipped when it is a Go keyword; import \"x\" still takes the import prefix; the new tests cover return, case and defer before a string.",
+      "TidyFindings: a removed requirement is dropped when the same diff adds a requirement line with the same module path; +++ headers are skipped; replace and exclude added lines have more than two fields and are ignored; three new tests cover a comment added, a version bump and a plain removal.",
+      "The docs changes match the strings asserted in review_sweep_test.go; each new CHANGELOG clause has a matching code change."
+    ]
+  }
+}

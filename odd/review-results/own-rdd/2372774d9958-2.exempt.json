@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "2681ab4d7b7780f59ca1dcf512b7748bc85ba3da",
+    "head": "2372774d99589da162610124c2f850e624ea05ec",
+    "diff_sha256": "c230b6a31645d1a87fb5c84ac0f2d6db054cd8ed6e0ff80efee501ca4d63b9b3",
+    "paths": [
+      "engine/review/analyzers/analyzers_test.go"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "cd engine && go vet ./... && gofmt -l . && staticcheck ./review/analyzers/",
+        "result": "pass",
+        "output": "exit=0, no output"
+      },
+      {
+        "command": "cd engine && go test -count=1 ./review/...",
+        "result": "pass",
+        "output": "all 6 packages ok"
+      }
+    ]
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "fea619c6232ab2dd07a634aa6afadf3ac0b8a598",
+    "head": "ca900da513adf115bb68165382a28bf1c852949c",
+    "diff_sha256": "261677249bd8e83f6c72c8c23ca9b1997ef9d70535a9fff00c64ed020dc76256",
+    "paths": [
+      "CHANGELOG.md",
+      "agents/sweeper.md",
+      "codex/agents/sweeper.toml",
+      "engine/cmd/review_sweep.go",
+      "engine/skills/role_agents_artifact_test.go",
+      "engine/skills/role_chain_artifact_test.go",
+      "pi/agents/sweeper.md",
+      "roles/sweeper/body.md",
+      "skills/sweeper/SKILL.md"
+    ]
+  },
+  "rows": [
+    "default",
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "fea619c6232ab2dd07a634aa6afadf3ac0b8a598",
+      "head": "ca900da513adf115bb68165382a28bf1c852949c",
+      "diff_sha256": "261677249bd8e83f6c72c8c23ca9b1997ef9d70535a9fff00c64ed020dc76256"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "agents/sweeper.md",
+        "codex/agents/sweeper.toml",
+        "engine/cmd/review_sweep.go",
+        "engine/skills/role_agents_artifact_test.go",
+        "engine/skills/role_chain_artifact_test.go",
+        "pi/agents/sweeper.md",
+        "roles/sweeper/body.md",
+        "skills/sweeper/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "roles/sweeper/body.md:8",
+        "severity": "SUGGESTION",
+        "claim": "The new sweeper line reads \"the goldens and assertions a test reads stay identical\". It drops the explicit \"test assertions\" wording, so a fixture the sweeper judges orphaned could be deleted while a test that does read it (through a glob or from another package) is still green. The only guard is the existing rule that a deletion that turns a test red was live. A fixture read through a glob is covered by the CHANGELOG instruction to answer `live` with the test, but the role text itself does not say so. The change is wording only and has no concrete failure.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "roles/sweeper/body.md:8",
+          "CHANGELOG.md:10"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff.",
+      "The three runtime role files (agents/, pi/agents/, codex/agents/) carry a byte-identical new line to roles/sweeper/body.md.",
+      "The new test checks that exact line once in each of the four files.",
+      "The proposals line in skills/sweeper/SKILL.md says to relay each proposal to the owner and run a command only after the owner confirms it. This matches the CHANGELOG description of `review proposals` as printing and never running.",
+      "Grep found 'T1 to T4' in engine/cmd/usage.go and review_sweep_test.go, so the T1-T4 wording in the skill and the sweep.go comment is consistent with the CLI.",
+      "Only a stale 'T1-T3' remains in docs/architecture/role-design/per-role-sweeper.md:70, which is design history. A stale test comment at review_sweep_test.go:285 and an error message at :341 are untouched by this diff.",
+      "The skill approval going stale is stated in the CHANGELOG.",
+      "No tests were run (read-only)."
+    ]
+  }
+}

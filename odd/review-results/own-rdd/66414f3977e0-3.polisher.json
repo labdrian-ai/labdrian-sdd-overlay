@@ -1,0 +1,17 @@
+{
+  "kind": "polisher",
+  "base": "3ca9375e69269f26d2bb936d86f03b96a56eabca",
+  "head": "66414f3977e042fd5300b89e5d1cced3a98db0f0",
+  "diff_sha256": "08513e90e3ba445b01fd5c3613f5ecbb208b8dc66691a007c0cbcd4f624ed912",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the whole diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/66414f39.diff.",
+      "Checked DecodeSweep in engine/review/rolerecords.go at the head. The outer struct's own `T4 json.RawMessage` shadows the embedded `SweepFindings.T4` (depth 0 against depth 2). A missing `t4` gives nil, which decodes as both lists empty and non-nil. A `null` t4 reaches RawMessage as the non-nil bytes `null`, so decodeSweepT4 refuses it. A present t4 goes through DecodeStrict, which rejects unknown members and a repeated key. Both lists must be arrays.",
+      "Used Grep on the worktree's non-test engine code. DecodeSweep is called from engine/review/app/recordrole.go:97 and engine/review/app/needs.go:90, and both receive the same decoded StoredSweep. No other decoder of the sweep file turned up.",
+      "Checked Leftovers in engine/review/sweep.go. It matches on the base name, skips paths in T1.DeletedOrRenamed, removes duplicates, sorts, and never returns nil. Candidates() keeps the old ids in their old order and appends the T4 ids after T3.",
+      "Fired() and check() now cover T4. EncodeSweep writes `t4` through present(), so a new record always holds both lists as arrays.",
+      "Did not run the tests; this was read-only static review. The new tests cover the old-record, null/partial t4, and duplicate-key cases, and a repository-wide decode test covers stored sweeps."
+    ]
+  }
+}

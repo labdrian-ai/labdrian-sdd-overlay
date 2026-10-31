@@ -1,0 +1,18 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "go test -count=1 ./review/ -run Probe -v in a git-archive copy of head; zz_probe_test.go calls review.TidyFindings on a same-path // indirect rewrite and on a version bump",
+      "output": "indirect: [\"go.mod: require github.com/x/y v1.2.3\"]; bump: [\"go.mod: require github.com/x/y v1.2.3\"]",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "rg -n '1\\.23|Go 1\\.' engine/cmd/usage.go README.md bin/lib/usage.sh CHANGELOG.md",
+      "output": "no match (rg exit 1); the T2 tidy sentences at README.md:731, engine/cmd/usage.go:218, bin/lib/usage.sh:314 and CHANGELOG.md:39 name no Go version",
+      "base_result": "not-reproduced"
+    }
+  ]
+}

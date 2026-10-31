@@ -1,0 +1,11 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "go test -count=1 ./review/ -run Probe -v in a git-archive copy of head; zz_probe_test.go calls review.TidyFindings on a same-path // indirect rewrite and on a version bump",
+      "output": "indirect: [\"go.mod: require github.com/x/y v1.2.3\"]; bump: [\"go.mod: require github.com/x/y v1.2.3\"]",
+      "base_result": "not-reproduced"
+    }
+  ]
+}

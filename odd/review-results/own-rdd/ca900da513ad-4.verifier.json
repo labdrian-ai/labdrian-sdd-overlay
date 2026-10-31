@@ -1,0 +1,18 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "not-reproduced",
+      "command": "rg -n deltaLines engine/skills/role_agents_artifact_test.go; cd engine && go test -count=1 ./skills/ -run Delta|Sweeper -v",
+      "output": "the role table row {\"sweeper\", \"sonnet\", sweeperTools(), 4, ...} (line 106) sets deltaLines 4, and lines 253-254 fail when len(delta) != spec.deltaLines, so the four lines are pinned by the per-role test; the run printed ok",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "rg -n T1-T3 docs/architecture/role-design/per-role-sweeper.md; git show fea619c6:docs/architecture/role-design/per-role-sweeper.md | rg -n T1-T3",
+      "output": "line 70 says T1-T3 under ## 5. Considered and cut (rung), a record of rejected alternatives; the line is unchanged by the commit",
+      "base_result": "reproduced"
+    }
+  ]
+}

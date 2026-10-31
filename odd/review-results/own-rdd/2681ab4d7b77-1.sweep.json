@@ -1,0 +1,21 @@
+{
+  "kind": "sweep",
+  "base": "50eae04a7d114301729473dece79b0d967ec8d0d",
+  "head": "2681ab4d7b7780f59ca1dcf512b7748bc85ba3da",
+  "diff_sha256": "f5ebaaf5d7fd1731cd7946c1025b5c25dcd59bcb554b8091ac7218164f7d1ea7",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": []
+  },
+  "t2": [
+    {
+      "tool": "staticcheck",
+      "module": "engine",
+      "new": [
+        "review/analyzers/analyzers_test.go: this value of log is never used (SA4006)"
+      ]
+    }
+  ],
+  "t3": []
+}

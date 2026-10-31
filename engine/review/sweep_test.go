@@ -48,6 +48,111 @@ func TestRemovedNamesAreTheDeclarationsOfRemovedLines(t *testing.T) {
 	}
 }
 
+// T4 lists the leftovers a commit adds (own-rdd T12b, S15 b): a changed path whose base name ends .orig or .bak and
+// that the commit does not delete, sorted, once each.
+func TestLeftoversAreTheChangedPathsEndingOrigOrBak(t *testing.T) {
+	paths := []string{"x.go.orig", "d/y.bak", "x.orig.go", "bak", "z.orig", "d/y.bak", "a/b.orig/c.go", "docs/a.md"}
+	got := review.Leftovers(paths, []string{"z.orig"})
+	if want := []string{"d/y.bak", "x.go.orig"}; !slices.Equal(got, want) {
+		t.Errorf("Leftovers() = %q, want %q", got, want)
+	}
+	if got := review.Leftovers(nil, nil); got == nil || len(got) != 0 {
+		t.Errorf("Leftovers(nil, nil) = %#v, want an empty slice that is not nil", got)
+	}
+}
+
+// T4 also lists the fixtures a commit leaves unread (own-rdd T12c, S15 c).
+func TestFixturePackagesAreTheDirectoriesOfTheChangedGoFilesAndAboveTestdata(t *testing.T) {
+	paths := []string{"a/b/x_test.go", "a/testdata/g/v1.json", "testdata/x.json", "docs/a.md", "a/b/y.go", "README.md"}
+	got := review.FixturePackages(paths)
+	if want := []string{".", "a", "a/b"}; !slices.Equal(got, want) {
+		t.Errorf("FixturePackages(%q) = %q, want %q: sorted, each once", paths, got, want)
+	}
+	if got := review.FixturePackages([]string{"docs/a.md", "x.sh"}); len(got) != 0 {
+		t.Errorf("FixturePackages(md and sh) = %q, want none", got)
+	}
+}
+
+func TestFixtureNamesAreTheBaseNameAndEachDirectoryBetweenTestdataAndIt(t *testing.T) {
+	got := review.FixtureNames("a/testdata/g/h/v1.json")
+	if want := []string{"v1.json", "g", "h"}; !slices.Equal(got, want) {
+		t.Errorf("FixtureNames = %q, want %q", got, want)
+	}
+	if got, want := review.FixtureNames("testdata/x.json"), []string{"x.json"}; !slices.Equal(got, want) {
+		t.Errorf("FixtureNames(root) = %q, want %q", got, want)
+	}
+}
+
+func TestOrphanedFixturesAreTheFixturesNoGoFileOfTheirPackageNames(t *testing.T) {
+	files := []string{
+		"a/x_test.go", "a/sub/y_test.go", "b/x_test.go",
+		"a/testdata/read.json",     // named by its base name in a/x_test.go
+		"a/testdata/g/inner.json",  // named only by its directory g in a/x_test.go
+		"a/testdata/only-sub.json", // named only in a/sub/y_test.go
+		"a/testdata/only-b.json",   // named only in b/x_test.go
+		"a/testdata/nobody.json",   // named nowhere
+		"c/testdata/other.json",    // a package nobody asked about
+		"a/testdata/doc.json",      // named only by a markdown file
+	}
+	mentioned := map[string][]string{
+		"read.json":     {"a/x_test.go"},
+		"g":             {"a/x_test.go"},
+		"only-sub.json": {"a/sub/y_test.go"},
+		"only-b.json":   {"b/x_test.go"},
+		"doc.json":      {"a/README.md"},
+	}
+	got := review.OrphanedFixtures(files, []string{"a"}, mentioned)
+	want := []string{"a/testdata/doc.json", "a/testdata/nobody.json", "a/testdata/only-b.json", "a/testdata/only-sub.json"}
+	if !slices.Equal(got, want) {
+		t.Errorf("OrphanedFixtures = %q, want %q", got, want)
+	}
+	if got := review.OrphanedFixtures(files, nil, mentioned); got == nil || len(got) != 0 {
+		t.Errorf("OrphanedFixtures(no package) = %#v, want an empty slice that is not nil", got)
+	}
+	root := review.OrphanedFixtures([]string{"testdata/x.json", "m_test.go"}, []string{"."}, map[string][]string{"x.json": {"m_test.go"}})
+	if len(root) != 0 {
+		t.Errorf("OrphanedFixtures(root package) = %q, want none: m_test.go names x.json", root)
+	}
+}
+
+// T1 also looks for the flags a diff removed (own-rdd T12a, S15 d): a flag held by a removed line of a .go or .sh
+// file that no added line of a .go or .sh file holds.
+func TestRemovedFlagsAreTheFlagsARemovedLineHeldThatNoAddedLineHolds(t *testing.T) {
+	mdLines := []review.ChangedLines{{Path: "docs/a.md", Lines: []string{"use --onto here"}}}
+	for _, tc := range []struct {
+		name           string
+		removed, added []review.ChangedLines
+		want           []string
+	}{
+		{"a flag of a removed Go line", goLines(`if f.has("--onto") {`), nil, []string{"--onto"}},
+		{"a flag of a removed shell line", shLines("--dry-run)"), nil, []string{"--dry-run"}},
+		{"both kinds, sorted", append(goLines(`f.has("--onto")`), shLines("--dry-run)")...), nil, []string{"--dry-run", "--onto"}},
+		{"a flag with digits and single hyphens", goLines(`"--a1-b2-c3"`), nil, []string{"--a1-b2-c3"}},
+		{"two flags on one line", goLines(`"--one --two"`), nil, []string{"--one", "--two"}},
+		{"a flag once, however many lines hold it", goLines(`"--onto"`, `"--onto"`), nil, []string{"--onto"}},
+		{"a flag an added Go line holds again", goLines(`"--onto"`), goLines(`"--onto" // kept`), nil},
+		{"a flag an added line of another Go file holds", goLines(`"--onto"`), []review.ChangedLines{{Path: "b/other.go", Lines: []string{`"--onto"`}}}, nil},
+		{"a flag an added shell line holds", goLines(`"--onto"`), shLines("--onto)"), nil},
+		{"only the flag held again is dropped", goLines(`"--kept --gone"`), goLines(`"--kept"`), []string{"--gone"}},
+		{"a flag an added markdown line holds is still removed", goLines(`"--onto"`), mdLines, []string{"--onto"}},
+		{"three hyphens", goLines(`"---"`), nil, nil},
+		{"two hyphens alone", goLines(`"--"`), nil, nil},
+		{"an uppercase first letter", goLines(`"--X"`), nil, nil},
+		{"a trailing hyphen", goLines(`"--a-"`), nil, nil},
+		{"a double hyphen inside", goLines(`"--a--b"`), nil, nil},
+		{"a letter before", goLines(`x--onto`), nil, nil},
+		{"an underscore after", goLines(`--onto_x`), nil, nil},
+		{"a letter after", goLines(`--ontoX`), nil, nil},
+		{"a flag on a removed markdown line", mdLines, nil, nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := review.RemovedFlags(tc.removed, tc.added); !slices.Equal(got, tc.want) {
+				t.Errorf("RemovedFlags() = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
 func goLines(lines ...string) []review.ChangedLines {
 	return []review.ChangedLines{{Path: "a/file.go", Lines: lines}}
 }
@@ -103,5 +208,80 @@ func TestNewFindingsAreTheNormalizedLinesThatOccurMoreAtTheHead(t *testing.T) {
 				t.Errorf("NewFindings() = %q, want %q", got, tc.want)
 			}
 		})
+	}
+}
+
+// T2 also runs `go mod tidy -diff` over a module whose dependencies a commit touches (own-rdd T12d, S15 e): a removed
+// import of a path that is not the standard library's is a sign that a requirement may be left unused.
+func TestRemovesImportReadsTheImportSpecsOfANonStandardPath(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		line string
+		want bool
+	}{
+		{"a single import", `import "github.com/x/y"`, true},
+		{"a named single import", `import y "github.com/x/y"`, true},
+		{"a named block entry", "\ty \"golang.org/x/tools/go/packages\"", true},
+		{"a blank block entry", "\t_ \"example.com/z\"", true},
+		{"a block entry with a comment", "\t\"github.com/x/y\" // used for the tests", true},
+		{"a standard package", "\t\"fmt\"", false},
+		{"a nested standard package", "\t\"os/exec\"", false},
+		{"a commented import", "\t// \"github.com/x/y\"", false},
+		{"a string in a literal", "\t\"github.com/x/y\",", false},
+		{"code", "return nil", false},
+		{"a returned string", "\treturn \"config.json\"", false},
+		{"a keyword before a string", "\tcase \"config.json\":", false},
+		{"a go statement keyword", "\tdefer \"a.b\"", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := review.RemovesImport([]string{tc.line}); got != tc.want {
+				t.Errorf("RemovesImport(%q) = %v, want %v", tc.line, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestTidyFindingsLeaveOutARequirementTheSameDiffAddsBack(t *testing.T) {
+	head := "diff current/go.mod tidy/go.mod\n--- current/go.mod\n+++ tidy/go.mod\n@@ -1,3 +1,3 @@\n"
+	for _, tc := range []struct {
+		name string
+		body string
+		want []string
+	}{
+		{"a comment added", " require (\n-\tgithub.com/x/y v1.2.3\n+\tgithub.com/x/y v1.2.3 // indirect\n )\n", nil},
+		{"a version bump", "-require github.com/x/y v1.2.3\n+require github.com/x/y v1.3.0\n", nil},
+		{"a plain removal", "-require github.com/x/y v1.2.3\n", []string{"go.mod: require github.com/x/y v1.2.3"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := review.TidyFindings(head + tc.body); !slices.Equal(got, tc.want) {
+				t.Errorf("TidyFindings = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestTidyFindingsAreTheRequirementsTheDiffRemovesFromGoMod(t *testing.T) {
+	diff := "diff current/go.mod tidy/go.mod\n" +
+		"--- current/go.mod\n" +
+		"+++ tidy/go.mod\n" +
+		"@@ -1,12 +1,10 @@\n" +
+		" module example.com/u\n" +
+		" \n" +
+		" go 1.21\n" +
+		"-\n" +
+		"-require github.com/x/y v1.2.3\n" +
+		" \n" +
+		" require (\n" +
+		"-\tgolang.org/x/z v0.1.0 // indirect\n" +
+		"+\tgolang.org/x/new v0.2.0\n" +
+		" )\n" +
+		"diff current/go.sum tidy/go.sum\n" +
+		"--- current/go.sum\n" +
+		"+++ tidy/go.sum\n" +
+		"@@ -1,2 +1,1 @@\n" +
+		"-golang.org/x/z v0.1.0 h1:abc=\n"
+	want := []string{"go.mod: require github.com/x/y v1.2.3", "go.mod: require golang.org/x/z v0.1.0"}
+	if got := review.TidyFindings(diff); !slices.Equal(got, want) {
+		t.Errorf("TidyFindings = %q, want %q: the removed requirements of go.mod in the order of the diff, nothing of go.sum, no added requirement", got, want)
 	}
 }

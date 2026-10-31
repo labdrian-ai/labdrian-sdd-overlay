@@ -23,7 +23,7 @@ type Swept struct {
 	SHA256 string
 	// Outcome is review.OutcomeClean or review.OutcomeFired.
 	Outcome string
-	// Findings are what the three checks found.
+	// Findings are what the four checks found.
 	Findings review.SweepFindings
 	// Candidates are the ids a sweeper answers for when the sweep fired, in the order of review.StoredSweep.Candidates;
 	// none when it did not.
@@ -33,7 +33,7 @@ type Swept struct {
 	NotFlushed error
 }
 
-// Sweep runs the checks T1 to T3 of the sweeper on the one commit from base to head, in the
+// Sweep runs the checks T1 to T4 of the sweeper on the one commit from base to head, in the
 // repository that holds dir (absolute), and stores their findings as the sweep record of the head in the results
 // directory of the feature (own-rdd T6b3, S6 b and c). The candidate is bound from git as Bind and Exempt bind it, and the
 // base is the first parent of the head (review.ErrNotOneCommit).
@@ -51,7 +51,10 @@ type Swept struct {
 //     files, each on a copy of the base and on a copy of the head; a finding is new when its normalized line occurs more
 //     times at the head (review.NewFindings). A check that cannot run is an error wrapping ErrToolDidNotRun, and nothing
 //     is stored (S1);
-//   - T3: the lines of git status of the working tree as it is, but for the records waiting under odd/review-results/.
+//   - T3: the lines of git status of the working tree as it is, but for the records waiting under odd/review-results/;
+//   - T4: the changed paths ending .orig or .bak that the commit does not delete (review.Leftovers), and the test
+//     fixtures of the packages the commit changes that no .go file of their package names at the head and did at the
+//     base (review.OrphanedFixtures).
 //
 // A commit that changes no Go module and no shell file makes no copy and runs no tool.
 func (s Service) Sweep(dir, feature, base, head string) (Swept, error) {
@@ -90,7 +93,11 @@ func (s Service) Sweep(dir, feature, base, head string) (Swept, error) {
 	if err != nil {
 		return Swept{}, err
 	}
-	findings := review.SweepFindings{T1: t1, T2: t2, T3: t3}
+	t4, err := s.sweepT4(repo, candidate, t1)
+	if err != nil {
+		return Swept{}, err
+	}
+	findings := review.SweepFindings{T1: t1, T2: t2, T3: t3, T4: t4}
 	file, err := review.EncodeSweep(candidate, findings)
 	if err != nil {
 		return Swept{}, err
@@ -131,18 +138,94 @@ func (s Service) sweepT1(repo Repository, c review.Candidate) (review.SweepT1, e
 		}
 	}
 	for _, name := range asked {
-		var hits []string
-		for _, p := range mentioned[name] {
-			if !slices.Contains(c.Paths, p) && !slices.Contains(hits, p) {
-				hits = append(hits, p)
-			}
-		}
-		if len(hits) > 0 {
-			slices.Sort(hits)
+		if hits := hitsOutside(c.Paths, mentioned[name]); len(hits) > 0 {
 			names = append(names, review.RemovedName{Name: name, Hits: hits})
 		}
 	}
+	// The flags are asked in a call of their own: a name inside a longer match at the same place is dropped by the search.
+	if flags := review.RemovedFlags(removed, added); len(flags) > 0 {
+		found, err := s.git.Mentions(repo, c.Head, flags)
+		if err != nil {
+			return review.SweepT1{}, fmt.Errorf("search %s for the removed flags: %w", c.Head, err)
+		}
+		for _, flag := range flags {
+			if hits := hitsOutside(c.Paths, found[flag]); len(hits) > 0 {
+				names = append(names, review.RemovedName{Name: flag, Hits: hits})
+			}
+		}
+		slices.SortFunc(names, func(a, b review.RemovedName) int { return strings.Compare(a.Name, b.Name) })
+	}
 	return review.SweepT1{DeletedOrRenamed: deleted, RemovedNames: names}, nil
+}
+
+// sweepT4 is the fourth check: the leftovers, and the fixtures the commit leaves unread. A commit that changes no package
+// asks git for no tree.
+func (s Service) sweepT4(repo Repository, c review.Candidate, t1 review.SweepT1) (review.SweepT4, error) {
+	t4 := review.SweepT4{Leftovers: review.Leftovers(c.Paths, t1.DeletedOrRenamed)}
+	packages := review.FixturePackages(c.Paths)
+	if len(packages) == 0 {
+		return t4, nil
+	}
+	base, err := s.orphanedAt(repo, c.Base, packages)
+	if err != nil {
+		return review.SweepT4{}, err
+	}
+	head, err := s.orphanedAt(repo, c.Head, packages)
+	if err != nil {
+		return review.SweepT4{}, err
+	}
+	for _, f := range head {
+		if !slices.Contains(base, f) {
+			t4.OrphanedFixtures = append(t4.OrphanedFixtures, f)
+		}
+	}
+	return t4, nil
+}
+
+// orphanedAt is the fixtures of packages that no .go file of their package names at commit.
+func (s Service) orphanedAt(repo Repository, commit string, packages []string) ([]string, error) {
+	files, err := s.git.TreeFiles(repo, commit)
+	if err != nil {
+		return nil, fmt.Errorf("list the files of %s: %w", commit, err)
+	}
+	var names []string
+	for _, pkg := range packages {
+		prefix := "testdata/"
+		if pkg != "." {
+			prefix = pkg + "/testdata/"
+		}
+		for _, f := range files {
+			if !strings.HasPrefix(f, prefix) {
+				continue
+			}
+			for _, name := range review.FixtureNames(f) {
+				if !slices.Contains(names, name) {
+					names = append(names, name)
+				}
+			}
+		}
+	}
+	if len(names) == 0 {
+		return nil, nil
+	}
+	slices.Sort(names)
+	mentioned, err := s.git.Mentions(repo, commit, names)
+	if err != nil {
+		return nil, fmt.Errorf("search %s for the names of the fixtures: %w", commit, err)
+	}
+	return review.OrphanedFixtures(files, packages, mentioned), nil
+}
+
+// hitsOutside is the paths that mention a name and are not paths of the diff, each once, sorted.
+func hitsOutside(diff, mentioned []string) []string {
+	var hits []string
+	for _, p := range mentioned {
+		if !slices.Contains(diff, p) && !slices.Contains(hits, p) {
+			hits = append(hits, p)
+		}
+	}
+	slices.Sort(hits)
+	return hits
 }
 
 // goChange is what a commit changed in one Go module: the module, relative to the root, and the packages of the changed
@@ -226,6 +309,10 @@ func (s Service) sweepT2(repo Repository, c review.Candidate) ([]review.SweepT2,
 	if err != nil {
 		return nil, err
 	}
+	tidy, err := s.tidyPicks(repo, c, modules, changes)
+	if err != nil {
+		return nil, err
+	}
 	a := s.analyzers
 	var all []review.SweepT2
 	add := func(tool, module string, base, head []string) {
@@ -243,18 +330,28 @@ func (s Service) sweepT2(repo Repository, c review.Candidate) ([]review.SweepT2,
 			return nil, err
 		}
 		add("deadcode", change.module, base, head)
-		if len(change.packages) == 0 {
-			continue
+		if len(change.packages) > 0 {
+			base, err = a.Staticcheck(baseRoot, change.module, change.packages)
+			if err != nil {
+				return nil, err
+			}
+			head, err = a.Staticcheck(headRoot, change.module, change.packages)
+			if err != nil {
+				return nil, err
+			}
+			add("staticcheck", change.module, base, head)
 		}
-		base, err = a.Staticcheck(baseRoot, change.module, change.packages)
-		if err != nil {
-			return nil, err
+		if slices.Contains(tidy, change.module) {
+			base, err = a.Tidy(baseRoot, change.module)
+			if err != nil {
+				return nil, err
+			}
+			head, err = a.Tidy(headRoot, change.module)
+			if err != nil {
+				return nil, err
+			}
+			add("go-mod-tidy", change.module, base, head)
 		}
-		head, err = a.Staticcheck(headRoot, change.module, change.packages)
-		if err != nil {
-			return nil, err
-		}
-		add("staticcheck", change.module, base, head)
 	}
 	if len(shell) > 0 {
 		base, err := a.Shellcheck(baseRoot, shell)
@@ -268,6 +365,46 @@ func (s Service) sweepT2(repo Repository, c review.Candidate) ([]review.SweepT2,
 		add("shellcheck", ".", base, head)
 	}
 	return all, nil
+}
+
+// tidyPicks is the modules `go mod tidy -diff` runs in. The removed lines are read only when a changed .go file lies in a
+// module that go.mod or go.sum has not picked already.
+func (s Service) tidyPicks(repo Repository, c review.Candidate, modules []string, changes []goChange) ([]string, error) {
+	byFile := tidyModules(c.Paths, nil, modules)
+	var removed []review.ChangedLines
+	for _, change := range changes {
+		if len(change.packages) > 0 && !slices.Contains(byFile, change.module) {
+			var err error
+			if removed, _, err = s.git.ChangedLines(repo, c.Base, c.Head); err != nil {
+				return nil, fmt.Errorf("read the changed lines of %s..%s: %w", c.Base, c.Head, err)
+			}
+			break
+		}
+	}
+	return tidyModules(c.Paths, removed, modules), nil
+}
+
+// tidyModules is the modules whose dependencies the commit touches: those whose go.mod or go.sum it changes, and those
+// one of whose .go files lost an import spec of a path outside the standard library (review.RemovesImport).
+func tidyModules(paths []string, removed []review.ChangedLines, modules []string) []string {
+	var picked []string
+	pick := func(p string) {
+		if m, ok := innermostModule(p, modules); ok && !slices.Contains(picked, m) {
+			picked = append(picked, m)
+		}
+	}
+	for _, p := range paths {
+		if base := path.Base(p); base == "go.mod" || base == "go.sum" {
+			pick(p)
+		}
+	}
+	for _, r := range removed {
+		if strings.HasSuffix(r.Path, ".go") && review.RemovesImport(r.Lines) {
+			pick(r.Path)
+		}
+	}
+	slices.Sort(picked)
+	return picked
 }
 
 // fillCopy empties the copy called side and fills it with the tree of commit.

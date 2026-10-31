@@ -38,21 +38,27 @@ var fakeRepo = app.Repository{Root: "/work/wt/feature", Main: "/work/main", Comm
 type fakeGit struct {
 	diff          []byte
 	paths         []string
-	pathsOf       map[string][]string         // the paths Paths answers for a head that is a key, instead of paths
-	parents       map[string]string           // the first parent of a commit; none for a commit that is not a key
-	standing      app.Standing                // what Standing answers
-	messages      map[string]string           // the raw message of a commit; "" for a commit that is not a key
-	trailers      map[string][]review.Trailer // the trailers of a message; none for a message that is not a key
-	deleted       []string                    // what DeletedOrRenamed answers
-	removedLines  []review.ChangedLines       // what ChangedLines answers first
-	addedLines    []review.ChangedLines       // what ChangedLines answers second
-	modules       []string                    // what Modules answers
-	mentions      map[string][]string         // the paths that mention a name; none for a name that is not a key
-	notCommit     map[string]bool             // the object names IsCommit says are not a commit; every other one is
-	status        []string                    // what Status answers
-	allParents    map[string][]string         // every parent of a commit; none for a commit that is not a key
-	mergeBases    map[string][]string         // the merge bases of "<a> <b>"; none for a pair that is not a key
-	trees         map[string]string           // the tree of a commit
+	pathsOf       map[string][]string            // the paths Paths answers for a head that is a key, instead of paths
+	parents       map[string]string              // the first parent of a commit; none for a commit that is not a key
+	standing      app.Standing                   // what Standing answers
+	messages      map[string]string              // the raw message of a commit; "" for a commit that is not a key
+	trailers      map[string][]review.Trailer    // the trailers of a message; none for a message that is not a key
+	deleted       []string                       // what DeletedOrRenamed answers
+	removedLines  []review.ChangedLines          // what ChangedLines answers first
+	addedLines    []review.ChangedLines          // what ChangedLines answers second
+	modules       []string                       // what Modules answers
+	mentions      map[string][]string            // the paths that mention a name; none for a name that is not a key
+	mentionsAt    map[string]map[string][]string // like mentions, for a commit that is a key, instead of mentions
+	treeFiles     map[string][]string            // the files of the tree of a commit; none for a commit that is not a key
+	notCommit     map[string]bool                // the object names IsCommit says are not a commit; every other one is
+	status        []string                       // what Status answers
+	allParents    map[string][]string            // every parent of a commit; none for a commit that is not a key
+	mergeBases    map[string][]string            // the merge bases of "<a> <b>"; none for a pair that is not a key
+	trees         map[string]string              // the tree of a commit
+	commitOf      map[string]string              // the commit Commit answers for a revision that is a key, before its own table
+	worktrees     []review.Worktree              // what Worktrees answers
+	merged        []string                       // what MergedBranches answers
+	ancestors     map[string]bool                // whether IsAncestor says a head is an ancestor; false for a head that is not a key
 	worktree      app.WorktreeState
 	worktreeLater []worktreeAnswer
 	fail          map[string]error
@@ -117,6 +123,9 @@ func (g *fakeGit) Commit(repo app.Repository, rev string) (string, error) {
 	g.record("Commit " + rev)
 	if err := g.fail["Commit "+rev]; err != nil {
 		return "", err
+	}
+	if commit, ok := g.commitOf[rev]; ok {
+		return commit, nil
 	}
 	switch rev {
 	case "HEAD~1", baseSHA:
@@ -246,14 +255,26 @@ func (g *fakeGit) Modules(repo app.Repository, commit string) ([]string, error) 
 	return g.modules, nil
 }
 
+func (g *fakeGit) TreeFiles(repo app.Repository, commit string) ([]string, error) {
+	g.record("TreeFiles " + commit)
+	if err := g.fail["TreeFiles"]; err != nil {
+		return nil, err
+	}
+	return g.treeFiles[commit], nil
+}
+
 func (g *fakeGit) Mentions(repo app.Repository, commit string, names []string) (map[string][]string, error) {
 	g.record("Mentions " + commit + " " + strings.Join(names, ","))
 	if err := g.fail["Mentions"]; err != nil {
 		return nil, err
 	}
 	found := map[string][]string{}
+	table := g.mentions
+	if at, ok := g.mentionsAt[commit]; ok {
+		table = at
+	}
 	for _, name := range names {
-		if paths := g.mentions[name]; len(paths) > 0 {
+		if paths := table[name]; len(paths) > 0 {
 			found[name] = paths
 		}
 	}
@@ -266,6 +287,30 @@ func (g *fakeGit) IsCommit(repo app.Repository, name string) (bool, error) {
 		return false, err
 	}
 	return !g.notCommit[name], nil
+}
+
+func (g *fakeGit) Worktrees(repo app.Repository) ([]review.Worktree, error) {
+	g.record("Worktrees")
+	if err := g.fail["Worktrees"]; err != nil {
+		return nil, err
+	}
+	return g.worktrees, nil
+}
+
+func (g *fakeGit) MergedBranches(repo app.Repository, into string) ([]string, error) {
+	g.record("MergedBranches " + into)
+	if err := g.fail["MergedBranches"]; err != nil {
+		return nil, err
+	}
+	return g.merged, nil
+}
+
+func (g *fakeGit) IsAncestor(repo app.Repository, a, b string) (bool, error) {
+	g.record("IsAncestor " + a + " " + b)
+	if err := g.fail["IsAncestor"]; err != nil {
+		return false, err
+	}
+	return g.ancestors[a], nil
 }
 
 func (g *fakeGit) Status(repo app.Repository) ([]string, error) {
@@ -307,6 +352,10 @@ func (a *fakeAnalyzers) Deadcode(root, module string) ([]string, error) {
 
 func (a *fakeAnalyzers) Staticcheck(root, module string, packages []string) ([]string, error) {
 	return a.answer("Staticcheck", "Staticcheck "+root+" "+module+" "+strings.Join(packages, ","))
+}
+
+func (a *fakeAnalyzers) Tidy(root, module string) ([]string, error) {
+	return a.answer("Tidy", "Tidy "+root+" "+module)
 }
 
 func (a *fakeAnalyzers) Shellcheck(root string, files []string) ([]string, error) {

@@ -1,6 +1,7 @@
 package review
 
 import (
+	"path"
 	"regexp"
 	"slices"
 	"strings"
@@ -8,7 +9,7 @@ import (
 
 // This file is what the sweep of a commit computes from text, without git or any tool (own-rdd T6b2, S6 b): the names a
 // diff removed, and the findings of an analyzer that a diff added. `review sweep` hands it the lines and the output
-// of the tools; the checks themselves (T1-T3 of the sweeper) run in the app.
+// of the tools; the checks themselves (T1-T4 of the sweeper) run in the app.
 
 // ChangedLines are the lines of one file that a diff removed, or that it added: the path as git prints it and the
 // lines without the leading '-' or '+'.
@@ -76,6 +77,230 @@ func declaredNames(files []ChangedLines) []string {
 		}
 	}
 	return names
+}
+
+// RemovedFlags is the flags held by a removed line of a .go or .sh file that no added line of a .go or .sh file holds,
+// once each, in alphabetical order. A flag is `--` and a lowercase letter, then lowercase letters, digits and single
+// hyphens, not ending with a hyphen, with no letter, digit, `_` or `-` right before or after it (S15 d).
+func RemovedFlags(removed, added []ChangedLines) []string {
+	again := map[string]bool{}
+	for _, flag := range flagsOf(added) {
+		again[flag] = true
+	}
+	var gone []string
+	for _, flag := range flagsOf(removed) {
+		if !again[flag] && !slices.Contains(gone, flag) {
+			gone = append(gone, flag)
+		}
+	}
+	slices.Sort(gone)
+	return gone
+}
+
+// flagsOf is every flag on the lines of the .go and .sh files.
+func flagsOf(files []ChangedLines) []string {
+	var flags []string
+	for _, f := range files {
+		if !strings.HasSuffix(f.Path, ".go") && !strings.HasSuffix(f.Path, ".sh") {
+			continue
+		}
+		for _, line := range f.Lines {
+			for i := 0; i+2 < len(line); i++ {
+				if line[i] != '-' || line[i+1] != '-' || (i > 0 && inFlagWord(line[i-1])) {
+					continue
+				}
+				if end := flagEnd(line, i+2); end > 0 {
+					flags = append(flags, line[i:end])
+					i = end - 1
+				}
+			}
+		}
+	}
+	return flags
+}
+
+// flagEnd is where the flag whose name starts at start ends in line, or 0 when no flag starts there.
+func flagEnd(line string, start int) int {
+	if !isLower(line[start]) {
+		return 0
+	}
+	end := start + 1
+	for end < len(line) {
+		c := line[end]
+		if isLower(c) || isDigit(c) || (c == '-' && end+1 < len(line) && (isLower(line[end+1]) || isDigit(line[end+1]))) {
+			end++
+			continue
+		}
+		break
+	}
+	if end < len(line) && inFlagWord(line[end]) {
+		return 0
+	}
+	return end
+}
+
+func isLower(c byte) bool { return c >= 'a' && c <= 'z' }
+func isDigit(c byte) bool { return c >= '0' && c <= '9' }
+
+// inFlagWord is a character that may not touch a flag: a letter, a digit, `_` or `-`.
+func inFlagWord(c byte) bool {
+	return isLower(c) || isDigit(c) || (c >= 'A' && c <= 'Z') || c == '_' || c == '-'
+}
+
+// Leftovers is the changed paths whose base name ends .orig or .bak and that the commit does not delete, sorted, once
+// each (S15 b). The slice is empty, never nil.
+func Leftovers(paths, deleted []string) []string {
+	left := []string{}
+	for _, p := range paths {
+		name := p[strings.LastIndex(p, "/")+1:]
+		if (strings.HasSuffix(name, ".orig") || strings.HasSuffix(name, ".bak")) && !slices.Contains(deleted, p) && !slices.Contains(left, p) {
+			left = append(left, p)
+		}
+	}
+	slices.Sort(left)
+	return left
+}
+
+// FixturePackages is the packages of a commit for the fixture check (S15 c): the directory of each changed .go path and,
+// for a changed path with a testdata element, the directory above the first testdata ("." at the root). Sorted, once
+// each. A path that is neither gives none.
+func FixturePackages(paths []string) []string {
+	var packages []string
+	for _, p := range paths {
+		pkg, ok := "", false
+		if dir, _, found := strings.Cut(p, "/testdata/"); found {
+			pkg, ok = dir, true
+		} else if strings.HasPrefix(p, "testdata/") {
+			pkg, ok = ".", true
+		} else if strings.HasSuffix(p, ".go") {
+			pkg, ok = path.Dir(p), true
+		}
+		if ok && !slices.Contains(packages, pkg) {
+			packages = append(packages, pkg)
+		}
+	}
+	slices.Sort(packages)
+	return packages
+}
+
+// FixtureNames is the names of a fixture, a path of the form <package>/testdata/...: its base name, then each directory
+// between testdata and it, outermost first (S15 c).
+func FixtureNames(fixture string) []string {
+	below, found := strings.CutPrefix(fixture, "testdata/")
+	if !found {
+		_, below, _ = strings.Cut(fixture, "/testdata/")
+	}
+	parts := strings.Split(below, "/")
+	names := []string{parts[len(parts)-1]}
+	return append(names, parts[:len(parts)-1]...)
+}
+
+// OrphanedFixtures is the fixtures of packages among files, the paths of a tree, that no .go file directly in their
+// package names (S15 c): mentioned says, for a name, the paths of the tree that hold it as a whole word. Sorted, once
+// each. The slice is empty, never nil.
+func OrphanedFixtures(files, packages []string, mentioned map[string][]string) []string {
+	orphaned := []string{}
+	for _, pkg := range packages {
+		prefix := "testdata/"
+		if pkg != "." {
+			prefix = pkg + "/testdata/"
+		}
+		for _, f := range files {
+			if !strings.HasPrefix(f, prefix) || slices.Contains(orphaned, f) {
+				continue
+			}
+			read := false
+			for _, name := range FixtureNames(f) {
+				for _, hit := range mentioned[name] {
+					if strings.HasSuffix(hit, ".go") && path.Dir(hit) == pkg {
+						read = true
+					}
+				}
+			}
+			if !read {
+				orphaned = append(orphaned, f)
+			}
+		}
+	}
+	slices.Sort(orphaned)
+	return orphaned
+}
+
+// importSpec is a line that is an import spec: `import "p"`, `import n "p"`, or an entry `n? "p"` of an import block, with
+// at most a comment after it. A string in a literal is followed by a comma or a brace, so it is not read. The optional
+// name is `_`, `.`, or an identifier that is not a Go keyword (goKeywords), so `return "config.json"` is not read.
+var importSpec = regexp.MustCompile(`^\s*(?:import\s+)?(?:([A-Za-z_.][A-Za-z0-9_]*)\s+)?"([^"]+)"\s*(?://.*)?$`)
+
+// goKeywords is the 25 keywords of the Go specification.
+var goKeywords = map[string]bool{
+	"break": true, "default": true, "func": true, "interface": true, "select": true,
+	"case": true, "defer": true, "go": true, "map": true, "struct": true,
+	"chan": true, "else": true, "goto": true, "package": true, "switch": true,
+	"const": true, "fallthrough": true, "if": true, "range": true, "type": true,
+	"continue": true, "for": true, "import": true, "return": true, "var": true,
+}
+
+// RemovesImport says whether one of the removed lines of a .go file is an import spec of a path whose first element holds
+// a dot, which is how a path of a module outside the standard library reads (assumption of S15 e, D33). The name of the
+// spec, when there is one, is `_`, `.` or an identifier that is not a Go keyword.
+func RemovesImport(lines []string) bool {
+	for _, line := range lines {
+		m := importSpec.FindStringSubmatch(line)
+		if m == nil || goKeywords[m[1]] {
+			continue
+		}
+		if strings.Contains(strings.SplitN(m[2], "/", 2)[0], ".") {
+			return true
+		}
+	}
+	return false
+}
+
+// TidyFindings is the lines `go.mod: require <path> <version>` for the requirements that the go.mod part of the unified
+// diff of `go mod tidy -diff` removes, in the order of the diff: a `require` line, or an entry `<path> <version>` of a
+// block, its `// indirect` comment dropped. A requirement it adds, and the go.sum part, are not findings (removal-only).
+// A removed requirement whose module path also appears on an added requirement line of the go.mod part of the same diff
+// (a version bump, an `// indirect` comment added or dropped) is not a finding: the requirement is kept, not left unused.
+// An entry of the same shape inside an `exclude` or `retract` block cannot be told apart and is read as a requirement.
+func TidyFindings(diff string) []string {
+	type requirement struct{ path, version string }
+	var removed []requirement
+	added := map[string]bool{}
+	inGoMod := false
+	for _, line := range strings.Split(diff, "\n") {
+		if rest, ok := strings.CutPrefix(line, "--- "); ok {
+			name, _, _ := strings.Cut(rest, "\t")
+			inGoMod = path.Base(name) == "go.mod"
+			continue
+		}
+		if !inGoMod || strings.HasPrefix(line, "+++ ") {
+			continue
+		}
+		body, isRemoved := strings.CutPrefix(line, "-")
+		if !isRemoved {
+			var isAdded bool
+			if body, isAdded = strings.CutPrefix(line, "+"); !isAdded {
+				continue
+			}
+		}
+		body, _, _ = strings.Cut(body, "//")
+		fields := strings.Fields(strings.TrimPrefix(strings.TrimSpace(body), "require "))
+		if len(fields) != 2 || !strings.HasPrefix(fields[1], "v") {
+			continue
+		}
+		if isRemoved {
+			removed = append(removed, requirement{fields[0], fields[1]})
+		} else {
+			added[fields[0]] = true
+		}
+	}
+	var found []string
+	for _, r := range removed {
+		if !added[r.path] {
+			found = append(found, "go.mod: require "+r.path+" "+r.version)
+		}
+	}
+	return found
 }
 
 // position is the `:<line>` or `:<line>:<col>` that follows the path at the start of a finding.

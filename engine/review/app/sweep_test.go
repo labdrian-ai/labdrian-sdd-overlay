@@ -150,6 +150,135 @@ func TestSweepListsTheRemovedNamesThatTheHeadStillMentionsOutsideTheDiff(t *test
 	}
 }
 
+// T4 lists the leftovers a commit adds (own-rdd T12b, S15 b): a changed path ending .orig or .bak that the commit
+// does not delete.
+func TestSweepFiresOnALeftoverTheCommitAdds(t *testing.T) {
+	s := newSweepRig(t)
+	s.git.paths = []string{"docs/a.md", "d/y.bak", "x.go.orig", "gone.orig"}
+	s.git.deleted = []string{"gone.orig"}
+
+	got := s.mustSweep()
+
+	stored := s.stored()
+	if want := []string{"d/y.bak", "x.go.orig"}; !stored.Fired() || !reflect.DeepEqual(stored.Findings.T4.Leftovers, want) {
+		t.Errorf("stored sweep fired = %v, t4 leftovers = %q, want fired with %q", stored.Fired(), stored.Findings.T4.Leftovers, want)
+	}
+	if len(stored.Findings.T4.OrphanedFixtures) != 0 {
+		t.Errorf("t4 orphaned fixtures = %q, want none for a commit with no package", stored.Findings.T4.OrphanedFixtures)
+	}
+	want := []string{"T1 path: gone.orig", "T4 leftover: d/y.bak", "T4 leftover: x.go.orig"}
+	if got.Outcome != review.OutcomeFired || !reflect.DeepEqual(got.Candidates, want) {
+		t.Errorf("Swept outcome = %q, candidates = %q, want fired and %q", got.Outcome, got.Candidates, want)
+	}
+}
+
+// T4 lists the fixtures a commit leaves unread (own-rdd T12c, S15 c): orphaned at the head and not at the base.
+func TestSweepFiresOnAFixtureTheCommitLeavesUnread(t *testing.T) {
+	s := newSweepRig(t)
+	s.git.paths = []string{"a/x_test.go"}
+	files := []string{"a/x_test.go", "a/testdata/old.json", "a/testdata/kept.json"}
+	s.git.treeFiles = map[string][]string{baseSHA: files, headSHA: files}
+	s.git.mentionsAt = map[string]map[string][]string{
+		baseSHA: {"old.json": {"a/x_test.go"}, "kept.json": {"a/x_test.go"}},
+		headSHA: {"kept.json": {"a/x_test.go"}},
+	}
+
+	got := s.mustSweep()
+
+	stored := s.stored()
+	if want := []string{"a/testdata/old.json"}; !stored.Fired() || !reflect.DeepEqual(stored.Findings.T4.OrphanedFixtures, want) {
+		t.Errorf("stored sweep fired = %v, t4 fixtures = %q, want fired with %q", stored.Fired(), stored.Findings.T4.OrphanedFixtures, want)
+	}
+	if got.Outcome != review.OutcomeFired || !reflect.DeepEqual(got.Candidates, []string{"T4 fixture: a/testdata/old.json"}) {
+		t.Errorf("Swept outcome = %q, candidates = %q, want fired with the fixture", got.Outcome, got.Candidates)
+	}
+	var searches []string
+	for _, c := range s.git.calls {
+		if strings.HasPrefix(c, "Mentions ") {
+			searches = append(searches, c)
+		}
+	}
+	want := []string{"Mentions " + baseSHA + " kept.json,old.json", "Mentions " + headSHA + " kept.json,old.json"}
+	if !reflect.DeepEqual(searches, want) {
+		t.Errorf("searches = %q, want one per side with the names of the fixtures", searches)
+	}
+}
+
+func TestSweepDoesNotFireOnAFixtureAlreadyUnreadAtTheBase(t *testing.T) {
+	s := newSweepRig(t)
+	s.git.paths = []string{"a/x_test.go"}
+	files := []string{"a/x_test.go", "a/testdata/old.json"}
+	s.git.treeFiles = map[string][]string{baseSHA: files, headSHA: files}
+
+	got := s.mustSweep()
+
+	if got.Outcome != review.OutcomeClean || len(s.stored().Findings.T4.OrphanedFixtures) != 0 {
+		t.Errorf("outcome = %q, fixtures = %q, want clean: the fixture was unread at the base too", got.Outcome, s.stored().Findings.T4.OrphanedFixtures)
+	}
+}
+
+func TestSweepAsksNoFixtureSearchForACommitWithNoPackage(t *testing.T) {
+	s := newSweepRig(t)
+	s.git.paths = []string{"README.md"}
+
+	s.mustSweep()
+
+	if s.git.called("TreeFiles") != 0 {
+		t.Errorf("calls = %q, want no TreeFiles for a commit that changes only README.md", s.git.calls)
+	}
+}
+
+func TestSweepRefusesAndStoresNothingWhenTheFilesOfATreeCannotBeListed(t *testing.T) {
+	s := newSweepRig(t)
+	s.git.paths = []string{"a/x_test.go"}
+	s.git.fail["TreeFiles"] = errors.New("boom")
+
+	_, err := s.sweep()
+
+	if err == nil || !strings.Contains(err.Error(), "list the files of") || len(s.results.files["own-rdd"]) != 0 {
+		t.Errorf("error = %v, stored %v, want a refusal naming the listing and nothing stored", err, s.results.files)
+	}
+}
+
+func TestSweepFiresOnARemovedFlagTheHeadStillMentionsOutsideTheDiff(t *testing.T) {
+	s := newSweepRig(t)
+	s.git.paths = []string{"pkg/a.go"}
+	s.git.removedLines = []review.ChangedLines{{Path: "pkg/a.go", Lines: []string{"func gone() {}", `f.has("--onto")`}}}
+	s.git.mentions = map[string][]string{"gone": {"docs/x.md"}, "--onto": {"README.md", "pkg/a.go"}}
+
+	got := s.mustSweep()
+
+	want := []review.RemovedName{{Name: "--onto", Hits: []string{"README.md"}}, {Name: "gone", Hits: []string{"docs/x.md"}}}
+	if names := s.stored().Findings.T1.RemovedNames; !reflect.DeepEqual(names, want) {
+		t.Errorf("stored removed names = %v, want %v: the flag first, hits outside the diff", names, want)
+	}
+	if got.Outcome != review.OutcomeFired || !reflect.DeepEqual(got.Candidates, []string{"T1 name: --onto", "T1 name: gone"}) {
+		t.Errorf("Swept outcome = %q, candidates = %q, want fired with the flag and the name", got.Outcome, got.Candidates)
+	}
+	var searches []string
+	for _, c := range s.git.calls {
+		if strings.HasPrefix(c, "Mentions ") {
+			searches = append(searches, c)
+		}
+	}
+	if want := []string{"Mentions " + headSHA + " gone", "Mentions " + headSHA + " --onto"}; !reflect.DeepEqual(searches, want) {
+		t.Errorf("searches = %q, want the names in one call and the flags in a call of their own", searches)
+	}
+}
+
+func TestSweepIsCleanForAFlagNothingOutsideTheDiffMentions(t *testing.T) {
+	s := newSweepRig(t)
+	s.git.paths = []string{"pkg/a.go"}
+	s.git.removedLines = []review.ChangedLines{{Path: "pkg/a.go", Lines: []string{`f.has("--onto")`}}}
+	s.git.mentions = map[string][]string{"--onto": {"pkg/a.go"}}
+
+	got := s.mustSweep()
+
+	if got.Outcome != review.OutcomeClean || len(s.stored().Findings.T1.RemovedNames) != 0 {
+		t.Errorf("Swept outcome = %q, removed names = %v, want clean: the only hit is inside the diff", got.Outcome, s.stored().Findings.T1.RemovedNames)
+	}
+}
+
 func TestSweepSearchesNothingWhenTheCommitRemovesNoName(t *testing.T) {
 	s := newSweepRig(t)
 
@@ -186,6 +315,7 @@ func TestSweepRunsDeadcodeAndStaticcheckOnTheCopiesOfEveryModuleTheCommitChanges
 	wantTools := []string{
 		"Deadcode /state/base mod", "Deadcode /state/head mod",
 		"Staticcheck /state/base mod ./a,./b", "Staticcheck /state/head mod ./a,./b",
+		"Tidy /state/base mod", "Tidy /state/head mod", // mod/go.sum is changed
 	}
 	if !reflect.DeepEqual(s.tools.calls, wantTools) {
 		t.Errorf("tool calls = %q, want %q: the whole module for deadcode, the packages of the changed files for staticcheck", s.tools.calls, wantTools)
@@ -208,7 +338,7 @@ func TestSweepOfOnlyModuleFilesRunsDeadcodeAndNoStaticcheck(t *testing.T) {
 
 	s.mustSweep()
 
-	want := []string{"Deadcode /state/base mod", "Deadcode /state/head mod"}
+	want := []string{"Deadcode /state/base mod", "Deadcode /state/head mod", "Tidy /state/base mod", "Tidy /state/head mod"}
 	if !reflect.DeepEqual(s.tools.calls, want) {
 		t.Errorf("tool calls = %q, want %q: no changed .go file, no package for staticcheck", s.tools.calls, want)
 	}
@@ -371,6 +501,74 @@ func TestSweepGivesTheLockBackAndStoresNothingWhenAnythingAfterItFails(t *testin
 				t.Errorf("created = %d, want nothing stored", s.results.created())
 			}
 		})
+	}
+}
+
+func TestSweepFiresOnARequirementTheCommitLeavesUnused(t *testing.T) {
+	s := newSweepRig(t)
+	s.git.paths = []string{"engine/x.go"}
+	s.git.modules = []string{"engine"}
+	s.git.removedLines = []review.ChangedLines{{Path: "engine/x.go", Lines: []string{"\t\"github.com/x/y\""}}}
+	s.tools.out["Tidy /state/head engine"] = []string{"go.mod: require github.com/x/y v1.2.3"}
+
+	got := s.mustSweep()
+
+	want := []review.SweepT2{{Tool: "go-mod-tidy", Module: "engine", New: []string{"go.mod: require github.com/x/y v1.2.3"}}}
+	if t2 := s.stored().Findings.T2; !reflect.DeepEqual(t2, want) {
+		t.Errorf("stored t2 = %v, want %v", t2, want)
+	}
+	if got.Outcome != review.OutcomeFired || !reflect.DeepEqual(got.Candidates, []string{"T2 go-mod-tidy engine: go.mod: require github.com/x/y v1.2.3"}) {
+		t.Errorf("outcome = %q, candidates = %q, want fired with the requirement", got.Outcome, got.Candidates)
+	}
+	wantCalls := []string{"Deadcode /state/base engine", "Deadcode /state/head engine", "Staticcheck /state/base engine .", "Staticcheck /state/head engine .", "Tidy /state/base engine", "Tidy /state/head engine"}
+	if !reflect.DeepEqual(s.tools.calls, wantCalls) {
+		t.Errorf("tool calls = %q, want %q: tidy after the other two, on both copies", s.tools.calls, wantCalls)
+	}
+}
+
+func TestSweepRunsTidyForAModuleWhoseGoModOrGoSumTheCommitChanges(t *testing.T) {
+	s := newSweepRig(t)
+	s.git.paths = []string{"mod/go.sum"}
+	s.git.modules = []string{"mod"}
+
+	s.mustSweep()
+
+	if s.git.called("ChangedLines") != 1 {
+		t.Errorf("calls = %q, want the lines read once, by T1 alone: go.sum already picks the module", s.git.calls)
+	}
+	if want := []string{"Tidy /state/base mod", "Tidy /state/head mod"}; len(s.tools.calls) != 4 || !reflect.DeepEqual(s.tools.calls[2:], want) {
+		t.Errorf("tool calls = %q, want tidy on both copies after deadcode", s.tools.calls)
+	}
+}
+
+func TestSweepRunsNoTidyForACommitThatTouchesNoDependency(t *testing.T) {
+	s := newSweepRig(t)
+	s.git.paths = []string{"engine/x.go"}
+	s.git.modules = []string{"engine"}
+	s.git.removedLines = []review.ChangedLines{{Path: "engine/x.go", Lines: []string{"\t\"fmt\"", "func gone() {}"}}}
+
+	s.mustSweep()
+
+	for _, call := range s.tools.calls {
+		if strings.HasPrefix(call, "Tidy") {
+			t.Errorf("tool calls = %q, want no tidy: a .go change with no removed import and no go.mod or go.sum", s.tools.calls)
+		}
+	}
+}
+
+func TestSweepStoresNothingWhenTidyDidNotRun(t *testing.T) {
+	s := newSweepRig(t)
+	s.git.paths = []string{"mod/go.mod"}
+	s.git.modules = []string{"mod"}
+	s.tools.fail["Tidy"] = fmt.Errorf("%w: go mod tidy: exit status 1", app.ErrToolDidNotRun)
+
+	_, err := s.sweep()
+
+	if !errors.Is(err, app.ErrToolDidNotRun) || !strings.Contains(err.Error(), "go mod tidy") {
+		t.Errorf("Sweep error = %v, want ErrToolDidNotRun naming go mod tidy", err)
+	}
+	if s.results.created() != 0 {
+		t.Errorf("created = %d, want nothing stored", s.results.created())
 	}
 }
 

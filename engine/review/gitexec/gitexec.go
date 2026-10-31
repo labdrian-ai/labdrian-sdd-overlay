@@ -575,6 +575,16 @@ func (g Git) Modules(repo app.Repository, commit string) ([]string, error) {
 	return modules, nil
 }
 
+// TreeFiles returns every path of the tree of commit, in the order git prints them (own-rdd T12c, S15 c). It asks git what
+// Modules asks.
+func (g Git) TreeFiles(repo app.Repository, commit string) ([]string, error) {
+	out, err := g.output(repo.Root, "ls-tree", []string{"ls-tree", "-r", "--name-only", "-z", "--end-of-options", commit})
+	if err != nil {
+		return nil, err
+	}
+	return splitPaths(out)
+}
+
 // mentionsBatch is how many names one start of `git grep` is asked for: the cost of a sweep grows with the names in
 // steps of this size, and 256 names of the length of an identifier stay far under the limit of the arguments.
 const mentionsBatch = 256
@@ -667,6 +677,112 @@ func (g Git) IsCommit(repo app.Repository, name string) (bool, error) {
 	default:
 		return false, fmt.Errorf("git cat-file -t printed %q for %q, want the kind of the object", clip(string(out)), name)
 	}
+}
+
+// Worktrees returns the working trees of the repository in the order `git worktree list --porcelain -z` prints them (own-rdd
+// T12e, S15 g): the main one first. A record is the fields of one worktree, each ended by a NUL byte, and an empty field
+// ends the record: `worktree <path>` first, then `HEAD <full object name>` (a bare repository has none, and says `bare`),
+// `branch <ref>` or `detached`, and `locked` or `prunable`, each with an optional reason after a space. A record of
+// another shape, or no record at all, is an error.
+func (g Git) Worktrees(repo app.Repository) ([]review.Worktree, error) {
+	out, err := g.output(repo.Root, "worktree list", []string{"worktree", "list", "--porcelain", "-z"})
+	if err != nil {
+		return nil, err
+	}
+	var all []review.Worktree
+	var cur *review.Worktree
+	sawHead, bare := false, false
+	finish := func() error {
+		if cur == nil {
+			return nil
+		}
+		if !sawHead && !bare {
+			return fmt.Errorf("git worktree list printed no HEAD for the worktree %q", cur.Path)
+		}
+		all = append(all, *cur)
+		cur, sawHead, bare = nil, false, false
+		return nil
+	}
+	for _, field := range strings.Split(string(out), "\x00") {
+		if field == "" {
+			if err := finish(); err != nil {
+				return nil, err
+			}
+			continue
+		}
+		key, value, _ := strings.Cut(field, " ")
+		if key != "worktree" && cur == nil {
+			return nil, fmt.Errorf("git worktree list printed %q before any worktree, want a worktree line first", clip(field))
+		}
+		switch key {
+		case "worktree":
+			if cur != nil || value == "" {
+				return nil, fmt.Errorf("git worktree list printed %q, want one worktree line with a path that starts a record", clip(field))
+			}
+			cur = &review.Worktree{Path: value}
+		case "HEAD":
+			if !gitobject.IsName(value) {
+				return nil, fmt.Errorf("git worktree list printed %q for the HEAD of %q, want a full object name", clip(value), cur.Path)
+			}
+			cur.Head, sawHead = value, true
+		case "branch", "detached":
+		case "bare":
+			bare = true
+		case "locked":
+			cur.Locked = true
+		case "prunable":
+			cur.Prunable = true
+		default:
+			return nil, fmt.Errorf("git worktree list printed the field %q for %q, want worktree, HEAD, branch, detached, bare, locked or prunable", clip(field), cur.Path)
+		}
+	}
+	if err := finish(); err != nil {
+		return nil, err
+	}
+	if len(all) == 0 {
+		return nil, errors.New("git worktree list printed no worktree, want at least the main one")
+	}
+	return all, nil
+}
+
+// MergedBranches returns the short names of the local branches merged into into, as `git for-each-ref --merged` lists
+// them, sorted by git. A name is what git prints, one to a line; a branch name has no line break.
+func (g Git) MergedBranches(repo app.Repository, into string) ([]string, error) {
+	if into == "" || strings.HasPrefix(into, "-") {
+		return nil, fmt.Errorf("%q is not a revision to ask what is merged into", into)
+	}
+	out, err := g.output(repo.Root, "for-each-ref", []string{"for-each-ref", "--format=%(refname:short)", "--merged", into, "refs/heads/"})
+	if err != nil {
+		return nil, err
+	}
+	var names []string
+	for _, line := range strings.Split(strings.TrimSuffix(string(out), "\n"), "\n") {
+		if line != "" {
+			names = append(names, line)
+		}
+	}
+	return names, nil
+}
+
+// IsAncestor says whether a is an ancestor of b. `git merge-base --is-ancestor` exits 1 with nothing printed for an a that
+// is not, which is false and not an error; any other failure, an object git does not have included, is an error.
+func (g Git) IsAncestor(repo app.Repository, a, b string) (bool, error) {
+	for _, name := range []string{a, b} {
+		if !gitobject.IsName(name) {
+			return false, fmt.Errorf("%q is not a full object name", name)
+		}
+	}
+	ctx, cancel := g.context()
+	defer cancel()
+	stdout, stderr, err := g.runner.Output(ctx, g.env, gitProgram, "-C", repo.Root, "merge-base", "--is-ancestor", a, b)
+	var exit *exec.ExitError
+	if errors.As(err, &exit) && exit.ExitCode() == 1 && len(stdout) == 0 && strings.TrimSpace(string(stderr)) == "" {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("git merge-base --is-ancestor: %w%s", err, said(stderr))
+	}
+	return true, nil
 }
 
 // Status returns the lines of `git status --porcelain` with every untracked file on its own line, as the working tree is.

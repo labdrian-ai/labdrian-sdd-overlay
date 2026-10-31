@@ -1,0 +1,15 @@
+{
+  "kind": "polisher",
+  "base": "423c9e58f2fb5bdb0b0c2f27bbc5d66da532adce",
+  "head": "60003a8c457bd4501d91f159fa8d498e8b6b05ba",
+  "diff_sha256": "85f090f021ab9269db557e965f273b9909be6f6985c9a9476e5d934c453dce0b",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff at the scratchpad path. I did not open the worktree, S15 or the T12d row, and ran no commands or tests.",
+      "TidyFindings collects removed and added go.mod requirement lines and drops a removed requirement whose module path is added back, covering the version-bump and // indirect cases; a plain removal still reports; go.sum parts are still ignored. No reachable defect.",
+      "RemovesImport captures the optional name; a Go keyword before a string is skipped, and import \"x.y/z\" still matches by leftmost-first matching; _ and . names still work. No reachable defect.",
+      "Docs: the Go 1.23 note is right and consistent across README, bin/lib/usage.sh, engine/cmd/usage.go, CHANGELOG and the test assertions."
+    ]
+  }
+}

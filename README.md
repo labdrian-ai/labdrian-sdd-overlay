@@ -721,23 +721,25 @@ overlay review <verb>
         writes nothing and the error names the rule. `check` clears an exempted head unless a stored result
         blocks it. Exit 0 stored, 2 report refused, 1 usage error, a risk that is refused or any other failure.
     sweep  --feature <name> --base <rev> --head <rev> [--cwd <repo>]
-        Run the checks T1 to T3 of the sweeper once on the one commit from --base
+        Run the checks T1 to T4 of the sweeper once on the one commit from --base
         to --head (--base must be the first parent of --head, as for `exempt`) and store their findings as
         odd/review-results/<feature>/<head12>-<n>.sweep.json, numbered with the other files of the head and never
         over an existing one. T1: the paths the commit deleted or renamed, and the names its removed lines
-        declared that the head still mentions outside the diff. T2: `deadcode -test ./...` over each Go module
+        declared and the flags (--name) its removed lines of .go and .sh files held that the head still
+        mentions outside the diff. T2: `deadcode -test ./...` over each Go module
         the commit changes, `staticcheck` over the packages of its changed .go files and `shellcheck` over its
-        changed .sh files, each on a copy of the base and a copy of the head kept under
+        changed .sh files and `go mod tidy -diff` over each module whose go.mod or go.sum it changes or whose .go files lose an import, a finding being a required module the head no longer needs, each on a copy of the base and a copy of the head kept under
         $XDG_STATE_HOME/labdrian/review-sweep/ (default ~/.local/state), outside the working tree; a line is a
         finding when it occurs more times at the head than at the base. T3: `git status` of the working tree
-        as it is, but for the records under odd/review-results/. A tool that is not found, or that fails
+        as it is, but for the records under odd/review-results/. T4: the paths the commit changes whose name ends .orig or .bak, and the test fixtures it leaves unread. A tool that is not found, or that fails
         without printing a finding, is a check that did not run: nothing is stored and the error names the
-        tool (it needs deadcode, staticcheck and shellcheck on PATH, so until they are there the delivery stops
+        tool (it needs deadcode, staticcheck and shellcheck on PATH, and go on PATH (Go 1.23 or newer) with the module cache of a module whose dependencies the commit touches, so until they are there the delivery stops
         with it). A tree whose blobs pass 256 MiB in the one `git cat-file --batch` answer that fills the copies
         cannot be swept: the sweep exits 2 and stores nothing, so the delivery of such a repository stops. A
         second sweep of the repository while one runs is refused at once: another review sweep of this
         repository is running. stdout is one JSON object: outcome (`clean`, or `fired` when any check found
-        something), the path and sha256 of the stored record, and the candidates the sweeper answers for. Exit 0
+        something), the path and sha256 of the stored record, and the candidates the sweeper answers for (`T1 path: <path>`, `T1 name: <name>`, `T2 <tool> <module>: <line>`, `T3: <line>`,
+        T4 leftover: <path>, T4 fixture: <path>). Exit 0
         stored (clean or fired), 2 refused or a check that did not run, 1 usage error.
     record --role sweeper|polisher --feature <name> --base <rev> --head <rev> [--result <file>|-] [--cwd <repo>]
         Store the report of the sweeper, or the findings of one polisher judge (read from --result, or from
@@ -793,6 +795,18 @@ overlay review <verb>
         brief that names the binding and asks something else passes it, and the reply is still held to the binding by
         `record`. Whether the installed Codex enforces `--sandbox read-only` is shown only by a live run. Exit 0 stored,
         2 reply refused, 1 usage error or any other failure.
+    proposals [--cwd <repo>]
+        Prints, and never runs, what the owner may remove: the worktrees of the repository other than the main one and the
+        one of `--cwd`, not locked, that git marks prunable (`git worktree prune`) or whose HEAD is an ancestor of the tip of
+        the default branch (origin/HEAD, else main, else master; `git worktree remove <path>`), then the local branches other
+        than the default one and the one checked out at `--cwd` that are merged into it (`git branch -d <branch>`). stdout is
+        one JSON object `{default, worktrees: [{path, head, reason, command}], branches: [{name, command}]}` with both lists
+        always there and `reason` `merged` or `prunable`; the commands are git's own refusing forms, never `--force` or
+        `-D`. A repository with no default branch is refused (the repository has no default branch (origin/HEAD, main or
+        master), so nothing can be told merged), and so is a detached HEAD at `--cwd`. Nothing is stored and nothing is
+        deleted: the parent relays each proposal to the owner and runs a proposed command only after the owner confirms it.
+        Remote branches are not proposed, and a branch merged by squash or rebase is not. Exit 0 listed, 1 usage error,
+        refusal or any other failure.
     stop-hook
         Not run by a person: the Claude Code Stop hook that `install-hooks` wires (the review stop-hook, described
         below as `gentle-ai-overlay review stop-hook`). It asks the agent for what the first commit with unfinished
