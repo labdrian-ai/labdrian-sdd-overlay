@@ -1,0 +1,117 @@
+[
+  {
+    "id": "R1",
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R2",
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R3",
+    "score": 1,
+    "quote": "If filepath.Rel fails, the file is silently skipped and Files returns success with an incomplete listing."
+  },
+  {
+    "id": "R4",
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R5",
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R6",
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R7",
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R8",
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R9",
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R10",
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R11",
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R12",
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R13",
+    "score": 1,
+    "quote": "CI strips review_lens_count from every committed actuals record before validation, so the validator no longer checks that field for any fixture, not just the one known-bad record."
+  },
+  {
+    "id": "R14",
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R15",
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R16",
+    "score": 0.5,
+    "quote": "A file swapped to a FIFO between Lstat and Open could block os.Open indefinitely. (states the wait on a pipe, not the missing regular-file requirement)"
+  },
+  {
+    "id": "R17",
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R18",
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R19",
+    "score": 1,
+    "quote": "writeReviewJSON ignores the error from p.stdout.Write and exits 0."
+  },
+  {
+    "id": "R20",
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R21",
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R22",
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R23",
+    "score": 0,
+    "quote": ""
+  }
+]
