@@ -131,6 +131,17 @@ func TestDocsDescribeTheBuilderGuard(t *testing.T) {
 	}
 }
 
+// The README says a relative path is resolved from the root of the worktree, not from the session cwd (own-rdd S22 c).
+func TestDocsSayARelativeSpecIsRelativeToTheRootOfTheWorktree(t *testing.T) {
+	text := normalizeDocText(readRepositoryFile(t, "README.md"))
+	if want := "relative to the root of the git worktree that holds the session cwd"; !strings.Contains(text, want) {
+		t.Errorf("the README does not say %q", want)
+	}
+	if bad := "or relative to the session cwd"; strings.Contains(text, bad) {
+		t.Errorf("the README still says %q", bad)
+	}
+}
+
 // Every summary of the verbs that manage the hook families names the builder guard, with the other families, and the
 // summaries of the verbs that list the verbs of the engine name its verb.
 func TestInstallHooksSummariesNameTheBuilderGuard(t *testing.T) {

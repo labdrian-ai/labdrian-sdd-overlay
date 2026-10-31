@@ -48,9 +48,25 @@ func TestReadReturnsTheTextOfAnAbsolutePath(t *testing.T) {
 	}
 }
 
-func TestReadJoinsARelativePathToTheCwd(t *testing.T) {
+// recordingRoot is a Root that answers root for dir and records every dir it is asked about.
+type recordingRoot struct {
+	root, dir string
+	asked     []string
+}
+
+func (r *recordingRoot) Root(dir string) string {
+	r.asked = append(r.asked, dir)
+	if dir == r.dir {
+		return r.root
+	}
+	return ""
+}
+
+func TestReadJoinsARelativePathToTheRootOfTheWorktreeOfTheCwd(t *testing.T) {
 	root, doc := repo(t, "hello")
-	got, err := fsdoc.Reader{}.Read("odd/x/../tasks/f.md", root)
+	sub := filepath.Join(root, "engine")
+	rec := &recordingRoot{root: root, dir: sub}
+	got, err := fsdoc.Reader{Root: rec.Root}.Read("odd/x/../tasks/f.md", sub)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -59,9 +75,34 @@ func TestReadJoinsARelativePathToTheCwd(t *testing.T) {
 	}
 }
 
+func TestReadRefusesARelativePathNoRepositoryHolds(t *testing.T) {
+	root, _ := repo(t, "hello")
+	rec := &recordingRoot{}
+	for _, r := range []fsdoc.Reader{{}, {Root: rec.Root}} {
+		_, err := r.Read("odd/tasks/f.md", root)
+		wantReadError(t, err, "odd/tasks/f.md", oddtask.CauseNoRepository)
+	}
+}
+
+func TestReadRefusesARelativePathThatLeavesTheRepository(t *testing.T) {
+	root, _ := repo(t, "hello")
+	rec := &recordingRoot{root: root, dir: root}
+	for _, path := range []string{"../odd/tasks/f.md", "odd/../../odd/tasks/f.md"} {
+		_, err := fsdoc.Reader{Root: rec.Root}.Read(path, root)
+		wantReadError(t, err, path, oddtask.CauseOutsideRepository)
+	}
+	if len(rec.asked) != 0 {
+		t.Fatalf("Root was asked about %q, want it never called", rec.asked)
+	}
+}
+
 func TestReadRefusesARelativePathWithNoCwd(t *testing.T) {
-	_, err := fsdoc.Reader{}.Read("odd/tasks/f.md", "")
+	rec := &recordingRoot{}
+	_, err := fsdoc.Reader{Root: rec.Root}.Read("odd/tasks/f.md", "")
 	wantReadError(t, err, "odd/tasks/f.md", oddtask.CauseNoCwd)
+	if len(rec.asked) != 0 {
+		t.Fatalf("Root was asked about %q, want it never called", rec.asked)
+	}
 }
 
 func TestReadRefusesAMissingDocument(t *testing.T) {

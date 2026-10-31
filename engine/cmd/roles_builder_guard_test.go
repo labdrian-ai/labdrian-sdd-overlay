@@ -159,6 +159,38 @@ func TestBuilderGuardDeniesWhenTheDocumentCannotBeRead(t *testing.T) {
 	}
 }
 
+// A relative citation is resolved from the root of the git worktree that holds the session cwd (own-rdd S22 b).
+func TestBuilderGuardResolvesARelativeSpecFromTheRootOfTheWorktree(t *testing.T) {
+	root := bgRepo(t)
+	sub := filepath.Join(root, "engine")
+	if err := os.MkdirAll(sub, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	assertGuardSilent(t, "a designed task from a subdirectory", bgRun(bgCall(t, sub, "builder", "Spec: odd/tasks/f.md, T1")))
+	got := decodeGuardDenial(t, bgRun(bgCall(t, sub, "builder", "Spec: odd/tasks/f.md, T2")))
+	path := filepath.Join(root, "odd", "tasks", "f.md")
+	if !strings.Contains(got, "task T2 of "+path+" is not marked as designed by the shaper") {
+		t.Fatalf("reason = %q, want T2 refused as not designed, naming %s", got, path)
+	}
+}
+
+// A relative citation that leaves the worktree, or that no repository holds, is refused naming the path as cited.
+func TestBuilderGuardRefusesARelativeSpecThatLeavesTheRepositoryOrHasNone(t *testing.T) {
+	root := bgRepo(t)
+	sub := filepath.Join(root, "engine")
+	if err := os.MkdirAll(sub, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	got := decodeGuardDenial(t, bgRun(bgCall(t, sub, "builder", "Spec: ../odd/tasks/f.md, T1")))
+	if want := oddtask.Message(oddtask.UnreadableReason("../odd/tasks/f.md", oddtask.CauseOutsideRepository)); got != want {
+		t.Fatalf("reason = %q, want %q", got, want)
+	}
+	got = decodeGuardDenial(t, bgRun(bgCall(t, t.TempDir(), "builder", "Spec: odd/tasks/f.md, T1")))
+	if want := oddtask.Message(oddtask.UnreadableReason("odd/tasks/f.md", oddtask.CauseNoRepository)); got != want {
+		t.Fatalf("reason = %q, want %q", got, want)
+	}
+}
+
 func TestBuilderGuardLeavesEveryOtherAgentAloneAndReadsNothing(t *testing.T) {
 	root := bgRepo(t)
 	for _, agent := range []string{"verifier", "reviewer", "shaper", "general-purpose", "Builder", "builder ", "builders", ""} {

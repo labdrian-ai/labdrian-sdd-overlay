@@ -1,0 +1,15 @@
+{
+  "kind": "sweeper",
+  "base": "af266d75e2c3382975f2268594426ac01615f30e",
+  "head": "34e6cbe1a9699c9ff024e56ead27870590ca079d",
+  "diff_sha256": "f1e50dd17dc646c37664d84757ea75b16d0a074af6a9c623bff63c93d9c4dfec",
+  "sweep": "34e6cbe1a969-2.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 name: TestReadJoinsARelativePathToTheCwd",
+      "disposition": "live",
+      "evidence": "The T22 commit (34e6cbe1) already renamed this test to TestReadJoinsARelativePathToTheRootOfTheWorktreeOfTheCwd (engine/oddtask/fsdoc/fsdoc_test.go:65). rg -n TestReadJoinsARelativePathToTheCwd --glob !odd/** found no hit in code or other prose; the only hits are odd/ history (the T22 row and stored sweep records), not edited. Nothing left to delete, so no commit."
+    }
+  ]
+}

@@ -51,7 +51,7 @@ func runRolesCore(args []string, stdin io.Reader, stdout, stderr io.Writer, exit
 	case "match-shaper":
 		runRolesMatchShaper(args[1:], stdout, stderr, exit)
 	case rolesBuilderGuardVerb:
-		runRolesBuilderGuard(args[1:], stdin, stdout, stderr, exit, fsdoc.Reader{})
+		runRolesBuilderGuard(args[1:], stdin, stdout, stderr, exit, fsdoc.Reader{Root: worktreeRoot})
 	default:
 		fmt.Fprintf(stderr, "error: roles: unknown verb %q (expected validate, next, resume, append, or match-shaper)\n", args[0])
 		exit(1)

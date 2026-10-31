@@ -1,0 +1,11 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "awk NR>=1330&&NR<=1340 {print NR\": \"length($0)} README.md, at head (review worktree) and at base via git show af266d75:README.md",
+      "output": "Head lengths 1330-1340: 114, 115, 47, 117, 119, 117, 143, 94, 116, 110, 94; line 1336 is 143 chars against 94-119 around it.",
+      "base_result": "not-reproduced"
+    }
+  ]
+}

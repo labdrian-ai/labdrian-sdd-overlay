@@ -236,6 +236,8 @@ func TestReasonsWordedByTheSpec(t *testing.T) {
 		"cause large":   {oddtask.CauseTooLarge, "larger than 8 MiB"},
 		"cause no cwd":  {oddtask.CauseNoCwd, "a relative path and no working directory"},
 		"cause missing": {oddtask.CauseNotFound, "not found"},
+		"cause outside": {oddtask.CauseOutsideRepository, "a relative path that leaves the repository"},
+		"cause no repo": {oddtask.CauseNoRepository, "a relative path and no git repository holds the working directory"},
 	}
 	for name, c := range cases {
 		if c.got != c.want {

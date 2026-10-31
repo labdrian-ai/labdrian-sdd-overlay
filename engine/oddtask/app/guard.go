@@ -12,8 +12,8 @@ import (
 
 // Documents is the port to the feature documents of a repository.
 type Documents interface {
-	// Read returns the feature document at path, resolved against cwd when it is relative. It fails with an
-	// *oddtask.ReadError when the document cannot be read.
+	// Read returns the feature document at path; a relative path is resolved against the root of the git
+	// worktree that holds cwd. It fails with an *oddtask.ReadError when the document cannot be read.
 	Read(path, cwd string) (oddtask.File, error)
 }
 
