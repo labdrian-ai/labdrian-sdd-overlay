@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "735992bfa7d1e8bae00966fa540e6d142bc97ca4",
+    "head": "ee8d7a408ea800b064fb2fdacabeaf1509a01c73",
+    "diff_sha256": "61a4f053d2d73ed1a851d97feeacd1631047f2de27dd9a6d1e80015ef143ca2b",
+    "paths": [
+      "openspec/changes/archive/2026-10-31-overlay-versioned-releases/archive-report.md",
+      "tools/archive-reconcile/known-gaps.txt",
+      "tools/entry-contract-validator/evolution_test.go"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "735992bfa7d1e8bae00966fa540e6d142bc97ca4",
+      "head": "ee8d7a408ea800b064fb2fdacabeaf1509a01c73",
+      "diff_sha256": "61a4f053d2d73ed1a851d97feeacd1631047f2de27dd9a6d1e80015ef143ca2b"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "openspec/changes/archive/2026-10-31-overlay-versioned-releases/archive-report.md",
+        "tools/archive-reconcile/known-gaps.txt",
+        "tools/entry-contract-validator/evolution_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the full diff file, 3 changed paths.",
+      "Listed the archive folder in the worktree. It holds entry.json and verify-report.md, plus 7 spec.md files under specs/. This matches the 'seven delta specs' wording in archive-report.md and the new realEntryContract path in evolution_test.go.",
+      "Searched the worktree, excluding the archive folder, for other references to the old path openspec/changes/overlay-versioned-releases/. The only live reference is a historical review-receipt JSON. The other mentions are prose, and the roadmap line saying 'awaiting-archive' was not changed in this diff.",
+      "known-gaps.txt: the stranded entry and its comment were removed, and the header counts now say four, which is consistent.",
+      "Not run: Go tests, the archive-reconcile guard, and the commit 735992bf claim in the report."
+    ]
+  }
+}

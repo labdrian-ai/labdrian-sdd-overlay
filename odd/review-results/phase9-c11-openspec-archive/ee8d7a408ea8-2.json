@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "735992bfa7d1e8bae00966fa540e6d142bc97ca4",
+    "head": "ee8d7a408ea800b064fb2fdacabeaf1509a01c73",
+    "diff_sha256": "61a4f053d2d73ed1a851d97feeacd1631047f2de27dd9a6d1e80015ef143ca2b",
+    "paths": [
+      "openspec/changes/archive/2026-10-31-overlay-versioned-releases/archive-report.md",
+      "tools/archive-reconcile/known-gaps.txt",
+      "tools/entry-contract-validator/evolution_test.go"
+    ]
+  },
+  "rows": [
+    "default",
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "735992bfa7d1e8bae00966fa540e6d142bc97ca4",
+      "head": "ee8d7a408ea800b064fb2fdacabeaf1509a01c73",
+      "diff_sha256": "61a4f053d2d73ed1a851d97feeacd1631047f2de27dd9a6d1e80015ef143ca2b"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "openspec/changes/archive/2026-10-31-overlay-versioned-releases/archive-report.md",
+        "tools/archive-reconcile/known-gaps.txt",
+        "tools/entry-contract-validator/evolution_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the full diff: it adds an archive report, removes one ledger entry and its comment, and repoints one test fixture path to the archive folder.",
+      "Grepped the worktree (excluding odd/) for the old path openspec/changes/overlay-versioned-releases. The remaining hits are historical text in design.md, entry.json, archive-report.md and roadmap.md, plus entry.json's internal openspec_path field, which the archive move left unedited. No code or test still references the old path.",
+      "Globbed for files under openspec/changes/**/overlay-versioned-releases/. None were found, so the folder is fully moved and no stale copy remains.",
+      "Grepped archive/2026-10-31-overlay-versioned-releases/verify-report.md. It says verdict: fail with 31/35 scenarios compliant, 3 UNTESTED, 1 PARTIAL and 0 FAILING (line 148), matching the archive-report claims.",
+      "known-gaps.txt now lists four undetermined changes, and its header comments were updated to match. I did not run the archive-reconcile guard or the Go tests."
+    ]
+  }
+}
