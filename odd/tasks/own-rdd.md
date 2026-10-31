@@ -1578,3 +1578,4 @@ Objective: replace gentle-ai's native review with our own mechanically enforced 
   - GREEN: `go test ./cmd/ -count=1` ok (82.0s), `go vet ./...` clean, `gofmt -l .` empty. The repaired file equals the row's expectation.
   - Records: the sweep fired on `T1 name: phase8SameEntries` (`4e5daa5529e7-1.sweep.json`). The sweeper answered it stale with no commit (`-2.sweeper.json`): the name is left only in odd/ history. The commit is exempted (`-3.exempt.json`; `go test ./cmd/ -run TestPhase8` ok).
   - Role chain `own-rdd-t21` hops 3-5. Next: delivery of T21, then T22 once the owner answers D39.
+- **L146** (2026-10-31, owner), answering the parent's "¿agregamos que el guard rechace las rutas `Spec:` relativas que se salen del repo (`../...`), o lo dejamos afuera?": "si agregalo". D39 is accepted: T22 refuses a relative citation that leaves the worktree, as its row describes.
