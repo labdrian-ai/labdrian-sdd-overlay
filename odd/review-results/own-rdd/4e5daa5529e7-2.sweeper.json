@@ -1,0 +1,15 @@
+{
+  "kind": "sweeper",
+  "base": "d8bd97181e719d845a9dd09d3fb64fe52ebac025",
+  "head": "4e5daa5529e7896638692ee456c7ec8c21df1a26",
+  "diff_sha256": "f4e61d55256ac906e6b1f6f0c0563a95203d44b1b2518f4cc6cb9b9c86c55208",
+  "sweep": "4e5daa5529e7-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 name: phase8SameEntries",
+      "disposition": "live",
+      "evidence": "stale, not live: rg -n phase8SameEntries --glob !odd/** and rg over engine return no matches; the only mentions are historical odd/ records. Helper already replaced by phase8Repaired in 4e5daa55; nothing to remove or correct."
+    }
+  ]
+}

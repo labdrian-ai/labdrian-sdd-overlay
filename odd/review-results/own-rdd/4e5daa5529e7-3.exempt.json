@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "d8bd97181e719d845a9dd09d3fb64fe52ebac025",
+    "head": "4e5daa5529e7896638692ee456c7ec8c21df1a26",
+    "diff_sha256": "f4e61d55256ac906e6b1f6f0c0563a95203d44b1b2518f4cc6cb9b9c86c55208",
+    "paths": [
+      "engine/cmd/phase8_acceptance_test.go"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "go test ./cmd/ -run TestPhase8 -count=1 (in engine/)",
+        "result": "pass",
+        "output": "ok github.com/labdrian-ai/labdrian-sdd-overlay/engine/cmd 4.322s"
+      }
+    ]
+  }
+}
