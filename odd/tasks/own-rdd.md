@@ -1556,3 +1556,6 @@ Objective: replace gentle-ai's native review with our own mechanically enforced 
   - Role chain `own-rdd-t12` hops 27-33. The parent removed the builder's scratch `/tmp/tmp.G2DqQ6ifRp`.
   - Carried items (L127): F1 of `a2186905faf2-1.json` (`phase8SameEntries` sorts the hook lists) and the builder guard resolving `Spec:` against the parent's working directory are outside S15. The parent's decision is that each becomes a task of its own after T12 is delivered; they are not in this pull request.
   - Waiting on the owner: re-approve the `sweeper` skill (`skills/sweeper/SKILL.md` changed in ca900da5). Until then, `TestRegistryLockE2E_ValidateLeavesTheRealTreeUntouched` fails with `APPROVAL_STALE`. Next, after the approval: its record commit, then push, pull request, merge, anchor, close and unbind `own-rdd-t12`, and apply.
+- **L143** (2026-10-31, parent): the owner re-approved `sweeper` (sha256 `059d38db6b0c81092c19388739a2c1594534aeddbd9106ed88a40c5c5ae7d3ec`).
+  - The record is committed in `c3807a94` (`chore(skills)`, `Risk: none`). Its sweep is clean (`c3807a946d8f-1.sweep.json`), and it is exempted (`c3807a946d8f-2.exempt.json`). In the exemption, `TestRegistryLockE2E_ValidateLeavesTheRealTreeUntouched` passes.
+  - Role chain `own-rdd-t12` hops 34-36. Next: push, pull request, merge, anchor, close and unbind `own-rdd-t12`, and apply.
