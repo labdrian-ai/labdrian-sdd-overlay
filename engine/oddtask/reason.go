@@ -28,6 +28,9 @@ const (
 	CauseLink       = "a symbolic link"
 	CauseTooLarge   = "larger than 8 MiB"
 	CauseNoCwd      = "a relative path and no working directory"
+
+	CauseOutsideRepository = "a relative path that leaves the repository"
+	CauseNoRepository      = "a relative path and no git repository holds the working directory"
 )
 
 // ReadError is a feature document that could not be read, with the absolute path that was tried.

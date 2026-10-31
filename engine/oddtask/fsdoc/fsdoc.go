@@ -13,18 +13,39 @@ import (
 )
 
 // Reader reads feature documents from the file system.
-type Reader struct{}
+type Reader struct {
+	// Root is the root of the git worktree that holds dir, or "" when no repository holds it. The adapter
+	// imports no git package: the caller hands the lookup in.
+	Root func(dir string) string
+}
 
-// Read returns the document at path, joined to cwd when path is relative. The last component of the path must
-// not be a symbolic link and must be a regular file of at most oddtask.MaxDocumentBytes; a link in a directory
-// of the path is followed. Every refusal is an *oddtask.ReadError that names the resolved path.
-func (Reader) Read(path, cwd string) (oddtask.File, error) {
+// Read returns the document at path. A relative path is resolved against the root of the git worktree that
+// holds cwd, not against cwd, and is refused when it has no cwd (oddtask.CauseNoCwd), when it leaves the
+// repository (oddtask.CauseOutsideRepository) or when no repository holds cwd (oddtask.CauseNoRepository),
+// each as an *oddtask.ReadError whose Path is the path as cited. An absolute path is read as it is. The last
+// component of the path must not be a symbolic link and must be a regular file of at most
+// oddtask.MaxDocumentBytes; a link in a directory of the path is followed. Every other refusal is an
+// *oddtask.ReadError that names the resolved path.
+func (r Reader) Read(path, cwd string) (oddtask.File, error) {
 	resolved := filepath.Clean(path)
 	if !filepath.IsAbs(resolved) {
-		if cwd == "" {
-			return oddtask.File{}, &oddtask.ReadError{Path: path, Cause: oddtask.CauseNoCwd}
+		refuseCited := func(cause string) (oddtask.File, error) {
+			return oddtask.File{}, &oddtask.ReadError{Path: path, Cause: cause}
 		}
-		resolved = filepath.Join(cwd, resolved)
+		if cwd == "" {
+			return refuseCited(oddtask.CauseNoCwd)
+		}
+		if !filepath.IsLocal(resolved) {
+			return refuseCited(oddtask.CauseOutsideRepository)
+		}
+		root := ""
+		if r.Root != nil {
+			root = r.Root(cwd)
+		}
+		if root == "" {
+			return refuseCited(oddtask.CauseNoRepository)
+		}
+		resolved = filepath.Join(root, resolved)
 	}
 	refuse := func(cause string) (oddtask.File, error) {
 		return oddtask.File{}, &oddtask.ReadError{Path: resolved, Cause: cause}

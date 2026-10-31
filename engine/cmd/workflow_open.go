@@ -63,8 +63,11 @@ func parseOpenArgs(args []string) (openOpts, error) {
 // repositorySources reads the goal and the feature document from the git repository that holds cwd.
 type repositorySources struct{ cwd string }
 
+// worktreeRoot is the root of the git worktree that holds dir, or "" when none does.
+func worktreeRoot(dir string) string { return newRepoLocator().Provenance(dir).WorktreeRoot }
+
 func (s repositorySources) root() (string, error) {
-	root := newRepoLocator().Provenance(s.cwd).WorktreeRoot
+	root := worktreeRoot(s.cwd)
 	if root == "" {
 		return "", errors.New(errNoRepository)
 	}
