@@ -266,37 +266,61 @@ func phase8Read(t *testing.T, path string) []byte {
 	return data
 }
 
-// phase8SameEntries reports whether two settings files hold the same entries under every event: the order of a hook list
-// is left out, because a merge that repairs a drifted entry removes it and appends the repaired one at the end of its
-// list, after the entries of the families installed after it (own-rdd T11d: the builder guard comes last).
-func phase8SameEntries(t *testing.T, a, b []byte) bool {
-	t.Helper()
-	canonical := func(data []byte) string {
-		var doc map[string]any
-		if err := json.Unmarshal(data, &doc); err != nil {
-			t.Fatalf("settings are not JSON: %v", err)
-		}
-		hooks, _ := doc["hooks"].(map[string]any)
-		for event, list := range hooks {
-			entries, _ := list.([]any)
-			keys := make([]string, 0, len(entries))
-			for _, e := range entries {
-				k, err := json.Marshal(e)
-				if err != nil {
-					t.Fatal(err)
-				}
-				keys = append(keys, string(k))
-			}
-			sort.Strings(keys)
-			hooks[event] = keys
-		}
-		out, err := json.Marshal(doc)
-		if err != nil {
+func TestPhase8RepairedNoticesAnOrderOrACountThatDiffers(t *testing.T) {
+	isG := func(entry any) bool { return entry.(map[string]any)["id"] == "g" }
+	decode := func(s string) any {
+		var v any
+		if err := json.Unmarshal([]byte(s), &v); err != nil {
 			t.Fatal(err)
 		}
-		return string(out)
+		return v
 	}
-	return canonical(a) == canonical(b)
+	doc := func(pre string) string {
+		return `{"hooks":{"PreToolUse":` + pre + `,"Stop":[{"id":"s"},{"id":"t"}]}}`
+	}
+	want := phase8Repaired(t, []byte(doc(`[{"id":"a"},{"id":"g"},{"id":"b"}]`)), isG)
+	if !reflect.DeepEqual(want, decode(doc(`[{"id":"a"},{"id":"b"},{"id":"g"}]`))) {
+		t.Errorf("a moved entry is not appended at the end: %v", want)
+	}
+	for name, other := range map[string]string{
+		"another order": `[{"id":"b"},{"id":"a"},{"id":"g"}]`,
+		"another count": `[{"id":"a"},{"id":"b"},{"id":"g"},{"id":"g"}]`,
+	} {
+		if reflect.DeepEqual(want, decode(doc(other))) {
+			t.Errorf("%s is deemed equal to the expectation", name)
+		}
+	}
+	if !reflect.DeepEqual(want.(map[string]any)["hooks"].(map[string]any)["Stop"], decode(`[{"id":"s"},{"id":"t"}]`)) {
+		t.Errorf("an event with no moved entry changed: %v", want)
+	}
+}
+
+// phase8Repaired is the settings document before as the merge leaves it once it has repaired the entries for which moved
+// is true: under every event of hooks they are taken out of their list and appended at its end, in the order they had.
+// The order is compared because it is part of the file's bytes (engine/settings/merge.go:3-5), and a merge appends a
+// repaired entry at the end of its list.
+func phase8Repaired(t *testing.T, before []byte, moved func(entry any) bool) any {
+	t.Helper()
+	var doc any
+	if err := json.Unmarshal(before, &doc); err != nil {
+		t.Fatalf("settings are not JSON: %v", err)
+	}
+	root, _ := doc.(map[string]any)
+	hooks, _ := root["hooks"].(map[string]any)
+	for event, list := range hooks {
+		entries, _ := list.([]any)
+		kept := make([]any, 0, len(entries))
+		var gone []any
+		for _, e := range entries {
+			if moved(e) {
+				gone = append(gone, e)
+			} else {
+				kept = append(kept, e)
+			}
+		}
+		hooks[event] = append(kept, gone...)
+	}
+	return doc
 }
 
 // phase8Overlay is the overlay as bytes, leaving out the lock files: a writer's
@@ -1182,8 +1206,9 @@ func phase8ApproveGuard(t *testing.T, binary string) {
 		t.Errorf("a second merge changed the settings file:\n%s\nvs\n%s", second, first)
 	}
 
-	// Drift: an edited entry is reported, and the next merge repairs it to the same
-	// bytes without touching a foreign entry.
+	// Drift: an edited entry is reported, and the next merge repairs it without touching a foreign entry: every list holds
+	// the installed entries again, in their order, but for the repaired ones, which the merge appends at the end of their
+	// list.
 	doc := phase7ReadSettings(t, settingsPath)
 	for _, e := range doc["hooks"].(map[string]any)["PreToolUse"].([]any) {
 		for _, h := range e.(map[string]any)["hooks"].([]any) {
@@ -1204,8 +1229,22 @@ func phase8ApproveGuard(t *testing.T, binary string) {
 		t.Errorf("status with a drifted entry: %q", line)
 	}
 	merge()
-	if repaired := phase8Read(t, settingsPath); !phase8SameEntries(t, repaired, first) {
-		t.Errorf("the merge did not repair the drift to the installed entries:\n%s\nvs\n%s", repaired, first)
+	var repaired any
+	if err := json.Unmarshal(phase8Read(t, settingsPath), &repaired); err != nil {
+		t.Fatalf("repaired settings are not JSON: %v", err)
+	}
+	want := phase8Repaired(t, first, func(entry any) bool {
+		for _, h := range entry.(map[string]any)["hooks"].([]any) {
+			if strings.Contains(h.(map[string]any)["command"].(string), hookCommand+" skills guard-hook") {
+				return true
+			}
+		}
+		return false
+	})
+	if !reflect.DeepEqual(repaired, want) {
+		got, _ := json.MarshalIndent(repaired, "", "  ")
+		exp, _ := json.MarshalIndent(want, "", "  ")
+		t.Errorf("the merge did not repair the drift to the installed entries:\n%s\nvs\n%s", got, exp)
 	}
 	assertForeignKept("after the repair")
 
