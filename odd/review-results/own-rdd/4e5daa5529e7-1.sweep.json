@@ -1,0 +1,25 @@
+{
+  "kind": "sweep",
+  "base": "d8bd97181e719d845a9dd09d3fb64fe52ebac025",
+  "head": "4e5daa5529e7896638692ee456c7ec8c21df1a26",
+  "diff_sha256": "f4e61d55256ac906e6b1f6f0c0563a95203d44b1b2518f4cc6cb9b9c86c55208",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": [
+      {
+        "name": "phase8SameEntries",
+        "hits": [
+          "odd/review-results/own-rdd/a2186905faf2-1.json",
+          "odd/tasks/own-rdd.md"
+        ]
+      }
+    ]
+  },
+  "t2": [],
+  "t3": [],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}
