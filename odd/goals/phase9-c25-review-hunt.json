@@ -1,0 +1,37 @@
+{
+  "version": 3,
+  "project_id": "labdrian-sdd-overlay",
+  "goal_id": "phase9-c25-review-hunt",
+  "objective": "Close Phase 9 item C25: the tasks of odd/tasks/phase9-c25-review-hunt.md, so that our own review beats gentle-ai's native review on recall of real defects at no higher cost on a corpus of about 25 real cases, or gentle-ai review is re-enabled.",
+  "scope": "The specs S1-S6 of odd/tasks/phase9-c25-review-hunt.md; one workflow and one role chain for each task.",
+  "constraints": [
+    "The builder builds only a task the shaper designed.",
+    "The acceptance bar and gentle-ai's numbers are written in the Log before T3 starts and are not changed after (S1).",
+    "Gentle-ai and our review are scored by the same rule on the same real cases, with prompt bytes from the same shim (S2).",
+    "Nothing reaches the role chain before T7 records that the bar is met (S6).",
+    "Every commit is reviewed or exempted, and labdrian review check clears it."
+  ],
+  "non_goals": [
+    "Changing the codex or pi paths of review launch beyond the refusal text of an unknown runtime.",
+    "Removing the risk-line row id or rewriting roles/reviewer/body.md.",
+    "Retuning the hunt lens on the scores of T7.",
+    "Re-enabling gentle-ai review on the owner's behalf."
+  ],
+  "acceptance_criteria": [
+    "T1-T8 of odd/tasks/phase9-c25-review-hunt.md are checked off, each with its commit or, for the not-met outcome, the owner's recorded run.",
+    "The Log holds the bar entry of T1 before the first T3 commit and the verdict entry of T7 against exactly those numbers.",
+    "labdrian review check --onto main clears the head of each task's pull request."
+  ],
+  "memory_directive": {
+    "version": 1,
+    "scope": "project",
+    "sources": [
+      "engram",
+      "longterm-mem",
+      "procedural-skills"
+    ],
+    "write": "none"
+  },
+  "runtime_scope": "Claude Code, as the parent that runs the labdrian workflow and the role agents.",
+  "delivery_boundary": "Work-unit commits on the branches of odd/tasks/phase9-c25-review-hunt.md; push, pull requests, merges and re-enabling gentle-ai review are the owner's decisions."
+}
