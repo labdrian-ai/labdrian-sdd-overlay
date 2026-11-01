@@ -1,0 +1,31 @@
+{
+  "kind": "polisher",
+  "base": "a2be821b6fe4b6cf8e242c2485ebb0926d792b62",
+  "head": "4560f598d1b592f7dd3514983de37d6c1736e673",
+  "diff_sha256": "daa1a1d5e1b88a6827909cef87e60f8c972d961b49efb70712bc6b6c4a0c6436",
+  "findings": {
+    "findings": [
+      {
+        "location": "engine/review/analyzers/analyzers.go:231-247",
+        "claim": "The nilerr message embeds a line number ('error is not nil (line 13) but it returns nil'), and NormalizeFinding strips only the leading file:line:col. A nilerr finding that already exists at the base therefore reads differently at the head once any line is added above it in the same file. The sweep then reports it as a new T2 finding, which makes the check fire (outcome 'fired') on a commit that added no finding.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "The new test TestNilerrReadsItsFindingsFromItsStandardErrorWhenItExitsThree uses the observed nilerr output '/abs/mod/a/x.go:14:3: error is not nil (line 13) but it returns nil', so the text carries 'line 13'.",
+          "engine/review/sweep.go:306-319: NormalizeFinding removes the copy root and the leading ':line:col' only. The '(line N)' inside the message survives.",
+          "engine/review/sweep.go:324-340: NewFindings counts normalized strings. Base 'error is not nil (line 13)' counts -1 and head 'error is not nil (line 15)' counts +1, so the head string is reported as new.",
+          "engine/review/app/sweep.go:331-346: the diff adds nilerr to the same add(...)/NewFindings path with no extra normalization. The existing tools do not have this problem because their messages carry no source line numbers.",
+          "The new app test (TestSweepAddsTheNewLinesOfErrcheckAndNilerr...) feeds a nilerr finding only at the head, so the shifted-line case is not covered.",
+          "Not run: I did not execute nilerr. The claim rests on the message text in the test and on the code above."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/diff-105c770c.patch",
+      "Read engine/review/sweep.go:295-341 (NormalizeFinding, NewFindings) at the head tree /home/labdrian/labdrian-sdd-overlay-worktrees/review-105c770c5801",
+      "Grepped engine/review/app/sweep.go and fsstore/sweepcopy.go for other places that enumerate tool names; none found",
+      "Looked at the T5 and S4 lines of odd/tasks/phase9-c25-review-hunt.md. The grep omitted the long lines, so I did not read the S4 text itself.",
+      "No tests or tools were run"
+    ]
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a2be821b6fe4b6cf8e242c2485ebb0926d792b62",
+    "head": "4560f598d1b592f7dd3514983de37d6c1736e673",
+    "diff_sha256": "daa1a1d5e1b88a6827909cef87e60f8c972d961b49efb70712bc6b6c4a0c6436",
+    "paths": [
+      ".github/workflows/ci.yml",
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/cmd/review_sweep_docs_test.go",
+      "engine/cmd/review_sweep_test.go",
+      "engine/cmd/usage.go",
+      "engine/review/analyzers/analyzers.go",
+      "engine/review/analyzers/analyzers_test.go",
+      "engine/review/app/app.go",
+      "engine/review/app/fakes_test.go",
+      "engine/review/app/sweep.go",
+      "engine/review/app/sweep_test.go",
+      "tools/lint/README.md",
+      "tools/lint/doc.go",
+      "tools/lint/go.mod",
+      "tools/lint/go.sum"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "a2be821b6fe4b6cf8e242c2485ebb0926d792b62",
+      "head": "4560f598d1b592f7dd3514983de37d6c1736e673",
+      "diff_sha256": "daa1a1d5e1b88a6827909cef87e60f8c972d961b49efb70712bc6b6c4a0c6436"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        ".github/workflows/ci.yml",
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/cmd/review_sweep_docs_test.go",
+        "engine/cmd/review_sweep_test.go",
+        "engine/cmd/usage.go",
+        "engine/review/analyzers/analyzers.go",
+        "engine/review/analyzers/analyzers_test.go",
+        "engine/review/app/app.go",
+        "engine/review/app/fakes_test.go",
+        "engine/review/app/sweep.go",
+        "engine/review/app/sweep_test.go",
+        "tools/lint/README.md",
+        "tools/lint/doc.go",
+        "tools/lint/go.mod",
+        "tools/lint/go.sum"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the whole diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/diff-105c770c.patch (16 changed paths), through the risk-line lens (item 5: delivery or environment).",
+      "CI: grep of /home/labdrian/labdrian-sdd-overlay-worktrees/review-105c770c5801/.github/workflows/ci.yml shows six jobs building staticcheck from tools/lint: test-engine:100, test-tui:428, test-longterm-mem:471, test-archguard:508, test-identity:546, test-telemetry:578. Each job sets Go from its own module's go.mod through go-version-file. The new step (ci.yml:106-109) is only in test-engine and uses the same `go build -C \"$GITHUB_WORKSPACE/tools/lint\"` form as the existing staticcheck step. It writes to $RUNNER_TEMP and adds nothing to PATH, as its comment says.",
+      "Toolchain: the go directive moves from 1.25.0 to 1.26.0. Jobs on Go modules older than that directive were already building tools/lint with a newer toolchain (1.25.0 before this commit), so the commit adds no new way for a job to break. Raising the Go that staticcheck is built with does not make a 'requires newer Go version' mismatch (tools/deterministic-check-runner/main.go:740) more likely.",
+      "Dependency move: golang.org/x/tools goes from v0.40.1-pre to v0.51.0, plus mod and sync, under staticcheck v0.7.0. The claim that staticcheck still builds and reports the same lines was not checked here (no command was run). Whether it builds is caught by the six existing CI staticcheck steps, so it is not a silent risk. No finding without proof.",
+      "Sweep environment: errcheck and nilerr on PATH are now required. A missing or failing program goes through the existing ErrToolDidNotRun path (analyzers.go read/Nilerr): nothing is stored and the error names the tool. This is documented in the same commit in README.md, bin/lib/usage.sh and engine/cmd/usage.go, and pinned by the docs tests and TestErrcheckAndNilerrThatAreNotOnThePathDidNotRun.",
+      "Exit-status handling: nilerr counts as a run only on exit 3 with finding lines read from stderr. Compiler errors under exit 1 count as did-not-run (TestNilerrThatExitsWithAnotherStatusDidNotRunWhateverItPrinted). errcheck lines are read from stdout only and rewritten into the finding shape. The errcheck exclude file goes in the process temp dir and is removed with a deferred call.",
+      "Other consumers checked by grep: tools/deterministic-check-runner/main.go:647 pins staticcheck with `go run ...@v0.7.0`, independent of tools/lint/go.mod, so the go.mod bump does not affect it. agents/sweeper.md, pi/agents/sweeper.md and codex/agents/sweeper.toml mention only staticcheck and deadcode for the agent's own runs, not the sweep's T2, so they are not stale contracts.",
+      "No commands were run: no build, no test, no CI. Every point above comes from reading the code."
+    ]
+  }
+}

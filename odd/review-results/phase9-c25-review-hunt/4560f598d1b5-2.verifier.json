@@ -1,0 +1,11 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "toy module (go.mod, toy.go with `if err := f(); err != nil { return nil }`, toy_test.go); commit base; add a two-line comment above B; commit head; XDG_STATE_HOME=<scratch> <engine built at 105c770c> review sweep --feature toy --base HEAD~1 --head HEAD",
+      "output": "{\"outcome\":\"fired\",\"candidates\":[\"T2 nilerr .: toy.go: error is not nil (line 8) but it returns nil\"]} — the same finding is at the base as \"(line 6)\"; nilerr . over a file before and after adding one line above prints \"(line 6)\" then \"(line 7)\"",
+      "base_result": "not-reproduced"
+    }
+  ]
+}
