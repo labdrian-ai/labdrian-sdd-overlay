@@ -1,0 +1,19 @@
+{
+  "kind": "polisher",
+  "base": "38ac46721ec1255124b742ce50d1dde505b48125",
+  "head": "ed5e2ed8ff7b8028bc00f3dddd58cdabe2027175",
+  "diff_sha256": "0ec5ebe8ccd0bea4e8e4cb7d16f42a6596e78df765bcf2339fb941fe280bfe15",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read all 926 lines of /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/diff-t4.patch.",
+      "The guard argv in engine/review/claudeprint/claudeprint.go is `--print --output-format text --tools \"\" --permission-mode dontAsk --no-session-persistence --setting-sources \"\" --model <model> --system-prompt <fixed text>`. The command is exec'd directly with no shell, so the empty arguments are passed as given. TestReviewRunsClaudePrintWithNoToolsInTheWorktreeAndAnswersItsStdout pins this exact slice with reflect.DeepEqual, so dropping or changing any guard flag fails that test. The cmd-level test only checks a prefix, and the claudeprint test covers the rest.",
+      "Stdin is the agent-file body, a blank line, the brief, then the frozen context. In engine/review/app/launch.go, `CheckBrief` and the size limit run before `withContext` and before `s.reviewer.Review`, so every refusal happens before claude starts. A missing or foreign agent file is refused before the runner is called, and the tests assert `calls == 0`.",
+      "Working directory: `Review` passes `bound.Worktree` to `OutputStdinIn`, which sets `cmd.Dir`. An empty dir keeps the old behaviour, so the existing `Output` and `OutputStdin` paths are unchanged. The execrunner test covers the new method.",
+      "Environment: `d.environment()` is passed whole, as the codex adapter already does. No new exposure is introduced.",
+      "Failure paths: a non-zero exit, a deadline, and empty or whitespace-only stdout all wrap `ErrReviewerDidNotAnswer`, and the tests cover each. Stderr is bounded to 2000 bytes, and the agent file read is bounded to 1 MiB.",
+      "`ClaudeInstructions` matches the writer at engine/agentgen/roles.go:257. The writer emits `---\\nname: ..\\ndescription: ..\\nmodel: ..\\ntools: ..\\n---\\n\\n` followed by the body, and the parser expects exactly that. A per-role test checks that the body equals the Codex body.",
+      "Not proven by any test, and the package comment says so: whether the installed claude honours `--tools \"\"` and `--setting-sources \"\"`, and whether MCP tools or the candidate's CLAUDE.md are reachable. With `dontAsk` and no loaded allow rules, unapproved tools should be denied. I have no concrete proof of a defect here, so I report nothing for it."
+    ]
+  }
+}
