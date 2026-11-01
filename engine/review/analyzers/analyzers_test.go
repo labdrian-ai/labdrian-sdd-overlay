@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -195,6 +196,134 @@ func TestAModuleTheCopyDoesNotHaveHasNoFindingsAndRunsNoTool(t *testing.T) {
 	}
 	if ran := calls(t, log); len(ran) != 0 {
 		t.Errorf("tools ran as %q, want none", ran)
+	}
+}
+
+// errcheck prints `file:line:col:<tab>source` on its standard output and exits 1 when it reports; the adapter gives each
+// line the finding shape, the position, ": unchecked error: " and the source (v1.30.0, observed 2026-11-01).
+func TestErrcheckRunsOverTheExistingPackagesAndGivesItsLinesTheFindingShape(t *testing.T) {
+	log := bin(t, map[string]stub{"errcheck": {exit: 1, stdout: "a/x.go:9:11:\tos.Remove(x)\nb/y.go:3:2:\tdefer f.Close()\n"}})
+	root := copyOf(t)
+
+	got, err := tools(t).Errcheck(root, "mod", []string{"./a", "./gone", "./b"})
+
+	want := []string{"a/x.go:9:11: unchecked error: os.Remove(x)", "b/y.go:3:2: unchecked error: defer f.Close()"}
+	if err != nil || !reflect.DeepEqual(got, want) {
+		t.Errorf("Errcheck = %q, %v, want %q, nil", got, err, want)
+	}
+	ran := calls(t, log)
+	if len(ran) != 1 || !regexp.MustCompile(`^`+regexp.QuoteMeta(filepath.Join(root, "mod"))+`\|-exclude \S+ \./a \./b$`).MatchString(ran[0]) {
+		t.Errorf("errcheck ran as %q, want it in the module of the copy with -exclude <file> over the packages the copy has", ran)
+	}
+}
+
+// The writes of fmt to a writer, which the engine makes for every line of its usage and never checks, are excluded
+// through errcheck's -exclude file, and the file is gone once errcheck ends.
+func TestErrcheckExcludesTheWritesOfFmtAndRemovesItsExcludeFile(t *testing.T) {
+	dir, kept := t.TempDir(), filepath.Join(t.TempDir(), "excludes")
+	script := "#!/bin/sh\nprintf '%s\\n' \"$2\" > '" + kept + ".path'\n/bin/cp \"$2\" '" + kept + "'\n"
+	if err := os.WriteFile(filepath.Join(dir, "errcheck"), []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", dir)
+
+	if _, err := tools(t).Errcheck(copyOf(t), "mod", []string{"./a"}); err != nil {
+		t.Fatalf("Errcheck error = %v, want none", err)
+	}
+
+	got, err := os.ReadFile(kept)
+	if err != nil || string(got) != "fmt.Fprint\nfmt.Fprintf\nfmt.Fprintln\n" {
+		t.Errorf("exclude file = %q, %v, want the three writes of fmt, one per line", got, err)
+	}
+	path, err := os.ReadFile(kept + ".path")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(strings.TrimSpace(string(path))); !os.IsNotExist(err) {
+		t.Errorf("the exclude file %s is still there (%v), want it removed", path, err)
+	}
+}
+
+func TestErrcheckThatFindsNothingOrHasNoPackageGivesNone(t *testing.T) {
+	log := bin(t, map[string]stub{"errcheck": {}})
+	root := copyOf(t)
+
+	clean, cleanErr := tools(t).Errcheck(root, "mod", []string{"./a"})
+	none, noneErr := tools(t).Errcheck(root, "mod", []string{"./gone"})
+	noModule, noModuleErr := tools(t).Errcheck(t.TempDir(), "mod", []string{"./a"})
+
+	if cleanErr != nil || noneErr != nil || noModuleErr != nil || len(clean)+len(none)+len(noModule) != 0 {
+		t.Errorf("Errcheck = %q %v, %q %v, %q %v, want none and no error", clean, cleanErr, none, noneErr, noModule, noModuleErr)
+	}
+	if ran := calls(t, log); len(ran) != 1 {
+		t.Errorf("errcheck ran as %q, want once: no package and no module start nothing", ran)
+	}
+}
+
+func TestErrcheckThatCannotLoadThePackagesDidNotRun(t *testing.T) {
+	bin(t, map[string]stub{"errcheck": {exit: 2, stderr: "error: failed to check packages: a/x.go:3:25: undefined: y"}})
+
+	got, err := tools(t).Errcheck(copyOf(t), "mod", []string{"./a"})
+
+	if !errors.Is(err, app.ErrToolDidNotRun) || len(got) != 0 || !strings.Contains(err.Error(), "errcheck") || !strings.Contains(err.Error(), "undefined: y") {
+		t.Errorf("Errcheck = %q, %v, want ErrToolDidNotRun naming errcheck and what it said", got, err)
+	}
+}
+
+// nilerr is an analysis driver: it prints its findings on its standard error and exits 3 when it reports, and exits 1
+// when a package does not load, printing the compiler's errors, which have the finding shape (v0.1.2, observed
+// 2026-11-01). Only the exit status 3 is a report.
+func TestNilerrReadsItsFindingsFromItsStandardErrorWhenItExitsThree(t *testing.T) {
+	log := bin(t, map[string]stub{"nilerr": {exit: 3, stderr: "/abs/mod/a/x.go:14:3: error is not nil (line 13) but it returns nil\n"}})
+	root := copyOf(t)
+
+	got, err := tools(t).Nilerr(root, "mod", []string{"./a", "./gone"})
+
+	want := []string{"/abs/mod/a/x.go:14:3: error is not nil (line 13) but it returns nil"}
+	if err != nil || !reflect.DeepEqual(got, want) {
+		t.Errorf("Nilerr = %q, %v, want %q, nil", got, err, want)
+	}
+	if ran := calls(t, log); !reflect.DeepEqual(ran, []string{filepath.Join(root, "mod") + "|./a"}) {
+		t.Errorf("nilerr ran as %q, want it in the module of the copy over the packages the copy has", ran)
+	}
+}
+
+func TestNilerrThatExitsZeroGivesNone(t *testing.T) {
+	bin(t, map[string]stub{"nilerr": {}})
+
+	got, err := tools(t).Nilerr(copyOf(t), "mod", []string{"./a"})
+
+	if err != nil || len(got) != 0 {
+		t.Errorf("Nilerr = %q, %v, want none, nil", got, err)
+	}
+}
+
+func TestNilerrThatExitsWithAnotherStatusDidNotRunWhateverItPrinted(t *testing.T) {
+	for _, s := range []stub{
+		{exit: 1, stderr: "/abs/mod/a/x.go:3:25: undefined: y\nnilerr: failed prerequisites: buildssa@m\n"},
+		{exit: 3, stderr: "-: stat ./gone: directory not found\n"},
+	} {
+		bin(t, map[string]stub{"nilerr": s})
+
+		got, err := tools(t).Nilerr(copyOf(t), "mod", []string{"./a"})
+
+		if !errors.Is(err, app.ErrToolDidNotRun) || len(got) != 0 || !strings.Contains(err.Error(), "nilerr") {
+			t.Errorf("Nilerr with exit %d = %q, %v, want ErrToolDidNotRun naming nilerr: a compile error is no finding", s.exit, got, err)
+		}
+	}
+}
+
+func TestErrcheckAndNilerrThatAreNotOnThePathDidNotRun(t *testing.T) {
+	bin(t, map[string]stub{})
+	root := copyOf(t)
+
+	_, checkErr := tools(t).Errcheck(root, "mod", []string{"./a"})
+	_, nilErr := tools(t).Nilerr(root, "mod", []string{"./a"})
+
+	for name, err := range map[string]error{"errcheck": checkErr, "nilerr": nilErr} {
+		if !errors.Is(err, app.ErrToolDidNotRun) || !strings.Contains(err.Error(), name) {
+			t.Errorf("%s error = %v, want ErrToolDidNotRun naming it", name, err)
+		}
 	}
 }
 

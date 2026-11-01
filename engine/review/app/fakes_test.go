@@ -363,6 +363,14 @@ func (a *fakeAnalyzers) Staticcheck(root, module string, packages []string) ([]s
 	return a.answer("Staticcheck", "Staticcheck "+root+" "+module+" "+strings.Join(packages, ","))
 }
 
+func (a *fakeAnalyzers) Errcheck(root, module string, packages []string) ([]string, error) {
+	return a.answer("Errcheck", "Errcheck "+root+" "+module+" "+strings.Join(packages, ","))
+}
+
+func (a *fakeAnalyzers) Nilerr(root, module string, packages []string) ([]string, error) {
+	return a.answer("Nilerr", "Nilerr "+root+" "+module+" "+strings.Join(packages, ","))
+}
+
 func (a *fakeAnalyzers) Tidy(root, module string) ([]string, error) {
 	return a.answer("Tidy", "Tidy "+root+" "+module)
 }

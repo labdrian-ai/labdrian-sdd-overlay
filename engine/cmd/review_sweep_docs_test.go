@@ -33,7 +33,7 @@ func TestReadmeStatesTheLimitsOfReviewSweep(t *testing.T) {
 	section := docSection(t, readRepositoryFile(t, "README.md"), "    sweep  --feature", "    record --role sweeper|polisher")
 
 	for _, want := range []string{
-		"it needs deadcode, staticcheck and shellcheck on PATH",
+		"it needs deadcode, staticcheck, errcheck, nilerr and shellcheck on PATH",
 		"256 MiB",
 		"cannot be swept",
 		"delivery stops",
