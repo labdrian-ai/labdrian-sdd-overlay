@@ -1,0 +1,18 @@
+{
+  "kind": "polisher",
+  "base": "f28e764858b578bfe83753d92ea93916def8380b",
+  "head": "cc0ed947aee5467134a97e038bba3fad8c5bd510",
+  "diff_sha256": "84606243ec71cbd8bbbd9e3dd33de6b63e574612894c434927d37e833672c598",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the whole diff-t3.patch (app.go, launch.go, service.go, fakes_test.go, launch_test.go, gitexec.go, gitexec_test.go, realgit_test.go).",
+      "Launch order matches the spec. CheckBrief runs on the original brief before the context is built. The context is appended only when WithFrozenContext is set. Without the option the code path is untouched, and a test asserts FunctionContextDiff is never called.",
+      "FunctionContextDiffArgs is `diff --no-renames --function-context --no-color --no-ext-diff --no-textconv --end-of-options base head`, with the commits as values after the end-of-options marker. The heading text and the ErrInvalidBrief wrapping on size overflow match the spec. MaxReplyBytes is 1<<20 in review.go:86.",
+      "The fence is longer than any backtick run in the diff, with a minimum of 3. A missing trailing newline is handled, and a test covers it.",
+      "Grep of the worktree found exactly two implementers of app.Git.Paths, fakeGit and gitexec.Git, and both gained FunctionContextDiff, so no other implementer breaks.",
+      "Git errors are wrapped with %w and returned before the reviewer starts. Tests cover this failure path, the size refusal, brief-alone checking, and a real-git whole-function check.",
+      "No tests were run, so I make no claim that they pass. I found no user-impacting defect from reading."
+    ]
+  }
+}
