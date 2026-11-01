@@ -36,6 +36,8 @@ type Service struct {
 	copies    Copies
 	// reviewer is the port Launch starts a reviewer with; WithReviewer sets it.
 	reviewer Reviewer
+	// frozenContext makes Launch append the function-context diff to the brief; WithFrozenContext sets it.
+	frozenContext bool
 }
 
 // New is the Service over git and results. It never waits between two tries for a result number: the clock

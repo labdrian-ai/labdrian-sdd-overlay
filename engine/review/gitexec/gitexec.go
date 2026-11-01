@@ -300,6 +300,18 @@ func (g Git) Diff(repo app.Repository, base, head string) ([]byte, error) {
 	return g.output(repo.Root, "diff-tree", DiffArgs(base, head))
 }
 
+// FunctionContextDiffArgs is the argument vector of the diff from base to head with every changed function whole, for a
+// reviewer to read. It keeps the guard of the canonical diff: no rename detection, no color, no external diff and no
+// textconv, and the commits are values after --end-of-options.
+func FunctionContextDiffArgs(base, head string) []string {
+	return []string{"diff", "--no-renames", "--function-context", "--no-color", "--no-ext-diff", "--no-textconv", "--end-of-options", base, head}
+}
+
+// FunctionContextDiff returns the bytes of the diff of FunctionContextDiffArgs.
+func (g Git) FunctionContextDiff(repo app.Repository, base, head string) ([]byte, error) {
+	return g.output(repo.Root, "diff", FunctionContextDiffArgs(base, head))
+}
+
 // Paths returns the paths of the diff, in the order git prints them.
 func (g Git) Paths(repo app.Repository, base, head string) ([]string, error) {
 	out, err := g.output(repo.Root, "diff-tree", PathsArgs(base, head))

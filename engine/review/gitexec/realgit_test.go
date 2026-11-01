@@ -281,6 +281,35 @@ func TestDiffIsExactlyThePatchOfTheTwoCommits(t *testing.T) {
 	}
 }
 
+// The function-context diff of a one-line change in a long function holds the whole function, from its first line
+// to its closing brace, which three lines of context do not.
+func TestFunctionContextDiffHoldsTheWholeFunctionOfAChange(t *testing.T) {
+	f := newFixture(t, "sha1")
+	body := func(changed string) string {
+		return "package a\n\nfunc f() int {\n\tx := 1\n\tx++\n\tx++\n\tx++\n\t" + changed + "\n\tx++\n\tx++\n\tx++\n\treturn x\n}\n"
+	}
+	f.write("a.go", body("x--"))
+	f.stage()
+	base := f.snapshot("base")
+	f.write("a.go", body("x -= 2"))
+	f.stage()
+	head := f.snapshot("head")
+
+	got, err := f.adapter().FunctionContextDiff(f.repo(), base, head)
+	if err != nil {
+		t.Fatalf("FunctionContextDiff() error = %v, want nil", err)
+	}
+
+	for _, line := range []string{"\n func f() int {\n", "\n-\tx--\n", "\n+\tx -= 2\n", "\n \treturn x\n", "\n }\n"} {
+		if !strings.Contains(string(got), line) {
+			t.Errorf("FunctionContextDiff() =\n%s\nwant it to hold the line %q", got, line)
+		}
+	}
+	if canonical := diffOf(t, f.adapter(), f.repo(), base, head); strings.Contains(string(canonical), "\n func f() int {\n") {
+		t.Fatalf("setup: three lines of context already hold the first line of the function:\n%s", canonical)
+	}
+}
+
 // Each kind of change is in the bytes as the change it is, which is what makes the digest bind it: a rename
 // is a removal and an addition, a binary file is a patch, an object is named in full, and nothing is colored.
 func TestDiffShowsEveryKindOfChangeAsTheChangeItIs(t *testing.T) {

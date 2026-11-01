@@ -51,6 +51,9 @@ func TestLaunchRecordsTheReplyOfTheReviewerOverTheBoundCandidate(t *testing.T) {
 	if git.called("AddWorktree ") != 1 {
 		t.Errorf("AddWorktree calls = %d, want 1: Launch binds as Bind does", git.called("AddWorktree "))
 	}
+	if n := git.called("FunctionContextDiff "); n != 0 {
+		t.Errorf("FunctionContextDiff calls = %d, want none without WithFrozenContext", n)
+	}
 	// What Record of the same reply stores, on an empty store of its own.
 	otherStore := newFakeResults()
 	recorded, err := app.New(newFakeGit(), otherStore).Record("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", "default", reviewer.reply)
@@ -127,6 +130,90 @@ func TestLaunchRefusesAReplyAsRecordDoes(t *testing.T) {
 	if store.created() != 0 {
 		t.Errorf("Create calls = %d, want nothing written", store.created())
 	}
+}
+
+// frozenWorld is launchWorld with the frozen context on, over a function-context diff of contextDiff.
+func frozenWorld(t *testing.T, contextDiff string) (app.Service, *fakeGit, *fakeResults, *fakeReviewer, review.Candidate, []byte) {
+	t.Helper()
+	service, git, store, reviewer, c, brief := launchWorld(t)
+	git.contextDiff = []byte(contextDiff)
+	return service.WithFrozenContext(), git, store, reviewer, c, brief
+}
+
+func TestLaunchWithFrozenContextAppendsTheFunctionContextDiffAfterTheBrief(t *testing.T) {
+	contextDiff := "diff --git a/a.go b/a.go\n@@ -1,3 +1,3 @@\n func f() {\n-\treturn 1\n+\treturn 2\n }\n"
+	service, git, store, reviewer, c, brief := frozenWorld(t, contextDiff)
+	if _, err := service.Launch("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", "default", "gpt-5.5", brief); err != nil {
+		t.Fatalf("Launch() error = %v", err)
+	}
+	want := string(brief) + "\n\n## Frozen context (base " + c.Base + ", head " + c.Head + ")\n\n```diff\n" + contextDiff + "```\n"
+	if len(reviewer.calls) != 1 || string(reviewer.calls[0].brief) != want {
+		t.Fatalf("the reviewer was asked %d times, the first with\n%q\nwant once with\n%q", len(reviewer.calls), firstBrief(reviewer), want)
+	}
+	if n := git.count("FunctionContextDiff " + c.Base + " " + c.Head); n != 1 {
+		t.Errorf("FunctionContextDiff of the bound base and head asked %d times, want once: %v", n, git.calls)
+	}
+	if store.created() != 1 {
+		t.Errorf("Create calls = %d, want the reply recorded once", store.created())
+	}
+}
+
+// A diff that holds a fence of its own stays inside the one block: the fence is longer than any run of backticks in it.
+func TestLaunchWithFrozenContextFencesADiffThatHoldsAFence(t *testing.T) {
+	contextDiff := "diff --git a/README.md b/README.md\n@@ -1,3 +1,3 @@\n ````sh\n-old\n+new\n ````"
+	service, _, _, reviewer, c, brief := frozenWorld(t, contextDiff)
+	if _, err := service.Launch("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", "default", "gpt-5.5", brief); err != nil {
+		t.Fatalf("Launch() error = %v", err)
+	}
+	want := string(brief) + "\n\n## Frozen context (base " + c.Base + ", head " + c.Head + ")\n\n`````diff\n" + contextDiff + "\n`````\n"
+	if got := firstBrief(reviewer); got != want {
+		t.Fatalf("the reviewer was asked with\n%q\nwant\n%q", got, want)
+	}
+}
+
+func TestLaunchWithFrozenContextRefusesABriefAndContextOverTheBound(t *testing.T) {
+	service, _, store, reviewer, _, brief := frozenWorld(t, strings.Repeat("x", review.MaxReplyBytes))
+	_, err := service.Launch("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", "default", "gpt-5.5", brief)
+	if !errors.Is(err, review.ErrInvalidBrief) {
+		t.Fatalf("Launch() error = %v, want one wrapping ErrInvalidBrief", err)
+	}
+	if len(reviewer.calls) != 0 || store.created() != 0 {
+		t.Errorf("the reviewer was asked %d times and %d results created, want neither", len(reviewer.calls), store.created())
+	}
+}
+
+// The brief is checked as the parent wrote it: the frozen context cannot supply what the brief lacks, and is not asked for.
+func TestLaunchWithFrozenContextChecksTheBriefAlone(t *testing.T) {
+	_, _, _, _, c, brief := launchWorld(t)
+	service, git, _, reviewer, _, _ := frozenWorld(t, c.DiffSHA256)
+	_, err := service.Launch("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", "default", "gpt-5.5", []byte(strings.Replace(string(brief), c.DiffSHA256, "", 1)))
+	if !errors.Is(err, review.ErrInvalidBrief) {
+		t.Fatalf("Launch() error = %v, want one wrapping ErrInvalidBrief", err)
+	}
+	if len(reviewer.calls) != 0 || git.called("FunctionContextDiff ") != 0 {
+		t.Errorf("the reviewer was asked %d times and the context %d times, want neither", len(reviewer.calls), git.called("FunctionContextDiff "))
+	}
+}
+
+func TestLaunchWithFrozenContextReturnsTheErrorOfGit(t *testing.T) {
+	service, git, store, reviewer, _, brief := frozenWorld(t, "")
+	broken := errors.New("git diff: exit status 128")
+	git.fail["FunctionContextDiff"] = broken
+	_, err := service.Launch("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", "default", "gpt-5.5", brief)
+	if !errors.Is(err, broken) {
+		t.Fatalf("Launch() error = %v, want one wrapping %v", err, broken)
+	}
+	if len(reviewer.calls) != 0 || store.created() != 0 {
+		t.Errorf("the reviewer was asked %d times and %d results created, want neither", len(reviewer.calls), store.created())
+	}
+}
+
+// firstBrief is the brief of the first call of the reviewer, or "" when it was never asked.
+func firstBrief(r *fakeReviewer) string {
+	if len(r.calls) == 0 {
+		return ""
+	}
+	return string(r.calls[0].brief)
 }
 
 func TestLaunchWithoutAReviewerRefuses(t *testing.T) {
