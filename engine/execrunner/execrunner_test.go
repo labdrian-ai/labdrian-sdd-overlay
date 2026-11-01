@@ -302,6 +302,19 @@ func TestOutputStdinHandsTheProgramExactlyTheInputItIsGiven(t *testing.T) {
 	}
 }
 
+// OutputStdinIn is OutputStdin in a directory: the program starts there and reads exactly its input.
+func TestOutputStdinInStartsTheProgramInTheDirectory(t *testing.T) {
+	bin := fakeBinary(t, "git", `pwd; /bin/cat`)
+	dir := t.TempDir()
+
+	stdout, _, err := New().OutputStdinIn(context.Background(), dir, nil, []byte("input"), bin)
+
+	want, _ := filepath.EvalSymlinks(dir)
+	if err != nil || string(stdout) != want+"\ninput" {
+		t.Errorf("OutputStdinIn = %q, %v, want %q, nil", stdout, err, want+"\ninput")
+	}
+}
+
 // A nil input is an empty one: the program reads the end of its input at once and the call returns.
 func TestOutputStdinWithANilInputGivesAnEmptyOne(t *testing.T) {
 	bin := fakeBinary(t, "git", `/bin/cat; printf 'done'`)

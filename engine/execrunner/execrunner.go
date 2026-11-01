@@ -107,12 +107,23 @@ func (r Runner) OutputStdin(ctx context.Context, env []string, stdin []byte, bin
 	return r.output(ctx, env, bytes.NewReader(stdin), bin, args)
 }
 
+// OutputStdinIn is OutputStdin for a program that starts in dir, an absolute directory.
+func (r Runner) OutputStdinIn(ctx context.Context, dir string, env []string, stdin []byte, bin string, args ...string) (stdout, stderr []byte, err error) {
+	return r.outputIn(ctx, dir, env, bytes.NewReader(stdin), bin, args)
+}
+
 // output is the run of Output and OutputStdin; a nil in leaves the standard input of the program closed, as Output
 // always did.
 func (r Runner) output(ctx context.Context, env []string, in io.Reader, bin string, args []string) (stdout, stderr []byte, err error) {
+	return r.outputIn(ctx, "", env, in, bin, args)
+}
+
+// outputIn is output in dir; an empty dir is the directory of the process.
+func (r Runner) outputIn(ctx context.Context, dir string, env []string, in io.Reader, bin string, args []string) (stdout, stderr []byte, err error) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, bin, args...)
+	cmd.Dir = dir
 	cmd.Env = env
 	cmd.Stdin = in
 	cmd.WaitDelay = killGrace

@@ -13,11 +13,14 @@ import (
 
 // launchFacts are what every help of the verb says, in the words they share.
 var launchFacts = []string{
-	"the one verb that starts a reviewer, on Codex, read-only",
+	"the one verb that starts a reviewer, on Codex read-only and on Claude Code with no tool",
 	"codex exec --sandbox read-only --model <model> --cd <worktree>",
 	"--ignore-user-config",
-	"--runtime must be codex: on Claude Code and Pi the parent launches the reviewer agent natively",
+	"--runtime must be claude or codex: on Pi the parent launches the reviewer agent natively",
 	"run: labdrian-overlay apply --target codex",
+	"run: labdrian-overlay apply --target claude",
+	"## Frozen context",
+	"git diff --no-renames --function-context",
 	"over the 150000-byte limit of one launch",
 	"does not name the full base, the full head, the diff_sha256 and the worktree path of the binding",
 	"names codex and repeats what it printed on stderr",
@@ -29,7 +32,7 @@ func TestUsageDocumentsReviewLaunch(t *testing.T) {
 	section := docSection(t, out.String(), "  engine review launch", "  engine review stop-hook")
 
 	for _, want := range append([]string{
-		"engine review launch --runtime codex --feature <name> --base <rev> --head <rev> --rows <id,id> --model <model> [--cwd <repo>]",
+		"engine review launch --runtime claude|codex --feature <name> --base <rev> --head <rev> --rows <id,id> --model <model> [--cwd <repo>]",
 		"exit 0 stored, 2 reply refused, 1 usage error or any other failure",
 	}, launchFacts...) {
 		if !strings.Contains(section, want) {
@@ -45,7 +48,7 @@ func TestWrapperUsageOfReviewLaunchSaysWhatTheEngineUsageSays(t *testing.T) {
 	section := docSection(t, readRepositoryFile(t, "bin/lib/usage.sh"), "                                   launch --runtime", "                                   stop-hook\n")
 
 	for _, want := range append([]string{
-		"launch --runtime codex --feature NAME --base REV --head REV --rows ID,ID --model MODEL [--cwd REPO]",
+		"launch --runtime claude|codex --feature NAME --base REV --head REV --rows ID,ID --model MODEL [--cwd REPO]",
 		"(exit 0 stored, 2 reply refused, 1 usage error or any other failure)",
 	}, launchFacts...) {
 		if !strings.Contains(section, want) {
@@ -62,7 +65,7 @@ func TestReadmeDocumentsReviewLaunch(t *testing.T) {
 	section := docSection(t, readme, "    launch --runtime", "    stop-hook\n")
 
 	for _, want := range append([]string{
-		"launch --runtime codex --feature <name> --base <rev> --head <rev> --rows <id,id> --model <model> [--cwd <repo>]",
+		"launch --runtime claude|codex --feature <name> --base <rev> --head <rev> --rows <id,id> --model <model> [--cwd <repo>]",
 		"Exit 0 stored, 2 reply refused, 1 usage error or any other failure",
 	}, launchFacts...) {
 		if !strings.Contains(section, want) {
@@ -70,7 +73,7 @@ func TestReadmeDocumentsReviewLaunch(t *testing.T) {
 		}
 	}
 	intro := docSection(t, readme, "overlay review <verb>\n", "    bind   --base")
-	if !strings.Contains(intro, "launch is the one verb that starts a reviewer, on Codex, read-only") || strings.Contains(intro, "No verb launches an agent or dispatches work") {
+	if !strings.Contains(intro, "launch is the one verb that starts a reviewer, on Codex read-only and on Claude Code with no tool") || strings.Contains(intro, "No verb launches an agent or dispatches work") {
 		t.Errorf("the README intro of review <verb> does not name launch as the one verb that starts a reviewer: %q", intro)
 	}
 }
@@ -81,7 +84,7 @@ func TestReviewHeaderCommentNamesLaunch(t *testing.T) {
 		t.Fatal(err)
 	}
 	header := normalizeDocText(strings.ReplaceAll(strings.SplitN(string(data), "\nimport (", 2)[0], "\n//", "\n"))
-	for _, want := range []string{"'review launch --runtime codex", "launch is the one verb that starts a reviewer, on Codex, read-only"} {
+	for _, want := range []string{"'review launch --runtime claude|codex", "launch is the one verb that starts a reviewer, on Codex read-only and on Claude Code with no tool"} {
 		if !strings.Contains(header, want) {
 			t.Errorf("the header comment of review.go does not say %q", want)
 		}

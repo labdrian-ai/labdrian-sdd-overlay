@@ -9,6 +9,7 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/execrunner"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection/app"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review/claudeprint"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review/codexexec"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/synctrigger"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/synctrigger/osproc"
@@ -107,6 +108,8 @@ type deps struct {
 	// reviewRunner starts codex for 'review launch'; nil, as in the program, is the operating system's
 	// (execrunner). A test that must never start the real codex gives it one that records.
 	reviewRunner codexexec.Runner
+	// claudeRunner starts claude for 'review launch --runtime claude', as reviewRunner starts codex.
+	claudeRunner claudeprint.Runner
 
 	// skillsLockWait is how long a skills verb waits for a taken lock before it gives up with
 	// exit 2. Zero means filelock.DefaultWait (2 s), the bound the workflow binding store uses.
@@ -215,6 +218,14 @@ const launchMaxOutput = 64 << 20
 func (d deps) launchRunner() codexexec.Runner {
 	if d.reviewRunner != nil {
 		return d.reviewRunner
+	}
+	return execrunner.New().WithMaxOutput(launchMaxOutput)
+}
+
+// launchClaudeRunner is the Runner of 'review launch --runtime claude': the deps' own, or the operating system's.
+func (d deps) launchClaudeRunner() claudeprint.Runner {
+	if d.claudeRunner != nil {
+		return d.claudeRunner
 	}
 	return execrunner.New().WithMaxOutput(launchMaxOutput)
 }
