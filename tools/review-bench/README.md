@@ -13,6 +13,12 @@ It is not part of the product and never runs against the main repository.
 - `run-gentle.sh <id>`: runs gentle-ai native review (lenses `reliability,risk`, committed range `base..head`) on one
   case and writes `$BENCH/out/<id>/summary.json` (`id`, `state`, `secs`, `lenses[]` with `lens`, `n`, `findings`,
   `runs[]` with the stdin and stdout bytes of every model process).
+- `run-ours.sh <id>`: runs our review on one case: `labdrian review sweep` (feature `review-bench`), then
+  `labdrian review bind` and one `labdrian review launch --runtime claude` per row of `ROWS` (default `default,hunt`,
+  rows read from `ROWS_FILE`, default `roles/reviewer/rows.json`; model `MODEL`, default `claude-sonnet-5-5`), each with
+  a brief that names the binding and the row's sentence (`--runtime claude` comes with C25 T4). It writes `$BENCH/out/ours/<id>/summary.json` in the shape of
+  gentle's (`state` is `recorded`, or what failed) plus `analyzers[]`, the sweep's T2 lines as repository paths. A
+  failed sweep, bind or launch stops the case with exit 4; an unknown case or row is refused with exit 2.
 - `shim/claude`: put first on the `PATH` by the runners; logs the arguments and byte sizes of every reviewer process to
   `$BENCH/scratch/shim.log`, then runs `~/bin/claude`.
 - `score.sh <id>...`: prints, per case, every finding and analyzer line of `$OUT/<id>/summary.json` located in the
@@ -29,6 +35,8 @@ scripts.
 ```sh
 tools/review-bench/run-gentle.sh R3
 tools/review-bench/score.sh R3
+tools/review-bench/run-ours.sh R3
+OUT="$BENCH/out/ours" tools/review-bench/score.sh R3
 ```
 
 ## Selection rule

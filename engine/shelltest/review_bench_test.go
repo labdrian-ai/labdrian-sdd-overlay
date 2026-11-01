@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -158,4 +159,267 @@ func TestReviewBenchScore(t *testing.T) {
 			t.Fatalf("%v\n%s", err, out)
 		}
 	})
+}
+
+// stubLabdrian logs each call, answers sweep and bind, and makes a launch pipe its brief through the claude on the
+// PATH (the bench shim) and store a result as the next <head12>-<n>.json, unless STUB_FAIL_ROW names its row.
+const stubLabdrian = `#!/usr/bin/env bash
+echo "$*" >> "$STUB_DIR/calls.log"
+verb="$1 $2"
+shift 2
+while [ $# -gt 0 ]; do
+  case "$1" in --base) b=$2; shift;; --head) h=$2; shift;; --rows) r=$2; shift;; --cwd) c=$2; shift;; esac
+  shift
+done
+case "$verb" in
+"review sweep")
+  [ -z "${STUB_SWEEP_FAIL:-}" ] || { echo "sweep: staticcheck did not run" >&2; exit 2; }
+  echo '{"outcome":"fired","path":"p","sha256":"s","candidates":["T1 path: gone.go","T2 staticcheck engine: x/x.go:18:2: error dropped","T2 shellcheck .: tools/a.sh:3:1: SC2086"]}';;
+"review bind")
+  echo "{\"base\":\"$b\",\"head\":\"$h\",\"diff_sha256\":\"d1ff\",\"worktree\":\"/wt/review-${h:0:12}\"}";;
+"review launch")
+  claude --print > /dev/null
+  [ "${STUB_FAIL_ROW:-}" != "$r" ] || { echo "launch: claude exited 1" >&2; exit 1; }
+  dir="$c/odd/review-results/review-bench"
+  mkdir -p "$dir"
+  n=$(( $(compgen -G "$dir/${h:0:12}-*.json" | wc -l) + 1 ))
+  echo "{\"version\":1,\"rows\":[\"$r\"],\"reply\":{\"findings\":[{\"location\":\"engine/x/x.go:17\",\"severity\":\"WARNING\",\"claim\":\"claim of $r\"}]}}" > "$dir/${h:0:12}-$n.json"
+  echo '{"payload_kind":"review-report"}';;
+esac
+`
+
+// oursFixture builds a bench: a clone of two commits, a corpus whose R1 is the second, run-ours.sh and the shim beside
+// it, a rows file, a stub labdrian on the PATH and a stub claude at $HOME/bin/claude that saves the brief it reads.
+func oursFixture(t *testing.T) (script, bench, head string, env []string) {
+	t.Helper()
+	overlayScript(t) // require bash
+	tools := t.TempDir()
+	for _, f := range []string{"run-ours.sh", "shim/claude"} {
+		body, err := os.ReadFile(filepath.Join("../../tools/review-bench", f))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.MkdirAll(filepath.Dir(filepath.Join(tools, f)), 0700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(tools, f), body, 0700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	rows := `{"rows": [{"id": "default", "sentence": "Inspect behavior."}, {"id": "hunt", "sentence": "Hunt four classes."}]}`
+	if err := os.WriteFile(filepath.Join(tools, "rows.json"), []byte(rows), 0600); err != nil {
+		t.Fatal(err)
+	}
+	bench = t.TempDir()
+	repo := filepath.Join(bench, "repo")
+	git := func(args ...string) string {
+		cmd := exec.Command("git", append([]string{"-C", repo, "-c", "user.name=t", "-c", "user.email=t@t"}, args...)...)
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+		return strings.TrimSpace(string(out))
+	}
+	if err := os.MkdirAll(repo, 0700); err != nil {
+		t.Fatal(err)
+	}
+	git("init", "-q")
+	git("commit", "-q", "--allow-empty", "-m", "base")
+	git("commit", "-q", "--allow-empty", "-m", "head")
+	head = git("rev-parse", "HEAD")
+	corpus := `{"real": [{"id": "R1", "head": "` + head[:8] + `", "base": "` + head[:8] + `^", "range": "` + head[:8] + `^..` + head[:8] + `",
+  "bytes": 1, "fix": "cccc", "defect": {"file": "engine/x/x.go", "lines": "17", "text": "t"}}], "mutants": []}`
+	if err := os.WriteFile(filepath.Join(tools, "corpus.json"), []byte(corpus), 0600); err != nil {
+		t.Fatal(err)
+	}
+	stubs := t.TempDir()
+	if err := os.WriteFile(filepath.Join(stubs, "labdrian"), []byte(stubLabdrian), 0700); err != nil {
+		t.Fatal(err)
+	}
+	home := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(home, "bin"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	claude := "#!/usr/bin/env bash\ncat > \"$STUB_DIR/brief-$(date +%s%N)\"\necho reply\n"
+	if err := os.WriteFile(filepath.Join(home, "bin", "claude"), []byte(claude), 0700); err != nil {
+		t.Fatal(err)
+	}
+	env = []string{"BENCH=" + bench, "HOME=" + home, "STUB_DIR=" + stubs, "ROWS_FILE=" + filepath.Join(tools, "rows.json"),
+		"PATH=" + stubs + string(os.PathListSeparator) + os.Getenv("PATH")}
+	return filepath.Join(tools, "run-ours.sh"), bench, head, env
+}
+
+func runOurs(t *testing.T, script string, env []string, args ...string) (string, string, int) {
+	t.Helper()
+	cmd := exec.Command("bash", append([]string{script}, args...)...)
+	cmd.Env = env
+	var stdout, stderr strings.Builder
+	cmd.Stdout, cmd.Stderr = &stdout, &stderr
+	err := cmd.Run()
+	code := 0
+	if exit, ok := err.(*exec.ExitError); ok {
+		code = exit.ExitCode()
+	} else if err != nil {
+		t.Fatal(err)
+	}
+	return stdout.String(), stderr.String(), code
+}
+
+func readSummary(t *testing.T, bench string) string {
+	t.Helper()
+	out, err := exec.Command("jq", "-c", "del(.secs)", filepath.Join(bench, "out", "ours", "R1", "summary.json")).Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return strings.TrimSpace(string(out))
+}
+
+func readFile(t *testing.T, path string) string {
+	t.Helper()
+	body, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(body)
+}
+
+func TestReviewBenchRunOurs(t *testing.T) {
+	t.Run("sweep, bind, then one launch per row in order, and the summary of them", func(t *testing.T) {
+		script, bench, head, env := oursFixture(t)
+		// A result of an earlier review of the same head is not this run's.
+		old := filepath.Join(bench, "repo", "odd", "review-results", "review-bench")
+		if err := os.MkdirAll(old, 0700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(old, head[:12]+"-1.json"), []byte(`{"reply":{"findings":[]}}`), 0600); err != nil {
+			t.Fatal(err)
+		}
+		stdout, stderr, code := runOurs(t, script, env, "R1")
+		if code != 0 || stderr != "" {
+			t.Fatalf("exit %d\n%s", code, stderr)
+		}
+		stubs := strings.TrimPrefix(env[2], "STUB_DIR=")
+		calls := strings.Split(strings.TrimSpace(readFile(t, filepath.Join(stubs, "calls.log"))), "\n")
+		repo := filepath.Join(bench, "repo")
+		parent, err := exec.Command("git", "-C", repo, "rev-parse", head+"^").Output()
+		if err != nil {
+			t.Fatal(err)
+		}
+		b := strings.TrimSpace(string(parent))
+		want := []string{
+			"review sweep --feature review-bench --base " + b + " --head " + head + " --cwd " + repo,
+			"review bind --base " + b + " --head " + head + " --cwd " + repo,
+			"review launch --runtime claude --feature review-bench --base " + b + " --head " + head + " --rows default --model claude-sonnet-5-5 --cwd " + repo,
+			"review launch --runtime claude --feature review-bench --base " + b + " --head " + head + " --rows hunt --model claude-sonnet-5-5 --cwd " + repo,
+		}
+		if strings.Join(calls, "\n") != strings.Join(want, "\n") {
+			t.Fatalf("calls\n%s\nwant\n%s", strings.Join(calls, "\n"), strings.Join(want, "\n"))
+		}
+		brief := readFile(t, filepath.Join(bench, "out", "ours", "R1", "brief-hunt.txt"))
+		wantBrief := "Review the committed candidate below as the reviewer role.\nbase: " + b + "\nhead: " + head +
+			"\ndiff_sha256: d1ff\nworktree: /wt/review-" + head[:12] + "\nLens row hunt: Hunt four classes.\n" +
+			"No tool is available to you: the frozen context below is the whole of what you can inspect; set inspection.status to completed when it covers every changed path.\n"
+		if brief != wantBrief {
+			t.Fatalf("brief\n%s\nwant\n%s", brief, wantBrief)
+		}
+		briefs, err := filepath.Glob(filepath.Join(stubs, "brief-*"))
+		if err != nil || len(briefs) != 2 {
+			t.Fatalf("claude ran %d times: %v", len(briefs), err)
+		}
+		got := readSummary(t, bench)
+		wantSummary := `{"id":"R1","state":"recorded","lenses":[` +
+			`{"lens":"default","n":1,"findings":[{"location":"engine/x/x.go:17","severity":"WARNING","claim":"claim of default"}]},` +
+			`{"lens":"hunt","n":1,"findings":[{"location":"engine/x/x.go:17","severity":"WARNING","claim":"claim of hunt"}]}],` +
+			`"analyzers":["engine/x/x.go:18:2: error dropped [staticcheck]","tools/a.sh:3:1: SC2086 [shellcheck]"],` +
+			`"runs":[{"in":"` + strconv.Itoa(len(readFile(t, filepath.Join(bench, "out", "ours", "R1", "brief-default.txt")))) + `","out":"6","exit":"0","secs":`
+		if !strings.HasPrefix(got, wantSummary) || strings.Count(got, `"in":`) != 2 {
+			t.Fatalf("summary\n%s\nwant prefix\n%s", got, wantSummary)
+		}
+		if stdout != `{"id":"R1","state":"recorded","secs":`+jqField(t, bench, ".secs")+`,"lenses":[{"lens":"default","n":1},{"lens":"hunt","n":1}],"analyzers":2,"runs":2}`+"\n" {
+			t.Fatalf("stdout %q", stdout)
+		}
+	})
+
+	t.Run("ROWS picks the rows, and a row the rows file lacks is refused before anything runs", func(t *testing.T) {
+		script, bench, _, env := oursFixture(t)
+		_, stderr, code := runOurs(t, script, append(env, "ROWS=default"), "R1")
+		if code != 0 || stderr != "" {
+			t.Fatalf("exit %d\n%s", code, stderr)
+		}
+		if got := jqField(t, bench, "[.lenses[].lens] | join(\",\")"); got != `"default"` {
+			t.Fatalf("lenses %s", got)
+		}
+		stubs := strings.TrimPrefix(env[2], "STUB_DIR=")
+		if err := os.Remove(filepath.Join(stubs, "calls.log")); err != nil {
+			t.Fatal(err)
+		}
+		_, stderr, code = runOurs(t, script, append(env, "ROWS=default,nope"), "R1")
+		if code != 2 || stderr != "unknown row nope\n" {
+			t.Fatalf("exit %d\n%s", code, stderr)
+		}
+		if _, err := os.Stat(filepath.Join(stubs, "calls.log")); !os.IsNotExist(err) {
+			t.Fatalf("labdrian ran: %v", err)
+		}
+	})
+
+	t.Run("the default rows file is the repository's, read by its rows", func(t *testing.T) {
+		overlayScript(t) // require bash
+		script, err := filepath.Abs("../../tools/review-bench/run-ours.sh")
+		if err != nil {
+			t.Fatal(err)
+		}
+		// An empty bench has no clone: a known row passes the row check and the case stops at the checkout.
+		env := []string{"BENCH=" + t.TempDir(), "PATH=" + os.Getenv("PATH")}
+		if _, stderr, code := runOurs(t, script, append(env, "ROWS=default,readability"), "R1"); code != 2 || strings.Contains(stderr, "unknown row") {
+			t.Fatalf("exit %d\n%s", code, stderr)
+		}
+		if _, stderr, code := runOurs(t, script, append(env, "ROWS=default,nope"), "R1"); code != 2 || stderr != "unknown row nope\n" {
+			t.Fatalf("exit %d\n%s", code, stderr)
+		}
+	})
+
+	t.Run("a failed launch ends the case non-zero with a summary that says so", func(t *testing.T) {
+		script, bench, _, env := oursFixture(t)
+		_, stderr, code := runOurs(t, script, append(env, "STUB_FAIL_ROW=default"), "R1")
+		if code != 4 || stderr != "case R1 ended without a review result: launch failed: default\n" {
+			t.Fatalf("exit %d\n%s", code, stderr)
+		}
+		if got := jqField(t, bench, "[.state, (.lenses | length)]"); got != `["launch failed: default",0]` {
+			t.Fatalf("summary %s", got)
+		}
+		stubs := strings.TrimPrefix(env[2], "STUB_DIR=")
+		if calls := readFile(t, filepath.Join(stubs, "calls.log")); strings.Contains(calls, "--rows hunt") {
+			t.Fatalf("the next row ran after a failure:\n%s", calls)
+		}
+	})
+
+	t.Run("a failed sweep ends the case before any launch", func(t *testing.T) {
+		script, bench, _, env := oursFixture(t)
+		_, stderr, code := runOurs(t, script, append(env, "STUB_SWEEP_FAIL=1"), "R1")
+		if code != 4 || stderr != "case R1 ended without a review result: sweep failed\n" {
+			t.Fatalf("exit %d\n%s", code, stderr)
+		}
+		if got := jqField(t, bench, "[.state, .analyzers, .runs]"); got != `["sweep failed",[],[]]` {
+			t.Fatalf("summary %s", got)
+		}
+	})
+
+	t.Run("an unknown id and a missing id are refused", func(t *testing.T) {
+		script, _, _, env := oursFixture(t)
+		if _, stderr, code := runOurs(t, script, env, "R9"); code != 2 || stderr != "unknown case R9\n" {
+			t.Fatalf("exit %d\n%s", code, stderr)
+		}
+		if _, stderr, code := runOurs(t, script, env); code != 2 || stderr != "usage: run-ours.sh <id>\n" {
+			t.Fatalf("exit %d\n%s", code, stderr)
+		}
+	})
+}
+
+func jqField(t *testing.T, bench, filter string) string {
+	t.Helper()
+	out, err := exec.Command("jq", "-c", filter, filepath.Join(bench, "out", "ours", "R1", "summary.json")).Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return strings.TrimSpace(string(out))
 }
