@@ -16,8 +16,9 @@ import (
 
 // rowIDs are the ids of the rows of roles/reviewer/rows.json, in the order of the file: the default row every launch
 // is sent, the readability row of a change that touches docs, a public API, messages or help, and the row of the
-// second blind launch that a Risk line which names an item asks for.
-var rowIDs = [...]string{"default", "readability", "risk-line"}
+// second blind launch that a Risk line which names an item asks for, and the hunt row of four concrete defect classes
+// (phase9-c25-review-hunt S5).
+var rowIDs = [...]string{"default", "readability", "risk-line", "hunt"}
 
 // RowIDs are the ids of the rows a launch may be sent, in the order of roles/reviewer/rows.json. The slice is a copy:
 // the table is the program's.

@@ -11,6 +11,10 @@
     {
       "id": "risk-line",
       "sentence": "You are a second, blind launch: nothing from an earlier review is shown to you. Inspect first the high-risk items (data or irreversible effects, security, contracts others consume, concurrency, delivery or environment, a change no test would catch), starting with the one the Risk line in this prompt names, and report only a reachable impact with concrete evidence."
+    },
+    {
+      "id": "hunt",
+      "sentence": "Hunt in every changed function for four defect classes and report each one a concrete input reaches: (1) an empty, zero or negative input (an empty string or word, 0, a negative size or budget, an empty list): what does the code do with it, and does an empty value count as found or as valid? (2) a value outside the known set (an unknown role, option, kind or argument): is it refused, or does it fall through to a true, a default or silence? (3) an ignored or swallowed error: is an error discarded, dropped in a loop, or turned into success by returning nil after a failure? (4) where a path writes or deletes: for every path the change computes, returns, creates, renames or removes, is it the path its contract names, and can it be a directory another owner keeps?"
     }
   ]
 }
