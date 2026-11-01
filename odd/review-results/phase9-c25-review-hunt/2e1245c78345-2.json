@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "10362b77b58d9998274540a5dc5cfe79494c2021",
+    "head": "2e1245c78345cbea6805829308018eafbc8a9b76",
+    "diff_sha256": "de5f97d633c043e885323b60e3f311f68dcbd0978ed367241931074418808871",
+    "paths": [
+      "README.md",
+      "engine/cmd/usage.go",
+      "engine/review/rows.go",
+      "engine/review/rows_test.go",
+      "roles/reviewer/rows.json"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "10362b77b58d9998274540a5dc5cfe79494c2021",
+      "head": "2e1245c78345cbea6805829308018eafbc8a9b76",
+      "diff_sha256": "de5f97d633c043e885323b60e3f311f68dcbd0978ed367241931074418808871"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "README.md",
+        "engine/cmd/usage.go",
+        "engine/review/rows.go",
+        "engine/review/rows_test.go",
+        "roles/reviewer/rows.json"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the whole diff.",
+      "Compared the hunt sentence in roles/reviewer/rows.json with the Hunt sentence in L3 of odd/tasks/phase9-c25-review-hunt.md (line 39). I found no difference from the text I read.",
+      "The existing rows default, readability and risk-line are unchanged in the diff.",
+      "The rowIDs order in engine/review/rows.go matches the order in rows.json.",
+      "README.md and engine/cmd/usage.go list the new hunt id. bin/lib/usage.sh only says 'ids of roles/reviewer/rows.json' and needs no change.",
+      "engine/review/rows_test.go covers the new id, a single-row declaration and a repeated hunt. I did not run the tests."
+    ]
+  }
+}
