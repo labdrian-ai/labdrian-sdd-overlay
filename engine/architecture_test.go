@@ -219,6 +219,7 @@ var rings = map[string]archguard.Ring{
 	"review":                    archguard.Domain,
 	"review/analyzers":          archguard.Adapter,
 	"review/app":                archguard.Application,
+	"review/claudeprint":        archguard.Adapter,
 	"review/codexexec":          archguard.Adapter,
 	"review/fsstore":            archguard.Adapter,
 	"review/gitexec":            archguard.Adapter,
