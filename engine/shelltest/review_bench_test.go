@@ -378,6 +378,15 @@ func TestReviewBenchRunOurs(t *testing.T) {
 		}
 	})
 
+	t.Run("a rows file that cannot be read is named, not taken for an unknown row", func(t *testing.T) {
+		script, _, _, env := oursFixture(t)
+		missing := filepath.Join(t.TempDir(), "rows.json")
+		_, stderr, code := runOurs(t, script, append(env, "ROWS_FILE="+missing), "R1")
+		if code != 2 || stderr != "cannot read the rows of "+missing+"\n" {
+			t.Fatalf("exit %d\n%s", code, stderr)
+		}
+	})
+
 	t.Run("a failed launch ends the case non-zero with a summary that says so", func(t *testing.T) {
 		script, bench, _, env := oursFixture(t)
 		_, stderr, code := runOurs(t, script, append(env, "STUB_FAIL_ROW=default"), "R1")

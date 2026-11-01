@@ -16,6 +16,7 @@ case_json=$(jq -c --arg id "$id" '(.real + .mutants)[] | select(.id == $id)' "$h
 [ -n "$case_json" ] || { echo "unknown case $id" >&2; exit 2; }
 head_ref=$(jq -r '.head' <<<"$case_json")
 base_ref=$(jq -r '.range | split("..")[0]' <<<"$case_json")
+jq -e '.rows | type == "array"' "$rows_file" > /dev/null 2>&1 || { echo "cannot read the rows of $rows_file" >&2; exit 2; }
 IFS=, read -r -a row_ids <<<"$rows"
 for row in "${row_ids[@]}"; do
   jq -e --arg r "$row" 'any(.rows[]; .id == $r)' "$rows_file" > /dev/null || { echo "unknown row $row" >&2; exit 2; }
