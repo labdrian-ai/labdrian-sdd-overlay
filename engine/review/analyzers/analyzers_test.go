@@ -99,6 +99,28 @@ func TestDeadcodeRunsOverTheWholeModuleOfTheCopyAndReturnsItsFindingLines(t *tes
 	}
 }
 
+// deadcode refuses a module with no main package and no test (tools/lint has only doc.go): it exits 1 and says so on its
+// standard error. Nothing in such a module is reachable from a root, so there is nothing for it to report.
+func TestDeadcodeOverAModuleWithNoMainPackageIsNoFindings(t *testing.T) {
+	bin(t, map[string]stub{"deadcode": {exit: 1, stderr: "deadcode: no main packages\n"}})
+
+	got, err := tools(t).Deadcode(copyOf(t), "mod")
+
+	if err != nil || len(got) != 0 {
+		t.Errorf("Deadcode = %q, %v, want none, nil", got, err)
+	}
+}
+
+func TestDeadcodeThatSaysMoreThanNoMainPackagesDidNotRun(t *testing.T) {
+	bin(t, map[string]stub{"deadcode": {exit: 1, stderr: "deadcode: no main packages\nx.go:1:1: expected package\n"}})
+
+	_, err := tools(t).Deadcode(copyOf(t), "mod")
+
+	if !errors.Is(err, app.ErrToolDidNotRun) {
+		t.Errorf("Deadcode error = %v, want ErrToolDidNotRun: only that one message is a module with no root", err)
+	}
+}
+
 func TestACleanToolIsNoFindings(t *testing.T) {
 	bin(t, map[string]stub{"deadcode": {}})
 	root := copyOf(t)

@@ -88,13 +88,19 @@ func New(runner Runner, o Options) Tools {
 }
 
 // Deadcode runs `deadcode -test ./...` in the module of the copy. A module the copy has no go.mod for gives none and
-// starts nothing: the module is new at the other side of the sweep.
+// starts nothing: the module is new at the other side of the sweep. A module with no main package and no test, which
+// deadcode refuses with exit 1 and only `deadcode: no main packages` on its standard error, gives none: nothing in it
+// is reachable from a root, so there is nothing to report.
 func (t Tools) Deadcode(root, module string) ([]string, error) {
 	dir := filepath.Join(root, filepath.FromSlash(module))
 	if !isFile(filepath.Join(dir, "go.mod")) {
 		return nil, nil
 	}
-	return t.run("deadcode", dir, "-test", "./...")
+	lines, err := t.run("deadcode", dir, "-test", "./...")
+	if errors.Is(err, app.ErrToolDidNotRun) && strings.HasSuffix(err.Error(), ": deadcode: no main packages") {
+		return nil, nil
+	}
+	return lines, err
 }
 
 // Staticcheck runs staticcheck over the packages of the module of the copy that the copy has: a package is a pattern
