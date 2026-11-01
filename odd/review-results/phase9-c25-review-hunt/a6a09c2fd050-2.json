@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "dc1de7e9dbcf4a78ea9a3041902eb1107d1bc828",
+    "head": "a6a09c2fd05078c0566808f74b1f380cda440f42",
+    "diff_sha256": "566f04cfdb535457b072eb40a96e329d687c9eb04fc5fd5d2cc429f77da3be02",
+    "paths": [
+      "engine/shelltest/review_bench_test.go",
+      "tools/review-bench/run-ours.sh"
+    ]
+  },
+  "rows": [
+    "default"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "dc1de7e9dbcf4a78ea9a3041902eb1107d1bc828",
+      "head": "a6a09c2fd05078c0566808f74b1f380cda440f42",
+      "diff_sha256": "566f04cfdb535457b072eb40a96e329d687c9eb04fc5fd5d2cc429f77da3be02"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "tools/review-bench/run-ours.sh",
+        "engine/shelltest/review_bench_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the full diff. The new guard on run-ours.sh line 19 runs `jq -e '.rows | type == \"array\"' \"$rows_file\"` with output suppressed. It sits after the case lookup and before the per-row `unknown row` loop.",
+      "A missing file, malformed JSON, or a non-array `.rows` makes jq exit non-zero. The script then prints `cannot read the rows of <file>` and exits 2. This resolves part (b).",
+      "The guard cannot reject valid input. A valid rows file has an array under `.rows`, which is the shape the existing loop already indexes with `.rows[]`.",
+      "The default ROWS_FILE path and the `${ROWS:-default,hunt}` default are unchanged (grep of ROWS lines 3, 9 and 10). Part (a) was reported as not reproducing, so no further change was needed.",
+      "The new test sets ROWS_FILE to a nonexistent path. It asserts exit 2 and the exact stderr `cannot read the rows of <path>\\n`. It matches the guard's output. I did not run the test."
+    ]
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a6a09c2fd05078c0566808f74b1f380cda440f42",
+    "head": "790e7e6fc6c6b4cd8949ad78a5475b0cdd5a4c9f",
+    "diff_sha256": "7062a6809e547a6ffd94199d1c56eba1d1e8c41b8a42c392b628633dad12ec09",
+    "paths": [
+      "odd/review-results/phase9-c25-review-hunt/a6a09c2fd050-1.sweep.json",
+      "odd/review-results/phase9-c25-review-hunt/a6a09c2fd050-2.json",
+      "odd/review-results/phase9-c25-review-hunt/a6a09c2fd050-2.verifier.json",
+      "odd/review-results/phase9-c25-review-hunt/dc1de7e9dbcf-1.sweep.json",
+      "odd/review-results/phase9-c25-review-hunt/dc1de7e9dbcf-2.json",
+      "odd/review-results/phase9-c25-review-hunt/dc1de7e9dbcf-2.verifier.json",
+      "odd/tasks/phase9-c25-review-hunt.md"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git show --stat HEAD (records and the feature document only)",
+        "result": "pass",
+        "output": " 7 files changed, 153 insertions(+), 1 deletion(-)"
+      },
+      {
+        "command": "git diff --name-only a6a09c2f HEAD | rg -vc ^odd/ (files outside odd/)",
+        "result": "pass",
+        "output": "0"
+      },
+      {
+        "command": "rg -c \\\\u escapes in odd/tasks/phase9-c25-review-hunt.md",
+        "result": "pass",
+        "output": "0"
+      }
+    ]
+  }
+}

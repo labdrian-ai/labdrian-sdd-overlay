@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "9fe703272953a7b464e0c0737b587c91cc4b84f4",
+    "head": "dc1de7e9dbcf4a78ea9a3041902eb1107d1bc828",
+    "diff_sha256": "772923a9920f2958eaea08417131965ee7d3a947a8b9419bf6a3ea4d287e5b9c",
+    "paths": [
+      "engine/shelltest/review_bench_test.go",
+      "tools/review-bench/README.md",
+      "tools/review-bench/run-ours.sh"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "9fe703272953a7b464e0c0737b587c91cc4b84f4",
+      "head": "dc1de7e9dbcf4a78ea9a3041902eb1107d1bc828",
+      "diff_sha256": "772923a9920f2958eaea08417131965ee7d3a947a8b9419bf6a3ea4d287e5b9c"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "tools/review-bench/run-ours.sh",
+        "tools/review-bench/README.md",
+        "engine/shelltest/review_bench_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "tools/review-bench/run-ours.sh:321-333",
+        "severity": "SUGGESTION",
+        "claim": "An empty ROWS value yields zero rows, so the case ends with state \"recorded\", no lenses and exit 0. That looks like a successful review with no findings, which would score as a clean miss. An unreadable ROWS_FILE is also reported as \"unknown row <x>\", because jq's failure is folded into the same message. Both are operator-input edge cases outside the default path. A one-line check that at least one row was given, and a separate message for an unreadable rows file, would fix them.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "tools/review-bench/run-ours.sh:321 (rows=${ROWS:-default,hunt}, so ROWS= is not defaulted)",
+          "tools/review-bench/run-ours.sh:330-333"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff: run-ours.sh, the README change and the new shell tests.",
+      "Read the spec: T2 line and the L3 brief template of odd/tasks/phase9-c25-review-hunt.md. The brief the runner builds matches the template: base, head, diff_sha256, worktree, the row sentence, and the no-tool sentence.",
+      "Read run-gentle.sh and score.sh. The summary shape (id, state, secs, lenses[].lens/n/findings, runs[] with in/out/exit/secs) matches gentle's. analyzers[] lines of the form <path>:<line>:<col>: ... [tool] satisfy score.sh's location regex, and score.sh reads runs[].in.",
+      "Read engine/cmd/review_sweep.go. A clean sweep prints candidates as [] (normalized at lines 95-97), so the jq iteration over .candidates[] does not fail on a clean sweep.",
+      "Read engine/review/rolerecords.go:205-229. The T2 candidate format is \"T2 <tool> <module>: <line>\", which the capture regex in run-ours.sh parses. The module \".\" and non-\".\" cases are both handled.",
+      "Read engine/review/launch.go CheckBrief. It needs the base, head, diff_sha256 and worktree text in the brief, and the runner's brief contains all four. The bind JSON fields (base, head, diff_sha256, worktree) exist in engine/cmd/review.go:223-227.",
+      "Read engine/review/stored.go. The stored record has a reply field holding the reviewer's own reply, so .reply.findings is the right path.",
+      "The new-result detection (comm of before and after listings plus the <head12>-<n>.json regex) excludes the <head12>-<n>.sweep.json file that shares the number sequence, and also excludes results left by earlier runs.",
+      "Not run: no tests or shellcheck were executed. `review launch --runtime claude` does not exist yet, so the live path is untestable here and the stubs cover it."
+    ]
+  }
+}

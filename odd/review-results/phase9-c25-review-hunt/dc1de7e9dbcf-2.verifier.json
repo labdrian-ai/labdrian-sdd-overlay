@@ -1,0 +1,11 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "ROWS_FILE=/nonexistent BENCH=$(mktemp -d) bash tools/review-bench/run-ours.sh R1; and ROWS='' / ROWS=',' the same way, at head dc1de7e9",
+      "output": "missing rows file: 'jq: error: Could not open file /nonexistent' then 'unknown row default', exit 2 (the unreadable-file half reproduces). ROWS='' takes the default rows (${ROWS:-...} defaults an empty value) and ROWS=',' is refused with 'unknown row ', exit 2: the zero-row half does not reproduce.",
+      "base_result": "not-reproduced"
+    }
+  ]
+}
