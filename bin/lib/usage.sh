@@ -351,8 +351,8 @@ Commands:
                                              instructions of the deployed Codex agent file (a missing one says run:
                                              labdrian-overlay apply --target codex) and the brief, then record its
                                              last message as review record does, printing what it prints;
-                                             with --runtime claude run instead one tool-free claude --print in the
-                                             worktree over the body of the deployed Claude agent file (a missing one
+                                             with --runtime claude run instead one tool-free claude --print
+                                             --strict-mcp-config in the worktree over the body of the deployed Claude agent file (a missing one
                                              says run: labdrian-overlay apply --target claude), the brief and its
                                              ## Frozen context (git diff --no-renames --function-context), and record
                                              its stdout; --runtime must be claude or codex: on Pi the parent launches

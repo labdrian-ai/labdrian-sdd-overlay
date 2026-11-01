@@ -75,7 +75,7 @@ func TestReviewRunsClaudePrintWithNoToolsInTheWorktreeAndAnswersItsStdout(t *tes
 		t.Fatalf("Review = %q, %v; want the stdout of claude", reply, err)
 	}
 	wantArgs := []string{"--print", "--output-format", "text", "--tools", "", "--permission-mode", "dontAsk",
-		"--no-session-persistence", "--setting-sources", "", "--model", "claude-sonnet-5-5",
+		"--no-session-persistence", "--setting-sources", "", "--strict-mcp-config", "--model", "claude-sonnet-5-5",
 		"--system-prompt", "You are an isolated code reviewer process. Your only instructions are those delivered in the user message."}
 	if f.calls != 1 || f.bin != "claude" || f.dir != "/work/review-abc" || !reflect.DeepEqual(f.args, wantArgs) {
 		t.Errorf("started %d times %q in %q with %q; want once claude in the worktree with %q", f.calls, f.bin, f.dir, f.args, wantArgs)

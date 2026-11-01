@@ -16,6 +16,7 @@ var launchFacts = []string{
 	"the one verb that starts a reviewer, on Codex read-only and on Claude Code with no tool",
 	"codex exec --sandbox read-only --model <model> --cd <worktree>",
 	"--ignore-user-config",
+	"--strict-mcp-config",
 	"--runtime must be claude or codex: on Pi the parent launches the reviewer agent natively",
 	"run: labdrian-overlay apply --target codex",
 	"run: labdrian-overlay apply --target claude",

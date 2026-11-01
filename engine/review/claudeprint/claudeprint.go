@@ -4,7 +4,9 @@
 //
 // The flags are the ones gentle-ai runs its lens processes with: --tools "" leaves the reviewer no tool, so the brief,
 // and the frozen context review/app appends to it, is the whole of what it can inspect; --setting-sources "" loads no
-// settings source, the user's or the worktree's; --no-session-persistence leaves no session behind.
+// settings source, the user's or the worktree's; --strict-mcp-config, with no --mcp-config, starts no MCP server, so
+// neither the user's servers nor a .mcp.json of the candidate offer it a tool; --no-session-persistence leaves no
+// session behind.
 // That the installed claude honours them is not something a test of this package can prove: it is proved only by the
 // live check of the feature document (phase9-c25-review-hunt T4).
 package claudeprint
@@ -82,7 +84,7 @@ func (r Reviewer) Review(worktree, model string, brief []byte) ([]byte, error) {
 	stdin := []byte(instructions + "\n\n" + string(brief))
 	stdout, stderr, err := r.runner.OutputStdinIn(ctx, worktree, r.environ, stdin, "claude",
 		"--print", "--output-format", "text", "--tools", "", "--permission-mode", "dontAsk", "--no-session-persistence",
-		"--setting-sources", "", "--model", model, "--system-prompt", systemPrompt)
+		"--setting-sources", "", "--strict-mcp-config", "--model", model, "--system-prompt", systemPrompt)
 	if err != nil {
 		if ctx.Err() != nil {
 			err = fmt.Errorf("stopped at its deadline of %s: %w", r.timeout, err)
