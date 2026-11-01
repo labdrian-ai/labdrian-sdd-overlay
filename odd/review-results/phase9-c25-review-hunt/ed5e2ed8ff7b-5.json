@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "38ac46721ec1255124b742ce50d1dde505b48125",
+    "head": "ed5e2ed8ff7b8028bc00f3dddd58cdabe2027175",
+    "diff_sha256": "0ec5ebe8ccd0bea4e8e4cb7d16f42a6596e78df765bcf2339fb941fe280bfe15",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/agentgen/claude.go",
+      "engine/agentgen/claude_test.go",
+      "engine/cmd/deps.go",
+      "engine/cmd/review.go",
+      "engine/cmd/review_launch.go",
+      "engine/cmd/review_launch_docs_test.go",
+      "engine/cmd/review_launch_test.go",
+      "engine/cmd/usage.go",
+      "engine/execrunner/execrunner.go",
+      "engine/execrunner/execrunner_test.go",
+      "engine/review/claudeprint/claudeprint.go",
+      "engine/review/claudeprint/claudeprint_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "38ac46721ec1255124b742ce50d1dde505b48125",
+      "head": "ed5e2ed8ff7b8028bc00f3dddd58cdabe2027175",
+      "diff_sha256": "0ec5ebe8ccd0bea4e8e4cb7d16f42a6596e78df765bcf2339fb941fe280bfe15"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/agentgen/claude.go",
+        "engine/agentgen/claude_test.go",
+        "engine/cmd/deps.go",
+        "engine/cmd/review.go",
+        "engine/cmd/review_launch.go",
+        "engine/cmd/review_launch_docs_test.go",
+        "engine/cmd/review_launch_test.go",
+        "engine/cmd/usage.go",
+        "engine/execrunner/execrunner.go",
+        "engine/execrunner/execrunner_test.go",
+        "engine/review/claudeprint/claudeprint.go",
+        "engine/review/claudeprint/claudeprint_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the whole diff file /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/diff-t4.patch, which covers all 15 changed paths.",
+      "Checked the Risk 2 guard (the tool-free flags) first. engine/review/claudeprint/claudeprint.go:706-708 passes --print --output-format text --tools \"\" --permission-mode dontAsk --no-session-persistence --setting-sources \"\" --model <model> --system-prompt <isolated> as separate argv entries, never through a shell. This matches the flag list in the T4 row of odd/tasks/phase9-c25-review-hunt.md:20. claudeprint_test.go pins the exact argv with reflect.DeepEqual.",
+      "Whether the installed claude honours these flags, for example whether user-scope MCP tools are also blocked, cannot be shown from the worktree. The package comment hands that proof to the T4 live check. No reachable impact was shown, so there is no finding.",
+      "Read the worktree file engine/cmd/review_launch.go:30-74. --runtime accepts only claude or codex, and --runtime is still a required flag. The codex branch builds the same codexexec reviewer as at the base, with launchRunner unchanged, and does not apply WithFrozenContext. The claude branch adds WithFrozenContext and the claude runner.",
+      "engine/review/app/launch.go:34 and :69 already exist in the worktree: WithFrozenContext came from T3, and Launch adds the context only when the flag is set.",
+      "engine/execrunner/execrunner.go: output now delegates to outputIn with an empty dir. An empty dir means exec.Cmd runs in the directory of the current process, so OutputStdin and Output behave as before.",
+      "engine/runtime/core/config.go:52: DefaultClaudeRoot is ~/.claude, the path the README and usage text name.",
+      "engine/agentgen/claude.go: ClaudeInstructions refuses a file without the exact four-key frontmatter. claude_test.go checks that its output equals CodexInstructions for every generated role.",
+      "Doc tests use normalizeDocText (engine/cmd/approve_guard_docs_test.go:20), which collapses whitespace and backticks. The wrapped usage.sh and README text can therefore still match launchFacts.",
+      "Checked the T4 row and S3 of odd/tasks/phase9-c25-review-hunt.md: the changed surfaces and behavior match the scope.",
+      "Nothing was run: no build, test, differential or live check."
+    ]
+  }
+}

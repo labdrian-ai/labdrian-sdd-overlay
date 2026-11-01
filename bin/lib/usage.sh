@@ -342,17 +342,22 @@ Commands:
                                              refused; print the outcome (verified or no-feature) and the features as
                                              JSON, store nothing
                                              (exit 0 verified or no-feature, 1 refused or error)
-                                   launch --runtime codex --feature NAME --base REV --head REV --rows ID,ID --model MODEL [--cwd REPO]
-                                             the one verb that starts a reviewer, on Codex, read-only: read the brief
+                                   launch --runtime claude|codex --feature NAME --base REV --head REV --rows ID,ID --model MODEL [--cwd REPO]
+                                             the one verb that starts a reviewer, on Codex read-only and on Claude
+                                             Code with no tool: read the brief
                                              from stdin, bind the candidate as review bind does and run
                                              codex exec --sandbox read-only --model <model> --cd <worktree>
                                              --skip-git-repo-check --ephemeral --ignore-user-config with the reviewer
                                              instructions of the deployed Codex agent file (a missing one says run:
                                              labdrian-overlay apply --target codex) and the brief, then record its
                                              last message as review record does, printing what it prints;
-                                             --runtime must be codex: on Claude Code and Pi the parent launches the
-                                             reviewer agent natively; --model is required; refused before codex
-                                             starts (exit 1): a candidate over the 150000-byte limit of one launch,
+                                             with --runtime claude run instead one tool-free claude --print
+                                             --strict-mcp-config in the worktree over the body of the deployed Claude agent file (a missing one
+                                             says run: labdrian-overlay apply --target claude), the brief and its
+                                             ## Frozen context (git diff --no-renames --function-context), and record
+                                             its stdout; --runtime must be claude or codex: on Pi the parent launches
+                                             the reviewer agent natively; --model is required; refused before the
+                                             reviewer starts (exit 1): a candidate over the 150000-byte limit of one launch,
                                              and a brief that is empty, not UTF-8, or that does not name the full
                                              base, the full head, the diff_sha256 and the worktree path of the
                                              binding; a codex that fails or leaves no last message is an error that

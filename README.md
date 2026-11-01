@@ -609,7 +609,7 @@ overlay roles <verb>
 
 overlay review <verb>
     Forward review binding, storage, exemption, delivery-check and launch verbs to the engine unchanged. `launch` is the one
-    verb that starts a reviewer, on Codex, read-only; no other verb launches an agent or dispatches work: a reviewer's or a
+    verb that starts a reviewer, on Codex read-only and on Claude Code with no tool; no other verb launches an agent or dispatches work: a reviewer's or a
     verifier's reply is a file somebody else produced. What is stored
     where, and the exact git command whose output `diff_sha256` is the digest of, are in
     odd/review-results/README.md.
@@ -775,17 +775,24 @@ overlay review <verb>
         repository, and a pull request whose commits were reviewed only by gentle-ai receipts is refused. The gate
         for openspec archives (`tools/archive-anchor-gate`) is not changed. Exit 0 verified or no-feature, 1 usage
         error, refusal or any other failure.
-    launch --runtime codex --feature <name> --base <rev> --head <rev> --rows <id,id> --model <model> [--cwd <repo>]
-        This is the one verb that starts a reviewer, on Codex, read-only. It reads the brief on stdin, binds the candidate as
+    launch --runtime claude|codex --feature <name> --base <rev> --head <rev> --rows <id,id> --model <model> [--cwd <repo>]
+        This is the one verb that starts a reviewer, on Codex read-only and on Claude Code with no tool. It reads the brief on stdin, binds the candidate as
         `bind` does (making or reusing the detached worktree) and runs `codex exec --sandbox read-only --model <model>
         --cd <worktree> --skip-git-repo-check --ephemeral --ignore-user-config` in that worktree, never through a shell,
         under a deadline of 30 minutes and 64 MiB on each stream. Its stdin is the reviewer instructions of the deployed
         Codex agent file (`<codex root>/agents/reviewer.toml`, `$CODEX_HOME` or `~/.codex`; a missing one, or one the
         generator did not write, is an error that says run: labdrian-overlay apply --target codex) and the brief. The
         last message of codex is recorded as `record --rows` records a reply, so every rule of `record` holds and stdout
-        and stderr are what `record` prints. `--runtime` takes only `codex`: --runtime must be codex: on Claude Code and Pi
-        the parent launches the reviewer agent natively. `--model` is required and passed through, with no default.
-        Refused before codex starts, as exit 1: an unsafe feature, rows that are not rows of `roles/reviewer/rows.json`,
+        and stderr are what `record` prints. With `--runtime claude` the reviewer is instead one tool-free `claude --print
+        --output-format text --tools "" --permission-mode dontAsk --no-session-persistence --setting-sources "" --strict-mcp-config
+        --model <model> --system-prompt <an isolated reviewer's>`, started in the worktree under the same deadline and bounds. Its
+        stdin is the body of the deployed Claude agent file (`<claude root>/agents/reviewer.md`, `~/.claude`; a missing
+        one, or one the generator did not write, is an error that says run: labdrian-overlay apply --target claude), the
+        brief and the frozen context of the candidate: a heading `## Frozen context (base <base>, head <head>)` and `git
+        diff --no-renames --function-context` in one fenced block, refused with the brief when both are over the reply
+        limit. Its stdout is the reply; one with nothing but white space is no answer. `--runtime` takes `claude` or
+        `codex`: --runtime must be claude or codex: on Pi the parent launches the reviewer agent natively. `--model` is
+        required and passed through, with no default. Refused before the reviewer starts, as exit 1: an unsafe feature, rows that are not rows of `roles/reviewer/rows.json`,
         a model that is empty, starts with `-` or holds a control character, a candidate over the 150000-byte limit of
         one launch (split it into one launch per commit), and a brief that is empty, not UTF-8, over the reply limit or
         that does not name the full base, the full head, the diff_sha256 and the worktree path of the binding. A codex

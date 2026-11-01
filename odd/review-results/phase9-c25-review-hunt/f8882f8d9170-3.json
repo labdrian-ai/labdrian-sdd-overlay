@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ed5e2ed8ff7b8028bc00f3dddd58cdabe2027175",
+    "head": "f8882f8d917081b2ebe9814b89a9889804555d23",
+    "diff_sha256": "85df7042e2fcf0e891c629a47e937d67195622461fadfe3da022c61fd9c09773",
+    "paths": [
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/cmd/review_launch_docs_test.go",
+      "engine/cmd/usage.go",
+      "engine/review/claudeprint/claudeprint.go",
+      "engine/review/claudeprint/claudeprint_test.go"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "ed5e2ed8ff7b8028bc00f3dddd58cdabe2027175",
+      "head": "f8882f8d917081b2ebe9814b89a9889804555d23",
+      "diff_sha256": "85df7042e2fcf0e891c629a47e937d67195622461fadfe3da022c61fd9c09773"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/cmd/review_launch_docs_test.go",
+        "engine/cmd/usage.go",
+        "engine/review/claudeprint/claudeprint.go",
+        "engine/review/claudeprint/claudeprint_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the full diff at diff-t4-fix.patch (93 lines). I did not run any command or test, and I did not open the worktree files.",
+      "claudeprint.go adds --strict-mcp-config to the argv with no --mcp-config. Per my recollection of the Claude CLI flag description (not verified here), that starts no MCP servers from user or project config. The comment is updated to match.",
+      "claudeprint_test.go wantArgs matches the new argv order exactly (after --setting-sources \"\" and before --model).",
+      "The docs-sync fact --strict-mcp-config is added to launchFacts. The flag appears in the README, the usage.go text and the usage.sh text. I did not run the docs-sync test, so I did not confirm it passes.",
+      "No defects found in the diff. The only issue is that a few doc lines are now longer (style only)."
+    ]
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "kind": "polisher",
+  "base": "38ac46721ec1255124b742ce50d1dde505b48125",
+  "head": "ed5e2ed8ff7b8028bc00f3dddd58cdabe2027175",
+  "diff_sha256": "0ec5ebe8ccd0bea4e8e4cb7d16f42a6596e78df765bcf2339fb941fe280bfe15",
+  "findings": {
+    "findings": [
+      {
+        "location": "engine/review/claudeprint/claudeprint.go:706-708",
+        "severity": "WARNING",
+        "claim": "The argv removes only Claude Code's built-in tools. It does not isolate MCP configuration: there is no --strict-mcp-config and no empty --mcp-config. So the user-scope MCP servers in ~/.claude.json, which are not a settings source and so are not covered by --setting-sources \"\", can still start in the reviewer's worktree, and their tools can be offered to the model. If so, the reviewer is not 'with no tool' as README, usage and the package doc say. The only thing then stopping a write-capable MCP tool (for example a memory mem_save) is --permission-mode dontAsk with no allow rules loaded, not the tool-free flags the Risk line names as the guard. Those servers would also add their tool schemas to the prompt bytes S1 compares, and would spawn their processes on every launch.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "The argv built at claudeprint.go:706-708 is exactly: --print --output-format text --tools \"\" --permission-mode dontAsk --no-session-persistence --setting-sources \"\" --model <m> --system-prompt <s>. No MCP-related flag is passed.",
+          "Claude Code documents --tools as restricting built-in tools; MCP server tools are a separate source. That source is controlled by --mcp-config/--strict-mcp-config, and user-scope servers live in ~/.claude.json, not in a settings source. This is my reading of Claude Code behavior; I did not run the installed claude to confirm it.",
+          "This session's environment shows user-level MCP servers configured for this user (codegraph, context7, engram, claude.ai docs). One of them (engram) has write tools (mem_save).",
+          "claudeprint_test.go:841-846 pins the argv with reflect.DeepEqual, so no test would notice the missing MCP isolation. The package doc (claudeprint.go:628-632) says that whether claude honours the flags is proved only by the live check, which is listed in T4 as after the commit and is not in this target.",
+          "Commit-introduced: the whole claudeprint package and its argv are new in ed5e2ed8 (diff-t4.patch lines 618-758)."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/diff-t4.patch.",
+      "Read /home/labdrian/labdrian-sdd-overlay-worktrees/review-ed5e2ed8ff7b/odd/tasks/phase9-c25-review-hunt.md up to ## Log: S3 and the T4 row, including the specified argv. The implemented argv matches the spec exactly.",
+      "Checked engine/agentgen/roles.go:257-258 (the Claude file writer). ClaudeInstructions is its exact inverse; claude_test.go cross-checks the body against CodexInstructions for every role.",
+      "Checked engine/runtime/core/config.go DefaultClaudeRoot (~/.claude, the same as apply) and deps.environment (the environ of the deps; nil means inherit).",
+      "Checked execrunner OutputStdinIn/outputIn: cmd.Dir is set and the old output() passes an empty dir, so the codex path is unchanged.",
+      "Checked the failure paths in claudeprint.Review: a runner error and a deadline wrap ErrReviewerDidNotAnswer with stderr bounded to 2000 bytes; a stdout that is empty or only white space is refused; a missing, oversized or foreign agent file is refused before claude starts. Each case is tested.",
+      "The model guard (empty, a leading '-', control characters) comes before the reviewer starts (existing Service.Launch), so --model cannot inject a flag.",
+      "Not run: go test, go vet, or any live claude invocation; findings rest on static reading."
+    ]
+  }
+}

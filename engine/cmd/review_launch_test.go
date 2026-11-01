@@ -42,35 +42,58 @@ func (f *fakeCodex) OutputStdin(_ context.Context, _ []string, stdin []byte, bin
 	return nil, []byte("codex said something"), f.err
 }
 
-// launchWorld is a reviewWorld whose HOME holds the Codex reviewer agent file of this checkout.
+// fakeClaude is the claudeprint.Runner of the tests. It records what it was asked to start, and where, and answers
+// stdout as its reply.
+type fakeClaude struct {
+	calls    int
+	dir, bin string
+	args     []string
+	stdin    string
+	stdout   string
+}
+
+func (f *fakeClaude) OutputStdinIn(_ context.Context, dir string, _ []string, stdin []byte, bin string, args ...string) ([]byte, []byte, error) {
+	f.calls++
+	f.dir, f.bin, f.args, f.stdin = dir, bin, append([]string{}, args...), string(stdin)
+	return []byte(f.stdout), nil, nil
+}
+
+// launchWorld is a reviewWorld whose HOME holds the Codex and the Claude reviewer agent files of this checkout.
 type launchWorld struct {
 	*reviewWorld
-	fake *fakeCodex
-	home string
+	fake   *fakeCodex
+	claude *fakeClaude
+	home   string
 }
 
 func newLaunchWorld(t *testing.T, withReviewerFile bool) *launchWorld {
 	t.Helper()
-	w := &launchWorld{reviewWorld: newReviewWorld(t), fake: &fakeCodex{}, home: t.TempDir()}
+	w := &launchWorld{reviewWorld: newReviewWorld(t), fake: &fakeCodex{}, claude: &fakeClaude{}, home: t.TempDir()}
 	t.Setenv("HOME", w.home)
-	if withReviewerFile {
-		artifacts, err := agentgen.Artifacts(filepath.Join("..", ".."))
-		if err != nil {
+	if !withReviewerFile {
+		return w
+	}
+	artifacts, err := agentgen.Artifacts(filepath.Join("..", ".."))
+	if err != nil {
+		t.Fatal(err)
+	}
+	wanted := map[string]string{"codex/agents/reviewer.toml": ".codex/agents", "agents/reviewer.md": ".claude/agents"}
+	for _, a := range artifacts {
+		dir, ok := wanted[a.Path]
+		if !ok {
+			continue
+		}
+		delete(wanted, a.Path)
+		dir = filepath.Join(w.home, dir)
+		if err := os.MkdirAll(dir, 0o755); err != nil {
 			t.Fatal(err)
 		}
-		for _, a := range artifacts {
-			if a.Path == "codex/agents/reviewer.toml" {
-				dir := filepath.Join(w.home, ".codex", "agents")
-				if err := os.MkdirAll(dir, 0o755); err != nil {
-					t.Fatal(err)
-				}
-				if err := os.WriteFile(filepath.Join(dir, "reviewer.toml"), []byte(a.Content), 0o644); err != nil {
-					t.Fatal(err)
-				}
-				return w
-			}
+		if err := os.WriteFile(filepath.Join(dir, filepath.Base(a.Path)), []byte(a.Content), 0o644); err != nil {
+			t.Fatal(err)
 		}
-		t.Fatal("agentgen.Artifacts has no codex/agents/reviewer.toml")
+	}
+	if len(wanted) != 0 {
+		t.Fatalf("agentgen.Artifacts lacks %v", wanted)
 	}
 	return w
 }
@@ -84,6 +107,7 @@ func (w *launchWorld) launch(stdin string, args ...string) (stdout, stderr strin
 	d.getwd = func() (string, error) { return w.cwd, nil }
 	d.environ = goldenEnvironment
 	d.reviewRunner = w.fake
+	d.claudeRunner = w.claude
 	run(p.process, d, append([]string{"review", "launch"}, args...))
 	return p.out.String(), p.err.String(), p.exits
 }
@@ -138,8 +162,8 @@ func TestLaunchRunsTheReviewerReadOnlyInTheWorktreeAndRecordsItsReply(t *testing
 	}
 }
 
-func TestLaunchRefusesARuntimeOtherThanCodex(t *testing.T) {
-	for _, runtime := range []string{"claude", "pi", ""} {
+func TestLaunchRefusesARuntimeOtherThanClaudeOrCodex(t *testing.T) {
+	for _, runtime := range []string{"pi", "Claude", ""} {
 		t.Run("runtime "+runtime, func(t *testing.T) {
 			w := newLaunchWorld(t, true)
 			b := w.bind()
@@ -148,11 +172,51 @@ func TestLaunchRefusesARuntimeOtherThanCodex(t *testing.T) {
 
 			stdout, stderr, exits := w.launch(briefOf(b), args...)
 
-			want := "error: review launch: --runtime must be codex: on Claude Code and Pi the parent launches the reviewer agent natively\n"
-			if stdout != "" || stderr != want || !equalInts(exits, []int{1}) || w.fake.calls != 0 || !w.storedNothing() {
-				t.Errorf("stdout = %q, stderr = %q, exits = %v, codex calls = %d; want nothing, %q, [1], 0", stdout, stderr, exits, w.fake.calls, want)
+			want := "error: review launch: --runtime must be claude or codex: on Pi the parent launches the reviewer agent natively\n"
+			if stdout != "" || stderr != want || !equalInts(exits, []int{1}) || w.fake.calls != 0 || w.claude.calls != 0 || !w.storedNothing() {
+				t.Errorf("stdout = %q, stderr = %q, exits = %v, codex calls = %d, claude calls = %d; want nothing, %q, [1], 0, 0", stdout, stderr, exits, w.fake.calls, w.claude.calls, want)
 			}
 		})
+	}
+}
+
+func TestLaunchWithRuntimeClaudeRunsClaudePrintOverTheBriefAndItsFrozenContext(t *testing.T) {
+	w := newLaunchWorld(t, true)
+	b := w.bind()
+	good := reply(t, b, nil)
+	w.claude.stdout = good
+	args := w.args(b)
+	args[1] = "claude"
+
+	stdout, stderr, exits := w.launch(briefOf(b), args...)
+
+	if !equalInts(exits, []int{0}) {
+		t.Fatalf("exits = %v, stderr = %q; want [0]", exits, stderr)
+	}
+	if w.claude.calls != 1 || w.claude.bin != "claude" || w.claude.dir != b.Worktree || w.fake.calls != 0 {
+		t.Fatalf("claude started %d times as %q in %q, codex %d times; want claude once in %s", w.claude.calls, w.claude.bin, w.claude.dir, w.fake.calls, b.Worktree)
+	}
+	if a := strings.Join(w.claude.args, " "); !strings.HasPrefix(a, "--print --output-format text --tools  --permission-mode dontAsk") || !strings.Contains(a, "--model gpt-5.5") {
+		t.Errorf("claude arguments = %q; want the tool-free print run with the model", w.claude.args)
+	}
+	if !strings.Contains(w.claude.stdin, "\n\n"+briefOf(b)+"\n\n## Frozen context (base "+b.Base+", head "+b.Head+")\n\n```diff\n") {
+		t.Errorf("claude stdin = %q; want the instructions, the brief and its frozen context", w.claude.stdin)
+	}
+	if names := listNames(t, w.results("f")); len(names) != 1 || names[0] != b.Head[:12]+"-1.json" || !strings.Contains(stdout, b.Head[:12]+"-1.json") {
+		t.Errorf("stored %v, printed %q; want one result recorded as review record does", names, stdout)
+	}
+}
+
+func TestLaunchNamesTheMissingClaudeReviewer(t *testing.T) {
+	w := newLaunchWorld(t, false)
+	b := w.bind()
+	args := w.args(b)
+	args[1] = "claude"
+
+	stdout, stderr, exits := w.launch(briefOf(b), args...)
+
+	if stdout != "" || !equalInts(exits, []int{1}) || !strings.Contains(stderr, "run: labdrian-overlay apply --target claude") || w.claude.calls != 0 || !w.storedNothing() {
+		t.Errorf("stdout = %q, stderr = %q, exits = %v, claude calls = %d; want nothing, the apply command, [1], 0", stdout, stderr, exits, w.claude.calls)
 	}
 }
 

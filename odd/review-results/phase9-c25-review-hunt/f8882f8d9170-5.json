@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ed5e2ed8ff7b8028bc00f3dddd58cdabe2027175",
+    "head": "f8882f8d917081b2ebe9814b89a9889804555d23",
+    "diff_sha256": "85df7042e2fcf0e891c629a47e937d67195622461fadfe3da022c61fd9c09773",
+    "paths": [
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/cmd/review_launch_docs_test.go",
+      "engine/cmd/usage.go",
+      "engine/review/claudeprint/claudeprint.go",
+      "engine/review/claudeprint/claudeprint_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "ed5e2ed8ff7b8028bc00f3dddd58cdabe2027175",
+      "head": "f8882f8d917081b2ebe9814b89a9889804555d23",
+      "diff_sha256": "85df7042e2fcf0e891c629a47e937d67195622461fadfe3da022c61fd9c09773"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/cmd/review_launch_docs_test.go",
+        "engine/cmd/usage.go",
+        "engine/review/claudeprint/claudeprint.go",
+        "engine/review/claudeprint/claudeprint_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the whole diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/diff-t4-fix.patch (6 files, every hunk).",
+      "Read /home/labdrian/labdrian-sdd-overlay-worktrees/review-f8882f8d9170/engine/review/claudeprint/claudeprint.go in full. Review() at lines 85-87 adds only the boolean flag \"--strict-mcp-config\", placed after the \"--setting-sources\", \"\" pair and before \"--model\". No --mcp-config is passed, the other guard flags (--tools \"\", --permission-mode dontAsk, --no-session-persistence, --setting-sources \"\", --system-prompt) are all still there, and the flag cannot be read as the value of a neighbouring flag. Error handling, the deadline, the stdin build and the reply checks are unchanged.",
+      "Risk line item 2 (the guard flag set): the change only adds a restriction and removes none, so this diff cannot open a path that lets the reviewer act. Whether the installed claude really ignores the user's MCP servers, a candidate .mcp.json and plugin MCP servers under this flag cannot be proved from the repository. The package comment says so and leaves it to the live check of T4. I ran nothing, so the live behaviour is not run, not a pass.",
+      "claudeprint_test.go lines 87-90: wantArgs now has \"--strict-mcp-config\" in the same position as production, and reflect.DeepEqual compares the whole argv, so the test fails if the flag is dropped or moved.",
+      "Read /home/labdrian/labdrian-sdd-overlay-worktrees/review-f8882f8d9170/engine/cmd/review_launch_docs_test.go in full. \"--strict-mcp-config\" was added to launchFacts, which the engine usage, bin/lib/usage.sh and README tests all check. Each of those three docs changes the text the test reads: usage.go line 242, usage.sh line 352 and README line 787 now name the flag.",
+      "Searched odd/tasks/phase9-c25-review-hunt.md for 'mcp' and 'strict-mcp-config' and found no matches. The spec does not quote the flag, so I could not check its wording against S3 or the T4 row beyond the description in the prompt.",
+      "Tests and builds were not run, because the reviewer role does not run commands."
+    ]
+  }
+}

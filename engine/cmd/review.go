@@ -17,9 +17,10 @@ package main
 // (review_sweep.go). 'review anchor --merge <rev> [--cwd <repo>]' decides whether a merge lands a tree that stored
 // reviews cleared (review_anchor.go). The rules are the use cases of review/app over the adapters review/gitexec (git) and review/fsstore
 // (the results directory); this file parses the command line, wires them and says what they did. 'review launch
-// --runtime codex --feature <name> --base <rev> --head <rev> --rows <id,id> --model <model> [--cwd <repo>]' (review_launch.go)
-// binds the candidate, runs the Codex reviewer read-only on the brief on stdin and records its reply as 'review record'
-// does. launch is the one verb that starts a reviewer, on Codex, read-only; no other verb launches an agent or
+// --runtime claude|codex --feature <name> --base <rev> --head <rev> --rows <id,id> --model <model> [--cwd <repo>]'
+// (review_launch.go) binds the candidate, runs the Codex reviewer read-only, or the Claude reviewer with no tool over the
+// frozen context of the candidate, on the brief on stdin and records its reply as 'review record' does. launch is the one
+// verb that starts a reviewer, on Codex read-only and on Claude Code with no tool; no other verb launches an agent or
 // dispatches work: their reply is a file somebody else produced. 'review proposals [--cwd <repo>]' prints the worktrees
 // and branches the owner may remove and the git command for each, and deletes and stores nothing (review_proposals.go).
 // 'review stop-hook' is the odd one out: the

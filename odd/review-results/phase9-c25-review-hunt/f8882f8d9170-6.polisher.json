@@ -1,0 +1,18 @@
+{
+  "kind": "polisher",
+  "base": "ed5e2ed8ff7b8028bc00f3dddd58cdabe2027175",
+  "head": "f8882f8d917081b2ebe9814b89a9889804555d23",
+  "diff_sha256": "85df7042e2fcf0e891c629a47e937d67195622461fadfe3da022c61fd9c09773",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the whole diff /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/diff-t4-fix.patch (README.md, bin/lib/usage.sh, engine/cmd/review_launch_docs_test.go, engine/cmd/usage.go, engine/review/claudeprint/claudeprint.go, engine/review/claudeprint/claudeprint_test.go).",
+      "Read the spec in the worktree, /home/labdrian/labdrian-sdd-overlay-worktrees/review-f8882f8d9170/odd/tasks/phase9-c25-review-hunt.md, lines 1-25: S3 and the T4 row, up to ## Log.",
+      "Read all of /home/labdrian/labdrian-sdd-overlay-worktrees/review-f8882f8d9170/engine/review/claudeprint/claudeprint.go. Lines 85-87 show the full argv: --print --output-format text --tools \"\" --permission-mode dontAsk --no-session-persistence --setting-sources \"\" --strict-mcp-config --model <model> --system-prompt <const>. No --mcp-config is passed, the argv is fixed with no caller-supplied flags, and the model is a separate argv element, so it cannot inject a flag.",
+      "Other ways the reviewer could get a tool: built-in tools are off through --tools \"\". Allow rules in settings cannot apply because --setting-sources \"\" loads no settings. MCP servers from the user's config or a candidate .mcp.json are now off through --strict-mcp-config. --permission-mode dontAsk, with no allow rules loaded, denies any tool that is not pre-approved, which is a second layer behind those flags. Whether the installed claude also skips plugin or account-connector MCP servers under --strict-mcp-config cannot be proved from the repository. The package doc (claudeprint.go:10-11) already says this is proved only by T4's live check, so it is not reported as a defect.",
+      "Regression coverage: claudeprint_test.go:77-92 compares the full argv with reflect.DeepEqual, so removing or reordering --strict-mcp-config, or adding a --mcp-config, fails the test.",
+      "Docs sync: review_launch_docs_test.go:15-28 adds \"--strict-mcp-config\" to launchFacts, which is checked against the engine usage, bin/lib/usage.sh and the README section. Grep for strict-mcp-config|setting-sources outside odd/ found it on one line in each of README.md:787, bin/lib/usage.sh:355 and engine/cmd/usage.go:245, so none of those fragments is split by a line wrap.",
+      "No tests or commands were run (read-only inspection): go test was not run."
+    ]
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "labdrian review launch --runtime claude with a stub claude on PATH recording argv (independent verifier guard probe), and claude --help",
+      "output": "argv at ed5e2ed8: --print --output-format text --tools '' --permission-mode dontAsk --no-session-persistence --setting-sources '' --model m --system-prompt ...; no --strict-mcp-config, which claude --help names as the only flag that skips MCP servers outside --mcp-config",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F2",
+      "result": "not-reproduced",
+      "command": "rg -n 'the brief' engine/review/claudeprint/claudeprint_test.go",
+      "output": "claudeprint_test.go:83: if want := body + \"\\n\\nthe brief\\n\"; f.stdin != want { -- the adapter test pins the separator exactly; review/app/launch_test.go pins the frozen-context block",
+      "base_result": "not-reproduced"
+    }
+  ]
+}
