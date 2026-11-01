@@ -54,8 +54,8 @@ func TestTheRowsTheProgramAcceptsAreTheRowsOfTheCanonicalFile(t *testing.T) {
 		}
 	}
 
-	if want := []string{"default", "readability", "risk-line"}; !reflect.DeepEqual(ids, want) {
-		t.Errorf("the rows of the canonical file are %q, want the three rows that own-rdd S8 names: %q", ids, want)
+	if want := []string{"default", "readability", "risk-line", "hunt"}; !reflect.DeepEqual(ids, want) {
+		t.Errorf("the rows of the canonical file are %q, want the three rows that own-rdd S8 names and the hunt row of phase9-c25-review-hunt S5: %q", ids, want)
 	}
 	if got := review.RowIDs(); !reflect.DeepEqual(got, ids) {
 		t.Errorf("RowIDs() = %q, want the ids of the canonical file, in its order: %q", got, ids)
@@ -73,6 +73,8 @@ func TestParseRowsReadsTheRowsOfALaunchInTheOrderTheyAreWritten(t *testing.T) {
 		{"default,readability", []string{"default", "readability"}},
 		{"readability,default", []string{"readability", "default"}},
 		{"default,readability,risk-line", []string{"default", "readability", "risk-line"}},
+		{"default,hunt", []string{"default", "hunt"}},
+		{"risk-line", []string{"risk-line"}},
 	} {
 		if got, err := review.ParseRows(tc.declared); err != nil || !reflect.DeepEqual(got, tc.want) {
 			t.Errorf("ParseRows(%q) = %q, %v, want %q and no error", tc.declared, got, err, tc.want)
@@ -86,7 +88,7 @@ func TestParseRowsRefusesWhatIsNotAListOfTheRowsOfTheCanonicalFile(t *testing.T)
 	accepted := strings.Join(review.RowIDs(), ", ")
 	for _, declared := range []string{
 		"", "nope", "default,nope", "default,default", "default,readability,default",
-		"default, readability", " default", "default ", "default,", ",default", "default,,readability", "Default", "default;readability",
+		"default, readability", "hunt,hunt", " default", "default ", "default,", ",default", "default,,readability", "Default", "default;readability",
 	} {
 		got, err := review.ParseRows(declared)
 		if !errors.Is(err, review.ErrInvalidRows) || got != nil {

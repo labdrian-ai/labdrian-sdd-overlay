@@ -631,8 +631,8 @@ overlay review <verb>
         inspection that is not completed, paths that differ, a finding id that is missing or repeats, a
         severity, evidence class or disposition outside its enumeration, a BLOCKER or CRITICAL with no proof
         reference, a reply above 1 MiB), and store it with the binding and the lens rows the reviewer was
-        sent (--rows, required: the ids of the rows of roles/reviewer/rows.json, default, readability and
-        risk-line, separated by commas with no space and none written twice; the lens count of a change is the
+        sent (--rows, required: the ids of the rows of roles/reviewer/rows.json, default, readability,
+        risk-line and hunt, separated by commas with no space and none written twice; the lens count of a change is the
         number of rows its stored results record) as
         odd/review-results/<feature>/<head12>-<n>.json. <feature> is one safe path segment, <n> one more than
         the highest stored for that head (from 1); the file is published whole and never over an existing one,

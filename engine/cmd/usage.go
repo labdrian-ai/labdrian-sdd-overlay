@@ -169,7 +169,7 @@ func usage(w io.Writer) {
 	fmt.Fprintln(w, "    names a path outside odd/review-results/ (a symbolic link on the way is refused). stdout is the skeleton of the role handoff for 'roles append --stdin':")
 	fmt.Fprintln(w, "    payload_kind review-report, payload_sha256 of the stored file, evidence review-diff and review-result; the parent of the chain fills project_id, goal_id,")
 	fmt.Fprintln(w, "    chain_id, seq, prev_sha256, to_role and context.summary. A reply that does not hold writes nothing and the error names the rule it broke.")
-	fmt.Fprintln(w, "    --rows is required: the ids of the lens rows the reviewer was sent, written in roles/reviewer/rows.json (default, readability, risk-line), separated by commas with no space and none written")
+	fmt.Fprintln(w, "    --rows is required: the ids of the lens rows the reviewer was sent, written in roles/reviewer/rows.json (default, readability, risk-line, hunt), separated by commas with no space and none written")
 	fmt.Fprintln(w, "    twice; the stored result records them, and the lens count of a change is the number of rows its stored results record. exit 0 stored, 2 reply refused, 1 usage error, rows that are not")
 	fmt.Fprintln(w, "    rows of that file or any other failure")
 	fmt.Fprintln(w, "  engine review verify --feature <name> --stored <result> [--verdicts <file>|-] [--cwd <repo>]")
