@@ -100,6 +100,14 @@ jobs:
           go build -C "$GITHUB_WORKSPACE/tools/lint" -o "$RUNNER_TEMP/staticcheck" honnef.co/go/tools/cmd/staticcheck
           "$RUNNER_TEMP/staticcheck" ./...
 
+      # labdrian review sweep runs errcheck and nilerr from the PATH over the packages a commit changes, keeping only the
+      # lines a commit adds. The engine is not gated on them (errcheck reports lines the engine keeps on purpose); they are
+      # built here so a pin of tools/lint that no longer builds fails CI.
+      - name: Build errcheck and nilerr
+        run: |
+          go build -C "$GITHUB_WORKSPACE/tools/lint" -o "$RUNNER_TEMP/errcheck" github.com/kisielk/errcheck
+          go build -C "$GITHUB_WORKSPACE/tools/lint" -o "$RUNNER_TEMP/nilerr" github.com/gostaticanalysis/nilerr/cmd/nilerr
+
       # With -test, code reached only from tests counts as live, so every line deadcode prints is a
       # function nothing calls. The engine reports none, so any line fails the job. deadcode exits 0
       # when it reports findings, so the output decides, not the exit code.

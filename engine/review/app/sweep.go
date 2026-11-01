@@ -47,10 +47,10 @@ type Swept struct {
 //   - T1: the paths the commit removed, and the names its removed lines declared that its head still mentions in a path the
 //     diff does not touch;
 //   - T2: for each Go module that holds a changed .go, go.mod or go.sum (the innermost module of each path), deadcode over
-//     the whole module and staticcheck over the packages of the changed .go files, and shellcheck over the changed .sh
-//     files, each on a copy of the base and on a copy of the head; a finding is new when its normalized line occurs more
-//     times at the head (review.NewFindings). A check that cannot run is an error wrapping ErrToolDidNotRun, and nothing
-//     is stored (S1);
+//     the whole module and staticcheck, errcheck and nilerr over the packages of the changed .go files, and shellcheck
+//     over the changed .sh files, each on a copy of the base and on a copy of the head; a finding is new when its
+//     normalized line occurs more times at the head (review.NewFindings). A check that cannot run is an error wrapping
+//     ErrToolDidNotRun, and nothing is stored (S1);
 //   - T3: the lines of git status of the working tree as it is, but for the records waiting under odd/review-results/;
 //   - T4: the changed paths ending .orig or .bak that the commit does not delete (review.Leftovers), and the test
 //     fixtures of the packages the commit changes that no .go file of their package names at the head and did at the
@@ -331,15 +331,20 @@ func (s Service) sweepT2(repo Repository, c review.Candidate) ([]review.SweepT2,
 		}
 		add("deadcode", change.module, base, head)
 		if len(change.packages) > 0 {
-			base, err = a.Staticcheck(baseRoot, change.module, change.packages)
-			if err != nil {
-				return nil, err
+			for _, check := range []struct {
+				tool string
+				run  func(root, module string, packages []string) ([]string, error)
+			}{{"staticcheck", a.Staticcheck}, {"errcheck", a.Errcheck}, {"nilerr", a.Nilerr}} {
+				base, err = check.run(baseRoot, change.module, change.packages)
+				if err != nil {
+					return nil, err
+				}
+				head, err = check.run(headRoot, change.module, change.packages)
+				if err != nil {
+					return nil, err
+				}
+				add(check.tool, change.module, base, head)
 			}
-			head, err = a.Staticcheck(headRoot, change.module, change.packages)
-			if err != nil {
-				return nil, err
-			}
-			add("staticcheck", change.module, base, head)
 		}
 		if slices.Contains(tidy, change.module) {
 			base, err = a.Tidy(baseRoot, change.module)

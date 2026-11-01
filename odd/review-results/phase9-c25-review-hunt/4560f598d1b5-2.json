@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a2be821b6fe4b6cf8e242c2485ebb0926d792b62",
+    "head": "4560f598d1b592f7dd3514983de37d6c1736e673",
+    "diff_sha256": "daa1a1d5e1b88a6827909cef87e60f8c972d961b49efb70712bc6b6c4a0c6436",
+    "paths": [
+      ".github/workflows/ci.yml",
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/cmd/review_sweep_docs_test.go",
+      "engine/cmd/review_sweep_test.go",
+      "engine/cmd/usage.go",
+      "engine/review/analyzers/analyzers.go",
+      "engine/review/analyzers/analyzers_test.go",
+      "engine/review/app/app.go",
+      "engine/review/app/fakes_test.go",
+      "engine/review/app/sweep.go",
+      "engine/review/app/sweep_test.go",
+      "tools/lint/README.md",
+      "tools/lint/doc.go",
+      "tools/lint/go.mod",
+      "tools/lint/go.sum"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "a2be821b6fe4b6cf8e242c2485ebb0926d792b62",
+      "head": "4560f598d1b592f7dd3514983de37d6c1736e673",
+      "diff_sha256": "daa1a1d5e1b88a6827909cef87e60f8c972d961b49efb70712bc6b6c4a0c6436"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        ".github/workflows/ci.yml",
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/cmd/review_sweep_docs_test.go",
+        "engine/cmd/review_sweep_test.go",
+        "engine/cmd/usage.go",
+        "engine/review/analyzers/analyzers.go",
+        "engine/review/analyzers/analyzers_test.go",
+        "engine/review/app/app.go",
+        "engine/review/app/fakes_test.go",
+        "engine/review/app/sweep.go",
+        "engine/review/app/sweep_test.go",
+        "tools/lint/README.md",
+        "tools/lint/doc.go",
+        "tools/lint/go.mod",
+        "tools/lint/go.sum"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/review/analyzers/analyzers.go:231-247",
+        "severity": "WARNING",
+        "claim": "The nilerr message embeds a source line number, as in the commit's own test fixture 'error is not nil (line 13) but it returns nil'. NormalizeFinding strips only the position at the start of the line, not a '(line N)' inside the message. If a commit adds or removes lines above an existing nilerr finding in a changed file, the message text differs between base and head. The unchanged finding is then counted as new, and the sweep reports it as fired. This breaks the rule that the sweep keeps only the lines a commit adds. This is inferred from the fixture format and the normalizer code. I did not run nilerr.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/sweep.go:307-319 (NormalizeFinding strips only the leading line and column)",
+          "engine/review/analyzers/analyzers_test.go:402 (fixture message includes '(line 13)')",
+          "engine/review/app/sweep_test.go:564 (the same message format is expected to survive normalization)"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff.",
+      "Read engine/review/sweep.go lines 300-341 in the worktree to check how base and head findings are normalized and compared.",
+      "Checked the errcheck tab-to-finding-shape rewrite, the nilerr exit-3 rule, the exclude-file cleanup, the tool loop in sweepT2, and the docs and usage strings against their tests.",
+      "Ran no commands."
+    ]
+  }
+}

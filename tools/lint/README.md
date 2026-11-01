@@ -1,12 +1,14 @@
 # tools/lint
 
-Pins the `staticcheck` that CI runs. `go.mod` names the version and `go.sum` holds the checksum of it
+Pins the `staticcheck` that CI runs and the `errcheck` and `nilerr` that `labdrian review sweep` runs. `go.mod` names the versions and `go.sum` holds the checksum of each
 and of every module it is built from, so a CI job no longer resolves a version tag at run time.
 The module has no code of its own: `doc.go` only gives the per-module checks of the repository a package to look at.
 
 | Pinned | Where |
 |---|---|
 | staticcheck v0.7.0 (2026.1) | `require honnef.co/go/tools` in `go.mod` |
+| errcheck v1.30.0 | `require github.com/kisielk/errcheck` in `go.mod` |
+| nilerr v0.1.2 | `require github.com/gostaticanalysis/nilerr` in `go.mod` |
 | the modules it is built from | `go.sum` |
 
 ## How CI uses it
@@ -26,7 +28,7 @@ It is built first and run from the module because `go run -C` would run it insid
 
 ## Toolchain
 
-The `go` directive is the Go that staticcheck v0.7.0 itself requires (1.25.0). A job on an older Go (the
+The `go` directive is the Go that errcheck v1.30.0 requires (1.26.0), the highest of the three. An older errcheck cannot be pinned: v1.10.0 and v1.20.0, built against an older `golang.org/x/tools`, fail on a Go 1.27 toolchain (`package "errors" without types was imported`); v1.30.0 raises `golang.org/x/tools` to v0.51.0 for staticcheck too, which reports the same lines in every module CI lints (2026-11-01). A job on an older Go (the
 `go 1.21` modules) downloads exactly that toolchain through `GOTOOLCHAIN=auto` to build the binary; a job on a newer
 Go (tui and longterm-mem, 1.26.1) builds with its own. The code under analysis is still loaded by the job's own `go`.
 
@@ -35,6 +37,8 @@ Go (tui and longterm-mem, 1.26.1) builds with its own. The code under analysis i
 ```bash
 cd tools/lint
 go get -tool honnef.co/go/tools/cmd/staticcheck@vX.Y.Z   # also raises the go directive when the new version needs it
+go get -tool github.com/kisielk/errcheck@vX.Y.Z          # likewise for errcheck
+go get -tool github.com/gostaticanalysis/nilerr/cmd/nilerr@vX.Y.Z   # and nilerr
 go mod tidy
 go mod verify
 ```

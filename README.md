@@ -727,13 +727,13 @@ overlay review <verb>
         over an existing one. T1: the paths the commit deleted or renamed, and the names its removed lines
         declared and the flags (--name) its removed lines of .go and .sh files held that the head still
         mentions outside the diff. T2: `deadcode -test ./...` over each Go module
-        the commit changes, `staticcheck` over the packages of its changed .go files and `shellcheck` over its
+        the commit changes, `staticcheck`, `errcheck` and `nilerr` over the packages of its changed .go files and `shellcheck` over its
         changed .sh files and `go mod tidy -diff` over each module whose go.mod or go.sum it changes or whose .go files lose an import, a finding being a required module the head no longer needs, each on a copy of the base and a copy of the head kept under
         $XDG_STATE_HOME/labdrian/review-sweep/ (default ~/.local/state), outside the working tree; a line is a
         finding when it occurs more times at the head than at the base. T3: `git status` of the working tree
         as it is, but for the records under odd/review-results/. T4: the paths the commit changes whose name ends .orig or .bak, and the test fixtures it leaves unread. A tool that is not found, or that fails
         without printing a finding, is a check that did not run: nothing is stored and the error names the
-        tool (it needs deadcode, staticcheck and shellcheck on PATH, and go on PATH (Go 1.23 or newer) with the module cache of a module whose dependencies the commit touches, so until they are there the delivery stops
+        tool (it needs deadcode, staticcheck, errcheck, nilerr and shellcheck on PATH, and go on PATH (Go 1.23 or newer) with the module cache of a module whose dependencies the commit touches, so until they are there the delivery stops
         with it). A tree whose blobs pass 256 MiB in the one `git cat-file --batch` answer that fills the copies
         cannot be swept: the sweep exits 2 and stores nothing, so the delivery of such a repository stops. A
         second sweep of the repository while one runs is refused at once: another review sweep of this

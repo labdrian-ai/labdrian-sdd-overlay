@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "4560f598d1b592f7dd3514983de37d6c1736e673",
+    "head": "1321803f7da7774ea16a197f3478dc88d6c83db1",
+    "diff_sha256": "859263aa8f9b9b6777613a8880178bfae5df7aeebcb3046d34251f2181132006",
+    "paths": [
+      "engine/review/analyzers/analyzers.go",
+      "engine/review/analyzers/analyzers_test.go"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "4560f598d1b592f7dd3514983de37d6c1736e673",
+      "head": "1321803f7da7774ea16a197f3478dc88d6c83db1",
+      "diff_sha256": "859263aa8f9b9b6777613a8880178bfae5df7aeebcb3046d34251f2181132006"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/review/analyzers/analyzers.go",
+        "engine/review/analyzers/analyzers_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the whole diff. Read analyzers.go in the worktree, including read(), said() and the imports already in use.",
+      "The error read() builds for a failing deadcode run ends with `: deadcode: no main packages` when stderr is exactly that line. said() trims whitespace and `: ` + text is the tail of the message. The new strings.HasSuffix check therefore matches this case.",
+      "Stderr with extra lines does not end in that suffix, so it still returns ErrToolDidNotRun. The second new test pins this.",
+      "Both new tests cover the intended behavior, and the comment on Deadcode states the rule.",
+      "I did not run the code or the tests."
+    ]
+  }
+}

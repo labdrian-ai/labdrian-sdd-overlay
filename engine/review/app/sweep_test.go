@@ -315,6 +315,8 @@ func TestSweepRunsDeadcodeAndStaticcheckOnTheCopiesOfEveryModuleTheCommitChanges
 	wantTools := []string{
 		"Deadcode /state/base mod", "Deadcode /state/head mod",
 		"Staticcheck /state/base mod ./a,./b", "Staticcheck /state/head mod ./a,./b",
+		"Errcheck /state/base mod ./a,./b", "Errcheck /state/head mod ./a,./b",
+		"Nilerr /state/base mod ./a,./b", "Nilerr /state/head mod ./a,./b",
 		"Tidy /state/base mod", "Tidy /state/head mod", // mod/go.sum is changed
 	}
 	if !reflect.DeepEqual(s.tools.calls, wantTools) {
@@ -328,6 +330,29 @@ func TestSweepRunsDeadcodeAndStaticcheckOnTheCopiesOfEveryModuleTheCommitChanges
 		if s.git.count(call) != 1 {
 			t.Errorf("calls = %q, want %q once", s.git.calls, call)
 		}
+	}
+}
+
+func TestSweepAddsTheNewLinesOfErrcheckAndNilerrOverThePackagesOfTheChangedFiles(t *testing.T) {
+	s := newSweepRig(t)
+	s.git.paths = []string{"mod/a/x.go"}
+	s.git.modules = []string{"mod"}
+	s.tools.out["Errcheck /state/base mod ./a"] = []string{"a/x.go:3:2: unchecked error: defer f.Close()"}
+	s.tools.out["Errcheck /state/head mod ./a"] = []string{"a/x.go:5:2: unchecked error: defer f.Close()", "a/x.go:9:2: unchecked error: os.Remove(p)"}
+	s.tools.out["Nilerr /state/head mod ./a"] = []string{"/state/head/mod/a/x.go:14:3: error is not nil but it returns nil"}
+
+	got := s.mustSweep()
+
+	want := []review.SweepT2{
+		{Tool: "errcheck", Module: "mod", New: []string{"a/x.go: unchecked error: os.Remove(p)"}},
+		{Tool: "nilerr", Module: "mod", New: []string{"mod/a/x.go: error is not nil but it returns nil"}},
+	}
+	if t2 := s.stored().Findings.T2; !reflect.DeepEqual(t2, want) {
+		t.Errorf("stored t2 = %v, want %v: the new lines only, a line of the base dropped", t2, want)
+	}
+	wantIDs := []string{"T2 errcheck mod: a/x.go: unchecked error: os.Remove(p)", "T2 nilerr mod: mod/a/x.go: error is not nil but it returns nil"}
+	if got.Outcome != review.OutcomeFired || !reflect.DeepEqual(got.Candidates, wantIDs) {
+		t.Errorf("outcome = %q, candidates = %q, want fired with %q", got.Outcome, got.Candidates, wantIDs)
 	}
 }
 
@@ -354,8 +379,12 @@ func TestSweepGivesAChangedFileToTheInnermostModuleOnly(t *testing.T) {
 	want := []string{
 		"Deadcode /state/base .", "Deadcode /state/head .",
 		"Staticcheck /state/base . .,./loose", "Staticcheck /state/head . .,./loose",
+		"Errcheck /state/base . .,./loose", "Errcheck /state/head . .,./loose",
+		"Nilerr /state/base . .,./loose", "Nilerr /state/head . .,./loose",
 		"Deadcode /state/base tools/x", "Deadcode /state/head tools/x",
 		"Staticcheck /state/base tools/x .", "Staticcheck /state/head tools/x .",
+		"Errcheck /state/base tools/x .", "Errcheck /state/head tools/x .",
+		"Nilerr /state/base tools/x .", "Nilerr /state/head tools/x .",
 	}
 	if !reflect.DeepEqual(s.tools.calls, want) {
 		t.Errorf("tool calls = %q, want %q", s.tools.calls, want)
@@ -480,6 +509,16 @@ func TestSweepGivesTheLockBackAndStoresNothingWhenAnythingAfterItFails(t *testin
 			s.git.modules = []string{"."}
 			s.tools.fail["Staticcheck"] = boom
 		}},
+		{"errcheck", func(s *sweepRig) {
+			s.git.paths = []string{"x.go"}
+			s.git.modules = []string{"."}
+			s.tools.fail["Errcheck"] = boom
+		}},
+		{"nilerr", func(s *sweepRig) {
+			s.git.paths = []string{"x.go"}
+			s.git.modules = []string{"."}
+			s.tools.fail["Nilerr"] = boom
+		}},
 		{"shellcheck", func(s *sweepRig) { s.git.paths = []string{"x.sh"}; s.tools.fail["Shellcheck"] = boom }},
 		{"status", func(s *sweepRig) { s.git.fail["Status"] = boom }},
 		{"the store", func(s *sweepRig) { s.results.fail["Create"] = boom }},
@@ -520,9 +559,13 @@ func TestSweepFiresOnARequirementTheCommitLeavesUnused(t *testing.T) {
 	if got.Outcome != review.OutcomeFired || !reflect.DeepEqual(got.Candidates, []string{"T2 go-mod-tidy engine: go.mod: require github.com/x/y v1.2.3"}) {
 		t.Errorf("outcome = %q, candidates = %q, want fired with the requirement", got.Outcome, got.Candidates)
 	}
-	wantCalls := []string{"Deadcode /state/base engine", "Deadcode /state/head engine", "Staticcheck /state/base engine .", "Staticcheck /state/head engine .", "Tidy /state/base engine", "Tidy /state/head engine"}
+	wantCalls := []string{
+		"Deadcode /state/base engine", "Deadcode /state/head engine", "Staticcheck /state/base engine .", "Staticcheck /state/head engine .",
+		"Errcheck /state/base engine .", "Errcheck /state/head engine .", "Nilerr /state/base engine .", "Nilerr /state/head engine .",
+		"Tidy /state/base engine", "Tidy /state/head engine",
+	}
 	if !reflect.DeepEqual(s.tools.calls, wantCalls) {
-		t.Errorf("tool calls = %q, want %q: tidy after the other two, on both copies", s.tools.calls, wantCalls)
+		t.Errorf("tool calls = %q, want %q: tidy after the others, on both copies", s.tools.calls, wantCalls)
 	}
 }
 

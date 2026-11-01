@@ -1,0 +1,22 @@
+{
+  "kind": "polisher",
+  "base": "a2be821b6fe4b6cf8e242c2485ebb0926d792b62",
+  "head": "4560f598d1b592f7dd3514983de37d6c1736e673",
+  "diff_sha256": "daa1a1d5e1b88a6827909cef87e60f8c972d961b49efb70712bc6b6c4a0c6436",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the whole diff /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/diff-105c770c.patch, which covers ci.yml, README.md, bin/lib/usage.sh, engine/cmd/usage.go and its doc tests, engine/review/analyzers/analyzers.go and its tests, engine/review/app/app.go, sweep.go, fakes_test.go and sweep_test.go, and tools/lint go.mod, go.sum, README.md and doc.go.",
+      "Read S1-S6 and the T5 row of /home/labdrian/labdrian-sdd-overlay-worktrees/review-105c770c5801/odd/tasks/phase9-c25-review-hunt.md. The diff does what S4 and T5 ask: the Analyzers port gains Errcheck and Nilerr, the sweep runs both wherever it runs staticcheck (sweep.go:331-348) and keeps only their new lines under the tools errcheck and nilerr, both tools are pinned in tools/lint/go.mod, and CI builds them.",
+      "Read analyzers.go:56-105 at the head. Staticcheck still returns nothing and starts nothing when the module or its packages are missing: presentPackages returns no packages when there is no go.mod. The error returned when a tool did not run has the same shape as before, now produced through read and findingLines.",
+      "Read the errcheck adapter. Its lines are rewritten from `file:line:col:\\t` to the finding shape and read from stdout only, so compile errors on stderr cannot count as findings. The exclude file is removed with a deferred call.",
+      "Read the nilerr adapter. It counts a finding only on exit status 3 with at least one line in the finding shape. Exit 1 (a package that does not load) and every other status are reported as a tool that did not run, so a compile error that looks like a finding is not miscounted.",
+      "Read review.NewFindings (engine/review/sweep.go:324-340). It normalizes base and head lines against their own roots, so the absolute paths nilerr prints compare equal across the two copies. The sweep test pins this with /state/head/mod/a/x.go becoming mod/a/x.go.",
+      "Grepped engine/ for other places that stub the analysis programs. Only engine/cmd/review_sweep_test.go builds a PATH with just those programs, and the diff adds errcheck and nilerr to it. No other test runs the sweep over a Go change with a restricted PATH.",
+      "Checked the readers of tools/lint/go.mod. The regex in tools/deterministic-check-runner/main_test.go:418 still matches the `honnef.co/go/tools v0.7.0 // indirect` require line after the tool directive became a block. identity/go_version_test.go compares only identity/go.mod with engine/go.mod and does not read tools/lint.",
+      "Read .github/workflows/ci.yml:96-110. The new build step has no working-directory and builds with -C on tools/lint, in the same job and the same way as the staticcheck build it sits beside.",
+      "Read the sweep record of this target, /home/labdrian/labdrian-sdd-overlay/odd/review-results/phase9-c25-review-hunt/105c770c5801-1.sweep.json: outcome clean with t2 empty. A sweep with errcheck and nilerr in it was stored for this commit; an error from a tool that did not run would have stored nothing.",
+      "Not run: go test, go build in tools/lint, the differential sweep and the R8 bench check named in T5. I had no shell in this review, so the claims that staticcheck builds against golang.org/x/tools v0.51.0 and prints the same lines rest on the commit's README, not on a check of mine."
+    ]
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "1321803f7da7774ea16a197f3478dc88d6c83db1",
+    "head": "837403057d74a72bd4dfb498052d9507252f79db",
+    "diff_sha256": "4529e502ce938894d8dd8830100d4c31cbae7c6a1e78370292a212b3eff0669a",
+    "paths": [
+      "engine/review/analyzers/analyzers.go",
+      "engine/review/analyzers/analyzers_test.go",
+      "engine/review/app/sweep_test.go"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "1321803f7da7774ea16a197f3478dc88d6c83db1",
+      "head": "837403057d74a72bd4dfb498052d9507252f79db",
+      "diff_sha256": "4529e502ce938894d8dd8830100d4c31cbae7c6a1e78370292a212b3eff0669a"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/review/analyzers/analyzers.go",
+        "engine/review/analyzers/analyzers_test.go",
+        "engine/review/app/sweep_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/review/analyzers/analyzers.go:172",
+        "claim": "The correction closes the earlier F1. Nilerr strips ` (line N)` from the whole stderr before findingLines. Base and head runs both go through Nilerr, so an unchanged finding keeps the same message when lines are added above it. NormalizeFinding (sweep.go:313-319) already strips the leading position, so the compared strings now match. Duplicate findings that collapse to one string are still counted per occurrence in NewFindings, so none are lost. Nothing breaks. The one cost is that the reported finding no longer shows which line holds the error check, which is minor. The new test covers both message variants, `is not nil` and `is nil`. I did not run the tests.",
+        "severity": "SUGGESTION",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/analyzers/analyzers.go:172",
+          "engine/review/sweep.go:313-335"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff.",
+      "Read Nilerr, findingLines, ranToAnExit and said in analyzers.go.",
+      "Read NormalizeFinding and NewFindings in sweep.go.",
+      "Checked that the exit-3 guard and the error path (which uses the raw stderr) are unchanged.",
+      "Ran no tests; the worktree is read-only."
+    ]
+  }
+}
