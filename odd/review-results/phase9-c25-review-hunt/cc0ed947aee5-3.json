@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f28e764858b578bfe83753d92ea93916def8380b",
+    "head": "cc0ed947aee5467134a97e038bba3fad8c5bd510",
+    "diff_sha256": "84606243ec71cbd8bbbd9e3dd33de6b63e574612894c434927d37e833672c598",
+    "paths": [
+      "engine/review/app/app.go",
+      "engine/review/app/fakes_test.go",
+      "engine/review/app/launch.go",
+      "engine/review/app/launch_test.go",
+      "engine/review/app/service.go",
+      "engine/review/gitexec/gitexec.go",
+      "engine/review/gitexec/gitexec_test.go",
+      "engine/review/gitexec/realgit_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f28e764858b578bfe83753d92ea93916def8380b",
+      "head": "cc0ed947aee5467134a97e038bba3fad8c5bd510",
+      "diff_sha256": "84606243ec71cbd8bbbd9e3dd33de6b63e574612894c434927d37e833672c598"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/review/app/app.go",
+        "engine/review/app/fakes_test.go",
+        "engine/review/app/launch.go",
+        "engine/review/app/launch_test.go",
+        "engine/review/app/service.go",
+        "engine/review/gitexec/gitexec.go",
+        "engine/review/gitexec/gitexec_test.go",
+        "engine/review/gitexec/realgit_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the whole diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/diff-t3.patch (8 files).",
+      "Risk line item 3 (Service.Launch shared with the codex launch path): in launch.go:69-73 the new branch runs only when s.frozenContext is true. Only WithFrozenContext sets that field, and a search of engine/ found WithFrozenContext() only in launch.go and launch_test.go, so no production caller turns it on. The codex path of Launch therefore runs the same code as at base. launch_test.go also checks that FunctionContextDiff is never called without WithFrozenContext.",
+      "Git port contract (app.go): the new FunctionContextDiff method is added to the Git interface. Searching the worktree for implementers of Diff(repo app.Repository found only gitexec.Git (gitexec.go:299) and fakeGit (fakes_test.go:176). Both now implement FunctionContextDiff, so no implementer breaks at compile time.",
+      "CheckBrief still checks the parent's brief alone: launch.go:66 runs CheckBrief before withContext at :69-73. TestLaunchWithFrozenContextChecksTheBriefAlone confirms that the context is not requested when the brief is refused.",
+      "Size refusal: withContext compares the full assembled bytes against review.MaxReplyBytes and wraps review.ErrInvalidBrief before the reviewer starts and before anything is stored, as S3 a requires.",
+      "Adapter guard (gitexec.go:264-271): the command uses --no-renames, --no-color, --no-ext-diff, --no-textconv and --end-of-options before the full commit names, and runs through the same g.output path as Diff. The binding Diff's extra -c and --attr-source options pin the digest. This diff is not bound to any digest, and with --no-ext-diff and --no-textconv a .gitattributes in the candidate cannot run a driver or a textconv, so I found no reachable security impact.",
+      "Fence building (launch.go longestBacktickRun): the fence is max(3, longest backtick run + 1), and a newline is added when the diff does not end with one. Both cases are pinned by tests.",
+      "No commands were run (review is read-only)."
+    ]
+  }
+}

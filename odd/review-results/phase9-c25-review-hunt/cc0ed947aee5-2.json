@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f28e764858b578bfe83753d92ea93916def8380b",
+    "head": "cc0ed947aee5467134a97e038bba3fad8c5bd510",
+    "diff_sha256": "84606243ec71cbd8bbbd9e3dd33de6b63e574612894c434927d37e833672c598",
+    "paths": [
+      "engine/review/app/app.go",
+      "engine/review/app/fakes_test.go",
+      "engine/review/app/launch.go",
+      "engine/review/app/launch_test.go",
+      "engine/review/app/service.go",
+      "engine/review/gitexec/gitexec.go",
+      "engine/review/gitexec/gitexec_test.go",
+      "engine/review/gitexec/realgit_test.go"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f28e764858b578bfe83753d92ea93916def8380b",
+      "head": "cc0ed947aee5467134a97e038bba3fad8c5bd510",
+      "diff_sha256": "84606243ec71cbd8bbbd9e3dd33de6b63e574612894c434927d37e833672c598"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/review/app/app.go",
+        "engine/review/app/fakes_test.go",
+        "engine/review/app/launch.go",
+        "engine/review/app/launch_test.go",
+        "engine/review/app/service.go",
+        "engine/review/gitexec/gitexec.go",
+        "engine/review/gitexec/gitexec_test.go",
+        "engine/review/gitexec/realgit_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the full diff at the scratchpad diff-t3.patch.",
+      "Launch without WithFrozenContext is unchanged: the new branch is guarded by s.frozenContext, which defaults to false, and CheckBrief still runs on the parent's brief alone before the context is read. The test asserts no FunctionContextDiff call without the option.",
+      "The Git interface gained one method. A grep for Paths implementers found only gitexec.Git and the app fakeGit, and both gained FunctionContextDiff in this diff, so no other implementer is left uncompiled.",
+      "FunctionContextDiffArgs keeps the guard of the canonical diff: --no-renames, --no-color, --no-ext-diff, --no-textconv and --end-of-options before the commits. It is pinned by an args test and a real-git test.",
+      "withContext sizes the whole brief plus context against review.MaxReplyBytes and returns an error wrapping ErrInvalidBrief. The fence is longer than any backtick run in the diff, and a trailing newline is added when the diff lacks one. Tests cover both cases.",
+      "The reviewer is started only after the context is built, so a git error or an oversize refusal stops Launch before any reviewer call or stored result. Tests cover both.",
+      "Not run: I did not execute any tests or builds."
+    ]
+  }
+}

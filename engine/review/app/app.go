@@ -94,6 +94,9 @@ type Git interface {
 	// SHA-256 is the diff_sha256 of the binding. They are the same for the same two commits whichever
 	// commit is checked out, whichever user configuration git reads and whatever the environment says.
 	Diff(repo Repository, base, head string) ([]byte, error)
+	// FunctionContextDiff returns what `git diff --no-renames --function-context` prints from base to head, both full
+	// names: every changed function whole, for a reviewer to read (C25 T3, S3 a). Nothing is bound to its bytes.
+	FunctionContextDiff(repo Repository, base, head string) ([]byte, error)
 	// Paths returns the paths the diff from base to head changes, once each, in the order git prints
 	// them, byte for byte, with a rename counted as the removal of the old path and the creation of the
 	// new one.
