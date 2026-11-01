@@ -296,12 +296,12 @@ func TestErrcheckThatCannotLoadThePackagesDidNotRun(t *testing.T) {
 // when a package does not load, printing the compiler's errors, which have the finding shape (v0.1.2, observed
 // 2026-11-01). Only the exit status 3 is a report.
 func TestNilerrReadsItsFindingsFromItsStandardErrorWhenItExitsThree(t *testing.T) {
-	log := bin(t, map[string]stub{"nilerr": {exit: 3, stderr: "/abs/mod/a/x.go:14:3: error is not nil (line 13) but it returns nil\n"}})
+	log := bin(t, map[string]stub{"nilerr": {exit: 3, stderr: "/abs/mod/a/x.go:14:3: error is not nil (line 13) but it returns nil\n/abs/mod/a/x.go:30:2: error is nil (line 28) but it returns error\n"}})
 	root := copyOf(t)
 
 	got, err := tools(t).Nilerr(root, "mod", []string{"./a", "./gone"})
 
-	want := []string{"/abs/mod/a/x.go:14:3: error is not nil (line 13) but it returns nil"}
+	want := []string{"/abs/mod/a/x.go:14:3: error is not nil but it returns nil", "/abs/mod/a/x.go:30:2: error is nil but it returns error"}
 	if err != nil || !reflect.DeepEqual(got, want) {
 		t.Errorf("Nilerr = %q, %v, want %q, nil", got, err, want)
 	}

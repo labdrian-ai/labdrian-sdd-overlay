@@ -55,6 +55,11 @@ var errcheckLine = regexp.MustCompile(`(?m)^([^:\t\n]+:\d+:\d+):\t`)
 // over engine/cmd on 2026-11-01), so that a changed usage line is no finding of the sweep.
 const errcheckExcludes = "fmt.Fprint\nfmt.Fprintf\nfmt.Fprintln\n"
 
+// nilerrLine is the line of the check of the error that a nilerr message names (`error is not nil (line 13) but it
+// returns nil`). It is taken out, as the position is when lines are compared (review.NormalizeFinding): kept, a commit
+// that adds a line above a finding of the base would make that finding new.
+var nilerrLine = regexp.MustCompile(` \(line \d+\)`)
+
 // Runner starts a program in dir with exactly the environment it is given and returns what it printed on its standard
 // output and its standard error, apart. ExecRunner is the process adapter.
 type Runner interface {
@@ -164,7 +169,7 @@ func (t Tools) Nilerr(root, module string, packages []string) ([]string, error) 
 		return nil, nil
 	}
 	var exit *exec.ExitError
-	if lines := findingLines(stderr); len(lines) > 0 && ranToAnExit(ctx, err) && errors.As(err, &exit) && exit.ExitCode() == 3 {
+	if lines := findingLines(nilerrLine.ReplaceAll(stderr, nil)); len(lines) > 0 && ranToAnExit(ctx, err) && errors.As(err, &exit) && exit.ExitCode() == 3 {
 		return lines, nil
 	}
 	return nil, fmt.Errorf("%w: nilerr: %v%s", app.ErrToolDidNotRun, err, said(stderr))

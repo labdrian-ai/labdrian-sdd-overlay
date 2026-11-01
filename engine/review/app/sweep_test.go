@@ -339,18 +339,18 @@ func TestSweepAddsTheNewLinesOfErrcheckAndNilerrOverThePackagesOfTheChangedFiles
 	s.git.modules = []string{"mod"}
 	s.tools.out["Errcheck /state/base mod ./a"] = []string{"a/x.go:3:2: unchecked error: defer f.Close()"}
 	s.tools.out["Errcheck /state/head mod ./a"] = []string{"a/x.go:5:2: unchecked error: defer f.Close()", "a/x.go:9:2: unchecked error: os.Remove(p)"}
-	s.tools.out["Nilerr /state/head mod ./a"] = []string{"/state/head/mod/a/x.go:14:3: error is not nil (line 13) but it returns nil"}
+	s.tools.out["Nilerr /state/head mod ./a"] = []string{"/state/head/mod/a/x.go:14:3: error is not nil but it returns nil"}
 
 	got := s.mustSweep()
 
 	want := []review.SweepT2{
 		{Tool: "errcheck", Module: "mod", New: []string{"a/x.go: unchecked error: os.Remove(p)"}},
-		{Tool: "nilerr", Module: "mod", New: []string{"mod/a/x.go: error is not nil (line 13) but it returns nil"}},
+		{Tool: "nilerr", Module: "mod", New: []string{"mod/a/x.go: error is not nil but it returns nil"}},
 	}
 	if t2 := s.stored().Findings.T2; !reflect.DeepEqual(t2, want) {
 		t.Errorf("stored t2 = %v, want %v: the new lines only, a line of the base dropped", t2, want)
 	}
-	wantIDs := []string{"T2 errcheck mod: a/x.go: unchecked error: os.Remove(p)", "T2 nilerr mod: mod/a/x.go: error is not nil (line 13) but it returns nil"}
+	wantIDs := []string{"T2 errcheck mod: a/x.go: unchecked error: os.Remove(p)", "T2 nilerr mod: mod/a/x.go: error is not nil but it returns nil"}
 	if got.Outcome != review.OutcomeFired || !reflect.DeepEqual(got.Candidates, wantIDs) {
 		t.Errorf("outcome = %q, candidates = %q, want fired with %q", got.Outcome, got.Candidates, wantIDs)
 	}
