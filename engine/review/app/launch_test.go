@@ -167,6 +167,45 @@ func replyWithoutSeverity(t *testing.T, c review.Candidate) []byte {
 	return data
 }
 
+// replyWithLocation is a reply of c with one WARNING finding at location, otherwise valid.
+func replyWithLocation(t *testing.T, c review.Candidate, location string) []byte {
+	t.Helper()
+	reply := map[string]any{
+		"candidate":  map[string]string{"base": c.Base, "head": c.Head, "diff_sha256": c.DiffSHA256},
+		"inspection": map[string]any{"status": "completed", "paths": c.Paths, "reason": ""},
+		"findings": []any{map[string]any{
+			"id": "F1", "location": location, "severity": "WARNING", "claim": "an empty input panics",
+			"evidence_class": "inferential", "causal_disposition": "introduced", "proof_refs": []string{},
+		}},
+		"evidence": []string{"read every changed path"},
+	}
+	data, err := json.Marshal(reply)
+	if err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+	return data
+}
+
+// A reply whose location has no line is refused for its shape: the reviewer is asked again once with the refusal
+// quoted, and the second reply is stored (C26 S4).
+func TestLaunchAsksAgainOnceWhenALocationHasNoLine(t *testing.T) {
+	service, _, store, reviewer, c, brief := launchWorld(t)
+	reviewer.replies = [][]byte{replyWithLocation(t, c, "fsstore.go:readFile"), replyWithLocation(t, c, "fsstore.go:12")}
+	got, err := service.Launch("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", "default", "gpt-5.5", brief)
+	if err != nil {
+		t.Fatalf("Launch() error = %v, want the second reply recorded", err)
+	}
+	if len(reviewer.calls) != 2 {
+		t.Fatalf("the reviewer was asked %d times, want twice", len(reviewer.calls))
+	}
+	if tail := string(reviewer.calls[1].brief[len(brief):]); !strings.Contains(tail, `findings[0] has location "fsstore.go:readFile"`) {
+		t.Errorf("the re-ask after the brief is %q, want it to quote the location refusal", tail)
+	}
+	if name := review.ResultName(c, got.Number); store.created() != 1 || !bytes.Contains(store.files["own-rdd"][name], []byte(`fsstore.go:12`)) {
+		t.Errorf("the store holds %q after %d creates, want the second reply stored once", store.files["own-rdd"][name], store.created())
+	}
+}
+
 // A reply refused for its shape is asked for again once, with the brief followed by the refusal, and the second
 // reply is what is recorded (phase9-c25-review-hunt S7).
 func TestLaunchAsksAgainOnceWhenTheReplyIsRefusedForItsShape(t *testing.T) {

@@ -1,6 +1,7 @@
 package reviewresult_test
 
 import (
+	"errors"
 	"reflect"
 	"strings"
 	"testing"
@@ -408,5 +409,61 @@ func TestParseRefusesAnEchoOfAnotherCandidate(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// A new reply is held to the location rule of C26 S4: every finding's location is a path, a colon and a line or a
+// range of lines. The rule is a separate check over a parsed Result and not a rule of Parse, so a result stored
+// before it still parses.
+func TestCheckLocationsRequiresAPathAndALine(t *testing.T) {
+	for _, tt := range []struct {
+		name     string
+		location string
+		refused  bool
+	}{
+		{"a line", "a.go:12", false},
+		{"a range", "a.go:3-9", false},
+		{"a path with a space", "my dir/a.go:7", false},
+		{"a path with a colon", "dir:x/a.go:7", false},
+		{"no line", "a.go", true},
+		{"a symbol after the colon", "fsstore.go:readFile", true},
+		{"a sentence after the colon", "ci.yml:Committed actuals records validate", true},
+		{"line zero", "a.go:0", true},
+		{"an open range", "a.go:12-", true},
+		{"no path", ":12", true},
+		{"empty", "", true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			result := reviewresult.Result{Findings: []reviewresult.Finding{
+				{ID: "F1", Location: "a.go:1"},
+				{ID: "F2", Location: tt.location},
+			}}
+			err := reviewresult.CheckLocations(result)
+			if !tt.refused {
+				if err != nil {
+					t.Fatalf("CheckLocations() error = %v, want nil", err)
+				}
+				return
+			}
+			if !errors.Is(err, reviewresult.ErrInvalidLocation) {
+				t.Fatalf("CheckLocations() error = %v, want one that is %v", err, reviewresult.ErrInvalidLocation)
+			}
+			for _, part := range []string{"findings[1]", `"` + tt.location + `"`} {
+				if !strings.Contains(err.Error(), part) {
+					t.Errorf("CheckLocations() error = %v, want it to name %s", err, part)
+				}
+			}
+		})
+	}
+}
+
+// Parse itself does not hold a location to the rule, so a result stored with one that has no line is still read.
+func TestParseStillAcceptsALocationWithoutALine(t *testing.T) {
+	got, err := reviewresult.Parse(edit(t, `"engine/guard_test.go:7"`, `"engine/guard_test.go"`), binding())
+	if err != nil {
+		t.Fatalf("Parse() error = %v, want nil", err)
+	}
+	if len(got.Findings) != 2 || got.Findings[1].Location != "engine/guard_test.go" {
+		t.Errorf("Parse() findings = %+v, want the second to keep its location", got.Findings)
 	}
 }

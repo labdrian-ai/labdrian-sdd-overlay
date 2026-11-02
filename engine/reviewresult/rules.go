@@ -2,6 +2,7 @@ package reviewresult
 
 import (
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -161,6 +162,24 @@ func checkFindings(r Result, _ Binding) error {
 		}
 		if err := checkProof(f); err != nil {
 			return err
+		}
+	}
+	return nil
+}
+
+// locationPattern is a path, a colon and a line or a range of lines. The path is anything, a space or a colon
+// included, since a repository may hold such a path; the line numbers start at 1. A range whose end is before
+// its start is not refused.
+var locationPattern = regexp.MustCompile(`^.+:[1-9][0-9]*(?:-[1-9][0-9]*)?$`)
+
+// CheckLocations requires the location of every finding of a parsed result to be path:line or path:start-end,
+// and returns ErrInvalidLocation, naming the first finding that breaks it by its index. It is not a rule of
+// Parse: Parse also reads the results stored before the rule, which must stay readable, so a caller that
+// records a new reply asks it after Parse.
+func CheckLocations(r Result) error {
+	for i, f := range r.Findings {
+		if !locationPattern.MatchString(f.Location) {
+			return fmt.Errorf("%w: findings[%d] has location %q, want path:line or path:start-end", ErrInvalidLocation, i, f.Location)
 		}
 	}
 	return nil

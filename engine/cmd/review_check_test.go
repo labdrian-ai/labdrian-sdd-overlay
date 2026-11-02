@@ -153,6 +153,41 @@ func TestCheckNamesTheVerdictAndTheFindingsToFixAndToCarry(t *testing.T) {
 	}
 }
 
+// A result stored before the location rule of C26 S4 may hold a location without a line. `record` refuses such a reply
+// now, but the rule is not applied when a stored result is read again: verify and check still read it.
+func TestCheckStillReadsAStoredResultWhoseLocationHasNoLine(t *testing.T) {
+	w := newCheckedWorld(t)
+	b := w.bind()
+	if _, stderr, exits := w.run(reply(t, b, withThreeFindings), "record", "--feature", "own-rdd", "--base", w.base, "--head", w.head, "--rows", "default"); !equalInts(exits, []int{0}) {
+		t.Fatalf("setup: review record exit calls = %v, stderr = %q; want [0]", exits, stderr)
+	}
+	stored := filepath.Join(w.results("own-rdd"), w.head[:12]+"-1.json")
+	data, err := os.ReadFile(stored)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n := strings.Count(string(data), `"a.txt:2"`); n == 0 {
+		t.Fatalf("setup: the stored result holds %d locations a.txt:2, want some", n)
+	}
+	if err := os.WriteFile(stored, []byte(strings.ReplaceAll(string(data), `"a.txt:2"`, `"a.txt"`)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	verdicts := `{"verdicts":[` +
+		`{"id":"F1","result":"not-reproduced","command":"go test ./...","output":"ok","base_result":"not-run"},` +
+		`{"id":"F2","result":"not-run","command":"","output":"not checked","base_result":"not-run"},` +
+		`{"id":"F3","result":"not-run","command":"","output":"not checked","base_result":"not-run"}]}`
+	if _, stderr, exits := w.run(verdicts, "verify", "--feature", "own-rdd", "--stored", w.head[:12]+"-1.json"); !equalInts(exits, []int{0}) {
+		t.Fatalf("setup: review verify of a stored location without a line exit calls = %v, stderr = %q; want [0]", exits, stderr)
+	}
+	w.sweepAll()
+
+	stdout, stderr, exits := w.run("", "check", "--feature", "own-rdd", "--head", w.head)
+
+	if !strings.Contains(stdout, `"outcome": "clear"`) || stderr != "" || !equalInts(exits, []int{0}) {
+		t.Errorf("stdout = %q, stderr = %q, exits = %v; want a clear outcome, nothing on stderr and [0]", stdout, stderr, exits)
+	}
+}
+
 // Everything that keeps a head from delivery is exit 1 with the reason named on stderr, and nothing on stdout: the
 // head was never reviewed (or another head was), the result blocks, a severe finding was never checked, the stored
 // result is not the one git binds now, the stored file is not a result any more.

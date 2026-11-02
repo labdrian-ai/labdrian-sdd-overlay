@@ -267,7 +267,8 @@ Commands:
                                              with the lens rows the reviewer was sent (--rows is required: ids of
                                              roles/reviewer/rows.json, separated by commas) as
                                              odd/review-results/NAME/HEAD12-N.json, never over a file; print the
-                                             record skeleton for roles append (exit 0 stored, 2 reply refused, 1 error)
+                                             record skeleton for roles append; a finding whose location is not path:line or
+                                             path:start-end is refused (exit 0 stored, 2 reply refused, 1 error)
                                    verify --feature NAME --stored RESULT [--verdicts FILE|-] [--cwd REPO]
                                              hold a verifier's reply to the stored result, decide whether the review
                                              blocks and store it beside the result as HEAD12-N.verifier.json, never
@@ -362,8 +363,9 @@ Commands:
                                              base, the full head, the diff_sha256 and the worktree path of the
                                              binding; a codex that fails or leaves no last message is an error that
                                              names codex and repeats what it printed on stderr, and nothing is
-                                             stored; a reply refused for its shape is asked for again once, the
-                                             brief followed by ## Your previous reply was refused and the refusal
+                                             stored; a reply refused for its shape (a member missing, a value outside its
+                                             enumeration, a location that is not path:line) is asked for again once,
+                                             the brief followed by ## Your previous reply was refused and the refusal
                                              (its first 1024 bytes), unless that is over the reply limit; a
                                              refusal of the second reply, or of the binding or the inspection, is
                                              not asked again, and a re-ask the reviewer does not answer leaves

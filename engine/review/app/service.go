@@ -164,7 +164,12 @@ func (s Service) Record(dir, feature, base, head, rows string, reply []byte) (Re
 	if err != nil {
 		return Recorded{}, err
 	}
-	if _, err := reviewresult.Parse(reply, candidate.Binding()); err != nil {
+	parsed, err := reviewresult.Parse(reply, candidate.Binding())
+	if err == nil {
+		// A new reply is held to the location rule; Parse is not, because it also reads stored results.
+		err = reviewresult.CheckLocations(parsed)
+	}
+	if err != nil {
 		return Recorded{}, &ReplyRefusedError{Err: err}
 	}
 	file, err := review.EncodeResult(candidate, ids, reply)
