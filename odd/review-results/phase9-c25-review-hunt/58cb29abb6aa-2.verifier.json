@@ -1,0 +1,11 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "go test -count=1 -v ./review/app/ -run TestProbeStderr in archives of 58cb29ab (/tmp/tmp.5TljVXK7Cw) and 6a4e0cd9 (/tmp/tmp.HjiAQ6fX0i)",
+      "output": "Head: the returned error is only the first refusal; contains STDERR-MARKER false. Base: err=claude exited 1: STDERR-MARKER: review: the reviewer did not answer.",
+      "base_result": "not-reproduced"
+    }
+  ]
+}

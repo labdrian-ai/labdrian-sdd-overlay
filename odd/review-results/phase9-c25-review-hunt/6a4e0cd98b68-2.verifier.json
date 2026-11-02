@@ -1,0 +1,18 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "go test -count=1 -v ./review/app/ -run TestProbe in an archive of 6a4e0cd98b68 plus a probe test (scratch /tmp/tmp.iLtnyxdCMO)",
+      "output": "calls=2 err=codex exited 1: review: the reviewer did not answer; is ErrReviewerDidNotAnswer=true, is ReplyRefusedError=false. Base: Launch calls Review once, no re-ask.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "same probe, TestProbeF2: first reply with a 4096-byte unknown top-level member name",
+      "output": "second brief len=4493 vs first 187, second contains the 4096-byte name. Base: no re-ask, brief never extended.",
+      "base_result": "not-reproduced"
+    }
+  ]
+}

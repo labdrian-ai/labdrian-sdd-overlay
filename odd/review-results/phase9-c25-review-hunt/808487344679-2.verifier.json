@@ -1,0 +1,11 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "not-reproduced",
+      "command": "read tools/review-bench/README.md:40-65, tools/review-bench/score.sh and S2(c); jq on corpus.json R17/R22 defect lines; same at 64212403 via git show",
+      "output": "README rule: located in the defect file within its lines ±3; score.sh window from-3..to+3. R17 window 86-96 overlaps the finding 84-88; R22 window 139-147 holds line 146. Both are located under the written rule.",
+      "base_result": "not-reproduced"
+    }
+  ]
+}

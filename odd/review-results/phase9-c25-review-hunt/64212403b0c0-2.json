@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ce097030e9133dfcbae2feec2969389a2469fbd9",
+    "head": "64212403b0c038363b1656a287792ff526fc0733",
+    "diff_sha256": "5681cb6e6ba188d78be390ccbf9a3c30a990627bdb48e665f2a5f661bf5704dc",
+    "paths": [
+      "README.md",
+      "engine/review/app/launch.go"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "ce097030e9133dfcbae2feec2969389a2469fbd9",
+      "head": "64212403b0c038363b1656a287792ff526fc0733",
+      "diff_sha256": "5681cb6e6ba188d78be390ccbf9a3c30a990627bdb48e665f2a5f661bf5704dc"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "README.md",
+        "engine/review/app/launch.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the full diff: a README line re-join and a rewritten Launch doc comment; no code change.",
+      "Compared the new comment against launch.go lines 79-96: an unanswered re-ask returns &ReplyRefusedError{Err: fmt.Errorf(... first.Err, err)}, which wraps the first refusal reason and appends the re-ask failure, as the comment states.",
+      "reAsk only returns ok when errors.As finds a *ReplyRefusedError, so first is non-nil on that path.",
+      "No commands or tests run."
+    ]
+  }
+}

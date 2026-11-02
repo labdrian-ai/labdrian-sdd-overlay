@@ -1,0 +1,113 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "64212403b0c038363b1656a287792ff526fc0733",
+    "head": "8084873446790c9d09da4b2db44288457e1f9134",
+    "diff_sha256": "87d6c44da71a447b9ddfb0656b03c42e66320f5fd5469ae8a76a6aef83083c25",
+    "paths": [
+      "odd/review-results/phase9-c25-review-hunt/58cb29abb6aa-1.sweep.json",
+      "odd/review-results/phase9-c25-review-hunt/58cb29abb6aa-2.json",
+      "odd/review-results/phase9-c25-review-hunt/58cb29abb6aa-2.verifier.json",
+      "odd/review-results/phase9-c25-review-hunt/58cb29abb6aa-3.json",
+      "odd/review-results/phase9-c25-review-hunt/58cb29abb6aa-3.verifier.json",
+      "odd/review-results/phase9-c25-review-hunt/58cb29abb6aa-4.polisher.json",
+      "odd/review-results/phase9-c25-review-hunt/58cb29abb6aa-5.polisher.json",
+      "odd/review-results/phase9-c25-review-hunt/64212403b0c0-1.sweep.json",
+      "odd/review-results/phase9-c25-review-hunt/64212403b0c0-2.json",
+      "odd/review-results/phase9-c25-review-hunt/64212403b0c0-2.verifier.json",
+      "odd/review-results/phase9-c25-review-hunt/6a4e0cd98b68-1.sweep.json",
+      "odd/review-results/phase9-c25-review-hunt/6a4e0cd98b68-2.json",
+      "odd/review-results/phase9-c25-review-hunt/6a4e0cd98b68-2.verifier.json",
+      "odd/review-results/phase9-c25-review-hunt/6a4e0cd98b68-3.polisher.json",
+      "odd/review-results/phase9-c25-review-hunt/6a4e0cd98b68-4.json",
+      "odd/review-results/phase9-c25-review-hunt/6a4e0cd98b68-4.verifier.json",
+      "odd/review-results/phase9-c25-review-hunt/6a4e0cd98b68-5.polisher.json",
+      "odd/review-results/phase9-c25-review-hunt/9b8c8ccec90e-1.sweep.json",
+      "odd/review-results/phase9-c25-review-hunt/9b8c8ccec90e-2.json",
+      "odd/review-results/phase9-c25-review-hunt/9b8c8ccec90e-2.verifier.json",
+      "odd/review-results/phase9-c25-review-hunt/c516f9eadbab-1.sweep.json",
+      "odd/review-results/phase9-c25-review-hunt/c516f9eadbab-2.json",
+      "odd/review-results/phase9-c25-review-hunt/c516f9eadbab-2.verifier.json",
+      "odd/review-results/phase9-c25-review-hunt/ce097030e913-1.sweep.json",
+      "odd/review-results/phase9-c25-review-hunt/ce097030e913-2.json",
+      "odd/review-results/phase9-c25-review-hunt/ce097030e913-2.verifier.json",
+      "odd/review-results/phase9-c25-review-hunt/ce097030e913-3.polisher.json",
+      "odd/review-results/phase9-c25-review-hunt/ce097030e913-4.json",
+      "odd/review-results/phase9-c25-review-hunt/ce097030e913-4.verifier.json",
+      "odd/review-results/phase9-c25-review-hunt/ce097030e913-5.polisher.json",
+      "odd/tasks/phase9-c25-review-hunt.md",
+      "tools/review-bench/scores/ours.json"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "64212403b0c038363b1656a287792ff526fc0733",
+      "head": "8084873446790c9d09da4b2db44288457e1f9134",
+      "diff_sha256": "87d6c44da71a447b9ddfb0656b03c42e66320f5fd5469ae8a76a6aef83083c25"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/review-results/phase9-c25-review-hunt/58cb29abb6aa-1.sweep.json",
+        "odd/review-results/phase9-c25-review-hunt/58cb29abb6aa-2.json",
+        "odd/review-results/phase9-c25-review-hunt/58cb29abb6aa-2.verifier.json",
+        "odd/review-results/phase9-c25-review-hunt/58cb29abb6aa-3.json",
+        "odd/review-results/phase9-c25-review-hunt/58cb29abb6aa-3.verifier.json",
+        "odd/review-results/phase9-c25-review-hunt/58cb29abb6aa-4.polisher.json",
+        "odd/review-results/phase9-c25-review-hunt/58cb29abb6aa-5.polisher.json",
+        "odd/review-results/phase9-c25-review-hunt/64212403b0c0-1.sweep.json",
+        "odd/review-results/phase9-c25-review-hunt/64212403b0c0-2.json",
+        "odd/review-results/phase9-c25-review-hunt/64212403b0c0-2.verifier.json",
+        "odd/review-results/phase9-c25-review-hunt/6a4e0cd98b68-1.sweep.json",
+        "odd/review-results/phase9-c25-review-hunt/6a4e0cd98b68-2.json",
+        "odd/review-results/phase9-c25-review-hunt/6a4e0cd98b68-2.verifier.json",
+        "odd/review-results/phase9-c25-review-hunt/6a4e0cd98b68-3.polisher.json",
+        "odd/review-results/phase9-c25-review-hunt/6a4e0cd98b68-4.json",
+        "odd/review-results/phase9-c25-review-hunt/6a4e0cd98b68-4.verifier.json",
+        "odd/review-results/phase9-c25-review-hunt/6a4e0cd98b68-5.polisher.json",
+        "odd/review-results/phase9-c25-review-hunt/9b8c8ccec90e-1.sweep.json",
+        "odd/review-results/phase9-c25-review-hunt/9b8c8ccec90e-2.json",
+        "odd/review-results/phase9-c25-review-hunt/9b8c8ccec90e-2.verifier.json",
+        "odd/review-results/phase9-c25-review-hunt/c516f9eadbab-1.sweep.json",
+        "odd/review-results/phase9-c25-review-hunt/c516f9eadbab-2.json",
+        "odd/review-results/phase9-c25-review-hunt/c516f9eadbab-2.verifier.json",
+        "odd/review-results/phase9-c25-review-hunt/ce097030e913-1.sweep.json",
+        "odd/review-results/phase9-c25-review-hunt/ce097030e913-2.json",
+        "odd/review-results/phase9-c25-review-hunt/ce097030e913-2.verifier.json",
+        "odd/review-results/phase9-c25-review-hunt/ce097030e913-3.polisher.json",
+        "odd/review-results/phase9-c25-review-hunt/ce097030e913-4.json",
+        "odd/review-results/phase9-c25-review-hunt/ce097030e913-4.verifier.json",
+        "odd/review-results/phase9-c25-review-hunt/ce097030e913-5.polisher.json",
+        "odd/tasks/phase9-c25-review-hunt.md",
+        "tools/review-bench/scores/ours.json"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "tools/review-bench/scores/ours.json:156-184",
+        "severity": "SUGGESTION",
+        "claim": "S2 (c) credits only a finding located in the defect's file within the defect's lines; R17's quoted finding sits at held_linux.go:84-88 vs defect lines 89-93 and R22's at review.go:146 vs lines 142-144, both outside the corpus lines, yet they are scored 0.5 and 1 and L14 does not say a line offset (likely head vs base shift) was accepted; a strict reading would score the hold-out at 0-1.0 for ours. The verdict (not met) is unchanged either way since stricter only lowers our score, but the rule's application is undocumented, which weakens the record as a measurement.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-c25-review-hunt.md S2 (c)",
+          "tools/review-bench/corpus.json R17 lines 89-93, R22 lines 142-144",
+          "odd/tasks/phase9-c25-review-hunt.md L14 scores"
+        ]
+      }
+    ],
+    "evidence": [
+      "Summed scores/gentle.json: 3.5 all, 1.5 hold-out, 2.5 R9-R23; matches L14",
+      "Summed scores/ours.json: 2.5 all, 1.5 hold-out, 1.5 R9-R23; matches L14",
+      "Verdict follows from S1: 1.5 not strictly above 1.5, and 1,540,093 > 1,136,084; bar numbers match L5; byte totals not re-checked against out-of-repo run outputs",
+      "R7 and R22 state the defects; R17 0.5 reasonable",
+      "L13/T9 commits all have records; the 30 record paths match the diff; T7/T9 checkboxes, S7 edit and L14 counts consistent"
+    ]
+  }
+}

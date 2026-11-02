@@ -2,6 +2,7 @@ package app_test
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -9,13 +10,17 @@ import (
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review/app"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/reviewresult"
 )
 
-// fakeReviewer is the Reviewer port with a canned answer. It records every call.
+// fakeReviewer is the Reviewer port with a canned answer. It records every call. With replies, call n answers
+// replies[n] (the last one again past the end) instead of reply.
 type fakeReviewer struct {
-	reply []byte
-	err   error
-	calls []reviewerCall
+	reply   []byte
+	replies [][]byte
+	err     error
+	errs    []error // with errs, call n fails with errs[n] (nil past the end) instead of err
+	calls   []reviewerCall
 }
 
 type reviewerCall struct {
@@ -25,7 +30,17 @@ type reviewerCall struct {
 
 func (r *fakeReviewer) Review(worktree, model string, brief []byte) ([]byte, error) {
 	r.calls = append(r.calls, reviewerCall{worktree: worktree, model: model, brief: brief})
-	return r.reply, r.err
+	err := r.err
+	if r.errs != nil {
+		err = nil
+		if n := len(r.calls) - 1; n < len(r.errs) {
+			err = r.errs[n]
+		}
+	}
+	if len(r.replies) > 0 {
+		return r.replies[min(len(r.calls), len(r.replies))-1], err
+	}
+	return r.reply, err
 }
 
 // launchWorld is a Service over the fakes with a reviewer, and the brief that names the binding of the candidate.
@@ -129,6 +144,131 @@ func TestLaunchRefusesAReplyAsRecordDoes(t *testing.T) {
 	}
 	if store.created() != 0 {
 		t.Errorf("Create calls = %d, want nothing written", store.created())
+	}
+}
+
+// replyWithoutSeverity is a reply of c with one finding that has no severity member: the refusal of the first T7 run
+// (phase9-c25-review-hunt L12), a reply refused for its shape.
+func replyWithoutSeverity(t *testing.T, c review.Candidate) []byte {
+	t.Helper()
+	reply := map[string]any{
+		"candidate":  map[string]string{"base": c.Base, "head": c.Head, "diff_sha256": c.DiffSHA256},
+		"inspection": map[string]any{"status": "completed", "paths": c.Paths, "reason": ""},
+		"findings": []any{map[string]any{
+			"id": "F1", "location": c.Paths[0] + ":1", "claim": "an empty input panics",
+			"evidence_class": "inferential", "causal_disposition": "introduced", "proof_refs": []string{},
+		}},
+		"evidence": []string{"read every changed path"},
+	}
+	data, err := json.Marshal(reply)
+	if err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+	return data
+}
+
+// A reply refused for its shape is asked for again once, with the brief followed by the refusal, and the second
+// reply is what is recorded (phase9-c25-review-hunt S7).
+func TestLaunchAsksAgainOnceWhenTheReplyIsRefusedForItsShape(t *testing.T) {
+	service, _, store, reviewer, c, brief := launchWorld(t)
+	reviewer.replies = [][]byte{replyWithoutSeverity(t, c), replyFor(t, c)}
+	got, err := service.Launch("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", "default", "gpt-5.5", brief)
+	if err != nil {
+		t.Fatalf("Launch() error = %v, want the second reply recorded", err)
+	}
+	if len(reviewer.calls) != 2 {
+		t.Fatalf("the reviewer was asked %d times, want twice", len(reviewer.calls))
+	}
+	again := reviewer.calls[1]
+	if again.worktree != reviewer.calls[0].worktree || again.model != "gpt-5.5" || !bytes.HasPrefix(again.brief, brief) {
+		t.Fatalf("the second call was %+v, want the same worktree and model and a brief that starts with the first", again)
+	}
+	tail := string(again.brief[len(brief):])
+	for _, want := range []string{"## Your previous reply was refused", `findings[0] has no "severity" member`, "Reply again with the whole JSON object"} {
+		if !strings.Contains(tail, want) {
+			t.Errorf("the re-ask after the brief is %q, want it to hold %q", tail, want)
+		}
+	}
+	name := review.ResultName(c, got.Number)
+	if store.created() != 1 || !bytes.Contains(store.files["own-rdd"][name], []byte(`"findings": []`)) {
+		t.Errorf("the store holds %q after %d creates, want the second reply stored once", store.files["own-rdd"][name], store.created())
+	}
+}
+
+// A second refusal is not asked for again: Launch returns it and stores nothing.
+func TestLaunchReturnsTheSecondRefusalOfAShape(t *testing.T) {
+	service, _, store, reviewer, c, brief := launchWorld(t)
+	reviewer.reply = replyWithoutSeverity(t, c)
+	_, err := service.Launch("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", "default", "gpt-5.5", brief)
+	var refused *app.ReplyRefusedError
+	if !errors.As(err, &refused) || !strings.Contains(err.Error(), `has no "severity" member`) {
+		t.Fatalf("Launch() error = %v, want the *ReplyRefusedError of the second reply", err)
+	}
+	if len(reviewer.calls) != 2 || store.created() != 0 {
+		t.Errorf("the reviewer was asked %d times and %d files created, want twice and nothing written", len(reviewer.calls), store.created())
+	}
+}
+
+// A reviewer that does not answer the re-ask leaves the first refusal as the outcome: a refusal still, not a reviewer
+// failure, that says why the re-ask failed, and nothing stored.
+func TestLaunchReturnsTheFirstRefusalWhenTheReAskIsNotAnswered(t *testing.T) {
+	service, _, store, reviewer, c, brief := launchWorld(t)
+	reviewer.replies = [][]byte{replyWithoutSeverity(t, c), nil}
+	reviewer.errs = []error{nil, fmt.Errorf("claude exited 1: %w", app.ErrReviewerDidNotAnswer)}
+	_, err := service.Launch("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", "default", "gpt-5.5", brief)
+	var refused *app.ReplyRefusedError
+	if !errors.As(err, &refused) || errors.Is(err, app.ErrReviewerDidNotAnswer) || !errors.Is(err, reviewresult.ErrUnparseable) || !strings.Contains(err.Error(), `has no "severity" member`) {
+		t.Fatalf("Launch() error = %v, want the first *ReplyRefusedError and not the reviewer's failure", err)
+	}
+	if !strings.Contains(err.Error(), "the re-ask was not answered: claude exited 1") {
+		t.Errorf("Launch() says %q, want it to say the re-ask's failure after the refusal", err)
+	}
+	if len(reviewer.calls) != 2 || store.created() != 0 {
+		t.Errorf("the reviewer was asked %d times and %d files created, want twice and nothing written", len(reviewer.calls), store.created())
+	}
+}
+
+// The refusal a re-ask quotes is bounded: a member name of any length in the reply does not grow the second brief
+// with it.
+func TestLaunchQuotesABoundedRefusal(t *testing.T) {
+	service, _, _, reviewer, c, brief := launchWorld(t)
+	long := strings.Repeat("y", 4096)
+	unknown := bytes.Replace(replyFor(t, c), []byte(`{"candidate"`), []byte(`{"`+long+`":1,"candidate"`), 1)
+	reviewer.replies = [][]byte{unknown, replyFor(t, c)}
+	if _, err := service.Launch("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", "default", "gpt-5.5", brief); err != nil {
+		t.Fatalf("Launch() error = %v, want the second reply recorded", err)
+	}
+	if len(reviewer.calls) != 2 {
+		t.Fatalf("the reviewer was asked %d times, want twice", len(reviewer.calls))
+	}
+	tail := string(reviewer.calls[1].brief[len(brief):])
+	if strings.Contains(tail, long) || !strings.Contains(tail, " ...") || len(tail) > 1024+256 {
+		t.Errorf("the re-ask after the brief is %d bytes (%.80q...), want the refusal cut to 1024 bytes and marked with ' ...'", len(tail), tail)
+	}
+}
+
+// A refusal that is not of the shape (here an echo of another candidate) is returned at once, as Record refuses it.
+func TestLaunchDoesNotAskAgainWhenTheReplyIsRefusedForItsBinding(t *testing.T) {
+	service, _, _, reviewer, c, brief := launchWorld(t)
+	reviewer.reply = replyWith(t, c.Base, c.Head, strings.Repeat("0", 64), "completed", c.Paths)
+	_, err := service.Launch("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", "default", "gpt-5.5", brief)
+	if !errors.Is(err, reviewresult.ErrCandidateMismatch) || len(reviewer.calls) != 1 {
+		t.Fatalf("Launch() error = %v after %d calls, want ErrCandidateMismatch after one", err, len(reviewer.calls))
+	}
+}
+
+// A re-ask that would take the brief over review.MaxReplyBytes is not sent: the first refusal is returned.
+func TestLaunchDoesNotAskAgainOverTheBound(t *testing.T) {
+	service, _, store, reviewer, c, brief := launchWorld(t)
+	brief = append(brief, bytes.Repeat([]byte("x"), review.MaxReplyBytes-len(brief)-10)...)
+	reviewer.replies = [][]byte{replyWithoutSeverity(t, c), replyFor(t, c)}
+	_, err := service.Launch("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", "default", "gpt-5.5", brief)
+	var refused *app.ReplyRefusedError
+	if !errors.As(err, &refused) || !errors.Is(err, reviewresult.ErrUnparseable) {
+		t.Fatalf("Launch() error = %v, want the first *ReplyRefusedError", err)
+	}
+	if len(reviewer.calls) != 1 || store.created() != 0 {
+		t.Errorf("the reviewer was asked %d times and %d files created, want once and nothing written", len(reviewer.calls), store.created())
 	}
 }
 

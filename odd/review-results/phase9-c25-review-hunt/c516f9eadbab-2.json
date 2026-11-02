@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "58cb29abb6aa3c9880abf35c12bd0c32268fc014",
+    "head": "c516f9eadbab6fedb10ce30be6df2048c1b9df8d",
+    "diff_sha256": "784c051f8c6bef8143763c0df055204e2ce442837cd89b164a26f4caa4d06e74",
+    "paths": [
+      "odd/tasks/phase9-c25-review-hunt.md"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "58cb29abb6aa3c9880abf35c12bd0c32268fc014",
+      "head": "c516f9eadbab6fedb10ce30be6df2048c1b9df8d",
+      "diff_sha256": "784c051f8c6bef8143763c0df055204e2ce442837cd89b164a26f4caa4d06e74"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-c25-review-hunt.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the full diff: only the T7 and T9 task lines of odd/tasks/phase9-c25-review-hunt.md change.",
+      "T7 now names T9 (S7, L12) committed and its binary built as a prerequisite; T9 now reads Risk: item 3, the same form as T8.",
+      "L12 says S7 and T9 come before T7 re-runs every real case and that T7 stays open, consistent with both.",
+      "No code or tests changed; docs-only."
+    ]
+  }
+}

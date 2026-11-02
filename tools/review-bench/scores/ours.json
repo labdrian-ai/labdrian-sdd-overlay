@@ -1,0 +1,117 @@
+[
+  {
+    "id": "R1",
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R2",
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R3",
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R4",
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R5",
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R6",
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R7",
+    "score": 1,
+    "quote": "readBounded uses os.Stat followed by os.ReadFile. This follows symlinks and does not require a regular file, and the size check and the read are separate. The sibling adapter oddtask/fsdoc is documented to read only a regular file that is not a link. A symlinked or special odd/tasks/<feature>.md is therefore read, and a FIFO would block the command."
+  },
+  {
+    "id": "R8",
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R9",
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R10",
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R11",
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R12",
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R13",
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R14",
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R15",
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R16",
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R17",
+    "score": 0.5,
+    "quote": "In createHeld, if dir.Sync() fails after linkat succeeded, Create returns an error although the result file is already published under its final name. A caller that sees the error and retries gets app.ErrExists, because the file is there."
+  },
+  {
+    "id": "R18",
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R19",
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R20",
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R21",
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R22",
+    "score": 1,
+    "quote": "Candidate.Short slices c.Head[:12] without a length check. The zero Candidate, which the package documents as names nothing and which NewCandidate returns alongside an error, makes Short panic."
+  },
+  {
+    "id": "R23",
+    "score": 0,
+    "quote": ""
+  }
+]

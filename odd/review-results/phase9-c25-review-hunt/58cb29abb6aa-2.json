@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "6a4e0cd98b68dc1ba91521fd28ddda185b6ad151",
+    "head": "58cb29abb6aa3c9880abf35c12bd0c32268fc014",
+    "diff_sha256": "5d447a112273cf3c4cefdf18451a745af2a5dba0d22ca47900ed3064495ec48f",
+    "paths": [
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/cmd/usage.go",
+      "engine/review/app/launch.go",
+      "engine/review/app/launch_test.go"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "6a4e0cd98b68dc1ba91521fd28ddda185b6ad151",
+      "head": "58cb29abb6aa3c9880abf35c12bd0c32268fc014",
+      "diff_sha256": "5d447a112273cf3c4cefdf18451a745af2a5dba0d22ca47900ed3064495ec48f"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/cmd/usage.go",
+        "engine/review/app/launch.go",
+        "engine/review/app/launch_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/review/app/launch.go:86-88",
+        "severity": "SUGGESTION",
+        "claim": "When the re-ask fails, the reviewer's own error (e.g. codex/claude exit status and stderr) is discarded and only the first refusal is returned; this matches the requested contract but loses the diagnostic that the re-ask failed due to a reviewer breakage, so the owner cannot tell why. Consider wrapping/annotating the first refusal with that cause (still errors.As to *ReplyRefusedError).",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/app/launch.go:86-88"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read full diff",
+      "Verified launch.go already imports strings (used by the new truncation)",
+      "Verified ErrReviewerDidNotAnswer is defined in package app so the new test compiles",
+      "Finding 1 (first refusal on unanswered re-ask): resolved",
+      "Finding 2 (bounded quote): resolved",
+      "Finding 3 (help text): resolved; usage.sh and README.md do not mention the 1024-byte quote bound that usage.go does, a minor asymmetry",
+      "Not run: no tests or builds executed (read-only review)"
+    ]
+  }
+}

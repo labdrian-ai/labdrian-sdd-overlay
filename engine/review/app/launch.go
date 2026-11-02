@@ -3,9 +3,11 @@ package app
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/reviewresult"
 )
 
 // Reviewer is the port that starts a reviewer over a worktree and answers what it replied. The adapter wraps
@@ -41,7 +43,10 @@ func (s Service) WithFrozenContext() Service {
 // full names of the bound candidate and rows. Everything that can be refused is refused before the reviewer starts, in
 // this order: the feature, the rows, the model, the binding, a diff over review.DiffLimitBytes, a brief that is not
 // the brief of the candidate, and, with WithFrozenContext, a brief and context over review.MaxReplyBytes. An error of
-// the reviewer is returned as it is and nothing is stored; a reply Record refuses is the *ReplyRefusedError of Record.
+// the reviewer is returned as it is and nothing is stored; a reply Record refuses for its shape is asked for again
+// once (reAsk), and a reply Record refuses after that, or for anything else, is the *ReplyRefusedError of Record; a
+// reviewer that does not answer the re-ask leaves a *ReplyRefusedError of the first refusal's reason, its message
+// followed by the failure of the re-ask.
 func (s Service) Launch(dir, feature, base, head, rows, model string, brief []byte) (Recorded, error) {
 	if s.reviewer == nil {
 		return Recorded{}, ErrNoReviewer
@@ -75,7 +80,49 @@ func (s Service) Launch(dir, feature, base, head, rows, model string, brief []by
 	if err != nil {
 		return Recorded{}, err
 	}
+	recorded, refusal := s.Record(dir, feature, c.Base, c.Head, rows, reply)
+	again, ok := reAsk(brief, refusal)
+	if !ok {
+		return recorded, refusal
+	}
+	if reply, err = s.reviewer.Review(bound.Worktree, model, again); err != nil {
+		// A reviewer that does not answer the re-ask leaves the first refusal as the outcome of the launch, with the
+		// failure of the re-ask (and the stderr the adapter put in it) said after it, not wrapped.
+		var first *ReplyRefusedError
+		errors.As(refusal, &first)
+		return Recorded{}, &ReplyRefusedError{Err: fmt.Errorf("%w; the re-ask was not answered: %v", first.Err, err)}
+	}
 	return s.Record(dir, feature, c.Base, c.Head, rows, reply)
+}
+
+// maxQuotedRefusal bounds the refusal a re-ask quotes: its text can echo a member name of the reply, of any length.
+const maxQuotedRefusal = 1024
+
+// shapeRefusals are the refusals of a reply that is not in the shape of the contract, which a reviewer asked again
+// can mend: a member missing, unknown or of the wrong type, an id missing or repeated, a value outside its
+// enumeration, a severe finding with no proof. A reply refused for its binding or its inspection is not asked again.
+var shapeRefusals = []error{
+	reviewresult.ErrUnparseable, reviewresult.ErrUnknownMember, reviewresult.ErrMissingID,
+	reviewresult.ErrDuplicateID, reviewresult.ErrOutsideEnum, reviewresult.ErrMissingProof,
+}
+
+// reAsk is the brief of the one time Launch asks the reviewer again (phase9-c25-review-hunt S7): brief followed by a
+// heading that quotes the refusal err of the first reply, its first maxQuotedRefusal bytes. It is false when err is not
+// a *ReplyRefusedError of a shapeRefusals reason, or when the re-ask would be over review.MaxReplyBytes.
+func reAsk(brief []byte, err error) ([]byte, bool) {
+	var refused *ReplyRefusedError
+	if !errors.As(err, &refused) || !slices.ContainsFunc(shapeRefusals, func(reason error) bool { return errors.Is(refused.Err, reason) }) {
+		return nil, false
+	}
+	quoted := refused.Err.Error()
+	if len(quoted) > maxQuotedRefusal {
+		quoted = strings.ToValidUTF8(quoted[:maxQuotedRefusal], "") + " ..."
+	}
+	again := fmt.Sprintf("%s\n\n## Your previous reply was refused\n\n%s\n\nReply again with the whole JSON object of the contract: every member of every object present, none null.\n", brief, quoted)
+	if len(again) > review.MaxReplyBytes {
+		return nil, false
+	}
+	return []byte(again), true
 }
 
 // withContext is brief followed by a heading that names the base and the head of c and their function-context diff in
