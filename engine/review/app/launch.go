@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review"
@@ -31,8 +32,8 @@ func (s Service) WithReviewer(r Reviewer) Service {
 }
 
 // WithFrozenContext is the Service whose Launch hands the reviewer, after the brief, the -U3 diff of the candidate
-// and the line of its changed paths (C25 T3, S3 a; C26 T3, S3): for a reviewer with no tool, the whole of what it can inspect. Without it Launch hands the
-// brief alone.
+// and the line of its changed paths (C25 T3, S3 a; phase9-c26-review-contract S3): for a reviewer with no tool, the
+// whole of what it can inspect. Without it Launch hands the brief alone.
 func (s Service) WithFrozenContext() Service {
 	s.frozenContext = true
 	return s
@@ -128,8 +129,9 @@ func reAsk(brief []byte, err error) ([]byte, bool) {
 }
 
 // withContext is brief followed by a heading that names the base and the head of c, a line `changed paths: <path>,
-// <path>` of c.Paths, and their -U3 diff in one fenced block, whose fence is longer than any run of backticks in the diff. Brief and context together over
-// review.MaxReplyBytes are refused with an error that wraps review.ErrInvalidBrief.
+// <path>` of c.Paths (changedPaths), and their -U3 diff in one fenced block, whose fence is longer than any run of
+// backticks in the diff. Brief and context together over review.MaxReplyBytes are refused with an error that wraps
+// review.ErrInvalidBrief.
 func (s Service) withContext(dir string, c review.Candidate, brief []byte) ([]byte, error) {
 	repo, err := s.git.Locate(dir)
 	if err != nil {
@@ -142,7 +144,7 @@ func (s Service) withContext(dir string, c review.Candidate, brief []byte) ([]by
 	fence := strings.Repeat("`", max(3, longestBacktickRun(diff)+1))
 	var b strings.Builder
 	b.Write(brief)
-	fmt.Fprintf(&b, "\n\n## Frozen context (base %s, head %s)\n\nchanged paths: %s\n\n%sdiff\n", c.Base, c.Head, strings.Join(c.Paths, ", "), fence)
+	fmt.Fprintf(&b, "\n\n## Frozen context (base %s, head %s)\n\nchanged paths: %s\n\n%sdiff\n", c.Base, c.Head, changedPaths(c.Paths), fence)
 	b.Write(diff)
 	if len(diff) > 0 && diff[len(diff)-1] != '\n' {
 		b.WriteByte('\n')
@@ -152,6 +154,20 @@ func (s Service) withContext(dir string, c review.Candidate, brief []byte) ([]by
 		return nil, fmt.Errorf("%w: the brief and its frozen context are %d bytes, the maximum is %d", review.ErrInvalidBrief, b.Len(), review.MaxReplyBytes)
 	}
 	return []byte(b.String()), nil
+}
+
+// changedPaths writes paths joined by ", ". The line sits outside the fenced block, so a path that holds a character Go
+// would escape (a line break among them), a quote, or ", " is written in Go quotes: it cannot start a line of its own
+// nor be read as two paths. A plain path is written as it is.
+func changedPaths(paths []string) string {
+	written := make([]string, len(paths))
+	for i, p := range paths {
+		written[i] = p
+		if quoted := strconv.Quote(p); quoted != `"`+p+`"` || strings.Contains(p, ", ") {
+			written[i] = quoted
+		}
+	}
+	return strings.Join(written, ", ")
 }
 
 // longestBacktickRun is the length of the longest run of backticks in text.
