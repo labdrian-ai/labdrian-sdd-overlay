@@ -85,8 +85,11 @@ func (s Service) Launch(dir, feature, base, head, rows, model string, brief []by
 		return recorded, refusal
 	}
 	if reply, err = s.reviewer.Review(bound.Worktree, model, again); err != nil {
-		// A reviewer that does not answer the re-ask leaves the first refusal as the outcome of the launch.
-		return Recorded{}, refusal
+		// A reviewer that does not answer the re-ask leaves the first refusal as the outcome of the launch, with the
+		// failure of the re-ask (and the stderr the adapter put in it) said after it, not wrapped.
+		var first *ReplyRefusedError
+		errors.As(refusal, &first)
+		return Recorded{}, &ReplyRefusedError{Err: fmt.Errorf("%w; the re-ask was not answered: %v", first.Err, err)}
 	}
 	return s.Record(dir, feature, c.Base, c.Head, rows, reply)
 }

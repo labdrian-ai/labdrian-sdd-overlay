@@ -363,10 +363,11 @@ Commands:
                                              binding; a codex that fails or leaves no last message is an error that
                                              names codex and repeats what it printed on stderr, and nothing is
                                              stored; a reply refused for its shape is asked for again once, the
-                                             brief followed by ## Your previous reply was refused and the refusal,
-                                             unless that is over the reply limit; a refusal of the second reply,
-                                             or of the binding or the inspection, is not asked again, and a
-                                             re-ask the reviewer does not answer leaves the first refusal
+                                             brief followed by ## Your previous reply was refused and the refusal
+                                             (its first 1024 bytes), unless that is over the reply limit; a
+                                             refusal of the second reply, or of the binding or the inspection, is
+                                             not asked again, and a re-ask the reviewer does not answer leaves
+                                             the first refusal, with the re-ask's failure said after it
                                              (exit 0 stored, 2 reply refused, 1 usage error or any other failure)
                                    proposals [--cwd REPO]
                                              print, and never run, what the owner may remove: the worktrees other

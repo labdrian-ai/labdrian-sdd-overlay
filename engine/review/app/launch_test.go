@@ -210,15 +210,18 @@ func TestLaunchReturnsTheSecondRefusalOfAShape(t *testing.T) {
 }
 
 // A reviewer that does not answer the re-ask leaves the first refusal as the outcome: a refusal still, not a reviewer
-// failure, and nothing stored.
+// failure, that says why the re-ask failed, and nothing stored.
 func TestLaunchReturnsTheFirstRefusalWhenTheReAskIsNotAnswered(t *testing.T) {
 	service, _, store, reviewer, c, brief := launchWorld(t)
 	reviewer.replies = [][]byte{replyWithoutSeverity(t, c), nil}
 	reviewer.errs = []error{nil, fmt.Errorf("claude exited 1: %w", app.ErrReviewerDidNotAnswer)}
 	_, err := service.Launch("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", "default", "gpt-5.5", brief)
 	var refused *app.ReplyRefusedError
-	if !errors.As(err, &refused) || errors.Is(err, app.ErrReviewerDidNotAnswer) || !strings.Contains(err.Error(), `has no "severity" member`) {
+	if !errors.As(err, &refused) || errors.Is(err, app.ErrReviewerDidNotAnswer) || !errors.Is(err, reviewresult.ErrUnparseable) || !strings.Contains(err.Error(), `has no "severity" member`) {
 		t.Fatalf("Launch() error = %v, want the first *ReplyRefusedError and not the reviewer's failure", err)
+	}
+	if !strings.Contains(err.Error(), "the re-ask was not answered: claude exited 1") {
+		t.Errorf("Launch() says %q, want it to say the re-ask's failure after the refusal", err)
 	}
 	if len(reviewer.calls) != 2 || store.created() != 0 {
 		t.Errorf("the reviewer was asked %d times and %d files created, want twice and nothing written", len(reviewer.calls), store.created())

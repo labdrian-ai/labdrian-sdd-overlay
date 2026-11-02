@@ -253,7 +253,7 @@ func usage(w io.Writer) {
 	fmt.Fprintln(w, "    a brief that names the binding and asks something else passes it, and the reply is still held to the binding by 'review record'. A reply refused for its shape (a member missing, unknown or of the wrong type, an id")
 	fmt.Fprintln(w, "    missing or repeated, a value outside its enumeration, a severe finding with no proof) is asked for again once, the brief followed by ## Your previous reply was refused and the refusal, unless that is over the")
 	fmt.Fprintln(w, "    reply limit (the refusal quoted to its first 1024 bytes); a refusal of the second reply, or of the binding or the inspection, is not asked again, and a re-ask the reviewer does not answer")
-	fmt.Fprintln(w, "    leaves the first refusal. exit 0 stored, 2 reply refused, 1 usage error or any other failure")
+	fmt.Fprintln(w, "    leaves the first refusal, with the re-ask's failure said after it. exit 0 stored, 2 reply refused, 1 usage error or any other failure")
 	fmt.Fprintln(w, "  engine review proposals [--cwd <repo>]")
 	fmt.Fprintln(w, "    prints, and never runs, what the owner may remove: the worktrees of the repository other than the main one and the one of --cwd, not locked, that git marks prunable (git worktree prune) or whose HEAD is an")
 	fmt.Fprintln(w, "    ancestor of the tip of the default branch (origin/HEAD, else main, else master; git worktree remove <path>), then the local branches other than the default one and the one checked out at --cwd that are")
