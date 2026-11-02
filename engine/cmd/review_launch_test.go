@@ -199,7 +199,7 @@ func TestLaunchWithRuntimeClaudeRunsClaudePrintOverTheBriefAndItsFrozenContext(t
 	if a := strings.Join(w.claude.args, " "); !strings.HasPrefix(a, "--print --output-format text --tools  --permission-mode dontAsk") || !strings.Contains(a, "--model gpt-5.5") {
 		t.Errorf("claude arguments = %q; want the tool-free print run with the model", w.claude.args)
 	}
-	if !strings.Contains(w.claude.stdin, "\n\n"+briefOf(b)+"\n\n## Frozen context (base "+b.Base+", head "+b.Head+")\n\n```diff\n") {
+	if !strings.Contains(w.claude.stdin, "\n\n"+briefOf(b)+"\n\n## Frozen context (base "+b.Base+", head "+b.Head+")\n\nchanged paths: "+strings.Join(b.Paths, ", ")+"\n\n```diff\n") {
 		t.Errorf("claude stdin = %q; want the instructions, the brief and its frozen context", w.claude.stdin)
 	}
 	if names := listNames(t, w.results("f")); len(names) != 1 || names[0] != b.Head[:12]+"-1.json" || !strings.Contains(stdout, b.Head[:12]+"-1.json") {

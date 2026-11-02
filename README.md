@@ -788,8 +788,8 @@ overlay review <verb>
         --model <model> --system-prompt <an isolated reviewer's>`, started in the worktree under the same deadline and bounds. Its
         stdin is the body of the deployed Claude agent file (`<claude root>/agents/reviewer.md`, `~/.claude`; a missing
         one, or one the generator did not write, is an error that says run: labdrian-overlay apply --target claude), the
-        brief and the frozen context of the candidate: a heading `## Frozen context (base <base>, head <head>)` and `git
-        diff --no-renames --function-context` in one fenced block, refused with the brief when both are over the reply
+        brief and the frozen context of the candidate: a heading `## Frozen context (base <base>, head <head>)`, a line `changed paths: <path>, <path>` and `git
+        diff --no-renames -U3` in one fenced block, refused with the brief when both are over the reply
         limit. Its stdout is the reply; one with nothing but white space is no answer. `--runtime` takes `claude` or
         `codex`: --runtime must be claude or codex: on Pi the parent launches the reviewer agent natively. `--model` is
         required and passed through, with no default. Refused before the reviewer starts, as exit 1: an unsafe feature, rows that are not rows of `roles/reviewer/rows.json`,

@@ -30,8 +30,8 @@ func (s Service) WithReviewer(r Reviewer) Service {
 	return s
 }
 
-// WithFrozenContext is the Service whose Launch hands the reviewer, after the brief, the function-context diff of the
-// candidate (C25 T3, S3 a): for a reviewer with no tool, the whole of what it can inspect. Without it Launch hands the
+// WithFrozenContext is the Service whose Launch hands the reviewer, after the brief, the -U3 diff of the candidate
+// and the line of its changed paths (C25 T3, S3 a; C26 T3, S3): for a reviewer with no tool, the whole of what it can inspect. Without it Launch hands the
 // brief alone.
 func (s Service) WithFrozenContext() Service {
 	s.frozenContext = true
@@ -127,22 +127,22 @@ func reAsk(brief []byte, err error) ([]byte, bool) {
 	return []byte(again), true
 }
 
-// withContext is brief followed by a heading that names the base and the head of c and their function-context diff in
-// one fenced block, whose fence is longer than any run of backticks in the diff. Brief and context together over
+// withContext is brief followed by a heading that names the base and the head of c, a line `changed paths: <path>,
+// <path>` of c.Paths, and their -U3 diff in one fenced block, whose fence is longer than any run of backticks in the diff. Brief and context together over
 // review.MaxReplyBytes are refused with an error that wraps review.ErrInvalidBrief.
 func (s Service) withContext(dir string, c review.Candidate, brief []byte) ([]byte, error) {
 	repo, err := s.git.Locate(dir)
 	if err != nil {
 		return nil, err
 	}
-	diff, err := s.git.FunctionContextDiff(repo, c.Base, c.Head)
+	diff, err := s.git.ContextDiff(repo, c.Base, c.Head)
 	if err != nil {
 		return nil, fmt.Errorf("read the frozen context: %w", err)
 	}
 	fence := strings.Repeat("`", max(3, longestBacktickRun(diff)+1))
 	var b strings.Builder
 	b.Write(brief)
-	fmt.Fprintf(&b, "\n\n## Frozen context (base %s, head %s)\n\n%sdiff\n", c.Base, c.Head, fence)
+	fmt.Fprintf(&b, "\n\n## Frozen context (base %s, head %s)\n\nchanged paths: %s\n\n%sdiff\n", c.Base, c.Head, strings.Join(c.Paths, ", "), fence)
 	b.Write(diff)
 	if len(diff) > 0 && diff[len(diff)-1] != '\n' {
 		b.WriteByte('\n')

@@ -36,7 +36,7 @@ type Service struct {
 	copies    Copies
 	// reviewer is the port Launch starts a reviewer with; WithReviewer sets it.
 	reviewer Reviewer
-	// frozenContext makes Launch append the function-context diff to the brief; WithFrozenContext sets it.
+	// frozenContext makes Launch append the -U3 diff and the changed paths to the brief; WithFrozenContext sets it.
 	frozenContext bool
 }
 

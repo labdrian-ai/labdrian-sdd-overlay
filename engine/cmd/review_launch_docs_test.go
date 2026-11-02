@@ -21,7 +21,7 @@ var launchFacts = []string{
 	"run: labdrian-overlay apply --target codex",
 	"run: labdrian-overlay apply --target claude",
 	"## Frozen context",
-	"git diff --no-renames --function-context",
+	"git diff --no-renames -U3",
 	"over the 150000-byte limit of one launch",
 	"does not name the full base, the full head, the diff_sha256 and the worktree path of the binding",
 	"names codex and repeats what it printed on stderr",
