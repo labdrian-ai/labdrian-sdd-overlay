@@ -328,7 +328,7 @@ func TestLaunchDoesNotAskAgainOverTheBound(t *testing.T) {
 	}
 }
 
-// frozenWorld is launchWorld with the frozen context on, over a function-context diff of contextDiff.
+// frozenWorld is launchWorld with the frozen context on, over a -U3 diff of contextDiff.
 func frozenWorld(t *testing.T, contextDiff string) (app.Service, *fakeGit, *fakeResults, *fakeReviewer, review.Candidate, []byte) {
 	t.Helper()
 	service, git, store, reviewer, c, brief := launchWorld(t)
