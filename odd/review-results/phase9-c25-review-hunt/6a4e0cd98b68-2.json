@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "9b8c8ccec90e11ff1bd434c7ae751e6562fd60ca",
+    "head": "6a4e0cd98b68dc1ba91521fd28ddda185b6ad151",
+    "diff_sha256": "734929e2c1b6c87077775209a49ee05ab51de083b8fc895310d750a8bd0e4db8",
+    "paths": [
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/cmd/usage.go",
+      "engine/review/app/launch.go",
+      "engine/review/app/launch_test.go"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "9b8c8ccec90e11ff1bd434c7ae751e6562fd60ca",
+      "head": "6a4e0cd98b68dc1ba91521fd28ddda185b6ad151",
+      "diff_sha256": "734929e2c1b6c87077775209a49ee05ab51de083b8fc895310d750a8bd0e4db8"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/cmd/usage.go",
+        "engine/review/app/launch.go",
+        "engine/review/app/launch_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/review/app/launch.go:86-88",
+        "severity": "WARNING",
+        "claim": "When the re-ask call itself fails (reviewer does not answer the second time), Launch returns the second call's error rather than the first refusal; the spec (S7) says a reviewer that does not answer returns the first error as today (the original *ReplyRefusedError), so callers mapping refusal to exit 2 will instead see exit 1 with a different error, and no test covers a reviewer error on the second call.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/app/launch.go:86-88",
+          "odd/tasks/phase9-c25-review-hunt.md S7"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/review/app/launch.go:104",
+        "severity": "SUGGESTION",
+        "claim": "The re-ask quotes refusal text (%v of refused.Err) into the next brief; that text can echo reviewer-controlled strings (e.g. an unknown member name), which is low-risk since the reviewer is already trusted with the brief, but it is unbounded and unescaped.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/app/launch.go:104"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read full diff at diff-fix.patch",
+      "Read engine/review/app/launch.go lines 44-88 in the worktree; brief passed to reAsk already includes the frozen context when WithFrozenContext is on, so the re-ask carries it as required",
+      "Checked shapeRefusals list against the spec: all six named errors present",
+      "Checked tests cover successful re-ask, second refusal, binding refusal, and byte bound; no test covers reviewer error on the second call",
+      "No tests were run"
+    ]
+  }
+}

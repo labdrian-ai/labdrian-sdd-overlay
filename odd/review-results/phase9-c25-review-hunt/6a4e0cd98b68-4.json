@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "9b8c8ccec90e11ff1bd434c7ae751e6562fd60ca",
+    "head": "6a4e0cd98b68dc1ba91521fd28ddda185b6ad151",
+    "diff_sha256": "734929e2c1b6c87077775209a49ee05ab51de083b8fc895310d750a8bd0e4db8",
+    "paths": [
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/cmd/usage.go",
+      "engine/review/app/launch.go",
+      "engine/review/app/launch_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "9b8c8ccec90e11ff1bd434c7ae751e6562fd60ca",
+      "head": "6a4e0cd98b68dc1ba91521fd28ddda185b6ad151",
+      "diff_sha256": "734929e2c1b6c87077775209a49ee05ab51de083b8fc895310d750a8bd0e4db8"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/cmd/usage.go",
+        "engine/review/app/launch.go",
+        "engine/review/app/launch_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the full diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/diff-fix.patch.",
+      "Risk item 3 (contracts others consume): engine/review/app/launch.go:81-89 re-asks only when reAsk accepts the first error and returns the second Record result unchanged; engine/cmd/review.go:607-610 still maps *ReplyRefusedError to exit 2, and a reviewer error on the second run is returned as is (exit 1, nothing stored), so the exit-code contract is unchanged.",
+      "engine/review/app/launch.go:72-76 and 82: with WithFrozenContext, `brief` is reassigned to brief+frozen context before the first Review, so the re-ask carries it; the added size is checked against review.MaxReplyBytes at launch.go:109.",
+      "engine/review/app/service.go:152-170: Record refuses before EncodeResult or any store write, so a refused first reply leaves no stored file, counter or number before the re-ask (test asserts store.created()==1 on success, 0 on second refusal).",
+      "Data/security: engine/review/codexexec/codexexec.go:77-103 creates a fresh MkdirTemp scratch and last-message file per Review call, so the second run cannot read a stale reply from the first; engine/review/claudeprint/claudeprint.go:77-98 starts a new tool-free claude --print with --no-session-persistence; both keep the same read-only sandbox and worktree.",
+      "app.go:254-264: ReplyRefusedError unwraps to the named reviewresult error; shapeRefusals excludes ErrCandidateMismatch and review.ErrReplyTooLarge, so binding, inspection and size refusals still return at once (TestLaunchDoesNotAskAgainWhenTheReplyIsRefusedForItsBinding).",
+      "Concurrency/delivery: no shared state between the two runs; no caller-side timeout around `review launch` found, so a worst case of two 30-minute runs per launch has no impact outside the process.",
+      "Tests: launch_test.go covers re-ask then record, second refusal returned, no re-ask on binding refusal, no re-ask over the size bound; none were run (reviewer is read-only)."
+    ]
+  }
+}

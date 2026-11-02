@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "277b5c9d67b847bd230af39b26c77c5c8ede57c0",
+    "head": "9b8c8ccec90e11ff1bd434c7ae751e6562fd60ca",
+    "diff_sha256": "7b94d346b5586284703580e4062bca016af63f125207c0163c7759c416217137",
+    "paths": [
+      "odd/tasks/phase9-c25-review-hunt.md"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "277b5c9d67b847bd230af39b26c77c5c8ede57c0",
+      "head": "9b8c8ccec90e11ff1bd434c7ae751e6562fd60ca",
+      "diff_sha256": "7b94d346b5586284703580e4062bca016af63f125207c0163c7759c416217137"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-c25-review-hunt.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "odd/tasks/phase9-c25-review-hunt.md:16-17",
+        "severity": "SUGGESTION",
+        "claim": "T7 still reads 'after T6 is delivered' and does not name T9 as a prerequisite, although S7, T9 and L12 say T7 re-runs every real case only after the re-ask lands; the ordering lives only in T9 ('before T7 is scored') and L12, so a reader resuming from T7's line alone could run the measurement without T9. T9 also writes 'Risk: 3' where the other tasks write 'Risk: item N'.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-c25-review-hunt.md:16 (T7 'after T6 is delivered', no T9)",
+          "odd/tasks/phase9-c25-review-hunt.md:17 (T9 'before T7 is scored', 'Risk: 3')"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff of odd/tasks/phase9-c25-review-hunt.md.",
+      "S7 and T9 agree on the refusal list, the one-ask bound, the unchanged reviewer instructions, and the focused tests; S7 states the re-ask is defect-agnostic so S2 (a)'s hold-out rule is not touched (S2 (a) itself was not re-read since the diff does not show it).",
+      "L12 counts are internally consistent: 11 recorded + 12 refused (9 on hunt + 3 on default) = 23 cases, disjoint sets; the hold-out R14-R23 splits into 6 recorded + 4 without result (R17-R20), matching R22 = 1 and R14, R15, R16, R21, R23 = 0.",
+      "The owner's option B text quoted in S7 matches the quote in L12.",
+      "The T6 Delivered line is consistent with T6's commit 2e1245c7 and the PR #714 merge at 277b5c9d."
+    ]
+  }
+}

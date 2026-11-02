@@ -1,0 +1,11 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "rg on odd/tasks/phase9-c25-review-hunt.md at 9b8c8cce and at 277b5c9d",
+      "output": "Head: T7 line names no T9 and reads after T6 is delivered; T9 writes Risk: 3 where other tasks write Risk: item N or Risk: none. Base: no T9 line.",
+      "base_result": "not-reproduced"
+    }
+  ]
+}

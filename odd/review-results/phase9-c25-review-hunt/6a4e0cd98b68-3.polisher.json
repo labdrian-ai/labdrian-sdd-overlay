@@ -1,0 +1,16 @@
+{
+  "kind": "polisher",
+  "base": "9b8c8ccec90e11ff1bd434c7ae751e6562fd60ca",
+  "head": "6a4e0cd98b68dc1ba91521fd28ddda185b6ad151",
+  "diff_sha256": "734929e2c1b6c87077775209a49ee05ab51de083b8fc895310d750a8bd0e4db8",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read full diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/diff-fix.patch.",
+      "Verified the error set in /home/labdrian/labdrian-sdd-overlay-worktrees/review-6a4e0cd98b68/engine/reviewresult/errors.go: shapeRefusals lists exactly the shape errors (ErrUnparseable, ErrUnknownMember, ErrMissingID, ErrDuplicateID, ErrOutsideEnum, ErrMissingProof) and excludes ErrCandidateMismatch, ErrInspectionNotCompleted, ErrPathsMismatch and ErrInvalidBinding, so binding/inspection refusals are not re-asked, as intended and documented.",
+      "Launch re-asks at most once; a reviewer error on the re-ask is returned as is; a re-ask over review.MaxReplyBytes falls back to the first refusal; any other first error is returned unchanged.",
+      "The four new tests cover the intent: shape refusal then success, second refusal returned after two calls, binding mismatch with no re-ask, and re-ask over the bound with no re-ask (not executed by this reviewer).",
+      "README.md, engine/cmd/usage.go and bin/lib/usage.sh describe the behavior the code implements."
+    ]
+  }
+}

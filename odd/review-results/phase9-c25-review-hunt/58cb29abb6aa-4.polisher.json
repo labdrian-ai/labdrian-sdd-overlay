@@ -1,0 +1,38 @@
+{
+  "kind": "polisher",
+  "base": "6a4e0cd98b68dc1ba91521fd28ddda185b6ad151",
+  "head": "58cb29abb6aa3c9880abf35c12bd0c32268fc014",
+  "diff_sha256": "5d447a112273cf3c4cefdf18451a745af2a5dba0d22ca47900ed3064495ec48f",
+  "findings": {
+    "findings": [
+      {
+        "location": "bin/lib/usage.sh:363-369",
+        "claim": "The commit claims bin/lib/usage.sh is aligned with README.md and engine/cmd/usage.go, but usage.sh does not mention that the quoted refusal is truncated to its first 1024 bytes, while README.md and usage.go both state it.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "The diff adds (its first 1024 bytes) to README.md and (the refusal quoted to its first 1024 bytes) to usage.go.",
+          "The diff adds only unless that is over the reply limit; ... leaves the first refusal to usage.sh."
+        ],
+        "severity": "SUGGESTION"
+      },
+      {
+        "location": "engine/review/app/launch.go:86-90",
+        "claim": "When the re-ask fails, the reviewer error is discarded entirely; the operator sees exit 2 and the first refusal, but the second-call error (e.g. claude exited 1 with stderr) is not logged or attached, so the cause of the re-ask failure is invisible.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "return Recorded{}, err became return Recorded{}, refusal on the re-ask error path",
+          "codexexec and claudeprint errors that carry stderr never reach the caller"
+        ],
+        "severity": "SUGGESTION"
+      }
+    ],
+    "evidence": [
+      "Read the full diff",
+      "imports strings and fmt present",
+      "truncation correct for UTF-8; MaxReplyBytes check still applies",
+      "tests assert the first refusal and no stored files; not run"
+    ]
+  }
+}

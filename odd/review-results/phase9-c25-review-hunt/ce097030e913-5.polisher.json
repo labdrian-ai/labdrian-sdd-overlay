@@ -1,0 +1,30 @@
+{
+  "kind": "polisher",
+  "base": "c516f9eadbab6fedb10ce30be6df2048c1b9df8d",
+  "head": "ce097030e9133dfcbae2feec2969389a2469fbd9",
+  "diff_sha256": "7ee418f44e74f65c410cea839bc5624a79e1db4ec5d61792129f59e3261456d2",
+  "findings": {
+    "findings": [
+      {
+        "location": "engine/review/app/launch.go:47-48",
+        "severity": "SUGGESTION",
+        "claim": "The Service.Launch doc comment still says a reviewer that does not answer the re-ask leaves the first refusal, but the commit changed the returned value to a new *ReplyRefusedError whose Err wraps the first refusal Err plus the re-ask failure; every help surface was updated but this Go doc was not.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "launch.go:92 returns &ReplyRefusedError{Err: fmt.Errorf(...)} which is not the same value as refusal",
+          "launch.go:47-48 is outside the diff hunk",
+          "README.md:807, bin/lib/usage.sh:367 and engine/cmd/usage.go:256 all gained with the re-ask failure said after it"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff-fix3.patch",
+      "first cannot be nil at launch.go:91",
+      "New error matches errors.As *ReplyRefusedError and errors.Is the first reason, not ErrReviewerDidNotAnswer",
+      "No doubled prefix",
+      "The test asserts all intended outcomes; not run",
+      "Help surfaces agree; README.md:807-809 has a ragged line break, cosmetic"
+    ]
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "kind": "polisher",
+  "base": "9b8c8ccec90e11ff1bd434c7ae751e6562fd60ca",
+  "head": "6a4e0cd98b68dc1ba91521fd28ddda185b6ad151",
+  "diff_sha256": "734929e2c1b6c87077775209a49ee05ab51de083b8fc895310d750a8bd0e4db8",
+  "findings": {
+    "findings": [
+      {
+        "location": "engine/review/app/launch.go:86-88",
+        "severity": "WARNING",
+        "claim": "When the reviewer does not answer on the re-ask, Launch returns the second call's error instead of the first refusal, although S7 says \"a reviewer that does not answer\" returns \"the first error as today\"; so a codex/claude failure on the re-ask turns the outcome of `review launch` from exit 2 (refusal of the reply it did get) into exit 1 (codex failure), a behavior change the re-ask was meant not to make.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "launch.go:86-88: `if reply, err = s.reviewer.Review(bound.Worktree, model, again); err != nil { return Recorded{}, err }` overwrites err with the reviewer error; the first *ReplyRefusedError held in the earlier `err` (line 81) is discarded.",
+          "odd/tasks/phase9-c25-review-hunt.md:14 (S7): \"any other refusal, a reviewer that does not answer, and a re-ask over `review.MaxReplyBytes` return the first error as today\" - the re-ask-over-bound case is listed alongside it, so the list describes outcomes during the re-ask.",
+          "app.go:254-262 / usage text: *ReplyRefusedError maps to exit 2, any other failure to exit 1; the Reviewer port wraps ErrReviewerDidNotAnswer, which is not a ReplyRefusedError (launch.go:13-22).",
+          "launch_test.go in the diff has no test where the second Review call fails (fakeReviewer.err applies to every call; no test sets it with replies), so this path is unpinned either way."
+        ]
+      },
+      {
+        "location": "bin/lib/usage.sh:365-366",
+        "severity": "SUGGESTION",
+        "claim": "The shell usage text says a shape-refused reply is asked again once but omits the two exceptions the code and the other docs state (no re-ask when it would be over the reply limit; a second refusal is not asked again), so the three help surfaces disagree.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "Diff of bin/lib/usage.sh adds only: \"a reply refused for its shape is asked for again once, the brief followed by ## Your previous reply was refused and the refusal\".",
+          "README.md:803-806 and engine/cmd/usage.go:251-253 in the same diff add: \"unless that is over the reply limit; a refusal of the second reply, or of the binding or the inspection, is not asked again\".",
+          "launch.go:109-111 returns false (no re-ask) when len(again) > review.MaxReplyBytes."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read full diff: /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/diff-fix.patch",
+      "Read /home/labdrian/labdrian-sdd-overlay-worktrees/review-6a4e0cd98b68/engine/review/app/launch.go:1-120 (Launch, shapeRefusals, reAsk, withContext header)",
+      "Grepped engine/reviewresult/errors.go sentinels: shapeRefusals matches the S7 list exactly; excluded are ErrInvalidBinding, ErrCandidateMismatch, ErrInspectionNotCompleted, ErrPathsMismatch",
+      "Grepped Record in engine/review/app/service.go:152-172: ReplyRefusedError wraps either review.ErrReplyTooLarge or the reviewresult.Parse error, so reAsk's filter is correct and too-large replies are not re-asked",
+      "Grepped ReplyRefusedError in app.go:254-262",
+      "Read S7/T9/L12 in odd/tasks/phase9-c25-review-hunt.md",
+      "Confirmed the re-ask brief includes the frozen context (`brief` reassigned at launch.go:73 before reAsk) and is bounded by MaxReplyBytes as S7 requires",
+      "No tests or commands executed (read-only review): not run"
+    ]
+  }
+}

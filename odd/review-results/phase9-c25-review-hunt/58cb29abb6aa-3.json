@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "6a4e0cd98b68dc1ba91521fd28ddda185b6ad151",
+    "head": "58cb29abb6aa3c9880abf35c12bd0c32268fc014",
+    "diff_sha256": "5d447a112273cf3c4cefdf18451a745af2a5dba0d22ca47900ed3064495ec48f",
+    "paths": [
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/cmd/usage.go",
+      "engine/review/app/launch.go",
+      "engine/review/app/launch_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "6a4e0cd98b68dc1ba91521fd28ddda185b6ad151",
+      "head": "58cb29abb6aa3c9880abf35c12bd0c32268fc014",
+      "diff_sha256": "5d447a112273cf3c4cefdf18451a745af2a5dba0d22ca47900ed3064495ec48f"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/cmd/usage.go",
+        "engine/review/app/launch.go",
+        "engine/review/app/launch_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/review/app/launch.go:82-85",
+        "severity": "WARNING",
+        "claim": "When the re-ask Review call fails, Launch discards that error entirely and returns only the first shape refusal. Every reviewer failure of both adapters (exit error, timeout, missing binary, empty last message) wraps ErrReviewerDidNotAnswer with the reviewer stderr, so the cause of the second run never reaches the caller; the launch exits 2 with an old shape refusal and the owner cannot tell the reviewer replied badly from the reviewer crashed or timed out on the second run. No in-repo consumer branches on 1 vs 2 (tools/review-bench/run-ours.sh:62-64), so the reachable impact is lost diagnostics. A fix that keeps the first refusal as the outcome could still attach the second error.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "diff-fix2.patch launch.go hunk: return Recorded{}, err replaced by return Recorded{}, refusal",
+          "engine/review/codexexec/codexexec.go:94,98,101",
+          "engine/review/claudeprint/claudeprint.go:92,95"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff",
+      "Read engine/review/app/launch.go:1-80 in the worktree",
+      "Every adapter failure wraps ErrReviewerDidNotAnswer with stderr",
+      "Consumers of review launch exit codes: run-ours.sh treats any non-zero alike; skills/role-chain/SKILL.md has no exit-code branching",
+      "reAsk truncation slices at 1024 bytes then strings.ToValidUTF8; MaxReplyBytes check still applies",
+      "Docs match the new behavior; the review_launch_docs_test parity tests were not run"
+    ]
+  }
+}
