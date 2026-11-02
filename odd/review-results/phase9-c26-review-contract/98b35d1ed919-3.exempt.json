@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "e338183e4e47b82c38c2e693c3ea1c34f13e771c",
+    "head": "98b35d1ed919f131ecea75d603cec8523998f8e4",
+    "diff_sha256": "b058322855dd9f4cba1c2456e3e96204645f150133d3eb740d15f1b50bcd21a7",
+    "paths": [
+      "odd/goals/phase9-c26-review-contract.json",
+      "odd/tasks/phase9-c26-review-contract.md",
+      "tools/review-bench/scores/gentle.json"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "jq '[.[]|select((.id|ltrimstr(\"R\")|tonumber)>=24)|.score]|add' tools/review-bench/scores/gentle.json; git diff e338183e 98b35d1e -- tools/review-bench/scores/gentle.json",
+        "result": "pass",
+        "output": "Score sum 2, 10 entries; the diff only adds lines (R24-R33), R1-R23 unchanged."
+      },
+      {
+        "command": "jq '[.runs[].in|tonumber]|add' out/R<n>/summary.json for R24-R30, R32, R33; jq -c . out/R31/start.json",
+        "result": "pass",
+        "output": "Total 1094721. R31 start.json: code invalid_request, mutation_outcome not_started."
+      },
+      {
+        "command": "tools/review-bench/score.sh R28 R33",
+        "result": "pass",
+        "output": "exit 0; R28 finding at pi_agents.go:203-207 matches the quote; R33 finding at log.go:105-113 within 101-108 +-3 matches the quote."
+      },
+      {
+        "command": "jq -e . odd/goals/phase9-c26-review-contract.json",
+        "result": "pass",
+        "output": "exit 0"
+      },
+      {
+        "command": "rg -n '\\\\u[0-9a-fA-F]{4}' odd/tasks/phase9-c26-review-contract.md tools/review-bench/scores/gentle.json odd/goals/phase9-c26-review-contract.json",
+        "result": "pass",
+        "output": "No matches, exit 1."
+      },
+      {
+        "command": "git diff --stat e338183e 98b35d1e",
+        "result": "pass",
+        "output": "odd/goals/phase9-c26-review-contract.json, odd/tasks/phase9-c26-review-contract.md, tools/review-bench/scores/gentle.json: 97 insertions, 1 deletion."
+      }
+    ]
+  }
+}

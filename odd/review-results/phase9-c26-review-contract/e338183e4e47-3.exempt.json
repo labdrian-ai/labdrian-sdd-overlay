@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ede93a26528b05d6963940b50150e6306c7d8ea6",
+    "head": "e338183e4e47b82c38c2e693c3ea1c34f13e771c",
+    "diff_sha256": "9b5ad6e3c7c1d8442f7bd2481b92e607bcf48239470f26cd51fc8543da06c29a",
+    "paths": [
+      "odd/tasks/phase9-c26-review-contract.md",
+      "tools/review-bench/README.md",
+      "tools/review-bench/corpus.json"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "jq '[.real[] | select((.id|ltrimstr(\"R\")|tonumber)>=24 and .holdout==true)] | length' tools/review-bench/corpus.json; jq '[.real[] | select(.holdout==true)] | length' tools/review-bench/corpus.json",
+        "result": "pass",
+        "output": "10, then 20"
+      },
+      {
+        "command": "for R24-R33: git rev-parse --verify <head>^{commit} and <base>^{commit} in /home/labdrian/labdrian-sdd-overlay and in ~/labdrian-sdd-overlay-worktrees/review-bench/repo",
+        "result": "pass",
+        "output": "All 10 cases R24-R33 resolved head and base in both repositories."
+      },
+      {
+        "command": "for R24-R33: git diff <base> <head> | wc -c against .bytes, and defect.lines against the head-side hunks of git diff <base> <head> -- <defect.file>",
+        "result": "pass",
+        "output": "Bytes equal the bytes field in all 10 and are at most 150000 (largest R29 134907); defect.lines fall inside a head-side hunk in all 10."
+      },
+      {
+        "command": "cd engine && go test -count=1 ./shelltest/ -run ReviewBench",
+        "result": "pass",
+        "output": "ok github.com/labdrian-ai/labdrian-sdd-overlay/engine/shelltest 0.581s"
+      },
+      {
+        "command": "shellcheck tools/review-bench/*.sh tools/review-bench/shim/claude",
+        "result": "pass",
+        "output": "no findings"
+      },
+      {
+        "command": "rg -n '\\\\u[0-9a-fA-F]{4}' tools/review-bench/corpus.json tools/review-bench/README.md",
+        "result": "pass",
+        "output": "No matches, exit 1."
+      },
+      {
+        "command": "git diff --stat ede93a26 e338183e",
+        "result": "pass",
+        "output": "odd/tasks/phase9-c26-review-contract.md, tools/review-bench/README.md, tools/review-bench/corpus.json: 3 files changed, 62 insertions(+), 1 deletion(-)"
+      }
+    ]
+  }
+}
