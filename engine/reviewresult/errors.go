@@ -41,4 +41,8 @@ var (
 
 	// ErrMissingProof is a BLOCKER or CRITICAL finding that lists no proof reference.
 	ErrMissingProof = errors.New("reviewresult: severe finding without a proof reference")
+
+	// ErrInvalidLocation is a finding whose location is not a path, a colon and a line or a range of lines.
+	// CheckLocations returns it; Parse does not, so a result stored before the rule still parses.
+	ErrInvalidLocation = errors.New("reviewresult: finding location is not path:line or path:start-end")
 )

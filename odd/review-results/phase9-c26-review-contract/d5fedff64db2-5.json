@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "c64c5d74b42ad849dcaa483c5d1d10ddca87a718",
+    "head": "d5fedff64db251c2986066d5f519ee2550c8b7ac",
+    "diff_sha256": "b7bde367ce981d8e80212621edea5f75a2a9b500428907159c2622c7118eb4b5",
+    "paths": [
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/cmd/review_check_test.go",
+      "engine/cmd/review_test.go",
+      "engine/cmd/usage.go",
+      "engine/review/app/launch.go",
+      "engine/review/app/launch_test.go",
+      "engine/review/app/record_test.go",
+      "engine/review/app/service.go",
+      "engine/reviewresult/errors.go",
+      "engine/reviewresult/reviewresult.go",
+      "engine/reviewresult/rules.go",
+      "engine/reviewresult/rules_test.go"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "c64c5d74b42ad849dcaa483c5d1d10ddca87a718",
+      "head": "d5fedff64db251c2986066d5f519ee2550c8b7ac",
+      "diff_sha256": "b7bde367ce981d8e80212621edea5f75a2a9b500428907159c2622c7118eb4b5"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/cmd/review_check_test.go",
+        "engine/cmd/review_test.go",
+        "engine/cmd/usage.go",
+        "engine/review/app/launch.go",
+        "engine/review/app/launch_test.go",
+        "engine/review/app/record_test.go",
+        "engine/review/app/service.go",
+        "engine/reviewresult/errors.go",
+        "engine/reviewresult/reviewresult.go",
+        "engine/reviewresult/rules.go",
+        "engine/reviewresult/rules_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the full diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/t2.diff. I did not read the worktree and ran no tests.",
+      "Service.Record calls the new CheckLocations only after Parse succeeds, and wraps the error in ReplyRefusedError. Parse is unchanged, so stored results still read.",
+      "ErrInvalidLocation is added to shapeRefusals in launch.go, which is what triggers the single re-ask in review launch.",
+      "The regex rejects a bare path, a symbol after the colon, line 0, an open range, an empty path and an empty string. It accepts a path containing spaces or colons.",
+      "The new tests cover the rule at four levels: rules_test.go, record_test.go, launch_test.go, review_test.go and review_check_test.go.",
+      "The usage, README and usage.sh changes match the new behaviour.",
+      "Parent note: the reviewer read the commit 3425b7e8; the parent amended only its message (Risk: item 3 to Risk: 3) to d5fedff6, whose diff_sha256 is the same, and set head to it."
+    ]
+  }
+}

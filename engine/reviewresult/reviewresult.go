@@ -37,6 +37,10 @@
 //     that are values the contract lists (ErrOutsideEnum); and, when it is a BLOCKER or a CRITICAL, at
 //     least one proof reference that is not blank (ErrMissingProof).
 //
+// One more rule is not applied by Parse: CheckLocations requires the location of every finding to be path:line
+// or path:start-end (ErrInvalidLocation). The caller that records a new reply (review/app Service.Record) asks
+// it after Parse; Parse itself also reads the results stored before the rule, which must stay readable.
+//
 // The contract itself is the object that the third line of the delta of roles/reviewer/body.md spells
 // out; tests in engine/skills pin that text and require Parse to accept the object it spells out, so the
 // agent's instructions and these rules cannot drift apart without a test failing.

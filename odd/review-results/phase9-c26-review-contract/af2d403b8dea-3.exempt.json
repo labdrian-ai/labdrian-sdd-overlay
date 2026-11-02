@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "af4d64b3c318072ad51146f4085999742eecc9f6",
+    "head": "af2d403b8dea609ce1dceb6da20d2ba094db5e74",
+    "diff_sha256": "643148e54148002a5f1bce6a5b31cdf40b7fb45e885c679629661d5818a4c5d6",
+    "paths": [
+      "engine/cmd/review_check_test.go",
+      "engine/review/app/launch.go",
+      "engine/review/app/launch_test.go",
+      "engine/review/app/record_test.go",
+      "engine/reviewresult/rules.go",
+      "engine/reviewresult/rules_test.go"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git diff af4d64b3 af2d403b -- engine/reviewresult/rules.go engine/review/app/launch.go | rg '^[+-]' | rg -v '^(\\+\\+\\+|---)' | rg -v '^[+-]\\s*//'",
+        "result": "pass",
+        "output": "No output. Every changed line in the two files is a comment line."
+      },
+      {
+        "command": "git diff --stat af4d64b3 af2d403b",
+        "result": "pass",
+        "output": "Six files, all under engine/: cmd/review_check_test.go (2), review/app/launch.go (3), review/app/launch_test.go (19), review/app/record_test.go (2), reviewresult/rules.go (7), reviewresult/rules_test.go (2). 27 insertions, 8 deletions."
+      },
+      {
+        "command": "cd engine && go test -count=1 ./reviewresult/... ./review/... ./cmd/...",
+        "result": "pass",
+        "output": "All packages ok: reviewresult, review, review/analyzers, review/app, review/claudeprint, review/codexexec, review/fsstore, review/gitexec, cmd (89.184s)."
+      },
+      {
+        "command": "cd engine && go vet ./reviewresult/... ./review/... ./cmd/... && staticcheck ./reviewresult/... ./review/...",
+        "result": "pass",
+        "output": "Both printed nothing."
+      },
+      {
+        "command": "cd engine && gofmt -l reviewresult review cmd",
+        "result": "pass",
+        "output": "Empty."
+      },
+      {
+        "command": "In a mktemp copy of af2d403b with reviewresult.ErrInvalidLocation removed from shapeRefusals: go test -count=1 ./review/app/ -run TestLaunchRefusesASecondLocationWithoutALineAndAsksNoMore",
+        "result": "pass",
+        "output": "The test fails under the mutation (the reviewer was asked 1 times, want 2; the error names the first reply's location), so it is load-bearing."
+      },
+      {
+        "command": "rg -n '\\\\u[0-9a-fA-F]{4}' over the six changed files",
+        "result": "pass",
+        "output": "No matches."
+      }
+    ]
+  }
+}

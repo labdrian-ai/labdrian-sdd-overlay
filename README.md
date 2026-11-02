@@ -630,7 +630,7 @@ overlay review <verb>
         --result, or from stdin) to it with the rules of the reviewer's contract (an echo that differs, an
         inspection that is not completed, paths that differ, a finding id that is missing or repeats, a
         severity, evidence class or disposition outside its enumeration, a BLOCKER or CRITICAL with no proof
-        reference, a reply above 1 MiB), and store it with the binding and the lens rows the reviewer was
+        reference, a finding location that is not `path:line` or `path:start-end`, a reply above 1 MiB), and store it with the binding and the lens rows the reviewer was
         sent (--rows, required: the ids of the rows of roles/reviewer/rows.json, default, readability,
         risk-line and hunt, separated by commas with no space and none written twice; the lens count of a change is the
         number of rows its stored results record) as
@@ -801,7 +801,7 @@ overlay review <verb>
         `~/.codex/config.toml`, so a model provider set only there cannot launch. The check of the brief is textual: a
         brief that names the binding and asks something else passes it, and the reply is still held to the binding by
         `record`. A reply refused for its shape (a member missing, unknown or of the wrong type, an id missing or
-        repeated, a value outside its enumeration, a severe finding with no proof) is asked for again once, the brief
+        repeated, a value outside its enumeration, a severe finding with no proof, a location that is not `path:line` or `path:start-end`) is asked for again once, the brief
         followed by `## Your previous reply was refused` and the refusal (its first 1024 bytes), unless that is over the
         reply limit; a refusal of the second reply, or of the binding or the inspection, is not asked again, and a
         re-ask the reviewer does not answer leaves the first refusal, with the re-ask's failure said after it. Whether

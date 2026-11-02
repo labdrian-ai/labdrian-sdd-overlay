@@ -345,6 +345,31 @@ func TestRecordRefusesAReplyThatDoesNotHoldToTheBindingAndStoresNothing(t *testi
 	}
 }
 
+// A new reply is held to the location rule of phase9-c26-review-contract S4: a finding whose location is not path:line is refused with
+// ErrInvalidLocation and nothing is stored. A location with a line is stored.
+func TestRecordRefusesAFindingWhoseLocationHasNoLineAndStoresNothing(t *testing.T) {
+	for _, location := range []string{"a.go", "fsstore.go:readFile", "a.go:0", "a.go:12-"} {
+		t.Run(location, func(t *testing.T) {
+			g, store := newFakeGit(), newFakeResults()
+			c := candidateOf(t, g)
+			_, err := app.New(g, store).Record("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", "default", replyWithLocation(t, c, location))
+
+			var refused *app.ReplyRefusedError
+			if !errors.As(err, &refused) || !errors.Is(err, reviewresult.ErrInvalidLocation) {
+				t.Fatalf("Record() error = %v, want a *app.ReplyRefusedError that is %v", err, reviewresult.ErrInvalidLocation)
+			}
+			if len(store.calls) != 0 {
+				t.Errorf("store calls = %q, want none for a refused reply", store.calls)
+			}
+		})
+	}
+	g, store := newFakeGit(), newFakeResults()
+	c := candidateOf(t, g)
+	if _, err := app.New(g, store).Record("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", "default", replyWithLocation(t, c, "a.go:3-9")); err != nil {
+		t.Errorf("Record() error = %v for a location with a range, want nil", err)
+	}
+}
+
 // The size of a reply is bounded by the command, and the rule is the domain's: one byte over is refused.
 func TestRecordRefusesAReplyAboveTheLimit(t *testing.T) {
 	g, store := newFakeGit(), newFakeResults()

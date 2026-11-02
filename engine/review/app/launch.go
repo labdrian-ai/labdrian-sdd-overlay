@@ -100,10 +100,12 @@ const maxQuotedRefusal = 1024
 
 // shapeRefusals are the refusals of a reply that is not in the shape of the contract, which a reviewer asked again
 // can mend: a member missing, unknown or of the wrong type, an id missing or repeated, a value outside its
-// enumeration, a severe finding with no proof. A reply refused for its binding or its inspection is not asked again.
+// enumeration, a severe finding with no proof, a location that is not path:line. A reply refused for its binding or
+// its inspection is not asked again.
 var shapeRefusals = []error{
 	reviewresult.ErrUnparseable, reviewresult.ErrUnknownMember, reviewresult.ErrMissingID,
 	reviewresult.ErrDuplicateID, reviewresult.ErrOutsideEnum, reviewresult.ErrMissingProof,
+	reviewresult.ErrInvalidLocation,
 }
 
 // reAsk is the brief of the one time Launch asks the reviewer again (phase9-c25-review-hunt S7): brief followed by a

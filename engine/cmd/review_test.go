@@ -610,6 +610,12 @@ func TestRecordRefusesAReplyThatDoesNotHoldAndWritesNothing(t *testing.T) {
 				"location": "a.txt:1", "claim": "it breaks", "proof_refs": []any{},
 			}}
 		}), "reviewresult: severe finding without a proof reference"},
+		{"a location without a line", reply(t, b, func(o map[string]any) {
+			o["findings"] = []any{map[string]any{
+				"id": "F1", "severity": "WARNING", "causal_disposition": "introduced", "evidence_class": "inferential",
+				"location": "fsstore.go:readFile", "claim": "it breaks", "proof_refs": []any{},
+			}}
+		}), "reviewresult: finding location is not path:line or path:start-end"},
 		{"prose", "I looked at it and it is fine.", "reviewresult: unparseable reply"},
 		{"nothing", "", "reviewresult: unparseable reply"},
 		{"a reply that is too large", strings.Repeat(" ", review.MaxReplyBytes+1), "review: reply too large"},

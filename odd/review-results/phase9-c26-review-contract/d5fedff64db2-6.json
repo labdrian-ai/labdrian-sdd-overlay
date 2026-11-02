@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "c64c5d74b42ad849dcaa483c5d1d10ddca87a718",
+    "head": "d5fedff64db251c2986066d5f519ee2550c8b7ac",
+    "diff_sha256": "b7bde367ce981d8e80212621edea5f75a2a9b500428907159c2622c7118eb4b5",
+    "paths": [
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/cmd/review_check_test.go",
+      "engine/cmd/review_test.go",
+      "engine/cmd/usage.go",
+      "engine/review/app/launch.go",
+      "engine/review/app/launch_test.go",
+      "engine/review/app/record_test.go",
+      "engine/review/app/service.go",
+      "engine/reviewresult/errors.go",
+      "engine/reviewresult/reviewresult.go",
+      "engine/reviewresult/rules.go",
+      "engine/reviewresult/rules_test.go"
+    ]
+  },
+  "rows": [
+    "default"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "c64c5d74b42ad849dcaa483c5d1d10ddca87a718",
+      "head": "d5fedff64db251c2986066d5f519ee2550c8b7ac",
+      "diff_sha256": "b7bde367ce981d8e80212621edea5f75a2a9b500428907159c2622c7118eb4b5"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/cmd/review_check_test.go",
+        "engine/cmd/review_test.go",
+        "engine/cmd/usage.go",
+        "engine/review/app/launch.go",
+        "engine/review/app/launch_test.go",
+        "engine/review/app/record_test.go",
+        "engine/review/app/service.go",
+        "engine/reviewresult/errors.go",
+        "engine/reviewresult/reviewresult.go",
+        "engine/reviewresult/rules.go",
+        "engine/reviewresult/rules_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/cmd/usage.go:181",
+        "severity": "WARNING",
+        "claim": "The diff adds 'a finding whose location is not path:line or path:start-end ... is refused' to the help text of 'engine review verify'. That is false. Verify reads the stored result with reviewresult.Parse only (engine/review/app/verify.go:187) and never calls CheckLocations, and the verifier reply holds verdicts, not finding locations. The new test TestCheckStillReadsAStoredResultWhoseLocationHasNoLine in engine/cmd/review_check_test.go needs 'review verify' to exit 0 on a stored result whose location is 'a.txt'. So the help text for verify now says it refuses something it accepts on purpose, and it contradicts S4: the location rule applies only when a reply is recorded, not when a stored result is read again.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/usage.go:181",
+          "engine/review/app/verify.go:187",
+          "engine/cmd/review_check_test.go:80"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/t2.diff (401 lines)",
+      "Service.Record calls CheckLocations after Parse and wraps the error in ReplyRefusedError (service.go hunk at line 164). The record command maps this to exit 2, which the new review_test.go table case checks.",
+      "ErrInvalidLocation is added to shapeRefusals in launch.go. CheckLocations wraps it with %w, so errors.Is matches and the single re-ask is triggered. TestLaunchAsksAgainOnceWhenALocationHasNoLine pins this.",
+      "Parse itself is unchanged, so stored results still parse. TestParseStillAcceptsALocationWithoutALine and the check test pin this.",
+      "Grepped every reviewresult.Parse call site in the worktree engine: only Record calls CheckLocations, and Verify does not.",
+      "Read engine/cmd/usage.go lines 160-184 in the worktree to compare the record and verify help text.",
+      "Checked locationPattern against the S4 criteria and the rules_test.go table.",
+      "No commands were run: tests and builds were not run.",
+      "Parent note: the reviewer read the commit 3425b7e8; the parent amended only its message (Risk: item 3 to Risk: 3) to d5fedff6, whose diff_sha256 is the same, and set head to it."
+    ]
+  }
+}
