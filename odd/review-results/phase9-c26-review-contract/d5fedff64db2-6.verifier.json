@@ -1,0 +1,11 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "bat -p -r 163:182 engine/cmd/usage.go; go test -count=1 ./cmd/ -run TestCheckStillReadsAStoredResultWhoseLocationHasNoLine -v (engine/, head worktree); git show c64c5d74:engine/cmd/usage.go | rg -c path:line",
+      "output": "usage.go:181 is in the review verify help and says a location without a line is refused; the test passes, so verify exits 0 on such a stored result. The base has no such sentence.",
+      "base_result": "not-reproduced"
+    }
+  ]
+}

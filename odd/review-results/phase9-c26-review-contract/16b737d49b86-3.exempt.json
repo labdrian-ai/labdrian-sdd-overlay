@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "d5fedff64db251c2986066d5f519ee2550c8b7ac",
+    "head": "16b737d49b86b6dc782095ba48836332ca5fd58c",
+    "diff_sha256": "66c053ae607d972dd0f09e0ba8c808718c15e45854631cad0d67c6ef07858217",
+    "paths": [
+      "engine/cmd/usage.go"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git diff --stat d5fedff6 16b737d4",
+        "result": "pass",
+        "output": "engine/cmd/usage.go | 2 +-, 1 file changed, 1 insertion(+), 1 deletion(-)"
+      },
+      {
+        "command": "git show 16b737d4:engine/cmd/usage.go | rg -n 'path:line'",
+        "result": "pass",
+        "output": "Lines 171 (review record help) and 254 (re-ask of review launch) only; none in the review verify block."
+      },
+      {
+        "command": "git show 16b737d4:engine/cmd/usage.go and c64c5d74:engine/cmd/usage.go | rg -n 'A reply that does not hold writes nothing and the error names the rule it broke. exit 0 stored, 2 reply refused'",
+        "result": "pass",
+        "output": "Head and base line 181 identical."
+      },
+      {
+        "command": "cd engine && go test -count=1 ./cmd/... && go vet ./cmd/...",
+        "result": "pass",
+        "output": "ok github.com/labdrian-ai/labdrian-sdd-overlay/engine/cmd 88.806s; go vet printed nothing"
+      },
+      {
+        "command": "cd engine && gofmt -l cmd/",
+        "result": "pass",
+        "output": "empty"
+      }
+    ]
+  }
+}
