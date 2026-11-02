@@ -113,5 +113,55 @@
     "id": "R23",
     "score": 0,
     "quote": ""
+  },
+  {
+    "id": "R24",
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R25",
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R26",
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R27",
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R28",
+    "score": 1,
+    "quote": "A package agents read failure other than a missing directory, such as a permission error, is now silently swallowed whenever the home agents directory lists cleanly. The error is returned only when both the package listing and the home listing fail."
+  },
+  {
+    "id": "R29",
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R30",
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R31",
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R32",
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R33",
+    "score": 1,
+    "quote": "Append writes the line with a single f.Write and does not check for a short write. The file is opened with O_NONBLOCK, so a FIFO or special file at the sidecar path (not a symlink) would be opened without blocking. A partial write would leave a truncated JSONL line that the next append then continues, corrupting the"
   }
 ]

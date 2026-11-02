@@ -55,6 +55,12 @@ No hold-out defect text, class or diff enters any design artifact (brief templat
 change to one of those after the hold-out is recorded voids it. The bar of C25 is measured on the hold-out alone;
 numbers over all real cases are evidence only.
 
+C26 (`odd/tasks/phase9-c26-review-contract.md`) grows a second, fresh hold-out: R24 onward, also marked
+`"holdout": true`, taken newest-first from the `fix` commits older than the oldest fix C25 walked (`5dfdeba6`). The bars
+are separate: the C25 bar is on R14-R23 and the C26 bar is on R24 onward. No defect text, class or diff of R24 onward
+enters a design artifact (the schema, the preamble, the diff command, the location pattern, the bench brief); a change
+to one of those after the corpus commit is logged and voids that hold-out.
+
 ## Scoring rule
 
 1 when a finding of any severity, or a new analyzer line, is located in the defect's file within its lines ±3 and its
