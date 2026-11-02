@@ -178,7 +178,7 @@ func usage(w io.Writer) {
 	fmt.Fprintln(w, "    odd/review-results/<feature>/<head12>-<n>.verifier.json, never over an existing file (a result has one verdict). stdout is the skeleton of the role handoff for 'roles append --stdin' as")
 	fmt.Fprintln(w, "    'review record' prints it, with evidence review-diff, review-result and verifier-report and to_role filled (builder when the review blocks, delivery when it is clear); stderr says the")
 	fmt.Fprintln(w, "    decision. There is at most one correction round per candidate: a verdict that blocks another head of a base whose review a stored verdict already blocked is refused and nothing is stored.")
-	fmt.Fprintln(w, "    A reply that does not hold writes nothing and the error names the rule it broke; a finding whose location is not path:line or path:start-end (a symbol or a sentence after the colon, no line) is refused. exit 0 stored, 2 reply refused, 1 usage error, a spent correction round or any other failure")
+	fmt.Fprintln(w, "    A reply that does not hold writes nothing and the error names the rule it broke. exit 0 stored, 2 reply refused, 1 usage error, a spent correction round or any other failure")
 	fmt.Fprintln(w, "  engine review check --feature <name> [--head <rev>] [--base <rev> | --onto <rev>] [--cwd <repo>]")
 	fmt.Fprintln(w, "    decides whether the head being delivered (--head, default HEAD) was reviewed, or exempted from review, and nothing the engine stored keeps it from delivery. For each result stored for that head in")
 	fmt.Fprintln(w, "    odd/review-results/<feature>/ it holds the stored reply to its binding again, recomputes from git the candidate of the base the result names and that head and requires the stored binding")
