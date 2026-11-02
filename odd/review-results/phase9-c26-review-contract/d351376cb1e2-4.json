@@ -1,0 +1,84 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ff2df8e58940fd39de2594a995ec52a5fb130220",
+    "head": "d351376cb1e2d91629966b886e7ea1688cad77ff",
+    "diff_sha256": "ed599d0d6b8ea8052199bc0ba4829d24c3c9e01fef8f81840738a6852afe1b04",
+    "paths": [
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/cmd/review_launch_docs_test.go",
+      "engine/cmd/review_launch_test.go",
+      "engine/cmd/usage.go",
+      "engine/review/app/app.go",
+      "engine/review/app/fakes_test.go",
+      "engine/review/app/launch.go",
+      "engine/review/app/launch_test.go",
+      "engine/review/app/service.go",
+      "engine/review/gitexec/gitexec.go",
+      "engine/review/gitexec/gitexec_test.go",
+      "engine/review/gitexec/realgit_test.go"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "ff2df8e58940fd39de2594a995ec52a5fb130220",
+      "head": "d351376cb1e2d91629966b886e7ea1688cad77ff",
+      "diff_sha256": "ed599d0d6b8ea8052199bc0ba4829d24c3c9e01fef8f81840738a6852afe1b04"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/cmd/review_launch_docs_test.go",
+        "engine/cmd/review_launch_test.go",
+        "engine/cmd/usage.go",
+        "engine/review/app/app.go",
+        "engine/review/app/fakes_test.go",
+        "engine/review/app/launch.go",
+        "engine/review/app/launch_test.go",
+        "engine/review/app/service.go",
+        "engine/review/gitexec/gitexec.go",
+        "engine/review/gitexec/gitexec_test.go",
+        "engine/review/gitexec/realgit_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/review/app/launch_test.go:331",
+        "severity": "SUGGESTION",
+        "claim": "The comment on frozenWorld still says 'over a function-context diff of contextDiff'. The rename to ContextDiff and the -U3 switch left this one comment stale. It misleads a reader about what the helper feeds the service.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "Grep for 'function-context' in the worktree matches engine/review/app/launch_test.go:331"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/review/app/launch.go:130-132",
+        "severity": "SUGGESTION",
+        "claim": "The rewrapped withContext doc comment has one very long line (the fence sentence). This is cosmetic only. The comment on WithFrozenContext in the same file has the same problem.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/app/launch.go:131"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/diff-t3.patch.",
+      "Read engine/review/app/launch.go in the worktree (Launch and withContext). The diff command is git diff --no-renames -U3 --no-color --no-ext-diff --no-textconv --end-of-options <base> <head>. The 'changed paths: <path>, <path>' line comes from c.Paths and sits after the heading and before the fence. The MaxReplyBytes check still covers the whole assembled brief.",
+      "withContext is only reached when s.frozenContext is set, so the codex path is unchanged. The docs, usage and tests match the new text.",
+      "Grep for FunctionContext and function-context: no stale code identifiers remain. The only leftover is the test comment in F1 (plus an unchecked CHANGELOG line and an unrelated JS function).",
+      "Not run: tests and builds, because this role never executes."
+    ]
+  }
+}

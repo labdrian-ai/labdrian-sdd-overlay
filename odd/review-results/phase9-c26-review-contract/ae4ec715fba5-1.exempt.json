@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "d351376cb1e2d91629966b886e7ea1688cad77ff",
+    "head": "ae4ec715fba54268f650bac827f436035a986d06",
+    "diff_sha256": "a59fba23e206e16d6a5857ce598a7c54e91b79ac1a482f0e2fe62abf5bde1567",
+    "paths": [
+      "engine/review/app/launch_test.go"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git diff --stat d351376c ae4ec715",
+        "result": "pass",
+        "output": "engine/review/app/launch_test.go | 2 +-, 1 file changed, 1 insertion(+), 1 deletion(-)"
+      },
+      {
+        "command": "git diff d351376c ae4ec715 | rg '^[+-]' | rg -v '^(\\+\\+\\+|---)' | rg -v '^[+-]\\s*//'",
+        "result": "pass",
+        "output": "printed nothing; only comment lines changed"
+      },
+      {
+        "command": "in a git archive copy of ae4ec715, engine/: go test -count=1 ./review/app/",
+        "result": "pass",
+        "output": "ok github.com/labdrian-ai/labdrian-sdd-overlay/engine/review/app 0.377s"
+      },
+      {
+        "command": "in the copy, engine/: gofmt -l review",
+        "result": "pass",
+        "output": "printed nothing"
+      },
+      {
+        "command": "in the copy: rg -n for \\u escapes in engine/review/app/launch_test.go",
+        "result": "pass",
+        "output": "no matches"
+      }
+    ]
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "d26e9c62194d5ed0417694e1f9216672e6d39e98",
+    "head": "98e197b11d93322d1ec4b143e3d04808b1fefe7a",
+    "diff_sha256": "78ff00cfd5985a41a863dd644a1436c9986828168c1fe7533dcb964c09607ead",
+    "paths": [
+      "README.md",
+      "engine/cmd/usage.go",
+      "engine/review/app/launch.go",
+      "engine/review/app/launch_test.go"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git diff --stat d26e9c62 98e197b1",
+        "result": "pass",
+        "output": "4 files changed, 15 insertions(+), 9 deletions(-): README.md, engine/cmd/usage.go, engine/review/app/launch.go, engine/review/app/launch_test.go"
+      },
+      {
+        "command": "in a git-archive copy of 98e197b1, engine/: go test -count=1 ./review/... ./cmd/...",
+        "result": "pass",
+        "output": "ok for review, review/analyzers, review/app, review/claudeprint, review/codexexec, review/fsstore, review/gitexec and cmd (87.653s)"
+      },
+      {
+        "command": "in the copy, engine/: go vet ./review/... ./cmd/...",
+        "result": "pass",
+        "output": "no output"
+      },
+      {
+        "command": "in the copy, engine/: staticcheck ./review/...",
+        "result": "pass",
+        "output": "no output"
+      },
+      {
+        "command": "in the copy, engine/: gofmt -l review cmd",
+        "result": "pass",
+        "output": "no output"
+      },
+      {
+        "command": "go test -count=1 ./review/app/ -run TestLaunchWithFrozenContextAppendsTheChangedPathsAndTheContextDiffAfterTheBrief in the d26e9c62 and 98e197b1 copies",
+        "result": "pass",
+        "output": "passes in both with an unchanged body: a line of plain paths is byte-identical"
+      },
+      {
+        "command": "rg -n for \\u escapes over the four changed files in the copy",
+        "result": "pass",
+        "output": "no matches"
+      }
+    ]
+  }
+}

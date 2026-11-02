@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ae4ec715fba54268f650bac827f436035a986d06",
+    "head": "d26e9c62194d5ed0417694e1f9216672e6d39e98",
+    "diff_sha256": "dc38012ee805425bb648f8a5763d9b2c1488e233cfa49cf73f121d32c755cb24",
+    "paths": [
+      "README.md",
+      "engine/cmd/usage.go",
+      "engine/review/app/launch.go",
+      "engine/review/app/launch_test.go"
+    ]
+  },
+  "rows": [
+    "default"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "ae4ec715fba54268f650bac827f436035a986d06",
+      "head": "d26e9c62194d5ed0417694e1f9216672e6d39e98",
+      "diff_sha256": "dc38012ee805425bb648f8a5763d9b2c1488e233cfa49cf73f121d32c755cb24"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "README.md",
+        "engine/cmd/usage.go",
+        "engine/review/app/launch.go",
+        "engine/review/app/launch_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/review/app/launch.go:162-170",
+        "severity": "SUGGESTION",
+        "claim": "A path that is not plain now appears in the frozen context only in its Go-quoted form, for example \"x, y.go\" or \"q\\\"uote.go\". Nothing in the context tells the reviewer to unquote it before listing it in the reply's inspected paths. A reviewer that copies the quoted form verbatim would report paths that do not match the candidate's binding. This affects only paths that contain an escapable character, a quote or \", \", which are rare in practice. The README and usage text say quoting happens but not that the listed paths must be unquoted.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/app/launch.go:147",
+          "engine/reviewresult/reviewresult.go:94"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full candidate diff copy (README.md, engine/cmd/usage.go, engine/review/app/launch.go, engine/review/app/launch_test.go).",
+      "Searched the worktree for 'changed paths', 'changedPaths' and 'Frozen context'. The new changedPaths helper is package-private and is called only from withContext (launch.go:147). No other code parses the changed-paths line. The existing exact-match tests use plain fixture paths, which changedPaths leaves unchanged, so the existing output for plain paths stays byte-identical.",
+      "Checked the quoting logic. strconv.Quote leaves printable Unicode unescaped, so only control characters, backslashes and quotes trigger quoting, plus the explicit ', ' check.",
+      "Risk line judgement: 'Risk: 2' holds. The change hardens a prompt-injection guard. It changes nothing in the stored-data, CLI-flag or binding formats. The only consumer-visible change is the content of the changed-paths line for paths that are not plain, and README.md and usage.go document it.",
+      "bin/lib/usage.sh:358 mentions the changed paths line without the quoting note; a minor documentation parity gap, not reported as a defect.",
+      "No commands were run (reviewer role: never run)."
+    ]
+  }
+}

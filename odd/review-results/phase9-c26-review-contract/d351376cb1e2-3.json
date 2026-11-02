@@ -1,0 +1,76 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ff2df8e58940fd39de2594a995ec52a5fb130220",
+    "head": "d351376cb1e2d91629966b886e7ea1688cad77ff",
+    "diff_sha256": "ed599d0d6b8ea8052199bc0ba4829d24c3c9e01fef8f81840738a6852afe1b04",
+    "paths": [
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/cmd/review_launch_docs_test.go",
+      "engine/cmd/review_launch_test.go",
+      "engine/cmd/usage.go",
+      "engine/review/app/app.go",
+      "engine/review/app/fakes_test.go",
+      "engine/review/app/launch.go",
+      "engine/review/app/launch_test.go",
+      "engine/review/app/service.go",
+      "engine/review/gitexec/gitexec.go",
+      "engine/review/gitexec/gitexec_test.go",
+      "engine/review/gitexec/realgit_test.go"
+    ]
+  },
+  "rows": [
+    "default"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "ff2df8e58940fd39de2594a995ec52a5fb130220",
+      "head": "d351376cb1e2d91629966b886e7ea1688cad77ff",
+      "diff_sha256": "ed599d0d6b8ea8052199bc0ba4829d24c3c9e01fef8f81840738a6852afe1b04"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/cmd/review_launch_docs_test.go",
+        "engine/cmd/review_launch_test.go",
+        "engine/cmd/usage.go",
+        "engine/review/app/app.go",
+        "engine/review/app/fakes_test.go",
+        "engine/review/app/launch.go",
+        "engine/review/app/launch_test.go",
+        "engine/review/app/service.go",
+        "engine/review/gitexec/gitexec.go",
+        "engine/review/gitexec/gitexec_test.go",
+        "engine/review/gitexec/realgit_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/review/app/launch.go:145",
+        "severity": "WARNING",
+        "claim": "The commit says Risk: none, but it reaches the guard on the reviewer's input (Task Size item 2). The new line `changed paths: ` + strings.Join(c.Paths, \", \") puts the raw candidate path names into the reviewer prompt outside the fenced diff block, with no escaping. c.Paths comes from `git diff-tree -z` through splitPaths (gitexec.go:166-167, 316-321), which gives the names as git holds them, byte for byte. No code in engine/review rejects a path that holds a control character. So a candidate can commit a file whose name holds line breaks or backtick runs. Such a name can add a fake markdown heading or text that looks like instructions, or open a code fence, in the trusted part of the prompt after the `## Frozen context` heading. Before this commit, path names reached the reviewer only inside the fenced diff, where git C-quotes names with unusual characters in its diff headers. The fence length also counts backtick runs in the diff only, not in the paths line. The ', ' separator is ambiguous too, because a path can hold a comma and a space. The renamed Git port method (FunctionContextDiff to ContextDiff) has no other reach: every implementer and caller in the worktree was updated.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "diff-t3.patch hunk engine/review/app/launch.go @@ -127,22 +127,22 @@: the paths line is added before the fence",
+          "engine/review/gitexec/gitexec.go:166-167 PathsArgs uses -z; :316-321 Paths returns splitPaths(out) raw",
+          "Grep for 'control character|line break' under engine/review (non-test) finds no check on path names",
+          "engine/review/app/launch.go:142 the fence length is computed from diff only"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff copy diff-t3.patch (13 files)",
+      "Grep of the worktree for FunctionContextDiff and function-context: the only references left are comments, CHANGELOG and one test comment (launch_test.go:331); no other implementer of the Git port is left unrenamed",
+      "Read engine/review/gitexec/gitexec.go: PathsArgs, Paths, splitPaths, and the Mentions guard that rejects line breaks in names but not in paths",
+      "Read engine/review/app/launch.go:128-167 withContext: the size check covers the paths line, and the fence length counts backticks in the diff only",
+      "Grep of engine/review for path control-character validation: none found",
+      "Not run: no tests or commands were executed"
+    ]
+  }
+}

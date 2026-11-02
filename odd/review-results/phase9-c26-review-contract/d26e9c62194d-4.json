@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ae4ec715fba54268f650bac827f436035a986d06",
+    "head": "d26e9c62194d5ed0417694e1f9216672e6d39e98",
+    "diff_sha256": "dc38012ee805425bb648f8a5763d9b2c1488e233cfa49cf73f121d32c755cb24",
+    "paths": [
+      "README.md",
+      "engine/cmd/usage.go",
+      "engine/review/app/launch.go",
+      "engine/review/app/launch_test.go"
+    ]
+  },
+  "rows": [
+    "default"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "ae4ec715fba54268f650bac827f436035a986d06",
+      "head": "d26e9c62194d5ed0417694e1f9216672e6d39e98",
+      "diff_sha256": "dc38012ee805425bb648f8a5763d9b2c1488e233cfa49cf73f121d32c755cb24"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "README.md",
+        "engine/cmd/usage.go",
+        "engine/review/app/launch.go",
+        "engine/review/app/launch_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the full diff at the scratchpad diff-fix.patch. I did not run anything or open the worktree.",
+      "changedPaths in launch.go quotes a path with strconv.Quote when the result differs from the path wrapped in plain quotes, or when the path contains ', '. strconv.Quote escapes newlines, CR, U+2028/U+2029, quotes, backslashes and other non-printable characters, so none of them can start a line of their own. A plain path is written as it is.",
+      "The new test covers a newline-injected heading, a path with ', ', and a path with a double quote. It asserts the exact expected line and that no raw newline-heading line appears.",
+      "The README and usage text changes only describe the quoting. Both match the code.",
+      "The brief named a lens \"risk\", which is not a row; the reply is recorded under the default row."
+    ]
+  }
+}
