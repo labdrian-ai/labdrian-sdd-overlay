@@ -412,7 +412,7 @@ func TestParseRefusesAnEchoOfAnotherCandidate(t *testing.T) {
 	}
 }
 
-// A new reply is held to the location rule of C26 S4: every finding's location is a path, a colon and a line or a
+// A new reply is held to the location rule of phase9-c26-review-contract S4: every finding's location is a path, a colon and a line or a
 // range of lines. The rule is a separate check over a parsed Result and not a rule of Parse, so a result stored
 // before it still parses.
 func TestCheckLocationsRequiresAPathAndALine(t *testing.T) {

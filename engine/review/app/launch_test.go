@@ -187,7 +187,7 @@ func replyWithLocation(t *testing.T, c review.Candidate, location string) []byte
 }
 
 // A reply whose location has no line is refused for its shape: the reviewer is asked again once with the refusal
-// quoted, and the second reply is stored (C26 S4).
+// quoted, and the second reply is stored (phase9-c26-review-contract S4).
 func TestLaunchAsksAgainOnceWhenALocationHasNoLine(t *testing.T) {
 	service, _, store, reviewer, c, brief := launchWorld(t)
 	reviewer.replies = [][]byte{replyWithLocation(t, c, "fsstore.go:readFile"), replyWithLocation(t, c, "fsstore.go:12")}
@@ -203,6 +203,23 @@ func TestLaunchAsksAgainOnceWhenALocationHasNoLine(t *testing.T) {
 	}
 	if name := review.ResultName(c, got.Number); store.created() != 1 || !bytes.Contains(store.files["own-rdd"][name], []byte(`fsstore.go:12`)) {
 		t.Errorf("the store holds %q after %d creates, want the second reply stored once", store.files["own-rdd"][name], store.created())
+	}
+}
+
+// A second reply whose location still has no line is refused for it, and the reviewer is not asked a third time.
+func TestLaunchRefusesASecondLocationWithoutALineAndAsksNoMore(t *testing.T) {
+	service, _, store, reviewer, c, brief := launchWorld(t)
+	reviewer.replies = [][]byte{replyWithLocation(t, c, "fsstore.go:readFile"), replyWithLocation(t, c, "fsstore.go"), replyFor(t, c)}
+	_, err := service.Launch("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", "default", "gpt-5.5", brief)
+	var refused *app.ReplyRefusedError
+	if !errors.As(err, &refused) || !errors.Is(err, reviewresult.ErrInvalidLocation) {
+		t.Fatalf("Launch() error = %v, want a *ReplyRefusedError for the location", err)
+	}
+	if !strings.Contains(err.Error(), `findings[0] has location "fsstore.go"`) {
+		t.Errorf("Launch() error = %q, want it to name the second reply's location", err)
+	}
+	if len(reviewer.calls) != 2 || store.created() != 0 {
+		t.Errorf("the reviewer was asked %d times and the store created %d files, want 2 and 0", len(reviewer.calls), store.created())
 	}
 }
 

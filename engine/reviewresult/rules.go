@@ -167,9 +167,10 @@ func checkFindings(r Result, _ Binding) error {
 	return nil
 }
 
-// locationPattern is a path, a colon and a line or a range of lines. The path is anything, a space or a colon
-// included, since a repository may hold such a path; the line numbers start at 1. A range whose end is before
-// its start is not refused.
+// locationPattern is the "path:line|path:start-end" the reviewer is told to write (roles/reviewer/body.md), so that a
+// finding can be found in the diff and scored (phase9-c26-review-contract S4). The path is anything, a space or a
+// colon included, since a repository may hold such a path; line numbers start at 1, as git numbers them. A range
+// whose end is before its start still names its lines, so it is not refused.
 var locationPattern = regexp.MustCompile(`^.+:[1-9][0-9]*(?:-[1-9][0-9]*)?$`)
 
 // CheckLocations requires the location of every finding of a parsed result to be path:line or path:start-end,

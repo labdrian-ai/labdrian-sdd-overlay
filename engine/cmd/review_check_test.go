@@ -153,7 +153,7 @@ func TestCheckNamesTheVerdictAndTheFindingsToFixAndToCarry(t *testing.T) {
 	}
 }
 
-// A result stored before the location rule of C26 S4 may hold a location without a line. `record` refuses such a reply
+// A result stored before the location rule of phase9-c26-review-contract S4 may hold a location without a line. `record` refuses such a reply
 // now, but the rule is not applied when a stored result is read again: verify and check still read it.
 func TestCheckStillReadsAStoredResultWhoseLocationHasNoLine(t *testing.T) {
 	w := newCheckedWorld(t)

@@ -345,7 +345,7 @@ func TestRecordRefusesAReplyThatDoesNotHoldToTheBindingAndStoresNothing(t *testi
 	}
 }
 
-// A new reply is held to the location rule of C26 S4: a finding whose location is not path:line is refused with
+// A new reply is held to the location rule of phase9-c26-review-contract S4: a finding whose location is not path:line is refused with
 // ErrInvalidLocation and nothing is stored. A location with a line is stored.
 func TestRecordRefusesAFindingWhoseLocationHasNoLineAndStoresNothing(t *testing.T) {
 	for _, location := range []string{"a.go", "fsstore.go:readFile", "a.go:0", "a.go:12-"} {
