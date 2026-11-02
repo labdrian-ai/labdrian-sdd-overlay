@@ -1,0 +1,1480 @@
+{
+  "kind": "sweeper",
+  "base": "af4d64b3c318072ad51146f4085999742eecc9f6",
+  "head": "af2d403b8dea609ce1dceb6da20d2ba094db5e74",
+  "diff_sha256": "643148e54148002a5f1bce6a5b31cdf40b7fb45e885c679629661d5818a4c5d6",
+  "sweep": "af2d403b8dea-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-004f2341ac56bb5c.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-004f2341ac56bb5c.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-01985d1083599996.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-0740780bd6334357.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-0b97e92aed49832f.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-0b97e92aed49832f.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-0cf1731e70cd0a05.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-0cf1731e70cd0a05.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-0d8df0491a22add2.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-0fcd0e2de111113e.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-186047c06d291a3f.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-190aa181c13b07a2.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-1f1bd9f44d742d64.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-25536291f45bdbce.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-259d2fc20f0bb931.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-259d2fc20f0bb931.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-270a5e0f9b44565b.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-270a5e0f9b44565b.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-278b30960a3b2c7b.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-278b30960a3b2c7b.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-295d2b51369e73b5.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-29c370d59b5ad05d.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-2bebe9f9ae38f4eb.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-2ecc5f11a9d4dd50.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-2fc7dff62bb3e72f.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-3043e66fb53de8e0.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-3043e66fb53de8e0.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-357c481d1bf4e6fd.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-357c481d1bf4e6fd.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-373e9d4c47ec9d79.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-373e9d4c47ec9d79.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-3c66c8568f2e0796.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-3dfefffd0f0256e2.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-3f77d0788020485e.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-3f77d0788020485e.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-40fdc89863238ebb.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-40fdc89863238ebb.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-41b62f3fd20991f2.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-41b62f3fd20991f2.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-4340cd9e59e6ca48.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-451142c850fd4b45.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-47f8f83fda8603c8.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-47f8f83fda8603c8.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-49b9b48fc3262f52.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-49b9b48fc3262f52.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-4cdc2fc0eb25cafb.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-4cdc2fc0eb25cafb.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-4d7cccaa59fa3134.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-51558e5ca1883fde.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-51558e5ca1883fde.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-518ef304c80c8a3a.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-518ef304c80c8a3a.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-5211315c3888432e.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-5211315c3888432e.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-52131eb3cf49304e.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-52131eb3cf49304e.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-5257b69f56e818cd.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-55260927969e0526.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-55260927969e0526.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-5739aae852631762.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-578b97aed1cb4065.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-578b97aed1cb4065.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-5bbb6bb41ed8cb8a.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-5bfedb40657f00f2.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-602cc25f2e1651db.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-61cbd7fdcc002f00.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-623705293b5b1346.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-6359d03a8270791e.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-6359d03a8270791e.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-63ebfacf07d9e333.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-63ebfacf07d9e333.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-65bbc081244ce19f.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-6651fe7faf0155c7.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-665e3a7b9f865b1a.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-680823a20133d3a6.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-6dca2f525c80220c.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-6dca2f525c80220c.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-6f27c049bcd0fb5a.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-710d7c8ac1973bbb.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-724785355f49c8f7.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-724785355f49c8f7.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-750038ec539b9c4c.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-750038ec539b9c4c.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-76dfa05d5fe23b09.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-76dfa05d5fe23b09.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-7f7e3469178415ee.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-829770e2c0b99922.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-8afca11eac0d548b.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-8afca11eac0d548b.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-8f69978ee4fde827.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-8f69978ee4fde827.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-94bcf88f55185c66.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-94bcf88f55185c66.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-95269883989a8bce.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-96c02f8c98207338.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-96c02f8c98207338.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-970a07df97a9c91d.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-9b61cdceca75fd04.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-9bf6d9f936ae77b9.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-a00909199de4d72c.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-a02f07727f9a7e71.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-a02f07727f9a7e71.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-a151d9234e9b702f.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-a6c86ce80fa71630.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-a6c86ce80fa71630.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-actuals-remediation-successor.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-actuals-remediation-successor.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-b5b5e8045f81ac78.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-b5b5e8045f81ac78.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-b996a378e4a7e01a.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-ba56c9709c6d9f2a.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-ba56c9709c6d9f2a.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-bd3ee1b26f0e7a28.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-bd3ee1b26f0e7a28.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-c367d2c3be41be37.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-ca8ba8bf608f4b25.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-ca8ba8bf608f4b25.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-caaf6029cba603a1.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-caaf6029cba603a1.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-cd5a0e7bf37aed72.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-cd5a0e7bf37aed72.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-ce4c38c744336735.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-cf52317bbbec128f.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-cf52317bbbec128f.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-d2ddff54-corr1.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-d2ddff54-corr1.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-d3781085ff275c0f.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-de0dd1d8ecdfc9f1.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-de39bbef08719275.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-e3d604adcc0ad5da.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-e8f3594f01e0bbe3.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-ea9915f1f23e4ee1.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-ee1769dc1542991a.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-ee1769dc1542991a.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-ef1018f87cf82d74.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-f14337775a52fa76.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-f49fbe6e5da55686.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-f5569f7494049fe9.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-faadf14f5d5e06ce.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-faadf14f5d5e06ce.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-fe05e579d704a78e.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-fe05e579d704a78e.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-fe709ea5c2921f26.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-ff27c40d4812aefb.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-ff27c40d4812aefb.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-overlay-sync-push-successor.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c25-review-hunt/review-overlay-sync-push-successor.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-004f2341ac56bb5c.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-004f2341ac56bb5c.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-01985d1083599996.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-0740780bd6334357.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-0b97e92aed49832f.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-0b97e92aed49832f.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-0cf1731e70cd0a05.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-0cf1731e70cd0a05.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-0d8df0491a22add2.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-0fcd0e2de111113e.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-186047c06d291a3f.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-190aa181c13b07a2.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-1f1bd9f44d742d64.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-25536291f45bdbce.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-259d2fc20f0bb931.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-259d2fc20f0bb931.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-270a5e0f9b44565b.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-270a5e0f9b44565b.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-278b30960a3b2c7b.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-278b30960a3b2c7b.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-295d2b51369e73b5.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-29c370d59b5ad05d.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-2ecc5f11a9d4dd50.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-2fc7dff62bb3e72f.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-3043e66fb53de8e0.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-3043e66fb53de8e0.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-357c481d1bf4e6fd.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-357c481d1bf4e6fd.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-373e9d4c47ec9d79.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-373e9d4c47ec9d79.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-3c66c8568f2e0796.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-3dfefffd0f0256e2.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-3f77d0788020485e.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-3f77d0788020485e.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-40fdc89863238ebb.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-40fdc89863238ebb.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-41b62f3fd20991f2.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-41b62f3fd20991f2.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-4340cd9e59e6ca48.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-451142c850fd4b45.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-47f8f83fda8603c8.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-47f8f83fda8603c8.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-49b9b48fc3262f52.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-49b9b48fc3262f52.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-4cdc2fc0eb25cafb.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-4cdc2fc0eb25cafb.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-4d7cccaa59fa3134.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-51558e5ca1883fde.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-51558e5ca1883fde.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-518ef304c80c8a3a.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-518ef304c80c8a3a.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-5211315c3888432e.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-5211315c3888432e.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-52131eb3cf49304e.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-52131eb3cf49304e.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-5257b69f56e818cd.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-55260927969e0526.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-55260927969e0526.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-5739aae852631762.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-578b97aed1cb4065.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-578b97aed1cb4065.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-5bbb6bb41ed8cb8a.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-5bfedb40657f00f2.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-5ca843578175366f.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-602cc25f2e1651db.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-61cbd7fdcc002f00.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-623705293b5b1346.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-6359d03a8270791e.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-6359d03a8270791e.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-63ebfacf07d9e333.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-63ebfacf07d9e333.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-65bbc081244ce19f.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-6651fe7faf0155c7.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-665e3a7b9f865b1a.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-680823a20133d3a6.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-6dca2f525c80220c.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-6dca2f525c80220c.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-6f27c049bcd0fb5a.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-710d7c8ac1973bbb.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-724785355f49c8f7.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-724785355f49c8f7.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-750038ec539b9c4c.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-750038ec539b9c4c.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-76dfa05d5fe23b09.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-76dfa05d5fe23b09.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-7f7e3469178415ee.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-829770e2c0b99922.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-8afca11eac0d548b.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-8afca11eac0d548b.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-8f69978ee4fde827.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-8f69978ee4fde827.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-94bcf88f55185c66.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-94bcf88f55185c66.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-95269883989a8bce.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-96c02f8c98207338.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-96c02f8c98207338.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-970a07df97a9c91d.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-9b61cdceca75fd04.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-9bf6d9f936ae77b9.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-a00909199de4d72c.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-a02f07727f9a7e71.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-a02f07727f9a7e71.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-a151d9234e9b702f.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-a6c86ce80fa71630.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-a6c86ce80fa71630.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-actuals-remediation-successor.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-actuals-remediation-successor.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-b5b5e8045f81ac78.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-b5b5e8045f81ac78.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-b996a378e4a7e01a.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-ba56c9709c6d9f2a.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-ba56c9709c6d9f2a.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-bd3ee1b26f0e7a28.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-bd3ee1b26f0e7a28.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-c367d2c3be41be37.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-ca8ba8bf608f4b25.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-ca8ba8bf608f4b25.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-caaf6029cba603a1.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-caaf6029cba603a1.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-cd5a0e7bf37aed72.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-cd5a0e7bf37aed72.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-ce4c38c744336735.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-cf52317bbbec128f.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-cf52317bbbec128f.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-d2ddff54-corr1.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-d2ddff54-corr1.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-d3781085ff275c0f.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-de0dd1d8ecdfc9f1.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-de39bbef08719275.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-e3d604adcc0ad5da.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-e8f3594f01e0bbe3.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-ea9915f1f23e4ee1.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-ee1769dc1542991a.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-ee1769dc1542991a.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-ef1018f87cf82d74.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-f14337775a52fa76.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-f49fbe6e5da55686.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-f5569f7494049fe9.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-faadf14f5d5e06ce.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-faadf14f5d5e06ce.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-fe05e579d704a78e.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-fe05e579d704a78e.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-fe709ea5c2921f26.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-ff27c40d4812aefb.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-ff27c40d4812aefb.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-overlay-sync-push-successor.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    },
+    {
+      "candidate": "T3: ?? odd/review-receipts/phase9-c26-review-contract/review-overlay-sync-push-successor.review-state.json",
+      "disposition": "live",
+      "evidence": "An untracked gentle-ai review receipt, kept untracked on purpose; af2d403b neither creates nor references it (git diff af4d64b3 af2d403b --name-only matches no review-receipts path)."
+    }
+  ]
+}
