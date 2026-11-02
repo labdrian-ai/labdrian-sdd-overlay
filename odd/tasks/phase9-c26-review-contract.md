@@ -76,3 +76,28 @@ Test runner: `go test` in `engine/` (the review packages, `engine/cmd` and `engi
 - **L5** (2026-11-02, parent): the source of the fresh hold-out (L4 open item 1).
   - *Evidence.* `git log --oneline --no-merges 60003a8c..main` holds 8 `fix` commits (`4baeee6e`, `a6a09c2f`, `f8882f8d`, `39d4fe50`, `1321803f`, `83740305`, `58cb29ab`, `ce097030`): the bench scripts, claudeprint, the sweep and the re-ask, all fixes of C25's own work, so fewer than 10 cases and biased toward our review (L4 counter-argument). The C25 walk took R9-R23 newest-first and stopped at `5dfdeba6` (2026-10-26, the oldest R9-R23 fix); `git log --oneline --no-merges 5dfdeba6~1` holds 317 `fix` commits that no corpus step has read, R1-R8's fixes among them.
   - *Decision (parent, within the owner's "armar uno nuevo" of L3; the owner may overrule it).* The fresh hold-out continues the C25 walk past `5dfdeba6`, newest-first, by the same rule, skipping R1-R8 and C25's rejected candidates, up to 10 accepted. Every such defect is unseen by every design artifact here, and none lies in the code C26 rewrites. Applied: S5, T1. L4 open item 1 is resolved by it; item 2 stays open until T5.
+- **L6** (2026-11-02, builder): T1 commit (1), the fresh hold-out R24-R33, picked by the selection rule of C25 L3.
+  - *Walk.* `git log --no-merges --format='%h %s' 5dfdeba6~1` filtered to `fix`: 317 candidates; walked newest-first, 30 read (10 accepted, 18 rejected, 2 skipped), stopping at the 10th acceptance (R24-R33, so S5's 10 is reached and T1 does not stop). Skipped without reading: `6ea5cbd3` (R8's fix) and `f360e1a6` (R1's fix). C25 L5 records only a count of its 19 rejected candidates, not their hashes; every one of them is newer than `5dfdeba6~1`, so none can be met in this walk. The head H of each candidate is the commit that introduced the removed lines of the fix, found with `git blame` of the fix's parent (the dominant commit of the non-test lines; a fix that only adds code was tied to the commit of the line it replaced or to the commit that introduced the omission).
+  - *Accepted* (id, fix commit; head, bytes and lines are in `tools/review-bench/corpus.json`): R24 `7dc522d6`, R25 `de629a42`, R26 `791ec109`, R27 `1f7d6668`, R28 `9a89a9f5`, R29 `c8b32dcd`, R30 `47f9c77d`, R31 `f661d43f`, R32 `1895f5b0`, R33 `469d8951`.
+  - *Rejected* (candidate, rule it failed; rules of C25 L3: 1 the fix names the defect, 2 the defect's lines lie in a hunk of H or a path H created, 3 `git diff H^ H` at most 150,000 bytes, 4 the defect is not pinned as intended by a test at H, 5 H is not already in the corpus):
+    - `a82ca151`: rule 3 (H `5ee2ea3a`, 295,962 bytes).
+    - `3ffd1bf0`: rule 3 (H `5ee2ea3a`, 295,962 bytes).
+    - `28cf5220`: rule 1 (a version string aligned with the convention of other skills; no failure named).
+    - `0964b39b`: rule 4 (the golden of `e40d970d` pins the blank status in the output).
+    - `9f16e7b5`: rule 5 (H `4615aec8` is R24's head).
+    - `69fe010f`: rule 2 (four defects whose lines blame to four commits, the main one a refactor that moved the code; no single head shows the defect).
+    - `5fd28f0d`: rule 4 (the test case "the identity alone is a substring, not the path" pins the substring match at H `c09b3751`).
+    - `a712d8c5`: rule 2 (the count in the help was right at H `b02603f9` and went stale with a later change; the other parts add text).
+    - `18395e6f`: rule 1 (the message names advisories, not a defect; the diff spreads over five commits).
+    - `b713e769`: rule 1 (an omission clarified; no failure named).
+    - `f76113dd`: rule 4 (`messages_pin_test.go` at H `61a31b70` pins the header it changes).
+    - `22766856`: rule 1 (review warnings; no defect named).
+    - `1528cf2d`: rule 1 (a bundle of review findings; no single failure named).
+    - `c420ae1d`: rule 4 (the prompt text is asserted by `memory_live_acceptance_test.go` at H `0f4e0dcd`).
+    - `0f4e0dcd`: rule 4 (the test at H `eb89a27b` asserts the fixed `goal-1` fixture the fix removes).
+    - `34d8b6aa`: rule 2 (the fix only adds files; the removed lines blame to ledger text, so no head shows the defect).
+    - `a304361e`: rule 2 (the removed lines blame to two code-move commits and one commit over 150,000 bytes; no head shows the defect).
+    - `19fc5a5a`: rule 4 (`presence_test.go` at H `ee7148d1` pins the fixed detail text).
+  - *Judgment calls, as the rule reads.* R24: a comment of H calls the pruning best effort, but no test pins it. R32 (a dead read, SA4006) and R31 (a document table) have a defect that is a flaw named in code or text terms, not a runtime failure the message states. R30: the fix corrects several defects, one of them (the cross-file dedupe of Pi line IDs) pinned at H by `TestPiDedupeFirst`; the case records the one that no test pinned, the partial read.
+  - *Checks.* Every new head resolves in the repository and in the bench clone (fetched where missing); every defect's lines lie in a hunk of `git diff <base> <head>`; every diff is at most 134,907 bytes. The bar entry (commit (2), after the gentle run) is not written here.
+  - *Covered.* S5 (corpus, README); the gentle run and the bar are commit (2).
