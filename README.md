@@ -805,8 +805,7 @@ overlay review <verb>
         followed by `## Your previous reply was refused` and the refusal (its first 1024 bytes), unless that is over the
         reply limit; a refusal of the second reply, or of the binding or the inspection, is not asked again, and a
         re-ask the reviewer does not answer leaves the first refusal, with the re-ask's failure said after it. Whether
-        the installed Codex
-        enforces `--sandbox read-only` is shown only by a live run. Exit 0 stored,
+        the installed Codex enforces `--sandbox read-only` is shown only by a live run. Exit 0 stored,
         2 reply refused, 1 usage error or any other failure.
     proposals [--cwd <repo>]
         Prints, and never runs, what the owner may remove: the worktrees of the repository other than the main one and the

@@ -45,7 +45,8 @@ func (s Service) WithFrozenContext() Service {
 // the brief of the candidate, and, with WithFrozenContext, a brief and context over review.MaxReplyBytes. An error of
 // the reviewer is returned as it is and nothing is stored; a reply Record refuses for its shape is asked for again
 // once (reAsk), and a reply Record refuses after that, or for anything else, is the *ReplyRefusedError of Record; a
-// reviewer that does not answer the re-ask leaves the first refusal.
+// reviewer that does not answer the re-ask leaves a *ReplyRefusedError of the first refusal's reason, its message
+// followed by the failure of the re-ask.
 func (s Service) Launch(dir, feature, base, head, rows, model string, brief []byte) (Recorded, error) {
 	if s.reviewer == nil {
 		return Recorded{}, ErrNoReviewer
