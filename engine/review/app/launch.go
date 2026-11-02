@@ -144,7 +144,7 @@ func (s Service) withContext(dir string, c review.Candidate, brief []byte) ([]by
 	fence := strings.Repeat("`", max(3, longestBacktickRun(diff)+1))
 	var b strings.Builder
 	b.Write(brief)
-	fmt.Fprintf(&b, "\n\n## Frozen context (base %s, head %s)\n\nchanged paths: %s\n\n%sdiff\n", c.Base, c.Head, changedPaths(c.Paths), fence)
+	fmt.Fprintf(&b, "\n\n## Frozen context (base %s, head %s)\n\n%s\n\n%sdiff\n", c.Base, c.Head, changedPaths(c.Paths), fence)
 	b.Write(diff)
 	if len(diff) > 0 && diff[len(diff)-1] != '\n' {
 		b.WriteByte('\n')
@@ -156,18 +156,24 @@ func (s Service) withContext(dir string, c review.Candidate, brief []byte) ([]by
 	return []byte(b.String()), nil
 }
 
-// changedPaths writes paths joined by ", ". The line sits outside the fenced block, so a path that holds a character Go
-// would escape (a line break among them), a quote, or ", " is written in Go quotes: it cannot start a line of its own
-// nor be read as two paths. A plain path is written as it is.
+// quotedPathsNote is what the changed paths line says when it quotes a path, so that the reviewer lists the path as it
+// is: inspection.paths is held to the paths of the binding, which are never quoted.
+const quotedPathsNote = " (a path in Go quotes is listed unquoted in inspection.paths)"
+
+// changedPaths is the line "changed paths: " followed by paths joined by ", ". The line sits outside the fenced block,
+// so a path that holds a character Go would escape (a line break among them), a quote, or ", " is written in Go quotes:
+// it cannot start a line of its own nor be read as two paths, and the line then carries quotedPathsNote. A line of
+// plain paths is written as they are.
 func changedPaths(paths []string) string {
 	written := make([]string, len(paths))
+	note := ""
 	for i, p := range paths {
 		written[i] = p
 		if quoted := strconv.Quote(p); quoted != `"`+p+`"` || strings.Contains(p, ", ") {
-			written[i] = quoted
+			written[i], note = quoted, quotedPathsNote
 		}
 	}
-	return strings.Join(written, ", ")
+	return "changed paths" + note + ": " + strings.Join(written, ", ")
 }
 
 // longestBacktickRun is the length of the longest run of backticks in text.
