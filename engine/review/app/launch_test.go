@@ -19,6 +19,7 @@ type fakeReviewer struct {
 	reply   []byte
 	replies [][]byte
 	err     error
+	errs    []error // with errs, call n fails with errs[n] (nil past the end) instead of err
 	calls   []reviewerCall
 }
 
@@ -29,10 +30,17 @@ type reviewerCall struct {
 
 func (r *fakeReviewer) Review(worktree, model string, brief []byte) ([]byte, error) {
 	r.calls = append(r.calls, reviewerCall{worktree: worktree, model: model, brief: brief})
-	if len(r.replies) > 0 {
-		return r.replies[min(len(r.calls), len(r.replies))-1], r.err
+	err := r.err
+	if r.errs != nil {
+		err = nil
+		if n := len(r.calls) - 1; n < len(r.errs) {
+			err = r.errs[n]
+		}
 	}
-	return r.reply, r.err
+	if len(r.replies) > 0 {
+		return r.replies[min(len(r.calls), len(r.replies))-1], err
+	}
+	return r.reply, err
 }
 
 // launchWorld is a Service over the fakes with a reviewer, and the brief that names the binding of the candidate.
@@ -198,6 +206,41 @@ func TestLaunchReturnsTheSecondRefusalOfAShape(t *testing.T) {
 	}
 	if len(reviewer.calls) != 2 || store.created() != 0 {
 		t.Errorf("the reviewer was asked %d times and %d files created, want twice and nothing written", len(reviewer.calls), store.created())
+	}
+}
+
+// A reviewer that does not answer the re-ask leaves the first refusal as the outcome: a refusal still, not a reviewer
+// failure, and nothing stored.
+func TestLaunchReturnsTheFirstRefusalWhenTheReAskIsNotAnswered(t *testing.T) {
+	service, _, store, reviewer, c, brief := launchWorld(t)
+	reviewer.replies = [][]byte{replyWithoutSeverity(t, c), nil}
+	reviewer.errs = []error{nil, fmt.Errorf("claude exited 1: %w", app.ErrReviewerDidNotAnswer)}
+	_, err := service.Launch("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", "default", "gpt-5.5", brief)
+	var refused *app.ReplyRefusedError
+	if !errors.As(err, &refused) || errors.Is(err, app.ErrReviewerDidNotAnswer) || !strings.Contains(err.Error(), `has no "severity" member`) {
+		t.Fatalf("Launch() error = %v, want the first *ReplyRefusedError and not the reviewer's failure", err)
+	}
+	if len(reviewer.calls) != 2 || store.created() != 0 {
+		t.Errorf("the reviewer was asked %d times and %d files created, want twice and nothing written", len(reviewer.calls), store.created())
+	}
+}
+
+// The refusal a re-ask quotes is bounded: a member name of any length in the reply does not grow the second brief
+// with it.
+func TestLaunchQuotesABoundedRefusal(t *testing.T) {
+	service, _, _, reviewer, c, brief := launchWorld(t)
+	long := strings.Repeat("y", 4096)
+	unknown := bytes.Replace(replyFor(t, c), []byte(`{"candidate"`), []byte(`{"`+long+`":1,"candidate"`), 1)
+	reviewer.replies = [][]byte{unknown, replyFor(t, c)}
+	if _, err := service.Launch("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", "default", "gpt-5.5", brief); err != nil {
+		t.Fatalf("Launch() error = %v, want the second reply recorded", err)
+	}
+	if len(reviewer.calls) != 2 {
+		t.Fatalf("the reviewer was asked %d times, want twice", len(reviewer.calls))
+	}
+	tail := string(reviewer.calls[1].brief[len(brief):])
+	if strings.Contains(tail, long) || !strings.Contains(tail, " ...") || len(tail) > 1024+256 {
+		t.Errorf("the re-ask after the brief is %d bytes (%.80q...), want the refusal cut to 1024 bytes and marked with ' ...'", len(tail), tail)
 	}
 }
 

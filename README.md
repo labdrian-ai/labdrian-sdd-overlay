@@ -802,8 +802,9 @@ overlay review <verb>
         brief that names the binding and asks something else passes it, and the reply is still held to the binding by
         `record`. A reply refused for its shape (a member missing, unknown or of the wrong type, an id missing or
         repeated, a value outside its enumeration, a severe finding with no proof) is asked for again once, the brief
-        followed by `## Your previous reply was refused` and the refusal, unless that is over the reply limit; a refusal
-        of the second reply, or of the binding or the inspection, is not asked again. Whether the installed Codex
+        followed by `## Your previous reply was refused` and the refusal (its first 1024 bytes), unless that is over the
+        reply limit; a refusal of the second reply, or of the binding or the inspection, is not asked again, and a
+        re-ask the reviewer does not answer leaves the first refusal. Whether the installed Codex
         enforces `--sandbox read-only` is shown only by a live run. Exit 0 stored,
         2 reply refused, 1 usage error or any other failure.
     proposals [--cwd <repo>]
