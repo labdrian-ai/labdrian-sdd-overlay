@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"reflect"
+	"regexp"
 	"sort"
 	"strings"
 	"testing"
@@ -165,7 +166,7 @@ func TestAReplyOfLegalValuesOfTheSchemaPassesParseAndCheckLocations(t *testing.T
 	}
 }
 
-func TestSchemaPatternsAreTheOnesTheBenchSent(t *testing.T) {
+func TestSchemaIdAndLocationPatterns(t *testing.T) {
 	finding := loadSchema(t).Properties["findings"].Items
 	if finding == nil {
 		t.Fatalf("the schema has no items for findings")
@@ -173,7 +174,14 @@ func TestSchemaPatternsAreTheOnesTheBenchSent(t *testing.T) {
 	if got := finding.Properties["id"].Pattern; got != `^F[1-9][0-9]*$` {
 		t.Errorf("id pattern = %q", got)
 	}
-	if got := finding.Properties["location"].Pattern; got != `^[^:\s]+:[1-9][0-9]*(-[1-9][0-9]*)?$` {
+	got := finding.Properties["location"].Pattern
+	if got != `^.+:[1-9][0-9]*(-[1-9][0-9]*)?$` {
 		t.Errorf("location pattern = %q", got)
+	}
+	// A path with a space or a colon is one the parser accepts, so the schema the reviewer validates against must too.
+	for _, loc := range []string{"docs/my file.md:3", "a:b.go:4-7"} {
+		if !regexp.MustCompile(got).MatchString(loc) || !locationPattern.MatchString(loc) {
+			t.Errorf("location %q: the schema pattern and the parser must both accept it", loc)
+		}
 	}
 }
