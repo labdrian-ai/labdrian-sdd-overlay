@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "dead4364741641aa426d311eb83c861a76bcf175",
+    "head": "7ffb148be032cff25eb205cba3fa080fc4918774",
+    "diff_sha256": "d08748869de2914eb3bd32645dbfd28cd91ae56094818fcd4c45cc6171cb21d5",
+    "paths": [
+      "engine/shelltest/review_bench_test.go",
+      "odd/tasks/phase9-c27-review-recall.md",
+      "tools/review-bench/README.md",
+      "tools/review-bench/run-gentle.sh",
+      "tools/review-bench/run-ours.sh"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git rev-parse 7ffb148b^1 dead4364",
+        "result": "pass",
+        "output": "Both print dead4364741641aa426d311eb83c861a76bcf175."
+      },
+      {
+        "command": "git diff --name-only dead4364 7ffb148b",
+        "result": "pass",
+        "output": "engine/shelltest/review_bench_test.go, odd/tasks/phase9-c27-review-recall.md, tools/review-bench/README.md, tools/review-bench/run-gentle.sh, tools/review-bench/run-ours.sh (exactly the five expected files)"
+      },
+      {
+        "command": "cd engine && go test -count=1 ./shelltest/ -run ReviewBench",
+        "result": "pass",
+        "output": "ok github.com/labdrian-ai/labdrian-sdd-overlay/engine/shelltest 1.219s"
+      },
+      {
+        "command": "cd engine && go vet ./shelltest/ && gofmt -l shelltest/",
+        "result": "pass",
+        "output": "go vet printed nothing; gofmt -l printed nothing."
+      },
+      {
+        "command": "shellcheck tools/review-bench/*.sh tools/review-bench/shim/claude",
+        "result": "pass",
+        "output": "No output, exit code 0."
+      },
+      {
+        "command": "git diff dead4364 7ffb148b | rg -n added-unicode-escape",
+        "result": "pass",
+        "output": "No output (rg exit code 1, no matches)."
+      },
+      {
+        "command": "git diff --check dead4364 7ffb148b",
+        "result": "pass",
+        "output": "No output, exit code 0."
+      },
+      {
+        "command": "git log -1 --format=%B 7ffb148b",
+        "result": "pass",
+        "output": "The message ends with the line Risk: none and holds no co-authored line."
+      },
+      {
+        "command": "git diff dead4364 7ffb148b -- tools/review-bench/run-ours.sh tools/review-bench/run-gentle.sh",
+        "result": "pass",
+        "output": "Each script changes in three places only: the header comment, one RUN check line after set -u (exit 2), and the out= line gaining ${RUN:+/run$RUN}; with RUN unset the out paths keep their old shape."
+      }
+    ]
+  }
+}
