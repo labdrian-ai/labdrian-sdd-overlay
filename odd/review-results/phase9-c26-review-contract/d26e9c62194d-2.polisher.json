@@ -1,0 +1,16 @@
+{
+  "kind": "polisher",
+  "base": "ae4ec715fba54268f650bac827f436035a986d06",
+  "head": "d26e9c62194d5ed0417694e1f9216672e6d39e98",
+  "diff_sha256": "dc38012ee805425bb648f8a5763d9b2c1488e233cfa49cf73f121d32c755cb24",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read diff-fix.patch in full: changes to engine/review/app/launch.go, launch_test.go, README.md and engine/cmd/usage.go.",
+      "strconv.Quote escapes line breaks and other control characters, so such a path is quoted and cannot start a new line in the prompt; the new test pins a path holding a line break followed by a heading.",
+      "Tabs, backslashes, double quotes, non-UTF-8 bytes and U+2028/U+2029 take the quoted branch; a backtick is written plain, which is safe because the line always begins with the literal 'changed paths:' prefix.",
+      "A path holding ', ' is quoted; leading or trailing spaces stay plain, a cosmetic ambiguity with no line break.",
+      "An empty path list writes the empty string, as before; README and usage text match the code."
+    ]
+  }
+}

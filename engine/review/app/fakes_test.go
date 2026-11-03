@@ -37,7 +37,7 @@ var fakeRepo = app.Repository{Root: "/work/wt/feature", Main: "/work/main", Comm
 // in order (a worktree that another process made in between), and worktree again once they run out.
 type fakeGit struct {
 	diff          []byte
-	contextDiff   []byte // what FunctionContextDiff answers
+	contextDiff   []byte // what ContextDiff answers
 	paths         []string
 	pathsOf       map[string][]string            // the paths Paths answers for a head that is a key, instead of paths
 	parents       map[string]string              // the first parent of a commit; none for a commit that is not a key
@@ -181,9 +181,9 @@ func (g *fakeGit) Diff(repo app.Repository, base, head string) ([]byte, error) {
 	return g.diff, nil
 }
 
-func (g *fakeGit) FunctionContextDiff(repo app.Repository, base, head string) ([]byte, error) {
-	g.record("FunctionContextDiff " + base + " " + head)
-	if err := g.fail["FunctionContextDiff"]; err != nil {
+func (g *fakeGit) ContextDiff(repo app.Repository, base, head string) ([]byte, error) {
+	g.record("ContextDiff " + base + " " + head)
+	if err := g.fail["ContextDiff"]; err != nil {
 		return nil, err
 	}
 	return g.contextDiff, nil

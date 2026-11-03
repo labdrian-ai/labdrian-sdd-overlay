@@ -281,9 +281,9 @@ func TestDiffIsExactlyThePatchOfTheTwoCommits(t *testing.T) {
 	}
 }
 
-// The function-context diff of a one-line change in a long function holds the whole function, from its first line
-// to its closing brace, which three lines of context do not.
-func TestFunctionContextDiffHoldsTheWholeFunctionOfAChange(t *testing.T) {
+// The -U3 diff of a one-line change deep in a long function holds the three lines around it and stops there: neither
+// the first line of the function nor its last lines, which the function-context diff held.
+func TestContextDiffHoldsThreeLinesAroundAChangeAndNotTheWholeFunction(t *testing.T) {
 	f := newFixture(t, "sha1")
 	body := func(changed string) string {
 		return "package a\n\nfunc f() int {\n\tx := 1\n\tx++\n\tx++\n\tx++\n\t" + changed + "\n\tx++\n\tx++\n\tx++\n\treturn x\n}\n"
@@ -295,18 +295,20 @@ func TestFunctionContextDiffHoldsTheWholeFunctionOfAChange(t *testing.T) {
 	f.stage()
 	head := f.snapshot("head")
 
-	got, err := f.adapter().FunctionContextDiff(f.repo(), base, head)
+	got, err := f.adapter().ContextDiff(f.repo(), base, head)
 	if err != nil {
-		t.Fatalf("FunctionContextDiff() error = %v, want nil", err)
+		t.Fatalf("ContextDiff() error = %v, want nil", err)
 	}
 
-	for _, line := range []string{"\n func f() int {\n", "\n-\tx--\n", "\n+\tx -= 2\n", "\n \treturn x\n", "\n }\n"} {
+	for _, line := range []string{"\n-\tx--\n", "\n+\tx -= 2\n", "\n \tx++\n"} {
 		if !strings.Contains(string(got), line) {
-			t.Errorf("FunctionContextDiff() =\n%s\nwant it to hold the line %q", got, line)
+			t.Errorf("ContextDiff() =\n%s\nwant it to hold the line %q", got, line)
 		}
 	}
-	if canonical := diffOf(t, f.adapter(), f.repo(), base, head); strings.Contains(string(canonical), "\n func f() int {\n") {
-		t.Fatalf("setup: three lines of context already hold the first line of the function:\n%s", canonical)
+	for _, line := range []string{"\n func f() int {\n", "\n \treturn x\n"} {
+		if strings.Contains(string(got), line) {
+			t.Errorf("ContextDiff() =\n%s\nwant it not to hold the line %q, which is over three lines from the change", got, line)
+		}
 	}
 }
 

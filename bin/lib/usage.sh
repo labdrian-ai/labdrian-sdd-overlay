@@ -355,7 +355,7 @@ Commands:
                                              with --runtime claude run instead one tool-free claude --print
                                              --strict-mcp-config in the worktree over the body of the deployed Claude agent file (a missing one
                                              says run: labdrian-overlay apply --target claude), the brief and its
-                                             ## Frozen context (git diff --no-renames --function-context), and record
+                                             ## Frozen context (changed paths line, git diff --no-renames -U3), and record
                                              its stdout; --runtime must be claude or codex: on Pi the parent launches
                                              the reviewer agent natively; --model is required; refused before the
                                              reviewer starts (exit 1): a candidate over the 150000-byte limit of one launch,

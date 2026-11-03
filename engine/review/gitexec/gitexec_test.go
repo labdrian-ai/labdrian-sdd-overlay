@@ -154,39 +154,39 @@ func TestDiffStartsGitInTheRootAndReturnsItsBytesUntouched(t *testing.T) {
 	}
 }
 
-// The function-context diff is for a reader, not for a digest; it keeps the guard of the canonical one: no rename
+// The -U3 diff is for a reader, not for a digest; it keeps the guard of the canonical one: no rename
 // detection, no color, no external diff and no textconv, and the commits after --end-of-options.
-func TestFunctionContextDiffArgsIsTheGuardedDiffWithWholeFunctions(t *testing.T) {
-	want := []string{"diff", "--no-renames", "--function-context", "--no-color", "--no-ext-diff", "--no-textconv", "--end-of-options", baseSHA, headSHA}
-	if got := gitexec.FunctionContextDiffArgs(baseSHA, headSHA); !reflect.DeepEqual(got, want) {
-		t.Errorf("FunctionContextDiffArgs() = %q, want %q", got, want)
+func TestContextDiffArgsIsTheGuardedDiffWithThreeLinesOfContext(t *testing.T) {
+	want := []string{"diff", "--no-renames", "-U3", "--no-color", "--no-ext-diff", "--no-textconv", "--end-of-options", baseSHA, headSHA}
+	if got := gitexec.ContextDiffArgs(baseSHA, headSHA); !reflect.DeepEqual(got, want) {
+		t.Errorf("ContextDiffArgs() = %q, want %q", got, want)
 	}
 }
 
-func TestFunctionContextDiffStartsGitInTheRootAndReturnsItsBytes(t *testing.T) {
+func TestContextDiffStartsGitInTheRootAndReturnsItsBytes(t *testing.T) {
 	printed := "diff --git a/a.go b/a.go\n func f() {\n"
 	r := &fakeRunner{stdout: []byte(printed)}
 
-	got, err := newGit(r).FunctionContextDiff(repo, baseSHA, headSHA)
+	got, err := newGit(r).ContextDiff(repo, baseSHA, headSHA)
 	if err != nil {
-		t.Fatalf("FunctionContextDiff() error = %v, want nil", err)
+		t.Fatalf("ContextDiff() error = %v, want nil", err)
 	}
 
 	if string(got) != printed {
-		t.Errorf("FunctionContextDiff() = %q, want %q", got, printed)
+		t.Errorf("ContextDiff() = %q, want %q", got, printed)
 	}
 	c := r.only(t)
-	if want := append([]string{"-C", root}, gitexec.FunctionContextDiffArgs(baseSHA, headSHA)...); c.bin != "git" || !reflect.DeepEqual(c.args, want) {
+	if want := append([]string{"-C", root}, gitexec.ContextDiffArgs(baseSHA, headSHA)...); c.bin != "git" || !reflect.DeepEqual(c.args, want) {
 		t.Errorf("started %q %q, want git %q", c.bin, c.args, want)
 	}
 }
 
-func TestFunctionContextDiffRepeatsWhatGitSaidWhenItFails(t *testing.T) {
+func TestContextDiffRepeatsWhatGitSaidWhenItFails(t *testing.T) {
 	r := &fakeRunner{stderr: []byte("fatal: bad object\n"), err: errors.New("exit status 128")}
 
-	_, err := newGit(r).FunctionContextDiff(repo, baseSHA, headSHA)
+	_, err := newGit(r).ContextDiff(repo, baseSHA, headSHA)
 	if err == nil || !strings.Contains(err.Error(), "git diff: exit status 128: fatal: bad object") {
-		t.Errorf("FunctionContextDiff() error = %v, want the command, the error and what git said", err)
+		t.Errorf("ContextDiff() error = %v, want the command, the error and what git said", err)
 	}
 }
 

@@ -1,0 +1,17 @@
+{
+  "kind": "polisher",
+  "base": "ae4ec715fba54268f650bac827f436035a986d06",
+  "head": "d26e9c62194d5ed0417694e1f9216672e6d39e98",
+  "diff_sha256": "dc38012ee805425bb648f8a5763d9b2c1488e233cfa49cf73f121d32c755cb24",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the whole target diff (base ae4ec715, head d26e9c62): README.md, engine/cmd/usage.go, engine/review/app/launch.go and engine/review/app/launch_test.go, and S3 and the T3 row in the worktree.",
+      "Plain paths are still written joined by ', ', so the exact-match assertions at launch_test.go:345 and engine/cmd/review_launch_test.go:202 stay valid.",
+      "Candidate.Paths comes from git diff-tree -r --name-only -z --no-renames (gitexec.go:167) through splitPaths, raw, so a path is never quoted twice and a raw newline or control byte does reach changedPaths.",
+      "A newline, CR, tab, other control byte, invalid UTF-8 byte or a non-printable rune makes strconv.Quote differ, so the path is quoted; a backslash or a double quote is quoted too; a path holding ', ' is quoted; leading or trailing spaces stay plain; a backtick cannot open a fence because the line starts with 'changed paths: '; an empty list writes 'changed paths: ' as before.",
+      "README.md:791 and engine/cmd/usage.go:246 were updated; bin/lib/usage.sh:358 does not describe the format.",
+      "No commands were run."
+    ]
+  }
+}

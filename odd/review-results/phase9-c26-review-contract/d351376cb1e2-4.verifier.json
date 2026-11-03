@@ -1,0 +1,18 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "rg -n function-context engine/review/app/launch_test.go in git-archive copies of d351376c, ff2df8e5 and d26e9c62",
+      "output": "d351376c:331 frozenWorld comment says function-context diff after the -U3 switch; at ff2df8e5 the same comment was still true; fixed by the sweep commit ae4ec715 (no match at d26e9c62).",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "awk length > 120 over comment lines of engine/review/app/launch.go in the same copies",
+      "output": "d351376c: lines 34 and 131 are 155 columns; ff2df8e5: none; d26e9c62: none (rewrapped).",
+      "base_result": "not-reproduced"
+    }
+  ]
+}
