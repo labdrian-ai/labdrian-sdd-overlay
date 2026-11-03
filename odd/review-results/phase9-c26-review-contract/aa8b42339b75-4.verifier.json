@@ -1,0 +1,11 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "cd /home/labdrian/labdrian-sdd-overlay-worktrees/review-aa8b42339b75 && rg -n 'longestBacktickRun|Repeat\\(\"`\"' engine/review/app/launch_test.go; rg -n 'longestBacktickRun' engine --glob '*.go'; bat -p -r 228:262 engine/review/app/launch_test.go; bat -p -r 296:313 engine/review/app/launch_test.go; git show c355b3d369e2035c7580a54a3efcfa7852ae5c12:engine/review/app/launch.go | rg -c 'fence|Repeat'",
+      "output": "HEAD is aa8b42339b7563a5f1af73a8e9c30469846eb9f7. The first rg on launch_test.go has no hit (exit 1), and longestBacktickRun appears only in engine/review/app/launch.go (lines 126, 147, 182-183), never in a test. The re-ask tests are TestLaunchAsksAgainOnceWhenTheReplyIsRefusedForItsShape (lines 228-260), TestLaunchReturnsTheSecondRefusalOfAShape, TestLaunchReturnsTheFirstRefusalWhenTheReAskIsNotAnswered and TestLaunchQuotesABoundedRefusal (lines 296-312). The refusals they use are 'findings[0] has no \"severity\" member' and a 4096-byte run of 'y'; none holds a backtick. The only fence assertion expects exactly three backticks, '## Your previous reply was refused\\n\\n```\\n' to '\\n```\\n\\nReply again'. Nothing pins a fence longer than a backtick run in the refusal, since the max(3, run+1) path in launch.go:126 is never exercised. The base-side 'rg -c fence|Repeat' printed 5, so I did not run it as a clean base check; per your instruction base_result is not-reproduced because the base reAsk had no fence.",
+      "base_result": "not-reproduced"
+    }
+  ]
+}

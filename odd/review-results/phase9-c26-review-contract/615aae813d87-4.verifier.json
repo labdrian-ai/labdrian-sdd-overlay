@@ -1,0 +1,11 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "cd /home/labdrian/labdrian-sdd-overlay-worktrees/review-615aae813d87 && git diff 352b4a3bc2492cedf37ec06c54a5df3653dcbff9 HEAD -- engine/review/claudeprint/preamble.md | rg '^[+-]'; rg -n 'voids the hold-out' odd/tasks/phase9-c26-review-contract.md; rg -n 'Causality you cannot prove' odd/tasks/phase9-c26-review-contract.md; rg -n '^- \\[x\\] T1' odd/tasks/phase9-c26-review-contract.md; git show 352b4a3b:engine/review/claudeprint/preamble.md | rg -c 'Causality you cannot prove'",
+      "output": "HEAD is 615aae813d87e17da6968b20bcf6ba4dc9774f58. The diff against the base adds 'Causality you cannot prove from the diff is unknown.' to the preamble line, so the line is at head and not at base (base rg -c printed nothing). Line 12 (S5) says a change to a design artifact including the preamble 'after T1's corpus commit is logged and voids the hold-out'. 'Causality you cannot prove' has no hit in the feature document (rg exit 1). Line 17 shows '- [x] T1' (checked off, commit e338183e and the bar commit after it). The change came after T1 and the head's feature document has no Log entry for it.",
+      "base_result": "not-reproduced"
+    }
+  ]
+}

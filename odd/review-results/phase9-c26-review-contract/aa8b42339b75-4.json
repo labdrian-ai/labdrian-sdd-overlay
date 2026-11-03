@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "c355b3d369e2035c7580a54a3efcfa7852ae5c12",
+    "head": "aa8b42339b7563a5f1af73a8e9c30469846eb9f7",
+    "diff_sha256": "248f3dd422d04c74dc5ea1f521c8e56cdc203f53b5e02f7bec07a56f5445e80d",
+    "paths": [
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/cmd/usage.go",
+      "engine/review/app/launch.go",
+      "engine/review/app/launch_test.go",
+      "engine/review/claudeprint/claudeprint.go",
+      "engine/review/claudeprint/claudeprint_test.go"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "c355b3d369e2035c7580a54a3efcfa7852ae5c12",
+      "head": "aa8b42339b7563a5f1af73a8e9c30469846eb9f7",
+      "diff_sha256": "248f3dd422d04c74dc5ea1f521c8e56cdc203f53b5e02f7bec07a56f5445e80d"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/cmd/usage.go",
+        "engine/review/app/launch.go",
+        "engine/review/app/launch_test.go",
+        "engine/review/claudeprint/claudeprint.go",
+        "engine/review/claudeprint/claudeprint_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/review/app/launch_test.go:248",
+        "severity": "SUGGESTION",
+        "claim": "The new test pins the 3-backtick fence and the order (heading, fence, refusal, fence, retry instruction). It does not pin the part of the change that matters most: a fence longer than any backtick run in the refusal. The refusal used in the test has no backticks, so deleting the `longestBacktickRun` term (a fixed ``` fence) would still pass. A second case whose refusal echoes a run of backticks, asserting a longer fence, would cover it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/app/launch.go:126 computes max(3, longestBacktickRun(quoted)+1)",
+          "engine/review/app/launch_test.go:76-80 asserts only the literal 3-backtick fence"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff of all 7 changed paths.",
+      "Confirmed longestBacktickRun exists at engine/review/app/launch.go:183 and counts consecutive backticks correctly.",
+      "Checked that the fence is built from the already-truncated quoted text, so its length matches what is emitted.",
+      "Checked that the help text in usage.go, usage.sh and README.md matches the new behavior (refusal in a fenced block, retry instruction after it).",
+      "Checked that the claudeprint comment, system prompt and test agree on the quoted refusal as evidence.",
+      "Did not run any commands or tests."
+    ]
+  }
+}

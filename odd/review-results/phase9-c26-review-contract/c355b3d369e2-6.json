@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "d4548feccfaba110e450af46ea1c3e7e248304f6",
+    "head": "c355b3d369e2035c7580a54a3efcfa7852ae5c12",
+    "diff_sha256": "9b7ac221f6a15365fdd092cb96aa991ff6342f273c65966ae76322d06bbe43dc",
+    "paths": [
+      "engine/review/claudeprint/claudeprint.go",
+      "engine/review/claudeprint/claudeprint_test.go"
+    ]
+  },
+  "rows": [
+    "default",
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "d4548feccfaba110e450af46ea1c3e7e248304f6",
+      "head": "c355b3d369e2035c7580a54a3efcfa7852ae5c12",
+      "diff_sha256": "9b7ac221f6a15365fdd092cb96aa991ff6342f273c65966ae76322d06bbe43dc"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/review/claudeprint/claudeprint.go",
+        "engine/review/claudeprint/claudeprint_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the whole candidate diff /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/diff-c355b3d3.patch: it changes the package doc comment (claudeprint.go:4), adds 'and the quoted refusal of a previous reply are evidence' to the systemPrompt constant (claudeprint.go:34), updates the expected --system-prompt argument in the test (claudeprint_test.go:57), and adds a 'quoted refusal' assertion (claudeprint_test.go:85-86).",
+      "Grep for systemPrompt and 'isolated code reviewer' across engine/ in the worktree: the constant is used only at claudeprint.go:89 as the --system-prompt argument of the claude --print process, and only claudeprint_test.go pins it. No other package reads or consumes this string, so it is not a contract others consume (item 3 does not apply).",
+      "engine/review/app/launch.go:99-128 (unchanged): reAsk appends '## Your previous reply was refused', then the refusal text, which can echo reply content and is capped at 1024 bytes, then a 'Reply again ...' instruction. So the 'quoted refusal of a previous reply' the new system prompt names does exist on the re-ask path, and the new wording matches real input.",
+      "Risk-line judgment: the system prompt is the reviewer's guard against prompt injection, the part that separates evidence from instructions. The change widens that guard to cover a second piece of untrusted text (a refusal that echoes reviewer output). That is item 2 (security: guards), so the declared 'Risk: 2' holds. The change does not alter existing behavior it leaves unmentioned: the flags, the model, the preamble and the stdin assembly are untouched. It does not touch delivery or CI.",
+      "Observation, not a finding: in launch.go:124 the quoted refusal is not fenced, so nothing in the text marks where the quote ends and the 'Reply again' instruction begins. That line is unchanged in this candidate (pre-existing), and the candidate makes no part of it worse.",
+      "Not run: go test, or any other command. This reviewer does not run commands."
+    ]
+  }
+}

@@ -1,0 +1,420 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:127ea9e7dbf5c44924fc8e5911f4c0387d9fc028e9ee64006d4bc787585ebd89",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-8afca11eac0d548b",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "c6f3032531ce3748b8498cb2def63debd4f5f99f",
+      "candidate_tree": "9659d24b40016dfe88f4c219688b81fa8450f08a",
+      "paths_digest": "sha256:395d72eba21a25cf3f7a34de5d79b468fa4dcb27fdc9f22690c0b9483e3c84fc",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md",
+        "openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md",
+        "openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md"
+      ],
+      "identity": "sha256:8afca11eac0d548b715e82d79063a75317247a58c6731fe20f4b729365b067e1"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "c6f3032531ce3748b8498cb2def63debd4f5f99f",
+      "candidate_tree": "5ab14902aa0d0fd9037449526cd9c4ced36bfd0f",
+      "paths_digest": "sha256:395d72eba21a25cf3f7a34de5d79b468fa4dcb27fdc9f22690c0b9483e3c84fc",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md",
+        "openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md",
+        "openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md"
+      ],
+      "identity": "sha256:e827cc3b432066d1d09fb4dbd5762bc93a52e3d1c00140cb8d36f367db80499d"
+    },
+    "genesis_paths": [
+      "openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md",
+      "openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md",
+      "openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md"
+    ],
+    "policy_hash": "sha256:34fb63d7f29f8613cd4431382b1057398a4816f8a4c20fc34677fffc80a184f6",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-reliability"
+    ],
+    "original_changed_lines": 2785,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_results": [
+      {
+        "lens": "review-reliability",
+        "findings": [
+          {
+            "id": "R3-loop-exit-code-cannot-fail",
+            "lens": "reliability",
+            "location": "openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md:9-13",
+            "severity": "CRITICAL",
+            "claim": "The machine-readable verification gate cannot fail for four of the five modules it claims to cover. Both `test_command` and `build_command` are bare `for m in engine tui tools/deterministic-check-runner tools/entry-contract-validator tools/review-preflight; do (cd \"$m\" \u0026\u0026 ...); done` loops with no `set -e`, no `|| exit`, and no failure accumulator. A POSIX `for` loop exits with the status of the last command executed, so `test_exit_code: 0` and `build_exit_code: 0` are satisfied whenever `tools/review-preflight` alone succeeds — a failure in `engine`, `tui`, `tools/deterministic-check-runner`, or `tools/entry-contract-validator` is silently discarded. This is a structurally-unfailable gate reported as a pass, the exact defect class this change's own Batch 8 exists to eliminate (\"a tautological check reported as 'verified' is a fabricated assurance\"), reproduced in the change's own verification record. The pasted per-package `ok` lines mitigate for a human reader but are not what the recorded exit code asserts, and the same loop form is what apply-progress relies on for every batch's \"full suite green\" claim.",
+            "proof_refs": [
+              "openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md:9 — `test_command: 'for m in engine tui tools/deterministic-check-runner tools/entry-contract-validator tools/review-preflight; do (cd \"$m\" \u0026\u0026 go test -count=1 ./...); done'`",
+              "openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md:10 — `test_exit_code: 0`",
+              "openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md:12-13 — identical loop form for `build_command`, `build_exit_code: 0`",
+              "openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md:665-668 — task 15C.1 records the same unguarded loop as the evidence for \"all green\"",
+              "openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md — every \"Full Suite Evidence\" block (post-Phase-9 through post-Phase-13, and Batch 9/Batch 10) uses the same `for m in ...; do (cd \"$m\" \u0026\u0026 go test -count=1 ./...); done` form as its green-suite proof",
+              "openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md Batch 8 rationale: \"a tautological check reported as 'verified' is a fabricated assurance, the same defect class this change exists to eliminate\""
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-pass-certifies-superseded-state",
+            "lens": "reliability",
+            "location": "openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md:2-14",
+            "severity": "CRITICAL",
+            "claim": "The candidate ships a `verdict: pass` / `archive-ready: YES` certification that provably predates the last behavior-affecting batch recorded in the same candidate, and nothing schedules a re-verification of that batch. openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md is round 8; openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md's Batch 10 (Phase 15) explicitly begins \"Verify round 8 returned PASS ... Batch 10 closes both [WARNINGs]\" and then modifies a shipped agent-executed rule file (`skills/sdd-time-estimation/SKILL.md`, a new normative CALIBRATION fallback rule) and adds a new contract subtest, taking the contract suite from the 15 subtests round 8 inspected to 16 (`sha256:5825df55…`, distinct from the certified `test_output_hash: sha256:39e698fe…`). Every prior remediation phase carried an explicit re-verify task (7D, 8E, 10D, 11C, 12E, 13E, 14E); Phase 15 ends at 15C with no 15D/15E and no unchecked re-verify item, so the loop that caught real defects after each of rounds 6 and 7 is not scheduled to run again. On this change's own stated premise that agent-executed SKILL.md prose *is* the implementation (openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md Phase 7B), the final edit to shipped behavior is covered by no verification round.",
+            "proof_refs": [
+              "openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md:3-11 — `evidence_revision: sha256:281b84f8…`, `verdict: pass`, `scenarios: 15/15`, `test_output_hash: sha256:39e698fe…`",
+              "openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md Batch 10 header — \"Verify round 8 returned **PASS** … Batch 10 closes both\"",
+              "openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md Batch 10 Files changed — `skills/sdd-time-estimation/SKILL.md` 1 line replaced; `engine/skills/actuals_instrumentation_contract_test.go` +20 (new subtest `R019_calibration_absent_numerators_fallback`)",
+              "openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md Batch 10 — \"Full contract-test output (16/16 subtests, `-v -count=1`) hashed … `sha256:5825df55…`\" versus round 8's own inventory of 15 scenarios and its unawareness of that subtest",
+              "openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md:664-673 — Phase 15 terminates at 15C with no re-verify task, unlike openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md sections 7D, 8E, 10D, 11C, 12E, 13E, 14E which each carry one",
+              "openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md Phase 7B — \"closure-feedback is agent-executed prose, so `skills/inception-pipeline/SKILL.md` **is** the implementation\", the premise that makes the Phase 15 SKILL.md edit behavior-affecting"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-forecast-falsified-not-updated",
+            "lens": "reliability",
+            "location": "openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md:7-17",
+            "severity": "WARNING",
+            "claim": "The Review Workload Forecast — the planning artifact an orchestrator reads to decide delivery shape — is falsified by roughly 3x and still directs a single unchained PR, contradicting both sibling files in the same candidate. openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md states \"Estimated changed lines ~280-380\", \"400-line budget risk Medium\", \"Chained PRs recommended: No\", and \"Chain strategy: pending (not required — estimate stays under budget)\". openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md's Delivery planning section measures the authored implementation + test total at approximately 1159 lines, calls it approximately 2.9x the 400-line budget, and states that under `delivery_strategy: auto-chain` this requires chained PR slices. openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md meanwhile still asserts \"Mode: single PR (forecast confirmed no chaining needed; batch 3 stayed well under budget)\", and separately concedes the overrun was \"carried, not resolved\" as of batch 4 (468 lines against 400) — after which six more batches added roughly 1150 further authored lines. Three artifacts in one candidate give three different answers to whether chaining is required, and the one an executor consults first gives the wrong one.",
+            "proof_refs": [
+              "openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md:7 — `| Estimated changed lines | ~280-380 |`",
+              "openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md:9,12,15 — `Chained PRs recommended | No`, `Chain strategy | pending (not required — estimate stays under budget)`, `Chained PRs recommended: No`",
+              "openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md Delivery planning table — \"Authored implementation + test total | ≈ 1159 lines\"; \"≈ **2.9×** the 400-line budget\"; \"Under `auto-chain` this requires chained PR slices\"",
+              "openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md Workload / PR Boundary — \"Mode: single PR (forecast confirmed no chaining needed; batch 3 stayed well under budget)\"",
+              "openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md Batch 4 — \"The cumulative-candidate concern round 3 flagged (W9: 468 lines against 400 before this batch) is **carried, not resolved**\""
+            ]
+          },
+          {
+            "id": "R3-status-header-stale",
+            "lens": "reliability",
+            "location": "openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md:3-14",
+            "severity": "WARNING",
+            "claim": "The apply record's own Status block — the first authoritative summary a reader encounters — is three batches out of date and understates what shipped. Line 3 dates the document \"(batch 7 / Phase 12)\" and line 7 states \"Tasks complete: Phases 1–11 (54/59) plus Phase 12 (12A–12D complete, 12E deferred) across seven apply batches\", while the same file goes on to record Batch 8 (Phase 13), Batch 9 (Phase 14), and Batch 10 (Phase 15) — including the two behavior-affecting edits in Batch 8 (the `approved_tree` synthesis removal) and Batch 10 (the CALIBRATION fallback rule). The document elsewhere is disciplined about marking superseded content (Phases 2/3 flagged SUPERSEDED, scenario-mapping row 14 flagged superseded, Phase 5's task 5.3 flagged CORRECTED), which makes the un-updated header a genuine inconsistency rather than an accepted convention. A reader trusting the summary would conclude 12E is the outstanding item and never learn that Phases 13-15 exist or that Batch 10's work is uncertified.",
+            "proof_refs": [
+              "openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md:3 — \"**Date**: 2026-08-14 (batch 7 / Phase 12)\"",
+              "openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md:7-14 — \"Tasks complete: Phases 1–11 (54/59) plus Phase 12 (12A–12D complete, 12E deferred) across seven apply batches\"",
+              "openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md — later sections \"## Batch 8 (Phase 13, this session) — Full Record\", \"## Batch 9 (Phase 14)\", \"## Batch 10 (Phase 15)\"",
+              "openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md — contrasting explicit staleness markers used elsewhere: \"Phases 2 and 3 (batch 1) are SUPERSEDED\", \"Row 14 is superseded below\", \"**CORRECTED by Phase 9 (see below).**\""
+            ]
+          },
+          {
+            "id": "R3-work-unit-4-misclassified",
+            "lens": "reliability",
+            "location": "openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md:26",
+            "severity": "WARNING",
+            "claim": "Suggested Work Unit 4 is classified \"(doc only)\" with rollback \"Revert one line\", and both halves are false as of Phase 15. `skills/sdd-time-estimation/SKILL.md` now carries two independent edits from this change — task 4.1's line-28 boundary word, and task 15A.1's inserted normative CALIBRATION rule governing what an estimator must do when the three R-019 numerators are absent — so a one-line revert leaves the second edit in place. It is also not doc-only under this change's own premise that agent-executed SKILL.md prose is the implementation: 15A.1 adds a behavioral fallback path (\"the record supplies NO compute-time numerator … never substitute `total_wall_clock_hours`\") that is pinned by a new contract subtest, which is the shape of behavior, not of documentation. The rollback instruction as written would produce a partially-reverted skill and a still-present test pinning removed prose.",
+            "proof_refs": [
+              "openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md:26 — `| 4 | sdd-time-estimation boundary (doc only) | contract test, regression check | N/A | Revert one line |`",
+              "openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md:63 — task 4.1, the first edit to that file",
+              "openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md 15A.1/15A.2 — the second, independent edit to the same file plus its new pinning subtest `R019_calibration_absent_numerators_fallback`",
+              "openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md Batch 10 Files changed — `skills/sdd-time-estimation/SKILL.md` listed as a Batch 10 modification",
+              "openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md Phase 7B — \"closure-feedback is agent-executed prose, so `skills/inception-pipeline/SKILL.md` **is** the implementation\", the premise under which a normative SKILL.md rule is behavior",
+              "openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md Batch 10 W2 fix — design.md's revert list is corrected to seven files, but openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md's own work-unit rollback column is not"
+            ]
+          },
+          {
+            "id": "R3-nonreproducible-evidence-hash",
+            "lens": "reliability",
+            "location": "openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md:11",
+            "severity": "WARNING",
+            "claim": "The recorded `test_output_hash` cannot be re-derived by anyone, so it does not function as the durable evidence anchor it is presented as. It hashes `go test` output, which embeds per-package wall-clock durations that vary run to run — demonstrated within this candidate, where the identical command's output is pasted eight times with eight different duration sets (for example `engine/installer` at 6.004s, 5.998s, 6.310s, 3.611s, 6.062s, 6.086s, 6.073s, 5.995s). A verifier re-running the same command on the same tree gets a different hash, so the field can only ever confirm \"this exact captured text\", never \"this tree passes\". The same defect applies to the `--evidence-revision` values apply-progress records at settle time (Batch 9's `sha256:2c5aa0cd…`, described as \"hash of the full test-suite output above\"; Batch 10's `sha256:5825df55…`), which are the values the attempt ledger retains as proof.",
+            "proof_refs": [
+              "openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md:11 — `test_output_hash: sha256:39e698fe6b171356fb1877d7a124ee72488eebf88ab398b616dab4dcce8c4205`",
+              "openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md \"Full Suite Evidence\" blocks — same command, differing timings: `.../engine/installer 6.004s`, `5.998s`, `6.310s`, `3.611s`, `6.062s`, `6.086s`, `6.073s`, `5.995s`",
+              "openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md Batch 9 settle — \"`--evidence-revision sha256:2c5aa0cde38a325d6a1d188eae96c57f726c0a66db54b773a91adc26bd71a783` (hash of the full test-suite output above)\"",
+              "openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md Batch 10 — \"Full contract-test output (16/16 subtests, `-v -count=1`) hashed for the settle evidence-revision: `sha256:5825df55…`\""
+            ]
+          },
+          {
+            "id": "R3-instrument-never-exercised-end-to-end",
+            "lens": "reliability",
+            "location": "openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md:77",
+            "severity": "WARNING",
+            "claim": "The instrument this change ships has never been executed end to end even once, and the candidate nonetheless records \"Archive-ready: YES\". Task 6.3 — this change's own closure, the single task that runs the t0/t1 resolution, the anchor verification, and the record write together against real data — remains unchecked across all ten batches and eight verify rounds, deferred as structurally impossible before merge. Everything actually proven is proven by proxy: string pins over shipped prose, a `resolveD2T1` reimplementation that lives only in `_test.go` and is not the code any pipeline runs, and two committed fixtures mirroring hand-reconstructed historical records. That is a coherent and honestly-disclosed position, but it means no assertion anywhere in this candidate observes the shipped instrument producing a value; the first real execution will be the archive of this change itself, with no round scheduled to inspect the result.",
+            "proof_refs": [
+              "openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md:77 — `- [ ] 6.3 This change's own closure (n=3) exercises the path live — evidence, not a gate.`",
+              "openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md Remaining Tasks — \"6.3 … Not executable during apply: it requires this change to actually archive. Left for the archive/closure phase.\"",
+              "openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md WARNING W3 — \"`t1` is this change's own merge commit, so the instrument cannot be exercised end-to-end before the change merges. Not closable within this candidate.\"",
+              "openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md — \"Archive-ready: **YES**\" recorded alongside that unclosable gap",
+              "openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md — `resolveD2T1`, `commitsCarryingTree`, `resolveTreeToCommitOrAmbiguous` are described as \"all test-file-only per ADR-15\", i.e. a reimplementation of the rule rather than the executed path"
+            ]
+          },
+          {
+            "id": "R3-empty-build-output-hash",
+            "lens": "reliability",
+            "location": "openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md:14",
+            "severity": "SUGGESTION",
+            "claim": "`build_output_hash: sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` is the SHA-256 of the empty string. It is the correct hash for a silent successful build, but as an evidence field it cannot discriminate between all five modules building cleanly and the build command never having run — any no-output outcome produces the identical value. The real signal is carried entirely by `build_exit_code`, which is itself weakened by the unguarded loop (see the CRITICAL at openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md:9-13). Recording a per-module marker, or hashing the list of produced binaries, would make this field able to fail.",
+            "proof_refs": [
+              "openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md:14 — `build_output_hash: sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` (the canonical SHA-256 of zero bytes)",
+              "openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md Quality Metrics — \"**Build**: ✅ all 5 modules, exit 0, empty output\"",
+              "openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md post-Phase-12 and post-Phase-13 blocks — \"exit 0 (empty output; scratch bin dir is outside the candidate)\""
+            ]
+          }
+        ],
+        "evidence": [
+          "Inspected all 3 manifest paths in full from the GENTLE_AI_REVIEW_PATCH sections; no working-tree, index, or HEAD access was used and no command was run.",
+          "The candidate adds only three markdown process artifacts (openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md 1682 lines, openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md 673 lines, openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md 430 lines). No schema, skill, Go test, or fixture file is present, so every behavioral and mutation-probe claim these documents make concerns files outside this candidate and is unverifiable within scope; findings are therefore confined to defects internal to the three documents and to contradictions between them.",
+          "Cross-checked the three files against one another for consistency of state: verify round 8's certification versus apply-progress Batch 10's subsequent edits; openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md's workload forecast versus verify-report's delivery-planning measurement versus apply-progress's PR-boundary section; apply-progress's Status header versus its own Batch 8/9/10 sections.",
+          "Enumerated every checkbox in openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md by hand: 90 total, 87 checked, 3 unchecked (6.3 at :77, 8E.1, 13E.1). openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md's \"84 total: 80 checked, 4 unchecked\" reconciles exactly to the pre-Phase-15 state (Phase 15 added 6 checkboxes and checked 14E.1), which independently confirms the report predates the openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md shipped here.",
+          "Re-derived every batch's line-count arithmetic from its own Files Changed table (batches 3, 4, 5, 6, 7, 8, 9, 10). All sums are internally consistent; no arithmetic defect found. Batch 10 counts a one-line replacement as 1 where batch 7 counted it as 2, a minor convention drift not reported as a finding.",
+          "Traced the shell semantics of the recorded `test_command` and `build_command` in openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md:9 and :12: a bare `for` loop with no `set -e` or failure accumulator exits with the status of its final iteration, making the recorded exit codes insensitive to failures in the first four of five modules.",
+          "Identified sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 as the SHA-256 of the empty input, matching verify-report's own \"empty output\" note.",
+          "Compared the eight pasted 'Full Suite Evidence' blocks in openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md and confirmed per-package durations differ across every run of the same command, establishing that the recorded output hashes are not reproducible.",
+          "Verified precise line anchors by counting the added lines of each new file from position 1: openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md frontmatter occupies lines 2-14; openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md's forecast occupies 7-17, its work-unit table 21-28, task 6.3 line 77; openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md's Phase 15 terminates at lines 664-673 with no re-verify task; openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md's Status block occupies lines 3-14."
+        ],
+        "result_hash": "sha256:f0798aa59f2af27597fc558a007e7775088879499485b74546c4b9b07d4eea5f"
+      }
+    ],
+    "findings": [
+      {
+        "id": "R3-loop-exit-code-cannot-fail",
+        "lens": "reliability",
+        "location": "openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md:9-13",
+        "severity": "CRITICAL",
+        "claim": "The machine-readable verification gate cannot fail for four of the five modules it claims to cover. Both `test_command` and `build_command` are bare `for m in engine tui tools/deterministic-check-runner tools/entry-contract-validator tools/review-preflight; do (cd \"$m\" \u0026\u0026 ...); done` loops with no `set -e`, no `|| exit`, and no failure accumulator. A POSIX `for` loop exits with the status of the last command executed, so `test_exit_code: 0` and `build_exit_code: 0` are satisfied whenever `tools/review-preflight` alone succeeds — a failure in `engine`, `tui`, `tools/deterministic-check-runner`, or `tools/entry-contract-validator` is silently discarded. This is a structurally-unfailable gate reported as a pass, the exact defect class this change's own Batch 8 exists to eliminate (\"a tautological check reported as 'verified' is a fabricated assurance\"), reproduced in the change's own verification record. The pasted per-package `ok` lines mitigate for a human reader but are not what the recorded exit code asserts, and the same loop form is what apply-progress relies on for every batch's \"full suite green\" claim.",
+        "proof_refs": [
+          "openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md:9 — `test_command: 'for m in engine tui tools/deterministic-check-runner tools/entry-contract-validator tools/review-preflight; do (cd \"$m\" \u0026\u0026 go test -count=1 ./...); done'`",
+          "openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md:10 — `test_exit_code: 0`",
+          "openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md:12-13 — identical loop form for `build_command`, `build_exit_code: 0`",
+          "openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md:665-668 — task 15C.1 records the same unguarded loop as the evidence for \"all green\"",
+          "openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md — every \"Full Suite Evidence\" block (post-Phase-9 through post-Phase-13, and Batch 9/Batch 10) uses the same `for m in ...; do (cd \"$m\" \u0026\u0026 go test -count=1 ./...); done` form as its green-suite proof",
+          "openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md Batch 8 rationale: \"a tautological check reported as 'verified' is a fabricated assurance, the same defect class this change exists to eliminate\""
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-pass-certifies-superseded-state",
+        "lens": "reliability",
+        "location": "openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md:2-14",
+        "severity": "CRITICAL",
+        "claim": "The candidate ships a `verdict: pass` / `archive-ready: YES` certification that provably predates the last behavior-affecting batch recorded in the same candidate, and nothing schedules a re-verification of that batch. openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md is round 8; openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md's Batch 10 (Phase 15) explicitly begins \"Verify round 8 returned PASS ... Batch 10 closes both [WARNINGs]\" and then modifies a shipped agent-executed rule file (`skills/sdd-time-estimation/SKILL.md`, a new normative CALIBRATION fallback rule) and adds a new contract subtest, taking the contract suite from the 15 subtests round 8 inspected to 16 (`sha256:5825df55…`, distinct from the certified `test_output_hash: sha256:39e698fe…`). Every prior remediation phase carried an explicit re-verify task (7D, 8E, 10D, 11C, 12E, 13E, 14E); Phase 15 ends at 15C with no 15D/15E and no unchecked re-verify item, so the loop that caught real defects after each of rounds 6 and 7 is not scheduled to run again. On this change's own stated premise that agent-executed SKILL.md prose *is* the implementation (openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md Phase 7B), the final edit to shipped behavior is covered by no verification round.",
+        "proof_refs": [
+          "openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md:3-11 — `evidence_revision: sha256:281b84f8…`, `verdict: pass`, `scenarios: 15/15`, `test_output_hash: sha256:39e698fe…`",
+          "openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md Batch 10 header — \"Verify round 8 returned **PASS** … Batch 10 closes both\"",
+          "openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md Batch 10 Files changed — `skills/sdd-time-estimation/SKILL.md` 1 line replaced; `engine/skills/actuals_instrumentation_contract_test.go` +20 (new subtest `R019_calibration_absent_numerators_fallback`)",
+          "openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md Batch 10 — \"Full contract-test output (16/16 subtests, `-v -count=1`) hashed … `sha256:5825df55…`\" versus round 8's own inventory of 15 scenarios and its unawareness of that subtest",
+          "openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md:664-673 — Phase 15 terminates at 15C with no re-verify task, unlike openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md sections 7D, 8E, 10D, 11C, 12E, 13E, 14E which each carry one",
+          "openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md Phase 7B — \"closure-feedback is agent-executed prose, so `skills/inception-pipeline/SKILL.md` **is** the implementation\", the premise that makes the Phase 15 SKILL.md edit behavior-affecting"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-forecast-falsified-not-updated",
+        "lens": "reliability",
+        "location": "openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md:7-17",
+        "severity": "WARNING",
+        "claim": "The Review Workload Forecast — the planning artifact an orchestrator reads to decide delivery shape — is falsified by roughly 3x and still directs a single unchained PR, contradicting both sibling files in the same candidate. openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md states \"Estimated changed lines ~280-380\", \"400-line budget risk Medium\", \"Chained PRs recommended: No\", and \"Chain strategy: pending (not required — estimate stays under budget)\". openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md's Delivery planning section measures the authored implementation + test total at approximately 1159 lines, calls it approximately 2.9x the 400-line budget, and states that under `delivery_strategy: auto-chain` this requires chained PR slices. openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md meanwhile still asserts \"Mode: single PR (forecast confirmed no chaining needed; batch 3 stayed well under budget)\", and separately concedes the overrun was \"carried, not resolved\" as of batch 4 (468 lines against 400) — after which six more batches added roughly 1150 further authored lines. Three artifacts in one candidate give three different answers to whether chaining is required, and the one an executor consults first gives the wrong one.",
+        "proof_refs": [
+          "openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md:7 — `| Estimated changed lines | ~280-380 |`",
+          "openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md:9,12,15 — `Chained PRs recommended | No`, `Chain strategy | pending (not required — estimate stays under budget)`, `Chained PRs recommended: No`",
+          "openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md Delivery planning table — \"Authored implementation + test total | ≈ 1159 lines\"; \"≈ **2.9×** the 400-line budget\"; \"Under `auto-chain` this requires chained PR slices\"",
+          "openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md Workload / PR Boundary — \"Mode: single PR (forecast confirmed no chaining needed; batch 3 stayed well under budget)\"",
+          "openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md Batch 4 — \"The cumulative-candidate concern round 3 flagged (W9: 468 lines against 400 before this batch) is **carried, not resolved**\""
+        ]
+      },
+      {
+        "id": "R3-status-header-stale",
+        "lens": "reliability",
+        "location": "openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md:3-14",
+        "severity": "WARNING",
+        "claim": "The apply record's own Status block — the first authoritative summary a reader encounters — is three batches out of date and understates what shipped. Line 3 dates the document \"(batch 7 / Phase 12)\" and line 7 states \"Tasks complete: Phases 1–11 (54/59) plus Phase 12 (12A–12D complete, 12E deferred) across seven apply batches\", while the same file goes on to record Batch 8 (Phase 13), Batch 9 (Phase 14), and Batch 10 (Phase 15) — including the two behavior-affecting edits in Batch 8 (the `approved_tree` synthesis removal) and Batch 10 (the CALIBRATION fallback rule). The document elsewhere is disciplined about marking superseded content (Phases 2/3 flagged SUPERSEDED, scenario-mapping row 14 flagged superseded, Phase 5's task 5.3 flagged CORRECTED), which makes the un-updated header a genuine inconsistency rather than an accepted convention. A reader trusting the summary would conclude 12E is the outstanding item and never learn that Phases 13-15 exist or that Batch 10's work is uncertified.",
+        "proof_refs": [
+          "openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md:3 — \"**Date**: 2026-08-14 (batch 7 / Phase 12)\"",
+          "openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md:7-14 — \"Tasks complete: Phases 1–11 (54/59) plus Phase 12 (12A–12D complete, 12E deferred) across seven apply batches\"",
+          "openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md — later sections \"## Batch 8 (Phase 13, this session) — Full Record\", \"## Batch 9 (Phase 14)\", \"## Batch 10 (Phase 15)\"",
+          "openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md — contrasting explicit staleness markers used elsewhere: \"Phases 2 and 3 (batch 1) are SUPERSEDED\", \"Row 14 is superseded below\", \"**CORRECTED by Phase 9 (see below).**\""
+        ]
+      },
+      {
+        "id": "R3-work-unit-4-misclassified",
+        "lens": "reliability",
+        "location": "openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md:26",
+        "severity": "WARNING",
+        "claim": "Suggested Work Unit 4 is classified \"(doc only)\" with rollback \"Revert one line\", and both halves are false as of Phase 15. `skills/sdd-time-estimation/SKILL.md` now carries two independent edits from this change — task 4.1's line-28 boundary word, and task 15A.1's inserted normative CALIBRATION rule governing what an estimator must do when the three R-019 numerators are absent — so a one-line revert leaves the second edit in place. It is also not doc-only under this change's own premise that agent-executed SKILL.md prose is the implementation: 15A.1 adds a behavioral fallback path (\"the record supplies NO compute-time numerator … never substitute `total_wall_clock_hours`\") that is pinned by a new contract subtest, which is the shape of behavior, not of documentation. The rollback instruction as written would produce a partially-reverted skill and a still-present test pinning removed prose.",
+        "proof_refs": [
+          "openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md:26 — `| 4 | sdd-time-estimation boundary (doc only) | contract test, regression check | N/A | Revert one line |`",
+          "openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md:63 — task 4.1, the first edit to that file",
+          "openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md 15A.1/15A.2 — the second, independent edit to the same file plus its new pinning subtest `R019_calibration_absent_numerators_fallback`",
+          "openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md Batch 10 Files changed — `skills/sdd-time-estimation/SKILL.md` listed as a Batch 10 modification",
+          "openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md Phase 7B — \"closure-feedback is agent-executed prose, so `skills/inception-pipeline/SKILL.md` **is** the implementation\", the premise under which a normative SKILL.md rule is behavior",
+          "openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md Batch 10 W2 fix — design.md's revert list is corrected to seven files, but openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md's own work-unit rollback column is not"
+        ]
+      },
+      {
+        "id": "R3-nonreproducible-evidence-hash",
+        "lens": "reliability",
+        "location": "openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md:11",
+        "severity": "WARNING",
+        "claim": "The recorded `test_output_hash` cannot be re-derived by anyone, so it does not function as the durable evidence anchor it is presented as. It hashes `go test` output, which embeds per-package wall-clock durations that vary run to run — demonstrated within this candidate, where the identical command's output is pasted eight times with eight different duration sets (for example `engine/installer` at 6.004s, 5.998s, 6.310s, 3.611s, 6.062s, 6.086s, 6.073s, 5.995s). A verifier re-running the same command on the same tree gets a different hash, so the field can only ever confirm \"this exact captured text\", never \"this tree passes\". The same defect applies to the `--evidence-revision` values apply-progress records at settle time (Batch 9's `sha256:2c5aa0cd…`, described as \"hash of the full test-suite output above\"; Batch 10's `sha256:5825df55…`), which are the values the attempt ledger retains as proof.",
+        "proof_refs": [
+          "openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md:11 — `test_output_hash: sha256:39e698fe6b171356fb1877d7a124ee72488eebf88ab398b616dab4dcce8c4205`",
+          "openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md \"Full Suite Evidence\" blocks — same command, differing timings: `.../engine/installer 6.004s`, `5.998s`, `6.310s`, `3.611s`, `6.062s`, `6.086s`, `6.073s`, `5.995s`",
+          "openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md Batch 9 settle — \"`--evidence-revision sha256:2c5aa0cde38a325d6a1d188eae96c57f726c0a66db54b773a91adc26bd71a783` (hash of the full test-suite output above)\"",
+          "openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md Batch 10 — \"Full contract-test output (16/16 subtests, `-v -count=1`) hashed for the settle evidence-revision: `sha256:5825df55…`\""
+        ]
+      },
+      {
+        "id": "R3-instrument-never-exercised-end-to-end",
+        "lens": "reliability",
+        "location": "openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md:77",
+        "severity": "WARNING",
+        "claim": "The instrument this change ships has never been executed end to end even once, and the candidate nonetheless records \"Archive-ready: YES\". Task 6.3 — this change's own closure, the single task that runs the t0/t1 resolution, the anchor verification, and the record write together against real data — remains unchecked across all ten batches and eight verify rounds, deferred as structurally impossible before merge. Everything actually proven is proven by proxy: string pins over shipped prose, a `resolveD2T1` reimplementation that lives only in `_test.go` and is not the code any pipeline runs, and two committed fixtures mirroring hand-reconstructed historical records. That is a coherent and honestly-disclosed position, but it means no assertion anywhere in this candidate observes the shipped instrument producing a value; the first real execution will be the archive of this change itself, with no round scheduled to inspect the result.",
+        "proof_refs": [
+          "openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md:77 — `- [ ] 6.3 This change's own closure (n=3) exercises the path live — evidence, not a gate.`",
+          "openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md Remaining Tasks — \"6.3 … Not executable during apply: it requires this change to actually archive. Left for the archive/closure phase.\"",
+          "openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md WARNING W3 — \"`t1` is this change's own merge commit, so the instrument cannot be exercised end-to-end before the change merges. Not closable within this candidate.\"",
+          "openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md — \"Archive-ready: **YES**\" recorded alongside that unclosable gap",
+          "openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md — `resolveD2T1`, `commitsCarryingTree`, `resolveTreeToCommitOrAmbiguous` are described as \"all test-file-only per ADR-15\", i.e. a reimplementation of the rule rather than the executed path"
+        ]
+      },
+      {
+        "id": "R3-empty-build-output-hash",
+        "lens": "reliability",
+        "location": "openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md:14",
+        "severity": "SUGGESTION",
+        "claim": "`build_output_hash: sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` is the SHA-256 of the empty string. It is the correct hash for a silent successful build, but as an evidence field it cannot discriminate between all five modules building cleanly and the build command never having run — any no-output outcome produces the identical value. The real signal is carried entirely by `build_exit_code`, which is itself weakened by the unguarded loop (see the CRITICAL at openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md:9-13). Recording a per-module marker, or hashing the list of produced binaries, would make this field able to fail.",
+        "proof_refs": [
+          "openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md:14 — `build_output_hash: sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` (the canonical SHA-256 of zero bytes)",
+          "openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md Quality Metrics — \"**Build**: ✅ all 5 modules, exit 0, empty output\"",
+          "openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md post-Phase-12 and post-Phase-13 blocks — \"exit 0 (empty output; scratch bin dir is outside the candidate)\""
+        ]
+      }
+    ],
+    "classifications": {
+      "R3-loop-exit-code-cannot-fail": {
+        "finding_id": "R3-loop-exit-code-cannot-fail",
+        "class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof": "openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md:9 — `test_command: 'for m in engine tui tools/deterministic-check-runner tools/entry-contract-validator tools/review-preflight; do (cd \"$m\" \u0026\u0026 go test -count=1 ./...); done'`; openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md:10 — `test_exit_code: 0`; openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md:12-13 — identical loop form for `build_command`, `build_exit_code: 0`; openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md:665-668 — task 15C.1 records the same unguarded loop as the evidence for \"all green\"; openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md — every \"Full Suite Evidence\" block (post-Phase-9 through post-Phase-13, and Batch 9/Batch 10) uses the same `for m in ...; do (cd \"$m\" \u0026\u0026 go test -count=1 ./...); done` form as its green-suite proof; openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md Batch 8 rationale: \"a tautological check reported as 'verified' is a fabricated assurance, the same defect class this change exists to eliminate\""
+      },
+      "R3-pass-certifies-superseded-state": {
+        "finding_id": "R3-pass-certifies-superseded-state",
+        "class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof": "openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md:3-11 — `evidence_revision: sha256:281b84f8…`, `verdict: pass`, `scenarios: 15/15`, `test_output_hash: sha256:39e698fe…`; openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md Batch 10 header — \"Verify round 8 returned **PASS** … Batch 10 closes both\"; openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md Batch 10 Files changed — `skills/sdd-time-estimation/SKILL.md` 1 line replaced; `engine/skills/actuals_instrumentation_contract_test.go` +20 (new subtest `R019_calibration_absent_numerators_fallback`); openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md Batch 10 — \"Full contract-test output (16/16 subtests, `-v -count=1`) hashed … `sha256:5825df55…`\" versus round 8's own inventory of 15 scenarios and its unawareness of that subtest; openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md:664-673 — Phase 15 terminates at 15C with no re-verify task, unlike openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md sections 7D, 8E, 10D, 11C, 12E, 13E, 14E which each carry one; openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md Phase 7B — \"closure-feedback is agent-executed prose, so `skills/inception-pipeline/SKILL.md` **is** the implementation\", the premise that makes the Phase 15 SKILL.md edit behavior-affecting"
+      }
+    },
+    "outcomes": {
+      "R3-empty-build-output-hash": "info",
+      "R3-forecast-falsified-not-updated": "info",
+      "R3-instrument-never-exercised-end-to-end": "info",
+      "R3-loop-exit-code-cannot-fail": "corroborated",
+      "R3-nonreproducible-evidence-hash": "info",
+      "R3-pass-certifies-superseded-state": "corroborated",
+      "R3-status-header-stale": "info",
+      "R3-work-unit-4-misclassified": "info"
+    },
+    "fix_finding_ids": [
+      "R3-loop-exit-code-cannot-fail",
+      "R3-pass-certifies-superseded-state"
+    ],
+    "follow_ups": [
+      {
+        "observation": "The recorded `test_command` alone does not reproduce the recorded `test_output_hash`; the normalisation is specified only as prose at verify-report.md:49-52. I re-derived the hash successfully from that prose, so it is reproducible, but a reader who runs only the envelope's `test_command` and hashes its stdout will get a different value (I observed two distinct raw hashes across two runs). Encoding the normalisation as part of the recorded command, or as a named helper, would make the envelope self-verifying.",
+        "proof_refs": [
+          "openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md:9",
+          "openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md:11",
+          "openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md:49-52",
+          "observed run1 raw sha256 7d7ed64b8c1df213a4fbeca826a02eaa50f51cbbfc56fbc5e80a371c05df0644 vs run2 raw 1e86958a949de40f25256b693f4f9e660cd482a2d82f9a8b342fcd2e972f72cd; both normalise to 45ada0f4a3e1c69cd0eb09c06ac81332247ac97649de15de88d8d8eedc680a9e"
+        ]
+      },
+      {
+        "observation": "The scope qualifier lives only at the top of verify-report.md. The document repeats an unqualified `## Archive-ready?` / `**YES.**` at lines 454-456, roughly 420 lines below the banner, with no local pointer back to it. A reader who jumps straight to that section sees the unscoped YES. Outside this correction's cited findings, but a one-line cross-reference there would remove the last place the document reads as unscoped.",
+        "proof_refs": [
+          "openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md:22-33",
+          "openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md:454-456"
+        ]
+      },
+      {
+        "observation": "verify-report.md's header metadata still reads `**State**: all UNCOMMITTED`, but the candidate is committed (HEAD 7343ff5, working tree clean). This is pre-existing round-8 text, untouched by the correction and outside its two findings, but it is now factually stale.",
+        "proof_refs": [
+          "openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md:20",
+          "git rev-parse HEAD -\u003e 7343ff5704fe2d38f539635e9ae81a82fd61d1b9; git status --porcelain --untracked-files=all -\u003e empty"
+        ]
+      },
+      {
+        "observation": "The un-corrected apply-progress.md has no pointer to the newly added 15D.1. Its Batch 10 section closes at line 1682 describing Phase 15 as complete without noting that a re-verify item was subsequently added to tasks.md, so the apply record and the task list are now out of step (an omission, not a contradiction — apply-progress.md asserts nothing that 15D.1 falsifies). Its Batch-10 line-count row `tasks.md | +~68` is likewise scoped to that batch and does not account for this correction's +28/-3, which is correct as scoped but easy to misread as a total.",
+        "proof_refs": [
+          "openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md:1502",
+          "openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md:1666",
+          "openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md:1671-1682",
+          "openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md:684-698"
+        ]
+      }
+    ],
+    "proposed_correction_lines": 49,
+    "actual_correction_lines": 74,
+    "fix_delta_hash": "sha256:362c9cd122ceb36f4ef64c9992ca04af54d9514e2fc7e79c9c781afc07324cd3",
+    "original_criteria": {
+      "evidence_hash": "sha256:3b3e01db341116061826de49fa3872760a4b7fe12180de3d433d141575343679",
+      "fix_delta_hash": "sha256:362c9cd122ceb36f4ef64c9992ca04af54d9514e2fc7e79c9c781afc07324cd3",
+      "passed": true
+    },
+    "correction_regression": {
+      "evidence_hash": "sha256:0d9261c6926a3c774c1c2c28f093b08cee100b74da31c0bd73733aee15d46a70",
+      "fix_delta_hash": "sha256:362c9cd122ceb36f4ef64c9992ca04af54d9514e2fc7e79c9c781afc07324cd3",
+      "passed": true
+    },
+    "evidence_hash": "sha256:ef29d1ddffd393da94dbd87512e7cdfc8d2d0250c75682a8f7ef789682b33a0b",
+    "evidence_record_digest": "sha256:e2736cefa9f04e38351d523e49cf19dd559f02218e8d4df51e31b3e604527453",
+    "evidence_outcome": "passed",
+    "evidence_target_identity": "sha256:a25208dcb41c4182522317e65933dd116530a6b00338b6bd1a9a210da9f485b5",
+    "evidence_authority_revision": "sha256:61a7db86de707c39aab1698e9d05298a2b607d4a9af0e9c8985f582dcc2ec781",
+    "correction_attempts": [
+      {
+        "snapshot": {
+          "kind": "fix-diff",
+          "base_tree": "9659d24b40016dfe88f4c219688b81fa8450f08a",
+          "candidate_tree": "5ab14902aa0d0fd9037449526cd9c4ced36bfd0f",
+          "paths_digest": "sha256:8378b4b5eb2d0ef0666b4a6de04a75a07ca4889651fed865d7a41125a9d9f56e",
+          "intended_untracked": [],
+          "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+          "ledger_ids": [
+            "R3-loop-exit-code-cannot-fail",
+            "R3-pass-certifies-superseded-state"
+          ],
+          "paths": [
+            "openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md",
+            "openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md"
+          ],
+          "identity": "sha256:a25208dcb41c4182522317e65933dd116530a6b00338b6bd1a9a210da9f485b5"
+        },
+        "proposed_lines": 49,
+        "actual_lines": 74,
+        "fix_delta_hash": "sha256:362c9cd122ceb36f4ef64c9992ca04af54d9514e2fc7e79c9c781afc07324cd3",
+        "original_criteria": {
+          "evidence_hash": "sha256:3b3e01db341116061826de49fa3872760a4b7fe12180de3d433d141575343679",
+          "fix_delta_hash": "sha256:362c9cd122ceb36f4ef64c9992ca04af54d9514e2fc7e79c9c781afc07324cd3",
+          "passed": true
+        },
+        "correction_regression": {
+          "evidence_hash": "sha256:0d9261c6926a3c774c1c2c28f093b08cee100b74da31c0bd73733aee15d46a70",
+          "fix_delta_hash": "sha256:362c9cd122ceb36f4ef64c9992ca04af54d9514e2fc7e79c9c781afc07324cd3",
+          "passed": true
+        },
+        "targeted_validation_request_hash": "sha256:c83a41935704d97a77828f25ed521ef66c9cd9d0a4d96cb32729fcf5ff1e3ddc",
+        "correction_target_identity": "sha256:a25208dcb41c4182522317e65933dd116530a6b00338b6bd1a9a210da9f485b5"
+      }
+    ],
+    "cumulative_correction_lines": 74,
+    "reviewer_context_level": "provider_command"
+  }
+}

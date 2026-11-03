@@ -1,0 +1,170 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:4dec826636b3564a128d761206acc5868fcfa78280385eea411aa21fe820e01c",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-724785355f49c8f7",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "b12a481d6478eb33cd153c499cc5fe91b07241ef",
+      "candidate_tree": "90fc5436a50bd659ea05ac3eaa68580be634ed0e",
+      "paths_digest": "sha256:9350af67ba4b8d31f0ab1a49f870961605019127259b9729db4ecb4baa3ca466",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/skills/actuals_instrumentation_contract_test.go",
+        "openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md",
+        "openspec/changes/sdd-cycle-timestamp-instrumentation/design.md",
+        "openspec/changes/sdd-cycle-timestamp-instrumentation/exploration.md",
+        "openspec/changes/sdd-cycle-timestamp-instrumentation/proposal.md",
+        "openspec/changes/sdd-cycle-timestamp-instrumentation/specs/actuals-instrumentation/spec.md",
+        "openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md",
+        "openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md",
+        "skills/_shared/actuals-record.schema.json",
+        "skills/sdd-time-estimation/SKILL.md"
+      ],
+      "identity": "sha256:724785355f49c8f777db1a7a29837b4c73304827d23c87fe889bdb6026264975"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "b12a481d6478eb33cd153c499cc5fe91b07241ef",
+      "candidate_tree": "90fc5436a50bd659ea05ac3eaa68580be634ed0e",
+      "paths_digest": "sha256:9350af67ba4b8d31f0ab1a49f870961605019127259b9729db4ecb4baa3ca466",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/skills/actuals_instrumentation_contract_test.go",
+        "openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md",
+        "openspec/changes/sdd-cycle-timestamp-instrumentation/design.md",
+        "openspec/changes/sdd-cycle-timestamp-instrumentation/exploration.md",
+        "openspec/changes/sdd-cycle-timestamp-instrumentation/proposal.md",
+        "openspec/changes/sdd-cycle-timestamp-instrumentation/specs/actuals-instrumentation/spec.md",
+        "openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md",
+        "openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md",
+        "skills/_shared/actuals-record.schema.json",
+        "skills/sdd-time-estimation/SKILL.md"
+      ],
+      "identity": "sha256:724785355f49c8f777db1a7a29837b4c73304827d23c87fe889bdb6026264975"
+    },
+    "genesis_paths": [
+      "engine/skills/actuals_instrumentation_contract_test.go",
+      "openspec/changes/sdd-cycle-timestamp-instrumentation/apply-progress.md",
+      "openspec/changes/sdd-cycle-timestamp-instrumentation/design.md",
+      "openspec/changes/sdd-cycle-timestamp-instrumentation/exploration.md",
+      "openspec/changes/sdd-cycle-timestamp-instrumentation/proposal.md",
+      "openspec/changes/sdd-cycle-timestamp-instrumentation/specs/actuals-instrumentation/spec.md",
+      "openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md",
+      "openspec/changes/sdd-cycle-timestamp-instrumentation/verify-report.md",
+      "skills/_shared/actuals-record.schema.json",
+      "skills/sdd-time-estimation/SKILL.md"
+    ],
+    "policy_hash": "sha256:34fb63d7f29f8613cd4431382b1057398a4816f8a4c20fc34677fffc80a184f6",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-reliability"
+    ],
+    "original_changed_lines": 3438,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_results": [
+      {
+        "lens": "review-reliability",
+        "findings": [
+          {
+            "id": "R3-001",
+            "lens": "reliability",
+            "location": "openspec/changes/sdd-cycle-timestamp-instrumentation/design.md:128-146",
+            "severity": "WARNING",
+            "claim": "The design and proposal inside this candidate assign the anchor-harvesting behavior to a producer skill, and the design's Testing Strategy assigns the D2 anchor-verification behavior to a dedicated integration test; neither the producer skill nor that test is present in this candidate's 10-path changed_path_manifest, so within this frozen target the delta spec's R-016, R-017 and R-018 anchor-derivation scenarios (typed t0 lookup, and verified, self-asserted or rejected t1 resolution) have no producer-side implementation and no behavioral test proving them. This is equally consistent with a staged or chained delivery, which evidence available inside this target cannot confirm or rule out.",
+            "proof_refs": [
+              "openspec/changes/sdd-cycle-timestamp-instrumentation/design.md:128 — the File Changes table carries a Modify row for the producer skill that writes the actuals record",
+              "openspec/changes/sdd-cycle-timestamp-instrumentation/design.md:140 — the closure-feedback edit list enumerates six concrete edits to that producer skill, including the boundary move and the D2 revision 3 algorithm paragraph",
+              "openspec/changes/sdd-cycle-timestamp-instrumentation/design.md:146 — the Testing Strategy table assigns D2 determinism to a dedicated integration test that is not part of this target",
+              "openspec/changes/sdd-cycle-timestamp-instrumentation/proposal.md — the Affected Areas table marks that same producer skill Modified for harvesting t0 and t1",
+              "openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md:49 — the Phase 3 heading names the producer-skill edit as planned behavior work",
+              "openspec/changes/sdd-cycle-timestamp-instrumentation/specs/actuals-instrumentation/spec.md — the added R-016, R-017 and R-018 requirement mandates the anchor-derivation behavior whose producer is absent from this target's manifest"
+            ],
+            "evidence_class": "inferential",
+            "causal_disposition": "unknown"
+          },
+          {
+            "id": "R3-002",
+            "lens": "reliability",
+            "location": "engine/skills/actuals_instrumentation_contract_test.go:86-106",
+            "severity": "SUGGESTION",
+            "claim": "The two pins this candidate adds to R009_calibration_excludes_calendar_time match against the whole SKILL.md file text instead of the CALIBRATION list item, unlike the sibling subtest added in the same candidate, which scopes its assertions precisely because a whole-file substring hit is a weaker binding.",
+            "proof_refs": [
+              "engine/skills/actuals_instrumentation_contract_test.go:86 — R009_calibration_excludes_calendar_time reads the whole skill file and asserts with strings.Contains over that whole-file value",
+              "engine/skills/actuals_instrumentation_contract_test.go:97 — the new positive pin on the merge-anchored boundary phrase is checked whole-file",
+              "engine/skills/actuals_instrumentation_contract_test.go:105 — the new negative pin on the retired archive-anchored phrase is checked whole-file",
+              "engine/skills/actuals_instrumentation_contract_test.go:91 — the sibling subtest added in this same candidate instead derives the CALIBRATION list item via markdownSectionBody and markdownListItemContaining, with the stated reason that a substring hit elsewhere in Hard Rules must not satisfy the gate"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          }
+        ],
+        "evidence": [
+          "Reviewed all 10 changed_path_manifest paths against base_tree b12a481d6478eb33cd153c499cc5fe91b07241ef and candidate_tree 90fc5436a50bd659ea05ac3eaa68580be634ed0e.",
+          "Evidence scope declared and bounded, not silently capped: full verbatim diffs for the three modified paths and full verbatim content for design.md, exploration.md, proposal.md and the delta spec; apply-progress.md, tasks.md and verify-report.md carried as complete heading outlines plus exact line and byte counts rather than full bytes.",
+          "Schema required-list change verified byte-for-byte against the test that pins it: four names leave `required`, all thirteen `properties` and `additionalProperties: false` are untouched, and the new exact-list assertion assertStringList(t, schema.Required, wantRequired) in D2_D5_closed_schema_invariant matches the shipped five-name remainder exactly.",
+          "The new R019_required_drops_compute_time_fields subtest binds the rule to the shipped artifact rather than to prose: it decodes the schema actually read from disk and runs r019ConformingRecordFixture() through validateAgainstActualsSchema, so a future re-add of any of the three compute-time names to `required` fails on the positive validation, not only on the negative membership pins.",
+          "validateAgainstActualsSchema is itself table-tested in TestActualsInstrumentationGateHelpers with four cases covering a valid record, an optional-property record, a missing-required record and an undeclared-key record, so the helper the new gate depends on is not unpinned.",
+          "The boundary co-move from archive to merge is pinned on both descriptions that share the boundary, not only on the field whose name mentions clock: checkpoint_count now carries its own positive pin, and the negative sweep widened from one retired phrase to three across the whole schema file.",
+          "The new R019_calibration_absent_numerators_fallback subtest scopes its four assertions to the CALIBRATION list item via markdownSectionBody and markdownListItemContaining rather than to the whole file, so a substring appearing elsewhere in Hard Rules cannot satisfy the gate.",
+          "Determinism check: every assertion added or changed in this candidate reads committed repository bytes through readRepoFile and compares literal strings or decoded JSON structure; none depends on wall-clock time, environment, map iteration order, network, or live git history.",
+          "Cross-checked the delta spec's R-021 scenario about loosening required without loosening the shape against the shipped schema and the shipped test: the scenario's four-name claim, the schema's five-name remainder and the test's wantRequired list agree."
+        ],
+        "result_hash": "sha256:b70f8c73d502806d7d2fbde8ed433910d0e8698307af6ca59725a0122d389546"
+      }
+    ],
+    "findings": [
+      {
+        "id": "R3-001",
+        "lens": "reliability",
+        "location": "openspec/changes/sdd-cycle-timestamp-instrumentation/design.md:128-146",
+        "severity": "WARNING",
+        "claim": "The design and proposal inside this candidate assign the anchor-harvesting behavior to a producer skill, and the design's Testing Strategy assigns the D2 anchor-verification behavior to a dedicated integration test; neither the producer skill nor that test is present in this candidate's 10-path changed_path_manifest, so within this frozen target the delta spec's R-016, R-017 and R-018 anchor-derivation scenarios (typed t0 lookup, and verified, self-asserted or rejected t1 resolution) have no producer-side implementation and no behavioral test proving them. This is equally consistent with a staged or chained delivery, which evidence available inside this target cannot confirm or rule out.",
+        "proof_refs": [
+          "openspec/changes/sdd-cycle-timestamp-instrumentation/design.md:128 — the File Changes table carries a Modify row for the producer skill that writes the actuals record",
+          "openspec/changes/sdd-cycle-timestamp-instrumentation/design.md:140 — the closure-feedback edit list enumerates six concrete edits to that producer skill, including the boundary move and the D2 revision 3 algorithm paragraph",
+          "openspec/changes/sdd-cycle-timestamp-instrumentation/design.md:146 — the Testing Strategy table assigns D2 determinism to a dedicated integration test that is not part of this target",
+          "openspec/changes/sdd-cycle-timestamp-instrumentation/proposal.md — the Affected Areas table marks that same producer skill Modified for harvesting t0 and t1",
+          "openspec/changes/sdd-cycle-timestamp-instrumentation/tasks.md:49 — the Phase 3 heading names the producer-skill edit as planned behavior work",
+          "openspec/changes/sdd-cycle-timestamp-instrumentation/specs/actuals-instrumentation/spec.md — the added R-016, R-017 and R-018 requirement mandates the anchor-derivation behavior whose producer is absent from this target's manifest"
+        ],
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown"
+      },
+      {
+        "id": "R3-002",
+        "lens": "reliability",
+        "location": "engine/skills/actuals_instrumentation_contract_test.go:86-106",
+        "severity": "SUGGESTION",
+        "claim": "The two pins this candidate adds to R009_calibration_excludes_calendar_time match against the whole SKILL.md file text instead of the CALIBRATION list item, unlike the sibling subtest added in the same candidate, which scopes its assertions precisely because a whole-file substring hit is a weaker binding.",
+        "proof_refs": [
+          "engine/skills/actuals_instrumentation_contract_test.go:86 — R009_calibration_excludes_calendar_time reads the whole skill file and asserts with strings.Contains over that whole-file value",
+          "engine/skills/actuals_instrumentation_contract_test.go:97 — the new positive pin on the merge-anchored boundary phrase is checked whole-file",
+          "engine/skills/actuals_instrumentation_contract_test.go:105 — the new negative pin on the retired archive-anchored phrase is checked whole-file",
+          "engine/skills/actuals_instrumentation_contract_test.go:91 — the sibling subtest added in this same candidate instead derives the CALIBRATION list item via markdownSectionBody and markdownListItemContaining, with the stated reason that a substring hit elsewhere in Hard Rules must not satisfy the gate"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      }
+    ],
+    "classifications": {},
+    "outcomes": {
+      "R3-001": "info",
+      "R3-002": "info"
+    },
+    "fix_finding_ids": [],
+    "follow_ups": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:6d0890e64ac63d7d659dd85a311a4e52c66a707248d275c335663805a28eed72",
+    "evidence_record_digest": "sha256:2b9b2c5ecb409210793b5484f87e212d35833137189be2cb28dd157d3240d191",
+    "evidence_outcome": "passed",
+    "evidence_target_identity": "sha256:724785355f49c8f777db1a7a29837b4c73304827d23c87fe889bdb6026264975",
+    "evidence_authority_revision": "sha256:5dd74c3d61e7136702b3fb9bcb15d8421631716f0004672dbec9e3c7ce523d28"
+  }
+}

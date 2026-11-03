@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "124799163d09d0b85c406eb644b4822a7d3524d8",
+    "head": "e4944dfb9f2dea61a2a89c3fe75e9c81b1a06158",
+    "diff_sha256": "f835aa36a14f325120c7cdb7470e66a71206169581575e88296616de922c044d",
+    "paths": [
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/cmd/review_launch.go",
+      "engine/cmd/review_launch_docs_test.go",
+      "engine/cmd/review_launch_test.go",
+      "engine/cmd/usage.go",
+      "engine/review/claudeprint/claudeprint.go",
+      "engine/review/claudeprint/claudeprint_test.go",
+      "engine/review/claudeprint/preamble.md",
+      "engine/reviewresult/schema.go",
+      "engine/reviewresult/schema_test.go",
+      "engine/shelltest/review_bench_test.go",
+      "tools/review-bench/README.md",
+      "tools/review-bench/run-ours.sh"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "124799163d09d0b85c406eb644b4822a7d3524d8",
+      "head": "e4944dfb9f2dea61a2a89c3fe75e9c81b1a06158",
+      "diff_sha256": "f835aa36a14f325120c7cdb7470e66a71206169581575e88296616de922c044d"
+    },
+    "inspection": {
+      "status": "completed",
+      "reason": "",
+      "paths": [
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/cmd/review_launch.go",
+        "engine/cmd/review_launch_docs_test.go",
+        "engine/cmd/review_launch_test.go",
+        "engine/cmd/usage.go",
+        "engine/review/claudeprint/claudeprint.go",
+        "engine/review/claudeprint/claudeprint_test.go",
+        "engine/review/claudeprint/preamble.md",
+        "engine/reviewresult/schema.go",
+        "engine/reviewresult/schema_test.go",
+        "engine/shelltest/review_bench_test.go",
+        "tools/review-bench/README.md",
+        "tools/review-bench/run-ours.sh"
+      ]
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/reviewresult/schema.go:12",
+        "severity": "WARNING",
+        "claim": "The schema's location pattern `^[^:\\s]+:[1-9][0-9]*(-[1-9][0-9]*)?$` is stricter than the pattern the parser enforces, `^.+:[1-9][0-9]*(?:-[1-9][0-9]*)?$` (rules.go:174). The parser comment says the path may contain a space or a colon. A reviewer that follows the schema cannot cite a finding in a path with a space or colon, such as `docs/my file.md:3`. The preamble tells it to validate against the schema, so it must leave such a finding out or write a path that is not the real one. Such paths are rare, and no in-contract reply is rejected, so a legal finding just cannot be reported. schema_test.go:665 pins the stricter pattern, so the mismatch would persist unless that test changes too.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/reviewresult/schema.go:12 (location pattern)",
+          "engine/reviewresult/rules.go:170-174 (locationPattern and its comment on spaces and colons)",
+          "engine/reviewresult/schema_test.go:665 (pins the stricter pattern)"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read all 14 changed paths in the diff copy, plus schema.go, preamble.md, claudeprint.go, rules.go and review_launch_docs_test.go in the worktree.",
+      "Tool-free flags: the claudeprint.go hunks leave the argument list untouched (--print, --output-format text, --tools \"\", --permission-mode dontAsk, --no-session-persistence, --setting-sources \"\", --strict-mcp-config, --model, --system-prompt). The README and the usage text still list the same flags. The test's wantArgs line is not in the diff, so it is unchanged.",
+      "Schema against parser: the required members, the additionalProperties:false rule and the enums match wire.go and rules.go. schema_test.go holds them to the package constants. The id pattern and claim minLength are stricter than the parser, which is intentional prompt guidance. Only the location path is a real mismatch (F1).",
+      "Preamble: it has a single {schema} slot. It no longer mentions the agent file, a sub-agent or the apply command. The lean preamble, the blank line, the brief and the frozen context match the stdin that review_launch_test.go and claudeprint_test.go assert.",
+      "Help and tests agree: the README, bin/lib/usage.sh and engine/cmd/usage.go all say the stdin is the lean preamble (the JSON Schema of the reply; no agent file is read). The launchFacts fragment in review_launch_docs_test.go matches that wording. The README fragment wraps across a line break, which the docs test normalises before comparing.",
+      "The ClaudeRoot option and the agent-file read are removed, and review_launch.go no longer passes ClaudeRoot. The old tests for a missing or foreign agent file are replaced by TestReviewStartsClaudeWithNoReviewerAgentFile.",
+      "The brief in run-ours.sh is five lines: Lens, base, head, diff_sha256 and worktree. This matches the bench README and the updated review_bench_test.go.",
+      "Not run: no tests, no builds."
+    ]
+  }
+}

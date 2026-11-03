@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "aa8b42339b7563a5f1af73a8e9c30469846eb9f7",
+    "head": "b50c1c6c88b445fc14b6cb2eed3cfdf9e91e86de",
+    "diff_sha256": "1a13fab4e6c427e4b8a6f027b70071a67dc64bc59a8701baa6f0daece1b597c6",
+    "paths": [
+      "engine/review/app/launch_test.go"
+    ]
+  },
+  "rows": [
+    "default",
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "aa8b42339b7563a5f1af73a8e9c30469846eb9f7",
+      "head": "b50c1c6c88b445fc14b6cb2eed3cfdf9e91e86de",
+      "diff_sha256": "1a13fab4e6c427e4b8a6f027b70071a67dc64bc59a8701baa6f0daece1b597c6"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/review/app/launch_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/diff-b50c1c6c.patch. It changes one file: it adds the test TestLaunchFencesARefusalThatEchoesBackticks to engine/review/app/launch_test.go (lines 313-337). No production code, contract, CLI flag, persisted format, dependency or CI file changes.",
+      "Read /home/labdrian/labdrian-sdd-overlay-worktrees/review-b50c1c6c88b4/engine/review/app/launch.go lines 60-134. reAsk builds the fence as max(3, longestBacktickRun(quoted)+1) backticks and puts the heading, opening fence, quoted refusal, closing fence and the text 'Reply again' in that order (launch.go:126-127). The test looks for that same layout with an 8-backtick fence around a 7-backtick run, so its assertions match the current behaviour. They would fail if the fence were not lengthened.",
+      "The test drives the code through the public Service.Launch with an unknown-member reply. ErrUnknownMember is in shapeRefusals (launch.go:106-110), so a re-ask is triggered. A short member name stays under maxQuotedRefusal (1024 bytes), so the quote is not truncated before the run.",
+      "Risk line: the change only adds a test and touches no shared production helper. None of the high-risk items 1-6 apply, and the test adds regression coverage for item 6. 'Risk: none' holds.",
+      "Nothing was run: no tests, builds or commands. Inspection was by reading only."
+    ]
+  }
+}

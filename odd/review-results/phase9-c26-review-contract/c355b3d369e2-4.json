@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "d4548feccfaba110e450af46ea1c3e7e248304f6",
+    "head": "c355b3d369e2035c7580a54a3efcfa7852ae5c12",
+    "diff_sha256": "9b7ac221f6a15365fdd092cb96aa991ff6342f273c65966ae76322d06bbe43dc",
+    "paths": [
+      "engine/review/claudeprint/claudeprint.go",
+      "engine/review/claudeprint/claudeprint_test.go"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "d4548feccfaba110e450af46ea1c3e7e248304f6",
+      "head": "c355b3d369e2035c7580a54a3efcfa7852ae5c12",
+      "diff_sha256": "9b7ac221f6a15365fdd092cb96aa991ff6342f273c65966ae76322d06bbe43dc"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/review/claudeprint/claudeprint.go",
+        "engine/review/claudeprint/claudeprint_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the full diff: the systemPrompt constant, the package comment and two test assertions changed.",
+      "Read the reAsk comments and code in engine/review/app/launch.go. reAsk appends a heading that quotes the refusal of the first reply to the brief, so the new wording matches what launch.go sends.",
+      "The expected string in the args test is identical to the constant. The prompt test now also checks for the substring \"quoted refusal\", which the constant contains.",
+      "The package comment now says the preamble and the brief are the whole of the instructions, which matches the systemPrompt wording.",
+      "Not run: no tests were executed, because this role does not run commands."
+    ]
+  }
+}

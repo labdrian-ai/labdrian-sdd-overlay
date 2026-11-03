@@ -1,0 +1,68 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:0a4846d63c41b524512ae30df894c46ad792673c604666f99c9633fe32a18a7e",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-2ecc5f11a9d4dd50",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "a0ea0018d7f32df2f36ae11796b671c38583be45",
+      "candidate_tree": "b1f1b63267ce08b1cc5b130f3dc0eac80f1aeb62",
+      "paths_digest": "sha256:ebc4c5e630a796636d4e40494ff1fd803817d231d8c07a77b4631bb341cdc17d",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "odd/tasks/consolidation-phase9.md"
+      ],
+      "identity": "sha256:515723c7fd54efc624b6725bf790088fe6a39e44f2c89827756655c23936a303"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "a0ea0018d7f32df2f36ae11796b671c38583be45",
+      "candidate_tree": "b1f1b63267ce08b1cc5b130f3dc0eac80f1aeb62",
+      "paths_digest": "sha256:ebc4c5e630a796636d4e40494ff1fd803817d231d8c07a77b4631bb341cdc17d",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "odd/tasks/consolidation-phase9.md"
+      ],
+      "identity": "sha256:515723c7fd54efc624b6725bf790088fe6a39e44f2c89827756655c23936a303"
+    },
+    "genesis_paths": [
+      "odd/tasks/consolidation-phase9.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "low",
+    "selected_lenses": [],
+    "original_changed_lines": 11,
+    "correction_budget": 6,
+    "correction_budget_policy": "floor_two",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:ad4f3bfc7e2ff4bf61cdca0e7a9fa3d28a833046f0cd7e7986057665db740db8",
+    "capture_phase_revision": "sha256:a05bf7887c92249d20a374ab6930d797df9c17162d8c536188f6bba63d9aed56",
+    "approved_ack_token": "a389ecba7d267fe021b9d9c5188249634e0d980eb32d6951f9f418a96596e407",
+    "initial_atomic_start": {
+      "lineage_id": "review-2ecc5f11a9d4dd50",
+      "worktree_identity": "sha256:e1d983e753e60e688b3eb0a923143db433494fa95428d822d2ff9354875d1a6e",
+      "target_identity": "sha256:515723c7fd54efc624b6725bf790088fe6a39e44f2c89827756655c23936a303",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "a0ea0018d7f32df2f36ae11796b671c38583be45",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "low",
+      "selected_lenses": null,
+      "original_changed_lines": 11,
+      "correction_budget": 6,
+      "correction_budget_policy": "floor_two"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

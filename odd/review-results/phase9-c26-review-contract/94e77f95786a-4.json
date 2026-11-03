@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "3ede5df7fff04cf6fc7b7afdfe382b7458ba0d39",
+    "head": "94e77f95786a22c33f8012e36d71b72769e5d3a7",
+    "diff_sha256": "5253ba6c20c4d48d3500fc3459f0d80587f67448fae4d45b6cdfcfad9b3bbae3",
+    "paths": [
+      "engine/reviewresult/schema.go",
+      "engine/reviewresult/schema_test.go"
+    ]
+  },
+  "rows": [
+    "default",
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "3ede5df7fff04cf6fc7b7afdfe382b7458ba0d39",
+      "head": "94e77f95786a22c33f8012e36d71b72769e5d3a7",
+      "diff_sha256": "5253ba6c20c4d48d3500fc3459f0d80587f67448fae4d45b6cdfcfad9b3bbae3"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/reviewresult/schema.go",
+        "engine/reviewresult/schema_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/reviewresult/schema.go:12",
+        "severity": "WARNING",
+        "claim": "The declared Risk: none does not hold. This change loosens the findings.location pattern of the reply JSON Schema from ^[^:\\s]+:... to ^.+:..., and that schema is a contract others consume. claudeprint.go:44 embeds reviewresult.Schema() byte for byte in the prompt the tool-free claude reviewer receives. Spec S2 (odd/tasks/phase9-c26-review-contract.md:9) quotes the user's L2 pattern ^[^:\\s]+:[1-9][0-9]*(-[1-9][0-9]*)?$ verbatim and pins the schema in S2(a) to 'the bytes the A/B sent'. The diff changes those bytes, changes what every claude reviewer is told, and renames and rewrites the test that held the schema to the bench (TestSchemaPatternsAreTheOnesTheBenchSent). The feature document was not updated. That is item 3 (a mirrored prompt or contract others already consume), and the change departs from the user-quoted S2 pattern, so the A/B evidence behind S2 no longer covers the shipped prompt.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/reviewresult/schema.go:12 (pattern changed from ^[^:\\\\s]+: to ^.+:)",
+          "engine/reviewresult/schema_test.go:169-186 (bench-pin test renamed and its expected pattern replaced)",
+          "engine/review/claudeprint/claudeprint.go:44 (Schema() substituted into the claude reviewer preamble)",
+          "odd/tasks/phase9-c26-review-contract.md:9 (S2 quotes the old pattern verbatim and pins the A/B bytes)"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read diff /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/diff-94e77f95.patch",
+      "Grep in the head worktree: Schema() is consumed by engine/review/claudeprint/claudeprint.go:44 (the reviewer prompt) and by tests, including engine/cmd/review_launch_test.go:209",
+      "The parser's locationPattern at engine/reviewresult/rules.go:174 is ^.+:[1-9][0-9]*(?:-[1-9][0-9]*)?$ and is unchanged. S4 (odd/tasks/phase9-c26-review-contract.md:11) records it as a superset of the S2 schema pattern, so the base pairing of a stricter schema and a looser parser was the specified design",
+      "No Log entry or S# in the head's feature document authorizes replacing the S2 schema pattern. Grep for the old pattern found only the S2 lines 9 and 38"
+    ]
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "352b4a3bc2492cedf37ec06c54a5df3653dcbff9",
+    "head": "615aae813d87e17da6968b20bcf6ba4dc9774f58",
+    "diff_sha256": "e783ab974a32024ab9ac4d03c3a24026be48f35a67336f8e05a5abe688a7e389",
+    "paths": [
+      "engine/review/claudeprint/claudeprint_test.go",
+      "engine/review/claudeprint/preamble.md"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "352b4a3bc2492cedf37ec06c54a5df3653dcbff9",
+      "head": "615aae813d87e17da6968b20bcf6ba4dc9774f58",
+      "diff_sha256": "e783ab974a32024ab9ac4d03c3a24026be48f35a67336f8e05a5abe688a7e389"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/review/claudeprint/claudeprint_test.go",
+        "engine/review/claudeprint/preamble.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/diff-615aae81.patch.",
+      "The same sentence was added to preamble.md and to the preambleHead test constant, so the two match.",
+      "The sentence agrees with the causal_disposition value `unknown` and with the existing pre-existing rule.",
+      "I did not open the worktree and ran no tests: not run."
+    ]
+  }
+}

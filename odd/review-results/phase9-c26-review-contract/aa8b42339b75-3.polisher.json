@@ -1,0 +1,20 @@
+{
+  "kind": "polisher",
+  "base": "c355b3d369e2035c7580a54a3efcfa7852ae5c12",
+  "head": "aa8b42339b7563a5f1af73a8e9c30469846eb9f7",
+  "diff_sha256": "248f3dd422d04c74dc5ea1f521c8e56cdc203f53b5e02f7bec07a56f5445e80d",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/diff-aa8b4233.patch.",
+      "Read reAsk and longestBacktickRun in /home/labdrian/labdrian-sdd-overlay-worktrees/review-aa8b42339b75/engine/review/app/launch.go (lines 99-132 and 183-194). Nothing was executed, so every conclusion below comes from reading the code and the diff; no test or build was run.",
+      "Fence escape: the fence is computed after truncation and the \" ...\" suffix are applied, from the exact bytes that get quoted. Its length is max(3, longest backtick run + 1), so no run inside the quote can close it. A run cut at the 1024-byte boundary, a quote ending in backticks, and an empty quote are all handled.",
+      "The closing fence sits on its own line after \"\\n\", so a trailing backtick run in the quote cannot merge with it.",
+      "Retry instruction: \"Reply again with the whole JSON object...\" is emitted after the closing fence, outside the quote. The updated test cuts at \"\\n```\\n\\nReply again\" and checks the quote does not contain it.",
+      "Size check: the len(again) > review.MaxReplyBytes test still runs on the final string, now including both fences. Fence overhead is at most about 2x(3 + 1024) bytes, so it can only make the existing refusal path trigger slightly earlier. Nothing is silently truncated.",
+      "Codex re-ask: reAsk is a shared helper that returns the re-ask brief. The change only wraps the quote, and the heading and the retry instruction text are unchanged. I found no codex-specific difference that the fence would break; I did not open the codex runtime call site.",
+      "Claude system prompt: the new text names the frozen context and the quoted refusal as evidence. The test now asserts that exact sentence.",
+      "Help and docs: README.md, bin/lib/usage.sh and engine/cmd/usage.go all say \"in a fenced block\" and still say the refusal is quoted to its first 1024 bytes. This matches the code."
+    ]
+  }
+}

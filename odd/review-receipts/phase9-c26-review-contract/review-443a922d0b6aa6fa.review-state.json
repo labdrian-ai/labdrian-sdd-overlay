@@ -1,0 +1,302 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:04939e57d7be182038d2520a26fc26f6f2d446e64b592436dba1e7ed5dc18424",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-443a922d0b6aa6fa",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "d2da5bff5bc14c39ab971bf96a610a487748cfa9",
+      "candidate_tree": "1d4572c023daf8122f927c25b251cf4f299c6a88",
+      "paths_digest": "sha256:c94d2721b0bea23892cca595972d013224c2d07dcc579e61eec73c1ad9c6a3c5",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/cmd/review_launch_docs_test.go",
+        "engine/cmd/review_launch_test.go",
+        "engine/cmd/usage.go",
+        "engine/review/app/app.go",
+        "engine/review/app/fakes_test.go",
+        "engine/review/app/launch.go",
+        "engine/review/app/launch_test.go",
+        "engine/review/app/service.go",
+        "engine/review/gitexec/gitexec.go",
+        "engine/review/gitexec/gitexec_test.go",
+        "engine/review/gitexec/realgit_test.go"
+      ],
+      "identity": "sha256:5eac9fdca70381f2dddf5c445fc16007b492d50d372f8715b4e7faa8f055f809"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "d2da5bff5bc14c39ab971bf96a610a487748cfa9",
+      "candidate_tree": "1d4572c023daf8122f927c25b251cf4f299c6a88",
+      "paths_digest": "sha256:c94d2721b0bea23892cca595972d013224c2d07dcc579e61eec73c1ad9c6a3c5",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/cmd/review_launch_docs_test.go",
+        "engine/cmd/review_launch_test.go",
+        "engine/cmd/usage.go",
+        "engine/review/app/app.go",
+        "engine/review/app/fakes_test.go",
+        "engine/review/app/launch.go",
+        "engine/review/app/launch_test.go",
+        "engine/review/app/service.go",
+        "engine/review/gitexec/gitexec.go",
+        "engine/review/gitexec/gitexec_test.go",
+        "engine/review/gitexec/realgit_test.go"
+      ],
+      "identity": "sha256:5eac9fdca70381f2dddf5c445fc16007b492d50d372f8715b4e7faa8f055f809"
+    },
+    "genesis_paths": [
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/cmd/review_launch_docs_test.go",
+      "engine/cmd/review_launch_test.go",
+      "engine/cmd/usage.go",
+      "engine/review/app/app.go",
+      "engine/review/app/fakes_test.go",
+      "engine/review/app/launch.go",
+      "engine/review/app/launch_test.go",
+      "engine/review/app/service.go",
+      "engine/review/gitexec/gitexec.go",
+      "engine/review/gitexec/gitexec_test.go",
+      "engine/review/gitexec/realgit_test.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-risk",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 168,
+    "correction_budget": 84,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "Moves the reviewer's frozen context to a -U3 diff with a changed paths line that quotes non-plain paths (a guard on prompt input), renames a git port method, and changes help, README and tests that pin them.",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:f4f99283b3be3deef81e90d0da4b368602f9aee0ef374bdacf4455db4fe58fa5",
+    "capture_phase_revision": "sha256:f11573c7f7dd04362967c82076bee48084550d7daca417adb75706c20fc60a91",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:5eac9fdca70381f2dddf5c445fc16007b492d50d372f8715b4e7faa8f055f809",
+        "capture_phase_revision": "sha256:f11573c7f7dd04362967c82076bee48084550d7daca417adb75706c20fc60a91",
+        "artifact_digest": "sha256:eeb3fcc5d572ba9afa975488eb08178aaf5ac5d4491b37c31b0e82538a1485f4",
+        "result_hash": "sha256:884b4bf06984326704a5cb28985c4d3bc60a08e146f7d59b97adcc10f738882f",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:bac61fc67e514eb9b25da55b8df3877a2c2601fa16b306b9cc61eb258ed459e3",
+            "lineage_id": "review-443a922d0b6aa6fa",
+            "authority_revision": "sha256:f11573c7f7dd04362967c82076bee48084550d7daca417adb75706c20fc60a91",
+            "target_identity": "sha256:5eac9fdca70381f2dddf5c445fc16007b492d50d372f8715b4e7faa8f055f809",
+            "base_tree": "d2da5bff5bc14c39ab971bf96a610a487748cfa9",
+            "candidate_tree": "1d4572c023daf8122f927c25b251cf4f299c6a88",
+            "changed_path_manifest_sha256": "sha256:de02e9790d0c8da0872295fa3cfddac755d03695cef4b6c96b2de6f1210de7ed",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:bac61fc67e514eb9b25da55b8df3877a2c2601fa16b306b9cc61eb258ed459e3",
+            "raw_sha256": "sha256:4bc6fad0869dc87236f7c979c096bc9a6d8d1dee1645d680cb8ccd535a327c19",
+            "canonical_sha256": "sha256:9267e7c6c9c37db0d2474060c9a8a9912e0554b232542f99d08c00e987eecc68",
+            "result_hash": "sha256:884b4bf06984326704a5cb28985c4d3bc60a08e146f7d59b97adcc10f738882f",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:bac61fc67e514eb9b25da55b8df3877a2c2601fa16b306b9cc61eb258ed459e3",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "README.md",
+                "bin/lib/usage.sh",
+                "engine/cmd/review_launch_docs_test.go",
+                "engine/cmd/review_launch_test.go",
+                "engine/cmd/usage.go",
+                "engine/review/app/app.go",
+                "engine/review/app/fakes_test.go",
+                "engine/review/app/launch.go",
+                "engine/review/app/launch_test.go",
+                "engine/review/app/service.go",
+                "engine/review/gitexec/gitexec.go",
+                "engine/review/gitexec/gitexec_test.go",
+                "engine/review/gitexec/realgit_test.go"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "Reviewed all 13 changed paths. The change swaps --function-context for -U3 in the guarded git diff args (still --no-ext-diff, --no-textconv, --no-color, and --end-of-options before the commit values), so no new command-injection or external-program surface is introduced.",
+              "The new changed-paths line in engine/review/app/launch.go is placed outside the fenced block; changedPaths uses strconv.Quote for any path that Go would escape (newlines, quotes, control characters) or that contains ', ', so a hostile path name cannot start its own line or inject a heading into the reviewer brief. A test in engine/review/app/launch_test.go covers a newline-bearing path, a comma-space path and a quote-bearing path.",
+              "Paths are the bound candidate paths, already part of the binding; no secrets or additional data are exposed beyond the diff the reviewer already received. The size limit (review.MaxReplyBytes) check still applies to brief plus context.",
+              "Remaining edits are renames (FunctionContextDiff to ContextDiff), docs and tests with no security impact."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "selected_order": 1,
+        "target_identity": "sha256:5eac9fdca70381f2dddf5c445fc16007b492d50d372f8715b4e7faa8f055f809",
+        "capture_phase_revision": "sha256:f11573c7f7dd04362967c82076bee48084550d7daca417adb75706c20fc60a91",
+        "artifact_digest": "sha256:7fe09b9bdb333afb0ddb09e162e2e488b92a6db04cc0c9b2ddc0d6e1edb68408",
+        "result_hash": "sha256:a4aa570e7e4b38062cccc133d3d64c39e1fc1b7fc266a9ca95ac1adafb437178",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:0c91c6b28794a8a26e6b886143e8095c2ea5ca6e6ba3404fac40f50048184990",
+            "lineage_id": "review-443a922d0b6aa6fa",
+            "authority_revision": "sha256:f11573c7f7dd04362967c82076bee48084550d7daca417adb75706c20fc60a91",
+            "target_identity": "sha256:5eac9fdca70381f2dddf5c445fc16007b492d50d372f8715b4e7faa8f055f809",
+            "base_tree": "d2da5bff5bc14c39ab971bf96a610a487748cfa9",
+            "candidate_tree": "1d4572c023daf8122f927c25b251cf4f299c6a88",
+            "changed_path_manifest_sha256": "sha256:de02e9790d0c8da0872295fa3cfddac755d03695cef4b6c96b2de6f1210de7ed",
+            "lens": "review-readability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:0c91c6b28794a8a26e6b886143e8095c2ea5ca6e6ba3404fac40f50048184990",
+            "raw_sha256": "sha256:93e5589df140190b3980840b51fb4886b7b5986f464e9dc1b81b13901ebcc0f9",
+            "canonical_sha256": "sha256:e4e1948d7a45fe4b6a9c0a3917b5d909a2a1f5b0f12f8514e60acbe5d459eec5",
+            "result_hash": "sha256:a4aa570e7e4b38062cccc133d3d64c39e1fc1b7fc266a9ca95ac1adafb437178",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:0c91c6b28794a8a26e6b886143e8095c2ea5ca6e6ba3404fac40f50048184990",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "README.md",
+                "bin/lib/usage.sh",
+                "engine/cmd/review_launch_docs_test.go",
+                "engine/cmd/review_launch_test.go",
+                "engine/cmd/usage.go",
+                "engine/review/app/app.go",
+                "engine/review/app/fakes_test.go",
+                "engine/review/app/launch.go",
+                "engine/review/app/launch_test.go",
+                "engine/review/app/service.go",
+                "engine/review/gitexec/gitexec.go",
+                "engine/review/gitexec/gitexec_test.go",
+                "engine/review/gitexec/realgit_test.go"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [],
+            "evidence": [
+              "Reviewed all 13 changed paths for readability. The FunctionContextDiff to ContextDiff rename is applied consistently across the interface in app.go, the fake and tests, the gitexec adapter, and its args function.",
+              "The new changedPaths helper in engine/review/app/launch.go has a doc comment that explains why it quotes (the line sits outside the fence, so a path could break out of it or read as two paths). It names its note constant. The quoting condition is understandable, and the test in launch_test.go covers newline, comma-space and quote paths.",
+              "The README, usage.sh, usage.go and the docs-facts test were all updated together to describe the new changed paths line and -U3, so the documentation and code do not diverge.",
+              "Minor, not defect-level: comments cite the change context in two forms ('C26 T3, S3' in app.go and 'phase9-c26-review-contract S3' in launch.go). The -U3 flag is also git's default context setting, but being explicit is harmless."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 2,
+        "target_identity": "sha256:5eac9fdca70381f2dddf5c445fc16007b492d50d372f8715b4e7faa8f055f809",
+        "capture_phase_revision": "sha256:f11573c7f7dd04362967c82076bee48084550d7daca417adb75706c20fc60a91",
+        "artifact_digest": "sha256:7ddc1429a16569b4612b296fabca052076a78aefa88d57c3b7ab2ee732e03d88",
+        "result_hash": "sha256:2190258706fb01f065223c4dabb8f888a3f1009827042021b719f8be8c5b2fd3",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:74162c3e33cef4b6fa77fafec2762c49a164c86d79096437cb9e27ef9c8cac04",
+            "lineage_id": "review-443a922d0b6aa6fa",
+            "authority_revision": "sha256:f11573c7f7dd04362967c82076bee48084550d7daca417adb75706c20fc60a91",
+            "target_identity": "sha256:5eac9fdca70381f2dddf5c445fc16007b492d50d372f8715b4e7faa8f055f809",
+            "base_tree": "d2da5bff5bc14c39ab971bf96a610a487748cfa9",
+            "candidate_tree": "1d4572c023daf8122f927c25b251cf4f299c6a88",
+            "changed_path_manifest_sha256": "sha256:de02e9790d0c8da0872295fa3cfddac755d03695cef4b6c96b2de6f1210de7ed",
+            "lens": "review-reliability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:74162c3e33cef4b6fa77fafec2762c49a164c86d79096437cb9e27ef9c8cac04",
+            "raw_sha256": "sha256:aa8a8398ecb8e264111c0041df056a9ad55e1b4e656a4688b08c2d5a1321e964",
+            "canonical_sha256": "sha256:9e0a6fb034550191e8f076fe7e9933e93dfc86f25f674a26ee367b999dd1555e",
+            "result_hash": "sha256:2190258706fb01f065223c4dabb8f888a3f1009827042021b719f8be8c5b2fd3",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:74162c3e33cef4b6fa77fafec2762c49a164c86d79096437cb9e27ef9c8cac04",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "README.md",
+                "bin/lib/usage.sh",
+                "engine/cmd/review_launch_docs_test.go",
+                "engine/cmd/review_launch_test.go",
+                "engine/cmd/usage.go",
+                "engine/review/app/app.go",
+                "engine/review/app/fakes_test.go",
+                "engine/review/app/launch.go",
+                "engine/review/app/launch_test.go",
+                "engine/review/app/service.go",
+                "engine/review/gitexec/gitexec.go",
+                "engine/review/gitexec/gitexec_test.go",
+                "engine/review/gitexec/realgit_test.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [],
+            "evidence": [
+              "The rename from FunctionContextDiff to ContextDiff is applied consistently across the interface (app.go), the real adapter (gitexec.go), the fake (fakes_test.go) and the callers and tests. No stale reference is visible in the patch.",
+              "ContextDiffArgs keeps the guard flags and --end-of-options, and gitexec_test.go asserts the exact argument vector. realgit_test.go checks against real git that the diff holds three lines around the change and not the whole function.",
+              "changedPaths in engine/review/app/launch.go quotes any path that strconv.Quote would escape, or that contains a comma-space. The test engine/review/app/launch_test.go covers a newline injection, a comma-space path and an embedded quote, and asserts that no line starts with the injected heading. Plain paths are written as they are, and the app-level and cmd-level tests both assert the plain line.",
+              "The paths line is written before the size check on the combined brief and context, so the reply-limit refusal still counts it.",
+              "Minor, not worth a finding: if c.Paths were empty, the line would end with a trailing space after the colon. An empty path list is not a realistic bound candidate."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "611147e63ef7fa351fbfc5e2163961b74a6181e48b35cf1837278ccdeb6f0ec1",
+    "initial_atomic_start": {
+      "lineage_id": "review-443a922d0b6aa6fa",
+      "worktree_identity": "sha256:423d0e7ee2999ea76a9b0721c5e579943ee14fbdc4c980f5c2078c13fec366d2",
+      "target_identity": "sha256:5eac9fdca70381f2dddf5c445fc16007b492d50d372f8715b4e7faa8f055f809",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "d2da5bff5bc14c39ab971bf96a610a487748cfa9",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "high",
+      "selected_lenses": [
+        "review-risk",
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 168,
+      "correction_budget": 84,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "Moves the reviewer's frozen context to a -U3 diff with a changed paths line that quotes non-plain paths (a guard on prompt input), renames a git port method, and changes help, README and tests that pin them."
+    },
+    "runtime_agent": "claude-code"
+  }
+}

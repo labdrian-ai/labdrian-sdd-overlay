@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "3ede5df7fff04cf6fc7b7afdfe382b7458ba0d39",
+    "head": "94e77f95786a22c33f8012e36d71b72769e5d3a7",
+    "diff_sha256": "5253ba6c20c4d48d3500fc3459f0d80587f67448fae4d45b6cdfcfad9b3bbae3",
+    "paths": [
+      "engine/reviewresult/schema.go",
+      "engine/reviewresult/schema_test.go"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "3ede5df7fff04cf6fc7b7afdfe382b7458ba0d39",
+      "head": "94e77f95786a22c33f8012e36d71b72769e5d3a7",
+      "diff_sha256": "5253ba6c20c4d48d3500fc3459f0d80587f67448fae4d45b6cdfcfad9b3bbae3"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/reviewresult/schema.go",
+        "engine/reviewresult/schema_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the full diff. The only change in schema.go is the location pattern. It goes from ^[^:\\s]+:[1-9][0-9]*(-[1-9][0-9]*)?$ to ^.+:[1-9][0-9]*(-[1-9][0-9]*)?$.",
+      "engine/reviewresult/rules.go:174 has locationPattern ^.+:[1-9][0-9]*(?:-[1-9][0-9]*)?$. The two differ only in a capturing group versus a non-capturing group, so they match the same strings. In Go RE2 and in ECMA-262, `.` does not match a newline, and `$` anchors at the end of the text.",
+      "The Go raw string for the schema has no backslash left in the location pattern. The old \\\\s escape is gone, so there is no JSON escaping problem.",
+      "The test asserts the exact schema pattern string. It then checks that both the schema pattern, compiled with Go regexp, and the parser's locationPattern accept 'docs/my file.md:3' and 'a:b.go:4-7'. This covers the space and colon cases the commit describes.",
+      "The test rename to TestSchemaIdAndLocationPatterns describes what it checks and drops the stale 'BenchSent' wording.",
+      "Nothing was run, since I only read the code. Tests: not run."
+    ]
+  }
+}

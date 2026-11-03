@@ -1,0 +1,34 @@
+{
+  "kind": "polisher",
+  "base": "c355b3d369e2035c7580a54a3efcfa7852ae5c12",
+  "head": "aa8b42339b7563a5f1af73a8e9c30469846eb9f7",
+  "diff_sha256": "248f3dd422d04c74dc5ea1f521c8e56cdc203f53b5e02f7bec07a56f5445e80d",
+  "findings": {
+    "findings": [
+      {
+        "location": "engine/review/app/launch.go:126",
+        "severity": "WARNING",
+        "claim": "No test covers the part of this guard that matters: making the fence longer than any backtick run in the quoted refusal. If someone changes the fence to a fixed three backticks, every test still passes. Then a refusal that echoes a reply containing a run of three or more backticks would close the fence early, and the retry instruction (or text the reply chose) would be read outside the quote.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "launch.go:126 computes the fence as strings.Repeat(\"`\", max(3, longestBacktickRun([]byte(quoted))+1)). This dynamic length is the only thing that stops the quote from escaping.",
+          "The only new reAsk assertion (launch_test.go:76-79 in the diff) uses a refusal with no backticks, `findings[0] has no \"severity\" member`, and checks for the literal 3-backtick fence. A constant 3-backtick fence produces exactly the same output, so the test still passes.",
+          "A search of engine/review/app/*_test.go for four backticks or 'backtick' finds only the withContext test at launch_test.go:383-390. That test covers the frozen-context fence, not the refusal fence. No reAsk test uses a refusal that contains backticks, or a truncated refusal that ends in backticks.",
+          "Item 6 of the Risk line (no test would catch a regression) applies to this guard change."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/diff-aa8b4233.patch",
+      "Read engine/review/app/launch.go:60-195 in the worktree /home/labdrian/labdrian-sdd-overlay-worktrees/review-aa8b42339b75 (Launch, reAsk, withContext, longestBacktickRun)",
+      "Truncation: the code cuts to 1024 bytes, applies ToValidUTF8 and appends ' ...', and only then measures the fence, so the fence length covers the final quoted text. The opening and closing fences sit on their own lines with no info string. A quote whose last line is a backtick run shorter than the fence cannot close it, so the quote cannot escape its fence.",
+      "The retry instruction comes after the closing fence followed by a blank line, so it stays outside the quote.",
+      "Size check: len(again) is measured after the fence is added, so the MaxReplyBytes bound still holds.",
+      "Codex re-ask: Launch at launch.go:85-96 uses reAsk for both runtimes, and the fence changes only how the refusal is framed. The codex runtime has no system prompt that names the quoted refusal as evidence. This was already true before this commit and is not reported as a finding.",
+      "Searched the tests: launch_test.go:308-309 covers truncation and the ' ...' suffix. claudeprint_test.go:57 and 85-87 pin the system prompt string.",
+      "README.md, bin/lib/usage.sh and engine/cmd/usage.go now describe the refusal as quoted in a fenced block, which matches the code.",
+      "No commands or tests were run. This review read the code only."
+    ]
+  }
+}

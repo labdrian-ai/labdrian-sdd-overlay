@@ -1,0 +1,11 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "In /home/labdrian/labdrian-sdd-overlay-worktrees/review-94e77f95786a: `rg -n -F 'pattern' engine/reviewresult/schema.go`; `rg -n -F '^[^:\\s]+:' odd/tasks/phase9-c26-review-contract.md`; `rg -n 'Allow the improvements' odd/tasks/phase9-c26-review-contract.md`; `git log -1 --format=%B 94e77f95 | rg Risk`. For base: `git show 3ede5df7fff04cf6fc7b7afdfe382b7458ba0d39:engine/reviewresult/schema.go | rg -n pattern`",
+      "output": "Head schema.go:12 has location pattern `^.+:[1-9][0-9]*(-[1-9][0-9]*)?$`. The feature document quotes `^[^:\\s]+:[1-9][0-9]*(-[1-9][0-9]*)?$` at line 9 (S2) and again at line 38. The search for 'Allow the improvements' gave no hit (rc=1), so no decision about the departure is recorded in the head's feature document. The commit message of 94e77f95 contains `Risk: none`. Base schema.go:12 has location pattern `^[^:\\s]+:[1-9][0-9]*(-[1-9][0-9]*)?$` (written `[^:\\s]` inside the Go raw string), which matches S2.",
+      "base_result": "not-reproduced"
+    }
+  ]
+}

@@ -1,0 +1,339 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:2bf892bfb1902a5acd259df7c7505f1b85de6c58bb33c7c27b7b6a33085679f1",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-5ca843578175366f",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "df40bc6270ebed4ee1756303f5bf24204b5f4591",
+      "candidate_tree": "c8decf1e53f8cdb005963f0b3b2fcaddad435bbb",
+      "paths_digest": "sha256:61875aa5e82a1b7e5189c86e37d9130ca45274ea282a7541b304f289d7ee7633",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/cmd/review_check_test.go",
+        "engine/cmd/review_test.go",
+        "engine/cmd/usage.go",
+        "engine/review/app/launch.go",
+        "engine/review/app/launch_test.go",
+        "engine/review/app/record_test.go",
+        "engine/review/app/service.go",
+        "engine/reviewresult/errors.go",
+        "engine/reviewresult/reviewresult.go",
+        "engine/reviewresult/rules.go",
+        "engine/reviewresult/rules_test.go"
+      ],
+      "identity": "sha256:11a68a924e3e6ba23968050a61bb1da33c55415af3eaae7f87225c539a52021b"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "df40bc6270ebed4ee1756303f5bf24204b5f4591",
+      "candidate_tree": "c8decf1e53f8cdb005963f0b3b2fcaddad435bbb",
+      "paths_digest": "sha256:61875aa5e82a1b7e5189c86e37d9130ca45274ea282a7541b304f289d7ee7633",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/cmd/review_check_test.go",
+        "engine/cmd/review_test.go",
+        "engine/cmd/usage.go",
+        "engine/review/app/launch.go",
+        "engine/review/app/launch_test.go",
+        "engine/review/app/record_test.go",
+        "engine/review/app/service.go",
+        "engine/reviewresult/errors.go",
+        "engine/reviewresult/reviewresult.go",
+        "engine/reviewresult/rules.go",
+        "engine/reviewresult/rules_test.go"
+      ],
+      "identity": "sha256:11a68a924e3e6ba23968050a61bb1da33c55415af3eaae7f87225c539a52021b"
+    },
+    "genesis_paths": [
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/cmd/review_check_test.go",
+      "engine/cmd/review_test.go",
+      "engine/cmd/usage.go",
+      "engine/review/app/launch.go",
+      "engine/review/app/launch_test.go",
+      "engine/review/app/record_test.go",
+      "engine/review/app/service.go",
+      "engine/reviewresult/errors.go",
+      "engine/reviewresult/reviewresult.go",
+      "engine/reviewresult/rules.go",
+      "engine/reviewresult/rules_test.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-risk",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 215,
+    "correction_budget": 108,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "changed which reviewer replies review record and launch accept (a location rule), its tests and the help text",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:e57d5643f2f76943da388faf7ddcc183a6912c3b735795322c6d02ab9bf832de",
+    "capture_phase_revision": "sha256:4c6e37982b0bac49863fab182ad7847ade433f1abd8a233495576ec0e46e8b1c",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:11a68a924e3e6ba23968050a61bb1da33c55415af3eaae7f87225c539a52021b",
+        "capture_phase_revision": "sha256:4c6e37982b0bac49863fab182ad7847ade433f1abd8a233495576ec0e46e8b1c",
+        "artifact_digest": "sha256:e68acfa45efbd8f51a84e3935e75c83e91b8a772798af965f261e28ec92d5239",
+        "result_hash": "sha256:b3aab7db99d7c68a6b38ef535421a2f15f8c3b1b5779c6c4647e4325244135c0",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:90c78c348c17658d2342f0236674937122b8ea87c89a89f9cae4e3fc2bacb372",
+            "lineage_id": "review-5ca843578175366f",
+            "authority_revision": "sha256:4c6e37982b0bac49863fab182ad7847ade433f1abd8a233495576ec0e46e8b1c",
+            "target_identity": "sha256:11a68a924e3e6ba23968050a61bb1da33c55415af3eaae7f87225c539a52021b",
+            "base_tree": "df40bc6270ebed4ee1756303f5bf24204b5f4591",
+            "candidate_tree": "c8decf1e53f8cdb005963f0b3b2fcaddad435bbb",
+            "changed_path_manifest_sha256": "sha256:e0d61b8e8bb5bea5061827ec447f137ee183c2862018bc91210e0f046f21471f",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:90c78c348c17658d2342f0236674937122b8ea87c89a89f9cae4e3fc2bacb372",
+            "raw_sha256": "sha256:8e5ce8e9aa8d4ff66d5d346ca2bf19af700ef7cf395a53f24d0d1ca9e8145753",
+            "canonical_sha256": "sha256:a05dbb2f60f53d0f441efdb3d29aeb62dc1da36fb6b31631e6cb1d64fdef9832",
+            "result_hash": "sha256:b3aab7db99d7c68a6b38ef535421a2f15f8c3b1b5779c6c4647e4325244135c0",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:90c78c348c17658d2342f0236674937122b8ea87c89a89f9cae4e3fc2bacb372",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "README.md",
+                "bin/lib/usage.sh",
+                "engine/cmd/review_check_test.go",
+                "engine/cmd/review_test.go",
+                "engine/cmd/usage.go",
+                "engine/review/app/launch.go",
+                "engine/review/app/launch_test.go",
+                "engine/review/app/record_test.go",
+                "engine/review/app/service.go",
+                "engine/reviewresult/errors.go",
+                "engine/reviewresult/reviewresult.go",
+                "engine/reviewresult/rules.go",
+                "engine/reviewresult/rules_test.go"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "Reviewed all 13 changed paths. The change adds a regex location check (CheckLocations) applied only in Service.Record after Parse, so newly recorded replies are validated while stored results still parse.",
+              "The regex is anchored and linear (RE2 in Go), so there is no ReDoS. The input is already bounded by the 1 MiB reply limit.",
+              "The check only tightens validation on untrusted reviewer output and refuses malformed replies before anything is stored. No new file, path, command or network access is introduced, and no secrets or dependencies are touched.",
+              "The location string is only quoted in an error message, which is truncated when re-asked (1024 bytes). The change gives no exploitable data exposure, authorization bypass or data loss.",
+              "Docs and usage text updates match the behavior."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "selected_order": 1,
+        "target_identity": "sha256:11a68a924e3e6ba23968050a61bb1da33c55415af3eaae7f87225c539a52021b",
+        "capture_phase_revision": "sha256:4c6e37982b0bac49863fab182ad7847ade433f1abd8a233495576ec0e46e8b1c",
+        "artifact_digest": "sha256:2d18ad7c1a9cb84b71cbb5834527932b0f5b0a43634dacda545c4934aa9a0ed9",
+        "result_hash": "sha256:fd8e0a26cb082048a82c5555cdcd981c85e65200b0d501e9d8c794e4db616dd6",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:2ba5d03830cc8eb4ea62614721f6a23addcbe2cc59197e15a53cd689db0c48ba",
+            "lineage_id": "review-5ca843578175366f",
+            "authority_revision": "sha256:4c6e37982b0bac49863fab182ad7847ade433f1abd8a233495576ec0e46e8b1c",
+            "target_identity": "sha256:11a68a924e3e6ba23968050a61bb1da33c55415af3eaae7f87225c539a52021b",
+            "base_tree": "df40bc6270ebed4ee1756303f5bf24204b5f4591",
+            "candidate_tree": "c8decf1e53f8cdb005963f0b3b2fcaddad435bbb",
+            "changed_path_manifest_sha256": "sha256:e0d61b8e8bb5bea5061827ec447f137ee183c2862018bc91210e0f046f21471f",
+            "lens": "review-readability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:2ba5d03830cc8eb4ea62614721f6a23addcbe2cc59197e15a53cd689db0c48ba",
+            "raw_sha256": "sha256:e8e6e48d37785f3278d1f31c630d465fd1f30bdd2d809b68a877989b762c0ac4",
+            "canonical_sha256": "sha256:60a55066eec9ea66f02239564ea29776ff7a827664cf8a6a30798e93a6d06a02",
+            "result_hash": "sha256:fd8e0a26cb082048a82c5555cdcd981c85e65200b0d501e9d8c794e4db616dd6",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:2ba5d03830cc8eb4ea62614721f6a23addcbe2cc59197e15a53cd689db0c48ba",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "README.md",
+                "bin/lib/usage.sh",
+                "engine/cmd/review_check_test.go",
+                "engine/cmd/review_test.go",
+                "engine/cmd/usage.go",
+                "engine/review/app/launch.go",
+                "engine/review/app/launch_test.go",
+                "engine/review/app/record_test.go",
+                "engine/review/app/service.go",
+                "engine/reviewresult/errors.go",
+                "engine/reviewresult/reviewresult.go",
+                "engine/reviewresult/rules.go",
+                "engine/reviewresult/rules_test.go"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-001",
+                "lens": "readability",
+                "location": "engine/reviewresult/rules.go:170-173",
+                "severity": "WARNING",
+                "claim": "The location regexp is duplicated: the reviewer result schema carries the same pattern, and this copy has no pointer to it. The comment says 'The path is anything' and 'a range whose end is before its start is not refused'. The 'C26 S4' references in tests and comments are opaque, so a maintainer cannot see why these constants are what they are.",
+                "proof_refs": [
+                  "engine/reviewresult/rules.go:170-173",
+                  "engine/reviewresult/rules_test.go:415-417"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-002",
+                "lens": "readability",
+                "location": "engine/review/app/launch.go:103",
+                "severity": "SUGGESTION",
+                "claim": "The edited doc comment line is now a very long single line that mixes the shape-refusal list with the binding/inspection sentence. It should be rewrapped like the surrounding lines.",
+                "proof_refs": [
+                  "engine/review/app/launch.go:103"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Reviewed all 13 changed paths.",
+              "The Parse/CheckLocations split is clearly documented in reviewresult.go, errors.go and service.go, and tests pin both behaviors.",
+              "Docs in README.md, usage.sh and usage.go are updated consistently, though with overly long lines."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 2,
+        "target_identity": "sha256:11a68a924e3e6ba23968050a61bb1da33c55415af3eaae7f87225c539a52021b",
+        "capture_phase_revision": "sha256:4c6e37982b0bac49863fab182ad7847ade433f1abd8a233495576ec0e46e8b1c",
+        "artifact_digest": "sha256:d4dddde2300254608be7cf8a61602f175ead4b25ed990e2f1e77deeea8929b3e",
+        "result_hash": "sha256:3d4fb255656f1cfea60a607e7496bc312e14ee286eadfc4d6a18a2821e93b46e",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:ecc08bf4d1dcd6d1a2c2fa2ba836a5087086c52c7050ea9cb054bb0050700e56",
+            "lineage_id": "review-5ca843578175366f",
+            "authority_revision": "sha256:4c6e37982b0bac49863fab182ad7847ade433f1abd8a233495576ec0e46e8b1c",
+            "target_identity": "sha256:11a68a924e3e6ba23968050a61bb1da33c55415af3eaae7f87225c539a52021b",
+            "base_tree": "df40bc6270ebed4ee1756303f5bf24204b5f4591",
+            "candidate_tree": "c8decf1e53f8cdb005963f0b3b2fcaddad435bbb",
+            "changed_path_manifest_sha256": "sha256:e0d61b8e8bb5bea5061827ec447f137ee183c2862018bc91210e0f046f21471f",
+            "lens": "review-reliability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:ecc08bf4d1dcd6d1a2c2fa2ba836a5087086c52c7050ea9cb054bb0050700e56",
+            "raw_sha256": "sha256:494ce061342f7c33a5dcd765f97512d7b88cae964bfa1577fea6ff8953d1427d",
+            "canonical_sha256": "sha256:c8cc56474fd367d3d702e63e19ec351f9d3f141d9b3837aeca0a77868b019e39",
+            "result_hash": "sha256:3d4fb255656f1cfea60a607e7496bc312e14ee286eadfc4d6a18a2821e93b46e",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:ecc08bf4d1dcd6d1a2c2fa2ba836a5087086c52c7050ea9cb054bb0050700e56",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "README.md",
+                "bin/lib/usage.sh",
+                "engine/cmd/review_check_test.go",
+                "engine/cmd/review_test.go",
+                "engine/cmd/usage.go",
+                "engine/review/app/launch.go",
+                "engine/review/app/launch_test.go",
+                "engine/review/app/record_test.go",
+                "engine/review/app/service.go",
+                "engine/reviewresult/errors.go",
+                "engine/reviewresult/reviewresult.go",
+                "engine/reviewresult/rules.go",
+                "engine/reviewresult/rules_test.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-empty-location-reask",
+                "lens": "reliability",
+                "location": "engine/review/app/launch.go:103-107",
+                "severity": "SUGGESTION",
+                "claim": "ErrInvalidLocation is added to shapeRefusals, so a bad location triggers one re-ask. This is covered by a launch test. The re-ask quotes the refusal, which includes the offending location, so the reviewer can fix it. Nothing is broken. One small gap remains: the launch test only checks the re-ask path where the second reply is valid. No test shows that a second reply with a bad location is refused without a third ask. That behavior comes from the existing two-attempt logic, so the risk is low.",
+                "proof_refs": [
+                  "engine/review/app/launch_test.go:191-207",
+                  "engine/review/app/launch.go:103-107"
+                ]
+              }
+            ],
+            "evidence": [
+              "Record calls Parse, then CheckLocations. A refusal is wrapped in ReplyRefusedError, so the exit-2 path is the same as for other refused replies. record_test.go and review_test.go cover this.",
+              "CheckLocations is kept out of Parse, so stored results with a bad location stay readable by verify and check. engine/cmd/review_check_test.go and engine/reviewresult/rules_test.go cover this.",
+              "The location regexp matches the reviewer schema pattern, and the table-driven tests cover the line, range, zero, open range, no path and empty cases.",
+              "The README, usage.sh and usage.go text changes match the new behavior."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "9cf8766cac6f984bbfb302267273162681b0ac8bda191cee97fc469da880a3e6",
+    "initial_atomic_start": {
+      "lineage_id": "review-5ca843578175366f",
+      "worktree_identity": "sha256:0630c50776ec7863998a80ae7fd3d156208587545f38bd6642cf9f7e9829da8d",
+      "target_identity": "sha256:11a68a924e3e6ba23968050a61bb1da33c55415af3eaae7f87225c539a52021b",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "df40bc6270ebed4ee1756303f5bf24204b5f4591",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "high",
+      "selected_lenses": [
+        "review-risk",
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 215,
+      "correction_budget": 108,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "changed which reviewer replies review record and launch accept (a location rule), its tests and the help text"
+    },
+    "runtime_agent": "claude-code"
+  }
+}
