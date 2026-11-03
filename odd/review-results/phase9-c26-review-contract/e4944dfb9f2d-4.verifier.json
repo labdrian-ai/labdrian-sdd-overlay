@@ -1,0 +1,11 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "printf 'docs/my file.md:3\\n' | rg -c '^[^:\\s]+:[1-9][0-9]*(-[1-9][0-9]*)?$'; printf 'docs/my file.md:3\\n' | rg -c '^.+:[1-9][0-9]*(-[1-9][0-9]*)?$'; rg -n 'MustCompile' engine/reviewresult/rules.go; git cat-file -e 124799163d09d0b85c406eb644b4822a7d3524d8:engine/reviewresult/schema.go",
+      "output": "This is the same mismatch as F2 above. Schema pattern (schema.go:12): no match (exit 1). Parser pattern (rules.go:174): count 1. Base: engine/reviewresult/schema.go is absent (git cat-file exit 128), so there is no base defect.",
+      "base_result": "not-reproduced"
+    }
+  ]
+}

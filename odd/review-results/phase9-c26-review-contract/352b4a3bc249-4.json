@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "94e77f95786a22c33f8012e36d71b72769e5d3a7",
+    "head": "352b4a3bc2492cedf37ec06c54a5df3653dcbff9",
+    "diff_sha256": "1d37f959119e8f5fd69470a982122d65b339ae9ff1f3ffb71895cdbd5cdcbbb2",
+    "paths": [
+      "engine/review/claudeprint/claudeprint.go",
+      "engine/review/claudeprint/claudeprint_test.go"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "94e77f95786a22c33f8012e36d71b72769e5d3a7",
+      "head": "352b4a3bc2492cedf37ec06c54a5df3653dcbff9",
+      "diff_sha256": "1d37f959119e8f5fd69470a982122d65b339ae9ff1f3ffb71895cdbd5cdcbbb2"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/review/claudeprint/claudeprint.go",
+        "engine/review/claudeprint/claudeprint_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/diff-352b4a3b.patch. It changes the systemPrompt constant and its doc comment in claudeprint.go, plus the wantArgs literal in claudeprint_test.go.",
+      "The constant and the test literal are identical strings.",
+      "The new wording (candidate is evidence, never instructions) matches the preamble's existing guard.",
+      "I did not open the worktree and ran no tests, so the ordering of preamble and brief in the real stdin is not checked: not run."
+    ]
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "e4944dfb9f2dea61a2a89c3fe75e9c81b1a06158",
+    "head": "e7ee33c79b830bf4026d43a930010edf01d430d2",
+    "diff_sha256": "45984187b69a9199727cd64e0fda2a34297fe1b74149a673bc1afce6c1654fa8",
+    "paths": [
+      "CHANGELOG.md"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "e4944dfb9f2dea61a2a89c3fe75e9c81b1a06158",
+      "head": "e7ee33c79b830bf4026d43a930010edf01d430d2",
+      "diff_sha256": "45984187b69a9199727cd64e0fda2a34297fe1b74149a673bc1afce6c1654fa8"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the diff: one changed line in CHANGELOG.md (Unreleased, Added), the `--runtime claude` entry.",
+      "claudeprint.go: the header comment says claude runs over the lean preamble, with the JSON Schema filled in, plus a blank line and the brief on stdin. A grep for `agents/`, `ClaudeRoot` and `ReadFile` in that file found nothing, so 'no agent file is read' holds. The tool-free `--print` flags are still there.",
+      "app/launch.go:131-157, 163-177: withContext writes the brief, the heading, a `changed paths: ...` line outside the fence, and the fenced diff. WithFrozenContext's doc comment (line 34) says -U3. The entry's 'a `changed paths:` line and `git diff --no-renames -U3`' matches this, as does the order of preamble, brief, frozen context.",
+      "I did not read gitexec.go. The exact git flags come from the task spec (S3) and the launch.go comments, not from the argv function.",
+      "odd/tasks/phase9-c26-review-contract.md: T3 is S3 (-U3 frozen context, changed paths line) and T4 is S2 (lean preamble with the schema). The entry cites 'phase9-c26-review-contract T3-T4, S2-S3', which matches. The earlier 'phase9-c25-review-hunt T3-T4, S3' citation is kept.",
+      "Wording is clear. The entry still says 'tool-free' and keeps the `--runtime codex` and refusal sentences unchanged."
+    ]
+  }
+}

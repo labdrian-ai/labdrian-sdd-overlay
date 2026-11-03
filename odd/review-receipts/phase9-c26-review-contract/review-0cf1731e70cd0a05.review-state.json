@@ -1,0 +1,154 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:181571a850daa6fe850fc56b3844e0813da8f5ff43b46f547a0ed7f4fb450f47",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-0cf1731e70cd0a05",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "current-changes",
+      "base_tree": "7404551c935a68ba384a83140587bb472202b98b",
+      "candidate_tree": "75ec386b614a7e5bc97f1b5a21bf699d36601d40",
+      "paths_digest": "sha256:9e1eb2108a1f4d671b0e196880c86693a01626bda7f1f0c9e76981ecb49fefb5",
+      "intended_untracked": [
+        "openspec/changes/overlay-versioned-releases/verify-report.md"
+      ],
+      "intended_untracked_proof": "sha256:424ea05e6c8c7956f9a13df475cf6bcb9955809ed8148ff44ac51f984143bba1",
+      "paths": [
+        "bin/labdrian-overlay",
+        "openspec/changes/overlay-versioned-releases/verify-report.md",
+        "tui/release_backend_test.go"
+      ],
+      "identity": "sha256:0cf1731e70cd0a0547f834d854313e9d2d754681a414b7cb3c2379ded75444f6"
+    },
+    "current_snapshot": {
+      "kind": "current-changes",
+      "base_tree": "7404551c935a68ba384a83140587bb472202b98b",
+      "candidate_tree": "75ec386b614a7e5bc97f1b5a21bf699d36601d40",
+      "paths_digest": "sha256:9e1eb2108a1f4d671b0e196880c86693a01626bda7f1f0c9e76981ecb49fefb5",
+      "intended_untracked": [
+        "openspec/changes/overlay-versioned-releases/verify-report.md"
+      ],
+      "intended_untracked_proof": "sha256:424ea05e6c8c7956f9a13df475cf6bcb9955809ed8148ff44ac51f984143bba1",
+      "paths": [
+        "bin/labdrian-overlay",
+        "openspec/changes/overlay-versioned-releases/verify-report.md",
+        "tui/release_backend_test.go"
+      ],
+      "identity": "sha256:0cf1731e70cd0a0547f834d854313e9d2d754681a414b7cb3c2379ded75444f6"
+    },
+    "genesis_paths": [
+      "bin/labdrian-overlay",
+      "openspec/changes/overlay-versioned-releases/verify-report.md",
+      "tui/release_backend_test.go"
+    ],
+    "policy_hash": "sha256:34fb63d7f29f8613cd4431382b1057398a4816f8a4c20fc34677fffc80a184f6",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-risk",
+      "review-resilience",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 532,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_results": [
+      {
+        "lens": "review-risk",
+        "findings": [],
+        "evidence": [
+          "Inspected the supplied unified diffs for bin/labdrian-overlay (resolve_latest_release_tag's new do_fetch parameter and fetch-guard) and tui/release_backend_test.go (updated and new tests). Both default-value parameter expansions and the bracket-test comparison are quoted, non-eval, and not subject to word-splitting or shell injection.",
+          "cmd_sync_check's release_version resolution now narrows rather than expands network access; the code comment states the other four call sites (cmd_apply, cmd_self_update, cmd_update, cmd_version) are unmodified and remain on the do_fetch=true default, and no call site bypasses the new gate for cmd_sync_check's default path.",
+          "No command injection, unsafe/unquoted variable expansion, privilege escalation, secret exposure, or dependency-vulnerability evidence was found.",
+          "openspec/changes/overlay-versioned-releases/verify-report.md is unchanged since its independent approval under prior lineage review-270a5e0f9b44565b; no new content was inspected there."
+        ],
+        "result_hash": "sha256:f0afd4f193751e38ba9babdf9fe49306254b9c5bce03f9c734ef1aa9ed29ac93"
+      },
+      {
+        "lens": "review-resilience",
+        "findings": [],
+        "evidence": [
+          "The new TestReleaseBackend_SyncCheck_DefaultDoesNotFetchTags differentially proves, via git tag -l staying empty, exit code 0, and the ACTION-line text, that the flagless default sync-check path performs zero git fetch and degrades gracefully to the untagged/apply-recommendation fallback rather than crashing or fabricating a release version.",
+          "The default parameter value ('true') on resolve_latest_release_tag's new do_fetch parameter structurally reproduces the exact prior always-fetch condition for every untouched call site (cmd_apply, cmd_self_update, cmd_update, cmd_version), so the behavior change is provably scoped to cmd_sync_check only.",
+          "TestReleaseBackend_SyncCheck_DigestMismatchActionNamesReleaseVersion was updated to pass --fetch, preserving its original always-fetch scenario without weakening its assertions.",
+          "No regression, missing-fallback, or blast-radius defect is evidenced. openspec/changes/overlay-versioned-releases/verify-report.md carried no diff in this context and was triaged as covered per its prior review-reliability approval under lineage review-270a5e0f9b44565b."
+        ],
+        "result_hash": "sha256:5eeebf2d0daf674d2e392ad296c8463bea37aa7f44acb307defb56fc8071f46f"
+      },
+      {
+        "lens": "review-readability",
+        "findings": [],
+        "evidence": [
+          "resolve_latest_release_tag's doc-comment was updated to '\u003cref\u003e [do_fetch=true]', matching its actual implementation default, so the new parameter's name, optionality, and default are unambiguous from the signature alone.",
+          "The accompanying prose explicitly names every caller (cmd_apply, cmd_self_update, cmd_update, cmd_version) that keeps the do_fetch=true default and explains why only cmd_sync_check's read-only default path needs do_fetch=false, tying the rationale to concrete requirement IDs (sync-check-verdicts R-001, tui-self-update R-001).",
+          "The new TestReleaseBackend_SyncCheck_DefaultDoesNotFetchTags has a self-describing name and a comment naming the exact regression (sdd-verify CRITICAL-1), the violated requirements, the reproduction scenario, and the specific TUI call path (probeBehindOriginCmd) that depends on the fix; its assertions directly match the stated intent.",
+          "No misleading names, duplicated/dead logic, unexplained constants, unsafe complexity, or missing change context was found. openspec/changes/overlay-versioned-releases/verify-report.md is unchanged since its prior review-reliability approval and is reported as covered."
+        ],
+        "result_hash": "sha256:d8d66fce020f1a97c4e65cbbfa615be42f55914d3d0c89bab314e8e2a3cae7d5"
+      },
+      {
+        "lens": "review-reliability",
+        "findings": [
+          {
+            "id": "R3-001",
+            "lens": "reliability",
+            "location": "bin/labdrian-overlay:459",
+            "severity": "WARNING",
+            "claim": "resolve_latest_release_tag's new do_fetch parameter defaults via bash's ${2:-true} expansion, which substitutes the default for both an unset AND an empty-string second argument; if cmd_sync_check's check_origin variable could ever be empty rather than the literal string 'false', the default sync-check path would still resolve do_fetch to true and keep fetching.",
+            "proof_refs": [
+              "bin/labdrian-overlay:459 (new line): local do_fetch=\"${2:-true}\" -- POSIX/bash ${var:-default} parameter expansion applies the default when the parameter is unset OR null (empty).",
+              "bin/labdrian-overlay:1848: local check_origin=false -- check_origin is always initialized to the literal string 'false' (never empty) and only ever reassigned the literal string 'true' by the --check-origin/--fetch flag branch, so this hypothetical does not manifest in the shipped code."
+            ],
+            "evidence_class": "inferential",
+            "causal_disposition": "introduced"
+          }
+        ],
+        "evidence": [
+          "Confirmed the new test drives real git plumbing (newScratchRepo, pushUpstreamTag, runGit against actual temporary repositories) rather than a mock, and asserts both the absence of fetched tags after a flagless sync-check and the absence of a named release version in its untagged-fallback ACTION line -- reproducing the exact CRITICAL-1 scenario.",
+          "Confirmed TestReleaseBackend_SyncCheck_DigestMismatchActionNamesReleaseVersion's original digest-mismatch/ACTION-naming assertions are unaffected by the added --fetch flag, since --fetch only re-establishes the pre-fix precondition (a resolvable release version) that the candidate's new default path no longer provides implicitly.",
+          "Verified against the full (non-diff-scoped) source: cmd_sync_check's check_origin local is declared 'local check_origin=false' (bin/labdrian-overlay:1848) and only ever reassigned the literal string 'true' on --check-origin/--fetch -- never an empty string -- so the WARNING finding below (raised from diff-only evidence that could not see this declaration) does not manifest in the shipped code; recorded as WARNING/informational rather than a corrected defect.",
+          "openspec/changes/overlay-versioned-releases/verify-report.md carried no patch in this context; per the supplied note it is unchanged since its prior independent review-reliability approval under lineage review-270a5e0f9b44565b, so it is listed as covered with no re-inspection performed for new findings."
+        ],
+        "result_hash": "sha256:4d4df9c9f1dd9d43f45f139680cfb187afd11593e40ce0f6124519c6f70fb7be"
+      }
+    ],
+    "findings": [
+      {
+        "id": "R3-001",
+        "lens": "reliability",
+        "location": "bin/labdrian-overlay:459",
+        "severity": "WARNING",
+        "claim": "resolve_latest_release_tag's new do_fetch parameter defaults via bash's ${2:-true} expansion, which substitutes the default for both an unset AND an empty-string second argument; if cmd_sync_check's check_origin variable could ever be empty rather than the literal string 'false', the default sync-check path would still resolve do_fetch to true and keep fetching.",
+        "proof_refs": [
+          "bin/labdrian-overlay:459 (new line): local do_fetch=\"${2:-true}\" -- POSIX/bash ${var:-default} parameter expansion applies the default when the parameter is unset OR null (empty).",
+          "bin/labdrian-overlay:1848: local check_origin=false -- check_origin is always initialized to the literal string 'false' (never empty) and only ever reassigned the literal string 'true' by the --check-origin/--fetch flag branch, so this hypothetical does not manifest in the shipped code."
+        ],
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced"
+      }
+    ],
+    "classifications": {},
+    "outcomes": {
+      "R3-001": "info"
+    },
+    "fix_finding_ids": [],
+    "follow_ups": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:98dd016c703547582bc87c840d72d1758d67ec2444588a64725ef53b0ec11bac",
+    "evidence_record_digest": "sha256:0876b63981854fa51da81f7ed7345786c3a59155632ef32eff11207d4a396e9a",
+    "evidence_outcome": "passed",
+    "evidence_target_identity": "sha256:0cf1731e70cd0a0547f834d854313e9d2d754681a414b7cb3c2379ded75444f6",
+    "evidence_authority_revision": "sha256:160838d7c2f0ca8102cea2b1f57f16677ad7c3c2199696fad17b46931968cbe8"
+  },
+  "effect_intents": [
+    {
+      "class": "repository_context",
+      "destination": "rctx1_ff13fcccd49cf0480a870269e98cd0f9ba54d83b3445531b08be97010cd15a9a",
+      "payload_hash": "sha256:3c95bca8167381f4397f378ef9aaeb36e742d3a3d2103d12d4268e54fad0806b",
+      "binding_revision": "sha256:e3df3438b5295d297f3a7e159f7c4fb8e492e0451fc0e698fba623a222e5e0bc",
+      "event_id": "sha256:827f7bd10639c0c1eca9bd6a945f5fbb4704f7dcb07106f73c6216eb6ba0187c"
+    }
+  ]
+}

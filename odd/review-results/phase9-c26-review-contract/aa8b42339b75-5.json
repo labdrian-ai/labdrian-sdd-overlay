@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "c355b3d369e2035c7580a54a3efcfa7852ae5c12",
+    "head": "aa8b42339b7563a5f1af73a8e9c30469846eb9f7",
+    "diff_sha256": "248f3dd422d04c74dc5ea1f521c8e56cdc203f53b5e02f7bec07a56f5445e80d",
+    "paths": [
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/cmd/usage.go",
+      "engine/review/app/launch.go",
+      "engine/review/app/launch_test.go",
+      "engine/review/claudeprint/claudeprint.go",
+      "engine/review/claudeprint/claudeprint_test.go"
+    ]
+  },
+  "rows": [
+    "default",
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "c355b3d369e2035c7580a54a3efcfa7852ae5c12",
+      "head": "aa8b42339b7563a5f1af73a8e9c30469846eb9f7",
+      "diff_sha256": "248f3dd422d04c74dc5ea1f521c8e56cdc203f53b5e02f7bec07a56f5445e80d"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/cmd/usage.go",
+        "engine/review/app/launch.go",
+        "engine/review/app/launch_test.go",
+        "engine/review/claudeprint/claudeprint.go",
+        "engine/review/claudeprint/claudeprint_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the whole candidate diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/diff-aa8b4233.patch, which covers all 7 changed paths.",
+      "engine/review/app/launch.go:117-132 (worktree at head): reAsk now puts the refusal it quotes inside a fence of max(3, longestBacktickRun(quoted)+1) backticks. The fence length is computed after the refusal is cut to maxQuotedRefusal bytes and ' ...' is appended, so no backtick run inside the quote can close the fence early. The MaxReplyBytes limit is still checked against the final string, which now includes the fence bytes. The only effect is that the re-ask is skipped a few bytes sooner; no error is hidden.",
+      "engine/review/app/launch.go:183-194: longestBacktickRun already existed before this change and withContext already used it (launch.go:147). The diff reuses it and does not add a second implementation.",
+      "engine/review/app/launch.go:106-110 and 119: which refusals get a re-ask (shapeRefusals) and the one-re-ask limit are unchanged. Only the layout of the re-ask brief changed.",
+      "engine/review/app/launch_test.go:248-254: the new assertion checks the opening fence under the heading, checks that the refusal text is inside the fence and the retry instruction is not, and checks that the instruction follows the closing fence. Existing assertions on the re-ask content and on what is stored are unchanged.",
+      "engine/review/claudeprint/claudeprint.go:32-35: only the doc comment changed. The systemPrompt constant at line 35 is unchanged, and claudeprint_test.go:85-88 now checks for that exact sentence instead of three substrings. That makes the test stricter; runtime behavior does not change.",
+      "README.md:804, bin/lib/usage.sh:369-370 and engine/cmd/usage.go:254 now all say the refusal is in a fenced block, which matches the code. The odd line wrap in usage.sh is style only.",
+      "Risk line: 'Risk: 3' holds. The re-ask brief is a prompt contract that the Codex and Claude reviewer launch paths both receive through Launch, and this change alters its layout. The help text and README that describe that contract were updated in the same change. The diff touches no stored data or format, no guard (the re-ask decision and the record checks are unchanged), no concurrency, and no delivery, CI or dependency files. The changed code has tests in launch_test.go, so item 6 does not apply. The risk line is complete as declared.",
+      "Not run: tests, build and binaries. This reviewer role does not execute anything."
+    ]
+  }
+}

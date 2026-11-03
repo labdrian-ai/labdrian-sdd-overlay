@@ -19,7 +19,7 @@ var launchFacts = []string{
 	"--strict-mcp-config",
 	"--runtime must be claude or codex: on Pi the parent launches the reviewer agent natively",
 	"run: labdrian-overlay apply --target codex",
-	"run: labdrian-overlay apply --target claude",
+	"its stdin the lean preamble (the JSON Schema of the reply; no agent file is read)",
 	"## Frozen context",
 	"git diff --no-renames -U3",
 	"over the 150000-byte limit of one launch",

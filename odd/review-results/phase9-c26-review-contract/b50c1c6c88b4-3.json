@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "aa8b42339b7563a5f1af73a8e9c30469846eb9f7",
+    "head": "b50c1c6c88b445fc14b6cb2eed3cfdf9e91e86de",
+    "diff_sha256": "1a13fab4e6c427e4b8a6f027b70071a67dc64bc59a8701baa6f0daece1b597c6",
+    "paths": [
+      "engine/review/app/launch_test.go"
+    ]
+  },
+  "rows": [
+    "default",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "aa8b42339b7563a5f1af73a8e9c30469846eb9f7",
+      "head": "b50c1c6c88b445fc14b6cb2eed3cfdf9e91e86de",
+      "diff_sha256": "1a13fab4e6c427e4b8a6f027b70071a67dc64bc59a8701baa6f0daece1b597c6"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/review/app/launch_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "I read the diff. The new test injects a member named x plus seven backticks plus y into the first reply.",
+      "The refusal text echoes the member name as written. jsonstrict.CheckKnownFields returns fmt.Errorf(\"unknown %s field %q\"), and reviewresult/wire.go:159 wraps that error with ErrUnknownMember. %q does not escape backticks.",
+      "The injected name is the only unknown member, so it is the one reported. ErrUnknownMember is in shapeRefusals, so Launch re-asks.",
+      "reAsk at launch.go:126 builds the fence from longestBacktickRun of the quoted refusal plus 1, with a minimum of 3. The echoed run is 7, so the fence is 8.",
+      "The test asserts that the re-ask opens with a fence of 8 backticks, that the echoed run is inside the fence, that the same fence closes it followed by \"Reply again\", and that text remains after the closing fence.",
+      "A fixed three-backtick fence would fail the strings.Cut on the opening fence, so the test pins the behavior.",
+      "The test calls the public Launch through launchWorld and inspects the brief the reviewer received. It uses no internals.",
+      "The test reads clearly. Its doc comment states the property, and the failure messages print the whole tail.",
+      "I did not run the tests."
+    ]
+  }
+}

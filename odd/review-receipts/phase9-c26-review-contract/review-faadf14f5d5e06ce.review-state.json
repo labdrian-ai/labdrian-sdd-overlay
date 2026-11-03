@@ -1,0 +1,230 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:a1f226cfce00dc73c2a439ecabf11c125f41cbd974010e1a56bf608d90f8a234",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-faadf14f5d5e06ce",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "c8057cca609a032f154abb683c1330f8004ad357",
+      "candidate_tree": "4a56885675c06733b6faccfe91e3a7611898cadd",
+      "paths_digest": "sha256:f9e81ab535ed3afd8323ef9b1d951e98631b70c5c223dc5372b7b162fab2019c",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "openspec/changes/anti-generic-design-runtime-wiring/apply-progress.md",
+        "openspec/changes/anti-generic-design-runtime-wiring/design.md",
+        "openspec/changes/anti-generic-design-runtime-wiring/proposal.md",
+        "openspec/changes/anti-generic-design-runtime-wiring/specs/anti-generic-design/spec.md",
+        "openspec/changes/anti-generic-design-runtime-wiring/tasks.md",
+        "openspec/changes/archive/2026-06-27-gadu-portable-operator/design.md",
+        "openspec/changes/archive/2026-06-27-gadu-portable-operator/proposal.md",
+        "openspec/changes/archive/2026-06-27-gadu-portable-operator/specs/gadu-canonical-source/spec.md",
+        "openspec/changes/archive/2026-06-27-gadu-portable-operator/specs/gadu-generator/spec.md",
+        "openspec/changes/archive/2026-06-27-gadu-portable-operator/specs/overlay-agent-route/spec.md",
+        "openspec/changes/archive/2026-06-27-gadu-portable-operator/tasks.md",
+        "openspec/changes/archive/2026-07-08-anti-generic-design-runtime-wiring/apply-progress.md",
+        "openspec/changes/archive/2026-07-08-anti-generic-design-runtime-wiring/archive-report.md",
+        "openspec/changes/archive/2026-07-08-anti-generic-design-runtime-wiring/design.md",
+        "openspec/changes/archive/2026-07-08-anti-generic-design-runtime-wiring/proposal.md",
+        "openspec/changes/archive/2026-07-08-anti-generic-design-runtime-wiring/specs/anti-generic-design/spec.md",
+        "openspec/changes/archive/2026-07-08-anti-generic-design-runtime-wiring/tasks.md",
+        "openspec/changes/archive/2026-07-08-anti-generic-design-runtime-wiring/verify-report.md",
+        "openspec/changes/gadu-portable-operator/design.md",
+        "openspec/changes/gadu-portable-operator/proposal.md",
+        "openspec/changes/gadu-portable-operator/specs/gadu-canonical-source/spec.md",
+        "openspec/changes/gadu-portable-operator/specs/gadu-generator/spec.md",
+        "openspec/changes/gadu-portable-operator/specs/overlay-agent-route/spec.md",
+        "openspec/changes/gadu-portable-operator/tasks.md",
+        "openspec/specs/anti-generic-design/spec.md"
+      ],
+      "identity": "sha256:faadf14f5d5e06cee24275f667e837cd41485f01d803b77fa5d55d07a3375bd3"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "c8057cca609a032f154abb683c1330f8004ad357",
+      "candidate_tree": "4a56885675c06733b6faccfe91e3a7611898cadd",
+      "paths_digest": "sha256:f9e81ab535ed3afd8323ef9b1d951e98631b70c5c223dc5372b7b162fab2019c",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "openspec/changes/anti-generic-design-runtime-wiring/apply-progress.md",
+        "openspec/changes/anti-generic-design-runtime-wiring/design.md",
+        "openspec/changes/anti-generic-design-runtime-wiring/proposal.md",
+        "openspec/changes/anti-generic-design-runtime-wiring/specs/anti-generic-design/spec.md",
+        "openspec/changes/anti-generic-design-runtime-wiring/tasks.md",
+        "openspec/changes/archive/2026-06-27-gadu-portable-operator/design.md",
+        "openspec/changes/archive/2026-06-27-gadu-portable-operator/proposal.md",
+        "openspec/changes/archive/2026-06-27-gadu-portable-operator/specs/gadu-canonical-source/spec.md",
+        "openspec/changes/archive/2026-06-27-gadu-portable-operator/specs/gadu-generator/spec.md",
+        "openspec/changes/archive/2026-06-27-gadu-portable-operator/specs/overlay-agent-route/spec.md",
+        "openspec/changes/archive/2026-06-27-gadu-portable-operator/tasks.md",
+        "openspec/changes/archive/2026-07-08-anti-generic-design-runtime-wiring/apply-progress.md",
+        "openspec/changes/archive/2026-07-08-anti-generic-design-runtime-wiring/archive-report.md",
+        "openspec/changes/archive/2026-07-08-anti-generic-design-runtime-wiring/design.md",
+        "openspec/changes/archive/2026-07-08-anti-generic-design-runtime-wiring/proposal.md",
+        "openspec/changes/archive/2026-07-08-anti-generic-design-runtime-wiring/specs/anti-generic-design/spec.md",
+        "openspec/changes/archive/2026-07-08-anti-generic-design-runtime-wiring/tasks.md",
+        "openspec/changes/archive/2026-07-08-anti-generic-design-runtime-wiring/verify-report.md",
+        "openspec/changes/gadu-portable-operator/design.md",
+        "openspec/changes/gadu-portable-operator/proposal.md",
+        "openspec/changes/gadu-portable-operator/specs/gadu-canonical-source/spec.md",
+        "openspec/changes/gadu-portable-operator/specs/gadu-generator/spec.md",
+        "openspec/changes/gadu-portable-operator/specs/overlay-agent-route/spec.md",
+        "openspec/changes/gadu-portable-operator/tasks.md",
+        "openspec/specs/anti-generic-design/spec.md"
+      ],
+      "identity": "sha256:faadf14f5d5e06cee24275f667e837cd41485f01d803b77fa5d55d07a3375bd3"
+    },
+    "genesis_paths": [
+      "openspec/changes/anti-generic-design-runtime-wiring/apply-progress.md",
+      "openspec/changes/anti-generic-design-runtime-wiring/design.md",
+      "openspec/changes/anti-generic-design-runtime-wiring/proposal.md",
+      "openspec/changes/anti-generic-design-runtime-wiring/specs/anti-generic-design/spec.md",
+      "openspec/changes/anti-generic-design-runtime-wiring/tasks.md",
+      "openspec/changes/archive/2026-06-27-gadu-portable-operator/design.md",
+      "openspec/changes/archive/2026-06-27-gadu-portable-operator/proposal.md",
+      "openspec/changes/archive/2026-06-27-gadu-portable-operator/specs/gadu-canonical-source/spec.md",
+      "openspec/changes/archive/2026-06-27-gadu-portable-operator/specs/gadu-generator/spec.md",
+      "openspec/changes/archive/2026-06-27-gadu-portable-operator/specs/overlay-agent-route/spec.md",
+      "openspec/changes/archive/2026-06-27-gadu-portable-operator/tasks.md",
+      "openspec/changes/archive/2026-07-08-anti-generic-design-runtime-wiring/apply-progress.md",
+      "openspec/changes/archive/2026-07-08-anti-generic-design-runtime-wiring/archive-report.md",
+      "openspec/changes/archive/2026-07-08-anti-generic-design-runtime-wiring/design.md",
+      "openspec/changes/archive/2026-07-08-anti-generic-design-runtime-wiring/proposal.md",
+      "openspec/changes/archive/2026-07-08-anti-generic-design-runtime-wiring/specs/anti-generic-design/spec.md",
+      "openspec/changes/archive/2026-07-08-anti-generic-design-runtime-wiring/tasks.md",
+      "openspec/changes/archive/2026-07-08-anti-generic-design-runtime-wiring/verify-report.md",
+      "openspec/changes/gadu-portable-operator/design.md",
+      "openspec/changes/gadu-portable-operator/proposal.md",
+      "openspec/changes/gadu-portable-operator/specs/gadu-canonical-source/spec.md",
+      "openspec/changes/gadu-portable-operator/specs/gadu-generator/spec.md",
+      "openspec/changes/gadu-portable-operator/specs/overlay-agent-route/spec.md",
+      "openspec/changes/gadu-portable-operator/tasks.md",
+      "openspec/specs/anti-generic-design/spec.md"
+    ],
+    "policy_hash": "sha256:34fb63d7f29f8613cd4431382b1057398a4816f8a4c20fc34677fffc80a184f6",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-reliability"
+    ],
+    "original_changed_lines": 4404,
+    "correction_budget": 200,
+    "lens_results": [
+      {
+        "lens": "review-reliability",
+        "findings": [
+          {
+            "id": "R3-gadu-spec-promotion-unverified",
+            "lens": "reliability",
+            "location": "openspec/changes/archive/2026-06-27-gadu-portable-operator/specs/overlay-agent-route/spec.md:1",
+            "severity": "WARNING",
+            "claim": "Archiving gadu-portable-operator deletes its three active delta specs (R-001..R-013 across gadu-canonical-source, gadu-generator, overlay-agent-route) while the candidate adds or modifies no canonical openspec/specs/gadu-canonical-source, gadu-generator, or overlay-agent-route spec.md; the only spec promotion in this candidate is for anti-generic-design. If those canonical specs do not already exist in the base tree, this archival removes the only live copies of the gadu requirements without promotion — exactly the unpromoted-delta hazard the sibling archive-report's W1 treated as a blocking pre-condition ('the file merely existing at the expected path is NOT evidence of promotion'). Base-tree presence of the gadu canonical specs is unverifiable from the supplied evidence and should be confirmed before delivery.",
+            "proof_refs": [
+              "changed_path_manifest: the only entry under openspec/specs/ is openspec/specs/anti-generic-design/spec.md (status M); no openspec/specs/gadu-* path appears anywhere in the manifest",
+              "openspec/changes/gadu-portable-operator/specs/gadu-canonical-source/spec.md (D), .../gadu-generator/spec.md (D), .../overlay-agent-route/spec.md (D) — all three delta specs deleted from the active tree",
+              "openspec/changes/archive/2026-07-08-anti-generic-design-runtime-wiring/archive-report.md:64 — W1 precedent: unpromoted delta requirements were treated as a blocking pre-archive condition and verified via rg before merge"
+            ],
+            "evidence_class": "inferential",
+            "causal_disposition": "unknown"
+          },
+          {
+            "id": "R3-gadu-archive-missing-closure-records",
+            "lens": "reliability",
+            "location": "openspec/changes/archive/2026-06-27-gadu-portable-operator/tasks.md:1",
+            "severity": "WARNING",
+            "claim": "The 2026-06-27-gadu-portable-operator archive contains only the six planning/spec artifacts (proposal, design, tasks, three delta specs) — no archive-report.md, no verify-report.md, and no apply-progress.md — unlike the sibling archive created in this same candidate, whose own 'Archive Contents' convention includes apply-progress, verify-report, and archive-report. No verification or closure record therefore survives in the archive to prove the gadu change was verified (requirements/scenarios/tests) before being closed; its completion rests solely on tasks.md checkboxes plus indirect corroboration from the other change's verify-report.",
+            "proof_refs": [
+              "changed_path_manifest: only design.md, proposal.md, specs/gadu-canonical-source/spec.md, specs/gadu-generator/spec.md, specs/overlay-agent-route/spec.md, tasks.md are added under openspec/changes/archive/2026-06-27-gadu-portable-operator/",
+              "openspec/changes/archive/2026-07-08-anti-generic-design-runtime-wiring/archive-report.md:72 — sibling 'Archive Contents' lists proposal, design, tasks, apply-progress, verify-report, delta spec, archive-report as the archive shape",
+              "openspec/changes/archive/2026-07-08-anti-generic-design-runtime-wiring/verify-report.md:47 — 'ok .../engine/gadu 0.009s' and 'ok .../engine/installer 5.479s' are the only surviving (indirect) verification evidence touching gadu implementation"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-archive-report-contradicts-shipped-tree",
+            "lens": "reliability",
+            "location": "openspec/changes/archive/2026-07-08-anti-generic-design-runtime-wiring/archive-report.md:87",
+            "severity": "WARNING",
+            "claim": "The newly added archive-report.md ships asserting facts this same candidate falsifies: line 87 states 'The original folder openspec/changes/anti-generic-design-runtime-wiring/ still exists on disk and was not removed' and lines 100/102 carry the corresponding follow-up/risk, while the candidate deletes that folder; line 93 states 'openspec/changes/gadu-portable-operator/ was not touched, per explicit instruction', while the candidate deletes and archives it. The authoritative closure record thus contradicts the tree it is delivered in; a future auditor reconciling the archive against its own report hits a false 'incomplete move' state. A one-line addendum recording that the physical move (and the gadu archival) completed in this change would restore internal consistency.",
+            "proof_refs": [
+              "openspec/changes/archive/2026-07-08-anti-generic-design-runtime-wiring/archive-report.md:87 — 'Change folder physical move: NOT completed by this execution ... still exists on disk and was not removed'",
+              "openspec/changes/archive/2026-07-08-anti-generic-design-runtime-wiring/archive-report.md:93 — 'openspec/changes/gadu-portable-operator/ was not touched, per explicit instruction'",
+              "changed_path_manifest: all five openspec/changes/anti-generic-design-runtime-wiring/* entries and all six openspec/changes/gadu-portable-operator/* entries have status D in this candidate"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          }
+        ],
+        "evidence": [
+          "Move fidelity verified by git blob identity from the supplied diffs: all six gadu-portable-operator files are byte-identical between deleted active paths and added archive paths (413e31317e31..., b7339f831520..., 75dbbdb1c467..., 1891db46b0fb..., afb46656288c..., 639483ff6161...), and four of five anti-generic-design-runtime-wiring files likewise (d961617e4aaa..., 900552b6e6b9..., ea9c45312725..., 23509e3efae4...)",
+          "apply-progress.md archive copy (blob 0cb3676b8f83...) diverges from the deleted original (blob 813bb1d7d21c...) only by the trailing, self-documented 'Archive note (added at archive time, 2026-08-11)' section — an intentional, disclosed divergence, not silent drift",
+          "The R-101..R-106 block appended to openspec/specs/anti-generic-design/spec.md was compared requirement-by-requirement against the archived delta spec: titles, IDs, and all 11 scenarios match, the insertion lands before '## OUT OF SCOPE', and the diff context shows pre-existing content untouched — consistent with the archive-report's append-only merge claim",
+          "The candidate is documentation-only (markdown under openspec/): no Go, bash, test, manifest, or hook files change, so no executable behavior, determinism, or test regression can originate from this tree; reliability review therefore centered on archive fidelity, spec-promotion completeness, and internal consistency of the closure records"
+        ],
+        "result_hash": "sha256:b5f713db6888ab3a84c69102c444c5534232bacdd05c5e6faf4327893dd8b70a"
+      }
+    ],
+    "findings": [
+      {
+        "id": "R3-gadu-spec-promotion-unverified",
+        "lens": "reliability",
+        "location": "openspec/changes/archive/2026-06-27-gadu-portable-operator/specs/overlay-agent-route/spec.md:1",
+        "severity": "WARNING",
+        "claim": "Archiving gadu-portable-operator deletes its three active delta specs (R-001..R-013 across gadu-canonical-source, gadu-generator, overlay-agent-route) while the candidate adds or modifies no canonical openspec/specs/gadu-canonical-source, gadu-generator, or overlay-agent-route spec.md; the only spec promotion in this candidate is for anti-generic-design. If those canonical specs do not already exist in the base tree, this archival removes the only live copies of the gadu requirements without promotion — exactly the unpromoted-delta hazard the sibling archive-report's W1 treated as a blocking pre-condition ('the file merely existing at the expected path is NOT evidence of promotion'). Base-tree presence of the gadu canonical specs is unverifiable from the supplied evidence and should be confirmed before delivery.",
+        "proof_refs": [
+          "changed_path_manifest: the only entry under openspec/specs/ is openspec/specs/anti-generic-design/spec.md (status M); no openspec/specs/gadu-* path appears anywhere in the manifest",
+          "openspec/changes/gadu-portable-operator/specs/gadu-canonical-source/spec.md (D), .../gadu-generator/spec.md (D), .../overlay-agent-route/spec.md (D) — all three delta specs deleted from the active tree",
+          "openspec/changes/archive/2026-07-08-anti-generic-design-runtime-wiring/archive-report.md:64 — W1 precedent: unpromoted delta requirements were treated as a blocking pre-archive condition and verified via rg before merge"
+        ],
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown"
+      },
+      {
+        "id": "R3-gadu-archive-missing-closure-records",
+        "lens": "reliability",
+        "location": "openspec/changes/archive/2026-06-27-gadu-portable-operator/tasks.md:1",
+        "severity": "WARNING",
+        "claim": "The 2026-06-27-gadu-portable-operator archive contains only the six planning/spec artifacts (proposal, design, tasks, three delta specs) — no archive-report.md, no verify-report.md, and no apply-progress.md — unlike the sibling archive created in this same candidate, whose own 'Archive Contents' convention includes apply-progress, verify-report, and archive-report. No verification or closure record therefore survives in the archive to prove the gadu change was verified (requirements/scenarios/tests) before being closed; its completion rests solely on tasks.md checkboxes plus indirect corroboration from the other change's verify-report.",
+        "proof_refs": [
+          "changed_path_manifest: only design.md, proposal.md, specs/gadu-canonical-source/spec.md, specs/gadu-generator/spec.md, specs/overlay-agent-route/spec.md, tasks.md are added under openspec/changes/archive/2026-06-27-gadu-portable-operator/",
+          "openspec/changes/archive/2026-07-08-anti-generic-design-runtime-wiring/archive-report.md:72 — sibling 'Archive Contents' lists proposal, design, tasks, apply-progress, verify-report, delta spec, archive-report as the archive shape",
+          "openspec/changes/archive/2026-07-08-anti-generic-design-runtime-wiring/verify-report.md:47 — 'ok .../engine/gadu 0.009s' and 'ok .../engine/installer 5.479s' are the only surviving (indirect) verification evidence touching gadu implementation"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-archive-report-contradicts-shipped-tree",
+        "lens": "reliability",
+        "location": "openspec/changes/archive/2026-07-08-anti-generic-design-runtime-wiring/archive-report.md:87",
+        "severity": "WARNING",
+        "claim": "The newly added archive-report.md ships asserting facts this same candidate falsifies: line 87 states 'The original folder openspec/changes/anti-generic-design-runtime-wiring/ still exists on disk and was not removed' and lines 100/102 carry the corresponding follow-up/risk, while the candidate deletes that folder; line 93 states 'openspec/changes/gadu-portable-operator/ was not touched, per explicit instruction', while the candidate deletes and archives it. The authoritative closure record thus contradicts the tree it is delivered in; a future auditor reconciling the archive against its own report hits a false 'incomplete move' state. A one-line addendum recording that the physical move (and the gadu archival) completed in this change would restore internal consistency.",
+        "proof_refs": [
+          "openspec/changes/archive/2026-07-08-anti-generic-design-runtime-wiring/archive-report.md:87 — 'Change folder physical move: NOT completed by this execution ... still exists on disk and was not removed'",
+          "openspec/changes/archive/2026-07-08-anti-generic-design-runtime-wiring/archive-report.md:93 — 'openspec/changes/gadu-portable-operator/ was not touched, per explicit instruction'",
+          "changed_path_manifest: all five openspec/changes/anti-generic-design-runtime-wiring/* entries and all six openspec/changes/gadu-portable-operator/* entries have status D in this candidate"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      }
+    ],
+    "classifications": {},
+    "outcomes": {
+      "R3-archive-report-contradicts-shipped-tree": "info",
+      "R3-gadu-archive-missing-closure-records": "info",
+      "R3-gadu-spec-promotion-unverified": "info"
+    },
+    "fix_finding_ids": [],
+    "follow_ups": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:7035f58de35df8a6dfc160e86ba6018a200010c07b4db17164d2b138ac986852",
+    "evidence_record_digest": "sha256:1ea685753ab823662bbbee0123dd6806e74d98b18d2946f9026a0cfab9f5c75f",
+    "evidence_outcome": "passed",
+    "evidence_target_identity": "sha256:faadf14f5d5e06cee24275f667e837cd41485f01d803b77fa5d55d07a3375bd3",
+    "evidence_authority_revision": "sha256:c0fddaebb255550da4f45f36b84d2fa997a730b8065fd457b8821ced00933ff2"
+  }
+}

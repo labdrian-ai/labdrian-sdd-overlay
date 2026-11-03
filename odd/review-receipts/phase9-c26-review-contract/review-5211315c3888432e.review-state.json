@@ -1,0 +1,87 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:14e9405494ac486bfb252092aaeb1bb585dbac7609402c83a87a2722553c4337",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-5211315c3888432e",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "current-changes",
+      "base_tree": "30985f932d3606978fc903299455e6a3671371bd",
+      "candidate_tree": "3d2f66c9cf1adf8c15de2c709a7acd9ef16bfa7c",
+      "paths_digest": "sha256:6e3d43e4056043369f551a4848113dc3bc7cf370000a17e14ab46b77707da9a3",
+      "intended_untracked": [
+        ".codegraph/.gitignore"
+      ],
+      "intended_untracked_proof": "sha256:1bc15770ce61d8b03840fbbbb6a806b4954e9b0b31326d39b72a8681a8d91a08",
+      "paths": [
+        ".codegraph/.gitignore",
+        "skills/_shared/actuals-record.schema.json",
+        "skills/_shared/pre-sdd-contracts.md",
+        "skills/inception-pipeline/SKILL.md",
+        "skills/sdd-time-estimation/SKILL.md"
+      ],
+      "identity": "sha256:5211315c3888432e63a079758b7bae7707ca4e9bbaa56faa31a7cf4234c85ca0"
+    },
+    "current_snapshot": {
+      "kind": "current-changes",
+      "base_tree": "30985f932d3606978fc903299455e6a3671371bd",
+      "candidate_tree": "3d2f66c9cf1adf8c15de2c709a7acd9ef16bfa7c",
+      "paths_digest": "sha256:6e3d43e4056043369f551a4848113dc3bc7cf370000a17e14ab46b77707da9a3",
+      "intended_untracked": [
+        ".codegraph/.gitignore"
+      ],
+      "intended_untracked_proof": "sha256:1bc15770ce61d8b03840fbbbb6a806b4954e9b0b31326d39b72a8681a8d91a08",
+      "paths": [
+        ".codegraph/.gitignore",
+        "skills/_shared/actuals-record.schema.json",
+        "skills/_shared/pre-sdd-contracts.md",
+        "skills/inception-pipeline/SKILL.md",
+        "skills/sdd-time-estimation/SKILL.md"
+      ],
+      "identity": "sha256:5211315c3888432e63a079758b7bae7707ca4e9bbaa56faa31a7cf4234c85ca0"
+    },
+    "genesis_paths": [
+      ".codegraph/.gitignore",
+      "skills/_shared/actuals-record.schema.json",
+      "skills/_shared/pre-sdd-contracts.md",
+      "skills/inception-pipeline/SKILL.md",
+      "skills/sdd-time-estimation/SKILL.md"
+    ],
+    "policy_hash": "sha256:34fb63d7f29f8613cd4431382b1057398a4816f8a4c20fc34677fffc80a184f6",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-reliability"
+    ],
+    "original_changed_lines": 97,
+    "correction_budget": 49,
+    "lens_results": [
+      {
+        "lens": "review-reliability",
+        "findings": [],
+        "evidence": [
+          "Read full candidate.diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/f3b5e141-8a88-4265-a530-1a04ad8decab/scratchpad/candidate.diff",
+          "Read /home/labdrian/labdrian-sdd-overlay/skills/_shared/actuals-record.schema.json in full",
+          "Read /home/labdrian/labdrian-sdd-overlay/skills/_shared/pre-sdd-contracts.md in full",
+          "Read /home/labdrian/labdrian-sdd-overlay/skills/inception-pipeline/SKILL.md in full, including lines 26 and 37 (pipeline-state write instructions) and 95-115 (closure-feedback)",
+          "Read /home/labdrian/labdrian-sdd-overlay/skills/sdd-time-estimation/SKILL.md in full",
+          "Read real receipt instance /home/labdrian/labdrian-sdd-overlay/openspec/changes/archive/2026-07-21-restore-skill-registry-scoped-blocks/reviews/receipt.json and confirmed schema=gentle-ai.review-receipt/v2 with genuine selected_lenses array",
+          "Grepped for 'go-ahead' across skills/ to confirm no dangling/undefined checkpoint terminology",
+          "Grepped for 'pipeline-state' across skills/ including references/tier-selection.md worked example",
+          "Grepped 'Review Workload Forecast' to confirm genuine existence in skills/sdd-tasks/SKILL.md",
+          "Grepped 'chain_strategy' in actuals-record.schema.json (no matches, confirming round-4 fix intact) and in inception-pipeline/SKILL.md (only unrelated, untouched Gate Compliance mentions outside candidate diff hunks)",
+          "Confirmed sdd/{change}/spec listed as genuine SDD-engine-owned key in pre-sdd-contracts.md engine-keys note"
+        ],
+        "result_hash": "sha256:1b3496155684b274e7f0369ecf8a554d5b52ecc1514a37bffb6c4c08106ca035"
+      }
+    ],
+    "findings": [],
+    "classifications": {},
+    "outcomes": {},
+    "fix_finding_ids": [],
+    "follow_ups": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:e1a86ba4c5e42f1b434a9384bbbe086c17b962ef31d019086aa3a4f05b334b70"
+  }
+}

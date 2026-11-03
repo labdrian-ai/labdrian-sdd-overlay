@@ -1,0 +1,155 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:c86e61ae8964021954dbae6f2776e29f0cc803541d9a9615b41311380fa7a1ac",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-6dca2f525c80220c",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "current-changes",
+      "base_tree": "83db62ff2b21f202c76986b85f967cbd54e9876e",
+      "candidate_tree": "8bb46c739bf236024c2fdfb603e44b75a9c72229",
+      "paths_digest": "sha256:0041decb891703d509d79e7e0069c5ea2fed2cb12c395472d7d80883dd582be9",
+      "intended_untracked": [
+        "openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/archive-report.md",
+        "openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/design.md",
+        "openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/proposal.md",
+        "openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/specs/actuals-instrumentation/spec.md",
+        "openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/tasks.md",
+        "openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/verify-report.md",
+        "openspec/specs/actuals-instrumentation/spec.md"
+      ],
+      "intended_untracked_proof": "sha256:9aa8b713a0655f855666c04390c08e155f2d880b3b35b6e9737da74cdc0de321",
+      "paths": [
+        "openspec/changes/actuals-calendar-checkpoint-instrumentation/design.md",
+        "openspec/changes/actuals-calendar-checkpoint-instrumentation/proposal.md",
+        "openspec/changes/actuals-calendar-checkpoint-instrumentation/specs/actuals-instrumentation/spec.md",
+        "openspec/changes/actuals-calendar-checkpoint-instrumentation/tasks.md",
+        "openspec/changes/actuals-calendar-checkpoint-instrumentation/verify-report.md",
+        "openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/archive-report.md",
+        "openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/design.md",
+        "openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/proposal.md",
+        "openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/specs/actuals-instrumentation/spec.md",
+        "openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/tasks.md",
+        "openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/verify-report.md",
+        "openspec/specs/actuals-instrumentation/spec.md"
+      ],
+      "identity": "sha256:6dca2f525c80220cb098930db9d0ae17fdda4f52b2ce41d701afcc2a7bc99181"
+    },
+    "current_snapshot": {
+      "kind": "current-changes",
+      "base_tree": "83db62ff2b21f202c76986b85f967cbd54e9876e",
+      "candidate_tree": "8bb46c739bf236024c2fdfb603e44b75a9c72229",
+      "paths_digest": "sha256:0041decb891703d509d79e7e0069c5ea2fed2cb12c395472d7d80883dd582be9",
+      "intended_untracked": [
+        "openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/archive-report.md",
+        "openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/design.md",
+        "openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/proposal.md",
+        "openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/specs/actuals-instrumentation/spec.md",
+        "openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/tasks.md",
+        "openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/verify-report.md",
+        "openspec/specs/actuals-instrumentation/spec.md"
+      ],
+      "intended_untracked_proof": "sha256:9aa8b713a0655f855666c04390c08e155f2d880b3b35b6e9737da74cdc0de321",
+      "paths": [
+        "openspec/changes/actuals-calendar-checkpoint-instrumentation/design.md",
+        "openspec/changes/actuals-calendar-checkpoint-instrumentation/proposal.md",
+        "openspec/changes/actuals-calendar-checkpoint-instrumentation/specs/actuals-instrumentation/spec.md",
+        "openspec/changes/actuals-calendar-checkpoint-instrumentation/tasks.md",
+        "openspec/changes/actuals-calendar-checkpoint-instrumentation/verify-report.md",
+        "openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/archive-report.md",
+        "openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/design.md",
+        "openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/proposal.md",
+        "openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/specs/actuals-instrumentation/spec.md",
+        "openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/tasks.md",
+        "openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/verify-report.md",
+        "openspec/specs/actuals-instrumentation/spec.md"
+      ],
+      "identity": "sha256:6dca2f525c80220cb098930db9d0ae17fdda4f52b2ce41d701afcc2a7bc99181"
+    },
+    "genesis_paths": [
+      "openspec/changes/actuals-calendar-checkpoint-instrumentation/design.md",
+      "openspec/changes/actuals-calendar-checkpoint-instrumentation/proposal.md",
+      "openspec/changes/actuals-calendar-checkpoint-instrumentation/specs/actuals-instrumentation/spec.md",
+      "openspec/changes/actuals-calendar-checkpoint-instrumentation/tasks.md",
+      "openspec/changes/actuals-calendar-checkpoint-instrumentation/verify-report.md",
+      "openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/archive-report.md",
+      "openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/design.md",
+      "openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/proposal.md",
+      "openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/specs/actuals-instrumentation/spec.md",
+      "openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/tasks.md",
+      "openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/verify-report.md",
+      "openspec/specs/actuals-instrumentation/spec.md"
+    ],
+    "policy_hash": "sha256:34fb63d7f29f8613cd4431382b1057398a4816f8a4c20fc34677fffc80a184f6",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-reliability"
+    ],
+    "original_changed_lines": 1257,
+    "correction_budget": 200,
+    "lens_results": [
+      {
+        "lens": "review-reliability",
+        "findings": [
+          {
+            "id": "R3-archive-report-warning-count-mismatch",
+            "lens": "reliability",
+            "location": "openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/archive-report.md:146",
+            "severity": "WARNING",
+            "claim": "The archive report's closing line claims six warnings were recorded as observations for future workflow, but its own outstanding-items list itemizes only five, never naming or describing the sixth.",
+            "proof_refs": [
+              "openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/archive-report.md:146 states that all critical findings are resolved and that six warnings are recorded as observations for future workflow, not blockers.",
+              "openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/archive-report.md:106-110, the outstanding non-blocking items section, contains exactly five bullets covering five warning identifiers, with no sixth bullet.",
+              "openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/verify-report.md:130 defines the missing sixth item: the closed-schema invariant group silently returns when the fixture is unreadable, self-disabling half that group, and that dead branch should be deleted. This item never appears in the archive report.",
+              "Failure scenario: a maintainer planning future cleanup solely from the itemized follow-up list in openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/archive-report.md, trusting its own claim that all six warnings were captured, would never learn that the dead branch in the Go contract test needs deleting, because that item is silently absent from the one list purporting to enumerate outstanding work."
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          }
+        ],
+        "evidence": [
+          "Confirmed the five pre-archive locations no longer exist on disk, consistent with their DELETED disposition, and that the archive directory holds exactly their five counterparts plus openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/archive-report.md, a clean one-to-one mapping with no lost artifact.",
+          "Read openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/specs/actuals-instrumentation/spec.md and openspec/specs/actuals-instrumentation/spec.md in full and compared them: identical across the Purpose section, all nine requirement headings, all thirteen scenario headings, and the R-013 deferral scope note. The promoted main spec matches the archived delta spec with no divergence.",
+          "Counted nine requirement headings and thirteen scenario headings in openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/specs/actuals-instrumentation/spec.md covering fifteen distinct requirement identifiers, and cross-checked them against the counts stated in openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/verify-report.md and openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/archive-report.md. All counts agree with no discrepancy.",
+          "Verified the corrected checkpoint arithmetic of twelve total, two durable and ten reconstructed is mutually consistent across openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/archive-report.md, openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/design.md, openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/proposal.md, openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/verify-report.md, and both copies of the specification.",
+          "Confirmed openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/tasks.md retains the superseded eleven-checkpoint arithmetic and the abandoned three-sample allowance gate inside entries checked complete, and that openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/archive-report.md discloses that exact staleness by line number, framed as a non-blocking historical-record item to normalize through its owning workflow rather than as delivered or incomplete work. Judged the disclosure honest and sufficiently precise, so no defect is raised for the preserved history itself.",
+          "Confirmed the positive roadmap-maker tracking-line-slot obligation is recorded as deliberately deferred and never as delivered, both in openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/archive-report.md and in openspec/specs/actuals-instrumentation/spec.md. No overclaim found.",
+          "Compared the six warning items enumerated in openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/verify-report.md against the outstanding-items list in openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/archive-report.md, which names only five of them across five bullets. The sixth is absent from that list even though the same file asserts that six warnings were recorded.",
+          "Scope limitation recorded rather than claimed as a finding: the commit hash and Engram observation identifiers cited in openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/archive-report.md could not be checked against git history or a live memory store, because this runtime exposes only working-tree reads. No contradicting evidence was obtained either way."
+        ],
+        "result_hash": "sha256:48203ce0e82ea395b08454b48fce7b2e1b5909a94914e7cc5d856e9aa43f5924"
+      }
+    ],
+    "findings": [
+      {
+        "id": "R3-archive-report-warning-count-mismatch",
+        "lens": "reliability",
+        "location": "openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/archive-report.md:146",
+        "severity": "WARNING",
+        "claim": "The archive report's closing line claims six warnings were recorded as observations for future workflow, but its own outstanding-items list itemizes only five, never naming or describing the sixth.",
+        "proof_refs": [
+          "openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/archive-report.md:146 states that all critical findings are resolved and that six warnings are recorded as observations for future workflow, not blockers.",
+          "openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/archive-report.md:106-110, the outstanding non-blocking items section, contains exactly five bullets covering five warning identifiers, with no sixth bullet.",
+          "openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/verify-report.md:130 defines the missing sixth item: the closed-schema invariant group silently returns when the fixture is unreadable, self-disabling half that group, and that dead branch should be deleted. This item never appears in the archive report.",
+          "Failure scenario: a maintainer planning future cleanup solely from the itemized follow-up list in openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/archive-report.md, trusting its own claim that all six warnings were captured, would never learn that the dead branch in the Go contract test needs deleting, because that item is silently absent from the one list purporting to enumerate outstanding work."
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      }
+    ],
+    "classifications": {},
+    "outcomes": {
+      "R3-archive-report-warning-count-mismatch": "info"
+    },
+    "fix_finding_ids": [],
+    "follow_ups": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:66870138463734223559504bd7046e5447d5a37fe7c6f80055356408eb1779e2",
+    "evidence_record_digest": "sha256:d494a1743e43c7a941216feb733426ae2cc7c1578acdf102e65578cf8c7ce11e",
+    "evidence_outcome": "passed",
+    "evidence_target_identity": "sha256:6dca2f525c80220cb098930db9d0ae17fdda4f52b2ce41d701afcc2a7bc99181",
+    "evidence_authority_revision": "sha256:44d2d2300050bc2c1f164015ec0b0c5ddd8fa2d71395999639b4a564187b034d"
+  }
+}

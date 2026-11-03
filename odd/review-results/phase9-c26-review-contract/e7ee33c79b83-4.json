@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "e4944dfb9f2dea61a2a89c3fe75e9c81b1a06158",
+    "head": "e7ee33c79b830bf4026d43a930010edf01d430d2",
+    "diff_sha256": "45984187b69a9199727cd64e0fda2a34297fe1b74149a673bc1afce6c1654fa8",
+    "paths": [
+      "CHANGELOG.md"
+    ]
+  },
+  "rows": [
+    "default",
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "e4944dfb9f2dea61a2a89c3fe75e9c81b1a06158",
+      "head": "e7ee33c79b830bf4026d43a930010edf01d430d2",
+      "diff_sha256": "45984187b69a9199727cd64e0fda2a34297fe1b74149a673bc1afce6c1654fa8"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read diff /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/diff-e7ee33c7.patch: one CHANGELOG.md bullet rewritten (line 10), nothing else changed",
+      "The rewritten text matches the claudeprint package comment in the worktree, which says no deployed reviewer agent is read and the preamble carries the JSON Schema",
+      "Only passive documentation changed. No code, guard, contract or delivery path changed, so the declared Risk: none holds"
+    ]
+  }
+}

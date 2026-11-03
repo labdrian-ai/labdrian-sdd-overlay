@@ -1,0 +1,374 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:e8f4bc06e6cc5ba806cf7203f6dbd2880771cf4dbb339690974f8e2f1d95aefd",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-a02f07727f9a7e71",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "current-changes",
+      "base_tree": "a657d537315b27453fe5a67c7b61a37409ea7c2f",
+      "candidate_tree": "2ad8e42e4f1ef4ff3e46c447d70e6123664f2180",
+      "paths_digest": "sha256:9a952f70a0f8e61ca1bba83ace8f1907f0fce59915ace7a7d5129468b7429a5b",
+      "intended_untracked": [
+        "engine/assets/review-projection-contract.md",
+        "skills/_shared/review-projection-contract.md",
+        "tools/review-preflight/go.mod",
+        "tools/review-preflight/main.go",
+        "tools/review-preflight/main_test.go"
+      ],
+      "intended_untracked_proof": "sha256:b33b3370f522420896830bb4e2fc6b0879d8421254b6ec101e3a35201c1249a2",
+      "paths": [
+        ".github/workflows/ci.yml",
+        "bin/labdrian-overlay",
+        "engine/assets/assets.go",
+        "engine/assets/assets_test.go",
+        "engine/assets/review-projection-contract.md",
+        "engine/cmd/main.go",
+        "engine/cmd/main_test.go",
+        "engine/propagator/propagator.go",
+        "engine/runtime/opencode.go",
+        "engine/settings/settings.go",
+        "engine/settings/settings_test.go",
+        "overlay.manifest",
+        "skills/_shared/review-projection-contract.md",
+        "skills/sdd-verify/SKILL.md",
+        "tools/review-preflight/go.mod",
+        "tools/review-preflight/main.go",
+        "tools/review-preflight/main_test.go"
+      ],
+      "identity": "sha256:a02f07727f9a7e717aa0fd40a1fd2ffc2085e561348f5c7a95cbd6e9f8c0daa6"
+    },
+    "current_snapshot": {
+      "kind": "current-changes",
+      "base_tree": "a657d537315b27453fe5a67c7b61a37409ea7c2f",
+      "candidate_tree": "2ad8e42e4f1ef4ff3e46c447d70e6123664f2180",
+      "paths_digest": "sha256:9a952f70a0f8e61ca1bba83ace8f1907f0fce59915ace7a7d5129468b7429a5b",
+      "intended_untracked": [
+        "engine/assets/review-projection-contract.md",
+        "skills/_shared/review-projection-contract.md",
+        "tools/review-preflight/go.mod",
+        "tools/review-preflight/main.go",
+        "tools/review-preflight/main_test.go"
+      ],
+      "intended_untracked_proof": "sha256:b33b3370f522420896830bb4e2fc6b0879d8421254b6ec101e3a35201c1249a2",
+      "paths": [
+        ".github/workflows/ci.yml",
+        "bin/labdrian-overlay",
+        "engine/assets/assets.go",
+        "engine/assets/assets_test.go",
+        "engine/assets/review-projection-contract.md",
+        "engine/cmd/main.go",
+        "engine/cmd/main_test.go",
+        "engine/propagator/propagator.go",
+        "engine/runtime/opencode.go",
+        "engine/settings/settings.go",
+        "engine/settings/settings_test.go",
+        "overlay.manifest",
+        "skills/_shared/review-projection-contract.md",
+        "skills/sdd-verify/SKILL.md",
+        "tools/review-preflight/go.mod",
+        "tools/review-preflight/main.go",
+        "tools/review-preflight/main_test.go"
+      ],
+      "identity": "sha256:a02f07727f9a7e717aa0fd40a1fd2ffc2085e561348f5c7a95cbd6e9f8c0daa6"
+    },
+    "genesis_paths": [
+      ".github/workflows/ci.yml",
+      "bin/labdrian-overlay",
+      "engine/assets/assets.go",
+      "engine/assets/assets_test.go",
+      "engine/assets/review-projection-contract.md",
+      "engine/cmd/main.go",
+      "engine/cmd/main_test.go",
+      "engine/propagator/propagator.go",
+      "engine/runtime/opencode.go",
+      "engine/settings/settings.go",
+      "engine/settings/settings_test.go",
+      "overlay.manifest",
+      "skills/_shared/review-projection-contract.md",
+      "skills/sdd-verify/SKILL.md",
+      "tools/review-preflight/go.mod",
+      "tools/review-preflight/main.go",
+      "tools/review-preflight/main_test.go"
+    ],
+    "policy_hash": "sha256:34fb63d7f29f8613cd4431382b1057398a4816f8a4c20fc34677fffc80a184f6",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-risk",
+      "review-resilience",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 1499,
+    "correction_budget": 200,
+    "lens_results": [
+      {
+        "lens": "review-risk",
+        "findings": [],
+        "evidence": [
+          "Ran the sanctioned discovery commands (git diff --name-status and --numstat, base a657d537...-\u003ecandidate 2ad8e42e...) confirming exactly the 17 manifest paths and their +/- line counts, then obtained full unified diffs (--patch --text --full-index, myers, no-indent-heuristic) for all 14 modified/added text files plus git cat-file -p contents for the 3 newly-added files with no prior history.",
+          "tools/review-preflight/main.go (new, 340 lines): every subprocess call (execReviewStatus) invokes gentle-ai via exec.CommandContext(ctx, toolPath, argv...) with argv built as a []string slice (`argv := []string{\"review\", \"status\", \"--cwd\", dir, \"--contract\", statusContract}`, optionally appending `--base-ref`, baseRef) -- never through a shell or string concatenation, so shell metacharacters in --base-ref or the working directory cannot be interpreted. JSON decoding uses encoding/json into a typed struct with explicit nil/empty checks in parseProjection before any field is trusted, so a malformed or partial payload fails closed to outcomeUndetermined (exit 3) instead of being misread as a valid empty projection.",
+          "tools/review-preflight/go.mod (new) declares `module github.com/labdrian-ai/labdrian-sdd-overlay/tools/review-preflight` / `go 1.21` with no `require` directive -- zero third-party dependencies, so no dependency-vulnerability surface is added by this tool. This is independently pinned by TestModuleShape in main_test.go, which fails if go.mod ever gains a require line.",
+          "engine/assets/review-projection-contract.md and skills/_shared/review-projection-contract.md (both new, read via git cat-file -p at the candidate tree) contain only markdown guidance (hazard description, exit-code table, remedies) -- no credentials, tokens, keys, or other secret-shaped content in either copy, and the two copies are byte-identical, matching the new TestReviewProjectionContractStandaloneCopyMatchesEmbeddedAsset drift guard added in engine/assets/assets_test.go.",
+          ".github/workflows/ci.yml new hunks (the 'Review-preflight dispatch guard smoke test' step and the 'test-review-preflight' job, including its 'Absent gentle-ai fails closed' step) reference no `${{ github.event.* }}` or other untrusted workflow-context expressions inside any run: block and no `secrets.*` -- every interpolated value is a locally-scoped shell variable produced by mktemp/command -v within the same step, so no GitHub Actions script-injection or secret-exposure surface is added.",
+          "engine/settings/settings.go buildProjectionUserPromptSubmitEntry / buildProjectionPreToolUseEntry build their hook `command` strings via fmt.Sprintf using only m.hookCommand and the package constant embeddedProjectionName -- both engine-internal, non-request-controlled values -- structurally identical to the three pre-existing sibling builders (minimalism/safety/design) already shipping in this file; no new externally-influenced interpolation point is introduced.",
+          "bin/labdrian-overlay's new cmd_review_preflight allocates its guard binary path via `mktemp \"${TMPDIR:-/tmp}/review-preflight.XXXXXX\"`, deletes it with `rm -f`, then `go build -o \"$guard_binary\" .` recreates a file at that same freed path by name before executing it -- a create/delete/recreate-by-name temp-file sequence. This was checked against base_tree a657d537... via git cat-file -p and found byte-for-byte identical, unchanged, in the pre-existing sibling function cmd_deterministic_checks in the same file: the candidate reproduces an already-shipped, previously-merged pattern rather than introducing a new construct. Exploiting it would require a co-resident local process able to predict or observe the randomized mktemp suffix and win a narrow race on a shared multi-tenant host; this tool's actual deployment context is a single-operator CLI/CI invocation, no such race was demonstrated against this candidate, and no concrete reachable exploit or scanner evidence supports elevating it to a reportable finding under this review's candidate-causal, non-hypothetical admission bar."
+        ],
+        "result_hash": "sha256:0bd3c28cc0276e866b5d648bb19002aaa1cc7310682277faf776f8259d4f4c65"
+      },
+      {
+        "lens": "review-resilience",
+        "findings": [
+          {
+            "id": "R4-001",
+            "lens": "resilience",
+            "location": "tools/review-preflight/main.go:164",
+            "severity": "WARNING",
+            "claim": "In execReviewStatus, exec.LookPath(gentleAIBinary) runs at line 164 before the bounded context (context.WithTimeout(context.Background(), statusExecTimeout)) is created at line 174, so PATH resolution for the gentle-ai binary is not covered by the statusExecTimeout/statusWaitDelay deadline machinery this same function documents as existing specifically to keep the guard from hanging. exec.LookPath performs an os.Stat call per PATH directory with no deadline parameter of its own, so a PATH entry that blocks on stat (e.g. an unresponsive network-mounted or stale-automount directory) hangs review-preflight indefinitely before any timeout is even armed, contradicting the function's own stated latency guarantee ('a guard that can hang indefinitely is one operators learn to skip').",
+            "proof_refs": [
+              "git cat-file -p 2ad8e42e4f1ef4ff3e46c447d70e6123664f2180:tools/review-preflight/main.go line 164: `toolPath, lookErr := exec.LookPath(gentleAIBinary)` — executed with no context/deadline in scope.",
+              "Same blob, line 174: `ctx, cancel := context.WithTimeout(context.Background(), statusExecTimeout)` — the bounded context is created only after the unbounded LookPath call has already returned.",
+              "Same blob, lines 138-139 (doc comment directly above the statusExecTimeout var): 'This guard is meant to be cheap enough to run before every review, and a guard that can hang indefinitely is one operators learn to skip' — the stated purpose the pre-timeout LookPath call does not satisfy.",
+              "tools/review-preflight/main_test.go (candidate blob, 521 lines, read in full): TestExecReviewStatusEnforcesItsDeadline only drives a fake gentle-ai that sleeps after being found on PATH (fakeGentleAI + shadowPATH prepend it to PATH), proving the post-LookPath exec.CommandContext phase is bounded; no test exercises a PATH entry that blocks LookPath itself, so the gap is untested as well as unbounded."
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          }
+        ],
+        "evidence": [
+          "git diff --name-status and --numstat between base_tree a657d537315b27453fe5a67c7b61a37409ea7c2f and candidate_tree 2ad8e42e4f1ef4ff3e46c447d70e6123664f2180 (env -i ... git diff, clean environment) confirm all 17 manifest paths and statuses (14 M, 3 A) exactly.",
+          "Full unified diffs (git diff --patch --full-index --no-renames --diff-algorithm=myers) were read for all 14 modified files; the three added files were read in full via git cat-file -p against the candidate tree blobs: engine/assets/review-projection-contract.md, skills/_shared/review-projection-contract.md, tools/review-preflight/go.mod, tools/review-preflight/main.go (340 lines), tools/review-preflight/main_test.go (521 lines).",
+          "tools/review-preflight/main.go execReviewStatus (lines 163-186, candidate blob) was line-numbered and inspected: exec.LookPath at line 164 precedes context.WithTimeout at line 174, with statusWaitDelay/WaitDelay correctly bounding only the post-timeout exec.Cmd.Wait() phase (basis for the one WARNING finding).",
+          "bin/labdrian-overlay: the new cmd_review_preflight (candidate blob) was diffed against the pre-existing, byte-unmodified cmd_deterministic_checks (read via git cat-file -p, lines 1632-1663) to separate genuinely new behavior from a deliberately mirrored pre-existing pattern; the unbounded 'go build' step, the mktemp/rm-then-build sequencing, and the CALLER_CWD exit-remap logic are structurally identical to the sibling function and therefore not candidate-introduced.",
+          "engine/runtime/opencode.go loadOpenCodePromptConfig (candidate blob, lines 458-514, read via git cat-file -p): the new review-projection contract load (openCodeContractFromContent, hard-fail on error) is structurally identical to the pre-existing 'safety' contract load immediately above it and distinct from the soft-fail 'OPTIONAL oo-quality' contract load below it, so the hard-fail-on-parse-error behavior is a pre-existing pattern applied to a fourth contract, not a new failure class.",
+          "engine/cmd/main.go gateTaskCore (candidate blob, lines 984-1087, read via git cat-file -p): the embedded-contract dispatch is fail-safe/pass-through ('{}' + exit 0) on any unknown-name, unreadable-file, oversized-stdin, or unparseable-frontmatter condition — an unmodified, pre-existing mechanism. The candidate's only change here is adding a 'review-projection-contract' name/spec entry to that unmodified dispatcher.",
+          "sha256 checksums of engine/assets/review-projection-contract.md and skills/_shared/review-projection-contract.md, both read via git cat-file -p against the candidate tree, are identical (a202f4aaefe9e85482e1ba0c904d4a200e36b8ebf0b90fda969eb44cf67b4cbe), confirming no drift between the embedded and standalone contract copies.",
+          ".github/workflows/ci.yml candidate blob was extracted via git cat-file -p and parsed with python3 yaml.safe_load: valid YAML, jobs = [lint-shell, test-engine, test-entry-contract-validator, test-deterministic-check-runner, test-review-preflight, test-tui], confirming the new job and step additions did not break workflow structure.",
+          "engine/settings/settings.go, settings_test.go, engine/cmd/main_test.go diffs: the fourth (review-projection) hook pair is added via the same appendHook/hasEntryMatching dedup pattern already used for the minimalism/safety/design pairs (mergeHooks, removeHooks, isProjectionEntry mirror isDesignEntry exactly); HasSupportedClaudeLifecycleState now requires all four pairs, and TestInstall_UpgradesTwoPairsToFour_PreservesExisting (candidate blob) proves pre-existing minimalism/safety entries are left byte-for-byte unchanged on upgrade. No change to settings persistence/write atomicity was found in the diff.",
+          "tools/review-preflight/main_test.go (full file read): covers empty-candidate blocking via both independent AND-branches (identical trees with paths present; differing trees with zero paths), the healthy-candidate pass path, intended-untracked-only coverage, four malformed-payload/undetermined cases, absent-binary and non-zero-exit-status failures, deadline enforcement of the exec.CommandContext phase, usage-error rejection before any subprocess runs, and --base-ref forwarding — a broad, concrete test suite that surfaces the one gap reported above (no coverage for a hang inside LookPath itself)."
+        ],
+        "result_hash": "sha256:0ef54695af9f439dd5fe450edc6b1b7a4c5ddcb3e7d1351546378df66ba2b165"
+      },
+      {
+        "lens": "review-readability",
+        "findings": [
+          {
+            "id": "R2-001",
+            "lens": "readability",
+            "location": "engine/cmd/main.go:179",
+            "severity": "WARNING",
+            "claim": "usage()'s 'Embedded contracts: skill-discovery-safety, anti-generic-design' line was a complete, accurate enumeration before this diff. The diff adds a third valid --embedded-contract value ('review-projection-contract', new case at line 100) without updating this line, so the binary's own --help/no-args output now omits a real, working option.",
+            "proof_refs": [
+              "engine/cmd/main.go:179 (byte-unchanged by this diff) reads exactly `fmt.Fprintln(os.Stderr, \"Embedded contracts: skill-discovery-safety, anti-generic-design\")`",
+              "engine/cmd/main.go:100-110 (new in this diff) adds `case \"review-projection-contract\":` returning a fully valid embeddedContractSpec, so `--embedded-contract review-projection-contract` now works but is undocumented at line 179",
+              "engine/cmd/main.go:126-130 (`if len(os.Args) \u003c 2 { usage(); os.Exit(1) }`) and 151-155 (`default: ...; usage(); os.Exit(1)`) show usage() is reached for a bare invocation or any unrecognized argument (including `--help`, since no explicit --help case exists), so this text is genuinely operator-visible",
+              "bin/labdrian-overlay's own help/status text at lines ~1163-1167 and ~1185-1186 (in the same diff) WAS correctly updated to name review-preflight/review-projection-contract, confirming the omission at engine/cmd/main.go:179 is an inconsistency within this same change rather than a stylistic choice"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "worsened"
+          },
+          {
+            "id": "R2-002",
+            "lens": "readability",
+            "location": "engine/cmd/main_test.go:1854",
+            "severity": "WARNING",
+            "claim": "TestCheckRegistry_FourBlockCombinations's doc comment ('Any one missing -\u003e ok, degraded, note names the missing block') promises isolated single-block-missing coverage, but the case labeled 'only anti-generic-design-scope missing' reuses the onlyMinimalismAndSafety fixture, which is also missing the review-projection-contract block, so it never exercises checkRegistry's !hasDesign branch independently of !hasProjection. No case in the table isolates 'design absent, projection present', so a regression that silently broke only the anti-generic-design-scope detection would not be caught by this test file.",
+            "proof_refs": [
+              "engine/cmd/main_test.go:1821-1824 doc comment: 'checkRegistry recognizes the third anti-generic-design-scope and fourth review-projection-contract-scope markers ... Any one missing -\u003e ok, degraded, note names the missing block.'",
+              "engine/cmd/main_test.go:1828-1830 defines minimalismAndSafety with only the minimalism and skill-discovery-safety markers (no design, no projection)",
+              "engine/cmd/main_test.go:1836 `onlyMinimalismAndSafety := minimalismAndSafety` — an identical alias, still missing both design and projection markers",
+              "engine/cmd/main_test.go:1853-1859 labels this fixture 'only anti-generic-design-scope missing' and asserts only `wantNoteHas: \"anti-generic-design-scope\"`, never checking for or against \"review-projection-contract-scope\"",
+              "engine/cmd/main.go:1462-1467 (checkRegistry) appends both \"anti-generic-design-scope\" and \"review-projection-contract-scope\" to `missing` whenever hasDesign and hasProjection are both false — exactly this fixture's actual state",
+              "engine/cmd/main_test.go:1839-1867 (full test table) has no case built from designBlock-absent + projectionBlock-present"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R2-003",
+            "lens": "readability",
+            "location": "engine/settings/settings_test.go:1053",
+            "severity": "WARNING",
+            "claim": "TestHasSupportedClaudeLifecycleState_RequiresDesignAndProjectionPairs's doc comment claims the test proves HasSupportedClaudeLifecycleState returns false when EITHER the design or the projection pair is independently absent, but the 'design absent' fixture (onlyMinimalismAndSafety) sets both includeDesign=false and includeProjection=false, so the design-only branch is never exercised in isolation from the projection branch — only the projection-only-absent case is actually isolated.",
+            "proof_refs": [
+              "engine/settings/settings_test.go:1042-1044: 'asserts the lifecycle-state check returns false when EITHER the anti-generic-design or the review-projection pair is absent, and true only when all four pairs exist'",
+              "engine/settings/settings_test.go:1051 `onlyMinimalismAndSafety := buildRootWithPairs(testHookCommand, true, true, false, false)` sets includeDesign=false AND includeProjection=false together",
+              "engine/settings/settings_test.go:1053 error message reads 'expected false when the design pair is absent', naming only the design pair despite projection also being absent in that same fixture",
+              "engine/settings/settings.go:126-135 HasSupportedClaudeLifecycleState ANDs together 8 independent Has*Hook checks (2 each for minimalism/safety/design/projection); a fixture with both design and projection false cannot distinguish a broken design-check clause from a correctly-working one",
+              "engine/settings/settings_test.go:1050-1065 (whole test body) contains no fixture with includeDesign=false and includeProjection=true"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R2-004",
+            "lens": "readability",
+            "location": "bin/labdrian-overlay:1704",
+            "severity": "SUGGESTION",
+            "claim": "cmd_review_preflight's exit-code remap treats 'CALLER_CWD no longer exists' as the only reason `cd \"$CALLER_CWD\"` can fail. If that cd instead fails for a different reason while the path still stats as a directory (e.g. permission denied, a stale/unmounted bind mount), the guard binary is never actually invoked, yet status stays at the cd failure's own code (typically 1) because `! -d \"$CALLER_CWD\"` is false — which this guard's own exit-code contract reads as outcomeEmptyCandidate (1, a specific verdict) rather than outcomeUndetermined (3, no verdict reached), the exact absence-of-proof-read-as-a-verdict failure mode this feature exists to prevent.",
+            "proof_refs": [
+              "bin/labdrian-overlay:1699-1700 `(cd \"$CALLER_CWD\" \u0026\u0026 \"$guard_binary\" \"$@\") || status=$?`",
+              "bin/labdrian-overlay:1701-1706 comment and remap scope the fix explicitly to 'A CALLER_CWD that no longer exists', and the guard condition is only `[[ \"$status\" -ne 0 \u0026\u0026 ! -d \"$CALLER_CWD\" ]]`, which is false whenever the path still exists as a directory regardless of why cd failed",
+              "tools/review-preflight/main.go's outcomeEmptyCandidate=1 vs outcomeUndetermined=3 constants (and their surrounding doc comment) are deliberately distinct verdicts — 'Only outcomeCovered asserts that starting a review here is safe... A guard that guessed \"probably fine\" when it could not read the projection would reproduce that failure one layer up' — the same design intent this narrower bash remap does not fully honor for non-existence-unrelated cd failures"
+            ],
+            "evidence_class": "inferential",
+            "causal_disposition": "introduced"
+          }
+        ],
+        "evidence": [
+          "Ran the mandated env -i git diff --name-status and --numstat between base_tree a657d537315b27453fe5a67c7b61a37409ea7c2f and candidate_tree 2ad8e42e4f1ef4ff3e46c447d70e6123664f2180, confirming all 17 changed_path_manifest entries and their exact +/- line counts before inspecting any content.",
+          "Retrieved the full unified diff (--patch --text --full-index --no-renames --diff-algorithm=myers --unified=3) for all 14 modified files (.github/workflows/ci.yml, bin/labdrian-overlay, engine/assets/assets.go, engine/assets/assets_test.go, engine/cmd/main.go, engine/cmd/main_test.go, engine/propagator/propagator.go, engine/runtime/opencode.go, engine/settings/settings.go, engine/settings/settings_test.go, overlay.manifest, skills/sdd-verify/SKILL.md) via the literal-pathspec diff command, and read the complete cat-file -p bytes of all 3 added files plus the two large added Go sources (tools/review-preflight/main.go, tools/review-preflight/main_test.go) and the two new markdown contracts.",
+          "Confirmed engine/assets/review-projection-contract.md and skills/_shared/review-projection-contract.md are byte-identical via direct cat-file comparison, matching the new TestReviewProjectionContractStandaloneCopyMatchesEmbeddedAsset drift guard.",
+          "Used git grep against the candidate tree to enumerate every call site of buildRootWithPairs (engine/settings/settings_test.go), checkRegistry (engine/cmd/main_test.go), and HasSupportedClaudeLifecycleState (both test files) to rule out any leftover 3-argument/3-pair call sites that would break compilation or silently under-test the new fourth (review-projection) pair, and to precisely locate the two call sites that reuse a two-things-absent fixture under a one-thing-absent label/claim.",
+          "Read the full embeddedContract() switch and usage() function (engine/cmd/main.go lines 76-181) via cat-file to confirm the new 'review-projection-contract' case is wired correctly into the actual --embedded-contract dispatch/validation path (lines 869, 1026) while the separate human-readable enumeration at line 179 was left unchanged.",
+          "Read engine/runtime/opencode_test.go and engine/runtime/labdrian-runtime-parity-plugin.mjs (both unchanged, outside the manifest) via cat-file from the candidate tree to verify the new projection-contract entry appended in engine/runtime/opencode.go's loadOpenCodePromptConfig does not break any existing assertion: the only contracts-length check is a `len(contracts) \u003c 3` minimum threshold and hasPromptContract is a path-lookup helper, and the JS parity plugin iterates promptConfig.contracts generically without hardcoding paths or a count.",
+          "Read the full tools/review-preflight/main.go and main_test.go bodies via cat-file and cross-checked every exit-code path, error-message string, and remedy-text fragment against the corresponding CI assertions (.github/workflows/ci.yml) and the skills/_shared/review-projection-contract.md documentation table, finding all of them mutually consistent."
+        ],
+        "result_hash": "sha256:ea7effeb0321f1290f0c8322f75e3dc1197d66e5e6e5921dbf717997ca46c108"
+      },
+      {
+        "lens": "review-reliability",
+        "findings": [
+          {
+            "id": "R3-001",
+            "lens": "reliability",
+            "location": "skills/sdd-verify/SKILL.md:96",
+            "severity": "WARNING",
+            "claim": "The new Decision Gates dispatch row for review-preflight lists STOP only for exit codes 1 and 3, omitting exit code 2 (usage error) and any other/unrecognized exit code, so a table-only scan finds no matching row and no explicit STOP instruction for those codes. The file's own pre-existing, unmodified pattern for the sibling deterministic-check-runner explicitly closes this exact gap with a stated fail-closed catch-all, but no equivalent catch-all was added for review-preflight.",
+            "proof_refs": [
+              "skills/sdd-verify/SKILL.md:96 (candidate, added by this diff) reads exactly: \"| `review-preflight` exits `1` (EMPTY candidate) or `3` (no verdict) | STOP; do not start the review. Exit `3` is unproven, never safe. |\" — no row names exit `2` or any other code.",
+              "skills/sdd-verify/SKILL.md:70 (candidate, added by this diff) is the adjacent prose bullet: it states \"only exit `0` permits starting\" and separately explains exit `2` as \"the guard's own usage error: fix the invocation and re-run\", but never states that a `2` (or any code outside {0,1,2,3}, e.g. a stray shell/build failure surfaced by bin/labdrian-overlay's cmd_review_preflight wrapper) must not start the review — it documents only the guard's own four codes, with no catch-all for an out-of-contract code.",
+              "skills/sdd-verify/SKILL.md:84 (unchanged, pre-existing, not part of this diff) shows the file's own established rigor for the sibling deterministic-check-runner: \"Any exit code not listed above — including a forwarded shell/signal status such as `126` or `127` reaching the caller from an unusable temporary binary — is unmapped and fails closed to `--outcome procedural_tooling_failed`, never `passed`, never `verification_failed`.\" No sentence of this shape was added for review-preflight, in either the line-70 prose or the line-96 table, despite review-preflight's own bash wrapper (bin/labdrian-overlay cmd_review_preflight, lines 1675-1708 of the candidate) being able to surface non-{0,1,2,3} exit statuses from `go build` or the guard binary's own process invocation."
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          }
+        ],
+        "evidence": [
+          "Ran env-clean `git diff --name-status` and `--numstat` between base_tree a657d537315b27453fe5a67c7b61a37409ea7c2f and candidate_tree 2ad8e42e4f1ef4ff3e46c447d70e6123664f2180, confirming all 17 manifest paths and their exact +/- line counts (93/0 ci.yml, 57/3 labdrian-overlay, 340/0 tools/review-preflight/main.go, etc.) before inspecting any content.",
+          "Ran full `git diff --patch` (myers, unified=3, full-index, --text, --no-ext-diff, --no-textconv) for every one of the 17 changed paths individually via `:(literal)\u003cpath\u003e` pathspecs, and read every hunk, including the complete new-file bodies for the 5 added paths (engine/assets/review-projection-contract.md, skills/_shared/review-projection-contract.md, tools/review-preflight/go.mod, main.go, main_test.go).",
+          "Confirmed via the matching git blob hash in both diff headers (2e9f90277effa91ca54d02cac9739531e6275b26) that engine/assets/review-projection-contract.md and skills/_shared/review-projection-contract.md are byte-identical in the candidate tree, satisfying the new drift-guard test TestReviewProjectionContractStandaloneCopyMatchesEmbeddedAsset without needing to execute Go.",
+          "Retrieved propagator.ParseFrontmatter's implementation via `git cat-file -p \u003ccandidate\u003e:engine/propagator/propagator.go` and hand-traced it against the new asset's frontmatter block (applies_to_phases: [sdd-apply, sdd-verify]), confirming it yields AppliesTo == [\"sdd-apply\",\"sdd-verify\"] as asserted by the new TestReviewProjectionContractFrontmatterParses.",
+          "Cross-checked settings.HasSupportedClaudeLifecycleState's new 4-pair requirement (engine/settings/settings.go, changed) against its only call site engine/runtime/claude.go:99 and against the full, unchanged engine/runtime/claude_test.go (305 lines) and engine/propagator/propagator_test.go (830 lines), all retrieved via `git cat-file -p \u003ccandidate\u003e:\u003cpath\u003e` and confirmed unchanged via an empty `git diff` against base_tree for each; every assertion in those two files checks either specific hook identities/Status enum outcomes or a self-contained fixture, not an exhaustive count tied to the old 3-pair total, so none of them regress under the new 4-pair requirement.",
+          "Also checked engine/runtime/opencode_test.go (unchanged, 927 lines, verified via empty `git diff` against base_tree) for the same class of risk: its only contract-count assertion at line 105 is `len(contracts) \u003c 3`, which stays false (not triggered) once a 4th unconditional contract exists.",
+          "Retrieved the complete tools/review-preflight/main.go (340 lines) and main_test.go (521 lines) via cat-file and traced run()/parseArgs()/execReviewStatus()/parseProjection()/emptyCandidateReasons()/reportEmptyCandidate() line-by-line against every test case, including the deadline-enforcement, malformed-payload, argv-forwarding, and both-conditions-independent emptiness tests.",
+          "Retrieved the complete bin/labdrian-overlay script (1752 lines) via cat-file and traced cmd_review_preflight's early-script path-resolution dependencies (dirname/readlink/cd/pwd only, before the go-guard check) against the two new CI shadow-PATH smoke tests in .github/workflows/ci.yml; also confirmed the new CALLER_CWD-remap block at candidate lines 1700-1707 is a direct structural mirror of the pre-existing, byte-unmodified cmd_deterministic_checks block at lines 1657-1658 (both fall within the single bin/labdrian-overlay diff hunk, but the mirrored lines themselves carry no +/- markers), not a novel pattern introduced by this diff.",
+          "Read skills/sdd-verify/SKILL.md's full diff plus the complete candidate file and directly compared the new review-preflight prose bullet (line 70) and Decision Gates table row (line 96) against the file's own pre-existing, unmodified exit-code-to-outcome table and explicit unmapped-code fail-closed clause for the sibling deterministic-check-runner (lines 73-86)."
+        ],
+        "result_hash": "sha256:3c3129b30d928ef982b4c9720753b95cd8af87a94c9f5785e374aebdc5ee1010"
+      }
+    ],
+    "findings": [
+      {
+        "id": "R4-001",
+        "lens": "resilience",
+        "location": "tools/review-preflight/main.go:164",
+        "severity": "WARNING",
+        "claim": "In execReviewStatus, exec.LookPath(gentleAIBinary) runs at line 164 before the bounded context (context.WithTimeout(context.Background(), statusExecTimeout)) is created at line 174, so PATH resolution for the gentle-ai binary is not covered by the statusExecTimeout/statusWaitDelay deadline machinery this same function documents as existing specifically to keep the guard from hanging. exec.LookPath performs an os.Stat call per PATH directory with no deadline parameter of its own, so a PATH entry that blocks on stat (e.g. an unresponsive network-mounted or stale-automount directory) hangs review-preflight indefinitely before any timeout is even armed, contradicting the function's own stated latency guarantee ('a guard that can hang indefinitely is one operators learn to skip').",
+        "proof_refs": [
+          "git cat-file -p 2ad8e42e4f1ef4ff3e46c447d70e6123664f2180:tools/review-preflight/main.go line 164: `toolPath, lookErr := exec.LookPath(gentleAIBinary)` — executed with no context/deadline in scope.",
+          "Same blob, line 174: `ctx, cancel := context.WithTimeout(context.Background(), statusExecTimeout)` — the bounded context is created only after the unbounded LookPath call has already returned.",
+          "Same blob, lines 138-139 (doc comment directly above the statusExecTimeout var): 'This guard is meant to be cheap enough to run before every review, and a guard that can hang indefinitely is one operators learn to skip' — the stated purpose the pre-timeout LookPath call does not satisfy.",
+          "tools/review-preflight/main_test.go (candidate blob, 521 lines, read in full): TestExecReviewStatusEnforcesItsDeadline only drives a fake gentle-ai that sleeps after being found on PATH (fakeGentleAI + shadowPATH prepend it to PATH), proving the post-LookPath exec.CommandContext phase is bounded; no test exercises a PATH entry that blocks LookPath itself, so the gap is untested as well as unbounded."
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R2-001",
+        "lens": "readability",
+        "location": "engine/cmd/main.go:179",
+        "severity": "WARNING",
+        "claim": "usage()'s 'Embedded contracts: skill-discovery-safety, anti-generic-design' line was a complete, accurate enumeration before this diff. The diff adds a third valid --embedded-contract value ('review-projection-contract', new case at line 100) without updating this line, so the binary's own --help/no-args output now omits a real, working option.",
+        "proof_refs": [
+          "engine/cmd/main.go:179 (byte-unchanged by this diff) reads exactly `fmt.Fprintln(os.Stderr, \"Embedded contracts: skill-discovery-safety, anti-generic-design\")`",
+          "engine/cmd/main.go:100-110 (new in this diff) adds `case \"review-projection-contract\":` returning a fully valid embeddedContractSpec, so `--embedded-contract review-projection-contract` now works but is undocumented at line 179",
+          "engine/cmd/main.go:126-130 (`if len(os.Args) \u003c 2 { usage(); os.Exit(1) }`) and 151-155 (`default: ...; usage(); os.Exit(1)`) show usage() is reached for a bare invocation or any unrecognized argument (including `--help`, since no explicit --help case exists), so this text is genuinely operator-visible",
+          "bin/labdrian-overlay's own help/status text at lines ~1163-1167 and ~1185-1186 (in the same diff) WAS correctly updated to name review-preflight/review-projection-contract, confirming the omission at engine/cmd/main.go:179 is an inconsistency within this same change rather than a stylistic choice"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "worsened"
+      },
+      {
+        "id": "R2-002",
+        "lens": "readability",
+        "location": "engine/cmd/main_test.go:1854",
+        "severity": "WARNING",
+        "claim": "TestCheckRegistry_FourBlockCombinations's doc comment ('Any one missing -\u003e ok, degraded, note names the missing block') promises isolated single-block-missing coverage, but the case labeled 'only anti-generic-design-scope missing' reuses the onlyMinimalismAndSafety fixture, which is also missing the review-projection-contract block, so it never exercises checkRegistry's !hasDesign branch independently of !hasProjection. No case in the table isolates 'design absent, projection present', so a regression that silently broke only the anti-generic-design-scope detection would not be caught by this test file.",
+        "proof_refs": [
+          "engine/cmd/main_test.go:1821-1824 doc comment: 'checkRegistry recognizes the third anti-generic-design-scope and fourth review-projection-contract-scope markers ... Any one missing -\u003e ok, degraded, note names the missing block.'",
+          "engine/cmd/main_test.go:1828-1830 defines minimalismAndSafety with only the minimalism and skill-discovery-safety markers (no design, no projection)",
+          "engine/cmd/main_test.go:1836 `onlyMinimalismAndSafety := minimalismAndSafety` — an identical alias, still missing both design and projection markers",
+          "engine/cmd/main_test.go:1853-1859 labels this fixture 'only anti-generic-design-scope missing' and asserts only `wantNoteHas: \"anti-generic-design-scope\"`, never checking for or against \"review-projection-contract-scope\"",
+          "engine/cmd/main.go:1462-1467 (checkRegistry) appends both \"anti-generic-design-scope\" and \"review-projection-contract-scope\" to `missing` whenever hasDesign and hasProjection are both false — exactly this fixture's actual state",
+          "engine/cmd/main_test.go:1839-1867 (full test table) has no case built from designBlock-absent + projectionBlock-present"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R2-003",
+        "lens": "readability",
+        "location": "engine/settings/settings_test.go:1053",
+        "severity": "WARNING",
+        "claim": "TestHasSupportedClaudeLifecycleState_RequiresDesignAndProjectionPairs's doc comment claims the test proves HasSupportedClaudeLifecycleState returns false when EITHER the design or the projection pair is independently absent, but the 'design absent' fixture (onlyMinimalismAndSafety) sets both includeDesign=false and includeProjection=false, so the design-only branch is never exercised in isolation from the projection branch — only the projection-only-absent case is actually isolated.",
+        "proof_refs": [
+          "engine/settings/settings_test.go:1042-1044: 'asserts the lifecycle-state check returns false when EITHER the anti-generic-design or the review-projection pair is absent, and true only when all four pairs exist'",
+          "engine/settings/settings_test.go:1051 `onlyMinimalismAndSafety := buildRootWithPairs(testHookCommand, true, true, false, false)` sets includeDesign=false AND includeProjection=false together",
+          "engine/settings/settings_test.go:1053 error message reads 'expected false when the design pair is absent', naming only the design pair despite projection also being absent in that same fixture",
+          "engine/settings/settings.go:126-135 HasSupportedClaudeLifecycleState ANDs together 8 independent Has*Hook checks (2 each for minimalism/safety/design/projection); a fixture with both design and projection false cannot distinguish a broken design-check clause from a correctly-working one",
+          "engine/settings/settings_test.go:1050-1065 (whole test body) contains no fixture with includeDesign=false and includeProjection=true"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R2-004",
+        "lens": "readability",
+        "location": "bin/labdrian-overlay:1704",
+        "severity": "SUGGESTION",
+        "claim": "cmd_review_preflight's exit-code remap treats 'CALLER_CWD no longer exists' as the only reason `cd \"$CALLER_CWD\"` can fail. If that cd instead fails for a different reason while the path still stats as a directory (e.g. permission denied, a stale/unmounted bind mount), the guard binary is never actually invoked, yet status stays at the cd failure's own code (typically 1) because `! -d \"$CALLER_CWD\"` is false — which this guard's own exit-code contract reads as outcomeEmptyCandidate (1, a specific verdict) rather than outcomeUndetermined (3, no verdict reached), the exact absence-of-proof-read-as-a-verdict failure mode this feature exists to prevent.",
+        "proof_refs": [
+          "bin/labdrian-overlay:1699-1700 `(cd \"$CALLER_CWD\" \u0026\u0026 \"$guard_binary\" \"$@\") || status=$?`",
+          "bin/labdrian-overlay:1701-1706 comment and remap scope the fix explicitly to 'A CALLER_CWD that no longer exists', and the guard condition is only `[[ \"$status\" -ne 0 \u0026\u0026 ! -d \"$CALLER_CWD\" ]]`, which is false whenever the path still exists as a directory regardless of why cd failed",
+          "tools/review-preflight/main.go's outcomeEmptyCandidate=1 vs outcomeUndetermined=3 constants (and their surrounding doc comment) are deliberately distinct verdicts — 'Only outcomeCovered asserts that starting a review here is safe... A guard that guessed \"probably fine\" when it could not read the projection would reproduce that failure one layer up' — the same design intent this narrower bash remap does not fully honor for non-existence-unrelated cd failures"
+        ],
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-001",
+        "lens": "reliability",
+        "location": "skills/sdd-verify/SKILL.md:96",
+        "severity": "WARNING",
+        "claim": "The new Decision Gates dispatch row for review-preflight lists STOP only for exit codes 1 and 3, omitting exit code 2 (usage error) and any other/unrecognized exit code, so a table-only scan finds no matching row and no explicit STOP instruction for those codes. The file's own pre-existing, unmodified pattern for the sibling deterministic-check-runner explicitly closes this exact gap with a stated fail-closed catch-all, but no equivalent catch-all was added for review-preflight.",
+        "proof_refs": [
+          "skills/sdd-verify/SKILL.md:96 (candidate, added by this diff) reads exactly: \"| `review-preflight` exits `1` (EMPTY candidate) or `3` (no verdict) | STOP; do not start the review. Exit `3` is unproven, never safe. |\" — no row names exit `2` or any other code.",
+          "skills/sdd-verify/SKILL.md:70 (candidate, added by this diff) is the adjacent prose bullet: it states \"only exit `0` permits starting\" and separately explains exit `2` as \"the guard's own usage error: fix the invocation and re-run\", but never states that a `2` (or any code outside {0,1,2,3}, e.g. a stray shell/build failure surfaced by bin/labdrian-overlay's cmd_review_preflight wrapper) must not start the review — it documents only the guard's own four codes, with no catch-all for an out-of-contract code.",
+          "skills/sdd-verify/SKILL.md:84 (unchanged, pre-existing, not part of this diff) shows the file's own established rigor for the sibling deterministic-check-runner: \"Any exit code not listed above — including a forwarded shell/signal status such as `126` or `127` reaching the caller from an unusable temporary binary — is unmapped and fails closed to `--outcome procedural_tooling_failed`, never `passed`, never `verification_failed`.\" No sentence of this shape was added for review-preflight, in either the line-70 prose or the line-96 table, despite review-preflight's own bash wrapper (bin/labdrian-overlay cmd_review_preflight, lines 1675-1708 of the candidate) being able to surface non-{0,1,2,3} exit statuses from `go build` or the guard binary's own process invocation."
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      }
+    ],
+    "classifications": {},
+    "outcomes": {
+      "R2-001": "info",
+      "R2-002": "info",
+      "R2-003": "info",
+      "R2-004": "info",
+      "R3-001": "info",
+      "R4-001": "info"
+    },
+    "fix_finding_ids": [],
+    "follow_ups": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:7f2577be2c74fab620dbf8b90a55b190ad6d43367180a287bb6ae261ef4d561f",
+    "evidence_record_digest": "sha256:0e76606d19e6e11910203fe89ea3c81b54e4fc7c4ce10f6558b25e66baf5072a",
+    "evidence_outcome": "passed",
+    "evidence_target_identity": "sha256:a02f07727f9a7e717aa0fd40a1fd2ffc2085e561348f5c7a95cbd6e9f8c0daa6",
+    "evidence_authority_revision": "sha256:28855fae034f0a7a998c631eaf854c4c2cfdf62df74fb0917e2006bb8f588c9b"
+  }
+}

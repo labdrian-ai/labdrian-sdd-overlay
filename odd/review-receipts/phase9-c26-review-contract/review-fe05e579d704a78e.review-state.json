@@ -1,0 +1,266 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:e48c4f9ca4114109a408fb1222193b1312a565691f8a5373c2005a1b52c5d6eb",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-fe05e579d704a78e",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "1ea82a02b54ed097bb3a8f9aa79e1ed0047737b6",
+      "candidate_tree": "c58f39a611148e3b13d555868ffd17c037a28a46",
+      "paths_digest": "sha256:0668d7c10ec972dcd840e473f9f53d9d6f937ae1e73ef6146a9dd7f0551d7259",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "bin/labdrian-overlay"
+      ],
+      "identity": "sha256:fe05e579d704a78e05b867309e45cbc25d7eefed36ca6f87e6b3abe7f5bc7128"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "1ea82a02b54ed097bb3a8f9aa79e1ed0047737b6",
+      "candidate_tree": "6fd6ff7023a6310eb59387b273aa64559e1a312e",
+      "paths_digest": "sha256:0668d7c10ec972dcd840e473f9f53d9d6f937ae1e73ef6146a9dd7f0551d7259",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "bin/labdrian-overlay"
+      ],
+      "identity": "sha256:02403fb40c8d48ecb46f30f27a913061d8243c2bed94c8a77c92ef29adb05332"
+    },
+    "genesis_paths": [
+      "bin/labdrian-overlay"
+    ],
+    "policy_hash": "sha256:34fb63d7f29f8613cd4431382b1057398a4816f8a4c20fc34677fffc80a184f6",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-reliability"
+    ],
+    "original_changed_lines": 65,
+    "correction_budget": 33,
+    "correction_budget_policy": "floor_two",
+    "lens_results": [
+      {
+        "lens": "review-reliability",
+        "findings": [
+          {
+            "id": "R3-apply-push-silent-noop-missing-origin-main",
+            "lens": "reliability",
+            "location": "bin/labdrian-overlay:792",
+            "severity": "CRITICAL",
+            "claim": "An explicit `overlay apply --push` silently pushes nothing when the remote-tracking ref origin/main is absent (new or never-fetched origin): the entire push/notice block, including the --push branch, sits inside the `git rev-parse --verify -q origin/main` guard with no else path, so the documented contract 'Never pushes main unless --push' is silently violated on first delivery to a fresh remote — no push, no NOTICE, no error. cmd_capture handles the analogous missing-ref case with `git push -u origin upstream`, but cmd_apply has no `git push -u origin main` counterpart.",
+            "proof_refs": [
+              "bin/labdrian-overlay:792 — the whole main push/notice block is gated by `if git rev-parse --verify -q origin/main \u003e/dev/null; then` with no else branch, so an absent remote-tracking ref skips everything with zero output",
+              "bin/labdrian-overlay:796 — the user's explicit --push request (`push_main`) is only consulted inside that guard, so it is silently dropped when origin/main does not resolve",
+              "bin/labdrian-overlay:103 — the new help text promises 'Never pushes main unless --push', implying --push does push; the flag becoming a silent no-op contradicts the documented behavior",
+              "bin/labdrian-overlay:674 — contrast: cmd_capture's parallel logic handles the missing-remote-ref case explicitly with `git push -u origin upstream`, showing the missing else path in cmd_apply is an omission, not a design choice"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-capture-hard-requires-reachable-origin",
+            "lens": "reliability",
+            "location": "bin/labdrian-overlay:674",
+            "severity": "WARNING",
+            "claim": "cmd_capture now unconditionally pushes the upstream branch, turning a previously local-only operation into one that fails without a reachable origin: when no origin remote exists or the network is down, `git push -u origin upstream` (missing-ref path) or `git push origin upstream` errors, and under the script's apparent strict-error discipline capture aborts after the local sync commit (the pre-existing EXIT trap restores the branch, so state is preserved but the run reports failure). Offline capture is a regression relative to base behavior.",
+            "proof_refs": [
+              "bin/labdrian-overlay:674 — `git push -u origin upstream` runs unconditionally whenever origin/upstream does not resolve, which includes the no-origin-remote and offline cases, not only the genuinely-new-remote-branch case",
+              "bin/labdrian-overlay:670 — the existing-ref path likewise issues a network push with no failure handling or offline tolerance",
+              "bin/labdrian-overlay:678 — the checkout back to the original branch is sequenced after the push, so a push failure exits via the trap rather than completing the documented 'Returned to branch' flow"
+            ],
+            "evidence_class": "inferential",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-apply-detached-head-strands-on-main",
+            "lens": "reliability",
+            "location": "bin/labdrian-overlay:714",
+            "severity": "WARNING",
+            "claim": "When apply is started from a detached HEAD, `git rev-parse --abbrev-ref HEAD` yields the literal string 'HEAD', so both the EXIT trap and the final restore execute `git checkout HEAD` — a no-op — and the session ends on main instead of the original commit, contradicting the new comment's own invariant that apply 'must never strand a session's checkout on main'. The trap additionally suppresses all checkout output and errors, so this restore failure mode is invisible to the user.",
+            "proof_refs": [
+              "bin/labdrian-overlay:714 — `current_branch=\"$(git rev-parse --abbrev-ref HEAD)\"` returns 'HEAD' on a detached checkout, capturing no restorable ref",
+              "bin/labdrian-overlay:719 — the trap runs `git checkout \"$current_branch\" \u003e/dev/null 2\u003e\u00261 || true`, which for the literal value 'HEAD' succeeds as a no-op on main and hides any diagnostic",
+              "bin/labdrian-overlay:786 — the happy-path restore `git checkout \"$current_branch\"` has the same no-op behavior, then line 788 reports 'Returned to branch: HEAD' misleadingly"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-no-coverage-for-new-behavior",
+            "lens": "reliability",
+            "location": "bin/labdrian-overlay:700",
+            "severity": "WARNING",
+            "claim": "The candidate adds several externally observable behaviors — dirty-tree rejection in capture and apply, unconditional upstream auto-push with distinct existing-ref and first-push paths, --push gating of main, and the ahead-of-origin NOTICE — and the changed-path manifest contains no test asserting any of them, so every new branch of this delivery-critical sync logic ships unproved. The cheapest useful level is a shell test (e.g. bats) driving the script against a scratch git repo with a file:// origin, asserting: capture/apply die on a dirty tree, apply without --push leaves origin/main untouched and prints the NOTICE with the correct count, and apply --push advances origin/main.",
+            "proof_refs": [
+              "bin/labdrian-overlay:700 — the new --push option introduces a behavioral fork (push vs. NOTICE) with no test exercising either side",
+              "bin/labdrian-overlay:586 — the capture dirty-tree guard's die path is asserted nowhere; a regression to its `--untracked-files=no` scoping would go undetected",
+              "bin/labdrian-overlay:668 — the upstream push has two distinct code paths (existing remote ref vs. `push -u` first push) whose selection logic is untested"
+            ],
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-stale-remote-tracking-comparisons",
+            "lens": "reliability",
+            "location": "bin/labdrian-overlay:794",
+            "severity": "SUGGESTION",
+            "claim": "Both new divergence checks compare against remote-tracking refs without fetching first, so on a multi-machine setup the ahead count in the NOTICE can misreport (origin/main stale since the last fetch) and the upstream/main pushes can fail non-fast-forward with only git's raw error as guidance; consider mentioning `sync-check --fetch` in the NOTICE or wrapping the pushes with a hint for the rejected-push case.",
+            "proof_refs": [
+              "bin/labdrian-overlay:794 — `git rev-list --count origin/main..main` reads the local remote-tracking ref, which reflects the last fetch, not the remote's current state",
+              "bin/labdrian-overlay:669 — the upstream ahead check `git rev-list origin/upstream..upstream` has the same staleness, so a push can be attempted and rejected when another machine already advanced origin/upstream"
+            ]
+          }
+        ],
+        "evidence": [
+          "Inspected the complete unified diff for bin/labdrian-overlay (blob 3d6d2b78 → b7f2111d, mode 100755 unchanged), the only path in the changed-path manifest; the review covers 100% of the candidate's changed paths.",
+          "Traced both modified command paths end to end: cmd_capture (dirty-tree guard at lines 584-588, unconditional upstream push with existing-ref and first-push branches at lines 666-676) and cmd_apply (--push parsing at lines 700-702, dirty-tree guard at lines 708-711, EXIT-trap branch restoration at lines 713-719, restore and main push/NOTICE block at lines 785-806), including failure ordering relative to the EXIT traps.",
+          "Verified the dirty-tree guards use `git status --porcelain --untracked-files=no`, which correctly covers staged and unstaged tracked changes while intentionally ignoring untracked files, and that guard/branch-record/trap ordering in cmd_apply is safe (guard fails before the trap is armed)."
+        ],
+        "result_hash": "sha256:43ce3f4700780b9ccea9fa4aaf72eac1cbbc282b8964cf194d716417d3e53fd7"
+      }
+    ],
+    "findings": [
+      {
+        "id": "R3-apply-push-silent-noop-missing-origin-main",
+        "lens": "reliability",
+        "location": "bin/labdrian-overlay:792",
+        "severity": "CRITICAL",
+        "claim": "An explicit `overlay apply --push` silently pushes nothing when the remote-tracking ref origin/main is absent (new or never-fetched origin): the entire push/notice block, including the --push branch, sits inside the `git rev-parse --verify -q origin/main` guard with no else path, so the documented contract 'Never pushes main unless --push' is silently violated on first delivery to a fresh remote — no push, no NOTICE, no error. cmd_capture handles the analogous missing-ref case with `git push -u origin upstream`, but cmd_apply has no `git push -u origin main` counterpart.",
+        "proof_refs": [
+          "bin/labdrian-overlay:792 — the whole main push/notice block is gated by `if git rev-parse --verify -q origin/main \u003e/dev/null; then` with no else branch, so an absent remote-tracking ref skips everything with zero output",
+          "bin/labdrian-overlay:796 — the user's explicit --push request (`push_main`) is only consulted inside that guard, so it is silently dropped when origin/main does not resolve",
+          "bin/labdrian-overlay:103 — the new help text promises 'Never pushes main unless --push', implying --push does push; the flag becoming a silent no-op contradicts the documented behavior",
+          "bin/labdrian-overlay:674 — contrast: cmd_capture's parallel logic handles the missing-remote-ref case explicitly with `git push -u origin upstream`, showing the missing else path in cmd_apply is an omission, not a design choice"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-capture-hard-requires-reachable-origin",
+        "lens": "reliability",
+        "location": "bin/labdrian-overlay:674",
+        "severity": "WARNING",
+        "claim": "cmd_capture now unconditionally pushes the upstream branch, turning a previously local-only operation into one that fails without a reachable origin: when no origin remote exists or the network is down, `git push -u origin upstream` (missing-ref path) or `git push origin upstream` errors, and under the script's apparent strict-error discipline capture aborts after the local sync commit (the pre-existing EXIT trap restores the branch, so state is preserved but the run reports failure). Offline capture is a regression relative to base behavior.",
+        "proof_refs": [
+          "bin/labdrian-overlay:674 — `git push -u origin upstream` runs unconditionally whenever origin/upstream does not resolve, which includes the no-origin-remote and offline cases, not only the genuinely-new-remote-branch case",
+          "bin/labdrian-overlay:670 — the existing-ref path likewise issues a network push with no failure handling or offline tolerance",
+          "bin/labdrian-overlay:678 — the checkout back to the original branch is sequenced after the push, so a push failure exits via the trap rather than completing the documented 'Returned to branch' flow"
+        ],
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-apply-detached-head-strands-on-main",
+        "lens": "reliability",
+        "location": "bin/labdrian-overlay:714",
+        "severity": "WARNING",
+        "claim": "When apply is started from a detached HEAD, `git rev-parse --abbrev-ref HEAD` yields the literal string 'HEAD', so both the EXIT trap and the final restore execute `git checkout HEAD` — a no-op — and the session ends on main instead of the original commit, contradicting the new comment's own invariant that apply 'must never strand a session's checkout on main'. The trap additionally suppresses all checkout output and errors, so this restore failure mode is invisible to the user.",
+        "proof_refs": [
+          "bin/labdrian-overlay:714 — `current_branch=\"$(git rev-parse --abbrev-ref HEAD)\"` returns 'HEAD' on a detached checkout, capturing no restorable ref",
+          "bin/labdrian-overlay:719 — the trap runs `git checkout \"$current_branch\" \u003e/dev/null 2\u003e\u00261 || true`, which for the literal value 'HEAD' succeeds as a no-op on main and hides any diagnostic",
+          "bin/labdrian-overlay:786 — the happy-path restore `git checkout \"$current_branch\"` has the same no-op behavior, then line 788 reports 'Returned to branch: HEAD' misleadingly"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-no-coverage-for-new-behavior",
+        "lens": "reliability",
+        "location": "bin/labdrian-overlay:700",
+        "severity": "WARNING",
+        "claim": "The candidate adds several externally observable behaviors — dirty-tree rejection in capture and apply, unconditional upstream auto-push with distinct existing-ref and first-push paths, --push gating of main, and the ahead-of-origin NOTICE — and the changed-path manifest contains no test asserting any of them, so every new branch of this delivery-critical sync logic ships unproved. The cheapest useful level is a shell test (e.g. bats) driving the script against a scratch git repo with a file:// origin, asserting: capture/apply die on a dirty tree, apply without --push leaves origin/main untouched and prints the NOTICE with the correct count, and apply --push advances origin/main.",
+        "proof_refs": [
+          "bin/labdrian-overlay:700 — the new --push option introduces a behavioral fork (push vs. NOTICE) with no test exercising either side",
+          "bin/labdrian-overlay:586 — the capture dirty-tree guard's die path is asserted nowhere; a regression to its `--untracked-files=no` scoping would go undetected",
+          "bin/labdrian-overlay:668 — the upstream push has two distinct code paths (existing remote ref vs. `push -u` first push) whose selection logic is untested"
+        ],
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-stale-remote-tracking-comparisons",
+        "lens": "reliability",
+        "location": "bin/labdrian-overlay:794",
+        "severity": "SUGGESTION",
+        "claim": "Both new divergence checks compare against remote-tracking refs without fetching first, so on a multi-machine setup the ahead count in the NOTICE can misreport (origin/main stale since the last fetch) and the upstream/main pushes can fail non-fast-forward with only git's raw error as guidance; consider mentioning `sync-check --fetch` in the NOTICE or wrapping the pushes with a hint for the rejected-push case.",
+        "proof_refs": [
+          "bin/labdrian-overlay:794 — `git rev-list --count origin/main..main` reads the local remote-tracking ref, which reflects the last fetch, not the remote's current state",
+          "bin/labdrian-overlay:669 — the upstream ahead check `git rev-list origin/upstream..upstream` has the same staleness, so a push can be attempted and rejected when another machine already advanced origin/upstream"
+        ]
+      }
+    ],
+    "classifications": {
+      "R3-apply-push-silent-noop-missing-origin-main": {
+        "finding_id": "R3-apply-push-silent-noop-missing-origin-main",
+        "class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof": "bin/labdrian-overlay:792 — the whole main push/notice block is gated by `if git rev-parse --verify -q origin/main \u003e/dev/null; then` with no else branch, so an absent remote-tracking ref skips everything with zero output; bin/labdrian-overlay:796 — the user's explicit --push request (`push_main`) is only consulted inside that guard, so it is silently dropped when origin/main does not resolve; bin/labdrian-overlay:103 — the new help text promises 'Never pushes main unless --push', implying --push does push; the flag becoming a silent no-op contradicts the documented behavior; bin/labdrian-overlay:674 — contrast: cmd_capture's parallel logic handles the missing-remote-ref case explicitly with `git push -u origin upstream`, showing the missing else path in cmd_apply is an omission, not a design choice"
+      }
+    },
+    "outcomes": {
+      "R3-apply-detached-head-strands-on-main": "info",
+      "R3-apply-push-silent-noop-missing-origin-main": "corroborated",
+      "R3-capture-hard-requires-reachable-origin": "info",
+      "R3-no-coverage-for-new-behavior": "info",
+      "R3-stale-remote-tracking-comparisons": "info"
+    },
+    "fix_finding_ids": [
+      "R3-apply-push-silent-noop-missing-origin-main"
+    ],
+    "follow_ups": [],
+    "proposed_correction_lines": 14,
+    "actual_correction_lines": 24,
+    "fix_delta_hash": "sha256:011eac01e261b72e4c7254b7a98e152d78ff889ae981b0abe18fbbcc1df227c8",
+    "original_criteria": {
+      "evidence_hash": "sha256:7b5e0b19715a3334b3548bed8332c3835e7cc1d01b1ac8193712be5fe52d43cc",
+      "fix_delta_hash": "sha256:011eac01e261b72e4c7254b7a98e152d78ff889ae981b0abe18fbbcc1df227c8",
+      "passed": true
+    },
+    "correction_regression": {
+      "evidence_hash": "sha256:6a5b34a5ee567649c6bc003bc50cee702dee89b8843d050dd00e4a4f36bfc65c",
+      "fix_delta_hash": "sha256:011eac01e261b72e4c7254b7a98e152d78ff889ae981b0abe18fbbcc1df227c8",
+      "passed": true
+    },
+    "evidence_hash": "sha256:e3dca1db8601aa742cbd256cd0cffcae222415b5d4427f7a4f672e6735aea11c",
+    "evidence_record_digest": "sha256:6b1597077e66dec5d760dc60f6f2c52c8d9099a5508227dcea1de4f1d6327ce5",
+    "evidence_outcome": "passed",
+    "evidence_target_identity": "sha256:e730c321dc61d7c0fb5aeba4f1994bc1383c4bb31487d4e18e8271b237f62d79",
+    "evidence_authority_revision": "sha256:481dc068f27db90f5f559e441fc3f50808ced5764307e7133d86a9b64c239229",
+    "correction_attempts": [
+      {
+        "snapshot": {
+          "kind": "fix-diff",
+          "base_tree": "c58f39a611148e3b13d555868ffd17c037a28a46",
+          "candidate_tree": "6fd6ff7023a6310eb59387b273aa64559e1a312e",
+          "paths_digest": "sha256:0668d7c10ec972dcd840e473f9f53d9d6f937ae1e73ef6146a9dd7f0551d7259",
+          "intended_untracked": [],
+          "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+          "ledger_ids": [
+            "R3-apply-push-silent-noop-missing-origin-main"
+          ],
+          "paths": [
+            "bin/labdrian-overlay"
+          ],
+          "identity": "sha256:e730c321dc61d7c0fb5aeba4f1994bc1383c4bb31487d4e18e8271b237f62d79"
+        },
+        "proposed_lines": 14,
+        "actual_lines": 24,
+        "fix_delta_hash": "sha256:011eac01e261b72e4c7254b7a98e152d78ff889ae981b0abe18fbbcc1df227c8",
+        "original_criteria": {
+          "evidence_hash": "sha256:7b5e0b19715a3334b3548bed8332c3835e7cc1d01b1ac8193712be5fe52d43cc",
+          "fix_delta_hash": "sha256:011eac01e261b72e4c7254b7a98e152d78ff889ae981b0abe18fbbcc1df227c8",
+          "passed": true
+        },
+        "correction_regression": {
+          "evidence_hash": "sha256:6a5b34a5ee567649c6bc003bc50cee702dee89b8843d050dd00e4a4f36bfc65c",
+          "fix_delta_hash": "sha256:011eac01e261b72e4c7254b7a98e152d78ff889ae981b0abe18fbbcc1df227c8",
+          "passed": true
+        },
+        "targeted_validation_request_hash": "sha256:9f45f986d51bf470e8dc25fc957473dc5cbd8207cac073573775812c1cdb8483",
+        "correction_target_identity": "sha256:e730c321dc61d7c0fb5aeba4f1994bc1383c4bb31487d4e18e8271b237f62d79"
+      }
+    ],
+    "cumulative_correction_lines": 24
+  }
+}

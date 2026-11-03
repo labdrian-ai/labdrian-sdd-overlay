@@ -316,9 +316,8 @@ func TestReviewBenchRunOurs(t *testing.T) {
 			t.Fatalf("calls\n%s\nwant\n%s", strings.Join(calls, "\n"), strings.Join(want, "\n"))
 		}
 		brief := readFile(t, filepath.Join(bench, "out", "ours", "R1", "brief-hunt.txt"))
-		wantBrief := "Review the committed candidate below as the reviewer role.\nbase: " + b + "\nhead: " + head +
-			"\ndiff_sha256: d1ff\nworktree: /wt/review-" + head[:12] + "\nLens row hunt: Hunt four classes.\n" +
-			"No tool is available to you: the frozen context below is the whole of what you can inspect; set inspection.status to completed when it covers every changed path.\n"
+		wantBrief := "Lens: Hunt four classes.\nbase: " + b + "\nhead: " + head +
+			"\ndiff_sha256: d1ff\nworktree: /wt/review-" + head[:12] + "\n"
 		if brief != wantBrief {
 			t.Fatalf("brief\n%s\nwant\n%s", brief, wantBrief)
 		}

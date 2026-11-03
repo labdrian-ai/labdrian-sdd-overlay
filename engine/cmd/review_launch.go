@@ -4,7 +4,8 @@ package main
 // the brief of the parent on stdin, binds the candidate as 'review bind' does, runs the reviewer of the runtime in the
 // worktree of the binding (behind the Reviewer port of review/app) and records its reply as 'review record' records one.
 // On codex the reviewer is `codex exec --sandbox read-only` (review/codexexec) over the brief; on claude it is one
-// tool-free `claude --print` (review/claudeprint) over the brief and the frozen context of the candidate. Every refusal
+// tool-free `claude --print` (review/claudeprint) over its lean preamble (the JSON Schema of the reply, no deployed
+// agent file), the brief and the frozen context of the candidate. Every refusal
 // that comes before the reviewer starts is exit 1; a reply that 'review record' would refuse is exit 2, and what it prints
 // when it is stored is what 'review record' prints.
 
@@ -58,8 +59,7 @@ func runReviewLaunch(p process, d deps, args []string) {
 	service := newReviewService(d)
 	var reviewer app.Reviewer
 	if f.runtime == launchRuntimeClaude {
-		claudeRoot := core.Config{Home: home}.DefaultClaudeRoot()
-		reviewer = claudeprint.New(d.launchClaudeRunner(), claudeprint.Options{Environ: d.environment(), ClaudeRoot: claudeRoot})
+		reviewer = claudeprint.New(d.launchClaudeRunner(), claudeprint.Options{Environ: d.environment()})
 		service = service.WithFrozenContext()
 	} else {
 		codexRoot := core.Config{Home: home, CodexHome: d.env("CODEX_HOME")}.DefaultCodexRoot()

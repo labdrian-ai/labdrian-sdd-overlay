@@ -353,8 +353,8 @@ Commands:
                                              labdrian-overlay apply --target codex) and the brief, then record its
                                              last message as review record does, printing what it prints;
                                              with --runtime claude run instead one tool-free claude --print
-                                             --strict-mcp-config in the worktree over the body of the deployed Claude agent file (a missing one
-                                             says run: labdrian-overlay apply --target claude), the brief and its
+                                             --strict-mcp-config in the worktree, its stdin the lean preamble (the JSON Schema of the reply; no agent file is read),
+                                             a blank line, the brief and its
                                              ## Frozen context (changed paths line, git diff --no-renames -U3), and record
                                              its stdout; --runtime must be claude or codex: on Pi the parent launches
                                              the reviewer agent natively; --model is required; refused before the
@@ -366,7 +366,8 @@ Commands:
                                              stored; a reply refused for its shape (a member missing, a value outside its
                                              enumeration, a location that is not path:line) is asked for again once,
                                              the brief followed by ## Your previous reply was refused and the refusal
-                                             (its first 1024 bytes), unless that is over the reply limit; a
+                                             (its first 1024 bytes) in a fenced block, unless that is over the
+                                             reply limit; a
                                              refusal of the second reply, or of the binding or the inspection, is
                                              not asked again, and a re-ask the reviewer does not answer leaves
                                              the first refusal, with the re-ask's failure said after it

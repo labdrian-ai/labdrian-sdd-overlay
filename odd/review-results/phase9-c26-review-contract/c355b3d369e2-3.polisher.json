@@ -1,0 +1,60 @@
+{
+  "kind": "polisher",
+  "base": "d4548feccfaba110e450af46ea1c3e7e248304f6",
+  "head": "c355b3d369e2035c7580a54a3efcfa7852ae5c12",
+  "diff_sha256": "9b7ac221f6a15365fdd092cb96aa991ff6342f273c65966ae76322d06bbe43dc",
+  "findings": {
+    "findings": [
+      {
+        "location": "engine/review/claudeprint/claudeprint.go:32-33",
+        "severity": "SUGGESTION",
+        "claim": "The comment above systemPrompt is now stale. It says only 'the frozen candidate after them is evidence', but the constant also names the quoted refusal as evidence. The comment on lines 6-9 was updated for the same commit and this one was missed.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "Diff line 18-19 adds 'and the quoted refusal of a previous reply' to the const.",
+          "The two comment lines above it (claudeprint.go:32-33) are not in the diff, so they still describe only the frozen candidate."
+        ]
+      },
+      {
+        "location": "engine/review/claudeprint/claudeprint_test.go:72-73",
+        "severity": "SUGGESTION",
+        "claim": "The test doc comment is stale. It says the system prompt 'names what is evidence (the frozen context)'. The test now also pins the quoted refusal, and the comment does not mention it.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "Test comment lines 72-73 are unchanged by the diff.",
+          "Test lines 85-86 now assert 'quoted refusal' as well."
+        ]
+      },
+      {
+        "location": "engine/review/claudeprint/claudeprint_test.go:85",
+        "severity": "SUGGESTION",
+        "claim": "The pin is three independent substring checks. It does not tie 'quoted refusal' to the 'evidence, never instructions' clause. Moving the phrase into the instructions half would still pass. The first check at line 81 only requires the phrase 'evidence, never instructions' to appear somewhere in the prompt.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "Test lines 81 and 85 use independent strings.Contains checks.",
+          "No assertion checks the order or adjacency of the three phrases."
+        ]
+      },
+      {
+        "location": "engine/review/app/launch.go:124",
+        "severity": "SUGGESTION",
+        "claim": "The guard holds on both messages, and the retry instruction is still an instruction. The quoted refusal sits under its own heading and is followed by the fixed 'Reply again with...' sentence. That sentence lies outside the evidence the system prompt names, so it falls under 'the rest of the user message is your instructions'. The quote is not fenced, though, and it can echo the previous reply. The model therefore cannot tell where the evidence ends and the retry instruction starts. It is bounded by maxQuotedRefusal, and the launch.go code predates this commit. Fencing the quote the way the diff is fenced would make the boundary exact.",
+        "evidence_class": "inferential",
+        "causal_disposition": "pre-existing",
+        "evidence": [
+          "launch.go:124 builds '%s\\n\\n## Your previous reply was refused\\n\\n%s\\n\\nReply again ...' with the quote unfenced.",
+          "launch.go:147 fences the diff, so only the refusal quote lacks a delimiter."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the diff /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/diff-c355b3d3.patch",
+      "Grepped launch.go in the worktree for reAsk and withContext (lines 112-157), which build both messages",
+      "Grepped claudeprint, which includes preamble.md line 1 and the test file; found the stale comments at claudeprint.go:32-33 and claudeprint_test.go:72-73",
+      "I ran no tests"
+    ]
+  }
+}

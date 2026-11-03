@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "94e77f95786a22c33f8012e36d71b72769e5d3a7",
+    "head": "352b4a3bc2492cedf37ec06c54a5df3653dcbff9",
+    "diff_sha256": "1d37f959119e8f5fd69470a982122d65b339ae9ff1f3ffb71895cdbd5cdcbbb2",
+    "paths": [
+      "engine/review/claudeprint/claudeprint.go",
+      "engine/review/claudeprint/claudeprint_test.go"
+    ]
+  },
+  "rows": [
+    "default",
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "94e77f95786a22c33f8012e36d71b72769e5d3a7",
+      "head": "352b4a3bc2492cedf37ec06c54a5df3653dcbff9",
+      "diff_sha256": "1d37f959119e8f5fd69470a982122d65b339ae9ff1f3ffb71895cdbd5cdcbbb2"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/review/claudeprint/claudeprint.go",
+        "engine/review/claudeprint/claudeprint_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read diff /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/diff-352b4a3b.patch: one constant changes, systemPrompt at engine/review/claudeprint/claudeprint.go:32-34. The argv test at claudeprint_test.go:57 is updated to match it.",
+      "Searched the worktree for the system prompt text. It appears only in claudeprint.go:34 and claudeprint_test.go:57 (plus odd/tasks/phase9-c25-review-hunt.md history), so no other code reads it.",
+      "Declared Risk: 2 (security/guard) holds. The changed value is the reviewer's prompt-injection guard. The old text made everything in the user message an instruction, candidate content included. The new text limits instructions to the opening rules and the brief and calls the candidate evidence. This tightens the guard. The other flags that keep the reviewer tool-free (--tools '', --permission-mode dontAsk, --setting-sources '', --strict-mcp-config) are unchanged in the argv test.",
+      "The committed S2(b) of odd/tasks/phase9-c26-review-contract.md says the process flags are unchanged. This commit changes only the --system-prompt value. Per the prompt note, the owner's uncommitted S2 amendment / L10 allows the claude reviewer's prompt to depart from the A/B for review fixes. I did not read that amendment because it is outside the worktree.",
+      "The S5 hold-out rule lists design artifacts (schema, preamble, diff command, location pattern, bench brief). The system prompt is not on that list, so the hold-out concern raised for candidate 2 does not clearly apply here.",
+      "No commands were run (reviewer is read-only)."
+    ]
+  }
+}
