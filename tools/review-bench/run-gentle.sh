@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Bench driver: runs gentle-ai native review (lenses risk + reliability) on one corpus case of corpus.json beside it and
-# writes $BENCH/out/<id>/summary.json with the finding count per lens, the bytes sent and the time taken.
+# writes $BENCH/out/<id>/summary.json with the finding count per lens, the bytes sent and the time taken. RUN=<k>, a
+# positive integer, writes $BENCH/out/run<k>/<id> instead, so one run of a case does not erase another.
 set -u
+if [ -n "${RUN+x}" ] && ! [[ "$RUN" =~ ^[1-9][0-9]*$ ]]; then echo "RUN must be a positive integer, not $RUN" >&2; exit 2; fi
 export BENCH="${BENCH:-$HOME/labdrian-sdd-overlay-worktrees/review-bench}"
 bench="$BENCH"
 here="$(cd "$(dirname "$0")" && pwd)"
@@ -11,7 +13,7 @@ case_json=$(jq -c --arg id "$id" '(.real + .mutants)[] | select(.id == $id)' "$h
 [ -n "$case_json" ] || { echo "unknown case $id" >&2; exit 2; }
 head_ref=$(jq -r '.head' <<<"$case_json")
 base_ref=$(jq -r '.range | split("..")[0]' <<<"$case_json")
-out="$bench/out/$id"
+out="$bench/out${RUN:+/run$RUN}/$id"
 # A rerun starts from an empty directory, so no capture or final result of an earlier run is read.
 rm -rf "$out"
 mkdir -p "$out" "$bench/scratch"
