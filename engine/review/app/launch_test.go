@@ -310,6 +310,32 @@ func TestLaunchQuotesABoundedRefusal(t *testing.T) {
 	}
 }
 
+// A refusal that echoes a run of backticks from the reply cannot close the fence it is quoted in: the fence is longer
+// than the run, and the retry instruction comes after the closing fence.
+func TestLaunchFencesARefusalThatEchoesBackticks(t *testing.T) {
+	service, _, _, reviewer, c, brief := launchWorld(t)
+	run := strings.Repeat("`", 7)
+	unknown := bytes.Replace(replyFor(t, c), []byte(`{"candidate"`), []byte(`{"x`+run+`y":1,"candidate"`), 1)
+	reviewer.replies = [][]byte{unknown, replyFor(t, c)}
+	if _, err := service.Launch("/work/wt/feature", "own-rdd", "HEAD~1", "HEAD", "default", "gpt-5.5", brief); err != nil {
+		t.Fatalf("Launch() error = %v, want the second reply recorded", err)
+	}
+	if len(reviewer.calls) != 2 {
+		t.Fatalf("the reviewer was asked %d times, want twice", len(reviewer.calls))
+	}
+	tail := string(reviewer.calls[1].brief[len(brief):])
+	fence := run + "`"
+	opened := "## Your previous reply was refused\n\n" + fence + "\n"
+	_, after, ok := strings.Cut(tail, opened)
+	if !ok {
+		t.Fatalf("the re-ask after the brief is %q, want the refusal opened by a fence of %d backticks", tail, len(fence))
+	}
+	quote, rest, ok := strings.Cut(after, "\n"+fence+"\n\nReply again")
+	if !ok || !strings.Contains(quote, "x"+run+"y") || rest == "" {
+		t.Errorf("the re-ask after the brief is %q, want the echoed run inside the fence and the retry instruction after it", tail)
+	}
+}
+
 // A refusal that is not of the shape (here an echo of another candidate) is returned at once, as Record refuses it.
 func TestLaunchDoesNotAskAgainWhenTheReplyIsRefusedForItsBinding(t *testing.T) {
 	service, _, _, reviewer, c, brief := launchWorld(t)
