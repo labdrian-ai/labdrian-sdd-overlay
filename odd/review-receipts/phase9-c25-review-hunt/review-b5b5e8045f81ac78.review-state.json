@@ -1,0 +1,221 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:8b6dd196c7d93ed6e3ef3cf2735bf536c8ec0d6342f4f1c1028406761448eb19",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-b5b5e8045f81ac78",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "897ed71a5d8fe26abc953df7c3fbbfa6d0692be6",
+      "candidate_tree": "4e2c687149e679225ac5f55bcfdddf03a9da81f7",
+      "paths_digest": "sha256:efb9a7f1ac8445343cb344eaa75304b46ab56e7398af0dd2b6ddbfcf32f0c81c",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/skills/actuals_instrumentation_contract_test.go",
+        "engine/skills/testdata/corrected-actuals-sync-check-repo-behind-origin.json",
+        "openspec/changes/actuals-calendar-checkpoint-instrumentation/design.md",
+        "openspec/changes/actuals-calendar-checkpoint-instrumentation/proposal.md",
+        "openspec/changes/actuals-calendar-checkpoint-instrumentation/specs/actuals-instrumentation/spec.md",
+        "openspec/changes/actuals-calendar-checkpoint-instrumentation/tasks.md",
+        "skills/_shared/actuals-record.schema.json",
+        "skills/inception-pipeline/SKILL.md",
+        "skills/sdd-time-estimation/SKILL.md"
+      ],
+      "identity": "sha256:b5b5e8045f81ac78dce9bb5a6299cb62031e857e10e4c3af5a6a47c7dbe2da01"
+    },
+    "current_snapshot": {
+      "kind": "fix-diff",
+      "base_tree": "4e2c687149e679225ac5f55bcfdddf03a9da81f7",
+      "candidate_tree": "c8cd0814067abc7b7b0b0e045beefd80f2a1fc62",
+      "paths_digest": "sha256:dd8cdceb63d96f386ab1c1ccde038f4525213dfaedaa0dbd28c27ae72bc39c7a",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "ledger_ids": [
+        "R3-interruption-contaminates-latency-rate"
+      ],
+      "paths": [
+        "engine/skills/actuals_instrumentation_contract_test.go",
+        "engine/skills/testdata/corrected-actuals-sync-check-repo-behind-origin.json",
+        "openspec/changes/actuals-calendar-checkpoint-instrumentation/design.md",
+        "openspec/changes/actuals-calendar-checkpoint-instrumentation/proposal.md",
+        "openspec/changes/actuals-calendar-checkpoint-instrumentation/specs/actuals-instrumentation/spec.md",
+        "skills/sdd-time-estimation/SKILL.md"
+      ],
+      "identity": "sha256:188cd04c2ac5f2d52ab9155dca9111f1b0e2ae7c372aa7a6c5c3e97139a73a64"
+    },
+    "genesis_paths": [
+      "engine/skills/actuals_instrumentation_contract_test.go",
+      "engine/skills/testdata/corrected-actuals-sync-check-repo-behind-origin.json",
+      "openspec/changes/actuals-calendar-checkpoint-instrumentation/design.md",
+      "openspec/changes/actuals-calendar-checkpoint-instrumentation/proposal.md",
+      "openspec/changes/actuals-calendar-checkpoint-instrumentation/specs/actuals-instrumentation/spec.md",
+      "openspec/changes/actuals-calendar-checkpoint-instrumentation/tasks.md",
+      "skills/_shared/actuals-record.schema.json",
+      "skills/inception-pipeline/SKILL.md",
+      "skills/sdd-time-estimation/SKILL.md"
+    ],
+    "policy_hash": "sha256:34fb63d7f29f8613cd4431382b1057398a4816f8a4c20fc34677fffc80a184f6",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-reliability"
+    ],
+    "original_changed_lines": 558,
+    "correction_budget": 200,
+    "lens_results": [
+      {
+        "lens": "review-reliability",
+        "findings": [
+          {
+            "id": "R3-interruption-contaminates-latency-rate",
+            "lens": "reliability",
+            "location": "skills/sdd-time-estimation/SKILL.md:28",
+            "severity": "CRITICAL",
+            "claim": "The proposed latency calibration cannot reliably implement its own delivery-window formula: its only declared signal, total_wall_clock_hours minus phase hours, explicitly combines round-trip and interruption overhead, then feeds a per-round-trip latency term that is multiplied by checkpoint count while a separate interruption allowance is added. This scales interruption cost with checkpoint count and can count it again, contradicting the fixed non-scaling allowance contract.",
+            "proof_refs": [
+              "skills/sdd-time-estimation/SKILL.md:28 says `total − sum(phase hours)` approximates combined `round-trip/interruption overhead` and feeds the delivery-window latency rate.",
+              "skills/sdd-time-estimation/SKILL.md:68 defines the window as `expected checkpoints × round-trip latency + interruption allowance` and requires the allowance not to scale with checkpoint count.",
+              "engine/skills/testdata/corrected-actuals-sync-check-repo-behind-origin.json:10 states the sole corrected calendar sample includes a provider session-limit interruption, so the candidate's first calibration input concretely contains the contaminating component."
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-proposal-contradicts-final-plan",
+            "lens": "reliability",
+            "location": "openspec/changes/actuals-calendar-checkpoint-instrumentation/proposal.md:22",
+            "severity": "WARNING",
+            "claim": "The committed proposal still requires structured durable/supplemental checkpoint counts and a roadmap-maker modification, while the final spec, design, and tasks forbid new properties and explicitly require no roadmap-maker edit. Keeping contradictory planning authority makes future continuation and verification unreliable.",
+            "proof_refs": [
+              "openspec/changes/actuals-calendar-checkpoint-instrumentation/proposal.md:22 says the durable sub-count is kept and non-durable checkpoints become an explicit supplemental count.",
+              "openspec/changes/actuals-calendar-checkpoint-instrumentation/specs/actuals-instrumentation/spec.md:21 binds the change to zero new schema properties.",
+              "openspec/changes/actuals-calendar-checkpoint-instrumentation/proposal.md:52 marks skills/roadmap-maker/SKILL.md as modified, while openspec/changes/actuals-calendar-checkpoint-instrumentation/design.md:18 and openspec/changes/actuals-calendar-checkpoint-instrumentation/tasks.md:78 explicitly say no edit."
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          }
+        ],
+        "evidence": [
+          "Exact-tree discovery showed nine candidate paths: six additions and three modifications; every ordered manifest path was inspected.",
+          "The candidate's calibration text, output formula, corrected fixture, and mutually contradictory OpenSpec artifacts provide direct line-level evidence for the findings."
+        ],
+        "result_hash": "sha256:cbfd47fef1e4bc985c47188f63686f293245f7c354573d701d75bded3f63f361"
+      }
+    ],
+    "findings": [
+      {
+        "id": "R3-interruption-contaminates-latency-rate",
+        "lens": "reliability",
+        "location": "skills/sdd-time-estimation/SKILL.md:28",
+        "severity": "CRITICAL",
+        "claim": "The proposed latency calibration cannot reliably implement its own delivery-window formula: its only declared signal, total_wall_clock_hours minus phase hours, explicitly combines round-trip and interruption overhead, then feeds a per-round-trip latency term that is multiplied by checkpoint count while a separate interruption allowance is added. This scales interruption cost with checkpoint count and can count it again, contradicting the fixed non-scaling allowance contract.",
+        "proof_refs": [
+          "skills/sdd-time-estimation/SKILL.md:28 says `total − sum(phase hours)` approximates combined `round-trip/interruption overhead` and feeds the delivery-window latency rate.",
+          "skills/sdd-time-estimation/SKILL.md:68 defines the window as `expected checkpoints × round-trip latency + interruption allowance` and requires the allowance not to scale with checkpoint count.",
+          "engine/skills/testdata/corrected-actuals-sync-check-repo-behind-origin.json:10 states the sole corrected calendar sample includes a provider session-limit interruption, so the candidate's first calibration input concretely contains the contaminating component."
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-proposal-contradicts-final-plan",
+        "lens": "reliability",
+        "location": "openspec/changes/actuals-calendar-checkpoint-instrumentation/proposal.md:22",
+        "severity": "WARNING",
+        "claim": "The committed proposal still requires structured durable/supplemental checkpoint counts and a roadmap-maker modification, while the final spec, design, and tasks forbid new properties and explicitly require no roadmap-maker edit. Keeping contradictory planning authority makes future continuation and verification unreliable.",
+        "proof_refs": [
+          "openspec/changes/actuals-calendar-checkpoint-instrumentation/proposal.md:22 says the durable sub-count is kept and non-durable checkpoints become an explicit supplemental count.",
+          "openspec/changes/actuals-calendar-checkpoint-instrumentation/specs/actuals-instrumentation/spec.md:21 binds the change to zero new schema properties.",
+          "openspec/changes/actuals-calendar-checkpoint-instrumentation/proposal.md:52 marks skills/roadmap-maker/SKILL.md as modified, while openspec/changes/actuals-calendar-checkpoint-instrumentation/design.md:18 and openspec/changes/actuals-calendar-checkpoint-instrumentation/tasks.md:78 explicitly say no edit."
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      }
+    ],
+    "classifications": {
+      "R3-interruption-contaminates-latency-rate": {
+        "finding_id": "R3-interruption-contaminates-latency-rate",
+        "class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof": "skills/sdd-time-estimation/SKILL.md:28 says `total − sum(phase hours)` approximates combined `round-trip/interruption overhead` and feeds the delivery-window latency rate.; skills/sdd-time-estimation/SKILL.md:68 defines the window as `expected checkpoints × round-trip latency + interruption allowance` and requires the allowance not to scale with checkpoint count.; engine/skills/testdata/corrected-actuals-sync-check-repo-behind-origin.json:10 states the sole corrected calendar sample includes a provider session-limit interruption, so the candidate's first calibration input concretely contains the contaminating component."
+      }
+    },
+    "outcomes": {
+      "R3-interruption-contaminates-latency-rate": "corroborated",
+      "R3-proposal-contradicts-final-plan": "info"
+    },
+    "fix_finding_ids": [
+      "R3-interruption-contaminates-latency-rate"
+    ],
+    "follow_ups": [
+      {
+        "observation": "The completed tasks artifact still preserves obsolete historical instructions for the combined residual proxy and checkpoint_count 11. It is outside the six frozen correction paths and does not alter the corrected implementation or passing runtime contract, but a future explicitly authorized planning-maintenance change should normalize it to the final clean-sample and 12/2/10 contract.",
+        "proof_refs": [
+          "c8cd0814067abc7b7b0b0e045beefd80f2a1fc62:openspec/changes/actuals-calendar-checkpoint-instrumentation/tasks.md:37-40",
+          "c8cd0814067abc7b7b0b0e045beefd80f2a1fc62:openspec/changes/actuals-calendar-checkpoint-instrumentation/tasks.md:46",
+          "c8cd0814067abc7b7b0b0e045beefd80f2a1fc62:openspec/changes/actuals-calendar-checkpoint-instrumentation/tasks.md:56-57"
+        ]
+      }
+    ],
+    "proposed_correction_lines": 80,
+    "actual_correction_lines": 82,
+    "fix_delta_hash": "sha256:4bd660407e388df9f84f3ba8c46068ec06170bdd86920d709d7addba90fcf70d",
+    "original_criteria": {
+      "evidence_hash": "sha256:00725414970719073011e03801fe3f058eb59ce6dc28ee7d40a29ad04f0b1316",
+      "fix_delta_hash": "sha256:4bd660407e388df9f84f3ba8c46068ec06170bdd86920d709d7addba90fcf70d",
+      "passed": true
+    },
+    "correction_regression": {
+      "evidence_hash": "sha256:40dbeabb82233568e066a5e0d1a0b61ed7330a7cdded7493cf797e3fc3056701",
+      "fix_delta_hash": "sha256:4bd660407e388df9f84f3ba8c46068ec06170bdd86920d709d7addba90fcf70d",
+      "passed": true
+    },
+    "evidence_hash": "sha256:c480a0f4278ed8eb7d4b539300a3a13f27f374f9e38538697171c18aa9898c56",
+    "evidence_record_digest": "sha256:7c2295adb2db23c01d5e7824402cc3026596db5b4e4e2d97be1a3e8169e24369",
+    "evidence_outcome": "passed",
+    "evidence_target_identity": "sha256:188cd04c2ac5f2d52ab9155dca9111f1b0e2ae7c372aa7a6c5c3e97139a73a64",
+    "evidence_authority_revision": "sha256:ef152caf698dfd4762b7e45a8801eb84effed258732568dfce5ec0e72ec1b5cd",
+    "correction_attempts": [
+      {
+        "snapshot": {
+          "kind": "fix-diff",
+          "base_tree": "4e2c687149e679225ac5f55bcfdddf03a9da81f7",
+          "candidate_tree": "c8cd0814067abc7b7b0b0e045beefd80f2a1fc62",
+          "paths_digest": "sha256:dd8cdceb63d96f386ab1c1ccde038f4525213dfaedaa0dbd28c27ae72bc39c7a",
+          "intended_untracked": [],
+          "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+          "ledger_ids": [
+            "R3-interruption-contaminates-latency-rate"
+          ],
+          "paths": [
+            "engine/skills/actuals_instrumentation_contract_test.go",
+            "engine/skills/testdata/corrected-actuals-sync-check-repo-behind-origin.json",
+            "openspec/changes/actuals-calendar-checkpoint-instrumentation/design.md",
+            "openspec/changes/actuals-calendar-checkpoint-instrumentation/proposal.md",
+            "openspec/changes/actuals-calendar-checkpoint-instrumentation/specs/actuals-instrumentation/spec.md",
+            "skills/sdd-time-estimation/SKILL.md"
+          ],
+          "identity": "sha256:188cd04c2ac5f2d52ab9155dca9111f1b0e2ae7c372aa7a6c5c3e97139a73a64"
+        },
+        "proposed_lines": 80,
+        "actual_lines": 82,
+        "fix_delta_hash": "sha256:4bd660407e388df9f84f3ba8c46068ec06170bdd86920d709d7addba90fcf70d",
+        "original_criteria": {
+          "evidence_hash": "sha256:00725414970719073011e03801fe3f058eb59ce6dc28ee7d40a29ad04f0b1316",
+          "fix_delta_hash": "sha256:4bd660407e388df9f84f3ba8c46068ec06170bdd86920d709d7addba90fcf70d",
+          "passed": true
+        },
+        "correction_regression": {
+          "evidence_hash": "sha256:40dbeabb82233568e066a5e0d1a0b61ed7330a7cdded7493cf797e3fc3056701",
+          "fix_delta_hash": "sha256:4bd660407e388df9f84f3ba8c46068ec06170bdd86920d709d7addba90fcf70d",
+          "passed": true
+        },
+        "targeted_validation_request_hash": "sha256:577398bd9b7da6193f00b1136eb2ed09782be2c6924a43aa7e536d4d169317fb",
+        "correction_target_identity": "sha256:188cd04c2ac5f2d52ab9155dca9111f1b0e2ae7c372aa7a6c5c3e97139a73a64"
+      }
+    ],
+    "cumulative_correction_lines": 82
+  }
+}

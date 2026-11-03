@@ -1,0 +1,110 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:c0d67dd00cc3ac0c123393faf5e17afc701decdd6cfb6cdfbe423275127d9111",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-ff27c40d4812aefb",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "dd840fab492948b64c1d39797f94ac1a2786ab30",
+      "candidate_tree": "c8057cca609a032f154abb683c1330f8004ad357",
+      "paths_digest": "sha256:eac2707d8eada5b45df63a0bd1e915ebb3206929c849009c842aa517366a54fa",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "openspec/changes/archive/2026-08-05-deterministic-verification-evidence/archive-report.md",
+        "openspec/changes/archive/2026-08-05-deterministic-verification-evidence/design.md",
+        "openspec/changes/archive/2026-08-05-deterministic-verification-evidence/proposal.md",
+        "openspec/changes/archive/2026-08-05-deterministic-verification-evidence/specs/deterministic-check-runner/spec.md",
+        "openspec/changes/archive/2026-08-05-deterministic-verification-evidence/specs/deterministic-verification-policy/spec.md",
+        "openspec/changes/archive/2026-08-05-deterministic-verification-evidence/specs/verification-evidence-capture/spec.md",
+        "openspec/changes/archive/2026-08-05-deterministic-verification-evidence/tasks.md",
+        "openspec/changes/deterministic-verification-evidence/design.md",
+        "openspec/changes/deterministic-verification-evidence/proposal.md",
+        "openspec/changes/deterministic-verification-evidence/specs/deterministic-check-runner/spec.md",
+        "openspec/changes/deterministic-verification-evidence/specs/deterministic-verification-policy/spec.md",
+        "openspec/changes/deterministic-verification-evidence/specs/verification-evidence-capture/spec.md",
+        "openspec/changes/deterministic-verification-evidence/tasks.md",
+        "openspec/specs/deterministic-check-runner/spec.md",
+        "openspec/specs/deterministic-verification-policy/spec.md",
+        "openspec/specs/verification-evidence-capture/spec.md"
+      ],
+      "identity": "sha256:ff27c40d4812aefb74546487ce12ab37df73475f02c70b5f4168f192af114fdf"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "dd840fab492948b64c1d39797f94ac1a2786ab30",
+      "candidate_tree": "c8057cca609a032f154abb683c1330f8004ad357",
+      "paths_digest": "sha256:eac2707d8eada5b45df63a0bd1e915ebb3206929c849009c842aa517366a54fa",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "openspec/changes/archive/2026-08-05-deterministic-verification-evidence/archive-report.md",
+        "openspec/changes/archive/2026-08-05-deterministic-verification-evidence/design.md",
+        "openspec/changes/archive/2026-08-05-deterministic-verification-evidence/proposal.md",
+        "openspec/changes/archive/2026-08-05-deterministic-verification-evidence/specs/deterministic-check-runner/spec.md",
+        "openspec/changes/archive/2026-08-05-deterministic-verification-evidence/specs/deterministic-verification-policy/spec.md",
+        "openspec/changes/archive/2026-08-05-deterministic-verification-evidence/specs/verification-evidence-capture/spec.md",
+        "openspec/changes/archive/2026-08-05-deterministic-verification-evidence/tasks.md",
+        "openspec/changes/deterministic-verification-evidence/design.md",
+        "openspec/changes/deterministic-verification-evidence/proposal.md",
+        "openspec/changes/deterministic-verification-evidence/specs/deterministic-check-runner/spec.md",
+        "openspec/changes/deterministic-verification-evidence/specs/deterministic-verification-policy/spec.md",
+        "openspec/changes/deterministic-verification-evidence/specs/verification-evidence-capture/spec.md",
+        "openspec/changes/deterministic-verification-evidence/tasks.md",
+        "openspec/specs/deterministic-check-runner/spec.md",
+        "openspec/specs/deterministic-verification-policy/spec.md",
+        "openspec/specs/verification-evidence-capture/spec.md"
+      ],
+      "identity": "sha256:ff27c40d4812aefb74546487ce12ab37df73475f02c70b5f4168f192af114fdf"
+    },
+    "genesis_paths": [
+      "openspec/changes/archive/2026-08-05-deterministic-verification-evidence/archive-report.md",
+      "openspec/changes/archive/2026-08-05-deterministic-verification-evidence/design.md",
+      "openspec/changes/archive/2026-08-05-deterministic-verification-evidence/proposal.md",
+      "openspec/changes/archive/2026-08-05-deterministic-verification-evidence/specs/deterministic-check-runner/spec.md",
+      "openspec/changes/archive/2026-08-05-deterministic-verification-evidence/specs/deterministic-verification-policy/spec.md",
+      "openspec/changes/archive/2026-08-05-deterministic-verification-evidence/specs/verification-evidence-capture/spec.md",
+      "openspec/changes/archive/2026-08-05-deterministic-verification-evidence/tasks.md",
+      "openspec/changes/deterministic-verification-evidence/design.md",
+      "openspec/changes/deterministic-verification-evidence/proposal.md",
+      "openspec/changes/deterministic-verification-evidence/specs/deterministic-check-runner/spec.md",
+      "openspec/changes/deterministic-verification-evidence/specs/deterministic-verification-policy/spec.md",
+      "openspec/changes/deterministic-verification-evidence/specs/verification-evidence-capture/spec.md",
+      "openspec/changes/deterministic-verification-evidence/tasks.md",
+      "openspec/specs/deterministic-check-runner/spec.md",
+      "openspec/specs/deterministic-verification-policy/spec.md",
+      "openspec/specs/verification-evidence-capture/spec.md"
+    ],
+    "policy_hash": "sha256:34fb63d7f29f8613cd4431382b1057398a4816f8a4c20fc34677fffc80a184f6",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-reliability"
+    ],
+    "original_changed_lines": 2129,
+    "correction_budget": 200,
+    "lens_results": [
+      {
+        "lens": "review-reliability",
+        "findings": [],
+        "evidence": [
+          "All six moved files are exact git-object matches, not merely equal content: `cat-file -p base_tree:openspec/changes/deterministic-verification-evidence` lists design.md as blob fc4a353d, proposal.md as blob 7a00f47e, specs/ as tree 3c698e18, tasks.md as blob efae9589; `cat-file -p candidate_tree:openspec/changes/archive/2026-08-05-deterministic-verification-evidence` lists the identical four object hashes plus one new blob (archive-report.md, 495539da) — proving a true move with zero re-serialization risk. `cat-file -p candidate_tree:openspec/changes/deterministic-verification-evidence` returns 'fatal: path ... does not exist', confirming the source directory was fully and cleanly removed with no orphaned files. sha256/cmp on extracted blobs confirm byte counts base==archived: design.md 8916B, proposal.md 4453B, tasks.md 41800B (not the previously-seen 519B truncation), deterministic-check-runner/spec.md 3964B, deterministic-verification-policy/spec.md 4159B, verification-evidence-capture/spec.md 7623B — matching the archive report's byte table exactly. Each of the three openspec/specs/\u003ccapability\u003e/spec.md promoted files is byte-for-byte identical (cmp, sha256) to its corresponding delta spec, and `cat-file -p base_tree:openspec/specs/\u003ccapability\u003e/spec.md` errors 'exists on disk, but not in \u003cbase_tree\u003e' for all three, confirming no pre-existing canonical spec was silently overwritten (consistent with their A, not M, status in the manifest). `### Requirement:` heading counts in the promoted specs are 6, 6, 7 = 19, matching the archive report's claimed total exactly. tasks.md contains exactly 82 '- [x]' lines and zero '- [ ]' lines, confirming the claimed 82/82 completion. The manifest's 16 entries reconcile with no orphans: 6 deletions pair 1:1 with 6 archived files, the 7th archive-folder addition (archive-report.md) is legitimately new, and the 3 openspec/specs/ additions are the promotions. Claims outside the frozen trees — PR numbers #121-129, the tracker-branch merge commit be2c3ca, Engram observation IDs, the actuals-gap-ledger, and receipt/review-lineage attribution — cannot be verified from base_tree/candidate_tree and are not assessed here; none of them are contradicted by anything the trees show."
+        ],
+        "result_hash": "sha256:a3778ec57053536a51531c44598dc4e59ac20f2fe3f2bf8a0d15698369c6a79f"
+      }
+    ],
+    "findings": [],
+    "classifications": {},
+    "outcomes": {},
+    "fix_finding_ids": [],
+    "follow_ups": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:64f720a644f2931924bb028382eef7a4367d43e1b8b09d1789963a0e9a48429c",
+    "evidence_record_digest": "sha256:a3ba361d3087d5510c8e3d94aa7bcf94e1ac236b59f2ea316659332418b01529",
+    "evidence_outcome": "passed",
+    "evidence_target_identity": "sha256:ff27c40d4812aefb74546487ce12ab37df73475f02c70b5f4168f192af114fdf",
+    "evidence_authority_revision": "sha256:b16da2d75ce1469c6518ef5a5f2ac47de18f1c3c7d90ebe16e4aacbfbd820dd9"
+  }
+}

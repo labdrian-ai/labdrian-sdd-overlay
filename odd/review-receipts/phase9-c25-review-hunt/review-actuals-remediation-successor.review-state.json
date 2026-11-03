@@ -1,0 +1,257 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:dd3ff6a8d91606eff7b28b279ddc7b1b9ef66fb4fc9647ba30216d752f8f4223",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-actuals-remediation-successor",
+    "generation": 2,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "897ed71a5d8fe26abc953df7c3fbbfa6d0692be6",
+      "candidate_tree": "83db62ff2b21f202c76986b85f967cbd54e9876e",
+      "paths_digest": "sha256:62a28375e162d344d7dee987d0ecc4f0078202a31637ab2eff751ad6f40def42",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/skills/actuals_instrumentation_contract_test.go",
+        "engine/skills/testdata/corrected-actuals-sync-check-repo-behind-origin.json",
+        "openspec/changes/actuals-calendar-checkpoint-instrumentation/design.md",
+        "openspec/changes/actuals-calendar-checkpoint-instrumentation/proposal.md",
+        "openspec/changes/actuals-calendar-checkpoint-instrumentation/specs/actuals-instrumentation/spec.md",
+        "openspec/changes/actuals-calendar-checkpoint-instrumentation/tasks.md",
+        "openspec/changes/actuals-calendar-checkpoint-instrumentation/verify-report.md",
+        "skills/_shared/actuals-record.schema.json",
+        "skills/inception-pipeline/SKILL.md",
+        "skills/sdd-time-estimation/SKILL.md"
+      ],
+      "identity": "sha256:09680bf50a0c511a86e67e01ab3e11bb5dfea0205214d455e9a98c52a576dab6"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "897ed71a5d8fe26abc953df7c3fbbfa6d0692be6",
+      "candidate_tree": "83db62ff2b21f202c76986b85f967cbd54e9876e",
+      "paths_digest": "sha256:62a28375e162d344d7dee987d0ecc4f0078202a31637ab2eff751ad6f40def42",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/skills/actuals_instrumentation_contract_test.go",
+        "engine/skills/testdata/corrected-actuals-sync-check-repo-behind-origin.json",
+        "openspec/changes/actuals-calendar-checkpoint-instrumentation/design.md",
+        "openspec/changes/actuals-calendar-checkpoint-instrumentation/proposal.md",
+        "openspec/changes/actuals-calendar-checkpoint-instrumentation/specs/actuals-instrumentation/spec.md",
+        "openspec/changes/actuals-calendar-checkpoint-instrumentation/tasks.md",
+        "openspec/changes/actuals-calendar-checkpoint-instrumentation/verify-report.md",
+        "skills/_shared/actuals-record.schema.json",
+        "skills/inception-pipeline/SKILL.md",
+        "skills/sdd-time-estimation/SKILL.md"
+      ],
+      "identity": "sha256:09680bf50a0c511a86e67e01ab3e11bb5dfea0205214d455e9a98c52a576dab6"
+    },
+    "genesis_paths": [
+      "engine/skills/actuals_instrumentation_contract_test.go",
+      "engine/skills/testdata/corrected-actuals-sync-check-repo-behind-origin.json",
+      "openspec/changes/actuals-calendar-checkpoint-instrumentation/design.md",
+      "openspec/changes/actuals-calendar-checkpoint-instrumentation/proposal.md",
+      "openspec/changes/actuals-calendar-checkpoint-instrumentation/specs/actuals-instrumentation/spec.md",
+      "openspec/changes/actuals-calendar-checkpoint-instrumentation/tasks.md",
+      "openspec/changes/actuals-calendar-checkpoint-instrumentation/verify-report.md",
+      "skills/_shared/actuals-record.schema.json",
+      "skills/inception-pipeline/SKILL.md",
+      "skills/sdd-time-estimation/SKILL.md"
+    ],
+    "policy_hash": "sha256:34fb63d7f29f8613cd4431382b1057398a4816f8a4c20fc34677fffc80a184f6",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-reliability"
+    ],
+    "original_changed_lines": 755,
+    "correction_budget": 200,
+    "lens_results": [
+      {
+        "lens": "review-reliability",
+        "findings": [
+          {
+            "id": "R3-schema-closure-invariant-missing-additionalproperties",
+            "lens": "reliability",
+            "location": "engine/skills/actuals_instrumentation_contract_test.go:178",
+            "severity": "WARNING",
+            "claim": "The closed-schema invariant subtest never asserts additionalProperties, so a regression that reopens the actuals schema would pass this invariant even though the requirement scenario demands that flag stay unchanged.",
+            "proof_refs": [
+              "engine/skills/actuals_instrumentation_contract_test.go:178-181 declares an anonymous struct with only Properties and Required fields; no additionalProperties field is declared, and searching that same file for the literal token additionalProperties returns zero matches.",
+              "openspec/changes/actuals-calendar-checkpoint-instrumentation/specs/actuals-instrumentation/spec.md scenario titled No schema shape change anywhere in the record requires that no property is added anywhere in the schema and that the additionalProperties false setting is unchanged; this second half has no covering assertion in the shipped test.",
+              "Failure scenario: flipping the additionalProperties setting in skills/_shared/actuals-record.schema.json from false to true, while leaving the same thirteen property keys and the same required array, would leave the closed-schema invariant subtest green."
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-dead-fixture-skip-branch",
+            "lens": "reliability",
+            "location": "engine/skills/actuals_instrumentation_contract_test.go:196",
+            "severity": "WARNING",
+            "claim": "The closed-schema invariant subtest silently returns instead of failing when the fixture file cannot be read, permanently disabling the fixture-versus-schema half of the invariant now that the fixture is committed to the tree.",
+            "proof_refs": [
+              "engine/skills/actuals_instrumentation_contract_test.go:194-198 reads the fixture and, on any read error, executes a bare return with the comment that the fixture is not created yet and the schema-only invariant above already holds.",
+              "engine/skills/testdata/corrected-actuals-sync-check-repo-behind-origin.json now exists permanently in the tree, so that branch is dead code whose only remaining effect is to silently skip the every-fixture-key-is-in-properties and required-is-a-subset checks rather than failing loudly if the read ever breaks, for example through a future typo in the fixture path constant."
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-position-blind-interruption-pin",
+            "lens": "reliability",
+            "location": "engine/skills/actuals_instrumentation_contract_test.go:30",
+            "severity": "WARNING",
+            "claim": "The schema temporal-boundary and interruption group checks for the word interruption anywhere in the whole schema file rather than scoped to the wall-clock field description, so the pin does not actually verify that the interruption disclosure lives in the field the requirement governs.",
+            "proof_refs": [
+              "engine/skills/actuals_instrumentation_contract_test.go:29-34 reads the whole schema file into one string and calls strings.Contains for the boundary phrase and for the bare word interruption against that entire file content, not against a per-property slice.",
+              "skills/_shared/actuals-record.schema.json:38 carries the wall-clock field description including interruption gaps for provider rate and session limits, and searching that whole file for the word interruption returns exactly one occurrence today, so the pin happens to be accurate right now.",
+              "Failure scenario: reverting the wall-clock field description to drop its interruption-gap disclosure while leaving the word interruption anywhere else in skills/_shared/actuals-record.schema.json, for example appended into an unrelated property description, would leave this subtest green despite the exact regression it exists to catch."
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-tasks-stale-checkpoint-count",
+            "lens": "reliability",
+            "location": "openspec/changes/actuals-calendar-checkpoint-instrumentation/tasks.md:40",
+            "severity": "WARNING",
+            "claim": "Three checked-complete task entries still document a checkpoint count of eleven, a one-durable and ten-reconstructed split, and an abandoned three-sample interruption-allowance gate, all superseded by the shipped fixture and by the estimator skill document, which contains no such gate.",
+            "proof_refs": [
+              "openspec/changes/actuals-calendar-checkpoint-instrumentation/tasks.md:40, a checked task, still instructs asserting a checkpoint count equal to eleven and pinning the string for that total.",
+              "openspec/changes/actuals-calendar-checkpoint-instrumentation/tasks.md:46, a checked task, still specifies a checkpoint count of eleven with an explicit durable-versus-reconstructed split of one durable and ten reconstructed.",
+              "openspec/changes/actuals-calendar-checkpoint-instrumentation/tasks.md:57, a checked task, still specifies a fixed disclosed uncalibrated interruption buffer gated below three samples; searching skills/sdd-time-estimation/SKILL.md for that three-sample gate returns zero matches.",
+              "This contradicts engine/skills/testdata/corrected-actuals-sync-check-repo-behind-origin.json, which stores a checkpoint count of twelve with a durable floor of two of twelve and ten of twelve reconstructed, and contradicts engine/skills/actuals_instrumentation_contract_test.go:104-107, which requires the count to equal twelve."
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-rule4-durable-floor-mismatch",
+            "lens": "reliability",
+            "location": "skills/inception-pipeline/SKILL.md:144",
+            "severity": "WARNING",
+            "claim": "The closure-feedback writer rules restrict the guaranteed durable ambiguity-checkpoint floor to the case where tier-selection rule four fired, while the schema and the spec use the unrestricted if-fired wording and the shipped fixture itself credits a requirements-capture-phase ambiguity as part of that same durable floor.",
+            "proof_refs": [
+              "skills/inception-pipeline/SKILL.md:144 states that the guaranteed durable floor is the tiering go-ahead, always one, plus an ambiguity clarifying question if rule four fired, zero to one, and that this floor is never dropped.",
+              "openspec/changes/actuals-calendar-checkpoint-instrumentation/specs/actuals-instrumentation/spec.md requires the checkpoint count to include every durably observed checkpoint type the pipeline state records, naming the tiering go-ahead and an ambiguity clarifying question if fired, with no rule-four restriction.",
+              "engine/skills/testdata/corrected-actuals-sync-check-repo-behind-origin.json credits its second durable checkpoint as an ambiguity clarifying question that surfaced during requirements capture, before the proposal phase, and states a durable floor of two of twelve for both durably observed checkpoints; that is a requirements-capture ambiguity, not the tier-selection rule-four ambiguity that skills/inception-pipeline/SKILL.md:144 requires.",
+              "Failure scenario: a future closure-feedback run following skills/inception-pipeline/SKILL.md:144 literally would exclude a requirements-capture-phase ambiguity checkpoint from the guaranteed durable floor because tier-selection rule four did not fire, undercounting relative to what this fixture precedent and the schema and spec credit as durable. Causal disposition is unknown because whether this exact phrase predates the candidate edit of the surrounding paragraph cannot be established from the live tree without git history access."
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "unknown"
+          }
+        ],
+        "evidence": [
+          "Read all ten manifest paths in full. The fixture checkpoint itemization (1 tiering go-ahead + 1 AMB-001 + 3 proposal-decision + 4 judgment-day + 1 chained-PR split + 1 merge authorization + 1 ACTION-hint fix scope) sums to 12, and its durable-floor 2 plus reconstructed 10 split also sums to 12, matching the stored checkpoint_count of 12, so the fixture is internally arithmetically consistent.",
+          "Verified the round-trip-latency formula string is byte-identical across all three of its occurrences: the CALIBRATION rule and Output item 6 in skills/sdd-time-estimation/SKILL.md, and the assertion string in engine/skills/actuals_instrumentation_contract_test.go. No unicode or character drift between them.",
+          "Verified the literal token additionalProperties occurs zero times anywhere in engine/skills/actuals_instrumentation_contract_test.go, and the literal token for a three-sample gate occurs zero times anywhere in skills/sdd-time-estimation/SKILL.md, corroborating two of the findings below with deterministic negative-match evidence.",
+          "Read the shared unchanged test helper file in the same Go package as permitted supporting context: its repository-reading helper hard-fails via t.Fatalf on a missing file, and its list-comparison helper performs a real sorted length-plus-element comparison, so the new contract test usage of those helpers is not itself a source of vacuous assertions.",
+          "Confirmed all nine requirement headings in openspec/changes/actuals-calendar-checkpoint-instrumentation/specs/actuals-instrumentation/spec.md cover all fifteen requirement identifiers and all thirteen scenarios are present, matching the Content-Verification Gate table in openspec/changes/actuals-calendar-checkpoint-instrumentation/design.md and the counts claimed in openspec/changes/actuals-calendar-checkpoint-instrumentation/verify-report.md. No discrepancy found between the claimed evidence and the actual candidate content.",
+          "Confirmed both GREEN-by-construction assertion groups carry in-code comments explicitly disclaiming them as RED or TDD coverage, and cross-checked the five forbidden field-name strings against the unchanged roadmap-maker skill document read as permitted context. None appear there, so that invariant is honestly labeled and currently true.",
+          "Cross-read skills/_shared/actuals-record.schema.json, skills/sdd-time-estimation/SKILL.md, skills/inception-pipeline/SKILL.md, openspec/changes/actuals-calendar-checkpoint-instrumentation/specs/actuals-instrumentation/spec.md, openspec/changes/actuals-calendar-checkpoint-instrumentation/design.md and openspec/changes/actuals-calendar-checkpoint-instrumentation/proposal.md for the corrected twelve/two/ten checkpoint math and the approximately thirty-six hour wall-clock correction. The design and proposal are internally consistent with the shipped twelve count, but openspec/changes/actuals-calendar-checkpoint-instrumentation/tasks.md still documents the superseded eleven count arithmetic and an abandoned interruption-allowance gate in three of its checked-complete entries, detailed below."
+        ],
+        "result_hash": "sha256:5e45687d6340e3859c20241ffa5dbfe2ae2f682a97d7231b212b4716f7c21d9e"
+      }
+    ],
+    "findings": [
+      {
+        "id": "R3-schema-closure-invariant-missing-additionalproperties",
+        "lens": "reliability",
+        "location": "engine/skills/actuals_instrumentation_contract_test.go:178",
+        "severity": "WARNING",
+        "claim": "The closed-schema invariant subtest never asserts additionalProperties, so a regression that reopens the actuals schema would pass this invariant even though the requirement scenario demands that flag stay unchanged.",
+        "proof_refs": [
+          "engine/skills/actuals_instrumentation_contract_test.go:178-181 declares an anonymous struct with only Properties and Required fields; no additionalProperties field is declared, and searching that same file for the literal token additionalProperties returns zero matches.",
+          "openspec/changes/actuals-calendar-checkpoint-instrumentation/specs/actuals-instrumentation/spec.md scenario titled No schema shape change anywhere in the record requires that no property is added anywhere in the schema and that the additionalProperties false setting is unchanged; this second half has no covering assertion in the shipped test.",
+          "Failure scenario: flipping the additionalProperties setting in skills/_shared/actuals-record.schema.json from false to true, while leaving the same thirteen property keys and the same required array, would leave the closed-schema invariant subtest green."
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-dead-fixture-skip-branch",
+        "lens": "reliability",
+        "location": "engine/skills/actuals_instrumentation_contract_test.go:196",
+        "severity": "WARNING",
+        "claim": "The closed-schema invariant subtest silently returns instead of failing when the fixture file cannot be read, permanently disabling the fixture-versus-schema half of the invariant now that the fixture is committed to the tree.",
+        "proof_refs": [
+          "engine/skills/actuals_instrumentation_contract_test.go:194-198 reads the fixture and, on any read error, executes a bare return with the comment that the fixture is not created yet and the schema-only invariant above already holds.",
+          "engine/skills/testdata/corrected-actuals-sync-check-repo-behind-origin.json now exists permanently in the tree, so that branch is dead code whose only remaining effect is to silently skip the every-fixture-key-is-in-properties and required-is-a-subset checks rather than failing loudly if the read ever breaks, for example through a future typo in the fixture path constant."
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-position-blind-interruption-pin",
+        "lens": "reliability",
+        "location": "engine/skills/actuals_instrumentation_contract_test.go:30",
+        "severity": "WARNING",
+        "claim": "The schema temporal-boundary and interruption group checks for the word interruption anywhere in the whole schema file rather than scoped to the wall-clock field description, so the pin does not actually verify that the interruption disclosure lives in the field the requirement governs.",
+        "proof_refs": [
+          "engine/skills/actuals_instrumentation_contract_test.go:29-34 reads the whole schema file into one string and calls strings.Contains for the boundary phrase and for the bare word interruption against that entire file content, not against a per-property slice.",
+          "skills/_shared/actuals-record.schema.json:38 carries the wall-clock field description including interruption gaps for provider rate and session limits, and searching that whole file for the word interruption returns exactly one occurrence today, so the pin happens to be accurate right now.",
+          "Failure scenario: reverting the wall-clock field description to drop its interruption-gap disclosure while leaving the word interruption anywhere else in skills/_shared/actuals-record.schema.json, for example appended into an unrelated property description, would leave this subtest green despite the exact regression it exists to catch."
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-tasks-stale-checkpoint-count",
+        "lens": "reliability",
+        "location": "openspec/changes/actuals-calendar-checkpoint-instrumentation/tasks.md:40",
+        "severity": "WARNING",
+        "claim": "Three checked-complete task entries still document a checkpoint count of eleven, a one-durable and ten-reconstructed split, and an abandoned three-sample interruption-allowance gate, all superseded by the shipped fixture and by the estimator skill document, which contains no such gate.",
+        "proof_refs": [
+          "openspec/changes/actuals-calendar-checkpoint-instrumentation/tasks.md:40, a checked task, still instructs asserting a checkpoint count equal to eleven and pinning the string for that total.",
+          "openspec/changes/actuals-calendar-checkpoint-instrumentation/tasks.md:46, a checked task, still specifies a checkpoint count of eleven with an explicit durable-versus-reconstructed split of one durable and ten reconstructed.",
+          "openspec/changes/actuals-calendar-checkpoint-instrumentation/tasks.md:57, a checked task, still specifies a fixed disclosed uncalibrated interruption buffer gated below three samples; searching skills/sdd-time-estimation/SKILL.md for that three-sample gate returns zero matches.",
+          "This contradicts engine/skills/testdata/corrected-actuals-sync-check-repo-behind-origin.json, which stores a checkpoint count of twelve with a durable floor of two of twelve and ten of twelve reconstructed, and contradicts engine/skills/actuals_instrumentation_contract_test.go:104-107, which requires the count to equal twelve."
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-rule4-durable-floor-mismatch",
+        "lens": "reliability",
+        "location": "skills/inception-pipeline/SKILL.md:144",
+        "severity": "WARNING",
+        "claim": "The closure-feedback writer rules restrict the guaranteed durable ambiguity-checkpoint floor to the case where tier-selection rule four fired, while the schema and the spec use the unrestricted if-fired wording and the shipped fixture itself credits a requirements-capture-phase ambiguity as part of that same durable floor.",
+        "proof_refs": [
+          "skills/inception-pipeline/SKILL.md:144 states that the guaranteed durable floor is the tiering go-ahead, always one, plus an ambiguity clarifying question if rule four fired, zero to one, and that this floor is never dropped.",
+          "openspec/changes/actuals-calendar-checkpoint-instrumentation/specs/actuals-instrumentation/spec.md requires the checkpoint count to include every durably observed checkpoint type the pipeline state records, naming the tiering go-ahead and an ambiguity clarifying question if fired, with no rule-four restriction.",
+          "engine/skills/testdata/corrected-actuals-sync-check-repo-behind-origin.json credits its second durable checkpoint as an ambiguity clarifying question that surfaced during requirements capture, before the proposal phase, and states a durable floor of two of twelve for both durably observed checkpoints; that is a requirements-capture ambiguity, not the tier-selection rule-four ambiguity that skills/inception-pipeline/SKILL.md:144 requires.",
+          "Failure scenario: a future closure-feedback run following skills/inception-pipeline/SKILL.md:144 literally would exclude a requirements-capture-phase ambiguity checkpoint from the guaranteed durable floor because tier-selection rule four did not fire, undercounting relative to what this fixture precedent and the schema and spec credit as durable. Causal disposition is unknown because whether this exact phrase predates the candidate edit of the surrounding paragraph cannot be established from the live tree without git history access."
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "unknown"
+      }
+    ],
+    "classifications": {},
+    "outcomes": {
+      "R3-dead-fixture-skip-branch": "info",
+      "R3-position-blind-interruption-pin": "info",
+      "R3-rule4-durable-floor-mismatch": "info",
+      "R3-schema-closure-invariant-missing-additionalproperties": "info",
+      "R3-tasks-stale-checkpoint-count": "info"
+    },
+    "fix_finding_ids": [],
+    "follow_ups": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:fddaa41804252fb32235b87da32c724bde40fde1aaf1bf0db094a1891c516912",
+    "evidence_record_digest": "sha256:cd73b7d1ed106691045411ca92bb808244708487e0fece65644ef586522997d1",
+    "evidence_outcome": "passed",
+    "evidence_target_identity": "sha256:09680bf50a0c511a86e67e01ab3e11bb5dfea0205214d455e9a98c52a576dab6",
+    "evidence_authority_revision": "sha256:72628ecd240bdaf934bab2aa39f770f216dcc837b2f476920e444f323f111984",
+    "recovery": {
+      "predecessor_lineage_id": "review-b5b5e8045f81ac78",
+      "predecessor_revision": "sha256:8b6dd196c7d93ed6e3ef3cf2735bf536c8ec0d6342f4f1c1028406761448eb19",
+      "disposition": "scope_changed",
+      "reason": "self-recovery: approved authority, recover action available",
+      "actor": "labdrian-ai \u003clabradoradrian770@gmail.com\u003e",
+      "recovered_at": "2026-07-30T03:50:42.363705323Z",
+      "maintainer_authorization": "gentle-ai.review-recovery-authorization/v1\npredecessor_lineage=review-b5b5e8045f81ac78\npredecessor_revision=sha256:8b6dd196c7d93ed6e3ef3cf2735bf536c8ec0d6342f4f1c1028406761448eb19\ntarget_identity=sha256:09680bf50a0c511a86e67e01ab3e11bb5dfea0205214d455e9a98c52a576dab6\nactor=labdrian-ai \u003clabradoradrian770@gmail.com\u003e\nreason=self-recovery: approved authority, recover action available"
+    }
+  }
+}

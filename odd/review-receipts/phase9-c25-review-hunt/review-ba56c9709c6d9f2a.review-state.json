@@ -1,0 +1,99 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:42489b6665aa80c4d9bfde32e73ae77aa3afa9cbc65042c785e885404ae1eeeb",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-ba56c9709c6d9f2a",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "current-changes",
+      "base_tree": "b12a481d6478eb33cd153c499cc5fe91b07241ef",
+      "candidate_tree": "a693f097c5586d5d159e10786e0bf87a7e21c85a",
+      "paths_digest": "sha256:93114fcafc4f89beb90b261267a76187d2f903c894e9a5d99656767cc9d92e75",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        ".github/workflows/ci.yml"
+      ],
+      "identity": "sha256:ba56c9709c6d9f2a0fe82603a4e2b9609fa5222cda1449aab53d2018994ca505"
+    },
+    "current_snapshot": {
+      "kind": "current-changes",
+      "base_tree": "b12a481d6478eb33cd153c499cc5fe91b07241ef",
+      "candidate_tree": "a693f097c5586d5d159e10786e0bf87a7e21c85a",
+      "paths_digest": "sha256:93114fcafc4f89beb90b261267a76187d2f903c894e9a5d99656767cc9d92e75",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        ".github/workflows/ci.yml"
+      ],
+      "identity": "sha256:ba56c9709c6d9f2a0fe82603a4e2b9609fa5222cda1449aab53d2018994ca505"
+    },
+    "genesis_paths": [
+      ".github/workflows/ci.yml"
+    ],
+    "policy_hash": "sha256:34fb63d7f29f8613cd4431382b1057398a4816f8a4c20fc34677fffc80a184f6",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-risk",
+      "review-resilience",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 7,
+    "correction_budget": 4,
+    "correction_budget_policy": "floor_two",
+    "lens_results": [
+      {
+        "lens": "review-risk",
+        "findings": [],
+        "evidence": [
+          "Inspected the complete unified diff for .github/workflows/ci.yml (GENTLE_AI_REVIEW_PATCH 0): the only change adds a `with: fetch-depth: 0` block plus five explanatory comment lines under the pre-existing `actions/checkout@v4` step (around line 112-117), switching that step from actions/checkout's default shallow depth-1 clone to a full-history checkout; no secrets, credentials, tokens, permissions blocks, workflow triggers, job matrix, or dependency/action versions are added, removed, or modified in this hunk.",
+          "numstat (7 insertions, 0 deletions) and name-status (M, single path) both match the shown diff content exactly, confirming the patch is the complete and only change for this candidate.",
+          "A full-history checkout could in principle place more git objects in the CI workspace, but this diff introduces no step that exports, uploads, echoes, or otherwise exfiltrates repository history or workspace contents, so there is no concrete, reachable data-exposure path attributable to this change; per review scope this is not reportable without concrete exploit or scanner evidence.",
+          "`actions/checkout@v4` itself (pinned by mutable tag rather than immutable commit SHA) is unchanged context in this diff, i.e. pre-existing/base-only, not introduced or modified by this candidate, so it is not attributable to this change under the candidate-causal admission rule."
+        ],
+        "result_hash": "sha256:3ecf63d46f99a4a6d07aef7336472e0105d682b6cfb3b1d40fd102f820f4da33"
+      },
+      {
+        "lens": "review-resilience",
+        "findings": [],
+        "evidence": [
+          "Inspected the complete diff for .github/workflows/ci.yml (hunk @@ -110,6 +110,13 @@, 7 lines added / 0 removed per numstat, mode unchanged 100644-\u003e100644): the sole change adds a `with: fetch-depth: 0` block to the existing 'Checkout' step, switching from actions/checkout@v4's default shallow depth-1 clone to a full-history clone, with an inline comment justifying it as needed for engine/skills' D2 anchor test to resolve `git log`/`git show` against real repository history. No application/runtime code, error-handling, retry logic, rollback path, or user-facing behavior is touched by this candidate. The only theoretically resilience-adjacent effect (checkout latency/network load per CI run) is a well-established, industry-standard trade-off for tests needing git history, has no measured before/after timing or repository-size evidence available in this candidate to establish a concrete production failure mode or material impact, and does not meet the bar for a reportable finding under this lens's evidentiary requirements."
+        ],
+        "result_hash": "sha256:87ff7e0e2e595e0a51b363720c5bc47a743a42224dd1d3a629983e41267c2a31"
+      },
+      {
+        "lens": "review-readability",
+        "findings": [],
+        "evidence": [
+          "Inspected the complete frozen diff for .github/workflows/ci.yml, the sole path in changed_path_manifest (index 0): a 7-line insertion (matches numstat '7 0'), adding `with: fetch-depth: 0` under the existing `actions/checkout@v4` step in the Checkout step of the job starting at hunk @@ -110,6 +110,13 @@, preceded by a 6-line comment explaining the rationale (engine/skills' D2 anchor test resolves inputs via `git log ... main` and `git show -s \u003csha\u003e` against real repository history, which the action's default shallow depth-1 clone would make unreachable). No misleading names, dead or duplicated logic, unexplained business constants, or unsafe complexity were introduced by this change; the added configuration is self-documenting and supplies its own change context, so no R2 readability/maintainability defect was found in this candidate."
+        ],
+        "result_hash": "sha256:a4b55e9a8aced1dd72c7395c7219fca9a14e1953675cca3f46ef7431d9af5977"
+      },
+      {
+        "lens": "review-reliability",
+        "findings": [],
+        "evidence": [
+          "Verified GENTLE_AI_REVIEW_BINDING.subject_hash equals artifact_subject.subject_hash and that the single changed_path_manifest entry '.github/workflows/ci.yml' is covered by exactly one GENTLE_AI_REVIEW_PATCH block at matching index 0, in order.",
+          "Inspected the sole unified diff hunk (@@ -110,6 +110,13 @@) which inserts a 'with: fetch-depth: 0' block under the existing 'actions/checkout@v4' step; confirmed valid YAML nesting (with: aligned with sibling uses: at 8 spaces, fetch-depth: 0 indented as its child at 10 spaces) and that no other steps, jobs, triggers, or lines in the visible hunk were altered, added, or removed.",
+          "The change is a CI-only configuration edit (shallow depth-1 clone to full-history fetch-depth 0) with an inline comment stating the rationale (making git log/git show-resolved history reachable for the referenced D2 anchor test); found no evidence within the provided patch of broken YAML, removed functionality, or destabilized steps."
+        ],
+        "result_hash": "sha256:26580ff63927ad546c9e89a063319f301d6e30b21304c8ac4e176ec1abc54d2e"
+      }
+    ],
+    "findings": [],
+    "classifications": {},
+    "outcomes": {},
+    "fix_finding_ids": [],
+    "follow_ups": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:c337e66528026a7e191cf6ba354871bb60498b684b562facd529fdb2510b7f52",
+    "evidence_record_digest": "sha256:cd2f9b4a379597ff9cf91cc54cda5900e724b9f89a7814cf3276203658655f62",
+    "evidence_outcome": "passed",
+    "evidence_target_identity": "sha256:ba56c9709c6d9f2a0fe82603a4e2b9609fa5222cda1449aab53d2018994ca505",
+    "evidence_authority_revision": "sha256:a81348787000bf548e4e00267199b6c1991c44de617ff8e689fb68d865656e33",
+    "reviewer_context_level": "provider_command"
+  }
+}
