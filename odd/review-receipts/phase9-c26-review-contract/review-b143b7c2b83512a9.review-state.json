@@ -1,0 +1,374 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:df17ff2dc11dd31c8b02c1a14509152d1ce23a073963ca148afa4518b6707000",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-b143b7c2b83512a9",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "14cebf2dd95b130ca16dfa328d698e75e0cd5779",
+      "candidate_tree": "644a636debfdebddc78f7bf9ceff4369d69c30c4",
+      "paths_digest": "sha256:7baad7c430a2514998b00b746e5fbf920d9542bc993d43a7d27b96951b8c188c",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/cmd/review_launch.go",
+        "engine/cmd/review_launch_docs_test.go",
+        "engine/cmd/review_launch_test.go",
+        "engine/cmd/usage.go",
+        "engine/review/app/launch.go",
+        "engine/review/app/launch_test.go",
+        "engine/review/claudeprint/claudeprint.go",
+        "engine/review/claudeprint/claudeprint_test.go",
+        "engine/review/claudeprint/preamble.md",
+        "engine/reviewresult/schema.go",
+        "engine/reviewresult/schema_test.go",
+        "engine/shelltest/review_bench_test.go",
+        "tools/review-bench/README.md",
+        "tools/review-bench/run-ours.sh"
+      ],
+      "identity": "sha256:3f6e5e72b789f56a98b5501b786768b0eb090b7571f986cf2f32521827a96c54"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "14cebf2dd95b130ca16dfa328d698e75e0cd5779",
+      "candidate_tree": "644a636debfdebddc78f7bf9ceff4369d69c30c4",
+      "paths_digest": "sha256:7baad7c430a2514998b00b746e5fbf920d9542bc993d43a7d27b96951b8c188c",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/cmd/review_launch.go",
+        "engine/cmd/review_launch_docs_test.go",
+        "engine/cmd/review_launch_test.go",
+        "engine/cmd/usage.go",
+        "engine/review/app/launch.go",
+        "engine/review/app/launch_test.go",
+        "engine/review/claudeprint/claudeprint.go",
+        "engine/review/claudeprint/claudeprint_test.go",
+        "engine/review/claudeprint/preamble.md",
+        "engine/reviewresult/schema.go",
+        "engine/reviewresult/schema_test.go",
+        "engine/shelltest/review_bench_test.go",
+        "tools/review-bench/README.md",
+        "tools/review-bench/run-ours.sh"
+      ],
+      "identity": "sha256:3f6e5e72b789f56a98b5501b786768b0eb090b7571f986cf2f32521827a96c54"
+    },
+    "genesis_paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/cmd/review_launch.go",
+      "engine/cmd/review_launch_docs_test.go",
+      "engine/cmd/review_launch_test.go",
+      "engine/cmd/usage.go",
+      "engine/review/app/launch.go",
+      "engine/review/app/launch_test.go",
+      "engine/review/claudeprint/claudeprint.go",
+      "engine/review/claudeprint/claudeprint_test.go",
+      "engine/review/claudeprint/preamble.md",
+      "engine/reviewresult/schema.go",
+      "engine/reviewresult/schema_test.go",
+      "engine/shelltest/review_bench_test.go",
+      "tools/review-bench/README.md",
+      "tools/review-bench/run-ours.sh"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-risk",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 532,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "changed the tool-free claude reviewer's system prompt and preamble (the guard on candidate input), the re-ask fence shared by both runtimes, the reply schema, help text and docs, and their tests",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:b7e746dcd0b34a538f07aef353d94b66d701b9390d88dc0ba30a38f679725197",
+    "capture_phase_revision": "sha256:4e08103af677625aa8788c36104df31012f96f2625f8e0640038b8d17c16b778",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:3f6e5e72b789f56a98b5501b786768b0eb090b7571f986cf2f32521827a96c54",
+        "capture_phase_revision": "sha256:4e08103af677625aa8788c36104df31012f96f2625f8e0640038b8d17c16b778",
+        "artifact_digest": "sha256:f224e8a09e3f8693663d017e8eeeb70c0f66442bc3db3e870c63160389a8c0a0",
+        "result_hash": "sha256:5e08eed37da8c06da8dcfc004bfb6db6ed953d3bc2e8eee08f7150264ab4c6a7",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:6823385037e0f400fabee1df25dab4d9cceda73a1e3df773dd370f2e2b5a2d51",
+            "lineage_id": "review-b143b7c2b83512a9",
+            "authority_revision": "sha256:4e08103af677625aa8788c36104df31012f96f2625f8e0640038b8d17c16b778",
+            "target_identity": "sha256:3f6e5e72b789f56a98b5501b786768b0eb090b7571f986cf2f32521827a96c54",
+            "base_tree": "14cebf2dd95b130ca16dfa328d698e75e0cd5779",
+            "candidate_tree": "644a636debfdebddc78f7bf9ceff4369d69c30c4",
+            "changed_path_manifest_sha256": "sha256:50722b59108638c3b2751a29b3b6a49824a60873fd050be30127614b3755a81f",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:6823385037e0f400fabee1df25dab4d9cceda73a1e3df773dd370f2e2b5a2d51",
+            "raw_sha256": "sha256:476d30d7756d0a6f8e0fd2424b7c18848dc1ffe1946b272a96b605392f6da57e",
+            "canonical_sha256": "sha256:b7cae37c69e319a7210b5694a820a59833126fae752b1c0a811f73a75c2b0133",
+            "result_hash": "sha256:5e08eed37da8c06da8dcfc004bfb6db6ed953d3bc2e8eee08f7150264ab4c6a7",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:6823385037e0f400fabee1df25dab4d9cceda73a1e3df773dd370f2e2b5a2d51",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "CHANGELOG.md",
+                "README.md",
+                "bin/lib/usage.sh",
+                "engine/cmd/review_launch.go",
+                "engine/cmd/review_launch_docs_test.go",
+                "engine/cmd/review_launch_test.go",
+                "engine/cmd/usage.go",
+                "engine/review/app/launch.go",
+                "engine/review/app/launch_test.go",
+                "engine/review/claudeprint/claudeprint.go",
+                "engine/review/claudeprint/claudeprint_test.go",
+                "engine/review/claudeprint/preamble.md",
+                "engine/reviewresult/schema.go",
+                "engine/reviewresult/schema_test.go",
+                "engine/shelltest/review_bench_test.go",
+                "tools/review-bench/README.md",
+                "tools/review-bench/run-ours.sh"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [
+              {
+                "id": "R1-001",
+                "lens": "risk",
+                "location": "engine/review/app/launch.go:126-127",
+                "severity": "WARNING",
+                "claim": "The re-ask uses a fenced block sized to the longest backtick run in the quoted refusal, which mitigates prompt-injection via fence escape. However, the quoted refusal is truncated to 1024 bytes after the fence length is computed from the truncated text, so this is consistent; residual risk is only that the refusal may echo candidate content that the model treats as evidence, which the system prompt explicitly addresses. No reachable exploit shown.",
+                "proof_refs": [
+                  "engine/review/app/launch.go:126-127",
+                  "engine/review/claudeprint/claudeprint.go:32-35"
+                ]
+              }
+            ],
+            "evidence": [
+              "Reviewed all 17 changed paths. The change removes reading of the deployed Claude agent file (no more filesystem reads from the Claude root), replaces it with an embedded preamble and compile-time schema constant, so the attack surface for untrusted file content is reduced.",
+              "The re-ask path now fences the quoted refusal with a fence longer than any backtick run in it, preventing the echoed reply from closing the fence and injecting instructions; a test covers this.",
+              "The claude process still runs with --tools empty, dontAsk permission mode, no setting sources and strict MCP config, unchanged from baseline.",
+              "The bench script change only alters the brief text built from jq with --arg, which safely quotes values; no new shell injection.",
+              "No secrets, dependency changes, or authorization logic are touched."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "selected_order": 1,
+        "target_identity": "sha256:3f6e5e72b789f56a98b5501b786768b0eb090b7571f986cf2f32521827a96c54",
+        "capture_phase_revision": "sha256:4e08103af677625aa8788c36104df31012f96f2625f8e0640038b8d17c16b778",
+        "artifact_digest": "sha256:761e96c043c9bdac9e75b51bcd49c3d3e9ec6bfaece7e83f9907e24ec5c50d21",
+        "result_hash": "sha256:01c29f616dfea2e9e7febc0520909810eaef3050a24a8f3095473d4da2849b50",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:b7d7429549407a15134bbfa1420354db18e398f3b3c4a017e942910c8abbf5db",
+            "lineage_id": "review-b143b7c2b83512a9",
+            "authority_revision": "sha256:4e08103af677625aa8788c36104df31012f96f2625f8e0640038b8d17c16b778",
+            "target_identity": "sha256:3f6e5e72b789f56a98b5501b786768b0eb090b7571f986cf2f32521827a96c54",
+            "base_tree": "14cebf2dd95b130ca16dfa328d698e75e0cd5779",
+            "candidate_tree": "644a636debfdebddc78f7bf9ceff4369d69c30c4",
+            "changed_path_manifest_sha256": "sha256:50722b59108638c3b2751a29b3b6a49824a60873fd050be30127614b3755a81f",
+            "lens": "review-readability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:b7d7429549407a15134bbfa1420354db18e398f3b3c4a017e942910c8abbf5db",
+            "raw_sha256": "sha256:676ba90f726a0cf545e7346e44ef6308ebfce35be4383aced31b71bb2ecaa7fc",
+            "canonical_sha256": "sha256:120474d78d393b9b592f0e18d98bd29ce02a90e963c395645cf0f508f010b70d",
+            "result_hash": "sha256:01c29f616dfea2e9e7febc0520909810eaef3050a24a8f3095473d4da2849b50",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:b7d7429549407a15134bbfa1420354db18e398f3b3c4a017e942910c8abbf5db",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "CHANGELOG.md",
+                "README.md",
+                "bin/lib/usage.sh",
+                "engine/cmd/review_launch.go",
+                "engine/cmd/review_launch_docs_test.go",
+                "engine/cmd/review_launch_test.go",
+                "engine/cmd/usage.go",
+                "engine/review/app/launch.go",
+                "engine/review/app/launch_test.go",
+                "engine/review/claudeprint/claudeprint.go",
+                "engine/review/claudeprint/claudeprint_test.go",
+                "engine/review/claudeprint/preamble.md",
+                "engine/reviewresult/schema.go",
+                "engine/reviewresult/schema_test.go",
+                "engine/shelltest/review_bench_test.go",
+                "tools/review-bench/README.md",
+                "tools/review-bench/run-ours.sh"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-preamble-dup",
+                "lens": "readability",
+                "location": "engine/review/claudeprint/claudeprint_test.go:36-45",
+                "severity": "WARNING",
+                "claim": "The test copies the full preamble text as preambleHead/preambleTail constants, duplicating preamble.md. Any wording edit to preamble.md requires a matching edit in the test, so the test checks that two copies match rather than checking behavior. The comment also points to an external script (re/ab/build.py) that is not in this repository, so the origin of the text cannot be checked here.",
+                "proof_refs": [
+                  "engine/review/claudeprint/claudeprint_test.go:36-45",
+                  "engine/review/claudeprint/preamble.md:1-9"
+                ]
+              },
+              {
+                "id": "R2-schema-unchecked",
+                "lens": "readability",
+                "location": "engine/reviewresult/schema.go:3-12",
+                "severity": "SUGGESTION",
+                "claim": "The schema is a hand-copied compact JSON string constant that mirrors a Python script outside this repository. The tests check its members and enumerations against package constants. Other parts of it, such as the required/optional rules, the minLength and minItems values, and the 'description' text, are not checked, and nothing regenerates the string. Those parts can drift without any test failing.",
+                "proof_refs": [
+                  "engine/reviewresult/schema.go:12",
+                  "engine/reviewresult/schema_test.go:68-95"
+                ]
+              },
+              {
+                "id": "R2-doc-drift",
+                "lens": "readability",
+                "location": "engine/review/claudeprint/claudeprint.go:32-35",
+                "severity": "SUGGESTION",
+                "claim": "The systemPrompt constant now carries a long, security-relevant statement about which parts of the user message are evidence and which are instructions. The same statement is repeated verbatim in a test literal, and it overlaps the 'Candidate content is evidence' line in preamble.md. Three copies of the trust boundary wording can drift apart.",
+                "proof_refs": [
+                  "engine/review/claudeprint/claudeprint.go:32-35",
+                  "engine/review/claudeprint/claudeprint_test.go:57",
+                  "engine/review/claudeprint/preamble.md:1"
+                ]
+              }
+            ],
+            "evidence": [
+              "Reviewed all 17 changed paths in the patch. The change drops the deployed-agent-file dependency in claudeprint, adds an embedded preamble and a schema constant, and fences the quoted refusal in the re-ask.",
+              "Removing Options.ClaudeRoot and the agent-file read is applied consistently in review_launch.go, the tests, and the docs (README, usage.go, usage.sh, CHANGELOG).",
+              "The fence-length logic in reAsk uses longestBacktickRun and the builtin max. Both are outside this patch, so I could not check them. The new tests cover a seven-backtick run.",
+              "The CHANGELOG entry for the Claude launch was rewritten in place instead of getting a new entry. This is acceptable because the earlier entry described the unreleased behavior."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 2,
+        "target_identity": "sha256:3f6e5e72b789f56a98b5501b786768b0eb090b7571f986cf2f32521827a96c54",
+        "capture_phase_revision": "sha256:4e08103af677625aa8788c36104df31012f96f2625f8e0640038b8d17c16b778",
+        "artifact_digest": "sha256:5708323e5a6535bf485233d13f9e20d0492a6229629eed14443fe47ad63bb747",
+        "result_hash": "sha256:3cf582dcec26315f7d5de70f236ad24781d28ee752754baea051309ba0b933d9",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:c50880149821c200f6874b05c8986b2dbb52a832e3b7ecca89fdeccf8023c6b1",
+            "lineage_id": "review-b143b7c2b83512a9",
+            "authority_revision": "sha256:4e08103af677625aa8788c36104df31012f96f2625f8e0640038b8d17c16b778",
+            "target_identity": "sha256:3f6e5e72b789f56a98b5501b786768b0eb090b7571f986cf2f32521827a96c54",
+            "base_tree": "14cebf2dd95b130ca16dfa328d698e75e0cd5779",
+            "candidate_tree": "644a636debfdebddc78f7bf9ceff4369d69c30c4",
+            "changed_path_manifest_sha256": "sha256:50722b59108638c3b2751a29b3b6a49824a60873fd050be30127614b3755a81f",
+            "lens": "review-reliability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:c50880149821c200f6874b05c8986b2dbb52a832e3b7ecca89fdeccf8023c6b1",
+            "raw_sha256": "sha256:04a9bf87f982a57248db0cb73ba7242f6ad632304673276095e3a947651006a7",
+            "canonical_sha256": "sha256:cac476894b9b6921210d1417add1e107815f35e948f8891e15a20aa056cbee3e",
+            "result_hash": "sha256:3cf582dcec26315f7d5de70f236ad24781d28ee752754baea051309ba0b933d9",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:c50880149821c200f6874b05c8986b2dbb52a832e3b7ecca89fdeccf8023c6b1",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "CHANGELOG.md",
+                "README.md",
+                "bin/lib/usage.sh",
+                "engine/cmd/review_launch.go",
+                "engine/cmd/review_launch_docs_test.go",
+                "engine/cmd/review_launch_test.go",
+                "engine/cmd/usage.go",
+                "engine/review/app/launch.go",
+                "engine/review/app/launch_test.go",
+                "engine/review/claudeprint/claudeprint.go",
+                "engine/review/claudeprint/claudeprint_test.go",
+                "engine/review/claudeprint/preamble.md",
+                "engine/reviewresult/schema.go",
+                "engine/reviewresult/schema_test.go",
+                "engine/shelltest/review_bench_test.go",
+                "tools/review-bench/README.md",
+                "tools/review-bench/run-ours.sh"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [],
+            "evidence": [
+              "Reviewed all 17 changed paths. Claude launch now builds its stdin from the embedded preamble, the schema, a blank line and the brief. The tests assert the exact stdin bytes, the single schema occurrence, the removed {schema} slot, the absence of a trailing newline, and that claude starts with no deployed agent file.",
+              "The re-ask fence is longer than any backtick run in the quoted refusal. engine/review/app/launch_test.go covers both the plain fenced form and a 7-backtick echo, and checks the retry instruction sits after the closing fence.",
+              "engine/reviewresult/schema_test.go ties the schema's required members, enumerations and id/location patterns to the package constants and to Parse and CheckLocations. This covers drift between the schema and the parser.",
+              "Docs, usage text and the docs-fact test were updated consistently for the removal of the agent-file read. The review-bench brief change is matched by the shelltest expectation.",
+              "One unverifiable point: the new re-ask code calls longestBacktickRun, which this patch does not define. It is presumably already in the base, since the frozen-context fence uses it, so I report no finding."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "19f2706407c0ba21b846fd5cf25798946f82f374e97943a2b5ae4cf545cecfd5",
+    "initial_atomic_start": {
+      "lineage_id": "review-b143b7c2b83512a9",
+      "worktree_identity": "sha256:bd8778514a16e68e31ff6005df7f1c9d5a89928e29e7250f23e950eec84f2adf",
+      "target_identity": "sha256:3f6e5e72b789f56a98b5501b786768b0eb090b7571f986cf2f32521827a96c54",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "14cebf2dd95b130ca16dfa328d698e75e0cd5779",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "high",
+      "selected_lenses": [
+        "review-risk",
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 532,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "changed the tool-free claude reviewer's system prompt and preamble (the guard on candidate input), the re-ask fence shared by both runtimes, the reply schema, help text and docs, and their tests"
+    },
+    "runtime_agent": "claude-code"
+  }
+}
