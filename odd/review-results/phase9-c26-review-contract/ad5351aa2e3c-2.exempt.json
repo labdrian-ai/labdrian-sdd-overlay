@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "0737dae427e15f70064b0bcffe87ae8fb1c5f111",
+    "head": "ad5351aa2e3c0ad044f4918b5a59b090963c1efa",
+    "diff_sha256": "3b5934826edffcf797ef8eaa5c6dac02ef15ebc45672273e3547ce06798000df",
+    "paths": [
+      "odd/review-results/phase9-c26-review-contract/0737dae427e1-1.sweep.json",
+      "odd/review-results/phase9-c26-review-contract/0737dae427e1-2.exempt.json",
+      "odd/tasks/phase9-c26-review-contract.md",
+      "tools/review-bench/scores/ours-c26.json"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git diff --name-only 0737dae4 ad5351aa | rg -v '^(tools/review-bench/scores/ours-c26\\.json|odd/tasks/phase9-c26-review-contract\\.md|odd/review-results/phase9-c26-review-contract/)'",
+        "result": "pass",
+        "output": "Printed nothing; rg exit 1 (pass)."
+      },
+      {
+        "command": "jq '[.[] | select(.id | ltrimstr(\"R\") | tonumber >= 24) | .score] | add' ours-c26.json and gentle.json; jq -c '[.[].id]' ours-c26.json",
+        "result": "pass",
+        "output": "ours-c26.json: 1; gentle.json: 2; ids in ours-c26.json: [\"R24\",\"R25\",\"R26\",\"R27\",\"R28\",\"R29\",\"R30\",\"R31\",\"R32\",\"R33\"]"
+      },
+      {
+        "command": "jq -s '[.[] | .runs[]?.in | tonumber] | add' ~/labdrian-sdd-overlay-worktrees/review-bench/out/ours/R2[4-9]/summary.json ~/labdrian-sdd-overlay-worktrees/review-bench/out/ours/R3[0-3]/summary.json; rg -c '923,788' odd/tasks/phase9-c26-review-contract.md",
+        "result": "pass",
+        "output": "923788; rg -c printed 1 (at least 1)"
+      },
+      {
+        "command": "OUT=$HOME/labdrian-sdd-overlay-worktrees/review-bench/out/ours tools/review-bench/score.sh R<id> for R29 and R24 R25 R26 R27 R28 R30 R31 R32 R33",
+        "result": "pass",
+        "output": "R29 printed a finding line: 'finding hunt WARNING engine/runtime/pi_agents.go:196-205: unlinkPackageAgents derives the set of links to remove from the package's current agents/ directory...'. R24, R25, R26, R27, R28, R30, R31, R32, R33 each printed 'none located'."
+      },
+      {
+        "command": "rg -n '\\\\u[0-9a-fA-F]{4}' odd/tasks/phase9-c26-review-contract.md tools/review-bench/scores/ours-c26.json; rg -n '^## ' odd/tasks/phase9-c26-review-contract.md",
+        "result": "pass",
+        "output": "First rg found nothing (rc=1). Second printed: 6:## Specs, 15:## Tasks, 23:## Log"
+      },
+      {
+        "command": "git diff --check 0737dae4 ad5351aa; git merge-base --is-ancestor 0737dae4 ad5351aa",
+        "result": "pass",
+        "output": "git diff --check printed nothing, exit 0; git merge-base --is-ancestor exit 0."
+      }
+    ]
+  }
+}
