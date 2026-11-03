@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ad5351aa2e3c0ad044f4918b5a59b090963c1efa",
+    "head": "939f236e3638a272fd51f92093c5caa8ccc9c3c8",
+    "diff_sha256": "3d57c3c933a575675576f5d1d89c11ae08d749643470af0e611c32ae86f5cf07",
+    "paths": [
+      "odd/review-results/phase9-c26-review-contract/ad5351aa2e3c-1.sweep.json",
+      "odd/review-results/phase9-c26-review-contract/ad5351aa2e3c-2.exempt.json"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git rev-parse 939f236e^1 vs git rev-parse ad5351aa",
+        "result": "pass",
+        "output": "Both print the full sha of ad5351aa."
+      },
+      {
+        "command": "git diff --name-only ad5351aa 939f236e; git diff --diff-filter=AM --name-status ad5351aa 939f236e",
+        "result": "pass",
+        "output": "Only the two ad5351aa2e3c records under odd/review-results/phase9-c26-review-contract/, all with status A."
+      },
+      {
+        "command": "git show 939f236e:<path> | jq empty for each added file",
+        "result": "pass",
+        "output": "Every added file parses."
+      },
+      {
+        "command": "git diff --check ad5351aa 939f236e",
+        "result": "pass",
+        "output": "Printed nothing, exit code 0."
+      },
+      {
+        "command": "git log -1 --format=%B 939f236e",
+        "result": "pass",
+        "output": "Ends with Risk: none; no co-authored line."
+      }
+    ]
+  }
+}
