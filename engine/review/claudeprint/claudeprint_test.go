@@ -3,16 +3,14 @@ package claudeprint_test
 import (
 	"context"
 	"errors"
-	"os"
-	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/agentgen"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review/app"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review/claudeprint"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/reviewresult"
 )
 
 // fakeRunner is the Runner of the tests: it records the one start and answers with canned streams.
@@ -35,39 +33,19 @@ func (f *fakeRunner) OutputStdinIn(ctx context.Context, dir string, env []string
 	return []byte(f.stdout), []byte(f.stderr), f.err
 }
 
-// claudeRoot is a Claude configuration directory that holds the reviewer agent file the generator writes, and the body
-// of that file.
-func claudeRoot(t *testing.T) (string, string) {
-	t.Helper()
-	artifacts, err := agentgen.Artifacts(filepath.Join("..", "..", ".."))
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, a := range artifacts {
-		if a.Path != "agents/reviewer.md" {
-			continue
-		}
-		root := t.TempDir()
-		if err := os.MkdirAll(filepath.Join(root, "agents"), 0o755); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(filepath.Join(root, "agents", "reviewer.md"), []byte(a.Content), 0o644); err != nil {
-			t.Fatal(err)
-		}
-		body, err := agentgen.ClaudeInstructions([]byte(a.Content))
-		if err != nil {
-			t.Fatal(err)
-		}
-		return root, body
-	}
-	t.Fatal("agentgen.Artifacts has no agents/reviewer.md")
-	return "", ""
-}
+// The preamble of the A/B (re/ab/build.py LEAN) up to and after the schema: the text this package hands claude, with
+// the lens and binding lines left to the brief and the frozen context.
+const (
+	preambleHead = "You review one committed code change. You have no tools: the diff below is the whole of what you can see.\n\n" +
+		"Report only real defects that this change introduced, activated or worsened and that realistic input reaches. A defect the base already had is pre-existing, at most WARNING. Style is not a finding.\n" +
+		"BLOCKER or CRITICAL only for a change-caused defect with an observable harm: a violated requested behavior, or a regression on input that was valid before the change. Each needs at least one proof_refs entry citing the changed lines. Silently ignoring an explicit option while reporting success is CRITICAL. Everything else is WARNING or SUGGESTION.\n\n" +
+		"Reply with exactly one JSON object and nothing else: no prose, no markdown fence. It must validate against this JSON Schema; every required member is present in every finding, none null:\n"
+	preambleTail = "\n\nlocation is one path exactly as it appears in the diff, then :line or :start-end, in line numbers of the head side (count from the +start of the @@ header). Never a function name. Copy base, head and diff_sha256 below exactly. inspection.status is completed when the diff covers every changed path."
+)
 
 func TestReviewRunsClaudePrintWithNoToolsInTheWorktreeAndAnswersItsStdout(t *testing.T) {
-	root, body := claudeRoot(t)
 	f := &fakeRunner{stdout: `{"findings":[]}`}
-	r := claudeprint.New(f, claudeprint.Options{Environ: []string{"A=1"}, ClaudeRoot: root})
+	r := claudeprint.New(f, claudeprint.Options{Environ: []string{"A=1"}})
 
 	reply, err := r.Review("/work/review-abc", "claude-sonnet-5-5", []byte("the brief\n"))
 
@@ -80,8 +58,11 @@ func TestReviewRunsClaudePrintWithNoToolsInTheWorktreeAndAnswersItsStdout(t *tes
 	if f.calls != 1 || f.bin != "claude" || f.dir != "/work/review-abc" || !reflect.DeepEqual(f.args, wantArgs) {
 		t.Errorf("started %d times %q in %q with %q; want once claude in the worktree with %q", f.calls, f.bin, f.dir, f.args, wantArgs)
 	}
-	if want := body + "\n\nthe brief\n"; f.stdin != want {
-		t.Errorf("stdin = %q; want the instructions of the reviewer agent, a blank line and the brief", f.stdin)
+	if want := preambleHead + reviewresult.Schema() + preambleTail + "\n\nthe brief\n"; f.stdin != want {
+		t.Errorf("stdin = %q; want the lean preamble with the schema filled in, a blank line and the brief", f.stdin)
+	}
+	if f.stdin != claudeprint.Preamble()+"\n\nthe brief\n" {
+		t.Errorf("stdin = %q; want Preamble(), a blank line and the brief", f.stdin)
 	}
 	if !reflect.DeepEqual(f.env, []string{"A=1"}) || !f.deadline {
 		t.Errorf("environment %q, deadline %v; want the one of the options and a deadline", f.env, f.deadline)
@@ -108,10 +89,9 @@ func TestReviewWhenClaudeDoesNotAnswer(t *testing.T) {
 		{"stderr repeated bounded", "", strings.Repeat("x", 5000), errors.New("exit status 2"), []string{strings.Repeat("x", 2000) + "..."}},
 	} {
 		t.Run(c.name, func(t *testing.T) {
-			root, _ := claudeRoot(t)
 			f := &fakeRunner{stdout: c.stdout, stderr: c.stderr, err: c.err}
 
-			reply, err := claudeprint.New(f, claudeprint.Options{ClaudeRoot: root}).Review("/w", "m", []byte("b"))
+			reply, err := claudeprint.New(f, claudeprint.Options{}).Review("/w", "m", []byte("b"))
 
 			if reply != nil || !errors.Is(err, app.ErrReviewerDidNotAnswer) {
 				t.Fatalf("Review = %q, %v; want no reply and an error wrapping ErrReviewerDidNotAnswer", reply, err)
@@ -128,34 +108,33 @@ func TestReviewWhenClaudeDoesNotAnswer(t *testing.T) {
 	}
 }
 
-func TestReviewRefusesAMissingOrForeignAgentFileBeforeClaudeStarts(t *testing.T) {
-	for _, c := range []struct {
-		name    string
-		content *string
-		want    string
-	}{
-		{"missing", nil, "cannot read the reviewer agent of Claude"},
-		{"foreign", ptr("---\nname: reviewer\n---\n\nbody\n"), "is not the one the overlay writes"},
-	} {
-		t.Run(c.name, func(t *testing.T) {
-			root := t.TempDir()
-			if c.content != nil {
-				if err := os.MkdirAll(filepath.Join(root, "agents"), 0o755); err != nil {
-					t.Fatal(err)
-				}
-				if err := os.WriteFile(filepath.Join(root, "agents", "reviewer.md"), []byte(*c.content), 0o644); err != nil {
-					t.Fatal(err)
-				}
-			}
-			f := &fakeRunner{stdout: "reply"}
+// The reviewer needs no deployed Claude agent file: with no home and no agents/reviewer.md anywhere, claude starts.
+func TestReviewStartsClaudeWithNoReviewerAgentFile(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	f := &fakeRunner{stdout: "reply"}
 
-			_, err := claudeprint.New(f, claudeprint.Options{ClaudeRoot: root}).Review("/w", "m", []byte("b"))
+	reply, err := claudeprint.New(f, claudeprint.Options{}).Review("/w", "m", []byte("b"))
 
-			if err == nil || !strings.Contains(err.Error(), c.want) || !strings.Contains(err.Error(), "run: labdrian-overlay apply --target claude") || f.calls != 0 {
-				t.Errorf("Review error = %v, claude calls = %d; want %q and the apply command, never started", err, f.calls, c.want)
-			}
-		})
+	if err != nil || string(reply) != "reply" || f.calls != 1 {
+		t.Errorf("Review = %q, %v, claude calls = %d; want the reply and one start", reply, err, f.calls)
 	}
 }
 
-func ptr(s string) *string { return &s }
+func TestThePreambleHoldsTheSchemaByteForByteAndNoSubAgentText(t *testing.T) {
+	p := claudeprint.Preamble()
+
+	if want := preambleHead + reviewresult.Schema() + preambleTail; p != want {
+		t.Errorf("Preamble() = %q; want the lean preamble with the schema between %q and %q", p, preambleHead, preambleTail)
+	}
+	if n := strings.Count(p, reviewresult.Schema()); n != 1 {
+		t.Errorf("the preamble holds the schema %d times; want once, byte for byte", n)
+	}
+	if strings.Contains(p, "{schema}") || strings.HasSuffix(p, "\n") {
+		t.Errorf("the preamble still holds the {schema} slot or ends with a line break: %q", p)
+	}
+	for _, word := range []string{"sub-agent", "envelope", "mem_get_observation", "worktree path"} {
+		if strings.Contains(p, word) {
+			t.Errorf("the preamble names %q, which belongs to the reviewer agent and not to this process", word)
+		}
+	}
+}

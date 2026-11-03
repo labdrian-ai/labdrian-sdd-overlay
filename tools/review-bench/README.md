@@ -16,7 +16,9 @@ It is not part of the product and never runs against the main repository.
 - `run-ours.sh <id>`: runs our review on one case: `labdrian review sweep` (feature `review-bench`), then
   `labdrian review bind` and one `labdrian review launch --runtime claude` per row of `ROWS` (default `default,hunt`,
   rows read from `ROWS_FILE`, default `roles/reviewer/rows.json`; model `MODEL`, default `claude-sonnet-5-5`), each with
-  a brief that names the binding and the row's sentence (`--runtime claude` comes with C25 T4). It writes `$BENCH/out/ours/<id>/summary.json` in the shape of
+  a brief of five lines, `Lens: <the row's sentence>` and the binding's `base:`, `head:`, `diff_sha256:` and `worktree:`
+  (the `worktree:` line only because `review launch` requires the brief to name it); the launch puts its lean preamble
+  and JSON Schema before it. It writes `$BENCH/out/ours/<id>/summary.json` in the shape of
   gentle's (`state` is `recorded`, or what failed) plus `analyzers[]`, the sweep's T2 lines as repository paths. A
   failed sweep, bind or launch stops the case with exit 4; an unknown case or row is refused with exit 2.
 - `shim/claude`: put first on the `PATH` by the runners; logs the arguments and byte sizes of every reviewer process to

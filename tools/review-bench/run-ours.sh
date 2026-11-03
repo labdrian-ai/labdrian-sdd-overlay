@@ -53,10 +53,9 @@ fi
 for row in "${row_ids[@]}"; do
   [ "$state" = "recorded" ] || break
   sentence=$(jq -r --arg r "$row" '.rows[] | select(.id == $r) | .sentence' "$rows_file")
-  jq -r --arg row "$row" --arg sentence "$sentence" '"Review the committed candidate below as the reviewer role.",
-    "base: \(.base)", "head: \(.head)", "diff_sha256: \(.diff_sha256)", "worktree: \(.worktree)",
-    "Lens row \($row): \($sentence)",
-    "No tool is available to you: the frozen context below is the whole of what you can inspect; set inspection.status to completed when it covers every changed path."' \
+  # The preamble of the launch says there is no tool; the worktree line stays because review launch checks the brief names it.
+  jq -r --arg sentence "$sentence" '"Lens: \($sentence)",
+    "base: \(.base)", "head: \(.head)", "diff_sha256: \(.diff_sha256)", "worktree: \(.worktree)"' \
     "$out/bind.json" > "$out/brief-$row.txt"
   before=$(compgen -G "$results/${head:0:12}-*.json" | sort)
   if ! labdrian review launch --runtime claude --feature review-bench --base "$base" --head "$head" --rows "$row" \

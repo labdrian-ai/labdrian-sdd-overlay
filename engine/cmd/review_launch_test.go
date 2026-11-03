@@ -13,6 +13,8 @@ import (
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/agentgen"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review/claudeprint"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/reviewresult"
 )
 
 // fakeCodex is the codexexec.Runner of the tests. It records what it was asked to start and, as codex does, writes its
@@ -77,7 +79,7 @@ func newLaunchWorld(t *testing.T, withReviewerFile bool) *launchWorld {
 	if err != nil {
 		t.Fatal(err)
 	}
-	wanted := map[string]string{"codex/agents/reviewer.toml": ".codex/agents", "agents/reviewer.md": ".claude/agents"}
+	wanted := map[string]string{"codex/agents/reviewer.toml": ".codex/agents"}
 	for _, a := range artifacts {
 		dir, ok := wanted[a.Path]
 		if !ok {
@@ -180,8 +182,10 @@ func TestLaunchRefusesARuntimeOtherThanClaudeOrCodex(t *testing.T) {
 	}
 }
 
+// The Claude reviewer needs no deployed agent file: the HOME of this world holds none, and the stdin is the lean
+// preamble, a blank line, the brief and its frozen context.
 func TestLaunchWithRuntimeClaudeRunsClaudePrintOverTheBriefAndItsFrozenContext(t *testing.T) {
-	w := newLaunchWorld(t, true)
+	w := newLaunchWorld(t, false)
 	b := w.bind()
 	good := reply(t, b, nil)
 	w.claude.stdout = good
@@ -199,24 +203,14 @@ func TestLaunchWithRuntimeClaudeRunsClaudePrintOverTheBriefAndItsFrozenContext(t
 	if a := strings.Join(w.claude.args, " "); !strings.HasPrefix(a, "--print --output-format text --tools  --permission-mode dontAsk") || !strings.Contains(a, "--model gpt-5.5") {
 		t.Errorf("claude arguments = %q; want the tool-free print run with the model", w.claude.args)
 	}
-	if !strings.Contains(w.claude.stdin, "\n\n"+briefOf(b)+"\n\n## Frozen context (base "+b.Base+", head "+b.Head+")\n\nchanged paths: "+strings.Join(b.Paths, ", ")+"\n\n```diff\n") {
-		t.Errorf("claude stdin = %q; want the instructions, the brief and its frozen context", w.claude.stdin)
+	if !strings.HasPrefix(w.claude.stdin, claudeprint.Preamble()+"\n\n"+briefOf(b)+"\n\n## Frozen context (base "+b.Base+", head "+b.Head+")\n\nchanged paths: "+strings.Join(b.Paths, ", ")+"\n\n```diff\n") {
+		t.Errorf("claude stdin = %q; want the lean preamble, a blank line, the brief and its frozen context", w.claude.stdin)
+	}
+	if strings.Contains(w.claude.stdin, "sub-agent") || !strings.Contains(w.claude.stdin, reviewresult.Schema()) {
+		t.Errorf("claude stdin = %q; want the JSON Schema of the reply and no sub-agent text", w.claude.stdin)
 	}
 	if names := listNames(t, w.results("f")); len(names) != 1 || names[0] != b.Head[:12]+"-1.json" || !strings.Contains(stdout, b.Head[:12]+"-1.json") {
 		t.Errorf("stored %v, printed %q; want one result recorded as review record does", names, stdout)
-	}
-}
-
-func TestLaunchNamesTheMissingClaudeReviewer(t *testing.T) {
-	w := newLaunchWorld(t, false)
-	b := w.bind()
-	args := w.args(b)
-	args[1] = "claude"
-
-	stdout, stderr, exits := w.launch(briefOf(b), args...)
-
-	if stdout != "" || !equalInts(exits, []int{1}) || !strings.Contains(stderr, "run: labdrian-overlay apply --target claude") || w.claude.calls != 0 || !w.storedNothing() {
-		t.Errorf("stdout = %q, stderr = %q, exits = %v, claude calls = %d; want nothing, the apply command, [1], 0", stdout, stderr, exits, w.claude.calls)
 	}
 }
 

@@ -785,9 +785,8 @@ overlay review <verb>
         last message of codex is recorded as `record --rows` records a reply, so every rule of `record` holds and stdout
         and stderr are what `record` prints. With `--runtime claude` the reviewer is instead one tool-free `claude --print
         --output-format text --tools "" --permission-mode dontAsk --no-session-persistence --setting-sources "" --strict-mcp-config
-        --model <model> --system-prompt <an isolated reviewer's>`, started in the worktree under the same deadline and bounds. Its
-        stdin is the body of the deployed Claude agent file (`<claude root>/agents/reviewer.md`, `~/.claude`; a missing
-        one, or one the generator did not write, is an error that says run: labdrian-overlay apply --target claude), the
+        --model <model> --system-prompt <an isolated reviewer's>`, started in the worktree under the same deadline and bounds, its
+        stdin the lean preamble (the JSON Schema of the reply; no agent file is read), a blank line, the
         brief and the frozen context of the candidate: a heading `## Frozen context (base <base>, head <head>)`, a line `changed paths: <path>, <path>` (a path that is not plain in Go quotes, and then a note to list it unquoted) and `git
         diff --no-renames -U3` in one fenced block, refused with the brief when both are over the reply
         limit. Its stdout is the reply; one with nothing but white space is no answer. `--runtime` takes `claude` or

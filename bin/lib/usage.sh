@@ -353,8 +353,8 @@ Commands:
                                              labdrian-overlay apply --target codex) and the brief, then record its
                                              last message as review record does, printing what it prints;
                                              with --runtime claude run instead one tool-free claude --print
-                                             --strict-mcp-config in the worktree over the body of the deployed Claude agent file (a missing one
-                                             says run: labdrian-overlay apply --target claude), the brief and its
+                                             --strict-mcp-config in the worktree, its stdin the lean preamble (the JSON Schema of the reply; no agent file is read),
+                                             a blank line, the brief and its
                                              ## Frozen context (changed paths line, git diff --no-renames -U3), and record
                                              its stdout; --runtime must be claude or codex: on Pi the parent launches
                                              the reviewer agent natively; --model is required; refused before the
