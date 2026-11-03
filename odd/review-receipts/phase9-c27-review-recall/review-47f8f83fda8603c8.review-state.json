@@ -1,0 +1,135 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:b4288adcd5217a2102591284215f72d10220bfb156f5e6ddb689fabd50d2aafe",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-47f8f83fda8603c8",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "749b1a29ff0ed49cb2ea9906f8607174a23110f8",
+      "candidate_tree": "7df4ef11016b3f4008e1f7b7ae6e7fea1d16e70c",
+      "paths_digest": "sha256:c7b116b1fbcda4606a1f0a1b726c14ddd719f43f4eea249d62ed423570023cda",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/skills/actuals_instrumentation_contract_test.go",
+        "skills/inception-pipeline/SKILL.md"
+      ],
+      "identity": "sha256:47f8f83fda8603c8a40df3a91f62bdc863af907815ccb6c24369a3e8a1582deb"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "749b1a29ff0ed49cb2ea9906f8607174a23110f8",
+      "candidate_tree": "7df4ef11016b3f4008e1f7b7ae6e7fea1d16e70c",
+      "paths_digest": "sha256:c7b116b1fbcda4606a1f0a1b726c14ddd719f43f4eea249d62ed423570023cda",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/skills/actuals_instrumentation_contract_test.go",
+        "skills/inception-pipeline/SKILL.md"
+      ],
+      "identity": "sha256:47f8f83fda8603c8a40df3a91f62bdc863af907815ccb6c24369a3e8a1582deb"
+    },
+    "genesis_paths": [
+      "engine/skills/actuals_instrumentation_contract_test.go",
+      "skills/inception-pipeline/SKILL.md"
+    ],
+    "policy_hash": "sha256:34fb63d7f29f8613cd4431382b1057398a4816f8a4c20fc34677fffc80a184f6",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-reliability"
+    ],
+    "original_changed_lines": 197,
+    "correction_budget": 99,
+    "correction_budget_policy": "floor_two",
+    "lens_results": [
+      {
+        "lens": "review-reliability",
+        "findings": [
+          {
+            "id": "R3-001",
+            "lens": "reliability",
+            "location": "skills/inception-pipeline/SKILL.md:160",
+            "severity": "WARNING",
+            "claim": "The new Execute step 3 instructs the agent to write a t1 table cell containing only 'the verified/self-asserted/rejected outcome', but this same diff establishes a four-way outcome vocabulary (verified, self-asserted, rejected, or absent) and separately describes multiple paths where t1 is entirely omitted (ambiguous shared tree, no landing_commit ever recorded, rejected SHA mismatch). The Execute step's unconditional '2-row table with t0 ... and t1 (...)' framing gives no guidance for what to write in that row when t1 is the fourth, 'absent' outcome, unlike the sibling t0 cell spec which correctly covers both of its own paths ('primary-or-fallback source').",
+            "proof_refs": [
+              "skills/inception-pipeline/SKILL.md diff, new line ~160: '3. Append a `## Cycle Timestamps` section to the archived `archive-report.md` ... a 2-row table with t0 (...) and t1 (`landing_commit`, `approved_tree` when recorded, committer timestamp, and the verified/self-asserted/rejected outcome).' — enumerates only 3 of the 4 outcomes for the t1 cell.",
+              "skills/inception-pipeline/SKILL.md diff, new line ~149: 'The resolution outcome — verified, self-asserted, rejected, or absent — MUST be named in `variance_vs_plan`' establishes the 4th 'absent' state as valid and expected.",
+              "engine/skills/actuals_instrumentation_contract_test.go diff, R016_R017_R018_closure_feedback_anchor_prose 'want' list pins the exact phrase 'verified, self-asserted, rejected, or absent' specifically 'as the full four-way enumeration ... so a rewrite that drops one of the other three states also fails' — yet the Execute step 3 cell description the same diff ships already drops 'absent' from its own enumeration.",
+              "skills/inception-pipeline/SKILL.md diff, new line ~147: 'the anchor is ambiguous: t1 is omitted' and 'WHEN no `landing_commit` was ever recorded — a change predating this convention — t1 is omitted (R-021)' both describe a t1-absent state the Execute step's table-cell spec does not name."
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-002",
+            "lens": "reliability",
+            "location": "skills/inception-pipeline/SKILL.md:178",
+            "severity": "SUGGESTION",
+            "claim": "The new Notes bullet scoping the archive-report append-only carve-out ('does not license editing any other part of the engine's native archive-report.md') is new normative behavior added by this diff but has no corresponding pinned substring assertion in the contract test file, unlike every sibling clause this same diff adds (each pinned specifically to survive mutation per the file's own 'mutation-proven non-covering' rationale comments), leaving this specific scope restriction unproved against future silent regression.",
+            "proof_refs": [
+              "skills/inception-pipeline/SKILL.md diff, new line ~178: '- **The archive-report append is a named carve-out, not a precedent.** ... it does not license editing any other part of the engine's native `archive-report.md`, and the Engram archive-report topic stays untouched either way.' is new prose added by this diff.",
+              "engine/skills/actuals_instrumentation_contract_test.go diff's R016_R017_R018_closure_feedback_anchor_prose want/forbidden lists (the only test touching this prose, also added by this diff) contain no substring drawn from 'not a precedent' or 'does not license editing any other part', while the sibling Execute-item-3 carve-out clause in the very same paragraph area IS pinned via the want string 'a named, delimited, append-only carve-out to closure-feedback's own \"do NOT modify engine outputs\" rule'."
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          }
+        ],
+        "evidence": [
+          "Inspected the complete unified diffs for both changed paths (engine/skills/actuals_instrumentation_contract_test.go and skills/inception-pipeline/SKILL.md) exactly as supplied in GENTLE_AI_REVIEW_PATCH 0 and 1; no working tree, index, HEAD, or other file/tool was consulted for candidate content.",
+          "Cross-checked all 18 'want' substrings and all 6 'forbidden' substrings added by the three new Go subtests (R021_required_drops_wall_clock, R016_R017_R018_closure_feedback_anchor_prose, R019_compute_time_deferral_rationale) character-by-character against the exact new SKILL.md prose shown in the diff: every 'want' string is present verbatim in the shipped text and every 'forbidden' string is verifiably absent from the new text, so these new tests are internally consistent with the shipped documentation change and not a source of an immediately failing assertion.",
+          "Verified brace/paren/slice-literal nesting of both new t.Run(...) subtest bodies and their nested for-range/if blocks in engine/skills/actuals_instrumentation_contract_test.go; found balanced, syntactically valid Go matching the file's existing idiom (e.g. the pre-existing, unmodified R015_R006_R007_R008_checkpoint_count_description subtest visible in the diff context already uses the identical strings.Contains pattern, confirming 'strings' is already imported).",
+          "Checked whether the new R021_required_drops_wall_clock subtest's use of slices.Contains and decodeActualsSchema could be an undeclared-import/undefined-symbol build break; the diff does not show the file's import block or these helpers' definitions (both are outside the shown hunks and the schema file itself is not in changed_path_manifest), so this could not be confirmed as a defect and is not reported as a finding for lack of proof.",
+          "Checked SKILL.md's new Execute step 3 and Notes-section additions for internal consistency against the four-way t1-outcome vocabulary and the failure-path (t1-omitted) scenarios the same diff defines; found one enumeration gap (finding 1) and one unpinned new normative clause (finding 2), both introduced by this diff and reported above."
+        ],
+        "result_hash": "sha256:b6aff7bf87be3bfd28ff954e28d0bd8811ac0d192244ee641fbd7a49a34bc586"
+      }
+    ],
+    "findings": [
+      {
+        "id": "R3-001",
+        "lens": "reliability",
+        "location": "skills/inception-pipeline/SKILL.md:160",
+        "severity": "WARNING",
+        "claim": "The new Execute step 3 instructs the agent to write a t1 table cell containing only 'the verified/self-asserted/rejected outcome', but this same diff establishes a four-way outcome vocabulary (verified, self-asserted, rejected, or absent) and separately describes multiple paths where t1 is entirely omitted (ambiguous shared tree, no landing_commit ever recorded, rejected SHA mismatch). The Execute step's unconditional '2-row table with t0 ... and t1 (...)' framing gives no guidance for what to write in that row when t1 is the fourth, 'absent' outcome, unlike the sibling t0 cell spec which correctly covers both of its own paths ('primary-or-fallback source').",
+        "proof_refs": [
+          "skills/inception-pipeline/SKILL.md diff, new line ~160: '3. Append a `## Cycle Timestamps` section to the archived `archive-report.md` ... a 2-row table with t0 (...) and t1 (`landing_commit`, `approved_tree` when recorded, committer timestamp, and the verified/self-asserted/rejected outcome).' — enumerates only 3 of the 4 outcomes for the t1 cell.",
+          "skills/inception-pipeline/SKILL.md diff, new line ~149: 'The resolution outcome — verified, self-asserted, rejected, or absent — MUST be named in `variance_vs_plan`' establishes the 4th 'absent' state as valid and expected.",
+          "engine/skills/actuals_instrumentation_contract_test.go diff, R016_R017_R018_closure_feedback_anchor_prose 'want' list pins the exact phrase 'verified, self-asserted, rejected, or absent' specifically 'as the full four-way enumeration ... so a rewrite that drops one of the other three states also fails' — yet the Execute step 3 cell description the same diff ships already drops 'absent' from its own enumeration.",
+          "skills/inception-pipeline/SKILL.md diff, new line ~147: 'the anchor is ambiguous: t1 is omitted' and 'WHEN no `landing_commit` was ever recorded — a change predating this convention — t1 is omitted (R-021)' both describe a t1-absent state the Execute step's table-cell spec does not name."
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-002",
+        "lens": "reliability",
+        "location": "skills/inception-pipeline/SKILL.md:178",
+        "severity": "SUGGESTION",
+        "claim": "The new Notes bullet scoping the archive-report append-only carve-out ('does not license editing any other part of the engine's native archive-report.md') is new normative behavior added by this diff but has no corresponding pinned substring assertion in the contract test file, unlike every sibling clause this same diff adds (each pinned specifically to survive mutation per the file's own 'mutation-proven non-covering' rationale comments), leaving this specific scope restriction unproved against future silent regression.",
+        "proof_refs": [
+          "skills/inception-pipeline/SKILL.md diff, new line ~178: '- **The archive-report append is a named carve-out, not a precedent.** ... it does not license editing any other part of the engine's native `archive-report.md`, and the Engram archive-report topic stays untouched either way.' is new prose added by this diff.",
+          "engine/skills/actuals_instrumentation_contract_test.go diff's R016_R017_R018_closure_feedback_anchor_prose want/forbidden lists (the only test touching this prose, also added by this diff) contain no substring drawn from 'not a precedent' or 'does not license editing any other part', while the sibling Execute-item-3 carve-out clause in the very same paragraph area IS pinned via the want string 'a named, delimited, append-only carve-out to closure-feedback's own \"do NOT modify engine outputs\" rule'."
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      }
+    ],
+    "classifications": {},
+    "outcomes": {
+      "R3-001": "info",
+      "R3-002": "info"
+    },
+    "fix_finding_ids": [],
+    "follow_ups": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:ffe2fdabfaf1bbbc7cb566641102597138e4a13f6b4c3d18ea67fb8bcda6edcd",
+    "evidence_record_digest": "sha256:ef710a1462f7d6f5d908a9ae23f001beb211c61a30d2d5d2d615fc5d7b305cbc",
+    "evidence_outcome": "passed",
+    "evidence_target_identity": "sha256:47f8f83fda8603c8a40df3a91f62bdc863af907815ccb6c24369a3e8a1582deb",
+    "evidence_authority_revision": "sha256:b56c19f777f26001bac5821130f71930e1522ec0e2493257a839503590a2f2f7",
+    "reviewer_context_level": "provider_command"
+  }
+}

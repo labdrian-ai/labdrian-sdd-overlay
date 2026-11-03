@@ -1,0 +1,104 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:89ab1fcbe52ea76c9118fe0604b06040e63a9239e0a34769feae7ec729070ed7",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-4cdc2fc0eb25cafb",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "186585af438e92989c2d7f77d24f6f77a063fc68",
+      "candidate_tree": "dd840fab492948b64c1d39797f94ac1a2786ab30",
+      "paths_digest": "sha256:5ebc69656832d1082b21f9fec7182aa03df83b8eeb80561814a3c4563666470b",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/skills/load.go",
+        "engine/skills/load_test.go",
+        "engine/skills/skills_test.go",
+        "tools/entry-contract-validator/main.go"
+      ],
+      "identity": "sha256:4cdc2fc0eb25cafb805afd199bcba95868ff829a6b45166bd2dee9bc6fbd9ec9"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "186585af438e92989c2d7f77d24f6f77a063fc68",
+      "candidate_tree": "dd840fab492948b64c1d39797f94ac1a2786ab30",
+      "paths_digest": "sha256:5ebc69656832d1082b21f9fec7182aa03df83b8eeb80561814a3c4563666470b",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/skills/load.go",
+        "engine/skills/load_test.go",
+        "engine/skills/skills_test.go",
+        "tools/entry-contract-validator/main.go"
+      ],
+      "identity": "sha256:4cdc2fc0eb25cafb805afd199bcba95868ff829a6b45166bd2dee9bc6fbd9ec9"
+    },
+    "genesis_paths": [
+      "engine/skills/load.go",
+      "engine/skills/load_test.go",
+      "engine/skills/skills_test.go",
+      "tools/entry-contract-validator/main.go"
+    ],
+    "policy_hash": "sha256:34fb63d7f29f8613cd4431382b1057398a4816f8a4c20fc34677fffc80a184f6",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-reliability"
+    ],
+    "original_changed_lines": 164,
+    "correction_budget": 82,
+    "lens_results": [
+      {
+        "lens": "review-reliability",
+        "findings": [
+          {
+            "id": "R3-001",
+            "lens": "reliability",
+            "location": "tools/entry-contract-validator/main.go:221",
+            "severity": "WARNING",
+            "claim": "The corrected diagnostic string (trailing period dropped before the wrapped-error colon) is not asserted by any test in the package; every existing assertion touching this message only checks for substring presence of the word nextRecommended, which passes whether or not the original punctuation collision is present, so a regression reintroducing the collision would go undetected.",
+            "proof_refs": [
+              "tools/entry-contract-validator/main.go:221"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          }
+        ],
+        "evidence": [
+          "engine/skills/load.go and engine/skills/load_test.go are pure deletions. An exhaustive text search for the identifier across every .go file in the candidate tree's Go modules (engine's ~40 source and test files spanning skills, cmd, gate, runtime, settings, propagator, prespec, gadu, installer, assets; tui's 9 files; and all three tools/* modules) found zero remaining call sites of the deleted Load(path string) function. Every remaining textual match for 'Load' resolves to unrelated, still-present functions (LoadManifestView in the skills package, LoadContractPhases in the runtime package) — the deletion took nothing live with it.",
+          "ParseRegistry (unchanged, defined outside the manifest in the same package as the deleted files) remains called from at least six production call sites in that package and is exercised by a pre-existing, independent table-driven test suite covering valid and malformed inputs via real on-disk fixtures, plus separate production-path tests elsewhere in the same package that independently cover a missing-registry-file error and a malformed-registry-YAML parse error through the injected readFile mechanism used by production entry points. None of that coverage depended on the deleted load_test.go, so the deletion drops no proof of ParseRegistry's behavior or its error handling.",
+          "engine/skills/skills_test.go: RenderValidateCore (defined outside the manifest) passes the --source-root flag value through to scanSkills completely unmodified — no filepath.Abs or cwd-relative resolution is applied to it. That makes the new recording-stub assertion (recorded scanned directory equals the exact expected --source-root value) a genuine, non-vacuous check: it would fail today if production stopped honoring --source-root, e.g. by resolving it against the working directory or falling back to it. Each of the four table-driven subtests builds its own fresh recording stub inside its own t.Run closure (no shared mutable state across subtests) and calls os.Chdir(tt.cwd) itself immediately before invoking RenderValidateCore, so per-subtest correctness does not depend on execution order. The one piece of shared state — os.Chdir to a candidate cwd with restoration only via a single t.Cleanup registered once, before the subtest loop, on the outer test — is carried over unchanged from the prior version of this test (which also chdir'd in a loop with a single deferred restore) and is not a new risk introduced by this diff; none of the affected tests call t.Parallel, so Go's -shuffle flag (which does not reorder subtests dynamically registered via sequential t.Run calls in a running goroutine) cannot interleave them unexpectedly."
+        ],
+        "result_hash": "sha256:ec298816d736681d1a5990beedcc743b2faf1d1a570eae4fecf97f6464c90bd9"
+      }
+    ],
+    "findings": [
+      {
+        "id": "R3-001",
+        "lens": "reliability",
+        "location": "tools/entry-contract-validator/main.go:221",
+        "severity": "WARNING",
+        "claim": "The corrected diagnostic string (trailing period dropped before the wrapped-error colon) is not asserted by any test in the package; every existing assertion touching this message only checks for substring presence of the word nextRecommended, which passes whether or not the original punctuation collision is present, so a regression reintroducing the collision would go undetected.",
+        "proof_refs": [
+          "tools/entry-contract-validator/main.go:221"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      }
+    ],
+    "classifications": {},
+    "outcomes": {
+      "R3-001": "info"
+    },
+    "fix_finding_ids": [],
+    "follow_ups": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:0c46750df8d6a962f954de9cf29b662397be939102da06c06b4dbf5cb39f928d",
+    "evidence_record_digest": "sha256:467b794849c0b60e98d08ed3cf53cd0710d652349a45a4bf9e84012399962153",
+    "evidence_outcome": "passed",
+    "evidence_target_identity": "sha256:4cdc2fc0eb25cafb805afd199bcba95868ff829a6b45166bd2dee9bc6fbd9ec9",
+    "evidence_authority_revision": "sha256:97fb218e1beee7b8ac89d06a34f87d8175b35678b6e72779b4de5e2c307c4c66"
+  }
+}

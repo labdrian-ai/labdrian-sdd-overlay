@@ -1,0 +1,238 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:a838f12aefd38d387151ace068ca364c90435e65ad55a48616665c89aa934656",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-3043e66fb53de8e0",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "2b0c5ce3a700a3b24fb4205042d7879413098a58",
+      "candidate_tree": "9d4f87c6e2e3ef7bc064827d40ce5193985b8058",
+      "paths_digest": "sha256:47ec438c59083efe342ef0fb72c842f7ac773bc8ec020f22837c5275b7eb3d35",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "openspec/changes/tui-self-update-offer/tasks.md",
+        "tui/main_test.go",
+        "tui/model.go",
+        "tui/run.go",
+        "tui/view.go",
+        "tui/view_test.go"
+      ],
+      "identity": "sha256:3043e66fb53de8e013095ea11a08105dba5ed062a03b2975552cf5dd6a3afcce"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "2b0c5ce3a700a3b24fb4205042d7879413098a58",
+      "candidate_tree": "9d4f87c6e2e3ef7bc064827d40ce5193985b8058",
+      "paths_digest": "sha256:47ec438c59083efe342ef0fb72c842f7ac773bc8ec020f22837c5275b7eb3d35",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "openspec/changes/tui-self-update-offer/tasks.md",
+        "tui/main_test.go",
+        "tui/model.go",
+        "tui/run.go",
+        "tui/view.go",
+        "tui/view_test.go"
+      ],
+      "identity": "sha256:3043e66fb53de8e013095ea11a08105dba5ed062a03b2975552cf5dd6a3afcce"
+    },
+    "genesis_paths": [
+      "openspec/changes/tui-self-update-offer/tasks.md",
+      "tui/main_test.go",
+      "tui/model.go",
+      "tui/run.go",
+      "tui/view.go",
+      "tui/view_test.go"
+    ],
+    "policy_hash": "sha256:34fb63d7f29f8613cd4431382b1057398a4816f8a4c20fc34677fffc80a184f6",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-risk",
+      "review-resilience",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 355,
+    "correction_budget": 178,
+    "correction_budget_policy": "floor_two",
+    "lens_results": [
+      {
+        "lens": "review-risk",
+        "findings": [],
+        "evidence": [
+          "Reviewed unified diffs for all 6 manifest paths (openspec/changes/tui-self-update-offer/tasks.md, tui/main_test.go, tui/model.go, tui/run.go, tui/view.go, tui/view_test.go) for security, authorization, data exposure, unsafe input handling, secrets, and dependency-vulnerability risk.",
+          "In tui/run.go, probeBehindOriginCmd builds exec.Command(bin, \"sync-check\") with a hardcoded literal argument and no shell interpolation (Go's os/exec never invokes a shell), so no command-injection vector is introduced by this candidate; root is not attacker-supplied request data, and cmd.CombinedOutput()'s failure path degrades safely to RepoBehindOriginNA.",
+          "In tui/view.go, repoLine renders m.behindOrigin through fmt.Sprintf's %d verb (an int field, not attacker-controlled free text used as a format string), and no secrets, credentials, tokens, or newly introduced external dependency versions appear anywhere in the 6 changed files (no go.mod/go.sum entries are in the manifest).",
+          "openspec/changes/tui-self-update-offer/tasks.md only toggles existing checkbox markers from [ ] to [x]; no manifest, dependency, or configuration content changed."
+        ],
+        "result_hash": "sha256:baef7c8485564e521078024cc647d999af0a6a04e7706e0476f68247626834fe"
+      },
+      {
+        "lens": "review-resilience",
+        "findings": [
+          {
+            "id": "R4-001",
+            "lens": "resilience",
+            "location": "tui/run.go:289-297",
+            "severity": "WARNING",
+            "claim": "probeBehindOriginCmd runs bin/labdrian-overlay sync-check via exec.Command with no context deadline, timeout, or cancellation, and discards CombinedOutput's error. tui/model.go:86 now wires this into Init() (previously return nil), so every TUI launch spawns this unbounded subprocess call; a slow-to-exit or hung backend leaves the probe goroutine blocked indefinitely with no diagnostic signal, and since bubbletea does not cancel outstanding tea.Cmd goroutines on tea.Quit, the child process can keep running after the user quits the TUI.",
+            "proof_refs": [
+              "tui/run.go:292 cmd := exec.Command(bin, \"sync-check\") sets no context.WithTimeout/CommandContext and no cmd.Cancel/WaitDelay.",
+              "tui/model.go:86 func (m model) Init() tea.Cmd { return probeBehindOriginCmd(m.repoRoot) } replaces the prior return nil, so this unbounded subprocess call now runs unconditionally on every TUI launch.",
+              "tui/run.go:294 discards the CombinedOutput error via out, _ :=, so a failed-to-start or hung backend is indistinguishable from a healthy zero-verdict probe."
+            ],
+            "evidence_class": "inferential",
+            "causal_disposition": "introduced"
+          }
+        ],
+        "evidence": [
+          "Inspected all 6 GENTLE_AI_REVIEW_PATCH sections in full as the complete and only view of this candidate; the working tree, index, HEAD, and any other file were not used as evidence for this result.",
+          "Traced the new launch-time probe path across files: tui/model.go:86 Init() wires tui/run.go:289-297 probeBehindOriginCmd()/probeBehind() (tui/run.go:275-281), confirmed from the patch text that the probe's exec.Command call has no timeout/cancellation and discards its error, and that TestProbeBehindOriginCmd only exercises an immediately-returning stub process, not a hang/timeout scenario."
+        ],
+        "result_hash": "sha256:01dbf14c3fd604c68de4e074bb800fa430da84cb18e6cd21ba72d94dfcb8eae2"
+      },
+      {
+        "lens": "review-readability",
+        "findings": [
+          {
+            "id": "R2-001",
+            "lens": "readability",
+            "location": "tui/model.go:137-143",
+            "severity": "WARNING",
+            "claim": "The added bannerVisible() function and its doc comment land between contentWidth's existing doc comment and the contentWidth function itself, so the comment block that now sits directly above bannerVisible opens with two sentences describing contentWidth's 80-column fallback, while contentWidth is left without its own doc comment.",
+            "proof_refs": [
+              "tui/model.go diff hunk @@ -115,6 +134,14 @@: the unchanged contentWidth doc comment lines are immediately followed by the newly added bannerVisible comment and function, before the unchanged func (m model) contentWidth() int { declaration appears."
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R2-002",
+            "lens": "readability",
+            "location": "tui/run.go:275-281",
+            "severity": "SUGGESTION",
+            "claim": "probeBehind always reads verdicts[0].RepoBehindOrigin with no comment or test covering what happens when ParseSyncCheck returns more than one verdict, even though sync-check checks multiple target directories.",
+            "proof_refs": [
+              "tui/run.go added function body: verdicts := ParseSyncCheck(output) then return verdicts[0].RepoBehindOrigin with no branch for len(verdicts) \u003e 1.",
+              "tui/main_test.go TestProbeBehind's cases confirm multiple target directories are checked in one probe run, yet no added test case supplies more than one VERDICT line."
+            ],
+            "evidence_class": "inferential",
+            "causal_disposition": "introduced"
+          }
+        ],
+        "evidence": [
+          "Inspected all six changed_path_manifest patches verbatim as supplied.",
+          "Verified the GENTLE_AI_REVIEW_BINDING subject_hash matches artifact_subject.subject_hash before inspecting, and that all 6 changed_path_manifest entries had corresponding patch sections in order.",
+          "Reconciled the tui/model.go and tui/run.go hunks against their literal +/- line content to precisely locate the bannerVisible insertion and the probeBehind/probeBehindOriginCmd additions.",
+          "tasks.md, tui/view.go, tui/view_test.go, and the remaining tui/main_test.go additions were reviewed and show no further readability defects introduced by this candidate."
+        ],
+        "result_hash": "sha256:38a9bf80918c9496cf4fd1bd865225840ff4355f5428d7ff27c87009ebc04dac"
+      },
+      {
+        "lens": "review-reliability",
+        "findings": [
+          {
+            "id": "R3-001",
+            "lens": "reliability",
+            "location": "tui/main_test.go:1441",
+            "severity": "WARNING",
+            "claim": "TestProbeBehind's 4 cases all use single-target sync-check output; none proves probeBehind's verdicts[0] selection when sync-check emits multiple target VERDICT blocks, the tool's normal multi-target case.",
+            "proof_refs": [
+              "every TestProbeBehind case in tui/main_test.go uses a single-target sync-check block",
+              "probeBehind in tui/run.go returns verdicts[0].RepoBehindOrigin only, ignoring further verdicts"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          }
+        ],
+        "evidence": [
+          "Inspected all 6 changed-path patches verbatim; traced probeBehind/probeBehindOriginCmd/Init/Update/repoLine and their new tests for behavior, determinism, and failure-path coverage; no candidate-introduced BLOCKER/CRITICAL defect found."
+        ],
+        "result_hash": "sha256:7fc18daf07689e96400223c1204b54655364231b062fe39b1bcdbe3f77c0b0aa"
+      }
+    ],
+    "findings": [
+      {
+        "id": "R4-001",
+        "lens": "resilience",
+        "location": "tui/run.go:289-297",
+        "severity": "WARNING",
+        "claim": "probeBehindOriginCmd runs bin/labdrian-overlay sync-check via exec.Command with no context deadline, timeout, or cancellation, and discards CombinedOutput's error. tui/model.go:86 now wires this into Init() (previously return nil), so every TUI launch spawns this unbounded subprocess call; a slow-to-exit or hung backend leaves the probe goroutine blocked indefinitely with no diagnostic signal, and since bubbletea does not cancel outstanding tea.Cmd goroutines on tea.Quit, the child process can keep running after the user quits the TUI.",
+        "proof_refs": [
+          "tui/run.go:292 cmd := exec.Command(bin, \"sync-check\") sets no context.WithTimeout/CommandContext and no cmd.Cancel/WaitDelay.",
+          "tui/model.go:86 func (m model) Init() tea.Cmd { return probeBehindOriginCmd(m.repoRoot) } replaces the prior return nil, so this unbounded subprocess call now runs unconditionally on every TUI launch.",
+          "tui/run.go:294 discards the CombinedOutput error via out, _ :=, so a failed-to-start or hung backend is indistinguishable from a healthy zero-verdict probe."
+        ],
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R2-001",
+        "lens": "readability",
+        "location": "tui/model.go:137-143",
+        "severity": "WARNING",
+        "claim": "The added bannerVisible() function and its doc comment land between contentWidth's existing doc comment and the contentWidth function itself, so the comment block that now sits directly above bannerVisible opens with two sentences describing contentWidth's 80-column fallback, while contentWidth is left without its own doc comment.",
+        "proof_refs": [
+          "tui/model.go diff hunk @@ -115,6 +134,14 @@: the unchanged contentWidth doc comment lines are immediately followed by the newly added bannerVisible comment and function, before the unchanged func (m model) contentWidth() int { declaration appears."
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R2-002",
+        "lens": "readability",
+        "location": "tui/run.go:275-281",
+        "severity": "SUGGESTION",
+        "claim": "probeBehind always reads verdicts[0].RepoBehindOrigin with no comment or test covering what happens when ParseSyncCheck returns more than one verdict, even though sync-check checks multiple target directories.",
+        "proof_refs": [
+          "tui/run.go added function body: verdicts := ParseSyncCheck(output) then return verdicts[0].RepoBehindOrigin with no branch for len(verdicts) \u003e 1.",
+          "tui/main_test.go TestProbeBehind's cases confirm multiple target directories are checked in one probe run, yet no added test case supplies more than one VERDICT line."
+        ],
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-001",
+        "lens": "reliability",
+        "location": "tui/main_test.go:1441",
+        "severity": "WARNING",
+        "claim": "TestProbeBehind's 4 cases all use single-target sync-check output; none proves probeBehind's verdicts[0] selection when sync-check emits multiple target VERDICT blocks, the tool's normal multi-target case.",
+        "proof_refs": [
+          "every TestProbeBehind case in tui/main_test.go uses a single-target sync-check block",
+          "probeBehind in tui/run.go returns verdicts[0].RepoBehindOrigin only, ignoring further verdicts"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      }
+    ],
+    "classifications": {},
+    "outcomes": {
+      "R2-001": "info",
+      "R2-002": "info",
+      "R3-001": "info",
+      "R4-001": "info"
+    },
+    "fix_finding_ids": [],
+    "follow_ups": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:508f80d47d28bba6c94edc93a7ab0b5fe09435e9ee02c83f3e0810ba0088ed50",
+    "evidence_record_digest": "sha256:f6d7f6c89e98e7ba9144f738de980282e08db20d66f21dfbba30bbc23d283538",
+    "evidence_outcome": "passed",
+    "evidence_target_identity": "sha256:3043e66fb53de8e013095ea11a08105dba5ed062a03b2975552cf5dd6a3afcce",
+    "evidence_authority_revision": "sha256:88f200b277f670c88c4ccb95f3dd12b99bcdba43874050bd1df754b3b11200d2",
+    "reviewer_context_level": "provider_command"
+  },
+  "effect_intents": [
+    {
+      "class": "repository_context",
+      "destination": "rctx1_6b7cb24fb354407118940569fc1e41974b189cb2dac703bf970715794e926b1a",
+      "payload_hash": "sha256:87ee179972cc5e8c038921ce5a87148471d46b42e35cfce590e25dbb989d0a01",
+      "binding_revision": "sha256:f095a95db9643104d9743e6c80f57474a7645ec42a1e6405c9073b2c236c0617",
+      "event_id": "sha256:1d51908eaf96246a48282344804b44026e7e636c9d33eadbdf58e295a0ee3d27"
+    }
+  ]
+}
