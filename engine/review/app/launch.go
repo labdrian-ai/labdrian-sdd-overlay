@@ -110,7 +110,9 @@ var shapeRefusals = []error{
 }
 
 // reAsk is the brief of the one time Launch asks the reviewer again (phase9-c25-review-hunt S7): brief followed by a
-// heading that quotes the refusal err of the first reply, its first maxQuotedRefusal bytes. It is false when err is not
+// heading that quotes the refusal err of the first reply, its first maxQuotedRefusal bytes, in a fenced block whose
+// fence is longer than any run of backticks in it (the refusal can echo the reply), then the retry instruction after
+// the fence. It is false when err is not
 // a *ReplyRefusedError of a shapeRefusals reason, or when the re-ask would be over review.MaxReplyBytes.
 func reAsk(brief []byte, err error) ([]byte, bool) {
 	var refused *ReplyRefusedError
@@ -121,7 +123,8 @@ func reAsk(brief []byte, err error) ([]byte, bool) {
 	if len(quoted) > maxQuotedRefusal {
 		quoted = strings.ToValidUTF8(quoted[:maxQuotedRefusal], "") + " ..."
 	}
-	again := fmt.Sprintf("%s\n\n## Your previous reply was refused\n\n%s\n\nReply again with the whole JSON object of the contract: every member of every object present, none null.\n", brief, quoted)
+	fence := strings.Repeat("`", max(3, longestBacktickRun([]byte(quoted))+1))
+	again := fmt.Sprintf("%s\n\n## Your previous reply was refused\n\n%s\n%s\n%s\n\nReply again with the whole JSON object of the contract: every member of every object present, none null.\n", brief, fence, quoted, fence)
 	if len(again) > review.MaxReplyBytes {
 		return nil, false
 	}

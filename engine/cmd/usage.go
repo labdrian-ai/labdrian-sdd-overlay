@@ -251,7 +251,7 @@ func usage(w io.Writer) {
 	fmt.Fprintln(w, "    the full head, the diff_sha256 and the worktree path of the binding. Codex not found, exiting non-zero, stopped at its deadline (30 minutes) or leaving no last message is an error that names codex")
 	fmt.Fprintln(w, "    and repeats what it printed on stderr, and nothing is stored. --ignore-user-config makes codex skip ~/.codex/config.toml, so a model provider set only there cannot launch. The check of the brief is textual:")
 	fmt.Fprintln(w, "    a brief that names the binding and asks something else passes it, and the reply is still held to the binding by 'review record'. A reply refused for its shape (a member missing, unknown or of the wrong type, an id")
-	fmt.Fprintln(w, "    missing or repeated, a value outside its enumeration, a severe finding with no proof, a location that is not path:line or path:start-end) is asked for again once, the brief followed by ## Your previous reply was refused and the refusal, unless that is over the")
+	fmt.Fprintln(w, "    missing or repeated, a value outside its enumeration, a severe finding with no proof, a location that is not path:line or path:start-end) is asked for again once, the brief followed by ## Your previous reply was refused and the refusal in a fenced block, unless that is over the")
 	fmt.Fprintln(w, "    reply limit (the refusal quoted to its first 1024 bytes); a refusal of the second reply, or of the binding or the inspection, is not asked again, and a re-ask the reviewer does not answer")
 	fmt.Fprintln(w, "    leaves the first refusal, with the re-ask's failure said after it. exit 0 stored, 2 reply refused, 1 usage error or any other failure")
 	fmt.Fprintln(w, "  engine review proposals [--cwd <repo>]")

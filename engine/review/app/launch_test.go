@@ -245,6 +245,13 @@ func TestLaunchAsksAgainOnceWhenTheReplyIsRefusedForItsShape(t *testing.T) {
 			t.Errorf("the re-ask after the brief is %q, want it to hold %q", tail, want)
 		}
 	}
+	// The refusal can echo the reply, so it sits in a fence of its own, as the frozen context does, and the retry
+	// instruction comes after that fence.
+	if _, after, ok := strings.Cut(tail, "## Your previous reply was refused\n\n```\n"); !ok {
+		t.Errorf("the re-ask after the brief is %q, want the refusal in a fenced block under its heading", tail)
+	} else if quote, rest, ok := strings.Cut(after, "\n```\n\nReply again"); !ok || !strings.Contains(quote, `findings[0] has no "severity" member`) || strings.Contains(quote, "Reply again") || rest == "" {
+		t.Errorf("the re-ask after the brief is %q, want the refusal inside the fence and the retry instruction after it", tail)
+	}
 	name := review.ResultName(c, got.Number)
 	if store.created() != 1 || !bytes.Contains(store.files["own-rdd"][name], []byte(`"findings": []`)) {
 		t.Errorf("the store holds %q after %d creates, want the second reply stored once", store.files["own-rdd"][name], store.created())
