@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "8963cd17fac83134482799659597de202e624288",
+    "head": "c9391b9b58b6c92ca2911190cbf6bee60b807f4e",
+    "diff_sha256": "c0f41201e92f424bc30a808a8be16bd37158b219201b83ec524c4bdcddb7326b",
+    "paths": [
+      "engine/shelltest/review_bench_test.go",
+      "odd/review-results/phase9-c27-review-recall/eb82c465a73d-1.sweep.json",
+      "odd/review-results/phase9-c27-review-recall/eb82c465a73d-2.exempt.json",
+      "odd/tasks/phase9-c27-review-recall.md",
+      "tools/review-bench/README.md",
+      "tools/review-bench/corpus.json"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git rev-parse c9391b9b^1 ; git rev-parse 8963cd17",
+        "result": "pass",
+        "output": "Both print 8963cd17fac83134482799659597de202e624288."
+      },
+      {
+        "command": "git diff --name-only 8963cd17 c9391b9b",
+        "result": "pass",
+        "output": "Exactly six files: engine/shelltest/review_bench_test.go, odd/review-results/phase9-c27-review-recall/eb82c465a73d-1.sweep.json, odd/review-results/phase9-c27-review-recall/eb82c465a73d-2.exempt.json, odd/tasks/phase9-c27-review-recall.md, tools/review-bench/README.md, tools/review-bench/corpus.json. This is the expected set."
+      },
+      {
+        "command": "git show c9391b9b:tools/review-bench/corpus.json | jq empty; jq count of .real ids >= 34 with holdout; sha256 of jq -c '[.real[] | id < 34]' and jq -c '.mutants' at 8963cd17 and c9391b9b",
+        "result": "pass",
+        "output": "jq empty passed. There are 10 entries with id >= 34, all with holdout true. The R<34 output and the mutants output give identical sha256 at both commits: 368b12b9... for R<34 and bbf3a53e... for mutants."
+      },
+      {
+        "command": "for each R34-R43: git rev-parse --verify <head>^{commit}; git diff <head>^ <head> | wc -c; git diff -U0 <head>^ <head> -- <defect.file> hunk overlap",
+        "result": "pass",
+        "output": "All of R34-R43 resolve to a commit. Actual bytes equal the corpus `bytes` and are at most 150000 (R34 15230, R35 22197, R36 58645, R37 84446, R38 86557, R39 7424, R40 116177, R41 8766, R42 43542, R43 56778). The defect line range overlaps an added head-side hunk line for every one of them (overlap=yes)."
+      },
+      {
+        "command": "cd engine; go test -count=1 ./shelltest/ -run ReviewBench; go vet ./shelltest/; gofmt -l shelltest/",
+        "result": "pass",
+        "output": "go test printed ok github.com/labdrian-ai/labdrian-sdd-overlay/engine/shelltest 1.099s. go vet printed nothing and exited 0. gofmt -l printed nothing."
+      },
+      {
+        "command": "shellcheck tools/review-bench/*.sh tools/review-bench/shim/claude",
+        "result": "pass",
+        "output": "No findings, exit 0."
+      },
+      {
+        "command": "rg -n '\\brunOurs\\b' --glob '!odd/**' --glob '!.git/**'",
+        "result": "pass",
+        "output": "Printed nothing, rc=1. This replaces the earlier command, as the coordinator asked."
+      },
+      {
+        "command": "git diff 8963cd17 c9391b9b | rg -n '^\\+.*\\\\u[0-9a-fA-F]{4}'",
+        "result": "pass",
+        "output": "Printed nothing, rc=1."
+      },
+      {
+        "command": "git diff --check 8963cd17 c9391b9b",
+        "result": "pass",
+        "output": "Printed nothing, rc=0."
+      },
+      {
+        "command": "git log -1 --format=%B c9391b9b | tail -4; git log -1 --format=%B c9391b9b | rg -ci 'co-authored-by'",
+        "result": "pass",
+        "output": "The message ends with the line `Risk: none`. The Co-Authored-By match count is 0, with no match printed. Scratch directory /tmp/tmp.WSOIcBxIEc was created and is empty; no repository files were modified."
+      }
+    ]
+  }
+}
