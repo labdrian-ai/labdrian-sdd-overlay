@@ -403,7 +403,7 @@ func TestReviewBenchRunOurs(t *testing.T) {
 		brief := readFile(t, filepath.Join(bench, "out", "ours", "R1", "brief-recall.txt"))
 		first, _, _ := strings.Cut(brief, "\n")
 		if !strings.HasPrefix(first, "Lens: Inspect behavior, tests, boundaries,") ||
-			!strings.HasSuffix(first, "a concrete failure mode for each finding; report a failure whose trigger you cannot show is reached as a WARNING or a SUGGESTION rather than leaving it out.") ||
+			!strings.HasSuffix(first, "a concrete failure mode for each finding; report a failure whose trigger you cannot show realistic input reaches as a WARNING or a SUGGESTION rather than leaving it out.") ||
 			strings.Contains(first, "do not report speculation") {
 			t.Fatalf("the recall brief's lens line is %q, want the default row's sentence with S2 (b)'s substitution", first)
 		}

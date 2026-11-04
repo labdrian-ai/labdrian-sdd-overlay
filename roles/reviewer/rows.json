@@ -18,7 +18,7 @@
     },
     {
       "id": "recall",
-      "sentence": "Inspect behavior, tests, boundaries, invalid inputs, failure paths, determinism, and regressions; then failure handling, retry safety, graceful degradation, and load; then the risk line: secrets, permissions, path escapes, and exec or net imports. Require externally observable assertions at the cheapest useful test level and a concrete failure mode for each finding; report a failure whose trigger you cannot show is reached as a WARNING or a SUGGESTION rather than leaving it out."
+      "sentence": "Inspect behavior, tests, boundaries, invalid inputs, failure paths, determinism, and regressions; then failure handling, retry safety, graceful degradation, and load; then the risk line: secrets, permissions, path escapes, and exec or net imports. Require externally observable assertions at the cheapest useful test level and a concrete failure mode for each finding; report a failure whose trigger you cannot show realistic input reaches as a WARNING or a SUGGESTION rather than leaving it out."
     }
   ]
 }
