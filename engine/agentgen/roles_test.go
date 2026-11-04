@@ -16,21 +16,23 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/agentgen"
 )
 
-// engramLine is the second line of the core prefix: the one that sends a role to Engram for its
-// artifacts. A role with no Engram tool is not sent there (slice 2, L3: the projection drops it).
-const engramLine = "Read every artifact the prompt locates (file path, or Engram topic via mem_get_observation) before acting. A missing required locator is a blocker: report it, never substitute another store."
+// memoryLine is the second line of the core prefix: the one that sends a role to memorycard for its
+// artifacts. A role with no memorycard tool is not sent there (slice 2, L3: the projection drops it).
+// memorycard replaced Engram as the memory store (Engram is frozen, read-only history), so the roles
+// read and write memorycard and no role lists an Engram tool.
+const memoryLine = "Read every artifact the prompt locates (file path, or memorycard topic via mem_search, then mem_get) before acting. A missing required locator is a blocker: report it, never substitute another store."
 
 const (
 	piSonnet = "pi-claude-cli/claude-sonnet-5"
 	piOpus   = "pi-claude-cli/claude-opus-5"
 	piHaiku  = "pi-claude-cli/claude-haiku-4-5"
 
-	builderClaudeTools  = "Read, Edit, Write, Glob, Grep, Bash, mcp__engram__mem_search, mcp__plugin_engram_engram__mem_search, mcp__engram__mem_get_observation, mcp__plugin_engram_engram__mem_get_observation, mcp__engram__mem_save, mcp__plugin_engram_engram__mem_save, mcp__engram__mem_update, mcp__plugin_engram_engram__mem_update, mcp__codegraph__codegraph_explore"
-	shaperClaudeTools   = "Read, Edit, Write, Grep, Glob, mcp__engram__mem_search, mcp__plugin_engram_engram__mem_search, mcp__engram__mem_get_observation, mcp__plugin_engram_engram__mem_get_observation, mcp__engram__mem_save, mcp__plugin_engram_engram__mem_save, mcp__codegraph__codegraph_explore"
-	polisherClaudeTools = "Read, Glob, Grep, mcp__plugin_engram_engram__mem_search, mcp__plugin_engram_engram__mem_get_observation, mcp__codegraph__codegraph_explore"
-	prototypeClaudeTool = "Read, Glob, Grep, Bash, Write, Edit, mcp__plugin_engram_engram__mem_search, mcp__plugin_engram_engram__mem_get_observation"
-	sweeperClaudeTools  = "Read, Edit, Glob, Grep, Bash, mcp__engram__mem_search, mcp__plugin_engram_engram__mem_search, mcp__engram__mem_get_observation, mcp__plugin_engram_engram__mem_get_observation, mcp__codegraph__codegraph_explore"
-	deliveryClaudeTools = "Read, Edit, Write, Glob, Bash, mcp__engram__mem_search, mcp__plugin_engram_engram__mem_search, mcp__engram__mem_get_observation, mcp__plugin_engram_engram__mem_get_observation, mcp__engram__mem_save, mcp__plugin_engram_engram__mem_save, mcp__codegraph__codegraph_explore"
+	builderClaudeTools  = "Read, Edit, Write, Glob, Grep, Bash, mcp__memorycard__mem_search, mcp__memorycard__mem_get, mcp__memorycard__mem_save, mcp__memorycard__mem_update, mcp__codegraph__codegraph_explore"
+	shaperClaudeTools   = "Read, Edit, Write, Grep, Glob, mcp__memorycard__mem_search, mcp__memorycard__mem_get, mcp__memorycard__mem_save, mcp__codegraph__codegraph_explore"
+	polisherClaudeTools = "Read, Glob, Grep, mcp__memorycard__mem_search, mcp__memorycard__mem_get, mcp__codegraph__codegraph_explore"
+	prototypeClaudeTool = "Read, Glob, Grep, Bash, Write, Edit, mcp__memorycard__mem_search, mcp__memorycard__mem_get"
+	sweeperClaudeTools  = "Read, Edit, Glob, Grep, Bash, mcp__memorycard__mem_search, mcp__memorycard__mem_get, mcp__codegraph__codegraph_explore"
+	deliveryClaudeTools = "Read, Edit, Write, Glob, Bash, mcp__memorycard__mem_search, mcp__memorycard__mem_get, mcp__memorycard__mem_save, mcp__codegraph__codegraph_explore"
 )
 
 // wantRole is what is expected of one role in the three files.
@@ -41,28 +43,28 @@ type wantRole struct {
 	piModel           string
 	piTools           string
 	effort            string
-	// engram says that the role has an Engram tool, so its body keeps the line that sends it to Engram.
-	engram bool
+	// memory says that the role has a memorycard tool, so its body keeps the line that sends it there.
+	memory bool
 }
 
 // wantRoles are the eight roles in the order of the table of per-role design v3, section 2.
 var wantRoles = []wantRole{
 	{"builder", "Implements the tasks a labdrian workflow names, or fixes confirmed ledger ids, and reports the evidence of each work unit.",
-		"sonnet", builderClaudeTools, piSonnet, "read, edit, write, find, grep, bash, mem_search, mem_get_observation, mem_save, mem_update, codegraph", "high", true},
+		"sonnet", builderClaudeTools, piSonnet, "read, edit, write, find, grep, bash, mcp__memorycard__mem_search, mcp__memorycard__mem_get, mcp__memorycard__mem_save, mcp__memorycard__mem_update, codegraph", "high", true},
 	{"shaper", "Writes the Specs and Tasks of the feature document of a labdrian workflow and returns open product decisions as risks.",
-		"opus", shaperClaudeTools, piOpus, "read, edit, write, grep, find, mem_search, mem_get_observation, mem_save, codegraph", "high", true},
+		"opus", shaperClaudeTools, piOpus, "read, edit, write, grep, find, mcp__memorycard__mem_search, mcp__memorycard__mem_get, mcp__memorycard__mem_save, codegraph", "high", true},
 	{"polisher", "Polisher role, the read-only blind judge of an immutable target (judgment-day launches it for both judges); returns one JSON findings object.",
-		"sonnet", polisherClaudeTools, piSonnet, "read, find, grep, mem_search, mem_get_observation, codegraph", "high", true},
+		"sonnet", polisherClaudeTools, piSonnet, "read, find, grep, mcp__memorycard__mem_search, mcp__memorycard__mem_get, codegraph", "high", true},
 	{"prototyper", "Answers listed feasibility questions with throwaway spikes in a disposable worktree and returns kill, narrow or continue per question.",
-		"sonnet", prototypeClaudeTool, piSonnet, "read, find, grep, bash, write, edit, mem_search, mem_get_observation", "medium", true},
+		"sonnet", prototypeClaudeTool, piSonnet, "read, find, grep, bash, write, edit, mcp__memorycard__mem_search, mcp__memorycard__mem_get", "medium", true},
 	{"sweeper", "Removal-only cleanup of dead code and stale prose that a work unit left behind; commits one chore(sweep) commit or none.",
-		"sonnet", sweeperClaudeTools, piSonnet, "read, edit, find, grep, bash, mem_search, mem_get_observation, codegraph", "medium", true},
+		"sonnet", sweeperClaudeTools, piSonnet, "read, edit, find, grep, bash, mcp__memorycard__mem_search, mcp__memorycard__mem_get, codegraph", "medium", true},
 	{"reviewer", "Reviewer role, the read-only reader of a committed diff and its detached worktree (send base, head, diff_sha256, the diff, the worktree path and the lens rows); returns one JSON object of findings.",
 		"sonnet", "Read, Grep, Glob", piSonnet, "read, grep, find", "high", false},
 	{"verifier", "Verifier role, runs the checks a prompt names and reproduces the findings it lists (send the finding ids, the exact checks and the worktree); returns reproduced, not-reproduced or not-run per id, or, with no finding id, the report of an exemption, each check as pass, fail or not-run.",
-		"sonnet", "Read, Grep, Glob, Bash, mcp__plugin_engram_engram__mem_get_observation", piSonnet, "read, grep, find, bash, mem_get_observation", "medium", true},
+		"sonnet", "Read, Grep, Glob, Bash, mcp__memorycard__mem_get", piSonnet, "read, grep, find, bash, mcp__memorycard__mem_get", "medium", true},
 	{"delivery", "Closes the feature document of a finished labdrian workflow in place with a final Log entry, recording unfinished work as unfinished.",
-		"haiku", deliveryClaudeTools, piHaiku, "read, edit, write, find, bash, mem_search, mem_get_observation, mem_save, codegraph", "low", true},
+		"haiku", deliveryClaudeTools, piHaiku, "read, edit, write, find, bash, mcp__memorycard__mem_search, mcp__memorycard__mem_get, mcp__memorycard__mem_save, codegraph", "low", true},
 }
 
 // seededRoot is a root with the role sources of this repository under roles/ and nothing else: all
@@ -105,17 +107,17 @@ func readText(t *testing.T, path string) string {
 }
 
 // wantBody is the body of a role in the three files: its source, without the line that sends it to
-// Engram when it has no Engram tool.
+// memorycard when it has no memorycard tool.
 func wantBody(t *testing.T, root string, r wantRole) string {
 	t.Helper()
 	source := readText(t, filepath.Join(root, "roles", r.name, "body.md"))
-	if r.engram {
+	if r.memory {
 		return source
 	}
-	if strings.Count(source, engramLine+"\n") != 1 {
-		t.Fatalf("roles/%s/body.md must carry the Engram line of the core prefix exactly once", r.name)
+	if strings.Count(source, memoryLine+"\n") != 1 {
+		t.Fatalf("roles/%s/body.md must carry the memory line of the core prefix exactly once", r.name)
 	}
-	return strings.Replace(source, engramLine+"\n", "", 1)
+	return strings.Replace(source, memoryLine+"\n", "", 1)
 }
 
 // generated is a root with the role sources, after Generate has written everything from them.
@@ -189,16 +191,20 @@ func TestTheCodexFileOfARoleHasTheFourFieldsOfTheDesignAndTheBody(t *testing.T) 
 	}
 }
 
-// A role with no Engram tool is not sent to Engram by its instructions, in any of the three files; a
-// role with one keeps the line. Only the reviewer has none.
-func TestARoleWithNoEngramToolIsNotSentToEngramInAnyFile(t *testing.T) {
+// A role with no memorycard tool is not sent to memorycard by its instructions, in any of the three
+// files; a role with one keeps the line. Only the reviewer has none. No file sends a role to Engram.
+func TestARoleWithNoMemoryToolIsNotSentToMemorycardInAnyFile(t *testing.T) {
 	root := generated(t)
 	for _, r := range wantRoles {
 		t.Run(r.name, func(t *testing.T) {
 			for _, path := range []string{"agents/" + r.name + ".md", "pi/agents/" + r.name + ".md", "codex/agents/" + r.name + ".toml"} {
-				has := strings.Contains(readText(t, filepath.Join(root, filepath.FromSlash(path))), "Engram topic via mem_get_observation")
-				if has != r.engram {
-					t.Errorf("%s carries the Engram line = %v, want %v", path, has, r.engram)
+				text := readText(t, filepath.Join(root, filepath.FromSlash(path)))
+				has := strings.Contains(text, "memorycard topic via mem_search, then mem_get")
+				if has != r.memory {
+					t.Errorf("%s carries the memory line = %v, want %v", path, has, r.memory)
+				}
+				if strings.Contains(strings.ToLower(text), "engram") {
+					t.Errorf("%s still names Engram, the frozen store", path)
 				}
 			}
 		})
@@ -224,15 +230,19 @@ func TestTheFilesOfTheRolesAreAsciiWithNoGeneratedHeader(t *testing.T) {
 	}
 }
 
-// The tool names of Pi are the ones the installed sources register (verified 2026-10-22 against Pi
-// 1.3.0, gentle-pi 4.3.0 and gentle-engram 0.4.2): the built-in tools of Pi, the tools gentle-engram
-// registers by the bare name of the Engram tool, and the one native tool gentle-pi names codegraph.
+// The tool names of Pi are the ones the installed sources register: the built-in tools of Pi and the
+// one native tool gentle-pi names codegraph (verified 2026-10-22 against Pi 1.3.0 and gentle-pi
+// 4.3.0), and the tools of the memorycard MCP server Pi loads from its mcp.json, by their MCP name (an
+// assumption, see piToolNames; gentle-engram, which registered bare mem_* names, is no longer
+// installed).
 // gentle-pi drops a name it does not know without a word, so a name outside this set would take a
 // tool from a role and say nothing.
 func TestThePiToolsOfEveryRoleAreNamesTheInstalledSourcesRegister(t *testing.T) {
 	known := map[string]bool{
 		"read": true, "edit": true, "write": true, "bash": true, "grep": true, "find": true,
-		"mem_search": true, "mem_get_observation": true, "mem_save": true, "mem_update": true, "codegraph": true,
+		"codegraph":                   true,
+		"mcp__memorycard__mem_search": true, "mcp__memorycard__mem_get": true,
+		"mcp__memorycard__mem_save": true, "mcp__memorycard__mem_update": true,
 	}
 	for _, r := range wantRoles {
 		for _, tool := range strings.Split(r.piTools, ", ") {

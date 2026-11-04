@@ -32,7 +32,7 @@ import (
 func roleCorePrefix(role string) []string {
 	return []string{
 		"You are the " + role + " sub-agent of a labdrian workflow. Do the work yourself; never launch sub-agents.",
-		"Read every artifact the prompt locates (file path, or Engram topic via mem_get_observation) before acting. A missing required locator is a blocker: report it, never substitute another store.",
+		"Read every artifact the prompt locates (file path, or memorycard topic via mem_search, then mem_get) before acting. A missing required locator is a blocker: report it, never substitute another store.",
 		"Write only the artifacts and paths the prompt names; for any other path, stop and report it.",
 		"Report only commands you ran and their exact results; an unrun check is \"not run\", never a pass.",
 		"End with the return envelope as text, never a tool call: status success|partial|blocked, summary, artifacts, next, risks, skill_resolution.",
@@ -46,24 +46,24 @@ func roleCorePrefix(role string) []string {
 // no mem_save, and the sweeper's is the builder's without Write, mem_save and mem_update. The
 // reviewer's is Read, Grep and Glob and nothing else (no shell, no edit, no MCP: its locators are
 // file paths inside the worktree it is given); the verifier's is the one of sdd-verify without
-// Edit, Write, mem_save, mem_search and CodeGraph, the single Engram tool being the plugin-prefixed
-// name the other read-only agents use (per-role reviewer design, section 6).
+// Edit, Write, mem_save, mem_search and CodeGraph, its single memory tool the read by id (per-role
+// reviewer design, section 6). The memory tools are the ones of memorycard, which replaced Engram as
+// the memory store: Engram is frozen, read-only history, and no role lists an Engram tool.
 const (
-	builderTools   = "Read, Edit, Write, Glob, Grep, Bash, mcp__engram__mem_search, mcp__plugin_engram_engram__mem_search, mcp__engram__mem_get_observation, mcp__plugin_engram_engram__mem_get_observation, mcp__engram__mem_save, mcp__plugin_engram_engram__mem_save, mcp__engram__mem_update, mcp__plugin_engram_engram__mem_update, mcp__codegraph__codegraph_explore"
-	shaperTools    = "Read, Edit, Write, Grep, Glob, mcp__engram__mem_search, mcp__plugin_engram_engram__mem_search, mcp__engram__mem_get_observation, mcp__plugin_engram_engram__mem_get_observation, mcp__engram__mem_save, mcp__plugin_engram_engram__mem_save, mcp__codegraph__codegraph_explore"
-	polisherTools  = "Read, Glob, Grep, mcp__plugin_engram_engram__mem_search, mcp__plugin_engram_engram__mem_get_observation, mcp__codegraph__codegraph_explore"
-	prototypeTools = "Read, Glob, Grep, Bash, Write, Edit, mcp__plugin_engram_engram__mem_search, mcp__plugin_engram_engram__mem_get_observation"
-	deliveryTools  = "Read, Edit, Write, Glob, Bash, mcp__engram__mem_search, mcp__plugin_engram_engram__mem_search, mcp__engram__mem_get_observation, mcp__plugin_engram_engram__mem_get_observation, mcp__engram__mem_save, mcp__plugin_engram_engram__mem_save, mcp__codegraph__codegraph_explore"
+	builderTools   = "Read, Edit, Write, Glob, Grep, Bash, mcp__memorycard__mem_search, mcp__memorycard__mem_get, mcp__memorycard__mem_save, mcp__memorycard__mem_update, mcp__codegraph__codegraph_explore"
+	shaperTools    = "Read, Edit, Write, Grep, Glob, mcp__memorycard__mem_search, mcp__memorycard__mem_get, mcp__memorycard__mem_save, mcp__codegraph__codegraph_explore"
+	polisherTools  = "Read, Glob, Grep, mcp__memorycard__mem_search, mcp__memorycard__mem_get, mcp__codegraph__codegraph_explore"
+	prototypeTools = "Read, Glob, Grep, Bash, Write, Edit, mcp__memorycard__mem_search, mcp__memorycard__mem_get"
+	deliveryTools  = "Read, Edit, Write, Glob, Bash, mcp__memorycard__mem_search, mcp__memorycard__mem_get, mcp__memorycard__mem_save, mcp__codegraph__codegraph_explore"
 	reviewerTools  = "Read, Grep, Glob"
-	verifierTools  = "Read, Grep, Glob, Bash, mcp__plugin_engram_engram__mem_get_observation"
+	verifierTools  = "Read, Grep, Glob, Bash, mcp__memorycard__mem_get"
 )
 
 // sweeperTools is the tool list of the builder without the tools that create files and persist
 // memory: the sweep only removes and corrects, and its outputs are its edits and its envelope.
 func sweeperTools() string {
 	drop := map[string]bool{
-		"Write": true, "mcp__engram__mem_save": true, "mcp__plugin_engram_engram__mem_save": true,
-		"mcp__engram__mem_update": true, "mcp__plugin_engram_engram__mem_update": true,
+		"Write": true, "mcp__memorycard__mem_save": true, "mcp__memorycard__mem_update": true,
 	}
 	var kept []string
 	for _, tool := range strings.Split(builderTools, ", ") {
@@ -194,7 +194,7 @@ func TestRoleAgentToolsCarryTheLimitsOfTheirRole(t *testing.T) {
 		"sweeper":    {"Bash", "Edit"},
 		"delivery":   {"Bash", "Edit"},
 		"reviewer":   {"Read", "Grep", "Glob"},
-		"verifier":   {"Bash", "Read", "Grep", "Glob", "mcp__plugin_engram_engram__mem_get_observation"},
+		"verifier":   {"Bash", "Read", "Grep", "Glob", "mcp__memorycard__mem_get"},
 	}
 	for _, spec := range roleAgentSpecs() {
 		t.Run(spec.role, func(t *testing.T) {
@@ -216,14 +216,14 @@ func TestRoleAgentToolsCarryTheLimitsOfTheirRole(t *testing.T) {
 	}
 }
 
-// The roles whose agent has no Engram tool. The core prefix tells a role to read Engram topics through
-// mem_get_observation, which these cannot do, so their agent files leave that one line out (slice 4,
-// S5); the role source keeps it, and so do the files of every role that has an Engram tool.
-var rolesWithoutAnEngramTool = map[string]bool{"reviewer": true}
+// The roles whose agent has no memorycard tool. The core prefix tells a role to read memorycard topics
+// through mem_search and mem_get, which these cannot do, so their agent files leave that one line out
+// (slice 4, S5); the role source keeps it, and so do the files of every role that has a memory tool.
+var rolesWithoutAMemoryTool = map[string]bool{"reviewer": true}
 
 // Each agent file is its frontmatter and the role source roles/<role>/body.md, nothing between or
 // after, so that the source is the one place the text of a role is edited; the one difference is the
-// Engram line of the core prefix in the file of a role that has no Engram tool. The body is the core
+// memory line of the core prefix in the file of a role that has no memorycard tool. The body is the core
 // prefix, a blank line and the delta of the role, in the number of lines v3 section 2 gives it.
 func TestRoleAgentFilesAreTheirFrontmatterAndTheRoleSource(t *testing.T) {
 	root := skillsRepoRoot(t)
@@ -232,18 +232,22 @@ func TestRoleAgentFilesAreTheirFrontmatterAndTheRoleSource(t *testing.T) {
 			_, frontmatter, rest := agentFile(t, root, spec.role)
 			body := readRepoFile(t, root, "roles/"+spec.role+"/body.md")
 			want := body
-			if rolesWithoutAnEngramTool[spec.role] {
-				engramLine := roleCorePrefix(spec.role)[1] + "\n"
-				if strings.Count(body, engramLine) != 1 {
-					t.Fatalf("roles/%s/body.md must carry the Engram line of the core prefix once", spec.role)
+			if rolesWithoutAMemoryTool[spec.role] {
+				memoryLine := roleCorePrefix(spec.role)[1] + "\n"
+				if strings.Count(body, memoryLine) != 1 {
+					t.Fatalf("roles/%s/body.md must carry the memory line of the core prefix once", spec.role)
 				}
-				want = strings.Replace(body, engramLine, "", 1)
+				want = strings.Replace(body, memoryLine, "", 1)
 			}
 			if rest != "\n\n"+want {
-				t.Fatalf("agents/%[1]s.md must be its frontmatter, a blank line and roles/%[1]s/body.md (without the Engram line when the role has no Engram tool); edit the source and copy it", spec.role)
+				t.Fatalf("agents/%[1]s.md must be its frontmatter, a blank line and roles/%[1]s/body.md (without the memory line when the role has no memorycard tool); edit the source and copy it", spec.role)
 			}
-			if hasEngramTool := strings.Contains(parseYAMLScalar(t, frontmatter, "tools"), "mem_"); hasEngramTool == rolesWithoutAnEngramTool[spec.role] {
-				t.Errorf("%s: has an Engram tool = %v, but the list of roles without one says %v", spec.role, hasEngramTool, rolesWithoutAnEngramTool[spec.role])
+			tools := parseYAMLScalar(t, frontmatter, "tools")
+			if hasMemoryTool := strings.Contains(tools, "mcp__memorycard__mem_"); hasMemoryTool == rolesWithoutAMemoryTool[spec.role] {
+				t.Errorf("%s: has a memorycard tool = %v, but the list of roles without one says %v", spec.role, hasMemoryTool, rolesWithoutAMemoryTool[spec.role])
+			}
+			if strings.Contains(tools, "engram") {
+				t.Errorf("%s still lists an Engram tool: %s", spec.role, tools)
 			}
 			prefix := strings.Join(roleCorePrefix(spec.role), "\n")
 			if !strings.HasPrefix(body, prefix+"\n\n") {
