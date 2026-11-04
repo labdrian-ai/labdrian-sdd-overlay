@@ -26,6 +26,8 @@ import (
 //     search shapes, the standing, the tokenizer and the snippet rule); engram is
 //     an adapter that maps Engram's rows to it (L1). Only the composition root may
 //     import engram (engram_adapter_guard_test.go).
+//   - memorycard is an adapter, the second store promotion reads: it maps memorycard's rows to memory.CardMemory,
+//     read-only, as engram does for Engram's. Only the composition root may import it (the adapter guard).
 //   - vaultlayout is a domain package: the one list of where the vault keeps its pages, catalog, log
 //     and state, with no I/O. Promotion, the diagnostics and the file system adapter all read it (L3).
 //   - vaultfs is the file system adapter of the vault: the repositories behind the ports promote and ops
@@ -61,6 +63,7 @@ var rings = map[string]archguard.Ring{
 	"internal/identityledger": archguard.Adapter,
 	"internal/ingest":         archguard.Domain,
 	"internal/memory":         archguard.Domain,
+	"internal/memorycard":     archguard.Adapter,
 	"internal/mcpserver":      archguard.Adapter,
 	"internal/ops":            archguard.Application,
 	"internal/opstest":        archguard.Support,

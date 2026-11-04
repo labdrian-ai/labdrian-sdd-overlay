@@ -13,6 +13,9 @@ import (
 // engramDBEnvVar overrides the default Engram database path (D8 CLI).
 const engramDBEnvVar = "LONGTERM_MEM_ENGRAM_DB"
 
+// memorycardDBEnvVar overrides the default memorycard database path (`promote --source memorycard`).
+const memorycardDBEnvVar = "LONGTERM_MEM_MEMORYCARD_DB"
+
 // maxTopN bounds --top (2b-2 review advisory).
 const maxTopN = 50
 

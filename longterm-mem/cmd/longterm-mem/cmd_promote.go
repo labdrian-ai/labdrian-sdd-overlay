@@ -33,10 +33,15 @@ func (c commands) cmdPromote(args []string) int {
 	project := fs.String("project", "", projectFlagUsage)
 	id := fs.Int64("id", 0, "Engram observation id (required)")
 	vaultDir := fs.String("vault", "", "vault path override")
+	source := fs.String("source", sourceEngram, "store to promote from: engram (the default) or memorycard; with memorycard, --id is a memorycard memory id")
 	if err := fs.Parse(args); err != nil {
 		return exitUsage
 	}
 	a := c.newApp("promote")
+	if *source != sourceEngram && *source != sourceMemorycard {
+		fmt.Fprintf(os.Stderr, "longterm-mem: promote: --source %q is not a store: use %s or %s\n", *source, sourceEngram, sourceMemorycard)
+		return exitUsage
+	}
 	resolvedProject, exit := a.project(*project, false)
 	if exit != exitOK {
 		return exit
@@ -48,6 +53,9 @@ func (c commands) cmdPromote(args []string) int {
 	vaultRoot, exit := a.vaultRoot(resolvedProject, *vaultDir, false)
 	if exit != exitOK {
 		return exit
+	}
+	if *source == sourceMemorycard {
+		return c.promoteFromMemorycard(a, vaultRoot, *id)
 	}
 	store, exit := a.memoryToPromoteFrom()
 	if exit != exitOK {
@@ -63,6 +71,50 @@ func (c commands) cmdPromote(args []string) int {
 		return a.refuse(err, exitInternal)
 	}
 	return reportPromotion(result, *id)
+}
+
+// The stores `promote --source` names.
+const (
+	sourceEngram     = "engram"
+	sourceMemorycard = "memorycard"
+)
+
+// promoteFromMemorycard promotes the memorycard memory id into the vault at vaultRoot, and only as a new page:
+// a memory that already has a page is reported and leaves it as it is, and a memory bridged to an Engram
+// observation that has a page is refused (exit 6, registration_conflict, the code of every refusal that leaves
+// a page of the vault alone), naming that page.
+func (c commands) promoteFromMemorycard(a app, vaultRoot string, id int64) int {
+	store, exit := a.memorycard()
+	if exit != exitOK {
+		return exit
+	}
+	defer store.Close()
+
+	writer, err := newPromoteWriter(vaultRoot, c.clock)
+	if err != nil {
+		return a.refuse(err, exitInternal)
+	}
+	result, err := promote.ExplicitPromoteCard(context.Background(), writer, store.MemoryByID, id)
+	var bridged *promote.BridgedError
+	switch {
+	case errors.As(err, &bridged):
+		return a.refuse(err, exitRegistrationConflict)
+	case errors.Is(err, promote.ErrObservationNotFound):
+		return a.refuse(err, exitNotFound)
+	case err != nil:
+		return a.refuse(err, exitInternal)
+	}
+	if result.Action.Kind == promote.ActionAlreadyPromoted {
+		fmt.Printf("longterm-mem: memorycard memory %d already promoted as %s; the page is left as it is\n", id, result.Page.Address)
+		return exitOK
+	}
+	if result.Action.Kind == promote.ActionSkippedUnreadablePages {
+		// Nothing was written, and the line names the memory, not an observation.
+		fmt.Printf("longterm-mem: refused memorycard memory %d (%s)\n", id, result.Action.Kind)
+		fmt.Fprintf(os.Stderr, "longterm-mem: promote: %s\n", result.Action.Diagnostic.Detail)
+		return exitRegistrationConflict
+	}
+	return reportPromotion(result, id)
 }
 
 // reportPromotion says what a promotion did and answers the exit code of it.

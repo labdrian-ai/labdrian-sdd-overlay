@@ -39,6 +39,9 @@ const (
 	// address was taken, and Diagnostic names the pages that could not be read. It is a skip like
 	// ActionSkippedLocalEdit, and the Result carries no page.
 	ActionSkippedUnreadablePages
+	// ActionAlreadyPromoted means the memory of memorycard already has its page and a promote writes no
+	// existing page: nothing was written, and the Result names the page it has (PromoteCard only).
+	ActionAlreadyPromoted
 )
 
 // Action reports the outcome of one promotion write.
@@ -65,6 +68,8 @@ func (k ActionKind) String() string {
 		return "skipped_local_edit"
 	case ActionSkippedUnreadablePages:
 		return "skipped_unreadable_pages"
+	case ActionAlreadyPromoted:
+		return "already_promoted"
 	default:
 		return "unknown"
 	}
