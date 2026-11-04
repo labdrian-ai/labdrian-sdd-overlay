@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "8f52618931e77e8a57b638e606f5f9fd0fc0e20f",
+    "head": "b87f43e234116f1b29060e7444474509263be977",
+    "diff_sha256": "3e8e3f84fd2bdfddb03cd906c7a1bc81e93ea9be9c50e905d1d09899736760a2",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/review/rows.go",
+      "engine/skills/role_chain_artifact_test.go",
+      "odd/tasks/phase9-c27-review-recall.md",
+      "skills/role-chain/.approval.json",
+      "skills/role-chain/SKILL.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "8f52618931e77e8a57b638e606f5f9fd0fc0e20f",
+      "head": "b87f43e234116f1b29060e7444474509263be977",
+      "diff_sha256": "3e8e3f84fd2bdfddb03cd906c7a1bc81e93ea9be9c50e905d1d09899736760a2"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/review/rows.go",
+        "engine/skills/role_chain_artifact_test.go",
+        "odd/tasks/phase9-c27-review-recall.md",
+        "skills/role-chain/.approval.json",
+        "skills/role-chain/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the full diff at the scratchpad path t7.diff.",
+      "engine/review/rows.go: only `//` comment lines changed, and the `rowIDs` code line is untouched, so `default` stays a row.",
+      "skills/role-chain/SKILL.md:32: now reads \"(`recall` always)\". A Grep of `skills/` for `default` and `rows.json` found no other line that names `default` as the row always sent.",
+      "engine/skills/role_chain_artifact_test.go:189 pins \"`recall` always\", matching the skill line.",
+      "A Grep of non-test Go under `engine/` found no code that branches on the row id \"default\". It appears only in `rowIDs` (rows.go:22), a stored-results comment (stored.go:17), a Go keyword table (sweep.go:236) and a JSON tag (proposals.go:55), so no engine output depends on which row the role chain sends.",
+      "`.approval.json` was updated to a new sha256 and approver `labdrian`. I did not recompute the digest or run `labdrian skills validate`, so that exit 0 is only claimed in the task Log (L22) and is not run by me.",
+      "No tests, vet or other commands were run by me."
+    ]
+  }
+}

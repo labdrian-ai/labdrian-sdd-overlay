@@ -1,0 +1,15 @@
+{
+  "kind": "polisher",
+  "base": "8f52618931e77e8a57b638e606f5f9fd0fc0e20f",
+  "head": "b87f43e234116f1b29060e7444474509263be977",
+  "diff_sha256": "3e8e3f84fd2bdfddb03cd906c7a1bc81e93ea9be9c50e905d1d09899736760a2",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff at t7.diff. It changes one word in skills/role-chain/SKILL.md:32 (`default` to `recall`) and the matching pin at engine/skills/role_chain_artifact_test.go:189. rows.go changes only `//` comment lines, and rowIDs is unchanged. The CHANGELOG entry, the task document entries S7, T7 and L22, and the version 2 .approval.json record complete the diff.",
+      "Grepped the worktree outside odd/ for leftover 'default always' or 'default row' references. Nothing in skills/ still names default as the row always sent. The only other hits are the review-bench README (which describes recall as default relaxed) and a shelltest that passes --rows default to --runtime claude on purpose. Both are consistent with S7's assumptions.",
+      "Confirmed that roles/reviewer/rows.json holds a row with id `recall` (line 20), so the skill's row id resolves and ParseRows still accepts it.",
+      "Not run: go test, skills validate and the approval sha256 recomputation. I had no shell tool and could not check that the sha256 in .approval.json matches the skill bytes. The task document reports it was recomputed and validated by the owner's approve command."
+    ]
+  }
+}

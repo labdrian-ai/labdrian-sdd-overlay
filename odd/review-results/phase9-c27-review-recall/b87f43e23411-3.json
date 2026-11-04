@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "8f52618931e77e8a57b638e606f5f9fd0fc0e20f",
+    "head": "b87f43e234116f1b29060e7444474509263be977",
+    "diff_sha256": "3e8e3f84fd2bdfddb03cd906c7a1bc81e93ea9be9c50e905d1d09899736760a2",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/review/rows.go",
+      "engine/skills/role_chain_artifact_test.go",
+      "odd/tasks/phase9-c27-review-recall.md",
+      "skills/role-chain/.approval.json",
+      "skills/role-chain/SKILL.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "8f52618931e77e8a57b638e606f5f9fd0fc0e20f",
+      "head": "b87f43e234116f1b29060e7444474509263be977",
+      "diff_sha256": "3e8e3f84fd2bdfddb03cd906c7a1bc81e93ea9be9c50e905d1d09899736760a2"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/review/rows.go",
+        "engine/skills/role_chain_artifact_test.go",
+        "odd/tasks/phase9-c27-review-recall.md",
+        "skills/role-chain/.approval.json",
+        "skills/role-chain/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the whole diff in /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/t7.diff. The diff has six hunks: one CHANGELOG entry, a comment-only change in engine/review/rows.go with rowIDs unchanged, one pin in role_chain_artifact_test.go:189 changed to '`recall` always', the S7/S8/T7/T8 lines and Log entries L17-L22 in the task document, a new sha256 and approved_at in the version 2 approval record, and SKILL.md:32 changed from '(`default` always)' to '(`recall` always)'.",
+      "Checked S7 scope (a)-(d) against the diff. Line 32 of the skill is the only skill line that changes, and the rest of that line is identical. The rows.go hunk holds only // lines. The CHANGELOG states the change.",
+      "Checked /home/labdrian/labdrian-sdd-overlay-worktrees/review-b87f43e23411/roles/reviewer/rows.json. It still holds both the 'default' row (line 4) and the 'recall' row (line 20), so the skill names an id that exists, and stored results that declare 'default' still parse through rowIDs.",
+      "Grepped skills/ in the worktree for '`default`', 'default row' and 'recall'. Only SKILL.md:32 matches, and it now reads '`recall` always'. No other line of skills/ names default as the row always sent.",
+      "Grepped the worktree for '`default` always', 'default row every' and 'always .default', excluding odd/. There are no matches, so no README, help or agent text still says default is always sent.",
+      "Grepped non-test Go under engine/ for '\"default\"' and '\"recall\"'. The only row-id use is the rowIDs table at rows.go:22, and the other hits are an unrelated JSON tag, a Go keyword table and golden permission_mode fields. No engine code branches on the row id, so no engine output changes (risk item 3: the only consumer of this contract change is the prompt the parent sends).",
+      "Not verified, because I run nothing in this role: whether the approval sha256 6797bad9... matches the skill bytes. The owner's skills approve wrote it, and L22 records that skills validate exits 0.",
+      "Known tradeoff, not reported as a finding: the reviewer body still says 'Report only real, user-impacting defects' while the recall row asks for unproved failures as WARNING or SUGGESTION. L19 recorded this as an owner-accepted intermediate state, and S8/T8 address it."
+    ]
+  }
+}

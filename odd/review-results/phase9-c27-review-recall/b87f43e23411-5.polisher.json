@@ -1,0 +1,19 @@
+{
+  "kind": "polisher",
+  "base": "8f52618931e77e8a57b638e606f5f9fd0fc0e20f",
+  "head": "b87f43e234116f1b29060e7444474509263be977",
+  "diff_sha256": "3e8e3f84fd2bdfddb03cd906c7a1bc81e93ea9be9c50e905d1d09899736760a2",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/t7.diff (CHANGELOG.md, engine/review/rows.go, engine/skills/role_chain_artifact_test.go, odd/tasks/phase9-c27-review-recall.md, skills/role-chain/.approval.json, skills/role-chain/SKILL.md).",
+      "S7 and the T7 line of odd/tasks/phase9-c27-review-recall.md: SKILL.md:32 now reads '(`recall` always)' and the rest of the line is byte-identical. The rows.go hunk changes only `//` comment lines (17-21); rowIDs at :22 is unchanged. The test pin at role_chain_artifact_test.go:189 now names '`recall` always'. The CHANGELOG entry is present. The .approval.json version 2 record carries a new sha256 and approved_at, with approver 'labdrian'.",
+      "roles/reviewer/rows.json in the worktree holds a row with id 'recall' (line 20), so the skill now names an existing row. 'default' is also still present (line 4), so stored results that declare it stay parseable.",
+      "Grep of skills/role-chain: no line names `default` as the row always sent. Lines 24 and 34 (the readability row, the second blind launch, the Codex launch) are unchanged.",
+      "Grep of non-test Go under engine/ for '\"default\"': the row id appears only in the id table at rows.go:22 and the doc comment at stored.go:17. The hits at sweep.go:236 and proposals.go:55 are unrelated. No engine logic branches on the row id 'default' or on the position of rowIDs, so moving the chain to 'recall' changes no engine output.",
+      "engine/cmd/usage.go:172 and README.md:634 still list all five ids (default, readability, risk-line, hunt, recall), so `--rows recall` is documented as accepted.",
+      "Known and documented, not reported as a defect: the reviewer body still says 'Report only real, user-impacting defects'. That pulls against the relaxed gating of the recall row. The owner accepted this split as a tradeoff in L19 and L20, and S8/T8 cover it as a separate change.",
+      "Commands not run by this judge: go test, skills validate, go vet, staticcheck. The pass results in L22 are the parent's claims and were not reproduced here."
+    ]
+  }
+}
