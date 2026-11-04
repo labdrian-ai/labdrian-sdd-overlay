@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "440ecb8343e595790c822a317a1c02c0eb5673d7",
+    "head": "836197e73a7356c3d31a8781ef8707db90eca151",
+    "diff_sha256": "507b302601e44450473c493e9842be7f3f9de971edeb89b3453b82305d9da8e4",
+    "paths": [
+      "odd/review-receipts/phase9-c26-review-contract/review-b143b7c2b83512a9.review-state.json",
+      "odd/review-results/phase9-c26-review-contract/03d812261dc8-1.sweep.json",
+      "odd/review-results/phase9-c26-review-contract/03d812261dc8-2.sweep.json",
+      "odd/review-results/phase9-c26-review-contract/03d812261dc8-3.sweeper.json",
+      "odd/review-results/phase9-c26-review-contract/03d812261dc8-4.exempt.json",
+      "odd/review-results/phase9-c26-review-contract/440ecb8343e5-1.sweep.json",
+      "odd/review-results/phase9-c26-review-contract/440ecb8343e5-2.exempt.json",
+      "odd/review-results/phase9-c26-review-contract/440ecb8343e5-3.sweeper.json",
+      "odd/tasks/phase9-c26-review-contract.md"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git diff --name-only 440ecb83 836197e7 | rg -v '^odd/(tasks/phase9-c26-review-contract\\.md|review-results/phase9-c26-review-contract/|review-receipts/phase9-c26-review-contract/)'",
+        "result": "pass",
+        "output": "Printed nothing. rg exit code 1."
+      },
+      {
+        "command": "rg -n '\\\\u[0-9a-fA-F]{4}' odd/tasks/phase9-c26-review-contract.md",
+        "result": "pass",
+        "output": "No matches. rg exit code 1."
+      },
+      {
+        "command": "git diff --name-only --diff-filter=A 440ecb83 836197e7 -- '*.json' | xargs -r jq -e . > /dev/null",
+        "result": "pass",
+        "output": "Exit code 0. The diff added 8 .json files, and all parsed."
+      },
+      {
+        "command": "git diff 440ecb83 836197e7 -- odd/tasks/phase9-c26-review-contract.md | rg -c '^-[^-]|^--[^-]'",
+        "result": "pass",
+        "output": "Printed 1. The one matching line starts with `-- [x] T4 — S2 — inline (no writer reason: one unit, ~20`."
+      },
+      {
+        "command": "rg -c '^- \\*\\*L12\\*\\*' odd/tasks/phase9-c26-review-contract.md; git rev-parse --verify <hash>^{commit} for 03d81226, b50c1c6c, 440ecb83",
+        "result": "pass",
+        "output": "The rg count printed 1. All three hashes resolved with exit code 0: 03d812261dc8bed0568aaba65540ab181f044730, b50c1c6c88b445fc14b6cb2eed3cfdf9e91e86de, 440ecb8343e595790c822a317a1c02c0eb5673d7. A separate extraction of the hashes from the L12 line printed nothing, so I did not confirm that L12 names exactly these three. I only confirmed that each of them resolves."
+      },
+      {
+        "command": "labdrian review check --feature phase9-c26-review-contract --onto main",
+        "result": "pass",
+        "output": "Exit code 0. I kept only the last 15 lines of output, so I did not see the overall verdict. The tail is a JSON chain. The 440ecb83 range lists exemption odd/review-results/phase9-c26-review-contract/440ecb8343e5-2.exempt.json with base 03d81226. The final range 440ecb83..836197e7 has results [] and no exemption."
+      }
+    ]
+  }
+}

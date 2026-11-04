@@ -1,0 +1,160 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:4eb182cc4dd385f5cfc530af9a780fc5c1a88b9754d52d1186c80de3a606ebe6",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-b106668c23908df5",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "e5b4dacda1d6c76b25750a329fc70e655d7dd83f",
+      "candidate_tree": "cd1f2ecb9e82d8cc9b5d77461bff7bdb99f0b8cc",
+      "paths_digest": "sha256:23a6c80b3216e7155f83526ac407aa91b6741a7d52eb335e1eec9e3f9114f541",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "odd/review-results/phase9-c26-review-contract/0737dae427e1-1.sweep.json",
+        "odd/review-results/phase9-c26-review-contract/0737dae427e1-2.exempt.json",
+        "odd/tasks/phase9-c26-review-contract.md",
+        "tools/review-bench/scores/ours-c26.json"
+      ],
+      "identity": "sha256:b931b81f83536b71af27373ea5350b21bd011934b0b3c987a7a234ad3f8bdad4"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "e5b4dacda1d6c76b25750a329fc70e655d7dd83f",
+      "candidate_tree": "cd1f2ecb9e82d8cc9b5d77461bff7bdb99f0b8cc",
+      "paths_digest": "sha256:23a6c80b3216e7155f83526ac407aa91b6741a7d52eb335e1eec9e3f9114f541",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "odd/review-results/phase9-c26-review-contract/0737dae427e1-1.sweep.json",
+        "odd/review-results/phase9-c26-review-contract/0737dae427e1-2.exempt.json",
+        "odd/tasks/phase9-c26-review-contract.md",
+        "tools/review-bench/scores/ours-c26.json"
+      ],
+      "identity": "sha256:b931b81f83536b71af27373ea5350b21bd011934b0b3c987a7a234ad3f8bdad4"
+    },
+    "genesis_paths": [
+      "odd/review-results/phase9-c26-review-contract/0737dae427e1-1.sweep.json",
+      "odd/review-results/phase9-c26-review-contract/0737dae427e1-2.exempt.json",
+      "odd/tasks/phase9-c26-review-contract.md",
+      "tools/review-bench/scores/ours-c26.json"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-readability"
+    ],
+    "original_changed_lines": 239,
+    "correction_budget": 120,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "Records only: a feature-document Log entry with the C26 hold-out verdict and a bench score file",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:2c32e43590eea391c78f08b5dadebbe5ff62863f69a37c491c3314a6f626f460",
+    "capture_phase_revision": "sha256:23db69f9eef81b932b29093b355c9bb63b25519733562313ad4345f7e53bef41",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "target_identity": "sha256:b931b81f83536b71af27373ea5350b21bd011934b0b3c987a7a234ad3f8bdad4",
+        "capture_phase_revision": "sha256:23db69f9eef81b932b29093b355c9bb63b25519733562313ad4345f7e53bef41",
+        "artifact_digest": "sha256:0163f9223730d7e2b532d5ae74af647198e1482ac9400a11dfd7bf590c54500c",
+        "result_hash": "sha256:59993bebfdb61cfdb4d7c4c85de58671dce1732ab3f0ef5c56f1e2fab422a342",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:bc9d6e800f20b1b6cfce8b509d7ec048b7c6145466fdd77dbff0a90355a141db",
+            "lineage_id": "review-b106668c23908df5",
+            "authority_revision": "sha256:23db69f9eef81b932b29093b355c9bb63b25519733562313ad4345f7e53bef41",
+            "target_identity": "sha256:b931b81f83536b71af27373ea5350b21bd011934b0b3c987a7a234ad3f8bdad4",
+            "base_tree": "e5b4dacda1d6c76b25750a329fc70e655d7dd83f",
+            "candidate_tree": "cd1f2ecb9e82d8cc9b5d77461bff7bdb99f0b8cc",
+            "changed_path_manifest_sha256": "sha256:8a17a72360dc15c0b1f660bc89938c4d702a16b80618f5ed00034b18f5b0ac84",
+            "lens": "review-readability",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:bc9d6e800f20b1b6cfce8b509d7ec048b7c6145466fdd77dbff0a90355a141db",
+            "raw_sha256": "sha256:5c9b42fdacf974e2859bbb5b1fc2f2b8ba0d5d1a0d19ca6250d68ec09ca9cd62",
+            "canonical_sha256": "sha256:20d3d019f4ba5079e7cab5318de7419cd5ce72e40f5ff0520c0640ca836a6248",
+            "result_hash": "sha256:59993bebfdb61cfdb4d7c4c85de58671dce1732ab3f0ef5c56f1e2fab422a342",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:bc9d6e800f20b1b6cfce8b509d7ec048b7c6145466fdd77dbff0a90355a141db",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "odd/review-results/phase9-c26-review-contract/0737dae427e1-1.sweep.json",
+                "odd/review-results/phase9-c26-review-contract/0737dae427e1-2.exempt.json",
+                "odd/tasks/phase9-c26-review-contract.md",
+                "tools/review-bench/scores/ours-c26.json"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-score-quote-empty",
+                "lens": "readability",
+                "location": "tools/review-bench/scores/ours-c26.json:2-5",
+                "severity": "SUGGESTION",
+                "claim": "Zero-score entries carry an empty quote, and the file has no header or comment saying that an empty quote means 'no located finding'. The scoring rule lives only in the task document's Log (L13), so a reader of the JSON alone cannot tell a zero from an unscored case.",
+                "proof_refs": [
+                  "tools/review-bench/scores/ours-c26.json:2-5",
+                  "odd/tasks/phase9-c26-review-contract.md:166"
+                ]
+              },
+              {
+                "id": "R2-exempt-hand-binding",
+                "lens": "readability",
+                "location": "odd/review-results/phase9-c26-review-contract/0737dae427e1-2.exempt.json:1-5",
+                "severity": "SUGGESTION",
+                "claim": "The exempt record's binding.paths lists 150 paths, including three c26 result files for a different head, while the check output says the sweep.json and sweeper.json carry a top-level .head but the exempt record does not. This asymmetry is explained only inside a check's output string, which makes the record harder to audit. The task Log says '5 checks' while the file lists 5 checks consistently, so no contradiction was found.",
+                "proof_refs": [
+                  "odd/review-results/phase9-c26-review-contract/0737dae427e1-2.exempt.json:1-5",
+                  "odd/review-results/phase9-c26-review-contract/0737dae427e1-2.exempt.json:178-182"
+                ]
+              }
+            ],
+            "evidence": [
+              "Reviewed all 4 changed paths in full.",
+              "The Log entry L13 numbers are consistent with the score file: one score of 1 (R29) in ours-c26.json, 1/10 recall against gentle 2/10, verdict NOT MET follows from the stated rule.",
+              "The T5 task line is flipped to done and cites commit 0737dae4 and L13; the delivered note for T4 is added.",
+              "No dead logic, misleading names or unexplained constants in changed lines beyond the minor documentation suggestions above."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "dd17dca7dbb57b44a4d5ec76e7346417decebd85f9c3af5d7aa90183009119b7",
+    "initial_atomic_start": {
+      "lineage_id": "review-b106668c23908df5",
+      "worktree_identity": "sha256:de1da41c76bdd68136eafa49341376ef384e62fed3ab1aac2afd494cd3d29dbc",
+      "target_identity": "sha256:b931b81f83536b71af27373ea5350b21bd011934b0b3c987a7a234ad3f8bdad4",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "e5b4dacda1d6c76b25750a329fc70e655d7dd83f",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-readability"
+      ],
+      "original_changed_lines": 239,
+      "correction_budget": 120,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "Records only: a feature-document Log entry with the C26 hold-out verdict and a bench score file"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

@@ -1,0 +1,12 @@
+[
+  {"id": "R24", "score": 0, "quote": ""},
+  {"id": "R25", "score": 0, "quote": ""},
+  {"id": "R26", "score": 0, "quote": ""},
+  {"id": "R27", "score": 0, "quote": ""},
+  {"id": "R28", "score": 0, "quote": ""},
+  {"id": "R29", "score": 1, "quote": "unlinkPackageAgents derives the set of links to remove from the package's current agents/ directory. The old unlinkGaduAgent removed the overlay-owned GADU link by fixed name, whether or not the package directory still existed. Now, if the package directory is missing (already removed, or never built) or was rebuilt without an agent, the overlay-owned links under ~/.pi/agent/agents are left behind as dangling symlinks."},
+  {"id": "R30", "score": 0, "quote": ""},
+  {"id": "R31", "score": 0, "quote": ""},
+  {"id": "R32", "score": 0, "quote": ""},
+  {"id": "R33", "score": 0, "quote": ""}
+]

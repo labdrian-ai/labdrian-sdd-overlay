@@ -1,0 +1,107 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:e10081c088d0e589cd506e4ace7e02d09769dff57129764a9c00e9c2bb075183",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-750038ec539b9c4c",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "b2014266cccd81c832bd7e155d151eef7f25805d",
+      "candidate_tree": "27945f962b09c9eb6216a0452f930a5575a0f275",
+      "paths_digest": "sha256:c7b116b1fbcda4606a1f0a1b726c14ddd719f43f4eea249d62ed423570023cda",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/skills/actuals_instrumentation_contract_test.go",
+        "skills/inception-pipeline/SKILL.md"
+      ],
+      "identity": "sha256:750038ec539b9c4cfc998a7c10235b922cebc37e38a4651e4502ed624c898529"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "b2014266cccd81c832bd7e155d151eef7f25805d",
+      "candidate_tree": "27945f962b09c9eb6216a0452f930a5575a0f275",
+      "paths_digest": "sha256:c7b116b1fbcda4606a1f0a1b726c14ddd719f43f4eea249d62ed423570023cda",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/skills/actuals_instrumentation_contract_test.go",
+        "skills/inception-pipeline/SKILL.md"
+      ],
+      "identity": "sha256:750038ec539b9c4cfc998a7c10235b922cebc37e38a4651e4502ed624c898529"
+    },
+    "genesis_paths": [
+      "engine/skills/actuals_instrumentation_contract_test.go",
+      "skills/inception-pipeline/SKILL.md"
+    ],
+    "policy_hash": "sha256:34fb63d7f29f8613cd4431382b1057398a4816f8a4c20fc34677fffc80a184f6",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-reliability"
+    ],
+    "original_changed_lines": 197,
+    "correction_budget": 99,
+    "correction_budget_policy": "floor_two",
+    "lens_results": [
+      {
+        "lens": "review-reliability",
+        "findings": [
+          {
+            "id": "R3-unpinned-partial-write-contract",
+            "lens": "reliability",
+            "location": "skills/inception-pipeline/SKILL.md:162",
+            "severity": "WARNING",
+            "claim": "The diff extends the closure-feedback partial-write-failure contract from two stores to three (adding the new archive-report append) and adds a standalone 'named carve-out, not a precedent' bullet, but neither the two-to-three-store extension nor the new bullet is asserted by any of the required/forbidden string pins the same diff adds in engine/skills/actuals_instrumentation_contract_test.go, so this specific behavior change ships unproved even though the diff's own established practice in the very same file is to pin every other changed clause, several with explicit 'mutation-proven non-covering' rationale.",
+            "proof_refs": [
+              "skills/inception-pipeline/SKILL.md:162 — 'On any partial-write failure (any of the three written, another not), report the inconsistency and STOP. Do not silently leave the stores out of sync.' replaces the removed two-store sentence but is not among the required substrings in the new R016_R017_R018_closure_feedback_anchor_prose, R021_required_drops_wall_clock, or R019_compute_time_deferral_rationale blocks.",
+              "skills/inception-pipeline/SKILL.md:177-178 — the updated 'Stop on partial closure writes' bullet and the wholly new 'The archive-report append is a named carve-out, not a precedent' bullet have no matching entry anywhere in the same test file's required-substring lists.",
+              "engine/skills/actuals_instrumentation_contract_test.go — sibling clauses in the same change ARE pinned with explicit rationale (the Execute-item-3 pin cites 'mutation-proven non-covering (verify round 3, W2)'; the checkpoint_count-boundary pin cites 'the bare pin survived deletion of this clause'), showing the authors already treat an unpinned changed clause in this exact file as a demonstrated regression vector, yet left these clauses in that category.",
+              "ORCHESTRATOR CONFIRMATION: a direct search of the shipped test file returns zero occurrences of 'any of the three written', 'not a precedent' and 'does not license editing', while the shipped skill file contains each exactly once — so the clauses ship and nothing asserts them."
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          }
+        ],
+        "evidence": [
+          "Inspected the complete unified diff for both changed_path_manifest entries (engine/skills/actuals_instrumentation_contract_test.go, +172/-0, and skills/inception-pipeline/SKILL.md, +18/-7, per GENTLE_AI_REVIEW_NUMSTAT) with no access to the working tree, index, HEAD, or any file outside the two supplied GENTLE_AI_REVIEW_PATCH sections.",
+          "Cross-verified, substring by substring, every one of the 18 required and 6 forbidden pins in the new R016_R017_R018_closure_feedback_anchor_prose block, the 2 required pins in R021_required_drops_wall_clock, and the 6 required pins in R019_compute_time_deferral_rationale against the literal added SKILL.md prose in the same diff, confirming each required pin matches the added content verbatim and each forbidden pin is absent from the added content shown, with no mismatched or vacuous pins found.",
+          "Computed exact new-file line numbers for both SKILL.md hunks directly from the unified-diff hunk headers by walking every context and added line in order; the first hunk walk lands exactly on the header's declared 31-line span, confirming the line numbers cited in the finding above.",
+          "Reviewed both new Go t.Run blocks for brace and loop balance and correct assertion polarity (Fatalf on missing required substrings, Fatalf on present forbidden substrings) and found no syntax or inverted-logic defects."
+        ],
+        "result_hash": "sha256:bc299dba737763f9782a2e0448ab39026efd0712785a973fcfb2e481ed6b0f55"
+      }
+    ],
+    "findings": [
+      {
+        "id": "R3-unpinned-partial-write-contract",
+        "lens": "reliability",
+        "location": "skills/inception-pipeline/SKILL.md:162",
+        "severity": "WARNING",
+        "claim": "The diff extends the closure-feedback partial-write-failure contract from two stores to three (adding the new archive-report append) and adds a standalone 'named carve-out, not a precedent' bullet, but neither the two-to-three-store extension nor the new bullet is asserted by any of the required/forbidden string pins the same diff adds in engine/skills/actuals_instrumentation_contract_test.go, so this specific behavior change ships unproved even though the diff's own established practice in the very same file is to pin every other changed clause, several with explicit 'mutation-proven non-covering' rationale.",
+        "proof_refs": [
+          "skills/inception-pipeline/SKILL.md:162 — 'On any partial-write failure (any of the three written, another not), report the inconsistency and STOP. Do not silently leave the stores out of sync.' replaces the removed two-store sentence but is not among the required substrings in the new R016_R017_R018_closure_feedback_anchor_prose, R021_required_drops_wall_clock, or R019_compute_time_deferral_rationale blocks.",
+          "skills/inception-pipeline/SKILL.md:177-178 — the updated 'Stop on partial closure writes' bullet and the wholly new 'The archive-report append is a named carve-out, not a precedent' bullet have no matching entry anywhere in the same test file's required-substring lists.",
+          "engine/skills/actuals_instrumentation_contract_test.go — sibling clauses in the same change ARE pinned with explicit rationale (the Execute-item-3 pin cites 'mutation-proven non-covering (verify round 3, W2)'; the checkpoint_count-boundary pin cites 'the bare pin survived deletion of this clause'), showing the authors already treat an unpinned changed clause in this exact file as a demonstrated regression vector, yet left these clauses in that category.",
+          "ORCHESTRATOR CONFIRMATION: a direct search of the shipped test file returns zero occurrences of 'any of the three written', 'not a precedent' and 'does not license editing', while the shipped skill file contains each exactly once — so the clauses ship and nothing asserts them."
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      }
+    ],
+    "classifications": {},
+    "outcomes": {
+      "R3-unpinned-partial-write-contract": "info"
+    },
+    "fix_finding_ids": [],
+    "follow_ups": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:e7dc7933177dfe5e3404ce4ea9bb315e46feb3b506d32c2a5a46c6a0909c2287",
+    "evidence_record_digest": "sha256:1f1907a296a0b8842e6f09a3d1083e02de325abb833a08e33b110b3a5cbd123e",
+    "evidence_outcome": "passed",
+    "evidence_target_identity": "sha256:750038ec539b9c4cfc998a7c10235b922cebc37e38a4651e4502ed624c898529",
+    "evidence_authority_revision": "sha256:3d90f6d0cbf425317c2d3e5597c66c340a4aa8d231a1d4b72fc5d037f663962f",
+    "reviewer_context_level": "provider_command"
+  }
+}

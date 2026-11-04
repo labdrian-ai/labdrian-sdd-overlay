@@ -1,0 +1,44 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:4d71b9964808d966f00554349807e5a35873d6d8a38a4438421e669202f3135f",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-49b9b48fc3262f52",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "current-changes",
+      "base_tree": "ad9d09b8b77948e8a296ed0c07b2e94c930e2363",
+      "candidate_tree": "ad9d09b8b77948e8a296ed0c07b2e94c930e2363",
+      "paths_digest": "sha256:2286a180488f90f2e97062d500a629bc747716d55a34c2861a8309e1b02589a1",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [],
+      "identity": "sha256:49b9b48fc3262f52e6a944e9e5de1828d10bf491c316022d5e7d9264ce9366bd"
+    },
+    "current_snapshot": {
+      "kind": "current-changes",
+      "base_tree": "ad9d09b8b77948e8a296ed0c07b2e94c930e2363",
+      "candidate_tree": "ad9d09b8b77948e8a296ed0c07b2e94c930e2363",
+      "paths_digest": "sha256:2286a180488f90f2e97062d500a629bc747716d55a34c2861a8309e1b02589a1",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [],
+      "identity": "sha256:49b9b48fc3262f52e6a944e9e5de1828d10bf491c316022d5e7d9264ce9366bd"
+    },
+    "genesis_paths": null,
+    "policy_hash": "sha256:34fb63d7f29f8613cd4431382b1057398a4816f8a4c20fc34677fffc80a184f6",
+    "risk_level": "low",
+    "selected_lenses": [],
+    "original_changed_lines": 0,
+    "correction_budget": 0,
+    "lens_results": [],
+    "findings": [],
+    "classifications": {},
+    "outcomes": {},
+    "fix_finding_ids": [],
+    "follow_ups": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:7f434933647f2afa8cd8c10560d002323a0d8d3706dc7617129cda023a35ae5d"
+  }
+}
