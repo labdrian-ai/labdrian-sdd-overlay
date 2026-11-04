@@ -21,7 +21,7 @@ func usage(w io.Writer) {
 	fmt.Fprintln(w, "  engine uninstall-hooks --settings <path> --hook-command <binary-path>")
 	fmt.Fprintln(w, "  engine merge-codex-hooks --hooks <path> --hook-command <binary-path>")
 	fmt.Fprintln(w, "  engine uninstall-codex-hooks --hooks <path> --hook-command <binary-path>")
-	fmt.Fprintln(w, "    merge/remove the three owned Codex memory entries: SessionStart (matcher startup|resume|clear|compact), PreToolUse and PostToolUse (only Engram reads and longterm-mem query/get; tool commands pass --source codex). Foreign values stay byte-identical; edited array layout may change.")
+	fmt.Fprintln(w, "    merge/remove the three owned Codex memory entries: SessionStart (matcher startup|resume|clear|compact), PreToolUse and PostToolUse (only Engram reads, memorycard reads and longterm-mem query/get; tool commands pass --source codex). Foreign values stay byte-identical; edited array layout may change.")
 	fmt.Fprintln(w, "    atomic write with <path>.bak; identical merge and absent uninstall write nothing. Exit 0 success, 1 usage error, 2 invalid/unwritable file (untouched).")
 	fmt.Fprintln(w, "    install-hooks calls merge only when CODEX_HOME (default ~/.codex) already exists; trust each new handler once in the Codex TUI (/hooks, key t). A SessionStart-only install needs two more trusts; existing SessionStart bytes and trust are unchanged. Neither verb edits config.toml or trust state.")
 	fmt.Fprintln(w, "  engine status [--only registry] [--cwd <dir>]")

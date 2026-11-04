@@ -220,6 +220,8 @@ func TestMemoryMatcherMatchesTheNamesCodexSendsForTheGatesReadsAndNothingElse(t 
 		"mcp__engram__mem_search", "mcp__engram__mem_context", "mcp__engram__mem_get_observation", "mcp__engram__mem_timeline",
 		"mcp__plugin_engram_engram__mem_search", "mcp__plugin_engram_engram__mem_get_observation",
 		"mcp__longterm_mem__query", "mcp__longterm_mem__get",
+		"mcp__memorycard__mem_search", "mcp__memorycard__mem_context", "mcp__memorycard__mem_get",
+		"mcp__plugin_memorycard__mem_search",
 	} {
 		if !re.MatchString(name) {
 			t.Errorf("%s must be gated", name)
@@ -229,6 +231,8 @@ func TestMemoryMatcherMatchesTheNamesCodexSendsForTheGatesReadsAndNothingElse(t 
 		"mcp__engram__mem_save", "mcp__engram__mem_update", "mcp__longterm_mem__promote", "mcp__longterm_mem__sync",
 		"mcp__longterm-mem__query", "mcp__engramx__mem_search", "mcp__longterm_memx__query", "mcp__a__engram__mem_search",
 		"mcp__context7__resolve", "Bash", "apply_patch", "spawn_agent", "engram__mem_search", "mcp__engram__mem_search_extra", "",
+		"mcp__memorycard__mem_save", "mcp__memorycard__mem_update", "mcp__memorycard__mem_session", "mcp__memorycardx__mem_search",
+		"mcp__a__memorycard__mem_search", "mcp__memorycard__mem_get_observation", "mcp__memorycard__mem_getx",
 	} {
 		if re.MatchString(name) {
 			t.Errorf("%s must not be matched", name)

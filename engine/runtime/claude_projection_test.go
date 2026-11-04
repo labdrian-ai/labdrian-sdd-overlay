@@ -59,8 +59,8 @@ func TestClaudeInstallWritesTheProjectionHookFamily(t *testing.T) {
 		t.Errorf("UserPromptSubmit projection commands = %v", ups)
 	}
 	pre := projectionCommands(got, "PreToolUse", hookCommand)
-	if len(pre) != 5 {
-		t.Fatalf("PreToolUse projection commands = %v, want 5", pre)
+	if len(pre) != 6 {
+		t.Fatalf("PreToolUse projection commands = %v, want 6", pre)
 	}
 	for _, c := range pre {
 		if !strings.Contains(c, hookCommand+" projection hook --event PreToolUse") {

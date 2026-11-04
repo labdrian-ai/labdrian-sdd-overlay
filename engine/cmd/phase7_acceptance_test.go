@@ -1014,6 +1014,7 @@ func phase7Settings(t *testing.T, binary string) {
 		{"PreToolUse", `^mcp__([A-Za-z0-9-]+_)*longterm-mem__get$`, ""},
 		{"PreToolUse", `^mcp__([A-Za-z0-9-]+_)*engram__(mem_search|mem_context|mem_get_observation|mem_timeline)$`, ""},
 		{"PreToolUse", "Skill|Read", ""},
+		{"PreToolUse", `^mcp__([A-Za-z0-9-]+_)*memorycard__(mem_search|mem_context|mem_get)$`, ""},
 	}
 	if len(installed) != len(wantEntries) {
 		t.Fatalf("projection entries = %+v, want %d", installed, len(wantEntries))

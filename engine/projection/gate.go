@@ -19,7 +19,9 @@ package projection
 //   - The memory gate (C23 M4, docs/architecture/adr-c23-m4-memory-gate.md). A
 //     memory read is checked against the workflow's memory plan: the longterm-mem
 //     query and get, and the Engram mem_search, mem_context, mem_get_observation
-//     and mem_timeline. A plan with no project (scope none) permits no read at
+//     and mem_timeline, and the memorycard mem_search, mem_context and mem_get,
+//     which are of source engram (memorycard replaced Engram and names a project
+//     as Engram does). A plan with no project (scope none) permits no read at
 //     all, and a plan that does not include the read's source denies it. Then a
 //     longterm-mem query must name the plan's project, which is the shared
 //     identity the workflow recorded at create (C23 M2). An Engram mem_search or
@@ -181,8 +183,9 @@ func (r GateResult) Explanation() string {
 
 // GateRelevant reports whether Gate can ever have an opinion about a tool: a
 // file-edit tool of editTools (paused edit gate) or a memory read (memory gate:
-// the longterm-mem query and get, and the Engram mem_search, mem_context,
-// mem_get_observation and mem_timeline). It is decided from the name alone, so a
+// the longterm-mem query and get, the Engram mem_search, mem_context,
+// mem_get_observation and mem_timeline, and the memorycard mem_search,
+// mem_context and mem_get). It is decided from the name alone, so a
 // caller can answer for every other tool without reading the binding or the
 // workflow. Gate itself denies or warns only for tools this reports true for.
 func GateRelevant(editTools []string, toolName string) bool {
@@ -270,6 +273,13 @@ var (
 	// observation up by its id.
 	engramProjectReadTool = regexp.MustCompile(`^mcp__([A-Za-z0-9-]+_)*engram__(mem_search|mem_context)$`)
 	engramIDReadTool      = regexp.MustCompile(`^mcp__([A-Za-z0-9-]+_)*engram__(mem_get_observation|mem_timeline)$`)
+	// memorycard replaced Engram as the episodic memory store and holds its imported history, and it
+	// names a project as Engram does (the last segment of the origin remote), so its reads are of
+	// source engram: memorycardProjectReadTool reads name a project and are checked like the Engram
+	// ones; memorycardIDReadTool reads a memory by its id. Its writes (mem_save, mem_update,
+	// mem_session) are not reads.
+	memorycardProjectReadTool = regexp.MustCompile(`^mcp__([A-Za-z0-9-]+_)*memorycard__(mem_search|mem_context)$`)
+	memorycardIDReadTool      = regexp.MustCompile(`^mcp__([A-Za-z0-9-]+_)*memorycard__mem_get$`)
 )
 
 // memoryRead is one kind of memory read the gate checks: the source of the plan it
@@ -306,6 +316,8 @@ var memoryReads = []struct {
 	{longtermGetTool, memoryRead{source: memoryscope.SourceLongtermMem, what: "longterm-mem get", unbindTo: "read it", check: checkSourceOnly}},
 	{engramProjectReadTool, memoryRead{source: memoryscope.SourceEngram, what: "Engram read", unbindTo: "read it", check: checkEngramProject}},
 	{engramIDReadTool, memoryRead{source: memoryscope.SourceEngram, what: "Engram read", unbindTo: "read it", check: checkSourceOnly}},
+	{memorycardProjectReadTool, memoryRead{source: memoryscope.SourceEngram, what: "memorycard read", unbindTo: "read it", check: checkEngramProject}},
+	{memorycardIDReadTool, memoryRead{source: memoryscope.SourceEngram, what: "memorycard read", unbindTo: "read it", check: checkSourceOnly}},
 }
 
 // memoryReadOf is the memory read a tool is, by its name.
@@ -455,7 +467,7 @@ func memoryGate(in GateInput, s workflow.State, read memoryRead) GateResult {
 			strconv.Quote(sanitizeLine(string(plan.Scope))) + ", so this " + read.what + " was not checked against it."}
 	}
 	if read.check == checkEngramProject {
-		return engramProjectGate(b, in.EngramName, s.ProjectIdentity, in.Call)
+		return engramProjectGate(b, read.what, in.EngramName, s.ProjectIdentity, in.Call)
 	}
 	return longtermProjectGate(b, plan, in.Call)
 }
@@ -517,32 +529,34 @@ func goalAdvice(planProject, planGoal string) string {
 		", or stop following this workflow with 'labdrian workflow unbind'."
 }
 
-// engramProjectGate checks the project an Engram mem_search or mem_context names
-// against the name Engram gives the workflow's identity (engramName of identity,
-// C23 M2 decision 3): another project, none, or every project is denied.
-func engramProjectGate(b Binding, engramName func(string) string, identity string, call ToolCall) GateResult {
+// engramProjectGate checks the project an Engram or memorycard mem_search or
+// mem_context names (what names the read in a sentence) against the name Engram
+// gives the workflow's identity (engramName of identity, C23 M2 decision 3), which
+// is the name memorycard gives it too: another project, none, or every project is
+// denied.
+func engramProjectGate(b Binding, what string, engramName func(string) string, identity string, call ToolCall) GateResult {
 	var want string
 	if engramName != nil {
 		want = engramName(identity)
 	}
 	if want == "" {
 		return GateResult{Warning: "labdrian: the Engram name of the project of " + workflowRef(b) +
-			" is not known here, so the project of this Engram read was not checked against its memory plan."}
+			" is not known here, so the project of this " + what + " was not checked against its memory plan."}
 	}
 	read := call.query()
 	if !read.Named {
-		return GateResult{Warning: "labdrian: the input of this Engram read is not a JSON object, so its project was not checked against the memory plan of " +
+		return GateResult{Warning: "labdrian: the input of this " + what + " is not a JSON object, so its project was not checked against the memory plan of " +
 			workflowRef(b) + "."}
 	}
 	permits := "the memory plan of " + workflowRef(b) + " permits only project " + strconv.Quote(sanitizeLine(want)) + ". " + engramAdvice(want)
 	switch {
 	case read.AllProjects:
-		return GateResult{Deny: true, Reason: "labdrian: this Engram read asks for every project (all_projects is true), but " + permits}
+		return GateResult{Deny: true, Reason: "labdrian: this " + what + " asks for every project (all_projects is true), but " + permits}
 	case read.Project == "":
 		// Absent, null, not text, or empty: the read names no project.
-		return GateResult{Deny: true, Reason: "labdrian: this Engram read names no project (the project argument is missing, not a string, or empty), but " + permits}
+		return GateResult{Deny: true, Reason: "labdrian: this " + what + " names no project (the project argument is missing, not a string, or empty), but " + permits}
 	case read.Project != want:
-		return GateResult{Deny: true, Reason: "labdrian: this Engram read asks for project " + quoteValue(read.Project) + ", but " + permits}
+		return GateResult{Deny: true, Reason: "labdrian: this " + what + " asks for project " + quoteValue(read.Project) + ", but " + permits}
 	}
 	return GateResult{}
 }
