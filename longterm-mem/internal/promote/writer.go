@@ -266,12 +266,28 @@ func (w *Writer) Promote(ctx context.Context, obs memory.Observation, explicit b
 	// error; a killed process returns nothing for any compensating removal
 	// to react to, which is exactly why the ordering has to carry the
 	// guarantee rather than the cleanup.
+	if err := w.publishNew(address, page, existingPath); err != nil {
+		return Result{}, err
+	}
+	if err := w.register(address, obs.Title); err != nil {
+		return Result{}, err
+	}
+	if err := w.supersedeMoved(moved, address, obs.Title); err != nil {
+		return Result{}, err
+	}
+	return Result{Page: page, Action: Action{Kind: ActionCreated}}, nil
+}
+
+// publishNew records page's fingerprint and then publishes the page, in that order and with the rollback the
+// ordering comment of Promote explains. It is the create path every new page takes, whichever store the page
+// is promoted from; existingPath only names the page in a message.
+func (w *Writer) publishNew(address string, page Page, existingPath string) error {
 	w.Store.Set(address, entryFor(page))
 	if err := w.Precedence.SavePrecedence(w.Store); err != nil {
 		// Nothing has been published yet, so there is no page to withdraw:
 		// drop the in-memory entry and report the failure.
 		delete(w.Store, address)
-		return Result{}, fmt.Errorf("promote: persist precedence for %s: %w (no page published)", address, err)
+		return fmt.Errorf("promote: persist precedence for %s: %w (no page published)", address, err)
 	}
 	if err := w.Pages.WritePage(address, page.Frontmatter+page.Body); err != nil {
 		// The fingerprint is durable but no page carries it. A retry would
@@ -293,17 +309,11 @@ func (w *Writer) Promote(ctx context.Context, obs memory.Observation, explicit b
 		// address), and neither wedges anything.
 		delete(w.Store, address)
 		if saveErr := w.Precedence.SavePrecedence(w.Store); saveErr != nil {
-			return Result{}, fmt.Errorf("promote: write page %s: %w (and withdrawing its precedence entry failed: %v)", existingPath, err, saveErr)
+			return fmt.Errorf("promote: write page %s: %w (and withdrawing its precedence entry failed: %v)", existingPath, err, saveErr)
 		}
-		return Result{}, err
+		return err
 	}
-	if err := w.register(address, obs.Title); err != nil {
-		return Result{}, err
-	}
-	if err := w.supersedeMoved(moved, address, obs.Title); err != nil {
-		return Result{}, err
-	}
-	return Result{Page: page, Action: Action{Kind: ActionCreated}}, nil
+	return nil
 }
 
 // supersedeMoved marks every page the observation left behind in another

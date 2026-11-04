@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memorycard"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vault"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vecindex"
@@ -73,6 +74,17 @@ func (a app) vaultRoot(project, override string, readOnly bool) (string, int) {
 // engram_unavailable.
 func (a app) memory() (*engram.Store, int) {
 	store, err := engram.Open(os.Getenv(engramDBEnvVar))
+	if err != nil {
+		return nil, a.refuse(err, exitEngramUnavailable)
+	}
+	return store, exitOK
+}
+
+// memorycard opens memorycard's database, read-only, at the path of LONGTERM_MEM_MEMORYCARD_DB or its default.
+// The caller closes the store. exitOK, or the exit code to return after saying why: a database that cannot be
+// opened is the same unavailable store Engram's is.
+func (a app) memorycard() (*memorycard.Store, int) {
+	store, err := memorycard.Open(os.Getenv(memorycardDBEnvVar))
 	if err != nil {
 		return nil, a.refuse(err, exitEngramUnavailable)
 	}

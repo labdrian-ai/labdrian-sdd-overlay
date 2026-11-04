@@ -88,7 +88,7 @@ The binary (`longterm-mem <subcommand> [flags]`) currently dispatches:
 | `status` | `[--project P]` `[--vault DIR]` `[--json]` | Report Engram reachability, vault provisioning, last sync, and when the embedding index was built. |
 | `stale` | `[--project P]` | Report the memories this repository's history disagrees with (removed or moved paths). Reports only; never deletes. A path that climbs out of the project (`a/../../x.go`) is unknown: it is not asked of git and the rest of the report prints. |
 | `doctor` | `[--project P]` `[--vault DIR]` `[--json]` | Deeper diagnostics: prerequisites, wiki-lint, registration consistency, embedding index presence/freshness and backend reachability, and an advisory check that names promoted pages `sync` no longer refreshes (see [Frozen pages](#frozen-pages)). Each check answers `PASS`, `FAIL` or `warn`; only a `FAIL` makes the exit code 9, so a `warn` never changes it. |
-| `promote` | `[--project P]` `--id N` `[--vault DIR]` | Explicitly promote one Engram observation by id. `promote reconcile <address>` adopts one already-promoted page whose precedence entry cannot tell longterm-mem's own write from a human edit, so promotion stops refusing it; deliberately one address at a time. |
+| `promote` | `[--project P]` `--id N` `[--vault DIR]` `[--source engram\|memorycard]` | Explicitly promote one Engram observation by id. With `--source memorycard`, `--id` is a memorycard memory id; see [Promoting from memorycard](docs/promote-from-memorycard.md). `promote reconcile <address>` adopts one already-promoted page whose precedence entry cannot tell longterm-mem's own write from a human edit, so promotion stops refusing it; deliberately one address at a time. |
 | `mcp` | — | Run the MCP stdio server (`query`, `get`, `promote` tools). |
 | `register` | `--target claude\|opencode\|codex\|all` `[--binary PATH]` `[--config-root DIR]` `[--state-dir DIR]` | Write this binary's MCP entry into the runtime's config file (ownership-tagged, idempotent). |
 | `unregister` | `--target claude\|opencode\|codex\|all` `[--config-root DIR]` `[--state-dir DIR]` | Remove the entry `register` wrote; an entry it does not own is left untouched and reported as `unmanaged`. |
@@ -134,6 +134,8 @@ directory default: the server's working directory is the host runtime's,
 not the project's.
 
 Global env overrides: `LONGTERM_MEM_ENGRAM_DB` (Engram database path),
+`LONGTERM_MEM_MEMORYCARD_DB` (memorycard database path, read by
+`promote --source memorycard`; default `~/.memorycard/memory.db`),
 `LONGTERM_MEM_VAULT` (vault path), `LONGTERM_MEM_VAULTS_FILE` (vault
 registry path), `LONGTERM_MEM_STATE_DIR` (state directory, default
 `~/.labdrian-overlay/longterm-mem`).
@@ -196,7 +198,9 @@ runtime's, not the project's):
   records and the records of no goal (see [Goals](#goals)). Responses are
   byte-budgeted and carry `diagnostics` naming anything that degraded.
 - `get` — read one Engram observation whole by `engram_id`.
-- `promote` — explicitly promote one observation into the vault.
+- `promote` — explicitly promote one observation into the vault. The optional
+  `source` (`engram`, the default, or `memorycard`) names the store `engram_id`
+  is an id of; see [Promoting from memorycard](docs/promote-from-memorycard.md).
 
 Two records describe a registration: the engine-owned view
 (`~/.labdrian-overlay/longterm-mem-registration.json`, reported by `overlay

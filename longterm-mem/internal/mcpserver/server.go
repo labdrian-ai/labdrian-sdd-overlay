@@ -40,7 +40,10 @@ type Deps struct {
 	// and -- when that promotion actually wrote a page -- rebuilds the
 	// vault index so the page is queryable over this same session
 	// (cmd_mcp.go wires that; see PromoteOutcome).
-	Promote func(ctx context.Context, project string, engramID int64) (PromoteOutcome, error)
+	//
+	// source is the store id is an id of: SourceEngram, or SourceMemorycard. The handler hands it over already
+	// checked, and never empty.
+	Promote func(ctx context.Context, project, source string, id int64) (PromoteOutcome, error)
 	// Get reads one observation whole, by id (cmd_mcp.go wires it to
 	// the Engram adapter's ObservationByID, which is read-only like every other
 	// path in that package -- R-002).
@@ -156,10 +159,17 @@ type GetOut struct {
 	Detail string `json:"detail,omitempty"`
 }
 
-// PromoteIn is the promote tool's input (D3 contract: promote{project,engram_id}).
+// The stores the promote tool promotes from.
+const (
+	SourceEngram     = "engram"
+	SourceMemorycard = "memorycard"
+)
+
+// PromoteIn is the promote tool's input (D3 contract: promote{project,engram_id}, plus the optional source).
 type PromoteIn struct {
 	Project  string `json:"project" jsonschema:"the project owning the observation"`
-	EngramID int64  `json:"engram_id" jsonschema:"the Engram observation id to promote"`
+	EngramID int64  `json:"engram_id" jsonschema:"the Engram observation id to promote; with source memorycard, the memorycard memory id"`
+	Source   string `json:"source,omitempty" jsonschema:"the store to promote from: engram (the default) or memorycard"`
 }
 
 // PromoteOut is the promote tool's output: the address and outcome of the
@@ -333,7 +343,14 @@ func promoteHandler(deps Deps) mcp.ToolHandlerFor[PromoteIn, PromoteOut] {
 		if deps.Promote == nil {
 			return nil, PromoteOut{}, fmt.Errorf("mcpserver: promote dependency is not configured")
 		}
-		outcome, err := deps.Promote(ctx, in.Project, in.EngramID)
+		source := in.Source
+		if source == "" {
+			source = SourceEngram
+		}
+		if source != SourceEngram && source != SourceMemorycard {
+			return nil, PromoteOut{}, fmt.Errorf("mcpserver: promote: source %q is not a store: use %s or %s", in.Source, SourceEngram, SourceMemorycard)
+		}
+		outcome, err := deps.Promote(ctx, in.Project, source, in.EngramID)
 		if err != nil {
 			return nil, PromoteOut{}, err
 		}

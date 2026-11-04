@@ -47,6 +47,13 @@ func allocateAddress(ctx context.Context, pages PageReader, project string, engr
 		return existing.Address, nil
 	}
 
+	return takeAddress(ctx, addresses, addressMap, at)
+}
+
+// takeAddress takes the next free address from addresses and enters it, through addressMap, in the vault's
+// address map under the page's address-derived path. It is the half of allocateAddress that every new page
+// needs, whichever store the page is promoted from.
+func takeAddress(ctx context.Context, addresses AddressAllocator, addressMap AddressMapRecorder, at time.Time) (string, error) {
 	if memory.IsMissing(addresses) {
 		return "", errNoAddressAllocator
 	}

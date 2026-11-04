@@ -172,6 +172,24 @@ func (s *Store) ListObservations(project string) ([]memory.Observation, error) {
 	return observations, nil
 }
 
+// ObservationIDsWithCardHash returns the id of every observation of project, soft-deleted ones included (a
+// page can outlive its observation), whose title and content hash, as memorycard hashes a memory
+// (memory.CardContentHash), to hash. It is how a memory that was mirrored to memorycard by hand, and so has no
+// bridge, finds the observation it duplicates. Engram stores no such hash, so it reads the project's rows.
+func (s *Store) ObservationIDsWithCardHash(project, hash string) ([]int64, error) {
+	observations, err := s.ObservationsIncludingDeleted(project)
+	if err != nil {
+		return nil, err
+	}
+	var ids []int64
+	for _, o := range observations {
+		if memory.CardContentHash(o.Title, o.Content) == hash {
+			ids = append(ids, o.ID)
+		}
+	}
+	return ids, nil
+}
+
 // HasMemory reports whether project already holds memory: at least one
 // observation that has not been soft-deleted.
 //
