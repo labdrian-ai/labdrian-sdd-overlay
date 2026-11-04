@@ -15,10 +15,11 @@ import (
 // not from the receipt of another tool.
 
 // rowIDs are the ids of the rows of roles/reviewer/rows.json, in the order of the file: the default row, which
-// stored results still declare, the readability row of a change that touches docs, a public API, messages or help,
-// and the row of the second blind launch that a Risk line which names an item asks for, the hunt row of four
-// concrete defect classes (phase9-c25-review-hunt S5), and the recall row, the default row with its gating
-// relaxed, which the role chain sends on every launch in place of the default row (phase9-c27-review-recall S4, S7).
+// the role chain no longer sends and stored results still declare, the readability row of a change that touches
+// docs, a public API, messages or help, and the row of the second blind launch that a Risk line which names an
+// item asks for, the hunt row of four concrete defect classes (phase9-c25-review-hunt S5), and the recall row,
+// the default row with its gating relaxed, which the role chain sends on every launch in place of the default
+// row (phase9-c27-review-recall S4, S7).
 var rowIDs = [...]string{"default", "readability", "risk-line", "hunt", "recall"}
 
 // RowIDs are the ids of the rows a launch may be sent, in the order of roles/reviewer/rows.json. The slice is a copy:
