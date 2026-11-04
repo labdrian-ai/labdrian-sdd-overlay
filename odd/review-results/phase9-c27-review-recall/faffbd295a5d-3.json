@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "d772854988ad12a53da3f9b42ff0822cc1e0d0d9",
+    "head": "faffbd295a5dc1d84e37f9c627dee7169a5c33fa",
+    "diff_sha256": "fd78d4347e7616e0f0e157a711fb4db5e71fe9cd18fc9dcef058ef60d689f348",
+    "paths": [
+      "CHANGELOG.md",
+      "agents/reviewer.md",
+      "codex/agents/reviewer.toml",
+      "engine/review/rows.go",
+      "engine/skills/role_agents_artifact_test.go",
+      "odd/tasks/phase9-c27-review-recall.md",
+      "pi/agents/reviewer.md",
+      "roles/reviewer/body.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "d772854988ad12a53da3f9b42ff0822cc1e0d0d9",
+      "head": "faffbd295a5dc1d84e37f9c627dee7169a5c33fa",
+      "diff_sha256": "fd78d4347e7616e0f0e157a711fb4db5e71fe9cd18fc9dcef058ef60d689f348"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "agents/reviewer.md",
+        "codex/agents/reviewer.toml",
+        "engine/review/rows.go",
+        "engine/skills/role_agents_artifact_test.go",
+        "odd/tasks/phase9-c27-review-recall.md",
+        "pi/agents/reviewer.md",
+        "roles/reviewer/body.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the full diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/t8.diff (all 8 changed paths).",
+      "Read S8 in /home/labdrian/labdrian-sdd-overlay-worktrees/review-faffbd295a5d/odd/tasks/phase9-c27-review-recall.md:15 and the T8 task line. Part (a) of the spec replaces only the clause 'Report only real, user-impacting defects:' with the preamble's first sentence. The diff does exactly that in roles/reviewer/body.md:9, and the rest of the line is byte-identical.",
+      "Searched the worktree with Grep for 'Report only real|Report every defect' (excluding odd/). The relaxed sentence appears once in each of roles/reviewer/body.md:9, agents/reviewer.md:15, codex/agents/reviewer.toml:11 and pi/agents/reviewer.md:16. The old clause remains only in the approved design docs/architecture/role-design/per-role-reviewer.md:61, which S8 assumption (2) keeps unedited, and in the test comment that names the difference.",
+      "The new sentence matches the first sentence of engine/review/claudeprint/preamble.md:3 word for word. That preamble is untouched, and its pin in claudeprint_test.go:43 is unchanged.",
+      "The three generated copies differ from base in the same single line as the body, so no other line of any agent file changed.",
+      "engine/review/rows.go: the hunk changes only // comment lines and leaves rowIDs as-is.",
+      "engine/skills/role_agents_artifact_test.go: the delta pin at index 1 now holds the full new line. The pins at index 0 and 3 and the comment explaining the second differing line are consistent with S8.",
+      "Risk line item 3 (a mirrored prompt others consume): the changed line keeps the requirement that BLOCKER/CRITICAL need proof and that no finding member may be omitted or null. The JSON reply contract the engine parses is on a separate, unchanged line. So the reply shape that consumers parse cannot drift. The intended effect is that the reviewer reports more WARNING and SUGGESTION findings, as S8 requests.",
+      "Not run: no command was executed (the reviewer contract forbids running). The checks reported in L24 were not reproduced."
+    ]
+  }
+}

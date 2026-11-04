@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "d772854988ad12a53da3f9b42ff0822cc1e0d0d9",
+    "head": "faffbd295a5dc1d84e37f9c627dee7169a5c33fa",
+    "diff_sha256": "fd78d4347e7616e0f0e157a711fb4db5e71fe9cd18fc9dcef058ef60d689f348",
+    "paths": [
+      "CHANGELOG.md",
+      "agents/reviewer.md",
+      "codex/agents/reviewer.toml",
+      "engine/review/rows.go",
+      "engine/skills/role_agents_artifact_test.go",
+      "odd/tasks/phase9-c27-review-recall.md",
+      "pi/agents/reviewer.md",
+      "roles/reviewer/body.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "d772854988ad12a53da3f9b42ff0822cc1e0d0d9",
+      "head": "faffbd295a5dc1d84e37f9c627dee7169a5c33fa",
+      "diff_sha256": "fd78d4347e7616e0f0e157a711fb4db5e71fe9cd18fc9dcef058ef60d689f348"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "agents/reviewer.md",
+        "codex/agents/reviewer.toml",
+        "engine/review/rows.go",
+        "engine/skills/role_agents_artifact_test.go",
+        "odd/tasks/phase9-c27-review-recall.md",
+        "pi/agents/reviewer.md",
+        "roles/reviewer/body.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the full diff at the scratchpad t8.diff. I ran no commands and no tests.",
+      "In the diff, the new sentence in roles/reviewer/body.md and in the three generated copies (agents/reviewer.md, codex/agents/reviewer.toml, pi/agents/reviewer.md) is byte-identical.",
+      "Grep in the worktree found 'Report every defect you can find' once in each of the four files.",
+      "The delta pin in engine/skills/role_agents_artifact_test.go holds the same sentence. I did not run the test.",
+      "The 'Report only real, user-impacting' phrase no longer appears in any of the four files in the diff hunks. I did not run a repo-wide search for it.",
+      "engine/review/claudeprint/preamble.md line 3 starts with the same sentence, up to 'a WARNING or a SUGGESTION.' The CHANGELOG 'word for word' claim holds for that part.",
+      "The BLOCKER/CRITICAL proof rule, the JSON envelope line and the 'Never edit, run, or delegate.' line are unchanged.",
+      "The diff to engine/review/rows.go changes comment lines only, so there is no code change.",
+      "The diff touches no .approval.json file, so no approval record changes.",
+      "I did not run gadu-generate --check. The log (L24) reports it passing, but I did not verify that."
+    ]
+  }
+}

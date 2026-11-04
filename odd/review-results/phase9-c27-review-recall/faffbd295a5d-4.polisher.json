@@ -1,0 +1,17 @@
+{
+  "kind": "polisher",
+  "base": "d772854988ad12a53da3f9b42ff0822cc1e0d0d9",
+  "head": "faffbd295a5dc1d84e37f9c627dee7169a5c33fa",
+  "diff_sha256": "fd78d4347e7616e0f0e157a711fb4db5e71fe9cd18fc9dcef058ef60d689f348",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff at t8.diff (8 paths) and checked it against the T8 line and S8 of the task document.",
+      "The new sentence in roles/reviewer/body.md, agents/reviewer.md, codex/agents/reviewer.toml and pi/agents/reviewer.md is identical across the four files. It matches the first sentence of engine/review/claudeprint/preamble.md, the preamble sentence the spec says to copy.",
+      "In the worktree, 'Report only real, user-impacting' survives only in the task document, CHANGELOG.md, the delta pin in engine/skills/role_agents_artifact_test.go, two stored review results and docs/architecture/role-design/per-role-reviewer.md. The design doc is the historical reference the test comment says the delta now departs from. The stored results are historical records. The other matches are prose describing the change. None of these is a generated agent file.",
+      "The diff changes only the second line of the reviewer delta. The BLOCKER/CRITICAL proof rule, the return-envelope line and the 'Never edit, run, or delegate.' line are unchanged.",
+      "The rows.go change is comment lines only.",
+      "Not run: go test, gadu-generate --check, and the differential. The worktree is read-only and I ran no commands."
+    ]
+  }
+}
