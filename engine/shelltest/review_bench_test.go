@@ -249,7 +249,20 @@ func oursFixture(t *testing.T) (script, bench, head string, env []string) {
 	return filepath.Join(tools, "run-ours.sh"), bench, head, env
 }
 
-func runOurs(t *testing.T, script string, env []string, args ...string) (string, string, int) {
+// stubDir is the STUB_DIR of a fixture's environment, found by its key so the order of env does not matter.
+func stubDir(t *testing.T, env []string) string {
+	t.Helper()
+	for _, kv := range env {
+		if dir, ok := strings.CutPrefix(kv, "STUB_DIR="); ok {
+			return dir
+		}
+	}
+	t.Fatal("the fixture environment has no STUB_DIR")
+	return ""
+}
+
+// runScript runs one bench script (run-ours.sh or run-gentle.sh) under env and returns its stdout, stderr and exit code.
+func runScript(t *testing.T, script string, env []string, args ...string) (string, string, int) {
 	t.Helper()
 	cmd := exec.Command("bash", append([]string{script}, args...)...)
 	cmd.Env = env
@@ -294,11 +307,11 @@ func TestReviewBenchRunOurs(t *testing.T) {
 		if err := os.WriteFile(filepath.Join(old, head[:12]+"-1.json"), []byte(`{"reply":{"findings":[]}}`), 0600); err != nil {
 			t.Fatal(err)
 		}
-		stdout, stderr, code := runOurs(t, script, env, "R1")
+		stdout, stderr, code := runScript(t, script, env, "R1")
 		if code != 0 || stderr != "" {
 			t.Fatalf("exit %d\n%s", code, stderr)
 		}
-		stubs := strings.TrimPrefix(env[2], "STUB_DIR=")
+		stubs := stubDir(t, env)
 		calls := strings.Split(strings.TrimSpace(readFile(t, filepath.Join(stubs, "calls.log"))), "\n")
 		repo := filepath.Join(bench, "repo")
 		parent, err := exec.Command("git", "-C", repo, "rev-parse", head+"^").Output()
@@ -341,18 +354,18 @@ func TestReviewBenchRunOurs(t *testing.T) {
 
 	t.Run("ROWS picks the rows, and a row the rows file lacks is refused before anything runs", func(t *testing.T) {
 		script, bench, _, env := oursFixture(t)
-		_, stderr, code := runOurs(t, script, append(env, "ROWS=default"), "R1")
+		_, stderr, code := runScript(t, script, append(env, "ROWS=default"), "R1")
 		if code != 0 || stderr != "" {
 			t.Fatalf("exit %d\n%s", code, stderr)
 		}
 		if got := jqField(t, bench, "[.lenses[].lens] | join(\",\")"); got != `"default"` {
 			t.Fatalf("lenses %s", got)
 		}
-		stubs := strings.TrimPrefix(env[2], "STUB_DIR=")
+		stubs := stubDir(t, env)
 		if err := os.Remove(filepath.Join(stubs, "calls.log")); err != nil {
 			t.Fatal(err)
 		}
-		_, stderr, code = runOurs(t, script, append(env, "ROWS=default,nope"), "R1")
+		_, stderr, code = runScript(t, script, append(env, "ROWS=default,nope"), "R1")
 		if code != 2 || stderr != "unknown row nope\n" {
 			t.Fatalf("exit %d\n%s", code, stderr)
 		}
@@ -369,10 +382,10 @@ func TestReviewBenchRunOurs(t *testing.T) {
 		}
 		// An empty bench has no clone: a known row passes the row check and the case stops at the checkout.
 		env := []string{"BENCH=" + t.TempDir(), "PATH=" + os.Getenv("PATH")}
-		if _, stderr, code := runOurs(t, script, append(env, "ROWS=default,readability"), "R1"); code != 2 || strings.Contains(stderr, "unknown row") {
+		if _, stderr, code := runScript(t, script, append(env, "ROWS=default,readability"), "R1"); code != 2 || strings.Contains(stderr, "unknown row") {
 			t.Fatalf("exit %d\n%s", code, stderr)
 		}
-		if _, stderr, code := runOurs(t, script, append(env, "ROWS=default,nope"), "R1"); code != 2 || stderr != "unknown row nope\n" {
+		if _, stderr, code := runScript(t, script, append(env, "ROWS=default,nope"), "R1"); code != 2 || stderr != "unknown row nope\n" {
 			t.Fatalf("exit %d\n%s", code, stderr)
 		}
 	})
@@ -380,7 +393,7 @@ func TestReviewBenchRunOurs(t *testing.T) {
 	t.Run("a rows file that cannot be read is named, not taken for an unknown row", func(t *testing.T) {
 		script, _, _, env := oursFixture(t)
 		missing := filepath.Join(t.TempDir(), "rows.json")
-		_, stderr, code := runOurs(t, script, append(env, "ROWS_FILE="+missing), "R1")
+		_, stderr, code := runScript(t, script, append(env, "ROWS_FILE="+missing), "R1")
 		if code != 2 || stderr != "cannot read the rows of "+missing+"\n" {
 			t.Fatalf("exit %d\n%s", code, stderr)
 		}
@@ -388,14 +401,14 @@ func TestReviewBenchRunOurs(t *testing.T) {
 
 	t.Run("a failed launch ends the case non-zero with a summary that says so", func(t *testing.T) {
 		script, bench, _, env := oursFixture(t)
-		_, stderr, code := runOurs(t, script, append(env, "STUB_FAIL_ROW=default"), "R1")
+		_, stderr, code := runScript(t, script, append(env, "STUB_FAIL_ROW=default"), "R1")
 		if code != 4 || stderr != "case R1 ended without a review result: launch failed: default\n" {
 			t.Fatalf("exit %d\n%s", code, stderr)
 		}
 		if got := jqField(t, bench, "[.state, (.lenses | length)]"); got != `["launch failed: default",0]` {
 			t.Fatalf("summary %s", got)
 		}
-		stubs := strings.TrimPrefix(env[2], "STUB_DIR=")
+		stubs := stubDir(t, env)
 		if calls := readFile(t, filepath.Join(stubs, "calls.log")); strings.Contains(calls, "--rows hunt") {
 			t.Fatalf("the next row ran after a failure:\n%s", calls)
 		}
@@ -403,7 +416,7 @@ func TestReviewBenchRunOurs(t *testing.T) {
 
 	t.Run("a failed sweep ends the case before any launch", func(t *testing.T) {
 		script, bench, _, env := oursFixture(t)
-		_, stderr, code := runOurs(t, script, append(env, "STUB_SWEEP_FAIL=1"), "R1")
+		_, stderr, code := runScript(t, script, append(env, "STUB_SWEEP_FAIL=1"), "R1")
 		if code != 4 || stderr != "case R1 ended without a review result: sweep failed\n" {
 			t.Fatalf("exit %d\n%s", code, stderr)
 		}
@@ -421,7 +434,7 @@ func TestReviewBenchRunOurs(t *testing.T) {
 		if err := os.WriteFile(run1, []byte("run one\n"), 0600); err != nil {
 			t.Fatal(err)
 		}
-		if _, stderr, code := runOurs(t, script, append(env, "RUN=2"), "R1"); code != 0 || stderr != "" {
+		if _, stderr, code := runScript(t, script, append(env, "RUN=2"), "R1"); code != 0 || stderr != "" {
 			t.Fatalf("exit %d\n%s", code, stderr)
 		}
 		out, err := exec.Command("jq", "-r", ".state", filepath.Join(bench, "out", "ours", "run2", "R1", "summary.json")).Output()
@@ -439,11 +452,11 @@ func TestReviewBenchRunOurs(t *testing.T) {
 	t.Run("a RUN that is not a positive integer exits 2 before anything runs", func(t *testing.T) {
 		for _, run := range []string{"0", "x", "-1"} {
 			script, bench, _, env := oursFixture(t)
-			_, stderr, code := runOurs(t, script, append(env, "RUN="+run), "R1")
+			_, stderr, code := runScript(t, script, append(env, "RUN="+run), "R1")
 			if code != 2 || stderr != "RUN must be a positive integer, not "+run+"\n" {
 				t.Fatalf("RUN=%s: exit %d\n%s", run, code, stderr)
 			}
-			stubs := strings.TrimPrefix(env[2], "STUB_DIR=")
+			stubs := stubDir(t, env)
 			if _, err := os.Stat(filepath.Join(stubs, "calls.log")); !os.IsNotExist(err) {
 				t.Fatalf("RUN=%s: labdrian ran: %v", run, err)
 			}
@@ -455,10 +468,10 @@ func TestReviewBenchRunOurs(t *testing.T) {
 
 	t.Run("an unknown id and a missing id are refused", func(t *testing.T) {
 		script, _, _, env := oursFixture(t)
-		if _, stderr, code := runOurs(t, script, env, "R9"); code != 2 || stderr != "unknown case R9\n" {
+		if _, stderr, code := runScript(t, script, env, "R9"); code != 2 || stderr != "unknown case R9\n" {
 			t.Fatalf("exit %d\n%s", code, stderr)
 		}
-		if _, stderr, code := runOurs(t, script, env); code != 2 || stderr != "usage: run-ours.sh <id>\n" {
+		if _, stderr, code := runScript(t, script, env); code != 2 || stderr != "usage: run-ours.sh <id>\n" {
 			t.Fatalf("exit %d\n%s", code, stderr)
 		}
 	})
@@ -490,7 +503,7 @@ func gentleFixture(t *testing.T) (script, bench string, env []string) {
 	if err := os.WriteFile(script, body, 0700); err != nil {
 		t.Fatal(err)
 	}
-	stubs := strings.TrimPrefix(env[2], "STUB_DIR=")
+	stubs := stubDir(t, env)
 	if err := os.WriteFile(filepath.Join(stubs, "gentle-ai"), []byte(stubGentle), 0700); err != nil {
 		t.Fatal(err)
 	}
@@ -508,7 +521,7 @@ func TestReviewBenchRunGentle(t *testing.T) {
 
 	t.Run("RUN unset writes out/<id> as before", func(t *testing.T) {
 		script, bench, env := gentleFixture(t)
-		if _, stderr, code := runOurs(t, script, env, "R1"); code != 4 || stderr != stopped {
+		if _, stderr, code := runScript(t, script, env, "R1"); code != 4 || stderr != stopped {
 			t.Fatalf("exit %d\n%s", code, stderr)
 		}
 		out, err := exec.Command("jq", "-c", "[.id, .state]", filepath.Join(bench, "out", "R1", "summary.json")).Output()
@@ -526,7 +539,7 @@ func TestReviewBenchRunGentle(t *testing.T) {
 		if err := os.WriteFile(run1, []byte("run one\n"), 0600); err != nil {
 			t.Fatal(err)
 		}
-		if _, stderr, code := runOurs(t, script, append(env, "RUN=2"), "R1"); code != 4 || stderr != stopped {
+		if _, stderr, code := runScript(t, script, append(env, "RUN=2"), "R1"); code != 4 || stderr != stopped {
 			t.Fatalf("exit %d\n%s", code, stderr)
 		}
 		out, err := exec.Command("jq", "-r", ".id", filepath.Join(bench, "out", "run2", "R1", "summary.json")).Output()
@@ -544,11 +557,11 @@ func TestReviewBenchRunGentle(t *testing.T) {
 	t.Run("a RUN that is not a positive integer exits 2 before anything runs", func(t *testing.T) {
 		for _, run := range []string{"0", "x", "-1"} {
 			script, bench, env := gentleFixture(t)
-			_, stderr, code := runOurs(t, script, append(env, "RUN="+run), "R1")
+			_, stderr, code := runScript(t, script, append(env, "RUN="+run), "R1")
 			if code != 2 || stderr != "RUN must be a positive integer, not "+run+"\n" {
 				t.Fatalf("RUN=%s: exit %d\n%s", run, code, stderr)
 			}
-			stubs := strings.TrimPrefix(env[2], "STUB_DIR=")
+			stubs := stubDir(t, env)
 			if _, err := os.Stat(filepath.Join(stubs, "gentle.log")); !os.IsNotExist(err) {
 				t.Fatalf("RUN=%s: gentle-ai ran: %v", run, err)
 			}

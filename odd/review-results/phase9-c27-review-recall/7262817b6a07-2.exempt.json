@@ -1,0 +1,76 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "c9391b9b58b6c92ca2911190cbf6bee60b807f4e",
+    "head": "7262817b6a079cf6a6b12f6da13e6236daf7030d",
+    "diff_sha256": "5ad635e2b7fbfdb3e6871e30e15f48ea4e7cf3cd21c2b661aa90c9204eadf8d6",
+    "paths": [
+      "odd/review-results/phase9-c27-review-recall/c9391b9b58b6-1.sweep.json",
+      "odd/review-results/phase9-c27-review-recall/c9391b9b58b6-2.sweep.json",
+      "odd/review-results/phase9-c27-review-recall/c9391b9b58b6-3.sweeper.json",
+      "odd/review-results/phase9-c27-review-recall/c9391b9b58b6-4.exempt.json",
+      "odd/tasks/phase9-c27-review-recall.md",
+      "tools/review-bench/scores/gentle-c27.json"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git rev-parse 7262817b^1",
+        "result": "pass",
+        "output": "c9391b9b58b6c92ca2911190cbf6bee60b807f4e"
+      },
+      {
+        "command": "git diff --name-only c9391b9b 7262817b",
+        "result": "pass",
+        "output": "Six files: tools/review-bench/scores/gentle-c27.json, odd/tasks/phase9-c27-review-recall.md, and four under odd/review-results/phase9-c27-review-recall/ (c9391b9b58b6-1.sweep.json, c9391b9b58b6-2.sweep.json, c9391b9b58b6-3.sweeper.json, c9391b9b58b6-4.exempt.json). All four match c9391b9b58b6-*."
+      },
+      {
+        "command": "jq length tools/review-bench/scores/gentle-c27.json, plus jq checks on keys, unique id/run pairs, score domain and quote emptiness",
+        "result": "pass",
+        "output": "length=30. Every entry has exactly the keys id, run, score, quote. 30 unique id/run pairs, and 30 entries fall in R34-R43 with run 1, 2 or 3, so each id appears once per run. All scores are in {0,0.5,1}. Every score-0 entry has an empty quote and every nonzero entry has a nonempty quote."
+      },
+      {
+        "command": "jq '[.[].score]|add' tools/review-bench/scores/gentle-c27.json",
+        "result": "pass",
+        "output": "3.5"
+      },
+      {
+        "command": "jq -s sum of [.runs[].in|tonumber] and unique [.state] over out/run{1,2,3}/R{34..43}/summary.json in ~/labdrian-sdd-overlay-worktrees/review-bench",
+        "result": "pass",
+        "output": "All 30 summary files exist. Sum of .runs[].in = 4035318. The unique state is [\"approved\"]."
+      },
+      {
+        "command": "For each nonzero entry (R42 run1, R42 run2, R43 run2, R34 run3): jq check that the quote text, ignoring [...], appears in a finding of out/run<k>/<id>/summary.json",
+        "result": "pass",
+        "output": "All four quotes have the form \"review-<lens> <SEVERITY> <location>: <claim>\". For each one, the claim text, with the \"review-reliability WARNING <loc>: \" prefix removed and split on [...], is found in a finding's claim field in the matching summary (claim_only=true for all four). The literal prefix is not in the summary files, because lens, severity and location are separate fields, so a strict whole-string substring match would fail. My first run flagged R43 run2 for this reason. I passed it because the claim body matches and the lens (review-reliability), WARNING and gitfs.go:74 are all in that same finding."
+      },
+      {
+        "command": "git diff c9391b9b 7262817b -- odd/tasks/phase9-c27-review-recall.md | rg -n '^[-+]'",
+        "result": "pass",
+        "output": "Changed lines are: one T3 row in ## Tasks changed from '- [ ] T3 ...' to '- [x] T3 ...' (one - line and one + line), plus five added lines forming the L10 entry (+L10 header, Runs, Scores, The bar, Checks). No other line is removed or added. I did not diff the commit field of the T3 row character by character."
+      },
+      {
+        "command": "Read the L10 added lines in the same diff",
+        "result": "pass",
+        "output": "L10 states 'Gentle's Σ over the 30 runs is **3.5**' and 'prompt bytes are **4,035,318**'. It also states the bar: 'our review meets the bar only with Σ ≥ **6.5** over the same 30 runs and prompt bytes ≤ **4,035,318**'."
+      },
+      {
+        "command": "git diff c9391b9b 7262817b | rg -n '^\\+.*\\\\u[0-9a-fA-F]{4}'; git diff --check c9391b9b 7262817b",
+        "result": "pass",
+        "output": "The \\u search printed nothing. git diff --check printed nothing (rc=0)."
+      },
+      {
+        "command": "cd engine && go test -count=1 ./shelltest/ -run ReviewBench; shellcheck tools/review-bench/*.sh tools/review-bench/shim/claude",
+        "result": "pass",
+        "output": "ok  github.com/labdrian-ai/labdrian-sdd-overlay/engine/shelltest 1.172s. shellcheck printed nothing (rc=0)."
+      },
+      {
+        "command": "git log -1 --format=%B 7262817b; rg -ci co-authored-by on the same message",
+        "result": "pass",
+        "output": "The message ends with the line 'Risk: none'. The Co-Authored-By match printed nothing (no match)."
+      }
+    ]
+  }
+}

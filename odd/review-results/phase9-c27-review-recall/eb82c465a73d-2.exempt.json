@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "09b93b9b00f7973c9ef17788296cc738b98b80c4",
+    "head": "eb82c465a73d5d181e95bda6e689f8a25e653a96",
+    "diff_sha256": "5c1162d08703babfe49af1c0aca5a4b3411fffbb9c53919aac157d4d925951a0",
+    "paths": [
+      "odd/review-results/phase9-c26-review-contract/070778296a63-1.sweep.json",
+      "odd/review-results/phase9-c26-review-contract/070778296a63-2.exempt.json",
+      "odd/review-results/phase9-c27-review-recall/c4bed0c23dde-1.sweep.json",
+      "odd/review-results/phase9-c27-review-recall/c4bed0c23dde-2.exempt.json",
+      "odd/tasks/phase9-c27-review-recall.md"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git rev-parse eb82c465^1 09b93b9b origin/main",
+        "result": "pass",
+        "output": "All three resolve to 09b93b9b00f7973c9ef17788296cc738b98b80c4."
+      },
+      {
+        "command": "git diff --name-status 09b93b9b eb82c465",
+        "result": "pass",
+        "output": "Exactly the five expected entries: four added review records and the modified C27 task document."
+      },
+      {
+        "command": "git show eb82c465:<path> | jq empty for the four added files",
+        "result": "pass",
+        "output": "All four parse."
+      },
+      {
+        "command": "git diff 09b93b9b eb82c465 -- odd/tasks/phase9-c27-review-recall.md",
+        "result": "pass",
+        "output": "One added line starting with - **L8**, no removed line."
+      },
+      {
+        "command": "git diff 09b93b9b eb82c465 -- odd/tasks/phase9-c27-review-recall.md | rg added-unicode-escape",
+        "result": "pass",
+        "output": "Printed nothing."
+      },
+      {
+        "command": "git diff --check 09b93b9b eb82c465",
+        "result": "pass",
+        "output": "Printed nothing, exit 0."
+      },
+      {
+        "command": "git log -1 --format=%B eb82c465",
+        "result": "pass",
+        "output": "Ends with Risk: none; no co-authored line."
+      }
+    ]
+  }
+}

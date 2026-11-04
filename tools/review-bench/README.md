@@ -82,7 +82,9 @@ they no longer hold out anything, and its bar is measured on a fresh hold-out R3
 
 1 when a finding of any severity, or a new analyzer line, is located in the defect's file within its lines ±3 and its
 claim states the defect's failure; 0.5 when such a located finding states only part of it (as R2 was scored on
-2026-10-31); 0 otherwise. The parent judges the claim and quotes it in the score file. Cost: the sum of `runs[].in`
+2026-10-31); 0 otherwise. The parent judges the claim and quotes it in the score file; an entry of score 0 has an empty
+`quote`, meaning no located finding states the failure (every case of a score file is scored, so an empty quote never
+means an unscored case). With `RUN=<k>`, an entry also carries `"run": <k>`. Cost: the sum of `runs[].in`
 (stdin bytes of every model process, from the shim) over the real cases; the analyzers count 0. Tokens are not used:
 `--output-format text` reports none for either side (assumption: bytes stand for tokens equally on both sides, the
 same model and the same wrapper).

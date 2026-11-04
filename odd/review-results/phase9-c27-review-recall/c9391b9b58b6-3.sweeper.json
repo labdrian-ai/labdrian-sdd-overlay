@@ -1,0 +1,15 @@
+{
+  "kind": "sweeper",
+  "base": "8963cd17fac83134482799659597de202e624288",
+  "head": "c9391b9b58b6c92ca2911190cbf6bee60b807f4e",
+  "diff_sha256": "c0f41201e92f424bc30a808a8be16bd37158b219201b83ec524c4bdcddb7326b",
+  "sweep": "c9391b9b58b6-2.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 name: runOurs",
+      "disposition": "live",
+      "evidence": "renamed to runScript in engine/shelltest/review_bench_test.go; remaining hits are the stored receipt review-0957b6ce316044b3.review-state.json:135 and Log L7 of odd/tasks/phase9-c27-review-recall.md, append-only history"
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "kind": "sweep",
+  "base": "8963cd17fac83134482799659597de202e624288",
+  "head": "c9391b9b58b6c92ca2911190cbf6bee60b807f4e",
+  "diff_sha256": "c0f41201e92f424bc30a808a8be16bd37158b219201b83ec524c4bdcddb7326b",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": [
+      {
+        "name": "runOurs",
+        "hits": [
+          "odd/review-receipts/phase9-c27-review-recall/review-0957b6ce316044b3.review-state.json"
+        ]
+      }
+    ]
+  },
+  "t2": [],
+  "t3": [],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

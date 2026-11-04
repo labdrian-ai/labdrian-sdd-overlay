@@ -1,0 +1,182 @@
+[
+  {
+    "id": "R34",
+    "run": 1,
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R35",
+    "run": 1,
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R36",
+    "run": 1,
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R37",
+    "run": 1,
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R38",
+    "run": 1,
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R39",
+    "run": 1,
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R40",
+    "run": 1,
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R41",
+    "run": 1,
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R42",
+    "run": 1,
+    "score": 1,
+    "quote": "review-reliability WARNING engine/cmd/workflow.go:228-237: A resolved identity that fails validateProjectIdentity (over 512 runes, or containing a control character such as a tab in a declared name) makes Lifecycle.Create return an error, and the command exits 2 instead of warning and recording none."
+  },
+  {
+    "id": "R43",
+    "run": 1,
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R34",
+    "run": 2,
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R35",
+    "run": 2,
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R36",
+    "run": 2,
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R37",
+    "run": 2,
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R38",
+    "run": 2,
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R39",
+    "run": 2,
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R40",
+    "run": 2,
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R41",
+    "run": 2,
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R42",
+    "run": 2,
+    "score": 1,
+    "quote": "review-reliability WARNING engine/cmd/workflow.go:237: A resolver error only produces a warning and an empty identity, but a resolved identity that fails validateProjectIdentity in Lifecycle.Create (over 512 runes, a control character, or invalid UTF-8) makes create exit 2."
+  },
+  {
+    "id": "R43",
+    "run": 2,
+    "score": 0.5,
+    "quote": "review-reliability WARNING identity/gitfs/gitfs.go:74: For any .git pointer file, MainWorktreeRoot is computed as the parent of the common directory. [...] For a submodule (gitdir under the superproject's modules directory, no commondir) or a separate-git-dir repository, the parent is the modules directory or whatever directory holds the git dir. With no origin remote, the project is then named 'modules' (or the git dir's parent)"
+  },
+  {
+    "id": "R34",
+    "run": 3,
+    "score": 1,
+    "quote": "review-reliability WARNING engine/hookwire/posttooluse.go:70-125: The documentation says tool_response is 'hashed and dropped' as a stream of tokens. The code decodes each value into a json.RawMessage, so the whole tool_response is buffered in the decoder and then copied. A response near the 64 MiB bound costs several times that in memory."
+  },
+  {
+    "id": "R35",
+    "run": 3,
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R36",
+    "run": 3,
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R37",
+    "run": 3,
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R38",
+    "run": 3,
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R39",
+    "run": 3,
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R40",
+    "run": 3,
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R41",
+    "run": 3,
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R42",
+    "run": 3,
+    "score": 0,
+    "quote": ""
+  },
+  {
+    "id": "R43",
+    "run": 3,
+    "score": 0,
+    "quote": ""
+  }
+]
