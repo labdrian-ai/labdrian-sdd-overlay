@@ -390,6 +390,28 @@ func TestReviewBenchRunOurs(t *testing.T) {
 		}
 	})
 
+	t.Run("ROWS=recall,hunt over the repository's rows file writes the recall row's sentence in its brief", func(t *testing.T) {
+		script, bench, _, env := oursFixture(t)
+		rows, err := filepath.Abs("../../roles/reviewer/rows.json")
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, stderr, code := runScript(t, script, append(env, "ROWS_FILE="+rows, "ROWS=recall,hunt"), "R1")
+		if code != 0 || stderr != "" {
+			t.Fatalf("exit %d\n%s", code, stderr)
+		}
+		brief := readFile(t, filepath.Join(bench, "out", "ours", "R1", "brief-recall.txt"))
+		first, _, _ := strings.Cut(brief, "\n")
+		if !strings.HasPrefix(first, "Lens: Inspect behavior, tests, boundaries,") ||
+			!strings.HasSuffix(first, "a concrete failure mode for each finding; report a failure whose trigger you cannot show realistic input reaches as a WARNING or a SUGGESTION rather than leaving it out.") ||
+			strings.Contains(first, "do not report speculation") {
+			t.Fatalf("the recall brief's lens line is %q, want the default row's sentence with S2 (b)'s substitution", first)
+		}
+		if got := jqField(t, bench, "[.lenses[].lens] | join(\",\")"); got != `"recall,hunt"` {
+			t.Fatalf("lenses %s", got)
+		}
+	})
+
 	t.Run("a rows file that cannot be read is named, not taken for an unknown row", func(t *testing.T) {
 		script, _, _, env := oursFixture(t)
 		missing := filepath.Join(t.TempDir(), "rows.json")

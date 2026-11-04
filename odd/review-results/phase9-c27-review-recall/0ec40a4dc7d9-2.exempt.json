@@ -1,0 +1,83 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "2db3c61cb91e063424f9c1fef756f54655b15bf3",
+    "head": "0ec40a4dc7d928a27e8deaa7f782e5ee14544d64",
+    "diff_sha256": "9b8e23edaeebc2e4ef9f854a28fec46c57c523c7c7c3ccbc8f0b1c2446ac063b",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/cmd/usage.go",
+      "engine/review/claudeprint/claudeprint_test.go",
+      "engine/review/claudeprint/preamble.md",
+      "engine/review/rows.go",
+      "engine/review/rows_test.go",
+      "engine/shelltest/review_bench_test.go",
+      "odd/review-results/phase9-c27-review-recall/01561818030f-1.sweep.json",
+      "odd/review-results/phase9-c27-review-recall/01561818030f-2.exempt.json",
+      "odd/tasks/phase9-c27-review-recall.md",
+      "roles/reviewer/rows.json",
+      "tools/review-bench/README.md"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git rev-parse 0ec40a4d^1",
+        "result": "pass",
+        "output": "2db3c61cb91e063424f9c1fef756f54655b15bf3, which equals the base."
+      },
+      {
+        "command": "git diff --name-only 2db3c61c 0ec40a4d, filtered with rg -v against the T4 row's surfaces plus odd/tasks/phase9-c27-review-recall.md, engine/review/rows.go and odd/review-results/phase9-c27-review-recall/01561818030f-*.json (revised spec)",
+        "result": "pass",
+        "output": "No file was left after filtering (leftover-exit=1), so the 13 changed files are a subset of the allowed set. A second rg -c count found preamble.md, rows.json and rows.go all in the diff (3 of 3). The files are CHANGELOG.md, README.md, engine/cmd/usage.go, engine/review/claudeprint/claudeprint_test.go, engine/review/claudeprint/preamble.md, engine/review/rows.go, engine/review/rows_test.go, engine/shelltest/review_bench_test.go, the two 01561818030f-* records, odd/tasks/phase9-c27-review-recall.md, roles/reviewer/rows.json and tools/review-bench/README.md."
+      },
+      {
+        "command": "git diff 2db3c61c 0ec40a4d -- engine/review/claudeprint/preamble.md",
+        "result": "pass",
+        "output": "One line changed (1 removed, 1 added), at line 3. Old: 'Report only real defects that this change introduced, activated or worsened and that realistic input reaches. A defect the base already had is pre-existing, at most WARNING. Causality you cannot prove from the diff is unknown. Style is not a finding.' New: 'Report every defect you can find in what this change introduced, activated or worsened, including a failure whose trigger you cannot show realistic input reaches; such a finding is a WARNING or a SUGGESTION.' followed by the same unchanged rest. This is S2 (b)'s from/to sentence."
+      },
+      {
+        "command": "git show <commit>:roles/reviewer/rows.json | jq -c '.rows[:4]' at 2db3c61c and 0ec40a4d; jq sub of the default sentence compared to the recall sentence",
+        "result": "pass",
+        "output": "sha256 of .rows[:4] is identical at both commits (0767daaa4b10...). Row ids at head are [default, readability, risk-line, hunt, recall]. The recall row has keys id and sentence. Its sentence equals the default sentence with S2 (b)'s row substitution applied via jq sub (diff printed EQUAL)."
+      },
+      {
+        "command": "cd engine && go test -count=1 ./review/... ./cmd/... ./shelltest/ ./skills/...; go vet ...; staticcheck ...; gofmt -l review cmd shelltest skills",
+        "result": "pass",
+        "output": "All 15 packages ok (review, analyzers, app, claudeprint, codexexec, fsstore, gitexec, cmd 85.2s, shelltest 13.4s, skills, skills/app, engramexport, projectidentity, registryyaml, skillsfs). go vet printed nothing. staticcheck printed nothing. gofmt -l printed nothing. git status afterwards showed only the pre-existing untracked 0ec40a4dc7d9-1.sweep.json."
+      },
+      {
+        "command": "git worktree add --detach <dir>/wt 2db3c61c and <dir>/wt2 0ec40a4d; go build -o <dir>/base and <dir>/new ./cmd; bash t4-diff.sh <dir>/run <dir>/base <dir>/new /home/labdrian/labdrian-sdd-overlay/codex/agents/reviewer.toml; git worktree remove --force both. Scratch dir: /tmp/tmp.Eyp0p4aSqK",
+        "result": "pass",
+        "output": "The script printed diff-exit=1. The only diff lines are line 3 ('3c3') of out-*/claude/claude-0.stdin and claude-1.stdin, which is the preamble sentence old vs new. No diff lines appeared under out-*/codex or for the codex.* files, and none for claude.stdout, claude.stderr or claude.exit. I read only the last 30 lines of script output (tail -30), so I did not see the claude/codex file listing in that output. Both worktrees were removed; git worktree list shows neither."
+      },
+      {
+        "command": "shellcheck tools/review-bench/*.sh bin/lib/usage.sh",
+        "result": "pass",
+        "output": "No output, exit 0."
+      },
+      {
+        "command": "git diff 2db3c61c 0ec40a4d -- odd/tasks/phase9-c27-review-recall.md",
+        "result": "pass",
+        "output": "Two hunks. Hunk @@ -17 changes only the T4 row: '- [ ]' becomes '- [x]' and the commit field changes to 'the T4 commit; done: L11'. This is the one removed line. Hunk @@ -71,3 +71,8 adds only the L11 entry with its sub-bullets (Change, RED/GREEN, Differential, Checks) after the last L10 line. No other line is removed."
+      },
+      {
+        "command": "git diff 2db3c61c 0ec40a4d | rg -n '^\\+.*\\\\u[0-9a-fA-F]{4}'; git diff --check 2db3c61c 0ec40a4d",
+        "result": "pass",
+        "output": "The rg \\u check printed nothing (exit 1). git diff --check printed nothing (exit 0)."
+      },
+      {
+        "command": "rg -n 'recall' skills/role-chain/SKILL.md; git diff 2db3c61c 0ec40a4d --stat -- skills/",
+        "result": "pass",
+        "output": "rg printed nothing (exit 1). The skills/ diff stat is empty, so skills/role-chain/SKILL.md is unchanged between the two commits and its 'rows default|--rows' content is identical."
+      },
+      {
+        "command": "git log -1 --format=%B 0ec40a4d",
+        "result": "pass",
+        "output": "The last non-empty line is 'Risk: none'. rg for 'Co-Authored' found nothing. The only match for Co-Authored|Risk was line 13, 'Risk: none'."
+      }
+    ]
+  }
+}

@@ -15,6 +15,10 @@
     {
       "id": "hunt",
       "sentence": "Hunt in every changed function for four defect classes and report each one a concrete input reaches: (1) an empty, zero or negative input (an empty string or word, 0, a negative size or budget, an empty list): what does the code do with it, and does an empty value count as found or as valid? (2) a value outside the known set (an unknown role, option, kind or argument): is it refused, or does it fall through to a true, a default or silence? (3) an ignored or swallowed error: is an error discarded, dropped in a loop, or turned into success by returning nil after a failure? (4) where a path writes or deletes: for every path the change computes, returns, creates, renames or removes, is it the path its contract names, and can it be a directory another owner keeps?"
+    },
+    {
+      "id": "recall",
+      "sentence": "Inspect behavior, tests, boundaries, invalid inputs, failure paths, determinism, and regressions; then failure handling, retry safety, graceful degradation, and load; then the risk line: secrets, permissions, path escapes, and exec or net imports. Require externally observable assertions at the cheapest useful test level and a concrete failure mode for each finding; report a failure whose trigger you cannot show realistic input reaches as a WARNING or a SUGGESTION rather than leaving it out."
     }
   ]
 }
