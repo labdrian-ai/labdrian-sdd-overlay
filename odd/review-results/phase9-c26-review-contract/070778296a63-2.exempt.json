@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "939f236e3638a272fd51f92093c5caa8ccc9c3c8",
+    "head": "070778296a634816a7572518b24a01d6b13f9e28",
+    "diff_sha256": "ffe5778496a4af3cb972179acdde80fc71b54146076c706538e96f7ee0cc90c9",
+    "paths": [
+      "odd/review-receipts/phase9-c26-review-contract/review-b106668c23908df5.review-state.json",
+      "odd/review-results/phase9-c26-review-contract/939f236e3638-1.sweep.json",
+      "odd/review-results/phase9-c26-review-contract/939f236e3638-2.exempt.json",
+      "odd/tasks/phase9-c26-review-contract.md"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git rev-parse 07077829^1; git rev-parse 939f236e",
+        "result": "pass",
+        "output": "Both print 939f236e3638a272fd51f92093c5caa8ccc9c3c8."
+      },
+      {
+        "command": "git diff --name-status 939f236e 07077829",
+        "result": "pass",
+        "output": "A review-b106668c23908df5.review-state.json, A 939f236e3638-1.sweep.json, A 939f236e3638-2.exempt.json, M odd/tasks/phase9-c26-review-contract.md: exactly the four expected entries."
+      },
+      {
+        "command": "git show 07077829:<path> | jq empty for the three added files",
+        "result": "pass",
+        "output": "All three parse."
+      },
+      {
+        "command": "git diff 939f236e 07077829 -- odd/tasks/phase9-c26-review-contract.md",
+        "result": "pass",
+        "output": "One added line starting with - **L14**, no removed line."
+      },
+      {
+        "command": "git diff 939f236e 07077829 -- odd/tasks/phase9-c26-review-contract.md | rg added-unicode-escape",
+        "result": "pass",
+        "output": "No output."
+      },
+      {
+        "command": "git diff --check 939f236e 07077829",
+        "result": "pass",
+        "output": "No output, rc 0."
+      },
+      {
+        "command": "git log -1 --format=%B 07077829",
+        "result": "pass",
+        "output": "Ends with Risk: none; no co-authored line."
+      }
+    ]
+  }
+}
