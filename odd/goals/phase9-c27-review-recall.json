@@ -1,0 +1,39 @@
+{
+  "version": 3,
+  "project_id": "labdrian-sdd-overlay",
+  "goal_id": "phase9-c27-review-recall",
+  "objective": "Close Phase 9 item C27: the tasks of odd/tasks/phase9-c27-review-recall.md, so that causes (1) and (2) of the C26 diagnosis are tested by an A/B on R24-R33 with 3 runs per case, what the A/B keeps is built into our review, and it is measured against gentle-ai with 3 runs per case on a fresh hold-out R34 onward.",
+  "scope": "The specs S1-S6 of odd/tasks/phase9-c27-review-recall.md; one workflow and one role chain for each task.",
+  "constraints": [
+    "The builder builds only a task the shaper designed.",
+    "The A/B of S2 runs outside the repository and the review-bench clone, its arm texts and its gate are fixed before any reply is read, and C27 stops after T1 when the gate does not pass (S2).",
+    "The fresh hold-out R34 onward is picked mechanically, without reading a defect before the pick, and no R34-onward defect text, class or diff enters a design artifact (S3).",
+    "The bar, gentle-ai's score sum and prompt bytes over 3 runs per R34-onward case, is written in the Log before the first T4 commit and is not changed after (S3).",
+    "Gentle-ai and our review are scored by the scoring rule of C25 L3 on the same cases and the same number of runs, with prompt bytes from the same shim; a run that ends without a result scores 0 with its bytes and is never repeated (S3, S6).",
+    "The parser change of S5 is its own task and commit, with Risk: 3 and the independent verifier (T5).",
+    "Every commit is reviewed or exempted, and labdrian review check clears it."
+  ],
+  "non_goals": [
+    "Cause (3) of the diagnosis: splitting our lenses as gentle-ai's (S1).",
+    "Changing the role chain before the verdict of T6.",
+    "Changing the scoring rule of C25 L3.",
+    "Retuning the arm texts, the preamble, the row or the parser rule on the scores of T1 or T6."
+  ],
+  "acceptance_criteria": [
+    "T1-T6 of odd/tasks/phase9-c27-review-recall.md are checked off, each with its commit, or C27 is stopped at the gate of S2 with the A/B entry in the Log.",
+    "The Log holds the bar entry of T3 before the first T4 commit and the verdict entry of T6 against exactly those numbers.",
+    "labdrian review check --onto main clears the head of each task's pull request."
+  ],
+  "memory_directive": {
+    "version": 1,
+    "scope": "project",
+    "sources": [
+      "engram",
+      "longterm-mem",
+      "procedural-skills"
+    ],
+    "write": "none"
+  },
+  "runtime_scope": "Claude Code, as the parent that runs the labdrian workflow and the role agents.",
+  "delivery_boundary": "Work-unit commits on the branches of odd/tasks/phase9-c27-review-recall.md; push, pull requests and merges remain the owner's decisions under ordinary repository policy."
+}

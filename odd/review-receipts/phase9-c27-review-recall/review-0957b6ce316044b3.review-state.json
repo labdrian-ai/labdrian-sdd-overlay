@@ -1,0 +1,232 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:2dcc665d201eb4a066f125bf525d6174f3af0e64c4d76ec3937d7ba041508181",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-0957b6ce316044b3",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "8fff2a77a4806cd7764e09be1cb81a5c8c53dd19",
+      "candidate_tree": "e3be691db7a8efeda423b7966fb2836b3961eb54",
+      "paths_digest": "sha256:a751709ea8f5875489ebb906e4f1a310a53e4fbcb6e43252a02e93da16fd88c8",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/shelltest/review_bench_test.go",
+        "odd/review-results/phase9-c27-review-recall/7ffb148be032-1.sweep.json",
+        "odd/review-results/phase9-c27-review-recall/7ffb148be032-2.sweep.json",
+        "odd/review-results/phase9-c27-review-recall/7ffb148be032-3.exempt.json",
+        "odd/review-results/phase9-c27-review-recall/dead43647416-1.sweep.json",
+        "odd/review-results/phase9-c27-review-recall/dead43647416-2.exempt.json",
+        "odd/tasks/phase9-c27-review-recall.md",
+        "tools/review-bench/README.md",
+        "tools/review-bench/run-gentle.sh",
+        "tools/review-bench/run-ours.sh"
+      ],
+      "identity": "sha256:ea7b083d6823e95b75eb2d12332e76ef81d5466d767ef8262005a3231b77c0f3"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "8fff2a77a4806cd7764e09be1cb81a5c8c53dd19",
+      "candidate_tree": "e3be691db7a8efeda423b7966fb2836b3961eb54",
+      "paths_digest": "sha256:a751709ea8f5875489ebb906e4f1a310a53e4fbcb6e43252a02e93da16fd88c8",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/shelltest/review_bench_test.go",
+        "odd/review-results/phase9-c27-review-recall/7ffb148be032-1.sweep.json",
+        "odd/review-results/phase9-c27-review-recall/7ffb148be032-2.sweep.json",
+        "odd/review-results/phase9-c27-review-recall/7ffb148be032-3.exempt.json",
+        "odd/review-results/phase9-c27-review-recall/dead43647416-1.sweep.json",
+        "odd/review-results/phase9-c27-review-recall/dead43647416-2.exempt.json",
+        "odd/tasks/phase9-c27-review-recall.md",
+        "tools/review-bench/README.md",
+        "tools/review-bench/run-gentle.sh",
+        "tools/review-bench/run-ours.sh"
+      ],
+      "identity": "sha256:ea7b083d6823e95b75eb2d12332e76ef81d5466d767ef8262005a3231b77c0f3"
+    },
+    "genesis_paths": [
+      "engine/shelltest/review_bench_test.go",
+      "odd/review-results/phase9-c27-review-recall/7ffb148be032-1.sweep.json",
+      "odd/review-results/phase9-c27-review-recall/7ffb148be032-2.sweep.json",
+      "odd/review-results/phase9-c27-review-recall/7ffb148be032-3.exempt.json",
+      "odd/review-results/phase9-c27-review-recall/dead43647416-1.sweep.json",
+      "odd/review-results/phase9-c27-review-recall/dead43647416-2.exempt.json",
+      "odd/tasks/phase9-c27-review-recall.md",
+      "tools/review-bench/README.md",
+      "tools/review-bench/run-gentle.sh",
+      "tools/review-bench/run-ours.sh"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 346,
+    "correction_budget": 173,
+    "correction_budget_policy": "floor_two",
+    "lens_selection_reason": "Bench runner scripts gain an optional RUN option with a refusal message, shell tests pin it, README documents it; records only otherwise",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:5776c3bb63076ea74bdfd5a706f5a7f33055fd0ba679743f70f4844166cd22c5",
+    "capture_phase_revision": "sha256:d3ec0362a16009142498675142affdf178dbf38347d425351c692b8ec2ed8f76",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "target_identity": "sha256:ea7b083d6823e95b75eb2d12332e76ef81d5466d767ef8262005a3231b77c0f3",
+        "capture_phase_revision": "sha256:d3ec0362a16009142498675142affdf178dbf38347d425351c692b8ec2ed8f76",
+        "artifact_digest": "sha256:0632a6ac40ffc820972167f008482d1ddd2e94b94da6234b06d725bcca9b59f9",
+        "result_hash": "sha256:e5050a4a8d4a4fdb4602199a42729e693610adc67151cef1e99439f0aa9821a8",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:f054ce607cdf82394c1a2bdda978cdae3fd6bacce7e1910440baa4e728672831",
+            "lineage_id": "review-0957b6ce316044b3",
+            "authority_revision": "sha256:d3ec0362a16009142498675142affdf178dbf38347d425351c692b8ec2ed8f76",
+            "target_identity": "sha256:ea7b083d6823e95b75eb2d12332e76ef81d5466d767ef8262005a3231b77c0f3",
+            "base_tree": "8fff2a77a4806cd7764e09be1cb81a5c8c53dd19",
+            "candidate_tree": "e3be691db7a8efeda423b7966fb2836b3961eb54",
+            "changed_path_manifest_sha256": "sha256:c5e4b48fcb4d6ba43d2846742e45182a1f98b7a57e9147fb3dfcbdbc45e1e535",
+            "lens": "review-readability",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:f054ce607cdf82394c1a2bdda978cdae3fd6bacce7e1910440baa4e728672831",
+            "raw_sha256": "sha256:1eb7b299b9cd63ad0c2052c83a5926861da104ce5046977708c9fc0ee0ab284d",
+            "canonical_sha256": "sha256:697655d9c80b9fe01c421caad4dd0697e013b5973ddcce4d9793e1ee41c56a0a",
+            "result_hash": "sha256:e5050a4a8d4a4fdb4602199a42729e693610adc67151cef1e99439f0aa9821a8",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:f054ce607cdf82394c1a2bdda978cdae3fd6bacce7e1910440baa4e728672831",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/shelltest/review_bench_test.go",
+                "odd/review-results/phase9-c27-review-recall/7ffb148be032-1.sweep.json",
+                "odd/review-results/phase9-c27-review-recall/7ffb148be032-2.sweep.json",
+                "odd/review-results/phase9-c27-review-recall/7ffb148be032-3.exempt.json",
+                "odd/review-results/phase9-c27-review-recall/dead43647416-1.sweep.json",
+                "odd/review-results/phase9-c27-review-recall/dead43647416-2.exempt.json",
+                "odd/tasks/phase9-c27-review-recall.md",
+                "tools/review-bench/README.md",
+                "tools/review-bench/run-gentle.sh",
+                "tools/review-bench/run-ours.sh"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-env-index",
+                "lens": "readability",
+                "location": "engine/shelltest/review_bench_test.go:446",
+                "severity": "SUGGESTION",
+                "claim": "The new tests recover the stub directory with strings.TrimPrefix(env[2], \"STUB_DIR=\"), which depends on STUB_DIR sitting at position 2 of the slice oursFixture returns. The same positional lookup is repeated in the gentle fixture and its RUN-validation subtest. If the fixture's env order changes, the tests fail with a misleading result: the missing-file check passes vacuously, or the lookup hits the wrong variable. The test helper runOurs is also used to run run-gentle.sh, which reads misleadingly. A small helper that finds STUB_DIR by key, or a fixture that returns the stub directory directly, would make the tests safer to maintain.",
+                "proof_refs": [
+                  "engine/shelltest/review_bench_test.go:446"
+                ]
+              }
+            ],
+            "evidence": [
+              "Read all 10 changed paths in full. The script changes in run-ours.sh and run-gentle.sh are small and symmetrical: one RUN validation line plus the out= expansion. The README and task Log explain the change well.",
+              "The RUN validation line is duplicated verbatim across the two scripts. That is acceptable for standalone bench scripts, so I did not report it.",
+              "The only maintainability concern is the positional env[2] lookup in the tests, a low-severity suggestion. The JSON result files are generated records with no readability defects."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 1,
+        "target_identity": "sha256:ea7b083d6823e95b75eb2d12332e76ef81d5466d767ef8262005a3231b77c0f3",
+        "capture_phase_revision": "sha256:d3ec0362a16009142498675142affdf178dbf38347d425351c692b8ec2ed8f76",
+        "artifact_digest": "sha256:313ae48dd3d8cb6cbfb6ab13a3f168264d80557308f921022c44aac570216a9f",
+        "result_hash": "sha256:3a2ed4af1f1b7e6ad44f397e0be0dc5d954771c668b2510092ff1b2ea962fd62",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:53a284abf0492361f12d24a842a63b9dc4a283350263b80834bb5da1787fd168",
+            "lineage_id": "review-0957b6ce316044b3",
+            "authority_revision": "sha256:d3ec0362a16009142498675142affdf178dbf38347d425351c692b8ec2ed8f76",
+            "target_identity": "sha256:ea7b083d6823e95b75eb2d12332e76ef81d5466d767ef8262005a3231b77c0f3",
+            "base_tree": "8fff2a77a4806cd7764e09be1cb81a5c8c53dd19",
+            "candidate_tree": "e3be691db7a8efeda423b7966fb2836b3961eb54",
+            "changed_path_manifest_sha256": "sha256:c5e4b48fcb4d6ba43d2846742e45182a1f98b7a57e9147fb3dfcbdbc45e1e535",
+            "lens": "review-reliability",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:53a284abf0492361f12d24a842a63b9dc4a283350263b80834bb5da1787fd168",
+            "raw_sha256": "sha256:4a66b708fcc1f29dce3113efc8065cb0a35538474ee425d45b50db2814547e1d",
+            "canonical_sha256": "sha256:165a77572da518363d1e0ae36719c45aa6f25c42e3a4ae7b0e32088fcf711ae2",
+            "result_hash": "sha256:3a2ed4af1f1b7e6ad44f397e0be0dc5d954771c668b2510092ff1b2ea962fd62",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:53a284abf0492361f12d24a842a63b9dc4a283350263b80834bb5da1787fd168",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/shelltest/review_bench_test.go",
+                "odd/review-results/phase9-c27-review-recall/7ffb148be032-1.sweep.json",
+                "odd/review-results/phase9-c27-review-recall/7ffb148be032-2.sweep.json",
+                "odd/review-results/phase9-c27-review-recall/7ffb148be032-3.exempt.json",
+                "odd/review-results/phase9-c27-review-recall/dead43647416-1.sweep.json",
+                "odd/review-results/phase9-c27-review-recall/dead43647416-2.exempt.json",
+                "odd/tasks/phase9-c27-review-recall.md",
+                "tools/review-bench/README.md",
+                "tools/review-bench/run-gentle.sh",
+                "tools/review-bench/run-ours.sh"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [],
+            "evidence": [
+              "Both scripts place the RUN validation first after set -u. It refuses a set-but-invalid RUN (including empty, 0, x and -1) with exit 2 before any command runs, which matches the request.",
+              "The out path ${RUN:+/run$RUN} leaves the path unchanged when RUN is unset, so baseline behavior is preserved. RUN=k writes under run\u003ck\u003e, and the tests assert that an earlier run1 is untouched and that the unsuffixed directory is not written.",
+              "Tests in engine/shelltest/review_bench_test.go cover, per runner, the RUN=2 isolation, the unset-RUN pin (gentle) and invalid RUN values with no stub calls and no output directory. These are externally observable assertions at the cheapest level.",
+              "The remaining files are docs and review records, with no behavioral reliability concerns."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "726672cd4e32ddc176e5e5ff8f8a7080048229f55b6d9d0cbb7fec12b7fdfe71",
+    "initial_atomic_start": {
+      "lineage_id": "review-0957b6ce316044b3",
+      "worktree_identity": "sha256:ecb6db33a5f00eca062c84ad7f4d16d6c07d24ee25694334741798d76f53fb98",
+      "target_identity": "sha256:ea7b083d6823e95b75eb2d12332e76ef81d5466d767ef8262005a3231b77c0f3",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "8fff2a77a4806cd7764e09be1cb81a5c8c53dd19",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "high",
+      "selected_lenses": [
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 346,
+      "correction_budget": 173,
+      "correction_budget_policy": "floor_two",
+      "lens_selection_reason": "Bench runner scripts gain an optional RUN option with a refusal message, shell tests pin it, README documents it; records only otherwise"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

@@ -1,0 +1,141 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:5502b9c37574c66d640cf92890871e1de0f636a3a112110dd1833b1b86f73047",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-94bcf88f55185c66",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "current-changes",
+      "base_tree": "bbc3518213f90a2845347f235def5ef700afa996",
+      "candidate_tree": "73080c8839448ea835b5b0d0609b43b94c53bcdf",
+      "paths_digest": "sha256:c237d268bff9914b43495dbb3b93278f285697778f59307dfc8e6caa74624256",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "overlay.manifest",
+        "skills.registry.yaml"
+      ],
+      "identity": "sha256:94bcf88f55185c66a1767aa668f9d6f0f78e87cdc09841989d0ec627031efef7"
+    },
+    "current_snapshot": {
+      "kind": "current-changes",
+      "base_tree": "bbc3518213f90a2845347f235def5ef700afa996",
+      "candidate_tree": "73080c8839448ea835b5b0d0609b43b94c53bcdf",
+      "paths_digest": "sha256:c237d268bff9914b43495dbb3b93278f285697778f59307dfc8e6caa74624256",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "overlay.manifest",
+        "skills.registry.yaml"
+      ],
+      "identity": "sha256:94bcf88f55185c66a1767aa668f9d6f0f78e87cdc09841989d0ec627031efef7"
+    },
+    "genesis_paths": [
+      "overlay.manifest",
+      "skills.registry.yaml"
+    ],
+    "policy_hash": "sha256:34fb63d7f29f8613cd4431382b1057398a4816f8a4c20fc34677fffc80a184f6",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-reliability"
+    ],
+    "original_changed_lines": 38,
+    "correction_budget": 19,
+    "lens_results": [
+      {
+        "lens": "review-reliability",
+        "findings": [
+          {
+            "id": "R3-001",
+            "lens": "reliability",
+            "location": "skills.registry.yaml:237",
+            "severity": "WARNING",
+            "claim": "The durable spec at openspec/specs/anti-generic-design/spec.md carries a requirement titled 'Skill is indexed via skill-registry refresh, not hand-edited YAML' whose scenario asserts that no manual edits were made to skills.registry.yaml. A downstream sdd-verify reading that living spec can therefore report a requirements divergence against the twelve-line registry entry this candidate adds at line 237. This is non-blocking because the requirement is defective at its root and the resulting bytes are tool-equivalent: it is self-scoped to 'as part of this change', meaning the archived skill-authoring change rather than this one; it conflates two artifacts, since the mechanism it names regenerates .atl/skill-registry.md and cannot write skills.registry.yaml at all, making the mandated route impossible; and engine/skills/lifecycle.go AddEntry called without --repo emits exactly these fields in exactly this position. The actionable follow-up is amending the stale spec text, not changing this candidate.",
+            "proof_refs": [
+              "openspec/specs/anti-generic-design/spec.md states that skills.registry.yaml MUST NOT be hand-edited as part of this change and that the registry command is the sole mechanism for indexing, with a scenario line asserting that no manual edits were made to skills.registry.yaml to achieve this.",
+              "engine/skills/lifecycle.go lines 37 through 53, AddEntry builds Source{Type: custom} with Path set to the id, DefaultScope global, Targets claude/opencode/codex and UpdateStrategy overlay-only, field for field identical to the entry added at skills.registry.yaml:237.",
+              "engine/skills/lifecycle.go line 59 appends the new entry last, matching this candidate's placement at the end of the skills list.",
+              "engine/skills/serialize.go Serialize emits that entry in exactly the field order and two/four/six/eight-space indentation present in the candidate at skills.registry.yaml lines 237 through 248."
+            ],
+            "evidence_class": "inferential",
+            "causal_disposition": "introduced"
+          },
+          {
+            "id": "R3-002",
+            "lens": "reliability",
+            "location": "overlay.manifest:39",
+            "severity": "SUGGESTION",
+            "claim": "The row added at line 39 makes a second copy of the same guidance deploy into every runtime's skills root alongside the pre-existing _shared/anti-generic-design.md row at line 59. The contract body is distilled verbatim from the SKILL.md, but the only drift guard that exists compares the embedded asset against its deployed _shared copy and never compares the SKILL.md against either. A future edit to skills/anti-generic-design/SKILL.md therefore leaves the injected contract silently stale while both copies keep shipping side by side, and no test fails. Shipping the skill alongside the contract is an explicit recorded decision, so this is a coverage gap rather than a defect: the missing test is a same-direction guard asserting the two documents agree on the four forbidden patterns and the anti-mimicry checklist line.",
+            "proof_refs": [
+              "openspec/changes/anti-generic-design-runtime-wiring/tasks.md task 5.3 records TestAntiGenericDesignStandaloneCopyMatchesEmbeddedAsset in engine/assets/assets_test.go asserting that assets.AntiGenericDesign and the file contents of skills/_shared/anti-generic-design.md are byte-identical, which guards the asset against the _shared copy only.",
+              "openspec/changes/anti-generic-design-runtime-wiring/tasks.md task 1.3 records the contract body as distilled verbatim from skills/anti-generic-design/SKILL.md, establishing the dependency that is left unguarded.",
+              "git grep for anti-generic-design/SKILL.md restricted to Go files in the candidate tree returns exactly one hit and it is a comment rather than an assertion: engine/assets/assets.go line 32 refers to skills/anti-generic-design/SKILL.md as agent-facing guidance.",
+              "openspec/changes/anti-generic-design-runtime-wiring/proposal.md Decision 3 records keeping the skill invokable alongside the contract as intentional, which is why this is raised as coverage rather than as a defect."
+            ],
+            "evidence_class": "inferential",
+            "causal_disposition": "introduced"
+          }
+        ],
+        "evidence": [
+          "Actor substitution, disclosed: the dedicated review-reliability subagent in this runtime is provisioned with Read/Grep/Glob/codegraph only and has no Bash tool, so it cannot execute the contract-mandated read-only Git inspection against the frozen base and candidate trees; without a shell it could only read the live worktree, which the contract forbids. The same provider-selected R3 reliability lens was therefore executed by a shell-capable subagent constrained to the identical read-only tree-to-tree Git recipe.",
+          "Inspected the frozen trees only: base_tree bbc3518213f90a2845347f235def5ef700afa996 and candidate_tree 73080c8839448ea835b5b0d0609b43b94c53bcdf. 34 Git commands ran under a cleared environment with env -i, GIT_CONFIG_NOSYSTEM=1, GIT_CONFIG_GLOBAL=/dev/null, GIT_CONFIG_SYSTEM=/dev/null, GIT_ATTR_NOSYSTEM=1, --no-replace-objects, core.attributesFile=/dev/null, core.excludesFile=/dev/null, core.autocrlf=false and LC_ALL=C. Content diffs used --text --diff-algorithm=myers --no-indent-heuristic with literal pathspecs and never --binary. The live worktree, index and HEAD were never read, no checkout or restore ran, no temporary files were written, and no candidate bytes were piped through another command.",
+          "Recipe deviation 1, disclosed: the prescribed prefix's -c diff.external= makes Git treat the empty string as a configured external differ, so diff --text against overlay.manifest failed with 'cannot run : No such file or directory / fatal: external diff died'. Discovery through --name-status and --numstat succeeded under the literal prefix because it never invokes the differ. Content diffs dropped -c diff.external= and passed --no-ext-diff instead, which disables external diff for real while preserving the recipe's intent; every other flag was unchanged.",
+          "Recipe deviation 2, disclosed: beyond diff and cat-file the lens used git ls-tree -r --name-only against the candidate tree to enumerate the skill directory, and git grep against the candidate tree to locate manifest and registry consumers. Both read only frozen tree objects under the same cleared-environment prefix.",
+          "Manifest row targets verified present: every added overlay.manifest row resolves to an existing blob under skills/ in candidate_tree 73080c8839448ea835b5b0d0609b43b94c53bcdf, checked per row with cat-file. No row points at a missing path, so this candidate introduces no deploy-time failure.",
+          "Row-set integrity verified: comparing the complete set of manifest rows in base_tree against candidate_tree, the reordering visible in this diff drops no pre-existing row, duplicates no row, and retags no row. This was the highest-value regression check available in this diff because a silent drop would undeploy a live skill, and it came back clean.",
+          "Reference-row completeness verified: ls-tree -r --name-only over skills/anti-generic-design in the candidate tree yields exactly SKILL.md plus three files under references/, and all four have corresponding manifest rows at overlay.manifest lines 39 and 52 through 54. Nothing in the skill directory is left undeployed.",
+          "Mechanism correction bearing on finding R3-registry-indexing-mechanism-vs-spec: skills.registry.yaml was not hand-edited in this candidate. It was written by the sanctioned command labdrian skills add anti-generic-design, which routes to engine/skills/lifecycle.go AddEntry, the same tool the finding independently identifies as byte-equivalent to the added entry. A reviewer reading the diff alone cannot distinguish tool output from a hand-edit precisely because the two are identical. The only hand-authored rows in this candidate are the three references rows at overlay.manifest lines 52 through 54, which SyncManifest does not generate by design. This strengthens the finding's own conclusion that no change to the candidate is warranted.",
+          "No candidate-caused BLOCKER or CRITICAL finding was identified. Both findings below are non-blocking."
+        ],
+        "result_hash": "sha256:618a48786fde3b2c287412376fc1c3878764d840d48ab869e16eb08dfaad3b3d"
+      }
+    ],
+    "findings": [
+      {
+        "id": "R3-001",
+        "lens": "reliability",
+        "location": "skills.registry.yaml:237",
+        "severity": "WARNING",
+        "claim": "The durable spec at openspec/specs/anti-generic-design/spec.md carries a requirement titled 'Skill is indexed via skill-registry refresh, not hand-edited YAML' whose scenario asserts that no manual edits were made to skills.registry.yaml. A downstream sdd-verify reading that living spec can therefore report a requirements divergence against the twelve-line registry entry this candidate adds at line 237. This is non-blocking because the requirement is defective at its root and the resulting bytes are tool-equivalent: it is self-scoped to 'as part of this change', meaning the archived skill-authoring change rather than this one; it conflates two artifacts, since the mechanism it names regenerates .atl/skill-registry.md and cannot write skills.registry.yaml at all, making the mandated route impossible; and engine/skills/lifecycle.go AddEntry called without --repo emits exactly these fields in exactly this position. The actionable follow-up is amending the stale spec text, not changing this candidate.",
+        "proof_refs": [
+          "openspec/specs/anti-generic-design/spec.md states that skills.registry.yaml MUST NOT be hand-edited as part of this change and that the registry command is the sole mechanism for indexing, with a scenario line asserting that no manual edits were made to skills.registry.yaml to achieve this.",
+          "engine/skills/lifecycle.go lines 37 through 53, AddEntry builds Source{Type: custom} with Path set to the id, DefaultScope global, Targets claude/opencode/codex and UpdateStrategy overlay-only, field for field identical to the entry added at skills.registry.yaml:237.",
+          "engine/skills/lifecycle.go line 59 appends the new entry last, matching this candidate's placement at the end of the skills list.",
+          "engine/skills/serialize.go Serialize emits that entry in exactly the field order and two/four/six/eight-space indentation present in the candidate at skills.registry.yaml lines 237 through 248."
+        ],
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-002",
+        "lens": "reliability",
+        "location": "overlay.manifest:39",
+        "severity": "SUGGESTION",
+        "claim": "The row added at line 39 makes a second copy of the same guidance deploy into every runtime's skills root alongside the pre-existing _shared/anti-generic-design.md row at line 59. The contract body is distilled verbatim from the SKILL.md, but the only drift guard that exists compares the embedded asset against its deployed _shared copy and never compares the SKILL.md against either. A future edit to skills/anti-generic-design/SKILL.md therefore leaves the injected contract silently stale while both copies keep shipping side by side, and no test fails. Shipping the skill alongside the contract is an explicit recorded decision, so this is a coverage gap rather than a defect: the missing test is a same-direction guard asserting the two documents agree on the four forbidden patterns and the anti-mimicry checklist line.",
+        "proof_refs": [
+          "openspec/changes/anti-generic-design-runtime-wiring/tasks.md task 5.3 records TestAntiGenericDesignStandaloneCopyMatchesEmbeddedAsset in engine/assets/assets_test.go asserting that assets.AntiGenericDesign and the file contents of skills/_shared/anti-generic-design.md are byte-identical, which guards the asset against the _shared copy only.",
+          "openspec/changes/anti-generic-design-runtime-wiring/tasks.md task 1.3 records the contract body as distilled verbatim from skills/anti-generic-design/SKILL.md, establishing the dependency that is left unguarded.",
+          "git grep for anti-generic-design/SKILL.md restricted to Go files in the candidate tree returns exactly one hit and it is a comment rather than an assertion: engine/assets/assets.go line 32 refers to skills/anti-generic-design/SKILL.md as agent-facing guidance.",
+          "openspec/changes/anti-generic-design-runtime-wiring/proposal.md Decision 3 records keeping the skill invokable alongside the contract as intentional, which is why this is raised as coverage rather than as a defect."
+        ],
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced"
+      }
+    ],
+    "classifications": {},
+    "outcomes": {
+      "R3-001": "info",
+      "R3-002": "info"
+    },
+    "fix_finding_ids": [],
+    "follow_ups": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:718e7ad8f476b6488edde5e2e3b6298275076ca82923f86e663027084e666707",
+    "evidence_record_digest": "sha256:b35bd83c397eb1e1e198fccd07aa8ca2dd4baeec46775aeb3f145adbe491678e",
+    "evidence_outcome": "passed",
+    "evidence_target_identity": "sha256:94bcf88f55185c66a1767aa668f9d6f0f78e87cdc09841989d0ec627031efef7",
+    "evidence_authority_revision": "sha256:e843548811f06fbf84e5cfd707c122edd59a93491d847b395d9774ca130a6e59"
+  }
+}

@@ -1,0 +1,184 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:75b67c524e10ba83eba806f64350dd3558b2456f6c4f393073b4ee41ef63a7a6",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-8f69978ee4fde827",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "27945f962b09c9eb6216a0452f930a5575a0f275",
+      "candidate_tree": "c6f3032531ce3748b8498cb2def63debd4f5f99f",
+      "paths_digest": "sha256:fe01c58294b176cd497afba36a7cf8feb14b0930a591b89c3b74cd2b93dbe08b",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        ".github/workflows/ci.yml",
+        "engine/skills/actuals_instrumentation_contract_test.go",
+        "engine/skills/actuals_instrumentation_d2_anchor_test.go",
+        "engine/skills/testdata/corrected-actuals-skills-validate-ondisk-gate.json",
+        "engine/skills/testdata/corrected-actuals-sync-check-repo-behind-origin.json"
+      ],
+      "identity": "sha256:8f69978ee4fde827ede48d04d1a8f1c0dc7d429c8d5e4cd3f400c99ec36bbdf6"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "27945f962b09c9eb6216a0452f930a5575a0f275",
+      "candidate_tree": "c6f3032531ce3748b8498cb2def63debd4f5f99f",
+      "paths_digest": "sha256:fe01c58294b176cd497afba36a7cf8feb14b0930a591b89c3b74cd2b93dbe08b",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        ".github/workflows/ci.yml",
+        "engine/skills/actuals_instrumentation_contract_test.go",
+        "engine/skills/actuals_instrumentation_d2_anchor_test.go",
+        "engine/skills/testdata/corrected-actuals-skills-validate-ondisk-gate.json",
+        "engine/skills/testdata/corrected-actuals-sync-check-repo-behind-origin.json"
+      ],
+      "identity": "sha256:8f69978ee4fde827ede48d04d1a8f1c0dc7d429c8d5e4cd3f400c99ec36bbdf6"
+    },
+    "genesis_paths": [
+      ".github/workflows/ci.yml",
+      "engine/skills/actuals_instrumentation_contract_test.go",
+      "engine/skills/actuals_instrumentation_d2_anchor_test.go",
+      "engine/skills/testdata/corrected-actuals-skills-validate-ondisk-gate.json",
+      "engine/skills/testdata/corrected-actuals-sync-check-repo-behind-origin.json"
+    ],
+    "policy_hash": "sha256:34fb63d7f29f8613cd4431382b1057398a4816f8a4c20fc34677fffc80a184f6",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-risk",
+      "review-resilience",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 811,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "lens_results": [
+      {
+        "lens": "review-risk",
+        "findings": [],
+        "evidence": [
+          "Inspected all 5 changed_path_manifest patches in full: .github/workflows/ci.yml only adds `fetch-depth: 0` to the actions/checkout@v4 step (no permissions/secrets/trigger changes); actuals_instrumentation_contract_test.go and the new actuals_instrumentation_d2_anchor_test.go are test-only Go code — the latter shells out to git via exec.Command (no shell interpretation) using only hardcoded literal commit SHAs/refs, never externally-supplied input, and its own doc comment confirms os/exec is excluded from production by the package's zero-fetch import allowlist (ADR-15/TestZeroFetchImportAllowlist); the two testdata JSON fixtures (new corrected-actuals-skills-validate-ondisk-gate.json and modified corrected-actuals-sync-check-repo-behind-origin.json) contain only project metrics and commit hashes, no credentials/secrets/PII; no dependency manifest (go.mod/go.sum, package.json, etc.) is present in the manifest. No authorization gap, data exposure, unsafe untrusted-input handling, secret, or dependency vulnerability with reachable/exploitable impact was found."
+        ],
+        "result_hash": "sha256:c0e78d62e2e62fca5889cdf4d27fbb99394f5adc306be47e048d3189d336d457"
+      },
+      {
+        "lens": "review-resilience",
+        "findings": [
+          {
+            "id": "R4-001",
+            "lens": "resilience",
+            "location": "engine/skills/actuals_instrumentation_d2_anchor_test.go:312-320",
+            "severity": "WARNING",
+            "claim": "The new D2 anchor test file hardcodes specific historical commit SHAs and a tree hash as literal inputs and resolves them via live `git show`/`git log` subprocess calls with no environment-capability probe; resolveD2T1 and its sibling helpers (commitsCarryingTree, resolveTreeToCommitOrAmbiguous) convert any git failure into an error that every t.Run closure turns into t.Fatalf, and the file has no build tag or t.Skip fallback gating it out of a default `go test` run. Any invocation of this package's test suite that lacks this repository's full commit history — a shallow clone, a different CI job/provider than the one patched in this same diff, a container build context, or a fresh contributor clone — fails the suite unconditionally instead of degrading gracefully. This is the exact failure class the companion .github/workflows/ci.yml change documents as already observed for one CI job ('leaves the suite red').",
+            "proof_refs": [
+              "engine/skills/actuals_instrumentation_d2_anchor_test.go:69-70 hardcodes landingCommit=\"be2c3ca46ea5f4f740ecab6b51dc2db3f167f37c\" and approvedTree=\"2ad8e42e4f1ef4ff3e46c447d70e6123664f2180\" as literal test inputs to resolveD2T1, resolved through a live git subprocess against this repository's actual history.",
+              "engine/skills/actuals_instrumentation_d2_anchor_test.go:317-320: `out, err := runGitReadOnly(...)` followed by `if err != nil { return nil, \"\", fmt.Errorf(...) }` — no t.Skip branch exists anywhere in resolveD2T1.",
+              "engine/skills/actuals_instrumentation_d2_anchor_test.go:383-390 (commitsCarryingTree): `if err != nil { t.Fatalf(\"listing commits on %s: %v\", ref, err) }` on any runGitReadOnly failure, never t.Skip.",
+              "engine/skills/actuals_instrumentation_d2_anchor_test.go:167,177,185-188: collidingTree and defaultBranchRef are hardcoded constants, and `if len(carriers) != 3 { t.Fatalf(...) }` hard-fails rather than skipping when the checkout's visible history does not match.",
+              ".github/workflows/ci.yml:114-120's added comment states 'Depth and ref layout are independent failure modes ... Both are required; either one alone leaves the suite red', confirming the shallow-history failure mode is real and previously observed for the one CI job this diff patches; the new test file carries no equivalent guard for any other execution environment running `go test ./engine/skills/...`."
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          }
+        ],
+        "evidence": [
+          "Read all 5 changed_path_manifest patches in full from the provided GENTLE_AI_REVIEW_PATCH blocks: .github/workflows/ci.yml, engine/skills/actuals_instrumentation_contract_test.go, engine/skills/actuals_instrumentation_d2_anchor_test.go (new 432-line file), engine/skills/testdata/corrected-actuals-skills-validate-ondisk-gate.json (new file), and engine/skills/testdata/corrected-actuals-sync-check-repo-behind-origin.json.",
+          "Verified GENTLE_AI_REVIEW_BINDING.subject_hash equals GENTLE_AI_REVIEW_CONTEXT.artifact_subject.subject_hash (sha256:fc702f34d767b82e8bda658f438d977e6cddc0ecb94248552edf9861d4b94986) and that all 5 changed_path_manifest paths have exactly one corresponding patch block, in the same order given.",
+          "Traced every failure path in the new D2 anchor test file (resolveD2T1, scanCarriersFromGitLog, commitsCarryingTree, resolveTreeToCommitOrAmbiguous, runGitReadOnly, lines 312-432) for retry/skip/degradation behavior: no t.Skip, no build tag, and no context/timeout wraps the git subprocess calls; every failure surfaces as an unconditional t.Fatalf.",
+          "Confirmed type assertions in the new R020_skillsValidateOndiskGate_fixture_mirrors_measured_rebased_record subtest (engine/skills/actuals_instrumentation_contract_test.go) consistently use the comma-ok idiom, so no panic-on-assertion risk was found there.",
+          "Reviewed stripMarkdownSection's new span-integrity guard (engine/skills/actuals_instrumentation_contract_test.go) and confirmed it fails loudly (returns errMarkdownSectionNotFound) rather than silently mis-parsing when a same-or-shallower-level heading is inserted before the expected terminator; no panic or unbounded loop was found.",
+          "No production/runtime source file is touched by this candidate; all 5 changed paths are CI configuration, Go test code, or JSON test fixtures, so resilience scope was bounded to the CI pipeline and test-suite's own failure/degradation behavior rather than application runtime behavior."
+        ],
+        "result_hash": "sha256:c4e6efada618fd81cb4ffa813b7126ccee96ee5f486ebf77096e70cd5415186e"
+      },
+      {
+        "lens": "review-readability",
+        "findings": [],
+        "evidence": [
+          "Inspected all 5 changed_path_manifest paths solely via the supplied unified diffs, in canonical order, with no working tree, index, HEAD, or other file read: .github/workflows/ci.yml (fetch-depth:0 addition with an inline rationale comment), engine/skills/actuals_instrumentation_contract_test.go (new constant correctedActualsSkillsValidateOndiskGateFixtureRelPath, new R020_skillsValidateOndiskGate_fixture_mirrors_measured_rebased_record subtest, new TestAbolishedVocabularySweptFromCurrentSections plus the stripMarkdownSection helper it exercises, and a new section_stripping table-driven test with 9 cases), engine/skills/actuals_instrumentation_d2_anchor_test.go (new file defining the d2RecordedAnchor/d2AnchorOutcome/resolveD2T1 state machine and 5 subtests, explicitly documented as test-only proof code, never a production runtime path), and the two testdata JSON fixtures. Hand-traced stripMarkdownSection's span-boundary control flow against all 9 new section_stripping cases (including the demoted-terminator exact-text-match guard and the inserted-section same-or-shallower-level span-widening guard) and each expected output/error matches the implementation. Hand-traced resolveD2T1's four outcomes (absent/self-asserted/rejected/verified) against all 5 TestD2AnchorIsVerifiableAndUnambiguous subtests; the self-asserted branch returns before ever comparing approvedTree to actualTree, so the tautology the doc comment describes as the pre-Phase-13 defect cannot recur through this code path. Cross-checked the new R020 subtest's want-substrings and its total_wall_clock_hours==6.64 assertion against the literal prose in the new fixture testdata/corrected-actuals-skills-validate-ondisk-gate.json, and confirmed the 'was NOT re-based to the merge-anchored boundary' string added to the existing test's require-list matches the sentence appended to testdata/corrected-actuals-sync-check-repo-behind-origin.json's variance_vs_plan; both match verbatim. Verified internal numeric consistency inside the new fixture: changed_lines 1456 = 1433 insertions + 23 deletions as stated in prose, authored 511 = 464 pre-review + 47 review-correction as stated, checkpoint_count 7 = 1 durable + 6 reconstructed as stated, and t1 20:51:17 minus t0 14:12:55 = 6h38m22s, which rounds to the recorded total_wall_clock_hours of 6.64. Every changed file is test code, CI workflow configuration, or a JSON test fixture; no production source is in scope. No misleading name, duplicated/dead logic, unexplained business constant, undocumented unsafe complexity, or missing change context attributable to this candidate was found — new complexity (stripMarkdownSection's span-boundary rules, the d2Anchor outcome states) carries doc comments that accurately describe the traced behavior, and cross-file citations (fixture text vs. Go assertions vs. CI comment) are internally consistent."
+        ],
+        "result_hash": "sha256:2ba6aef87bbd0e0a377a56c56c5da15796fef3d48242584103bdcda4cef1bb56"
+      },
+      {
+        "lens": "review-reliability",
+        "findings": [
+          {
+            "id": "R3-001",
+            "lens": "reliability",
+            "location": "engine/skills/actuals_instrumentation_d2_anchor_test.go:63-177",
+            "severity": "WARNING",
+            "claim": "The new D2 anchor test suite asserts against hardcoded literal commit SHAs and tree hashes (be2c3ca46ea5f4f740ecab6b51dc2db3f167f37c, 79995ea1733fce362b86d3727184eb539f2c1832, tree 2ad8e42e4f1ef4ff3e46c447d70e6123664f2180, tree b654d2d006d4d151145fd6452817f97d1ddc9ebb) read via live `git log`/`git show` subprocess calls against the `origin/main` ref of this actual repository's history, rather than against a synthetic/fixture git repository. Test pass/fail is therefore coupled to this specific repository's mutable commit graph staying exactly as-is and to a remote literally named `origin` existing with full history, so any future history rewrite (rebase/squash/force-push on main), a differently named remote, or a checkout whose fetched history diverges from upstream main will fail this suite with no code regression involved.",
+            "proof_refs": [
+              "engine/skills/actuals_instrumentation_d2_anchor_test.go new struct literals `landingCommit: \"be2c3ca46ea5f4f740ecab6b51dc2db3f167f37c\"` / `approvedTree: \"2ad8e42e4f1ef4ff3e46c447d70e6123664f2180\"` in subtest `recorded_anchor_with_matching_tree_resolves_verified`, reused with a different `approvedTree` in `mismatched_tree_is_rejected_not_trusted` and with `approvedTree: \"\"` in `recorded_anchor_with_no_review_receipt_is_self_asserted_never_verified`",
+              "engine/skills/actuals_instrumentation_d2_anchor_test.go `const collidingTree = \"2ad8e42e4f1ef4ff3e46c447d70e6123664f2180\"` and `const defaultBranchRef = \"origin/main\"` inside `tree_carried_by_more_than_one_commit_is_ambiguous_never_resolved_by_position`, consumed by `commitsCarryingTree(t, repoRoot, defaultBranchRef, collidingTree)` and `resolveTreeToCommitOrAmbiguous(repoRoot, defaultBranchRef, collidingTree)`, both of which shell out through `runGitReadOnly(\"-C\", repoRoot, \"log\", \"--format=%H %T\", ref)` against the real checkout",
+              "hardcoded collision-count assertion `if len(carriers) != 3 { t.Fatalf(\"commits carrying tree %s on %s = %d, want 3 (be2c3ca, aa81361, 459b48d) ...\", ...) }` fails the whole suite the moment this repository's real commit graph no longer matches the exact 3-carrier snapshot the test assumes",
+              "the accompanying .github/workflows/ci.yml hunk (`fetch-depth: 0`) is itself evidence the author already needed a CI-specific mitigation for this file's live-git dependency, confirming the coupling is real and load-bearing rather than incidental"
+            ],
+            "evidence_class": "deterministic",
+            "causal_disposition": "introduced"
+          }
+        ],
+        "evidence": [
+          "Read all 5 changed_path_manifest patches in full as supplied in GENTLE_AI_REVIEW_CONTEXT: the .github/workflows/ci.yml fetch-depth:0 addition; the modified engine/skills/actuals_instrumentation_contract_test.go (new constant, new R020 fixture-mirroring subtest, new TestAbolishedVocabularySweptFromCurrentSections, new stripMarkdownSection helper plus its 9-case unit-test table); the new engine/skills/actuals_instrumentation_d2_anchor_test.go (resolveD2T1 four-outcome state machine, scanCarriersFromGitLog/commitsCarryingTree/resolveTreeToCommitOrAmbiguous, runGitReadOnly); the new testdata/corrected-actuals-skills-validate-ondisk-gate.json fixture; and the modified testdata/corrected-actuals-sync-check-repo-behind-origin.json fixture.",
+          "Hand-traced resolveD2T1's four branches (absent/self-asserted/verified/rejected) against all four subtests in actuals_instrumentation_d2_anchor_test.go and confirmed each assertion (outcome value, nil-vs-non-nil t1, parsed timestamp) is internally consistent with the function body shown in the same patch.",
+          "Hand-traced all 9 table cases of the new `section_stripping` subtest against stripMarkdownSection's line-by-line logic (fence handling, exact-text terminator match, same-or-shallower-level span-widening guard, strictly-deeper nested-subsection exemption) and confirmed each produces the table's expected want/wantErr outcome.",
+          "Cross-checked every new `want` substring added in actuals_instrumentation_contract_test.go (the R-020 sentence and the three R020_skillsValidateOndiskGate substrings) against the corresponding prose actually present in the new and modified fixture JSON patches, and confirmed each is verbatim present.",
+          "Manually verified brace/quote balance and escape sequences (`\\\"` around embedded double-quoted phrases, literal unescaped backticks) in the new and modified `variance_vs_plan`/`scope_drift_notes` JSON string values for syntactic JSON validity.",
+          "Manually verified none of the abolished-vocabulary strings (`path-scan`, `first-parent`, `receipt-bound`, `carrying that tree MUST be chosen`, `earliest commit on the default branch carrying`, \"otherwise `landing_commit`'s own tree\") appear in either touched testdata JSON fixture, consistent with the new `other_shipped_artifacts_have_no_carve_out` subtest's requirement for those two paths."
+        ],
+        "result_hash": "sha256:963cb1aa8f75b65b2de6542421debf9ecaf3860b2ac22a128189d770e22c2a89"
+      }
+    ],
+    "findings": [
+      {
+        "id": "R4-001",
+        "lens": "resilience",
+        "location": "engine/skills/actuals_instrumentation_d2_anchor_test.go:312-320",
+        "severity": "WARNING",
+        "claim": "The new D2 anchor test file hardcodes specific historical commit SHAs and a tree hash as literal inputs and resolves them via live `git show`/`git log` subprocess calls with no environment-capability probe; resolveD2T1 and its sibling helpers (commitsCarryingTree, resolveTreeToCommitOrAmbiguous) convert any git failure into an error that every t.Run closure turns into t.Fatalf, and the file has no build tag or t.Skip fallback gating it out of a default `go test` run. Any invocation of this package's test suite that lacks this repository's full commit history — a shallow clone, a different CI job/provider than the one patched in this same diff, a container build context, or a fresh contributor clone — fails the suite unconditionally instead of degrading gracefully. This is the exact failure class the companion .github/workflows/ci.yml change documents as already observed for one CI job ('leaves the suite red').",
+        "proof_refs": [
+          "engine/skills/actuals_instrumentation_d2_anchor_test.go:69-70 hardcodes landingCommit=\"be2c3ca46ea5f4f740ecab6b51dc2db3f167f37c\" and approvedTree=\"2ad8e42e4f1ef4ff3e46c447d70e6123664f2180\" as literal test inputs to resolveD2T1, resolved through a live git subprocess against this repository's actual history.",
+          "engine/skills/actuals_instrumentation_d2_anchor_test.go:317-320: `out, err := runGitReadOnly(...)` followed by `if err != nil { return nil, \"\", fmt.Errorf(...) }` — no t.Skip branch exists anywhere in resolveD2T1.",
+          "engine/skills/actuals_instrumentation_d2_anchor_test.go:383-390 (commitsCarryingTree): `if err != nil { t.Fatalf(\"listing commits on %s: %v\", ref, err) }` on any runGitReadOnly failure, never t.Skip.",
+          "engine/skills/actuals_instrumentation_d2_anchor_test.go:167,177,185-188: collidingTree and defaultBranchRef are hardcoded constants, and `if len(carriers) != 3 { t.Fatalf(...) }` hard-fails rather than skipping when the checkout's visible history does not match.",
+          ".github/workflows/ci.yml:114-120's added comment states 'Depth and ref layout are independent failure modes ... Both are required; either one alone leaves the suite red', confirming the shallow-history failure mode is real and previously observed for the one CI job this diff patches; the new test file carries no equivalent guard for any other execution environment running `go test ./engine/skills/...`."
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      },
+      {
+        "id": "R3-001",
+        "lens": "reliability",
+        "location": "engine/skills/actuals_instrumentation_d2_anchor_test.go:63-177",
+        "severity": "WARNING",
+        "claim": "The new D2 anchor test suite asserts against hardcoded literal commit SHAs and tree hashes (be2c3ca46ea5f4f740ecab6b51dc2db3f167f37c, 79995ea1733fce362b86d3727184eb539f2c1832, tree 2ad8e42e4f1ef4ff3e46c447d70e6123664f2180, tree b654d2d006d4d151145fd6452817f97d1ddc9ebb) read via live `git log`/`git show` subprocess calls against the `origin/main` ref of this actual repository's history, rather than against a synthetic/fixture git repository. Test pass/fail is therefore coupled to this specific repository's mutable commit graph staying exactly as-is and to a remote literally named `origin` existing with full history, so any future history rewrite (rebase/squash/force-push on main), a differently named remote, or a checkout whose fetched history diverges from upstream main will fail this suite with no code regression involved.",
+        "proof_refs": [
+          "engine/skills/actuals_instrumentation_d2_anchor_test.go new struct literals `landingCommit: \"be2c3ca46ea5f4f740ecab6b51dc2db3f167f37c\"` / `approvedTree: \"2ad8e42e4f1ef4ff3e46c447d70e6123664f2180\"` in subtest `recorded_anchor_with_matching_tree_resolves_verified`, reused with a different `approvedTree` in `mismatched_tree_is_rejected_not_trusted` and with `approvedTree: \"\"` in `recorded_anchor_with_no_review_receipt_is_self_asserted_never_verified`",
+          "engine/skills/actuals_instrumentation_d2_anchor_test.go `const collidingTree = \"2ad8e42e4f1ef4ff3e46c447d70e6123664f2180\"` and `const defaultBranchRef = \"origin/main\"` inside `tree_carried_by_more_than_one_commit_is_ambiguous_never_resolved_by_position`, consumed by `commitsCarryingTree(t, repoRoot, defaultBranchRef, collidingTree)` and `resolveTreeToCommitOrAmbiguous(repoRoot, defaultBranchRef, collidingTree)`, both of which shell out through `runGitReadOnly(\"-C\", repoRoot, \"log\", \"--format=%H %T\", ref)` against the real checkout",
+          "hardcoded collision-count assertion `if len(carriers) != 3 { t.Fatalf(\"commits carrying tree %s on %s = %d, want 3 (be2c3ca, aa81361, 459b48d) ...\", ...) }` fails the whole suite the moment this repository's real commit graph no longer matches the exact 3-carrier snapshot the test assumes",
+          "the accompanying .github/workflows/ci.yml hunk (`fetch-depth: 0`) is itself evidence the author already needed a CI-specific mitigation for this file's live-git dependency, confirming the coupling is real and load-bearing rather than incidental"
+        ],
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced"
+      }
+    ],
+    "classifications": {},
+    "outcomes": {
+      "R3-001": "info",
+      "R4-001": "info"
+    },
+    "fix_finding_ids": [],
+    "follow_ups": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:1031c2f4529423574058fd221e92075c3c75f80db682b08c4ba6cb302b18379b",
+    "evidence_record_digest": "sha256:f6e931c37380eb7498008f58930d5ec99ac59a6aac6b6232af633f911625d5f2",
+    "evidence_outcome": "passed",
+    "evidence_target_identity": "sha256:8f69978ee4fde827ede48d04d1a8f1c0dc7d429c8d5e4cd3f400c99ec36bbdf6",
+    "evidence_authority_revision": "sha256:a2587c0014f0afd542c9eba75b23e7c1f6fc27f9a9302cb0597aa7cb3991cb83",
+    "reviewer_context_level": "provider_command"
+  }
+}

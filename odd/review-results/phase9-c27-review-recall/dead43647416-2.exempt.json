@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f87c09587c4790e59d50ea9cbbe7e2fb9e19f983",
+    "head": "dead4364741641aa426d311eb83c861a76bcf175",
+    "diff_sha256": "1e525d364820c23a8d3ef47e0a517a3c1f72f443e610d660a35a23844f0dde64",
+    "paths": [
+      "odd/goals/phase9-c27-review-recall.json",
+      "odd/tasks/consolidation-phase9.md",
+      "odd/tasks/phase9-c27-review-recall.md"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git diff --name-only f87c0958 dead4364",
+        "result": "pass",
+        "output": "Printed exactly odd/goals/phase9-c27-review-recall.json, odd/tasks/consolidation-phase9.md, odd/tasks/phase9-c27-review-recall.md."
+      },
+      {
+        "command": "git rev-parse dead4364^1; git rev-parse f87c0958",
+        "result": "pass",
+        "output": "Both printed f87c09587c4790e59d50ea9cbbe7e2fb9e19f983."
+      },
+      {
+        "command": "git show dead4364:odd/goals/phase9-c27-review-recall.json | jq empty",
+        "result": "pass",
+        "output": "Exit code 0, no output."
+      },
+      {
+        "command": "git diff f87c0958 dead4364 | rg -n added-escape-pattern",
+        "result": "pass",
+        "output": "Printed nothing (rg exit 1); the 5 escapes of odd/tasks/consolidation-phase9.md predate the base and this diff adds none."
+      },
+      {
+        "command": "git diff --check f87c0958 dead4364",
+        "result": "pass",
+        "output": "No output, exit code 0."
+      },
+      {
+        "command": "git log -1 --format=%B dead4364",
+        "result": "pass",
+        "output": "The message ends with the line Risk: none and holds no co-authored line."
+      }
+    ]
+  }
+}

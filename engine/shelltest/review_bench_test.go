@@ -412,6 +412,47 @@ func TestReviewBenchRunOurs(t *testing.T) {
 		}
 	})
 
+	t.Run("RUN=2 writes under ours/run2/<id> and leaves an earlier run1 untouched", func(t *testing.T) {
+		script, bench, _, env := oursFixture(t)
+		run1 := filepath.Join(bench, "out", "ours", "run1", "R1", "summary.json")
+		if err := os.MkdirAll(filepath.Dir(run1), 0700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(run1, []byte("run one\n"), 0600); err != nil {
+			t.Fatal(err)
+		}
+		if _, stderr, code := runOurs(t, script, append(env, "RUN=2"), "R1"); code != 0 || stderr != "" {
+			t.Fatalf("exit %d\n%s", code, stderr)
+		}
+		out, err := exec.Command("jq", "-r", ".state", filepath.Join(bench, "out", "ours", "run2", "R1", "summary.json")).Output()
+		if err != nil || strings.TrimSpace(string(out)) != "recorded" {
+			t.Fatalf("run2 summary state %q: %v", out, err)
+		}
+		if got := readFile(t, run1); got != "run one\n" {
+			t.Fatalf("run1 summary changed: %q", got)
+		}
+		if _, err := os.Stat(filepath.Join(bench, "out", "ours", "R1")); !os.IsNotExist(err) {
+			t.Fatalf("RUN=2 also wrote out/ours/R1: %v", err)
+		}
+	})
+
+	t.Run("a RUN that is not a positive integer exits 2 before anything runs", func(t *testing.T) {
+		for _, run := range []string{"0", "x", "-1"} {
+			script, bench, _, env := oursFixture(t)
+			_, stderr, code := runOurs(t, script, append(env, "RUN="+run), "R1")
+			if code != 2 || stderr != "RUN must be a positive integer, not "+run+"\n" {
+				t.Fatalf("RUN=%s: exit %d\n%s", run, code, stderr)
+			}
+			stubs := strings.TrimPrefix(env[2], "STUB_DIR=")
+			if _, err := os.Stat(filepath.Join(stubs, "calls.log")); !os.IsNotExist(err) {
+				t.Fatalf("RUN=%s: labdrian ran: %v", run, err)
+			}
+			if _, err := os.Stat(filepath.Join(bench, "out")); !os.IsNotExist(err) {
+				t.Fatalf("RUN=%s: an output directory was made: %v", run, err)
+			}
+		}
+	})
+
 	t.Run("an unknown id and a missing id are refused", func(t *testing.T) {
 		script, _, _, env := oursFixture(t)
 		if _, stderr, code := runOurs(t, script, env, "R9"); code != 2 || stderr != "unknown case R9\n" {
@@ -419,6 +460,101 @@ func TestReviewBenchRunOurs(t *testing.T) {
 		}
 		if _, stderr, code := runOurs(t, script, env); code != 2 || stderr != "usage: run-ours.sh <id>\n" {
 			t.Fatalf("exit %d\n%s", code, stderr)
+		}
+	})
+}
+
+// stubGentle answers the three calls run-gentle.sh makes on a fresh case: the first STATUS names a START, the START a
+// bound STATUS, and the bound STATUS stops, so the case ends without a review result and still writes its summary.
+const stubGentle = `#!/usr/bin/env bash
+echo "$*" >> "$STUB_DIR/gentle.log"
+case "$1 $2" in
+"review status")
+  case " $* " in
+  *" --bound "*) echo '{"next_transition":{"kind":"stop","reason_code":"stub_stop"}}';;
+  *) echo '{"next_transition":{"execute":{"command":"gentle-ai review start"}}}';;
+  esac;;
+"review start") echo '{"action":"started","next_transition":{"execute":{"command":"gentle-ai review status --bound"}}}';;
+esac
+`
+
+// gentleFixture is oursFixture with run-gentle.sh beside run-ours.sh, a stub gentle-ai on the PATH and an empty shim.log.
+func gentleFixture(t *testing.T) (script, bench string, env []string) {
+	t.Helper()
+	ours, bench, _, env := oursFixture(t)
+	body, err := os.ReadFile("../../tools/review-bench/run-gentle.sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	script = filepath.Join(filepath.Dir(ours), "run-gentle.sh")
+	if err := os.WriteFile(script, body, 0700); err != nil {
+		t.Fatal(err)
+	}
+	stubs := strings.TrimPrefix(env[2], "STUB_DIR=")
+	if err := os.WriteFile(filepath.Join(stubs, "gentle-ai"), []byte(stubGentle), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(bench, "scratch"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(bench, "scratch", "shim.log"), nil, 0600); err != nil {
+		t.Fatal(err)
+	}
+	return script, bench, env
+}
+
+func TestReviewBenchRunGentle(t *testing.T) {
+	stopped := "case R1 ended without a review result: status:stop:stub_stop\n"
+
+	t.Run("RUN unset writes out/<id> as before", func(t *testing.T) {
+		script, bench, env := gentleFixture(t)
+		if _, stderr, code := runOurs(t, script, env, "R1"); code != 4 || stderr != stopped {
+			t.Fatalf("exit %d\n%s", code, stderr)
+		}
+		out, err := exec.Command("jq", "-c", "[.id, .state]", filepath.Join(bench, "out", "R1", "summary.json")).Output()
+		if err != nil || strings.TrimSpace(string(out)) != `["R1","status:stop:stub_stop"]` {
+			t.Fatalf("summary %q: %v", out, err)
+		}
+	})
+
+	t.Run("RUN=2 writes under run2/<id> and leaves an earlier run1 untouched", func(t *testing.T) {
+		script, bench, env := gentleFixture(t)
+		run1 := filepath.Join(bench, "out", "run1", "R1", "summary.json")
+		if err := os.MkdirAll(filepath.Dir(run1), 0700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(run1, []byte("run one\n"), 0600); err != nil {
+			t.Fatal(err)
+		}
+		if _, stderr, code := runOurs(t, script, append(env, "RUN=2"), "R1"); code != 4 || stderr != stopped {
+			t.Fatalf("exit %d\n%s", code, stderr)
+		}
+		out, err := exec.Command("jq", "-r", ".id", filepath.Join(bench, "out", "run2", "R1", "summary.json")).Output()
+		if err != nil || strings.TrimSpace(string(out)) != "R1" {
+			t.Fatalf("run2 summary %q: %v", out, err)
+		}
+		if got := readFile(t, run1); got != "run one\n" {
+			t.Fatalf("run1 summary changed: %q", got)
+		}
+		if _, err := os.Stat(filepath.Join(bench, "out", "R1")); !os.IsNotExist(err) {
+			t.Fatalf("RUN=2 also wrote out/R1: %v", err)
+		}
+	})
+
+	t.Run("a RUN that is not a positive integer exits 2 before anything runs", func(t *testing.T) {
+		for _, run := range []string{"0", "x", "-1"} {
+			script, bench, env := gentleFixture(t)
+			_, stderr, code := runOurs(t, script, append(env, "RUN="+run), "R1")
+			if code != 2 || stderr != "RUN must be a positive integer, not "+run+"\n" {
+				t.Fatalf("RUN=%s: exit %d\n%s", run, code, stderr)
+			}
+			stubs := strings.TrimPrefix(env[2], "STUB_DIR=")
+			if _, err := os.Stat(filepath.Join(stubs, "gentle.log")); !os.IsNotExist(err) {
+				t.Fatalf("RUN=%s: gentle-ai ran: %v", run, err)
+			}
+			if _, err := os.Stat(filepath.Join(bench, "out")); !os.IsNotExist(err) {
+				t.Fatalf("RUN=%s: an output directory was made: %v", run, err)
+			}
 		}
 	})
 }

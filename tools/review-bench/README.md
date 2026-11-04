@@ -41,6 +41,18 @@ tools/review-bench/run-ours.sh R3
 OUT="$BENCH/out/ours" tools/review-bench/score.sh R3
 ```
 
+`RUN=<k>` (a positive integer; anything else exits 2 before any command runs) keeps several runs of one case apart:
+`run-gentle.sh` then writes `$BENCH/out/run<k>/<id>` and `run-ours.sh` `$BENCH/out/ours/run<k>/<id>`, and each run is
+scored on its own directory. Unset, both write where they always did. Run the runs of one runner one after another,
+never in parallel: both read their prompt bytes from the tail of the one `scratch/shim.log`.
+
+```sh
+RUN=2 tools/review-bench/run-ours.sh R3
+OUT="$BENCH/out/ours/run2" tools/review-bench/score.sh R3
+RUN=2 tools/review-bench/run-gentle.sh R3
+OUT="$BENCH/out/run2" tools/review-bench/score.sh R3
+```
+
 ## Selection rule
 
 A real case is a commit H whose defect a later commit F on main fixes, with: F's message or diff names the defect it
@@ -62,6 +74,9 @@ C26 (`odd/tasks/phase9-c26-review-contract.md`) grows a second, fresh hold-out: 
 are separate: the C25 bar is on R14-R23 and the C26 bar is on R24 onward. No defect text, class or diff of R24 onward
 enters a design artifact (the schema, the preamble, the diff command, the location pattern, the bench brief); a change
 to one of those after the corpus commit is logged and voids that hold-out.
+
+For C27 (`odd/tasks/phase9-c27-review-recall.md`) R1-R33 are development cases: its A/B was scored on R24-R33, so
+they no longer hold out anything, and its bar is measured on a fresh hold-out R34 onward, 3 runs per case.
 
 ## Scoring rule
 

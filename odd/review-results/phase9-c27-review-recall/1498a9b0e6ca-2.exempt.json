@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "7ffb148be032cff25eb205cba3fa080fc4918774",
+    "head": "1498a9b0e6ca665d99b0429462ace4c3ba512870",
+    "diff_sha256": "91b51bc6d2ecbb79805df82753eedd4105d4f4ec67ff618951f936acf3f0dd23",
+    "paths": [
+      "odd/review-results/phase9-c27-review-recall/7ffb148be032-1.sweep.json",
+      "odd/review-results/phase9-c27-review-recall/7ffb148be032-2.sweep.json",
+      "odd/review-results/phase9-c27-review-recall/7ffb148be032-3.exempt.json",
+      "odd/review-results/phase9-c27-review-recall/dead43647416-1.sweep.json",
+      "odd/review-results/phase9-c27-review-recall/dead43647416-2.exempt.json"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git rev-parse 1498a9b0^1 vs git rev-parse 7ffb148b",
+        "result": "pass",
+        "output": "Both print the full sha of 7ffb148b."
+      },
+      {
+        "command": "git diff --name-only 7ffb148b 1498a9b0; git diff --diff-filter=AM --name-status 7ffb148b 1498a9b0",
+        "result": "pass",
+        "output": "Only the five dead43647416 and 7ffb148be032 records under odd/review-results/phase9-c27-review-recall/, all with status A."
+      },
+      {
+        "command": "git show 1498a9b0:<path> | jq empty for each added file",
+        "result": "pass",
+        "output": "Every added file parses."
+      },
+      {
+        "command": "git diff --check 7ffb148b 1498a9b0",
+        "result": "pass",
+        "output": "Printed nothing, exit code 0."
+      },
+      {
+        "command": "git log -1 --format=%B 1498a9b0",
+        "result": "pass",
+        "output": "Ends with Risk: none; no co-authored line."
+      }
+    ]
+  }
+}

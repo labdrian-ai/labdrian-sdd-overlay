@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # Bench driver for our review: on one corpus case of corpus.json beside it, runs `labdrian review sweep` and then one
 # `labdrian review launch --runtime claude` per row of ROWS (default default,hunt), and writes
-# $BENCH/out/ours/<id>/summary.json in the shape of run-gentle.sh's, plus the sweep's analyzer lines.
+# $BENCH/out/ours/<id>/summary.json in the shape of run-gentle.sh's, plus the sweep's analyzer lines. RUN=<k>, a
+# positive integer, writes $BENCH/out/ours/run<k>/<id> instead, so one run of a case does not erase another.
 set -u
+if [ -n "${RUN+x}" ] && ! [[ "$RUN" =~ ^[1-9][0-9]*$ ]]; then echo "RUN must be a positive integer, not $RUN" >&2; exit 2; fi
 export BENCH="${BENCH:-$HOME/labdrian-sdd-overlay-worktrees/review-bench}"
 bench="$BENCH"
 here="$(cd "$(dirname "$0")" && pwd)"
@@ -21,7 +23,7 @@ IFS=, read -r -a row_ids <<<"$rows"
 for row in "${row_ids[@]}"; do
   jq -e --arg r "$row" 'any(.rows[]; .id == $r)' "$rows_file" > /dev/null || { echo "unknown row $row" >&2; exit 2; }
 done
-out="$bench/out/ours/$id"
+out="$bench/out/ours${RUN:+/run$RUN}/$id"
 # A rerun starts from an empty directory, so no launch or result of an earlier run is read.
 rm -rf "$out"
 mkdir -p "$out" "$bench/scratch"
