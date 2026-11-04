@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "495454cf8241b6772f9cca9ac0985de52f30d303",
+    "head": "0be251d8a51821014faaad429cabdcec5eda31ab",
+    "diff_sha256": "7e1e3cb1c97cd29f8c1220fd20425c9a9d16c01785dc826db32174f403f12c02",
+    "paths": [
+      "odd/review-results/phase9-c27-review-recall/e17a3707418a-1.sweep.json",
+      "odd/review-results/phase9-c27-review-recall/e17a3707418a-2.exempt.json",
+      "odd/tasks/phase9-c27-review-recall.md",
+      "tools/review-bench/scores/ours-c27.json"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git rev-parse 0be251d8^1",
+        "result": "pass",
+        "output": "495454cf8241b6772f9cca9ac0985de52f30d303"
+      },
+      {
+        "command": "git diff --name-only 495454cf 0be251d8",
+        "result": "pass",
+        "output": "Four paths, the expected set: odd/review-results/phase9-c27-review-recall/e17a3707418a-1.sweep.json, odd/review-results/phase9-c27-review-recall/e17a3707418a-2.exempt.json, odd/tasks/phase9-c27-review-recall.md, tools/review-bench/scores/ours-c27.json."
+      },
+      {
+        "command": "git diff -U0 495454cf 0be251d8 -- odd/tasks/phase9-c27-review-recall.md",
+        "result": "pass",
+        "output": "Two hunks: the T6 task line goes from '- [ ] T6' to '- [x] T6' with 'commit: the T6 commit; done: L15'; lines 85-89 are added after L14 and make up L15 with its four sub-bullets. No other task line changed."
+      },
+      {
+        "command": "jq sums and counts of ours-c27.json and gentle-c27.json",
+        "result": "pass",
+        "output": "Ours: 12.5 over 30 entries, 3 per id R34..R43 with runs [1,2,3]. gentle-c27.json over R34-R43: 3.5."
+      },
+      {
+        "command": "jq -s sum of runs[].in and states over out/ours/run{1,2,3}/R{34..43}/summary.json",
+        "result": "pass",
+        "output": "3350246; all 30 summaries 'recorded'; every run exit 0."
+      },
+      {
+        "command": "location rule spot checks against the stored results (R34 run2, R43 run3, R40 runs 1-3, every nonzero entry)",
+        "result": "pass",
+        "output": "R34 run2 has no finding in posttooluse.go within 100-119 (hunt :99 one line below); R43 run3 none in gitfs.go within 68-74 (:66, :56-60, :84); R40 runs 1-3 none in hook_translate.go; all 14 nonzero entries name the defect file with a range overlapping the defect lines ±3."
+      },
+      {
+        "command": "rg -n '\\\\u[0-9a-fA-F]{4}' tools/review-bench/scores/ours-c27.json; git diff --check 495454cf 0be251d8",
+        "result": "pass",
+        "output": "Both printed nothing."
+      },
+      {
+        "command": "git log -1 --format=%B 0be251d8",
+        "result": "pass",
+        "output": "The last non-empty line is 'Risk: none'; no Co-Authored line."
+      }
+    ]
+  }
+}

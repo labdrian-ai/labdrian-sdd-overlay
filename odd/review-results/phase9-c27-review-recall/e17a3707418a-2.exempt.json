@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "6c42ce36e7bad1f6c2d8e0644c191f7994b46cfc",
+    "head": "e17a3707418aa4eb905485efde4e85d2a066062e",
+    "diff_sha256": "0516d42ba704c3cbdd52796259ea02536b5ef63e195ef3194a81f91cfa3cea5c",
+    "paths": [
+      "odd/review-results/phase9-c27-review-recall/6c42ce36e7ba-1.sweep.json",
+      "odd/review-results/phase9-c27-review-recall/6c42ce36e7ba-2.exempt.json",
+      "odd/tasks/phase9-c27-review-recall.md"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git rev-parse e17a3707^1",
+        "result": "pass",
+        "output": "6c42ce36e7bad1f6c2d8e0644c191f7994b46cfc, which equals the base."
+      },
+      {
+        "command": "git diff --name-only 6c42ce36 e17a3707",
+        "result": "pass",
+        "output": "odd/review-results/phase9-c27-review-recall/6c42ce36e7ba-1.sweep.json, odd/review-results/phase9-c27-review-recall/6c42ce36e7ba-2.exempt.json and odd/tasks/phase9-c27-review-recall.md: records and the feature document only."
+      },
+      {
+        "command": "git diff --numstat 6c42ce36 e17a3707 -- odd/tasks/",
+        "result": "pass",
+        "output": "1 added, 0 removed: the L14 entry appended to the Log, nothing else changed."
+      },
+      {
+        "command": "git diff 6c42ce36 e17a3707 | rg -c '^\\+.*\\\\u[0-9a-fA-F]{4}'; git diff --check 6c42ce36 e17a3707",
+        "result": "pass",
+        "output": "rg printed nothing (no match); git diff --check printed nothing."
+      },
+      {
+        "command": "git log -1 --format=%B e17a3707",
+        "result": "pass",
+        "output": "The last non-empty line is 'Risk: none'; no Co-Authored line (rg count printed nothing)."
+      }
+    ]
+  }
+}
