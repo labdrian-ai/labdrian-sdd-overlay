@@ -13,6 +13,7 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/embed"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/mcpserver"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memorycard"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/query"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vault"
@@ -117,8 +118,11 @@ func mcpGet(store *engram.Store) func(context.Context, int64) (mcpserver.GetOutc
 // index when the promotion wrote a page, before the call returns, exactly as a sync does. The rebuild's failure is
 // reported beside a SUCCESSFUL promotion rather than as the call's error -- the page is written and durable by
 // then. It writes, so it seeds the vault registry of a machine that has none, as the commands that write do.
-func (c commands) mcpPromote(store *engram.Store) func(ctx context.Context, project string, engramID int64) (mcpserver.PromoteOutcome, error) {
-	return func(ctx context.Context, project string, engramID int64) (mcpserver.PromoteOutcome, error) {
+//
+// With source memorycard the id is a memorycard memory id; memorycard's database is opened for the call, read-only,
+// and the session's Engram store answers which observations hold the memory's content.
+func (c commands) mcpPromote(store *engram.Store) func(ctx context.Context, project, source string, id int64) (mcpserver.PromoteOutcome, error) {
+	return func(ctx context.Context, project, source string, id int64) (mcpserver.PromoteOutcome, error) {
 		vaultRoot, err := machineVaults().ToWrite(project, "")
 		if err != nil {
 			return mcpserver.PromoteOutcome{}, err
@@ -127,7 +131,18 @@ func (c commands) mcpPromote(store *engram.Store) func(ctx context.Context, proj
 		if err != nil {
 			return mcpserver.PromoteOutcome{}, err
 		}
-		outcome, err := promote.PromoteAndReindex(ctx, writer, store.ObservationByID, engramID, vault.IndexRebuilder{Root: vaultRoot, Clock: c.clock})
+		index := vault.IndexRebuilder{Root: vaultRoot, Clock: c.clock}
+		var outcome promote.Outcome
+		if source == mcpserver.SourceMemorycard {
+			cards, openErr := memorycard.Open(os.Getenv(memorycardDBEnvVar))
+			if openErr != nil {
+				return mcpserver.PromoteOutcome{}, openErr
+			}
+			defer cards.Close()
+			outcome, err = promote.PromoteCardAndReindex(ctx, writer, cardLookup(cards, store), id, index)
+		} else {
+			outcome, err = promote.PromoteAndReindex(ctx, writer, store.ObservationByID, id, index)
+		}
 		if err != nil {
 			return mcpserver.PromoteOutcome{}, err
 		}

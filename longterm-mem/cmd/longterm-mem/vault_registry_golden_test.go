@@ -155,7 +155,7 @@ func TestVaultRegistry_WhatTheMCPToolsLeave(t *testing.T) {
 			}
 		}},
 		"the promote tool": {seeded: true, call: func(t *testing.T, c commands, store *engram.Store) {
-			if _, err := c.mcpPromote(store)(context.Background(), registryDefaultProject, 1); err != nil {
+			if _, err := c.mcpPromote(store)(context.Background(), registryDefaultProject, "engram", 1); err != nil {
 				t.Fatalf("the promote tool: %v", err)
 			}
 		}},

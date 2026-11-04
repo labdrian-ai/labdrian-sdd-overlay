@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -148,7 +149,7 @@ func TestServer_PromoteRoundTripsOverStdio(t *testing.T) {
 	var gotProject string
 	var gotID int64
 	deps := Deps{
-		Promote: func(_ context.Context, project string, engramID int64) (PromoteOutcome, error) {
+		Promote: func(_ context.Context, project, _ string, engramID int64) (PromoteOutcome, error) {
 			gotProject = project
 			gotID = engramID
 			return PromoteOutcome{Result: want}, nil
@@ -177,6 +178,39 @@ func TestServer_PromoteRoundTripsOverStdio(t *testing.T) {
 	}
 }
 
+// The promote tool takes an optional source: absent it is engram, memorycard is forwarded as such, and any other
+// value is an error that reaches no store.
+func TestServer_PromoteForwardsTheSource(t *testing.T) {
+	var sources []string
+	deps := Deps{
+		Promote: func(_ context.Context, _, source string, _ int64) (PromoteOutcome, error) {
+			sources = append(sources, source)
+			return PromoteOutcome{}, nil
+		},
+	}
+	session := connectInMemory(t, deps)
+	call := func(args map[string]any) error {
+		res, err := session.CallTool(context.Background(), &mcp.CallToolParams{Name: "promote", Arguments: args})
+		if err == nil && res.IsError {
+			err = fmt.Errorf("the tool reported an error")
+		}
+		return err
+	}
+
+	if err := call(map[string]any{"project": "p", "engram_id": 1}); err != nil {
+		t.Fatal(err)
+	}
+	if err := call(map[string]any{"project": "p", "engram_id": 1, "source": "memorycard"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := call(map[string]any{"project": "p", "engram_id": 1, "source": "notes"}); err == nil {
+		t.Fatal("an unknown source was accepted")
+	}
+	if len(sources) != 2 || sources[0] != "engram" || sources[1] != "memorycard" {
+		t.Fatalf("sources reaching the dependency = %v, want [engram memorycard]", sources)
+	}
+}
+
 // TestServer_PromoteReportsAStaleIndexWithoutFailingThePromotion pins the
 // third state a promote call can end in, and the reason it needs a field
 // of its own.
@@ -189,7 +223,7 @@ func TestServer_PromoteRoundTripsOverStdio(t *testing.T) {
 // alongside a successful action, with the remedy named.
 func TestServer_PromoteReportsAStaleIndexWithoutFailingThePromotion(t *testing.T) {
 	deps := Deps{
-		Promote: func(context.Context, string, int64) (PromoteOutcome, error) {
+		Promote: func(context.Context, string, string, int64) (PromoteOutcome, error) {
 			return PromoteOutcome{
 				Result: promote.Result{
 					Page:   promote.Page{Address: "c-000043", Path: "wiki/memory/c-000043.md"},

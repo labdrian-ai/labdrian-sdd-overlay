@@ -1,12 +1,16 @@
 package main
 
 import (
+	"context"
 	"crypto/sha256"
 	"database/sql"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 )
 
 // The tests of `promote --source memorycard`. They run through the command, on the world of the golden tests (a
@@ -156,6 +160,86 @@ func TestPromoteSourceMemorycard_BridgedMemoryIsRefused(t *testing.T) {
 	}
 	if after := renderPromoteGoldenTree(t, w.vaultRoot); after != treeBefore {
 		t.Errorf("the vault changed:\nbefore:\n%s\nafter:\n%s", treeBefore, after)
+	}
+}
+
+// A memory mirrored by hand (no import_map row) whose content hash is that of an Engram observation which has a
+// page is refused like a bridged one. Memory 5 holds the text of observation 1 in other case and spacing, memory 6
+// the text of observation 3, which has no page.
+func addHandMirroredMemories(t *testing.T, dbPath string) {
+	t.Helper()
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	// The stored hash is memorycard's: lowercased, white space collapsed over title + "\n" + body.
+	for _, row := range []struct {
+		id          int
+		title, body string
+	}{
+		{5, "pinned   DECISION", "A decision\nsomebody pinned."},
+		{6, "Below Threshold", "A discovery nobody curated."},
+	} {
+		if _, err := db.Exec(`insert into memories(id, project, type, title, body, content_hash) values (?, 'golden-project', 'decision', ?, ?, ?)`,
+			row.id, row.title, row.body, memory.CardContentHash(row.title, row.body)); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+func TestPromoteSourceMemorycard_SameContentAsAnObservationWithAPageIsRefused(t *testing.T) {
+	w, db := memorycardWorld(t)
+	addHandMirroredMemories(t, db)
+	if code, so, se := runPromoteGolden(t, []string{"promote", "--project", promoteGoldenProject, "--id", "1"}); code != exitOK {
+		t.Fatalf("promote observation 1: exit %d: %s %s", code, so, se)
+	}
+	pagePath := filepath.Join(w.vaultRoot, "wiki", "memory", "c-000901.md")
+	before := fileHash(t, pagePath)
+	treeBefore := renderPromoteGoldenTree(t, w.vaultRoot)
+
+	code, stdout, stderr := runPromoteGolden(t, []string{"promote", "--project", promoteGoldenProject, "--source", "memorycard", "--id", "5"})
+	if code != exitRegistrationConflict {
+		t.Fatalf("exit %d, want %d\nstdout: %s\nstderr: %s", code, exitRegistrationConflict, stdout, stderr)
+	}
+	if !strings.Contains(stderr, "c-000901") || !strings.Contains(stderr, "same content") {
+		t.Errorf("stderr = %q, want it to name the existing page c-000901 and the shared content", stderr)
+	}
+	if fileHash(t, pagePath) != before || renderPromoteGoldenTree(t, w.vaultRoot) != treeBefore {
+		t.Errorf("the vault changed")
+	}
+
+	// The same text as an observation with no page is not a duplicate of a page.
+	if code, so, se := runPromoteGolden(t, []string{"promote", "--project", promoteGoldenProject, "--source", "memorycard", "--id", "6"}); code != exitOK {
+		t.Fatalf("memory 6: exit %d: %s %s", code, so, se)
+	}
+}
+
+// The MCP promote tool promotes from memorycard with source memorycard, and from Engram without a source.
+func TestTheMCPPromoteToolPromotesFromMemorycardWhenAskedTo(t *testing.T) {
+	w, _ := memorycardWorld(t)
+	store, err := engram.Open(w.dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	tool := commands{newEmbedClient: testEmbedClient, clock: promoteGoldenClock}.mcpPromote(store)
+
+	if _, err := tool(context.Background(), promoteGoldenProject, "memorycard", 1); err != nil {
+		t.Fatalf("memorycard: %v", err)
+	}
+	if page := readVaultFile(t, w, "wiki/memory/c-000901.md"); !strings.Contains(page, "memorycard_id: 1\n") || strings.Contains(page, "engram_id") {
+		t.Errorf("page promoted from memorycard = %s", page)
+	}
+	if _, err := tool(context.Background(), promoteGoldenProject, "engram", 1); err != nil {
+		t.Fatalf("engram: %v", err)
+	}
+	if page := readVaultFile(t, w, "wiki/memory/c-000902.md"); !strings.Contains(page, "engram_id: 1\n") {
+		t.Errorf("page promoted from Engram = %s", page)
+	}
+	// Memory 2 is bridged to observation 1, which now has a page: the tool refuses it, with the page named.
+	if _, err := tool(context.Background(), promoteGoldenProject, "memorycard", 2); err == nil || !strings.Contains(err.Error(), "c-000902") {
+		t.Errorf("bridged memory over MCP: err = %v, want a refusal naming c-000902", err)
 	}
 }
 

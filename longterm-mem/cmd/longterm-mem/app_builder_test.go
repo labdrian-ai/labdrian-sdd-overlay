@@ -75,7 +75,7 @@ func TestMCPPromoteTool_BuildsNoEmbeddingIndex(t *testing.T) {
 	}
 	defer store.Close()
 
-	if _, err := (commands{newEmbedClient: testEmbedClient, clock: promoteGoldenClock}).mcpPromote(store)(context.Background(), promoteGoldenProject, 1); err != nil {
+	if _, err := (commands{newEmbedClient: testEmbedClient, clock: promoteGoldenClock}).mcpPromote(store)(context.Background(), promoteGoldenProject, "engram", 1); err != nil {
 		t.Fatalf("the promote tool: %v", err)
 	}
 

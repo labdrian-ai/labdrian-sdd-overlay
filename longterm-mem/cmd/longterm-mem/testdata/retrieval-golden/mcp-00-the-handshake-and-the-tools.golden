@@ -91,7 +91,11 @@
             },
             "engram_id": {
               "type": "integer",
-              "description": "the Engram observation id to promote"
+              "description": "the Engram observation id to promote; with source memorycard, the memorycard memory id"
+            },
+            "source": {
+              "type": "string",
+              "description": "the store to promote from: engram (the default) or memorycard"
             }
           },
           "required": [

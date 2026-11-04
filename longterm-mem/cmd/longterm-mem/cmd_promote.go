@@ -8,6 +8,9 @@ import (
 	"os"
 	"strings"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memorycard"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
 )
 
@@ -79,6 +82,20 @@ const (
 	sourceMemorycard = "memorycard"
 )
 
+// cardLookup is the lookup of a memorycard memory by id (promote.CardLookup): the memory as memorycard holds it
+// and, when it has no import_map row, the observations of Engram that hold its content, which promotion
+// refuses it for when one of them already has a page.
+func cardLookup(cards *memorycard.Store, engramStore *engram.Store) promote.CardLookup {
+	return func(id int64) (memory.CardMemory, bool, error) {
+		m, ok, err := cards.MemoryByID(id)
+		if err != nil || !ok || m.Mapped {
+			return m, ok, err
+		}
+		m.SameContentEngramIDs, err = engramStore.ObservationIDsWithCardHash(m.Project, m.ContentHash)
+		return m, true, err
+	}
+}
+
 // promoteFromMemorycard promotes the memorycard memory id into the vault at vaultRoot, and only as a new page:
 // a memory that already has a page is reported and leaves it as it is, and a memory bridged to an Engram
 // observation that has a page is refused (exit 6, registration_conflict, the code of every refusal that leaves
@@ -89,12 +106,19 @@ func (c commands) promoteFromMemorycard(a app, vaultRoot string, id int64) int {
 		return exit
 	}
 	defer store.Close()
+	// Engram's database is read too: a memory with no bridge is refused when it holds the content of an
+	// observation that has a page, and only Engram can say which observations hold it.
+	engramStore, exit := a.memory()
+	if exit != exitOK {
+		return exit
+	}
+	defer engramStore.Close()
 
 	writer, err := newPromoteWriter(vaultRoot, c.clock)
 	if err != nil {
 		return a.refuse(err, exitInternal)
 	}
-	result, err := promote.ExplicitPromoteCard(context.Background(), writer, store.MemoryByID, id)
+	result, err := promote.ExplicitPromoteCard(context.Background(), writer, cardLookup(store, engramStore), id)
 	var bridged *promote.BridgedError
 	switch {
 	case errors.As(err, &bridged):

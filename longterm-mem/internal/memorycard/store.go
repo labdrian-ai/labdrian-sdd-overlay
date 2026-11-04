@@ -91,10 +91,11 @@ func (s *Store) MemoryByID(id int64) (memory.CardMemory, bool, error) {
 	err := s.db.QueryRow(
 		`select m.id, m.project, m.type, m.title, m.body, coalesce(m.topic_key, ''), m.pinned, m.status,
 			coalesce(m.superseded_by, 0), coalesce(s.title, ''),
-			coalesce((select max(v.version) from memory_versions v where v.memory_id = m.id), 0)
+			coalesce((select max(v.version) from memory_versions v where v.memory_id = m.id), 0),
+			m.content_hash, exists (select 1 from import_map i where i.memory_id = m.id)
 		 from memories m left join memories s on s.id = m.superseded_by
 		 where m.id = ?`, id,
-	).Scan(&m.ID, &m.Project, &m.Type, &m.Title, &m.Body, &m.TopicKey, &pinned, &m.Status, &m.SupersededBy, &m.SupersededByTitle, &maxVersion)
+	).Scan(&m.ID, &m.Project, &m.Type, &m.Title, &m.Body, &m.TopicKey, &pinned, &m.Status, &m.SupersededBy, &m.SupersededByTitle, &maxVersion, &m.ContentHash, &m.Mapped)
 	if errors.Is(err, sql.ErrNoRows) {
 		return memory.CardMemory{}, false, nil
 	}

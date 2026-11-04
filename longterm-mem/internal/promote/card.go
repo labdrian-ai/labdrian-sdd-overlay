@@ -38,9 +38,16 @@ type BridgedError struct {
 	EngramID int64
 	// Address is the page that observation already has.
 	Address string
+	// SameContent reports that the memory has no bridge: it holds the same content as that observation (the
+	// content hash memorycard computes, in the same project), which is how a memory mirrored by hand is found.
+	SameContent bool
 }
 
 func (e *BridgedError) Error() string {
+	if e.SameContent {
+		return fmt.Sprintf("promote: memorycard memory %d has the same content as Engram observation %d, which already has the page %s; it is not promoted from memorycard, and the page %s is left as it is",
+			e.MemoryID, e.EngramID, e.Address, e.Address)
+	}
 	return fmt.Sprintf("promote: memorycard memory %d is bridged to Engram observation %d, which already has the page %s; it is not promoted from memorycard, and the page %s is left as it is",
 		e.MemoryID, e.EngramID, e.Address, e.Address)
 }
@@ -76,11 +83,11 @@ func (w *Writer) PromoteCard(ctx context.Context, m memory.CardMemory) (Result, 
 		return Result{}, err
 	}
 	if scan.bridged != nil {
-		return Result{}, &BridgedError{MemoryID: m.ID, EngramID: m.EngramID, Address: scan.bridged.address()}
+		engramID, _ := strconv.ParseInt(scan.bridged.EngramID, 10, 64)
+		return Result{}, &BridgedError{MemoryID: m.ID, EngramID: engramID, Address: scan.bridged.address(), SameContent: engramID != m.EngramID}
 	}
 	if scan.own != nil {
-		address := scan.own.address()
-		return Result{Page: Page{Address: address, Path: vaultlayout.PageFile(address)}, Action: Action{Kind: ActionAlreadyPromoted}}, nil
+		return w.updateCardPage(m, scan)
 	}
 	if len(scan.unreadable) > 0 {
 		return Result{Action: Action{Kind: ActionSkippedUnreadablePages, Diagnostic: &Diagnostic{
@@ -113,6 +120,49 @@ func (w *Writer) PromoteCard(ctx context.Context, m memory.CardMemory) (Result, 
 	return Result{Page: page, Action: Action{Kind: ActionCreated}}, nil
 }
 
+// updateCardPage brings the page already promoted from m up to m's revision, in place and the way the Engram path
+// does (UpdateInPlace: a page edited by hand since is skipped, not overwritten). A page at m's revision, or at a
+// newer one, is left alone and reported as ActionAlreadyPromoted. Only a page that carries memorycard_id is ever
+// updated here: the scan never selects another.
+func (w *Writer) updateCardPage(m memory.CardMemory, scan cardScan) (Result, error) {
+	address := scan.own.address()
+	onDisk := 0
+	if raw := scan.own.RawRevision; raw != "" {
+		parsed, err := strconv.Atoi(raw)
+		if err != nil {
+			return Result{}, fmt.Errorf("promote: promoted page %s carries an unparseable %s %q: %w", scan.own.File, memorycardRevisionField, raw, err)
+		}
+		onDisk = parsed
+	}
+	if m.Revision <= onDisk {
+		return Result{Page: Page{Address: address, Path: vaultlayout.PageFile(address)}, Action: Action{Kind: ActionAlreadyPromoted}}, nil
+	}
+
+	var related []Link
+	if m.SupersededBy > 0 {
+		if successor, ok := scan.byCardID[m.SupersededBy]; ok {
+			related = append(related, Link{Address: successor, Title: m.SupersededByTitle})
+		}
+	}
+	page, err := EmitCardPage(m, address, related, utc(w.Clock))
+	if err != nil {
+		return Result{}, err
+	}
+	action, err := UpdateInPlace(w.Pages, w.Store, page)
+	if err != nil {
+		return Result{}, err
+	}
+	if action.Kind != ActionSkippedLocalEdit {
+		if err := w.Precedence.SavePrecedence(w.Store); err != nil {
+			return Result{}, err
+		}
+		if err := w.register(address, m.Title); err != nil {
+			return Result{}, err
+		}
+	}
+	return Result{Page: page, Action: action}, nil
+}
+
 // cardScan is what one pass over the pages found out about a memory of memorycard.
 type cardScan struct {
 	// bridged is the page of the Engram observation the memory was imported from, if it has one.
@@ -137,10 +187,18 @@ func (m promotedPageMatch) address() string {
 // as the Engram scan keeps it.
 func scanCardPages(pages PageReader, m memory.CardMemory) (cardScan, error) {
 	scan := cardScan{byCardID: map[int64]string{}}
-	wantEngram := ""
+	// The observations whose pages bridge the memory: the one it was imported from, then the ones that hold its
+	// content. A page of the first wins when both have one.
+	wanted := map[string]int{}
 	if m.EngramID > 0 {
-		wantEngram = strconv.FormatInt(m.EngramID, 10)
+		wanted[strconv.FormatInt(m.EngramID, 10)] = 0
 	}
+	for _, id := range m.SameContentEngramIDs {
+		if _, seen := wanted[strconv.FormatInt(id, 10)]; !seen {
+			wanted[strconv.FormatInt(id, 10)] = 1
+		}
+	}
+	bridgedRank := 2
 	err := eachPage(pages, func(address, content string, err error) {
 		file := address + ".md"
 		if err != nil {
@@ -152,10 +210,12 @@ func scanCardPages(pages PageReader, m memory.CardMemory) (cardScan, error) {
 			return
 		}
 		fields := parseFrontmatterFields(block)
-		match := promotedPageMatch{File: file, Project: fields[projectField], Address: strings.TrimSpace(fields["address"])}
-		if wantEngram != "" && fields[engramIDField] == wantEngram && scan.bridged == nil {
-			match.EngramID = wantEngram
+		match := promotedPageMatch{File: file, Project: fields[projectField], Address: strings.TrimSpace(fields["address"]),
+			RawRevision: strings.TrimSpace(fields[memorycardRevisionField])}
+		if rank, ok := wanted[fields[engramIDField]]; ok && rank < bridgedRank {
+			match.EngramID = fields[engramIDField]
 			scan.bridged = &match
+			bridgedRank = rank
 		}
 		if id, err := strconv.ParseInt(strings.TrimSpace(fields[memorycardIDField]), 10, 64); err == nil && match.Project == m.Project {
 			if id == m.ID && scan.own == nil {

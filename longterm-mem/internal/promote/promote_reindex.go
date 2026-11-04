@@ -34,6 +34,16 @@ func PromoteAndReindex(ctx context.Context, w *Writer, lookup ObservationLookup,
 	return Outcome{Result: result, IndexRebuildErr: reindexAfterPromote(ctx, result, index)}, nil
 }
 
+// PromoteCardAndReindex is PromoteAndReindex for a memory of memorycard (ExplicitPromoteCard): the index is
+// rebuilt when, and only when, the promotion wrote a page.
+func PromoteCardAndReindex(ctx context.Context, w *Writer, lookup CardLookup, id int64, index IndexRebuilder) (Outcome, error) {
+	result, err := ExplicitPromoteCard(ctx, w, lookup, id)
+	if err != nil {
+		return Outcome{}, err
+	}
+	return Outcome{Result: result, IndexRebuildErr: reindexAfterPromote(ctx, result, index)}, nil
+}
+
 // reindexAfterPromote rebuilds the vault index after a promotion, but only
 // when that promotion actually WROTE a page.
 //

@@ -24,9 +24,10 @@ func fixture(t *testing.T) string {
 			pinned integer not null default 0, status text not null default 'active', superseded_by integer, created_at text not null default '', updated_at text not null default '')`,
 		`create table memory_versions (memory_id integer not null, version integer not null, title text not null, body text not null, saved_at text not null, primary key (memory_id, version))`,
 		`create table import_map (source text not null, source_key text not null, part integer not null default 1, memory_id integer not null, primary key (source, source_key, part))`,
-		`insert into memories(id, project, type, title, body, topic_key, pinned, status, superseded_by) values
-			(1, 'p', 'decision', 'Old', 'old body', 'a/b', 1, 'superseded', 2),
-			(2, 'p', 'decision', 'New', 'new body', null, 0, 'active', null)`,
+		`insert into memories(id, project, type, title, body, topic_key, pinned, status, superseded_by, content_hash) values
+			(1, 'p', 'decision', 'Old', 'old body', 'a/b', 1, 'superseded', 2, 'h1'),
+			(2, 'p', 'decision', 'New', 'new body', null, 0, 'active', null, 'h2'),
+			(3, 'p', 'learning', 'Loose', 'no row', null, 0, 'active', null, 'h3')`,
 		`insert into memory_versions values (1, 1, 'Old', 'v1', ''), (1, 2, 'Old', 'v2', '')`,
 		`insert into import_map values ('engram', '402', 1, 1), ('notes', 'x', 1, 2)`,
 	} {
@@ -60,10 +61,16 @@ func TestMemoryByID_MapsTheRowTheBridgeAndTheRevision(t *testing.T) {
 	if m.EngramID != 402 {
 		t.Errorf("EngramID = %d, want 402", m.EngramID)
 	}
+	if !m.Mapped || m.ContentHash != "h1" {
+		t.Errorf("Mapped = %v, ContentHash = %q, want true and h1", m.Mapped, m.ContentHash)
+	}
 
 	n, ok, _ := store.MemoryByID(2)
-	if !ok || n.Revision != 1 || n.EngramID != 0 || n.TopicKey != "" {
+	if !ok || n.Revision != 1 || n.EngramID != 0 || n.TopicKey != "" || !n.Mapped {
 		t.Errorf("memory 2 = %+v, want revision 1, no Engram id (its import_map source is not engram), no topic", n)
+	}
+	if l, ok, _ := store.MemoryByID(3); !ok || l.Mapped || l.ContentHash != "h3" {
+		t.Errorf("memory 3 = %+v, want no import_map row and hash h3", l)
 	}
 	if _, ok, err := store.MemoryByID(99); ok || err != nil {
 		t.Errorf("MemoryByID(99) = %v, %v, want not found and no error", ok, err)

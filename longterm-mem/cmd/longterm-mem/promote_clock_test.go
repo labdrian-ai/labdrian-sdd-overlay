@@ -109,7 +109,7 @@ func TestTheMCPPromoteToolDatesWhatItWritesWithTheClockItWasGiven(t *testing.T) 
 	}
 	defer store.Close()
 
-	outcome, err := commands{newEmbedClient: testEmbedClient, clock: fixedClock{at: clockE2EInstant}}.mcpPromote(store)(context.Background(), promoteGoldenProject, 1)
+	outcome, err := commands{newEmbedClient: testEmbedClient, clock: fixedClock{at: clockE2EInstant}}.mcpPromote(store)(context.Background(), promoteGoldenProject, "engram", 1)
 	if err != nil {
 		t.Fatalf("the promote tool: %v", err)
 	}
