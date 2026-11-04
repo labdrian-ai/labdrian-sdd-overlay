@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "0ec40a4dc7d928a27e8deaa7f782e5ee14544d64",
+    "head": "6c42ce36e7bad1f6c2d8e0644c191f7994b46cfc",
+    "diff_sha256": "3d960f7e5ad73ddfa41bfdc3845dee6e885b7457738eb083e8fa2ee0c295bd6e",
+    "paths": [
+      "engine/shelltest/review_bench_test.go",
+      "odd/review-results/phase9-c27-review-recall/0ec40a4dc7d9-1.sweep.json",
+      "odd/review-results/phase9-c27-review-recall/0ec40a4dc7d9-2.exempt.json",
+      "odd/tasks/phase9-c27-review-recall.md",
+      "roles/reviewer/rows.json"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git rev-parse 6c42ce36^1",
+        "result": "pass",
+        "output": "0ec40a4dc7d928a27e8deaa7f782e5ee14544d64 (starts with 0ec40a4d)"
+      },
+      {
+        "command": "git diff --name-only 0ec40a4d 6c42ce36",
+        "result": "pass",
+        "output": "engine/shelltest/review_bench_test.go, odd/review-results/phase9-c27-review-recall/0ec40a4dc7d9-1.sweep.json, odd/review-results/phase9-c27-review-recall/0ec40a4dc7d9-2.exempt.json, odd/tasks/phase9-c27-review-recall.md, roles/reviewer/rows.json. This is exactly the five expected files."
+      },
+      {
+        "command": "git diff -U0 0ec40a4d 6c42ce36 -- roles/reviewer/rows.json engine/shelltest/review_bench_test.go; jq -c '.rows[:4]' of rows.json at both commits, then cmp; jq -e . on the head file",
+        "result": "pass",
+        "output": "Each file has one changed line (review_bench_test.go:406, rows.json:21). In both, 'cannot show is reached as a WARNING' becomes 'cannot show realistic input reaches as a WARNING'. The first four rows are identical at both commits (cmp: no difference). jq -e . parsed the head file with no error."
+      },
+      {
+        "command": "git diff -U0 0ec40a4d 6c42ce36 -- odd/tasks/phase9-c27-review-recall.md",
+        "result": "pass",
+        "output": "One removed line: S4 at line 11, replaced by a rewritten S4 line. The other changes are additions only, hunk @@ -78,0 +79,5 @@, which holds L12 and L13 and their sub-bullets."
+      },
+      {
+        "command": "cd engine && go test -count=1 ./shelltest/ ./review/... ./cmd/... ; gofmt -l shelltest",
+        "result": "pass",
+        "output": "ok for shelltest, review, review/analyzers, review/app, review/claudeprint, review/codexexec, review/fsstore, review/gitexec and cmd. gofmt -l shelltest printed nothing."
+      },
+      {
+        "command": "git diff 0ec40a4d 6c42ce36 | rg -n '^\\+.*\\\\u[0-9a-fA-F]{4}'; git diff --check 0ec40a4d 6c42ce36",
+        "result": "pass",
+        "output": "The rg search printed nothing (rc=1, no match). git diff --check printed nothing (rc=0)."
+      },
+      {
+        "command": "git log -1 --format=%B 6c42ce36 (last non-empty lines; rg -c Co-Authored)",
+        "result": "pass",
+        "output": "The last non-empty line is 'Risk: none', preceded by 'The commit also stores the review records of 0ec40a4d.'. The Co-Authored match count was 0."
+      }
+    ]
+  }
+}
