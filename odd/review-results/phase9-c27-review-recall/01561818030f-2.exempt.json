@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "7262817b6a079cf6a6b12f6da13e6236daf7030d",
+    "head": "01561818030f49370df088ee920bafc5844e4b4b",
+    "diff_sha256": "81dc5b1d9469f52ffcc6b601bf80866609c7405d7be426c5c969a140c89182e2",
+    "paths": [
+      "odd/review-results/phase9-c27-review-recall/7262817b6a07-1.sweep.json",
+      "odd/review-results/phase9-c27-review-recall/7262817b6a07-2.exempt.json"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git rev-parse 01561818^1",
+        "result": "pass",
+        "output": "7262817b6a079cf6a6b12f6da13e6236daf7030d"
+      },
+      {
+        "command": "git diff --name-only 7262817b 01561818; git diff --diff-filter=A --name-only 7262817b 01561818",
+        "result": "pass",
+        "output": "Both commands list exactly odd/review-results/phase9-c27-review-recall/7262817b6a07-1.sweep.json and odd/review-results/phase9-c27-review-recall/7262817b6a07-2.exempt.json, so both files are added and nothing else changed."
+      },
+      {
+        "command": "git show 01561818:<file> > <scratch>/x.json; jq empty <scratch>/x.json; jq -c '[.head, .binding.head, .base, .binding.base]' <scratch>/x.json (for each of the two files)",
+        "result": "pass",
+        "output": "jq empty exited 0 for both files. 7262817b6a07-1.sweep.json has top-level head 7262817b6a079cf6a6b12f6da13e6236daf7030d and base c9391b9b58b6c92ca2911190cbf6bee60b807f4e. 7262817b6a07-2.exempt.json has binding.head 7262817b6a079cf6a6b12f6da13e6236daf7030d and binding.base c9391b9b58b6c92ca2911190cbf6bee60b807f4e. The fields not named here were null."
+      },
+      {
+        "command": "git diff --check 7262817b 01561818; git diff 7262817b 01561818 | rg -n '^\\+.*\\\\u[0-9a-fA-F]{4}'",
+        "result": "pass",
+        "output": "git diff --check printed nothing and exited 0. rg printed nothing and exited 1, meaning no matches."
+      },
+      {
+        "command": "git log -1 --format=%B 01561818 | tail -4; git log -1 --format=%B 01561818 | rg -c 'Co-Authored-By'",
+        "result": "pass",
+        "output": "The last line of the message is 'Risk: none', and the preceding line shown is 'after it, so the merge lands them with the reviewed head.' The Co-Authored-By count command printed nothing, so there is no such line (its exit code was not captured)."
+      }
+    ]
+  }
+}

@@ -14,8 +14,8 @@ It is not part of the product and never runs against the main repository.
   case and writes `$BENCH/out/<id>/summary.json` (`id`, `state`, `secs`, `lenses[]` with `lens`, `n`, `findings`,
   `runs[]` with the stdin and stdout bytes of every model process).
 - `run-ours.sh <id>`: runs our review on one case: `labdrian review sweep` (feature `review-bench`), then
-  `labdrian review bind` and one `labdrian review launch --runtime claude` per row of `ROWS` (default `default,hunt`,
-  rows read from `ROWS_FILE`, default `roles/reviewer/rows.json`; model `MODEL`, default `claude-sonnet-5-5`), each with
+  `labdrian review bind` and one `labdrian review launch --runtime claude` per row of `ROWS` (default `default,hunt`;
+  C27 measures `ROWS=recall,hunt`, where `recall` is the `default` row with its gating relaxed; rows read from `ROWS_FILE`, default `roles/reviewer/rows.json`; model `MODEL`, default `claude-sonnet-5-5`), each with
   a brief of five lines, `Lens: <the row's sentence>` and the binding's `base:`, `head:`, `diff_sha256:` and `worktree:`
   (the `worktree:` line only because `review launch` requires the brief to name it); the launch puts its lean preamble
   and JSON Schema before it. It writes `$BENCH/out/ours/<id>/summary.json` in the shape of
