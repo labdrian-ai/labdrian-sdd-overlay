@@ -1,0 +1,19 @@
+{
+  "kind": "polisher",
+  "base": "d772854988ad12a53da3f9b42ff0822cc1e0d0d9",
+  "head": "faffbd295a5dc1d84e37f9c627dee7169a5c33fa",
+  "diff_sha256": "fd78d4347e7616e0f0e157a711fb4db5e71fe9cd18fc9dcef058ef60d689f348",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/t8.diff, covering 8 changed paths: CHANGELOG.md, agents/reviewer.md, codex/agents/reviewer.toml, engine/review/rows.go, engine/skills/role_agents_artifact_test.go, odd/tasks/phase9-c27-review-recall.md, pi/agents/reviewer.md and roles/reviewer/body.md.",
+      "Read S8 at odd/tasks/phase9-c27-review-recall.md:15 and the T8 line and L21 design in the worktree. The body substitution follows S8 (a): only the old clause is replaced, and the BLOCKER/CRITICAL proof rule and the rest of the line are kept as their own sentence.",
+      "The new sentence matches engine/review/claudeprint/preamble.md:3 word for word. A grep in the worktree found its first sentence identical.",
+      "The three generated agent files (agents/reviewer.md:15, codex/agents/reviewer.toml:11, pi/agents/reviewer.md:16) carry the same line as roles/reviewer/body.md:9, and the diff touches no other agent file.",
+      "A grep for 'Report only real, user-impacting' outside odd/ found it only in docs/architecture/role-design/per-role-reviewer.md, which S8 assumption (2) says stays unedited; in the test comment that names the difference (engine/skills/role_agents_artifact_test.go:317); and in a CHANGELOG entry. No live prompt or consumer still holds the old sentence.",
+      "engine/skills/role_agents_artifact_test.go:322-339: the reviewer delta still has 4 lines, line index 1 is pinned to the new sentence, and lines 0 and 3 are unchanged. The engine/review/rows.go change is comment lines only, so rowIDs is unchanged.",
+      "The polisher body (the polisher's prompt) and the claude preamble are untouched, as S8 assumption (1) requires.",
+      "Nothing was run (no tests, builds or generator); this judgment rests on reading the files only."
+    ]
+  }
+}
