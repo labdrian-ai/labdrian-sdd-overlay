@@ -1,0 +1,556 @@
+[
+  {
+    "key": "4720b953ec59",
+    "runner": "gentle",
+    "id": "R34",
+    "run": 3,
+    "row": "review-reliability",
+    "finding": "R3-response-buffered",
+    "severity": "WARNING",
+    "location": "engine/hookwire/posttooluse.go:70-125",
+    "claim": "The documentation says tool_response is 'hashed and dropped' as a stream of tokens. The code decodes each value into a json.RawMessage, so the whole tool_response is buffered in the decoder and then copied. A response near the 64 MiB bound costs several times that in memory. The bound is still enforced, so this is not unbounded. The size-bound test (which builds a 64 MiB string) also allocates heavily and may be slow or flaky on small CI runners.",
+    "proof_refs": [
+      "engine/hookwire/posttooluse.go:70-125",
+      "engine/hookwire/posttooluse_test.go:96-102"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": true
+  },
+  {
+    "key": "ba4c75157a0c",
+    "runner": "gentle",
+    "id": "R35",
+    "run": 2,
+    "row": "review-risk",
+    "finding": "R1-001",
+    "severity": "SUGGESTION",
+    "location": "engine/projection/evidence.go:104",
+    "claim": "Evidence values (project, goal, ids, skill, tool) are sanitized to one line and clipped to a bounded length, and only a response digest and length are recorded, never the response body. This limits log injection and data exposure. The remaining exposure is that query goal text is persisted to a sidecar log, which is the intended feature and depends on the log adapter's file permissions, which are not in this candidate.",
+    "proof_refs": [
+      "engine/projection/evidence.go:104",
+      "engine/projection/evidence.go:55-70"
+    ],
+    "evidence_class": null,
+    "causal_disposition": null,
+    "c27_control": false
+  },
+  {
+    "key": "168b8633fc1b",
+    "runner": "gentle",
+    "id": "R35",
+    "run": 2,
+    "row": "review-reliability",
+    "finding": "R3-001",
+    "severity": "WARNING",
+    "location": "engine/projection/app/hook.go:217",
+    "claim": "OnToolResult passes the request call through readOnce before Evidence reads ReadRecordID. The body of readOnce is not in this candidate. If it rebuilds the ToolCall from named fields, the new ReadRecordID field would be dropped. Every by-id read (mem_get_observation, mem_timeline, longterm-mem get) would then be recorded with empty IDs, and nothing would warn. The service-level tests only exercise a query read (mem_search) and a Skill call. The id path is checked only at the pure Evidence level, where readOnce is not involved. The end-to-end behavior for id reads is therefore unproved.",
+    "proof_refs": [
+      "engine/projection/app/hook.go:217",
+      "engine/projection/app/evidence_test.go:48-56",
+      "engine/projection/evidence_test.go:36-46"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "unknown",
+    "c27_control": false
+  },
+  {
+    "key": "093444b4d5bf",
+    "runner": "gentle",
+    "id": "R37",
+    "run": 1,
+    "row": "review-reliability",
+    "finding": "R3-feature-flag-without-value",
+    "severity": "WARNING",
+    "location": "engine/cmd/review_receipt.go:68-72",
+    "claim": "A trailing `--feature` with no value is treated as not given, so `capture --cwd X --feature` falls through to auto-detect. With a single active change it captures into that change and exits 0, and with none it is a silent no-op. The explicit option is ignored while success is reported. `--change` already behaves this way at baseline and the code comment documents it, but the new flag extends that behaviour to a destination selector. An unambiguous usage error would be safer.",
+    "proof_refs": [
+      "engine/cmd/review_receipt.go:68-72",
+      "engine/cmd/review_receipt.go:36-37"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "6e7bb1afb812",
+    "runner": "gentle",
+    "id": "R37",
+    "run": 2,
+    "row": "review-reliability",
+    "finding": "R3-feature-flag-without-value",
+    "severity": "WARNING",
+    "location": "engine/cmd/review_receipt.go:68-72",
+    "claim": "A trailing `--feature` with no value is treated as not given, so `capture --cwd X --feature` silently falls through to active-change auto-detection and can capture into the single active change and exit 0 instead of reporting a usage error. This is the same behavior `--change` already had at the baseline, but it is now also true of the newly added `--feature` option. It is also untested: the golden cases cover an empty value but not a missing one.",
+    "proof_refs": [
+      "engine/cmd/review_receipt.go:68-72",
+      "engine/cmd/review_receipt.go:36-37"
+    ],
+    "evidence_class": null,
+    "causal_disposition": null,
+    "c27_control": false
+  },
+  {
+    "key": "1244c072c02c",
+    "runner": "gentle",
+    "id": "R37",
+    "run": 3,
+    "row": "review-reliability",
+    "finding": "R3-trailing-feature-flag",
+    "severity": "WARNING",
+    "location": "engine/cmd/review_receipt.go:68-72",
+    "claim": "A trailing --feature with no value is treated as not given. capture then silently falls through to active-change auto-detection (or a no-op with exit 0) instead of reporting a usage error. An explicit option is ignored while success is reported. This mirrors how --change already behaved at the baseline, but the new flag copies the weakness. The golden and feature tests cover an empty value (--feature \"\") but not a missing one.",
+    "proof_refs": [
+      "engine/cmd/review_receipt.go:36-37",
+      "engine/cmd/review_receipt.go:68-72"
+    ],
+    "evidence_class": "deterministic",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "3c4f41b6d67f",
+    "runner": "gentle",
+    "id": "R39",
+    "run": 1,
+    "row": "review-reliability",
+    "finding": "R3-001",
+    "severity": "WARNING",
+    "location": "engine/cmd/hook_translate.go:57-70",
+    "claim": "realSkillFile only resolves symlinks for absolute paths whose base is exactly SKILL.md and that exist. A relative Read path, a non-existent target (EvalSymlinks error), or a case-variant name falls back to the unresolved path and will not match the lock's real-path entries, so the gate stays silent. Likely acceptable since Claude Code passes absolute paths, but the fallthrough is untested.",
+    "proof_refs": [
+      "engine/cmd/hook_translate.go:57-70"
+    ],
+    "evidence_class": null,
+    "causal_disposition": null,
+    "c27_control": false
+  },
+  {
+    "key": "37bbfdf23729",
+    "runner": "gentle",
+    "id": "R39",
+    "run": 1,
+    "row": "review-reliability",
+    "finding": "R3-002",
+    "severity": "WARNING",
+    "location": "engine/cmd/procedural_lock.go:52-56",
+    "claim": "Lock reader adds the real path only when EvalSymlinks succeeds and differs. If a symlink is broken or a parent directory is later relinked, only the link-form path is listed, so reads by real path would be missed. The three tested combinations (linked/real/linked from link) do not cover a SKILL.md that is itself a symlink to a file outside the repo.",
+    "proof_refs": [
+      "engine/cmd/procedural_lock.go:52-56",
+      "engine/cmd/projection_gate_test.go:375-397"
+    ],
+    "evidence_class": null,
+    "causal_disposition": null,
+    "c27_control": false
+  },
+  {
+    "key": "5dc5fba3a810",
+    "runner": "gentle",
+    "id": "R39",
+    "run": 2,
+    "row": "review-risk",
+    "finding": "R1-001",
+    "severity": "WARNING",
+    "location": "engine/cmd/hook_translate.go:55",
+    "claim": "The gate only denies a SKILL.md Read when the resolved path matches the lock's listed paths. realSkillFile resolves symlinks only for absolute paths whose base name is exactly SKILL.md. A relative path, or a case variant of the name, is returned unresolved, so a link-based path would not match. Any gap here is a bypass of a soft guard that reads a file already readable to the agent, not a privilege escalation. The lock lists both link and real forms, which covers the tested scenarios. The unresolved cases are at most a hardening gap, and the baseline had no symlink handling at all, so this is not a regression.",
+    "proof_refs": [
+      "engine/cmd/hook_translate.go:55",
+      "engine/cmd/procedural_lock.go:54"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "pre-existing",
+    "c27_control": false
+  },
+  {
+    "key": "d07fbc0ab025",
+    "runner": "gentle",
+    "id": "R39",
+    "run": 2,
+    "row": "review-reliability",
+    "finding": "R3-001",
+    "severity": "WARNING",
+    "location": "engine/cmd/hook_translate.go:60-71",
+    "claim": "realSkillFile only resolves symlinks when the SKILL.md exists and the path is absolute. If the target is missing or EvalSymlinks fails, the raw path is returned and the gate can silently fail to match a locked skill file. This is a fail-open edge, but a nonexistent file cannot be read, so the harm is limited. Also, a symlink at the SKILL.md leaf pointing outside the repo resolves to a path not in the lock, so the gate would not deny that read. That is arguably intended (the real file is not the locked one), but no test pins the behavior.",
+    "proof_refs": [
+      "engine/cmd/hook_translate.go:60-71",
+      "engine/cmd/projection_gate_test.go:375-396"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "d3ef421fa106",
+    "runner": "gentle",
+    "id": "R39",
+    "run": 2,
+    "row": "review-reliability",
+    "finding": "R3-002",
+    "severity": "SUGGESTION",
+    "location": "engine/cmd/projection_gate_test.go:375-396",
+    "claim": "The new symlink test covers the three directory-link combinations, but not a symlinked SKILL.md leaf, a relative path, or a missing file. The fallback branches of realSkillFile and the lock reader are therefore unproved by tests.",
+    "proof_refs": [
+      "engine/cmd/projection_gate_test.go:375-396",
+      "engine/cmd/hook_translate.go:60-71"
+    ],
+    "evidence_class": null,
+    "causal_disposition": null,
+    "c27_control": false
+  },
+  {
+    "key": "c772923c2bda",
+    "runner": "gentle",
+    "id": "R39",
+    "run": 3,
+    "row": "review-risk",
+    "finding": "R1-001",
+    "severity": "WARNING",
+    "location": "engine/cmd/hook_translate.go:65-71",
+    "claim": "realSkillFile resolves symlinks only when the path is absolute, basename is SKILL.md, and the file exists. A symlink to a SKILL.md under a different name, or a link whose final component is not SKILL.md (e.g. a link named other.md pointing at a locked SKILL.md), is not canonicalized, so the gate will not match it. This is a bypass of a read-deny gate, but the gate is a guidance/projection gate rather than a security boundary and the base had no symlink handling at all, so this is not a regression.",
+    "proof_refs": [
+      "engine/cmd/hook_translate.go:65-71"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "pre-existing",
+    "c27_control": false
+  },
+  {
+    "key": "073ab3fcd7b5",
+    "runner": "gentle",
+    "id": "R39",
+    "run": 3,
+    "row": "review-reliability",
+    "finding": "R3-001",
+    "severity": "WARNING",
+    "location": "engine/cmd/hook_translate.go:55",
+    "claim": "Symlink resolution is only applied for absolute paths whose base name is exactly SKILL.md. A relative file_path, or a link whose own name is not SKILL.md but resolves to a SKILL.md (or a link directory component with differing case), is not normalized and so is not matched against the lock. The lock lists real paths only for existing files at Load time; a SKILL.md created after the lock is read is not covered. These are narrow edge cases that are not tested.",
+    "proof_refs": [
+      "engine/cmd/hook_translate.go:55-71",
+      "engine/cmd/procedural_lock.go:52-57"
+    ],
+    "evidence_class": null,
+    "causal_disposition": null,
+    "c27_control": false
+  },
+  {
+    "key": "073e067cfea1",
+    "runner": "gentle",
+    "id": "R39",
+    "run": 3,
+    "row": "review-reliability",
+    "finding": "R3-002",
+    "severity": "SUGGESTION",
+    "location": "engine/cmd/procedural_lock.go:52-57",
+    "claim": "When the target SKILL.md does not exist, EvalSymlinks fails and only the unresolved path is listed. If a parent directory is a link, the real path of a not-yet-existing file is not added, so the behavior differs between existing and missing files. This is harmless because a missing file cannot be read, but it is not asserted by a test.",
+    "proof_refs": [
+      "engine/cmd/procedural_lock.go:52-57"
+    ],
+    "evidence_class": null,
+    "causal_disposition": null,
+    "c27_control": false
+  },
+  {
+    "key": "b35fcb443409",
+    "runner": "gentle",
+    "id": "R40",
+    "run": 1,
+    "row": "review-risk",
+    "finding": "R1-001",
+    "severity": "WARNING",
+    "location": "engine/cmd/procedural_lock.go:50-58",
+    "claim": "The gate is a documented speed bump, and a procedural skill's SKILL.md is matched by lexical path comparison only. A symlink or alternate path to the same file (or a Bash cat) bypasses the deny. This is a limited-scope bypass of a policy gate, not a data-exposure boundary, and the ADR already accepts that a skill file can be read through Bash.",
+    "proof_refs": [
+      "engine/cmd/procedural_lock.go:50-58",
+      "docs/architecture/adr-c23-m4-memory-gate.md:70-72"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "c88bb9a0ad09",
+    "runner": "gentle",
+    "id": "R40",
+    "run": 1,
+    "row": "review-reliability",
+    "finding": "R3-read-matcher-edit-tools",
+    "severity": "WARNING",
+    "location": "engine/projection/gate.go:211-214",
+    "claim": "relevantUse falls back to slices.Contains(editTools, readTool) for a non-SKILL.md Read, but GateRelevant (unchanged semantics aside) now reports Read as relevant unconditionally. The two helpers disagree for ordinary Reads: GateRelevant(Read) is true while GateRelevantCall of a non-SKILL.md Read is false. Callers using the older GateRelevant for Read would touch the stores; the service uses GateRelevantCall so behavior is correct today, but the divergence is a latent trap.",
+    "proof_refs": [
+      "engine/projection/gate.go:173-176",
+      "engine/projection/gate.go:197-212"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "8bf48d07b13b",
+    "runner": "gentle",
+    "id": "R40",
+    "run": 1,
+    "row": "review-reliability",
+    "finding": "R3-lock-hardlink-symlink",
+    "severity": "WARNING",
+    "location": "engine/cmd/procedural_lock.go:44-56",
+    "claim": "Lock targets are joined lexically to the worktree root and matched against the Read path by cleaned string comparison only. A Read through a symlink or a differently-spelled path (e.g. a symlinked worktree) to a procedural skill's SKILL.md will not match and so passes the gate. This is an accepted limitation (Bash can read the file anyway) but no test covers it.",
+    "proof_refs": [
+      "engine/projection/gate.go:380-388",
+      "engine/cmd/procedural_lock_test.go:15-33"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "494da8a1fac9",
+    "runner": "gentle",
+    "id": "R40",
+    "run": 2,
+    "row": "review-risk",
+    "finding": "R1-lock-symlink-note",
+    "severity": "SUGGESTION",
+    "location": "engine/cmd/procedural_lock.go:44-60",
+    "claim": "The lock reader joins lock targets under the worktree root after a lexical IsLocal check, and the gate compares lexically cleaned paths, so a symlinked SKILL.md path is not resolved. This is a deliberate, documented speed-bump gate (the ADR accepts that skill files can still be read through Bash), so it is not a reachable security boundary break. Noted only as a hardening opportunity.",
+    "proof_refs": [
+      "engine/cmd/procedural_lock.go:44-60",
+      "docs/architecture/adr-c23-m4-memory-gate.md:70-72"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "fe66ddf3cec0",
+    "runner": "gentle",
+    "id": "R40",
+    "run": 2,
+    "row": "review-reliability",
+    "finding": "R3-001",
+    "severity": "WARNING",
+    "location": "engine/projection/gate.go:211-215",
+    "claim": "relevantUse for a Read whose path is not a SKILL.md returns relevant only if editTools contains \"Read\". Behavior is correct today, but a hook installed on every Read means the Read tool is routed through the hook process for each call (latency cost); the narrowing happens only inside the hook, so performance of all Reads is affected by the new matcher. Not a correctness defect.",
+    "proof_refs": [
+      "engine/settings/projection.go:40"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "dc498b58fc0d",
+    "runner": "gentle",
+    "id": "R42",
+    "run": 1,
+    "row": "review-risk",
+    "finding": "R1-001",
+    "severity": "WARNING",
+    "location": "engine/cmd/workflow.go:233-236",
+    "claim": "When identity resolution fails, the warning echoes the resolver error text (newlines stripped) to stderr. The error may include repository-controlled content such as file contents or paths; it is only printed to the local user's own stderr, so exposure is limited to the invoking user and no cross-boundary impact is shown. Fail-open recording of no identity makes the memory gate treat the project as unknown, which is a documented design choice, not an exploitable bypass shown here.",
+    "proof_refs": [
+      "engine/cmd/workflow.go:233-236",
+      "engine/cmd/workflow_identity_test.go:124-141"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "6341abac20a0",
+    "runner": "gentle",
+    "id": "R42",
+    "run": 1,
+    "row": "review-reliability",
+    "finding": "R3-identity-validation-hard-fails-create",
+    "severity": "WARNING",
+    "location": "engine/cmd/workflow.go:228-237",
+    "claim": "The comment and warning path say an unresolvable identity must not stop create. A resolved identity that fails validateProjectIdentity (over 512 runes, or containing a control character such as a tab in a declared name) makes Lifecycle.Create return an error, and the command exits 2 instead of warning and recording none. The cmd tests cover only a resolver error, not an invalid resolved value. The shared resolver may already bound its output, which the patch does not show, so this is at most a warning.",
+    "proof_refs": [
+      "engine/cmd/workflow.go:228-237",
+      "engine/workflow/lifecycle.go:471-480",
+      "engine/workflow/workflow.go:567-586"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": true
+  },
+  {
+    "key": "b547bf09f3a3",
+    "runner": "gentle",
+    "id": "R42",
+    "run": 2,
+    "row": "review-risk",
+    "finding": "R1-001",
+    "severity": "WARNING",
+    "location": "engine/cmd/workflow.go:228-237",
+    "claim": "workflow create now resolves the project identity from the working directory (reads .longterm-mem-project, git config/remote) and persists it in the append-only workflow log. A remote URL with embedded credentials could be normalized into the identity; whether the shared resolver strips userinfo is not visible in this candidate, so no reachable exposure is demonstrated. Input is validated for control characters and length, so injection into the log is bounded.",
+    "proof_refs": [
+      "engine/cmd/workflow.go:228-237",
+      "engine/workflow/workflow.go:567-586"
+    ],
+    "evidence_class": "insufficient",
+    "causal_disposition": "unknown",
+    "c27_control": false
+  },
+  {
+    "key": "d8fb4c756ce1",
+    "runner": "gentle",
+    "id": "R42",
+    "run": 2,
+    "row": "review-reliability",
+    "finding": "R3-identity-validation-hard-fails-create",
+    "severity": "WARNING",
+    "location": "engine/cmd/workflow.go:237",
+    "claim": "A resolver error only produces a warning and an empty identity, but a resolved identity that fails validateProjectIdentity in Lifecycle.Create (over 512 runes, a control character, or invalid UTF-8) makes create exit 2. Create worked in that situation at the baseline. Whether the shared resolver can return such a value is not visible in this candidate; if it validates its output, this cannot happen. No test covers a resolver-supplied identity that Create rejects.",
+    "proof_refs": [
+      "engine/cmd/workflow.go:237",
+      "engine/workflow/lifecycle.go:476-479",
+      "engine/workflow/workflow.go:567-586"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": true
+  },
+  {
+    "key": "c98957b79224",
+    "runner": "gentle",
+    "id": "R42",
+    "run": 3,
+    "row": "review-risk",
+    "finding": "R1-001",
+    "severity": "WARNING",
+    "location": "engine/cmd/workflow.go:228-237",
+    "claim": "If identity resolution fails, create proceeds and records no identity, so the memory gate treats the workflow as unknown and allows queries. This is an intentional fail-open, documented in the code and the warning message. It weakens the gate only where the repository is unreadable, and the failure is surfaced to the user. Reaching it requires a malformed repository, and no data is exposed beyond what the baseline gate already allowed.",
+    "proof_refs": [
+      "engine/cmd/workflow.go:228-237",
+      "engine/cmd/workflow_identity_test.go:119-142"
+    ],
+    "evidence_class": null,
+    "causal_disposition": null,
+    "c27_control": false
+  },
+  {
+    "key": "b4c01b3acf62",
+    "runner": "gentle",
+    "id": "R43",
+    "run": 1,
+    "row": "review-reliability",
+    "finding": "R3-bare-repo-locate",
+    "severity": "WARNING",
+    "location": "identity/gitfs/gitfs.go:62-82",
+    "claim": "Locate only recognizes a .git entry found by walking up. A bare repository (HEAD/config/objects directly in the directory, no .git) is reported as ErrNotARepository, so the chain silently names the project by the directory. The resolve.Repository doc says MainWorktreeRoot may be empty for a bare repository, but no adapter path produces that and no test covers it.",
+    "proof_refs": [
+      "identity/gitfs/gitfs.go:62-82",
+      "identity/resolve/resolve.go:70-77"
+    ],
+    "evidence_class": null,
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "efbeeaf58f07",
+    "runner": "gentle",
+    "id": "R43",
+    "run": 1,
+    "row": "review-reliability",
+    "finding": "R3-engram-windows-sep",
+    "severity": "SUGGESTION",
+    "location": "identity/engram.go:13-18",
+    "claim": "EngramName splits only on '/'. For a directory-derived identity (SourceDirectory), the name is already a single base segment, so this is fine; but an explicit or declared id containing a backslash is kept whole. This is unproved by tests and is a minor behavior ambiguity.",
+    "proof_refs": [
+      "identity/engram.go:13-18",
+      "identity/engram_test.go:12-21"
+    ],
+    "evidence_class": null,
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "9671c8a7d171",
+    "runner": "gentle",
+    "id": "R43",
+    "run": 2,
+    "row": "review-risk",
+    "finding": "R1-001",
+    "severity": "WARNING",
+    "location": "identity/gitfs/gitfs.go:136-139",
+    "claim": "A relative or absolute commondir/gitdir pointer in a checked-out repository's .git file is followed to any directory that has a HEAD file. A malicious repository could point at another git directory on the machine and cause its config's origin URL to be used as the project identity. Impact is limited to a wrong project name (identity spoofing), and git itself follows the same pointers, so this is at most a low-severity concern. No secrets are exposed: only the normalized origin host/path is used.",
+    "proof_refs": [
+      "identity/gitfs/gitfs.go:136-139"
+    ],
+    "evidence_class": null,
+    "causal_disposition": null,
+    "c27_control": false
+  },
+  {
+    "key": "f70da32bca51",
+    "runner": "gentle",
+    "id": "R43",
+    "run": 2,
+    "row": "review-reliability",
+    "finding": "R3-submodule-main-root",
+    "severity": "WARNING",
+    "location": "identity/gitfs/gitfs.go:74",
+    "claim": "For any .git pointer file, MainWorktreeRoot is computed as the parent of the common directory. That is right for a linked worktree of a normal checkout. For a submodule (gitdir under the superproject's modules directory, no commondir) or a separate-git-dir repository, the parent is the modules directory or whatever directory holds the git dir. With no origin remote, the project is then named 'modules' (or the git dir's parent), and the declaration file is looked up in the wrong directory. The tests cover the submodule case only with an origin set, so this fallback is unproved.",
+    "proof_refs": [
+      "identity/gitfs/gitfs.go:74",
+      "identity/gitfs/gitfs_test.go:222"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": true
+  },
+  {
+    "key": "6ade72670e74",
+    "runner": "gentle",
+    "id": "R43",
+    "run": 2,
+    "row": "review-reliability",
+    "finding": "R3-relative-dir-base",
+    "severity": "WARNING",
+    "location": "identity/resolve/resolve.go:127",
+    "claim": "Outside a repository, Resolve uses filepath.Base on the raw dir argument, which Locate has not canonicalized. A relative dir such as '.' or '' gives the project '.', and '/' gives '/'. This is not the real directory name and is nondeterministic across callers. No test covers a relative dir.",
+    "proof_refs": [
+      "identity/resolve/resolve.go:127"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "df482811e3c1",
+    "runner": "gentle",
+    "id": "R43",
+    "run": 3,
+    "row": "review-reliability",
+    "finding": "R3-outside-repo-name-uncanonical",
+    "severity": "WARNING",
+    "location": "identity/resolve/resolve.go:129",
+    "claim": "Outside a repository the project name is filepath.Base of the raw dir, while Locate canonicalizes only inside gitfs. Resolve(\".\", \"\") outside a repo yields project \".\", and a symlinked directory yields the link's name rather than the real directory's. This contradicts the package's goal that the name not depend on how the directory was reached. Neither case is tested; the symlink test only covers the in-repo path.",
+    "proof_refs": [
+      "identity/resolve/resolve.go:129",
+      "identity/gitfs/gitfs.go:56"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "1909651071b4",
+    "runner": "gentle",
+    "id": "R43",
+    "run": 3,
+    "row": "review-reliability",
+    "finding": "R3-enotdir-not-notexist",
+    "severity": "WARNING",
+    "location": "identity/gitfs/gitfs.go:77",
+    "claim": "Locate treats any stat error other than IsNotExist as a hard failure. If dir is a file path, or a path component is a file, stat returns ENOTDIR, which os.IsNotExist does not match, so Locate returns an error instead of walking up or returning ErrNotARepository. No test covers a file passed as dir.",
+    "proof_refs": [
+      "identity/gitfs/gitfs.go:77"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  }
+]

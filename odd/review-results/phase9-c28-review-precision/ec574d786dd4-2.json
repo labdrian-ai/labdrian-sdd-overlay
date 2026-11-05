@@ -1,0 +1,79 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ba098b10fd44cfe9346153e7e75dc2b1617cfd6d",
+    "head": "ec574d786dd41cefa73110cecd3d197da838bfa1",
+    "diff_sha256": "fa0d90dacc1b84b21ee39eedc4329d252b3360016f22ed9efee603749e981696",
+    "paths": [
+      "engine/shelltest/review_bench_test.go",
+      "odd/tasks/phase9-c28-review-precision.md",
+      "tools/review-bench/README.md",
+      "tools/review-bench/findings.sh"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "ba098b10fd44cfe9346153e7e75dc2b1617cfd6d",
+      "head": "ec574d786dd41cefa73110cecd3d197da838bfa1",
+      "diff_sha256": "fa0d90dacc1b84b21ee39eedc4329d252b3360016f22ed9efee603749e981696"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/shelltest/review_bench_test.go",
+        "odd/tasks/phase9-c28-review-precision.md",
+        "tools/review-bench/README.md",
+        "tools/review-bench/findings.sh"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "tools/review-bench/findings.sh:44",
+        "severity": "SUGGESTION",
+        "claim": "`SCORES=` set to an empty string is tested with `-n \"${SCORES:-}\"`, so it behaves like an unset SCORES. Nothing is marked and no message is printed. A caller who built the path from an empty variable (for example `SCORES=\"$dir/x.json\"` with `$dir` unset gives a non-empty bad path and is caught, but `SCORES=\"$maybe_path\"` with an empty value is not) gets silently unmarked controls. This is the same silent-degradation class as the F2 that this round fixed. The test suite and README do not cover the empty case.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "tools/review-bench/findings.sh:44-47"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "tools/review-bench/findings.sh:49-65",
+        "severity": "SUGGESTION",
+        "claim": "Scored quotes whose run is not in RUNS, or whose id is not in the case arguments, are filtered out in jq without any message. This covers quotes for run 3 when RUNS=\"1 2\". The same unattributed-quote class that F1 of the previous review fixed for a quote naming no finding remains for a quote whose run or case was not requested. A partial refreeze therefore reports no controls for those quotes without saying so. This is lower severity because a partial freeze may be intended.",
+        "evidence_class": "inferential",
+        "causal_disposition": "behavior-activated",
+        "proof_refs": [
+          "tools/review-bench/findings.sh:58"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "tools/review-bench/findings.sh:24-41",
+        "severity": "SUGGESTION",
+        "claim": "`$runs` is expanded unquoted in both loops. A RUNS value containing glob characters (for example `RUNS='*'`) is expanded against the current directory's filenames before validation. The error message then names an arbitrary filename instead of `*`. The script has no `set -f`. This is a minor diagnostic defect on a developer-only tool. Ids from `\"$@\"` are matched against the `seen` list with space delimiters, so an id containing a space could collide with the next entry. Both are very unlikely inputs.",
+        "evidence_class": "inferential",
+        "causal_disposition": "worsened",
+        "proof_refs": [
+          "tools/review-bench/findings.sh:24",
+          "tools/review-bench/findings.sh:38"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff at the scratchpad t1fix.diff.",
+      "Read the complete worktree tools/review-bench/findings.sh at head.",
+      "Traced the new no-finding warning branch (select($n != 1)) against the test expecting two stderr lines in order. They match.",
+      "Traced the duplicate RUNS, empty RUNS, duplicate case, missing SCORES file and unreadable corpus checks against the added test cases. Each has a matching exit 2 case.",
+      "Checked that README and script header describe the no-default SCORES behavior consistently.",
+      "Not run: no tests or scripts were executed, since execution is not permitted for this role."
+    ]
+  }
+}

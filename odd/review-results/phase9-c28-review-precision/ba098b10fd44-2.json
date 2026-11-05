@@ -1,0 +1,96 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ed2b95707873bfdf28a836d625f38cbbb48b4278",
+    "head": "ba098b10fd44cfe9346153e7e75dc2b1617cfd6d",
+    "diff_sha256": "78d05f471e6ba047c77bc8c5537ea198634fc3406bf57ffe730f2e4809bb2cb8",
+    "paths": [
+      "engine/shelltest/review_bench_test.go",
+      "odd/tasks/phase9-c28-review-precision.md",
+      "tools/review-bench/README.md",
+      "tools/review-bench/findings.sh",
+      "tools/review-bench/findings/gentle-c27.json",
+      "tools/review-bench/findings/ours-c27.json"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "ed2b95707873bfdf28a836d625f38cbbb48b4278",
+      "head": "ba098b10fd44cfe9346153e7e75dc2b1617cfd6d",
+      "diff_sha256": "78d05f471e6ba047c77bc8c5537ea198634fc3406bf57ffe730f2e4809bb2cb8"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/shelltest/review_bench_test.go",
+        "odd/tasks/phase9-c28-review-precision.md",
+        "tools/review-bench/README.md",
+        "tools/review-bench/findings.sh",
+        "tools/review-bench/findings/gentle-c27.json",
+        "tools/review-bench/findings/ours-c27.json"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "tools/review-bench/findings.sh:354-359",
+        "severity": "WARNING",
+        "claim": "A scored quote that matches no finding is dropped without a message. Only a quote that matches several findings is named on stderr. If a quote's row, severity or location does not match any finding, `c27_control` is silently undercounted. L9 relies on the control counts (13 and 4) equalling the score-1 and score-0.5 entries, which only holds if every quote matched. Nothing in the script or the tests checks that every quote matched exactly one finding.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "tools/review-bench/findings.sh:354-359 emits a warning only for `.hits | length > 1`",
+          "engine/shelltest/review_bench_test.go:188-221 never plants a quote with zero hits"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "tools/review-bench/findings.sh:339",
+        "severity": "WARNING",
+        "claim": "The default scores file is hardcoded to `scores/<runner>-c27.json`, but the README presents the script as reusable for later run sets. A later run set that reuses ids and run numbers without setting SCORES would be marked with the C27 quotes. Quotes are matched by id, run, row, severity and location, so a coincidental prefix match could set `c27_control` true on unrelated findings, with no warning.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "tools/review-bench/findings.sh:339",
+          "tools/review-bench/README.md 'Freeze a run set's findings before any rerun'"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "tools/review-bench/findings.sh:326-345",
+        "severity": "SUGGESTION",
+        "claim": "Input validation leaves three gaps, none checked by a test. A whitespace-only `RUNS` passes validation, runs zero iterations and prints `[]` with exit 0. A repeated run in `RUNS` (for example `1 1`) or a repeated id argument emits duplicate entries with identical keys. This breaks the 'distinct keys' contract and would skew counts and precision. The 'unknown case' message also fires when jq itself fails, for example on a malformed corpus.json.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "tools/review-bench/findings.sh:326-338"
+        ]
+      },
+      {
+        "id": "F4",
+        "location": "tools/review-bench/findings.sh:348-371",
+        "severity": "SUGGESTION",
+        "claim": "The jq program emits finding rows and `{warn: ...}` rows in one stream. The shell loop then separates them by sniffing a `warn` member, and spawns two or three jq processes per finding to build the name, the key and the entry. This couples the mixed-stream protocol to the shell loop. It also slows the freeze, which runs over 189 findings. Computing the key and warnings in a single jq pass, or splitting stderr from stdout, would be simpler and safer to maintain.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "tools/review-bench/findings.sh:361-371"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/t1.diff in full: findings.sh, the README additions, the T1/L9 task-file edits and the new Go tests.",
+      "Counted \"key\" occurrences in the two data files with Grep. ours-c27.json has 158 and gentle-c27.json has 31, which matches S2 (b) and L9. Together that is 189 entries, equal to the 189 distinct keys L9 claims, though I did not check distinctness.",
+      "Counted `\"c27_control\": true` with Grep: 13 in ours and 4 in gentle, matching the 13 and 4 score entries L9 reports.",
+      "Counted nulls with Grep. ours-c27.json has no null `evidence_class` or `causal_disposition`. gentle-c27.json has 11 null `evidence_class` and 9 null `causal_disposition`, so those members are present as null as the script emits them. Some gentle findings carry only one of the two members, and the counts are internally consistent (20 and 22 non-null).",
+      "Read the first two entries of gentle-c27.json. Members and order are key, runner, id, run, row, finding, severity, location, claim, proof_refs, evidence_class, causal_disposition, c27_control. A null-member entry is written with both `evidence_class` and `causal_disposition` null and `c27_control` false.",
+      "No defects found in the data files beyond the gaps in the generating script (F1 to F3). I did not read every entry, and I did not recompute keys or severity totals.",
+      "I ran no commands other than the Grep and Read tools. The test and shellcheck results in L9 are not verified by me."
+    ]
+  }
+}
