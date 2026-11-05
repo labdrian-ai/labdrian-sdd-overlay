@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "5c03ef23bce514dfb9270d49a2a7bd038b2d97f1",
+    "head": "ff4835799f61c7a2bad8c30bbf4940029d8da610",
+    "diff_sha256": "2a53b44f249231daa745737b0c628cf8a901283a6c0e8aabbc19e9ff01dd09a9",
+    "paths": [
+      "odd/tasks/phase9-c28-review-precision.md",
+      "tools/review-bench/judge-brief.md",
+      "tools/review-bench/precision/labels-c27.json"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git diff --name-status 5c03ef23 ff483579",
+        "result": "pass",
+        "output": "M\todd/tasks/phase9-c28-review-precision.md\nA\ttools/review-bench/judge-brief.md\nA\ttools/review-bench/precision/labels-c27.json\n(the same three paths and statuses, in a different order)"
+      },
+      {
+        "command": "git diff 5c03ef23 ff483579 -- odd/tasks/phase9-c28-review-precision.md | rg '^[-+][^-+]' | cut -c1-80",
+        "result": "pass",
+        "output": "The prescribed command prints nothing. Its filter drops every changed line, because each starts with the diff marker followed by the list marker '-', and the new L13 line starts '+-'. I ran `git diff -U0 ... | rg '^[-+]'` instead. It shows two hunks: @@ -18 +18 @@ and @@ -62,0 +63 @@. Line 18 changes from '- [ ] T2 — S5 (a), (b) — inline ... — commit: -' to '- [x] T2 ... — commit: 7e72f5ce, 3a952699 (PR #734, merge 5c03ef23)'; the middle of the row is identical and I only compared its start and end. Line 63 is a single added entry starting '- **L13** (2026-11-05, parent): T3 (S3, S4), inline, ...'. It sits after the last existing line, which is the final line of the file. Nothing else changed."
+      },
+      {
+        "command": "jq '(.labels|length), ([.labels[].key]|unique|length)' tools/review-bench/precision/labels-c27.json",
+        "result": "pass",
+        "output": "189\n189"
+      },
+      {
+        "command": "diff <(jq -r '.labels[].key' labels-c27.json | sort) <(jq -s -r 'add|.[].key' ours-c27.json gentle-c27.json | sort) | wc -l",
+        "result": "pass",
+        "output": "0 (diff is empty)"
+      },
+      {
+        "command": "jq '[.labels[]|select(label not in real/false/unsure or failure_stated not boolean or (label real/false and citation not a non-empty string))]|length' tools/review-bench/precision/labels-c27.json",
+        "result": "pass",
+        "output": "0"
+      },
+      {
+        "command": "for each label: look up case id by key in ours-c27.json and gentle-c27.json, then test -e ~/labdrian-sdd-overlay-worktrees/c28-judge/<id>/<citation before first ':'>",
+        "result": "pass",
+        "output": "checked=189 missing=0"
+      },
+      {
+        "command": "jq -r '.labels|group_by(.label)|map(\"\\(.[0].label)=\\(length)\")|join(\" \")' tools/review-bench/precision/labels-c27.json",
+        "result": "pass",
+        "output": "false=34 real=151 unsure=4. I did not compare this against the L13 text; the check only asked for these counts."
+      },
+      {
+        "command": "jq compare of spot-c27.json .labels against labels-c27.json by key (label equality)",
+        "result": "pass",
+        "output": "{\"n\":30,\"agree\":28,\"diff\":[\"040471329be7\",\"0e7545345f23\"]}. I did not check that L13 states these two keys."
+      },
+      {
+        "command": "rg -nwi 'gentle|ours|runner' tools/review-bench/judge-brief.md ~/labdrian-sdd-overlay-worktrees/c28-judge/R*/brief.md ~/labdrian-sdd-overlay-worktrees/c28-judge/R*/claims.json",
+        "result": "pass",
+        "output": "No output. The R* directories exist (R34, R35, R36 and others)."
+      },
+      {
+        "command": "rg -n '\\\\u[0-9a-fA-F]{4}' tools/review-bench/judge-brief.md tools/review-bench/precision/labels-c27.json odd/tasks/phase9-c28-review-precision.md",
+        "result": "pass",
+        "output": "No output."
+      }
+    ]
+  }
+}
