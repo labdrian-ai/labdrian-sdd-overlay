@@ -1,0 +1,1327 @@
+{
+  "labels": [
+    {
+      "key": "003845f4dbda",
+      "label": "false",
+      "failure_stated": true,
+      "citation": "head/engine/settings/projection.go:49-61",
+      "reason": "The projection hook family that install-hooks writes already holds a SessionStart entry, so the hook is registered and the install message is accurate."
+    },
+    {
+      "key": "02920603a4a6",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/identity/engram.go:14-15",
+      "reason": "EngramName returns the text after the last slash with no non-empty check, so a declared name such as acme/ (accepted by Declared as one non-empty line) gives the empty string."
+    },
+    {
+      "key": "032fd85083ac",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/longterm-mem/internal/vault/pagetags.go:116-119",
+      "reason": "A value such as \"[a, goal:g-7] # x\" (or a flow list continued on a later line) does not end with \"]\", so flowListItems returns errUnclosedFlowList and keepGoalPages leaves the page out and names it as unreadable."
+    },
+    {
+      "key": "040471329be7",
+      "label": "false",
+      "failure_stated": false,
+      "citation": "head/engine/workflow/project_identity_test.go:124-138",
+      "reason": "The test mutates only ProjectIdentity on a started event loaded from an owned log, so Validate can only fail on the payload rule; the rest is a coverage remark."
+    },
+    {
+      "key": "04567d3902de",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/identity/gitfs/gitfs.go:71",
+      "reason": "MainWorktreeRoot is always filepath.Dir(common), so a submodule whose git dir is .git/modules/sub gets .git/modules (named modules with no origin) and a bare-repo worktree gets the bare repo parent, never the empty value the contract allows."
+    },
+    {
+      "key": "045ccf91bb5f",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/hookwire/posttooluse.go:103-116",
+      "reason": "The whole tool_response value is decoded into a json.RawMessage (copied out of the decoder buffer) before sha256.Sum256 runs, contrary to the stream wording at lines 69-71, so a large response is held at least twice."
+    },
+    {
+      "key": "050fe6c1c983",
+      "label": "false",
+      "failure_stated": true,
+      "citation": "head/engine/projection/context.go:108-128",
+      "reason": "projection.Instructions never sets both Warning and Block in one result, so the case order in memoryInstructions cannot make the CLI and the hook disagree."
+    },
+    {
+      "key": "05549fe395d7",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/projection/gate.go:340-347",
+      "reason": "With an unreadable lock and a plan without procedural-skills, proceduralGate returns the warning before any match for every Skill call and SKILL.md Read, and nothing dedupes it across calls."
+    },
+    {
+      "key": "073ab3fcd7b5",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/cmd/hook_translate.go:63-71",
+      "reason": "realSkillFile resolves only absolute paths whose unresolved base is SKILL.md, and relevantUse (gate.go:213) ignores a Read whose base is not SKILL.md, so a relative path or a differently named link to a locked SKILL.md is never matched."
+    },
+    {
+      "key": "073e067cfea1",
+      "label": "real",
+      "failure_stated": false,
+      "citation": "head/engine/cmd/procedural_lock.go:54-56",
+      "reason": "The real path is added only when EvalSymlinks succeeds, so a missing file gets only its unresolved path; the claim itself calls this harmless and only notes it is untested."
+    },
+    {
+      "key": "08e4aa39643e",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/identity/gitfs/gitfs.go:72-76",
+      "reason": "A stat of file/.git returns ENOTDIR, which os.IsNotExist does not match, so Locate returns the hard cannot-look error instead of walking up."
+    },
+    {
+      "key": "093444b4d5bf",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/cmd/review_receipt.go:68-72",
+      "reason": "A trailing --feature leaves hasFeature false, so capture skips the feature branch at lines 121-130 and auto-detects a change (capturing into one, or a no-op with exit 0) instead of a usage error."
+    },
+    {
+      "key": "09b57e64683c",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/identity/engram.go:14-15",
+      "reason": "A declared name ending in a slash passes Declared validation and EngramName returns the empty string for it."
+    },
+    {
+      "key": "0ab52a07ff17",
+      "label": "false",
+      "failure_stated": true,
+      "citation": "head/engine/projection/app/hook.go:144-145",
+      "reason": "The lock is reloaded on every hook call that can use a skill, so a file missing at Load cannot be read in that call and a later-created file is resolved on the next call; no mismatch results from the swallowed error."
+    },
+    {
+      "key": "0c7b7bcd1624",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/identity/resolve/resolve.go:124-125",
+      "reason": "Outside a repository the project is filepath.Base of the raw dir, so . and the empty string give . and / gives /, while the repository path is canonicalized."
+    },
+    {
+      "key": "0e7545345f23",
+      "label": "false",
+      "failure_stated": true,
+      "citation": "base/engine/projection/gate.go:343-347",
+      "reason": "At base an unreadable lock with a plan error already fell through to a warning for every skill use, so the change alters only the warning text, not which skills warn."
+    },
+    {
+      "key": "10e28e46165e",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/hookwire/posttooluse.go:103-116",
+      "reason": "dec.Decode(&raw) buffers the full value in the decoder and copies it into raw before hashing, so memory grows with the response size up to the 64 MiB bound on each call."
+    },
+    {
+      "key": "119af0f94ca6",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/identity/engram.go:14-15",
+      "reason": "EngramName of acme/widgets/ returns the empty string and nothing in the declared-name validation rules out a trailing slash."
+    },
+    {
+      "key": "1244c072c02c",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/cmd/review_receipt.go:68-72",
+      "reason": "hasFeature is only set when a value follows, so a missing value falls through to DetectActiveChange at lines 132-144 and reports success."
+    },
+    {
+      "key": "168b8633fc1b",
+      "label": "false",
+      "failure_stated": true,
+      "citation": "head/engine/projection/app/hook.go:254-258",
+      "reason": "readOnce takes the ToolCall by value and only replaces ReadSkill and ReadFilePath, so ReadRecordID is carried through unchanged."
+    },
+    {
+      "key": "168ee356b9be",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/identity/gitfs/gitfs.go:71",
+      "reason": "With no commondir the common dir is the submodule git dir under .git/modules, and its parent becomes MainWorktreeRoot, so the declaration is read and the directory name taken from .git/modules."
+    },
+    {
+      "key": "17b107269f29",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/cmd/memory.go:184-201",
+      "reason": "The named form only checks ownership and prints the block whatever the status, while the bound form refuses a closed workflow through the Warning from OnInstructions, so the two forms treat a closed workflow differently."
+    },
+    {
+      "key": "1909651071b4",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/identity/gitfs/gitfs.go:72-76",
+      "reason": "Any stat error that is not IsNotExist, including ENOTDIR for a file passed as dir, ends Locate with an error instead of ErrNotARepository or walking up."
+    },
+    {
+      "key": "19fc69e85ae2",
+      "label": "false",
+      "failure_stated": true,
+      "citation": "head/engine/settings/projection.go:58",
+      "reason": "The settings projection family that install-hooks writes, removes and checks includes a SessionStart spec, so the hook is wired."
+    },
+    {
+      "key": "1a307615c03f",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/projection/gate.go:207-216",
+      "reason": "relevantUse marks every Skill call (even with an empty skill) and every Read whose base is SKILL.md as a skill use, and proceduralGate warns for all of them before matching when the lock is unreadable."
+    },
+    {
+      "key": "1d33446c142b",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/cmd/hook_translate.go:127-128",
+      "reason": "Every Agent call with a prompt synchronously calls boundInstructions, which reads the binding store and workflow log with no timeout, and its recover hides a panic as an empty block."
+    },
+    {
+      "key": "1dc5da536391",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/projection/gate.go:211-216",
+      "reason": "The Read check requires the exact-case base SKILL.md and match compares cleaned strings against lexically joined lock paths, so symlinked or differently cased paths are allowed."
+    },
+    {
+      "key": "20f1a97b3ceb",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/projection/gate.go:211-216",
+      "reason": "A Read of skill.md fails the exact-case Base check and is allowed unlooked-at, and symlinks are never resolved before the string comparison at gate.go:379."
+    },
+    {
+      "key": "216a96fa71e1",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/longterm-mem/internal/engram/search.go:131-137",
+      "reason": "The SQL compares the goal with the topic text before the first \"/\", so a goal containing \"/\" equals no id and only goalless rows survive, while goalOfTag in head/longterm-mem/internal/memory/goal.go:42 takes everything after \"goal:\" so a vault tag goal:a/b matches, and nothing validates the goal."
+    },
+    {
+      "key": "21fa00796ac2",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/longterm-mem/internal/vault/pagetags.go:44-58",
+      "reason": "pageInside only cleans the path and checks filepath.Rel lexically without EvalSymlinks, and PageTags then calls os.ReadFile, which follows a symlink inside the vault to a file outside it."
+    },
+    {
+      "key": "22172b954c22",
+      "label": "false",
+      "failure_stated": false,
+      "citation": "head/engine/workflow/plan.go:49-71",
+      "reason": "The claim only notes a missing test; present and narrowers are built from the same ordered slice, so NarrowerError.Index maps to the right name even when an earlier directive is nil."
+    },
+    {
+      "key": "22b31f1d319c",
+      "label": "real",
+      "failure_stated": false,
+      "citation": "head/engine/projection/gate_procedural_test.go:165-172",
+      "reason": "The test does assert the warning lacks the substring \"lock\" and no test covers a differently named or dangling link; this is a remark on test robustness and coverage, not a failure at head."
+    },
+    {
+      "key": "233072b921b0",
+      "label": "false",
+      "failure_stated": true,
+      "citation": "head/engine/projection/app/hook.go:144-145",
+      "reason": "Load runs on each hook call that can use a skill, so the resolution is not computed once and kept stale, and a file absent at Load cannot be read in that call."
+    },
+    {
+      "key": "2b2c7a0cc446",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/identity/resolve/resolve.go:124-125",
+      "reason": "The not-a-repository branch uses filepath.Base of the raw dir, so . yields . and a symlinked path yields the link name, unlike the canonicalized repository case."
+    },
+    {
+      "key": "2d318e8808b6",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/cmd/procedural_lock.go:61-66",
+      "reason": "Lock targets become filepath.Join(root, rel) with no symlink resolution and the gate compares cleaned strings, so a symlinked or differently spelled path to the SKILL.md is not denied."
+    },
+    {
+      "key": "2de37e1e9b1a",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/reviewreceipt/service.go:189-199",
+      "reason": "Features keeps only DirEntry.IsDir entries (store.go:283-287, excluding symlinks) and unpersisted returns the CheckPathComponent error for any listed feature name, so a malformed folder makes the ambiguous-case hook deny."
+    },
+    {
+      "key": "309a2293bed8",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/settings/projection.go:40",
+      "reason": "The matcher Skill|Read routes every Read to the hook process, and the SKILL.md narrowing happens only inside that process."
+    },
+    {
+      "key": "309f17ccf319",
+      "label": "false",
+      "failure_stated": true,
+      "citation": "head/longterm-mem/internal/query/query.go:152-155",
+      "reason": "Run replaces a top of zero or less with DefaultTopN before vaultRetrievalSize and keepGoalPages are called, so a non-positive top never reaches them."
+    },
+    {
+      "key": "3530d9956650",
+      "label": "real",
+      "failure_stated": false,
+      "citation": "head/engine/projection/gate_procedural_test.go:196",
+      "reason": "The assertion paths > 2*wantPaths tolerates two path reads for a Read, so it does not pin exactly one read."
+    },
+    {
+      "key": "37bbfdf23729",
+      "label": "false",
+      "failure_stated": true,
+      "citation": "head/engine/cmd/procedural_lock.go:54-56",
+      "reason": "A broken link cannot be read at all and the lock is reloaded per hook call (app/hook.go:145), so no read by real path is missed; a leaf SKILL.md linked outside the repo has its external target listed by EvalSymlinks."
+    },
+    {
+      "key": "399d672e0ca4",
+      "label": "false",
+      "failure_stated": true,
+      "citation": "head/engine/projection/evidence.go:10-39",
+      "reason": "The one-sanitized-line promise is documented on ReadEvidence, not on the CallID/SessionID/ResponseSHA256 fields of ReadRecord, and no line-oriented ReadEvidenceLog adapter exists at head to be corrupted."
+    },
+    {
+      "key": "3c4f41b6d67f",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/cmd/hook_translate.go:63-71",
+      "reason": "A relative or case-variant path is returned unresolved, and match (gate.go:377-391) compares cleaned strings against absolute lock paths, so the gate stays silent for such reads."
+    },
+    {
+      "key": "3ca04f2d1b95",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/projection/evidence.go:68-78",
+      "reason": "For a by-id read whose ReadRecordID is nil or yields an empty line, IDs stays empty and Evidence still returns ok=true, so the read is recorded."
+    },
+    {
+      "key": "3f5de1b39d4c",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/identity/gitfs/gitfs.go:72-76",
+      "reason": "For a regular file as dir the stat of file/.git fails with ENOTDIR, which is treated as fatal, so Resolve fails rather than walking to the parent."
+    },
+    {
+      "key": "3fef1bb48033",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/longterm-mem/internal/vault/pagetags.go:116-136",
+      "reason": "A trailing comment makes the value not end with \"]\" so the page is reported unclosed and left out, and the quote tracking closes a double-quoted item at any \\\" because it never looks at backslashes."
+    },
+    {
+      "key": "4138f03d8bd6",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/longterm-mem/internal/query/vault_goal.go:43-66",
+      "reason": "keepGoalPages reads candidates one at a time and emits a diagnostic only for unreadable pages, so a result cut short because other goals filled the overfetch carries no diagnostic and the retrieval size is not reported."
+    },
+    {
+      "key": "448d2b3d52cd",
+      "label": "real",
+      "failure_stated": false,
+      "citation": "head/engine/projection/app/evidence_test.go:43-50",
+      "reason": "Every OnToolResult test sets InputDir and only uses query or Skill calls, so the ProcessDir fallback and a by-id read through OnToolResult are not exercised."
+    },
+    {
+      "key": "46f1d0a1fd3d",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/cmd/gate_task.go:84-124",
+      "reason": "An unknown embedded contract now sets managed=false and goes on to agentGateAnswer, which rewrites the prompt when a workflow is bound, the stdin-read warning is printed only when managed, and the bound-workflow read runs on every call with a prompt and is not cached."
+    },
+    {
+      "key": "4720b953ec59",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/hookwire/posttooluse.go:103-116",
+      "reason": "Each value, tool_response included, is buffered whole into a json.RawMessage before hashing, so a near-bound response costs a multiple of its size in memory."
+    },
+    {
+      "key": "494da8a1fac9",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/cmd/procedural_lock.go:61-66",
+      "reason": "skillFileIn only joins the target lexically after an IsLocal check and the gate compares cleaned strings, so a symlinked SKILL.md path is not resolved, as the claim says."
+    },
+    {
+      "key": "4b35248aa6be",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/cmd/binding_wiring.go:62-74",
+      "reason": "boundInstructions turns a panic and every non-projection outcome, including a store warning, into an empty block and writes nothing to stderr, so a broken store silently drops the instructions from gate-task."
+    },
+    {
+      "key": "4d99655f47e9",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/identity/resolve/resolve.go:124-125",
+      "reason": "filepath.Base on the uncanonicalized dir gives . for . and / for /, and the link name for a symlinked path outside a repository."
+    },
+    {
+      "key": "4e6ec476c541",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/projection/app/hook.go:197-203",
+      "reason": "ToolResultRequest carries no error or denial flag and OnToolResult records any matching call that reaches it."
+    },
+    {
+      "key": "51dd597b2576",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/projection/gate.go:211-216",
+      "reason": "A Read through a link not named SKILL.md is not even a skill use, and relative paths are returned unresolved and never match the absolute lock paths, so such reads of a locked SKILL.md are not denied."
+    },
+    {
+      "key": "56b87d019b33",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/settings/projection.go:40",
+      "reason": "Skill|Read is a list of exact tool names that sends every Read to the hook binary, which discards non-SKILL.md paths only after starting."
+    },
+    {
+      "key": "57857f506e16",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/projection/gate.go:343-347",
+      "reason": "With a plan error the gate now returns the plan warning before the lock branch, so the unreadable-lock detail is no longer reported."
+    },
+    {
+      "key": "5b11fd241e11",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/identity/resolve/resolve.go:124-125",
+      "reason": "Outside a repository Resolve returns filepath.Base(dir) of the raw argument, so Resolve(.) gives . and Resolve(/) gives /."
+    },
+    {
+      "key": "5b26f2b29a72",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/identity/resolve/resolve.go:124-125",
+      "reason": "The directory branch returns filepath.Base(dir) without any check, so an empty dir yields . and the root yields / as a valid project."
+    },
+    {
+      "key": "5be326d98ba6",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/hookwire/posttooluse.go:76-79",
+      "reason": "counted wraps io.LimitReader(r, MaxPostToolUseBytes+1), so counted.n can never exceed limit+1 and tooLarge always reports that value rather than the real input size."
+    },
+    {
+      "key": "5c245d678fd2",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/longterm-mem/internal/promote/eligible.go:39-49",
+      "reason": "At base a goal:x/sdd/... key was judged by its first segment goal:x and eligible, while at head TopicWithoutGoal makes it sdd/... and excluded, so sync (decidePromotion in head/longterm-mem/internal/promote/sync.go:170) no longer refreshes such pages."
+    },
+    {
+      "key": "5dc5fba3a810",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/cmd/hook_translate.go:63-71",
+      "reason": "Relative and case-variant paths are returned unresolved and cannot match the absolute lock paths, as the claim states (it also correctly notes this is not a regression)."
+    },
+    {
+      "key": "5fe782c9e7c4",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/longterm-mem/internal/vault/pagetags.go:103-112",
+      "reason": "blockListItems stops at the first line that is not \"- item\" (a blank line, a comment, or \"-\\\"x\\\"\"), so a goal tag after it is missed and TagsVisibleUnderGoal treats the page as goalless and shows it under any goal."
+    },
+    {
+      "key": "6135d63a8f62",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/identity/resolve/resolve.go:155-159",
+      "reason": "The resolver accepts a declared name with a tab or over 512 runes, and Create then rejects it at head/engine/workflow/lifecycle.go:478-480, so create exits 2 instead of degrading."
+    },
+    {
+      "key": "6341abac20a0",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/identity/resolve/resolve.go:155-159",
+      "reason": "The shared resolver rejects only blank or CR/LF declared names, so a tab or over-long name reaches validateProjectIdentity in Create and the command exits 2."
+    },
+    {
+      "key": "65341e63a2b1",
+      "label": "false",
+      "failure_stated": false,
+      "citation": "head/engine/workflow/project_identity_test.go:124-138",
+      "reason": "Only ProjectIdentity differs from a started event that came from an owned log, so the error cannot come from another field."
+    },
+    {
+      "key": "657f0a3de71e",
+      "label": "false",
+      "failure_stated": true,
+      "citation": "head/engine/cmd/procedural_lock.go:54-56",
+      "reason": "The lock reader runs EvalSymlinks on each listed SKILL.md, so a leaf link pointing outside the repo has its external target listed and the resolved Read is denied, contrary to the claimed bypass."
+    },
+    {
+      "key": "666cafd4ba8e",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/longterm-mem/cmd/longterm-mem/cmd_query.go:36",
+      "reason": "The --goal value is passed to the query as is with no validation, and since a topic id ends at the first \"/\" (and is never trimmed) a goal with a slash or of whitespace only matches no goal and keeps only goalless records with exit success and no diagnostic."
+    },
+    {
+      "key": "69fa0bdf53ef",
+      "label": "false",
+      "failure_stated": true,
+      "citation": "head/engine/projection/app/hook.go:144-145",
+      "reason": "The lock is loaded on every relevant hook call and a file missing at that moment cannot be read, so the silently swallowed EvalSymlinks error causes no missed match."
+    },
+    {
+      "key": "6ade72670e74",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/identity/resolve/resolve.go:124-125",
+      "reason": "Resolve uses filepath.Base on the raw dir that Locate canonicalized only internally, so . or the empty string give the project . and / gives /."
+    },
+    {
+      "key": "6d97ad468f63",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/hookwire/posttooluse.go:103-116",
+      "reason": "The response is decoded into raw via dec.Decode, holding the decoder buffer and the RawMessage copy before hashing, so it is not hashed as a stream."
+    },
+    {
+      "key": "6e7bb1afb812",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/cmd/review_receipt.go:68-72",
+      "reason": "A trailing --feature is dropped by the parser and capture auto-detects the single active change and exits 0."
+    },
+    {
+      "key": "6f97eceb0f7b",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/hookwire/posttooluse_test.go:102-104",
+      "reason": "The test builds a 64 MiB repeat and concatenates it into a second string of the same size before decoding, and no test covers a read error, a duplicated tool_response or a null tool_response."
+    },
+    {
+      "key": "7070986e3e2f",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/hookwire/posttooluse.go:114-116",
+      "reason": "Any tool_response key, including a null value, reaches the hash branch, so null yields the digest of the 4 bytes null and ResponseBytes 4 instead of empty and 0."
+    },
+    {
+      "key": "721fefe7a5d4",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/longterm-mem/internal/vault/pagetags.go:84-119",
+      "reason": "Multi-line flow lists and trailing comments fail the \"]\" suffix check and yield an error (page left out as unreadable), and block items require \"- \" so other forms stop the list and drop tags, making a page of another goal look goalless."
+    },
+    {
+      "key": "727458e7c69c",
+      "label": "real",
+      "failure_stated": false,
+      "citation": "head/engine/cmd/projection_gate_test.go:378-396",
+      "reason": "The new test covers only directory-link success cases and calls os.Symlink with t.Fatal instead of the makeSymlink skip helper (symlink_test.go:29-37); this is a coverage and portability remark."
+    },
+    {
+      "key": "72b1d791aa12",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/cmd/gate_task.go:25",
+      "reason": "The workingDir error is discarded (here and in memory.go:38) and boundInstructions recovers panics into an empty block, so no instructions are injected and nothing is reported on stderr."
+    },
+    {
+      "key": "78362b06ed83",
+      "label": "false",
+      "failure_stated": false,
+      "citation": "head/engine/jsonstrict/jsonstrict.go:148-158",
+      "reason": "The claim asks for a comment or test and names no failure; json.Unmarshal rejects leading zeros and plus signs, so dropping the Itoa round-trip changes no result."
+    },
+    {
+      "key": "7884debb71e4",
+      "label": "unsure",
+      "failure_stated": true,
+      "citation": "head/engine/cmd/hook_translate.go:63-71",
+      "reason": "A link swapped between the EvalSymlinks call of the hook and the actual Read is a race outside the code shown, so reading the code cannot decide whether it occurs."
+    },
+    {
+      "key": "78fee28c29e2",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/longterm-mem/internal/memory/goal.go:42-48",
+      "reason": "goalOfTag takes the whole text after \"goal:\" so a tag goal:a/b matches goal a/b, while GoalOfTopic (goal.go:14) ends the id at the first \"/\" so no Engram topic can match it, and no layer validates the goal."
+    },
+    {
+      "key": "79831554a62f",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/identity/gitfs/gitfs.go:134-135",
+      "reason": "A git dir without commondir is returned as the common dir and Locate then takes its parent, the modules directory, as MainWorktreeRoot (gitfs.go:71)."
+    },
+    {
+      "key": "79a97efd84d9",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/projection/evidence.go:68-78",
+      "reason": "An empty or missing record id leaves IDs empty while Evidence still returns the read as recordable."
+    },
+    {
+      "key": "7a73e70eff63",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/identity/gitfs/gitfs.go:71",
+      "reason": "MainWorktreeRoot is filepath.Dir(common), which for a submodule is .git/modules and for a bare or separate-git-dir repository is the git dir parent, so the directory fallback and declaration root are wrong."
+    },
+    {
+      "key": "7cbcbfb4ab35",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/settings/projection.go:54",
+      "reason": "The projection family installs a PreToolUse entry with the Skill|Read matcher, so every Read spawns the hook, which then decides from the path."
+    },
+    {
+      "key": "7e0c6918965c",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/identity/engram.go:14-15",
+      "reason": "EngramName neither trims trailing slashes nor checks the result, so acme/widgets/ yields the empty string."
+    },
+    {
+      "key": "7ecc89a70776",
+      "label": "false",
+      "failure_stated": true,
+      "citation": "head/engine/projection/app/hook.go:144-145",
+      "reason": "The lock is reloaded on each relevant call, so the listed real path is not kept across calls, and an unresolvable file cannot be read, so the silent fallback misses nothing."
+    },
+    {
+      "key": "7f9981638c8d",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/longterm-mem/internal/vault/pagetags.go:44-58",
+      "reason": "The containment check is lexical (filepath.Clean plus filepath.Rel) with no symlink resolution, and os.ReadFile at pagetags.go:31 follows a symlinked page to a file outside the vault."
+    },
+    {
+      "key": "7fbf5793b03d",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/cmd/review_receipt.go:63-76",
+      "reason": "Both flags are only marked given when a value follows, so a trailing --feature is ignored and a trailing --change next to --feature F escapes the conflict check at lines 110-114."
+    },
+    {
+      "key": "80c9a90bf915",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/projection/gate.go:211-216",
+      "reason": "A Read of a link named other.md is not a SKILL.md use, so the gate never checks it even when it points at a locked SKILL.md."
+    },
+    {
+      "key": "8271373f5150",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/longterm-mem/internal/query/vault_goal.go:50-66",
+      "reason": "Each unreadable page appends its raw error, which for pageInside includes the absolute page path and vault root (pagetags.go:55), into one Detail string over up to all retrieved candidates (at most 100), returned in the query diagnostics."
+    },
+    {
+      "key": "855128633716",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/longterm-mem/internal/vault/pagetags.go:69-72",
+      "reason": "A first line that is not exactly \"---\" after trimming trailing blanks, such as one starting with a UTF-8 BOM, returns nil tags with no error, so the page is treated as goalless and shown under any goal, unlike the unclosed cases that return errors."
+    },
+    {
+      "key": "8568018b8885",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/hookwire/posttooluse_test.go:102-104",
+      "reason": "strings.Repeat allocates over 64 MiB and the concatenation allocates a second copy, so the test allocates over 128 MiB before decoding."
+    },
+    {
+      "key": "869501f6c5cf",
+      "label": "false",
+      "failure_stated": false,
+      "citation": "head/engine/workflow/plan.go:57-71",
+      "reason": "Only a missing test and a hypothetical future skew are named; narrowers[i] comes from present[i], so the error names the refused directive correctly at head."
+    },
+    {
+      "key": "8735c6cf1a59",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/longterm-mem/internal/promote/page.go:56",
+      "reason": "The goal tag is only written when EmitPage runs, pages promoted at base from goal:<id>/ topics (eligible then by their first segment) carry only memory and the type, TagsVisibleUnderGoal shows untagged pages to every goal, and sync rewrites a page only when the revision grows (sync.go:181)."
+    },
+    {
+      "key": "88906dd6a6dd",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/longterm-mem/internal/vault/pagetags.go:44-58",
+      "reason": "pageInside does not resolve symlinks, so a symlink inside the vault pointing outside passes the Rel check and is read by os.ReadFile."
+    },
+    {
+      "key": "892ea76afe77",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/projection/gate.go:211-216",
+      "reason": "A file link whose name is not SKILL.md, or a relative path, is not matched against the lock, so the read is allowed."
+    },
+    {
+      "key": "89aefb66e21a",
+      "label": "false",
+      "failure_stated": true,
+      "citation": "head/identity/resolve/resolve.go:118-144",
+      "reason": "Every error return of Resolve is Identity{}, so identity.Project is empty whenever err is non-nil."
+    },
+    {
+      "key": "89f263239b8b",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/longterm-mem/internal/engram/search.go:131-137",
+      "reason": "The goal is bound untrimmed and compared with the id before the first \"/\", so a goal with a slash or surrounding whitespace equals no id and the query returns only goalless records with success and no diagnostic."
+    },
+    {
+      "key": "8ad7016734b9",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/workflow/workflow.go:571-586",
+      "reason": "unicode.IsControl matches only Cc, so U+2028/U+2029 and bidi format characters pass the one-line check."
+    },
+    {
+      "key": "8aff4e8ae626",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/projection/evidence.go:70-74",
+      "reason": "IDs is set only when the sanitized id is non-empty, and the function returns ev,true either way, so the read is recorded with no id and no signal."
+    },
+    {
+      "key": "8b4116fc5628",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/cmd/gate_task.go:97-124",
+      "reason": "With no usable contract a stdin read error is no longer reported, and the call goes to agentGateAnswer with the instructions, so with a binding it is rewritten even though the warning says all Agent hooks will pass through."
+    },
+    {
+      "key": "8bf48d07b13b",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/projection/gate.go:377-381",
+      "reason": "Read matching is a cleaned string equality with no symlink resolution, and procedural_lock_test.go has no symlink case."
+    },
+    {
+      "key": "8bf8181204d7",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/reviewreceipt/service.go:236-247",
+      "reason": "The fallback lists every feature folder and accepts byte-identical bytes in any of them, and an unsafe listed name makes unpersisted return an error the hook turns into a denial."
+    },
+    {
+      "key": "8c6dd20cc158",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/cmd/procedural_lock.go:35",
+      "reason": "The lock is read whole with os.ReadFile and no size limit and parsed on each skill-using call, since each hook call loads it via ProceduralSkills.Load."
+    },
+    {
+      "key": "8cf1460b3597",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/identity/resolve/resolve.go:124-125",
+      "reason": "The raw dir is passed to filepath.Base outside a repository, giving . for . and the empty string and / for /, with no canonicalization of relative or symlinked paths."
+    },
+    {
+      "key": "8e422a6e1893",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/identity/engram.go:14-15",
+      "reason": "For an identity ending in a slash EngramName returns the empty string, and declared names are only checked to be one non-empty line."
+    },
+    {
+      "key": "90494ce447e5",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/projection/gate.go:340-347",
+      "reason": "The unreadable-lock branch warns for every SKILL.md Read when the plan excludes procedural-skills, without knowing whether the file is procedural and without per-session dedupe."
+    },
+    {
+      "key": "90fb79d77ce5",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/cmd/memory.go:185-190",
+      "reason": "With --project and --workflow only ownership is checked and the block is printed with exit 0 for a closed workflow, while the README and usage say without qualification that a closed one is refused with exit 2."
+    },
+    {
+      "key": "9490bc8b2dfd",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/projection/app/hook.go:239-246",
+      "reason": "ResponseBytes and ResponseSHA256 are copied into the record without validation, and the == nil interface checks do not catch a typed-nil Evidence or Clock, whose method call would then panic."
+    },
+    {
+      "key": "9671c8a7d171",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/identity/gitfs/gitfs.go:125-135",
+      "reason": "A gitdir or commondir pointer is followed to any directory with a HEAD file, so a checked-out .git file can direct the resolver to another repository config and its origin."
+    },
+    {
+      "key": "9d50c6d4f395",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/identity/engram.go:14-15",
+      "reason": "EngramName returns the empty string for an identity with a trailing slash and the declared name is not validated against slashes."
+    },
+    {
+      "key": "9e80d6bb69d0",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/reviewreceipt/service.go:233-247",
+      "reason": "Receipts not under a change are matched against every listed feature folder with no tie to the review, and a listed name failing CheckPathComponent (line 194) aborts with an error that denies."
+    },
+    {
+      "key": "9f4fec43fe87",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/workflow/workflow.go:575-583",
+      "reason": "U+2028/U+2029 are Zl/Zp and pass unicode.IsControl, and the TrimSpace check only refuses an all-blank value, so leading or trailing spaces pass."
+    },
+    {
+      "key": "9fa96e6bbe14",
+      "label": "false",
+      "failure_stated": false,
+      "citation": "head/engine/jsonstrict/jsonstrict.go:148-158",
+      "reason": "The claim concedes the behavior is correct today and only asks for dispatch tests in goal and shaper; non-canonical versions such as 03 or +3 fail json.Unmarshal and return 0."
+    },
+    {
+      "key": "9fc67b5ccc0f",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/reviewreceipt/fsstore/store.go:283-287",
+      "reason": "ReadDir entries for symlinks report IsDir false, so a symlinked feature folder is not listed and receipts in it do not satisfy the hook, although the test does assert the exclusion (feature_test.go:88-93)."
+    },
+    {
+      "key": "a0daedfaf12c",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/cmd/review_receipt.go:63-73",
+      "reason": "A flag with no following value leaves its has-flag false, so capture falls through to auto-detect or the change capture without a usage error."
+    },
+    {
+      "key": "a2229dd08d67",
+      "label": "false",
+      "failure_stated": true,
+      "citation": "head/identity/resolve/resolve.go:118-144",
+      "reason": "Resolve returns the zero Identity on every error path, so no partial identity can be recorded."
+    },
+    {
+      "key": "a2b6340547b2",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/cmd/memory.go:74-128",
+      "reason": "fromWorkflow tests for non-empty values, so empty --project and --workflow values with --instructions pass the parse and fall back to the binding of the working directory instead of being refused."
+    },
+    {
+      "key": "a3d14d2ffce3",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/workflow/lifecycle.go:475-480",
+      "reason": "Create now refuses a Goal whose project_id differs from --project, which base create accepted, and refuses a resolved but invalid identity, so create exits 2."
+    },
+    {
+      "key": "a511cb65fded",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/identity/gitfs/gitfs.go:71",
+      "reason": "MainWorktreeRoot is the parent of the common dir, which is the modules directory for a submodule and the bare repo parent for a bare-repo worktree."
+    },
+    {
+      "key": "a6d44d2801da",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/projection/app/hook.go:242-246",
+      "reason": "Append receives the record with no dedupe on CallID, so a re-delivered post-tool hook appends the same call twice."
+    },
+    {
+      "key": "a6f745ae8ea4",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/reviewreceipt/service.go:236-247",
+      "reason": "Any feature folder the sink lists is accepted for a receipt regardless of feature, and each remaining receipt is read once per feature with no bound."
+    },
+    {
+      "key": "a8b67da763aa",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/longterm-mem/internal/vault/pagetags.go:84-119",
+      "reason": "Trailing-comment or multi-line flow lists give errUnclosedFlowList and the page is dropped as unreadable, and only an unindented unquoted \"tags:\" key and \"- \" items are recognised, so other spellings yield no tags and make another goal page visible."
+    },
+    {
+      "key": "ac85540f62bf",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/projection/app/hook.go:226-229",
+      "reason": "A binding Load error returns an empty outcome with no warning, and the test at evidence_test.go:93-99 asserts that silence."
+    },
+    {
+      "key": "ae7cdba66128",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/projection/gate.go:343-347",
+      "reason": "With the plan unresolvable the gate returns only the plan warning, so the unreadable-lock warning surfaces only once the plan is fixed."
+    },
+    {
+      "key": "b0a07dda3fe8",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/workflow/lifecycle.go:475-477",
+      "reason": "The mismatch check is new (base/engine/cmd/workflow.go:228 passed g unchecked) and runs before the ErrCreateRefused check at head/engine/workflow/lifecycle.go:513."
+    },
+    {
+      "key": "b2e471ce2517",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/identity/resolve/resolve.go:155-159",
+      "reason": "A declared name with a control character other than CR/LF, invalid UTF-8 or over 512 runes passes the resolver and Create rejects it, so create exits 2 where base succeeded."
+    },
+    {
+      "key": "b35fcb443409",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/projection/gate.go:377-381",
+      "reason": "A SKILL.md Read matches a procedural skill only by cleaned string equality, so a symlink or alternate path to the same file is allowed."
+    },
+    {
+      "key": "b3ca2c17d89d",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/longterm-mem/internal/vault/pagetags.go:44-58",
+      "reason": "Containment is checked only lexically on the cleaned path, so a symlink inside the vault to an outside file passes and os.ReadFile reads its target."
+    },
+    {
+      "key": "b4c01b3acf62",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/identity/gitfs/gitfs.go:57-83",
+      "reason": "Locate only recognizes a .git entry, so a bare repository directory walks up to ErrNotARepository and no path ever leaves MainWorktreeRoot empty as resolve.go:70-71 describes."
+    },
+    {
+      "key": "b547bf09f3a3",
+      "label": "false",
+      "failure_stated": true,
+      "citation": "head/identity/identity.go:109-111",
+      "reason": "NormalizeRemote drops the userinfo before the host, so credentials in a remote URL do not reach the identity."
+    },
+    {
+      "key": "b5cd68ae6513",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/longterm-mem/internal/promote/eligible.go:39-43",
+      "reason": "TopicWithoutGoal turns goal:g-42/ into an empty key, now ineligible though at base its first segment goal:g-42 was curated, and pages promoted before the change carry no goal tag and are rewritten by sync only when their revision grows."
+    },
+    {
+      "key": "b702bd20e7de",
+      "label": "real",
+      "failure_stated": false,
+      "citation": "head/engine/projection/gate_procedural_test.go:196",
+      "reason": "The bound paths > 2*wantPaths lets two path reads pass, so at-most-once reading of the path is not asserted by this test."
+    },
+    {
+      "key": "b7e6d36c0be0",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/identity/gitfs/gitfs.go:120-121",
+      "reason": "Everything after gitdir: in the trimmed whole file is the path, so extra lines put a newline in it and requireGitDir then reports no HEAD; ENOTDIR is also fatal at gitfs.go:72."
+    },
+    {
+      "key": "b8d0218b9d44",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/workflow/workflow.go:582",
+      "reason": "unicode.IsControl does not match U+2028/U+2029 or format characters, so they pass validation."
+    },
+    {
+      "key": "ba4c75157a0c",
+      "label": "unsure",
+      "failure_stated": false,
+      "citation": "head/engine/projection/evidence.go:103-104",
+      "reason": "The ReadEvidence values are sanitized and clipped, but the remaining exposure depends on log file permissions of an adapter that does not exist at head."
+    },
+    {
+      "key": "bb79cad3fdcb",
+      "label": "false",
+      "failure_stated": true,
+      "citation": "head/identity/resolve/resolve.go:126-139",
+      "reason": "Each error return of Resolve is Identity{}, so the identity passed to Create on error is always empty."
+    },
+    {
+      "key": "bfb5473abdde",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/identity/gitfs/gitfs.go:71",
+      "reason": "filepath.Dir(common) gives the modules directory for a submodule and the bare repo parent for a bare-repo worktree, and mainRoot then uses it for the declaration and directory name."
+    },
+    {
+      "key": "c38a637692be",
+      "label": "false",
+      "failure_stated": true,
+      "citation": "head/engine/settings/projection.go:43-61",
+      "reason": "The projection family that install-hooks installs and uninstall-hooks removes registers one SessionStart entry, so SessionStart does fire and the documentation is accurate."
+    },
+    {
+      "key": "c772923c2bda",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/projection/gate.go:211-216",
+      "reason": "A link named other.md pointing at a locked SKILL.md is not treated as a skill read, so the gate does not match it."
+    },
+    {
+      "key": "c7ab222afc09",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/hookwire/posttooluse_test.go:102-104",
+      "reason": "The test materializes the 64 MiB repeat and a concatenated copy of it in memory rather than streaming the bytes from a lazy reader."
+    },
+    {
+      "key": "c88bb9a0ad09",
+      "label": "real",
+      "failure_stated": false,
+      "citation": "head/engine/projection/gate.go:174-177",
+      "reason": "GateRelevant returns true for any Read while relevantUse returns false for a non-SKILL.md Read, a divergence that causes no failure today since GateRelevant has no other caller than relevantUse."
+    },
+    {
+      "key": "c98957b79224",
+      "label": "real",
+      "failure_stated": false,
+      "citation": "head/engine/cmd/workflow.go:233-237",
+      "reason": "On a resolver error create warns and records no identity, as the remark describes; it states no defect."
+    },
+    {
+      "key": "cc69159ce069",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/cmd/review_receipt.go:68-73",
+      "reason": "A trailing --feature is not marked given, so `--change a --feature` captures into change a with success and the conflict check at lines 110-114 never fires."
+    },
+    {
+      "key": "cc99be25bd72",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/longterm-mem/internal/vault/pagetags.go:103-119",
+      "reason": "blockListItems breaks at the first non \"- \" line so a later goal tag is lost and the page shows as goalless, and multi-line or commented flow lists fail the suffix check and are left out as unreadable."
+    },
+    {
+      "key": "cfacab4caa8e",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/hookwire/posttooluse.go:56-64",
+      "reason": "RecordID returns the first key whose value is any non-empty text (whitespace included) or a number, in fixed key order and without checking the tool, so a later valid engram_id is ignored."
+    },
+    {
+      "key": "d043a3295dc8",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/projection/gate.go:340-347",
+      "reason": "The unreadable branch runs before match, which is where the empty-skill check lives (gate.go:374), so a Skill call with no skill warns with use of skill \"\"."
+    },
+    {
+      "key": "d07fbc0ab025",
+      "label": "false",
+      "failure_stated": true,
+      "citation": "head/engine/cmd/procedural_lock.go:54-56",
+      "reason": "A leaf SKILL.md link pointing outside the repo has its external target added to the lock, so the resolved Read matches and is denied; a missing file cannot be read at all."
+    },
+    {
+      "key": "d1964133e3a2",
+      "label": "false",
+      "failure_stated": true,
+      "citation": "head/engine/hookwire/posttooluse.go:45-67",
+      "reason": "No production code calls OnToolResult at head, so no by-id read is recorded with empty IDs, and the PostToolUse adapter already exposes RecordID to populate the field once wired."
+    },
+    {
+      "key": "d25f3ee7e6cd",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/hookwire/posttooluse.go:103-111",
+      "reason": "dec.Decode buffers the whole value before hashing, and json.Unmarshal of null into a *string is a no-op, so a repeated text key with a later null keeps the earlier value."
+    },
+    {
+      "key": "d2716cddf20e",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/projection/gate.go:372-385",
+      "reason": "match compares Skill ids exactly and Read paths by cleaned string equality, so symlinked, differently cased or differently rooted spellings of the procedural SKILL.md are allowed."
+    },
+    {
+      "key": "d2b761b4e1cb",
+      "label": "false",
+      "failure_stated": false,
+      "citation": "head/engine/hookwire/encode.go:115-118",
+      "reason": "This is a test-coverage remark, and the behavior it relies on holds because SessionStartReply.Encode returns no output for an empty context."
+    },
+    {
+      "key": "d3cbd91f554c",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/longterm-mem/internal/vault/pagetags.go:44-58",
+      "reason": "The check uses filepath.Rel on the cleaned path only, so a symlinked page pointing outside the vault passes and is read, contrary to the comment that the reader reads only the vault own pages."
+    },
+    {
+      "key": "d3ef421fa106",
+      "label": "real",
+      "failure_stated": false,
+      "citation": "head/engine/cmd/projection_gate_test.go:378-396",
+      "reason": "The test exercises only the three directory-link combinations, so the fallback branches are untested; this is a coverage remark."
+    },
+    {
+      "key": "d4df342b467c",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/cmd/procedural_lock.go:54-56",
+      "reason": "The resolved external target is listed under the skill, and match returns the first skill whose files contain the resolved Read path (gate.go:377-391), so another SKILL.md linked to the same shared file is denied under this skill name."
+    },
+    {
+      "key": "d59b088515d0",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/cmd/hook_translate.go:63-71",
+      "reason": "Every Read of an absolute SKILL.md now calls EvalSymlinks with no timeout, and an error silently falls back to the unresolved path."
+    },
+    {
+      "key": "d66f30351c32",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/cmd/procedural_lock.go:61-66",
+      "reason": "Lock paths are the provenance worktree root joined lexically with the target, compared lexically with the Read path, so a symlinked or case-variant path is not denied."
+    },
+    {
+      "key": "d8fb4c756ce1",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/identity/resolve/resolve.go:155-159",
+      "reason": "The resolver does not bound the declared name length or control characters, so Create can reject a resolved identity and create exits 2 where base succeeded."
+    },
+    {
+      "key": "d916e5f67e1b",
+      "label": "false",
+      "failure_stated": true,
+      "citation": "head/engine/hookwire/posttooluse.go:45-67",
+      "reason": "With no caller of OnToolResult at head nothing is recorded in production, and the hook adapter provides RecordID for the field, so the stated empty-ID recording does not occur."
+    },
+    {
+      "key": "dc498b58fc0d",
+      "label": "real",
+      "failure_stated": false,
+      "citation": "head/engine/cmd/workflow.go:234-236",
+      "reason": "The warning prints the resolver error with CR/LF replaced to the invoking user stderr, as described; no failure is stated."
+    },
+    {
+      "key": "ddfeaccea26d",
+      "label": "false",
+      "failure_stated": true,
+      "citation": "head/engine/cmd/hook_translate.go:63-71",
+      "reason": "A Read through any link is resolved to the real path, and the lock lists the real path of each existing file, so paths through other links still match."
+    },
+    {
+      "key": "df482811e3c1",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/identity/resolve/resolve.go:124-125",
+      "reason": "Outside a repository the name is filepath.Base of the raw dir, so . yields . and a symlinked directory yields the link name, unlike the canonicalized in-repo path."
+    },
+    {
+      "key": "dfc3195b4b2a",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/projection/gate.go:340-347",
+      "reason": "Every SKILL.md Read under an unreadable lock and a plan without procedural-skills warns, and the hook reloads the lock per call (engine/projection/app/hook.go:144-145)."
+    },
+    {
+      "key": "e0caf12ea1c9",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/identity/gitfs/gitfs.go:72-76",
+      "reason": "ENOTDIR from stat is not IsNotExist so Locate fails with cannot look for a git repository, and the ReadFile calls at gitfs.go:89,102,116 bypass the Stat seam."
+    },
+    {
+      "key": "e20d916f6632",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/cmd/memory.go:192-201",
+      "reason": "A store read failure returns PromptWarning and is refused, but an empty processCwd from a failed workingDir makes RepoKey return false (head/engine/gitfs/locator.go:62), which is silent and is reported as no workflow bound with exit 0."
+    },
+    {
+      "key": "e263ed9d095d",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/cmd/review_receipt.go:68-73",
+      "reason": "A trailing --feature leaves hasFeature false, so capture auto-detects or uses --change and the mutual-exclusion check at lines 110-114 is bypassed."
+    },
+    {
+      "key": "e45608b17cb6",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/projection/gate.go:340-347",
+      "reason": "The warning is returned for every Skill call and SKILL.md Read before any check of whether the use is procedural, so a corrupt lock warns on every skill use."
+    },
+    {
+      "key": "e4e8d4b8c3f7",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/projection/gate.go:211-216",
+      "reason": "The gate only treats a Read as a skill read when the base is exactly SKILL.md, so a link named other.md or a case variant pointing at a locked SKILL.md is not denied."
+    },
+    {
+      "key": "e5114f139a57",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/projection/app/hook.go:197-203",
+      "reason": "ToolResultRequest has no success or error indicator, so OnToolResult records a matching read and its response digest regardless of whether the result was an error."
+    },
+    {
+      "key": "e95da7e099b1",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/identity/resolve/resolve.go:155-159",
+      "reason": "The partial-identity part does not hold since Resolve returns Identity{} on error, but an over-long or control-character declared name does make create exit 2."
+    },
+    {
+      "key": "ea33790c401d",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/projection/gate.go:343-347",
+      "reason": "When the plan errors, the gate returns the plan warning first and the lock-unreadable detail is not mentioned."
+    },
+    {
+      "key": "ecb835c89bc3",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/reviewreceipt/fsstore/store.go:256-287",
+      "reason": "Location falls back to s.root when folderUnder refuses an unknown kind, and Features drops symlinked directories via IsDir while folderUnder paths used by Read/Write follow them."
+    },
+    {
+      "key": "efb91ae864aa",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/cmd/review_receipt.go:68-72",
+      "reason": "A trailing --feature is not given per the parser, so capture auto-detects the single active change and writes into openspec/changes/<change>/ with exit 0."
+    },
+    {
+      "key": "efbeeaf58f07",
+      "label": "unsure",
+      "failure_stated": false,
+      "citation": "head/identity/engram.go:14-17",
+      "reason": "The claim notes only that a backslash is kept whole and calls it an ambiguity, naming no failure the code can confirm or refute."
+    },
+    {
+      "key": "f001288e30c1",
+      "label": "false",
+      "failure_stated": true,
+      "citation": "head/engine/projection/app/hook.go:254-258",
+      "reason": "readOnce preserves ReadRecordID, the hookwire adapter exposes RecordID, and with no production caller of OnToolResult no by-id read is recorded with empty IDs at head."
+    },
+    {
+      "key": "f0026caac014",
+      "label": "false",
+      "failure_stated": true,
+      "citation": "head/engine/settings/projection.go:49-61",
+      "reason": "The base settings projection family already writes a SessionStart entry (also present at base/engine/settings/projection.go:58), so the new hook runs in a real session."
+    },
+    {
+      "key": "f1787301b694",
+      "label": "false",
+      "failure_stated": true,
+      "citation": "head/engine/projection/evidence.go:10-39",
+      "reason": "The sanitized-line doc covers ReadEvidence values, not the runtime fields of ReadRecord, and no line-oriented log adapter exists at head that an embedded newline could break."
+    },
+    {
+      "key": "f3d87852d175",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/cmd/workflow.go:233-237",
+      "reason": "Only a resolver error is downgraded; a resolved name the resolver accepts (head/identity/resolve/resolve.go:155-159) but validateProjectIdentity refuses makes create exit 2."
+    },
+    {
+      "key": "f70da32bca51",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/identity/gitfs/gitfs.go:71",
+      "reason": "For any .git pointer file MainWorktreeRoot is the parent of the common dir, which for a submodule without commondir is the modules directory."
+    },
+    {
+      "key": "f7c391110a80",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/projection/gate.go:213",
+      "reason": "The exact-case SKILL.md base check and the cleaned-string path comparison at gate.go:379 let case-variant, symlinked or alternately rooted Reads of a procedural SKILL.md pass."
+    },
+    {
+      "key": "f7d197ad6a11",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/workflow/workflow.go:582",
+      "reason": "unicode.IsControl misses U+2028/U+2029, so such an identity passes the one-line validation."
+    },
+    {
+      "key": "f7d42c0b8461",
+      "label": "unsure",
+      "failure_stated": true,
+      "citation": "head/engine/cmd/hook_translate.go:55",
+      "reason": "The closure does resolve links lazily on each Read of a SKILL.md, but whether a filesystem change between the check and the actual Read occurs is a race that the code cannot decide."
+    },
+    {
+      "key": "fa426618e05b",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/hookwire/posttooluse.go:103-117",
+      "reason": "Every value, including tool_response and unknown keys, is read whole into a json.RawMessage before being hashed or discarded."
+    },
+    {
+      "key": "faf85866aeed",
+      "label": "false",
+      "failure_stated": true,
+      "citation": "head/engine/workflow/lifecycle.go:478-480",
+      "reason": "Create runs validateProjectIdentity before appending, so the writer cannot record an identity the parser later refuses, and a just-created workflow stays replayable."
+    },
+    {
+      "key": "fd08d4fd7c8d",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/hookwire/posttooluse.go:103-116",
+      "reason": "A tool_response up to the 64 MiB bound is fully buffered in the decoder and copied into raw before it is hashed."
+    },
+    {
+      "key": "fd38796b6326",
+      "label": "false",
+      "failure_stated": true,
+      "citation": "head/engine/settings/projection.go:58",
+      "reason": "The unchanged settings projection family installs, removes and checks a SessionStart entry, so the SessionStart event is wired for users."
+    },
+    {
+      "key": "fd9dc60aa27f",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/workflow/lifecycle.go:475-481",
+      "reason": "The new mismatch check refuses input base create accepted and runs before profile resolution and the ErrCreateRefused check."
+    },
+    {
+      "key": "fe4d56827d5c",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/cmd/memory.go:38",
+      "reason": "The workingDir error is discarded and the empty cwd makes RepoKey fail, which is silent, so memoryInstructions prints noBoundInstructions and exits 0 instead of reporting the failure."
+    },
+    {
+      "key": "fe66ddf3cec0",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/settings/projection.go:40",
+      "reason": "Every Read is routed through the hook process by the Skill|Read matcher, and relevantUse narrows to SKILL.md only inside the hook."
+    },
+    {
+      "key": "ff64e3d17440",
+      "label": "real",
+      "failure_stated": true,
+      "citation": "head/engine/hookwire/posttooluse.go:57-59",
+      "reason": "Any JSON number literal, such as 1.5 or 1e3, unmarshals into json.Number and is returned verbatim by number.String()."
+    }
+  ]
+}
