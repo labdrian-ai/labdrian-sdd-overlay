@@ -5,9 +5,11 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"strings"
 	"testing"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings"
 )
 
@@ -67,8 +69,9 @@ func installFresh(t *testing.T) (string, *settingsInstaller) {
 // projectionFamilySize is the number of entries of the projection family: one UserPromptSubmit
 // entry and a PreToolUse entry per matcher (the edit tools, the longterm-mem query and get, and the
 // Engram reads, and the tools that can use a procedural skill), one SessionStart entry (C23 M6), and
-// a PostToolUse entry per memory-read matcher (C23 M7).
-const projectionFamilySize = 11
+// a PostToolUse entry per memory-read matcher (C23 M7), then the PreToolUse and PostToolUse entries
+// of the memorycard reads, which came last.
+const projectionFamilySize = 13
 
 func TestInstall_AddsTheProjectionFamily(t *testing.T) {
 	path, _ := installFresh(t)
@@ -115,6 +118,100 @@ func TestProjectionMatchersAreTheDocumentedOnes(t *testing.T) {
 	if settings.ProjectionEngramReadMatcher != `^mcp__([A-Za-z0-9-]+_)*engram__(mem_search|mem_context|mem_get_observation|mem_timeline)$` {
 		t.Errorf("ProjectionEngramReadMatcher = %q", settings.ProjectionEngramReadMatcher)
 	}
+	if settings.ProjectionMemorycardReadMatcher != `^mcp__([A-Za-z0-9-]+_)*memorycard__(mem_search|mem_context|mem_get)$` {
+		t.Errorf("ProjectionMemorycardReadMatcher = %q", settings.ProjectionMemorycardReadMatcher)
+	}
+}
+
+// TestProjectionMemorycardMatcherIsTheGatePolicy: Claude Code runs the hook only for a tool the
+// installed matcher names, so the memorycard matcher names exactly the memorycard tools the gate
+// acts on: every one it matches is gate-relevant, and every memorycard read the gate checks is
+// matched.
+func TestProjectionMemorycardMatcherIsTheGatePolicy(t *testing.T) {
+	re := regexp.MustCompile(settings.ProjectionMemorycardReadMatcher)
+	for _, prefix := range []string{"", "plugin_", "plugin_x_", "a-b_", "a__", "_"} {
+		for _, server := range []string{"memorycard", "memorycardx", "xmemorycard", "engram"} {
+			for _, tool := range []string{"mem_search", "mem_context", "mem_get", "mem_save", "mem_update", "mem_session", "mem_get_observation", "mem_getx", ""} {
+				name := "mcp__" + prefix + server + "__" + tool
+				for _, raw := range []string{name, "x" + name, name + "x", name + "\n"} {
+					isMemorycard := strings.Contains(raw, "memorycard__")
+					if got, want := re.MatchString(raw), isMemorycard && projection.GateRelevant(nil, raw); got != want {
+						t.Errorf("%q: matcher=%v, gate policy for a memorycard tool=%v", raw, got, want)
+					}
+				}
+			}
+		}
+	}
+	for _, read := range []string{"mcp__memorycard__mem_search", "mcp__memorycard__mem_context", "mcp__memorycard__mem_get"} {
+		if !re.MatchString(read) {
+			t.Errorf("%s must be matched", read)
+		}
+	}
+}
+
+// TestInstall_AddsTheMemorycardMatchersToAnInstallThatPredatesThem: an install of the whole family
+// as it was before the memorycard reads lacks exactly their PreToolUse and PostToolUse entries;
+// Install appends them and leaves every entry it had as it was.
+func TestInstall_AddsTheMemorycardMatchersToAnInstallThatPredatesThem(t *testing.T) {
+	path, m := installFresh(t)
+	root := parseJSON(t, path)
+	hooks := root["hooks"].(map[string]interface{})
+	for _, event := range []string{"PreToolUse", "PostToolUse"} {
+		var kept []interface{}
+		for _, e := range hooks[event].([]interface{}) {
+			if e.(map[string]interface{})["matcher"] == settings.ProjectionMemorycardReadMatcher {
+				continue
+			}
+			kept = append(kept, e)
+		}
+		hooks[event] = kept
+	}
+	b, _ := json.Marshal(root)
+	if err := os.WriteFile(path, b, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	older := projectionEntries(t, parseJSON(t, path))
+	if len(older) != projectionFamilySize-2 {
+		t.Fatalf("test bug: the older install has %d entries, want %d", len(older), projectionFamilySize-2)
+	}
+	parts := settings.MissingProjectionHookParts(parseJSON(t, path), testHookCommand)
+	wantParts := []string{
+		`PreToolUse matcher="` + settings.ProjectionMemorycardReadMatcher + `" projection hook`,
+		`PostToolUse matcher="` + settings.ProjectionMemorycardReadMatcher + `" projection hook`,
+	}
+	if !reflect.DeepEqual(parts, wantParts) {
+		t.Fatalf("missing parts = %q, want exactly %q", parts, wantParts)
+	}
+	if err := m.Install(); err != nil {
+		t.Fatal(err)
+	}
+	after := projectionEntries(t, parseJSON(t, path))
+	if len(after) != projectionFamilySize || !settings.HasProjectionHooks(parseJSON(t, path), testHookCommand) {
+		t.Fatalf("after Install: %d entries, missing %v", len(after), settings.MissingProjectionHookParts(parseJSON(t, path), testHookCommand))
+	}
+	var added []string
+	for _, e := range after {
+		if e.matcher == settings.ProjectionMemorycardReadMatcher {
+			added = append(added, e.event)
+			if !strings.Contains(e.command, testHookCommand+" projection hook --event "+e.event) {
+				t.Errorf("memorycard %s entry command %q", e.event, e.command)
+			}
+		}
+	}
+	if !reflect.DeepEqual(added, []string{"PreToolUse", "PostToolUse"}) {
+		t.Errorf("memorycard entries = %v, want one PreToolUse and one PostToolUse", added)
+	}
+	for _, e := range older {
+		found := false
+		for _, a := range after {
+			if reflect.DeepEqual(a.raw, e.raw) {
+				found = true
+			}
+		}
+		if !found {
+			t.Errorf("entry changed or lost: %s", mustJSON(t, e.raw))
+		}
+	}
 }
 
 // TestInstall_AddsTheMemoryReadMatchersToAnInstallThatPredatesThem: an install made before C23 M4
@@ -127,7 +224,8 @@ func TestInstall_AddsTheMemoryReadMatchersToAnInstallThatPredatesThem(t *testing
 	var kept []interface{}
 	for _, e := range hooks["PreToolUse"].([]interface{}) {
 		em := e.(map[string]interface{})
-		if em["matcher"] == settings.ProjectionMemoryGetMatcher || em["matcher"] == settings.ProjectionEngramReadMatcher || em["matcher"] == settings.ProjectionProceduralSkillMatcher {
+		if em["matcher"] == settings.ProjectionMemoryGetMatcher || em["matcher"] == settings.ProjectionEngramReadMatcher || em["matcher"] == settings.ProjectionProceduralSkillMatcher ||
+			em["matcher"] == settings.ProjectionMemorycardReadMatcher {
 			continue
 		}
 		kept = append(kept, e)
@@ -150,11 +248,13 @@ func TestInstall_AddsTheMemoryReadMatchersToAnInstallThatPredatesThem(t *testing
 		`PreToolUse matcher="` + settings.ProjectionMemoryGetMatcher + `" projection hook`,
 		`PreToolUse matcher="` + settings.ProjectionEngramReadMatcher + `" projection hook`,
 		`PreToolUse matcher="Skill|Read" projection hook`,
+		`PreToolUse matcher="` + settings.ProjectionMemorycardReadMatcher + `" projection hook`,
 		"SessionStart projection hook",
 		`PostToolUse matcher="` + settings.ProjectionMemoryQueryMatcher + `" projection hook`,
 		`PostToolUse matcher="` + settings.ProjectionMemoryGetMatcher + `" projection hook`,
 		`PostToolUse matcher="` + settings.ProjectionEngramReadMatcher + `" projection hook`,
 		`PostToolUse matcher="Skill|Read" projection hook`,
+		`PostToolUse matcher="` + settings.ProjectionMemorycardReadMatcher + `" projection hook`,
 	}
 	if !reflect.DeepEqual(parts, wantParts) {
 		t.Fatalf("missing parts = %q, want exactly %q", parts, wantParts)

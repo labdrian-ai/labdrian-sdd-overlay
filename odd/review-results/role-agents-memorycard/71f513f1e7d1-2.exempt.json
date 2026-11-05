@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "2815fdf278a68ee26bf6aab55fb8d1a438189e30",
+    "head": "71f513f1e7d1a9afa3bfc3e234c2f365b44f4786",
+    "diff_sha256": "f85a6313ba02da97369adc7705f348f4891acc2fc5d54f2f212770e1c611862d",
+    "paths": [
+      "odd/goals/role-agents-memorycard.json",
+      "odd/tasks/role-agents-memorycard.md"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git -C /home/labdrian/labdrian-sdd-overlay-worktrees/role-agents-memorycard diff --name-status a9433e51 17fec6d0",
+        "result": "pass",
+        "output": "A\todd/goals/role-agents-memorycard.json\nA\todd/tasks/role-agents-memorycard.md (only two added files, no deletions or renames)"
+      },
+      {
+        "command": "git -C /home/labdrian/labdrian-sdd-overlay-worktrees/role-agents-memorycard show 17fec6d0:odd/goals/role-agents-memorycard.json | jq -e '.goal_id == \"role-agents-memorycard\" and .version == 3'",
+        "result": "pass",
+        "output": "true (exit 0)"
+      },
+      {
+        "command": "git -C /home/labdrian/labdrian-sdd-overlay-worktrees/role-agents-memorycard show 17fec6d0:odd/tasks/role-agents-memorycard.md | rg -c '^## (Specs|Tasks|Log)$'; same file | rg -n '\\bL[123]\\b'",
+        "result": "pass",
+        "output": "count printed 3. Line 12 is the T1 line and ends with 'shaped: L3 — commit: -'. The Log holds L1 (line 16), L2 (line 17) and L3 (line 18)."
+      },
+      {
+        "command": "git -C /home/labdrian/labdrian-sdd-overlay-worktrees/role-agents-memorycard show 17fec6d0 | rg -n '\\\\u[0-9a-fA-F]{4}'",
+        "result": "pass",
+        "output": "no output, exit 1 (no matches)."
+      },
+      {
+        "command": "git -C /home/labdrian/labdrian-sdd-overlay-worktrees/role-agents-memorycard log -1 --format=%B 17fec6d0 | git interpret-trailers --parse",
+        "result": "pass",
+        "output": "Risk: none"
+      }
+    ]
+  }
+}

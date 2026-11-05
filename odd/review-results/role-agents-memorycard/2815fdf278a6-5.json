@@ -1,0 +1,122 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "170909985f1b274b0cae2cc93a9ce4e84ec64173",
+    "head": "2815fdf278a68ee26bf6aab55fb8d1a438189e30",
+    "diff_sha256": "560d920dba0efa57a4a4ade11b3a5c09ed71df10bdee74caae860b5dfa43516f",
+    "paths": [
+      "engine/cmd/main_test.go",
+      "engine/cmd/phase7_acceptance_test.go",
+      "engine/cmd/testdata/status-golden/status-families-missing-or-drifted.golden",
+      "engine/cmd/testdata/status-golden/status-settings-without-the-hooks.golden",
+      "engine/cmd/usage.go",
+      "engine/projection/app/memorycard_test.go",
+      "engine/projection/gate.go",
+      "engine/projection/gate_memorycard_test.go",
+      "engine/runtime/claude_projection_test.go",
+      "engine/settings/codexhooks/document.go",
+      "engine/settings/codexhooks/document_test.go",
+      "engine/settings/codexhooks/m12b_matcher_scope_test.go",
+      "engine/settings/projection.go",
+      "engine/settings/settingsfile/golden_unix_test.go",
+      "engine/settings/settingsfile/projection_test.go",
+      "engine/settings/settingsfile/settings_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "170909985f1b274b0cae2cc93a9ce4e84ec64173",
+      "head": "2815fdf278a68ee26bf6aab55fb8d1a438189e30",
+      "diff_sha256": "560d920dba0efa57a4a4ade11b3a5c09ed71df10bdee74caae860b5dfa43516f"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/main_test.go",
+        "engine/cmd/phase7_acceptance_test.go",
+        "engine/cmd/testdata/status-golden/status-families-missing-or-drifted.golden",
+        "engine/cmd/testdata/status-golden/status-settings-without-the-hooks.golden",
+        "engine/cmd/usage.go",
+        "engine/projection/app/memorycard_test.go",
+        "engine/projection/gate.go",
+        "engine/projection/gate_memorycard_test.go",
+        "engine/runtime/claude_projection_test.go",
+        "engine/settings/codexhooks/document.go",
+        "engine/settings/codexhooks/document_test.go",
+        "engine/settings/codexhooks/m12b_matcher_scope_test.go",
+        "engine/settings/projection.go",
+        "engine/settings/settingsfile/golden_unix_test.go",
+        "engine/settings/settingsfile/projection_test.go",
+        "engine/settings/settingsfile/settings_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/settings/codexhooks/document.go:24",
+        "severity": "WARNING",
+        "claim": "The Codex memoryMatcher constant changed. On the next install-hooks, editEvent (document.go:214-243) does not treat the existing owned PreToolUse and PostToolUse groups as equivalent, so it replaces them. The commit's own Risk line says Codex handlers then need re-trust. Until the user re-trusts them in the Codex TUI, the existing Engram and longterm-mem memory gate and read evidence do not run in Codex, so a guard that already worked is silently switched off on upgrade. Nothing tells the user. bin/lib/hooks.sh:48-49 tells the user only to trust each new handler and says existing SessionStart trust is unchanged, which suggests nothing else changed. usage.go:26 says the same. Present (document.go:70) reports the entries as installed without checking trust, so status stays OK.",
+        "evidence_class": "inferential",
+        "causal_disposition": "behavior-activated",
+        "proof_refs": [
+          "engine/settings/codexhooks/document.go:24 (changed matcher)",
+          "engine/settings/codexhooks/document.go:224-236 (a non-equivalent owned group is replaced)",
+          "bin/lib/hooks.sh:48-49 (install message unchanged)",
+          "engine/cmd/usage.go:26"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/projection/gate.go:319-320",
+        "severity": "WARNING",
+        "claim": "Before this change, memorycard reads were never gated. Now, in any repository bound to a running workflow, they are denied unless the call names the exact Engram name of the workflow identity. A mem_search or mem_context that relies on memorycard resolving the project from the working directory, with no project argument, is denied as 'names no project'. Under a scope-none plan such as standalone-minimal, every memorycard read is denied, including mem_get. The generated role prompts (engine/agentgen/roles.go:17, roles/*/body.md) tell every role to read its artifacts via memorycard mem_search and then mem_get, and they never say to pass a project. They also call a missing artifact a blocker. So role sub-agents in a bound workflow can be blocked from reading their handoff artifacts by a behavior change the commit does not mention.",
+        "evidence_class": "inferential",
+        "causal_disposition": "behavior-activated",
+        "proof_refs": [
+          "engine/projection/gate.go:319-320 (memorycard reads mapped to checkEngramProject and checkSourceOnly)",
+          "engine/projection/gate.go:559-560 (no project means deny)",
+          "engine/projection/gate_memorycard_test.go:431-433 (standalone-minimal denies every memorycard read)",
+          "engine/agentgen/roles.go:17 (role memory line: mem_search then mem_get, with no project)"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "engine/projection/gate.go:276-282",
+        "severity": "SUGGESTION",
+        "claim": "The gate assumes two things about memorycard that nothing in this repository verifies: that its read arguments are Engram's (only 'project' and 'all_projects' are parsed, in engine/hookwire/decode.go:121-135), and that it names a project by the last segment of the origin remote. The memorycard instructions also allow a 'cwd' argument to select the project. The gate ignores it, so a read whose effective project comes from cwd rather than 'project' is judged only by its 'project' field. That field could be absent, and then the call is denied. If memorycard lets cwd take precedence over 'project', a call that names the right project but selects another one through cwd passes. Nothing here can show whether that second case happens.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "engine/hookwire/decode.go:121-135"
+        ]
+      },
+      {
+        "id": "F4",
+        "location": "engine/capability/declarations.go:297",
+        "severity": "SUGGESTION",
+        "claim": "The Codex capability declaration still says PreToolUse checks 'MCP Engram reads and longterm-mem query/get', but the Codex matcher now also gates the memorycard reads. The capability report users read is therefore out of date for this change, and it also does not mention that the changed handlers need re-trust.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "worsened",
+        "proof_refs": [
+          "engine/capability/declarations.go:297",
+          "engine/settings/codexhooks/document.go:24"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full candidate diff (825 lines), including every golden hunk",
+      "Read engine/settings/codexhooks/document.go in full at head (merge, replace and Present logic)",
+      "Read the gate.go memoryReads table, engramProjectGate and engramAdvice at head",
+      "Read engine/cmd/hook_translate.go gateCall and resultCall",
+      "Read the engine/hookwire queryArguments and RecordID keys",
+      "Read bin/lib/hooks.sh install-hooks Codex messages",
+      "Read the engine/capability/declarations.go Codex memory enforcement detail",
+      "Searched engine/agentgen/roles.go and roles/builder/body.md for memorycard role instructions",
+      "Nothing was run: no tests or commands were executed"
+    ]
+  }
+}

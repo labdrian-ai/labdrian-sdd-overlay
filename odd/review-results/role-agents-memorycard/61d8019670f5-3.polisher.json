@@ -1,0 +1,18 @@
+{
+  "kind": "polisher",
+  "base": "079eac2e44f1d4c5f4a6c35f949fd467ad9d3025",
+  "head": "61d8019670f5a98e6fb81cb0f48e3a91f7d86c2f",
+  "diff_sha256": "cd8a2c2442cb4f721dae9737d4ca47abe2110041004c9e20b84bd0590faf213b",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/ram-c5.diff.",
+      "Searched the head tree (/home/labdrian/labdrian-sdd-overlay-worktrees/review-6aaf115964a4) for WorkDir, checkMemorycardProject and ownProject. The only match, engine/cmd/phase6_acceptance_test.go:461-463, is an unrelated local variable named otherWorkDir. No dead code or tests from the reverted path remain.",
+      "memorycardProjectReadTool now uses checkEngramProject, and engramProjectGate denies an empty project, a different project and all_projects. The restored test at engine/projection/gate_memorycard_test.go:98-99 asserts the 'names no project' deny reason, the 'missing, not a string, or empty' wording and the unbind hint. I did not run the test suite.",
+      "README.md:1239-1241 already states that mem_search and mem_context are denied when project is missing. The engine/cmd/usage.go text now says the same and that memorycard needs the project named. Both match the gate.",
+      "engine/capability/declarations.go:297 and bin/lib/hooks.sh:48 contain 'trust each new or changed handler', and the declarations text also contains 'MCP Engram reads'. The updated capability test strings match them.",
+      "mem_get stays a by-id read (checkSourceOnly). This is unchanged and matches the 'no project check for reads by id' limit.",
+      "The engine/agentgen/roles_test.go comments were only moved. The new Codex note matches the test's behaviour."
+    ]
+  }
+}

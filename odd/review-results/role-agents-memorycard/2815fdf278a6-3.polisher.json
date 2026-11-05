@@ -1,0 +1,40 @@
+{
+  "kind": "polisher",
+  "base": "170909985f1b274b0cae2cc93a9ce4e84ec64173",
+  "head": "2815fdf278a68ee26bf6aab55fb8d1a438189e30",
+  "diff_sha256": "560d920dba0efa57a4a4ade11b3a5c09ed71df10bdee74caae860b5dfa43516f",
+  "findings": {
+    "findings": [
+      {
+        "location": "engine/projection/gate.go:311-312",
+        "claim": "The new memorycard reads reuse the Engram project check, which denies any mem_search or mem_context that has no explicit `project` argument. memorycard resolves the project from the working directory when `project` is omitted, so the default call in a workflow-bound repository is denied as 'names no project'. In the other direction, a call that passes the workflow's `project` but a `cwd` pointing at another repository is allowed, and the gate never reads `cwd`.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "severity": "WARNING",
+        "evidence": [
+          "The diff adds `memorycardProjectReadTool` with `check: checkEngramProject`, and `engramProjectGate` denies when `read.Project == \"\"`.",
+          "The gate reads only `Project` and `AllProjects` from `QueryArguments`. The tests build their calls with `Named` and `Project` only, so none sets `cwd` or leaves the project out.",
+          "The workspace memory instructions say memorycard 'resolves the project from the working directory; pass `project` (or `cwd`) when you work outside it'. I did not read the memorycard tool schema, so I could not confirm that `cwd` overrides `project`."
+        ]
+      },
+      {
+        "location": "engine/settings/projection.go:70-71",
+        "claim": "Existing installs gain two entries (one PreToolUse, one PostToolUse) and the Codex matcher changes. Until the user reinstalls and re-trusts the Codex handlers, memorycard reads are neither gated nor recorded as evidence. `status` will report the projection family as drifted. This is a deliberate and documented consequence of the change, so it is lower risk than the gate bypass in the previous finding.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "severity": "SUGGESTION",
+        "evidence": [
+          "The `projectionFamily` specs gain two entries appended at the end.",
+          "The Codex `memoryMatcher` regex is widened. `usage.go` already says to trust each new handler once in the Codex TUI.",
+          "The golden files now list the memorycard PreToolUse and PostToolUse matchers as 'missing or drifted' for installs that predate this commit."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read lines 1-117 and 189-510 of the diff in full, and 511-640 (runtime test, Codex matcher and tests, `projection.go`, start of `settingsfile`).",
+      "Did not read the `settingsfile` test diffs at lines 635-825 or the remaining golden hunks.",
+      "Grepped the head tree for the Engram read patterns. The memorycard matchers and gate patterns mirror them: anchored, no lookalike server names, no writes, and `mem_get` mapped to source engram with a source-only check.",
+      "Ran no tests or builds."
+    ]
+  }
+}

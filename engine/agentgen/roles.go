@@ -9,10 +9,17 @@ import (
 	"strings"
 )
 
-// engramLine is the second line of the core prefix every role body starts with: it sends the role to
-// Engram for the artifacts the prompt locates. A role with no Engram tool in its list is not sent
-// there, so the projection drops the line for it (slice 2 of the design, L3).
-const engramLine = "Read every artifact the prompt locates (file path, or Engram topic via mem_get_observation) before acting. A missing required locator is a blocker: report it, never substitute another store."
+// memoryLine is the second line of the core prefix every role body starts with: it sends the role to
+// memorycard for the artifacts the prompt locates. A role with no memorycard tool in its list is not
+// sent there, so the projection drops the line for it (slice 2 of the design, L3). memorycard replaced
+// Engram as the memory store: Engram is frozen, read-only history (longterm-mem reads it), so no role
+// lists an Engram tool.
+const memoryLine = "Read every artifact the prompt locates (file path, or memorycard topic via mem_search, then mem_get) before acting. A missing required locator is a blocker: report it, never substitute another store."
+
+// byIDLine takes the place of memoryLine in the files of a role that can read memorycard by id but
+// cannot search it (the verifier, which per-role design v3 keeps from searching memory): the prompt
+// gives it a memorycard id, never a topic.
+const byIDLine = "Read every artifact the prompt locates (file path, or memorycard id via mem_get) before acting. A missing required locator is a blocker: report it, never substitute another store."
 
 // modelFamily is a family of models named once for the runtimes that take the model from the agent
 // file. Codex has no entry: its files omit the model, the parent passes it at spawn (D14).
@@ -76,10 +83,7 @@ var roles = []role{
 		effort:      "high",
 		tools: []string{
 			"Read", "Edit", "Write", "Glob", "Grep", "Bash",
-			"mcp__engram__mem_search", "mcp__plugin_engram_engram__mem_search",
-			"mcp__engram__mem_get_observation", "mcp__plugin_engram_engram__mem_get_observation",
-			"mcp__engram__mem_save", "mcp__plugin_engram_engram__mem_save",
-			"mcp__engram__mem_update", "mcp__plugin_engram_engram__mem_update",
+			"mcp__memorycard__mem_search", "mcp__memorycard__mem_get", "mcp__memorycard__mem_save", "mcp__memorycard__mem_update",
 			"mcp__codegraph__codegraph_explore",
 		},
 	},
@@ -90,9 +94,7 @@ var roles = []role{
 		effort:      "high",
 		tools: []string{
 			"Read", "Edit", "Write", "Grep", "Glob",
-			"mcp__engram__mem_search", "mcp__plugin_engram_engram__mem_search",
-			"mcp__engram__mem_get_observation", "mcp__plugin_engram_engram__mem_get_observation",
-			"mcp__engram__mem_save", "mcp__plugin_engram_engram__mem_save",
+			"mcp__memorycard__mem_search", "mcp__memorycard__mem_get", "mcp__memorycard__mem_save",
 			"mcp__codegraph__codegraph_explore",
 		},
 	},
@@ -103,7 +105,7 @@ var roles = []role{
 		effort:      "high",
 		tools: []string{
 			"Read", "Glob", "Grep",
-			"mcp__plugin_engram_engram__mem_search", "mcp__plugin_engram_engram__mem_get_observation",
+			"mcp__memorycard__mem_search", "mcp__memorycard__mem_get",
 			"mcp__codegraph__codegraph_explore",
 		},
 	},
@@ -114,7 +116,7 @@ var roles = []role{
 		effort:      "medium",
 		tools: []string{
 			"Read", "Glob", "Grep", "Bash", "Write", "Edit",
-			"mcp__plugin_engram_engram__mem_search", "mcp__plugin_engram_engram__mem_get_observation",
+			"mcp__memorycard__mem_search", "mcp__memorycard__mem_get",
 		},
 	},
 	{
@@ -124,8 +126,7 @@ var roles = []role{
 		effort:      "medium",
 		tools: []string{
 			"Read", "Edit", "Glob", "Grep", "Bash",
-			"mcp__engram__mem_search", "mcp__plugin_engram_engram__mem_search",
-			"mcp__engram__mem_get_observation", "mcp__plugin_engram_engram__mem_get_observation",
+			"mcp__memorycard__mem_search", "mcp__memorycard__mem_get",
 			"mcp__codegraph__codegraph_explore",
 		},
 	},
@@ -141,7 +142,7 @@ var roles = []role{
 		description: "Verifier role, runs the checks a prompt names and reproduces the findings it lists (send the finding ids, the exact checks and the worktree); returns reproduced, not-reproduced or not-run per id, or, with no finding id, the report of an exemption, each check as pass, fail or not-run.",
 		model:       sonnet,
 		effort:      "medium",
-		tools:       []string{"Read", "Grep", "Glob", "Bash", "mcp__plugin_engram_engram__mem_get_observation"},
+		tools:       []string{"Read", "Grep", "Glob", "Bash", "mcp__memorycard__mem_get"},
 	},
 	{
 		name:        "delivery",
@@ -150,9 +151,7 @@ var roles = []role{
 		effort:      "low",
 		tools: []string{
 			"Read", "Edit", "Write", "Glob", "Bash",
-			"mcp__engram__mem_search", "mcp__plugin_engram_engram__mem_search",
-			"mcp__engram__mem_get_observation", "mcp__plugin_engram_engram__mem_get_observation",
-			"mcp__engram__mem_save", "mcp__plugin_engram_engram__mem_save",
+			"mcp__memorycard__mem_search", "mcp__memorycard__mem_get", "mcp__memorycard__mem_save",
 			"mcp__codegraph__codegraph_explore",
 		},
 	},
@@ -160,18 +159,24 @@ var roles = []role{
 
 // piToolNames translates a tool of Claude Code into the tool of Pi that does the same.
 //
-// Verified on 2026-10-22 by reading the installed sources (Pi 1.3.0, gentle-pi 4.3.0, gentle-engram
-// 0.4.2), not by running Pi:
+// Verified on 2026-10-22 by reading the installed sources (Pi 1.3.0, gentle-pi 4.3.0), not by running
+// Pi:
 //   - read, edit, write, bash, grep and find are built-in tools of Pi (docs/cli.md of pi-coding-agent
 //     lists them in --tools), and the agents gentle-ai installs for Pi name them
 //     (~/.pi/agent/agents/gentle-ai-worker.md). Glob is find.
-//   - gentle-engram registers each Engram tool by its bare name, with no mcp__ prefix
-//     (index.ts:70-89 and :2337-2340), so both server names Claude Code lists map to one name.
+//   - the memorycard tools keep their MCP name, mcp__memorycard__<tool>. Verified on 2026-11-05 by
+//     reading pi-coding-agent 1.4.0: Pi registers every tool of an MCP server as mcp__<server>__<tool>
+//     (createMcpToolName in dist/extensions/mcp/tools.js), and memorycard is the server key
+//     "memorycard" of its mcp.json (~/.pi/agent/mcp.json). gentle-pi treats a requested tool whose
+//     name starts with mcp__ as an MCP tool it cannot check up front (extensions/gentle-agents.ts:338
+//     of gentle-pi 4.4.0). gentle-engram, which registered the Engram
+//     tools by their bare names (mem_search, ...), is no longer installed (2026-11-04), so the bare
+//     names would reach no tool.
 //   - gentle-pi has one native CodeGraph tool, codegraph, with the operations init, query and explore
 //     (extensions/codegraph-tools.ts:345). It has no explore-only form: the tool a role gets on Pi
 //     can also run init, which writes the .codegraph index of the workspace.
 //
-// Not verified: that the child process of a subagent loads gentle-engram and gentle-pi, so that
+// Not verified: that the child process of a subagent loads gentle-pi and the memorycard server, so that
 // these tools exist there. gentle-pi reads the tools field as a comma list or a YAML list
 // (lib/agents-config.ts:173-177), passes it to the child as --tools (lib/agents-runner.ts:283-329),
 // and Pi drops a name it does not know without a word (the comment at lib/agents-runner.ts:241), which
@@ -184,25 +189,31 @@ var piToolNames = map[string]string{
 	"Grep":  "grep",
 	"Bash":  "bash",
 
-	"mcp__engram__mem_search":                        "mem_search",
-	"mcp__plugin_engram_engram__mem_search":          "mem_search",
-	"mcp__engram__mem_get_observation":               "mem_get_observation",
-	"mcp__plugin_engram_engram__mem_get_observation": "mem_get_observation",
-	"mcp__engram__mem_save":                          "mem_save",
-	"mcp__plugin_engram_engram__mem_save":            "mem_save",
-	"mcp__engram__mem_update":                        "mem_update",
-	"mcp__plugin_engram_engram__mem_update":          "mem_update",
-	"mcp__codegraph__codegraph_explore":              "codegraph",
+	"mcp__memorycard__mem_search":       "mcp__memorycard__mem_search",
+	"mcp__memorycard__mem_get":          "mcp__memorycard__mem_get",
+	"mcp__memorycard__mem_save":         "mcp__memorycard__mem_save",
+	"mcp__memorycard__mem_update":       "mcp__memorycard__mem_update",
+	"mcp__codegraph__codegraph_explore": "codegraph",
 }
 
 // sourcePath is where the source of the role is, as a slash-separated path under the repository root.
 func (r role) sourcePath() string { return "roles/" + r.name + "/body.md" }
 
-// hasEngramTool says whether the role can reach Engram: one of its tools is a tool of an Engram server,
-// under either name the agents of Claude Code list it by.
-func (r role) hasEngramTool() bool {
+// hasMemoryTool says whether the role can reach memorycard: one of its tools is a tool of the
+// memorycard server.
+func (r role) hasMemoryTool() bool {
 	for _, tool := range r.tools {
-		if strings.HasPrefix(tool, "mcp__engram__") || strings.HasPrefix(tool, "mcp__plugin_engram_engram__") {
+		if strings.HasPrefix(tool, "mcp__memorycard__") {
+			return true
+		}
+	}
+	return false
+}
+
+// hasTool says whether the role holds the tool of that name.
+func (r role) hasTool(name string) bool {
+	for _, tool := range r.tools {
+		if tool == name {
 			return true
 		}
 	}
@@ -210,15 +221,20 @@ func (r role) hasEngramTool() bool {
 }
 
 // body is what the three files of the role carry after their frontmatter: its source, without the
-// line that sends it to Engram when it has no Engram tool.
+// line that sends it to memorycard when it has no memorycard tool, and with byIDLine in its place when
+// it can read memorycard by id but cannot search it (the verifier), so no role is told to call a tool
+// it does not hold.
 func (r role) body(source string) (string, error) {
-	if r.hasEngramTool() {
+	if r.hasMemoryTool() && r.hasTool("mcp__memorycard__mem_search") {
 		return source, nil
 	}
-	if strings.Count(source, engramLine+"\n") != 1 {
-		return "", fmt.Errorf("the line of the core prefix that sends a role to Engram is not there exactly once, and %s has no Engram tool to drop it for", r.name)
+	if strings.Count(source, memoryLine+"\n") != 1 {
+		return "", fmt.Errorf("the line of the core prefix that sends a role to memorycard is not there exactly once, and %s has no memorycard search to keep it for", r.name)
 	}
-	return strings.Replace(source, engramLine+"\n", "", 1), nil
+	if r.hasTool("mcp__memorycard__mem_get") {
+		return strings.Replace(source, memoryLine+"\n", byIDLine+"\n", 1), nil
+	}
+	return strings.Replace(source, memoryLine+"\n", "", 1), nil
 }
 
 // piTools is the tools field of the Pi file: the tools of the role in the names of Pi, in the order of

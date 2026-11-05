@@ -1,0 +1,52 @@
+{
+  "kind": "polisher",
+  "base": "71f513f1e7d1a9afa3bfc3e234c2f365b44f4786",
+  "head": "079eac2e44f1d4c5f4a6c35f949fd467ad9d3025",
+  "diff_sha256": "8245002a8d54a46348338d64bdef30e16b20fb6a7b1ae6bcc65336850c3a8bdd",
+  "findings": {
+    "findings": [
+      {
+        "location": "engine/projection/gate.go:565-570",
+        "claim": "A memorycard mem_search or mem_context with no project and no cwd/directory now passes the gate on the assumption that memorycard resolves the session's project from its own working directory. The gate does not check that assumption. If that directory resolves to a different project than the workflow's, such as a worktree or a server started elsewhere, the read reaches another project. Before this commit every read with no project was denied.",
+        "severity": "WARNING",
+        "evidence_class": "inferential",
+        "causal_disposition": "behavior-activated",
+        "evidence": [
+          "The new switch case `read.Project == \"\" && ownProject && read.WorkDir == \"\"` returns GateResult{} with no comparison against s.ProjectIdentity or the engramName result.",
+          "Before the commit, checkMemorycardProject did not exist and these tools used checkEngramProject, which denied every read that named no project.",
+          "The commit deleted the test case `denied(\"no project\")` for memorycard reads."
+        ]
+      },
+      {
+        "location": "engine/hookwire/decode.go:141-148",
+        "claim": "The new cwd/directory read matches keys case-sensitively, like the project key. A call with a differently cased key, such as {\"CWD\":\"/other\"} or {\"Directory\":\"/other\"}, gives WorkDir=\"\", so the new no-project, no-directory branch lets it through. Go's encoding/json matches struct field names case-insensitively, so if memorycard decodes its arguments that way, the call would read another project's directory. Before this commit, the same input was denied as naming no project.",
+        "severity": "WARNING",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "`fields[key]` is a lookup in map[string]json.RawMessage, which is exact-case.",
+          "The existing test 'a goal key in another case is another key' confirms the case-sensitive design.",
+          "The old behavior denied any read with Project==\"\"; the new case `Project==\"\" && ownProject && WorkDir==\"\"` returns an allow.",
+          "I did not verify how memorycard decodes its arguments, so whether it accepts a differently cased key is unconfirmed."
+        ]
+      },
+      {
+        "location": "engine/projection/gate.go:568-570",
+        "claim": "A mem_search that carries a cwd or directory argument and no project is denied with the message 'names no project but a directory to pick it by', although the context says mem_search takes only query, type, k, detail, include_old and project. A mem_search ignores cwd and would resolve from its own working directory, so this read is wrongly denied and the reason text is misleading. The deny applies equally to mem_context where cwd equals the session directory.",
+        "severity": "SUGGESTION",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "The same engramProjectGate case covers all memorycardProjectReadTool tools, including mem_search, and keys off read.WorkDir alone.",
+          "The tests only exercise the deny with a generic WorkDir '/elsewhere' for every tool in memorycardProjectReads.",
+          "The mem_search argument list is taken from the task context, not from memorycard source."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/ram-c4.diff",
+      "Read engine/hookwire/decode.go queryArguments at head in /home/labdrian/labdrian-sdd-overlay-worktrees/review-25d905b534f1",
+      "Reviewed the generated agent files (agents/, pi/agents/, codex/agents/ verifier) against byIDLine in roles.go and found them consistent. Reviewed the roles_test and role_agents_artifact_test changes and found nothing wrong. Read-only static review: no commands or tests were run."
+    ]
+  }
+}

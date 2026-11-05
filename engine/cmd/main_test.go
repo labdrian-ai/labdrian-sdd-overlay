@@ -702,8 +702,8 @@ func TestRunMergeSettings_Idempotent(t *testing.T) {
 	if n := countEntries("UserPromptSubmit"); n != 3 {
 		t.Errorf("UserPromptSubmit: expected 3 entries, got %d", n)
 	}
-	if n := countEntries("PreToolUse"); n != 13 {
-		t.Errorf("PreToolUse: expected 13 entries, got %d", n)
+	if n := countEntries("PreToolUse"); n != 14 {
+		t.Errorf("PreToolUse: expected 14 entries, got %d", n)
 	}
 }
 

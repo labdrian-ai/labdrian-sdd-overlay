@@ -1,0 +1,104 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "170909985f1b274b0cae2cc93a9ce4e84ec64173",
+    "head": "2815fdf278a68ee26bf6aab55fb8d1a438189e30",
+    "diff_sha256": "560d920dba0efa57a4a4ade11b3a5c09ed71df10bdee74caae860b5dfa43516f",
+    "paths": [
+      "engine/cmd/main_test.go",
+      "engine/cmd/phase7_acceptance_test.go",
+      "engine/cmd/testdata/status-golden/status-families-missing-or-drifted.golden",
+      "engine/cmd/testdata/status-golden/status-settings-without-the-hooks.golden",
+      "engine/cmd/usage.go",
+      "engine/projection/app/memorycard_test.go",
+      "engine/projection/gate.go",
+      "engine/projection/gate_memorycard_test.go",
+      "engine/runtime/claude_projection_test.go",
+      "engine/settings/codexhooks/document.go",
+      "engine/settings/codexhooks/document_test.go",
+      "engine/settings/codexhooks/m12b_matcher_scope_test.go",
+      "engine/settings/projection.go",
+      "engine/settings/settingsfile/golden_unix_test.go",
+      "engine/settings/settingsfile/projection_test.go",
+      "engine/settings/settingsfile/settings_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "170909985f1b274b0cae2cc93a9ce4e84ec64173",
+      "head": "2815fdf278a68ee26bf6aab55fb8d1a438189e30",
+      "diff_sha256": "560d920dba0efa57a4a4ade11b3a5c09ed71df10bdee74caae860b5dfa43516f"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/main_test.go",
+        "engine/cmd/phase7_acceptance_test.go",
+        "engine/cmd/testdata/status-golden/status-families-missing-or-drifted.golden",
+        "engine/cmd/testdata/status-golden/status-settings-without-the-hooks.golden",
+        "engine/cmd/usage.go",
+        "engine/projection/app/memorycard_test.go",
+        "engine/projection/gate.go",
+        "engine/projection/gate_memorycard_test.go",
+        "engine/runtime/claude_projection_test.go",
+        "engine/settings/codexhooks/document.go",
+        "engine/settings/codexhooks/document_test.go",
+        "engine/settings/codexhooks/m12b_matcher_scope_test.go",
+        "engine/settings/projection.go",
+        "engine/settings/settingsfile/golden_unix_test.go",
+        "engine/settings/settingsfile/projection_test.go",
+        "engine/settings/settingsfile/settings_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/projection/gate.go:302-312",
+        "severity": "WARNING",
+        "claim": "Memorycard mem_search and mem_context reuse the Engram project check, which denies any call without an explicit `project` argument (\"names no project\"). The overlay's own memory notes say memorycard resolves the project from the working directory and also accepts a `cwd` argument, so a plain `mem_context` or `mem_search` without `project` is now denied for a bound workflow even though it would read the workflow's own project. The gate does not understand the `cwd` alternative. Whether memorycard's project naming (last segment of origin) matches `EngramName` in a worktree was not verified. The result is a possible false deny, or a mismatch between the name the gate expects and the name memorycard uses.",
+        "evidence_class": "inferential",
+        "causal_disposition": "behavior-activated",
+        "proof_refs": [
+          "engine/projection/gate.go:302-312 (new memorycard patterns routed to checkEngramProject)",
+          "engine/projection/gate.go:359-362 (read.Project == \"\" is denied)"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/cmd/usage.go:367-373",
+        "severity": "WARNING",
+        "claim": "The `projection hook` help text still lists only the longterm-mem and Engram reads as the gated memory reads. The commit updated only the Codex merge line at usage.go:197. Memorycard reads are now gated and denied, but the help does not say so. This conflicts with the ODD rule that help text is updated when behavior changes.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/usage.go:368-372 (memory-read list without memorycard)",
+          "engine/cmd/usage.go:197 (the only usage line the diff changed)"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "engine/hookwire/posttooluse.go:42-44",
+        "severity": "SUGGESTION",
+        "claim": "The recordIDKeys comment and the evidence ID extraction document only Engram and longterm-mem id arguments. Memorycard `mem_get` is now recorded as evidence, but its id argument name is not pinned by any test. The memorycard evidence test covers only mem_search. If memorycard's id key is not one of id, observation_id or engram_id, mem_get evidence is recorded without an ID.",
+        "evidence_class": "inferential",
+        "causal_disposition": "behavior-activated",
+        "proof_refs": [
+          "engine/projection/app/memorycard_test.go:249-265 (evidence test covers mem_search only)"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff file, apart from the long golden lines and the settingsfile test hunks, which were only skimmed through the diff file list.",
+      "Read the gate.go hunks: the new regexes, the memoryReads table and the parameterised engramProjectGate.",
+      "Read the settings/projection.go and codexhooks/document.go matcher changes.",
+      "Read the new gate and app tests.",
+      "Read engine/cmd/usage.go:362-373 and engine/hookwire/posttooluse.go:30-100 in the worktree.",
+      "Not run: no tests or builds were executed, per the read-only rule."
+    ]
+  }
+}

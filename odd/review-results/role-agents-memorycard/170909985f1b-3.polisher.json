@@ -1,0 +1,37 @@
+{
+  "kind": "polisher",
+  "base": "f31530e0c0fa5f85cc095bc339370cc0d4facb2d",
+  "head": "170909985f1b274b0cae2cc93a9ce4e84ec64173",
+  "diff_sha256": "30553afb25c082286c0127eedb1046cd034c9d541e8c6761533595835462dea3",
+  "findings": {
+    "findings": [
+      {
+        "location": "roles/verifier/body.md:2; engine/agentgen/roles.go:137-141",
+        "claim": "The verifier is told to locate a memorycard topic via mem_search, then mem_get, but its tool list has only mcp__memorycard__mem_get (and Pi's mem_get). It has no mem_search, so it cannot resolve a topic to an id. The old line said 'Engram topic via mem_get_observation'. The new core-prefix line now names a tool the verifier does not have. The same line sits in agents/verifier.md, pi/agents/verifier.md and codex/agents/verifier.toml. The tests only compare the line text and tool lists, so none of them catches this.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "worsened",
+        "evidence": [
+          "Diff lines 113-118 and 205-217 show verifier tools = 'Read, Grep, Glob, Bash, mcp__memorycard__mem_get' while the body line now says 'via mem_search, then mem_get'.",
+          "engine/agentgen/roles.go hasMemoryTool() keeps the shared line for any role with any memorycard tool, so the verifier keeps a line instructing a tool it lacks.",
+          "The old text pointed only at mem_get_observation, which the verifier had. The commit added the mem_search reference."
+        ]
+      },
+      {
+        "location": "engine/agentgen/roles.go:187-190; pi/agents/*.md tools lines",
+        "claim": "The Pi tool names for memorycard (mcp__memorycard__mem_*) are unverified. gentle-pi drops unknown tool names without a word, so if the real Pi names differ, every role that loses its memory tools on Pi gets no error. The commit's own comment concedes the assumption. The new test TestThePiToolsOfEveryRoleAreNamesTheInstalledSourcesRegister only checks against a hand-edited allowlist of the same assumed names. It pins nothing about what Pi registers, although its comment still claims the names are 'the ones the installed sources register'.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "roles.go comment in the diff: 'This one is an assumption, not verified'.",
+          "roles_test.go known map adds the assumed mcp__memorycard__* names, so the test is circular.",
+          "The same comment says Pi 'drops a name it does not know without a word', so a wrong name means silent loss of memory access on Pi."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff ram-c1.diff (865 lines)",
+      "Grep of roles/ at head for engram or mem_get_observation: none left",
+      "Grep of engine/settings/projection.go and engine/projection/gate.go at head: the Engram read matchers still cover only Engram tool names and were not updated; I did not verify their runtime effect, so I did not report it"
+    ]
+  }
+}

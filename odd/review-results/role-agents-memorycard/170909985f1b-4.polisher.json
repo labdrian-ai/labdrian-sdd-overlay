@@ -1,0 +1,40 @@
+{
+  "kind": "polisher",
+  "base": "f31530e0c0fa5f85cc095bc339370cc0d4facb2d",
+  "head": "170909985f1b274b0cae2cc93a9ce4e84ec64173",
+  "diff_sha256": "30553afb25c082286c0127eedb1046cd034c9d541e8c6761533595835462dea3",
+  "findings": {
+    "findings": [
+      {
+        "location": "engine/agentgen/roles.go:137-141",
+        "severity": "WARNING",
+        "claim": "The verifier agent keeps the core-prefix line that sends it to 'memorycard topic via mem_search, then mem_get', but its tool list only has mcp__memorycard__mem_get. A verifier given a memorycard topic key rather than an id cannot resolve it. The same mismatch is generated into agents/verifier.md, pi/agents/verifier.md and codex/agents/verifier.toml.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "The old line said 'Engram topic via mem_get_observation', which the verifier's single Engram tool could satisfy.",
+          "The new memoryLine says 'memorycard topic via mem_search, then mem_get'. The verifier role's tools are Read, Grep, Glob, Bash and mem_get only, with no mem_search (roles.go diff lines 294-295; agents/verifier.md tools line).",
+          "hasMemoryTool() returns true for the verifier, so the line is kept rather than dropped.",
+          "The updated tests do not catch it: they only check that the line is present for roles with a memory tool."
+        ]
+      },
+      {
+        "location": "engine/agentgen/roles.go:154-185",
+        "severity": "WARNING",
+        "claim": "The Pi tool names are now 'mcp__memorycard__mem_*', and the commit's own comment says this is an unverified assumption. Pi silently drops tool names it does not know (the comment at lib/agents-runner.ts:241). If Pi exposes the memorycard tools under another name, all seven Pi role agents with memory tools lose memory access with no error.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "The commit replaces the verified bare names (mem_search and so on) with an assumed mcp__ prefix. The diff comment says 'This one is an assumption, not verified'.",
+          "TestThePiToolsOfEveryRoleAreNamesTheInstalledSourcesRegister now whitelists the same assumed names. It pins the generator's own output, not an installed Pi source, so it cannot catch a wrong name.",
+          "I did not run Pi or read the installed Pi or gentle-pi sources, so whether the names resolve is unconfirmed."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff, /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/ram-c1.diff, lines 1-865.",
+      "Grepped the head tree's roles, agents, pi/agents and codex/agents for 'engram' and 'mem_get_observation', case-insensitive, and found none, so no stale Engram names remain in the generated agent files or role sources.",
+      "Checked the generated agent file diffs against the roles.go table and the updated tests, and found no drift between the generator and its output."
+    ]
+  }
+}

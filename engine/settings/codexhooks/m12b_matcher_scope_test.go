@@ -14,9 +14,9 @@ import (
 func TestM12bIndependentMatcherPolicyScope(t *testing.T) {
 	matcher := regexp.MustCompile(memoryMatcher)
 	count := 0
-	for _, prefix := range []string{"", "plugin_", "plugin_engram_", "A_1_", "a__", "_", "__", "plugin_longterm_mem_"} {
-		for _, server := range []string{"engram", "engramx", "longterm_mem", "longterm_memx", "context7"} {
-			for _, tool := range []string{"mem_search", "mem_context", "mem_get_observation", "mem_timeline", "mem_save", "mem_update", "query", "get", "promote", "query2", "mem_search_extra", ""} {
+	for _, prefix := range []string{"", "plugin_", "plugin_engram_", "plugin_memorycard_", "A_1_", "a__", "_", "__", "plugin_longterm_mem_"} {
+		for _, server := range []string{"engram", "engramx", "longterm_mem", "longterm_memx", "memorycard", "memorycardx", "context7"} {
+			for _, tool := range []string{"mem_search", "mem_context", "mem_get_observation", "mem_timeline", "mem_get", "mem_session", "mem_save", "mem_update", "query", "get", "promote", "query2", "mem_search_extra", ""} {
 				name := "mcp__" + prefix + server + "__" + tool
 				for _, raw := range []string{name, "x" + name, name + "x", name + "\n"} {
 					adapted, err := hookwire.AdaptToolName("codex", raw)

@@ -18,9 +18,10 @@ import (
 // memoryMatcher is the matcher of the tool entries: the narrowest one the gate acts on once the
 // adapter has translated Codex's names. Codex reads a matcher that holds more than letters, digits,
 // "_" and "|" as an unanchored Rust regex, so it is anchored here. It names the four Engram reads
-// (with an optional alphanumeric plugin prefix) and longterm-mem query and
-// get, in the spelling Codex sends (the server name has its hyphen replaced by an underscore).
-const memoryMatcher = `^mcp__(([A-Za-z0-9]+_)*engram__mem_(search|context|get_observation|timeline)|longterm_mem__(query|get))$`
+// and the three memorycard reads (each with an optional alphanumeric plugin prefix) and
+// longterm-mem query and get, in the spelling Codex sends (the server name has its hyphen replaced
+// by an underscore).
+const memoryMatcher = `^mcp__(([A-Za-z0-9]+_)*engram__mem_(search|context|get_observation|timeline)|([A-Za-z0-9]+_)*memorycard__mem_(search|context|get)|longterm_mem__(query|get))$`
 
 // spec is one entry this package owns: the event, its matcher, and the flags its command carries.
 type spec struct {

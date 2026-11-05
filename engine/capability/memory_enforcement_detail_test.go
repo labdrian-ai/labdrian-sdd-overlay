@@ -32,7 +32,7 @@ func TestCodexMemoryEnforcementClaimIsPartialAndBounded(t *testing.T) {
 	}
 	for _, want := range []string{
 		"PreToolUse", "MCP Engram reads", "longterm-mem query/get", "plan sources",
-		"project", "goal", "--source codex", "trust each handler", "fails open",
+		"project", "goal", "--source codex", "trust each new or changed handler", "fails open",
 		"no procedural skills, Bash or apply_patch enforcement", "no project check for reads by id",
 		"agent_id ignored", "successful MCP reads only", "not live validation",
 	} {

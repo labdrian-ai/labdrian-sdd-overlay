@@ -1,0 +1,113 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "71f513f1e7d1a9afa3bfc3e234c2f365b44f4786",
+    "head": "079eac2e44f1d4c5f4a6c35f949fd467ad9d3025",
+    "diff_sha256": "8245002a8d54a46348338d64bdef30e16b20fb6a7b1ae6bcc65336850c3a8bdd",
+    "paths": [
+      "agents/verifier.md",
+      "bin/lib/hooks.sh",
+      "codex/agents/verifier.toml",
+      "engine/agentgen/roles.go",
+      "engine/agentgen/roles_test.go",
+      "engine/capability/declarations.go",
+      "engine/cmd/hook_translate.go",
+      "engine/cmd/hook_translate_test.go",
+      "engine/cmd/usage.go",
+      "engine/hookwire/decode.go",
+      "engine/hookwire/decode_test.go",
+      "engine/projection/gate.go",
+      "engine/projection/gate_memorycard_test.go",
+      "engine/shelltest/codex_hooks_test.go",
+      "engine/skills/role_agents_artifact_test.go",
+      "pi/agents/verifier.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "71f513f1e7d1a9afa3bfc3e234c2f365b44f4786",
+      "head": "079eac2e44f1d4c5f4a6c35f949fd467ad9d3025",
+      "diff_sha256": "8245002a8d54a46348338d64bdef30e16b20fb6a7b1ae6bcc65336850c3a8bdd"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "agents/verifier.md",
+        "bin/lib/hooks.sh",
+        "codex/agents/verifier.toml",
+        "engine/agentgen/roles.go",
+        "engine/agentgen/roles_test.go",
+        "engine/capability/declarations.go",
+        "engine/cmd/hook_translate.go",
+        "engine/cmd/hook_translate_test.go",
+        "engine/cmd/usage.go",
+        "engine/hookwire/decode.go",
+        "engine/hookwire/decode_test.go",
+        "engine/projection/gate.go",
+        "engine/projection/gate_memorycard_test.go",
+        "engine/shelltest/codex_hooks_test.go",
+        "engine/skills/role_agents_artifact_test.go",
+        "pi/agents/verifier.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/projection/gate.go:411-412",
+        "severity": "WARNING",
+        "claim": "The memory gate now allows a memorycard mem_search or mem_context that names no project and no cwd/directory (the base denied it). The allowance rests on an unverified premise: that memorycard's own process working directory resolves to the bound workflow's project, meaning engramName(identity). The gate never compares the two. A memorycard MCP server started in a different directory, or one whose project derivation from that directory differs from engramName(identity), lets the read reach another project's memories while the plan permits only one project. This is fail-open behavior on a security guard (item 2), and no test or runtime check covers the premise.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "diff hunk engine/projection/gate.go @@ -552,6 +565,10 @@: `case read.Project == \"\" && ownProject && read.WorkDir == \"\": return GateResult{}`",
+          "diff hunk engine/projection/gate_memorycard_test.go removes the base `denied(t, \"no project\", ...)` assertion for memorycard reads and adds `allowed(...no project, no directory...)`"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/hookwire/decode.go:141-148",
+        "severity": "WARNING",
+        "claim": "WorkDir is read only from the exact keys \"cwd\" and \"directory\", and only when the value is a non-empty string. A memorycard read that selects its project through any other argument passes the gate as a read with no project and no directory. That covers another key name memorycard may accept, a different case such as \"CWD\" (keys match exactly), or a non-string value the server coerces. This is a deny-list of directory keys on a fail-open path. The candidate does not show the full argument schema of memorycard mem_search and mem_context to prove that no other project-selecting argument exists.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "diff hunk engine/hookwire/decode.go @@ -135,7 +138,15 @@: `for _, key := range []string{\"cwd\", \"directory\"}`",
+          "decode_test.go case {\"a cwd that is a number\", `{\"cwd\":3}`, ...{Named: true}} gives WorkDir \"\", and gate.go:411 then allows the read"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "engine/projection/gate.go:413-414",
+        "severity": "SUGGESTION",
+        "claim": "A memorycard read that names no project but passes a cwd or directory is always denied, even when that directory is the session's own project directory, which is the case the comment says is safe. An agent that follows the documented memorycard usage of passing cwd for its own repository is refused, and the refusal message does not say that dropping cwd would make the read pass.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "diff hunk engine/projection/gate.go: `case read.Project == \"\" && ownProject: return GateResult{Deny: true, Reason: ... names no project but a directory to pick it by ...}`"
+        ]
+      },
+      {
+        "id": "F4",
+        "location": "engine/capability/declarations.go:297",
+        "severity": "SUGGESTION",
+        "claim": "The Codex capability detail still says \"searches/queries check project\". After this change, a memorycard search or query that names no project and no directory passes without a project check, so the declared claim overstates what is enforced.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "worsened",
+        "proof_refs": [
+          "diff hunk engine/capability/declarations.go line 233 (new text keeps \"searches/queries check project\") versus gate.go:411-412, which allows a memorycard read with no project"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full candidate diff /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/ram-c4.diff (16 paths)",
+      "Grep of /home/labdrian/labdrian-sdd-overlay-worktrees/review-25d905b534f1/engine/projection for the memorycard tool regexes (gate.go:286-287), the memoryReads table (gate.go:328-329), the permits text (gate.go:564) and quoteValue (gate.go:592)",
+      "Read /home/labdrian/labdrian-sdd-overlay-worktrees/review-25d905b534f1/engine/hookwire/decode.go:90-149 for QueryArguments decoding",
+      "Checked the agentgen role body logic: the verifier holds mem_get without mem_search, so it now gets byIDLine in all three runtime files, which matches the diffs of agents/, codex/agents/ and pi/agents/",
+      "No commands were run (reviewer role: never run)"
+    ]
+  }
+}

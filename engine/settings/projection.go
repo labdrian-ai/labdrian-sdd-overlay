@@ -38,6 +38,13 @@ const (
 	// Claude Code reads it as a list of exact tool names. The hook itself answers
 	// a Read of any file but a SKILL.md before it reads anything.
 	ProjectionProceduralSkillMatcher = "Skill|Read"
+	// ProjectionMemorycardReadMatcher is the PreToolUse and PostToolUse matcher of
+	// the entries that run the memory gate for the memorycard reads, which are of
+	// plan source engram: mem_search and mem_context, which must name the
+	// workflow's project, and mem_get, which reads by id. It is the union of the
+	// gate's two memorycard patterns, with a plugin prefix allowed, and no
+	// memorycard write.
+	ProjectionMemorycardReadMatcher = `^mcp__([A-Za-z0-9-]+_)*memorycard__(mem_search|mem_context|mem_get)$`
 )
 
 // projectionFamily is the whole family in install order: one UserPromptSubmit
@@ -46,7 +53,9 @@ const (
 // cleared or is compacted (C23 M6; no matcher, so every source), and a PostToolUse
 // entry per memory-read matcher of the gate, which records the evidence of a read
 // that ran (C23 M7). The entries added by C23 M4, M6 and M7 come last, so an
-// install made before them gains them at the end and keeps the rest.
+// install made before them gains them at the end and keeps the rest; the
+// PreToolUse and PostToolUse entries of the memorycard reads were added after
+// them, and come last for the same reason.
 var projectionFamily = hookFamily{
 	identity: LabdrianProjectionIdentity,
 	specs: []hookSpec{
@@ -61,6 +70,8 @@ var projectionFamily = hookFamily{
 		{event: "PostToolUse", matcher: ProjectionMemoryGetMatcher},
 		{event: "PostToolUse", matcher: ProjectionEngramReadMatcher},
 		{event: "PostToolUse", matcher: ProjectionProceduralSkillMatcher},
+		{event: "PreToolUse", matcher: ProjectionMemorycardReadMatcher},
+		{event: "PostToolUse", matcher: ProjectionMemorycardReadMatcher},
 	},
 	build: buildProjectionEntry,
 }

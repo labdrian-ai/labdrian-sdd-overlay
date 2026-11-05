@@ -1,0 +1,25 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "not-reproduced",
+      "command": "bat -p -r 30:60 <Pi 1.4.0>/dist/extensions/mcp/tools.js; bat -p -r 1:20 <Pi 1.4.0>/dist/extensions/mcp/index.js; bat -p ~/.pi/agent/mcp.json; bat -p -r 232:262 engine/agentgen/roles_test.go (head)",
+      "output": "Installed Pi 1.4.0 registers MCP tools under that name. tools.js createMcpToolName builds `mcp__${server}__${tool}` and replaces every character outside [A-Za-z0-9_] with `_`. index.js:1-20 says 'Tools are registered as `mcp__<server>__<tool>`'. In ~/.pi/agent/mcp.json the server key is `memorycard`. So Pi registers `mcp__memorycard__mem_search`, and the same form for mem_get, mem_save and mem_update. The name is not an unverified assumption on this install. The roles_test.go comment (lines 232-236) still calls it 'an assumption', which is now out of date. I did not check whether gentle-pi accepts these names, so I cannot say it never drops them. The earlier Pi session logs that showed unprefixed mem_search records came from the older gentle-engram, which registered bare mem_* names.",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "rg -n 'tools:|mem_search|mem_get' agents/verifier.md roles/verifier/body.md pi/agents/verifier.md codex/agents/verifier.toml (head); git show f31530e0:agents/verifier.md | rg -n 'mem_|Engram' (base)",
+      "output": "At head, agents/verifier.md line 5 is `tools: ... mcp__memorycard__mem_get`, and line 9 says to locate a topic 'via mem_search, then mem_get'. roles/verifier/body.md:2, pi/agents/verifier.md:10 and codex/agents/verifier.toml:5 carry the same sentence. At base, the tools list was `mcp__plugin_engram_engram__mem_get_observation` and the line said 'Engram topic via mem_get_observation', which matches the tool list.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F3",
+      "result": "reproduced",
+      "command": "rg -n 'mcp__memorycard|memorycard' engine/projection/*.go (head); rg -n 'engramProjectReadTool' engine/projection/gate.go; git show a9433e51 --stat",
+      "output": "At head, `rg memorycard engine/projection/*.go` found nothing. gate.go:271 is still `engramProjectReadTool = ^mcp__([A-Za-z0-9-]+_)*engram__(mem_search|mem_context)$`, so mcp__memorycard__* reads are not matched. The follow-up commit a9433e51 changes settings, codexhooks and settingsfile files (16 files). I did not read its diff, so I did not confirm it adds the matchers. On this commit alone the claim holds. Base has the same Engram-only gate, but there roles also used Engram names, so it was not a gap.",
+      "base_result": "not-reproduced"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "kind": "sweeper",
+  "base": "f31530e0c0fa5f85cc095bc339370cc0d4facb2d",
+  "head": "170909985f1b274b0cae2cc93a9ce4e84ec64173",
+  "diff_sha256": "30553afb25c082286c0127eedb1046cd034c9d541e8c6761533595835462dea3",
+  "sweep": "170909985f1b-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 name: engramLine",
+      "disposition": "live",
+      "evidence": "The hit is a different identifier. In longterm-mem/cmd/longterm-mem/main_test.go:375-389, `engramLine` is a local `var engramLine string` inside a test, assigned from `line` and asserted with strings.Contains for reachable=true and degraded. The removed name was a package-level const in engine/agentgen/roles.go at base (f31530e0, lines 12-15, used at 218-221) and has no connection to that local. `rg engramLine` at head finds only the longterm-mem test. I changed nothing and did not run tests."
+    }
+  ]
+}
