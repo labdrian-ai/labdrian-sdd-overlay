@@ -1,0 +1,91 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "7dbbdb05ae82eba2247bc8f7c3ca93d6aa997e76",
+    "head": "7ef8c516c613d98de954549510aad284c092fe7d",
+    "diff_sha256": "3db55dfff4b80b061d4053bc92cb250fe8a14c5ed4cf0009a2edd01bb9c7873a",
+    "paths": [
+      "engine/shelltest/review_bench_test.go",
+      "odd/tasks/phase9-c28-review-precision.md",
+      "tools/review-bench/README.md",
+      "tools/review-bench/precision.sh"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "7dbbdb05ae82eba2247bc8f7c3ca93d6aa997e76",
+      "head": "7ef8c516c613d98de954549510aad284c092fe7d",
+      "diff_sha256": "3db55dfff4b80b061d4053bc92cb250fe8a14c5ed4cf0009a2edd01bb9c7873a"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/shelltest/review_bench_test.go",
+        "odd/tasks/phase9-c28-review-precision.md",
+        "tools/review-bench/README.md",
+        "tools/review-bench/precision.sh"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "tools/review-bench/precision.sh:408-427",
+        "severity": "WARNING",
+        "claim": "The headline depends on `failure_stated` being the JSON boolean true, but nothing validates it. The `check` function validates only `label` and duplicate keys. A label with `\"failure_stated\": \"true\"`, a typo, or a missing field is counted as stating no failure. A `real` label like that moves from the numerator to the false-like denominator, and an `unsure` like that loses its `uf` credit in `high`. Nothing reports the shift: the script exits 0 and prints a plausible lower headline. The labels come from LLM judges, so malformed values are a realistic input. The script's own contract rejects other label-shape errors with exit 2.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "tools/review-bench/precision.sh:428-434 (check validates label values and duplicate keys only)",
+          "tools/review-bench/precision.sh:422-427 (headline uses `.failure_stated == true` and `!= true`)"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "tools/review-bench/README.md:348-356",
+        "severity": "SUGGESTION",
+        "claim": "The README says the headline `high` bound counts every `unsure` as real. The script (header comment, lines 405-407, and the `headline` def at line 427) credits only an `unsure` whose `failure_stated` is true. An `unsure` that states no failure counts false in both bounds. This is a documented-versus-implemented mismatch in the contract the Log entry L14 relies on. The tests never exercise an `unsure` with `failure_stated` false in the headline, since the planted `o4` has `failure_stated` true. That branch is therefore unpinned even though the real gentle data takes it (`high` 0.645 equals `low`).",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "README.md lines 350-353 versus precision.sh line 427",
+          "review_bench_test.go precisionLabels: o4 is failure_stated true"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "engine/shelltest/review_bench_test.go:177-183",
+        "severity": "SUGGESTION",
+        "claim": "The README and script header document three more exit-2 paths: a key labeled twice, a label value other than the four allowed, and a missing file or wrong argument count. No test pins any of them. Only the unknown-key path is tested, so a regression in `check` or in the argument handling would pass the suite. The unknown-key test also fixes the exact stderr text, which relies on stripping jq's `jq: error (at <unknown>): ` prefix (line 461). A jq version that formats the error differently would leak the prefix and break the test and the message.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "precision.sh:409-411,428-434,461",
+          "review_bench_test.go:86-184 (no case for duplicate key, bad label value, or bad usage)"
+        ]
+      },
+      {
+        "id": "F4",
+        "location": "tools/review-bench/precision.sh:435-442",
+        "severity": "SUGGESTION",
+        "claim": "The findings files are not validated. A finding whose `runner` is neither \"ours\" nor \"gentle\" is joined and then dropped from every group without a message. A key present in both findings files, or twice in one, receives the same label for each occurrence and is double counted. Labels are checked for duplicates, but the findings the join reads from are not. The only guard is the manual sum check in the Log entry L14. The frozen files are probably clean today, but a later run set repeating the README procedure has no check.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "precision.sh:435 (`$fs` is the plain concatenation), 442 (join by key), 445-446 (select by runner)"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff t4.diff (all four changed paths).",
+      "Recomputed the Log entry L14 table by hand: the real/false/unsure sums per severity, row and case match the overall rows for both runners, and the headline values (121/156, 121/158, 123/158 for ours; 20/29 and 20/31 for gentle) follow from the script's formulas.",
+      "Hand-evaluated the planted-data test expectations (headline, overall, severity, row, case, null precision) against the jq program and found them consistent.",
+      "Did not run anything (no tests, no jq); the shell and jq behavior is read from source only.",
+      "Used the corrected base sha 7dbbdb05ae82eba2247bc8f7c3ca93d6aa997e76 from the coordinator's message as candidate.base."
+    ]
+  }
+}

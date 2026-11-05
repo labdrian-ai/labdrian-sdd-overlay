@@ -855,3 +855,238 @@ func TestReviewBenchFindings(t *testing.T) {
 		}
 	})
 }
+
+// Planted findings of both runners for precision.sh (phase9-c28-review-precision S6): ours o1-o5 over R1 and R2 and
+// rows recall and hunt, gentle g1-g2 over rows review-risk and review-reliability.
+const precisionOurs = `[
+  {"key": "o1", "runner": "ours", "id": "R1", "row": "recall", "severity": "WARNING"},
+  {"key": "o2", "runner": "ours", "id": "R1", "row": "recall", "severity": "SUGGESTION"},
+  {"key": "o3", "runner": "ours", "id": "R1", "row": "hunt", "severity": "WARNING"},
+  {"key": "o4", "runner": "ours", "id": "R2", "row": "hunt", "severity": "WARNING"},
+  {"key": "o5", "runner": "ours", "id": "R2", "row": "recall", "severity": "WARNING"}]`
+
+const precisionGentle = `[
+  {"key": "g1", "runner": "gentle", "id": "R1", "row": "review-risk", "severity": "WARNING"},
+  {"key": "g2", "runner": "gentle", "id": "R2", "row": "review-reliability", "severity": "SUGGESTION"}]`
+
+// precisionLabels leaves o5 unlabeled (not-judged); o2 is real but states no failure.
+const precisionLabels = `{"labels": [
+  {"key": "o1", "label": "real", "failure_stated": true, "citation": "head/a.go:1", "reason": "r"},
+  {"key": "o2", "label": "real", "failure_stated": false, "citation": "head/a.go:2", "reason": "r"},
+  {"key": "o3", "label": "false", "failure_stated": true, "citation": "head/a.go:3", "reason": "r"},
+  {"key": "o4", "label": "unsure", "failure_stated": true, "citation": "", "reason": "r"},
+  {"key": "g1", "label": "real", "failure_stated": true, "citation": "head/b.go:1", "reason": "r"},
+  {"key": "g2", "label": "false", "failure_stated": true, "citation": "head/b.go:2", "reason": "r"}]}`
+
+// runPrecision writes the findings and labels into a temporary directory, runs precision.sh on them (plus a repro
+// file when repro is not empty) and returns its stdout, stderr and exit code.
+func runPrecision(t *testing.T, ours, gentle, labels, repro string) (string, string, int) {
+	t.Helper()
+	overlayScript(t) // require bash
+	script, err := filepath.Abs("../../tools/review-bench/precision.sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := t.TempDir()
+	args := []string{}
+	for _, f := range []struct{ name, body string }{{"ours.json", ours}, {"gentle.json", gentle}, {"labels.json", labels}, {"repro.json", repro}} {
+		if f.body == "" {
+			continue
+		}
+		path := filepath.Join(dir, f.name)
+		if err := os.WriteFile(path, []byte(f.body), 0600); err != nil {
+			t.Fatal(err)
+		}
+		args = append(args, path)
+	}
+	return runScript(t, script, []string{"PATH=" + os.Getenv("PATH")}, args...)
+}
+
+// precisionTable parses the output of precision.sh into "<group> <metric>" -> [ours, gentle].
+func precisionTable(t *testing.T, stdout string) map[string][2]string {
+	t.Helper()
+	lines := strings.Split(strings.TrimSuffix(stdout, "\n"), "\n")
+	if len(lines) == 0 || strings.Join(strings.Fields(lines[0]), " ") != "group metric ours gentle" {
+		t.Fatalf("no header line:\n%s", stdout)
+	}
+	table := map[string][2]string{}
+	for _, line := range lines[1:] {
+		f := strings.Fields(line)
+		if len(f) != 4 {
+			t.Fatalf("line %q has %d fields, not 4", line, len(f))
+		}
+		table[f[0]+" "+f[1]] = [2]string{f[2], f[3]}
+	}
+	return table
+}
+
+func assertPrecision(t *testing.T, table map[string][2]string, want map[string][2]string) {
+	t.Helper()
+	for k, w := range want {
+		got, ok := table[k]
+		if !ok {
+			t.Errorf("%s: missing", k)
+		} else if got != w {
+			t.Errorf("%s: got ours %s gentle %s, want ours %s gentle %s", k, got[0], got[1], w[0], w[1])
+		}
+	}
+}
+
+func TestReviewBenchPrecision(t *testing.T) {
+	t.Run("known counts give the precision and both bounds per runner, overall and per severity, row and case", func(t *testing.T) {
+		stdout, stderr, code := runPrecision(t, precisionOurs, precisionGentle, precisionLabels, "")
+		if code != 0 || stderr != "" {
+			t.Fatalf("exit %d\n%s", code, stderr)
+		}
+		table := precisionTable(t, stdout)
+		if first := strings.Fields(strings.Split(stdout, "\n")[1]); first[0] != "headline" || first[1] != "precision" {
+			t.Errorf("the first row is %v, not the headline precision", first)
+		}
+		assertPrecision(t, table, map[string][2]string{
+			// headline: o2 (real, no failure stated) counts false; unsure left out, then counted false, then real.
+			"headline precision":             {"0.333", "0.5"},
+			"headline unsure":                {"1", "0"},
+			"headline low":                   {"0.25", "0.5"},
+			"headline high":                  {"0.5", "0.5"},
+			"overall real":                   {"2", "1"},
+			"overall false":                  {"1", "1"},
+			"overall unsure":                 {"1", "0"},
+			"overall not-judged":             {"1", "0"},
+			"overall precision":              {"0.667", "0.5"},
+			"overall low":                    {"0.5", "0.5"},
+			"overall high":                   {"0.75", "0.5"},
+			"failure_stated=true real":       {"1", "1"},
+			"failure_stated=true precision":  {"0.5", "0.5"},
+			"failure_stated=false real":      {"1", "-"},
+			"failure_stated=false precision": {"1", "-"},
+			"severity=WARNING precision":     {"0.5", "1"},
+			"severity=WARNING low":           {"0.333", "1"},
+			"severity=WARNING high":          {"0.667", "1"},
+			"severity=SUGGESTION precision":  {"1", "0"},
+			"row=recall real":                {"2", "-"},
+			"row=recall not-judged":          {"1", "-"},
+			"row=hunt precision":             {"0", "-"},
+			"row=review-risk precision":      {"-", "1"},
+			"row=review-reliability false":   {"-", "1"},
+			"case=R1 precision":              {"0.667", "1"},
+			"case=R2 unsure":                 {"1", "0"},
+		})
+	})
+
+	t.Run("a label joins its runner by key only", func(t *testing.T) {
+		labels := strings.Replace(precisionLabels, `{"key": "o1",`, `{"key": "o1", "runner": "gentle", "id": "R2",`, 1)
+		stdout, _, code := runPrecision(t, precisionOurs, precisionGentle, labels, "")
+		if code != 0 {
+			t.Fatalf("exit %d", code)
+		}
+		assertPrecision(t, precisionTable(t, stdout), map[string][2]string{
+			"overall real": {"2", "1"},
+			"case=R1 real": {"2", "1"},
+			"case=R2 real": {"0", "0"},
+		})
+	})
+
+	t.Run("not-judged stays out of judged", func(t *testing.T) {
+		stdout, _, code := runPrecision(t, precisionOurs, precisionGentle, precisionLabels, "")
+		if code != 0 {
+			t.Fatalf("exit %d", code)
+		}
+		// row=recall holds o1 and o2 (real) and o5 (not-judged): both bounds are 2/2, not 2/3.
+		assertPrecision(t, precisionTable(t, stdout), map[string][2]string{
+			"row=recall low":  {"1", "-"},
+			"row=recall high": {"1", "-"},
+		})
+	})
+
+	t.Run("no real + false prints the precision as null, not a division error", func(t *testing.T) {
+		stdout, stderr, code := runPrecision(t, precisionOurs, precisionGentle, precisionLabels, "")
+		if code != 0 || stderr != "" {
+			t.Fatalf("exit %d\n%s", code, stderr)
+		}
+		// case=R2 of ours holds o4 (unsure) and o5 (not-judged).
+		assertPrecision(t, precisionTable(t, stdout), map[string][2]string{
+			"case=R2 precision": {"null", "0"},
+			"case=R2 low":       {"0", "0"},
+			"case=R2 high":      {"1", "0"},
+		})
+	})
+
+	t.Run("a repro label replaces the reading label of its key", func(t *testing.T) {
+		repro := `{"labels": [{"key": "o3", "label": "real", "failure_stated": true, "citation": "head/a.go:3", "reason": "reproduced on head"}]}`
+		stdout, _, code := runPrecision(t, precisionOurs, precisionGentle, precisionLabels, repro)
+		if code != 0 {
+			t.Fatalf("exit %d", code)
+		}
+		assertPrecision(t, precisionTable(t, stdout), map[string][2]string{
+			"overall real":  {"3", "1"},
+			"overall false": {"0", "1"},
+		})
+	})
+
+	t.Run("an unsure that states no failure counts false in both headline bounds", func(t *testing.T) {
+		labels := strings.Replace(precisionLabels, `"label": "unsure", "failure_stated": true`, `"label": "unsure", "failure_stated": false`, 1)
+		stdout, _, code := runPrecision(t, precisionOurs, precisionGentle, labels, "")
+		if code != 0 {
+			t.Fatalf("exit %d", code)
+		}
+		// rf = 1 over 1 + 1 (o2) + 1 (o3) + 1 unsure: low and high are both 1/4.
+		assertPrecision(t, precisionTable(t, stdout), map[string][2]string{
+			"headline unsure": {"1", "0"},
+			"headline low":    {"0.25", "0.5"},
+			"headline high":   {"0.25", "0.5"},
+		})
+	})
+
+	t.Run("malformed findings, labels or arguments exit 2 and print nothing", func(t *testing.T) {
+		o1 := `{"key": "o1", "label": "real", "failure_stated": true, "citation": "head/a.go:1", "reason": "r"}`
+		cases := []struct {
+			name, ours, gentle, labels, stderr string
+		}{
+			{"failure_stated a string", precisionOurs, precisionGentle,
+				strings.Replace(precisionLabels, o1, `{"key": "o1", "label": "real", "failure_stated": "true"}`, 1),
+				"failure_stated is not a boolean: o1\n"},
+			{"failure_stated missing", precisionOurs, precisionGentle,
+				strings.Replace(precisionLabels, o1, `{"key": "o1", "label": "false"}`, 1),
+				"failure_stated is not a boolean: o1\n"},
+			{"a key labeled twice", precisionOurs, precisionGentle,
+				strings.Replace(precisionLabels, `"labels": [`, `"labels": [`+o1+`,`, 1),
+				"key labeled twice: o1\n"},
+			{"another label value", precisionOurs, precisionGentle,
+				strings.Replace(precisionLabels, `"label": "real", "failure_stated": true, "citation": "head/a.go:1"`, `"label": "maybe", "failure_stated": true, "citation": "head/a.go:1"`, 1),
+				"label not real, false, unsure or not-judged: o1\n"},
+			{"a finding of neither runner", strings.Replace(precisionOurs, `"key": "o5", "runner": "ours"`, `"key": "o5", "runner": "other"`, 1), precisionGentle, precisionLabels,
+				"finding of neither runner: o5\n"},
+			{"a finding key twice", precisionOurs, strings.Replace(precisionGentle, `"key": "g2"`, `"key": "o1"`, 1), precisionLabels,
+				"finding key twice: o1\n"},
+		}
+		for _, c := range cases {
+			stdout, stderr, code := runPrecision(t, c.ours, c.gentle, c.labels, "")
+			if code != 2 || stdout != "" || stderr != c.stderr {
+				t.Errorf("%s: exit %d stdout %q stderr %q", c.name, code, stdout, stderr)
+			}
+		}
+		script, err := filepath.Abs("../../tools/review-bench/precision.sh")
+		if err != nil {
+			t.Fatal(err)
+		}
+		missing := filepath.Join(t.TempDir(), "none.json")
+		for _, args := range [][]string{{"a.json"}, {missing, missing, missing}} {
+			want := "usage: precision.sh <ours-findings> <gentle-findings> <labels> [<repro>]\n"
+			if len(args) == 3 {
+				want = "no file at " + missing + "\n"
+			}
+			stdout, stderr, code := runScript(t, script, []string{"PATH=" + os.Getenv("PATH")}, args...)
+			if code != 2 || stdout != "" || stderr != want {
+				t.Errorf("%v: exit %d stdout %q stderr %q", args, code, stdout, stderr)
+			}
+		}
+	})
+
+	t.Run("a label whose key is in neither findings file exits 2", func(t *testing.T) {
+		labels := strings.Replace(precisionLabels, `"labels": [`, `"labels": [{"key": "zz", "label": "real", "failure_stated": true, "citation": "head/c.go:1", "reason": "r"},`, 1)
+		stdout, stderr, code := runPrecision(t, precisionOurs, precisionGentle, labels, "")
+		if code != 2 || stdout != "" || stderr != "label key in neither findings file: zz\n" {
+			t.Fatalf("exit %d stdout %q stderr %q", code, stdout, stderr)
+		}
+	})
+}

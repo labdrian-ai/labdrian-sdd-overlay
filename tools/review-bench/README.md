@@ -38,6 +38,22 @@ It is not part of the product and never runs against the main repository.
   stdout. Findings are never deduplicated: each is one a delivery must resolve.
 - `findings/<runner>-c27.json`: the output of `findings.sh` for R34-R43, the 158 findings of ours and the 31 of
   gentle in C27's 30 runs each, frozen because a rerun erases a case's output.
+- `judge-brief.md` (C28): the brief of the blind judge, with `{{CASE_DIR}}` (a case export) and `{{OUT}}` (the labels
+  file it writes) to fill. It names no runner.
+- `precision/`: `spot-c27.json`, the parent's labels of the 30 lowest keys, and `labels-c27.json`, the judge's labels
+  of all 189 findings, each entry `{key, label, failure_stated, citation, reason}` with `label` `real`, `false` or
+  `unsure`.
+- `precision.sh <ours-findings> <gentle-findings> <labels> [<repro>]` (C28): joins the labels to the findings by
+  `key` (a finding with no label is `not-judged`; a repro file's label of a key replaces the reading label) and prints
+  one table, `group metric ours gentle`. The `headline` group comes first: precision with `unsure` left out and a
+  `real` finding that states no failure counted false, the `unsure` count, and its `low` and `high` bounds (every
+  `unsure` counted false; every `unsure` counted real, except that one stating no failure counts false, as a `real`
+  one does). Then `overall`, `failure_stated=true|false`,
+  `severity=<s>`, `row=<row>` and `case=<id>`, each with the counts `real`, `false`, `unsure`, `not-judged`,
+  `precision` = real / (real + false) and the bounds `low` = real / judged and `high` = (real + unsure) / judged. A
+  ratio over no finding prints `null`, a group a runner has no finding in prints `-`. A finding of neither runner, a
+  finding key twice over both findings files, another label value, a judged label whose `failure_stated` is not a
+  boolean, a key labeled twice or a label whose key is in neither findings file exits 2 with nothing on stdout.
 
 ## Running
 
@@ -70,6 +86,25 @@ Freeze a run set's findings before any rerun of its cases:
 ```sh
 RUNNER=ours SCORES=tools/review-bench/scores/ours-c27.json tools/review-bench/findings.sh R34 R35 R36 R37 R38 R39 R40 R41 R42 R43 > tools/review-bench/findings/ours-c27.json
 RUNNER=gentle SCORES=tools/review-bench/scores/gentle-c27.json tools/review-bench/findings.sh R34 R35 R36 R37 R38 R39 R40 R41 R42 R43 > tools/review-bench/findings/gentle-c27.json
+```
+
+Measure the precision of a frozen run set (C28, `odd/tasks/phase9-c28-review-precision.md`), for a later set `<set>`:
+
+1. Freeze both runners' findings as above, into `findings/ours-<set>.json` and `findings/gentle-<set>.json`.
+2. Export each case once, outside the repository: `head/` and `base/` by `git archive` of the corpus `head` and the
+   range base in `$BENCH/repo`, and `diff.patch`, under a directory per case. Leave `$BENCH/repo` untouched.
+3. Before any judge runs, the parent labels the 30 lowest keys of both findings files together into
+   `precision/spot-<set>.json`, and commits them.
+4. Per case, write `claims.json` (that case's findings of both runners, by `key`, with only `key`, `location`, `claim`
+   and `proof_refs`) and fill `judge-brief.md`; check that no brief or claims file names a runner
+   (`rg -nwi 'gentle|ours|runner'`). Launch one read-only `verifier` per case on another model than the reviewers.
+   A finding of severity BLOCKER or CRITICAL is also reproduced by the `verifier`, into `precision/repro-<set>.json`.
+5. Merge the labels unchanged into `precision/labels-<set>.json` and compare them with the spot labels: with fewer
+   than 24 of 30 agreeing, correct the brief once and rerun every judge.
+6. Print the table:
+
+```sh
+tools/review-bench/precision.sh tools/review-bench/findings/ours-<set>.json tools/review-bench/findings/gentle-<set>.json tools/review-bench/precision/labels-<set>.json
 ```
 
 ## Selection rule

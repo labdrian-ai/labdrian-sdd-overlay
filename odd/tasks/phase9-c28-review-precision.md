@@ -14,10 +14,10 @@ Test runner: `go test` in `engine/` (`engine/shelltest` for the bench scripts), 
 
 ## Tasks
 
-- [x] T1 — S2 — inline (no writer reason: one unit, ~140-240 authored lines plus two generated data files) — first, before any rerun of `run-ours.sh` or `run-gentle.sh`; one work-unit commit, `Risk: none` (a bench script and data outside the product) — `tools/review-bench/findings.sh` (new): S2 (a)-(b), `RUNNER=ours|gentle`, ids as arguments, `BENCH` as the other scripts, `RUNS` default `1 2 3`, exit 2 on an unknown runner, an unknown id or a missing summary, before writing anything; `tools/review-bench/findings/ours-c27.json` and `tools/review-bench/findings/gentle-c27.json` (new): its output for R34-R43 per runner; `tools/review-bench/README.md`: the script and the files; tests, RED first (`engine/shelltest/review_bench_test.go`, over planted summaries in a `mktemp -d` `BENCH`): for each runner, two runs with known findings give the entries, keys and counts expected; a gentle finding without `evidence_class` and `causal_disposition` is written with both `null`; the same case, run, row and finding id under the two runners give two distinct keys; a planted score quote sets `c27_control` on its one finding only; an unknown runner, an unknown id and a missing summary exit 2 and write nothing; checks: `go test -count=1 ./shelltest/ -run ReviewBench` in `engine/`, `shellcheck tools/review-bench/*.sh`, `jq length` is 158 (ours) and 31 (gentle), `jq '[.[].severity] | group_by(.) | map({(.[0]): length}) | add'` gives WARNING 77 and SUGGESTION 81 (ours), WARNING 26 and SUGGESTION 5 (gentle), `jq -s 'add | [.[].key] | unique | length'` over both files is 189, the per-lens counts equal the summaries' `n`, the `\u` check (`rg -n '\\u[0-9a-fA-F]{4}'` over every edited file) — surfaces `tools/review-bench/findings.sh`, `tools/review-bench/findings/ours-c27.json`, `tools/review-bench/findings/gentle-c27.json`, `tools/review-bench/README.md`, `engine/shelltest/review_bench_test.go`, `odd/tasks/phase9-c28-review-precision.md` (Log only) — shaped: L4 — commit: -
+- [x] T1 — S2 — inline (no writer reason: one unit, ~140-240 authored lines plus two generated data files) — first, before any rerun of `run-ours.sh` or `run-gentle.sh`; one work-unit commit, `Risk: none` (a bench script and data outside the product) — `tools/review-bench/findings.sh` (new): S2 (a)-(b), `RUNNER=ours|gentle`, ids as arguments, `BENCH` as the other scripts, `RUNS` default `1 2 3`, exit 2 on an unknown runner, an unknown id or a missing summary, before writing anything; `tools/review-bench/findings/ours-c27.json` and `tools/review-bench/findings/gentle-c27.json` (new): its output for R34-R43 per runner; `tools/review-bench/README.md`: the script and the files; tests, RED first (`engine/shelltest/review_bench_test.go`, over planted summaries in a `mktemp -d` `BENCH`): for each runner, two runs with known findings give the entries, keys and counts expected; a gentle finding without `evidence_class` and `causal_disposition` is written with both `null`; the same case, run, row and finding id under the two runners give two distinct keys; a planted score quote sets `c27_control` on its one finding only; an unknown runner, an unknown id and a missing summary exit 2 and write nothing; checks: `go test -count=1 ./shelltest/ -run ReviewBench` in `engine/`, `shellcheck tools/review-bench/*.sh`, `jq length` is 158 (ours) and 31 (gentle), `jq '[.[].severity] | group_by(.) | map({(.[0]): length}) | add'` gives WARNING 77 and SUGGESTION 81 (ours), WARNING 26 and SUGGESTION 5 (gentle), `jq -s 'add | [.[].key] | unique | length'` over both files is 189, the per-lens counts equal the summaries' `n`, the `\u` check (`rg -n '\\u[0-9a-fA-F]{4}'` over every edited file) — surfaces `tools/review-bench/findings.sh`, `tools/review-bench/findings/ours-c27.json`, `tools/review-bench/findings/gentle-c27.json`, `tools/review-bench/README.md`, `engine/shelltest/review_bench_test.go`, `odd/tasks/phase9-c28-review-precision.md` (Log only) — shaped: L4 — commit: 788e7fb6, 1727ff4b, ed2b9570, ba098b10, ec574d78, 512e21fd (PR #732, merge f31530e0)
 - [x] T2 — S5 (a), (b) — inline (no writer reason: ~30-50 lines of data and a Log entry) — after T1 is merged and before T3's first launch; one work-unit commit, `Risk: none` (data) — the exports of S3 (b) for the cases the sample touches; the parent labels the 30 lowest keys over both findings files into `tools/review-bench/precision/spot-c27.json` by the rules of S3 (c), and states in the Log how many are ours and how many gentle's; no code; checks: 30 entries, each key among the 30 lowest of `findings/ours-c27.json` and `findings/gentle-c27.json` together, every `real` and `false` with a citation, the `\u` check — surfaces `tools/review-bench/precision/spot-c27.json`, `odd/tasks/phase9-c28-review-precision.md` (Log only) — shaped: L4 — commit: 7e72f5ce, 3a952699 (PR #734, merge 5c03ef23)
 - [x] T3 — S3, S4 — inline (no writer reason: the parent launches 10 read-only `verifier` judges, per-action workers, and commits their data) — after T2 is merged; one work-unit commit, `Risk: none` (data and a brief template outside the product) — `tools/review-bench/judge-brief.md` (new): the template of S3 (c); the exports of S3 (b) for all 10 cases; each case's claims of both runners in one launch, in `key` order, with no runner named; the pilot on R41, then the other 9 cases one after another, each with the stop and relaunch rules of S3 (d)-(e); S4 only for findings of severity BLOCKER or CRITICAL (none on these runs, L2, L4); `tools/review-bench/precision/labels-c27.json` (new): the merged labels; the parent deletes `~/labdrian-sdd-overlay-worktrees/c28-judge/` after the merge and names it in the Log; checks: one label per key of both findings files or the `not-judged` named, no brief names a runner (`rg -nwi 'gentle|ours|runner' <each brief>` prints nothing), citations name files present in the export, `git status --short` in the bench clone unchanged, the `\u` check — surfaces `tools/review-bench/judge-brief.md`, `tools/review-bench/precision/labels-c27.json`, `tools/review-bench/precision/repro-c27.json` (only when S4 applies), `odd/tasks/phase9-c28-review-precision.md` (Log only) — shaped: L4 — commit: ff483579
-- [ ] T4 — S5 (c)-(e), S6 — inline (no writer reason: one unit, ~140-220 authored lines) — after T3 is merged; one work-unit commit, `Risk: none` (a bench script and records) — `tools/review-bench/precision.sh` (new): the output of S6, per runner side by side; `tools/review-bench/README.md`: how to repeat C28 for a later run set; the result entry in the Log with S5's agreement (overall and per runner) and control; tests, RED first (`engine/shelltest/review_bench_test.go`, planted findings of both runners and labels): known counts give the precision and both bounds expected per runner, overall and per severity, row and case; a label joins its runner by `key` only; `not-judged` stays out of `judged`; no `real + false` prints the precision as `null`, not a division error; a label whose key is in neither findings file exits 2; checks: `go test -count=1 ./shelltest/ -run ReviewBench` in `engine/`, `shellcheck tools/review-bench/*.sh`, the numbers in the Log equal the script's output over the committed files, the counts sum to 158 (ours) and 31 (gentle), the `\u` check — surfaces `tools/review-bench/precision.sh`, `tools/review-bench/README.md`, `engine/shelltest/review_bench_test.go`, `odd/tasks/phase9-c28-review-precision.md` (Log only) — shaped: L4 — commit: -
+- [x] T4 — S5 (c)-(e), S6 — inline (no writer reason: one unit, ~140-220 authored lines) — after T3 is merged; one work-unit commit, `Risk: none` (a bench script and records) — `tools/review-bench/precision.sh` (new): the output of S6, per runner side by side; `tools/review-bench/README.md`: how to repeat C28 for a later run set; the result entry in the Log with S5's agreement (overall and per runner) and control; tests, RED first (`engine/shelltest/review_bench_test.go`, planted findings of both runners and labels): known counts give the precision and both bounds expected per runner, overall and per severity, row and case; a label joins its runner by `key` only; `not-judged` stays out of `judged`; no `real + false` prints the precision as `null`, not a division error; a label whose key is in neither findings file exits 2; checks: `go test -count=1 ./shelltest/ -run ReviewBench` in `engine/`, `shellcheck tools/review-bench/*.sh`, the numbers in the Log equal the script's output over the committed files, the counts sum to 158 (ours) and 31 (gentle), the `\u` check — surfaces `tools/review-bench/precision.sh`, `tools/review-bench/README.md`, `engine/shelltest/review_bench_test.go`, `odd/tasks/phase9-c28-review-precision.md` (Log only) — shaped: L4 — commit: 7ef8c516, fe13b063
 
 ## Log
 
@@ -61,3 +61,147 @@ Test runner: `go test` in `engine/` (`engine/shelltest` for the bench scripts), 
 - **L11** (2026-11-05, parent): ec574d78 (T1's fix round). Sweep clean (`-1`); reviewer, rows `recall,readability` (`-2`): three SUGGESTIONs, reproduced by the verifier (`-2.verifier.json`) on head and on base: F1 `SCORES=` (empty) acts as unset, with no message; F2 a scored quote for a run outside `RUNS` or a case not named is dropped silently (a partial refreeze); F3 an unquoted `RUNS` glob (`RUNS='*'`) names a filename in its error (the space-in-id part did not reproduce). `review check --onto main` clear over the whole chain (788e7fb6, 1727ff4b, ed2b9570, ba098b10, ec574d78). Carried to the next batch: F4 of `ba098b10fd44-2.json` (one jq pass instead of a mixed stream and per-finding jq calls) and F1-F3 of `ec574d786dd4-2.json`.
 - **L12** (2026-11-05, parent): T2 (S5 (a), (b)), inline, under `phase9-c28-review-precision-t2`, branch `feat/phase9-c28-t2` from main 7f6e32af. The owner, after the role-agents handoff: "arregla esa cosa chicay luego retoma c28 t2". The exports of S3 (b) for the nine cases the sample touches (R34-R40, R42, R43; R41 has no sample finding) are in `~/labdrian-sdd-overlay-worktrees/c28-judge/<id>/` (`head/`, `base/` by `git archive`, `diff.patch`), built from the corpus `head` and range base in the bench clone, which they leave untouched; T3 reuses them and adds R41. The sample: the 30 lowest keys of `findings/ours-c27.json` and `findings/gentle-c27.json` together, 24 ours and 6 gentle's, 2 of them `c27_control: true` (both ours). The parent labeled them by the rules of S3 (c), reading the exports, before any judge launch, into `tools/review-bench/precision/spot-c27.json`: 25 `real`, 5 `false`, 0 `unsure`; ours 20 real and 4 false, gentle's 5 real and 1 false; both control findings `real`; 3 entries with `failure_stated: false` (all `real`: a test that asserts only an error, a documented difference, a claim that calls itself harmless). The five `false`: two R36 findings that say SessionStart is not registered, while the settings projection lists it (`engine/settings/projection.go:44-58`); an R36 case-order disagreement that cannot occur, since `Instructions` returns a warning or a block, never both; an R39 claim that a missing file makes the Read side resolve differently, while every hook process reads the lock anew; and gentle's R35 claim that `readOnce` drops `ReadRecordID`, which it keeps by copying the call. The parent is not blind: it knew each finding's runner and the scores while labeling. Checks: 30 entries, each key among the 30 lowest of both files, every `real` and `false` with a citation naming a file present in its case's export, the `\u` check.
 - **L13** (2026-11-05, parent): T3 (S3, S4), inline, under `phase9-c28-review-precision-t3`, branch `feat/phase9-c28-t3` from main 5c03ef23. The brief template `tools/review-bench/judge-brief.md` is filled per case with the export path and the output file; each case gets `claims.json`, its claims of both runners in `key` order with only `key`, `location`, `claim` and `proof_refs`. The pilot on R41 (4 claims) came back with a valid file: 0 `real`, 4 `false`. It showed one convention apart from the spot labels: the judge labels a claim that names no failure (a coverage or style remark) `false` with `failure_stated: false`, where the parent had labeled such claims `real` with `failure_stated: false`; this changes label-by-label agreement, not the S6 headline, which counts only `failure_stated: true`. The brief was kept, as the bar below decides. Owner decision after the pilot, changing the order T3 named ("the other 9 cases one after another"): "bueno amigo hay que meterle que podemos ir sacando en paralelo ?"; the other 9 judges ran in parallel, one per case, each blind to the others. Cost: 10 launches, 0 relaunches, 0 `not-judged`. Labels, merged unchanged into `tools/review-bench/precision/labels-c27.json`: 189 entries, one per key of both findings files; 151 `real`, 34 `false`, 4 `unsure`. Per case (real/false/unsure): R34 14/0/0, R35 9/6/1, R36 10/7/0, R37 14/0/0, R38 21/1/0, R39 17/9/2, R40 23/0/0, R41 0/4/0, R42 15/7/0, R43 28/0/1. S4 applied to 0 findings (no BLOCKER or CRITICAL), so no `repro-c27.json`. Spot check (S5, bar 24 of 30, L8): 28 of 30 agree, ours 22 of 24, gentle 6 of 6, so the brief is not corrected and no judge is rerun. The two disagreements, both ours: 040471329be7 (a test that asserts only an error), parent `real`, judge `false`, both `failure_stated: false`, the convention above; 0e7545345f23 (an unreadable lock warns on every skill use), parent `real`, judge `false`, citing `base/engine/projection/gate.go:343-347` because base already warned the same way, so the judge read the claim as change-caused, which the brief does not ask. Control findings (`c27_control: true`) not labeled `real`: f1787301b694 (R35) `false`, f7d42c0b8461 (R39) `unsure`. Checks: every case passed the shape, key, duplicate and citation-file check; no brief or claims file names a runner (`rg -lwi 'gentle|ours|runner'` prints nothing); `git status --short` in the bench clone shows the same 1 line as before; the `\u` check. The exports under `~/labdrian-sdd-overlay-worktrees/c28-judge/` are kept until after the merge, then deleted as T3 names.
+- **L14** (2026-11-05, parent): T4 (S5 (c)-(e), S6), inline, under `phase9-c28-review-precision-t4`, branch `feat/phase9-c28-t4` from main 7dbbdb05. The owner, after T3's merge, to deleting the exports: "si porfa"; `~/labdrian-sdd-overlay-worktrees/c28-judge/` (R34-R43, copies by `git archive`, no git worktree) was deleted, as T3 names. Then: "arranca". `tools/review-bench/precision.sh` joins the labels to both findings files by `key` and prints the table of S6; RED first: `go test -count=1 ./shelltest/ -run ReviewBenchPrecision` in `engine/` failed with exit 127 (no script), then passed with it (six cases: the counts, precision and bounds per runner overall and per severity, row and case; a label joins by `key` only; `not-judged` stays out of `judged`; no `real + false` prints `null`; a repro label replaces the reading label; a key in neither findings file exits 2). The headline counts an `unsure` that states no failure as false in both bounds, as a `real` with no failure stated is; this reading of "computed the same way" is the parent's. Output over the committed files (`tools/review-bench/precision.sh tools/review-bench/findings/ours-c27.json tools/review-bench/findings/gentle-c27.json tools/review-bench/precision/labels-c27.json`): headline precision ours 0.776 (121 / 156), gentle 0.69 (20 / 29), 2 `unsure` each, bounds ours 0.766-0.778, gentle 0.645-0.645; counts real + false + unsure + not-judged = 126 + 30 + 2 + 0 = 158 (ours) and 25 + 4 + 2 + 0 = 31 (gentle). The headline does not depend on the label convention of L13 for claims that state no failure, since a `real` and a `false` among them both count false. S5 (c), agreement on the 30 sample findings: 28 of 30, ours 22 of 24, gentle 6 of 6. Disagreements, both ours: 040471329be7, parent `real` (`head/engine/workflow/project_identity_test.go:134-138`), judge `false` (`head/engine/workflow/project_identity_test.go:124-138`), both `failure_stated: false`; 0e7545345f23, parent `real` (`head/engine/projection/gate.go:340-346`), judge `false` (`base/engine/projection/gate.go:343-347`). S5 (d): no judge label was edited. S5 (e), control findings the judge labels `false` or `unsure`, judge errors against a known-real finding: f1787301b694 (ours, R35) `false`, f7d42c0b8461 (ours, R39) `unsure`. Cost: 10 judge launches, 0 relaunches, 0 `not-judged`; S4 reproduced 0 findings. No verdict: the owner set no bar. Checks: `go test -count=1 ./shelltest/` in `engine/` passes; `shellcheck tools/review-bench/*.sh` passes; the numbers above equal the script's output; the `\u` check. The full output:
+
+  ```text
+  group                    metric      ours     gentle
+  headline                 precision   0.776    0.69
+  headline                 unsure      2        2
+  headline                 low         0.766    0.645
+  headline                 high        0.778    0.645
+  overall                  real        126      25
+  overall                  false       30       4
+  overall                  unsure      2        2
+  overall                  not-judged  0        0
+  overall                  precision   0.808    0.862
+  overall                  low         0.797    0.806
+  overall                  high        0.81     0.871
+  failure_stated=true      real        121      20
+  failure_stated=true      false       23       4
+  failure_stated=true      unsure      2        0
+  failure_stated=true      not-judged  0        0
+  failure_stated=true      precision   0.84     0.833
+  failure_stated=true      low         0.829    0.833
+  failure_stated=true      high        0.842    0.833
+  failure_stated=false     real        5        5
+  failure_stated=false     false       7        0
+  failure_stated=false     unsure      0        2
+  failure_stated=false     not-judged  0        0
+  failure_stated=false     precision   0.417    1
+  failure_stated=false     low         0.417    0.714
+  failure_stated=false     high        0.417    1
+  severity=SUGGESTION      real        65       3
+  severity=SUGGESTION      false       16       0
+  severity=SUGGESTION      unsure      0        2
+  severity=SUGGESTION      not-judged  0        0
+  severity=SUGGESTION      precision   0.802    1
+  severity=SUGGESTION      low         0.802    0.6
+  severity=SUGGESTION      high        0.802    1
+  severity=WARNING         real        61       22
+  severity=WARNING         false       14       4
+  severity=WARNING         unsure      2        0
+  severity=WARNING         not-judged  0        0
+  severity=WARNING         precision   0.813    0.846
+  severity=WARNING         low         0.792    0.846
+  severity=WARNING         high        0.818    0.846
+  row=hunt                 real        51       -
+  row=hunt                 false       8        -
+  row=hunt                 unsure      0        -
+  row=hunt                 not-judged  0        -
+  row=hunt                 precision   0.864    -
+  row=hunt                 low         0.864    -
+  row=hunt                 high        0.864    -
+  row=recall               real        75       -
+  row=recall               false       22       -
+  row=recall               unsure      2        -
+  row=recall               not-judged  0        -
+  row=recall               precision   0.773    -
+  row=recall               low         0.758    -
+  row=recall               high        0.778    -
+  row=review-reliability   real        -        18
+  row=review-reliability   false       -        3
+  row=review-reliability   unsure      -        1
+  row=review-reliability   not-judged  -        0
+  row=review-reliability   precision   -        0.857
+  row=review-reliability   low         -        0.818
+  row=review-reliability   high        -        0.864
+  row=review-risk          real        -        7
+  row=review-risk          false       -        1
+  row=review-risk          unsure      -        1
+  row=review-risk          not-judged  -        0
+  row=review-risk          precision   -        0.875
+  row=review-risk          low         -        0.778
+  row=review-risk          high        -        0.889
+  case=R34                 real        13       1
+  case=R34                 false       0        0
+  case=R34                 unsure      0        0
+  case=R34                 not-judged  0        0
+  case=R34                 precision   1        1
+  case=R34                 low         1        1
+  case=R34                 high        1        1
+  case=R35                 real        9        0
+  case=R35                 false       5        1
+  case=R35                 unsure      0        1
+  case=R35                 not-judged  0        0
+  case=R35                 precision   0.643    0
+  case=R35                 low         0.643    0
+  case=R35                 high        0.643    0.5
+  case=R36                 real        10       -
+  case=R36                 false       7        -
+  case=R36                 unsure      0        -
+  case=R36                 not-judged  0        -
+  case=R36                 precision   0.588    -
+  case=R36                 low         0.588    -
+  case=R36                 high        0.588    -
+  case=R37                 real        11       3
+  case=R37                 false       0        0
+  case=R37                 unsure      0        0
+  case=R37                 not-judged  0        0
+  case=R37                 precision   1        1
+  case=R37                 low         1        1
+  case=R37                 high        1        1
+  case=R38                 real        21       -
+  case=R38                 false       1        -
+  case=R38                 unsure      0        -
+  case=R38                 not-judged  0        -
+  case=R38                 precision   0.955    -
+  case=R38                 low         0.955    -
+  case=R38                 high        0.955    -
+  case=R39                 real        11       6
+  case=R39                 false       7        2
+  case=R39                 unsure      2        0
+  case=R39                 not-judged  0        0
+  case=R39                 precision   0.611    0.75
+  case=R39                 low         0.55     0.75
+  case=R39                 high        0.65     0.75
+  case=R40                 real        18       5
+  case=R40                 false       0        0
+  case=R40                 unsure      0        0
+  case=R40                 not-judged  0        0
+  case=R40                 precision   1        1
+  case=R40                 low         1        1
+  case=R40                 high        1        1
+  case=R41                 real        0        -
+  case=R41                 false       4        -
+  case=R41                 unsure      0        -
+  case=R41                 not-judged  0        -
+  case=R41                 precision   0        -
+  case=R41                 low         0        -
+  case=R41                 high        0        -
+  case=R42                 real        11       4
+  case=R42                 false       6        1
+  case=R42                 unsure      0        0
+  case=R42                 not-judged  0        0
+  case=R42                 precision   0.647    0.8
+  case=R42                 low         0.647    0.8
+  case=R42                 high        0.647    0.8
+  case=R43                 real        22       6
+  case=R43                 false       0        0
+  case=R43                 unsure      0        1
+  case=R43                 not-judged  0        0
+  case=R43                 precision   1        1
+  case=R43                 low         1        0.857
+  case=R43                 high        1        1
+  ```
+- **L15** (2026-11-05, parent): 7ef8c516 (T4). Sweep clean (`-1`); reviewer, rows `recall,readability` (`-2`), the brief first naming a wrong full base sha that the parent had written from the 8-digit prefix, corrected before the reply was recorded: one WARNING and three SUGGESTIONs, all reproduced by the verifier on head (`-2.verifier.json`; base not run, the script is new). F1 (WARNING) a label whose `failure_stated` is a string or missing silently counts as stating no failure and lowers the headline; F2 the README said the headline `high` bound counts every `unsure` as real while the script counts one stating no failure false; F3 no test pinned the other exit-2 paths, and the error text relied on stripping jq's prefix; F4 a finding of neither runner was dropped and a finding key twice was counted twice, silently. All four fixed in the fix round (RED first: `failure_stated` a string or missing, a finding of neither runner, exit 0; the duplicate-key, label-value and argument paths already exited 2 and are now pinned): a judged label needs a boolean `failure_stated`, a finding needs runner `ours` or `gentle` and a key once over both files, each refusal exits 2 through jq's `halt_error` with the message alone, the README states the headline `high` rule, and a test pins an `unsure` that states no failure. The C27 output is unchanged (`diff` against L14's table is empty).
+- **L16** (2026-11-05, parent): fe13b063 (T4's fix round). Sweep clean (`-1`); reviewer, rows `recall,readability` (`-2`): F1-F4 of `7ef8c516c613-2.json` confirmed fixed, and one new SUGGESTION, reproduced by the verifier (`-2.verifier.json`): F1 no test passes a malformed repro file (the script already refuses one, exit 2). Carried to the next batch: F1 of `fe13b0634311-2.json`, with F4 of `ba098b10fd44-2.json` and F1-F3 of `ec574d786dd4-2.json` (L11). T4 is closed with commits 7ef8c516 and fe13b063; C28 is complete with its four tasks.

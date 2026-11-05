@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "7ef8c516c613d98de954549510aad284c092fe7d",
+    "head": "fe13b0634311503e58e2663d201e4423ab8c6077",
+    "diff_sha256": "03636589f81a7dac26316369530c67a7bdf49f2e3b9d1d0f9053f20de736b237",
+    "paths": [
+      "engine/shelltest/review_bench_test.go",
+      "odd/review-results/phase9-c28-review-precision/7ef8c516c613-1.sweep.json",
+      "odd/review-results/phase9-c28-review-precision/7ef8c516c613-2.json",
+      "odd/review-results/phase9-c28-review-precision/7ef8c516c613-2.verifier.json",
+      "odd/tasks/phase9-c28-review-precision.md",
+      "tools/review-bench/README.md",
+      "tools/review-bench/precision.sh"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "7ef8c516c613d98de954549510aad284c092fe7d",
+      "head": "fe13b0634311503e58e2663d201e4423ab8c6077",
+      "diff_sha256": "03636589f81a7dac26316369530c67a7bdf49f2e3b9d1d0f9053f20de736b237"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/shelltest/review_bench_test.go",
+        "odd/review-results/phase9-c28-review-precision/7ef8c516c613-1.sweep.json",
+        "odd/review-results/phase9-c28-review-precision/7ef8c516c613-2.json",
+        "odd/review-results/phase9-c28-review-precision/7ef8c516c613-2.verifier.json",
+        "odd/tasks/phase9-c28-review-precision.md",
+        "tools/review-bench/README.md",
+        "tools/review-bench/precision.sh"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/shelltest/review_bench_test.go:1023-1083",
+        "severity": "SUGGESTION",
+        "claim": "The new failure_stated, label-value and duplicate-key checks also run on the optional repro file, because check is applied to $repro[0].labels. No test pins a malformed repro file, for example a repro label whose failure_stated is a string. Every new exit-2 case uses only the labels file, so a regression that skipped validation of the repro file would pass the suite. The only repro test is the valid-label replacement case. This does not make a documented behavior wrong today.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "precision.sh:54 (repro labels go through check)",
+          "review_bench_test.go:1014-1026 (the only repro test uses a valid label)"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff (22850 bytes) and the prior review record 7ef8c516c613-2.json (F1-F4).",
+      "F1 (failure_stated not validated): fixed. precision.sh:46-47 refuses any non-not-judged label whose failure_stated is not a boolean, and exits 2 through halt_error. Tests cover a string value and a missing value, and expect the exact stderr 'failure_stated is not a boolean: o1'.",
+      "F2 (README says high counts every unsure): fixed. The README and the script header now state that an unsure stating no failure counts false. A new subtest pins it. I checked its expectations by hand against the fixture: ours rf=1, d=3, u=1, uf=0, so low and high are both 0.25. Gentle gives 0.5 for both and unsure 0.",
+      "F3 (exit-2 paths unpinned, error text relied on stripping jq's prefix): fixed. The jq 'jq: error (at <unknown>): ' prefix stripping is gone. fail() uses halt_error(2) with the message plus a newline, and stderr is no longer captured, so the message cannot carry a jq prefix. Tests cover a key labeled twice, a label value of 'maybe', and the wrong argument count. They also cover a missing file ('no file at <path>'). I traced each replace-string against the fixtures at review_bench_test.go:861-879 and each matches. The expected messages follow the evaluation order in precision.sh. The existing unknown-key test still expects the exact text 'label key in neither findings file: zz\\n', which refuse() produces.",
+      "F4 (findings not validated): fixed. precision.sh:51-52 refuses a runner outside ours/gentle and a finding key twice over both files. Tests cover both, with the messages 'finding of neither runner: o5' and 'finding key twice: o1'.",
+      "Pipeline soundness: refuse() returns its input unchanged when it is [], and each later stage reads only variables ($ls, $fs, $keys, $items), so threading [] through the pipeline is harmless. Evaluation order is label value, then failure_stated, then duplicate key, then the cross-file checks, which matches every expected message.",
+      "Behavior change seen: jq runtime errors such as a findings file that is not an array now reach stderr with jq's own text. The exit code is still forced to 2 by '|| exit 2'. No documented contract promises that text.",
+      "The log entry L15 says the C27 output is unchanged. I could not confirm this and did not re-derive it.",
+      "Not run: no tests and no jq. Everything is read from source and hand-traced. The unrun items are the go test suite in engine/shelltest, the jq version availability of halt_error/1 (jq 1.6 or newer), and the C27 diff against L14.",
+      "The three odd/review-results files and the L15 log text were read as data."
+    ]
+  }
+}
