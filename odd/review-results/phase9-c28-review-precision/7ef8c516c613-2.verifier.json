@@ -1,0 +1,32 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "Scratch dir /tmp/tmp.8uRFyiz6aP (kept). In /home/labdrian/labdrian-sdd-overlay-worktrees/review-7ef8c516c613 (HEAD 7ef8c516): bash tools/review-bench/precision.sh o.json g.json {bool,str,miss}.json | rg '^headline'. The files are in the scratch dir. o.json has 3 ours findings (a, b, c) and g.json has 1 gentle finding. The labels are a=real, b=false, c=real, g1=real, all with failure_stated true. In str.json, c has \"failure_stated\":\"true\" (a string). In miss.json, c has no failure_stated.",
+      "output": "bool.json: headline precision 0.667 (ours), low 0.667, high 0.667, exit 0. str.json: headline precision 0.333, low 0.333, high 0.333, exit 0. miss.json: same as str.json (0.333), exit 0. The headline drops from 0.667 to 0.333 and the script prints nothing about it. The `real` label with a non-boolean or missing failure_stated moves to the false-like denominator.",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "In the same worktree: bash tools/review-bench/precision.sh o.json g.json f2.json | rg '^(headline|overall)'. Labels in f2.json are a=unsure with failure_stated false, b=false, c=real, g1=real. README.md lines 49-50 say `high` counts every `unsure` as real. The script header and the `headline` jq def credit only an `unsure` that states a failure (`uf`).",
+      "output": "headline unsure=1, headline low 0.333, headline high 0.333 (equal to low; the unsure is not credited), exit 0. In the same run, overall high is 0.667 because the overall group does count every unsure as real. The README text (\"every `unsure` counted real\") therefore does not match the headline `high`. The mismatch is confirmed. The test fixture is also confirmed: o4, the only `unsure` in precisionLabels, has failure_stated true, so the unsure-with-no-failure branch is unpinned.",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F3",
+      "result": "reproduced",
+      "command": "rg -n 't.Run\\(' on TestReviewBenchPrecision in engine/shelltest/review_bench_test.go, plus rg -n -i 'twice|duplicate|bogus|usage: precision|no file at'. Then four runs of precision.sh with dup.json (key a labeled twice), badval.json (label \"maybe\"), two arguments only, and a missing labels file nope.json.",
+      "output": "The TestReviewBenchPrecision subtests are: known counts; a label joins its runner by key only; not-judged stays out of judged; null precision; a repro label replaces the reading label; a label whose key is in neither findings file exits 2. The rg hits for 'twice' are only lines 846-847, which are in a different test. There is no test for a key labeled twice, a bad label value, or a wrong argument count or missing file. Script behavior: dup.json prints 'key labeled twice: a', exit 2. badval.json prints 'label not real, false, unsure or not-judged: a', exit 2. Two arguments print the usage line, exit 2. A missing file prints 'no file at /tmp/tmp.8uRFyiz6aP/nope.json', exit 2. The exit-2 paths work today but no test pins them. The jq-prefix-stripping claim was not tested.",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F4",
+      "result": "reproduced",
+      "command": "bash tools/review-bench/precision.sh o4.json g4.json l4.json | rg '^overall'. o4.json has x with runner \"other\" and a with runner ours. g4.json has a (the same key, runner ours) and g1 (gentle). l4.json labels x, a and g1 all real with failure_stated true.",
+      "output": "overall real: ours 2, gentle 1; false and unsure 0; precision 1; exit 0. Key a is one finding in truth but is counted twice in ours (real 2), and nothing is reported. Finding x, with runner \"other\", is joined to its label and then dropped from every group with no message. The label for x passed the unknown-key check, so it did not exit 2.",
+      "base_result": "not-run"
+    }
+  ]
+}

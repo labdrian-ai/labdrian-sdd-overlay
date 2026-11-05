@@ -47,11 +47,13 @@ It is not part of the product and never runs against the main repository.
   `key` (a finding with no label is `not-judged`; a repro file's label of a key replaces the reading label) and prints
   one table, `group metric ours gentle`. The `headline` group comes first: precision with `unsure` left out and a
   `real` finding that states no failure counted false, the `unsure` count, and its `low` and `high` bounds (every
-  `unsure` counted false, every `unsure` counted real). Then `overall`, `failure_stated=true|false`,
+  `unsure` counted false; every `unsure` counted real, except that one stating no failure counts false, as a `real`
+  one does). Then `overall`, `failure_stated=true|false`,
   `severity=<s>`, `row=<row>` and `case=<id>`, each with the counts `real`, `false`, `unsure`, `not-judged`,
   `precision` = real / (real + false) and the bounds `low` = real / judged and `high` = (real + unsure) / judged. A
-  ratio over no finding prints `null`, a group a runner has no finding in prints `-`. A label whose key is in neither
-  findings file, a key labeled twice or another label value exits 2 with nothing on stdout.
+  ratio over no finding prints `null`, a group a runner has no finding in prints `-`. A finding of neither runner, a
+  finding key twice over both findings files, another label value, a judged label whose `failure_stated` is not a
+  boolean, a key labeled twice or a label whose key is in neither findings file exits 2 with nothing on stdout.
 
 ## Running
 

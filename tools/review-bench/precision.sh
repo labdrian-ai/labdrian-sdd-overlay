@@ -5,8 +5,9 @@
 # The findings files are the arrays findings.sh prints; each finding's runner and case come from the finding itself.
 # The labels file is {"labels":[{key, label, failure_stated, ...}]} with label real, false, unsure or not-judged; a
 # finding with no label is not-judged. The optional repro file has the same shape and its label of a key replaces the
-# reading label (S4). A label whose key is in neither findings file, a key labeled twice in one file or another label
-# value exits 2 and prints nothing on stdout.
+# reading label (S4). A finding of neither runner, a finding key twice over both findings files, another label value,
+# a real, false or unsure label whose failure_stated is not a boolean, a key labeled twice in one file or a label whose
+# key is in neither findings file exits 2 and prints nothing on stdout.
 # Groups: headline first, then overall, failure_stated=true and failure_stated=false (judged findings only),
 # severity=<s>, row=<row> and case=<id>. Metrics per group: real, false, unsure, not-judged; precision
 # real / (real + false); low real / judged (every unsure counted false); high (real + unsure) / judged (every unsure
@@ -34,19 +35,25 @@ out=$(jq -n -r --slurpfile ours "$1" --slurpfile gentle "$2" --slurpfile labels 
     | count(.label == "unsure" and .failure_stated == true) as $uf
     | ($rf + $rn + $f) as $d
     | [["precision", ratio($rf; $d)], ["unsure", $u], ["low", ratio($rf; $d + $u)], ["high", ratio($rf + $uf; $d + $u)]];
+  # fail prints its message alone on stderr and ends jq with exit 2, whatever prefix jq gives its own errors.
+  def fail(m): "\(m)\n" | halt_error(2);
+  def refuse(m): if . != [] then fail("\(m): \(join(" "))") else . end;
+  def twice: group_by(.) | map(select(length > 1)[0]);
   def check(file):
-    (file // error("a labels file holds no labels array")) as $ls
-    | ([$ls[] | select(.label | IN("real", "false", "unsure", "not-judged") | not) | .key] | unique) as $bad
-    | if $bad != [] then error("label not real, false, unsure or not-judged: \($bad | join(" "))") else . end
-    | ([$ls[].key] | group_by(.) | map(select(length > 1)[0])) as $twice
-    | if $twice != [] then error("key labeled twice: \($twice | join(" "))") else . end
+    (file // fail("a labels file holds no labels array")) as $ls
+    | ([$ls[] | select(.label | IN("real", "false", "unsure", "not-judged") | not) | .key] | unique
+       | refuse("label not real, false, unsure or not-judged"))
+    | ([$ls[] | select(.label != "not-judged" and (.failure_stated | type) != "boolean") | .key] | unique
+       | refuse("failure_stated is not a boolean"))
+    | ([$ls[].key] | twice | refuse("key labeled twice"))
     | $ls;
   ($ours[0] + $gentle[0]) as $fs
+  | ([$fs[] | select(.runner | IN("ours", "gentle") | not) | .key] | refuse("finding of neither runner"))
+  | ([$fs[].key] | twice | refuse("finding key twice"))
   | ($labels[0].labels | check(.)) as $ls
   | (if $repro == [] then [] else ($repro[0].labels | check(.)) end) as $rs
   | ([$fs[].key]) as $keys
-  | ([$ls[], $rs[]] | map(.key) | unique | map(select(IN($keys[]) | not))) as $unknown
-  | if $unknown != [] then error("label key in neither findings file: \($unknown | join(" "))") else . end
+  | ([$ls[], $rs[]] | map(.key) | unique | map(select(IN($keys[]) | not)) | refuse("label key in neither findings file"))
   | ((($ls | map({(.key): .}) | add) // {}) + (($rs | map({(.key): .}) | add) // {})) as $by
   | [$fs[] | . + {label: ($by[.key].label // "not-judged"), failure_stated: $by[.key].failure_stated}] as $items
   | def side(rows): [rows[] | [.[0], (.[1] | if . == null then "null" else tostring end)]];
@@ -67,5 +74,5 @@ out=$(jq -n -r --slurpfile ours "$1" --slurpfile gentle "$2" --slurpfile labels 
      + ([$items[].row] | unique | map(. as $r | group("row=\($r)"; .row == $r; stats)) | add)
      + ([$items[].id] | unique | map(. as $c | group("case=\($c)"; .id == $c; stats)) | add))
     | .[] | "\(.[0] | pad(24)) \(.[1] | pad(11)) \(.[2] | pad(8)) \(.[3])"
-' 2>&1) || { echo "${out#jq: error (at <unknown>): }" >&2; exit 2; }
+') || exit 2
 printf '%s\n' "$out"

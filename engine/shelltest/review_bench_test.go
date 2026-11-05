@@ -1023,6 +1023,65 @@ func TestReviewBenchPrecision(t *testing.T) {
 		})
 	})
 
+	t.Run("an unsure that states no failure counts false in both headline bounds", func(t *testing.T) {
+		labels := strings.Replace(precisionLabels, `"label": "unsure", "failure_stated": true`, `"label": "unsure", "failure_stated": false`, 1)
+		stdout, _, code := runPrecision(t, precisionOurs, precisionGentle, labels, "")
+		if code != 0 {
+			t.Fatalf("exit %d", code)
+		}
+		// rf = 1 over 1 + 1 (o2) + 1 (o3) + 1 unsure: low and high are both 1/4.
+		assertPrecision(t, precisionTable(t, stdout), map[string][2]string{
+			"headline unsure": {"1", "0"},
+			"headline low":    {"0.25", "0.5"},
+			"headline high":   {"0.25", "0.5"},
+		})
+	})
+
+	t.Run("malformed findings, labels or arguments exit 2 and print nothing", func(t *testing.T) {
+		o1 := `{"key": "o1", "label": "real", "failure_stated": true, "citation": "head/a.go:1", "reason": "r"}`
+		cases := []struct {
+			name, ours, gentle, labels, stderr string
+		}{
+			{"failure_stated a string", precisionOurs, precisionGentle,
+				strings.Replace(precisionLabels, o1, `{"key": "o1", "label": "real", "failure_stated": "true"}`, 1),
+				"failure_stated is not a boolean: o1\n"},
+			{"failure_stated missing", precisionOurs, precisionGentle,
+				strings.Replace(precisionLabels, o1, `{"key": "o1", "label": "false"}`, 1),
+				"failure_stated is not a boolean: o1\n"},
+			{"a key labeled twice", precisionOurs, precisionGentle,
+				strings.Replace(precisionLabels, `"labels": [`, `"labels": [`+o1+`,`, 1),
+				"key labeled twice: o1\n"},
+			{"another label value", precisionOurs, precisionGentle,
+				strings.Replace(precisionLabels, `"label": "real", "failure_stated": true, "citation": "head/a.go:1"`, `"label": "maybe", "failure_stated": true, "citation": "head/a.go:1"`, 1),
+				"label not real, false, unsure or not-judged: o1\n"},
+			{"a finding of neither runner", strings.Replace(precisionOurs, `"key": "o5", "runner": "ours"`, `"key": "o5", "runner": "other"`, 1), precisionGentle, precisionLabels,
+				"finding of neither runner: o5\n"},
+			{"a finding key twice", precisionOurs, strings.Replace(precisionGentle, `"key": "g2"`, `"key": "o1"`, 1), precisionLabels,
+				"finding key twice: o1\n"},
+		}
+		for _, c := range cases {
+			stdout, stderr, code := runPrecision(t, c.ours, c.gentle, c.labels, "")
+			if code != 2 || stdout != "" || stderr != c.stderr {
+				t.Errorf("%s: exit %d stdout %q stderr %q", c.name, code, stdout, stderr)
+			}
+		}
+		script, err := filepath.Abs("../../tools/review-bench/precision.sh")
+		if err != nil {
+			t.Fatal(err)
+		}
+		missing := filepath.Join(t.TempDir(), "none.json")
+		for _, args := range [][]string{{"a.json"}, {missing, missing, missing}} {
+			want := "usage: precision.sh <ours-findings> <gentle-findings> <labels> [<repro>]\n"
+			if len(args) == 3 {
+				want = "no file at " + missing + "\n"
+			}
+			stdout, stderr, code := runScript(t, script, []string{"PATH=" + os.Getenv("PATH")}, args...)
+			if code != 2 || stdout != "" || stderr != want {
+				t.Errorf("%v: exit %d stdout %q stderr %q", args, code, stdout, stderr)
+			}
+		}
+	})
+
 	t.Run("a label whose key is in neither findings file exits 2", func(t *testing.T) {
 		labels := strings.Replace(precisionLabels, `"labels": [`, `"labels": [{"key": "zz", "label": "real", "failure_stated": true, "citation": "head/c.go:1", "reason": "r"},`, 1)
 		stdout, stderr, code := runPrecision(t, precisionOurs, precisionGentle, labels, "")
