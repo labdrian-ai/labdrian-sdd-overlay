@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "80c1216cbcaa3f3250e13f8fdf48d44ba3138109",
+    "head": "7e72f5cefc185f698fdb44d539d85c6e8c1bd668",
+    "diff_sha256": "55eb2eaa99bdd9f81b268964b8c41559bff8795f27d8a7ac3a9eb07be3aef4b6",
+    "paths": [
+      "odd/tasks/phase9-c28-review-precision.md",
+      "tools/review-bench/precision/spot-c27.json"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git diff --name-status 80c1216c 7e72f5ce",
+        "result": "pass",
+        "output": "M\todd/tasks/phase9-c28-review-precision.md\nA\ttools/review-bench/precision/spot-c27.json"
+      },
+      {
+        "command": "git diff --numstat 80c1216c 7e72f5ce -- odd/tasks/phase9-c28-review-precision.md; git diff 80c1216c 7e72f5ce -- odd/tasks/phase9-c28-review-precision.md | rg -c '^-[^-]'",
+        "result": "pass",
+        "output": "numstat: 1 added, 0 deleted. The removed-line count printed nothing (rg -c finds no match), so no line was removed."
+      },
+      {
+        "command": "jq '.labels|length' tools/review-bench/precision/spot-c27.json",
+        "result": "pass",
+        "output": "30"
+      },
+      {
+        "command": "diff <(jq -r '.labels[].key' tools/review-bench/precision/spot-c27.json | sort) <(jq -s -r 'add | sort_by(.key) | .[:30][].key' tools/review-bench/findings/ours-c27.json tools/review-bench/findings/gentle-c27.json | sort); echo rc=$?",
+        "result": "pass",
+        "output": "Empty diff, rc=0"
+      },
+      {
+        "command": "jq '[.labels[] | select((.label==\"real\" or .label==\"false\") and ((.citation // \"\") == \"\"))] | length' tools/review-bench/precision/spot-c27.json; jq '[.labels[] | select(.label|IN(\"real\",\"false\",\"unsure\")|not)] | length' tools/review-bench/precision/spot-c27.json",
+        "result": "pass",
+        "output": "0\n0"
+      },
+      {
+        "command": "loop over each label (key, citation): id looked up from the two findings files; test -e ~/labdrian-sdd-overlay-worktrees/c28-judge/<id>/<citation before first ':'>; labels with an empty citation were skipped",
+        "result": "pass",
+        "output": "checked=30 missing=0"
+      },
+      {
+        "command": "rg -n '\\\\u[0-9a-fA-F]{4}' tools/review-bench/precision/spot-c27.json odd/tasks/phase9-c28-review-precision.md; echo rc=$?",
+        "result": "pass",
+        "output": "No output, rc=1 (no match)"
+      }
+    ]
+  }
+}
