@@ -294,7 +294,7 @@ func (d Declaration) clone() Declaration {
 // declared-only runtimes without changing any other runtime's claim.
 func memoryEnforcementDetail(runtime, scope string) string {
 	if runtime == "Codex" {
-		return "PreToolUse checks plan sources for MCP Engram reads and longterm-mem query/get; searches/queries check project, goal-scoped queries check goal. install-hooks installs --source codex; trust each handler in the Codex TUI. Limits: Codex fails open on hook failure; no procedural skills, Bash or apply_patch enforcement; no project check for reads by id; agent_id ignored. PostToolUse records successful MCP reads only. Proven by engine hook processes, not live validation."
+		return "PreToolUse checks plan sources for MCP Engram reads, memorycard reads and longterm-mem query/get; searches/queries check project, goal-scoped queries check goal. install-hooks installs --source codex; trust each new or changed handler in the Codex TUI. Limits: Codex fails open on hook failure; no procedural skills, Bash or apply_patch enforcement; no project check for reads by id; agent_id ignored. PostToolUse records successful MCP reads only. Proven by engine hook processes, not live validation."
 	}
 	return "Not implemented: no memory plan is projected into or enforced in a " + runtime + " session." + scope
 }

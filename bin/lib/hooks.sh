@@ -45,7 +45,7 @@ cmd_install_hooks() {
     "$ENGINE_BINARY" merge-codex-hooks \
       --hooks "$codex_home/hooks.json" --hook-command "$ENGINE_BINARY" \
       || die "merge-codex-hooks failed"
-    echo "Codex memory hooks (SessionStart, PreToolUse, PostToolUse) installed; trust each new handler once in the Codex TUI (/hooks, key t)."
+    echo "Codex memory hooks (SessionStart, PreToolUse, PostToolUse) installed; trust each new or changed handler once in the Codex TUI (/hooks, key t): a handler whose matcher changed is replaced and runs again only once trusted."
     echo "Upgrading from SessionStart alone needs two more trusts; existing SessionStart trust is unchanged; no trust state or config.toml is changed."
   fi
 

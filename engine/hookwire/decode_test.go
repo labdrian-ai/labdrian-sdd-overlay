@@ -316,6 +316,12 @@ func TestQueryArgumentsAreReadTheWayTheMemoryGateReadThem(t *testing.T) {
 		{"a goal that is a list", `{"goal":["goal-1"]}`, hookwire.QueryArguments{Named: true}},
 		{"a goal key in another case is another key", `{"GOAL":"goal-1"}`, hookwire.QueryArguments{Named: true}},
 		{"the last of two goals wins", `{"goal":"a","goal":"goal-1"}`, hookwire.QueryArguments{Named: true, Goal: "goal-1"}},
+		// cwd, or directory when cwd names none, is the directory a memorycard read picks its project by.
+		{"a cwd", `{"cwd":"/a"}`, hookwire.QueryArguments{Named: true, WorkDir: "/a"}},
+		{"a directory", `{"directory":"/b"}`, hookwire.QueryArguments{Named: true, WorkDir: "/b"}},
+		{"cwd before directory", `{"cwd":"/a","directory":"/b"}`, hookwire.QueryArguments{Named: true, WorkDir: "/a"}},
+		{"an empty cwd and a directory", `{"cwd":"","directory":"/b"}`, hookwire.QueryArguments{Named: true, WorkDir: "/b"}},
+		{"a cwd that is a number", `{"cwd":3}`, hookwire.QueryArguments{Named: true}},
 		{"a string", `"proj-1"`, hookwire.QueryArguments{}},
 		{"an array", `[1]`, hookwire.QueryArguments{}},
 		{"a number", `5`, hookwire.QueryArguments{}},

@@ -16,6 +16,11 @@ import (
 // lists an Engram tool.
 const memoryLine = "Read every artifact the prompt locates (file path, or memorycard topic via mem_search, then mem_get) before acting. A missing required locator is a blocker: report it, never substitute another store."
 
+// byIDLine takes the place of memoryLine in the files of a role that can read memorycard by id but
+// cannot search it (the verifier, which per-role design v3 keeps from searching memory): the prompt
+// gives it a memorycard id, never a topic.
+const byIDLine = "Read every artifact the prompt locates (file path, or memorycard id via mem_get) before acting. A missing required locator is a blocker: report it, never substitute another store."
+
 // modelFamily is a family of models named once for the runtimes that take the model from the agent
 // file. Codex has no entry: its files omit the model, the parent passes it at spawn (D14).
 type modelFamily struct {
@@ -159,10 +164,12 @@ var roles = []role{
 //   - read, edit, write, bash, grep and find are built-in tools of Pi (docs/cli.md of pi-coding-agent
 //     lists them in --tools), and the agents gentle-ai installs for Pi name them
 //     (~/.pi/agent/agents/gentle-ai-worker.md). Glob is find.
-//   - the memorycard tools keep their MCP name, mcp__memorycard__<tool>. This one is an assumption,
-//     not verified: Pi loads memorycard from its mcp.json (~/.pi/agent/mcp.json), and gentle-pi treats
-//     a requested tool whose name starts with mcp__ as an MCP tool it cannot check up front
-//     (extensions/gentle-agents.ts:338 of gentle-pi 4.4.0). gentle-engram, which registered the Engram
+//   - the memorycard tools keep their MCP name, mcp__memorycard__<tool>. Verified on 2026-11-05 by
+//     reading pi-coding-agent 1.4.0: Pi registers every tool of an MCP server as mcp__<server>__<tool>
+//     (createMcpToolName in dist/extensions/mcp/tools.js), and memorycard is the server key
+//     "memorycard" of its mcp.json (~/.pi/agent/mcp.json). gentle-pi treats a requested tool whose
+//     name starts with mcp__ as an MCP tool it cannot check up front (extensions/gentle-agents.ts:338
+//     of gentle-pi 4.4.0). gentle-engram, which registered the Engram
 //     tools by their bare names (mem_search, ...), is no longer installed (2026-11-04), so the bare
 //     names would reach no tool.
 //   - gentle-pi has one native CodeGraph tool, codegraph, with the operations init, query and explore
@@ -203,14 +210,29 @@ func (r role) hasMemoryTool() bool {
 	return false
 }
 
+// hasTool says whether the role holds the tool of that name.
+func (r role) hasTool(name string) bool {
+	for _, tool := range r.tools {
+		if tool == name {
+			return true
+		}
+	}
+	return false
+}
+
 // body is what the three files of the role carry after their frontmatter: its source, without the
-// line that sends it to memorycard when it has no memorycard tool.
+// line that sends it to memorycard when it has no memorycard tool, and with byIDLine in its place when
+// it can read memorycard by id but cannot search it (the verifier), so no role is told to call a tool
+// it does not hold.
 func (r role) body(source string) (string, error) {
-	if r.hasMemoryTool() {
+	if r.hasMemoryTool() && r.hasTool("mcp__memorycard__mem_search") {
 		return source, nil
 	}
 	if strings.Count(source, memoryLine+"\n") != 1 {
-		return "", fmt.Errorf("the line of the core prefix that sends a role to memorycard is not there exactly once, and %s has no memorycard tool to drop it for", r.name)
+		return "", fmt.Errorf("the line of the core prefix that sends a role to memorycard is not there exactly once, and %s has no memorycard search to keep it for", r.name)
+	}
+	if r.hasTool("mcp__memorycard__mem_get") {
+		return strings.Replace(source, memoryLine+"\n", byIDLine+"\n", 1), nil
 	}
 	return strings.Replace(source, memoryLine+"\n", "", 1), nil
 }

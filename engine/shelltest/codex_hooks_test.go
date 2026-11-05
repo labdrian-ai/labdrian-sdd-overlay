@@ -79,7 +79,7 @@ cmd_install_hooks
 					}
 				}
 				if !strings.Contains(out, "Codex memory hooks (SessionStart, PreToolUse, PostToolUse) installed") ||
-					!strings.Contains(out, "trust each new handler once") || !strings.Contains(out, "/hooks, key t") ||
+					!strings.Contains(out, "trust each new or changed handler once") || !strings.Contains(out, "a handler whose matcher changed is replaced") || !strings.Contains(out, "/hooks, key t") ||
 					!strings.Contains(out, "two more trusts") || !strings.Contains(out, "no trust state or config.toml is changed") {
 					t.Fatal(out)
 				}

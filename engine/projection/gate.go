@@ -156,6 +156,11 @@ type QueryArguments struct {
 	// Goal is the goal the query names (C23 M5): empty when it names none, which is the case when
 	// the argument is missing, null, not text, or empty.
 	Goal string
+	// WorkDir is the directory the query names to pick its project by: its "cwd" argument, or its
+	// "directory" argument when cwd names none, each read like Project. A memorycard read that
+	// names no project resolves it from this directory, or from its own working directory when
+	// this is empty.
+	WorkDir string
 }
 
 // GateResult is what Gate decides. Deny is true for a denial, and Reason then
@@ -305,6 +310,10 @@ const (
 	// checkEngramProject compares the project argument with the Engram name of the
 	// workflow's identity, and refuses every project (C23 M4, decision 3).
 	checkEngramProject
+	// checkMemorycardProject is checkEngramProject, except that a read naming no project
+	// and no directory passes: memorycard then resolves the project from its own working
+	// directory, which is the session's project.
+	checkMemorycardProject
 )
 
 // memoryReads are the memory reads, by the pattern of their tool name.
@@ -316,7 +325,7 @@ var memoryReads = []struct {
 	{longtermGetTool, memoryRead{source: memoryscope.SourceLongtermMem, what: "longterm-mem get", unbindTo: "read it", check: checkSourceOnly}},
 	{engramProjectReadTool, memoryRead{source: memoryscope.SourceEngram, what: "Engram read", unbindTo: "read it", check: checkEngramProject}},
 	{engramIDReadTool, memoryRead{source: memoryscope.SourceEngram, what: "Engram read", unbindTo: "read it", check: checkSourceOnly}},
-	{memorycardProjectReadTool, memoryRead{source: memoryscope.SourceEngram, what: "memorycard read", unbindTo: "read it", check: checkEngramProject}},
+	{memorycardProjectReadTool, memoryRead{source: memoryscope.SourceEngram, what: "memorycard read", unbindTo: "read it", check: checkMemorycardProject}},
 	{memorycardIDReadTool, memoryRead{source: memoryscope.SourceEngram, what: "memorycard read", unbindTo: "read it", check: checkSourceOnly}},
 }
 
@@ -466,8 +475,8 @@ func memoryGate(in GateInput, s workflow.State, read memoryRead) GateResult {
 		return GateResult{Warning: "labdrian: the memory plan of " + workflowRef(b) + " names no project although its scope is " +
 			strconv.Quote(sanitizeLine(string(plan.Scope))) + ", so this " + read.what + " was not checked against it."}
 	}
-	if read.check == checkEngramProject {
-		return engramProjectGate(b, read.what, in.EngramName, s.ProjectIdentity, in.Call)
+	if read.check == checkEngramProject || read.check == checkMemorycardProject {
+		return engramProjectGate(b, read.what, in.EngramName, s.ProjectIdentity, in.Call, read.check == checkMemorycardProject)
 	}
 	return longtermProjectGate(b, plan, in.Call)
 }
@@ -534,7 +543,11 @@ func goalAdvice(planProject, planGoal string) string {
 // gives the workflow's identity (engramName of identity, C23 M2 decision 3), which
 // is the name memorycard gives it too: another project, none, or every project is
 // denied.
-func engramProjectGate(b Binding, what string, engramName func(string) string, identity string, call ToolCall) GateResult {
+//
+// ownProject is true for a memorycard read: one that names no project passes when it names no
+// directory either (memorycard then reads the project of its own working directory, the
+// session's), and is denied, naming the directory, when it names one.
+func engramProjectGate(b Binding, what string, engramName func(string) string, identity string, call ToolCall, ownProject bool) GateResult {
 	var want string
 	if engramName != nil {
 		want = engramName(identity)
@@ -552,6 +565,10 @@ func engramProjectGate(b Binding, what string, engramName func(string) string, i
 	switch {
 	case read.AllProjects:
 		return GateResult{Deny: true, Reason: "labdrian: this " + what + " asks for every project (all_projects is true), but " + permits}
+	case read.Project == "" && ownProject && read.WorkDir == "":
+		return GateResult{}
+	case read.Project == "" && ownProject:
+		return GateResult{Deny: true, Reason: "labdrian: this " + what + " names no project but a directory to pick it by (" + quoteValue(read.WorkDir) + "), but " + permits}
 	case read.Project == "":
 		// Absent, null, not text, or empty: the read names no project.
 		return GateResult{Deny: true, Reason: "labdrian: this " + what + " names no project (the project argument is missing, not a string, or empty), but " + permits}

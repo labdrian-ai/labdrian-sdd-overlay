@@ -221,6 +221,13 @@ func TestRoleAgentToolsCarryTheLimitsOfTheirRole(t *testing.T) {
 // (slice 4, S5); the role source keeps it, and so do the files of every role that has a memory tool.
 var rolesWithoutAMemoryTool = map[string]bool{"reviewer": true}
 
+// The roles that read memorycard by id and cannot search it (the verifier keeps mem_get and has no
+// mem_search, per the limits above): their agent files carry byIDLine in place of the memory line, so
+// no role is told to call a tool it does not hold; the role source keeps the memory line.
+var rolesReadingMemoryByID = map[string]bool{"verifier": true}
+
+const byIDLine = "Read every artifact the prompt locates (file path, or memorycard id via mem_get) before acting. A missing required locator is a blocker: report it, never substitute another store."
+
 // Each agent file is its frontmatter and the role source roles/<role>/body.md, nothing between or
 // after, so that the source is the one place the text of a role is edited; the one difference is the
 // memory line of the core prefix in the file of a role that has no memorycard tool. The body is the core
@@ -239,8 +246,15 @@ func TestRoleAgentFilesAreTheirFrontmatterAndTheRoleSource(t *testing.T) {
 				}
 				want = strings.Replace(body, memoryLine, "", 1)
 			}
+			if rolesReadingMemoryByID[spec.role] {
+				memoryLine := roleCorePrefix(spec.role)[1] + "\n"
+				if strings.Count(body, memoryLine) != 1 {
+					t.Fatalf("roles/%s/body.md must carry the memory line of the core prefix once", spec.role)
+				}
+				want = strings.Replace(body, memoryLine, byIDLine+"\n", 1)
+			}
 			if rest != "\n\n"+want {
-				t.Fatalf("agents/%[1]s.md must be its frontmatter, a blank line and roles/%[1]s/body.md (without the memory line when the role has no memorycard tool); edit the source and copy it", spec.role)
+				t.Fatalf("agents/%[1]s.md must be its frontmatter, a blank line and roles/%[1]s/body.md (without the memory line when the role has no memorycard tool, with the by-id line when it cannot search memorycard); edit the source and copy it", spec.role)
 			}
 			tools := parseYAMLScalar(t, frontmatter, "tools")
 			if hasMemoryTool := strings.Contains(tools, "mcp__memorycard__mem_"); hasMemoryTool == rolesWithoutAMemoryTool[spec.role] {

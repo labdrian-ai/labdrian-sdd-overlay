@@ -84,6 +84,7 @@ func TestGateCallCarriesTheNameAndReadsTheArgumentsOfAMemoryQueryWhenAsked(t *te
 		"every project":                {query + `{"project":"p","all_projects":true}}`, projection.QueryArguments{Named: true, Project: "p", AllProjects: true}},
 		"a goal":                       {query + `{"project":"p","goal":"goal-1"}}`, projection.QueryArguments{Named: true, Project: "p", Goal: "goal-1"}},
 		"a goal of the wrong type":     {query + `{"project":"p","goal":7}}`, projection.QueryArguments{Named: true, Project: "p"}},
+		"a directory":                  {query + `{"cwd":"/a"}}`, projection.QueryArguments{Named: true, WorkDir: "/a"}},
 	} {
 		t.Run(name, func(t *testing.T) {
 			call := gateCall(decodePreToolUse(t, tc.input))

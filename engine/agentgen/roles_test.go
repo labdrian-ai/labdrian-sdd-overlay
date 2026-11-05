@@ -10,6 +10,7 @@ package agentgen_test
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -21,6 +22,10 @@ import (
 // memorycard replaced Engram as the memory store (Engram is frozen, read-only history), so the roles
 // read and write memorycard and no role lists an Engram tool.
 const memoryLine = "Read every artifact the prompt locates (file path, or memorycard topic via mem_search, then mem_get) before acting. A missing required locator is a blocker: report it, never substitute another store."
+
+// byIDLine takes the place of memoryLine in the files of a role that reads memorycard by id and cannot
+// search it: the verifier.
+const byIDLine = "Read every artifact the prompt locates (file path, or memorycard id via mem_get) before acting. A missing required locator is a blocker: report it, never substitute another store."
 
 const (
 	piSonnet = "pi-claude-cli/claude-sonnet-5"
@@ -107,15 +112,19 @@ func readText(t *testing.T, path string) string {
 }
 
 // wantBody is the body of a role in the three files: its source, without the line that sends it to
-// memorycard when it has no memorycard tool.
+// memorycard when it has no memorycard tool, and with the by-id line in its place when it can read
+// memorycard but not search it.
 func wantBody(t *testing.T, root string, r wantRole) string {
 	t.Helper()
 	source := readText(t, filepath.Join(root, "roles", r.name, "body.md"))
-	if r.memory {
+	if r.memory && strings.Contains(r.claudeTools, "mcp__memorycard__mem_search") {
 		return source
 	}
 	if strings.Count(source, memoryLine+"\n") != 1 {
 		t.Fatalf("roles/%s/body.md must carry the memory line of the core prefix exactly once", r.name)
+	}
+	if r.memory {
+		return strings.Replace(source, memoryLine+"\n", byIDLine+"\n", 1)
 	}
 	return strings.Replace(source, memoryLine+"\n", "", 1)
 }
@@ -199,9 +208,9 @@ func TestARoleWithNoMemoryToolIsNotSentToMemorycardInAnyFile(t *testing.T) {
 		t.Run(r.name, func(t *testing.T) {
 			for _, path := range []string{"agents/" + r.name + ".md", "pi/agents/" + r.name + ".md", "codex/agents/" + r.name + ".toml"} {
 				text := readText(t, filepath.Join(root, filepath.FromSlash(path)))
-				has := strings.Contains(text, "memorycard topic via mem_search, then mem_get")
+				has := strings.Contains(text, "memorycard topic via mem_search, then mem_get") || strings.Contains(text, "memorycard id via mem_get")
 				if has != r.memory {
-					t.Errorf("%s carries the memory line = %v, want %v", path, has, r.memory)
+					t.Errorf("%s carries a memory line = %v, want %v", path, has, r.memory)
 				}
 				if strings.Contains(strings.ToLower(text), "engram") {
 					t.Errorf("%s still names Engram, the frozen store", path)
@@ -232,17 +241,53 @@ func TestTheFilesOfTheRolesAreAsciiWithNoGeneratedHeader(t *testing.T) {
 
 // The tool names of Pi are the ones the installed sources register: the built-in tools of Pi and the
 // one native tool gentle-pi names codegraph (verified 2026-10-22 against Pi 1.3.0 and gentle-pi
-// 4.3.0), and the tools of the memorycard MCP server Pi loads from its mcp.json, by their MCP name (an
-// assumption, see piToolNames; gentle-engram, which registered bare mem_* names, is no longer
-// installed).
+// 4.3.0), and the tools of the memorycard MCP server Pi loads from its mcp.json, by the name Pi gives
+// an MCP tool (piMCPTool; gentle-engram, which registered bare mem_* names, is no longer installed).
 // gentle-pi drops a name it does not know without a word, so a name outside this set would take a
 // tool from a role and say nothing.
+// No file of a role tells it to call a memorycard tool it does not hold: the memory line names
+// mem_search and mem_get, the by-id line mem_get alone, and each tool a file names is in the tools of
+// that runtime.
+func TestNoRoleIsToldToCallAMemoryToolItDoesNotHold(t *testing.T) {
+	root := generated(t)
+	for _, r := range wantRoles {
+		for path, tools := range map[string]string{"agents/" + r.name + ".md": r.claudeTools, "pi/agents/" + r.name + ".md": r.piTools} {
+			text := readText(t, filepath.Join(root, filepath.FromSlash(path)))
+			for line, names := range map[string][]string{memoryLine: {"mem_search", "mem_get"}, byIDLine: {"mem_get"}} {
+				if !strings.Contains(text, line) {
+					continue
+				}
+				for _, name := range names {
+					if !slices.Contains(strings.Split(tools, ", "), "mcp__memorycard__"+name) {
+						t.Errorf("%s tells the role to call %s, which its tools (%s) miss", path, name, tools)
+					}
+				}
+			}
+		}
+	}
+}
+
+// piMCPTool is the name Pi gives a tool of an MCP server: mcp__<server>__<tool>, every character
+// outside [A-Za-z0-9_] replaced by an underscore (createMcpToolName in
+// dist/extensions/mcp/tools.js of pi-coding-agent 1.4.0, read 2026-11-05).
+func piMCPTool(server, tool string) string {
+	name := "mcp__" + server + "__" + tool
+	return strings.Map(func(c rune) rune {
+		if c == '_' || c >= '0' && c <= '9' || c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z' {
+			return c
+		}
+		return '_'
+	}, name)
+}
+
 func TestThePiToolsOfEveryRoleAreNamesTheInstalledSourcesRegister(t *testing.T) {
 	known := map[string]bool{
 		"read": true, "edit": true, "write": true, "bash": true, "grep": true, "find": true,
-		"codegraph":                   true,
-		"mcp__memorycard__mem_search": true, "mcp__memorycard__mem_get": true,
-		"mcp__memorycard__mem_save": true, "mcp__memorycard__mem_update": true,
+		"codegraph": true,
+	}
+	// The memorycard server is the key "memorycard" of ~/.pi/agent/mcp.json.
+	for _, tool := range []string{"mem_search", "mem_get", "mem_save", "mem_update"} {
+		known[piMCPTool("memorycard", tool)] = true
 	}
 	for _, r := range wantRoles {
 		for _, tool := range strings.Split(r.piTools, ", ") {

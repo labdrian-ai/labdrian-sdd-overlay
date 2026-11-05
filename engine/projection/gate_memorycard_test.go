@@ -95,13 +95,33 @@ func TestGateComparesTheProjectOfAMemorycardReadWithTheEngramNameOfTheIdentity(t
 			denied(t, "the identity itself", gate(w, tool, engramRead(engramIdentity, false)),
 				"this memorycard read asks for project", `"github.com/acme/proj-1"`, `permits only project "proj-1"`, `Name project "proj-1"`, "labdrian workflow unbind")
 			denied(t, "another project", gate(w, tool, engramRead("other", false)), `"other"`, `"proj-1"`, "memorycard read")
-			denied(t, "no project", gate(w, tool, engramRead("", false)),
-				"this memorycard read names no project", "missing, not a string, or empty", `"proj-1"`, "labdrian workflow unbind")
 			warned(t, "arguments that are not named", gate(w, tool, unnamed), "memorycard read", "not a JSON object", "not checked")
 		})
 	}
 	for _, tool := range engramProjectReads {
 		denied(t, "Engram wording kept/"+tool, gate(w, tool, engramRead("other", false)), "this Engram read asks for project")
+	}
+}
+
+// TestGateLetsAMemorycardReadWithNoProjectResolveItsOwn: memorycard resolves an omitted project
+// from its working directory, the session's own project, so a mem_search or mem_context that names
+// no project and no directory passes; one that names no project but a directory (cwd or directory,
+// which mem_context reads only when project is empty) is denied, since that directory picks the
+// project. An Engram read that names no project is still denied, and every project still is.
+func TestGateLetsAMemorycardReadWithNoProjectResolveItsOwn(t *testing.T) {
+	for _, profile := range []string{"odd", "sdd"} {
+		w := engramWorkflow(profile)
+		for _, tool := range memorycardProjectReads {
+			allowed(t, profile+"/no project, no directory/"+tool, gate(w, tool, engramRead("", false)))
+			denied(t, profile+"/no project, a directory/"+tool,
+				gate(w, tool, projection.QueryArguments{Named: true, WorkDir: "/elsewhere"}),
+				"this memorycard read names no project", "a directory", `"/elsewhere"`, `"proj-1"`, "labdrian workflow unbind")
+			denied(t, profile+"/every project/"+tool, gate(w, tool, engramRead("", true)), "all_projects is true")
+		}
+		for _, tool := range engramProjectReads {
+			denied(t, profile+"/Engram no project/"+tool, gate(w, tool, engramRead("", false)),
+				"this Engram read names no project", "missing, not a string, or empty")
+		}
 	}
 }
 

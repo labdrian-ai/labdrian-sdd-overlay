@@ -109,6 +109,9 @@ type QueryArguments struct {
 	// Goal is the goal the query names: the value of its "goal" argument, which is empty when
 	// there is none, when it is null, when it is not text, or when it is empty.
 	Goal string
+	// WorkDir is the directory the query picks its project by: its "cwd" argument, or its
+	// "directory" argument when cwd names none, each read like Project (a memorycard read).
+	WorkDir string
 }
 
 // Query reads the input of the call as the arguments of a memory query. A key is matched
@@ -135,7 +138,15 @@ func queryArguments(input json.RawMessage) QueryArguments {
 	if err := json.Unmarshal(fields["goal"], &goal); err != nil {
 		goal = ""
 	}
-	return QueryArguments{Named: true, Project: project, AllProjects: all, Goal: goal}
+	workDir := ""
+	for _, key := range []string{"cwd", "directory"} {
+		var dir string
+		if err := json.Unmarshal(fields[key], &dir); err == nil && dir != "" {
+			workDir = dir
+			break
+		}
+	}
+	return QueryArguments{Named: true, Project: project, AllProjects: all, Goal: goal, WorkDir: workDir}
 }
 
 // Skill is the skill a Skill call names: its "skill" argument when that is text, else "".
