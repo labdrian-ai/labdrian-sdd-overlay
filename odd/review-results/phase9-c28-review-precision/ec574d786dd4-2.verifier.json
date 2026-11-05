@@ -1,0 +1,25 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "BENCH=$S/bench RUNNER=ours RUNS=1 SCORES= bash <script> c1 (run with S=/tmp/f123.jtNBao, once with head/findings.sh and once with base/findings.sh; the scores file holding the matching quote was not passed, because SCORES is empty). Control: the same command with SCORES=$S/s_match.json.",
+      "output": "On head, with SCORES= (empty), the command exits 0 and prints one entry with c27_control:false. Nothing is written to stderr and no message is shown. A matching score-1 quote exists in s_match.json, but SCORES= is treated the same as an unset SCORES, so nothing is marked and nothing is reported. Control: with SCORES=$S/s_match.json the same entry has c27_control:true. Scratch dir: /tmp/f123.jtNBao (kept).",
+      "base_result": "reproduced"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "BENCH=$S/bench RUNNER=ours RUNS=\"1 2\" SCORES=$S/s_f2.json bash <script> c1 (head and base copies). s_f2.json holds a score-1 quote for c1 run 3, plus a score-1 quote for c2 run 1 while only c1 is named.",
+      "output": "On head the command exits 0 with empty stderr. The c27_control values are [false,false]. Neither the out-of-range run-3 quote nor the quote for the unnamed case c2 produces any message. Both are dropped silently by the jq select at line 58. Scratch dir: /tmp/f123.jtNBao.",
+      "base_result": "reproduced"
+    },
+    {
+      "id": "F3",
+      "result": "reproduced",
+      "command": "cd $S/cwd (holds files aaa and bbb) && RUNS='*' BENCH=$S/bench RUNNER=ours bash <script> c1. Second probe: RUNS=1 bash <script> \"c1 x\". Third probe: ids c1 and c2 passed together.",
+      "output": "The glob part reproduces on head. The command exits 2 with 'RUNS must hold positive integers, not aaa'. The message names the first filename in the directory (aaa) instead of '*'. The id-with-space part does not reproduce. The id 'c1 x' is rejected first with 'unknown case c1 x' and exit 2. The collision in the `seen` list would need a corpus id that itself contains a space. Passing c1 and c2 together works normally and gives 2 entries. So the glob claim is reproduced, and the space-collision claim is not reproduced because the unknown-case check rejects it before the `seen` match. Scratch dir: /tmp/f123.jtNBao.",
+      "base_result": "reproduced"
+    }
+  ]
+}

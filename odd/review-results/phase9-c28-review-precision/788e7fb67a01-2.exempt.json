@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "835dcd3a99d346920a69292d0f96c256ec4c11dd",
+    "head": "788e7fb67a013d233a19ccb3c0ca8e450f5d9855",
+    "diff_sha256": "335a917ebb9caaee20bb17a84c7b38b66799cbae0585688a4efd6862305b5826",
+    "paths": [
+      "odd/goals/phase9-c28-review-precision.json",
+      "odd/tasks/phase9-c28-review-precision.md"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git rev-parse 788e7fb67a013d233a19ccb3c0ca8e450f5d9855^",
+        "result": "pass",
+        "output": "835dcd3a99d346920a69292d0f96c256ec4c11dd"
+      },
+      {
+        "command": "git diff --name-status 835dcd3a99d346920a69292d0f96c256ec4c11dd 788e7fb67a013d233a19ccb3c0ca8e450f5d9855",
+        "result": "pass",
+        "output": "A odd/goals/phase9-c28-review-precision.json; A odd/tasks/phase9-c28-review-precision.md (only two added files)"
+      },
+      {
+        "command": "jq -e . odd/goals/phase9-c28-review-precision.json; diff of sorted jq paths (C28 vs C27)",
+        "result": "pass",
+        "output": "exit=0. Differences are only keys present in C27 and missing from C28: constraints.5, constraints.6, non_goals.3. The C28 key set is a subset of C27's."
+      },
+      {
+        "command": "rg -n '\\\\u[0-9a-fA-F]{4}' odd/tasks/phase9-c28-review-precision.md odd/goals/phase9-c28-review-precision.json",
+        "result": "pass",
+        "output": "No output (rg exit 1, no matches)"
+      },
+      {
+        "command": "git log -1 --format=%B 788e7fb67a013d233a19ccb3c0ca8e450f5d9855",
+        "result": "pass",
+        "output": "The last non-empty line is the bare trailer 'Risk: none'."
+      },
+      {
+        "command": "rg -n '^## ' odd/tasks/phase9-c28-review-precision.md",
+        "result": "pass",
+        "output": "6:## Specs, 15:## Tasks, 22:## Log (in that order)"
+      }
+    ]
+  }
+}

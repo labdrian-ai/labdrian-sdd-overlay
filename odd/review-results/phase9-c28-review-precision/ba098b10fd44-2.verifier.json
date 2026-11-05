@@ -1,0 +1,32 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "In /tmp/f.4kKX8S/t, with BENCH=/tmp/f.4kKX8S/b RUNNER=ours: SCORES=/tmp/f.4kKX8S/q.json RUNS=1 bash findings.sh c1. q.json holds one score-1 quote, 'recall ERROR zz.go:9: nothing', which matches no finding. The planted finding is recall WARNING a.go:1.",
+      "output": "Exit 0 and 0 bytes on stderr. The finding was printed with c27_control false. No warning named the unmatched quote.",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "In /tmp/f.4kKX8S/t, with BENCH=/tmp/f.4kKX8S/b RUNNER=ours: env -u SCORES RUNS=1 bash findings.sh c1. The file scores/ours-c27.json sits beside the script and holds the quote 'recall WARNING a.go:1: x'. The planted finding is recall WARNING a.go:1 in run1/c1.",
+      "output": "{\"finding\":\"F1\",\"c27_control\":true}. The default C27 scores file marked an unrelated finding with no warning. The quote matched only on the 'recall WARNING a.go:1:' prefix, and its id and run matched.",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F3",
+      "result": "reproduced",
+      "command": "In /tmp/f.4kKX8S/t, with BENCH=/tmp/f.4kKX8S/b RUNNER=ours: (a) RUNS=\" \" bash findings.sh c1; (b) RUNS=\"1 1\" bash findings.sh c1; (c) RUNS=1 bash findings.sh c1 c1; (d) after printf '{bad' > corpus.json, RUNS=1 bash findings.sh c1.",
+      "output": "(a) printed [] with exit 0. (b) printed two entries, both with key 51700ac30466 and run 1. (c) printed two entries, both with key 51700ac30466 and run 1. (d) jq printed 'parse error: Invalid numeric literal at EOF at line 1, column 4', then the script printed 'unknown case c1' and exited 2. The misleading message is confirmed.",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F4",
+      "result": "not-run",
+      "command": "none",
+      "output": "The claim is about maintainability and speed: a mixed warn/finding stream, and two or three jq processes spawned per finding. I did not measure the speed claim, and there is no observable wrong behavior to show. I read the code at findings.sh:361-371 and it matches the description, but that is not a behavior reproduction. Scratch dir kept at /tmp/f.4kKX8S.",
+      "base_result": "not-run"
+    }
+  ]
+}
