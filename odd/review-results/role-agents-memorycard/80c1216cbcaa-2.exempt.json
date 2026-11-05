@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "7f6e32af261a534b39ed7b1b2bca294976e536e5",
+    "head": "80c1216cbcaa3f3250e13f8fdf48d44ba3138109",
+    "diff_sha256": "91c8b6bf4d7f47579b05eb578806c4e3694ba5909e25e95eecfc0d0598d0d0a2",
+    "paths": [
+      "odd/tasks/role-agents-memorycard.md"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git -C /home/labdrian/labdrian-sdd-overlay diff --name-status 7f6e32af 80c1216c",
+        "result": "pass",
+        "output": "M\todd/tasks/role-agents-memorycard.md (the only path listed)"
+      },
+      {
+        "command": "git -C /home/labdrian/labdrian-sdd-overlay diff 7f6e32af 80c1216c -- odd/tasks/role-agents-memorycard.md",
+        "result": "pass",
+        "output": "Hunk 1 (@@ -9,7 +9,7 @@) removes one line, the T1 task line `- [ ] T1 — S1 — inline ...`. It adds the same line as `- [x] T1 ...`, with the commit list `17090998, 2815fdf2, 71f513f1, 079eac2e, 61d80196, 27b5b3a7 (PR #733, merge 7f6e32af)` in place of `commit: -`. Hunk 2 (@@ -18,3 +18,4 @@) adds one line, the new Log entry L6. L2 to L5 appear only as unchanged context lines. No other lines were removed, and the Log is append-only."
+      },
+      {
+        "command": "cd /home/labdrian/labdrian-sdd-overlay && rg -n '\\\\u[0-9a-fA-F]{4}' odd/tasks/role-agents-memorycard.md",
+        "result": "pass",
+        "output": "Printed nothing (rg exit 1, no matches)."
+      }
+    ]
+  }
+}
