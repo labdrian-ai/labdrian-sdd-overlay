@@ -787,15 +787,16 @@ func TestReviewBenchFindings(t *testing.T) {
 		scores := `[{"id": "R1", "run": 1, "score": 1, "quote": "recall WARNING a.go:1-3: c1 ..."},
  {"id": "R1", "run": 2, "score": 1, "quote": "recall SUGGESTION a.go:9: other run"},
  {"id": "R2", "run": 1, "score": 0.5, "quote": "recall WARNING b.go:2: x"},
+ {"id": "R2", "run": 1, "score": 1, "quote": "hunt WARNING b.go:2: no such finding"},
  {"id": "R1", "run": 1, "score": 0, "quote": "recall SUGGESTION a.go:9: c2"}]`
 		if err := os.WriteFile(filepath.Join(tools, "scores", "ours-c27.json"), []byte(scores), 0600); err != nil {
 			t.Fatal(err)
 		}
-		stdout, stderr, code := runFindings(t, script, bench, []string{"RUNNER=ours", "RUNS=1"}, "R1", "R2")
+		stdout, stderr, code := runFindings(t, script, bench, []string{"RUNNER=ours", "RUNS=1", "SCORES=" + filepath.Join(tools, "scores", "ours-c27.json")}, "R1", "R2")
 		if code != 0 {
 			t.Fatalf("exit %d\n%s", code, stderr)
 		}
-		if stderr != "quote of R2 run 1 names 2 findings; none is marked\n" {
+		if stderr != "quote of R2 run 1 names 2 findings; none is marked\nquote of R2 run 1 names no finding; none is marked\n" {
 			t.Fatalf("stderr %q", stderr)
 		}
 		var marked []string
@@ -806,6 +807,24 @@ func TestReviewBenchFindings(t *testing.T) {
 		}
 		if strings.Join(marked, ",") != "R1/recall/F1" {
 			t.Fatalf("marked %v\n%s", marked, stdout)
+		}
+	})
+
+	t.Run("with SCORES unset no finding is marked, even beside a scores file", func(t *testing.T) {
+		script, tools, bench := findingsFixture(t)
+		plantSummary(t, bench, "ours", 1, "R1", oursR1Run1)
+		scores := `[{"id": "R1", "run": 1, "score": 1, "quote": "recall WARNING a.go:1-3: c1"}]`
+		if err := os.WriteFile(filepath.Join(tools, "scores", "ours-c27.json"), []byte(scores), 0600); err != nil {
+			t.Fatal(err)
+		}
+		stdout, stderr, code := runFindings(t, script, bench, []string{"RUNNER=ours", "RUNS=1"}, "R1")
+		if code != 0 || stderr != "" {
+			t.Fatalf("exit %d\n%s", code, stderr)
+		}
+		for _, f := range parseFindings(t, stdout) {
+			if f.C27Control {
+				t.Fatalf("marked without SCORES: %+v", f)
+			}
 		}
 	})
 
@@ -823,6 +842,10 @@ func TestReviewBenchFindings(t *testing.T) {
 			{[]string{"RUNNER=ours", "RUNS=1"}, []string{"R1", "R9"}, "unknown case R9\n"},
 			{[]string{"RUNNER=ours", "RUNS=1 2"}, []string{"R1"}, "R1 run 2: no summary at " + filepath.Join(bench, "out", "ours", "run2", "R1", "summary.json") + "\n"},
 			{[]string{"RUNNER=ours", "RUNS=0"}, []string{"R1"}, "RUNS must hold positive integers, not 0\n"},
+			{[]string{"RUNNER=ours", "RUNS= "}, []string{"R1"}, "RUNS names no run\n"},
+			{[]string{"RUNNER=ours", "RUNS=1 1"}, []string{"R1"}, "RUNS names run 1 twice\n"},
+			{[]string{"RUNNER=ours", "RUNS=1"}, []string{"R1", "R1"}, "case R1 is named twice\n"},
+			{[]string{"RUNNER=ours", "RUNS=1", "SCORES=" + filepath.Join(bench, "none.json")}, []string{"R1"}, "no scores file at " + filepath.Join(bench, "none.json") + "\n"},
 		}
 		for _, c := range cases {
 			stdout, stderr, code := runFindings(t, script, bench, c.env, c.args...)

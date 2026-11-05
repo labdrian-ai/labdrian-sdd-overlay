@@ -4,10 +4,11 @@
 # RUNNER=ours reads $BENCH/out/ours/run<k>/<id>/summary.json, RUNNER=gentle $BENCH/out/run<k>/<id>/summary.json.
 # Each entry: key (the first 12 hex digits of sha256 of <runner>/<id>/<run>/<row>/<finding>), runner, id, run, row
 # (the lens of the summary), finding, severity, location, claim, proof_refs, evidence_class and causal_disposition
-# (null when the finding leaves them out) and c27_control: true when a score-1 or score-0.5 quote of
-# $SCORES (default scores/<runner>-c27.json) for the same id and run starts with "<row> <SEVERITY> <location>:" of
-# exactly one finding. A quote that names several findings marks none and is named on stderr. Nothing is printed
-# on stdout unless every summary is read.
+# (null when the finding leaves them out) and c27_control: true when a score-1 or score-0.5 quote of the scores file
+# $SCORES (no default: unset, no finding is marked) for the same id and run starts with
+# "<row> <SEVERITY> <location>:" of exactly one finding. A quote that names no finding or several marks none and is
+# named on stderr. A run named twice in RUNS or a case named twice is refused, since its entries would share keys.
+# Nothing is printed on stdout unless every summary is read.
 set -u
 bench="${BENCH:-$HOME/labdrian-sdd-overlay-worktrees/review-bench}"
 here="$(cd "$(dirname "$0")" && pwd)"
@@ -18,23 +19,31 @@ case "$runner" in
   *) echo "RUNNER must be ours or gentle, not $runner" >&2; exit 2 ;;
 esac
 [ "$#" -gt 0 ] || { echo "usage: RUNNER=ours|gentle findings.sh <id>..." >&2; exit 2; }
-runs="${RUNS:-1 2 3}"
+runs="${RUNS-1 2 3}"
+seen=" "
 for k in $runs; do
   case "$k" in
-    '' | *[!0-9]* | 0*) echo "RUNS must hold positive integers, not $k" >&2; exit 2 ;;
+    *[!0-9]* | 0*) echo "RUNS must hold positive integers, not $k" >&2; exit 2 ;;
   esac
+  case "$seen" in *" $k "*) echo "RUNS names run $k twice" >&2; exit 2 ;; esac
+  seen="$seen$k "
 done
+[ "$seen" != " " ] || { echo "RUNS names no run" >&2; exit 2; }
+seen=" "
 for id in "$@"; do
-  jq -e --arg id "$id" 'any(.real[]; .id == $id)' "$here/corpus.json" >/dev/null || { echo "unknown case $id" >&2; exit 2; }
+  case "$seen" in *" $id "*) echo "case $id is named twice" >&2; exit 2 ;; esac
+  seen="$seen$id "
+  known=$(jq --arg id "$id" 'any(.real[]; .id == $id)' "$here/corpus.json") || { echo "cannot read $here/corpus.json" >&2; exit 2; }
+  [ "$known" = true ] || { echo "unknown case $id" >&2; exit 2; }
   for k in $runs; do
     summary="$out_dir/run$k/$id/summary.json"
     [ -f "$summary" ] || { echo "$id run $k: no summary at $summary" >&2; exit 2; }
   done
 done
-scores="${SCORES:-$here/scores/$runner-c27.json}"
 quotes='[]'
-if [ -f "$scores" ]; then
-  quotes=$(jq -c '[.[] | select(.score > 0)]' "$scores") || exit 2
+if [ -n "${SCORES:-}" ]; then
+  [ -f "$SCORES" ] || { echo "no scores file at $SCORES" >&2; exit 2; }
+  quotes=$(jq -c '[.[] | select(.score > 0)]' "$SCORES") || exit 2
 fi
 entries=()
 for id in "$@"; do
@@ -48,7 +57,8 @@ for id in "$@"; do
            prefix: "\($row) \(.severity) \(.location):"} ] as $fs
       | [ $quotes[] | select(.id == $id and .run == $run) | .quote as $q
           | {quote: $q, hits: [ $fs[] | select(.prefix as $p | $q | startswith($p)) | [.row, .finding] ]} ] as $qs
-      | ($qs[] | select((.hits | length) > 1) | {warn: "quote of \($id) run \($run) names \(.hits | length) findings; none is marked"}),
+      | ($qs[] | (.hits | length) as $n | select($n != 1)
+          | {warn: "quote of \($id) run \($run) names \(if $n == 0 then "no finding" else "\($n) findings" end); none is marked"}),
         ($fs[] | [.row, .finding] as $f
           | . + {c27_control: any($qs[]; .hits == [$f])}
           | del(.prefix))
