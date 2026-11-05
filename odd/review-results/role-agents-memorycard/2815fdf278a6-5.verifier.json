@@ -1,0 +1,32 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "rg memoryMatcher engine/settings/codexhooks/document.go on head and base; bat -r 212:240 -p document.go (editEvent); rg -n 'trust' bin/lib/hooks.sh",
+      "output": "Head matcher adds `([A-Za-z0-9]+_)*memorycard__mem_(search|context|get)`. Base matcher is `^mcp__(([A-Za-z0-9]+_)*engram__mem_(...)|longterm_mem__(query|get))$`. editEvent keeps an owned group only if equivalent(group, wanted). The old group is not equivalent, so it is replaced and changed=true. hooks.sh:48-49 still says only 'trust each new handler once in the Codex TUI', and the Codex hooks line in usage.go:24 doesn't say the existing trust is lost either. I did not run Codex, so the claim that gate and evidence stop running until re-trust is not verified.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "go test -run 'TestProbe$' -v ./engine/projection (head scratch copy); rg memorycard engine/agentgen/roles.go",
+      "output": "Head: memorycard mem_search and mem_context with no project are denied under odd and sdd (profiles whose plans carry a project). Under standalone-minimal (scope none), mem_search is denied even with the right project: deny=true. roles.go:17 memoryLine tells roles 'memorycard topic via mem_search, then mem_get' with no project. Base: no memorycard gating, all calls allowed.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F3",
+      "result": "not-reproduced",
+      "command": "Read server.go projIn (lines 60-85) and gate.go engramProjectGate / QueryArguments",
+      "output": "The gate reads only project and all_projects, and a given cwd is not looked at. But memorycard's projIn lets an explicit project win over cwd. mem_search has no cwd argument at all. mem_context's cwd is only used when project is empty, and the gate denies empty projects. So a call naming the right project with another cwd still queries the right project, and no bypass is reachable. The only probe I ran with a right project and no cwd was allowed, as expected.",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F4",
+      "result": "reproduced",
+      "command": "bat -r 295:299 -p engine/capability/declarations.go (head scratch copy)",
+      "output": "Head memoryEnforcementDetail for Codex reads 'PreToolUse checks plan sources for MCP Engram reads and longterm-mem query/get...' and does not mention memorycard, though the Codex matcher and gate now cover it. The same text at base was accurate because memorycard was not gated.",
+      "base_result": "not-reproduced"
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "rg -n 'tools:|mem_search|mem_get' agents/verifier.md pi/agents/verifier.md codex/agents/verifier.toml (head); git show f31530e0:agents/verifier.md | rg -n 'mem_|Engram' (base)",
+      "output": "At head, the verifier tool list is `mcp__memorycard__mem_get` only, in agents/ and pi/agents. The prompt line in agents/verifier.md, pi/agents/verifier.md and codex/agents/verifier.toml says 'memorycard topic via mem_search, then mem_get'. I did not check which tool list codex/agents/verifier.toml carries. At base, the list and the prompt line both used mem_get_observation, so they were consistent.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "bat -p -r 232:262 engine/agentgen/roles_test.go (head); bat -p -r 30:60 <Pi 1.4.0>/dist/extensions/mcp/tools.js",
+      "output": "The Pi names themselves are valid, so the first half of this finding does not hold. The circularity half does hold. TestThePiToolsOfEveryRoleAreNamesTheInstalledSourcesRegister (roles_test.go:240-255) checks the roles' Pi tools against a hand-written `known` map. That map holds the same four mcp__memorycard__mem_* literals that roles.go emits. Nothing in the test reads the Pi install, mcp.json or Pi's naming rule. The test would pass for any name typed into both places, and its own comment calls the names 'an assumption'.",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F3",
+      "result": "reproduced",
+      "command": "rg -n Engram skills/role-chain/references/worktrees.md; rg -n Engram engine/skills/role_chain_artifact_test.go; rg -n 'mem_(search|get|save)' docs/architecture/role-design/per-role-reviewer.md docs/architecture/role-design/per-role-design-v3.md (head); git show f31530e0:skills/role-chain/references/worktrees.md | rg -n Engram (base)",
+      "output": "At head, worktrees.md:4 still says 'Pass Engram `project`.' and role_chain_artifact_test.go:252 pins that exact string. per-role-reviewer.md:58 lists `mcp__plugin_engram_engram__mem_get_observation`, and per-role-design-v3.md:35 and :38 list mem_search, mem_get_observation. The same wording exists at base, where Engram was still the store, so it was not stale then.",
+      "base_result": "not-reproduced"
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "go test ./projection -run TestZZ -v on head 25d905b5 and base 17fec6d0",
+      "output": "head: mem_search and mem_context with no project and no directory give {Deny:false}; base: Deny:true",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F2",
+      "result": "not-reproduced",
+      "command": "go test ./internal/mcpserver -run TestZZCase -v in a scratch copy of ~/memorycard, calling mem_context and mem_search with keys CWD, Directory and PROJECT",
+      "output": "the SDK validates arguments against the input schema first: 'validating root: unexpected additional properties [\"CWD\"]' and the same for Directory and PROJECT; only lowercase cwd is accepted, so a differently cased key never reads another project",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F3",
+      "result": "reproduced",
+      "command": "go test ./projection -run TestZZ -v on head with QueryArguments{Named:true, WorkDir:\"/r\"} on mem_context",
+      "output": "Deny:true 'names no project but a directory to pick it by (\"/r\")'; any WorkDir is denied and the message never says that omitting it would pass",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F4",
+      "result": "reproduced",
+      "command": "bat -p --line-range 297:297 engine/capability/declarations.go on head, plus the F1 gate test",
+      "output": "the Codex detail says searches/queries check project while head lets a memorycard search with no project through unchecked",
+      "base_result": "not-reproduced"
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "kind": "polisher",
+  "base": "079eac2e44f1d4c5f4a6c35f949fd467ad9d3025",
+  "head": "61d8019670f5a98e6fb81cb0f48e3a91f7d86c2f",
+  "diff_sha256": "cd8a2c2442cb4f721dae9737d4ca47abe2110041004c9e20b84bd0590faf213b",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/ram-c5.diff.",
+      "Searched the head tree at /home/labdrian/labdrian-sdd-overlay-worktrees/review-6aaf115964a4 for WorkDir, checkMemorycardProject, ownProject and the old 'own working directory' wording. Nothing is left behind in engine code or tests. The only 'own working directory' hits are an unrelated ADR line and a synctrigger comment.",
+      "engine/projection/gate.go:281 and :319: mem_search and mem_context now use checkEngramProject. A read with no project hits the `read.Project == ''` deny case, and all_projects is denied first, so neither reaches another project. mem_get (the read by id) stays checkSourceOnly.",
+      "The new 'no project' case in gate_memorycard_test.go:98 runs for every memorycard project-read tool and asserts the deny reason, so it pins what it claims. The cwd/directory decode tests were removed along with the decoder code, so no dead tests remain. engine/projection/app/memorycard_test.go does not use WorkDir.",
+      "The help text in engine/cmd/usage.go:368-373 and the Codex capability declaration in engine/capability/declarations.go:297 ('trust each new or changed handler') match the gate and the updated capability test. bin/lib/hooks.sh:48 already uses that wording.",
+      "The comment move in engine/agentgen/roles_test.go is comment-only and correct. The Pi tool-name comment now sits above TestThePiToolsOfEveryRoleAreNamesTheInstalledSourcesRegister, and the Codex note explains why there is no tool list to compare.",
+      "Not run: no Go tests or builds. This was static review only."
+    ]
+  }
+}

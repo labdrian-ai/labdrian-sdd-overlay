@@ -1,0 +1,25 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "Ran a throwaway zz_probe_test.go (go test -run 'TestProbe$' -v ./engine/projection) in a scratch copy of head and in a scratch copy of base. It calls gate(engramWorkflow(profile), tool, engramRead(project, false)) for the memorycard tools. Also read ~/memorycard/internal/mcpserver/server.go.",
+      "output": "Head: odd and sdd profiles, mem_search and mem_context with no project: deny=true, reason 'labdrian: this memorycard read names no project (the project argument is missing...'. The same calls with the right project 'proj-1' are allowed. mem_get is allowed. memorycard server.go: `project` is `json:\"project,omitempty\"` (optional) on mem_search and mem_context; when omitted, the server falls back to its default project resolved from the working directory. mem_search takes query, type, k, detail, include_old and project. mem_context takes project, cwd, directory and query. mem_get takes id and history.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "bat -r 365:374 -p engine/cmd/usage.go (head scratch copy); rg -c memorycard engine/cmd/usage.go on head and base",
+      "output": "The projection hook help at head lists only 'a longterm-mem query or get; an Engram mem_search, mem_context, mem_get_observation or mem_timeline' as gated reads. memorycard appears once in usage.go, on line 24 (install-hooks), and not in the gate help. Base: the memorycard reads were not gated, so the help was accurate there.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F3",
+      "result": "not-reproduced",
+      "command": "Read engine/hookwire/posttooluse.go lines 42-47 and ~/memorycard/internal/mcpserver/server.go; rg 'memorycard' engine/hookwire/*_test.go engine/cmd/*_test.go",
+      "output": "memorycard's mem_get takes the key `id` (an int64). `id` is in recordIDKeys {id, observation_id, engram_id}, so the id is recorded and the finding's 'no id' consequence does not occur. It is true that no hookwire or cmd test pins a memorycard mem_get id; the only memorycard hit in engine/cmd tests is the Codex matcher assertion at phase7_acceptance_test.go:1017. The risk is only a missing test.",
+      "base_result": "not-run"
+    }
+  ]
+}

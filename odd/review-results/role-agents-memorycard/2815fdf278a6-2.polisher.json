@@ -1,0 +1,30 @@
+{
+  "kind": "polisher",
+  "base": "170909985f1b274b0cae2cc93a9ce4e84ec64173",
+  "head": "2815fdf278a68ee26bf6aab55fb8d1a438189e30",
+  "diff_sha256": "560d920dba0efa57a4a4ade11b3a5c09ed71df10bdee74caae860b5dfa43516f",
+  "findings": {
+    "findings": [
+      {
+        "location": "engine/projection/gate.go:273-320",
+        "severity": "WARNING",
+        "claim": "A memorycard mem_search or mem_context with no `project` argument is denied for any session bound to a running workflow. This is the call memorycard makes by default, because it resolves the project from the working directory. It reuses the Engram rule (checkEngramProject) that a read naming no project is denied. Memorycard has a different default from Engram, so the common bare call is blocked, not only cross-project reads.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "The diff registers memorycardProjectReadTool with check: checkEngramProject (gate.go lines 311-312 of the diff).",
+          "engramProjectGate returns Deny when read.Project == \"\" ('names no project (the project argument is missing, not a string, or empty)').",
+          "The user's global instructions state that memorycard resolves the project from the working directory when `project` is not passed. So the bare call is legitimate and is now denied.",
+          "The commit's tests only cover a call that passes `project`. The no-project denial for memorycard is not shown to be intended."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read lines 1-117 and 189-623 of /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/ram-c2.diff (gate.go, projection.go, codexhooks/document.go and the unit tests in that range).",
+      "Read the head tree /home/labdrian/labdrian-sdd-overlay-worktrees/review-a9433e519878/engine for engram__ and memorycard references outside tests. No other gate path has memorycard handling.",
+      "I did not read diff lines 118-188 (golden files) or 624-825 (settingsfile tests). I ran no tests.",
+      "The Claude and Codex matchers match exactly mem_search, mem_context and mem_get, and match no memorycard write tool. The Claude matcher allows a hyphenated plugin prefix. The Codex matcher allows an alphanumeric prefix only, like the existing Engram one.",
+      "I found no bypass through the matchers or settings entries. The two new PreToolUse and PostToolUse entries are appended last, so existing installs keep their entries."
+    ]
+  }
+}

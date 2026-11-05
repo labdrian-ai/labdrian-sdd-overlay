@@ -1,0 +1,32 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "go test ./projection -run TestZZ -v on head 25d905b5 and base 17fec6d0 (throwaway test: mem_search/mem_context with no project and no cwd)",
+      "output": "head: {Deny:false}; memorycard picks the project from the server's startup cwd, which the gate cannot see. base: Deny:true 'names no project'",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "go test ./hookwire -run TestZZDecode -v on head with tool_input {\"cwd\":5} and {\"cwd\":[\"/x\"]}",
+      "output": "Query() gives WorkDir empty with no error; no test pins a non-string cwd. memorycard's schema rejects a non-string cwd",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F3",
+      "result": "reproduced",
+      "command": "bat -p --line-range 190:290 engine/agentgen/roles_test.go on head",
+      "output": "the Pi tool-name comment sits above TestNoRoleIsToldToCallAMemoryToolItDoesNotHold; the new test covers agents/*.md and pi/agents/*.md, not codex/agents/*.toml",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F4",
+      "result": "reproduced",
+      "command": "rg -n 'const byIDLine|byIDLine =' --glob '*.go'",
+      "output": "byIDLine defined in engine/skills/role_agents_artifact_test.go:229, engine/agentgen/roles_test.go:28 and engine/agentgen/roles.go:22; piMCPTool applies the same rule that produces the names it checks",
+      "base_result": "not-run"
+    }
+  ]
+}

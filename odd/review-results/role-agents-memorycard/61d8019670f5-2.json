@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "079eac2e44f1d4c5f4a6c35f949fd467ad9d3025",
+    "head": "61d8019670f5a98e6fb81cb0f48e3a91f7d86c2f",
+    "diff_sha256": "cd8a2c2442cb4f721dae9737d4ca47abe2110041004c9e20b84bd0590faf213b",
+    "paths": [
+      "engine/agentgen/roles_test.go",
+      "engine/capability/memory_enforcement_detail_test.go",
+      "engine/cmd/hook_translate.go",
+      "engine/cmd/hook_translate_test.go",
+      "engine/cmd/usage.go",
+      "engine/hookwire/decode.go",
+      "engine/hookwire/decode_test.go",
+      "engine/projection/gate.go",
+      "engine/projection/gate_memorycard_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "079eac2e44f1d4c5f4a6c35f949fd467ad9d3025",
+      "head": "61d8019670f5a98e6fb81cb0f48e3a91f7d86c2f",
+      "diff_sha256": "cd8a2c2442cb4f721dae9737d4ca47abe2110041004c9e20b84bd0590faf213b"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/agentgen/roles_test.go",
+        "engine/capability/memory_enforcement_detail_test.go",
+        "engine/cmd/hook_translate.go",
+        "engine/cmd/hook_translate_test.go",
+        "engine/cmd/usage.go",
+        "engine/hookwire/decode.go",
+        "engine/hookwire/decode_test.go",
+        "engine/projection/gate.go",
+        "engine/projection/gate_memorycard_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/cmd/usage.go:368-372",
+        "severity": "SUGGESTION",
+        "claim": "The reworded help text puts a long parenthetical about memorycard inside a sentence that already lists several alternatives, which makes it hard to see which reads are denied. The tests do not pin this help wording. They only pin the gate's denial reason. A future edit could let the help text and the gate drift apart without any test failing.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/usage.go:368-372"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full 9-path diff.",
+      "The revert is complete: grep of the worktree engine/ found no remaining WorkDir, checkMemorycardProject or ownProject references outside unrelated test variables.",
+      "The gate reverts to checkEngramProject for memorycard reads. A new test case, 'no project', asserts the denial text for every memorycard project-read tool.",
+      "The 'trust each new or changed handler' wording in engine/capability/declarations.go:297 matches the updated test expectation in memory_enforcement_detail_test.go.",
+      "The codex hooks shell test expects the same wording as usage.go:26.",
+      "The roles_test.go change only moves a comment block and has no behavior effect.",
+      "Nothing was run; this is static inspection only."
+    ]
+  }
+}

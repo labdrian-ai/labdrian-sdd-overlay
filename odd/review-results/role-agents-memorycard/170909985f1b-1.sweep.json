@@ -1,0 +1,24 @@
+{
+  "kind": "sweep",
+  "base": "f31530e0c0fa5f85cc095bc339370cc0d4facb2d",
+  "head": "170909985f1b274b0cae2cc93a9ce4e84ec64173",
+  "diff_sha256": "30553afb25c082286c0127eedb1046cd034c9d541e8c6761533595835462dea3",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": [
+      {
+        "name": "engramLine",
+        "hits": [
+          "longterm-mem/cmd/longterm-mem/main_test.go"
+        ]
+      }
+    ]
+  },
+  "t2": [],
+  "t3": [],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

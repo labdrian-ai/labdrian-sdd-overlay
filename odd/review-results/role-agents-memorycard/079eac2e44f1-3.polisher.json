@@ -1,0 +1,42 @@
+{
+  "kind": "polisher",
+  "base": "71f513f1e7d1a9afa3bfc3e234c2f365b44f4786",
+  "head": "079eac2e44f1d4c5f4a6c35f949fd467ad9d3025",
+  "diff_sha256": "8245002a8d54a46348338d64bdef30e16b20fb6a7b1ae6bcc65336850c3a8bdd",
+  "findings": {
+    "findings": [
+      {
+        "location": "engine/projection/gate.go:568-569",
+        "claim": "A memorycard mem_search or mem_context with no project and no cwd or directory now passes the memory gate on the assumption that memorycard's own working directory is the workflow's project. The hook never checks that assumption. If the memorycard MCP server runs from a directory that resolves to a different project (a worktree, a subdirectory, or a server started elsewhere), the read reaches a project other than the workflow's and the gate lets it through. Before this commit such a read was always denied.",
+        "severity": "WARNING",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "The gate previously denied every memorycard read that named no project (`case read.Project == \"\"`). The new case `read.Project == \"\" && ownProject && read.WorkDir == \"\"` returns an empty GateResult, so it allows the read without comparing anything to `want`.",
+          "The justification (\"memorycard then reads the project of its own working directory, the session's\") appears only in comments at gate.go:547-549 and in the help text. The hook has no code that verifies the server's cwd matches the workflow identity.",
+          "MEMORY.md records that mem_* resolves \"unknown\" from a worktree and needs an explicit project. This workflow uses worktrees under ~/labdrian-sdd-overlay-worktrees, so cwd-based resolution is known to differ from the workflow's project in practice.",
+          "The new test in gate_memorycard_test.go only asserts that the read is allowed. It does not cover the case where the server's cwd differs from the bound project.",
+          "I did not run any tests or check how memorycard resolves its project, so this is inferred from the diff and the memory note."
+        ]
+      },
+      {
+        "location": "engine/agentgen/roles_test.go:166-177",
+        "claim": "The comment block that describes the Pi tool-name test is now stuck above the new TestNoRoleIsToldToCallAMemoryToolItDoesNotHold. Its first lines still say the tool names of Pi come from the installed sources, and its last lines describe the memory-line check, so it reads as documentation for the wrong test. TestThePiToolsOfEveryRoleAreNamesTheInstalledSourcesRegister, which the comment is about, now has only the doc comment of piMCPTool above it.",
+        "severity": "SUGGESTION",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "In the diff (lines 166-195) the original comment starting \"The tool names of Pi are the ones the installed sources register\" is followed directly by the added sentences about the memory line, and then by `func TestNoRoleIsToldToCallAMemoryToolItDoesNotHold`.",
+          "The Pi test function (`TestThePiToolsOfEveryRoleAreNamesTheInstalledSourcesRegister`) follows `piMCPTool` and carries no comment of its own."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/ram-c4.diff.",
+      "In the head tree, read roles.go (the memorycard tool lists of each role and role.body) and engine/projection/gate.go (the memorycard tool regexes, memoryReads and engramProjectGate).",
+      "Checked that the generator change matches the verifier's generated agent files for Claude, Pi and Codex, and that the roles_test and role_agents_artifact_test expectations agree with it.",
+      "Checked the new decoder reads cwd and directory in both the PreToolUse and PostToolUse paths, and that its tests pin the cwd-first and empty-cwd cases.",
+      "Did not run any tests or commands."
+    ]
+  }
+}

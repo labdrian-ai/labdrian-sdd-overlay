@@ -1,0 +1,137 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f31530e0c0fa5f85cc095bc339370cc0d4facb2d",
+    "head": "170909985f1b274b0cae2cc93a9ce4e84ec64173",
+    "diff_sha256": "30553afb25c082286c0127eedb1046cd034c9d541e8c6761533595835462dea3",
+    "paths": [
+      "agents/builder.md",
+      "agents/delivery.md",
+      "agents/polisher.md",
+      "agents/prototyper.md",
+      "agents/shaper.md",
+      "agents/sweeper.md",
+      "agents/verifier.md",
+      "codex/agents/builder.toml",
+      "codex/agents/delivery.toml",
+      "codex/agents/polisher.toml",
+      "codex/agents/prototyper.toml",
+      "codex/agents/shaper.toml",
+      "codex/agents/sweeper.toml",
+      "codex/agents/verifier.toml",
+      "engine/agentgen/roles.go",
+      "engine/agentgen/roles_test.go",
+      "engine/skills/role_agents_artifact_test.go",
+      "pi/agents/builder.md",
+      "pi/agents/delivery.md",
+      "pi/agents/polisher.md",
+      "pi/agents/prototyper.md",
+      "pi/agents/shaper.md",
+      "pi/agents/sweeper.md",
+      "pi/agents/verifier.md",
+      "roles/builder/body.md",
+      "roles/delivery/body.md",
+      "roles/polisher/body.md",
+      "roles/prototyper/body.md",
+      "roles/reviewer/body.md",
+      "roles/shaper/body.md",
+      "roles/sweeper/body.md",
+      "roles/verifier/body.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f31530e0c0fa5f85cc095bc339370cc0d4facb2d",
+      "head": "170909985f1b274b0cae2cc93a9ce4e84ec64173",
+      "diff_sha256": "30553afb25c082286c0127eedb1046cd034c9d541e8c6761533595835462dea3"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "agents/builder.md",
+        "agents/delivery.md",
+        "agents/polisher.md",
+        "agents/prototyper.md",
+        "agents/shaper.md",
+        "agents/sweeper.md",
+        "agents/verifier.md",
+        "codex/agents/builder.toml",
+        "codex/agents/delivery.toml",
+        "codex/agents/polisher.toml",
+        "codex/agents/prototyper.toml",
+        "codex/agents/shaper.toml",
+        "codex/agents/sweeper.toml",
+        "codex/agents/verifier.toml",
+        "engine/agentgen/roles.go",
+        "engine/agentgen/roles_test.go",
+        "engine/skills/role_agents_artifact_test.go",
+        "pi/agents/builder.md",
+        "pi/agents/delivery.md",
+        "pi/agents/polisher.md",
+        "pi/agents/prototyper.md",
+        "pi/agents/shaper.md",
+        "pi/agents/sweeper.md",
+        "pi/agents/verifier.md",
+        "roles/builder/body.md",
+        "roles/delivery/body.md",
+        "roles/polisher/body.md",
+        "roles/prototyper/body.md",
+        "roles/reviewer/body.md",
+        "roles/shaper/body.md",
+        "roles/sweeper/body.md",
+        "roles/verifier/body.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/agentgen/roles.go:155-190",
+        "severity": "WARNING",
+        "claim": "The Pi tool names mcp__memorycard__* are an admitted, unverified assumption. The comment itself says gentle-pi drops unknown tool names silently. If Pi registers the tools under another name, every Pi role loses its memory access with no error. The old bare names are removed, so no fallback remains. The test's `known` set copies the same assumption, so it cannot catch a wrong name.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/agentgen/roles.go piToolNames hunk",
+          "engine/agentgen/roles_test.go TestThePiToolsOfEveryRoleAreNamesTheInstalledSourcesRegister"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "roles/verifier/body.md:2",
+        "severity": "WARNING",
+        "claim": "The shared core-prefix line tells every role to use mem_search and then mem_get. The verifier's tool list (Claude, Pi) has only mem_get, with no mem_search. The old text named only the by-id read, which matched the verifier's single tool. The verifier is now told to call a tool it does not have, so a topic locator cannot be resolved there.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "agents/verifier.md tools line and body line 2",
+          "pi/agents/verifier.md tools line"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "engine/projection/gate.go:262-272",
+        "severity": "WARNING",
+        "claim": "The memory-plan gate and evidence recorder still match only Engram tool names, through the engramIDReadTool regexp and mem_get_observation. Grep found no memorycard reference in engine outside agentgen and the skills test. mcp__memorycard__* calls by the role agents are therefore likely ungated: no project-plan denial and no read-by-id evidence. Before this change, role reads went through the gated names. This is inferred from the name-matching code and was not run.",
+        "evidence_class": "inferential",
+        "causal_disposition": "worsened",
+        "proof_refs": [
+          "engine/projection/gate.go:262-272",
+          "engine/hookwire/posttooluse.go:42"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff (865 lines) in two pages",
+      "Grepped agentgen for leftover Engram references",
+      "Grepped the whole worktree for plugin_engram and mem_get_observation",
+      "Read matching lines in gate.go, evidence.go, posttooluse.go and usage.go",
+      "Grepped engine for memorycard outside agentgen",
+      "Did not run the tests"
+    ]
+  }
+}

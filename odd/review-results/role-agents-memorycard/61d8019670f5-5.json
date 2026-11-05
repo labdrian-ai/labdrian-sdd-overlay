@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "079eac2e44f1d4c5f4a6c35f949fd467ad9d3025",
+    "head": "61d8019670f5a98e6fb81cb0f48e3a91f7d86c2f",
+    "diff_sha256": "cd8a2c2442cb4f721dae9737d4ca47abe2110041004c9e20b84bd0590faf213b",
+    "paths": [
+      "engine/agentgen/roles_test.go",
+      "engine/capability/memory_enforcement_detail_test.go",
+      "engine/cmd/hook_translate.go",
+      "engine/cmd/hook_translate_test.go",
+      "engine/cmd/usage.go",
+      "engine/hookwire/decode.go",
+      "engine/hookwire/decode_test.go",
+      "engine/projection/gate.go",
+      "engine/projection/gate_memorycard_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "079eac2e44f1d4c5f4a6c35f949fd467ad9d3025",
+      "head": "61d8019670f5a98e6fb81cb0f48e3a91f7d86c2f",
+      "diff_sha256": "cd8a2c2442cb4f721dae9737d4ca47abe2110041004c9e20b84bd0590faf213b"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/agentgen/roles_test.go",
+        "engine/capability/memory_enforcement_detail_test.go",
+        "engine/cmd/hook_translate.go",
+        "engine/cmd/hook_translate_test.go",
+        "engine/cmd/usage.go",
+        "engine/hookwire/decode.go",
+        "engine/hookwire/decode_test.go",
+        "engine/projection/gate.go",
+        "engine/projection/gate_memorycard_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/projection/gate.go:319",
+        "severity": "SUGGESTION",
+        "claim": "Sending memorycard mem_search and mem_context back to checkEngramProject makes the gate deny any memorycard project read that names no project. The generated role memory line (engine/agentgen/roles.go:17) still tells every role to read 'memorycard topic via mem_search, then mem_get' and never says to pass the project. At base, a project-less mem_search passed. Now, a role that follows its own instructions inside a bound workflow is denied on its first memory search and has to retry with the project. Nothing is exposed, because the gate fails closed and the deny reason names the project. The cost is a wasted round trip that this change activates, and the role text and the gate's contract now disagree.",
+        "evidence_class": "inferential",
+        "causal_disposition": "behavior-activated",
+        "proof_refs": [
+          "diff hunk engine/projection/gate.go @@ -325,7 +316,7 (checkMemorycardProject -> checkEngramProject)",
+          "diff hunk engine/projection/gate.go @@ -565,10 +552,6 (removed the ownProject pass for an empty Project)",
+          "engine/agentgen/roles.go:17 memoryLine names mem_search with no project argument"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full candidate diff /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/ram-c5.diff (9 files).",
+      "Risk item 2 (security guard): the gate now sends memorycard project reads to engramProjectGate. That gate denies all_projects, an empty project and a non-matching project, so the change narrows access and fails closed. I found no path by which it widens access. A query's cwd or directory argument is no longer decoded, and that is harmless because an empty Project is denied whatever the cwd or directory says.",
+      "Risk item 3 (contracts others read): the usage.go help text now says a memorycard read must name the project, which matches the gate. A grep of the worktree for WorkDir and for the old memorycard no-project wording found no remaining reference in engine code or goldens.",
+      "engine/capability/memory_enforcement_detail_test.go now expects 'trust each new or changed handler'. That string is present in the unchanged engine/capability/declarations.go:297 and in engine/cmd/usage.go:26, so this edit aligns the test with existing text.",
+      "engine/agentgen/roles_test.go: only a comment block moved to the test it describes, plus a note about Codex. No change in behavior.",
+      "No tests were run: this review is read-only."
+    ]
+  }
+}

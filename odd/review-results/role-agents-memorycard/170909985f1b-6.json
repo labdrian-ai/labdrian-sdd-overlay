@@ -1,0 +1,135 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f31530e0c0fa5f85cc095bc339370cc0d4facb2d",
+    "head": "170909985f1b274b0cae2cc93a9ce4e84ec64173",
+    "diff_sha256": "30553afb25c082286c0127eedb1046cd034c9d541e8c6761533595835462dea3",
+    "paths": [
+      "agents/builder.md",
+      "agents/delivery.md",
+      "agents/polisher.md",
+      "agents/prototyper.md",
+      "agents/shaper.md",
+      "agents/sweeper.md",
+      "agents/verifier.md",
+      "codex/agents/builder.toml",
+      "codex/agents/delivery.toml",
+      "codex/agents/polisher.toml",
+      "codex/agents/prototyper.toml",
+      "codex/agents/shaper.toml",
+      "codex/agents/sweeper.toml",
+      "codex/agents/verifier.toml",
+      "engine/agentgen/roles.go",
+      "engine/agentgen/roles_test.go",
+      "engine/skills/role_agents_artifact_test.go",
+      "pi/agents/builder.md",
+      "pi/agents/delivery.md",
+      "pi/agents/polisher.md",
+      "pi/agents/prototyper.md",
+      "pi/agents/shaper.md",
+      "pi/agents/sweeper.md",
+      "pi/agents/verifier.md",
+      "roles/builder/body.md",
+      "roles/delivery/body.md",
+      "roles/polisher/body.md",
+      "roles/prototyper/body.md",
+      "roles/reviewer/body.md",
+      "roles/shaper/body.md",
+      "roles/sweeper/body.md",
+      "roles/verifier/body.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f31530e0c0fa5f85cc095bc339370cc0d4facb2d",
+      "head": "170909985f1b274b0cae2cc93a9ce4e84ec64173",
+      "diff_sha256": "30553afb25c082286c0127eedb1046cd034c9d541e8c6761533595835462dea3"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "agents/builder.md",
+        "agents/delivery.md",
+        "agents/polisher.md",
+        "agents/prototyper.md",
+        "agents/shaper.md",
+        "agents/sweeper.md",
+        "agents/verifier.md",
+        "codex/agents/builder.toml",
+        "codex/agents/delivery.toml",
+        "codex/agents/polisher.toml",
+        "codex/agents/prototyper.toml",
+        "codex/agents/shaper.toml",
+        "codex/agents/sweeper.toml",
+        "codex/agents/verifier.toml",
+        "engine/agentgen/roles.go",
+        "engine/agentgen/roles_test.go",
+        "engine/skills/role_agents_artifact_test.go",
+        "pi/agents/builder.md",
+        "pi/agents/delivery.md",
+        "pi/agents/polisher.md",
+        "pi/agents/prototyper.md",
+        "pi/agents/shaper.md",
+        "pi/agents/sweeper.md",
+        "pi/agents/verifier.md",
+        "roles/builder/body.md",
+        "roles/delivery/body.md",
+        "roles/polisher/body.md",
+        "roles/prototyper/body.md",
+        "roles/reviewer/body.md",
+        "roles/shaper/body.md",
+        "roles/sweeper/body.md",
+        "roles/verifier/body.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "agents/verifier.md:5-9",
+        "severity": "WARNING",
+        "claim": "The new core-prefix line tells the verifier to resolve a memorycard topic 'via mem_search, then mem_get', but the verifier's tool list gives it only mcp__memorycard__mem_get, with no mem_search. Before this change the line ('Engram topic via mem_get_observation') matched the verifier's one tool. In memorycard, mem_get replaces mem_get_observation, so it reads by id. A verifier prompt that locates an artifact by memorycard topic_key cannot do the step it is told to do. Because the line also says a missing locator is a blocker, the verifier would stop as blocked. hasMemoryTool() keeps the line whenever any mcp__memorycard__ tool is listed, so the generator emits this mismatch. The same mismatch is in pi/agents/verifier.md and codex/agents/verifier.toml.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "diff hunk agents/verifier.md: tools '...Bash, mcp__memorycard__mem_get' with line '+...memorycard topic via mem_search, then mem_get...'",
+          "engine/agentgen/roles.go hasMemoryTool: strings.HasPrefix(tool, \"mcp__memorycard__\") keeps the full line for verifier",
+          "engine/agentgen/roles.go verifier tools []string{\"Read\", \"Grep\", \"Glob\", \"Bash\", \"mcp__memorycard__mem_get\"}"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/agentgen/roles.go:155-191",
+        "severity": "WARNING",
+        "claim": "On Pi, every role's memory tools now use the names mcp__memorycard__mem_*, and the code comment admits these names are an unverified assumption. If gentle-pi or pi-mcp-adapter does not register those exact names, gentle-pi drops them without a warning (lib/agents-runner.ts:241, per the comment). Pi roles would then lose every memory tool while their prompt still sends them to memorycard topics. The test TestThePiToolsOfEveryRoleAreNamesTheInstalledSourcesRegister now puts these assumed names in its 'known' set, so it cannot catch a wrong name, even though the test's name says it checks registered names. The base mapping (bare mem_* names from gentle-engram, which is said to be uninstalled) was likely broken too, so this change cannot be shown to make Pi worse.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "engine/agentgen/roles.go piToolNames comment: 'This one is an assumption, not verified'",
+          "engine/agentgen/roles_test.go known map adds mcp__memorycard__mem_search/get/save/update"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "skills/role-chain/references/worktrees.md:4",
+        "severity": "SUGGESTION",
+        "claim": "This change removes every Engram tool from the role agents and rewrites their locator line to memorycard. The role-chain skill that launches these roles still says 'Pass Engram `project`', and engine/skills/role_chain_artifact_test.go:252 pins that text. The design tables in docs/architecture/role-design/per-role-reviewer.md:58 and per-role-design-v3.md:35,38 still list the Engram tool names. These consumers now give instructions the roles cannot follow.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "behavior-activated",
+        "proof_refs": [
+          "skills/role-chain/references/worktrees.md:4 'Pass Engram `project`.'",
+          "engine/skills/role_chain_artifact_test.go:252"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full candidate diff (865 lines) at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/ram-c1.diff covering all 32 changed paths",
+      "Compared the tool lists in roles.go with the hasMemoryTool/body projection logic, per role",
+      "Grep of the worktree for remaining Engram/mem_get_observation consumers of the role agents (skills/role-chain, docs/architecture/role-design, engine/skills tests)",
+      "Grep of the worktree for memorycard MCP registration or config (none in the repository; only longterm-mem references)"
+    ]
+  }
+}
