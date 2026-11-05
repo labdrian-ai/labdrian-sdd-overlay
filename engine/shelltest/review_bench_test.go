@@ -1,6 +1,9 @@
 package shelltest
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -601,4 +604,231 @@ func jqField(t *testing.T, bench, filter string) string {
 		t.Fatal(err)
 	}
 	return strings.TrimSpace(string(out))
+}
+
+// frozenFinding is one entry of the array findings.sh prints (phase9-c28-review-precision S2 b).
+type frozenFinding struct {
+	Key               string   `json:"key"`
+	Runner            string   `json:"runner"`
+	ID                string   `json:"id"`
+	Run               int      `json:"run"`
+	Row               string   `json:"row"`
+	Finding           string   `json:"finding"`
+	Severity          string   `json:"severity"`
+	Location          string   `json:"location"`
+	Claim             string   `json:"claim"`
+	ProofRefs         []string `json:"proof_refs"`
+	EvidenceClass     *string  `json:"evidence_class"`
+	CausalDisposition *string  `json:"causal_disposition"`
+	C27Control        bool     `json:"c27_control"`
+}
+
+// findingsFixture copies findings.sh next to a corpus of R1 and R2 and an empty scores directory, and returns the
+// script, its tools directory and a bench directory with no output yet.
+func findingsFixture(t *testing.T) (script, tools, bench string) {
+	t.Helper()
+	overlayScript(t) // require bash
+	body, err := os.ReadFile("../../tools/review-bench/findings.sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	tools = t.TempDir()
+	script = filepath.Join(tools, "findings.sh")
+	if err := os.WriteFile(script, body, 0700); err != nil {
+		t.Fatal(err)
+	}
+	corpus := `{"real": [{"id": "R1", "defect": {"file": "a.go", "lines": "1"}}, {"id": "R2", "defect": {"file": "b.go", "lines": "2"}}], "mutants": []}`
+	if err := os.WriteFile(filepath.Join(tools, "corpus.json"), []byte(corpus), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(tools, "scores"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	return script, tools, t.TempDir()
+}
+
+// plantSummary writes a summary.json for one runner, run and case: ours under out/ours/run<k>/<id>, gentle under
+// out/run<k>/<id>, as run-ours.sh and run-gentle.sh write them.
+func plantSummary(t *testing.T, bench, runner string, run int, id, summary string) {
+	t.Helper()
+	dir := filepath.Join(bench, "out", "run"+strconv.Itoa(run), id)
+	if runner == "ours" {
+		dir = filepath.Join(bench, "out", "ours", "run"+strconv.Itoa(run), id)
+	}
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "summary.json"), []byte(summary), 0600); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func runFindings(t *testing.T, script, bench string, env []string, args ...string) (string, string, int) {
+	t.Helper()
+	return runScript(t, script, append([]string{"BENCH=" + bench, "PATH=" + os.Getenv("PATH")}, env...), args...)
+}
+
+func parseFindings(t *testing.T, stdout string) []frozenFinding {
+	t.Helper()
+	var got []frozenFinding
+	if err := json.Unmarshal([]byte(stdout), &got); err != nil {
+		t.Fatalf("stdout is not a JSON array of findings: %v\n%s", err, stdout)
+	}
+	return got
+}
+
+func findingKey(runner, id string, run int, row, finding string) string {
+	sum := sha256.Sum256([]byte(runner + "/" + id + "/" + strconv.Itoa(run) + "/" + row + "/" + finding))
+	return hex.EncodeToString(sum[:])[:12]
+}
+
+const oursR1Run1 = `{"id": "R1", "lenses": [
+  {"lens": "recall", "n": 2, "findings": [
+    {"id": "F1", "severity": "WARNING", "location": "a.go:1-3", "claim": "c1", "evidence_class": "inferential",
+     "causal_disposition": "introduced", "proof_refs": ["a.go:1"]},
+    {"id": "F2", "severity": "SUGGESTION", "location": "a.go:9", "claim": "c2", "evidence_class": "deterministic",
+     "causal_disposition": "activated", "proof_refs": []}]},
+  {"lens": "hunt", "n": 0, "findings": []}]}`
+
+const oursR1Run2 = `{"id": "R1", "lenses": [
+  {"lens": "recall", "n": 0, "findings": []},
+  {"lens": "hunt", "n": 1, "findings": [
+    {"id": "F1", "severity": "WARNING", "location": "a.go:1", "claim": "c3", "evidence_class": "inferential",
+     "causal_disposition": "introduced", "proof_refs": ["a.go:1"]}]}]}`
+
+func TestReviewBenchFindings(t *testing.T) {
+	t.Run("ours: every finding of every run and row, in order, with its key", func(t *testing.T) {
+		script, _, bench := findingsFixture(t)
+		plantSummary(t, bench, "ours", 1, "R1", oursR1Run1)
+		plantSummary(t, bench, "ours", 2, "R1", oursR1Run2)
+		stdout, stderr, code := runFindings(t, script, bench, []string{"RUNNER=ours", "RUNS=1 2"}, "R1")
+		if code != 0 || stderr != "" {
+			t.Fatalf("exit %d\n%s", code, stderr)
+		}
+		got := parseFindings(t, stdout)
+		want := []struct {
+			run          int
+			row, finding string
+			severity     string
+			location     string
+			claim        string
+		}{
+			{1, "recall", "F1", "WARNING", "a.go:1-3", "c1"},
+			{1, "recall", "F2", "SUGGESTION", "a.go:9", "c2"},
+			{2, "hunt", "F1", "WARNING", "a.go:1", "c3"},
+		}
+		if len(got) != len(want) {
+			t.Fatalf("%d entries, want %d\n%s", len(got), len(want), stdout)
+		}
+		for i, w := range want {
+			g := got[i]
+			if g.Runner != "ours" || g.ID != "R1" || g.Run != w.run || g.Row != w.row || g.Finding != w.finding ||
+				g.Severity != w.severity || g.Location != w.location || g.Claim != w.claim || g.C27Control {
+				t.Fatalf("entry %d: %+v", i, g)
+			}
+			if g.Key != findingKey("ours", "R1", w.run, w.row, w.finding) {
+				t.Fatalf("entry %d key %q", i, g.Key)
+			}
+		}
+		if got[0].EvidenceClass == nil || *got[0].EvidenceClass != "inferential" || got[0].CausalDisposition == nil ||
+			*got[0].CausalDisposition != "introduced" || len(got[0].ProofRefs) != 1 || got[0].ProofRefs[0] != "a.go:1" {
+			t.Fatalf("entry 0 members: %+v", got[0])
+		}
+	})
+
+	t.Run("gentle: a finding without evidence_class and causal_disposition is written with both null", func(t *testing.T) {
+		script, _, bench := findingsFixture(t)
+		plantSummary(t, bench, "gentle", 1, "R2", `{"id": "R2", "lenses": [
+  {"lens": "review-risk", "n": 1, "findings": [
+    {"id": "R1-001", "lens": "risk", "severity": "WARNING", "location": "b.go:2", "claim": "g1", "proof_refs": ["b.go:2"]}]},
+  {"lens": "review-reliability", "n": 0, "findings": []}]}`)
+		stdout, stderr, code := runFindings(t, script, bench, []string{"RUNNER=gentle", "RUNS=1"}, "R2")
+		if code != 0 || stderr != "" {
+			t.Fatalf("exit %d\n%s", code, stderr)
+		}
+		if !strings.Contains(stdout, `"evidence_class": null`) || !strings.Contains(stdout, `"causal_disposition": null`) {
+			t.Fatalf("missing members not written as null:\n%s", stdout)
+		}
+		got := parseFindings(t, stdout)
+		if len(got) != 1 || got[0].Runner != "gentle" || got[0].Row != "review-risk" || got[0].Finding != "R1-001" ||
+			got[0].Key != findingKey("gentle", "R2", 1, "review-risk", "R1-001") {
+			t.Fatalf("entries: %+v", got)
+		}
+	})
+
+	t.Run("the same case, run, row and finding id under the two runners give two distinct keys", func(t *testing.T) {
+		script, _, bench := findingsFixture(t)
+		plantSummary(t, bench, "ours", 1, "R1", oursR1Run1)
+		plantSummary(t, bench, "gentle", 1, "R1", oursR1Run1)
+		ours, _, code := runFindings(t, script, bench, []string{"RUNNER=ours", "RUNS=1"}, "R1")
+		if code != 0 {
+			t.Fatalf("ours exit %d", code)
+		}
+		gentle, _, code := runFindings(t, script, bench, []string{"RUNNER=gentle", "RUNS=1"}, "R1")
+		if code != 0 {
+			t.Fatalf("gentle exit %d", code)
+		}
+		o, g := parseFindings(t, ours), parseFindings(t, gentle)
+		if len(o) != 2 || len(g) != 2 || o[0].Key == g[0].Key || o[1].Key == g[1].Key || g[0].Runner != "gentle" {
+			t.Fatalf("ours %+v\ngentle %+v", o, g)
+		}
+	})
+
+	t.Run("a scored quote marks c27_control on the one finding it names, and an ambiguous quote on none", func(t *testing.T) {
+		script, tools, bench := findingsFixture(t)
+		// F1 of the hunt row shares its id with the quoted F1 of the recall row, and must stay unmarked.
+		plantSummary(t, bench, "ours", 1, "R1", strings.Replace(oursR1Run1, `{"lens": "hunt", "n": 0, "findings": []}`,
+			`{"lens": "hunt", "n": 1, "findings": [{"id": "F1", "severity": "WARNING", "location": "a.go:2", "claim": "h", "proof_refs": []}]}`, 1))
+		plantSummary(t, bench, "ours", 1, "R2", `{"id": "R2", "lenses": [
+  {"lens": "recall", "n": 2, "findings": [
+    {"id": "F1", "severity": "WARNING", "location": "b.go:2", "claim": "x", "proof_refs": []},
+    {"id": "F2", "severity": "WARNING", "location": "b.go:2", "claim": "y", "proof_refs": []}]},
+  {"lens": "hunt", "n": 0, "findings": []}]}`)
+		scores := `[{"id": "R1", "run": 1, "score": 1, "quote": "recall WARNING a.go:1-3: c1 ..."},
+ {"id": "R1", "run": 2, "score": 1, "quote": "recall SUGGESTION a.go:9: other run"},
+ {"id": "R2", "run": 1, "score": 0.5, "quote": "recall WARNING b.go:2: x"},
+ {"id": "R1", "run": 1, "score": 0, "quote": "recall SUGGESTION a.go:9: c2"}]`
+		if err := os.WriteFile(filepath.Join(tools, "scores", "ours-c27.json"), []byte(scores), 0600); err != nil {
+			t.Fatal(err)
+		}
+		stdout, stderr, code := runFindings(t, script, bench, []string{"RUNNER=ours", "RUNS=1"}, "R1", "R2")
+		if code != 0 {
+			t.Fatalf("exit %d\n%s", code, stderr)
+		}
+		if stderr != "quote of R2 run 1 names 2 findings; none is marked\n" {
+			t.Fatalf("stderr %q", stderr)
+		}
+		var marked []string
+		for _, f := range parseFindings(t, stdout) {
+			if f.C27Control {
+				marked = append(marked, f.ID+"/"+f.Row+"/"+f.Finding)
+			}
+		}
+		if strings.Join(marked, ",") != "R1/recall/F1" {
+			t.Fatalf("marked %v\n%s", marked, stdout)
+		}
+	})
+
+	t.Run("an unknown runner, an unknown id or a missing summary exits 2 and prints no findings", func(t *testing.T) {
+		script, _, bench := findingsFixture(t)
+		plantSummary(t, bench, "ours", 1, "R1", oursR1Run1)
+		cases := []struct {
+			env    []string
+			args   []string
+			stderr string
+		}{
+			{[]string{"RUNNER=both", "RUNS=1"}, []string{"R1"}, "RUNNER must be ours or gentle, not both\n"},
+			{[]string{"RUNS=1"}, []string{"R1"}, "RUNNER must be ours or gentle, not \n"},
+			{[]string{"RUNNER=ours", "RUNS=1"}, nil, "usage: RUNNER=ours|gentle findings.sh <id>...\n"},
+			{[]string{"RUNNER=ours", "RUNS=1"}, []string{"R1", "R9"}, "unknown case R9\n"},
+			{[]string{"RUNNER=ours", "RUNS=1 2"}, []string{"R1"}, "R1 run 2: no summary at " + filepath.Join(bench, "out", "ours", "run2", "R1", "summary.json") + "\n"},
+			{[]string{"RUNNER=ours", "RUNS=0"}, []string{"R1"}, "RUNS must hold positive integers, not 0\n"},
+		}
+		for _, c := range cases {
+			stdout, stderr, code := runFindings(t, script, bench, c.env, c.args...)
+			if code != 2 || stdout != "" || stderr != c.stderr {
+				t.Fatalf("%v %v: exit %d stdout %q stderr %q", c.env, c.args, code, stdout, stderr)
+			}
+		}
+	})
 }

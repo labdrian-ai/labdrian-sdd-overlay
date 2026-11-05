@@ -1,0 +1,2755 @@
+[
+  {
+    "key": "fd08d4fd7c8d",
+    "runner": "ours",
+    "id": "R34",
+    "run": 1,
+    "row": "recall",
+    "finding": "F1",
+    "severity": "WARNING",
+    "location": "engine/hookwire/posttooluse.go:93-135",
+    "claim": "The doc says tool_response is hashed and dropped as a stream, but the code decodes every value into a json.RawMessage. A tool_response of up to 64 MiB is therefore fully buffered, first in the decoder's buffer and then in the RawMessage copy, before it is hashed. A hook that runs after every tool call could use a few hundred MB of memory on a large memory read. Hashing incrementally would avoid this, for example by reading the value with dec.Token and a streaming reader, or by lowering the bound.",
+    "proof_refs": [
+      "engine/hookwire/posttooluse.go:var raw json.RawMessage; dec.Decode(&raw)",
+      "engine/hookwire/hookwire.go:MaxPostToolUseBytes = 64 << 20"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": true
+  },
+  {
+    "key": "6f97eceb0f7b",
+    "runner": "ours",
+    "id": "R34",
+    "run": 1,
+    "row": "recall",
+    "finding": "F2",
+    "severity": "SUGGESTION",
+    "location": "engine/hookwire/posttooluse_test.go:99-105",
+    "claim": "TestPostToolUseRefusesAnInputOverItsBound builds a roughly 64 MiB string and decodes it, which makes the test slow and memory-heavy. A cheaper check would use a reader that yields repeated bytes. Tests also do not cover a non-EOF read error from the reader, a duplicated tool_response key, or a null tool_response.",
+    "proof_refs": [
+      "engine/hookwire/posttooluse_test.go:strings.Repeat(\"a\", hookwire.MaxPostToolUseBytes)"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "045ccf91bb5f",
+    "runner": "ours",
+    "id": "R34",
+    "run": 1,
+    "row": "hunt",
+    "finding": "F1",
+    "severity": "SUGGESTION",
+    "location": "engine/hookwire/posttooluse.go:99-106",
+    "claim": "The doc says tool_response is \"hashed and dropped\" as a stream. The code decodes the whole response into a json.RawMessage (and the Decoder also buffers it) before hashing. A response near the 64 MiB bound is therefore held in memory two or more times. A hook that must only digest the value could hash it incrementally instead.",
+    "proof_refs": [
+      "engine/hookwire/posttooluse.go:99-106"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "cfacab4caa8e",
+    "runner": "ours",
+    "id": "R34",
+    "run": 1,
+    "row": "hunt",
+    "finding": "F2",
+    "severity": "SUGGESTION",
+    "location": "engine/hookwire/posttooluse.go:56-70",
+    "claim": "RecordID accepts any non-empty text as an id, including whitespace-only text. A JSON string such as \"abc\" in the \"id\" key is returned as the record id even when a later key such as \"engram_id\" holds a valid one. It also returns a number for \"id\" ahead of the other keys without checking the tool. Nothing refuses or validates a value outside the expected id form.",
+    "proof_refs": [
+      "engine/hookwire/posttooluse.go:56-70"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "10e28e46165e",
+    "runner": "ours",
+    "id": "R34",
+    "run": 2,
+    "row": "recall",
+    "finding": "F1",
+    "severity": "WARNING",
+    "location": "engine/hookwire/posttooluse.go:76-82",
+    "claim": "The decoder claims to hash and drop tool_response as a stream, but it decodes it into a json.RawMessage. With the 64 MiB bound, one hook invocation can hold the decoder's buffer, the RawMessage copy and the hashing input at once, which is roughly 2-3x the input size in memory. A large memory-read response therefore costs memory proportional to its size on every PostToolUse call. The bound is also 64x MaxEnvelopeBytes (assuming that constant is about 1 MiB). The stream could instead be hashed incrementally, for example by teeing the value's bytes into sha256.",
+    "proof_refs": [
+      "engine/hookwire/posttooluse.go:106-125",
+      "engine/hookwire/hookwire.go:58-62"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "5be326d98ba6",
+    "runner": "ours",
+    "id": "R34",
+    "run": 2,
+    "row": "recall",
+    "finding": "F2",
+    "severity": "SUGGESTION",
+    "location": "engine/hookwire/posttooluse.go:79",
+    "claim": "On an oversize input the size reported to tooLarge is counted.n, which the LimitReader caps at MaxPostToolUseBytes+1. The error therefore never shows the real size, only limit+1.",
+    "proof_refs": [
+      "engine/hookwire/posttooluse.go:76-80"
+    ],
+    "evidence_class": "deterministic",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "c7ab222afc09",
+    "runner": "ours",
+    "id": "R34",
+    "run": 2,
+    "row": "recall",
+    "finding": "F3",
+    "severity": "SUGGESTION",
+    "location": "engine/hookwire/posttooluse_test.go:99-105",
+    "claim": "The over-bound test builds a string of more than 64 MiB and then a second, concatenated copy, and runs it through the decoder. This makes the unit test slow and memory-heavy, and it can cause OOM or flakiness on small CI runners. The same limit could be tested more cheaply with an io.Reader that generates the bytes lazily.",
+    "proof_refs": [
+      "engine/hookwire/posttooluse_test.go:99-105"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "ff64e3d17440",
+    "runner": "ours",
+    "id": "R34",
+    "run": 2,
+    "row": "recall",
+    "finding": "F4",
+    "severity": "SUGGESTION",
+    "location": "engine/hookwire/posttooluse.go:44-60",
+    "claim": "RecordID accepts any JSON number as an id, including fractional or exponent forms such as 1.5 or 1e3, and returns them verbatim. The tests cover only integer and string ids, so a downstream consumer could receive a non-canonical record id. No test covers a missing key, a null value, or a duplicated key.",
+    "proof_refs": [
+      "engine/hookwire/posttooluse.go:44-60"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "d25f3ee7e6cd",
+    "runner": "ours",
+    "id": "R34",
+    "run": 2,
+    "row": "hunt",
+    "finding": "F1",
+    "severity": "SUGGESTION",
+    "location": "engine/hookwire/posttooluse.go:99",
+    "claim": "The doc says tool_response is hashed and dropped as a stream, but dec.Decode(&raw) buffers the whole value in memory, up to MaxPostToolUseBytes (64 MiB), before hashing it. The decoder also holds its own buffer, so peak memory can be about twice that size. A true streaming hash would avoid it. Separately, a repeated text field whose later value is null keeps the earlier value, so last-wins does not hold for those fields.",
+    "proof_refs": [
+      "engine/hookwire/posttooluse.go:99",
+      "engine/hookwire/hookwire.go:59"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "fa426618e05b",
+    "runner": "ours",
+    "id": "R34",
+    "run": 3,
+    "row": "recall",
+    "finding": "F1",
+    "severity": "WARNING",
+    "location": "engine/hookwire/posttooluse.go:92-105",
+    "claim": "The docs call this a stream of tokens that hashes and drops tool_response. In fact each value, including a tool_response up to 64 MiB, is first read whole into a json.RawMessage with dec.Decode. The decoder's internal buffer holds a second copy, so peak memory for a large memory-read response is a multiple of the response size (roughly 2-3x of up to 64 MiB). This undermines the stated goal of bounding what a runaway writer can make the hook consume. Unknown keys are also fully buffered before being discarded.",
+    "proof_refs": [
+      "engine/hookwire/posttooluse.go:92-105",
+      "engine/hookwire/hookwire.go:58-62"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": true
+  },
+  {
+    "key": "8568018b8885",
+    "runner": "ours",
+    "id": "R34",
+    "run": 3,
+    "row": "recall",
+    "finding": "F2",
+    "severity": "SUGGESTION",
+    "location": "engine/hookwire/posttooluse_test.go:99-105",
+    "claim": "The over-bound test builds a string of more than 64 MiB and then concatenates it into a second string, so it allocates well over 128 MiB. It then decodes that input, which slows and bloats the unit test suite. The bound is a constant, so the test could use a custom reader that streams the bytes instead. Also, no test covers the limit boundary at exactly MaxPostToolUseBytes, or a truncated-at-limit document that returns a parse error before the size check.",
+    "proof_refs": [
+      "engine/hookwire/posttooluse_test.go:99-105"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "6d97ad468f63",
+    "runner": "ours",
+    "id": "R34",
+    "run": 3,
+    "row": "hunt",
+    "finding": "F1",
+    "severity": "WARNING",
+    "location": "engine/hookwire/posttooluse.go:105-108",
+    "claim": "The doc says tool_response is read as a stream, hashed and dropped. The code decodes it into a json.RawMessage with dec.Decode(&raw), which buffers the whole value. The json.Decoder also buffers it, so a response near the 64 MiB bound holds several copies in memory (decoder buffer, raw, possibly more during growth) before hashing. The hook's memory is therefore not bounded as the comment implies. A streaming hash would avoid the buffering.",
+    "proof_refs": [
+      "engine/hookwire/posttooluse.go:105-108",
+      "engine/hookwire/hookwire.go:59-62"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "7070986e3e2f",
+    "runner": "ours",
+    "id": "R34",
+    "run": 3,
+    "row": "hunt",
+    "finding": "F2",
+    "severity": "SUGGESTION",
+    "location": "engine/hookwire/posttooluse.go:108-111",
+    "claim": "The contract says ResponseSHA256 is \"\" and ResponseBytes is 0 when the input has no tool_response. An explicit `\"tool_response\":null` is hashed as the 4 bytes \"null\", so it is treated as a present response. The test covers only the key being absent.",
+    "proof_refs": [
+      "engine/hookwire/posttooluse.go:108-111"
+    ],
+    "evidence_class": "deterministic",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "f001288e30c1",
+    "runner": "ours",
+    "id": "R35",
+    "run": 1,
+    "row": "recall",
+    "finding": "F1",
+    "severity": "WARNING",
+    "location": "engine/projection/gate.go:126-129",
+    "claim": "ReadRecordID is a new ToolCall field, but the diff does not show any hook adapter populating it. It is also not shown in ToolResultRequest or in readOnce. If the adapter does not set it, then for mem_get_observation, mem_timeline and longterm-mem get, Evidence leaves IDs empty. The record then does not name the record that was read. Only unit tests set the field, and no test covers the OnToolResult path for a by-id read.",
+    "proof_refs": [
+      "engine/projection/gate.go:129",
+      "engine/projection/evidence.go:69-72"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "unknown",
+    "c27_control": false
+  },
+  {
+    "key": "a6d44d2801da",
+    "runner": "ours",
+    "id": "R35",
+    "run": 1,
+    "row": "recall",
+    "finding": "F2",
+    "severity": "SUGGESTION",
+    "location": "engine/projection/app/hook.go:244-249",
+    "claim": "A missing Evidence log or Clock makes every recordable memory read return a warning to the agent. The Append call is not idempotent and carries no dedupe key. If the runtime re-delivers a post-tool hook, the same CallID is recorded twice. The failure-path test checks only the warning text, not that nothing is written when the Clock is nil.",
+    "proof_refs": [
+      "engine/projection/app/hook.go:244-252"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "ac85540f62bf",
+    "runner": "ours",
+    "id": "R35",
+    "run": 1,
+    "row": "hunt",
+    "finding": "F1",
+    "severity": "WARNING",
+    "location": "engine/projection/app/hook.go:226-228",
+    "claim": "A binding-store load error (err != nil) is discarded and OnToolResult returns an empty outcome. A memory read that should have been recorded is then lost with no warning, although a write failure on the evidence log does produce one. The loss of evidence is silent in exactly the case where the binding store is failing. The same applies when the workflow cannot be loaded as owned, because that is not distinguished from 'not our repository'.",
+    "proof_refs": [
+      "engine/projection/app/hook.go:226-228",
+      "engine/projection/app/evidence_test.go: 'a binding store that cannot be read' asserts the silence"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "3ca04f2d1b95",
+    "runner": "ours",
+    "id": "R35",
+    "run": 1,
+    "row": "hunt",
+    "finding": "F2",
+    "severity": "SUGGESTION",
+    "location": "engine/projection/evidence.go:68-73",
+    "claim": "A read by id (mem_get_observation, mem_timeline, longterm-mem get) with an empty or missing record id (ReadRecordID nil or returning \"\") is still recorded as evidence, with an empty IDs list. The record therefore claims a read of nothing in particular. An empty value is treated as valid rather than skipped or flagged.",
+    "proof_refs": [
+      "engine/projection/evidence.go:68-73"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "d1964133e3a2",
+    "runner": "ours",
+    "id": "R35",
+    "run": 2,
+    "row": "recall",
+    "finding": "F1",
+    "severity": "WARNING",
+    "location": "engine/projection/gate.go:126-129",
+    "claim": "ReadRecordID is a new ToolCall field, but no hook adapter in this change populates it, and nothing visible calls HookService.OnToolResult. In production the field is nil, so by-id reads (mem_get_observation, mem_timeline, longterm-mem get) are recorded with empty IDs, and the evidence for those reads is lost. Only the unit tests set the field, so they pass while the shipped path records nothing.",
+    "proof_refs": [
+      "engine/projection/gate.go:126-129",
+      "engine/projection/evidence.go:68-72"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "f1787301b694",
+    "runner": "ours",
+    "id": "R35",
+    "run": 2,
+    "row": "recall",
+    "finding": "F2",
+    "severity": "SUGGESTION",
+    "location": "engine/projection/app/hook.go:242-244",
+    "claim": "The doc comment on ReadEvidence says every value is one sanitized line of bounded length. CallID, SessionID and ResponseSHA256 come from the request and go into ReadRecord unsanitized and unclipped. If the log is line-oriented, an embedded newline or an oversized value from the runtime could break or bloat the sidecar. No test covers this.",
+    "proof_refs": [
+      "engine/projection/app/hook.go:242-244"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": true
+  },
+  {
+    "key": "4e6ec476c541",
+    "runner": "ours",
+    "id": "R35",
+    "run": 2,
+    "row": "recall",
+    "finding": "F3",
+    "severity": "SUGGESTION",
+    "location": "engine/projection/app/hook.go:218-222",
+    "claim": "OnToolResult takes no signal that the tool call failed or was denied, so it records a read as having run whenever the call matches. A failed or blocked read would be logged as evidence. The request carries only a digest and a length, with no error flag, so the caller cannot express a failed call. Nothing in the diff addresses this.",
+    "proof_refs": [
+      "engine/projection/app/hook.go:194-202"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "8aff4e8ae626",
+    "runner": "ours",
+    "id": "R35",
+    "run": 2,
+    "row": "hunt",
+    "finding": "F1",
+    "severity": "SUGGESTION",
+    "location": "engine/projection/evidence.go:78-83",
+    "claim": "A read by id whose id is empty (ReadRecordID nil, returns \"\", or sanitizes to empty) is still recorded with an empty IDs slice. The evidence line then shows a record read with no record named, and nothing signals that the id could not be read. An empty value is treated as valid rather than as missing evidence.",
+    "proof_refs": [
+      "engine/projection/evidence.go:78-83"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "e5114f139a57",
+    "runner": "ours",
+    "id": "R35",
+    "run": 3,
+    "row": "recall",
+    "finding": "F1",
+    "severity": "WARNING",
+    "location": "engine/projection/app/hook.go:216-246",
+    "claim": "ToolResultRequest carries no success or error indicator, so OnToolResult records evidence for any matching memory-read call that reaches it, including one whose tool result was an error. The evidence is meant to show that a read ran. A failed read would count as a successful one, and the digest and length would describe an error body.",
+    "proof_refs": [
+      "engine/projection/app/hook.go:197-203"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "d916e5f67e1b",
+    "runner": "ours",
+    "id": "R35",
+    "run": 3,
+    "row": "recall",
+    "finding": "F2",
+    "severity": "WARNING",
+    "location": "engine/projection/gate.go:129",
+    "claim": "ReadRecordID is a new optional ToolCall field, and nothing in this diff sets it in production. OnToolResult has no caller here either. If the real hook adapter does not populate it, every by-id read (mem_get_observation, mem_timeline, longterm-mem get) is recorded with empty IDs. The evidence then does not say which record was read. Only fake-populated tests cover this path.",
+    "proof_refs": [
+      "engine/projection/gate.go:129",
+      "engine/projection/evidence.go:68-72"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "399d672e0ca4",
+    "runner": "ours",
+    "id": "R35",
+    "run": 3,
+    "row": "recall",
+    "finding": "F3",
+    "severity": "SUGGESTION",
+    "location": "engine/projection/evidence.go:33-40",
+    "claim": "The ReadEvidence doc promises that every value is one sanitized, bounded line. ReadRecord's CallID, SessionID and ResponseSHA256 are runtime-supplied strings that are neither sanitized nor clipped before Append. If the log is line-oriented, a newline or an oversized value could corrupt it or bloat the sidecar.",
+    "proof_refs": [
+      "engine/projection/app/hook.go:241-242"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "448d2b3d52cd",
+    "runner": "ours",
+    "id": "R35",
+    "run": 3,
+    "row": "recall",
+    "finding": "F4",
+    "severity": "SUGGESTION",
+    "location": "engine/projection/app/evidence_test.go:60-70",
+    "claim": "The tests do not cover the ProcessDir fallback in directoryOf. They do not cover a by-id read (mem_get_observation) going through OnToolResult, so a missing ReadRecordID wiring would go unnoticed. They also do not cover the case where Workflows.Load fails to load an owned workflow.",
+    "proof_refs": [
+      "engine/projection/app/evidence_test.go:60-70"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "79a97efd84d9",
+    "runner": "ours",
+    "id": "R35",
+    "run": 3,
+    "row": "hunt",
+    "finding": "F1",
+    "severity": "WARNING",
+    "location": "engine/projection/evidence.go:78-86",
+    "claim": "A by-id memory read (mem_get_observation, mem_timeline, longterm-mem get) whose record id is empty, or whose ReadRecordID is nil, is still recorded as valid evidence with an empty IDs list. The record then says a read happened but names nothing it read. An empty id counts as valid rather than as unrecordable or as a warning.",
+    "proof_refs": [
+      "engine/projection/evidence.go:78-86"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "9490bc8b2dfd",
+    "runner": "ours",
+    "id": "R35",
+    "run": 3,
+    "row": "hunt",
+    "finding": "F2",
+    "severity": "SUGGESTION",
+    "location": "engine/projection/app/hook.go:213-250",
+    "claim": "OnToolResult does not validate ResponseBytes or ResponseSHA256. A negative length or an empty digest is written to the evidence log as-is. Separately, the Evidence == nil || Clock == nil check cannot catch a typed-nil interface value, which would panic in Append or Now rather than give the warning.",
+    "proof_refs": [
+      "engine/projection/app/hook.go:213-250"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "f0026caac014",
+    "runner": "ours",
+    "id": "R36",
+    "run": 1,
+    "row": "recall",
+    "finding": "F1",
+    "severity": "WARNING",
+    "location": "bin/lib/hooks.sh:47",
+    "claim": "The install-hooks message and the README claim that a SessionStart entry is installed and removed, and that status-hooks reports it. The diff touches no settings-projection or runtime installer code, only the echo text, the README and the new engine event handler. If the base installer does not already write a SessionStart entry, the new hook never runs in a real session. The user would see no memory instructions at session start, and the tests (which call the engine directly) would not catch it. The diff gives no proof either way, and no test asserts the installed settings contain SessionStart.",
+    "proof_refs": [
+      "bin/lib/hooks.sh:47",
+      "engine/cmd/projection_hook.go:114-122"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "unknown",
+    "c27_control": false
+  },
+  {
+    "key": "4b35248aa6be",
+    "runner": "ours",
+    "id": "R36",
+    "run": 1,
+    "row": "recall",
+    "finding": "F2",
+    "severity": "SUGGESTION",
+    "location": "engine/cmd/binding_wiring.go:63-74",
+    "claim": "boundInstructions swallows every panic and every non-projection outcome as an empty block, with no stderr diagnostic. Combined with gate-task now running the binding-store and workflow-log read on every Agent call that has a prompt, a broken or slow store silently drops the memory instructions from sub-agents. There is no test for the panic-recovery path, for an unreadable store, or for a bound workflow with an unknown embedded contract. The PreToolUse gate-task hook now also has added I/O latency on each sub-agent spawn.",
+    "proof_refs": [
+      "engine/cmd/binding_wiring.go:63-74",
+      "engine/cmd/hook_translate.go:128-130"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "17b107269f29",
+    "runner": "ours",
+    "id": "R36",
+    "run": 1,
+    "row": "recall",
+    "finding": "F3",
+    "severity": "SUGGESTION",
+    "location": "engine/cmd/memory.go:182-191",
+    "claim": "For a named --project/--workflow, `memory plan --instructions` prints the block for a closed workflow, but the bound-repository form refuses a closed one with exit 2. The two forms of the same verb handle closed workflows differently. The tests cover only the running named workflow, not a closed named one, so the asymmetry is unasserted.",
+    "proof_refs": [
+      "engine/cmd/memory.go:177-191"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "fe4d56827d5c",
+    "runner": "ours",
+    "id": "R36",
+    "run": 1,
+    "row": "hunt",
+    "finding": "F1",
+    "severity": "WARNING",
+    "location": "engine/cmd/memory.go:38",
+    "claim": "runMemory discards the error from d.workingDir() and passes an empty cwd. 'memory plan --instructions' with no flags then reports 'no workflow is bound to this repository' and exits 0, although the real cause is that the working directory could not be determined. A failure is turned into success with a misleading message.",
+    "proof_refs": [
+      "engine/cmd/memory.go:38 `cwd, _ := d.workingDir()`",
+      "engine/cmd/memory.go memoryInstructions: empty ProcessDir falls through to noBoundInstructions"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "fd38796b6326",
+    "runner": "ours",
+    "id": "R36",
+    "run": 1,
+    "row": "hunt",
+    "finding": "F2",
+    "severity": "WARNING",
+    "location": "bin/lib/hooks.sh:47",
+    "claim": "The install-hooks output and the README now say a SessionStart entry is installed (and removed by uninstall, with status-hooks degraded until it is present). The diff changes no settings-merge, uninstall or status code that writes a SessionStart hook entry. If the runtime installer is unchanged, the new SessionStart event is never wired and the feature does not run for users.",
+    "proof_refs": [
+      "bin/lib/hooks.sh:47 echo lists SessionStart",
+      "README.md: 'plus one SessionStart entry; removing the hooks removes all of them'",
+      "changed paths contain no merge-settings/runtime installer file"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "003845f4dbda",
+    "runner": "ours",
+    "id": "R36",
+    "run": 2,
+    "row": "recall",
+    "finding": "F1",
+    "severity": "WARNING",
+    "location": "bin/lib/hooks.sh:47",
+    "claim": "The install-hooks message now says SessionStart is wired, but the diff contains no change that registers a SessionStart hook entry in settings.json (no runtime/settings projection change). README claims install-hooks installs one SessionStart entry. If the registration was not added elsewhere, the SessionStart handler is never invoked and the feature is dead while the installer reports success. The diff cannot show the registration.",
+    "proof_refs": [
+      "bin/lib/hooks.sh:47",
+      "engine/cmd/projection_hook.go:114-123"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "unknown",
+    "c27_control": false
+  },
+  {
+    "key": "46f1d0a1fd3d",
+    "runner": "ours",
+    "id": "R36",
+    "run": 2,
+    "row": "recall",
+    "finding": "F2",
+    "severity": "WARNING",
+    "location": "engine/cmd/gate_task.go:84-90",
+    "claim": "An unknown --embedded-contract previously passed through with `{}` only; it now continues to agentGateAnswer, so with a binding every sub-agent prompt is rewritten even though the contract is misconfigured. This is intentional, but the stderr warning is still the only signal, and the stdin-read-error branch suppresses its warning when !managed, so the diagnostics differ by path. Also gate-task now runs the full bound-workflow read (store load, binding lookup) on every Agent call with a prompt, adding file I/O latency to each sub-agent spawn, and nothing is cached.",
+    "proof_refs": [
+      "engine/cmd/gate_task.go:84-90",
+      "engine/cmd/hook_translate.go:125-129"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "050fe6c1c983",
+    "runner": "ours",
+    "id": "R36",
+    "run": 2,
+    "row": "recall",
+    "finding": "F3",
+    "severity": "SUGGESTION",
+    "location": "engine/cmd/memory.go:195-199",
+    "claim": "In memoryInstructions the case order checks outcome.Kind==PromptWarning first, then Result.Warning; a PromptProjection outcome with a nonempty Warning and Block would be refused, whereas hooks (boundInstructions) return the Block ignoring Result.Warning. The CLI and the hook can disagree on the same workflow, contradicting the stated 'cannot disagree' intent. Not shown reachable.",
+    "proof_refs": [
+      "engine/cmd/memory.go:195-199",
+      "engine/cmd/binding_wiring.go:64-75"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "d2b761b4e1cb",
+    "runner": "ours",
+    "id": "R36",
+    "run": 2,
+    "row": "recall",
+    "finding": "F4",
+    "severity": "SUGGESTION",
+    "location": "engine/cmd/plan_instructions_test.go:225-238",
+    "claim": "Tests for the sessionStart hook do not cover a panic/recover path or the SessionStart reply when the block is empty (SessionStartReply{Context:\"\"}.Encode returning empty bytes vs a JSON object); silence for the empty block relies on Encode behavior that is not asserted at the unit level except through integration.",
+    "proof_refs": [
+      "engine/cmd/projection_hook.go:236-243"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "8b4116fc5628",
+    "runner": "ours",
+    "id": "R36",
+    "run": 2,
+    "row": "hunt",
+    "finding": "F1",
+    "severity": "WARNING",
+    "location": "engine/cmd/gate_task.go:121-124",
+    "claim": "When the contract cannot be had (unknown embedded name, missing or unreadable --contract-file) the code now routes to agentGateAnswer with an empty gate.Config and the instructions callback. A stdin read error is silenced for unmanaged runs, and the unmanaged path skips the contract-frontmatter and work-context handling. Diagnostics for the broken contract are printed earlier, but a stdin read error in that case is no longer reported. This is a minor loss of a diagnostic; it also means a wiring mistake now produces a rewrite that appends instructions rather than a pure pass-through, which changes the documented 'all Agent hooks will pass through' warning text for the missing --contract-file case when a workflow is bound.",
+    "proof_refs": [
+      "engine/cmd/gate_task.go:98-105",
+      "engine/cmd/gate_task.go:121-124"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "e20d916f6632",
+    "runner": "ours",
+    "id": "R36",
+    "run": 2,
+    "row": "hunt",
+    "finding": "F2",
+    "severity": "WARNING",
+    "location": "engine/cmd/memory.go:196-203",
+    "claim": "memoryInstructions for the no-flag form: when outcome.Kind is not PromptWarning and Result.Warning is empty and Block is empty, it prints 'no workflow is bound' and exits 0. Any other non-projection outcome kind (e.g. silent for unusable input, store read failure that the hook treats as silent, or a not-in-repository directory) is reported as 'no workflow is bound', conflating distinct states, including an empty processCwd (when d.workingDir() fails and the error is discarded) which is reported as a success rather than an error.",
+    "proof_refs": [
+      "engine/cmd/memory.go:196-203",
+      "engine/cmd/memory.go:160-163"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "a2b6340547b2",
+    "runner": "ours",
+    "id": "R36",
+    "run": 2,
+    "row": "hunt",
+    "finding": "F3",
+    "severity": "WARNING",
+    "location": "engine/cmd/memory.go:182-186",
+    "claim": "With --instructions, --project and --workflow given as empty strings (e.g. --project '') are treated as not given because fromWorkflow tests for non-empty; the parse accepts the flag with an empty value, so the command silently falls back to reading the working directory's binding instead of refusing the empty project/workflow id.",
+    "proof_refs": [
+      "engine/cmd/memory.go:77",
+      "engine/cmd/memory.go:186"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "72b1d791aa12",
+    "runner": "ours",
+    "id": "R36",
+    "run": 2,
+    "row": "hunt",
+    "finding": "F4",
+    "severity": "SUGGESTION",
+    "location": "engine/cmd/binding_wiring.go:68-74",
+    "claim": "boundInstructions swallows any panic and returns an empty block, and the error from d.workingDir() is discarded in runGateTask, runMemory. A failure to compute the working directory or a panic in the projection silently results in no instructions being injected, with no diagnostic on stderr, while the call is reported as successful.",
+    "proof_refs": [
+      "engine/cmd/binding_wiring.go:64-70",
+      "engine/cmd/gate_task.go:25"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "19fc69e85ae2",
+    "runner": "ours",
+    "id": "R36",
+    "run": 3,
+    "row": "recall",
+    "finding": "F1",
+    "severity": "WARNING",
+    "location": "bin/lib/hooks.sh:47",
+    "claim": "install-hooks output and the README claim a SessionStart entry is installed (one SessionStart entry, status-hooks reports degraded until it is in place). No changed file adds the SessionStart hook to the settings projection family (runtime install, status, or uninstall). If the base does not already wire it, `projection hook --event SessionStart` is never run by Claude Code and the feature is dead, while the message and docs say it is installed. No test in the diff checks that install-hooks writes a SessionStart entry. This cannot be confirmed from the diff alone.",
+    "proof_refs": [
+      "bin/lib/hooks.sh:47",
+      "README.md SessionStart paragraph (+one SessionStart entry)"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "unknown",
+    "c27_control": false
+  },
+  {
+    "key": "1d33446c142b",
+    "runner": "ours",
+    "id": "R36",
+    "run": 3,
+    "row": "recall",
+    "finding": "F2",
+    "severity": "SUGGESTION",
+    "location": "engine/cmd/gate_task.go:25-27",
+    "claim": "gate-task now builds the deps and runs the binding lookup and workflow-log load (OnInstructions) on every Agent call that has a prompt, including ones the contract gate ignores. This is synchronous in a PreToolUse hook with no timeout. A slow or locked state store adds latency to every sub-agent spawn. The recover in boundInstructions swallows panics silently, so the only symptom would be a missing block. No test covers a slow or failing store.",
+    "proof_refs": [
+      "engine/cmd/gate_task.go:25-27",
+      "engine/cmd/hook_translate.go rewrittenAgentCall: instructions(call.Cwd)",
+      "engine/cmd/binding_wiring.go boundInstructions"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "c38a637692be",
+    "runner": "ours",
+    "id": "R36",
+    "run": 3,
+    "row": "hunt",
+    "finding": "F1",
+    "severity": "WARNING",
+    "location": "bin/lib/hooks.sh:47",
+    "claim": "The install-hooks output and the README claim a SessionStart entry is installed (README: 'plus one SessionStart entry'; removing hooks removes all of them). No installer, settings-projection or status-hooks code in this diff registers a SessionStart hook. If the runtime installer was not changed, SessionStart never fires in real sessions and the documentation is wrong. The only coverage is a test that calls the engine directly.",
+    "proof_refs": [
+      "bin/lib/hooks.sh:47",
+      "README.md: 'plus one SessionStart entry'"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "unknown",
+    "c27_control": false
+  },
+  {
+    "key": "90fb79d77ce5",
+    "runner": "ours",
+    "id": "R36",
+    "run": 3,
+    "row": "hunt",
+    "finding": "F2",
+    "severity": "SUGGESTION",
+    "location": "engine/cmd/memory.go:195",
+    "claim": "The README and usage say a closed workflow is refused (exit 2) by 'memory plan --instructions'. That is true only for the bound-repository form. With --project and --workflow, ownedWorkflowState only checks ownership, so a closed workflow prints its block and exits 0. The behavior is in a code comment ('whatever its status') but the user-facing docs do not say so.",
+    "proof_refs": [
+      "engine/cmd/memory.go:186-196",
+      "README.md memory plan --instructions paragraph"
+    ],
+    "evidence_class": "deterministic",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "7fbf5793b03d",
+    "runner": "ours",
+    "id": "R37",
+    "run": 1,
+    "row": "recall",
+    "finding": "F1",
+    "severity": "WARNING",
+    "location": "engine/cmd/review_receipt.go:63-76",
+    "claim": "A flag is only counted as given when followed by a value. `capture --change X --feature` (trailing --feature with no value) or `--feature` at the end silently leaves hasFeature false, so the command falls through to the change/auto-detect path and reports success instead of erroring; the user's explicit --feature option is silently ignored. Likewise a trailing `--change` combined with `--feature F` is not seen as a conflict.",
+    "proof_refs": [
+      "engine/cmd/review_receipt.go:63-76"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "9e80d6bb69d0",
+    "runner": "ours",
+    "id": "R37",
+    "run": 1,
+    "row": "recall",
+    "finding": "F2",
+    "severity": "WARNING",
+    "location": "engine/reviewreceipt/service.go:233-250",
+    "claim": "The hook's feature fallback accepts a receipt persisted in ANY feature folder (any odd/review-receipts/<dir>), not one tied to the current review. Any byte-identical file in some feature folder lets an acknowledgement through when several changes are active, bypassing the explicit-change requirement. Also, an unrelated unsafe feature directory name (e.g. with trailing space) makes the hook deny even though listing is fine; it is only reached when a receipt is not under a change.",
+    "proof_refs": [
+      "engine/reviewreceipt/service.go:233-250"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": true
+  },
+  {
+    "key": "ecb835c89bc3",
+    "runner": "ours",
+    "id": "R37",
+    "run": 1,
+    "row": "recall",
+    "finding": "F3",
+    "severity": "SUGGESTION",
+    "location": "engine/reviewreceipt/fsstore/store.go:262-289",
+    "claim": "Location silently falls back to s.root as the folder for an unknown destination kind, producing a misleading path; and Features() uses e.IsDir() on DirEntry, so symlinked feature directories are ignored while Write/Read through a symlinked feature dir would work, causing the hook to deny receipts persisted via a symlink.",
+    "proof_refs": [
+      "engine/reviewreceipt/fsstore/store.go:262-289"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "efb91ae864aa",
+    "runner": "ours",
+    "id": "R37",
+    "run": 1,
+    "row": "hunt",
+    "finding": "F1",
+    "severity": "WARNING",
+    "location": "engine/cmd/review_receipt.go:63-69",
+    "claim": "`capture --cwd X --feature` with a trailing --feature and no value leaves hasFeature false. The flag is silently ignored and capture falls through to auto-detecting the single active change, writing receipts into openspec/changes/<change>/ and exiting 0. The user explicitly asked for a feature destination and got a different one with no error. The code comment documents the behavior, but it is a destination-changing fallthrough that no test covers.",
+    "proof_refs": [
+      "engine/cmd/review_receipt.go:63-69"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "8bf8181204d7",
+    "runner": "ours",
+    "id": "R37",
+    "run": 2,
+    "row": "recall",
+    "finding": "F1",
+    "severity": "WARNING",
+    "location": "engine/reviewreceipt/service.go:229-250",
+    "claim": "The hook's feature-folder check treats a receipt in ANY feature folder as satisfying the acknowledgement, regardless of which review/feature it belongs to. A stale or unrelated feature folder containing identical bytes lets an ambiguous-change acknowledgement pass. Also, an unsafe-named directory under odd/review-receipts (e.g. with trailing space) makes CheckPathComponent fail and the hook deny with an error the user cannot fix via capture. This is by design but loosens the fail-closed guard.",
+    "proof_refs": [
+      "engine/reviewreceipt/service.go:229-250"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": true
+  },
+  {
+    "key": "9fc67b5ccc0f",
+    "runner": "ours",
+    "id": "R37",
+    "run": 2,
+    "row": "recall",
+    "finding": "F2",
+    "severity": "SUGGESTION",
+    "location": "engine/reviewreceipt/fsstore/store.go:268-289",
+    "claim": "Features() lists directories via DirEntry.IsDir, which is false for symlinks to directories. A feature folder that is a symlink is silently ignored, so the hook denies although the receipts are persisted there; the test only logs when symlinks are unavailable and does not assert this behavior.",
+    "proof_refs": [
+      "engine/reviewreceipt/fsstore/store.go:268-289"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "a0daedfaf12c",
+    "runner": "ours",
+    "id": "R37",
+    "run": 2,
+    "row": "recall",
+    "finding": "F3",
+    "severity": "SUGGESTION",
+    "location": "engine/cmd/review_receipt.go:60-74",
+    "claim": "A trailing --feature or --change flag with no value is treated as not given, so `capture --cwd X --feature` silently falls through to auto-detect or the single-change capture instead of failing with a usage error, ignoring the explicit option.",
+    "proof_refs": [
+      "engine/cmd/review_receipt.go:60-74"
+    ],
+    "evidence_class": "deterministic",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "cc69159ce069",
+    "runner": "ours",
+    "id": "R37",
+    "run": 3,
+    "row": "recall",
+    "finding": "F1",
+    "severity": "WARNING",
+    "location": "engine/cmd/review_receipt.go:68-75",
+    "claim": "A trailing --feature or --change flag with no value is treated as not given, so `capture --cwd X --feature` silently falls through to auto-detect or --change capture instead of reporting a usage error. A user who intended a feature capture gets a capture into a change (or a no-op exit 0) while success is reported; the conflict check also misses `--change a --feature` at the end.",
+    "proof_refs": [
+      "engine/cmd/review_receipt.go:68-75",
+      "engine/cmd/review_receipt.go:113-117"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "2de37e1e9b1a",
+    "runner": "ours",
+    "id": "R37",
+    "run": 3,
+    "row": "recall",
+    "finding": "F2",
+    "severity": "WARNING",
+    "location": "engine/reviewreceipt/fsstore/store.go:272-290",
+    "claim": "Features() lists directories by entry type, so a symlinked directory is not listed (the test creates one and expects it excluded) while Read/Write follow symlinks. Also, the hook trusts any directory name under odd/review-receipts; a name that fails CheckPathComponent (e.g. with trailing whitespace) makes the hook deny for the whole ambiguous case, so one stray malformed folder blocks all acknowledgements until removed.",
+    "proof_refs": [
+      "engine/reviewreceipt/fsstore/store.go:272-290",
+      "engine/reviewreceipt/service.go:195-199"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "a6f745ae8ea4",
+    "runner": "ours",
+    "id": "R37",
+    "run": 3,
+    "row": "recall",
+    "finding": "F3",
+    "severity": "SUGGESTION",
+    "location": "engine/reviewreceipt/service.go:215-248",
+    "claim": "The hook's ambiguous-change allow now accepts a receipt persisted in any feature folder, including one captured for a different, unrelated feature, so the persisted-check is weaker than before; and the allow does not verify the acknowledged lineage specifically. Also each survivor triggers a Read per feature (O(receipts x features)) with no bound.",
+    "proof_refs": [
+      "engine/reviewreceipt/service.go:215-248"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "worsened",
+    "c27_control": false
+  },
+  {
+    "key": "e263ed9d095d",
+    "runner": "ours",
+    "id": "R37",
+    "run": 3,
+    "row": "hunt",
+    "finding": "F1",
+    "severity": "WARNING",
+    "location": "engine/cmd/review_receipt.go:68-73",
+    "claim": "A trailing `--feature` with no value is treated as not given, so `review-receipt capture --cwd X --feature` silently falls through to change auto-detection. With a single active change it captures into that change and exits 0, instead of capturing into a feature or reporting an error. An explicit option is ignored while success is reported. The same applies to a trailing `--feature` alongside `--change`: the mutual-exclusion check is bypassed.",
+    "proof_refs": [
+      "engine/cmd/review_receipt.go:68-73",
+      "engine/cmd/review_receipt.go:113-125"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "8735c6cf1a59",
+    "runner": "ours",
+    "id": "R38",
+    "run": 1,
+    "row": "recall",
+    "finding": "F1",
+    "severity": "WARNING",
+    "location": "longterm-mem/internal/promote/page.go:73-84",
+    "claim": "The goal tag is added only when a page is first emitted. Vault pages already promoted from goal:<id>/ observations have no goal tag, so TagsVisibleUnderGoal treats them as belonging to no goal and every goal's query shows them. The goal filter leaks other goals' vault records until those pages are re-promoted, and sync does not refresh them. No migration or caveat is provided.",
+    "proof_refs": [
+      "longterm-mem/internal/promote/page.go:73-84",
+      "longterm-mem/internal/memory/goal.go:66-78"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "behavior-activated",
+    "c27_control": false
+  },
+  {
+    "key": "721fefe7a5d4",
+    "runner": "ours",
+    "id": "R38",
+    "run": 1,
+    "row": "recall",
+    "finding": "F2",
+    "severity": "SUGGESTION",
+    "location": "longterm-mem/internal/vault/pagetags.go:69-96",
+    "claim": "The hand-written frontmatter parser handles neither multi-line flow lists, inline YAML comments after values (`tags: [a] # c`), nor `-` items without a trailing space. Each of these either returns an error or silently drops tags. A page that names another goal can then be read as having no goal and shown under the wrong goal, or an otherwise fine page is left out and reported as unreadable.",
+    "proof_refs": [
+      "longterm-mem/internal/vault/pagetags.go:69-96",
+      "longterm-mem/internal/vault/pagetags.go:110-135"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "78fee28c29e2",
+    "runner": "ours",
+    "id": "R38",
+    "run": 1,
+    "row": "recall",
+    "finding": "F3",
+    "severity": "SUGGESTION",
+    "location": "longterm-mem/internal/query/vault_goal.go:45-65",
+    "claim": "A goal id containing '/' matches nothing in Engram, because the id ends at the first '/'. A vault tag `goal:a/b` does match goal \"a/b\". The sources therefore disagree for such a goal id, and the Goal input is never validated or rejected.",
+    "proof_refs": [
+      "longterm-mem/internal/memory/goal.go:66-78",
+      "longterm-mem/internal/query/vault_goal.go:45-65"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "88906dd6a6dd",
+    "runner": "ours",
+    "id": "R38",
+    "run": 1,
+    "row": "recall",
+    "finding": "F4",
+    "severity": "SUGGESTION",
+    "location": "longterm-mem/internal/vault/pagetags.go:38-52",
+    "claim": "pageInside checks containment lexically with filepath.Rel and does not resolve symlinks. A symlinked page inside the vault that points outside it is still read. Only frontmatter tags are consumed, so the exposure is low.",
+    "proof_refs": [
+      "longterm-mem/internal/vault/pagetags.go:38-52"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": true
+  },
+  {
+    "key": "216a96fa71e1",
+    "runner": "ours",
+    "id": "R38",
+    "run": 1,
+    "row": "hunt",
+    "finding": "F1",
+    "severity": "WARNING",
+    "location": "longterm-mem/internal/engram/search.go:123-137",
+    "claim": "A goal id containing '/' (e.g. --goal a/b) can never match any Engram topic, because the id ends at the first '/'. The query is accepted silently and returns only goalless records on the Engram arms, with no error or diagnostic. The vault arm can still match a page tagged goal:a/b, so the arms disagree for the same input. An unrecognised goal value falls through to a quiet default rather than being refused.",
+    "proof_refs": [
+      "longterm-mem/internal/engram/search.go:123-137",
+      "longterm-mem/internal/memory/goal.go:TagsVisibleUnderGoal"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "cc99be25bd72",
+    "runner": "ours",
+    "id": "R38",
+    "run": 1,
+    "row": "hunt",
+    "finding": "F2",
+    "severity": "SUGGESTION",
+    "location": "longterm-mem/internal/vault/pagetags.go:105-118",
+    "claim": "blockListItems stops at the first line that is not '- item', for example a blank line or a comment inside the tags list. Any goal tag after that line is missed, and under a goal the page is then treated as goalless and shown to other goals. Flow lists that span lines or carry a trailing comment are rejected as unclosed. Those pages are left out, but they are reported as unreadable.",
+    "proof_refs": [
+      "longterm-mem/internal/vault/pagetags.go:blockListItems",
+      "longterm-mem/internal/vault/pagetags.go:flowListItems"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "855128633716",
+    "runner": "ours",
+    "id": "R38",
+    "run": 2,
+    "row": "recall",
+    "finding": "F1",
+    "severity": "WARNING",
+    "location": "longterm-mem/internal/vault/pagetags.go:77-103",
+    "claim": "The frontmatter parser fails open on pages it fails to recognise as having frontmatter. A page starting with a UTF-8 BOM, or whose opening fence is not exactly '---' on line 1, is treated as having no tags. Under a goal such a page counts as 'no goal' and is shown, even if a later tags block names another goal. The unclosed-frontmatter and unclosed-flow-list cases fail closed, so the handling is inconsistent. A BOM is plausible for hand-edited vault pages.",
+    "proof_refs": [
+      "longterm-mem/internal/vault/pagetags.go:77-103"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "032fd85083ac",
+    "runner": "ours",
+    "id": "R38",
+    "run": 2,
+    "row": "recall",
+    "finding": "F2",
+    "severity": "SUGGESTION",
+    "location": "longterm-mem/internal/vault/pagetags.go:119-125",
+    "claim": "A flow list with a trailing YAML comment (`tags: [a, goal:g-7] # x`) fails the HasSuffix(\"]\") check and is reported as an unclosed list. A valid page is then left out under a goal and named in the diagnostic. Multi-line flow lists are also unsupported and hit the same path. The result is wrongly dropped pages, not a leak.",
+    "proof_refs": [
+      "longterm-mem/internal/vault/pagetags.go:119-125"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "21fa00796ac2",
+    "runner": "ours",
+    "id": "R38",
+    "run": 2,
+    "row": "recall",
+    "finding": "F3",
+    "severity": "SUGGESTION",
+    "location": "longterm-mem/internal/vault/pagetags.go:41-55",
+    "claim": "pageInside checks containment lexically (filepath.Rel) and does not resolve symlinks. A symlink inside the vault pointing outside it passes the check and os.ReadFile follows it. The impact is limited to reading a frontmatter tags block from an outside file, but the path-escape guard does not hold for symlinks.",
+    "proof_refs": [
+      "longterm-mem/internal/vault/pagetags.go:41-55"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": true
+  },
+  {
+    "key": "4138f03d8bd6",
+    "runner": "ours",
+    "id": "R38",
+    "run": 2,
+    "row": "recall",
+    "finding": "F4",
+    "severity": "SUGGESTION",
+    "location": "longterm-mem/internal/query/vault_goal.go:44-64",
+    "claim": "The vault page candidates are read one by one and in sequence, up to 100 file reads per query under a goal, with no concurrency or caching. The requested retrieval size (up to 100) is also not reported in the answer. If most candidates belong to other goals, the result is silently shorter than top with no diagnostic saying that the overfetch ran out.",
+    "proof_refs": [
+      "longterm-mem/internal/query/vault_goal.go:44-64"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "309f17ccf319",
+    "runner": "ours",
+    "id": "R38",
+    "run": 2,
+    "row": "hunt",
+    "finding": "F1",
+    "severity": "WARNING",
+    "location": "longterm-mem/internal/query/vault_goal.go:44-47",
+    "claim": "Under a goal, if top is zero or negative, vaultRetrievalSize returns a non-positive count, and keepGoalPages' loop breaks immediately (len(kept) >= top) so no pages are kept; harmless for 0, but a negative top passes a negative limit to the retriever. Without a goal the same top is passed through, so this is only a minor edge case, and Run is expected to clamp top beforehand.",
+    "proof_refs": [
+      "longterm-mem/internal/query/vault_goal.go:44-47"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "unknown",
+    "c27_control": false
+  },
+  {
+    "key": "7f9981638c8d",
+    "runner": "ours",
+    "id": "R38",
+    "run": 2,
+    "row": "hunt",
+    "finding": "F2",
+    "severity": "WARNING",
+    "location": "longterm-mem/internal/vault/pagetags.go:68-73",
+    "claim": "pageInside checks containment lexically with filepath.Rel and does not resolve symlinks, so a symlinked page inside the vault pointing outside it is read. The 'reads only the vault's own pages' contract is only lexically enforced.",
+    "proof_refs": [
+      "longterm-mem/internal/vault/pagetags.go:68-73"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "5fe782c9e7c4",
+    "runner": "ours",
+    "id": "R38",
+    "run": 2,
+    "row": "hunt",
+    "finding": "F3",
+    "severity": "WARNING",
+    "location": "longterm-mem/internal/vault/pagetags.go:95-110",
+    "claim": "frontmatterTags takes the first line starting with 'tags:' inside the frontmatter, including indented-looking nested keys only if at column 0; a block list whose items are indented with a non-'- ' form (e.g. '-\"x\"' or '  -   x' handled) or a YAML list with comments/blank line between key and items stops early and yields fewer tags. A page whose goal tag is missed is treated as having no goal and shown under another goal (fail-open) instead of being left out.",
+    "proof_refs": [
+      "longterm-mem/internal/vault/pagetags.go:95-125"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "5c245d678fd2",
+    "runner": "ours",
+    "id": "R38",
+    "run": 2,
+    "row": "hunt",
+    "finding": "F4",
+    "severity": "WARNING",
+    "location": "longterm-mem/internal/promote/eligible.go:40-42",
+    "claim": "curatedTopicKey now strips a goal prefix before judging. A previously-uncurated key like 'goal:g-1/foo' was judged by its first segment 'goal:g-1' (curated, eligible); the behavior is unchanged for non-sdd topics, but it changes eligibility of 'goal:x/sdd/...' topics that were previously eligible and are now excluded, so already-promoted pages for such observations are no longer refreshed by sync.",
+    "proof_refs": [
+      "longterm-mem/internal/promote/eligible.go:40-42"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "behavior-activated",
+    "c27_control": false
+  },
+  {
+    "key": "b3ca2c17d89d",
+    "runner": "ours",
+    "id": "R38",
+    "run": 3,
+    "row": "recall",
+    "finding": "F1",
+    "severity": "WARNING",
+    "location": "longterm-mem/internal/vault/pagetags.go:47-60",
+    "claim": "pageInside checks containment lexically only (filepath.Rel on a cleaned path). A symlink inside the vault pointing outside it passes the check and is read by os.ReadFile, so the 'reads only the vault's own pages' guarantee does not hold. Impact is limited to tag parsing, but it is a path-escape gap on a file-reading adapter.",
+    "proof_refs": [
+      "longterm-mem/internal/vault/pagetags.go:47-60"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": true
+  },
+  {
+    "key": "a8b67da763aa",
+    "runner": "ours",
+    "id": "R38",
+    "run": 3,
+    "row": "recall",
+    "finding": "F2",
+    "severity": "WARNING",
+    "location": "longterm-mem/internal/vault/pagetags.go:114-139",
+    "claim": "The frontmatter parser is a hand-rolled subset of YAML. A flow list with a trailing comment (`tags: [a, goal:g-7] # x`) or one spanning lines yields errUnclosedFlowList. Under a goal such a page is silently dropped as unreadable, even when it carries this goal's tag, so valid pages are lost from vault results. Indented or quoted `tags` keys and `-` items without a trailing space are also misparsed, which can yield no tags and wrongly make another goal's page visible.",
+    "proof_refs": [
+      "longterm-mem/internal/vault/pagetags.go:114-139",
+      "longterm-mem/internal/vault/pagetags.go:96-112"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "8271373f5150",
+    "runner": "ours",
+    "id": "R38",
+    "run": 3,
+    "row": "recall",
+    "finding": "F3",
+    "severity": "SUGGESTION",
+    "location": "longterm-mem/internal/query/vault_goal.go:55-62",
+    "claim": "The vault_page_tags_unreadable diagnostic Detail embeds raw error strings. These include the absolute page path and vault root from pageInside errors, and can list up to 100 pages. The detail is returned to MCP clients and bloats or leaks local filesystem paths.",
+    "proof_refs": [
+      "longterm-mem/internal/query/vault_goal.go:55-62",
+      "longterm-mem/internal/vault/pagetags.go:55-58"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "89f263239b8b",
+    "runner": "ours",
+    "id": "R38",
+    "run": 3,
+    "row": "recall",
+    "finding": "F4",
+    "severity": "SUGGESTION",
+    "location": "longterm-mem/internal/engram/search.go:137-138",
+    "claim": "A --goal value containing '/' (or surrounding whitespace) never matches any goal's records. The query silently returns only goal-less records and reports success, with no validation or diagnostic.",
+    "proof_refs": [
+      "longterm-mem/internal/engram/search.go:123-137",
+      "longterm-mem/cmd/longterm-mem/cmd_query.go:36"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "b5cd68ae6513",
+    "runner": "ours",
+    "id": "R38",
+    "run": 3,
+    "row": "recall",
+    "finding": "F5",
+    "severity": "SUGGESTION",
+    "location": "longterm-mem/internal/promote/eligible.go:37-41",
+    "claim": "Eligibility now strips the goal prefix. A topic like `goal:g-42/` was curated before (first segment `goal:g-42`) and is now ineligible. Pages already promoted from goal topics before this change carry no goal tag, so they stay visible to every goal. sync does not refresh them, so they never gain the tag.",
+    "proof_refs": [
+      "longterm-mem/internal/promote/eligible.go:37-41",
+      "longterm-mem/internal/promote/page.go:73-84"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "behavior-activated",
+    "c27_control": false
+  },
+  {
+    "key": "666cafd4ba8e",
+    "runner": "ours",
+    "id": "R38",
+    "run": 3,
+    "row": "hunt",
+    "finding": "F1",
+    "severity": "WARNING",
+    "location": "longterm-mem/cmd/longterm-mem/cmd_query.go:36",
+    "claim": "A goal id containing \"/\" is accepted without validation, but no topic can ever carry such an id (the id ends at the first \"/\"). A query with --goal a/b, or an MCP goal with a slash, therefore silently drops every goal's records and keeps only no-goal records, with success status and no diagnostic. Whitespace-only goals behave the same way.",
+    "proof_refs": [
+      "longterm-mem/cmd/longterm-mem/cmd_query.go:36",
+      "longterm-mem/internal/memory/goal.go:56-63"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "d3cbd91f554c",
+    "runner": "ours",
+    "id": "R38",
+    "run": 3,
+    "row": "hunt",
+    "finding": "F2",
+    "severity": "SUGGESTION",
+    "location": "longterm-mem/internal/vault/pagetags.go:46-58",
+    "claim": "The containment check is purely lexical (filepath.Rel). A symlinked page inside the vault that points outside it passes the check and is read. The result is only tags, so exposure is small, but it does not match the stated contract that the reader reads only the vault's own pages.",
+    "proof_refs": [
+      "longterm-mem/internal/vault/pagetags.go:46-58"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "3fef1bb48033",
+    "runner": "ours",
+    "id": "R38",
+    "run": 3,
+    "row": "hunt",
+    "finding": "F3",
+    "severity": "SUGGESTION",
+    "location": "longterm-mem/internal/vault/pagetags.go:117-122",
+    "claim": "A flow-list tags line with a trailing YAML comment (`tags: [a, goal:g-7] # x`) fails the HasSuffix(\"]\") check and is reported as an unclosed list. Under a goal the page is then left out and named as unreadable, though it is a valid page. The flow-list quote tracking also ignores backslash-escaped quotes inside double-quoted items.",
+    "proof_refs": [
+      "longterm-mem/internal/vault/pagetags.go:117-122"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "e4e8d4b8c3f7",
+    "runner": "ours",
+    "id": "R39",
+    "run": 1,
+    "row": "recall",
+    "finding": "F1",
+    "severity": "WARNING",
+    "location": "engine/cmd/hook_translate.go:60-71",
+    "claim": "realSkillFile only resolves symlinks when the target exists and the base name is exactly SKILL.md. A symlink to a SKILL.md read via a link whose own name differs, a non-existent path, or a relative path is left unresolved, so the gate's match against the lock can be bypassed (e.g. a symlink file named other.md pointing at the locked SKILL.md is not denied). Case-variant names on case-insensitive filesystems are also missed. The gate is an access-control check and the path comparison remains string-based.",
+    "proof_refs": [
+      "engine/cmd/hook_translate.go:60-71"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "7ecc89a70776",
+    "runner": "ours",
+    "id": "R39",
+    "run": 1,
+    "row": "recall",
+    "finding": "F2",
+    "severity": "WARNING",
+    "location": "engine/cmd/procedural_lock.go:52-56",
+    "claim": "The lock reader now calls filepath.EvalSymlinks on every listed skill file at each Load. The hook runs on every tool call, so this adds filesystem work per call. If the symlink resolves to a different location only after the Load (race), or the root itself is a link that is relocated, the listed real path can be stale. Errors from EvalSymlinks are silently swallowed, so an unresolvable file is listed only by its unresolved name with no diagnostic.",
+    "proof_refs": [
+      "engine/cmd/procedural_lock.go:52-56"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "f7d42c0b8461",
+    "runner": "ours",
+    "id": "R39",
+    "run": 1,
+    "row": "recall",
+    "finding": "F3",
+    "severity": "WARNING",
+    "location": "engine/cmd/hook_translate.go:55",
+    "claim": "ReadFilePath is now a closure that calls realSkillFile, performing a filesystem stat/EvalSymlinks inside the gate path for any Read of a file named SKILL.md, including ones unrelated to the lock. The call is evaluated lazily, so the cost and result may differ between invocations if the filesystem changes (TOCTOU between check and the actual Read).",
+    "proof_refs": [
+      "engine/cmd/hook_translate.go:55"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": true
+  },
+  {
+    "key": "22b31f1d319c",
+    "runner": "ours",
+    "id": "R39",
+    "run": 1,
+    "row": "recall",
+    "finding": "F4",
+    "severity": "SUGGESTION",
+    "location": "engine/projection/gate_procedural_test.go:165-172",
+    "claim": "The new test asserts the warning does not contain the substring \"lock\", which is brittle: any future wording or profile name containing \"lock\" fails it. The symlink test in projection_gate_test.go does not cover a symlink to a nonexistent or non-SKILL.md-named link, so the bypass in F1 is untested.",
+    "proof_refs": [
+      "engine/projection/gate_procedural_test.go:165-172"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "80c9a90bf915",
+    "runner": "ours",
+    "id": "R39",
+    "run": 1,
+    "row": "hunt",
+    "finding": "F1",
+    "severity": "WARNING",
+    "location": "engine/cmd/hook_translate.go:60-71",
+    "claim": "realSkillFile resolves symlinks only when the path's base is SKILL.md, is absolute and exists. A relative file_path or a not-yet-existing path is returned unresolved, and an EvalSymlinks error is silently swallowed and falls back to the raw path. A Read of a symlinked SKILL.md file itself (a link named SKILL.md pointing into the repo, or one whose own name differs) is handled only when the base name is SKILL.md, so a link such as other.md pointing at the lock's SKILL.md resolves nothing and is not denied. The skill lock gate can therefore be bypassed through a differently named link.",
+    "proof_refs": [
+      "engine/cmd/hook_translate.go:60-71"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "69fa0bdf53ef",
+    "runner": "ours",
+    "id": "R39",
+    "run": 1,
+    "row": "hunt",
+    "finding": "F2",
+    "severity": "SUGGESTION",
+    "location": "engine/cmd/procedural_lock.go:52-57",
+    "claim": "The EvalSymlinks error is discarded when listing the real path of a lock SKILL.md. If resolution fails, only the unresolved path is listed and the failure is silent. A repository root that is itself reached through a link is covered only when the file exists at lock load time. Duplicate entries are avoided only when real != file.",
+    "proof_refs": [
+      "engine/cmd/procedural_lock.go:52-57"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "7884debb71e4",
+    "runner": "ours",
+    "id": "R39",
+    "run": 2,
+    "row": "recall",
+    "finding": "F1",
+    "severity": "WARNING",
+    "location": "engine/cmd/hook_translate.go:60-71",
+    "claim": "realSkillFile only resolves symlinks when the file exists and the base name is exactly SKILL.md. A read of a non-existent path, or a path whose parent is a link but whose file is missing, falls back to the unresolved path. Case variants of the name are also not matched. The result is that the lock comparison depends on the filesystem state at hook time (TOCTOU between EvalSymlinks and the actual Read), so a symlink swapped after the check can read a locked SKILL.md under a non-matching path. The gate is advisory, but the comparison is still bypassable by retargeting a link.",
+    "proof_refs": [
+      "engine/cmd/hook_translate.go:60-71"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "d4df342b467c",
+    "runner": "ours",
+    "id": "R39",
+    "run": 2,
+    "row": "recall",
+    "finding": "F2",
+    "severity": "WARNING",
+    "location": "engine/cmd/procedural_lock.go:52-56",
+    "claim": "The lock reader lists the real path only when the SKILL.md itself resolves. A symlinked individual SKILL.md whose target lies outside the repository adds the external target to SkillFiles. The reader also follows links per file on every Load, which is an extra filesystem call on each hook invocation. If a skill file is a link to a shared file, any other skill's Read of that real path is denied under this skill's name, which is a misattribution.",
+    "proof_refs": [
+      "engine/cmd/procedural_lock.go:52-56"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "727458e7c69c",
+    "runner": "ours",
+    "id": "R39",
+    "run": 2,
+    "row": "recall",
+    "finding": "F3",
+    "severity": "SUGGESTION",
+    "location": "engine/cmd/projection_gate_test.go:375-396",
+    "claim": "The new symlink test covers only the success cases. It has no test for a dangling link, a non-SKILL.md path, a relative path, or a symlinked SKILL.md file. The fallback branches of realSkillFile and the extra-append condition (real != file) therefore have no externally observable assertion. The test also calls os.Symlink without skipping on platforms where it is unsupported.",
+    "proof_refs": [
+      "engine/cmd/projection_gate_test.go:375-396"
+    ],
+    "evidence_class": "deterministic",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "57857f506e16",
+    "runner": "ours",
+    "id": "R39",
+    "run": 2,
+    "row": "recall",
+    "finding": "F4",
+    "severity": "SUGGESTION",
+    "location": "engine/projection/gate.go:343-347",
+    "claim": "The behavior of the gate changes. When the lock is unreadable and the plan cannot be computed, the result used to be the lock-unreadable warning and is now a plan-error warning. The warning text no longer mentions the lock problem at all, so the user loses the lock diagnosis until the plan is fixed. Both problems should be surfaced.",
+    "proof_refs": [
+      "engine/projection/gate.go:343-347"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "892ea76afe77",
+    "runner": "ours",
+    "id": "R39",
+    "run": 2,
+    "row": "hunt",
+    "finding": "F1",
+    "severity": "WARNING",
+    "location": "engine/cmd/hook_translate.go:60-71",
+    "claim": "realSkillFile resolves symlinks only when the path's base is SKILL.md and it is absolute, and only when EvalSymlinks succeeds. A relative path or a non-existent file is returned unresolved, silently. A relative file_path, or a link whose final component is not named SKILL.md (e.g. a link 'x' pointing to a SKILL.md), is not matched against the lock's real paths, so the gate allows the read. A directory symlink inside a skills dir is handled, but a file symlink named otherwise is not.",
+    "proof_refs": [
+      "engine/cmd/hook_translate.go:60-71"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "0ab52a07ff17",
+    "runner": "ours",
+    "id": "R39",
+    "run": 2,
+    "row": "hunt",
+    "finding": "F2",
+    "severity": "SUGGESTION",
+    "location": "engine/cmd/procedural_lock.go:52-56",
+    "claim": "The EvalSymlinks error is swallowed in the lock reader: if the skill file does not exist or cannot be resolved, only the unresolved path is listed. This is silent, and the real path of a root reached through a link is not listed when the file is missing, though the Read side may then resolve differently (e.g. file created later).",
+    "proof_refs": [
+      "engine/cmd/procedural_lock.go:52-56"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "0e7545345f23",
+    "runner": "ours",
+    "id": "R39",
+    "run": 2,
+    "row": "hunt",
+    "finding": "F3",
+    "severity": "SUGGESTION",
+    "location": "engine/projection/gate.go:343-348",
+    "claim": "When the plan cannot be computed and the lock is unreadable, the gate now returns a warning for any skill, including skills unrelated to procedural ones. Before, the warning was about the lock; the new path warns on every skill use even when the plan error is irrelevant to this skill. Behavior change in noise rather than correctness.",
+    "proof_refs": [
+      "engine/projection/gate.go:343-348"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "behavior-activated",
+    "c27_control": false
+  },
+  {
+    "key": "657f0a3de71e",
+    "runner": "ours",
+    "id": "R39",
+    "run": 3,
+    "row": "recall",
+    "finding": "F1",
+    "severity": "WARNING",
+    "location": "engine/cmd/hook_translate.go:60-71",
+    "claim": "realSkillFile resolves symlinks only when the SKILL.md itself exists and the path is absolute with base name exactly SKILL.md. A relative file_path, a case variant, or a nonexistent/dangling path falls through unresolved and will not match the lock's real path, so the gate allows it. Also the lock lists only the real path and the unresolved path, so a symlink to a SKILL.md at a different name or a symlinked SKILL.md file inside the skills dir whose target lies outside the repo resolves to the external target, which the lock does not list; the read is then not denied. This is a bypass of the procedural-skill gate for a path through a link to the file itself.",
+    "proof_refs": [
+      "engine/cmd/hook_translate.go:60-71"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "unknown",
+    "c27_control": false
+  },
+  {
+    "key": "d59b088515d0",
+    "runner": "ours",
+    "id": "R39",
+    "run": 3,
+    "row": "recall",
+    "finding": "F2",
+    "severity": "WARNING",
+    "location": "engine/cmd/hook_translate.go:55",
+    "claim": "The change adds a filesystem call (EvalSymlinks) to the PreToolUse hook path on every Read of a SKILL.md, evaluated lazily inside the ReadFilePath closure. A stat of a slow or hung mount could delay the hook; there is no timeout. Failures silently fall back to the unresolved path, so the gate degrades to the pre-change behavior without any warning.",
+    "proof_refs": [
+      "engine/cmd/hook_translate.go:55",
+      "engine/cmd/hook_translate.go:66-70"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "ddfeaccea26d",
+    "runner": "ours",
+    "id": "R39",
+    "run": 3,
+    "row": "recall",
+    "finding": "F3",
+    "severity": "SUGGESTION",
+    "location": "engine/cmd/procedural_lock.go:52-57",
+    "claim": "The lock reader lists a symlink-resolved path in SkillFiles only when it differs; EvalSymlinks errors are silently ignored. If the skills root is resolved but the session's cwd is a different link than the one tested, paths through other links to the same repository are still not matched (the Read path is resolved, so this is mostly covered, but the root named in the lock is not canonicalised). Tests cover only one link configuration and no dangling-link or relative-path case.",
+    "proof_refs": [
+      "engine/cmd/procedural_lock.go:52-57",
+      "engine/cmd/projection_gate_test.go:375-396"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "ae7cdba66128",
+    "runner": "ours",
+    "id": "R39",
+    "run": 3,
+    "row": "recall",
+    "finding": "F4",
+    "severity": "SUGGESTION",
+    "location": "engine/projection/gate.go:343-348",
+    "claim": "Behavior change: when the plan cannot be computed and the lock is unreadable, the gate now warns about the plan instead of the lock. The warning text is built by the caller with the error detail and is non-denying, so the unreadable-lock warning is no longer surfaced in this case; a user fixing the plan will only then discover the lock problem on the next call.",
+    "proof_refs": [
+      "engine/projection/gate.go:343-348",
+      "engine/projection/gate_procedural_test.go:165-172"
+    ],
+    "evidence_class": "deterministic",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "51dd597b2576",
+    "runner": "ours",
+    "id": "R39",
+    "run": 3,
+    "row": "hunt",
+    "finding": "F1",
+    "severity": "WARNING",
+    "location": "engine/cmd/hook_translate.go:60-71",
+    "claim": "realSkillFile only resolves symlinks when the path ends in SKILL.md, is absolute and fully exists. A relative file_path, or a link to a non-existent target (EvalSymlinks error), falls through to the unresolved path, so the lock comparison silently misses and the read is not denied. A relative path is also not resolved against the session cwd. Also, a symlinked SKILL.md whose final component is a link to a differently named file, or a link named other than SKILL.md pointing at a locked SKILL.md, is not resolved because the Base check uses the unresolved name, so such a read bypasses the lock.",
+    "proof_refs": [
+      "engine/cmd/hook_translate.go:60-71"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "233072b921b0",
+    "runner": "ours",
+    "id": "R39",
+    "run": 3,
+    "row": "hunt",
+    "finding": "F2",
+    "severity": "WARNING",
+    "location": "engine/cmd/procedural_lock.go:52-57",
+    "claim": "The EvalSymlinks error is swallowed: if the lock-listed file cannot be resolved, only the unresolved path is listed. The real path is only added when it differs. If the repository root itself is reached through a link and the file does not exist yet or is removed later, the real-path entry is absent, so a later Read by real path is not matched. Resolution is computed once at Load time and may go stale.",
+    "proof_refs": [
+      "engine/cmd/procedural_lock.go:52-57"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "ea33790c401d",
+    "runner": "ours",
+    "id": "R39",
+    "run": 3,
+    "row": "hunt",
+    "finding": "F3",
+    "severity": "SUGGESTION",
+    "location": "engine/projection/gate.go:343-348",
+    "claim": "When the plan cannot be computed and the lock is also unreadable, the gate now returns a warning naming the plan error. Previously the lock-unreadable warning was returned. This changes behavior for a case the plan error previously hid, and the warning no longer mentions the unreadable lock at all, so the user loses that information until the plan is fixed.",
+    "proof_refs": [
+      "engine/projection/gate.go:343-348"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "309a2293bed8",
+    "runner": "ours",
+    "id": "R40",
+    "run": 1,
+    "row": "recall",
+    "finding": "F1",
+    "severity": "WARNING",
+    "location": "engine/settings/projection.go:40",
+    "claim": "The installed matcher \"Skill|Read\" routes every Read tool call to the hook binary. Claude Code spawns the engine process for each Read, even though the hook then ignores any file that is not a SKILL.md. Read is the most frequent tool, so this adds a process spawn to every Read in every session, and a failure to start the binary affects all of them. The narrowing happens only after the process has started.",
+    "proof_refs": [
+      "engine/settings/projection.go:40"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "1a307615c03f",
+    "runner": "ours",
+    "id": "R40",
+    "run": 1,
+    "row": "recall",
+    "finding": "F2",
+    "severity": "SUGGESTION",
+    "location": "engine/projection/gate.go:336-345",
+    "claim": "When the lock is unreadable, any Read of any file named SKILL.md (a global skill, a registry-installed skill, or a file outside the repo) and any Skill call, even one with an empty skill name, gets a warning whenever the plan excludes procedural-skills. The gate cannot tell whether the call concerns a procedural skill, so the warning repeats on every such call. Corrupt locks are therefore noisy and the warning says nothing about whether this specific call was affected.",
+    "proof_refs": [
+      "engine/projection/gate.go:336-345"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "8c6dd20cc158",
+    "runner": "ours",
+    "id": "R40",
+    "run": 1,
+    "row": "recall",
+    "finding": "F3",
+    "severity": "SUGGESTION",
+    "location": "engine/cmd/procedural_lock.go:37",
+    "claim": "The lock is read with os.ReadFile and no size cap, and it is re-read and re-parsed on every Skill call and every SKILL.md Read. A very large or malicious lock file in the repo makes each of these PreToolUse calls slow and memory-heavy.",
+    "proof_refs": [
+      "engine/cmd/procedural_lock.go:37"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "2d318e8808b6",
+    "runner": "ours",
+    "id": "R40",
+    "run": 1,
+    "row": "recall",
+    "finding": "F4",
+    "severity": "SUGGESTION",
+    "location": "engine/cmd/procedural_lock.go:60-67",
+    "claim": "Read matching compares only lexically cleaned absolute paths. A symlink to the SKILL.md, a differently-cased path on a case-insensitive filesystem, or a symlinked worktree root (the worktree root and the path Claude passes may differ) bypasses the denial. The same applies to the Skill tool with a namespaced name such as \"plugin:deploy-checks\". The gate silently allows these cases.",
+    "proof_refs": [
+      "engine/cmd/procedural_lock.go:60-67"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "d2716cddf20e",
+    "runner": "ours",
+    "id": "R40",
+    "run": 1,
+    "row": "hunt",
+    "finding": "F1",
+    "severity": "WARNING",
+    "location": "engine/projection/gate.go:372-385",
+    "claim": "Read matching compares only lexically cleaned paths against the lock-derived absolute paths. A symlinked worktree path, a different-case path on a case-insensitive filesystem, or a different spelling of the same file (the worktree root from the repo locator versus the path the model passes) does not match. The SKILL.md of a procedural skill is then read without the denial. Likewise, a Skill name with a plugin prefix or a leading slash does not match the id exactly. This is a gate bypass for non-canonical input.",
+    "proof_refs": [
+      "engine/projection/gate.go:match uses filepath.Clean(use.file) == filepath.Clean(file)",
+      "engine/cmd/procedural_lock.go:skillFileIn builds paths from the locator's WorktreeRoot"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "dfc3195b4b2a",
+    "runner": "ours",
+    "id": "R40",
+    "run": 1,
+    "row": "hunt",
+    "finding": "F2",
+    "severity": "WARNING",
+    "location": "engine/projection/gate.go:336-345",
+    "claim": "When the lock is unreadable, every Read of any SKILL.md (including global or unrelated skills) in a workflow whose plan excludes procedural-skills emits a warning. The warning repeats on every such call, because the gate cannot tell whether the file is procedural. The hook also re-reads and re-parses the lock on every call. This is noisy and not the 'one warning' the docs promise.",
+    "proof_refs": [
+      "engine/projection/gate.go:proceduralGate Unreadable branch returns Warning before match",
+      "engine/projection/app/hook.go:input.Procedural = s.ProceduralSkills.Load(dir) per call"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "56b87d019b33",
+    "runner": "ours",
+    "id": "R40",
+    "run": 2,
+    "row": "recall",
+    "finding": "F1",
+    "severity": "WARNING",
+    "location": "engine/settings/projection.go:40",
+    "claim": "The matcher \"Skill|Read\" routes every Read tool call to the hook binary. Claude Code spawns a process for each Read, including Reads of ordinary files that the hook then discards. Read is among the most frequent tool calls, so this adds process-spawn latency and load on every session, and the filter cannot run before the spawn because the matcher cannot see the path.",
+    "proof_refs": [
+      "engine/settings/projection.go:40",
+      "engine/projection/gate.go:212-222"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "f7c391110a80",
+    "runner": "ours",
+    "id": "R40",
+    "run": 2,
+    "row": "recall",
+    "finding": "F2",
+    "severity": "WARNING",
+    "location": "engine/projection/gate.go:375-385",
+    "claim": "The gate matches a Read by lexical comparison of cleaned paths, and it narrows relevance with a case-sensitive `SKILL.md` basename check. A symlinked path, a differently cased `skill.md` on a case-insensitive filesystem, a path through another mount or alias of the worktree, or a repo reached via a different worktree root all fail to match the lock's absolute paths. The gate then allows the Read silently, so the exclusion of procedural-skills can be bypassed with realistic paths. The README covers only the Bash bypass.",
+    "proof_refs": [
+      "engine/projection/gate.go:212-222",
+      "engine/projection/gate.go:375-385"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "05549fe395d7",
+    "runner": "ours",
+    "id": "R40",
+    "run": 2,
+    "row": "recall",
+    "finding": "F3",
+    "severity": "SUGGESTION",
+    "location": "engine/projection/gate.go:337-343",
+    "claim": "When the lock is unreadable and the plan excludes procedural-skills, every Skill call and every Read of any SKILL.md emits a systemMessage warning, including calls for global or installed skills that cannot be procedural. A single corrupt lock therefore produces repeated warnings for the whole session, with no once-per-session dedupe.",
+    "proof_refs": [
+      "engine/projection/gate.go:337-343"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "3530d9956650",
+    "runner": "ours",
+    "id": "R40",
+    "run": 2,
+    "row": "recall",
+    "finding": "F4",
+    "severity": "SUGGESTION",
+    "location": "engine/projection/gate_procedural_test.go:196-200",
+    "claim": "The read-count assertion in TestTheGateReadsOnlyTheArgumentItNeeds is loose. It allows paths up to 2x the expected reads and does not pin an exact count, so it will not catch a regression that multiplies argument reads. Exact once-only reading is enforced only by the readOnce wrapper in the app layer.",
+    "proof_refs": [
+      "engine/projection/gate_procedural_test.go:196-200"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "20f1a97b3ceb",
+    "runner": "ours",
+    "id": "R40",
+    "run": 2,
+    "row": "hunt",
+    "finding": "F1",
+    "severity": "SUGGESTION",
+    "location": "engine/projection/gate.go:211-215",
+    "claim": "The Read narrowing relies on an exact-case filepath.Base(Clean(file)) == \"SKILL.md\" and a lexical comparison with the lock paths. On a case-insensitive filesystem a Read of \"skill.md\" is never looked at, and a symlink to a procedural SKILL.md is not resolved, so either path reads a denied procedural skill past the gate. The ADR already accepts a Bash bypass; this one is not documented.",
+    "proof_refs": [
+      "engine/projection/gate.go:211-215",
+      "engine/projection/gate.go:380-384"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "90494ce447e5",
+    "runner": "ours",
+    "id": "R40",
+    "run": 2,
+    "row": "hunt",
+    "finding": "F2",
+    "severity": "SUGGESTION",
+    "location": "engine/projection/gate.go:345-352",
+    "claim": "When the lock is unreadable, the warning fires for every Read of any file named SKILL.md, including global or unrelated skills, whenever the plan excludes procedural-skills. The gate cannot tell whether the file is procedural, so it emits repeated noisy warnings on each such Read, not one warning per session.",
+    "proof_refs": [
+      "engine/projection/gate.go:345-352"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "7cbcbfb4ab35",
+    "runner": "ours",
+    "id": "R40",
+    "run": 3,
+    "row": "recall",
+    "finding": "F1",
+    "severity": "WARNING",
+    "location": "engine/settings/projection.go:54",
+    "claim": "The new PreToolUse matcher \"Skill|Read\" registers the hook for every Read tool call in Claude Code. Each Read now spawns the engine binary process, and the hook decides from the path that nothing needs doing only after it has started. Read is among the most frequent tool calls, so this adds a process spawn and JSON decode to each one. The narrowing to SKILL.md can only happen inside the hook, because matchers cannot filter on arguments.",
+    "proof_refs": [
+      "engine/settings/projection.go:54",
+      "engine/cmd/gate_tools_test.go:57-60"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "e45608b17cb6",
+    "runner": "ours",
+    "id": "R40",
+    "run": 3,
+    "row": "recall",
+    "finding": "F2",
+    "severity": "WARNING",
+    "location": "engine/projection/gate.go:340-347",
+    "claim": "When the lock is unreadable and the plan excludes procedural-skills (the sdd profile), the gate emits a warning for every Skill call and every Read of any SKILL.md. That includes global skills and registry installs that cannot be procedural, since the gate has no way to tell without the lock. A single corrupt lock therefore produces a systemMessage warning on every skill use for the whole session, which is noisy. The README says it warns 'when the plan would have denied a procedural skill', but the gate cannot know whether this particular use is one.",
+    "proof_refs": [
+      "engine/projection/gate.go:340-347"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "d66f30351c32",
+    "runner": "ours",
+    "id": "R40",
+    "run": 3,
+    "row": "recall",
+    "finding": "F3",
+    "severity": "SUGGESTION",
+    "location": "engine/cmd/procedural_lock.go:61-67",
+    "claim": "A Read is matched to a lock entry only by a lexical comparison of the cleaned path against root joined with the target. The root comes from git provenance and may be a resolved real path. If Claude passes a path through a symlink, or the filesystem is case-insensitive, the Read of a procedural SKILL.md does not match, and the denial is silently bypassed. The README states the guard as a limit, so this is not claimed as a hard security boundary.",
+    "proof_refs": [
+      "engine/cmd/procedural_lock.go:61-67",
+      "engine/projection/gate.go:383-391"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "b702bd20e7de",
+    "runner": "ours",
+    "id": "R40",
+    "run": 3,
+    "row": "recall",
+    "finding": "F4",
+    "severity": "SUGGESTION",
+    "location": "engine/projection/gate_procedural_test.go:190-200",
+    "claim": "TestTheGateReadsOnlyTheArgumentItNeeds has loose bounds: `paths > 2*wantPaths` permits two path reads where the code promises at most one. It also would not catch Read callers that read twice. Only the app-level readOnce test enforces exactly-once, so the gate's own documented contract of 'at most once' is not asserted.",
+    "proof_refs": [
+      "engine/projection/gate_procedural_test.go:190-200"
+    ],
+    "evidence_class": "deterministic",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "d043a3295dc8",
+    "runner": "ours",
+    "id": "R40",
+    "run": 3,
+    "row": "hunt",
+    "finding": "F1",
+    "severity": "WARNING",
+    "location": "engine/projection/gate.go:341-346",
+    "claim": "When the lock is unreadable, a Skill call with an empty or missing skill name still produces a warning (use of skill \"\"), and any Skill call for a global skill warns even though it cannot be procedural. An empty value is treated as potentially procedural, which is noise on every Skill call under a broken lock.",
+    "proof_refs": [
+      "engine/projection/gate.go:proceduralGate Unreadable branch runs before the empty-skill check in match"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "1dc5da536391",
+    "runner": "ours",
+    "id": "R40",
+    "run": 3,
+    "row": "hunt",
+    "finding": "F2",
+    "severity": "SUGGESTION",
+    "location": "engine/cmd/procedural_lock.go:61-67",
+    "claim": "Lock targets are joined lexically to the worktree root and a Read path is compared lexically. Symlinked worktree roots, symlinked skill directories, or case-insensitive filesystems (skill.md reading the same file, which the Base != SKILL.md check treats as irrelevant) let a Read reach a procedural SKILL.md without matching, so the gate is bypassable.",
+    "proof_refs": [
+      "engine/cmd/procedural_lock.go:skillFileIn uses filepath.Join only",
+      "engine/projection/gate.go:relevantUse compares Base to the exact SKILL.md"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "9fa96e6bbe14",
+    "runner": "ours",
+    "id": "R41",
+    "run": 2,
+    "row": "recall",
+    "finding": "F1",
+    "severity": "SUGGESTION",
+    "location": "engine/jsonstrict/jsonstrict.go:150-158",
+    "claim": "The shared WireVersion drops the strconv.Itoa(version) != raw round-trip check that both former copies had. It now relies on json.Unmarshal rejecting leading zeros and plus signs for the whole document, so '03' and '+3' return 0 only because Unmarshal fails. That is correct today, but nothing in the goal or shaper packages pins the dispatch, so a later change to the decoding step could silently route non-canonical versions to the v3 or v4 path. The new unit test covers 03, but only at the jsonstrict level.",
+    "proof_refs": [
+      "engine/jsonstrict/jsonstrict.go:150-158",
+      "engine/goal/goal.go:70",
+      "engine/shaper/shaper.go:110"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "869501f6c5cf",
+    "runner": "ours",
+    "id": "R41",
+    "run": 2,
+    "row": "recall",
+    "finding": "F2",
+    "severity": "SUGGESTION",
+    "location": "engine/workflow/plan.go:49-72",
+    "claim": "The refactor of names and narrowers into the present slice changes how NarrowerError indices are mapped to names. The diff adds no test that a refused narrower in a non-first position, with earlier nil directives skipped, still reports the right name. A future index skew would mislabel the offending directive in the error message.",
+    "proof_refs": [
+      "engine/workflow/plan.go:49-71"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "22172b954c22",
+    "runner": "ours",
+    "id": "R41",
+    "run": 3,
+    "row": "recall",
+    "finding": "F1",
+    "severity": "SUGGESTION",
+    "location": "engine/workflow/plan.go:49-60",
+    "claim": "The PlanOf refactor replaces the parallel names and narrowers slices with a single present slice, and the diff adds no test for it. Nothing asserts that the NarrowerError index maps to the right directive name when an earlier candidate is nil (for example, only the handoff and role directives are present). The mapping is the behavior this refactor must preserve, so a regression there would go unnoticed.",
+    "proof_refs": [
+      "engine/workflow/plan.go:49-60",
+      "engine/workflow/plan.go:69-71"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "unknown",
+    "c27_control": false
+  },
+  {
+    "key": "78362b06ed83",
+    "runner": "ours",
+    "id": "R41",
+    "run": 3,
+    "row": "recall",
+    "finding": "F2",
+    "severity": "SUGGESTION",
+    "location": "engine/jsonstrict/jsonstrict.go:140-158",
+    "claim": "WireVersion no longer re-checks strconv.Itoa(version) == raw; it relies on json.Unmarshal having rejected a leading zero or plus sign. That holds for the shown inputs, and the new test covers 03 and -0. The guarantee now rests on an implicit property of the JSON decoder rather than an explicit check. Both goal.Parse and shaper.Parse dispatch security-relevant field allowlists on this value, so the shared helper deserves a comment or test pinning that dependence.",
+    "proof_refs": [
+      "engine/jsonstrict/jsonstrict.go:140-158",
+      "engine/jsonstrict/jsonstrict_test.go:196-198"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "unknown",
+    "c27_control": false
+  },
+  {
+    "key": "a2229dd08d67",
+    "runner": "ours",
+    "id": "R42",
+    "run": 1,
+    "row": "recall",
+    "finding": "F1",
+    "severity": "WARNING",
+    "location": "engine/cmd/workflow.go:234-237",
+    "claim": "When the resolver returns an error, the code still uses identity.Project. If Resolve returns a partial/non-empty Project alongside an error, an unverified identity would be recorded despite the warning saying none is recorded. The code should explicitly set identity to empty on error rather than rely on the zero value of the returned struct.",
+    "proof_refs": [
+      "engine/cmd/workflow.go:234-237"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "b0a07dda3fe8",
+    "runner": "ours",
+    "id": "R42",
+    "run": 1,
+    "row": "recall",
+    "finding": "F2",
+    "severity": "WARNING",
+    "location": "engine/workflow/lifecycle.go:473-480",
+    "claim": "Create now refuses a Goal whose project_id differs from the projectID slug. Previously-valid invocations where --project differs from the goal's project_id (e.g. a goal reused across slugs) now exit 2. This is a deliberate behavior change but is a regression on previously accepted input; the check also runs before the existing-state check, so the error for an already-created workflow with a mismatched goal changes from ErrCreateRefused to a mismatch error.",
+    "proof_refs": [
+      "engine/workflow/lifecycle.go:473-480"
+    ],
+    "evidence_class": "deterministic",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "8ad7016734b9",
+    "runner": "ours",
+    "id": "R42",
+    "run": 1,
+    "row": "recall",
+    "finding": "F3",
+    "severity": "SUGGESTION",
+    "location": "engine/workflow/workflow.go:567-586",
+    "claim": "validateProjectIdentity uses unicode.IsControl, which covers only Cc; Unicode line/paragraph separators (U+2028/2029) and bidi overrides are not rejected, so 'one line' is not strictly enforced. The identity derives from a repository-controlled file (.longterm-mem-project) and could carry such characters into logs/terminal output. Also len([]rune()) is computed over unbounded input before the length check, a minor cost.",
+    "proof_refs": [
+      "engine/workflow/workflow.go:567-586"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "6135d63a8f62",
+    "runner": "ours",
+    "id": "R42",
+    "run": 1,
+    "row": "recall",
+    "finding": "F4",
+    "severity": "WARNING",
+    "location": "engine/cmd/workflow.go:228-237",
+    "claim": "A resolved identity that fails validateProjectIdentity (e.g. a declared name over 512 runes or containing a control character) makes Create fail with exit 2, unlike the resolver-error path which degrades gracefully. The 'create never needed a repository' degradation promise is broken for such inputs; there is no test for this path.",
+    "proof_refs": [
+      "engine/cmd/workflow.go:228-237",
+      "engine/workflow/lifecycle.go:477-479"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": true
+  },
+  {
+    "key": "b2e471ce2517",
+    "runner": "ours",
+    "id": "R42",
+    "run": 1,
+    "row": "hunt",
+    "finding": "F1",
+    "severity": "WARNING",
+    "location": "engine/cmd/workflow.go:233-237",
+    "claim": "The code says an identity that cannot be resolved must not stop create, and it only warns on a Resolve error. A resolved identity is passed to lc.Create unchecked, and Create now runs validateProjectIdentity on it. A resolved identity that is longer than 512 runes, contains a control character or is invalid UTF-8 (for example a .longterm-mem-project file or remote with such content) makes create exit 2. Create succeeded before this change, so this is a regression. Only an error from Resolve is downgraded to a warning. An invalid but resolved value is not downgraded to 'record none'.",
+    "proof_refs": [
+      "engine/cmd/workflow.go:233-237",
+      "engine/workflow/lifecycle.go:476-480"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "b8d0218b9d44",
+    "runner": "ours",
+    "id": "R42",
+    "run": 1,
+    "row": "hunt",
+    "finding": "F2",
+    "severity": "SUGGESTION",
+    "location": "engine/workflow/workflow.go:567-586",
+    "claim": "validateProjectIdentity rejects only unicode.IsControl (category Cc). Line and paragraph separators U+2028 and U+2029, and other format characters, pass although the field is documented as one line of text.",
+    "proof_refs": [
+      "engine/workflow/workflow.go:567-586"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "e95da7e099b1",
+    "runner": "ours",
+    "id": "R42",
+    "run": 2,
+    "row": "recall",
+    "finding": "F1",
+    "severity": "WARNING",
+    "location": "engine/cmd/workflow.go:234-237",
+    "claim": "When Resolve fails, the code relies on the returned identity being zero-valued (identity.Project) without checking. If Resolve returns a partial/non-empty Project alongside an error, the workflow records it despite the warning saying none is recorded. Also an over-long or control-character identity (e.g. a .longterm-mem-project value) would make Create fail with exit 2 even though the comment says an unreadable repository never stops create; identity validation failures are not degraded to a warning.",
+    "proof_refs": [
+      "engine/cmd/workflow.go:228-237",
+      "engine/workflow/lifecycle.go:476-478"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": true
+  },
+  {
+    "key": "fd9dc60aa27f",
+    "runner": "ours",
+    "id": "R42",
+    "run": 2,
+    "row": "recall",
+    "finding": "F2",
+    "severity": "WARNING",
+    "location": "engine/workflow/lifecycle.go:473-475",
+    "claim": "New Goal.ProjectID != projectID check refuses creates that were valid before (a Goal file whose project_id differs from --project). This is a deliberate behavior change but is a regression for existing callers/scripts; the Goal-mismatch check runs before profile resolution and the ErrCreateRefused existence check, changing which error is reported for repeated creates.",
+    "proof_refs": [
+      "engine/workflow/lifecycle.go:473-475"
+    ],
+    "evidence_class": "deterministic",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "faf85866aeed",
+    "runner": "ours",
+    "id": "R42",
+    "run": 2,
+    "row": "recall",
+    "finding": "F3",
+    "severity": "SUGGESTION",
+    "location": "engine/workflow/workflow.go:567-586",
+    "claim": "validateProjectIdentity is applied on event parse/validate, so a log whose created event has an identity that fails these bounds becomes unreadable (likely non-owned classification), while the writer allows anything Resolve returns. Mismatch of limits between the resolver and the validator could make a just-created workflow unreplayable; no test covers an over-long resolved identity at the cmd level. Also the control-character check uses unicode.IsControl, which does not reject Unicode line separators (U+2028/U+2029), despite the 'one line' claim.",
+    "proof_refs": [
+      "engine/workflow/workflow.go:567-586"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "65341e63a2b1",
+    "runner": "ours",
+    "id": "R42",
+    "run": 2,
+    "row": "recall",
+    "finding": "F4",
+    "severity": "SUGGESTION",
+    "location": "engine/workflow/project_identity_test.go:106-122",
+    "claim": "TestOnlyACreatedEventCarriesAProjectIdentity only asserts Validate fails for a started event with the field, not that the error names project_identity; it could pass for an unrelated reason (e.g. other fields), so it is weak.",
+    "proof_refs": [
+      "engine/workflow/project_identity_test.go:119-122"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "f3d87852d175",
+    "runner": "ours",
+    "id": "R42",
+    "run": 2,
+    "row": "hunt",
+    "finding": "F1",
+    "severity": "WARNING",
+    "location": "engine/cmd/workflow.go:238",
+    "claim": "A successful Resolve is passed to Create unchecked. Create now rejects an identity that is blank, longer than 512 runes, has control characters or is invalid UTF-8. A declared .longterm-mem-project name, a remote or a directory name that breaks those limits would make `workflow create` exit 2. Before this change that create succeeded, because only resolver errors were downgraded to a warning. The caller does not fall back to recording no identity when the resolved value is invalid.",
+    "proof_refs": [
+      "engine/cmd/workflow.go:228-238",
+      "engine/workflow/lifecycle.go: Create calls validateProjectIdentity(projectIdentity) and returns its error"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "9f4fec43fe87",
+    "runner": "ours",
+    "id": "R42",
+    "run": 2,
+    "row": "hunt",
+    "finding": "F2",
+    "severity": "SUGGESTION",
+    "location": "engine/workflow/workflow.go:571",
+    "claim": "validateProjectIdentity promises one line, but unicode.IsControl does not match Unicode line separators (U+2028, U+2029) or U+0085-class format characters. An identity containing them passes as one line. The strings.TrimSpace blank check also lets leading and trailing whitespace through.",
+    "proof_refs": [
+      "engine/workflow/workflow.go:566-586"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "89aefb66e21a",
+    "runner": "ours",
+    "id": "R42",
+    "run": 3,
+    "row": "recall",
+    "finding": "F1",
+    "severity": "WARNING",
+    "location": "engine/cmd/workflow.go:234-237",
+    "claim": "When the identity resolver errors, Resolve may return a non-empty partial Project in the identity value; the code passes identity.Project to Create regardless of err, while the warning says no identity is recorded. If Resolve returns a value alongside an error, the warning is false and a bogus identity may be persisted. The code should explicitly clear identity on error.",
+    "proof_refs": [
+      "engine/cmd/workflow.go:234-238"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "a3d14d2ffce3",
+    "runner": "ours",
+    "id": "R42",
+    "run": 3,
+    "row": "recall",
+    "finding": "F2",
+    "severity": "WARNING",
+    "location": "engine/workflow/lifecycle.go:471-480",
+    "claim": "Create now refuses a Goal whose project_id differs from --project, a behavior change for previously valid input (existing workflows with mismatched slug were accepted). The check runs before the Goal is otherwise used, and validateProjectIdentity failures from a resolved identity (e.g. a declared name in .longterm-mem-project containing control chars or over 512 runes) now make create fail with exit 2, whereas the cmd comment claims resolver problems never stop create. Resolved-but-invalid identities are not degraded to 'none'.",
+    "proof_refs": [
+      "engine/workflow/lifecycle.go:476-478",
+      "engine/cmd/workflow.go:228-237"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "040471329be7",
+    "runner": "ours",
+    "id": "R42",
+    "run": 3,
+    "row": "recall",
+    "finding": "F3",
+    "severity": "SUGGESTION",
+    "location": "engine/workflow/project_identity_test.go:111-130",
+    "claim": "TestOnlyACreatedEventCarriesAProjectIdentity asserts only that Validate errors, not that the error names project_identity or arises from the payload rule; it could pass for unrelated reasons (e.g. digest/seq state of a mutated event). Also the cmd tests do not cover an over-long or control-char declared name, the path in F2.",
+    "proof_refs": [
+      "engine/workflow/project_identity_test.go:124-128"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "bb79cad3fdcb",
+    "runner": "ours",
+    "id": "R42",
+    "run": 3,
+    "row": "hunt",
+    "finding": "F1",
+    "severity": "SUGGESTION",
+    "location": "engine/cmd/workflow.go:233-237",
+    "claim": "On a Resolve error the code still passes identity.Project to Create. The warning says the workflow records no identity, but that holds only if Resolve returns a zero value alongside its error. A partial value returned with an error would be recorded despite the warning. The code does not clear it explicitly.",
+    "proof_refs": [
+      "engine/cmd/workflow.go:233-237"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "f7d197ad6a11",
+    "runner": "ours",
+    "id": "R42",
+    "run": 3,
+    "row": "hunt",
+    "finding": "F2",
+    "severity": "SUGGESTION",
+    "location": "engine/workflow/workflow.go:578-585",
+    "claim": "validateProjectIdentity documents 'one line' and rejects control characters via unicode.IsControl. That misses Unicode line and paragraph separators (U+2028, U+2029) and other format characters, so an identity containing them passes validation despite the one-line contract.",
+    "proof_refs": [
+      "engine/workflow/workflow.go:578-585"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "79831554a62f",
+    "runner": "ours",
+    "id": "R43",
+    "run": 1,
+    "row": "recall",
+    "finding": "F1",
+    "severity": "WARNING",
+    "location": "identity/gitfs/gitfs.go:63",
+    "claim": "For a submodule or a repository with a separate git dir, the .git file points to a git directory with no commondir (for example <super>/.git/modules/sub). MainWorktreeRoot is then set to filepath.Dir(common), which is the modules directory, not a checkout. With no origin the project is named \"modules\", and the declaration is looked for in the wrong directory. The submodule test only covers the case where an origin exists, so it does not catch this.",
+    "proof_refs": [
+      "identity/gitfs/gitfs.go:63",
+      "identity/gitfs/gitfs.go:131-133"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "2b2c7a0cc446",
+    "runner": "ours",
+    "id": "R43",
+    "run": 1,
+    "row": "recall",
+    "finding": "F2",
+    "severity": "WARNING",
+    "location": "identity/resolve/resolve.go:136",
+    "claim": "Outside a repository the project is filepath.Base(dir) of the raw argument. A relative dir such as \".\" gives the project \".\", and a trailing-slash or symlinked path is not canonicalized. This contradicts the gitfs claim that the name does not depend on the link the directory was reached through, and the repository case does canonicalize.",
+    "proof_refs": [
+      "identity/resolve/resolve.go:136",
+      "identity/gitfs/gitfs.go:50"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "08e4aa39643e",
+    "runner": "ours",
+    "id": "R43",
+    "run": 1,
+    "row": "recall",
+    "finding": "F3",
+    "severity": "SUGGESTION",
+    "location": "identity/gitfs/gitfs.go:73",
+    "claim": "If dir is a file path or has a non-directory component, stat of dir/.git returns ENOTDIR, which is not IsNotExist. Locate then returns a hard error instead of walking up or reporting ErrNotARepository. Resolve fails for a file argument unless an explicit id is given.",
+    "proof_refs": [
+      "identity/gitfs/gitfs.go:73"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "119af0f94ca6",
+    "runner": "ours",
+    "id": "R43",
+    "run": 1,
+    "row": "recall",
+    "finding": "F4",
+    "severity": "SUGGESTION",
+    "location": "identity/engram.go:14",
+    "claim": "EngramName returns \"\" for an identity with a trailing slash (a declared name such as \"acme/widgets/\"). The gate's exact-equality check would then compare against an empty name. The declared name is not validated to rule this out, and there is no test for it.",
+    "proof_refs": [
+      "identity/engram.go:14-17"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "168ee356b9be",
+    "runner": "ours",
+    "id": "R43",
+    "run": 1,
+    "row": "hunt",
+    "finding": "F1",
+    "severity": "WARNING",
+    "location": "identity/gitfs/gitfs.go:71",
+    "claim": "For a .git pointer file, MainWorktreeRoot is computed as filepath.Dir(commonDir). That is right only for a linked worktree of a normal checkout whose common dir is <root>/.git. For a submodule (the case the code documents handling) the common dir is <super>/.git/modules/<name>, so MainWorktreeRoot becomes <super>/.git/modules. With no origin the project is named \"modules\", and the .longterm-mem-project declaration is read from inside the supermodule's .git directory instead of the submodule root. A linked worktree of a bare repo likewise gets the bare repo's parent directory as its main root. The tests cover the submodule only with an origin set, so the wrong directory-name fallback goes unnoticed.",
+    "proof_refs": [
+      "identity/gitfs/gitfs.go:64-71",
+      "identity/gitfs/gitfs_test.go TestAGitDirectoryWithNoCommondirIsTheCommonDirectory"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": true
+  },
+  {
+    "key": "7e0c6918965c",
+    "runner": "ours",
+    "id": "R43",
+    "run": 1,
+    "row": "hunt",
+    "finding": "F2",
+    "severity": "WARNING",
+    "location": "identity/engram.go:13-17",
+    "claim": "EngramName returns the text after the last slash without checking that it is non-empty. A declared identity such as \"acme/widgets/\" (the declaration file only requires one non-empty line) yields \"\", which then compares equal to any other empty name and matches no real Engram project. Trailing slashes are not trimmed, and the empty result is not distinguished from a valid name.",
+    "proof_refs": [
+      "identity/engram.go:13-17"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "5b26f2b29a72",
+    "runner": "ours",
+    "id": "R43",
+    "run": 1,
+    "row": "hunt",
+    "finding": "F3",
+    "severity": "SUGGESTION",
+    "location": "identity/resolve/resolve.go:121",
+    "claim": "Outside a repository the project is filepath.Base(dir) with no check. An empty dir gives \".\" and the filesystem root gives \"/\", and these are returned as valid directory-sourced project names instead of being refused.",
+    "proof_refs": [
+      "identity/resolve/resolve.go:119-122"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "7a73e70eff63",
+    "runner": "ours",
+    "id": "R43",
+    "run": 2,
+    "row": "recall",
+    "finding": "F1",
+    "severity": "WARNING",
+    "location": "identity/gitfs/gitfs.go:73",
+    "claim": "For a .git pointer file (linked worktree or submodule), MainWorktreeRoot is derived as filepath.Dir(common). That is only right when the common dir is <main>/.git. For a submodule (common dir <super>/.git/modules/sub) it yields <super>/.git/modules, so the DIRECTORY fallback names the project \"modules\" and the declaration file is looked up inside .git/modules. A submodule without an origin, or a worktree of a bare or separate-git-dir repository, gets a wrong project name or declaration root. The tests cover the submodule only with an origin, so this path is untested.",
+    "proof_refs": [
+      "identity/gitfs/gitfs.go:73",
+      "identity/gitfs/gitfs_test.go:228"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": true
+  },
+  {
+    "key": "4d99655f47e9",
+    "runner": "ours",
+    "id": "R43",
+    "run": 2,
+    "row": "recall",
+    "finding": "F2",
+    "severity": "WARNING",
+    "location": "identity/resolve/resolve.go:134",
+    "claim": "Outside a repository the project is filepath.Base(dir) on the raw, uncanonicalized dir. A relative dir such as \".\" gives the project \".\", and \"/\" gives \"/\". A symlinked path gives the link's name, although gitfs canonicalizes paths inside repositories. The same directory can therefore get different names depending on how it was reached, which contradicts the stated goal of link-independent names.",
+    "proof_refs": [
+      "identity/resolve/resolve.go:134"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "e0caf12ea1c9",
+    "runner": "ours",
+    "id": "R43",
+    "run": 2,
+    "row": "recall",
+    "finding": "F3",
+    "severity": "SUGGESTION",
+    "location": "identity/gitfs/gitfs.go:63",
+    "claim": "The error switch treats any non-IsNotExist stat error as fatal. If the start path is a file or has a file as an ancestor, the stat returns ENOTDIR and Locate fails with \"cannot look for a git repository\" instead of continuing the walk or reporting not-a-repository. Only g.stat is injectable. The ReadFile calls bypass the Stat seam, so injected failures do not cover them.",
+    "proof_refs": [
+      "identity/gitfs/gitfs.go:63"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "8e422a6e1893",
+    "runner": "ours",
+    "id": "R43",
+    "run": 2,
+    "row": "recall",
+    "finding": "F4",
+    "severity": "SUGGESTION",
+    "location": "identity/engram.go:14",
+    "claim": "EngramName returns \"\" for an identity ending in \"/\", for example a declared name \"acme/\". Declared names are only checked to be a single non-empty line. The memory gate would then compare against an empty project name. The function is currently uncalled, and the test does not cover a trailing slash.",
+    "proof_refs": [
+      "identity/engram.go:14"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "bfb5473abdde",
+    "runner": "ours",
+    "id": "R43",
+    "run": 2,
+    "row": "hunt",
+    "finding": "F1",
+    "severity": "WARNING",
+    "location": "identity/gitfs/gitfs.go:67",
+    "claim": "For a linked worktree or submodule, MainWorktreeRoot is computed as filepath.Dir(common). That is right only when the common dir is <main>/.git. For a submodule (common dir <super>/.git/modules/sub, or any gitdir without commondir) it gives the 'modules' directory, and for a bare-repo worktree it gives the bare repo's parent. The declaration is then read from, and the DIRECTORY fallback named after, the wrong directory (a submodule with no origin resolves to 'modules'). The tests check the submodule case only with an origin, so this is not caught.",
+    "proof_refs": [
+      "identity/gitfs/gitfs.go:67",
+      "identity/resolve/resolve.go:175-183"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "8cf1460b3597",
+    "runner": "ours",
+    "id": "R43",
+    "run": 2,
+    "row": "hunt",
+    "finding": "F2",
+    "severity": "WARNING",
+    "location": "identity/resolve/resolve.go:131",
+    "claim": "Outside a repository the project is filepath.Base(dir) of the raw dir, with no absolute or symlink canonicalization (inside a repository the adapter canonicalizes). Resolve(\".\", \"\") returns Project \".\", dir \"\" returns \".\", and dir \"/\" returns \"/\". These are meaningless or empty-equivalent project names accepted as valid, and a relative path or a symlink gives a different name than inside a repository would.",
+    "proof_refs": [
+      "identity/resolve/resolve.go:131"
+    ],
+    "evidence_class": "deterministic",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "09b57e64683c",
+    "runner": "ours",
+    "id": "R43",
+    "run": 2,
+    "row": "hunt",
+    "finding": "F3",
+    "severity": "SUGGESTION",
+    "location": "identity/engram.go:14-18",
+    "claim": "EngramName returns \"\" for a project ending in '/' (e.g. a declared name \"acme/\"), and the declared name is not validated. The doc says the result is compared by exact equality, so an empty Engram project name would match another empty name.",
+    "proof_refs": [
+      "identity/engram.go:14-18"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "b7e6d36c0be0",
+    "runner": "ours",
+    "id": "R43",
+    "run": 2,
+    "row": "hunt",
+    "finding": "F4",
+    "severity": "SUGGESTION",
+    "location": "identity/gitfs/gitfs.go:113-116",
+    "claim": "The gitdir value is taken as everything after 'gitdir:' in the whole file. A .git file with extra lines puts a newline into the path, producing a confusing 'no HEAD' error rather than reading the first line. Separately, Locate treats ENOTDIR from stat (the start dir is a file) as a hard error rather than a missing .git.",
+    "proof_refs": [
+      "identity/gitfs/gitfs.go:113-116",
+      "identity/gitfs/gitfs.go:62"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "a511cb65fded",
+    "runner": "ours",
+    "id": "R43",
+    "run": 3,
+    "row": "recall",
+    "finding": "F1",
+    "severity": "WARNING",
+    "location": "identity/gitfs/gitfs.go:66",
+    "claim": "For a .git pointer file, MainWorktreeRoot is computed as filepath.Dir(common). That is only right for a linked worktree of a normal checkout. For a submodule (common = <super>/.git/modules/sub, or a modules dir with no commondir) it yields the modules directory, so a submodule with no origin is named \"modules\" and its declaration is looked for in the wrong directory. A worktree of a bare repo (common = foo.git) gets the parent directory of the bare repo as its main root, so it is named after that parent. The submodule test only covers the case with an origin, so the wrong name is not caught.",
+    "proof_refs": [
+      "identity/gitfs/gitfs.go:66",
+      "identity/gitfs/gitfs.go:148-150"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "5b11fd241e11",
+    "runner": "ours",
+    "id": "R43",
+    "run": 3,
+    "row": "recall",
+    "finding": "F2",
+    "severity": "WARNING",
+    "location": "identity/resolve/resolve.go:136",
+    "claim": "Outside a repository, the project is filepath.Base(dir) of the raw argument, not the canonical path that Locate uses. Resolve(\".\", \"\") returns the project \".\", and Resolve(\"/\", \"\") returns \"/\". A relative dir or a symlinked dir therefore names the project differently outside a repository than inside one, which contradicts the stated goal that the name not depend on the path used to reach a directory.",
+    "proof_refs": [
+      "identity/resolve/resolve.go:136"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "3f5de1b39d4c",
+    "runner": "ours",
+    "id": "R43",
+    "run": 3,
+    "row": "recall",
+    "finding": "F3",
+    "severity": "SUGGESTION",
+    "location": "identity/gitfs/gitfs.go:56-60",
+    "claim": "Any stat error other than not-exist stops the walk with an error. If dir is a regular file, stat of file/.git returns ENOTDIR, so Resolve fails instead of walking up to the parent directory. Reading a file path as the working directory is a plausible input, and no test covers it.",
+    "proof_refs": [
+      "identity/gitfs/gitfs.go:56-60"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "9d50c6d4f395",
+    "runner": "ours",
+    "id": "R43",
+    "run": 3,
+    "row": "recall",
+    "finding": "F4",
+    "severity": "SUGGESTION",
+    "location": "identity/engram.go:14-18",
+    "claim": "EngramName returns \"\" for an identity with a trailing slash (e.g. a declared name like \"acme/widgets/\"). A later exact-equality check could then match against an empty project name. The declared name is not validated against slashes, and no test covers this input.",
+    "proof_refs": [
+      "identity/engram.go:14-18"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "04567d3902de",
+    "runner": "ours",
+    "id": "R43",
+    "run": 3,
+    "row": "hunt",
+    "finding": "F1",
+    "severity": "WARNING",
+    "location": "identity/gitfs/gitfs.go:84",
+    "claim": "For a .git file (linked worktree or submodule) MainWorktreeRoot is computed as filepath.Dir(common). For a submodule whose git dir is <super>/.git/modules/sub this yields <super>/.git/modules, so with no origin the project is named \"modules\" and the declaration file is looked for inside .git/modules. For a worktree of a bare repo (/srv/repo.git) it yields /srv, naming the project \"srv\". The Repository contract says MainWorktreeRoot is empty when no main checkout can be named, but the adapter never leaves it empty. Tests cover only the submodule-with-origin case.",
+    "proof_refs": [
+      "identity/gitfs/gitfs.go:84",
+      "identity/resolve/resolve.go:60-62"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "0c7b7bcd1624",
+    "runner": "ours",
+    "id": "R43",
+    "run": 3,
+    "row": "hunt",
+    "finding": "F2",
+    "severity": "WARNING",
+    "location": "identity/resolve/resolve.go:134",
+    "claim": "Outside a repository the project is filepath.Base(dir) of the raw argument, not a canonical path. Resolve(\".\", \"\") or Resolve(\"\", \"\") yields the project \".\", and Resolve(\"/\", \"\") yields \"/\". An empty or meaningless name is accepted as valid. Inside a repository the path is made absolute and symlink-free, so the same directory is named differently depending on whether it is in a repo and how it was reached, contrary to the gitfs package doc.",
+    "proof_refs": [
+      "identity/resolve/resolve.go:134"
+    ],
+    "evidence_class": "deterministic",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  },
+  {
+    "key": "02920603a4a6",
+    "runner": "ours",
+    "id": "R43",
+    "run": 3,
+    "row": "hunt",
+    "finding": "F3",
+    "severity": "SUGGESTION",
+    "location": "identity/engram.go:14",
+    "claim": "EngramName returns \"\" for a project ending in a slash (e.g. \"acme/\"), and an explicit id is arbitrary text. An empty name would then be compared by equality as if it were valid, and nothing guards against it.",
+    "proof_refs": [
+      "identity/engram.go:14-16"
+    ],
+    "evidence_class": "inferential",
+    "causal_disposition": "introduced",
+    "c27_control": false
+  }
+]

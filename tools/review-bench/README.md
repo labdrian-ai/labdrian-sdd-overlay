@@ -26,6 +26,17 @@ It is not part of the product and never runs against the main repository.
 - `score.sh <id>...`: prints, per case, every finding and analyzer line of `$OUT/<id>/summary.json` located in the
   defect's file within its lines ±3, and the prompt bytes of the case. It never scores: the parent judges each printed
   line by the scoring rule below and records it in `scores/<runner>.json` as `{"id", "score", "quote"}`.
+- `findings.sh <id>...` (C28): with `RUNNER=ours` or `RUNNER=gentle`, prints as one JSON array every finding of that
+  runner's summaries for the ids given and the runs of `RUNS` (default `1 2 3`): `$BENCH/out/ours/run<k>/<id>` for
+  ours, `$BENCH/out/run<k>/<id>` for gentle. Each entry carries an opaque `key` (the first 12 hex digits of the sha256
+  of `<runner>/<id>/<run>/<row>/<finding>`), the runner, case, run, row and finding id, and the finding's severity,
+  location, claim, proof refs, evidence class and causal disposition (`null` when the finding leaves them out), and
+  `c27_control`, true when a score-1 or score-0.5 quote of `$SCORES` (default `scores/<runner>-c27.json`) for the same
+  case and run starts with `<row> <SEVERITY> <location>:` of exactly one finding; a quote that names several marks
+  none and is named on stderr. An unknown runner, an unknown case, a bad `RUNS` or a missing summary exits 2 with
+  nothing on stdout. Findings are never deduplicated: each is one a delivery must resolve.
+- `findings/<runner>-c27.json`: the output of `findings.sh` for R34-R43, the 158 findings of ours and the 31 of
+  gentle in C27's 30 runs each, frozen because a rerun erases a case's output.
 
 ## Running
 
@@ -51,6 +62,13 @@ RUN=2 tools/review-bench/run-ours.sh R3
 OUT="$BENCH/out/ours/run2" tools/review-bench/score.sh R3
 RUN=2 tools/review-bench/run-gentle.sh R3
 OUT="$BENCH/out/run2" tools/review-bench/score.sh R3
+```
+
+Freeze a run set's findings before any rerun of its cases:
+
+```sh
+RUNNER=ours tools/review-bench/findings.sh R34 R35 R36 R37 R38 R39 R40 R41 R42 R43 > tools/review-bench/findings/ours-c27.json
+RUNNER=gentle tools/review-bench/findings.sh R34 R35 R36 R37 R38 R39 R40 R41 R42 R43 > tools/review-bench/findings/gentle-c27.json
 ```
 
 ## Selection rule
