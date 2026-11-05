@@ -1,0 +1,11 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "(a) rg -n 'runPrecision\\(' <worktree>/engine/shelltest/review_bench_test.go, and the same on `git show 7ef8c516:engine/shelltest/review_bench_test.go`. (b) In /tmp/tmp.xYI634CkwT: bash <head worktree>/tools/review-bench/precision.sh ours.json gentle.json labels.json repro.json, then bash base_precision.sh (base's script written there via git show 7ef8c516:tools/review-bench/precision.sh) with the same four files. repro.json holds one label for key o1 with \"failure_stated\": \"true\"; the other files hold valid findings and labels.",
+      "output": "(a) On head, runPrecision is called at lines 937, 978, 990, 1002, 1016, 1028, 1063 and 1087. Every call passes \"\" as the repro argument except line 1016, whose repro holds one valid label (o3, failure_stated true). No test passes a malformed repro file, so the exit-2 cases at 1045-1063 exercise only the labels file. (b) Head: exit 2, stderr \"failure_stated is not a boolean: o1\", empty stdout. So the script already refuses a bad repro label, but no test pins it. On base the finding as worded also holds (the same single valid-repro test); base's precision.sh exits 0 on the bad repro label, since it predates the failure_stated check.",
+      "base_result": "reproduced"
+    }
+  ]
+}
