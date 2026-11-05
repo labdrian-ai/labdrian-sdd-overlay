@@ -239,15 +239,10 @@ func TestTheFilesOfTheRolesAreAsciiWithNoGeneratedHeader(t *testing.T) {
 	}
 }
 
-// The tool names of Pi are the ones the installed sources register: the built-in tools of Pi and the
-// one native tool gentle-pi names codegraph (verified 2026-10-22 against Pi 1.3.0 and gentle-pi
-// 4.3.0), and the tools of the memorycard MCP server Pi loads from its mcp.json, by the name Pi gives
-// an MCP tool (piMCPTool; gentle-engram, which registered bare mem_* names, is no longer installed).
-// gentle-pi drops a name it does not know without a word, so a name outside this set would take a
-// tool from a role and say nothing.
 // No file of a role tells it to call a memorycard tool it does not hold: the memory line names
 // mem_search and mem_get, the by-id line mem_get alone, and each tool a file names is in the tools of
-// that runtime.
+// that runtime. The Codex files carry the same body and no tool list (an agent file of Codex has no
+// allowlist), so there is nothing of theirs to compare.
 func TestNoRoleIsToldToCallAMemoryToolItDoesNotHold(t *testing.T) {
 	root := generated(t)
 	for _, r := range wantRoles {
@@ -280,6 +275,12 @@ func piMCPTool(server, tool string) string {
 	}, name)
 }
 
+// The tool names of Pi are the ones the installed sources register: the built-in tools of Pi and the
+// one native tool gentle-pi names codegraph (verified 2026-10-22 against Pi 1.3.0 and gentle-pi
+// 4.3.0), and the tools of the memorycard MCP server Pi loads from its mcp.json, by the name Pi gives
+// an MCP tool (piMCPTool; gentle-engram, which registered bare mem_* names, is no longer installed).
+// gentle-pi drops a name it does not know without a word, so a name outside this set would take a
+// tool from a role and say nothing.
 func TestThePiToolsOfEveryRoleAreNamesTheInstalledSourcesRegister(t *testing.T) {
 	known := map[string]bool{
 		"read": true, "edit": true, "write": true, "bash": true, "grep": true, "find": true,
