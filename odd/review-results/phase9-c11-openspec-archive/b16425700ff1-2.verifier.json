@@ -1,0 +1,25 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "in /home/labdrian/labdrian-sdd-overlay-worktrees/review-b16425700ff1 (HEAD): awk 'NR>=24&&NR<=42{print NR\": \"$0}' openspec/specs/skill-package-manager/spec.md; rg -n 'R-203|R-204|R-208|R-234|other than|core.*custom' <same file>; awk 'NR>=366&&NR<=377{print NR\": \"$0}' <same file>; rg -n -i 'supersed|overrid|takes precedence' <same file>. Base was not checked for F1 with a command.",
+      "output": "Lines 26-31: '### Requirement: External Source Type Accepted', 'ID: R-112', 'When `source.type` is `external`, the parser MUST accept it as a valid source type alongside `core` and `custom`. The `validSourceTypes` set MUST include \"external\".' Lines 375-376: '**R-203** WHEN the engine parses a registry entry, it SHALL reject any `source.type` value other than \"core\" or \"custom\" with a non-nil error.' Line 343 also says 'exactly \"core\" or \"custom\"'; R-204 is at :378, R-208 at :390, R-234 at :497. Lines 366-377 contain no note about which rule wins. The only match for supersession wording is the intro paragraph at :316. So both SHALL/MUST rules sit in one file and R-203 has no local marker.",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "in the same worktree: rg -n 'this slice' openspec/specs/skill-package-manager/spec.md; awk 'NR>=314&&NR<=320{print NR\": \"$0}' <same file>; git show e8e55b219a8f:openspec/specs/skill-package-manager/spec.md | rg -c 'this slice'",
+      "output": "HEAD matches: 326 'version:  string  (required, value \"1\" in this slice)'; 356 'defaultScope:  string    (required — exactly \"global\" in this slice)'; 497 '**R-234** `engine skills validate` SHALL be a STANDALONE command this slice; it MUST NOT'; 524 'deploy target paths. These commands are read-only in this slice.' Intro at :316 never says 'this slice' refers to slice 1 as a historical snapshot. Base: 0 matches.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F3",
+      "result": "reproduced",
+      "command": "in the same worktree: awk 'NF{l=$0;n=NR} END{print n\": [\"l\"] total=\"NR}' openspec/specs/skill-package-manager/spec.md; and the same awk on git show e8e55b219a8f:openspec/specs/skill-package-manager/spec.md",
+      "output": "HEAD: '718: [---] total=718'. Base: '312: [- THEN each site states that an on-disk divergence also causes a non-zero exit] total=312', so there is no trailing separator.",
+      "base_result": "not-reproduced"
+    }
+  ]
+}

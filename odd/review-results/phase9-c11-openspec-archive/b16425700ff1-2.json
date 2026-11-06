@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "e8e55b219a8f121de4afda29d0dcfc30352d6dfd",
+    "head": "b16425700ff1f3df3bb6260c0a7173b82a5e9ab1",
+    "diff_sha256": "5a8be4197baee338913f27cf9c79ed049292083208c9152dc51ab60b6d0d6424",
+    "paths": [
+      "openspec/specs/skill-package-manager/spec.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "e8e55b219a8f121de4afda29d0dcfc30352d6dfd",
+      "head": "b16425700ff1f3df3bb6260c0a7173b82a5e9ab1",
+      "diff_sha256": "5a8be4197baee338913f27cf9c79ed049292083208c9152dc51ab60b6d0d6424"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "openspec/specs/skill-package-manager/spec.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "openspec/specs/skill-package-manager/spec.md:366-400",
+        "severity": "WARNING",
+        "claim": "The appended normative text (R-203, R-204, R-208 and R-234) says it rejects every source.type other than core or custom. The same canonical file's earlier Requirement sections accept an external source type. The appended R-2xx text sits in the same spec as live SHALL statements and conflicts with them. Only the intro paragraph says later changes supersede parts of it. That paragraph points to a roadmap row rather than marking the superseded requirements, so a reader or tool that picks up R-203 alone gets a contradicting rule.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "openspec/specs/skill-package-manager/spec.md:26-40 (External Source Type Accepted)",
+          "openspec/specs/skill-package-manager/spec.md:366-372 (R-203)"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "openspec/specs/skill-package-manager/spec.md:326",
+        "severity": "SUGGESTION",
+        "claim": "The verbatim copy keeps slice-relative wording such as 'in this slice', 'this slice' and 'read-only in this slice'. Inside the canonical spec these phrases lose their referent, and some are now false: the defaultScope 'exactly global' rule and the 'STANDALONE command this slice' rule R-234. The intro does not say these phrases refer to slice 1 as a historical snapshot.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "openspec/specs/skill-package-manager/spec.md:326",
+          "openspec/specs/skill-package-manager/spec.md:356",
+          "openspec/specs/skill-package-manager/spec.md:497",
+          "openspec/specs/skill-package-manager/spec.md:524"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "openspec/specs/skill-package-manager/spec.md:536",
+        "severity": "SUGGESTION",
+        "claim": "The copy ends with a trailing '---' horizontal rule, left over from the source's section separator. Nothing follows it, so it is a dangling separator at the end of the file.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "/tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/t2.diff:414"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff.",
+      "Compared the added text with the source change spec by grep: the R-001..R-044 and SC-01..SC-13 sequences, part headings and scenarios line up, with +200 IDs and one-level-deeper headings.",
+      "Grepped the canonical spec for stale unrenumbered IDs: only pre-existing 'ID: R-001/008/009/010' lines and the intro paragraph matched.",
+      "Grepped openspec outside this spec for R-2xx and SC-2xx IDs: none, so no collisions.",
+      "Read the task document odd/tasks/phase9-c11-openspec-archive.md L2: the renumbering rule (new = old + 100 × (slice + 1)) and the slice 1 row (R-201..R-244, SC-201..SC-213) match the diff.",
+      "Checked that openspec/decisions/standalone-platform-roadmap.md exists and mentions Phase 8; whether its row names the four changes was not confirmed.",
+      "No commands were run and no tests were run; this is a docs-only diff."
+    ]
+  }
+}

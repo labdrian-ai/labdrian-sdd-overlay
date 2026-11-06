@@ -310,3 +310,407 @@ against `overlay.manifest`.
 - GIVEN the documentation sites for `skills validate` (help text, README, `engine/cmd/main.go` doc comment)
 - WHEN their content is compared against the actual exit contract
 - THEN each site states that an on-disk divergence also causes a non-zero exit
+
+## Issue #29 slice 1 (`skill-package-manager`), synced and renumbered
+
+Synced by Phase 9 item C11 from the delta spec of the change `skill-package-manager` (issue #29, slice 1), archived under `openspec/changes/archive/`, which keeps the original numbers. The text is that spec's, but for two things: every requirement and scenario ID is the original plus 200 (R-001 to R-044 are R-201 to R-244, SC-01 to SC-13 are SC-201 to SC-213), and every heading is one level deeper. Its scope, assumptions and non-goals stay in the archive. Later changes supersede parts of it; `openspec/decisions/standalone-platform-roadmap.md` (the row on Phase 8 and these four changes) records which. The section records slice 1 as it was specified, so "this slice" in it means slice 1, and where it conflicts with a requirement above this heading (for example R-203 against R-112 on `external`), the requirement above holds.
+
+### Part 1 — `skills-registry`: YAML Schema and Parsing
+
+#### Schema Definition
+
+The file `skills.registry.yaml` at the repository root MUST conform to the following
+top-level structure when parsed by the engine:
+
+```
+version:  string  (required, value "1" in this slice)
+skills:   sequence of Entry  (required, may be empty)
+```
+
+Each `Entry` MUST carry:
+
+```
+id:       string  (required — stable kebab-case identifier, unique per file)
+source:   Source  (required)
+path:     string  (required — relative path within the skills deploy tree)
+install:  Install (required)
+lifecycle: Lifecycle (required)
+```
+
+`Source`:
+
+```
+type:     string  (required — exactly "core" or "custom")
+upstream: Upstream (optional — only valid when type == "core")
+```
+
+`Upstream` (allowed only when `source.type == "core"`):
+
+```
+owner:    string  (required when upstream block is present)
+```
+
+`Install`:
+
+```
+defaultScope:  string    (required — exactly "global" in this slice)
+targets:       []string  (required, non-empty — elements from {"claude","opencode","codex"})
+```
+
+`Lifecycle`:
+
+```
+updateStrategy:  string  (required — exactly "vendor-merge" or "overlay-only")
+```
+
+#### Requirements — Registry Schema
+
+**R-201** WHEN the engine parses `skills.registry.yaml`, it SHALL decode the top-level
+`version` field and validate that it equals `"1"`; a missing or unexpected value SHALL
+cause a non-nil parse error.
+
+**R-202** WHEN the engine parses a registry entry, it SHALL reject any entry where `id`
+is absent or empty with a non-nil error.
+
+**R-203** WHEN the engine parses a registry entry, it SHALL reject any `source.type` value
+other than `"core"` or `"custom"` with a non-nil error.
+
+**R-204** IF `source.type` is `"custom"`, the engine SHALL reject any entry that carries
+an `upstream` block with a non-nil error.
+
+**R-205** IF `source.type` is `"core"` and an `upstream` block is present, the engine
+SHALL reject any `upstream.owner` that is absent or empty with a non-nil error.
+
+**R-206** WHEN the engine parses a registry entry, it SHALL reject any `install.defaultScope`
+value other than `"global"` with a non-nil error.
+
+**R-207** WHEN the engine parses a registry entry, it SHALL reject an empty `install.targets`
+slice with a non-nil error.
+
+**R-208** WHEN the engine parses a registry entry, it SHALL reject any `install.targets`
+element that is not one of `"claude"`, `"opencode"`, or `"codex"` with a non-nil error.
+
+**R-209** WHEN the engine parses a registry entry, it SHALL reject any
+`lifecycle.updateStrategy` value other than `"vendor-merge"` or `"overlay-only"` with a
+non-nil error.
+
+**R-210** WHEN the engine parses `skills.registry.yaml`, it SHALL detect duplicate `id`
+values and return a non-nil error identifying the conflicting id.
+
+**R-211** WHEN the YAML is malformed (not valid YAML), the parser SHALL return a non-nil
+error and MUST NOT return partial data.
+
+**R-212** WHEN the engine successfully parses a valid registry file, it SHALL return
+entries in the same order they appear in the file (no reordering).
+
+#### Requirements — Population Rules
+
+**R-213** A `managed`-tagged row in `overlay.manifest` whose path component represents a
+skill directory (identified by a `*/SKILL.md` row) SHALL map to a registry entry with
+`source.type = "core"` and `lifecycle.updateStrategy = "vendor-merge"`.
+
+**R-214** A `custom`-tagged row in `overlay.manifest` whose path component represents a
+skill directory (identified by a `*/SKILL.md` row) SHALL map to a registry entry with
+`source.type = "custom"` and `lifecycle.updateStrategy = "overlay-only"`.
+
+**R-215** There SHALL be exactly ONE registry entry per skill directory; non-SKILL.md
+files within that directory (references/, assets/, evals/) MUST NOT produce separate entries.
+
+**R-216** Files in `overlay.manifest` that do NOT belong to a skill directory — engine
+source files (`engine/...`), schema files (`_shared/*.json`), and shared assets
+(`_shared/*.md` without a SKILL.md) — SHALL NOT have registry entries.
+
+**R-217** The `id` for each registry entry SHALL be a stable kebab-case string derived
+from the skill directory name (e.g., skill directory `genesis-design-system` → `id:
+genesis-design-system`).
+
+**R-218** The `path` for each registry entry SHALL be the skill directory path relative
+to the skills deploy tree root (e.g., `sdd-spec`, `genesis-design-system`), without a
+leading slash.
+
+---
+
+### Part 2 — `skills-cli`: `engine skills` Subcommands
+
+The engine binary gains a new top-level subcommand `skills` dispatched in
+`engine/cmd/main.go`. All logic lives in a new `engine/skills/` Go package following
+the project's injectable-dependency pattern (Core functions accept `io.Writer`, a file
+reader, and an exit function; the `run*` wrappers call them with real OS deps).
+
+#### Requirements — `engine skills list`
+
+**R-219** WHEN `engine skills list` is invoked with a readable, valid `skills.registry.yaml`,
+it SHALL write one line per registry entry to stdout and exit 0.
+
+**R-220** Each output line from `engine skills list` SHALL contain, at minimum and in a
+stable order: the entry `id`, `source.type`, `lifecycle.updateStrategy`, and
+`install.targets` (as a comma-separated list).
+
+**R-221** The output of `engine skills list` SHALL be deterministic: given the same
+registry file content, every invocation produces byte-identical output.
+
+**R-222** WHEN `engine skills list` cannot read or parse `skills.registry.yaml`, it
+SHALL write a diagnostic to stderr and exit 1 (fail-loud).
+
+**R-223** `engine skills list` SHALL accept a `--registry <path>` flag to override the
+default registry path; the default SHALL be `skills.registry.yaml` resolved relative to
+the current working directory.
+
+#### Requirements — `engine skills status`
+
+**R-224** WHEN `engine skills status` is invoked with a readable, valid
+`skills.registry.yaml`, it SHALL write to stdout: total skill count, count of `core`
+entries, count of `custom` entries, and an overall status line (`OK`), then exit 0.
+
+**R-225** WHEN `engine skills status` cannot read or parse `skills.registry.yaml`, it
+SHALL write a diagnostic to stderr and exit 1 (fail-loud).
+
+**R-226** `engine skills status` SHALL NOT read or access `overlay.manifest`; its data
+source is the registry file only.
+
+**R-227** `engine skills status` SHALL accept a `--registry <path>` flag with the same
+default as `engine skills list`.
+
+#### Requirements — `engine skills validate`
+
+**R-228** WHEN `engine skills validate` is invoked, it SHALL cross-check every entry in
+`skills.registry.yaml` against `overlay.manifest` and vice versa.
+
+**R-229** A registry entry with path P is "covered" in the manifest when at least one
+manifest row has a path whose first directory component equals P.
+
+**R-230** A manifest skill directory D (the top-level directory component of any
+`D/SKILL.md` manifest row) is "covered" in the registry when at least one registry entry
+has `path == D`.
+
+**R-231** IF any registry entry is NOT covered in the manifest, `engine skills validate`
+SHALL write a diagnostic identifying every uncovered entry to stderr and exit 1.
+
+**R-232** IF any manifest skill directory is NOT covered in the registry, `engine skills
+validate` SHALL write a diagnostic identifying every uncovered skill directory to stderr
+and exit 1.
+
+**R-233** WHEN registry and manifest are fully aligned (all registry entries covered, all
+manifest skill directories covered), `engine skills validate` SHALL write a success
+message to stdout and exit 0.
+
+**R-234** `engine skills validate` SHALL be a STANDALONE command this slice; it MUST NOT
+be invoked or wired inside `cmd_apply`, `cmd_capture`, or any other existing command.
+
+**R-235** `engine skills validate` SHALL accept a `--registry <path>` flag (same default
+as list/status) and a `--manifest <path>` flag (default: `overlay.manifest` in the
+current working directory).
+
+---
+
+### Part 3 — Bash Router Forwarding
+
+**R-236** `bin/labdrian-overlay` SHALL implement a `cmd_skills` function that forwards
+`labdrian skills <verb> [args...]` to `$ENGINE_BINARY skills <verb> [args...]`, using
+the same passthrough pattern as `cmd_prespec`.
+
+**R-237** The usage block in `bin/labdrian-overlay` SHALL document the `skills` command
+with its supported verbs: `list`, `status`, `validate`.
+
+**R-238** The vendored `bin/overlay` binary SHALL NOT be modified; all new skills CLI
+lives in `engine/skills/`, `engine/cmd/main.go`, and `bin/labdrian-overlay`.
+
+---
+
+### Part 4 — Red Lines (Non-Negotiable Invariants)
+
+**R-239** `engine skills list`, `engine skills status`, and `engine skills validate`
+SHALL NOT write to `skills.registry.yaml`, `overlay.manifest`, or any file in the
+deploy target paths. These commands are read-only in this slice.
+
+**R-240** `cmd_apply` and `cmd_capture` behavior SHALL be byte-identical to their
+pre-change behavior; the registry file is purely additive and not read by deploy.
+
+**R-241** All new Go code for the skills commands SHALL reside under `engine/skills/`
+and `engine/cmd/main.go`; no skills logic is added to `bin/overlay` or any other
+vendored binary.
+
+**R-242** `engine/skills/` SHALL have `go test`-covered unit tests with at least one
+table-driven test for the registry parser covering valid and invalid inputs.
+
+---
+
+### Part 5 — Manifest Entries
+
+**R-243** After this change, `overlay.manifest` SHALL contain rows for
+`engine/skills/*.go` source files tagged `managed`.
+
+**R-244** After this change, `overlay.manifest` SHALL contain a row for
+`skills.registry.yaml` tagged `custom`.
+
+---
+
+### Acceptance Scenarios
+
+Each scenario below corresponds directly to a `go test` case in `engine/skills/`.
+
+#### SC-201 — Parse valid registry: core + custom entries
+
+**Given** a YAML file with version `"1"`, one entry with `source.type: core` and
+`lifecycle.updateStrategy: vendor-merge`, and one entry with `source.type: custom` and
+`lifecycle.updateStrategy: overlay-only`
+
+**When** the parser is called
+
+**Then** error is nil, result has exactly 2 entries, entries are in declaration order,
+first entry `source.type == "core"`, second `source.type == "custom"`.
+
+```go
+// maps to: TestParseRegistry/valid_core_and_custom
+```
+
+#### SC-202 — Parse rejects missing `id`
+
+**Given** a YAML file with a skill entry where the `id` field is absent
+
+**When** the parser is called
+
+**Then** error is non-nil, returned slice is nil or empty.
+
+```go
+// maps to: TestParseRegistry/missing_id
+```
+
+#### SC-203 — Parse rejects unknown `source.type`
+
+**Given** a YAML entry with `source.type: external`
+
+**When** the parser is called
+
+**Then** error is non-nil.
+
+```go
+// maps to: TestParseRegistry/unknown_source_type
+```
+
+#### SC-204 — Parse rejects duplicate ids
+
+**Given** a YAML file with two entries both having `id: sdd-spec`
+
+**When** the parser is called
+
+**Then** error is non-nil and message references the duplicate id.
+
+```go
+// maps to: TestParseRegistry/duplicate_id
+```
+
+#### SC-205 — Parse rejects upstream block on custom entry
+
+**Given** a YAML entry with `source.type: custom` and a non-empty `upstream` block
+
+**When** the parser is called
+
+**Then** error is non-nil.
+
+```go
+// maps to: TestParseRegistry/upstream_on_custom_entry
+```
+
+#### SC-206 — `list` writes one line per entry, deterministic
+
+**Given** a registry file with 3 entries (alphabetically non-sorted ids)
+
+**When** `SkillsListCore` is called twice with the same registry content via injected reader
+
+**Then** both calls exit 0, output lines equal 3, both outputs are byte-identical, each
+line contains the entry `id`, `source.type`, `updateStrategy`, and `targets`.
+
+```go
+// maps to: TestSkillsListCore/deterministic_output
+```
+
+#### SC-207 — `list` exits 1 when registry file is missing
+
+**Given** a `--registry` path pointing to a non-existent file
+
+**When** `SkillsListCore` is called
+
+**Then** exit code == 1, stderr is non-empty, stdout is empty.
+
+```go
+// maps to: TestSkillsListCore/missing_registry_file
+```
+
+#### SC-208 — `status` reports counts and exits 0
+
+**Given** a registry with 3 core entries and 15 custom entries
+
+**When** `SkillsStatusCore` is called
+
+**Then** exit code == 0, stdout contains "18" (total), "3" (core count), "15" (custom
+count), and the word "OK".
+
+```go
+// maps to: TestSkillsStatusCore/count_report
+```
+
+#### SC-209 — `validate` exits 0 when aligned
+
+**Given** a registry with entries for `sdd-spec` and `gadu-orchestrate`, and a manifest
+with rows `sdd-spec/SKILL.md managed` and `gadu-orchestrate/SKILL.md custom`
+
+**When** `SkillsValidateCore` is called
+
+**Then** exit code == 0, stdout contains "OK" or equivalent success message, stderr is empty.
+
+```go
+// maps to: TestSkillsValidateCore/aligned_registry_and_manifest
+```
+
+#### SC-210 — `validate` exits 1 on registry entry missing from manifest
+
+**Given** a registry with an entry for `new-skill`, but the manifest has no
+`new-skill/SKILL.md` row
+
+**When** `SkillsValidateCore` is called
+
+**Then** exit code == 1, stderr contains `"new-skill"`.
+
+```go
+// maps to: TestSkillsValidateCore/registry_entry_not_in_manifest
+```
+
+#### SC-211 — `validate` exits 1 on manifest skill not in registry
+
+**Given** a manifest with `orphan-skill/SKILL.md custom`, but the registry has no
+entry with `path: orphan-skill`
+
+**When** `SkillsValidateCore` is called
+
+**Then** exit code == 1, stderr contains `"orphan-skill"`.
+
+```go
+// maps to: TestSkillsValidateCore/manifest_skill_not_in_registry
+```
+
+#### SC-212 — `validate` ignores non-skill manifest rows
+
+**Given** a registry with entries only for the skill directories, and a manifest that
+also contains `engine/propagator/propagator.go managed` and
+`_shared/pre-sdd-contracts.md custom`
+
+**When** `SkillsValidateCore` is called with a fully aligned set of skill directories
+
+**Then** exit code == 0; engine and _shared non-SKILL.md rows do not trigger divergence.
+
+```go
+// maps to: TestSkillsValidateCore/non_skill_rows_ignored
+```
+
+#### SC-213 — Deploy pipeline unchanged: `cmd_apply` not affected by registry presence or absence
+
+**Given** a test environment where `skills.registry.yaml` does or does not exist
+
+**When** `cmd_apply` logic is exercised (unit test of deploy path)
+
+**Then** behavior is identical in both cases; the registry file is never opened by apply.
+
+```go
+// maps to: TestApplyIgnoresRegistry (integration-style, skippable with -short)
+```
