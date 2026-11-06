@@ -59,6 +59,10 @@ When the source is small enough for one record (`N == 1`), there is no separate 
 save and promote the single record at the manifest key with `Chunk: 1/1`, per the contract's
 rule 2.
 
+**Every chunk, with its provenance block, stays under 64 KB.** Cut the source into smaller
+chunks otherwise: memorycard stores a larger body as parts, and the block, last in a chunk,
+would land outside part 1, where the re-ingestion gate and `promote` read.
+
 When the source produces more than one chunk (`N > 1`), order matters so a crash mid-ingestion
 is always readable and resumable:
 
@@ -98,7 +102,10 @@ document" rule above.
   `mem_save` call and no `promote` call. Report "unchanged".
 - If the digest matches but `**Status**` is `pending` or `partial`: this is a **resume**, not
   a no-op. Re-run the manifest-first ordering above starting from step 3, using
-  `**Chunk-Status**` to skip chunks already `saved promoted` and land only the missing ones.
+  `**Chunk-Status**`, read in full (when memorycard stored the manifest as parts, its list
+  continues in the memories at `<manifest key>/part-2`, `/part-3`, …, which `mem_search` and
+  `mem_get` read like any other), to skip chunks already `saved promoted` and land only the
+  missing ones.
 - If the digest differs, or no record exists yet: proceed through the manifest-first ordering
   above. The full re-ingestion decision table (including the shrink/grow/origin-changed rows)
   lives in the contract document — consult it before writing, do not improvise the shrink or
