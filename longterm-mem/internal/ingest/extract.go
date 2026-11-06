@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io/fs"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 )
@@ -84,30 +85,47 @@ func (e Extractor) Extract(req Request) (Result, error) {
 		return Result{}, err
 	}
 	origin, text := req.Origin, req.Text
-	skipped := []Skip{}
 	if req.Path != "" {
-		var skip *Skip
-		var err error
-		if origin, text, skip, err = e.readFile(req); err != nil {
+		root, entry, skip, err := e.locate(req)
+		if err != nil {
 			return Result{}, err
 		}
 		if skip != nil {
-			return Result{Skipped: append(skipped, *skip)}, nil
+			return Result{Skipped: []Skip{*skip}}, nil
+		}
+		if entry.Kind == EntryDirectory {
+			return e.scan(req, root)
+		}
+		if origin, text, skip = e.readText(req, root, entry); skip != nil {
+			return Result{Skipped: []Skip{*skip}}, nil
 		}
 	}
+	source, skip, err := extractOne(req, origin, text)
+	if err != nil {
+		return Result{}, err
+	}
+	if skip != nil {
+		return Result{Skipped: []Skip{*skip}}, nil
+	}
+	return Result{Sources: []Source{*source}, Skipped: []Skip{}}, nil
+}
+
+// extractOne turns one source's text into its Source, or into the Skip that says it holds none.
+func extractOne(req Request, origin Origin, text string) (*Source, *Skip, error) {
 	// The id is a function of the origin alone, so it is derived before any content is looked at.
 	id, err := SourceID(origin)
 	if err != nil {
-		return Result{}, err
+		return nil, nil, err
 	}
 	if strings.TrimSpace(text) == "" {
-		return Result{Skipped: append(skipped, Skip{Path: skipPath(origin), Code: "empty", Detail: "no text but whitespace"})}, nil
+		return nil, &Skip{Path: skipPath(origin), Code: "empty", Detail: "no text but whitespace"}, nil
 	}
 	chunks, err := ChunkText(text, req.MaxChunkBytes, req.MinChunkBytes)
 	if err != nil {
-		return Result{}, err
+		return nil, nil, err
 	}
-	return Result{Sources: []Source{buildSource(req, origin, id, text, chunks)}, Skipped: skipped}, nil
+	source := buildSource(req, origin, id, text, chunks)
+	return &source, nil, nil
 }
 
 // textExtensions are the file extensions read as text.
@@ -116,39 +134,49 @@ var textExtensions = map[string]bool{".md": true, ".markdown": true, ".txt": tru
 // binarySniffBytes is how far into a file a NUL byte marks it as binary.
 const binarySniffBytes = 8 << 10
 
-// readFile reads the one file a Path request names, through the reader. It returns the origin made absolute and
-// the file's text, or the Skip that says why the file yields none; the error is for a path that is not a file.
-func (e Extractor) readFile(req Request) (Origin, string, *Skip, error) {
+// locate resolves the path a Path request names and looks at it through the reader. It returns the origin made
+// absolute and the entry found there, or the Skip that says the entry cannot be looked at; the error is for a
+// path that is neither a file nor a directory, or that does not fit the origin's kind.
+func (e Extractor) locate(req Request) (Origin, Entry, *Skip, error) {
 	origin := req.Origin
 	origin.URI = req.Path
 	origin, err := ResolveOrigin(e.Reader, origin)
 	if err != nil {
-		return Origin{}, "", nil, err
+		return Origin{}, Entry{}, nil, err
 	}
 	entry, err := e.Reader.Lstat(origin.URI)
 	if errors.Is(err, fs.ErrPermission) {
 		// Being denied a look at a path that is there is a per-item failure, as a failed read is.
-		return origin, "", &Skip{Path: origin.URI, Code: "unreadable", Detail: err.Error()}, nil
+		return origin, Entry{}, &Skip{Path: origin.URI, Code: "unreadable", Detail: err.Error()}, nil
 	}
 	if err != nil {
 		// Anything else, a missing path or one that is not usable as given (ENOTDIR, ELOOP, ENAMETOOLONG), is a
 		// request error, so a mistyped Path never ends in success with no source (design.md, OQ-6).
-		return Origin{}, "", nil, fmt.Errorf("ingest: %w", err)
+		return Origin{}, Entry{}, nil, fmt.Errorf("ingest: %w", err)
 	}
 	switch entry.Kind {
 	case EntryFile:
 		if origin.Kind == KindDirectory {
-			return Origin{}, "", nil, fmt.Errorf("ingest: the origin is a directory but the path names a file: %s", origin.URI)
+			return Origin{}, Entry{}, nil, fmt.Errorf("ingest: the origin is a directory but the path names a file: %s", origin.URI)
 		}
 	case EntryDirectory:
-		return Origin{}, "", nil, fmt.Errorf("ingest: %s is a directory, and scanning one is not built yet", origin.URI)
+		if origin.Kind == KindFile {
+			return Origin{}, Entry{}, nil, fmt.Errorf("ingest: the origin is a file but the path names a directory: %s", origin.URI)
+		}
 	default:
 		// A link at Path is a request error too: the operator names the real path (Phase 9 C22, D1).
-		return Origin{}, "", nil, fmt.Errorf("ingest: %s is neither file nor directory (it is of kind %s)", origin.URI, entry.Kind)
+		return Origin{}, Entry{}, nil, fmt.Errorf("ingest: %s is neither file nor directory (it is of kind %s)", origin.URI, entry.Kind)
 	}
+	return origin, entry, nil, nil
+}
+
+// readText reads the one regular file at origin.URI, whose entry Lstat reported, through the reader. It returns
+// the origin as a file's and the file's text, or the Skip that says why the file yields none. A scan reads each of
+// its files here, as a Path request reads its one.
+func (e Extractor) readText(req Request, origin Origin, entry Entry) (Origin, string, *Skip) {
 	origin.Kind = KindFile
-	skip := func(code, detail string) (Origin, string, *Skip, error) {
-		return origin, "", &Skip{Path: origin.URI, Code: code, Detail: detail}, nil
+	skip := func(code, detail string) (Origin, string, *Skip) {
+		return origin, "", &Skip{Path: origin.URI, Code: code, Detail: detail}
 	}
 	if ext := strings.ToLower(filepath.Ext(origin.URI)); !textExtensions[ext] {
 		return skip("unsupported_extension", fmt.Sprintf("extension %q is not a text extension", ext))
@@ -172,7 +200,110 @@ func (e Extractor) readFile(req Request) (Origin, string, *Skip, error) {
 	if bytes.IndexByte(data[:min(len(data), binarySniffBytes)], 0) >= 0 {
 		return skip("binary", "a NUL byte within the first 8 KiB")
 	}
-	return origin, string(data), nil, nil
+	return origin, string(data), nil
+}
+
+// scanItem is one thing a scan found, or one reason it found nothing: rel is its path below the root, the key the
+// scan orders by; a file has an entry, anything else has the skip.
+type scanItem struct {
+	rel   string
+	path  string
+	entry Entry
+	skip  *Skip
+}
+
+// scan extracts every file of the directory root names, in lexical order of path below the root. A link is never
+// followed, listed through or read, and no entry whose cleaned path is not below the root is looked at; the paths
+// alone decide that, as no link is ever resolved. Each file is a source of its own: a file origin with no
+// override, titled by its name. Every failure of one entry is a Skip, and only a root that cannot be listed for a
+// reason other than permission fails the request.
+func (e Extractor) scan(req Request, rootOrigin Origin) (Result, error) {
+	root := filepath.Clean(rootOrigin.URI)
+	names, err := e.Reader.ReadDir(root)
+	if errors.Is(err, fs.ErrPermission) {
+		return Result{Skipped: []Skip{{Path: root, Code: "unreadable", Detail: err.Error()}}}, nil
+	}
+	if err != nil {
+		return Result{}, fmt.Errorf("ingest: %w", err)
+	}
+	items := e.walk(root, root, "", names, req.Recursive)
+	slices.SortStableFunc(items, func(a, b scanItem) int { return strings.Compare(a.rel, b.rel) })
+	result := Result{Skipped: []Skip{}}
+	for _, item := range items {
+		if item.skip != nil {
+			result.Skipped = append(result.Skipped, *item.skip)
+			continue
+		}
+		base := filepath.Base(item.path)
+		origin := Origin{Kind: KindFile, URI: item.path, Title: strings.TrimSuffix(base, filepath.Ext(base))}
+		origin, text, skip := e.readText(req, origin, item.entry)
+		var source *Source
+		if skip == nil {
+			if source, skip, err = extractOne(req, origin, text); err != nil {
+				return Result{}, err
+			}
+		}
+		if skip != nil {
+			result.Skipped = append(result.Skipped, *skip)
+			continue
+		}
+		result.Sources = append(result.Sources, *source)
+	}
+	return result, nil
+}
+
+// walk looks at each name listed in dir, whose path below the root is rel, and returns what it found.
+func (e Extractor) walk(root, dir, rel string, names []string, recursive bool) []scanItem {
+	var items []scanItem
+	for _, name := range names {
+		key := name
+		if rel != "" {
+			key = rel + string(filepath.Separator) + name
+		}
+		path := filepath.Join(dir, name)
+		unreadable := func(err error) scanItem {
+			return scanItem{rel: key, skip: &Skip{Path: path, Code: "unreadable", Detail: err.Error()}}
+		}
+		if !below(root, path) {
+			items = append(items, scanItem{rel: key, skip: &Skip{
+				Path: path, Code: "outside_root", Detail: fmt.Sprintf("the entry %q leaves the scan root %s", name, root),
+			}})
+			continue
+		}
+		entry, err := e.Reader.Lstat(path)
+		if err != nil {
+			items = append(items, unreadable(err))
+			continue
+		}
+		switch entry.Kind {
+		case EntryFile:
+			items = append(items, scanItem{rel: key, path: path, entry: entry})
+		case EntryDirectory:
+			if !recursive {
+				continue
+			}
+			children, err := e.Reader.ReadDir(path)
+			if err != nil {
+				items = append(items, unreadable(err))
+				continue
+			}
+			items = append(items, e.walk(root, path, key, children, recursive)...)
+		case EntrySymlink:
+			items = append(items, scanItem{rel: key, skip: &Skip{Path: path, Code: "symlink", Detail: "a link is never followed"}})
+		default:
+			items = append(items, unreadable(fmt.Errorf("neither file nor directory (it is of kind %s)", entry.Kind)))
+		}
+	}
+	return items
+}
+
+// below reports whether path, already cleaned, is strictly inside root, already cleaned.
+func below(root, path string) bool {
+	prefix := root
+	if !strings.HasSuffix(prefix, string(filepath.Separator)) {
+		prefix += string(filepath.Separator)
+	}
+	return strings.HasPrefix(path, prefix)
 }
 
 // skipPath names an item that yielded nothing: its path, or for pasted text its label.
@@ -274,6 +405,11 @@ func validate(req Request) error {
 	}
 	if req.Path != "" && req.Origin.URI != "" {
 		return errors.New("ingest: a Path request names its path in Path, not in Origin.URI")
+	}
+	// One literal override cannot be the identity of every file a scan finds, and a directory's is never inherited
+	// by them (Phase 9 C22, D3).
+	if req.Path != "" && req.Origin.Kind == KindDirectory && req.Origin.Override != "" {
+		return errors.New("ingest: a directory scan cannot carry an Origin.Override: it would name every file it finds")
 	}
 	return nil
 }

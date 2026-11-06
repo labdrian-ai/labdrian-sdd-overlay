@@ -247,13 +247,17 @@ the owner's decision D3 (`odd/tasks/phase9-c22-knowledge-ingestion.md`), taken b
   - Done by C22 T3 (2026-11-06) for the five codes one file can reach: `unreadable`, `binary`,
     `unsupported_extension`, `too_large`, `empty`. `symlink` and `outside_root` stay open for C22 T4: they
     are decided over a directory scan (a `Path` that is itself a link is a request error, not a `symlink` skip).
+  - Done by C22 T4 (2026-11-06): `symlink` and `outside_root`, over the directory scan of 2b.5/2b.6. A
+    link inside a scan is a `symlink` skip, never listed through or read; an entry whose cleaned path is not
+    strictly below the root's is `outside_root`, decided on the paths before the reader is asked about it. A
+    scan request with an `Origin.Override` is a request error (owner's decision D3).
 - [x] 2b.4 GREEN `extract.go`: implement single-source extraction for `Text` and for `Path` pointing
   at one file — the path made absolute with `ResolveOrigin` over the reader (so the id is a function
   of the origin, never of the process), the entry's kind and size asked through `Lstat` and its bytes
   read through `ReadFile`; produce `Skip` records for each reachable failure code above, and for a
   readable source call `chunk.go`'s boundary function and `header.go`'s `SourceID`/`Header.Render` to
   build `Record`s; assert `Result.Skipped` is always rendered (never `omitempty`)
-- [ ] 2b.5 RED `extract_test.go`: directory-scan table over an in-memory tree — lexical ordering by
+- [x] 2b.5 RED `extract_test.go`: directory-scan table over an in-memory tree — lexical ordering by
   relative path (whatever order the reader lists them in); shallow scan by default; recursive scan only
   when `Request.Recursive` is set; a symlinked entry is skipped and never followed (the reader reports a
   link from `Lstat`; the case fails if the use case lists or reads through it); a directory with zero
@@ -266,7 +270,7 @@ the owner's decision D3 (`odd/tasks/phase9-c22-knowledge-ingestion.md`), taken b
   process may not read fails (the case is skipped when the process can read it anyway, as root can);
   `ReadDir` lists the names in a directory without `.` and `..`, in no promised order (the use case
   sorts)
-- [ ] 2b.6 GREEN `extract.go`: implement the directory-scan path (`Path` pointing at a directory) —
+- [x] 2b.6 GREEN `extract.go`: implement the directory-scan path (`Path` pointing at a directory) —
   lexical ordering (the use case sorts the names the reader lists), shallow/recursive switch, symlink
   detection from the kind `Lstat` reports (a link is a `symlink` skip: never followed, never read), and
   the `outside_root` guard for any entry whose cleaned absolute path is not below the scan root's,
@@ -285,11 +289,11 @@ the owner's decision D3 (`odd/tasks/phase9-c22-knowledge-ingestion.md`), taken b
 - [x] 2b.9 Modify `longterm-mem/net_allowlist_test.go`: add `internal/ingest/extract.go` to
   `TestNetImportAllowlistStillRefusesOthers`'s must-never-be-allowlisted list (one line); do not
   touch `allowedNetImporters` and do not change its `len == 1` assertion
-- [ ] 2b.10 REFACTOR: confirm `extract.go` imports neither `net` nor `net/http` nor `os/exec` nor `os`,
+- [x] 2b.10 REFACTOR: confirm `extract.go` imports neither `net` nor `net/http` nor `os/exec` nor `os`,
   uses no `path/filepath` member that reaches the disk, and names no adapter (`internal/sourcefs`
   included); confirm `doc.go`'s citation of the contract document (2a.11) still matches `extract.go`'s
   actual `Record` field population, and that `doc.go` and `source.go` describe the port as it now is
-- [ ] 2b.11 Verify: `cd longterm-mem && go vet ./... && go test ./...` — full module run, confirming
+- [x] 2b.11 Verify: `cd longterm-mem && go vet ./... && go test ./...` — full module run, confirming
   `TestNetImportAllowlist` and `TestNetImportAllowlistStillRefusesOthers` both pass with the
   allowlist still holding exactly one entry (`internal/embed/client.go`), and that the L11 guards
   still pass with `knownDebt` empty: `TestArchitectureFollowsTheDependencyRule`,
@@ -297,7 +301,7 @@ the owner's decision D3 (`odd/tasks/phase9-c22-knowledge-ingestion.md`), taken b
   `TestOnlyTheCompositionRootImportsTheSourceFSAdapter` and
   `TestEveryCallerOfSourceIDResolvesTheOriginFirst` (the `Extractor` of 2b.4 is the first caller of
   `SourceID`, and its file must also use `ingest.ResolveOrigin`: the guard fails the build otherwise)
-- [ ] 2b.12 Verify threat-matrix coverage explicitly (cross-reference, no new tests expected beyond
+- [x] 2b.12 Verify threat-matrix coverage explicitly (cross-reference, no new tests expected beyond
   2b.1/2b.3/2b.5/2b.5a): filesystem traversal — a symlink pointing outside the scan root, and a
   relative entry containing a `..` component, are covered by the `symlink`/`outside_root` cases in
   2b.5 (the use case, over an in-memory reader) and by 2b.5a (the adapter reports a real link as a link

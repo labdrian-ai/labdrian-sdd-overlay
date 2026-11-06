@@ -20,7 +20,12 @@ type memTree struct {
 	// lstats and reads are the paths asked of Lstat and ReadFile, in order.
 	lstats []string
 	reads  []string
+	lists  []string
 	asked  int
+	// listings is what ReadDir answers for a directory, in the order the case sets; listErr is what it fails with
+	// instead.
+	listings map[string][]string
+	listErr  map[string]error
 }
 
 type memFile struct {
@@ -57,7 +62,15 @@ func (m *memTree) ReadFile(path string) ([]byte, error) {
 }
 
 func (m *memTree) ReadDir(path string) ([]string, error) {
-	return nil, errors.New("memTree: no case lists a directory yet")
+	m.lists = append(m.lists, path)
+	if err := m.listErr[path]; err != nil {
+		return nil, err
+	}
+	names, ok := m.listings[path]
+	if !ok {
+		return nil, fmt.Errorf("readdir %s: %w", path, fs.ErrNotExist)
+	}
+	return append([]string(nil), names...), nil
 }
 
 // textFile is a regular file holding text, its size the length of its bytes.
@@ -365,8 +378,8 @@ func TestExtractRefusesAPathThatIsNotAFile(t *testing.T) {
 		// The owner's answer to D1: a link at Path is a request error, however it points.
 		{"a link", map[string]memFile{"/notes/a.md": {entry: Entry{Kind: EntrySymlink}, data: []byte(guideBody)}}, "neither file nor directory"},
 		{"any other kind", map[string]memFile{"/notes/a.md": {entry: Entry{Kind: EntryOther}, data: []byte(guideBody)}}, "neither file nor directory"},
-		// A scan is the next task's; until it is built a directory is refused, not read as a file.
-		{"a directory", map[string]memFile{"/notes/a.md": {entry: Entry{Kind: EntryDirectory}}}, "directory"},
+		// A file origin names a file: a directory under it is refused, not scanned.
+		{"a directory under a file origin", map[string]memFile{"/notes/a.md": {entry: Entry{Kind: EntryDirectory}}}, "the origin is a file but the path names a directory"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -571,6 +584,285 @@ func TestExtractSkipsPastedTextThatIsOnlyWhitespace(t *testing.T) {
 	want := []Skip{{Path: "Meeting notes", Code: "empty", Detail: "no text but whitespace"}}
 	if len(got.Sources) != 0 || !reflect.DeepEqual(got.Skipped, want) {
 		t.Errorf("Extract = %+v, want no source and the skip %+v, its path the label", got, want)
+	}
+}
+
+// The directory scan. Every case builds its tree in a memTree: the root is /notes/docs, and a listing is the order
+// the reader happens to answer in.
+
+const scanRoot = "/notes/docs"
+
+var (
+	dirFile  = memFile{entry: Entry{Kind: EntryDirectory}}
+	linkFile = memFile{entry: Entry{Kind: EntrySymlink}, data: []byte(guideBody)}
+)
+
+// dirRequest is a valid request to scan a directory, which a case then bends.
+func dirRequest(path string) Request {
+	r := fileRequest(path)
+	r.Origin = Origin{Kind: KindDirectory, Title: "Docs"}
+	return r
+}
+
+// scanned lists the paths of the sources a result holds, in order.
+func scanned(r Result) []string {
+	var got []string
+	for _, s := range r.Sources {
+		got = append(got, s.Origin.URI)
+	}
+	return got
+}
+
+// skippedAs lists "code path" for each skip of a result, in order.
+func skippedAs(r Result) []string {
+	got := []string{}
+	for _, s := range r.Skipped {
+		got = append(got, s.Code+" "+s.Path)
+	}
+	return got
+}
+
+func TestExtractScansADirectoryInLexicalOrderOfRelativePath(t *testing.T) {
+	// "a-b.md" < "a.md" < "a/b.md" byte by byte ('-' 0x2d, '.' 0x2e, '/' 0x2f), which is not the order of a walk
+	// that sorts each directory's names ("a" lists before "a-b.md").
+	newReader := func() *memTree {
+		return &memTree{files: map[string]memFile{
+			scanRoot: dirFile, scanRoot + "/b.md": textFile("# B\n"), scanRoot + "/a-b.md": textFile("# AB\n"),
+			scanRoot + "/a.md": textFile("# A\n"), scanRoot + "/c.txt": textFile("c\n"),
+			scanRoot + "/a": dirFile, scanRoot + "/a/b.md": textFile("# A/B\n"),
+		}, listings: map[string][]string{
+			scanRoot:        {"b.md", "a", "c.txt", "a.md", "a-b.md"},
+			scanRoot + "/a": {"b.md"},
+		}}
+	}
+	cases := []struct {
+		name      string
+		recursive bool
+		want      []string
+		wantLists []string
+	}{
+		{"shallow by default", false,
+			[]string{scanRoot + "/a-b.md", scanRoot + "/a.md", scanRoot + "/b.md", scanRoot + "/c.txt"},
+			[]string{scanRoot}},
+		{"recursive on request", true,
+			[]string{scanRoot + "/a-b.md", scanRoot + "/a.md", scanRoot + "/a/b.md", scanRoot + "/b.md", scanRoot + "/c.txt"},
+			[]string{scanRoot, scanRoot + "/a"}},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			reader := newReader()
+			req := dirRequest(scanRoot)
+			req.Recursive = c.recursive
+
+			got, err := Extractor{Reader: reader}.Extract(req)
+
+			if err != nil {
+				t.Fatalf("Extract error = %v", err)
+			}
+			if !reflect.DeepEqual(scanned(got), c.want) {
+				t.Errorf("sources = %v, want %v", scanned(got), c.want)
+			}
+			if got.Skipped == nil || len(got.Skipped) != 0 {
+				t.Errorf("Skipped = %#v, want rendered and empty", got.Skipped)
+			}
+			if !reflect.DeepEqual(reader.lists, c.wantLists) {
+				t.Errorf("directories listed = %v, want %v", reader.lists, c.wantLists)
+			}
+		})
+	}
+}
+
+func TestExtractGivesEachScannedFileTheOriginOfAFile(t *testing.T) {
+	reader := &memTree{wd: "/notes", files: map[string]memFile{
+		scanRoot: dirFile, scanRoot + "/Guide v2.md": textFile(guideBody),
+	}, listings: map[string][]string{scanRoot: {"Guide v2.md"}}}
+
+	got, err := Extractor{Reader: reader}.Extract(dirRequest("docs"))
+
+	if err != nil || len(got.Sources) != 1 {
+		t.Fatalf("Extract = %+v, %v, want one source", got, err)
+	}
+	path := scanRoot + "/Guide v2.md"
+	src := got.Sources[0]
+	// The id is the one the same file has when it is named on its own: the directory only finds it.
+	//	printf '%s' '/notes/docs/Guide v2.md' | sha256sum = 1c7e471d...
+	if want := (Origin{Kind: KindFile, URI: path, Title: "Guide v2"}); src.Origin != want {
+		t.Errorf("origin = %+v, want %+v", src.Origin, want)
+	}
+	if src.ID != "guide-v2-1c7e471d" {
+		t.Errorf("id = %q, want guide-v2-1c7e471d, the id of %s named as a file", src.ID, path)
+	}
+	rec := src.Records[0]
+	if rec.Header.SourceKind != KindFile || rec.Header.SourceURI != path || rec.TopicKey != "ingested/file/guide-v2-1c7e471d" {
+		t.Errorf("kind, Source-URI, topic = %q, %q, %q, want file, %q, ingested/file/guide-v2-1c7e471d",
+			rec.Header.SourceKind, rec.Header.SourceURI, rec.TopicKey, path)
+	}
+}
+
+func TestExtractNeverFollowsALinkInAScan(t *testing.T) {
+	reader := &memTree{files: map[string]memFile{
+		scanRoot: dirFile, scanRoot + "/ok.md": textFile(guideBody),
+		scanRoot + "/link.md": linkFile, scanRoot + "/linkdir": {entry: Entry{Kind: EntrySymlink}},
+		// What the link to a directory points at, which a scan that followed it would list and read.
+		scanRoot + "/linkdir/inner.md": textFile(guideBody),
+	}, listings: map[string][]string{
+		scanRoot:              {"linkdir", "ok.md", "link.md"},
+		scanRoot + "/linkdir": {"inner.md"},
+	}}
+	req := dirRequest(scanRoot)
+	req.Recursive = true
+
+	got, err := Extractor{Reader: reader}.Extract(req)
+
+	if err != nil {
+		t.Fatalf("Extract error = %v", err)
+	}
+	if want := []string{scanRoot + "/ok.md"}; !reflect.DeepEqual(scanned(got), want) {
+		t.Errorf("sources = %v, want %v", scanned(got), want)
+	}
+	if want := []string{"symlink " + scanRoot + "/link.md", "symlink " + scanRoot + "/linkdir"}; !reflect.DeepEqual(skippedAs(got), want) {
+		t.Errorf("skipped = %v, want %v", skippedAs(got), want)
+	}
+	if want := []string{scanRoot + "/ok.md"}; !reflect.DeepEqual(reader.reads, want) {
+		t.Errorf("files read = %v, want only %v: a link is never read", reader.reads, want)
+	}
+	if want := []string{scanRoot}; !reflect.DeepEqual(reader.lists, want) {
+		t.Errorf("directories listed = %v, want only %v: a link is never listed through", reader.lists, want)
+	}
+}
+
+func TestExtractSkipsAnEntryThatLeavesTheScanRoot(t *testing.T) {
+	// A reader that lists a name with a .. component. The file it would reach exists, so a scan that decides on the
+	// uncleaned path, or that asks the reader before deciding, reads it.
+	reader := &memTree{files: map[string]memFile{
+		"/notes": dirFile, scanRoot: dirFile, scanRoot + "/in.md": textFile(guideBody),
+		"/notes/outside.md": textFile("# Outside\n"),
+	}, listings: map[string][]string{
+		scanRoot: {"../outside.md", "in.md", "sub/../../outside.md", "..", "."},
+	}}
+
+	got, err := Extractor{Reader: reader}.Extract(dirRequest(scanRoot))
+
+	if err != nil {
+		t.Fatalf("Extract error = %v", err)
+	}
+	if want := []string{scanRoot + "/in.md"}; !reflect.DeepEqual(scanned(got), want) {
+		t.Errorf("sources = %v, want %v", scanned(got), want)
+	}
+	want := []string{
+		"outside_root " + scanRoot, "outside_root /notes", "outside_root /notes/outside.md", "outside_root /notes/outside.md",
+	}
+	if !reflect.DeepEqual(skippedAs(got), want) {
+		t.Errorf("skipped = %v, want %v", skippedAs(got), want)
+	}
+	if want := []string{scanRoot, scanRoot + "/in.md"}; !reflect.DeepEqual(reader.lstats, want) {
+		t.Errorf("Lstat was asked %v, want only the root and the file inside it", reader.lstats)
+	}
+	if want := []string{scanRoot + "/in.md"}; !reflect.DeepEqual(reader.reads, want) {
+		t.Errorf("files read = %v, want only %v: nothing outside the root is read", reader.reads, want)
+	}
+}
+
+func TestExtractAScanWithNothingReadableSucceedsAndSaysWhy(t *testing.T) {
+	reader := &memTree{files: map[string]memFile{
+		scanRoot: dirFile, scanRoot + "/b.png": textFile("png"), scanRoot + "/a.bin": textFile("bin"),
+		scanRoot + "/e.md": textFile(" \n"), scanRoot + "/sub": dirFile,
+	}, listings: map[string][]string{scanRoot: {"sub", "e.md", "b.png", "a.bin"}}}
+
+	got, err := Extractor{Reader: reader}.Extract(dirRequest(scanRoot))
+
+	if err != nil || len(got.Sources) != 0 {
+		t.Fatalf("Extract = %+v, %v, want success with no source", got, err)
+	}
+	want := []string{"unsupported_extension " + scanRoot + "/a.bin", "unsupported_extension " + scanRoot + "/b.png", "empty " + scanRoot + "/e.md"}
+	if !reflect.DeepEqual(skippedAs(got), want) {
+		t.Errorf("skipped = %v, want %v", skippedAs(got), want)
+	}
+}
+
+func TestExtractAnEmptyDirectoryRendersAnEmptySkippedList(t *testing.T) {
+	reader := &memTree{files: map[string]memFile{scanRoot: dirFile}, listings: map[string][]string{scanRoot: {}}}
+
+	got, err := Extractor{Reader: reader}.Extract(dirRequest(scanRoot))
+
+	if err != nil || len(got.Sources) != 0 || got.Skipped == nil || len(got.Skipped) != 0 {
+		t.Errorf("Extract = %#v, %v, want success, no source and a rendered empty Skipped", got, err)
+	}
+}
+
+func TestExtractKeepsAScanGoingPastWhatOneEntryCannotYield(t *testing.T) {
+	denied := errors.New("denied")
+	reader := &memTree{files: map[string]memFile{
+		scanRoot: dirFile, scanRoot + "/ok.md": textFile(guideBody),
+		scanRoot + "/denied.md": {lstatErr: fs.ErrPermission},
+		scanRoot + "/bad.md":    {entry: Entry{Kind: EntryFile, Size: 1}, readErr: denied},
+		scanRoot + "/pipe":      {entry: Entry{Kind: EntryOther}},
+		scanRoot + "/sub":       dirFile,
+		// gone.md is listed and no longer there.
+	}, listings: map[string][]string{
+		scanRoot: {"sub", "pipe", "ok.md", "gone.md", "denied.md", "bad.md"},
+	}, listErr: map[string]error{scanRoot + "/sub": fs.ErrPermission}}
+	req := dirRequest(scanRoot)
+	req.Recursive = true
+
+	got, err := Extractor{Reader: reader}.Extract(req)
+
+	if err != nil {
+		t.Fatalf("Extract error = %v, want every per-entry failure a skip", err)
+	}
+	if want := []string{scanRoot + "/ok.md"}; !reflect.DeepEqual(scanned(got), want) {
+		t.Errorf("sources = %v, want %v", scanned(got), want)
+	}
+	want := []string{
+		"unreadable " + scanRoot + "/bad.md", "unreadable " + scanRoot + "/denied.md", "unreadable " + scanRoot + "/gone.md",
+		"unreadable " + scanRoot + "/pipe", "unreadable " + scanRoot + "/sub",
+	}
+	if !reflect.DeepEqual(skippedAs(got), want) {
+		t.Errorf("skipped = %v, want %v", skippedAs(got), want)
+	}
+}
+
+func TestExtractAScanOfADirectoryItCannotListSkipsOrRefusesAsALookDoes(t *testing.T) {
+	cases := []struct {
+		name    string
+		listErr error
+		want    []string
+	}{
+		{"permission is a skip", fs.ErrPermission, []string{"unreadable " + scanRoot}},
+		{"anything else is a request error", errors.New("input/output error"), nil},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			reader := &memTree{files: map[string]memFile{scanRoot: dirFile}, listErr: map[string]error{scanRoot: c.listErr}}
+
+			got, err := Extractor{Reader: reader}.Extract(dirRequest(scanRoot))
+
+			if c.want == nil {
+				if !errors.Is(err, c.listErr) || len(got.Sources) != 0 || len(got.Skipped) != 0 {
+					t.Errorf("Extract = %+v, %v, want the listing error and an empty Result", got, err)
+				}
+				return
+			}
+			if err != nil || len(got.Sources) != 0 || !reflect.DeepEqual(skippedAs(got), c.want) {
+				t.Errorf("Extract = %+v, %v, want success with the skip %v", got, err, c.want)
+			}
+		})
+	}
+}
+
+func TestExtractRefusesAScanRequestThatCarriesAnOverride(t *testing.T) {
+	reader := &memTree{files: map[string]memFile{scanRoot: dirFile, scanRoot + "/a.md": textFile(guideBody)},
+		listings: map[string][]string{scanRoot: {"a.md"}}}
+	req := dirRequest(scanRoot)
+	req.Origin.Override = "repo://openspec/specs"
+
+	got, err := Extractor{Reader: reader}.Extract(req)
+
+	if err == nil || !strings.Contains(err.Error(), "Override") {
+		t.Fatalf("Extract = %+v, %v, want the request refused for its Override", got, err)
+	}
+	if len(got.Sources) != 0 || len(got.Skipped) != 0 || len(reader.lstats)+len(reader.reads)+len(reader.lists)+reader.asked != 0 {
+		t.Errorf("Extract = %+v and the reader was asked (%v %v %v %d): a refused request reads nothing", got, reader.lstats, reader.reads, reader.lists, reader.asked)
 	}
 }
 
