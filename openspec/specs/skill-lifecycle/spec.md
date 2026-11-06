@@ -411,3 +411,285 @@ A failed manifest write, when it occurs before either rename executes, SHALL als
 leave the registry file byte-unchanged (both files safe together per R-465/R-472).
 
 ---
+
+### Acceptance Scenarios
+
+#### Serializer
+
+**SC-420** — Round-trip: real 18-entry registry
+
+```
+Given:  the raw bytes of the real skills.registry.yaml (18 entries, all fields)
+When:   reg, _ := ParseRegistry(bytes.NewReader(rawBytes))
+        out, err := Serialize(reg)                       // must not error
+        reg2, err2 := ParseRegistry(bytes.NewReader(out)) // must not error
+Then:   err == nil && err2 == nil
+        reg.Version == reg2.Version
+        len(reg.Skills) == 18 && len(reg2.Skills) == 18
+        for i in 0..17: reg.Skills[i] == reg2.Skills[i]  // field-by-field equality
+```
+
+Test file: `engine/skills/serialize_test.go`, function `TestSerializeRoundTripRealRegistry`.
+
+**SC-421** — Round-trip: project-scoped entry with allowedProjects
+
+```
+Given:  reg := Registry{Version: "1", Skills: []Entry{{
+          ID: "p-skill", Path: "p-skill",
+          Source: Source{Type: "custom"},
+          Install: Install{
+            DefaultScope: "project",
+            Targets: []string{"claude", "opencode", "codex"},
+            AllowedProjects: []string{"project-a", "project-b"},
+          },
+          Lifecycle: Lifecycle{UpdateStrategy: "overlay-only"},
+        }}}
+When:   out, _ := Serialize(reg)
+        reg2, err := ParseRegistry(bytes.NewReader(out))
+Then:   err == nil
+        reg2.Skills[0].Install.DefaultScope == "project"
+        reg2.Skills[0].Install.AllowedProjects == ["project-a", "project-b"]
+```
+
+Test: `TestSerializeRoundTripAllowedProjects`.
+
+**SC-422** — Determinism
+
+```
+Given:  any valid Registry reg (use the 18-entry real registry)
+When:   out1, _ := Serialize(reg)
+        out2, _ := Serialize(reg)
+Then:   bytes.Equal(out1, out2)
+```
+
+Test: `TestSerializeDeterministic`.
+
+**SC-423** — Upstream block absent for custom entries
+
+```
+Given:  reg with one custom entry (source.type="custom", upstream=nil)
+When:   out, _ := Serialize(reg)
+Then:   !bytes.Contains(out, []byte("upstream"))
+```
+
+Test: `TestSerializeNoUpstreamForCustom`.
+
+**SC-424** — Upstream block present for core entries
+
+```
+Given:  reg with one core entry (source.type="core", upstream.owner="some-owner")
+When:   out, _ := Serialize(reg)
+        reg2, _ := ParseRegistry(bytes.NewReader(out))
+Then:   reg2.Skills[0].Source.Upstream != nil
+        reg2.Skills[0].Source.Upstream.Owner == "some-owner"
+```
+
+Test: `TestSerializeUpstreamForCore`.
+
+**SC-425** — Golden: two-entry registry (one core, one custom)
+
+```
+Given:  reg := Registry{Version: "1", Skills: []Entry{
+          {ID: "core-skill", Path: "core-skill",
+           Source: Source{Type: "core", Upstream: &Upstream{Owner: "acme"}},
+           Install: Install{DefaultScope: "global",
+                            Targets: []string{"claude", "opencode", "codex"}},
+           Lifecycle: Lifecycle{UpdateStrategy: "vendor-merge"}},
+          {ID: "my-skill", Path: "my-skill",
+           Source: Source{Type: "custom"},
+           Install: Install{DefaultScope: "global",
+                            Targets: []string{"claude", "opencode", "codex"}},
+           Lifecycle: Lifecycle{UpdateStrategy: "overlay-only"}},
+        }}
+When:   out, _ := Serialize(reg)
+        (on first run with -update flag, write out to testdata/golden/two_entry.yaml)
+Then:   bytes.Equal(out, goldenBytes)       // golden match
+        ParseRegistry succeeds on out
+        validateEntry passes for both entries
+```
+
+Test: `TestSerializeGoldenTwoEntry` (table-driven golden pattern per go-testing skill).
+
+---
+
+#### `skills add`
+
+**SC-426** — Success path
+
+```
+Given:  tmp := t.TempDir()
+        write minimal valid registry to tmp/skills.registry.yaml (one custom entry "existing")
+        write matching manifest to tmp/overlay.manifest with row "existing/SKILL.md custom"
+        os.MkdirAll(tmp/skills/foo) and write tmp/skills/foo/SKILL.md
+When:   AddCore(
+          []string{"--registry", tmp+"/skills.registry.yaml",
+                   "--manifest", tmp+"/overlay.manifest",
+                   "--source-root", tmp+"/skills", "foo"},
+          ..., stdout, stderr, exitFn)
+Then:   exit code 0
+        ParseRegistry(registry file) succeeds
+        returned registry has id="foo" at end of Skills slice
+        registry entry for "foo" has source.type="custom", defaultScope="global",
+          targets=[claude,opencode,codex], updateStrategy="overlay-only"
+        overlay.manifest contains line "foo/SKILL.md custom"
+        Validate(registry, manifest) returns zero divergences
+```
+
+Test: `TestAddCoreSuccess` in `engine/skills/lifecycle_test.go`.
+
+**SC-427** — Missing SKILL.md
+
+```
+Given:  valid registry (no "foo" entry); skills/foo/ dir exists but SKILL.md absent
+When:   AddCore([..., "foo"], ...)
+Then:   exit code != 0
+        stderr contains non-empty error message mentioning "foo"
+        registry file is byte-unchanged (stat shows same mtime or byte comparison)
+        manifest file is byte-unchanged
+```
+
+Test: `TestAddCoreMissingSkillMD`.
+
+**SC-428** — ID already present
+
+```
+Given:  valid registry containing entry with id="foo"; skills/foo/SKILL.md exists
+When:   AddCore([..., "foo"], ...)
+Then:   exit code != 0
+        stderr contains error message
+        registry file is byte-unchanged
+```
+
+Test: `TestAddCoreIDAlreadyPresent`.
+
+**SC-429** — Atomic safety: registry temp write fails
+
+```
+Given:  valid registry; skills/foo/SKILL.md present; registry directory made read-only
+        (chmod 0555 on the dir so temp file creation fails)
+When:   AddCore([..., "foo"], ...)
+Then:   exit code != 0
+        original registry file content unchanged
+        original manifest content unchanged
+```
+
+Test: `TestAddCoreRegistryWriteFailureIsAtomic`. (Use `t.TempDir`; chmod dir before call.)
+
+**SC-430** — Validates before write: bad entry rejected
+
+```
+Given:  a custom AddCore implementation where the entry is constructed with an
+        invalid updateStrategy (inject via table test or a wrapper)
+When:   the validate-before-write check runs
+Then:   exit code != 0; registry unchanged
+```
+
+Test: `TestAddCoreValidateBeforeWrite`. (Can be unit-tested on the pure AddEntry helper.)
+
+---
+
+#### `skills remove`
+
+**SC-431** — Success path
+
+```
+Given:  valid registry with entries ["existing", "foo", "other"]
+        manifest with rows "existing/SKILL.md custom", "foo/SKILL.md custom",
+          "other/SKILL.md custom"
+When:   RemoveCore([..., "foo"], ...)
+Then:   exit code 0
+        ParseRegistry(registry) returns skills ["existing", "other"] in that order
+        manifest does NOT contain "foo/SKILL.md"
+        manifest DOES contain "existing/SKILL.md custom" and "other/SKILL.md custom"
+        Validate(registry, manifest) returns zero divergences
+```
+
+Test: `TestRemoveCoreSuccess`.
+
+**SC-432** — ID absent
+
+```
+Given:  valid registry without id="foo"
+When:   RemoveCore([..., "foo"], ...)
+Then:   exit code != 0
+        stderr contains error message
+        registry file byte-unchanged
+```
+
+Test: `TestRemoveCoreIDAbsent`.
+
+**SC-433** — Skill dir not deleted
+
+```
+Given:  valid registry with "foo"; skills/foo/SKILL.md exists
+When:   RemoveCore([..., "foo"], ...)
+Then:   exit code 0
+        skills/foo/SKILL.md still exists (os.Stat does not return an error)
+```
+
+Test: `TestRemoveCoreDoesNotDeleteDir`.
+
+**SC-434** — Atomic safety: manifest temp write fails
+
+```
+Given:  valid registry with "foo"; manifest directory made read-only after
+        registry temp is written (or inject manifest write error)
+When:   RemoveCore([..., "foo"], ...)
+Then:   exit code != 0
+        (if both renames blocked by dual-temp contract) registry is byte-unchanged
+```
+
+Test: `TestRemoveCoreManifestWriteFailureIsAtomic`.
+
+---
+
+#### Add + Remove cycle
+
+**SC-435** — Validate stays aligned through add+remove
+
+```
+Given:  minimal valid registry (one entry "base") + matching manifest
+        skills/new-skill/SKILL.md present
+When:   AddCore([..., "new-skill"], ...)   // step 1
+        RemoveCore([..., "new-skill"], ...) // step 2
+Then:   after step 1: Validate returns zero divergences; "new-skill" in registry
+        after step 2: Validate returns zero divergences; "new-skill" NOT in registry
+        "base" entry still present and unchanged after both operations
+```
+
+Test: `TestAddRemoveCycleValidateAligned`.
+
+---
+
+#### CLI dispatch
+
+**SC-436** — SkillsCore dispatches add and remove
+
+```
+Given:  in-memory setup with valid registry + SKILL.md present (injected via mocks)
+When:   SkillsCore("add", [..., "new-id"], ...) → should not emit "unknown verb"
+        SkillsCore("remove", [..., "some-id"], ...)
+Then:   neither call writes "unknown skills verb" to stderr
+```
+
+Test: `TestSkillsCoreDispatchAddRemove`.
+
+**SC-437** — Unknown verb message includes add and remove
+
+```
+Given:  SkillsCore("bogus", [], ...)
+When:   called
+Then:   exit code 1
+        stderr contains both "add" and "remove" as supported verbs
+```
+
+Test: `TestSkillsCoreUnknownVerbMessage`.
+
+**SC-438** — Zero stdlib-only imports (build-time assertion)
+
+```
+Given:  go list -f '{{join .Imports "\n"}}' ./engine/skills/...
+Then:   no line matches a non-stdlib import path that was not present before this slice
+```
+
+Can be checked as a `go build` pass in CI or as a comment-enforced manual gate.
