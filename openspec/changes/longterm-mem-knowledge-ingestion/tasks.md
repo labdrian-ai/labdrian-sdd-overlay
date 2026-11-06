@@ -310,23 +310,27 @@ the owner's decision D3 (`odd/tasks/phase9-c22-knowledge-ingestion.md`), taken b
 
 ## Phase 3: Full Verification (after all four slices land)
 
-- [ ] 3.1 `cd longterm-mem && go vet ./... && go test ./...`
-- [ ] 3.2 `cd engine && go vet ./... && go test ./...`
-- [ ] 3.3 Confirm `net_allowlist_test.go`'s allowlist still holds exactly one entry and no `.go` file
+- [x] 3.1 `cd longterm-mem && go vet ./... && go test ./...`
+- [x] 3.2 `cd engine && go vet ./... && go test ./...`
+- [x] 3.3 Confirm `net_allowlist_test.go`'s allowlist still holds exactly one entry and no `.go` file
   added or modified by this change imports `net` or `net/http` (re-run the two allowlist tests named
   in 2a.14/2b.11 as the final confirmation after all slices are merged)
-- [ ] 3.3a Confirm the L11 invariants after all slices are merged: `knownDebt` in
+- [x] 3.3a Confirm the L11 invariants after all slices are merged: `knownDebt` in
   `longterm-mem/architecture_test.go` is still empty; `internal/ingest` still reaches no file, process,
   clock or adapter, tests included (`TestIngestReachesNothingAmbient`); `cmd/longterm-mem` is still the
   only package that imports `internal/sourcefs`; every caller of `ingest.SourceID` still resolves the
   origin first (`TestEveryCallerOfSourceIDResolvesTheOriginFirst`); and no `.go` file added by this
   change outside `internal/sourcefs` names `os`
-- [ ] 3.4 Confirm no Go source path introduced by this change opens Engram's database in a writable
+- [x] 3.4 Confirm no Go source path introduced by this change opens Engram's database in a writable
   mode — `longterm-mem/internal/engram/store.go` stays untouched and read-only; no new `sql.Open`/DSN
   construction touching Engram appears anywhere in `longterm-mem/internal/ingest`
-- [ ] 3.5 Run the full R-001/R-002/R-003/R-004 acceptance checklist (added in 1b.4) against real
+- [x] 3.5 Run the full R-001/R-002/R-003/R-004 acceptance checklist (added in 1b.4) against real
   Engram records during `sdd-verify`; record results honestly in the verify report, including any
   scenario that could not be exercised
-- [ ] 3.6 Confirm `skills/_shared/ingested-observation-contract.md` has no `skills.registry.yaml` row
+  - Amended by C22 T7 (2026-11-06): run against an isolated memorycard database, the owner's answer
+    to D4. T6 evidence is in `odd/tasks/phase9-c22-knowledge-ingestion.md`, L30: scenarios 1-3 pass;
+    scenario 4 is unsupported for memorycard and is recorded as not exercisable, per D7.
+    The Go checks use `GOTOOLCHAIN=go1.26.1`, matching this module's CI toolchain.
+- [x] 3.6 Confirm `skills/_shared/ingested-observation-contract.md` has no `skills.registry.yaml` row
   and is excluded from `ManifestView` (per `engine/skills/manifest.go`'s `infraPrefixes`), and that
   `skills/knowledge-ingestion/` has exactly the one row added in 1b.2
