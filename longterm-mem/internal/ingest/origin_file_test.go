@@ -58,6 +58,8 @@ func TestSourceIDOfAnOverride(t *testing.T) {
 		{"beside a relative path", Origin{Kind: KindFile, URI: "notes/a.md", Override: "repo://openspec/specs/x.md"}, "x-8bfa69fe"},
 		{"beside no path", Origin{Kind: KindFile, Override: "repo://openspec/specs/x.md"}, "x-8bfa69fe"},
 		{"the readable part is the base name without its extension", Origin{Kind: KindFile, Override: "repo://openspec/specs/Guide v2.md"}, "guide-v2-31db09a7"},
+		{"a trailing slash is passed over in the readable part, not in the hash", Origin{Kind: KindDirectory, Override: "repo://a/specs/"}, "specs-d4cc6778"},
+		{"an override with no base name has no readable part", Origin{Kind: KindDirectory, Override: "/"}, "-8a5edab2"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

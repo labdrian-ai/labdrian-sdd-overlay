@@ -211,7 +211,9 @@ so it wires nothing: the change that adds the first command that ingests builds
 identity is `Origin.Override`, not `Origin.URI` (the owner's decision; `design.md`, open questions):
 `SourceID` takes a non-empty `Override` as it is and does not read `URI`, `ResolveOrigin` returns it
 unchanged, and on a URL or a pasted origin it is ignored. The `Origin` that 2b.4 builds for a `Path`
-request carries the request's `Override`.
+request carries the request's `Override`. A directory's `Override` is the id of that directory only: the
+files a scan finds in it never inherit it, and how a scan request with an `Override` identifies them is
+the owner's decision D3 (`odd/tasks/phase9-c22-knowledge-ingestion.md`), taken before 2b.5 is built.
 
 - [ ] 2b.1 RED `longterm-mem/internal/ingest/extract_test.go` (new): `Extract` request-validation
   table, over an in-memory `SourceReader` (no file is touched) — `Text` and `Path` both set errors;
