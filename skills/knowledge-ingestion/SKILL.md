@@ -34,7 +34,8 @@ There is exactly one sanctioned way for external knowledge to enter long-term me
    anything.
 2. **Save** the extracted content with memorycard's `mem_save`, using exactly the field and
    metadata shape defined in `skills/_shared/ingested-observation-contract.md`
-   (`topic_key`, `title`, `type: "discovery"`, `body` = body → `---` → provenance block).
+   (`topic_key`, `title`, `type: "discovery"`, `body` = body → `---` → provenance block;
+   for a manifest, the provenance block first).
 3. **Promote** the resulting observation with `longterm-mem`'s `promote` (the `promote` MCP
    tool with `source: "memorycard"` and the memorycard id in `engram_id`, or CLI
    `promote --source memorycard --id N`, N being the memorycard id).
