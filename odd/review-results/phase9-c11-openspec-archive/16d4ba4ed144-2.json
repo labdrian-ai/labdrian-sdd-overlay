@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ebd620e092ead62fc11b57adaf881543dd30146a",
+    "head": "16d4ba4ed1446317c149fbdfed3d0719ea94443b",
+    "diff_sha256": "72ef7da0e7de5bb3da708e8fbe88d4191cc88d5bff314c177e7a26b2aec879ba",
+    "paths": [
+      "openspec/specs/skill-manifest-gen/spec.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "ebd620e092ead62fc11b57adaf881543dd30146a",
+      "head": "16d4ba4ed1446317c149fbdfed3d0719ea94443b",
+      "diff_sha256": "72ef7da0e7de5bb3da708e8fbe88d4191cc88d5bff314c177e7a26b2aec879ba"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "openspec/specs/skill-manifest-gen/spec.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "openspec/specs/skill-manifest-gen/spec.md:9",
+        "severity": "SUGGESTION",
+        "claim": "The sentence says `runSkillsCore` dispatches the verb through the table in `engine/cmd/skills_cli.go`. That is slightly imprecise. `runSkillsCore` in engine/cmd/skills.go only builds the ports (`newSkillsDeps`) and calls `runSkillsCoreWith`. `runSkillsCoreWith` does the `skillsCLIVerbs[verb]` lookup. The table maps `sync-manifest` to `skillsSync`, which is defined in engine/cmd/skills_overlay_cli.go, not skills_cli.go. A reader following the sentence will land on a wrapper, not the dispatcher. This is minor and does not mislead on behaviour.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/skills.go:22-41",
+          "engine/cmd/skills_cli.go:31-38",
+          "engine/cmd/skills_overlay_cli.go:151"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "openspec/specs/skill-manifest-gen/spec.md:9",
+        "severity": "SUGGESTION",
+        "claim": "The sentence says `SyncCore` \"no longer exist[s]\". That holds for identifiers. But a stale comment at engine/skills/sync.go:87 still reads \"SyncCore will exit 1\", so a grep for the name finds a hit. This does not make the spec wrong. The comment is stale code context that now contradicts the spec's claim.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "pre-existing",
+        "proof_refs": [
+          "engine/skills/sync.go:87"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the diff: it changes only the one sentence on line 9 of openspec/specs/skill-manifest-gen/spec.md.",
+      "F1 of the previous review is fixed. engine/skills/skills.go does not exist (Glob returned no files). The new sentence says `engine/skills/skills.go` no longer exists, and that is true.",
+      "Grep for `SyncEvent|SyncCore|SkillsCore` in engine/ shows no type, func or var definitions. The only non-test hit for `SyncCore` is the comment at engine/skills/sync.go:87, and the `SkillsCore` hits are substrings of `runSkillsCore` and `runSkillsCoreWith`. So the \"no longer exist\" claim holds for identifiers.",
+      "`SyncManifest` has the signature ([]byte, ChangeReport, error) in engine/skills/sync.go:75, and `app.SyncManifest(p SyncPorts, in SyncInput)` exists in engine/skills/app/sync.go:44. Both cited paths are correct.",
+      "`skillsCLIVerbs` in engine/cmd/skills_cli.go:31-38 maps \"sync-manifest\" to `skillsSync`, so the table claim is true. The wrapper-versus-dispatcher imprecision is recorded in F1.",
+      "The change touches only prose in a spec file, so there is no code, test, secret, permission, path-escape or exec/net risk.",
+      "I did not run any commands or tests."
+    ]
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "W=/home/labdrian/labdrian-sdd-overlay-worktrees/review-16d4ba4ed144; rg -n 'skillsCLIVerbs\\[verb\\]|^func runSkillsCore' $W/engine/cmd/skills.go; rg -n '^func skillsSync' $W/engine/cmd",
+      "output": "engine/cmd/skills.go:22 func runSkillsCore (a wrapper), :28 func runSkillsCoreWith, :34 run, ok := skillsCLIVerbs[verb] (the lookup is in runSkillsCoreWith). skillsSync is defined at engine/cmd/skills_overlay_cli.go:152. The intro names runSkillsCore as the dispatcher.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "rg -n 'SyncCore' /home/labdrian/labdrian-sdd-overlay-worktrees/review-16d4ba4ed144/engine/skills/sync.go",
+      "output": "87:\t// error — SyncCore will exit 1 without touching overlay.manifest. The comment predates the candidate; the intro's 'no longer exist' claim holds for identifiers.",
+      "base_result": "reproduced"
+    }
+  ]
+}

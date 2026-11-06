@@ -1,0 +1,25 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "cd /home/labdrian/labdrian-sdd-overlay-worktrees/review-f7f409eb79a6 && rg -n '^func (\\([^)]*\\) )?(SyncManifest|SyncCore|SkillsCore)\\b' engine; rg -n 'SyncCore|SkillsCore' engine/skills; rg -n 'sync-manifest' engine/cmd/skills_cli.go; rg -n -A3 '^\\*\\*R-(599|604)\\*\\*' openspec/specs/skill-manifest-gen/spec.md; rg -n -o '.{80}(SyncManifest|SyncCore|SkillsCore).{80}' openspec/decisions/standalone-platform-roadmap.md",
+      "output": "Only two SyncManifest funcs exist: engine/skills/sync.go:75 `SyncManifest(reg Registry, manifest []byte) ([]byte, ChangeReport, error)` and engine/skills/app/sync.go:44 `SyncManifest(p SyncPorts, in SyncInput) (SyncResult, error)`. R-590 says it returns `([]byte, []SyncEvent)`; no such return exists. No `func SyncCore` or `func SkillsCore` exists in engine/skills; the only `SyncCore` hit is a comment at engine/skills/sync.go:87. engine/cmd/skills_cli.go:27 holds the verb list and :38 maps `\"sync-manifest\": skillsSync`. R-599 and R-601..R-603 name SyncCore, R-604 says SkillsCore dispatches in `engine/skills/skills.go`. The intro (spec.md:9) and roadmap line 76 do not say the names changed. The finding cites line 15; the intro is at line 9.",
+      "base_result": "reproduced"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "cd /home/labdrian/labdrian-sdd-overlay-worktrees/review-f7f409eb79a6 && rg -n -A3 '^\\*\\*R-(590|596|608|609)\\*\\*' openspec/specs/skill-manifest-gen/spec.md; git show c68d5310:openspec/changes/skill-manifest-gen/specs/spec.md | rg -n -A2 '^\\*\\*R-109'",
+      "output": "R-609 (spec.md:133-135): SyncCore SHALL NOT read or write skills.registry.yaml. R-608 (:126-129) requires a non-zero exit on registry read failure and registry parse error; R-590 and R-596 take `reg Registry` as input. The intro has no note. At base the same contradiction is in the source text (R-109 at :155-156, R-108 at :148); the canonical file does not exist at base.",
+      "base_result": "reproduced"
+    },
+    {
+      "id": "F3",
+      "result": "reproduced",
+      "command": "cd /home/labdrian/labdrian-sdd-overlay-worktrees/review-f7f409eb79a6 && rg -c 'requirement above this heading' openspec/specs/skill-manifest-gen/spec.md; awk 'NR<7' openspec/specs/skill-manifest-gen/spec.md; git show c68d5310:openspec/changes/skill-manifest-gen/specs/spec.md | rg -n 'requirement above'",
+      "output": "The sentence occurs once, in the intro at line 9. Above the heading are only lines 1-6: the title, `## Purpose` and the Purpose sentence; no requirement, so the clause has no target. At base the source has no such sentence and the canonical file does not exist.",
+      "base_result": "not-reproduced"
+    }
+  ]
+}
