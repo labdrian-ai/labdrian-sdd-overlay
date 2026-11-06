@@ -1,0 +1,18 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "Scratch copy /tmp/tmp.udDn5O9Szk/lm (head fcfcfd3e27a1), throwaway internal/ingest/probe_test.go with the real sourcefs.Reader{}, Path=<tmp>/a.md/b.md where a.md is a file, plus <tmp>/missing.md as control: go test ./internal/ingest -run TestProbeF1 -v; same probe on base e946c79d via git archive",
+      "output": "Head a.md/b.md: err=<nil> sources=0 skipped=[{Code:unreadable Detail:lstat .../a.md/b.md: not a directory}]. Head missing.md: err=ingest: lstat .../missing.md: no such file or directory. Base a.md/b.md: err=ingest: lstat .../a.md/b.md: not a directory, skipped=[]. ENOTDIR went from a request error on base to a successful call with an unreadable skip on head.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "Read review-fcfcfd3e27a1/longterm-mem/internal/ingest/extract.go:60-180 and source.go:1-50",
+      "output": "extract.go:161 reads the whole file before extract.go:165-167 checks len(data) > limit; extract.go:74-75 says MaxSourceBytes bounds what is read; nothing at the check says it is a correctness check and not a memory bound.",
+      "base_result": "not-run"
+    }
+  ]
+}

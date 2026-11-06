@@ -1,0 +1,25 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "rg -n 'c%04d' review-e946c79deebd/longterm-mem/internal/ingest/extract.go",
+      "output": "208: fmt.Sprintf(\"c%04d pending\", i+1); 221: fmt.Sprintf(\"%s/c%04d\", topic, c.Index). The format appears twice.",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "Read extract.go:201-223; rg -n 'Total' internal/ingest/chunk.go header.go",
+      "output": "extract.go:201 n := len(chunks); line 222 titles with c.Index and n; the header takes c.Total (chunk.go:29), filled as len(pieces) at chunk.go:306. They agree only because ChunkText fills both consistently. No divergence probe run.",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F3",
+      "result": "reproduced",
+      "command": "Read extract_test.go:120-140 and 441-462; rg -n 'Records\\[1:\\]|range .*Records' extract_test.go",
+      "output": "The cited range 120-140 holds validation cases; the assumption is at 441-462: line 455 treats records after index 0 as chunks and the subtest never asserts Records[0].Role == RoleManifest (asserted only at 484-486 in another subtest). The claim holds at the corrected location.",
+      "base_result": "not-run"
+    }
+  ]
+}

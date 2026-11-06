@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "3ce397065ab42c0ba05e8a2bfeec6e7d03c41459",
+    "head": "da693aeaedb6b75b36f71cffa2c9d7d9aac69c6b",
+    "diff_sha256": "e903ddd3667193a34d958c2fc0c3838322a116809afd6f3b1468aef990e008a6",
+    "paths": [
+      "odd/review-results/phase9-c22-knowledge-ingestion/3ce397065ab4-1.sweep.json",
+      "odd/review-results/phase9-c22-knowledge-ingestion/3ce397065ab4-2.json",
+      "odd/review-results/phase9-c22-knowledge-ingestion/3ce397065ab4-2.verifier.json",
+      "odd/review-results/phase9-c22-knowledge-ingestion/491ee351931c-1.sweep.json",
+      "odd/review-results/phase9-c22-knowledge-ingestion/491ee351931c-2.json",
+      "odd/review-results/phase9-c22-knowledge-ingestion/491ee351931c-2.verifier.json",
+      "odd/review-results/phase9-c22-knowledge-ingestion/de1a28f4c9fc-1.sweep.json",
+      "odd/review-results/phase9-c22-knowledge-ingestion/de1a28f4c9fc-2.exempt.json",
+      "odd/tasks/phase9-c22-knowledge-ingestion.md"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git show --format= --name-only da693aea",
+        "result": "pass",
+        "output": "Nine paths: eight under odd/review-results/phase9-c22-knowledge-ingestion/ and odd/tasks/phase9-c22-knowledge-ingestion.md. No other path."
+      },
+      {
+        "command": "git show --format= --name-only da693aea -- 'odd/review-results/*.json' | xargs -I{} jq -e . {} >/dev/null; echo rc=$?",
+        "result": "pass",
+        "output": "rc=0"
+      },
+      {
+        "command": "git log -1 --format=%B da693aea",
+        "result": "pass",
+        "output": "chore(odd): record C22 T2 and its review records / Risk: none; the last non-empty line is Risk: none."
+      },
+      {
+        "command": "rg -n '\\\\u[0-9a-fA-F]{4}' odd/tasks/phase9-c22-knowledge-ingestion.md",
+        "result": "pass",
+        "output": "No output, rc=1 (no matches)."
+      },
+      {
+        "command": "git diff da693aea^ da693aea -- odd/tasks/phase9-c22-knowledge-ingestion.md",
+        "result": "pass",
+        "output": "Three hunks: the T2 line checked with its commit field; L5 appended after L4; a Carried to T3 line appended after L5. No earlier Log line edited."
+      }
+    ]
+  }
+}

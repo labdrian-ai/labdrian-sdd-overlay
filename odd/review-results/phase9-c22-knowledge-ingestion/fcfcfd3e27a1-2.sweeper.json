@@ -1,0 +1,15 @@
+{
+  "kind": "sweeper",
+  "base": "e946c79deebde4b3d28c13c292959d9f400d6839",
+  "head": "fcfcfd3e27a1c653cbe3311115ab056e3f0077de",
+  "diff_sha256": "b9d1b41ab0ddbd323bec97718a5413981eaf42cee869c7c586c78137a8811d45",
+  "sweep": "fcfcfd3e27a1-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T2 nilerr longterm-mem: longterm-mem/internal/ingest/extract.go: error is not nil but it returns nil",
+      "disposition": "live",
+      "evidence": "longterm-mem/internal/ingest/extract.go:132-134 returns a Skip with code unreadable and a nil error on purpose: an Lstat failure other than fs.ErrNotExist is a per-item failure, as a failed ReadFile is (review finding 1ecd0fe2be27-2 F2, fixed in fcfcfd3e). The error is carried in Skip.Detail, not dropped. TestExtractSkipsAPathItCannotLookAt pins it, and the mutant that makes it a request error again is killed."
+    }
+  ]
+}

@@ -53,7 +53,7 @@ func (r Reader) ReadFile(path string) ([]byte, error) {
 		return nil, err
 	}
 	if entry.Kind != ingest.EntryFile {
-		return nil, fmt.Errorf("sourcefs: %s is a %s, not a file: not read", path, entry.Kind)
+		return nil, fmt.Errorf("sourcefs: %s is of kind %s, not a file: not read", path, entry.Kind)
 	}
 	return os.ReadFile(path)
 }
