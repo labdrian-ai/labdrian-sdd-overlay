@@ -1,0 +1,11 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "Probe test in a scratch copy /tmp/tmp.rEbaizdAyV/m of the worktree's longterm-mem module: internal/sourcefs/probe_test.go makes a fifo with syscall.Mkfifo and logs the error of Reader{}.ReadFile(fifo); go test -run TestProbeFifo -v ./internal/sourcefs/. Also read longterm-mem/internal/sourcefs/sourcefs.go:55-57 and longterm-mem/internal/ingest/source.go:35-43 at head 3ce397065ab42c0ba05e8a2bfeec6e7d03c41459.",
+      "output": "ERR: sourcefs: /tmp/TestProbeFifo1829912886/001/pipe is a other, not a file: not read. sourcefs.go:56 formats \"sourcefs: %s is a %s, not a file: not read\" and source.go:42 defines EntryOther as \"other\".",
+      "base_result": "not-run"
+    }
+  ]
+}

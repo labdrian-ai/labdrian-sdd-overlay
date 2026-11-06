@@ -9,13 +9,38 @@ import (
 // package owns, so that nothing in it reaches a file, a directory or the process. internal/sourcefs answers it on
 // a file system, and the composition root hands the answer to the ingestion use case.
 //
-// Today it answers one question, where a relative path begins. The questions that reading a source asks (what an
-// entry is, without following a link, and how big; its bytes; the names in a directory) join it with the use
-// case that asks them, in these terms: openspec/changes/longterm-mem-knowledge-ingestion, tasks 2b.2 and 2b.6.
+// It answers where a relative path begins and what reading a source asks: what an entry is, without following a
+// link, and how big; its bytes; the names in a directory. Every answer is in this package's own types, and an
+// entry that is not there fails with an error that satisfies errors.Is(err, fs.ErrNotExist).
 type SourceReader interface {
 	// WorkingDirectory is the absolute directory a relative path is taken to be relative to.
 	WorkingDirectory() (string, error)
+	// Lstat reports the kind of the entry at path and, for a file, its size. A link is reported as a link and
+	// never followed.
+	Lstat(path string) (Entry, error)
+	// ReadFile returns the bytes of the regular file at path, all of them, and refuses any other kind (a link is
+	// refused, never followed). Bounding the size is the caller's, from the Size Lstat reports.
+	ReadFile(path string) ([]byte, error)
+	// ReadDir returns the names (not paths) of every entry in the directory at path, links and other kinds
+	// included, without . and .., in no promised order; the kind of each is Lstat's to tell.
+	ReadDir(path string) ([]string, error)
 }
+
+// Entry is what Lstat reports of a path. Size is the size of a file, and zero for every other kind.
+type Entry struct {
+	Kind EntryKind
+	Size int64
+}
+
+// EntryKind is the kind of an entry, as Lstat sees it without following a link.
+type EntryKind string
+
+const (
+	EntryFile      EntryKind = "file"
+	EntryDirectory EntryKind = "directory"
+	EntrySymlink   EntryKind = "symlink"
+	EntryOther     EntryKind = "other"
+)
 
 // ResolveOrigin makes the file or directory an origin names absolute: a relative path begins at the reader's
 // working directory, as it did for the operator who typed it. Any other origin, and a path that is already

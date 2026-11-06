@@ -1,0 +1,32 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "In the scratch copy /tmp/tmp.tew8AuZMHM/longterm-mem, a probe test at internal/sourcefs/probe_test.go writes a file, symlinks to it and calls Reader{}.ReadFile(link): go test -run TestProbeFollow -v ./internal/sourcefs/; and a read of the docs in internal/ingest/source.go and internal/sourcefs/sourcefs.go",
+      "output": "The probe printed bytes=\"target-bytes\" err=<nil>: ReadFile on a symlink returns the target's bytes. The port doc (source.go:21) and the adapter doc (sourcefs.go:44) say only that ReadFile returns the bytes of the file at path; neither mentions following links or having no size bound, while Lstat's doc says never followed. The adapter is os.ReadFile(path).",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "cd /home/labdrian/labdrian-sdd-overlay-worktrees/review-491ee351931c/longterm-mem && GOOS=windows go vet ./internal/sourcefs/",
+      "output": "vet: internal/sourcefs/sourcefs_test.go:200:20: undefined: syscall.Mkfifo (exit 1); the test package does not compile for windows.",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F3",
+      "result": "reproduced",
+      "command": "In the scratch copy, Lstat changed to call _, _ = os.Stat(path) before os.Lstat, then go test -run TestLstat -v ./internal/sourcefs/",
+      "output": "The mutant passed every subtest of TestLstatTellsKindsApartWithoutFollowingALink: no test fails for an adapter that stats the target and still reports EntrySymlink.",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F4",
+      "result": "reproduced",
+      "command": "Read internal/ingest/source.go lines 23-24 in the worktree",
+      "output": "The ReadDir doc does not say whether links or non-regular entries are listed; the adapter lists everything through os.ReadDir.",
+      "base_result": "not-run"
+    }
+  ]
+}
