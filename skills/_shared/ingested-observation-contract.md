@@ -120,7 +120,7 @@ source, which R-004 forbids.
 | Source-Kind | Canonical origin | Human part |
 |---|---|---|
 | `url` | lowercase scheme+host, default port stripped, fragment stripped, query kept, trailing `/` stripped unless the path is `/` | `host + path` |
-| `file` | cleaned absolute path, or the caller-supplied `Origin.URI` override when present | base name without extension |
+| `file` | cleaned absolute path, or `Origin.Override` when it is not empty, taken as it is (neither cleaned nor joined to a directory) | base name without extension (of the override when present) |
 | `directory` | as `file`, applied per contained file | as `file` |
 | `pasted` | `pasted:` + the operator-supplied label (required) | the label |
 

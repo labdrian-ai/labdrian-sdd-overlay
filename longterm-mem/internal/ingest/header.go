@@ -49,10 +49,14 @@ const (
 // Origin is what a record records as its source of record. The agent
 // supplies it; this package never learns an origin by reaching for it.
 type Origin struct {
-	Kind  SourceKind
-	URI   string // canonical origin; for KindFile/KindDirectory, the file path (or an override), absolute once ResolveOrigin has seen it
-	Title string
-	Label string // required for KindPasted, ignored otherwise
+	Kind SourceKind
+	URI  string // canonical origin; for KindFile/KindDirectory, the file path, absolute once ResolveOrigin has seen it
+	// Override is the identity a caller chooses for a KindFile/KindDirectory origin (for example
+	// repo://openspec/specs/x.md), so that one source has one id on every machine. When it is not empty, SourceID
+	// takes it byte for byte, neither cleaned nor joined to a directory, and does not read URI. Ignored otherwise.
+	Override string
+	Title    string
+	Label    string // required for KindPasted, ignored otherwise
 }
 
 // Header is the provenance block's field set (the ingested-observation
@@ -256,6 +260,12 @@ func canonicalOrigin(o Origin) (canonical, human string, err error) {
 	case KindURL:
 		return canonicalURL(o.URI)
 	case KindFile, KindDirectory:
+		if o.Override != "" {
+			// The caller's identity, taken as it is: cleaning it or joining it to a directory would make the id
+			// depend on the machine, which is what an override exists to avoid.
+			base := filepath.Base(o.Override)
+			return o.Override, strings.TrimSuffix(base, filepath.Ext(base)), nil
+		}
 		if o.URI == "" {
 			return "", "", errors.New("ingest: file/directory origin requires URI")
 		}

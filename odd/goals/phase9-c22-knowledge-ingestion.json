@@ -4,6 +4,8 @@
   "goal_id": "phase9-c22-knowledge-ingestion",
   "objective": "Close Phase 9 item C22: the tasks of odd/tasks/phase9-c22-knowledge-ingestion.md, so that Origin carries the explicit override field the owner chose on 2026-11-06, slice 2b of the longterm-mem-knowledge-ingestion change (the Extractor over the SourceReader port and the reading side of internal/sourcefs) is built, and the change is closed and archived.",
   "scope": "The specs S1-S5 of odd/tasks/phase9-c22-knowledge-ingestion.md; one workflow and one role chain for each task.",
+  "runtime_scope": "Claude Code, as the parent that runs the labdrian workflow and the role agents.",
+  "delivery_boundary": "Work-unit commits on the branches of odd/tasks/phase9-c22-knowledge-ingestion.md; push, pull requests and merges remain the owner's decisions under ordinary repository policy.",
   "constraints": [
     "The builder builds only a task the shaper designed.",
     "internal/ingest stays pure: no file system, process or network access outside the SourceReader port.",
