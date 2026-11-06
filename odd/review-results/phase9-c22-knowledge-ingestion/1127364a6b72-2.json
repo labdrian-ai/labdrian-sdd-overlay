@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "fcfcfd3e27a1c653cbe3311115ab056e3f0077de",
+    "head": "1127364a6b727305b316542b51805313c0c367de",
+    "diff_sha256": "2bd51978b2942d280c020d6a22d7efc4c18c6fd305114443b4fc784a298412de",
+    "paths": [
+      "longterm-mem/internal/ingest/extract.go",
+      "longterm-mem/internal/ingest/extract_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "fcfcfd3e27a1c653cbe3311115ab056e3f0077de",
+      "head": "1127364a6b727305b316542b51805313c0c367de",
+      "diff_sha256": "2bd51978b2942d280c020d6a22d7efc4c18c6fd305114443b4fc784a298412de"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/ingest/extract.go",
+        "longterm-mem/internal/ingest/extract_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the full diff at c22t3fix2.diff (2 files).",
+      "Read readFile in the head worktree, extract.go lines 115-176. F1 is resolved. Only fs.ErrPermission from Lstat becomes an 'unreadable' Skip. Every other Lstat error, including not-exist, ENOTDIR, ELOOP and ENAMETOOLONG, now returns a request error with Origin{} and a wrapped error, so errors.Is still works.",
+      "F2 is resolved. The comment at extract.go:167-168 says the post-read size check is a correctness check, not a memory bound, and that the Lstat Size is what stops a large file being read.",
+      "The Extractor doc comment now says MaxSourceBytes bounds what is read from a path. This is accurate and I found no problem with it.",
+      "The new test TestExtractRefusesAPathItCannotLookAtForAnyReasonButPermission asserts errors.Is on the Lstat error, an empty Result, and no reads. The memTree helper (lstatErr field, extract_test.go:30-47) supports it. The existing permission test at extract_test.go:517 still covers the Skip path.",
+      "I did not run the tests and did not read design.md OQ-6. The review context describes it, and the new behavior matches that description."
+    ]
+  }
+}

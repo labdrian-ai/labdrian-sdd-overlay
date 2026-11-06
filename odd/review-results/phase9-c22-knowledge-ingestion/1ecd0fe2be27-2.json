@@ -1,0 +1,96 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "721c0829f874de2fd15470e166dc910a52373801",
+    "head": "1ecd0fe2be27123e90d9b3cf737ede90a298fe08",
+    "diff_sha256": "71d1f7a8d78ff892e47f9c16e96d6cb727eaff565df1cb3b8517267662da9d91",
+    "paths": [
+      "longterm-mem/internal/ingest/extract.go",
+      "longterm-mem/internal/ingest/extract_test.go",
+      "longterm-mem/internal/sourcefs/sourcefs.go",
+      "odd/tasks/phase9-c22-knowledge-ingestion.md",
+      "openspec/changes/longterm-mem-knowledge-ingestion/tasks.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "721c0829f874de2fd15470e166dc910a52373801",
+      "head": "1ecd0fe2be27123e90d9b3cf737ede90a298fe08",
+      "diff_sha256": "71d1f7a8d78ff892e47f9c16e96d6cb727eaff565df1cb3b8517267662da9d91"
+    },
+    "evidence": [
+      "Read the full diff file, including extract.go, extract_test.go, the sourcefs.go message change, the S3 and L6 edits in the task document, and the tasks.md 2b.1-2b.4 edits.",
+      "Read extract.go at head, lines 84-173 (Extract and readFile).",
+      "Read design.md lines 590-670 at head. The Request sketch lists Now as a plain field. Origin.URI is documented as 'for KindFile/KindDirectory, the path'. Neither says Now may be nil or that URI is refused beside Path.",
+      "Read chunk.go:20-44 (Chunk.Header, normalizeCRLF), and located ChunkText, ErrTooManyChunks, ResolveOrigin and SourceID.",
+      "Judgement on builder choice 1 (nil Now is a hard error): acceptable. 2b.1's list is a minimum, and the alternative is a nil-func panic in buildSource at extract.go. The tests pin it and tasks.md 2b.2 records it. It is reasonable but an addition to the spec.",
+      "Judgement on builder choice 2 (Path plus Origin.URI is a request error): defensible, because silent precedence would hide two sources of truth. It narrows the design sketch, which calls URI 'the path' for a file. The only record of the narrowing is the 'Done by C22 T3' note in tasks.md, and design.md was not amended.",
+      "Not run: no tests, builds or commands (read-only review)."
+    ],
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/ingest/extract.go:155-162",
+        "claim": "The size bound is enforced only against Lstat's Size, never against the bytes ReadFile returns. A file that grows between Lstat and ReadFile, or a reader whose Size disagrees with its bytes, passes MaxSourceBytes unbounded. A Text request is not bounded by MaxSourceBytes at all, so only the MaxChunks error limits it. Re-checking len(data) against the limit would close the gap.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "extract.go:152-155 compares entry.Size only",
+          "extract.go:84-111 never consults MaxSourceBytes for Text"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/ingest/extract.go:129-132",
+        "claim": "Any Lstat failure becomes a request error. This includes permission denied on a parent directory, which is a per-item failure equivalent to the 'unreadable' skip code. A single-file request therefore reports a hard error where ReadFile's failure reports a skip. The split is undocumented and untested. The only Lstat error the tests cover is not-exist.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "extract_test.go TestExtractRefusesAPathThatIsNotAFile covers only the missing-path case",
+          "extract.go:155-157 maps a ReadFile error to a skip"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/ingest/extract.go:141",
+        "claim": "origin.Kind is overwritten with KindFile after validate accepted KindDirectory for a Path request. A caller who passes KindDirectory with a file Path is silently reclassified, so the topic key becomes ingested/file/... instead of the kind the caller asked for. Either validate should require KindFile for a non-directory path, or the rewrite should be documented.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "extract.go:141 sets origin.Kind = KindFile",
+          "validate accepts KindFile or KindDirectory when Path is set"
+        ]
+      },
+      {
+        "id": "F4",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/ingest/extract.go:101-103",
+        "claim": "The 'empty' skip for a pasted-text request, whose Path comes from skipPath's Label branch, is untested. Every 'empty' case in the tests goes through a file. A regression in the Label fallback would pass the suite. The string(data) of a file is also never checked for valid UTF-8 before it enters Record.Content. Only the NUL sniff applies.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "extract_test.go TestExtractSkipsWhatOneFileCannotYield has file cases only",
+          "extract.go:165-171 skipPath"
+        ]
+      }
+    ],
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/ingest/extract.go",
+        "longterm-mem/internal/ingest/extract_test.go",
+        "longterm-mem/internal/sourcefs/sourcefs.go",
+        "odd/tasks/phase9-c22-knowledge-ingestion.md",
+        "openspec/changes/longterm-mem-knowledge-ingestion/tasks.md"
+      ],
+      "reason": ""
+    }
+  }
+}

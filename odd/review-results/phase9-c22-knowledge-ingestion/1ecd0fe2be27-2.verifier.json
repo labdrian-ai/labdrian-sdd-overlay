@@ -1,0 +1,32 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "Scratch copy /tmp/tmp.MPePajuw2m/ltm of review-1ecd0fe2be27/longterm-mem; probe internal/ingest/probe_a_test.go: go test ./internal/ingest -run TestProbeF1 -v (Lstat Size 1, ReadFile 100 bytes, MaxSourceBytes 10); read extract.go:148-162",
+      "output": "F1 sources=1 skipped=[] err=<nil>; the 100-byte file passed a 10-byte limit. extract.go:152 checks only entry.Size; len(data) is never checked.",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "Same scratch copy: go test ./internal/ingest -run TestProbeF2 -v (Lstat returns fs.ErrPermission); read extract.go:129-132",
+      "output": "F2 skipped=[] err=ingest: permission denied: a hard request error, no unreadable skip.",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F3",
+      "result": "reproduced",
+      "command": "Same scratch copy: go test ./internal/ingest -run TestProbeF3 -v (Path at a file, Origin.Kind=KindDirectory); read extract.go:141",
+      "output": "F3 origin kind=\"file\" header kind=\"file\", no error: extract.go:141 sets origin.Kind = KindFile unconditionally.",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F4",
+      "result": "reproduced",
+      "command": "rg -n 'pastedRequest|KindPasted|Text:' and rg -n 'empty' on review-1ecd0fe2be27/longterm-mem/internal/ingest/extract_test.go",
+      "output": "The empty-skip cases (lines 180-181) are Path requests; pastedRequest(\"\") at line 104 is the validation error case. No test sends whitespace-only pasted Text through the empty skip at extract.go:101-102.",
+      "base_result": "not-run"
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "kind": "sweep",
+  "base": "e946c79deebde4b3d28c13c292959d9f400d6839",
+  "head": "fcfcfd3e27a1c653cbe3311115ab056e3f0077de",
+  "diff_sha256": "b9d1b41ab0ddbd323bec97718a5413981eaf42cee869c7c586c78137a8811d45",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": []
+  },
+  "t2": [
+    {
+      "tool": "nilerr",
+      "module": "longterm-mem",
+      "new": [
+        "longterm-mem/internal/ingest/extract.go: error is not nil but it returns nil"
+      ]
+    }
+  ],
+  "t3": [],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

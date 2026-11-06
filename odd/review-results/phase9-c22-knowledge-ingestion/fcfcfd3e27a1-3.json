@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "e946c79deebde4b3d28c13c292959d9f400d6839",
+    "head": "fcfcfd3e27a1c653cbe3311115ab056e3f0077de",
+    "diff_sha256": "b9d1b41ab0ddbd323bec97718a5413981eaf42cee869c7c586c78137a8811d45",
+    "paths": [
+      "longterm-mem/internal/ingest/extract.go",
+      "longterm-mem/internal/ingest/extract_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "e946c79deebde4b3d28c13c292959d9f400d6839",
+      "head": "fcfcfd3e27a1c653cbe3311115ab056e3f0077de",
+      "diff_sha256": "b9d1b41ab0ddbd323bec97718a5413981eaf42cee869c7c586c78137a8811d45"
+    },
+    "evidence": [
+      "Read the full diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/c22t3fix.diff.",
+      "Read extract.go lines 75-260 at head in the worktree /home/labdrian/labdrian-sdd-overlay-worktrees/review-fcfcfd3e27a1.",
+      "Read source.go lines 10-68: the SourceReader contract, which promises errors.Is(err, fs.ErrNotExist) for a missing entry, and ResolveOrigin.",
+      "Grepped for the real reader: sourcefs.go:28-43 returns the raw os.Lstat error. The Total field is set from len(pieces) at chunk.go:306, so c.Total equals n and B-F2 is resolved.",
+      "A-F1: the post-ReadFile check at extract.go:165 gives too_large, with a test. The Text doc comment at extract.go:74-75 now says only MaxChunks bounds it. Resolved, but the file is still read in full before the check.",
+      "A-F2: a missing Path stays a request error (extract.go:129), and other Lstat errors become an unreadable skip (extract.go:132-135), with a test. Resolved, with the ENOTDIR caveat in F1.",
+      "A-F3: extract.go:138-140 refuses a file under a KindDirectory origin, with a test. A-F4: the whitespace-only Text test exists. B-F1: chunkSuffix is used at extract.go:225 and 238. B-F3: the Records[0] manifest assertion was added.",
+      "Nothing was run: no tests, build or vet."
+    ],
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/ingest/extract.go:129-135",
+        "claim": "The missing-path hard error (design.md:326) is detected only by errors.Is(err, fs.ErrNotExist). On Linux os.Lstat returns ENOTDIR when a parent component is a regular file, for example Path=/notes/a.md/b.md. It also returns ELOOP and ENAMETOOLONG. None of these satisfy fs.ErrNotExist, so before this change they were request errors and are now a successful call with an unreadable skip. For ENOTDIR, the path effectively does not exist. A typo'd Path can therefore exit success with zero sources, where the design asks for a hard error. No test pins this boundary.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/ingest/extract.go:129-135",
+          "longterm-mem/internal/sourcefs/sourcefs.go:28-31 passes the raw os.Lstat error through",
+          "longterm-mem/internal/ingest/source.go:14 promises ErrNotExist only for an entry that is not there"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/ingest/extract.go:161-167",
+        "claim": "The post-read check reports too_large, but the whole file has already been read into memory by then. The size bound still does not protect memory when Lstat under-reports, for example when the file grows between Lstat and read. The reader contract text at source.go:21-23 and the Text comment at extract.go:75 still describe MaxSourceBytes as bounding what is read. The fix makes the skip decision correct but leaves a small gap between the documented intent and the guarantee. A comment at the check saying it is a correctness check and not a memory bound would help.",
+        "evidence_class": "inferential",
+        "causal_disposition": "worsened",
+        "proof_refs": [
+          "longterm-mem/internal/ingest/extract.go:165-167",
+          "longterm-mem/internal/ingest/source.go:21-23",
+          "longterm-mem/internal/ingest/extract.go:74-75"
+        ]
+      }
+    ],
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/ingest/extract.go",
+        "longterm-mem/internal/ingest/extract_test.go"
+      ],
+      "reason": ""
+    }
+  }
+}

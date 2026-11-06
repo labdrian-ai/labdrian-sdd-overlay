@@ -1,0 +1,81 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "1ecd0fe2be27123e90d9b3cf737ede90a298fe08",
+    "head": "e946c79deebde4b3d28c13c292959d9f400d6839",
+    "diff_sha256": "172f4a22832993a78b93a250a7b24845eed7b998b601affe4da60c0178d3a5c7",
+    "paths": [
+      "longterm-mem/internal/ingest/extract.go",
+      "longterm-mem/internal/ingest/extract_test.go",
+      "longterm-mem/net_allowlist_test.go",
+      "openspec/changes/longterm-mem-knowledge-ingestion/tasks.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "1ecd0fe2be27123e90d9b3cf737ede90a298fe08",
+      "head": "e946c79deebde4b3d28c13c292959d9f400d6839",
+      "diff_sha256": "172f4a22832993a78b93a250a7b24845eed7b998b601affe4da60c0178d3a5c7"
+    },
+    "evidence": [
+      "Read the full diff file.",
+      "Read extract.go lines 90-240 at head: Extract tail, buildSource and the removed multi-chunk refusal.",
+      "Read chunk.go lines 1-60: Chunk.Header copies Index and Total into ChunkN and ChunkTotal.",
+      "Read header.go lines 105-215: Render omits Content-SHA256, Chunk and Split lines for a manifest and writes Chunks-Expected, Chunks-Saved and Chunk-Status.",
+      "Grep for MaxChunks: doc.go defines it as 9999, matching the c%04d width.",
+      "Did not read the S3/T3 text in odd/tasks, tasks.md 2b.7-2b.9 beyond the diff, design.md 590-690 or the record contract. Not run: no tests or builds."
+    ],
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/ingest/extract.go:208",
+        "claim": "The c%04d chunk-id format is written twice in buildSource: in the manifest's Chunk-Status lines at line 208 and in the chunk topic suffix at line 221. If one changes, the manifest's status entries stop matching the chunk topic keys. The initial 'pending' status string is also an unnamed literal. A small helper such as chunkSuffix(i) would remove the duplication.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/ingest/extract.go:208",
+          "longterm-mem/internal/ingest/extract.go:221"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/ingest/extract.go:222",
+        "claim": "A chunk's title uses the local n (len(chunks)) and c.Index, while the same record's header uses c.Total through Chunk.Header. The two counts agree only because ChunkText fills Total consistently. If they ever diverge, the title and the Chunk: x/y line would disagree. The code does not say which count is authoritative, and the tests check both only against the literal 3.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/ingest/extract.go:201",
+          "longterm-mem/internal/ingest/extract.go:222",
+          "longterm-mem/internal/ingest/chunk.go:26-35"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/ingest/extract_test.go:134",
+        "claim": "The provenance test treats Records[1:] as chunks. It checks distinct spans and distinct contents only by count, and does not check that the manifest is at index 0 before using that assumption. The manifest and chunk record checks sit in a different test, so a reordering fails with a confusing message here. The tests also never check that the chunk spans cover the source, or that the manifest's Chunk-Status entries line up with the chunk topic keys.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/ingest/extract_test.go:125-136"
+        ]
+      }
+    ],
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/ingest/extract.go",
+        "longterm-mem/internal/ingest/extract_test.go",
+        "longterm-mem/net_allowlist_test.go",
+        "openspec/changes/longterm-mem-knowledge-ingestion/tasks.md"
+      ],
+      "reason": ""
+    }
+  }
+}
