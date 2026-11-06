@@ -13,4 +13,4 @@ Never delete an exported symbol, verb, flag, config key or manifest row: report 
 Run the touched packages' tests before and after, deadcode -test and staticcheck after, the suite once; a deletion that turns a test red was live: restore it and record the test that proved it.
 Commit the sweep as one `chore(sweep): <what>` commit with its own `Risk:` trailer, or none, and return as your report the JSON object `{"commit": "<full sha>"|null, "candidates": [{"candidate": ..., "disposition": removed|corrected|live|finding, "evidence": ...}]}`, one entry for each candidate `labdrian review sweep` printed, with `commit` null when you committed nothing ("nothing to sweep" is a valid result); the parent stores it with `labdrian review record --role sweeper`.
 """
-model_reasoning_effort = "high"
+model_reasoning_effort = "medium"

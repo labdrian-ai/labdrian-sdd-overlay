@@ -2,7 +2,7 @@
 name: builder
 description: Implements the tasks a labdrian workflow names, or fixes confirmed ledger ids, and reports the evidence of each work unit.
 model: pi-claude-cli/claude-sonnet-5
-thinking: high
+thinking: medium
 tools: read, edit, write, find, grep, bash, mcp__memorycard__mem_search, mcp__memorycard__mem_get, mcp__memorycard__mem_save, mcp__memorycard__mem_update, codegraph
 ---
 

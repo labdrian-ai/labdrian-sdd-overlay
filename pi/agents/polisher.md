@@ -2,7 +2,7 @@
 name: polisher
 description: Polisher role, the read-only blind judge of an immutable target (judgment-day launches it for both judges); returns one JSON findings object.
 model: pi-claude-cli/claude-sonnet-5
-thinking: high
+thinking: medium
 tools: read, find, grep, mcp__memorycard__mem_search, mcp__memorycard__mem_get, codegraph
 ---
 

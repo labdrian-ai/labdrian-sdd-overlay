@@ -10,7 +10,7 @@ metadata:
 
 Chain: `[prototyper] → shaper → estimator → builder → [sweeper] → [polisher] → reviewer → delivery`.
 
-Parent: frontier, max effort. Tiers: `references/models.md`.
+Parent: frontier, medium effort. Tiers: `references/models.md`.
 
 ## Appends
 

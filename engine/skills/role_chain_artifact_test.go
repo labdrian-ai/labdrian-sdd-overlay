@@ -139,21 +139,22 @@ func TestRoleChainAppendsNameWorkflowOpenBeforeTheBuilder(t *testing.T) {
 	}
 }
 
-// The parent is frontier at max effort. The three tiers and the Codex spawn rule live in the reference,
+// The parent is frontier at medium effort. The three tiers and the Codex spawn rule live in the reference,
 // because the body is at the recommended token budget (v3 D15).
 func TestRoleChainSkillNamesTheParentModelAndPointsAtTheTiers(t *testing.T) {
 	_, _, body := roleChainSkill(t)
-	const line = "Parent: frontier, max effort. Tiers: `references/models.md`."
+	const line = "Parent: frontier, medium effort. Tiers: `references/models.md`."
 	if _, under := roleChainSections(body); !strings.Contains(under[""], line+"\n") {
 		t.Errorf("the text before the first heading must name the parent model, exactly:\n%s", line)
 	}
 	ref := readRepoFile(t, skillsRepoRoot(t), "skills/role-chain/references/models.md")
 	for _, fragment := range []string{
-		"frontier at max effort",
-		"Frontier, high", "shaper", "reviewer", "verifier", "`opus`", "pi-claude-cli/claude-opus-5",
-		"Mid, high", "builder", "polisher", "prototyper", "sweeper", "`sonnet`", "pi-claude-cli/claude-sonnet-5",
+		"frontier at medium effort",
+		"Frontier, medium", "shaper", "reviewer", "verifier", "`opus`", "pi-claude-cli/claude-opus-5",
+		"Mid, medium", "builder", "polisher", "prototyper", "sweeper", "`sonnet`", "pi-claude-cli/claude-sonnet-5",
 		"Light, low", "delivery", "`haiku`", "pi-claude-cli/claude-haiku-4-5",
 		"Sol; not Astra or Fable",
+		"Pass medium effort for yourself only when that spawn already accepts an effort flag",
 		"model_reasoning_effort",
 		"`labdrian review launch --runtime codex --model M` takes `--model` and no effort flag",
 		"spawn_agent",
