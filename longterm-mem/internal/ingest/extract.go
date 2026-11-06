@@ -146,7 +146,8 @@ func (e Extractor) locate(req Request) (Origin, Entry, *Skip, error) {
 		return Origin{}, Entry{}, nil, err
 	}
 	// Cleaned before it is looked at: the operating system follows a link named with a trailing slash or "/.", so
-	// an uncleaned path would let a link through as the directory it points at (D1).
+	// an uncleaned path would let a link through as the directory it points at (D1). Cleaning is lexical, as the
+	// scan's below() is: a ".." after a link ("/x/link/../y") names "/x/y", never what the link's target holds.
 	origin.URI = filepath.Clean(origin.URI)
 	entry, err := e.Reader.Lstat(origin.URI)
 	if errors.Is(err, fs.ErrPermission) {
