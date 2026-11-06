@@ -1,0 +1,19 @@
+{
+  "kind": "polisher",
+  "base": "68c4263b2ea997b4b31768cef7cea7050cb74179",
+  "head": "63254c3398b9791c1e00597c0dc48deebb2384b6",
+  "diff_sha256": "4ad6c0d225571a12aa830406e2e56b09e0a3b71f96c1b7ed079dbf7875bd285d",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff of 63254c33 (extract.go, extract_test.go, tasks.md) and the head files longterm-mem/internal/ingest/extract.go and its validate/buildSource/readText.",
+      "Traced the traversal guard in walk and below. Each listed name is joined and cleaned, then checked against the root with a strict prefix that includes the separator, before any Lstat, ReadFile or ReadDir. Names such as '..', '.', and '../x' land in outside_root with no reader call. Root '/' works. A '/notes/docs-evil' sibling cannot match the '/notes/docs/' prefix.",
+      "Checked link handling. EntrySymlink is only ever skipped as 'symlink'. Neither the link nor its target is read, listed or Lstat'd again, and recursion happens only on EntryDirectory. A scan therefore cannot follow a link or loop, apart from OS-level bind mounts, which are outside the port.",
+      "Checked the root request. locate Lstat's the Path and refuses a link as 'neither file nor directory' (D1). A directory origin on a file, and a file origin on a directory, are request errors. Only ErrPermission on Lstat or on the root ReadDir becomes an 'unreadable' skip, and other errors fail the request (OQ-6). A scan with Origin.Override is refused in validate before any reader call (D3).",
+      "Checked failure visibility. Per-entry Lstat, ReadDir, ReadFile, empty, binary, extension and size failures are all Skips with codes from the design list, and Skipped is always rendered non-nil. Sort is by relative path (rel, with a separator) and is stable. The guard's test cases cover the ordering, link, '..', denied and empty-scan cases.",
+      "Checked the adapter's sourcefs.go (Lstat, ReadFile and ReadDir use os.* without following links) and doc.go/source.go for stale scan wording. None found.",
+      "Compared against spec S4 and T4, owner decisions L6-L8, design.md rows 339-340 and 738, and tasks.md 2b.3, 2b.5, 2b.6 and 2b.10-2b.12. No mismatch. A shallow scan drops subdirectories without a Skip, but the design and tests specify that, so I did not report it.",
+      "Not run: go test, go vet, GOOS=darwin build, mutants. The review was read-only."
+    ]
+  }
+}

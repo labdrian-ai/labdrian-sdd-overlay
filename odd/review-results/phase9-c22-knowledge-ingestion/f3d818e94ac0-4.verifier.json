@@ -1,0 +1,11 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "Scratch /tmp/tmp.j4wTK8NddT: real/y, real/z.md, x/link -> real/y; go run m.go x/link/../z.md (os.Lstat); bat extract.go:148-150 at f3d818e9",
+      "output": "os.Lstat(x/link/../z.md) = <nil>: the operating system resolves '..' through the link's target, reaching real/z.md, while filepath.Clean gives x/z.md, which does not exist. The comment at extract.go:148-149 names only the trailing slash and '/.'.",
+      "base_result": "not-run"
+    }
+  ]
+}

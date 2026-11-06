@@ -1,0 +1,21 @@
+{
+  "kind": "polisher",
+  "base": "63254c3398b9791c1e00597c0dc48deebb2384b6",
+  "head": "f3d818e94ac0a02e41b2f52a161edc8d6f6cdfd5",
+  "diff_sha256": "3b5186f6dfe666681739b80a76a270b06f0c7c8d51055bd490a468ddb6461951",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the frozen round-0 ledger: 63254c3398b9-6.polisher.json (F1 WARNING, trailing slash or \"/.\" lets Lstat follow a link) and 63254c3398b9-4.json (F1-F3 SUGGESTIONs).",
+      "Read the fix delta c22t4fix.diff and the head files it touches: extract.go (Extract, locate, readText, scan, walk, below), source.go (ResolveOrigin) and the SourceID code in header.go.",
+      "Polisher F1 resolved. locate now runs origin.URI = filepath.Clean(origin.URI) before Reader.Lstat, so \"link/\" and \"link/.\" become \"link\". Lstat then reports EntrySymlink and the default branch refuses it with \"neither file nor directory\". The new real-filesystem test TestExtractRefusesALinkNamedWithATrailingSlash covers both spellings. I did not run it.",
+      "The empty-Path case is not affected. Clean(\"\") would give \".\", but locate is only reached when req.Path != \"\" (Extract line 89).",
+      "The cleaned URI is used for Lstat, the scan root and every Skip path. scan and walk still go through filepath.Clean and Join, and below() still gates each entry. Links inside a scan are still skipped as \"symlink\" before any ReadDir or ReadFile. I found no way to follow a link, read outside the root, or hide a failure in a success.",
+      "The ids and Source-URIs are unchanged. SourceID (header.go:277-280) already applies filepath.Clean to the absolute URI, and an Override is passed through byte for byte. Only the Path is cleaned, so no id the design fixes changes.",
+      "Behaviour change that is not a defect: a file Path written with a trailing slash used to fail with ENOTDIR. It is now cleaned and read as the file. That is lenient and not user-harming.",
+      "Suggestion F1 (stale doc comments) resolved. The Request.Origin comment, the scan comment and the Override comment in header.go now match the code.",
+      "Suggestion F2 (a file over MaxChunks failing the whole scan, untested) resolved. The scan comment now states it, and TestExtractRefusesAScanWithAFileOverMaxChunks pins ErrTooManyChunks with an empty Result.",
+      "Suggestion F3 (a shallow scan silently dropping subdirectories) resolved by documentation. The scan comment now says so, and the behaviour was kept."
+    ]
+  }
+}

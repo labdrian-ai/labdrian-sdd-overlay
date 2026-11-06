@@ -1,0 +1,91 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "68c4263b2ea997b4b31768cef7cea7050cb74179",
+    "head": "63254c3398b9791c1e00597c0dc48deebb2384b6",
+    "diff_sha256": "4ad6c0d225571a12aa830406e2e56b09e0a3b71f96c1b7ed079dbf7875bd285d",
+    "paths": [
+      "longterm-mem/internal/ingest/extract.go",
+      "longterm-mem/internal/ingest/extract_test.go",
+      "openspec/changes/longterm-mem-knowledge-ingestion/tasks.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "68c4263b2ea997b4b31768cef7cea7050cb74179",
+      "head": "63254c3398b9791c1e00597c0dc48deebb2384b6",
+      "diff_sha256": "4ad6c0d225571a12aa830406e2e56b09e0a3b71f96c1b7ed079dbf7875bd285d"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/ingest/extract.go",
+        "longterm-mem/internal/ingest/extract_test.go",
+        "openspec/changes/longterm-mem-knowledge-ingestion/tasks.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "longterm-mem/internal/ingest/extract.go:21-22",
+        "severity": "SUGGESTION",
+        "claim": "Doc comments now misdescribe the scan. The Request.Origin comment says Title is the caller's, but a scan gives every file its own base-name Title and drops the request's Title (Title \"Docs\" is silently unused). The scan comment at lines 218-219 says only a root that cannot be listed (for a reason other than permission) fails the request. In fact an ErrTooManyChunks or SourceID error from any file also fails the whole scan. The Override comment at header.go:57-59 still says how a scan identifies files is 'taken before the scan is built', which is stale now that the scan exists.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/ingest/extract.go:21-22",
+          "longterm-mem/internal/ingest/extract.go:218-219",
+          "longterm-mem/internal/ingest/extract.go:237-238",
+          "longterm-mem/internal/ingest/header.go:57-59"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "longterm-mem/internal/ingest/extract.go:242-244",
+        "severity": "SUGGESTION",
+        "claim": "In a scan, an ErrTooManyChunks from one file aborts the whole request. The sources already extracted and the skips already collected are discarded, although every other per-entry failure is a skip. This is consistent with the single-file path and the loss is only extraction work, since nothing is saved yet. It is reachable only with a small MaxChunkBytes: the default 4 MiB source limit divided by 1600-byte chunks gives about 2.6k chunks, under MaxChunks of 9999. Keeping it a request error is defensible, but the abort-the-scan consequence should be stated in the scan doc comment (see F1), or the case should be pinned by a test. No test covers it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/ingest/extract.go:242-244",
+          "longterm-mem/internal/ingest/chunk.go:297-298",
+          "longterm-mem/internal/ingest/doc.go:26-36"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "longterm-mem/internal/ingest/extract.go:214-217",
+        "severity": "SUGGESTION",
+        "claim": "A subdirectory in a shallow scan is dropped with no Skip and no trace. An operator who forgets Recursive sees success and a short list, and nothing in Skipped says subtrees were left out. The builder's choice is acceptable under the spec, which names no code for it. TestExtractAScanWithNothingReadableSucceedsAndSaysWhy pins the silence by including a 'sub' directory with no expected skip. A shallow scan that finds only subdirectories returns success with zero sources and zero skips, which is indistinguishable from an empty directory. Note this in the doc comment, or reconsider it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/ingest/extract.go:352-358",
+          "longterm-mem/internal/ingest/extract_test.go TestExtractAScanWithNothingReadableSucceedsAndSaysWhy"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/c22t4.diff.",
+      "Read head extract.go lines 1-80 and 212-253, plus the Override doc in header.go.",
+      "Grepped the ingest package and the openspec change for MaxChunks, ErrTooManyChunks, shallow, subdirectory and 'not built' wording.",
+      "Judged the builder choices.",
+      "Base name as Title: correct, since one request Title cannot name every file, and the id depends only on the URI. The undocumented drop of the request Title is in F1.",
+      "Silent shallow subdirectory: F3.",
+      "Kind other as an unreadable skip: sound, and consistent with the Lstat-failure skip.",
+      "Per-entry Lstat failure and subdirectory ReadDir failure as unreadable skips: sound, and they keep the scan going.",
+      "Root ReadDir: a permission failure is a skip and any other failure is a request error. This mirrors Lstat in locate, with matching tests.",
+      "A KindFile origin whose Path is a directory as a request error: sound, and symmetric with the existing directory-origin-names-a-file error.",
+      "D3 override check in validate: correct place, since it refuses before the reader is touched, and the test asserts zero reader calls.",
+      "ErrTooManyChunks as a request error in a scan: defensible, see F2.",
+      "outside_root skips carry the cleaned joined path: the test pins that, and below() handles a root of '/'.",
+      "Skips in relative-path order: the sort key is rel with the separator, so 'a-b.md' < 'a.md' < 'a/b.md', and the test covers it.",
+      "I did not run the tests."
+    ]
+  }
+}

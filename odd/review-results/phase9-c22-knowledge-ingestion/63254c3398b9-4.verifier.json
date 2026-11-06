@@ -1,0 +1,25 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "In review-63254c3398b9: bat -p -r 10:32 and 205:250 extract.go; bat -p -r 48:64 header.go",
+      "output": "The Request.Origin comment says Title is the caller's while a scan sets each file's Title to its base name; the scan comment says only a root that cannot be listed fails the request while an extractOne error also returns Result{}, err; header.go's Override comment says D3 is 'taken before the scan is built'.",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "Scratch copy /tmp/tmp.gTATvsc9hY/longterm-mem, probe TestProbeF2 (memTree scan of a.md valid, b.md with 10010 sections, c.png): go test ./internal/ingest -run TestProbe -v; rg -n TooManyChunks internal/ingest/*_test.go",
+      "output": "sources=0 skipped=[] err=ingest: source would exceed MaxChunks: 10009 chunks; a.md's source and c.png's skip are discarded. ErrTooManyChunks is tested only for a pasted request (extract_test.go:147-149) and in chunk_test.go.",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F3",
+      "result": "reproduced",
+      "command": "Same scratch, TestProbeF3 (shallow scan of a root holding only 'sub'); bat -p -r 766:782 extract_test.go",
+      "output": "sources=0 skipped=[] err=<nil>. TestExtractAScanWithNothingReadableSucceedsAndSaysWhy lists scanRoot+\"/sub\" with no expected skip.",
+      "base_result": "not-run"
+    }
+  ]
+}

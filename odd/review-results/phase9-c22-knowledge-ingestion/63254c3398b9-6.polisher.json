@@ -1,0 +1,40 @@
+{
+  "kind": "polisher",
+  "base": "68c4263b2ea997b4b31768cef7cea7050cb74179",
+  "head": "63254c3398b9791c1e00597c0dc48deebb2384b6",
+  "diff_sha256": "4ad6c0d225571a12aa830406e2e56b09e0a3b71f96c1b7ed079dbf7875bd285d",
+  "findings": {
+    "findings": [
+      {
+        "location": "longterm-mem/internal/ingest/extract.go:147-169",
+        "severity": "WARNING",
+        "claim": "If an absolute Path ends in a trailing slash (or in \"/.\"), the request skips the owner's D1 rule that a Path which is itself a link is an error. When the Path names a link to a directory, the scan now lists and reads everything behind that link. The files get ids and Source-URIs built from the link's path. Shell tab-completion adds this trailing slash to directory links by default, for example `~/notes/docs/`.",
+        "evidence_class": "inferential",
+        "causal_disposition": "behavior-activated",
+        "evidence": [
+          "locate passes origin.URI to Lstat without cleaning it. ResolveOrigin (source.go:55-56) returns an absolute URI unchanged and cleans only relative ones, through filepath.Join (source.go:65). So `/home/u/notes/docs/` reaches Lstat with its trailing slash still on.",
+          "sourcefs.Reader.Lstat (sourcefs.go:28-29) calls os.Lstat(path) as given. Go's lstatNolog (toolchain go1.26.1 src/os/stat_unix.go:42-46) passes the name straight to syscall.Lstat without trimming it. POSIX path resolution follows a final symlink when the path has a trailing slash, so Lstat reports the link target's kind, EntryDirectory, not EntrySymlink. The D1 guard at extract.go:166-168 never fires.",
+          "scan (extract.go:221-222) then runs root := filepath.Clean(rootOrigin.URI), which turns `/home/u/notes/docs/` into `/home/u/notes/docs`, the link itself, and calls Reader.ReadDir(root). os.ReadDir follows the link. Each child path root/<name> passes below() and goes to Lstat and ReadFile, which follow the link as an intermediate path component. So the scan reads the whole target tree, which D1 says must be refused.",
+          "Owner decision D1 (odd/tasks/phase9-c22-knowledge-ingestion.md L6) asked about \"a request's `Path` [that] is itself a symlink (to a file or to a directory)\". The answer was \"Request error\": the operator names the real path. The comment at extract.go:167 states the same rule.",
+          "Causality: at base 68c4263b, a directory at Path was always refused with \"is a directory, and scanning one is not built yet\". The same trailing-slash Lstat gap existed there, but its only outcome was that error. This commit's EntryDirectory branch (extract.go:162-165, 96-97) turns it into a successful scan through the link. A relative path is not affected, because filepath.Join in ResolveOrigin strips the slash, and Lstat then reports the link and the request is refused. No test covers a trailing-slash Path: memTree keys are exact strings and dirRequest always passes a clean path.",
+          "Not executed: I had no shell. The conclusion rests on reading Go's os.Lstat source and on Linux lstat semantics."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/c22t4.diff (extract.go and extract_test.go changes, tasks.md checkboxes)",
+      "Read head longterm-mem/internal/ingest/extract.go: Request, Result, Extract, locate, readText, scan, walk, below, validate, buildSource",
+      "Read longterm-mem/internal/ingest/source.go (SourceReader port, ResolveOrigin) and longterm-mem/internal/sourcefs/sourcefs.go (Lstat, ReadFile with a pre-read Lstat and a documented TOCTOU limit, ReadDir)",
+      "Read header.go canonicalOrigin/SourceID: per-file SourceID cannot fail for a cleaned absolute path, so a scan has no per-file request error from the id",
+      "Read chunk.go ChunkText/MaxChunks: ErrTooManyChunks failing the whole scan matches design.md:326-329, which lists the 9999-chunk cap as a request error",
+      "Read design.md OQ-6 skip-code table (lines 322-345) and threat-matrix rows (757-758)",
+      "Read odd/tasks/phase9-c22-knowledge-ingestion.md: S4 plus Log L2 (D1-D3 options), L6 (D1 and D2 answers), L7 and L8 (D3 answer)",
+      "Read tasks.md 2b.3-2b.12",
+      "Checked the outside_root guard: Join cleans '..', '.', '' and multi-component names before below(); root '/' is handled; real ReadDir never returns names containing separators. No lexical escape found.",
+      "Checked symlink handling inside a scan: an EntrySymlink entry is skipped before any ReadDir or ReadFile. No directory loop is possible without following links.",
+      "Checked failure paths: only a non-permission root ReadDir error, SourceID or ChunkText errors fail the request. Every other per-entry error, including a subdirectory ReadDir failure, becomes an 'unreadable' skip, so no failure is hidden in a success.",
+      "Checked the D3 Override refusal in validate, which runs before any reader call, and the stale-comment search for 'not built/not yet' (none)",
+      "Confirmed that Go's os.Lstat does not normalize the path, in toolchain go1.26.1 src/os/stat_unix.go"
+    ]
+  }
+}

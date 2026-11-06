@@ -55,8 +55,8 @@ type Origin struct {
 	// repo://openspec/specs/x.md), so that one source has one id on every machine. When it is not empty, SourceID
 	// takes it byte for byte, neither cleaned nor joined to a directory, and does not read URI. Ignored otherwise.
 	// It identifies the one origin it is set on: a directory's override is the id of the directory, not of the
-	// files a scan finds in it, which never inherit it (how a scan with an override identifies them is the
-	// owner's decision D3 of Phase 9 item C22, taken before the scan is built).
+	// files a scan finds in it, which never inherit it (a scan request with an override is refused, the owner's
+	// decision D3 of Phase 9 item C22).
 	Override string
 	Title    string
 	Label    string // required for KindPasted, ignored otherwise

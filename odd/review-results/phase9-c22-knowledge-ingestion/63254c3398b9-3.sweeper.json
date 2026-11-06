@@ -1,0 +1,15 @@
+{
+  "kind": "sweeper",
+  "base": "68c4263b2ea997b4b31768cef7cea7050cb74179",
+  "head": "63254c3398b9791c1e00597c0dc48deebb2384b6",
+  "diff_sha256": "4ad6c0d225571a12aa830406e2e56b09e0a3b71f96c1b7ed079dbf7875bd285d",
+  "sweep": "63254c3398b9-2.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 name: readFile",
+      "disposition": "live",
+      "evidence": "63254c33 replaces the unexported method Extractor.readFile of longterm-mem/internal/ingest/extract.go with locate and readText; nothing in ingest, openspec/changes/longterm-mem-knowledge-ingestion, skills/_shared or the C22 feature document names it. Every hit the sweep lists is an unrelated function of the same name in another package (engine/cmd, engine/review, longterm-mem/internal/vaultfs/catalog.go:33, longterm-mem/internal/testhome/testhome.go:135 and others), so no stale reference is left."
+    }
+  ]
+}
