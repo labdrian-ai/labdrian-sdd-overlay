@@ -1,0 +1,25 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "git diff 0e8d1831 4beb03e7 -- skills/knowledge-ingestion/SKILL.md; rg -n 'S6|\\(c\\)' odd/tasks/phase9-c22-knowledge-ingestion.md; rg -n observation skills/knowledge-ingestion/SKILL.md (run in /home/labdrian/labdrian-sdd-overlay-worktrees/review-4beb03e7d344)",
+      "output": "The diff has '-3. **Promote** the resulting observation with ...' and '+3. **Promote** the resulting memory with ...'. S6 (c) only asks that the promote step name the memorycard source (the `promote` MCP tool with `source: \"memorycard\"`, or CLI `promote --source memorycard --id N`, the id being the memorycard memory id). It does not ask for the noun change. rg still finds 'observation' at SKILL.md lines 17, 22, 36, 49, 51, 64 and 130, so the skill now mixes 'memory' and 'observation'. 'Nothing else reworded' is violated.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "git diff 0e8d1831 4beb03e7 -- skills/knowledge-ingestion/SKILL.md; rg -n '\\(d\\)|\\(f\\)' odd/tasks/phase9-c22-knowledge-ingestion.md (same worktree)",
+      "output": "The diff changes acceptance item 1 from 'resulting observation via `mem_search` + `mem_get_observation`' to 'resulting memory via `mem_search` + `mem_get`'. S6 (d) asks only that `mem_get_observation` become `mem_get` (at :85 and :121). S6 (f) asks only that the `query` command be replaced by the `query` MCP tool with `sources: [\"vault\"]`. Neither asks for 'observation' to become 'memory'. The same line also gains the 'longterm-mem's `query` MCP tool' wording that (f) does ask for.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F3",
+      "result": "reproduced",
+      "command": "git diff 0e8d1831 4beb03e7 -- skills/knowledge-ingestion/SKILL.md; rg -n engram_id longterm-mem/internal/mcpserver/server.go; rg -n engram_id skills/knowledge-ingestion/SKILL.md",
+      "output": "server.go:171 reads `EngramID int64 `json:\"engram_id\" jsonschema:\"the Engram observation id to promote; with source memorycard, the memorycard memory id\"``, so the promote MCP tool takes the memorycard id in the field `engram_id`. The new SKILL.md step 3 says only 'the `promote` MCP tool with `source: \"memorycard\"`, or CLI `promote --source memorycard --id N, N being the memorycard id', and the `rg engram_id` over SKILL.md prints nothing. So the skill never says which field carries the id on the MCP path. Whether S6 (c) allows adding this is a scope question for the parent. S6 (c) cites server.go:171-172 only as the source for `source`.",
+      "base_result": "reproduced"
+    }
+  ]
+}

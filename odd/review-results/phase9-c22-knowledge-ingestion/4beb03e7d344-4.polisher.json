@@ -1,0 +1,50 @@
+{
+  "kind": "polisher",
+  "base": "0e8d18311e45243d88e5fdcb67688dc4ceb12de2",
+  "head": "4beb03e7d344558bceb3a46185c5ef00bb21c551",
+  "diff_sha256": "6acaf9c3ddf6fb170835bd1e3c2e06413c783bf59269c3de4311cf99b4de9cbe",
+  "findings": {
+    "findings": [
+      {
+        "location": "skills/knowledge-ingestion/SKILL.md:35-37",
+        "severity": "WARNING",
+        "claim": "The procedure now saves every record with memorycard's mem_save, which stores any body over 16 KB as separate parts. A multi-chunk manifest with more than about 700 chunks goes over that limit. Its trailing provenance block (Source-SHA256, Status, Chunks-Saved) then lands in a later part under the topic key `<key>/part-N`. The memory at the manifest key, which the re-ingestion gate reads with mem_get and which step 3 promotes, is part 1 only. The gate cannot read the stored digest or Status, so an unchanged large source is never a hard no-op, and the promoted manifest page has no provenance block. The skill does not warn about this.",
+        "evidence_class": "inferential",
+        "causal_disposition": "worsened",
+        "evidence": [
+          "/home/labdrian/memorycard/internal/memory/save.go:26 sets HardCapBytes = 16 * 1024. Lines 94-95 say a body over the cap 'is stored as parts ... the result describes part 1'. Lines 192-211: with several parts, parts after the first get the topic key '<key>/part-i' and the title '(part i/N)'.",
+          "skills/_shared/ingested-observation-contract.md:59-60 and :104 put the provenance block LAST in the record. Lines :84-94 make the manifest carry a '**Chunk-Status**' line for every chunk (about 23 bytes per line, e.g. '- c0001 saved promoted'). Line 55 caps the count at 9999 chunks.",
+          "longterm-mem/internal/ingest/doc.go:26,32,36: DefaultMaxChunkBytes = 1600, DefaultMaxSourceBytes = 4 MiB, MaxChunks = 9999. A source of roughly 1 MB or more therefore gives a manifest of more than about 712 chunks, and its body goes over 16 KB.",
+          "SKILL.md:86-87 (changed by the target) reads the stored '**Source-SHA256**' and '**Status**' with `mem_get` at the manifest key, and :95-97 bases the hard no-op on them. Part 1 holds neither, because the block comes last.",
+          "Before the target, Engram's limit was MaxObservationLength: 50000 (/home/labdrian/memorycard-lab/data/engram-src/internal/store/store.go:848). The target moves the save to a store whose limit is about 3x lower, so more realistic sources are affected."
+        ]
+      },
+      {
+        "location": "skills/knowledge-ingestion/SKILL.md:125-129",
+        "severity": "SUGGESTION",
+        "claim": "Line 117 now runs the acceptance checklist against memorycard, but scenarios 2 and 3 still tell the operator to confirm that `revision_count` did or did not increment. memorycard has no revision_count. It records history as memory_versions rows, shown by mem_get with history=true. As written, the check names a field the target store does not have.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "behavior-activated",
+        "evidence": [
+          "SKILL.md:117 (changed by the target) says the scenarios run 'against real memorycard/`longterm-mem` state'. Lines :126 and :129 (unchanged) check `revision_count`.",
+          "/home/labdrian/memorycard/internal/mcpserver/server.go:145-151: mem_get takes only `id` and `history` ('Earlier versions only with history=true'). longterm-mem/internal/memorycard/store.go:91-106 derives the revision from `max(memory_versions.version)` + 1 because memorycard has no revision_count column.",
+          "revision_count is Engram's column (longterm-mem/internal/promote/store.go:24, \"Engram's revision_count\")."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the target diff /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/c22t7.diff and the whole of skills/knowledge-ingestion/SKILL.md at the head worktree /home/labdrian/labdrian-sdd-overlay-worktrees/review-4beb03e7d344",
+      "Read the spec odd/tasks/phase9-c22-knowledge-ingestion.md: S6 (a)-(f), the Not-changed list, and Log L12-L13. The owner accepted the contract's content/capture_prompt mismatch, the sync-only-reads-Engram gap (scenario 4) and mem_compare in D7 option (b), so none of these is reported.",
+      "Checked memorycard's MCP schema at /home/labdrian/memorycard/internal/mcpserver/server.go. mem_save takes title, body, type, topic_key, scope, supersedes, project, cwd and directory; mem_search takes query (a topic_key is accepted); mem_get takes id. The argument names the skill uses are correct.",
+      "Checked memorycard's save splitting in /home/labdrian/memorycard/internal/memory/save.go (HardCapBytes, splitInput, partKey).",
+      "Checked google/jsonschema-go v0.4.3 infer.go:245-248. Struct schemas set additionalProperties to false, so memorycard's mem_save rejects unknown fields such as the contract's capture_prompt. This falls under the owner-accepted D7 gap and is not reported.",
+      "longterm-mem promote: cmd_promote.go:39-62 has --source memorycard with --id as the memorycard id. internal/mcpserver/server.go:168-173: the promote tool's source accepts memorycard, and engram_id carries the memorycard id. cmd_mcp.go:134-145 uses PromoteCardAndReindex. internal/promote/card.go:77-164 shows PromoteCard updates an existing memorycard page in place (updateCardPage). The skill's promote instructions are correct.",
+      "The query MCP tool's sources accept vault (server.go:112), so SKILL.md:123 is valid.",
+      "sync reads Engram only (cmd_sync.go:43, app.go:97-104). This is owner-accepted in L13 and not reported.",
+      "The CLI promote path (rundeps.go:204-210, cmd_promote.go:103-142) does not rebuild the vault index. This is the same for the Engram path, so it is pre-existing and not reported.",
+      "Read the shared contract skills/_shared/ingested-observation-contract.md:20-119 plus the Engram-shaped lines found by grep (:37, :139-158).",
+      "Grepped the SKILL.md head for Engram, engram and mem_get_observation: no remaining line sends an agent to Engram.",
+      "No commands were run: no go test, no skills validate, no live memorycard or longterm-mem calls."
+    ]
+  }
+}
