@@ -28,8 +28,9 @@ shape to any record defined by this contract.
 | `type` | `discovery` — deliberately non-load-bearing; see "Marker mechanism" below |
 | `project` | the resolved project |
 | `scope` | `project` |
-| `capture_prompt` | `false` (automated artifact) |
-| `content` | body → `---` → provenance block, below; a manifest: the provenance block first |
+| `body` | the record's `content`: body → `---` → provenance block, below; a manifest: the provenance block first |
+
+memorycard's `mem_save` takes no other argument (no `capture_prompt`, no `content`); a call with one is refused before anything is saved.
 
 ## Marker mechanism (non-load-bearing `type`)
 

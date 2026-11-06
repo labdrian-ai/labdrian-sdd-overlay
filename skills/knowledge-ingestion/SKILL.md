@@ -89,7 +89,14 @@ the rest exists. Report the partial state honestly.
 Before saving anything for a source, derive its `Source-Id` (per the contract's derivation
 rule — a function of the origin only, never the content) and search its topic key:
 `mem_search("ingested/{source-kind}/{source-id}")`, then `mem_get` to read the
-stored `**Source-SHA256**` and, for a manifest record, `**Status**`.
+stored `**Source-SHA256**` and, for a manifest record, `**Status**`. A source ingested before
+this procedure moved to memorycard may have been stored as parts with its block in a later
+one: when the memory at the key holds no `**Source-SHA256**`, read `<key>/part-2`, `/part-3`,
+… for the block before deciding, and never take its absence there as "no record exists".
+
+If `promote` refuses a memory as bridged (`BridgedError`: it came from an Engram observation
+that already has a vault page), stop that source: do not retry and do not save again, and
+report the source as saved but not promoted, naming the refused memory id and the page.
 
 The hard no-op only applies to a manifest whose `**Status**` is already `complete` — a
 matching digest never short-circuits a `pending` or `partial` manifest, since an unchanged
