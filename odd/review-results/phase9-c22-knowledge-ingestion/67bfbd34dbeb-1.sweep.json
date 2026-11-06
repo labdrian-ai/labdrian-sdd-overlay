@@ -1,0 +1,24 @@
+{
+  "kind": "sweep",
+  "base": "4bb34fb334e6a3be161e69af97c3b831cd866aa6",
+  "head": "67bfbd34dbeb8cd13c1bf1389d0a3a510a81891b",
+  "diff_sha256": "7b40832359b00759bb0d3f8ddc616ddd96b34016b5277e56cb9f9b84ae80f309",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [
+      "openspec/changes/longterm-mem-knowledge-ingestion/design.md",
+      "openspec/changes/longterm-mem-knowledge-ingestion/exploration.md",
+      "openspec/changes/longterm-mem-knowledge-ingestion/proposal.md",
+      "openspec/changes/longterm-mem-knowledge-ingestion/specs/knowledge-ingestion/spec.md",
+      "openspec/changes/longterm-mem-knowledge-ingestion/specs/longterm-mem-ingest-extraction/spec.md",
+      "openspec/changes/longterm-mem-knowledge-ingestion/tasks.md"
+    ],
+    "removed_names": []
+  },
+  "t2": [],
+  "t3": [],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

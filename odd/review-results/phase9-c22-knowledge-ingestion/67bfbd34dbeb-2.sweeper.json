@@ -1,0 +1,40 @@
+{
+  "kind": "sweeper",
+  "base": "4bb34fb334e6a3be161e69af97c3b831cd866aa6",
+  "head": "67bfbd34dbeb8cd13c1bf1389d0a3a510a81891b",
+  "diff_sha256": "7b40832359b00759bb0d3f8ddc616ddd96b34016b5277e56cb9f9b84ae80f309",
+  "sweep": "67bfbd34dbeb-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 path: openspec/changes/longterm-mem-knowledge-ingestion/design.md",
+      "disposition": "live",
+      "evidence": "odd/tasks/phase9-c22-knowledge-ingestion.md:31,52 retain historical design references; no runtime consumer found in the old-directory search."
+    },
+    {
+      "candidate": "T1 path: openspec/changes/longterm-mem-knowledge-ingestion/exploration.md",
+      "disposition": "live",
+      "evidence": "odd/review-results/phase9-c22-knowledge-ingestion/67bfbd34dbeb-1.sweep.json:10 lists the moved historical artifact; no old-file reference found in the searched non-review files."
+    },
+    {
+      "candidate": "T1 path: openspec/changes/longterm-mem-knowledge-ingestion/proposal.md",
+      "disposition": "live",
+      "evidence": "openspec/decisions/standalone-platform-roadmap.md:62,78 preserve the proposal as historical evidence; no old-file runtime consumer found."
+    },
+    {
+      "candidate": "T1 path: openspec/changes/longterm-mem-knowledge-ingestion/specs/knowledge-ingestion/spec.md",
+      "disposition": "live",
+      "evidence": "openspec/specs/knowledge-ingestion/spec.md:8,29,75,122,161 retain change provenance; no old-file runtime consumer found."
+    },
+    {
+      "candidate": "T1 path: openspec/changes/longterm-mem-knowledge-ingestion/specs/longterm-mem-ingest-extraction/spec.md",
+      "disposition": "live",
+      "evidence": "openspec/specs/longterm-mem-ingest-extraction/spec.md:6,27,76,130 retain change provenance; no old-file runtime consumer found."
+    },
+    {
+      "candidate": "T1 path: openspec/changes/longterm-mem-knowledge-ingestion/tasks.md",
+      "disposition": "live",
+      "evidence": "odd/tasks/phase9-c22-knowledge-ingestion.md:3,52-55 retain the earlier task path and implementation history; no runtime consumer found in the old-directory search."
+    }
+  ]
+}

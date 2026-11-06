@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "4bb34fb334e6a3be161e69af97c3b831cd866aa6",
+    "head": "67bfbd34dbeb8cd13c1bf1389d0a3a510a81891b",
+    "diff_sha256": "7b40832359b00759bb0d3f8ddc616ddd96b34016b5277e56cb9f9b84ae80f309",
+    "paths": [
+      "openspec/changes/archive/2026-11-06-longterm-mem-knowledge-ingestion/design.md",
+      "openspec/changes/archive/2026-11-06-longterm-mem-knowledge-ingestion/exploration.md",
+      "openspec/changes/archive/2026-11-06-longterm-mem-knowledge-ingestion/proposal.md",
+      "openspec/changes/archive/2026-11-06-longterm-mem-knowledge-ingestion/specs/knowledge-ingestion/spec.md",
+      "openspec/changes/archive/2026-11-06-longterm-mem-knowledge-ingestion/specs/longterm-mem-ingest-extraction/spec.md",
+      "openspec/changes/archive/2026-11-06-longterm-mem-knowledge-ingestion/tasks.md",
+      "openspec/changes/longterm-mem-knowledge-ingestion/design.md",
+      "openspec/changes/longterm-mem-knowledge-ingestion/exploration.md",
+      "openspec/changes/longterm-mem-knowledge-ingestion/proposal.md",
+      "openspec/changes/longterm-mem-knowledge-ingestion/specs/knowledge-ingestion/spec.md",
+      "openspec/changes/longterm-mem-knowledge-ingestion/specs/longterm-mem-ingest-extraction/spec.md",
+      "openspec/changes/longterm-mem-knowledge-ingestion/tasks.md"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git diff --find-renames=100% --name-status 67bfbd34^ 67bfbd34",
+        "result": "pass",
+        "output": "R100\topenspec/changes/longterm-mem-knowledge-ingestion/design.md\topenspec/changes/archive/2026-11-06-longterm-mem-knowledge-ingestion/design.md\nR100\topenspec/changes/longterm-mem-knowledge-ingestion/exploration.md\topenspec/changes/archive/2026-11-06-longterm-mem-knowledge-ingestion/exploration.md\nR100\topenspec/changes/longterm-mem-knowledge-ingestion/proposal.md\topenspec/changes/archive/2026-11-06-longterm-mem-knowledge-ingestion/proposal.md\nR100\topenspec/changes/longterm-mem-knowledge-ingestion/specs/knowledge-ingestion/spec.md\topenspec/changes/archive/2026-11-06-longterm-mem-knowledge-ingestion/specs/knowledge-ingestion/spec.md\nR100\topenspec/changes/longterm-mem-knowledge-ingestion/specs/longterm-mem-ingest-extraction/spec.md\topenspec/changes/archive/2026-11-06-longterm-mem-knowledge-ingestion/specs/longterm-mem-ingest-extraction/spec.md\nR100\topenspec/changes/longterm-mem-knowledge-ingestion/tasks.md\topenspec/changes/archive/2026-11-06-longterm-mem-knowledge-ingestion/tasks.md\n"
+      },
+      {
+        "command": "git status --porcelain",
+        "result": "pass",
+        "output": "exit 0; stdout empty; stderr empty"
+      },
+      {
+        "command": "git show -s --format=%B 67bfbd34",
+        "result": "pass",
+        "output": "chore(openspec): archive the C22 change unchanged\n\nRisk: none\n\n"
+      },
+      {
+        "command": "diff -r /tmp/c22-t6.nh2R5w/pre-move openspec/changes/archive/2026-11-06-longterm-mem-knowledge-ingestion",
+        "result": "pass",
+        "output": "exit 0; stdout empty; stderr empty"
+      }
+    ]
+  }
+}
