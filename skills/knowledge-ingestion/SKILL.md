@@ -35,9 +35,9 @@ There is exactly one sanctioned way for external knowledge to enter long-term me
 2. **Save** the extracted content with memorycard's `mem_save`, using exactly the field and
    metadata shape defined in `skills/_shared/ingested-observation-contract.md`
    (`topic_key`, `title`, `type: "discovery"`, `body` = body → `---` → provenance block).
-3. **Promote** the resulting memory with `longterm-mem`'s `promote` (the `promote` MCP
-   tool with `source: "memorycard"`, or CLI `promote --source memorycard --id N`, N being
-   the memorycard id).
+3. **Promote** the resulting observation with `longterm-mem`'s `promote` (the `promote` MCP
+   tool with `source: "memorycard"` and the memorycard id in `engram_id`, or CLI
+   `promote --source memorycard --id N`, N being the memorycard id).
 
 No other intake path exists. Content that was fetched or read but never passed through
 `mem_save` is not "ingested" by this capability, regardless of whether it still sits in the
@@ -119,14 +119,14 @@ state, not by a unit test. Record results honestly in the verify report, includi
 scenario that could not be exercised.
 
 1. **R-003 end-to-end.** Ingest one real external source through this procedure. Show the
-   resulting memory via `mem_search` + `mem_get`, and show the promoted page
+   resulting observation via `mem_search` + `mem_get`, and show the promoted page
    via `longterm-mem`'s `query` MCP tool with `sources: ["vault"]`. Confirm the provenance block is
    present in the page body.
 2. **R-004 / OQ-5 unchanged re-ingestion.** Re-ingest the identical source a second time.
-   Confirm the procedure reports "unchanged", `revision_count` did not increment, and no
+   Confirm the procedure reports "unchanged", the version history `mem_get` returns shows no new version, and no
    second topic key was created.
 3. **R-004 / OQ-5 changed re-ingestion.** Edit the source, then re-ingest. Confirm it resolves
-   to the same topic key, `revision_count` increments, and the vault page path is unchanged.
+   to the same topic key, the version history `mem_get` returns shows one new version, and the vault page path is unchanged.
 4. **OQ-4 sync-eligibility.** Take an `ingested/`-keyed observation that was saved but never
    explicitly promoted (e.g. a deliberately interrupted ingestion). Confirm the next `sync`
    promotes it.
