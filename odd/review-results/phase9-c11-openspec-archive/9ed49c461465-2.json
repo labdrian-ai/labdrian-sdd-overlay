@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "2bb481a2fd5a7e4133d223388b2b92512d5efc92",
+    "head": "9ed49c4614653cf5dc0f2a46a165e5a6d504bba9",
+    "diff_sha256": "20bf076d758547c3b9ca9c03430438712ae910fadaa019e3270293a4f7c48581",
+    "paths": [
+      "openspec/specs/skill-project-scope/spec.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "2bb481a2fd5a7e4133d223388b2b92512d5efc92",
+      "head": "9ed49c4614653cf5dc0f2a46a165e5a6d504bba9",
+      "diff_sha256": "20bf076d758547c3b9ca9c03430438712ae910fadaa019e3270293a4f7c48581"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "openspec/specs/skill-project-scope/spec.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "openspec/specs/skill-project-scope/spec.md:362-372",
+        "severity": "WARNING",
+        "claim": "SC-320 is an active acceptance scenario. It requires a non-zero exit and an identity-resolution error when the cwd has no git repo or remote. The superseded note (lines 70-80) says the opposite: there is no failure without an origin, and the directory name answers. The note marks only R-346 and R-347 as 'kept for the record'. SC-320 and the SC-322 precondition 'identity resolves to target-repo' have no such marker. A reader or test author who treats SC-320 as binding would implement behavior the owner decision removed. The intro rule (a requirement above this heading wins) does not cover this, because the superseding text sits inside this spec. This is copied faithfully from the source, so it is a carried-over inconsistency that the new canonical spec makes load-bearing.",
+        "evidence_class": "inferential",
+        "causal_disposition": "pre-existing",
+        "proof_refs": [
+          "openspec/specs/skill-project-scope/spec.md:70-80",
+          "openspec/specs/skill-project-scope/spec.md:362-372"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read lines 1-110 and 360-417 of the new spec",
+      "Listed all headings and every R-/SC- identifier in the new spec: R-340..R-361 and SC-310..SC-324 are contiguous, with no stale low-numbered IDs",
+      "Slice-1 references (R-201, R-207, R-211, R-212, R-232, SC-201, SC-205) match the +200 renumbering",
+      "Slice-1 headings in openspec/specs/skill-package-manager/spec.md confirm R-2xx and SC-201..SC-213 exist",
+      "The intro range 'R-001 to R-044, SC-01 to SC-13' is consistent with slice 1's current canonical numbers",
+      "Headings are one level deeper and the Purpose and header structure is well-formed",
+      "Did not run the source-range comparison (diff against the change spec lines 20-425); renumbering was checked only by the ID listing"
+    ]
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "9ed49c4614653cf5dc0f2a46a165e5a6d504bba9",
+    "head": "076789f2a7bf943270e6f460bc73e9d56e78ed91",
+    "diff_sha256": "ef85fc8ce58c822244ae22bc833cf094647c4c2cdfc7000c982fedd09029120b",
+    "paths": [
+      "openspec/specs/skill-project-scope/spec.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "9ed49c4614653cf5dc0f2a46a165e5a6d504bba9",
+      "head": "076789f2a7bf943270e6f460bc73e9d56e78ed91",
+      "diff_sha256": "ef85fc8ce58c822244ae22bc833cf094647c4c2cdfc7000c982fedd09029120b"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "openspec/specs/skill-project-scope/spec.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "openspec/specs/skill-project-scope/spec.md:362",
+        "severity": "SUGGESTION",
+        "claim": "F1 is substantially fixed: the intro paragraph now states that SC-320 is kept for the record and is not an acceptance scenario, which removes the contradiction with the superseded note on R-346 and R-347. The marker is only in the intro (line 10), 350 lines away. The heading '#### SC-320' has no '(superseded)' suffix, unlike R-346 and R-347 at lines 82 and 95. A reader or tool that jumps to SC-320, or extracts scenarios by heading, still sees a normal scenario that requires a non-zero exit when no identity resolves. The R-346/R-347 headings carry a local marker, so the SC-320 heading would too if the verbatim-copy rule allowed it. Adding the same suffix, or a one-line blockquote above SC-320, would close the gap.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "openspec/specs/skill-project-scope/spec.md:10",
+          "openspec/specs/skill-project-scope/spec.md:82",
+          "openspec/specs/skill-project-scope/spec.md:95",
+          "openspec/specs/skill-project-scope/spec.md:362-372"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read diff t3f.diff: one sentence appended to the intro paragraph at line 10",
+      "Grepped the spec for R-346, R-347, SC-319, SC-320 and SC-321, and read lines 335-384",
+      "The superseded blockquote at lines 70-80 and the '(superseded)' headings on R-346 and R-347 are consistent with the new sentence",
+      "SC-320's Given/Then (no git repo, non-zero exit) does test R-347, so the sentence's claim about what SC-320 tests is accurate",
+      "Did not read the stored review JSON or the L2/L4 copy rules; the verbatim-copy constraint comes from the prompt"
+    ]
+  }
+}
