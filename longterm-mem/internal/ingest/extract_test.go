@@ -780,6 +780,31 @@ func TestExtractAScanWithNothingReadableSucceedsAndSaysWhy(t *testing.T) {
 	}
 }
 
+func TestExtractRefusesAScanWithAFileOverMaxChunks(t *testing.T) {
+	// The chunk cap is a request error wherever the file is found (design.md OQ-6): the whole scan fails, and the
+	// source and skip found before it are dropped with it.
+	var sections strings.Builder
+	for i := 0; i <= MaxChunks+10; i++ {
+		fmt.Fprintf(&sections, "## H%d\n\nshort body\n\n", i)
+	}
+	huge := sections.String()
+	reader := &memTree{files: map[string]memFile{
+		scanRoot: dirFile, scanRoot + "/a.md": textFile(guideBody), scanRoot + "/b.md": textFile(huge),
+		scanRoot + "/c.png": textFile("png"),
+	}, listings: map[string][]string{scanRoot: {"c.png", "b.md", "a.md"}}}
+	req := dirRequest(scanRoot)
+	req.MaxSourceBytes = len(huge)
+
+	got, err := Extractor{Reader: reader}.Extract(req)
+
+	if !errors.Is(err, ErrTooManyChunks) {
+		t.Fatalf("Extract = %d sources, %v, want ErrTooManyChunks", len(got.Sources), err)
+	}
+	if len(got.Sources) != 0 || len(got.Skipped) != 0 {
+		t.Errorf("Extract = %+v, want an empty Result beside the error", got)
+	}
+}
+
 func TestExtractAnEmptyDirectoryRendersAnEmptySkippedList(t *testing.T) {
 	reader := &memTree{files: map[string]memFile{scanRoot: dirFile}, listings: map[string][]string{scanRoot: {}}}
 

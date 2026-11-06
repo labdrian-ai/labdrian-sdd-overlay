@@ -19,7 +19,8 @@ type Request struct {
 	Text string
 	Path string
 	// Origin is what the records record as their source. For a Path request its Kind is KindFile or KindDirectory,
-	// and its Override and Title are the caller's; the path itself comes from Path.
+	// and its Override and Title are the caller's; the path itself comes from Path. A directory scan uses neither:
+	// an Override is refused (D3), and each file it finds is titled by its own name, as one Title cannot name them all.
 	Origin         Origin
 	Recursive      bool // directory scans are shallow unless set
 	Now            func() time.Time
@@ -144,6 +145,9 @@ func (e Extractor) locate(req Request) (Origin, Entry, *Skip, error) {
 	if err != nil {
 		return Origin{}, Entry{}, nil, err
 	}
+	// Cleaned before it is looked at: the operating system follows a link named with a trailing slash or "/.", so
+	// an uncleaned path would let a link through as the directory it points at (D1).
+	origin.URI = filepath.Clean(origin.URI)
 	entry, err := e.Reader.Lstat(origin.URI)
 	if errors.Is(err, fs.ErrPermission) {
 		// Being denied a look at a path that is there is a per-item failure, as a failed read is.
@@ -215,8 +219,10 @@ type scanItem struct {
 // scan extracts every file of the directory root names, in lexical order of path below the root. A link is never
 // followed, listed through or read, and no entry whose cleaned path is not below the root is looked at; the paths
 // alone decide that, as no link is ever resolved. Each file is a source of its own: a file origin with no
-// override, titled by its name. Every failure of one entry is a Skip, and only a root that cannot be listed for a
-// reason other than permission fails the request.
+// override, titled by its name. Every failure of one entry is a Skip. Two things fail the whole request, and what
+// was extracted before them is dropped: a root that cannot be listed for a reason other than permission, and a file
+// over MaxChunks, which is a request error wherever it is found (design.md OQ-6). A shallow scan leaves out the
+// subdirectories it finds without a Skip, as no skip code names them: set Recursive to take them in.
 func (e Extractor) scan(req Request, rootOrigin Origin) (Result, error) {
 	root := filepath.Clean(rootOrigin.URI)
 	names, err := e.Reader.ReadDir(root)

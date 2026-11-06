@@ -7,7 +7,9 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/ingest"
 )
@@ -312,6 +314,29 @@ func TestReadDirListsTheNames(t *testing.T) {
 	slices.Sort(got)
 	if want := []string{"a.txt", "b.md", "link", "sub"}; !slices.Equal(got, want) {
 		t.Errorf("ReadDir = %q, want %q", got, want)
+	}
+}
+
+// The operating system follows a link that a path names with a trailing slash or "/.", so a Path spelled that way
+// must still be refused as a link (Phase 9 C22, D1), never scanned through to its target.
+func TestExtractRefusesALinkNamedWithATrailingSlash(t *testing.T) {
+	dir := t.TempDir()
+	mkdir(t, filepath.Join(dir, "real"))
+	write(t, filepath.Join(dir, "real", "secret.md"), "# Secret\n\nbehind the link\n")
+	link := filepath.Join(dir, "link")
+	symlink(t, filepath.Join(dir, "real"), link)
+
+	for _, path := range []string{link + "/", link + "/."} {
+		req := ingest.Request{
+			Path:       path,
+			Origin:     ingest.Origin{Kind: ingest.KindDirectory},
+			Now:        func() time.Time { return time.Unix(0, 0).UTC() },
+			IngestedBy: "tester",
+		}
+		got, err := ingest.Extractor{Reader: Reader{}}.Extract(req)
+		if err == nil || !strings.Contains(err.Error(), "neither file nor directory") {
+			t.Errorf("Extract(%q) = %d sources, %v, want the link refused as neither file nor directory", path, len(got.Sources), err)
+		}
 	}
 }
 
