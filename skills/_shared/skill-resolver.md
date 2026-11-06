@@ -33,6 +33,8 @@ Match on two dimensions:
 
 Prefer the smallest useful set. If more than five skills match, keep the five most relevant and prioritize code context over task context.
 
+`adhd-output` is always on for user-facing replies. Pass its `SKILL.md` with the other paths, even when it is not one of those five. Pass it to the parent and to every sub-agent whose text the owner will read. Do not pass it to `reviewer` or `verifier`.
+
 ### Step 3: Pass Skill Paths
 
 Inject paths, not summaries:
