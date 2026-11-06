@@ -89,14 +89,21 @@ the rest exists. Report the partial state honestly.
 Before saving anything for a source, derive its `Source-Id` (per the contract's derivation
 rule — a function of the origin only, never the content) and search its topic key:
 `mem_search("ingested/{source-kind}/{source-id}")`, then `mem_get` to read the
-stored `**Source-SHA256**` and, for a manifest record, `**Status**`. A source ingested before
-this procedure moved to memorycard may have been stored as parts with its block in a later
-one: when the memory at the key holds no `**Source-SHA256**`, read `<key>/part-2`, `/part-3`,
-… for the block before deciding, and never take its absence there as "no record exists".
+stored `**Source-SHA256**` and, for a manifest record, `**Status**`. Read the record in full
+before deciding: when memorycard stored it as parts, each part's title ends `(part i/N)` and
+the rest sits in the memories at `<key>/part-2` … `<key>/part-N` (or `<key>/part-i~<n>` when
+an import moved a part). A record stored before this procedure moved to memorycard may hold
+its block, or only its `**Status**`, in one of those later parts.
 
-If `promote` refuses a memory as bridged (`BridgedError`: it came from an Engram observation
-that already has a vault page), stop that source: do not retry and do not save again, and
-report the source as saved but not promoted, naming the refused memory id and the page.
+**A source ingested before the move to memorycard is blocked.** Unless the hard no-op below
+applies, run `longterm-mem`'s `query` MCP tool with `sources: ["vault"]` for the source's
+`Source-Id` before saving anything. If a page whose `**Source-Id**` matches carries `engram_id`
+and no `memorycard_id`, `promote` would refuse every memory of this source as tied to that
+page: make no `mem_save` and no `promote` call, report "blocked: ingested before the move to
+memorycard" with the page address, and do not re-run the ingestion of that source (updating
+such a page is a later change to `longterm-mem`, not this procedure). If `promote` refuses a
+memory anyway because an Engram observation already has a page, stop the source the same
+way: no further `mem_save` or `promote`, the same report, no re-run.
 
 The hard no-op only applies to a manifest whose `**Status**` is already `complete` — a
 matching digest never short-circuits a `pending` or `partial` manifest, since an unchanged

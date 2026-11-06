@@ -30,7 +30,7 @@ shape to any record defined by this contract.
 | `scope` | `project` |
 | `body` | the record's `content`: body → `---` → provenance block, below; a manifest: the provenance block first |
 
-memorycard's `mem_save` takes no other argument (no `capture_prompt`, no `content`); a call with one is refused before anything is saved.
+memorycard's `mem_save` also takes `supersedes`, `cwd` and `directory`, and nothing else: it has no `capture_prompt` and no `content` argument, and a call with an unknown argument is refused before anything is saved. Below, a record's `content` is its text, sent as `body`.
 
 ## Marker mechanism (non-load-bearing `type`)
 
@@ -147,7 +147,7 @@ second parallel memory, and never an automatic supersession.
 | exists, **new N < old N**, new N ≥ 1 | — | Surplus keys `c{N+1}…` upsert to a retired tombstone (`**Status**: retired`, trailer preserved, body removed) and are promoted so the vault page updates in place. **Never hand-deleted.** |
 | exists, **new N == 1** (was > 1) | — | The record moves to the manifest key (rule 2: a single-chunk source has no separate chunk observation). Every prior chunk key `c0001…` — including `c0001` — retires to a tombstone the same way; none of them becomes the live record. |
 | exists, **new N > old N** | — | New chunk keys are created and promoted |
-| **origin changed** (new URI ⇒ new `Source-Id`) | — | A different topic key. The old record is NOT touched automatically; `mem_compare(new, old, "supersedes")` is a documented operator step, after which promotion propagates `status: superseded` and the related-link on the next `sync`. |
+| **origin changed** (new URI ⇒ new `Source-Id`) | — | A different topic key. The old record is NOT touched automatically; saving the new record with memorycard's `mem_save` argument `supersedes` set to the old record's memorycard id is a documented operator step, after which promotion propagates `status: superseded` and the related-link on the next `sync`. |
 
 The N-change rows (shrink, grow, N==1) apply on top of the **differ** row,
 never instead of it: a re-ingestion with a different chunk count always has
