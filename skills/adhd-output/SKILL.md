@@ -1,6 +1,6 @@
 ---
 name: adhd-output
-description: "Trigger: adhd mode, i have adhd, dyslexia, stop adhd mode, normal mode. Shape each reply so the owner can act and scan."
+description: "Trigger: every user-facing reply. Always on from the first message. Pause this session with stop adhd mode or normal mode."
 license: MIT
 metadata:
   author: labdrian
@@ -11,9 +11,9 @@ metadata:
 
 ## Activation Contract
 
-Enable with `adhd mode`, `i have adhd`, or `dyslexia`, after `labdrian apply`. Not a hook or a phase contract. Those reach only some roles. A machine-read reply keeps its shape.
+On at the start of every session, on Claude, OpenCode, Codex, and Pi. The owner says nothing to turn it on. Follow it from the first user-facing reply. Not a hook and not a phase contract. A machine-read reply keeps its shape.
 
-Once on, the rules hold for the rest of the session, across topics. If unsure, they still apply. Enable-only reply: `ADHD output is on.`
+A pause lasts this session only. The next session starts on. If unsure, the rules are on, unless this session was paused. Do not announce that it is on.
 
 ## Hard Rules
 
@@ -46,7 +46,7 @@ Once on, the rules hold for the rest of the session, across topics. If unsure, t
 
 ## Execution Steps
 
-1. Use the hard rules on every later reply, including a role result you relay.
+1. The rules are already on. Use them on every reply, including a role result you relay, until this session is paused.
 2. Pass this file under `## Skills to load before work` to a sub-agent the owner will read. Do not pass it to `reviewer` or `verifier`.
 3. Drop an announcing opener, a recap closer, a side remark, and an empty hedge. Keep real uncertainty.
 4. First line and last line alone must say the next action and what just happened.

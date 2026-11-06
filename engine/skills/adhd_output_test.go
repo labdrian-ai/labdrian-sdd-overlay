@@ -34,7 +34,8 @@ func adhdOutputRules() []adhdOutputRule {
 		{"put paths and commands in code spans", "Put each path, command, and identifier in a code span."},
 		{"add headers to a long explanation", "add headers so it can be skimmed"},
 		{"avoid idioms and unmarked lookalikes", "say digit zero or letter O"},
-		{"stay on for the session", "the rules hold for the rest of the session"},
+		{"start on every session", "On at the start of every session,"},
+		{"start on again next session", "The next session starts on."},
 		{"turn off in one line", "ADHD output is off."},
 		{"let safety beat brevity", "Safety beats brevity."},
 		{"stop a debug spiral", "The last three turns are still broken"},
@@ -75,13 +76,18 @@ func TestAdhdOutputSkillCarriesTheRulesAndTheAttribution(t *testing.T) {
 	if fm.MetaAuthor != "labdrian" || fm.MetaVersion != "1.0" {
 		t.Errorf("author %q version %q, want labdrian 1.0", fm.MetaAuthor, fm.MetaVersion)
 	}
-	for _, phrase := range []string{"Trigger: ", "adhd mode", "i have adhd", "dyslexia", "stop adhd mode", "normal mode"} {
+	for _, phrase := range []string{"Trigger: ", "every user-facing reply", "Always on", "stop adhd mode", "normal mode"} {
 		if !strings.Contains(fm.Description, phrase) {
 			t.Errorf("description %q lacks %q", fm.Description, phrase)
 		}
 	}
+	for _, phrase := range []string{"i have adhd", "say `adhd mode`"} {
+		if strings.Contains(fm.Description, phrase) || strings.Contains(body, phrase) {
+			t.Errorf("the skill still waits for the owner to say %q", phrase)
+		}
+	}
 	if strings.Contains(frontmatter, "disable-model-invocation") {
-		t.Error("the model must be able to load the skill when the owner says the trigger")
+		t.Error("the model must load the skill on every user-facing reply, without a phrase")
 	}
 	hard, warnings := LintSkillFile([]byte(whole))
 	for _, finding := range hard {
@@ -140,6 +146,15 @@ func TestAdhdOutputIsRegisteredForEveryRuntimeAndDeployed(t *testing.T) {
 	for _, row := range []string{"adhd-output/SKILL.md custom\n", "adhd-output/LICENSE custom\n"} {
 		if !strings.Contains(manifest, row) {
 			t.Errorf("overlay.manifest lacks %q", row)
+		}
+	}
+	resolver := readRepoFile(t, root, "skills/_shared/skill-resolver.md")
+	for _, line := range []string{
+		"`adhd-output` is always on for user-facing replies.",
+		"Do not pass it to `reviewer` or `verifier`.",
+	} {
+		if !strings.Contains(resolver, line) {
+			t.Errorf("skill-resolver must say %q", line)
 		}
 	}
 }
