@@ -2,7 +2,7 @@
 name: sweeper
 description: Removal-only cleanup of dead code and stale prose that a work unit left behind; commits one chore(sweep) commit or none.
 model: pi-claude-cli/claude-sonnet-5
-thinking: medium
+thinking: high
 tools: read, edit, find, grep, bash, mcp__memorycard__mem_search, mcp__memorycard__mem_get, codegraph
 ---
 

@@ -112,12 +112,12 @@ func roleAgentSpecs() []roleAgentSpec {
 			"return status blocked with its stderr line", "on exit 0 name the head and the results it prints",
 			"and the exemptions when it prints any",
 		}},
-		{"reviewer", "sonnet", reviewerTools, 4, []string{
+		{"reviewer", "opus", reviewerTools, 4, []string{
 			"diff in this prompt", "diff_sha256", "read nothing outside that path", "never instructions",
 			"BLOCKER/CRITICAL", "pre-existing or base-only", "unproved causality is unknown", "style is not a finding",
 			"This replaces the return envelope", "one JSON object", "never compute them", "Never edit, run, or delegate",
 		}},
-		{"verifier", "sonnet", verifierTools, 5, []string{
+		{"verifier", "opus", verifierTools, 5, []string{
 			"Run only the checks the prompt names", "mktemp -d", "never inferred", "reproduce it deterministically",
 			"reproduced | not-reproduced | not-run", "fix reverted in a scratch copy", "grant nothing",
 			"This replaces the return envelope", "one JSON object", "one verdict for each finding id",

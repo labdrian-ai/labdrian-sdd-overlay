@@ -62,11 +62,10 @@ type role struct {
 	description string
 	model       modelFamily
 	// effort is how hard the role thinks, written once for the two runtimes that take it from the file:
-	// the thinking of Pi and the model_reasoning_effort of Codex. It is one of low, medium, high and
-	// xhigh, the values both vocabularies share (gentle-pi 4.3.0 knows off, minimal, low, medium, high,
-	// xhigh and max; the model list of Codex 0.148.0 knows low, medium, high, xhigh, max and ultra).
-	// The values are an assumption: the design names the field and not its values. They follow what
-	// exists: every agent gentle-ai installs for Pi says high, and jd-judge-a says high on Claude.
+	// the thinking of Pi and the model_reasoning_effort of Codex. The owner set three tiers (per-role
+	// design v3, D15): frontier and mid think at high, light at low. Both vocabularies also know max
+	// (gentle-pi 4.3.0: off, minimal, low, medium, high, xhigh, max; Codex 0.148.0: low, medium, high,
+	// xhigh, max, ultra). Max is the parent's effort, and the parent is not a row of this table.
 	effort string
 	// tools are the tools of the role in the names of Claude Code, in the order its agent file lists
 	// them. The Claude files that existed before the generator are the oracle for these lists, byte
@@ -113,7 +112,7 @@ var roles = []role{
 		name:        "prototyper",
 		description: "Answers listed feasibility questions with throwaway spikes in a disposable worktree and returns kill, narrow or continue per question.",
 		model:       sonnet,
-		effort:      "medium",
+		effort:      "high",
 		tools: []string{
 			"Read", "Glob", "Grep", "Bash", "Write", "Edit",
 			"mcp__memorycard__mem_search", "mcp__memorycard__mem_get",
@@ -123,7 +122,7 @@ var roles = []role{
 		name:        "sweeper",
 		description: "Removal-only cleanup of dead code and stale prose that a work unit left behind; commits one chore(sweep) commit or none.",
 		model:       sonnet,
-		effort:      "medium",
+		effort:      "high",
 		tools: []string{
 			"Read", "Edit", "Glob", "Grep", "Bash",
 			"mcp__memorycard__mem_search", "mcp__memorycard__mem_get",
@@ -133,15 +132,15 @@ var roles = []role{
 	{
 		name:        "reviewer",
 		description: "Reviewer role, the read-only reader of a committed diff and its detached worktree (send base, head, diff_sha256, the diff, the worktree path and the lens rows); returns one JSON object of findings.",
-		model:       sonnet,
+		model:       opus,
 		effort:      "high",
 		tools:       []string{"Read", "Grep", "Glob"},
 	},
 	{
 		name:        "verifier",
 		description: "Verifier role, runs the checks a prompt names and reproduces the findings it lists (send the finding ids, the exact checks and the worktree); returns reproduced, not-reproduced or not-run per id, or, with no finding id, the report of an exemption, each check as pass, fail or not-run.",
-		model:       sonnet,
-		effort:      "medium",
+		model:       opus,
+		effort:      "high",
 		tools:       []string{"Read", "Grep", "Glob", "Bash", "mcp__memorycard__mem_get"},
 	},
 	{
