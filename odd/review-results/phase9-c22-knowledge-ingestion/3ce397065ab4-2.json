@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "491ee351931c3c6542255fe5f59a9d25e2187443",
+    "head": "3ce397065ab42c0ba05e8a2bfeec6e7d03c41459",
+    "diff_sha256": "be829649a46fe0179fb3e419a5e3bb3474b3f1198c7ca7766c26c45949180f66",
+    "paths": [
+      "longterm-mem/internal/ingest/source.go",
+      "longterm-mem/internal/sourcefs/sourcefs.go",
+      "longterm-mem/internal/sourcefs/sourcefs_test.go",
+      "longterm-mem/internal/sourcefs/sourcefs_unix_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "491ee351931c3c6542255fe5f59a9d25e2187443",
+      "head": "3ce397065ab42c0ba05e8a2bfeec6e7d03c41459",
+      "diff_sha256": "be829649a46fe0179fb3e419a5e3bb3474b3f1198c7ca7766c26c45949180f66"
+    },
+    "evidence": [
+      "Read the full diff at c22t2fix.diff and the previous review record 491ee351931c-2.json (F1-F4).",
+      "Read sourcefs.go at head in the worktree. ReadFile now calls r.Lstat first and returns the Lstat error unchanged, so a missing entry still satisfies fs.ErrNotExist. It refuses any kind other than EntryFile without opening it, and returns nil bytes on refusal. This resolves F1: the doc comments in sourcefs.go and ingest/source.go now say the whole file is read, the size bound is the caller's, and the replace-between-look-and-read race is not defended against.",
+      "F2 resolved: the Mkfifo case moved to sourcefs_unix_test.go behind //go:build unix, and the Mkfifo case was removed from the Lstat table test. The new test also asserts that ReadFile refuses a pipe, which would block if it opened it. I checked that syscall is no longer imported in sourcefs_test.go.",
+      "F3 partly resolved: TestLstatDoesNotReachALinksTarget uses a link whose target directory has mode 0, so an adapter that stat'ed or opened the target would fail. It skips when running as root. The test comment admits that an adapter that looks and discards the answer cannot be detected from outside; that residual gap is acknowledged and acceptable.",
+      "F4 resolved: the ReadDir doc on the port now says links and other kinds are included and that Lstat tells the kind.",
+      "EntryKind is a string type, so the %s verb in the refusal error is valid.",
+      "I ran no commands (read-only review), so no test, vet or build result is claimed. The unix-only test file and the root skip were judged by reading, not by running."
+    ],
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/sourcefs/sourcefs.go:56",
+        "claim": "The refusal message reads 'sourcefs: X is a other, not a file: not read' when the kind is EntryOther, because the EntryKind value is interpolated after the article 'a'. 'is a other' and 'is a directory' share one template, so the grammar is wrong for one kind. The message is also only a diagnostic and no test pins it. Use a form without an article, for example 'is of kind %s'. This is cosmetic.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/sourcefs/sourcefs.go:56",
+          "longterm-mem/internal/ingest/source.go:42"
+        ]
+      }
+    ],
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/ingest/source.go",
+        "longterm-mem/internal/sourcefs/sourcefs.go",
+        "longterm-mem/internal/sourcefs/sourcefs_test.go",
+        "longterm-mem/internal/sourcefs/sourcefs_unix_test.go"
+      ],
+      "reason": ""
+    }
+  }
+}

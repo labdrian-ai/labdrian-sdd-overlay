@@ -1,0 +1,99 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "d6778306bdb7b995f5a23e93f48b242efb3ef6bb",
+    "head": "491ee351931c3c6542255fe5f59a9d25e2187443",
+    "diff_sha256": "1d472521f7fd47465e706ba479d46e91bf3fd82e0a01036c095e58ff0d9c254c",
+    "paths": [
+      "longterm-mem/internal/ingest/doc.go",
+      "longterm-mem/internal/ingest/source.go",
+      "longterm-mem/internal/ingest/source_test.go",
+      "longterm-mem/internal/sourcefs/sourcefs.go",
+      "longterm-mem/internal/sourcefs/sourcefs_test.go",
+      "openspec/changes/longterm-mem-knowledge-ingestion/tasks.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "d6778306bdb7b995f5a23e93f48b242efb3ef6bb",
+      "head": "491ee351931c3c6542255fe5f59a9d25e2187443",
+      "diff_sha256": "1d472521f7fd47465e706ba479d46e91bf3fd82e0a01036c095e58ff0d9c254c"
+    },
+    "evidence": [
+      "Read the full diff (c22t2.diff) and S2/T2 in odd/tasks/phase9-c22-knowledge-ingestion.md (lines 16 and 24).",
+      "Read tasks 2b.5a and 2b.6a in openspec/changes/longterm-mem-knowledge-ingestion/tasks.md (lines 255-271) and the port sketch at design.md:655-672.",
+      "The port matches the sketch: Lstat, ReadFile and ReadDir were added, along with Entry and EntryKind with four constants. The adapter returns the os error unwrapped, so errors.Is(err, fs.ErrNotExist) holds.",
+      "The adapter checks ModeSymlink before IsDir and IsRegular, and gives a size only for regular files. The tests cover file, directory, link to a file, link to a directory, dangling link and fifo, a missing entry for all three methods, ReadFile bytes, an unreadable file with a root skip, and ReadDir names.",
+      "The directory fake in source_test.go counts reads, and the three ResolveOrigin tests assert reads == 0.",
+      "I ran no commands (read-only review), so no test, vet or guard result is claimed.",
+      "I rechecked every finding location against the files in the head worktree with Grep, not against the diff: sourcefs.go ReadFile is at line 45, Mkfifo is at sourcefs_test.go:200, TestLstatTellsKindsApartWithoutFollowingALink is at sourcefs_test.go:181, TestReadDirListsTheNames is at sourcefs_test.go:266, and ReadFile and ReadDir are at ingest/source.go:22-23.",
+      "The 2b.5a clause 'the target is never opened' is not asserted by any test. The Lstat test uses a symlink to a file outside the directory, so a followed link would show as EntryFile and fail, but nothing proves the target is not opened."
+    ],
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/sourcefs/sourcefs.go:44-47",
+        "claim": "The port says 'ReadFile returns the bytes of the file at path', but the adapter uses os.ReadFile, which follows symlinks, reads without a size bound, and blocks on a fifo. The safety of the future use case therefore depends only on a prior Lstat. Between that Lstat and the ReadFile call, the entry can be swapped for a link to a file outside the root, or the file can grow past the too_large bound. Neither the port doc nor the adapter doc says ReadFile follows links or is unbounded. The T3/T4 author could read the contract as 'never follows', which the threat matrix expects. No test pins the follow-a-link behavior of ReadFile or documents that the guard lives in the caller.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/sourcefs/sourcefs.go:44-47",
+          "longterm-mem/internal/ingest/source.go:21-22",
+          "openspec/changes/longterm-mem-knowledge-ingestion/design.md:655-672"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/sourcefs/sourcefs_test.go:200-207",
+        "claim": "The test calls syscall.Mkfifo directly, which does not exist on Windows. The test file would then fail to compile for the whole sourcefs package on a platform that has no fifo, even though the test logs 'no named pipe on this system' as if that case were handled at runtime. The T4 plan names a GOOS=darwin build but not windows. The skip path is therefore unreachable for the platforms where it would matter. If only Unix is supported, the comment and the Logf are misleading. Otherwise put the fifo case in a build-tagged file.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/sourcefs/sourcefs_test.go:200"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/sourcefs/sourcefs_test.go:178-219",
+        "claim": "Task 2b.5a requires that a link's target 'is never opened'. The test only checks the reported kind and size. It would pass for an adapter that opened or stat'ed the target and then still reported EntrySymlink. The size-of-a-link mutant is covered because the link-to-file target has 21 bytes and Size is expected to be 0, but an implementation that opens the target and discards the result would not be caught. This is a minor gap to the stated requirement.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "openspec/changes/longterm-mem-knowledge-ingestion/tasks.md:255-260",
+          "longterm-mem/internal/sourcefs/sourcefs_test.go:181"
+        ]
+      },
+      {
+        "id": "F4",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/ingest/source.go:23-24",
+        "claim": "The ReadDir doc says 'names (not paths)', but it does not say whether a link or a non-regular entry is included. The adapter includes links, and the test pins that. The interface comment does not state it, so the T4 author must read the adapter's test to learn that links are listed and must be filtered through Lstat. A one-line mention would keep the port contract self-contained, because the in-memory fake in T3 implements only the port doc.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/ingest/source.go:23",
+          "longterm-mem/internal/sourcefs/sourcefs_test.go:264-282"
+        ]
+      }
+    ],
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/ingest/doc.go",
+        "longterm-mem/internal/ingest/source.go",
+        "longterm-mem/internal/ingest/source_test.go",
+        "longterm-mem/internal/sourcefs/sourcefs.go",
+        "longterm-mem/internal/sourcefs/sourcefs_test.go",
+        "openspec/changes/longterm-mem-knowledge-ingestion/tasks.md"
+      ],
+      "reason": ""
+    }
+  }
+}
