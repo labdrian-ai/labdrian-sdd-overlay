@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "75e68b90b7bfa6a060ed64f7a1ea726d0b1321d7",
+    "head": "288ad6ed9fecf6fb608024eafc5b7deca5a83fde",
+    "diff_sha256": "e8e946963cbc46fd372031678c9203d69f36381ff8568967dd355d35b1c7923e",
+    "paths": [
+      "tools/archive-reconcile/main_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "75e68b90b7bfa6a060ed64f7a1ea726d0b1321d7",
+      "head": "288ad6ed9fecf6fb608024eafc5b7deca5a83fde",
+      "diff_sha256": "e8e946963cbc46fd372031678c9203d69f36381ff8568967dd355d35b1c7923e"
+    },
+    "evidence": [
+      "Read the full diff: it touches only tools/archive-reconcile/main_test.go. It deletes the test-side parser shippedLedgerEntries and calls readKnownGaps(\"known-gaps.txt\") instead.",
+      "main.go:276-303: readKnownGaps does not skip the path. It reads the file, strips '#' comments including inline ones, trims, and ignores blank lines. The test and run() therefore parse the ledger through the same function. The old helper treated an inline '#' differently from run().",
+      "main.go:186-190: the clean sentence is 'archive-reconcile: clean — %d active change(s) checked under %s, all classified, none stranded.\\n', printed when waivedCount==0. The ok sentence contains 'known gap(s)'. The new HasPrefix 'archive-reconcile: clean — ' plus Contains 'none stranded.' matches the clean sentence and cannot match the ok sentence.",
+      "main_test.go:1085-1111: run() is called with '--known-gaps known-gaps.txt' and readKnownGaps uses the same relative path. Go tests run in the package directory, so both resolve to tools/archive-reconcile/known-gaps.txt. An unreadable file would fail run() first via the outcomeClean check, and then the test via the readKnownGaps error. A non-empty ledger takes the 'known gap(s)' branch.",
+      "Imports os and filepath are still used by the test (os.Stat, filepath.Join), so removing the helper does not break compilation.",
+      "Not run: I did not execute tests (read-only). I took the parent's report of the mutation proof on the clean sentence as given."
+    ],
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "tools/archive-reconcile/main_test.go:1108",
+        "claim": "The non-empty ledger branch is weaker than the empty branch. It checks only for the substring 'known gap(s)'. It does not pin the waived count to len(waived), and it does not check the 'ok' prefix. If run() reported a wrong count, or waived fewer entries than the ledger lists, the test would still pass. The new code already has `waived`, so asserting the count (for example 'N known gap(s) waived') would be cheap. This was not covered by the earlier F1 and is not caused by this commit, but the commit reshaped this test.",
+        "evidence_class": "inferential",
+        "causal_disposition": "pre-existing",
+        "proof_refs": []
+      }
+    ],
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "tools/archive-reconcile/main_test.go"
+      ],
+      "reason": ""
+    }
+  }
+}

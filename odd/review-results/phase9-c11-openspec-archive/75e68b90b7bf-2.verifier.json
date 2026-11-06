@@ -1,0 +1,18 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "cd /home/labdrian/labdrian-sdd-overlay-worktrees/review-75e68b90b7bf && awk 'NR>=1094&&NR<=1125' tools/archive-reconcile/main_test.go; rg -n '^func readKnownGaps' tools/archive-reconcile/main.go",
+      "output": "At head the empty-ledger branch checks only strings.Contains(stdout, \"clean\"), and shippedLedgerEntries re-implements the ledger parse (blank and '#'-prefixed lines skipped, no inline-comment stripping), while main.go:276 readKnownGaps, in the same package, strips inline '#' comments. Neither exists at base.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F2",
+      "result": "not-reproduced",
+      "command": "cd /home/labdrian/labdrian-sdd-overlay && for c in b1642570 afe575d0 9ed49c46 076789f2 91dc9fa5 2d66dcc0 f7f409eb ebd620e0 16d4ba4e; do git log -1 --format='%h %s' $c; git merge-base --is-ancestor $c 75e68b90 || echo NOT-ANCESTOR; done",
+      "output": "All nine resolve and are ancestors of the head: b1642570 and afe575d0 sync and fix slice 1 into skill-package-manager, 9ed49c46 and 076789f2 slice 2 into skill-project-scope, 91dc9fa5 and 2d66dcc0 slice 3 into skill-lifecycle, f7f409eb, ebd620e0 and 16d4ba4e slice 4 into skill-manifest-gen; each report lists exactly its slice's commits.",
+      "base_result": "not-reproduced"
+    }
+  ]
+}

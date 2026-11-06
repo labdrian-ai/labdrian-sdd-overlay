@@ -1,0 +1,11 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "cd /home/labdrian/labdrian-sdd-overlay-worktrees/review-288ad6ed9fec && awk 'NR>=1106&&NR<=1110' tools/archive-reconcile/main_test.go; git show 45eceeec:tools/archive-reconcile/main_test.go | rg -n 'known gap\\(s\\)'",
+      "output": "At head the non-empty branch is `if !strings.Contains(stdout.String(), \"known gap(s)\")`, with no count against len(waived) and no 'ok' prefix. Before T6 the test had the same single assertion (1097 at 45eceeec), so the weakness is pre-existing; the shipped ledger is empty today, so this branch does not run.",
+      "base_result": "reproduced"
+    }
+  ]
+}

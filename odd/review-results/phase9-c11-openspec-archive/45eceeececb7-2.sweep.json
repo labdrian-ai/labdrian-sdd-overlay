@@ -1,0 +1,43 @@
+{
+  "kind": "sweep",
+  "base": "e3a8bd13863fa42be678b363b85409a9055aadf8",
+  "head": "45eceeececb7794ed0239fa98df3bc640cc1b2b2",
+  "diff_sha256": "64ae538b57500ec10aa84ea0c804fe31acea26b6615b941dad99114f97c3502e",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [
+      "openspec/changes/skill-lifecycle/apply-progress.md",
+      "openspec/changes/skill-lifecycle/design.md",
+      "openspec/changes/skill-lifecycle/proposal.md",
+      "openspec/changes/skill-lifecycle/specs/spec.md",
+      "openspec/changes/skill-lifecycle/tasks.md",
+      "openspec/changes/skill-manifest-gen/design.md",
+      "openspec/changes/skill-manifest-gen/proposal.md",
+      "openspec/changes/skill-manifest-gen/specs/spec.md",
+      "openspec/changes/skill-manifest-gen/tasks.md",
+      "openspec/changes/skill-package-manager/apply-progress.md",
+      "openspec/changes/skill-package-manager/design.md",
+      "openspec/changes/skill-package-manager/proposal.md",
+      "openspec/changes/skill-package-manager/specs/spec.md",
+      "openspec/changes/skill-package-manager/tasks.md",
+      "openspec/changes/skill-package-manager/verify-report.md",
+      "openspec/changes/skill-project-scope/apply-progress.md",
+      "openspec/changes/skill-project-scope/design.md",
+      "openspec/changes/skill-project-scope/proposal.md",
+      "openspec/changes/skill-project-scope/specs/spec.md",
+      "openspec/changes/skill-project-scope/tasks.md"
+    ],
+    "removed_names": []
+  },
+  "t2": [],
+  "t3": [
+    "?? openspec/changes/archive/2026-11-06-skill-lifecycle/archive-report.md",
+    "?? openspec/changes/archive/2026-11-06-skill-manifest-gen/archive-report.md",
+    "?? openspec/changes/archive/2026-11-06-skill-package-manager/archive-report.md",
+    "?? openspec/changes/archive/2026-11-06-skill-project-scope/archive-report.md"
+  ],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

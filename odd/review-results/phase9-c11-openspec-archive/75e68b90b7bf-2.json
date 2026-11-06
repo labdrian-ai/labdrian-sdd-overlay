@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "45eceeececb7794ed0239fa98df3bc640cc1b2b2",
+    "head": "75e68b90b7bfa6a060ed64f7a1ea726d0b1321d7",
+    "diff_sha256": "4bba2e1f83be43bdef66c50ff39472a09d29231236ea38fc1dd477dd18aadb2d",
+    "paths": [
+      "openspec/changes/archive/2026-11-06-skill-lifecycle/archive-report.md",
+      "openspec/changes/archive/2026-11-06-skill-manifest-gen/archive-report.md",
+      "openspec/changes/archive/2026-11-06-skill-package-manager/archive-report.md",
+      "openspec/changes/archive/2026-11-06-skill-project-scope/archive-report.md",
+      "tools/archive-reconcile/known-gaps.txt",
+      "tools/archive-reconcile/main_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "45eceeececb7794ed0239fa98df3bc640cc1b2b2",
+      "head": "75e68b90b7bfa6a060ed64f7a1ea726d0b1321d7",
+      "diff_sha256": "4bba2e1f83be43bdef66c50ff39472a09d29231236ea38fc1dd477dd18aadb2d"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "openspec/changes/archive/2026-11-06-skill-lifecycle/archive-report.md",
+        "openspec/changes/archive/2026-11-06-skill-manifest-gen/archive-report.md",
+        "openspec/changes/archive/2026-11-06-skill-package-manager/archive-report.md",
+        "openspec/changes/archive/2026-11-06-skill-project-scope/archive-report.md",
+        "tools/archive-reconcile/known-gaps.txt",
+        "tools/archive-reconcile/main_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "tools/archive-reconcile/main_test.go:1094-1125",
+        "severity": "SUGGESTION",
+        "claim": "The new empty-ledger branch asserts only that stdout contains the substring \"clean\". The tool's two outcomes are \"clean — ...\" (no waivers) and \"ok — ... known gap(s) waived\". The empty-ledger case is therefore weakly pinned, and the branch is chosen by a test-side line count (lines that are neither blank nor '#') that re-implements the ledger parser. If the tool's parsing ever differs from the test's, for example an inline trailing comment, the test would assert the wrong branch. Asserting the exact prefix \"archive-reconcile: clean\" and \"none stranded\" would tie the check to the tool's real output. Reusing the tool's own parser, if one is exported, would remove the duplicated logic.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "tools/archive-reconcile/main.go:186-190",
+          "tools/archive-reconcile/main_test.go:1097-1125"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "openspec/changes/archive/2026-11-06-skill-lifecycle/archive-report.md:22",
+        "severity": "SUGGESTION",
+        "claim": "I could not run git, so none of the commit ids in the \"Canonical Spec Composition\" sections were checked against git log. This line (91dc9fa5, 2d66dcc0 for skill-lifecycle) is the example. The same section in the other three reports is also unchecked: openspec/changes/archive/2026-11-06-skill-manifest-gen/archive-report.md (f7f409eb, ebd620e0, 16d4ba4e), openspec/changes/archive/2026-11-06-skill-package-manager/archive-report.md (b1642570, afe575d0), and openspec/changes/archive/2026-11-06-skill-project-scope/archive-report.md (9ed49c46, 076789f2). The task log does name 9ed49c46, 91dc9fa5 and f7f409eb as the first sync commits of their slices, and 16d4ba4e appears in the recent-commit list. The rest are unconfirmed. The other checks below are confirmed from the worktree files.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "odd/tasks/phase9-c11-openspec-archive.md:71,79,86"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff.",
+      "The four section headings quoted in the reports match the headings in openspec/specs/{skill-package-manager:314, skill-project-scope:7, skill-lifecycle:182, skill-manifest-gen:7}/spec.md.",
+      "The ID offsets (+200 package-manager, +300 project-scope, +400 lifecycle, +500 manifest-gen) are consistent with the slice numbers 1 to 4. The task log was not read for them.",
+      "Verification statuses match the archived folders. Only skill-package-manager has verify-report.md. The other three have none.",
+      "The d69a387 / ADR-5 / CRITICAL-1 claim matches openspec/project/roadmap.md:126,129. The roadmap names d69a387 as the commit that amended ADR-5 and resolved the NO-GO.",
+      "All four reports cite openspec/decisions/standalone-platform-roadmap.md:76. That line exists, and the grep shows it names skill-project-scope. I did not check that it names the other three.",
+      "tools/archive-reconcile/main.go:186-190 confirms that with zero waivers the tool prints \"clean — ... none stranded\" and with waivers it prints \"ok — ... known gap(s)\". The new test helper's branching matches this behaviour.",
+      "known-gaps.txt, as rewritten, leaves only comment lines, so the helper counts 0 entries and the clean branch is taken. The helper skips blank and '#' lines, which matches the file's stated format.",
+      "The comment on zeroBulletsOtherMarkers was updated to say the shape is historical. The constant is still used by tests."
+    ]
+  }
+}
