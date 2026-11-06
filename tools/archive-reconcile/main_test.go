@@ -644,9 +644,9 @@ func TestRunAcceptsMarkdownLinkBullets(t *testing.T) {
 	}
 }
 
-// zeroBulletsOtherMarkers is the shape four live changes in this repository
-// actually use: a real, complete task breakdown whose completion markers are
-// not bullet checkboxes at all. skill-lifecycle carries ten
+// zeroBulletsOtherMarkers is the shape four changes of this repository used
+// until C11 archived them: a real, complete task breakdown whose completion
+// markers are not bullet checkboxes at all. skill-lifecycle carries ten
 // "**Status**: [x] done" lines and zero bullet checkboxes.
 const zeroBulletsOtherMarkers = "# Tasks\n\n## T-01 first task\n**Status**: [x] done\n\n## T-02 second task\n**Status**: [x] done\n"
 
@@ -1094,7 +1094,32 @@ func TestShippedLedgerMatchesThisRepository(t *testing.T) {
 	if got != outcomeClean {
 		t.Fatalf("run() against this repository with the shipped ledger = exit %d, want %d (outcomeClean); stdout=%q stderr=%q", got, outcomeClean, stdout.String(), stderr.String())
 	}
+	if shippedLedgerEntries(t, root) == 0 {
+		// An empty ledger waives nothing, so the run reports a plain clean.
+		if !strings.Contains(stdout.String(), "clean") {
+			t.Errorf("stdout %q does not report a clean run for an empty ledger", stdout.String())
+		}
+		return
+	}
 	if !strings.Contains(stdout.String(), "known gap(s)") {
 		t.Errorf("stdout %q does not state the waived count", stdout.String())
 	}
+}
+
+// shippedLedgerEntries counts the change names in the shipped known-gaps.txt:
+// its lines that are neither blank nor a '#' comment.
+func shippedLedgerEntries(t *testing.T, root string) int {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join(root, "tools", "archive-reconcile", "known-gaps.txt"))
+	if err != nil {
+		t.Fatalf("read the shipped ledger: %v", err)
+	}
+	n := 0
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(line)
+		if line != "" && !strings.HasPrefix(line, "#") {
+			n++
+		}
+	}
+	return n
 }

@@ -1,5 +1,5 @@
 # Active changes under openspec/changes/ that this guard genuinely fails on
-# today: four it cannot classify at all.
+# today: none. Phase 9 item C11 archived the five that were listed here.
 #
 # This ledger is a RECORD of a gap, never a permission to keep it. Every line
 # is a change the guard really fails on right now, kept out of the run's exit
@@ -13,27 +13,5 @@
 #     gap closes. The list cannot rot into a permanent exemption by being
 #     forgotten.
 #
-# The four below are undetermined on the same signal: their tasks.md
-# carries no bullet checkbox, which is also what blocks them in the native SDD
-# engine today. Making those files readable is a change of its own, not a line
-# this guard can write for them.
-#
 # Each line is a change directory name under openspec/changes/. '#' starts a
 # comment.
-
-# UNDETERMINED. 0 bullet checkboxes; 10 `**Status**: [x] done` markers. The
-# completion convention is real but lives in a shape this guard deliberately
-# does not interpret, so it can say neither stranded nor in progress.
-skill-lifecycle
-
-# UNDETERMINED. 0 bullet checkboxes; 20 other [x]-shaped markers, same
-# convention mismatch as skill-lifecycle.
-skill-package-manager
-
-# UNDETERMINED. 0 checkboxes of any shape: its tasks are `### T-01` .. `### T-07`
-# headings with a dependency graph and no completion marker at all, so there is
-# nothing here for any tool to read a verdict from.
-skill-manifest-gen
-
-# UNDETERMINED. 0 checkboxes of any shape.
-skill-project-scope
