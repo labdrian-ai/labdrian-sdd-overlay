@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"syscall"
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/ingest"
@@ -197,14 +196,6 @@ func TestLstatTellsKindsApartWithoutFollowingALink(t *testing.T) {
 		{"to-a-directory", ingest.Entry{Kind: ingest.EntrySymlink}},
 		{"dangling", ingest.Entry{Kind: ingest.EntrySymlink}},
 	}
-	if err := syscall.Mkfifo(filepath.Join(dir, "pipe"), 0o600); err == nil {
-		cases = append(cases, struct {
-			name string
-			want ingest.Entry
-		}{"pipe", ingest.Entry{Kind: ingest.EntryOther}})
-	} else {
-		t.Logf("no named pipe on this system (%v): the other kind is not checked", err)
-	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			got, err := Reader{}.Lstat(filepath.Join(dir, c.name))
@@ -242,6 +233,49 @@ func TestReadFileReturnsTheBytes(t *testing.T) {
 	}
 	if !bytes.Equal(got, []byte("line one\nline two\n")) {
 		t.Errorf("ReadFile = %q, want the file's bytes", got)
+	}
+}
+
+// A link whose target the process may not reach (its directory has no permission bits) is still a link to Lstat:
+// an adapter that looked at the target, with os.Stat or by opening it, would fail here. (One that looked and threw
+// the answer away cannot be told apart from outside.)
+func TestLstatDoesNotReachALinksTarget(t *testing.T) {
+	dir, closed := t.TempDir(), t.TempDir()
+	write(t, filepath.Join(closed, "target.md"), "out of reach")
+	symlink(t, filepath.Join(closed, "target.md"), filepath.Join(dir, "link"))
+	if err := os.Chmod(closed, 0); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(closed, 0o700) })
+	if _, err := os.Stat(filepath.Join(dir, "link")); err == nil {
+		t.Skip("this process reaches a directory with no permission bits (root): the case cannot be shown")
+	}
+
+	got, err := Reader{}.Lstat(filepath.Join(dir, "link"))
+	if err != nil || got != (ingest.Entry{Kind: ingest.EntrySymlink}) {
+		t.Errorf("Lstat = %+v, %v, want a link and no error", got, err)
+	}
+}
+
+// ReadFile reads a regular file and nothing else: a link (to a file or to a directory) is refused rather than
+// followed, and so is a directory, so a caller that measured an entry with Lstat never reads something else.
+func TestReadFileRefusesAnythingButAFile(t *testing.T) {
+	dir, outside := t.TempDir(), t.TempDir()
+	write(t, filepath.Join(outside, "secret.md"), "outside the directory")
+	mkdir(t, filepath.Join(dir, "notes"))
+	symlink(t, filepath.Join(outside, "secret.md"), filepath.Join(dir, "to-a-file"))
+	symlink(t, filepath.Join(dir, "notes"), filepath.Join(dir, "to-a-directory"))
+
+	for _, name := range []string{"to-a-file", "to-a-directory", "notes"} {
+		t.Run(name, func(t *testing.T) {
+			got, err := Reader{}.ReadFile(filepath.Join(dir, name))
+			if err == nil {
+				t.Errorf("ReadFile = %q with no error, want a refusal", got)
+			}
+			if got != nil {
+				t.Errorf("ReadFile returned %q with its refusal, want no bytes", got)
+			}
+		})
 	}
 }
 

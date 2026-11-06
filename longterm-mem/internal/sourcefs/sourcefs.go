@@ -5,6 +5,7 @@
 package sourcefs
 
 import (
+	"fmt"
 	"io/fs"
 	"os"
 
@@ -41,13 +42,24 @@ func (Reader) Lstat(path string) (ingest.Entry, error) {
 	}
 }
 
-// ReadFile returns the bytes of the file at path; the failure is the operating system's own.
-func (Reader) ReadFile(path string) ([]byte, error) {
+// ReadFile returns the bytes of the regular file at path. It looks at the entry first, as Lstat does, and refuses
+// a link (never following it), a directory and any other kind, which it never opens (opening a named pipe would
+// wait for a writer). It reads the whole file: bounding the size is the caller's, from the Size Lstat reported.
+// An entry replaced between that look and the read is not defended against. Every other failure is the operating
+// system's own, so a missing entry satisfies errors.Is(err, fs.ErrNotExist).
+func (r Reader) ReadFile(path string) ([]byte, error) {
+	entry, err := r.Lstat(path)
+	if err != nil {
+		return nil, err
+	}
+	if entry.Kind != ingest.EntryFile {
+		return nil, fmt.Errorf("sourcefs: %s is a %s, not a file: not read", path, entry.Kind)
+	}
 	return os.ReadFile(path)
 }
 
-// ReadDir returns the names in the directory at path, without . and ..; the failure is the operating system's
-// own. The order is os.ReadDir's, which the port does not promise.
+// ReadDir returns the names of every entry in the directory at path, links and other kinds included, without .
+// and ..; the failure is the operating system's own. The order is os.ReadDir's, which the port does not promise.
 func (Reader) ReadDir(path string) ([]string, error) {
 	entries, err := os.ReadDir(path)
 	if err != nil {

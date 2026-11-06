@@ -18,9 +18,11 @@ type SourceReader interface {
 	// Lstat reports the kind of the entry at path and, for a file, its size. A link is reported as a link and
 	// never followed.
 	Lstat(path string) (Entry, error)
-	// ReadFile returns the bytes of the file at path.
+	// ReadFile returns the bytes of the regular file at path, all of them, and refuses any other kind (a link is
+	// refused, never followed). Bounding the size is the caller's, from the Size Lstat reports.
 	ReadFile(path string) ([]byte, error)
-	// ReadDir returns the names (not paths) in the directory at path, without . and .., in no promised order.
+	// ReadDir returns the names (not paths) of every entry in the directory at path, links and other kinds
+	// included, without . and .., in no promised order; the kind of each is Lstat's to tell.
 	ReadDir(path string) ([]string, error)
 }
 
