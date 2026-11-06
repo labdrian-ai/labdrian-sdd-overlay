@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "63254c3398b9791c1e00597c0dc48deebb2384b6",
+    "head": "f3d818e94ac0a02e41b2f52a161edc8d6f6cdfd5",
+    "diff_sha256": "3b5186f6dfe666681739b80a76a270b06f0c7c8d51055bd490a468ddb6461951",
+    "paths": [
+      "longterm-mem/internal/ingest/extract.go",
+      "longterm-mem/internal/ingest/extract_test.go",
+      "longterm-mem/internal/ingest/header.go",
+      "longterm-mem/internal/sourcefs/sourcefs_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "63254c3398b9791c1e00597c0dc48deebb2384b6",
+      "head": "f3d818e94ac0a02e41b2f52a161edc8d6f6cdfd5",
+      "diff_sha256": "3b5186f6dfe666681739b80a76a270b06f0c7c8d51055bd490a468ddb6461951"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/ingest/extract.go",
+        "longterm-mem/internal/ingest/extract_test.go",
+        "longterm-mem/internal/ingest/header.go",
+        "longterm-mem/internal/sourcefs/sourcefs_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "longterm-mem/internal/ingest/extract.go:148-150",
+        "severity": "SUGGESTION",
+        "claim": "The new filepath.Clean collapses \"..\" lexically before Lstat. A path such as \"/x/link/../y\" used to resolve through the link's target directory in the OS. It now names \"/x/y\", and that is also the URI recorded in the source. The trailing-slash link bypass is closed, but the change silently reinterprets \"link/..\" paths. The doc comment mentions only the trailing slash and \"/.\" cases, not this side effect. The effect is arguably consistent with the lexical below() check, so it is only a note.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/ingest/extract.go:150",
+          "longterm-mem/internal/ingest/source.go:54-67"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff and the head-worktree extract.go locate(), readText(), scan() and walk().",
+      "ResolveOrigin (source.go) joins and cleans only relative paths and returns absolute ones untouched. Before this fix an absolute \"link/\" or \"link/.\" reached Lstat uncleaned, so the new Clean in locate() addresses polisher F1. After Clean the symlink Lstat hits the default branch and returns the \"neither file nor directory\" error, which the new sourcefs test asserts for both spellings.",
+      "The doc comments for Request.Origin, scan() and Origin.Override now match the code. scan() returns Result{} on an extractOne error, so the whole scan fails on a MaxChunks error, as the new comment says. walk() skips subdirectories silently when Recursive is false, as the new comment says. This resolves review F1 and F3.",
+      "The new MaxChunks scan test uses the same input as chunk_test.go TestChunkText_RefusesBeyondMaxChunks (unique headings, 10009 sections against MaxChunks=9999). Unique headings keep chunks from merging, and MaxSourceBytes=len(huge) lets the file past the too_large check. Extraction order is a.md, b.md, c.png, so the empty-Result assertion shows the earlier source and skip were dropped. This resolves review F2.",
+      "The new imports (strings, time) in sourcefs_test.go are used by the new test.",
+      "I did not run any tests or builds (not run)."
+    ]
+  }
+}

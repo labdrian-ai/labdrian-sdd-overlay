@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "969adf5782da24370ae2a9d5745280d16361a695",
+    "head": "68c4263b2ea997b4b31768cef7cea7050cb74179",
+    "diff_sha256": "1eeece872d9704cf6c748bf6d5eff3f1eb9ba3bfd0417631b6d9f604dabf06fa",
+    "paths": [
+      "odd/review-results/phase9-c22-knowledge-ingestion/19af1ca0a95c-1.exempt.json",
+      "odd/tasks/phase9-c22-knowledge-ingestion.md"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git diff --name-status 68c4263b2ea997b4b31768cef7cea7050cb74179^ 68c4263b2ea997b4b31768cef7cea7050cb74179",
+        "result": "pass",
+        "output": "A odd/review-results/phase9-c22-knowledge-ingestion/19af1ca0a95c-1.exempt.json; M odd/tasks/phase9-c22-knowledge-ingestion.md; nothing else."
+      },
+      {
+        "command": "git diff 68c4263b2ea997b4b31768cef7cea7050cb74179^ 68c4263b2ea997b4b31768cef7cea7050cb74179 -- odd/tasks/phase9-c22-knowledge-ingestion.md",
+        "result": "pass",
+        "output": "Two hunks: the S4 sentence on an Override now a request error citing L8; one L8 line appended at the end. No other line changed."
+      },
+      {
+        "command": "git log -1 --format=%B 68c4263b2ea997b4b31768cef7cea7050cb74179",
+        "result": "pass",
+        "output": "Last non-empty line is Risk: none; no Co-Authored-By line."
+      },
+      {
+        "command": "git show 68c4263b2ea997b4b31768cef7cea7050cb74179:odd/tasks/phase9-c22-knowledge-ingestion.md | rg -n '\\\\u[0-9a-fA-F]{4}'",
+        "result": "pass",
+        "output": "No output (exit 1)."
+      },
+      {
+        "command": "git show 68c4263b2ea997b4b31768cef7cea7050cb74179:odd/review-results/phase9-c22-knowledge-ingestion/19af1ca0a95c-1.exempt.json | jq -e .",
+        "result": "pass",
+        "output": "Parsed (exit 0)."
+      }
+    ]
+  }
+}

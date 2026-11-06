@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f3d818e94ac0a02e41b2f52a161edc8d6f6cdfd5",
+    "head": "ea4bccc11ab9e441a6d2009176c4c94d29d7ea4b",
+    "diff_sha256": "3044a1681780ba11473d1b677342e85ee9e0d97a7734893a66a85f36de9e0e0f",
+    "paths": [
+      "longterm-mem/internal/ingest/extract.go"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git diff --name-status f3d818e94ac0a02e41b2f52a161edc8d6f6cdfd5 ea4bccc11ab9e441a6d2009176c4c94d29d7ea4b",
+        "result": "pass",
+        "output": "M longterm-mem/internal/ingest/extract.go"
+      },
+      {
+        "command": "git diff f3d818e94ac0a02e41b2f52a161edc8d6f6cdfd5 ea4bccc11ab9e441a6d2009176c4c94d29d7ea4b",
+        "result": "pass",
+        "output": "One hunk; only // comment lines changed (one removed, two added). No code lines changed."
+      },
+      {
+        "command": "git log -1 --format=%B ea4bccc11ab9e441a6d2009176c4c94d29d7ea4b",
+        "result": "pass",
+        "output": "Last non-empty line is Risk: none; no Co-Authored-By line."
+      },
+      {
+        "command": "git show ea4bccc11ab9e441a6d2009176c4c94d29d7ea4b:longterm-mem/internal/ingest/extract.go | rg -n '\\\\u[0-9a-fA-F]{4}'",
+        "result": "pass",
+        "output": "No output (exit 1)."
+      }
+    ]
+  }
+}
