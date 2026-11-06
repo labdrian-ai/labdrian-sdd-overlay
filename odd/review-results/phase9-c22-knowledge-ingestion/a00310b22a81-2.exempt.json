@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "44b22fb540de4afc9753622e08294bd2d0627ba3",
+    "head": "a00310b22a81bd1c82e52dbc59d963a34de09a55",
+    "diff_sha256": "1fc9ba34cb7280873fce46e4f7f65f253624b152dd4346f86d2d72558f41b5b0",
+    "paths": [
+      "openspec/specs/knowledge-ingestion/spec.md",
+      "openspec/specs/longterm-mem-ingest-extraction/spec.md"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git diff --stat a00310b22a81bd1c82e52dbc59d963a34de09a55^ a00310b22a81bd1c82e52dbc59d963a34de09a55",
+        "result": "pass",
+        "output": "openspec/specs/knowledge-ingestion/spec.md | 202 +++; openspec/specs/longterm-mem-ingest-extraction/spec.md | 168 +++; 2 files changed, 370 insertions(+)."
+      },
+      {
+        "command": "diff <(git show a00310b2:openspec/changes/longterm-mem-knowledge-ingestion/specs/knowledge-ingestion/spec.md) <(git show a00310b2:openspec/specs/knowledge-ingestion/spec.md)",
+        "result": "pass",
+        "output": "No output, exit 0."
+      },
+      {
+        "command": "diff <(git show a00310b2:openspec/changes/longterm-mem-knowledge-ingestion/specs/longterm-mem-ingest-extraction/spec.md) <(git show a00310b2:openspec/specs/longterm-mem-ingest-extraction/spec.md)",
+        "result": "pass",
+        "output": "No output, exit 0."
+      },
+      {
+        "command": "rg -n '\\\\u[0-9a-fA-F]{4}' openspec/specs/knowledge-ingestion/spec.md openspec/specs/longterm-mem-ingest-extraction/spec.md",
+        "result": "pass",
+        "output": "No matches, exit 1."
+      },
+      {
+        "command": "bin/labdrian-overlay archive-reconcile --repo \"$PWD\" --known-gaps tools/archive-reconcile/known-gaps.txt",
+        "result": "pass",
+        "output": "clean, 2 active changes checked, exit 0."
+      },
+      {
+        "command": "go run -C tools/archive-anchor-gate . --repo \"$PWD\" --known-gaps known-gaps.txt",
+        "result": "pass",
+        "output": "ok: 15 report(s) checked, 1 known gap(s); exit 0."
+      },
+      {
+        "command": "git log -1 --format=%B a00310b22a81bd1c82e52dbc59d963a34de09a55",
+        "result": "pass",
+        "output": "Last line Risk: none; no Co-Authored-By line."
+      }
+    ]
+  }
+}
