@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "67bfbd34dbeb8cd13c1bf1389d0a3a510a81891b",
+    "head": "0de821d17809b811a24897d051262e33a033037e",
+    "diff_sha256": "adb1eeb5c4b8d87dbfba1d6072049699fd38223cdbbb834e4f7de9b3a67eb133",
+    "paths": [
+      "odd/review-results/phase9-c22-knowledge-ingestion/67bfbd34dbeb-1.sweep.json",
+      "odd/review-results/phase9-c22-knowledge-ingestion/67bfbd34dbeb-2.sweeper.json",
+      "odd/review-results/phase9-c22-knowledge-ingestion/67bfbd34dbeb-3.exempt.json",
+      "odd/tasks/consolidation-phase9.md",
+      "odd/tasks/phase9-c22-knowledge-ingestion.md",
+      "openspec/changes/archive/2026-11-06-longterm-mem-knowledge-ingestion/archive-report.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "67bfbd34dbeb8cd13c1bf1389d0a3a510a81891b",
+      "head": "0de821d17809b811a24897d051262e33a033037e",
+      "diff_sha256": "adb1eeb5c4b8d87dbfba1d6072049699fd38223cdbbb834e4f7de9b3a67eb133"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/review-results/phase9-c22-knowledge-ingestion/67bfbd34dbeb-1.sweep.json",
+        "odd/review-results/phase9-c22-knowledge-ingestion/67bfbd34dbeb-2.sweeper.json",
+        "odd/review-results/phase9-c22-knowledge-ingestion/67bfbd34dbeb-3.exempt.json",
+        "odd/tasks/consolidation-phase9.md",
+        "odd/tasks/phase9-c22-knowledge-ingestion.md",
+        "openspec/changes/archive/2026-11-06-longterm-mem-knowledge-ingestion/archive-report.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Inspected every changed hunk in the supplied canonical diff for recall and readability.",
+      "The archive report distinguishes successful page refresh from unsupported memorycard sync and preserves the D7/D13 follow-up.",
+      "The ledger and task log consistently leave delivery, final bookkeeping and this review pending.",
+      "The persisted sweep and exemption records bind to the preceding move, rather than claiming verification of this candidate.",
+      "Commands and independent checks: not run. Full specification and worktree contents were not independently read; conclusions are limited to the supplied diff."
+    ]
+  }
+}
