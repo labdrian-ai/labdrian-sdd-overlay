@@ -1,0 +1,25 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "cd /home/labdrian/labdrian-sdd-overlay-worktrees/review-92083ce6b633/longterm-mem && go test -count=1 -run 'TestSourceIDOfAnOverride' ./internal/ingest/ ; rg -n 'Override' openspec/changes/longterm-mem-knowledge-ingestion/ skills/_shared/ (run from the worktree root) ; rg -n 'contained file' skills/_shared/ingested-observation-contract.md openspec/changes/longterm-mem-knowledge-ingestion/design.md ; Read of internal/ingest/header.go:255-287 and tasks.md:205-219",
+      "output": "git rev-parse HEAD = 92083ce6b633e1bb2a9f41e360cb0e0f7ba88f18. The test passes, and pins a directory Override to x-8bfa69fe, the file case's id. header.go:262-268 returns canonical = o.Override for file and directory alike and never reads URI. A scratch probe gave specs-d4cc6778 for uri=/srv/a/one.md and uri=/srv/a/two.md under one directory Override. The contract says directory is 'as file, applied per contained file'; no code or doc at head says how a contained file gets its identity when the scanned directory has an Override. Reproduced. Whether the T4 scan copies the Override cannot be tested at head, because the scan does not exist yet.",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "Probe test in scratch copy /tmp/tmp.Cn72GUoFMP/m (probe file /tmp/tmp.Cn72GUoFMP/m/internal/ingest/probe_test.go): cd /tmp/tmp.Cn72GUoFMP/m && go test -count=1 -v -run TestProbeF2 ./internal/ingest/",
+      "output": "override='repo://' -> id='repo-5b13a809'. override='repo://a/specs/' -> id='specs-d4cc6778'. override='/' -> id='-8a5edab2'. override='repo://a/specs/x.md' -> id='x-79700fd0'. Reproduced: the trailing slash reads 'specs', and '/' has an empty slug. Not reproduced for 'repo://', whose slug is 'repo'. Ids stay stable and unique through the hash. No test covers these inputs. Linux only, head only.",
+      "base_result": "not-run"
+    },
+    {
+      "id": "F3",
+      "result": "reproduced",
+      "command": "Read of internal/ingest/source.go (lines 1-40) and internal/ingest/source_test.go:88-152 in the worktree; rg -n 'Override|func ResolveOrigin' internal/ingest/source.go internal/ingest/source_test.go",
+      "output": "source.go:27-34 returns early only for non-file kinds, an empty URI or an absolute URI; Override is not in the condition, so a relative URI beside an Override asks reader.WorkingDirectory() and returns its error at line 33. The doc comment does not say why. source_test.go:100 pins asked==1 for that case. Shown by reading, not by a run.",
+      "base_result": "not-run"
+    }
+  ]
+}
