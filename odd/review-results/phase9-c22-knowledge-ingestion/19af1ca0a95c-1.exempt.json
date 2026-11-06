@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "1127364a6b727305b316542b51805313c0c367de",
+    "head": "19af1ca0a95cc404539064624788163f0b808aad",
+    "diff_sha256": "0926d6abd9eeedf90b9c832557f7900c5141b09cda054c5f184967138ebaf8f0",
+    "paths": [
+      "odd/review-results/phase9-c22-knowledge-ingestion/1127364a6b72-1.sweep.json",
+      "odd/review-results/phase9-c22-knowledge-ingestion/1127364a6b72-2.json",
+      "odd/review-results/phase9-c22-knowledge-ingestion/1127364a6b72-2.verifier.json",
+      "odd/review-results/phase9-c22-knowledge-ingestion/1ecd0fe2be27-1.sweep.json",
+      "odd/review-results/phase9-c22-knowledge-ingestion/1ecd0fe2be27-2.json",
+      "odd/review-results/phase9-c22-knowledge-ingestion/1ecd0fe2be27-2.verifier.json",
+      "odd/review-results/phase9-c22-knowledge-ingestion/da693aeaedb6-1.sweep.json",
+      "odd/review-results/phase9-c22-knowledge-ingestion/da693aeaedb6-2.exempt.json",
+      "odd/review-results/phase9-c22-knowledge-ingestion/e946c79deebd-1.sweep.json",
+      "odd/review-results/phase9-c22-knowledge-ingestion/e946c79deebd-2.json",
+      "odd/review-results/phase9-c22-knowledge-ingestion/e946c79deebd-2.verifier.json",
+      "odd/review-results/phase9-c22-knowledge-ingestion/fcfcfd3e27a1-1.sweep.json",
+      "odd/review-results/phase9-c22-knowledge-ingestion/fcfcfd3e27a1-2.sweeper.json",
+      "odd/review-results/phase9-c22-knowledge-ingestion/fcfcfd3e27a1-3.json",
+      "odd/review-results/phase9-c22-knowledge-ingestion/fcfcfd3e27a1-3.verifier.json",
+      "odd/tasks/phase9-c22-knowledge-ingestion.md"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git diff --stat 1127364a6b727305b316542b51805313c0c367de 19af1ca0a95cc404539064624788163f0b808aad",
+        "result": "pass",
+        "output": "16 files changed, 523 insertions(+), 1 deletion(-); --name-status: 15 A under odd/review-results/phase9-c22-knowledge-ingestion/, 1 M odd/tasks/phase9-c22-knowledge-ingestion.md, nothing else."
+      },
+      {
+        "command": "git diff 1127364a6b727305b316542b51805313c0c367de 19af1ca0a95cc404539064624788163f0b808aad -- odd/tasks/phase9-c22-knowledge-ingestion.md",
+        "result": "pass",
+        "output": "Two hunks: the T3 line's checkbox and commit tail; one line L7 appended at the end. No earlier Log line changed."
+      },
+      {
+        "command": "git log -1 --format=%B 19af1ca0a95cc404539064624788163f0b808aad",
+        "result": "pass",
+        "output": "Last non-empty line is Risk: none; no Co-Authored-By line."
+      },
+      {
+        "command": "rg -n '\\\\u[0-9a-fA-F]{4}' odd/tasks/phase9-c22-knowledge-ingestion.md",
+        "result": "pass",
+        "output": "No output (exit 1)."
+      },
+      {
+        "command": "jq -e . <file> >/dev/null for each of the 15 added .json files",
+        "result": "pass",
+        "output": "All 15 files parse."
+      }
+    ]
+  }
+}
