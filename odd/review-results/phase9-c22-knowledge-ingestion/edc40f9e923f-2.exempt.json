@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "b2d1aa021c709e3c3ee4be3ef423e9d1705fb569",
+    "head": "edc40f9e923f1ae7ed236fbdabd239666de31bb9",
+    "diff_sha256": "b0b01828f12f09d02dec1a7541b08e483e112ef2a3d9f028ee704fedc15e1349",
+    "paths": [
+      "skills/knowledge-ingestion/.approval.json"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git diff --stat edc40f9e^ edc40f9e",
+        "result": "pass",
+        "output": " skills/knowledge-ingestion/.approval.json | 4 ++--\n 1 file changed, 2 insertions(+), 2 deletions(-)"
+      },
+      {
+        "command": "git show edc40f9e:skills/knowledge-ingestion/.approval.json",
+        "result": "pass",
+        "output": "sha256 is 9d6c2787f24e391b0fb1aa8789c8c1eb7545942c03d837dc89972067c8cceeb7 (version 2, skill knowledge-ingestion, approved_at 2026-11-06T18:52:58Z, approver labdrian)"
+      },
+      {
+        "command": "cd engine && go run ./cmd/ skills validate --registry ../skills.registry.yaml --manifest ../overlay.manifest --source-root ../skills",
+        "result": "pass",
+        "output": "registry and manifest aligned (42 skills)\nskills/ on disk matches overlay.manifest (100 files)\nglobal skill approvals verified (42 skills: 42 approved)\nexit=0"
+      },
+      {
+        "command": "cd engine && go test -count=1 ./skills/...",
+        "result": "pass",
+        "output": "ok skills 9.194s; ok skills/app 0.338s; ok skills/engramexport 0.003s; ok skills/projectidentity 0.003s; ok skills/registryyaml 0.014s; ok skills/skillsfs 0.014s; exit=0"
+      },
+      {
+        "command": "git log -1 --format=%B edc40f9e",
+        "result": "pass",
+        "output": "chore(skills): record the owner's approval of knowledge-ingestion\n\nThe owner reviewed the memorycard retarget, the manifest provenance order and the resume and chunk-size rules, and approved the skill.\n\nRisk: none (last line; no Co-Authored-By line)"
+      }
+    ]
+  }
+}
