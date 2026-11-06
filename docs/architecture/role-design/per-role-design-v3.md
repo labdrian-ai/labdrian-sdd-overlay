@@ -22,25 +22,26 @@ Consolidates `per-role-design-v2.md` (v2), `per-role-prototyper.md` (P), `per-ro
 | D12 | Pi sub-agents: our own Pi shell (a later feature, reverse-engineered and simplified from gentle-pi) replaces the gentle-pi dependency; until it lands, compatible mode uses gentle-pi and standalone Pi uses the parent-skill path | owner 2026-10-22 |
 | D13 | Names stay `labdrian` now; the project becomes **wizzarpot** at Phase 11 (Release) | owner 2026-10-22 |
 | D14 | Open decisions resolved to the recommendations: generalize `engine/gadu` into the role generator; Codex `.toml` files omit `model` (the parent passes it at spawn); parent duties live in one `role-chain` skill | owner adopted recommendations |
+| D15 | Three tiers on every provider. Frontier + high: shaper, reviewer, verifier (Claude `opus`, Pi `pi-claude-cli/claude-opus-5`). Mid + high: builder, polisher, prototyper, sweeper (Claude `sonnet`, Pi `pi-claude-cli/claude-sonnet-5`). Light + low: delivery (Claude `haiku`, Pi `pi-claude-cli/claude-haiku-4-5`). The parent that launches the roles is frontier at max and is not a generated role (`skills/role-chain`). Codex still omits `model`; the parent passes the provider's frontier model (Sol; not Astra or Fable) for itself and for a frontier role, the provider's mid model for a mid role, and its light model for delivery, and invents no OpenAI id. Child effort is `model_reasoning_effort` / Pi `thinking`. Pass max for the parent only when that spawn already accepts an effort flag; `review launch` passes `--model` and no effort flag. Supersedes the sonnet cells of §2 for reviewer and verifier, and the sonnet-lens rule of R §5: the reviewer is launched by the Agent tool, and role-chain retries once on refusal | owner 2026-11-06 |
 
 ## 2. Roles
 
 Core prefix: v2 §2 lines 49-54 verbatim (do the work yourself / read every locator, missing = blocker / write only named paths / report only run commands / envelope as text / English). Tool names below are Claude Code's; §4 maps them per runtime.
 
-| Role | File | tools | model | Delta (final text location) | Trigger / optionality |
+| Role | File | tools | model, effort | Delta (final text location) | Trigger / optionality |
 |---|---|---|---|---|---|
-| builder | `builder.md` | `sdd-apply.md:8` list | sonnet | v2 §2 builder (4 lines) incl. ledger-scoped fixes | every goal |
-| shaper | `shaper.md` | `sdd-propose.md:7` list (no Bash) | opus | v2 §2 shaper (3 lines) + GADU's 2 lines → **4 lines**: artifact named; never code/tests; open product decisions in `risks`, a real fork as exactly one question; steelman + strongest counter-argument, recommend one and name the tradeoff, source-grounded | every goal; uses the estimation skill (E §4 shaper row) |
-| polisher | `polisher.md` | `jd-judge-a.md:9` read-only list | sonnet; opus per launch for judge 2 | v2 §2 polisher (3 lines) | judgment-day protocol (`skills/judgment-day`, actors renamed) |
-| prototyper | `prototyper.md` | P §6 list (Read, Glob, Grep, Bash, Write, Edit, mem_search, mem_get_observation; no Agent/web/CodeGraph/mem_save) | sonnet | P §6 (4 lines) with line 4 reworded: "Stop at the lookup/spike box the prompt sets or when every question has a verdict" | only when intake holds a P §3 shape (a)/(b)/(c) question; else chain starts at shaper (`chain.go:34-41`) |
-| sweeper | `sweeper.md` | builder's list minus Write, mem_save, mem_update | sonnet | S §3 (4 lines) | only when T1 names / T2 detector delta / T3 untracked fires (S §3) |
-| reviewer | `reviewer.md` | `Read, Grep, Glob` | sonnet (alias) | R §6 reviewer (4 lines) | after sweeper/polisher; second blind launch (other model) when the Risk line names an item; readability row by trigger |
-| verifier | `verifier.md` | `Read, Grep, Glob, Bash, mem_get_observation` | sonnet | R §6 verifier (3 lines) | reproduces every severe finding; runs the authorized checks |
-| delivery | `delivery.md` | `sdd-archive.md:8` list | haiku | v2 §2 delivery (3 lines) | every goal |
+| builder | `builder.md` | `sdd-apply.md:8` list | sonnet, high | v2 §2 builder (4 lines) incl. ledger-scoped fixes | every goal |
+| shaper | `shaper.md` | `sdd-propose.md:7` list (no Bash) | opus, high | v2 §2 shaper (3 lines) + GADU's 2 lines → **4 lines**: artifact named; never code/tests; open product decisions in `risks`, a real fork as exactly one question; steelman + strongest counter-argument, recommend one and name the tradeoff, source-grounded | every goal; uses the estimation skill (E §4 shaper row) |
+| polisher | `polisher.md` | `jd-judge-a.md:9` read-only list | sonnet, high; opus per launch for judge 2 | v2 §2 polisher (3 lines) | judgment-day protocol (`skills/judgment-day`, actors renamed) |
+| prototyper | `prototyper.md` | P §6 list (Read, Glob, Grep, Bash, Write, Edit, mem_search, mem_get_observation; no Agent/web/CodeGraph/mem_save) | sonnet, high | P §6 (4 lines) with line 4 reworded: "Stop at the lookup/spike box the prompt sets or when every question has a verdict" | only when intake holds a P §3 shape (a)/(b)/(c) question; else chain starts at shaper (`chain.go:34-41`) |
+| sweeper | `sweeper.md` | builder's list minus Write, mem_save, mem_update | sonnet, high | S §3 (4 lines) | only when T1 names / T2 detector delta / T3 untracked fires (S §3) |
+| reviewer | `reviewer.md` | `Read, Grep, Glob` | opus, high | R §6 reviewer (4 lines) | after sweeper/polisher; second blind launch (other model) when the Risk line names an item; readability row by trigger |
+| verifier | `verifier.md` | `Read, Grep, Glob, Bash, mem_get_observation` | opus, high | R §6 verifier (3 lines) | reproduces every severe finding; runs the authorized checks |
+| delivery | `delivery.md` | `sdd-archive.md:8` list | haiku, low | v2 §2 delivery (3 lines) | every goal |
 | estimator | skill only | — | — | E §4 skeleton (≈650 est. tokens; lint decides) | loaded via registry Trigger row naming shaper/builder/prototyper |
 | — | none | — | — | `sdd-init`, `sdd-onboard`, `sdd-explore`: orchestrator-run skills (v2 §1) | — |
 
-Each agent file ≈ 20-30 lines; no stamped gentle blocks (v2 §1: they are gentle's sync markers; the generator never emits them).
+Each agent file ≈ 20-30 lines; no stamped gentle blocks (v2 §1: they are gentle's sync markers; the generator never emits them). The parent that launches these roles is frontier at max (D15) and is not a row of this table.
 
 ## 3. Chain and parent duties (runtime-neutral: all through the `labdrian` CLI and one skill)
 
@@ -50,6 +51,7 @@ Order: `[prototyper] → shaper → estimator → builder → [sweeper] → [pol
 - **Worktrees** (never under the repo or the scratchpad, memory `no-worktrees-under-scratchpad`): `git worktree add --detach ~/labdrian-sdd-overlay-worktrees/spike-<goal>` for spikes and `…/review-<head12> <head>` for reviews; removed after the verdict; Engram `project` passed explicitly (memory `engram-worktree-project-detection`).
 - **Binding**: parent computes `base`, `head`, `diff_sha256`; refuses a review result whose echo differs; stores it under `odd/review-results/`; delivery recomputes the digest (R §3-4). Reproduction of severe findings by the verifier (or the parent within its 3-call budget) before anything blocks.
 - **Persistence**: parent-only for prototyper and sweeper; builder/shaper/delivery keep today's artifact saves (v2 §2 deltas).
+- **Models** (D15): the parent is frontier at max; each role takes the tier in §2. Codex has no family alias, so the parent passes the provider's model at spawn (frontier is Sol; not Astra or Fable). The text is `skills/role-chain/references/models.md`.
 - **Home of these duties**: one orchestrator-run skill `skills/role-chain/SKILL.md` within the lint budget (`engine/skills/lint.go:42-44`), `disable-model-invocation: true`, deployed to all three runtimes by the existing skill routes (it is the only runtime-neutral vehicle: the Claude PreToolUse gate and the hook-projected context exist for Claude only, `engine/capability/declarations.go:42-53,204-205` (verified)). If the lint refuses the size, the sweeper trigger splits into `skills/sweeper/SKILL.md` as S drafted; nothing else splits.
 
 ## 4. Cross-runtime matrix (verified on this machine unless marked)
@@ -69,7 +71,7 @@ Order: `[prototyper] → shaper → estimator → builder → [sweeper] → [pol
 | verifier | native; Bash allowed | native | native (`bash` tool) | parent-skill |
 | estimator | skill, all runtimes (skill routes already deploy to claude/codex and into the Pi package) | same | same | same |
 
-**What survives per runtime (honest).** Tools allowlist: enforced on Claude Code and Pi; advisory on Codex. Model choice: per-launch on Claude Code and Pi; file-or-spawn on Codex, and "sonnet" has no meaning there (Codex runs OpenAI models; the refusal history R §5 is Claude-only evidence). Read-only reviewer: enforced on Claude/Pi by tools; on Codex by the sandbox of the separate process `labdrian review launch --runtime codex` starts (D11), not by prose; the parent's digest/spot-check (R §3) still applies. Minimalism-contract injection and the memory block: Claude PreToolUse gate only; elsewhere the parent passes the path under `## Skills to load before work` (the registry protocol already does). Worktrees, digests, appends, result files: identical everywhere (CLI + git). Sub-agents on Pi are a **gentle-pi dependency**: compatible mode uses them; standalone Pi is the parent-skill column by construction (roadmap `:93`, "no gentle-pi-only subagent dependency"), which is OD1.
+**What survives per runtime (honest).** Tools allowlist: enforced on Claude Code and Pi; advisory on Codex. Model choice: per-launch on Claude Code and Pi; file-or-spawn on Codex, and the family aliases have no meaning there (Codex runs OpenAI models; D15 is the spawn rule, and the refusal history R §5 is Claude-only evidence, superseded for the reviewer by D15). Read-only reviewer: enforced on Claude/Pi by tools; on Codex by the sandbox of the separate process `labdrian review launch --runtime codex` starts (D11), not by prose; the parent's digest/spot-check (R §3) still applies. Minimalism-contract injection and the memory block: Claude PreToolUse gate only; elsewhere the parent passes the path under `## Skills to load before work` (the registry protocol already does). Worktrees, digests, appends, result files: identical everywhere (CLI + git). Sub-agents on Pi are a **gentle-pi dependency**: compatible mode uses them; standalone Pi is the parent-skill column by construction (roadmap `:93`, "no gentle-pi-only subagent dependency"), which is OD1.
 
 ## 5. One source of truth, projected (reuse, not a new generator)
 
@@ -108,7 +110,7 @@ Each slice: RED test first where a runner exists (routes/pins/generator tests), 
 
 1. **Pi sub-agents are gentle-pi's.** Recommend: accept gentle-pi as the Pi runner in compatible mode; standalone Pi advertises the parent-skill path (roadmap `:141`) and records `native subagents: unavailable`; no overlay extension.
 2. **Generator home.** Recommend: generalize `engine/gadu` into `engine/agentgen` (keeps `Generate`/`Check`/pins; PR 5 then deletes only the persona), over a shell loop (no drift check) or a fresh package (rung 6).
-3. **Codex model field.** Recommend: omit `model` in every `.toml` (file wins over spawn, so a pinned file kills polisher diversity and the refusal-retry rule); the parent passes model/effort at spawn; the "sonnet" rule is declared Claude/Pi-only.
+3. **Codex model field.** Recommend: omit `model` in every `.toml` (file wins over spawn, so a pinned file kills polisher diversity and the refusal-retry rule); the parent passes model/effort at spawn; the family aliases are Claude/Pi-only. D15 names which model the parent passes (frontier is Sol; not Astra or Fable) and does not invent an OpenAI id.
 4. **Where parent duties live.** Recommend: one `role-chain` skill (runtime-neutral) rather than the per-runtime orchestrator documents gentle-ai stamps; split only if the lint budget refuses it.
 
 ## 9. Not verified

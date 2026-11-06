@@ -1,7 +1,7 @@
 ---
 name: reviewer
 description: Reviewer role, the read-only reader of a committed diff and its detached worktree (send base, head, diff_sha256, the diff, the worktree path and the lens rows); returns one JSON object of findings.
-model: sonnet
+model: opus
 tools: Read, Grep, Glob
 ---
 

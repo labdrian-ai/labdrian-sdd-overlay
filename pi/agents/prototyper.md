@@ -2,7 +2,7 @@
 name: prototyper
 description: Answers listed feasibility questions with throwaway spikes in a disposable worktree and returns kill, narrow or continue per question.
 model: pi-claude-cli/claude-sonnet-5
-thinking: medium
+thinking: high
 tools: read, find, grep, bash, write, edit, mcp__memorycard__mem_search, mcp__memorycard__mem_get
 ---
 
