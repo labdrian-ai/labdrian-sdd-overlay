@@ -1,0 +1,56 @@
+{
+  "kind": "polisher",
+  "base": "01b8d759533ea6d66dbac2ba4d4e926d71c8df51",
+  "head": "aec51105a66989935d6a7b8ee6f3c0a4b416d4bf",
+  "diff_sha256": "67efe8540fb5a0e3c158cabb75c0ca37c9f28b8d10e701f8e7b28354a2715721",
+  "findings": {
+    "findings": [
+      {
+        "location": "skills/_shared/ingested-observation-contract.md:150",
+        "severity": "WARNING",
+        "claim": "The origin-changed row tells the agent to run `mem_compare(new, old, \"supersedes\")`. memorycard has no such tool. Its supersession mechanism is the `supersedes` argument on `mem_save`, which this commit's new line 33 documents as the full argument set. An agent that follows the row has no way to run it, or it records the supersession wrongly. The row is stale Engram wording that this commit leaves reachable.",
+        "evidence_class": "inferential",
+        "causal_disposition": "pre-existing",
+        "evidence": [
+          "saveArgs in /home/labdrian/memorycard/internal/mcpserver/server.go:96-106 has a `supersedes` int64 field, and save.go:122-180 applies it inside Save.",
+          "I found no mem_compare tool in the memorycard code I read. I did not list the registered tools.",
+          "Log L23 leaves the rest of the Engram wording to the L13 follow-up, so the omission is known and deferred."
+        ]
+      },
+      {
+        "location": "skills/knowledge-ingestion/SKILL.md:97-99",
+        "severity": "WARNING",
+        "claim": "The BridgedError clause fires only after `promote` refuses, so the save has already happened. For a pre-retarget source whose digest differs, the gate lets the flow proceed and the agent calls `mem_save` at the key of an imported, bridged memory. That upserts or re-splits the imported memory, which keeps its Engram-era page. The new content then reaches no vault page, because promote refuses. The clause says 'do not save again' but gives no pre-save check, and it does not say what happens to the manifest. For N>1 it stays `pending`, while step 5 of the manifest-first ordering says to upsert it to `partial` when a chunk fails. The clause is also silent on whether a bridged refusal counts as a chunk failure.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "card.go:85-87: PromoteCard returns BridgedError when a page already exists for the memory's Engram observation. The error carries MemoryID and Address.",
+          "save.go:99-203: Save upserts by topic_key and re-splits the body into parts. It does not look at import_map or bridging.",
+          "SKILL.md:116-119 sends 'digest differs' straight to the save path, and the added lines 93-99 add no pre-save bridged check."
+        ]
+      },
+      {
+        "location": "skills/knowledge-ingestion/SKILL.md:93-95",
+        "severity": "SUGGESTION",
+        "claim": "The pre-retarget fallback tells the agent to read `<key>/part-2`, `/part-3` and so on. memorycard's import can move a part to `<key>/part-i~<n>` and give `<key>/part-i` to another memory. A search for `<key>/part-k` can then miss the real part or hit the wrong one, and the agent would conclude the block is absent. The clause does not mention this variant.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "save.go:155-159 states that the importer may have moved a part to '<key>/part-i~<n>' and given '<key>/part-i' to another memory.",
+          "The added SKILL.md lines name only the plain `/part-N` keys."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/c22t7-d11.diff in full.",
+      "Read both changed files in the worktree: skills/knowledge-ingestion/SKILL.md and skills/_shared/ingested-observation-contract.md.",
+      "Read Log L23 (spec line 122). I did not read the rest of the T7 spec above `## Log`.",
+      "Read memorycard server.go:96-106. The saveArgs fields are title, body, type, topic_key, scope, supersedes, project, cwd and directory. There is no capture_prompt and no content, so the contract's argument table is now correct.",
+      "A memorycard task note (archive-restore-and-deletes.md:21) records the refusal 'unexpected additional properties', which supports the claim that an extra argument is refused before saving. I did not run a call.",
+      "Read memorycard save.go and import.go. HardCapBytes is 64 KB, and a body of at most that size is stored whole. Larger bodies split into parts keyed `<key>/part-N`, so the 'chunk under 64 KB keeps the block in part 1' rule holds. Part titles end in '(part i/N)' and later parts use the key `<key>/part-i`.",
+      "Read longterm-mem promote/card.go. BridgedError carries MemoryID, EngramID and Address, and PromoteCard returns it at card.go:87. The MCP promote input has the `source` and `engram_id` fields the skill uses (mcpserver/server.go:168-172). The CLI wraps BridgedError as exitRegistrationConflict.",
+      "Checked the new lines against the rest of the skill and the contract. Line 31 (`body`) is consistent with the SKILL's `body` wording and the 'content' wording in rules 4 and 6. The part-reading clause does not contradict the hard no-op or resume rules.",
+      "Not run: no commands executed, only file reads."
+    ]
+  }
+}
