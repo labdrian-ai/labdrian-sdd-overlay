@@ -1,0 +1,63 @@
+{
+  "kind": "polisher",
+  "base": "9a97ecb80d28ba1a6994e0d144095877e555f83a",
+  "head": "9c2897b7afa848de777debd2b9bf319c166fe444",
+  "diff_sha256": "397af4946574c834a4b400bd32239591beae712647ccf7ed52ac50e82aeceba4",
+  "findings": {
+    "findings": [
+      {
+        "location": "skills/knowledge-ingestion/SKILL.md:79-80",
+        "severity": "WARNING",
+        "claim": "The new resume exception says a source \"reported blocked\" is never re-run. Step 2 (lines 104-106), added in the same commit, reports a vault that was not searched as \"blocked: vault not searched\". Read literally, a temporary vault failure therefore bans that source from ever being ingested again. Only the engram_id page case (step 4) was meant to be permanent, per the owner's D12.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "SKILL.md:79-80 (added by this commit): \"Resuming is simply re-running the same ingestion, except for a source reported blocked (below), which is never re-run.\"",
+          "SKILL.md:104-106 (added by this commit): when vault_status is not ok, \"save nothing and report \\\"blocked: vault not searched\\\"\". This is a blocked report, so the line 79-80 exception applies to it.",
+          "longterm-mem/internal/query/query.go:246-251: any retrieval subprocess failure, including a timeout, returns VaultStatusError. The comment there says this \"degrades to Engram-only + a diagnostic rather than failing the call\". The failure is transient, not a property of the source.",
+          "L24 D12 answer: only the case \"If it finds a page with engram_id and no memorycard_id\" leads to \"no re-run\". The owner did not make a vault-unavailable outcome permanent."
+        ]
+      },
+      {
+        "location": "skills/knowledge-ingestion/SKILL.md:116-119",
+        "severity": "WARNING",
+        "claim": "When promote refuses a memory, the skill now upserts the manifest to **Status**: partial and says \"do not re-run\". Nothing stored records the block. The gate at lines 130-135 tells any later session that finds a partial manifest with a matching digest to resume from step 3. A later agent cannot know about a report from an earlier session, so it follows the gate, re-saves the refused chunk and hits the same refusal. The never-re-run rule cannot be followed across sessions, and the stored state contradicts it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "SKILL.md:117 (added by this commit): \"upsert an already-saved manifest once to `**Status**: partial` per step 5 ... and do not re-run.\"",
+          "SKILL.md:130-135 (unchanged): \"If the digest matches but `**Status**` is `pending` or `partial`: this is a **resume** ... Re-run the manifest-first ordering above starting from step 3\". The persisted partial state says the opposite of line 119.",
+          "This path is reached only when the vault check missed the page. On a re-run the same check misses it again, so the gate is all that is left to decide. longterm-mem/internal/promote/card.go:85-87 then refuses with BridgedError again, because the memory's import bridge has not changed.",
+          "No status value, field or marker in the contract records \"blocked\". The block exists only in a chat report."
+        ]
+      },
+      {
+        "location": "skills/knowledge-ingestion/SKILL.md:107-109",
+        "severity": "SUGGESTION",
+        "claim": "Step 3 tells the agent to read each row's `page_path`. The query tool's text block, the part an MCP client is guaranteed to show, does not include page_path. It shows only the page address and the title. An agent that sees only the text block has to work out the file location itself.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "longterm-mem/internal/mcpserver/server.go:228: the handler returns textResult(renderQuery(result)) as Content, with the structured result beside it.",
+          "server.go:265-271: renderQuery prints vault_status and, for each row, `[rank] sources PageAddress Title` plus the snippet. It never prints row.PagePath.",
+          "longterm-mem/internal/query/result.go:55 and merge.go:31: page_path (the absolute path) exists only in structuredContent."
+        ]
+      }
+    ],
+    "evidence": [
+      "Diff /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/c22t7-d12b.diff (the contract's origin-changed row; SKILL.md resume sentence, 4-step vault check, promote-refusal rule)",
+      "Log L23-L25 in odd/tasks/phase9-c22-knowledge-ingestion.md (owner's D11 and D12 answers, the findings this commit fixes)",
+      "SKILL.md:40-149 at head",
+      "longterm-mem/internal/mcpserver/server.go:80-297 (QueryIn requires project, sources; renderQuery text block)",
+      "longterm-mem/internal/query/query.go:180-258 (VaultStatus ok/error/not_provisioned/not_requested; askVault)",
+      "longterm-mem/internal/vault/retriever.go (project not sent to the script; AbsolutePath becomes page_path)",
+      "/home/labdrian/labdrian-brain/scripts/bm25-index.py:80-95: TOKEN_RE keeps a hyphenated Source-Id as a single token, so the Source-Id query matches exactly. Checked against the 9 hermes-agent pages, whose Source-Ids differ only in the hash suffix: the vault check finds c-000118.",
+      "/home/labdrian/labdrian-brain/scripts/retrieve.py (BM25 top-20, rerank to top-5, dedup by page)",
+      "/home/labdrian/labdrian-brain/wiki/memory/c-000118.md (frontmatter has engram_id 3422 and no memorycard_id; body line 216 has **Source-Id**: github-com-nousresearch-hermes-agent-f810e795), so steps 3-4 block it as intended",
+      "longterm-mem/internal/promote/card.go:14-126 (BridgedError: the refusal is limited to memories imported from an Engram observation that has a page; that matches the corrected wording)",
+      "longterm-mem/cmd/longterm-mem/cmd_sync.go:17-164 (sync reads Engram only, so the new origin-changed row is accurate)",
+      "/home/labdrian/memorycard/internal/memory/save.go:50-177 (supersedes requires a memory of the same project and marks it status=superseded, matching the row)",
+      "Grep of both changed files for supersed/sync/re-run/blocked/mem_compare: apart from the findings above, no other line contradicts the change"
+    ]
+  }
+}

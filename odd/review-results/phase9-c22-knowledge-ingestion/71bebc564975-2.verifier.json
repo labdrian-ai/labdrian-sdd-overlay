@@ -1,0 +1,25 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "base_result": "not-reproduced",
+      "command": "Read skills/knowledge-ingestion/SKILL.md lines 94-110 at head; git show 9957dc76:skills/knowledge-ingestion/SKILL.md | rg -n -i 'vault|Source-Id|refuse'; rg -n 'func askVault' -A14 longterm-mem/internal/query/query.go; rg -n 'VaultStatus' longterm-mem/internal/query/result.go",
+      "output": "Head lines 98-106 give only the match case: 'If a page whose **Source-Id** matches carries engram_id and no memorycard_id ... blocked'. They say nothing for an error, vault_status other than ok, or zero rows, and do not define how Source-Id 'matches'. askVault returns VaultStatusNotProvisioned (not_provisioned) on ErrVaultNotProvisioned, VaultStatusError (error) plus a vault_subprocess_failed diagnostic on any other retriever error, and VaultStatusOK otherwise. result.go also defines not_requested. So the non-ok statuses exist and the text is silent on them. At base the vault pre-check is absent: the base SKILL.md vault mentions are lines 6, 24, 53, 89-99 (the BridgedError stop) and 123-138, and none is a pre-check. The defect is therefore introduced at head."
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "base_result": "not-reproduced",
+      "command": "rg -n 'BridgedError|engram_id|EngramID' longterm-mem/internal/promote/card.go; Read of card.go lines 186-226 (scanCardPages); Read of SKILL.md lines 98-106 at head",
+      "output": "card.go:86-87 returns BridgedError only when scan.bridged is set. scanCardPages sets scan.bridged only when a page's engram_id is in 'wanted', which holds just m.EngramID and m.SameContentEngramIDs (lines 193-198, 214-218). Matching is by Engram id, not by Source-Id. So a page carrying engram_id but no memorycard_id refuses only memories whose Engram id matches, not 'every memory of this source'. Head SKILL.md:100-103 says it 'would refuse every memory of this source'. That claim is not in the base text, which at 97-99 says only that a memory from an Engram observation that already has a vault page is refused."
+    },
+    {
+      "id": "F3",
+      "result": "reproduced",
+      "base_result": "reproduced",
+      "command": "rg -n 'propagates' skills/_shared/ingested-observation-contract.md; git show 9957dc76:skills/_shared/ingested-observation-contract.md | rg -n 'propagates'; rg -n 'syncDeps' longterm-mem/cmd/longterm-mem/; Read of longterm-mem/cmd/longterm-mem/app.go syncDeps signature",
+      "output": "Head line 150 reads: 'saving the new record with memorycard's mem_save argument supersedes set to the old record's memorycard id is a documented operator step, after which promotion propagates status: superseded and the related-link on the next sync'. Base line 150 had the same 'propagates ... on the next sync' claim, worded 'mem_compare(new, old, \"supersedes\")'. cmd_sync.go:17 says sync propagates 'soft-delete/supersession status from Engram (R-033)', and cmd_sync.go:48 calls a.syncDeps(store, vaultRoot) with store *engram.Store (app.go:108), so sync reads Engram only. A memorycard supersedes is not seen by sync. The claim holds at head and was already present at base. The head commit only changed the mechanism wording."
+    }
+  ]
+}

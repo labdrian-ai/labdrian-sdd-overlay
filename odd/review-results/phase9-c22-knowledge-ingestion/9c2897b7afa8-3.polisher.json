@@ -1,0 +1,49 @@
+{
+  "kind": "polisher",
+  "base": "9a97ecb80d28ba1a6994e0d144095877e555f83a",
+  "head": "9c2897b7afa848de777debd2b9bf319c166fe444",
+  "diff_sha256": "397af4946574c834a4b400bd32239591beae712647ccf7ed52ac50e82aeceba4",
+  "findings": {
+    "findings": [
+      {
+        "location": "skills/knowledge-ingestion/SKILL.md:104-106",
+        "severity": "WARNING",
+        "claim": "Step 2 blocks the source on any `vault_status` other than `ok`. `not_provisioned` is the normal status of a vault that has never been indexed, such as a new project's first ingestion. The skill then reports 'blocked: vault not searched' and saves nothing, so `promote` is never called. `promote` is what rebuilds the index, so the status can never become `ok` and the source stays blocked. The reachable case is a project with no indexed vault yet.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "The diff adds step 2: 'If the result's `vault_status` is not `ok`... save nothing and report blocked'.",
+          "longterm-mem/internal/query/query.go:244-245 maps `ErrVaultNotProvisioned` to `VaultStatusNotProvisioned` with no rows.",
+          "longterm-mem/internal/vault/retriever.go:26-27 returns that error for a vault that was never indexed.",
+          "longterm-mem/internal/query/result.go:5-14 defines the four values: ok, not_provisioned, not_requested, error.",
+          "The L25 review asked for a block on `error` and `not_provisioned`, but a never-indexed vault holds no page that could be bridged. The rule lumps it with real failures.",
+          "I did not run the tools. This rests on reading the source."
+        ]
+      },
+      {
+        "location": "skills/knowledge-ingestion/SKILL.md:102-109",
+        "severity": "SUGGESTION",
+        "claim": "Step 1 passes no `top`, so `query` returns at most 5 vault rows (the default). Step 3 only inspects returned rows. A source with several pages carrying the same `**Source-Id**` can push a pre-memorycard page out of the top 5, and the check then silently passes (fail-open). The page `c-000118` itself matches normally, so the risk is limited to multi-page sources.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "longterm-mem/internal/mcpserver/server.go:103 says `top` defaults to 5 results per source.",
+          "Every chunk page carries the provenance block with `**Source-Id**`, as c-000118 line 216 shows for its own page.",
+          "The step does not tell the agent to raise `top`."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the diff /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/c22t7-d12b.diff.",
+      "Read the worktree's skills/knowledge-ingestion/SKILL.md lines 84-140 and the contract lines 33 and 150.",
+      "Read Log L23-L25 in odd/tasks/phase9-c22-knowledge-ingestion.md at line 120 onward.",
+      "Read longterm-mem/internal/mcpserver/server.go lines 95-285, query/result.go, query/query.go lines 242-258, query/vault.go and vault/retriever.go.",
+      "Read /home/labdrian/labdrian-brain/wiki/memory/c-000118.md: its frontmatter has `engram_id: 3422` and no `memorycard_id`, and line 216 holds `**Source-Id**`.",
+      "Checked memorycard internal/memory/save.go: `supersedes` marks the old memory `superseded` with `superseded_by` set to the new id. This matches the contract's origin-changed row.",
+      "Checked cmd_sync.go header comments: sync propagates status from Engram only, which matches the contract's claim that the vault page is not updated.",
+      "Checked that SKILL.md step 5 (line 75) exists, so the 'per step 5' reference at line 118 resolves.",
+      "I found no other contradiction between the two files. The 'Resuming is simply re-running' sentence now names the blocked exception.",
+      "No tools or tests were run."
+    ]
+  }
+}
