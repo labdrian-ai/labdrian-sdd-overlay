@@ -1,0 +1,73 @@
+{
+  "kind": "polisher",
+  "base": "9957dc7606fbc409a5a119e7c61152bf2bd88a10",
+  "head": "71bebc564975db57d1359b9247c6348999c08a9a",
+  "diff_sha256": "54cb55d28602d145d630dd2125c4eaf4aef3624dfcc3b198ec1ca754f23c2a02",
+  "findings": {
+    "findings": [
+      {
+        "location": "skills/knowledge-ingestion/SKILL.md:98-106",
+        "severity": "WARNING",
+        "claim": "The new vault check lets the save go ahead when the vault was never actually searched. longterm-mem `query` does not fail when the vault retrieval fails or the vault is not provisioned. It returns success with no vault rows and sets `vault_status` to `error` or `not_provisioned`. The clause only says to stop when a matching page is found and never says to check `vault_status`. So an agent that gets an empty vault answer reads it as 'no pre-memorycard page' and calls `mem_save`. That overwrites the imported memory, and `promote` then refuses it. This is the exact harm D12 (L24) asked this check to prevent.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "longterm-mem/internal/query/query.go:241-257 `askVault`: a retriever error returns `(VaultStatusError, nil rows, diagnostic)` and `ErrVaultNotProvisioned` returns `(VaultStatusNotProvisioned, nil, nil)`. Neither makes the query call fail.",
+          "longterm-mem/internal/mcpserver/server.go:219-229: the query handler returns that result as a success, and `renderQuery` prints `vault_status=...` with 0 results.",
+          "/home/labdrian/labdrian-brain/scripts/retrieve.py:13-17,49: the script exits 10 (not provisioned) when no BM25 index exists, so this case is reachable.",
+          "SKILL.md:98-106 (added by this commit) gates only on 'If a page whose `**Source-Id**` matches carries `engram_id`'. Nothing in the clause makes `vault_status != ok` a reason to stop.",
+          "L24 D12 answer: the agent 'stops before saving'. Saving first and having `promote` refuse afterwards is the failure D12 rejected."
+        ]
+      },
+      {
+        "location": "skills/_shared/ingested-observation-contract.md:150",
+        "severity": "WARNING",
+        "claim": "The rewritten origin-changed row says that after the new record is saved with memorycard's `supersedes`, 'promotion propagates `status: superseded` and the related-link on the next `sync`'. That is false for memorycard. `longterm-mem sync` reads only Engram observations. A memorycard supersession is never applied to the old record's vault page, so the old page keeps reading as current.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "longterm-mem/internal/promote/project_sync.go:52-54: `SyncProject` runs `Sync` and `Propagate`.",
+          "longterm-mem/internal/promote/propagate.go:112-127: `eachPatchTarget` lists `deps.Memory.ObservationsIncludingDeleted(project)`, which are Engram observations, and looks up pages by Engram id through `findPromotedPage`.",
+          "longterm-mem/cmd/longterm-mem/cmd_sync.go:17-19: sync is 'wired to a real Engram connection' and propagates 'supersession status from Engram'. No memorycard source appears in cmd_sync.go.",
+          "The diff (hunk at -147/+147) replaces `mem_compare` with memorycard `supersedes` but keeps the 'propagates ... on the next `sync`' claim, which was only true for the Engram path."
+        ]
+      },
+      {
+        "location": "skills/knowledge-ingestion/SKILL.md:104-106",
+        "severity": "WARNING",
+        "claim": "The new rule for a `promote` refusal says 'no further `mem_save` or `promote`' and 'no re-run'. Two older lines in the same file, which the commit left unchanged, say otherwise. Step 5 (lines 75-77) says that when a chunk fails, the agent must `mem_save` the manifest as `**Status**: partial` with its `**Chunk-Status**`. Lines 79-81 say 'Resuming is simply re-running the same ingestion'. An agent hitting a refusal in step 2 or step 3 must break one of these instructions. If it follows the new rule, the manifest stays `pending` with `Chunks-Saved: 0` even though chunks were saved, which misstates the source's state to the next reader. If it follows step 5, it makes the `mem_save` the new rule forbids.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "SKILL.md:75-77: 'If a chunk fails: stop that source, upsert the manifest to `**Status**: partial` ...'",
+          "SKILL.md:79-81: 'Resuming is simply re-running the same ingestion.'",
+          "SKILL.md:104-106 (added by this commit): 'If `promote` refuses a memory anyway ... stop the source the same way: no further `mem_save` or `promote`, the same report, no re-run.'",
+          "longterm-mem/internal/promote/card.go:85-88: the refusal comes back from `promote`, which runs after the manifest or chunk `mem_save` in steps 2 and 3, so the manifest is already stored as `pending`."
+        ]
+      },
+      {
+        "location": "skills/knowledge-ingestion/SKILL.md:99-101",
+        "severity": "SUGGESTION",
+        "claim": "The rule depends on whether the matching page 'carries `engram_id` and no `memorycard_id`'. Those are frontmatter fields, and the `query` result does not include them. A vault row has only the page address, `page_path`, a snippet of at most 200 characters from a BM25 chunk, and scores. The skill does not tell the agent to read the page at `page_path`. An agent may decide from the snippet or the row's `engram_id` field instead. For a pure vault row that field is empty, and for a linked row it is the Engram match, not the page frontmatter.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "longterm-mem/internal/query/merge.go:30-33: a vault-only row sets only `Sources`, `PageAddress`, `PagePath`, `Snippet` and `Score`. No frontmatter is carried.",
+          "longterm-mem/internal/query/vault.go:28-34: `VaultCandidate` has no frontmatter fields.",
+          "/home/labdrian/labdrian-brain/scripts/retrieve.py:98 `chunk_snippet(chunk_data, max_chars=200)`.",
+          "/home/labdrian/labdrian-brain/wiki/memory/c-000118.md:15 `engram_id: 3422` is in the frontmatter, while `**Source-Id**` is at line 216 of the body, so the field that decides the block and the text that matches the search are in different parts of the page."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the target diff /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/c22t7-d12.diff (contract table note and origin-changed row; SKILL.md re-ingestion gate).",
+      "Read odd/tasks/phase9-c22-knowledge-ingestion.md L23 and L24 (D11 and D12 verbatim) in the worktree.",
+      "Read the full /home/labdrian/labdrian-sdd-overlay-worktrees/review-71bebc564975/skills/knowledge-ingestion/SKILL.md and contract lines 18-33.",
+      "memorycard /home/labdrian/memorycard/internal/mcpserver/server.go:96-106 saveArgs: the argument set (title, body, type, topic_key, scope, supersedes, project, cwd, directory) matches the new contract note; internal/memory/save.go:156-226: part titles '(part i/N)', keys '<key>/part-i' and the '~<n>' variant match the new gate text.",
+      "longterm-mem mcpserver/server.go QueryIn/QueryOut/renderQuery; query/query.go askVault; query/merge.go; query/vault.go; vault/retrieve.go (scripts/retrieve.py); labdrian-brain scripts/bm25-index.py tokenizer: a hyphenated Source-Id is kept as one token, so the BM25 search can match it.",
+      "longterm-mem promote/card.go:40-121,188-230 (BridgedError, scanCardPages bridging by EngramID or SameContentEngramIDs); promote/project_sync.go, promote/propagate.go, cmd/longterm-mem/cmd_sync.go (sync is Engram-only).",
+      "/home/labdrian/labdrian-brain/wiki/memory/c-000118.md: frontmatter has engram_id 3422 and no memorycard_id; the body holds **Source-Id** github-com-nousresearch-hermes-agent-f810e795 and **Status** complete.",
+      "No commands or tests were run; everything was checked by reading files."
+    ]
+  }
+}

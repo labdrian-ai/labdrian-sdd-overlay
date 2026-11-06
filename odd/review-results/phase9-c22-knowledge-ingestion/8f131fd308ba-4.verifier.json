@@ -1,0 +1,11 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "base_result": "reproduced",
+      "command": "in /home/labdrian/labdrian-sdd-overlay-worktrees/review-8f131fd308ba: `git rev-parse HEAD`; `rg -n -i '64 ?KB' skills/knowledge-ingestion/SKILL.md`; `git show dd8dd9b8:skills/knowledge-ingestion/SKILL.md | rg -n -i '64 ?KB'`; `rg -n -B2 -A3 HardCapBytes /home/labdrian/memorycard/internal/memory/save.go`; `rg -n -B3 -A4 '> HardCapBytes|>= HardCapBytes' /home/labdrian/memorycard/internal/memory/save.go`",
+      "output": "HEAD is 8f131fd308bacc9f36f0fcdc53bab86937ad0010. Line 62 of SKILL.md reads '**Every chunk, with its provenance block, stays under 64 KB.**' at head, and the same line 62 at base dd8dd9b8. Both hits are identical, so head and base match. The rule is stated as a strict bound, \"under 64 KB\". In save.go, HardCapBytes = 64 * 1024 (line 29). The comment at lines 97-98 says 'A body over HardCapBytes is stored as parts'. The size check at line 410 is `len(in.Body) > HardCapBytes`, with no >= comparison anywhere. So a body of exactly 65536 bytes stays one memory. 'at most 64 KB' is the exact bound; 'under 64 KB' is slightly stricter than needed, though safe. I read the split condition from the comment and from the Update-path check at line 410. I did not run the Save split path itself."
+    }
+  ]
+}

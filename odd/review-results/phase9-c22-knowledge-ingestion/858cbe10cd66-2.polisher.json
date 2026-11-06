@@ -1,0 +1,16 @@
+{
+  "kind": "polisher",
+  "base": "4beb03e7d344558bceb3a46185c5ef00bb21c551",
+  "head": "858cbe10cd66b5a28df1f1530f5d9d80e7466f3c",
+  "diff_sha256": "36e19bf1fd1c3807df7a7db311b117f3bde086e50666d685a7f842a208211696",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff (/tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/c22t7-858cbe10.diff). It touches only skills/knowledge-ingestion/SKILL.md and has three hunks.",
+      "longterm-mem/internal/mcpserver/server.go:168-172: PromoteIn carries `engram_id` (required) and an optional `source`. The `engram_id` description reads 'with source memorycard, the memorycard memory id'. The handler at server.go:346-353 accepts only 'engram' or 'memorycard'. The new text 'source: \"memorycard\" and the memorycard id in `engram_id`' therefore matches the real tool contract.",
+      "longterm-mem/cmd/longterm-mem/cmd_promote.go:37-39 and 82: the CLI has `--id` and `--source` flags with 'memorycard' as an accepted value, and `--id` is a memorycard memory id when memorycard is the source. The CLI form `promote --source memorycard --id N` is correct.",
+      "The `revision_count` checks were replaced with 'the version history `mem_get` returns'. This matches the installed memorycard `mem_get`, which takes only `id`, as the task brief states. No Engram-only field remains in the changed lines.",
+      "I could not run a live check of memorycard's no-new-version behavior on an identical re-save. The mem_search call was blocked by a workflow project hook, so this rests on the brief's statement that `mem_get` returns version history."
+    ]
+  }
+}

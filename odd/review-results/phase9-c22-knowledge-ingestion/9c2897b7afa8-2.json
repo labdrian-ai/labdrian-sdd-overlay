@@ -1,0 +1,103 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "9a97ecb80d28ba1a6994e0d144095877e555f83a",
+    "head": "9c2897b7afa848de777debd2b9bf319c166fe444",
+    "diff_sha256": "397af4946574c834a4b400bd32239591beae712647ccf7ed52ac50e82aeceba4",
+    "paths": [
+      "skills/_shared/ingested-observation-contract.md",
+      "skills/knowledge-ingestion/SKILL.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "9a97ecb80d28ba1a6994e0d144095877e555f83a",
+      "head": "9c2897b7afa848de777debd2b9bf319c166fe444",
+      "diff_sha256": "397af4946574c834a4b400bd32239591beae712647ccf7ed52ac50e82aeceba4"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "skills/_shared/ingested-observation-contract.md",
+        "skills/knowledge-ingestion/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "skills/knowledge-ingestion/SKILL.md:102-114",
+        "severity": "WARNING",
+        "claim": "The vault check is still fail-open on recall. It uses a ranked search, not a keyed lookup. The call sets no `top`, so the default is 5 rows (DefaultTopN = 5). A page for this source can rank below 5 unrelated pages, or the slug-style Source-Id may tokenize poorly. The step then finds no matching page and the source is saved over an imported memory, which is the case D12 meant to block. Step 2 only covers `vault_status != ok`. Nothing says what to do when the rows are empty or none match, and nothing asks for a larger `top`.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/query/vault.go:11 (DefaultTopN = 5)",
+          "longterm-mem/internal/query/query.go:152-155,189,241-242 (rows limited to top, and no exact-match filter)"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "skills/knowledge-ingestion/SKILL.md:107-109",
+        "severity": "WARNING",
+        "claim": "Step 3 tells the agent to read each row's `page_path`. The MCP `query` tool's text block (renderQuery) prints only `page_address` or `engram:<id>`, the title and the snippet. `page_path` appears only in structuredContent. A client that reads the text block cannot follow the instruction. The step should say to resolve the page by its address, or to use structuredContent. It should also say what to do when the vault page cannot be read, since a failed read currently falls through to saving.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/mcpserver/server.go:263-297 (renderQuery omits PagePath)",
+          "longterm-mem/internal/query/result.go:54-55"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "skills/knowledge-ingestion/SKILL.md:116-119",
+        "severity": "WARNING",
+        "claim": "The promote-refusal rule tells the agent to upsert an already-saved manifest to `partial`, with `mem_save`, and to do so \"per step 5\". That is a second, fresh `mem_save` on a source that was just found to be tied to an imported Engram page. If the manifest is itself the imported memory, the upsert overwrites it. That is the harm the clause is meant to prevent. The text only says the manifest's own promote \"may be refused too\", so it does not settle this. It also leaves open how an agent tells a manifest saved in this run from one imported earlier.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/knowledge-ingestion/SKILL.md:75-77 (step 5 of the older list)",
+          "longterm-mem/internal/promote/card.go:30-33,85-88 (BridgedError: the history stays on the Engram page)"
+        ]
+      },
+      {
+        "id": "F4",
+        "location": "skills/knowledge-ingestion/SKILL.md:116-118",
+        "severity": "SUGGESTION",
+        "claim": "The reference \"per step 5\" now follows a new numbered list (1-4) in the same section, so it reads as a step of that list. Step 5 is actually in the manifest-first ordering list at lines 69-77. Name the section, for example \"step 5 of the manifest-first ordering\". The \"(below)\" in the resume sentence at line 80 points the same loose way.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/knowledge-ingestion/SKILL.md:69-77,79-80,102-114"
+        ]
+      },
+      {
+        "id": "F5",
+        "location": "skills/_shared/ingested-observation-contract.md:150",
+        "severity": "SUGGESTION",
+        "claim": "The origin-changed row now supersedes only the new manifest or standalone record against the old one. The old origin's chunk memories stay current and are not marked superseded. The row does not say so, and a reader may expect the whole old source to be retired. The statement that `sync` reads Engram only is correct: cmd_sync.go has no memorycard reference.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/_shared/ingested-observation-contract.md:150",
+          "longterm-mem/cmd/longterm-mem/cmd_sync.go (0 matches for memorycard)"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the diff file in full.",
+      "Read L23-L25 in odd/tasks/phase9-c22-knowledge-ingestion.md.",
+      "Read longterm-mem internal/query/result.go, query.go (lines 150-258) and vault.go (DefaultTopN).",
+      "Read internal/mcpserver/server.go (renderQuery and the query handler).",
+      "Read internal/promote/card.go (BridgedError and PromoteCard).",
+      "Read the pre-memorycard page c-000118: it has engram_id and no memorycard_id, and its body has **Source-Id** at line 216.",
+      "Read SKILL.md lines 56-135.",
+      "Grepped cmd_sync.go and the skills tree for memorycard and supersession wording.",
+      "Not run: no commands executed and no tests."
+    ]
+  }
+}

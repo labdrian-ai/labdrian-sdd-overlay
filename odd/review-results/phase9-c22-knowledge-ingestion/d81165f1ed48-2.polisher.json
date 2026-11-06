@@ -1,0 +1,58 @@
+{
+  "kind": "polisher",
+  "base": "858cbe10cd66b5a28df1f1530f5d9d80e7466f3c",
+  "head": "d81165f1ed48fcb245fb9e2466bbc99701fbb805",
+  "diff_sha256": "0afcec9222618cca72aa6abf6fe3ca195e1195ce70ed20460bf497062dd71829",
+  "findings": {
+    "findings": [
+      {
+        "location": "longterm-mem/internal/ingest/header.go:108-109",
+        "severity": "SUGGESTION",
+        "claim": "The `Header.Render` doc comment still says the block is 'the last element of a record's content'. The contract cites this comment as normative, and the commit now says a manifest's block comes first. The code already does this, so only the comment is stale.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "worsened",
+        "evidence": [
+          "extract.go:369-373 saves `manifest.Render()` alone as the manifest content. The block therefore leads and the Chunk-Status list is last, which matches the new rule.",
+          "extract.go:384 builds a chunk record as `c.Text + \"\\n\" + header.Render()`, where the block is last.",
+          "The header.go comment applies the 'last element' wording to every record, and the contract (lines 5-7) says this comment cites the contract as normative. The commit left the comment unchanged, so it now disagrees with the contract for manifests."
+        ]
+      },
+      {
+        "location": "skills/knowledge-ingestion/SKILL.md:100-102",
+        "severity": "SUGGESTION",
+        "claim": "The re-ingestion gate calls a single-chunk record 'non-manifest ... which has no `Status` field'. The contract and `Header.Render` give a standalone record `**Status**: complete`. The wrong claim was already there before this commit, and the commit leaves it next to the new manifest-first text.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "pre-existing",
+        "evidence": [
+          "Contract lines 81-83 say a chunk record's `**Status**` is `complete` or `retired`. Rule 2 says an N == 1 record is a standalone record, not a manifest.",
+          "header.go:130 always writes `**Status**` for every record, and `buildSource` sets `Status: StatusComplete` on the standalone record.",
+          "The outcome is unaffected: the agent still reaches a hard no-op on a matching digest."
+        ]
+      },
+      {
+        "location": "engine/skills/ingested_contract_artifact_test.go:49-54",
+        "severity": "SUGGESTION",
+        "claim": "The new subtest checks that one sentence exists in the contract. It does not check the other places that state the rule, so those could drift without failing the test.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "The subtest only calls `strings.Contains(contract, \"A manifest's `content` is the provenance block first\")`.",
+          "The same rule is also written in the table row at line 32, in Rule 6, in the narrowed Rule 4, and in SKILL.md. None of these is asserted.",
+          "Deleting Rule 6, which carries the 64 KB part-1 reason, or reverting SKILL.md would leave the test green.",
+          "The tested sentence is the main statement of the rule, so this is low impact."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff (c22t7-d81165f1.diff) and the head worktree contract in full.",
+      "Read skills/knowledge-ingestion/SKILL.md lines 52-117: manifest-first ordering, N == 1, resume, and the re-ingestion gate.",
+      "Read longterm-mem/internal/ingest/header.go (Render and ParseHeader) and extract.go buildSource.",
+      "Render emits the manifest block with `**Status**` before Chunks-Expected, Chunks-Saved and Chunk-Status, so Source-SHA256 and Status stay in part 1 when memorycard splits the body.",
+      "ParseHeader accepts a manifest starting with `---\\n` and fills ChunkStatus from the `- ` lines. A partial list read from part 1 therefore parses without error.",
+      "Read memorycard/internal/memory/save.go: HardCapBytes is 64 KB, the same value the contract now states, and `partKey` gives parts after the first the topic key `<key>/part-i`, so part 1 keeps the manifest key. The doc comment on `HardCapBytes` also says 64 KB.",
+      "N == 1 records are standalone: body first, block last, `Chunk: 1/1`. A chunk is capped at DefaultMaxChunkBytes of 1600 bytes and the SKILL requires every chunk under 64 KB, so a standalone record never splits and its block stays in part 1.",
+      "The resume path reads Chunk-Status across `<key>/part-2` and the following parts. This is consistent with the new ordering.",
+      "Neither run tests nor edited anything. The subtest assertion was checked by reading it against contract line 61, where the sentence is present verbatim."
+    ]
+  }
+}

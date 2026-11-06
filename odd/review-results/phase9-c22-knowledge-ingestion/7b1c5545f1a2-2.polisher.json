@@ -1,0 +1,19 @@
+{
+  "kind": "polisher",
+  "base": "e3ff284ea1a4924edaa2f0499ddeea423756c247",
+  "head": "7b1c5545f1a21f157a74620d40d2211dae339003",
+  "diff_sha256": "28ffbf66e894c0d04cd135e39698224bd5097d259b5526d3ffc1fe08f11a2bb1",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full code diff c22t7-land-code.diff: the contract, SKILL.md, the pinned subtest and the approval record.",
+      "/home/labdrian/memorycard/internal/memory/save.go and import.go: HardCapBytes is 64 KB. A larger body is split into parts, and part 1 keeps the topic key. Parts 2 and up get the key <key>/part-N and the title '(part i/N)'. savedPartCount re-saves a split manifest correctly. This matches contract rule 6, the 64 KB chunk rule and the resume rule.",
+      "longterm-mem/internal/mcpserver/server.go: promote takes a source of engram or memorycard, with the memorycard id in engram_id. The query tool has a sources list that accepts 'vault'. Both match the new SKILL.md wording.",
+      "longterm-mem/internal/ingest/header.go ParseHeader: manifest content that starts with '---' and has no later '\\n---\\n' is accepted through the HasPrefix branch. The re-ingestion gate can therefore read Source-SHA256 and Status from a provenance-first manifest.",
+      "longterm-mem/internal/ingest/extract.go buildSource: a manifest's Content is manifest.Render() alone, with no body. This already matches the new 'provenance block first' text. Chunks are Text plus the block, so the block stays last for them.",
+      "Splitting by memorycard cannot break the ingest code: DefaultMaxChunkBytes is 1600, MaxChunks is 9999, and a manifest passes 64 KB only for a source of roughly 2,600 or more chunks.",
+      "Grep for knowledge-ingestion and ingested-observation-contract across the head worktree: no reference from the adhd-output skill (PR #748) or the role-chain and model-tier files (PR #749). No interaction found with main's new content.",
+      "Not run: no tests, no sha256 recomputation of the approval record, and no live memorycard or longterm-mem calls. This was a read-only sweep, and the shell tool was not used."
+    ]
+  }
+}

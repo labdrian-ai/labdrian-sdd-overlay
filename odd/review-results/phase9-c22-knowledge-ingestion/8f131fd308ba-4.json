@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "dd8dd9b8b5b37aa9b6078e4261fcf64a390f9495",
+    "head": "8f131fd308bacc9f36f0fcdc53bab86937ad0010",
+    "diff_sha256": "25363e512199de9dd149c08764c6b37c4e0aadefc02801d01dddba40f0543395",
+    "paths": [
+      "skills/knowledge-ingestion/SKILL.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "dd8dd9b8b5b37aa9b6078e4261fcf64a390f9495",
+      "head": "8f131fd308bacc9f36f0fcdc53bab86937ad0010",
+      "diff_sha256": "25363e512199de9dd149c08764c6b37c4e0aadefc02801d01dddba40f0543395"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "skills/knowledge-ingestion/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "skills/knowledge-ingestion/SKILL.md:62-64",
+        "severity": "SUGGESTION",
+        "claim": "The size rule says a chunk with its provenance block must stay 'under 64 KB'. memorycard's HardCapBytes is 64*1024 and a body is split only when it exceeds that cap, so a body of exactly 64 KB still stays in one memory. 'At most 64 KB' (65536 bytes) would match the code. The current wording is stricter than needed, so it is safe, but it is not exact.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "pre-existing",
+        "proof_refs": [
+          "/home/labdrian/memorycard/internal/memory/save.go:24-29 (HardCapBytes = 64 * 1024; Save splits bigger ones into parts)",
+          "skills/knowledge-ingestion/SKILL.md:62 (the line is not part of the diff hunks, which touch only lines 76-81 and 96-118 of the base)"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read all of skills/knowledge-ingestion/SKILL.md at head (145 lines). It has no remaining reference to blocked sources, the vault check ('vault not searched', 'vault_status', 'page_path'), or the resume exception. The only 'vault' mentions are the promote step, the secret warning and acceptance items 1 and 4, none of which relate to the removed rule.",
+      "Read the diff file. It removes the 'except for a source reported blocked' clause and the whole 'ingested before the move to memorycard is blocked' block (steps 1-4 plus the promote-refusal paragraph). It leaves the sentence 'Resuming is simply re-running the same ingestion.'",
+      "The procedure reads in order: intake path, manifest-first ordering, re-ingestion gate, secret warning, acceptance checklist. The gate's resume branch ('starting from step 3') points to the manifest-first step 3, which exists. The hard no-op paragraph now follows directly after the part-reading paragraph, with no dangling reference to the removed block.",
+      "The part-reading paragraph (lines 91-96, plus 109-111 for the Chunk-Status list) agrees with save.go. Part titles end '(part i/N)' (splitInput, save.go:214). Part keys are '<key>/part-i' for i>=2 (partKey, save.go:224; splitInput:216-217). An import can move a part to '<key>/part-i~<n>' (save.go:155-157, import.go:195-227). Part 1 keeps the original key, as the text implies.",
+      "I could not read Log entry L26 in the worktree: the grep match is on one very long line that was omitted. The check against the owner's D13 wording therefore rests on the diff and the file contents, not on L26 itself."
+    ]
+  }
+}

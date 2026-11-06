@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "9957dc7606fbc409a5a119e7c61152bf2bd88a10",
+    "head": "71bebc564975db57d1359b9247c6348999c08a9a",
+    "diff_sha256": "54cb55d28602d145d630dd2125c4eaf4aef3624dfcc3b198ec1ca754f23c2a02",
+    "paths": [
+      "skills/_shared/ingested-observation-contract.md",
+      "skills/knowledge-ingestion/SKILL.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "9957dc7606fbc409a5a119e7c61152bf2bd88a10",
+      "head": "71bebc564975db57d1359b9247c6348999c08a9a",
+      "diff_sha256": "54cb55d28602d145d630dd2125c4eaf4aef3624dfcc3b198ec1ca754f23c2a02"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "skills/_shared/ingested-observation-contract.md",
+        "skills/knowledge-ingestion/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "skills/knowledge-ingestion/SKILL.md:98-106",
+        "severity": "WARNING",
+        "claim": "The new vault pre-check names no behavior when the `query` call cannot give an answer. The cases are an error, a vault that is not configured, a missing or stale vault index (the server returns a `vault_status` and a rebuild-failure note), and zero results. An agent can read zero results or an error as 'no page, proceed'. It would then run `mem_save` over the imported memory, which is the overwrite D12 meant to prevent. The text also does not say how to decide that a hit's `**Source-Id**` 'matches'. `query` is a ranked text search, not an exact lookup, and the text sets no limit and names no project. The rule is fail-open and depends on the agent's own judgment.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/knowledge-ingestion/SKILL.md:98-106",
+          "longterm-mem/internal/mcpserver/server.go:112 (sources arg, vault is queried only when named)",
+          "longterm-mem/internal/mcpserver/server.go:265 (result carries vault_status)"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "skills/knowledge-ingestion/SKILL.md:100-103",
+        "severity": "SUGGESTION",
+        "claim": "The text says `promote` 'would refuse every memory of this source'. In `scanCardPages`, `BridgedError` fires only for a memory whose own Engram id (from memorycard's import map) matches a page's `engram_id`. Memories created after the move, such as new chunk keys on growth, are not bridged. Only the imported memories at the old keys are refused. The block is still the owner's D12 choice, but the stated reason is overstated.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/card.go:30-33",
+          "longterm-mem/internal/promote/card.go:215-218"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "skills/_shared/ingested-observation-contract.md:20",
+        "severity": "WARNING",
+        "claim": "The rewritten origin-changed row keeps the claim that 'promotion propagates `status: superseded` and the related-link on the next `sync`'. Per L12 (3), `sync` reads Engram only (`cmd_sync.go:43`). After this change the row sends the operator to memorycard's `supersedes`, so the stated consequence cannot happen. The row also says 'the old record's memorycard id' without saying which record of a manifest-plus-chunks source to supersede: the manifest or each chunk. Nothing in the contract fixes the choice.",
+        "evidence_class": "inferential",
+        "causal_disposition": "worsened",
+        "proof_refs": [
+          "odd/tasks/phase9-c22-knowledge-ingestion.md L12 point (3)",
+          "skills/_shared/ingested-observation-contract.md:18 (diff hunk, row text)"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the diff file in full",
+      "Read L1-L24 of odd/tasks/phase9-c22-knowledge-ingestion.md",
+      "memorycard server.go:96-106: saveArgs holds title, body, type, topic_key, scope, supersedes, project, cwd, directory; the contract note matches this set",
+      "longterm-mem promote/card.go:30-90 and :200-225: BridgedError and scanCardPages logic",
+      "longterm-mem mcpserver/server.go: query `sources` arg, and vault queried only when named",
+      "SKILL.md:87-126 in the worktree: the gate text as changed"
+    ]
+  }
+}

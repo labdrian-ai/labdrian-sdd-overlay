@@ -32,11 +32,13 @@ There is exactly one sanctioned way for external knowledge to enter long-term me
    a local file, or the operator's pasted text taken verbatim). This is the only step that
    ever touches the network, and it is agent-owned — no Go code in this repository fetches
    anything.
-2. **Save** the extracted content with Engram's `mem_save`, using exactly the field and
+2. **Save** the extracted content with memorycard's `mem_save`, using exactly the field and
    metadata shape defined in `skills/_shared/ingested-observation-contract.md`
-   (`topic_key`, `title`, `type: "discovery"`, `content` = body → `---` → provenance block).
+   (`topic_key`, `title`, `type: "discovery"`, `body` = body → `---` → provenance block;
+   for a manifest, the provenance block first).
 3. **Promote** the resulting observation with `longterm-mem`'s `promote` (the `promote` MCP
-   tool, or CLI `promote --id N`).
+   tool with `source: "memorycard"` and the memorycard id in `engram_id`, or CLI
+   `promote --source memorycard --id N`, N being the memorycard id).
 
 No other intake path exists. Content that was fetched or read but never passed through
 `mem_save` is not "ingested" by this capability, regardless of whether it still sits in the
@@ -56,6 +58,10 @@ resulting `topic_key` happens to be automatically sync-eligible.
 When the source is small enough for one record (`N == 1`), there is no separate manifest:
 save and promote the single record at the manifest key with `Chunk: 1/1`, per the contract's
 rule 2.
+
+**Every chunk, with its provenance block, stays under 64 KB.** Cut the source into smaller
+chunks otherwise: memorycard stores a larger body as parts, and the block, last in a chunk,
+would land outside part 1, where the re-ingestion gate and `promote` read.
 
 When the source produces more than one chunk (`N > 1`), order matters so a crash mid-ingestion
 is always readable and resumable:
@@ -82,8 +88,12 @@ the rest exists. Report the partial state honestly.
 
 Before saving anything for a source, derive its `Source-Id` (per the contract's derivation
 rule — a function of the origin only, never the content) and search its topic key:
-`mem_search("ingested/{source-kind}/{source-id}")`, then `mem_get_observation` to read the
-stored `**Source-SHA256**` and, for a manifest record, `**Status**`.
+`mem_search("ingested/{source-kind}/{source-id}")`, then `mem_get` to read the
+stored `**Source-SHA256**` and, for a manifest record, `**Status**`. Read the record in full
+before deciding: when memorycard stored it as parts, each part's title ends `(part i/N)` and
+the rest sits in the memories at `<key>/part-2` … `<key>/part-N` (or `<key>/part-i~<n>` when
+an import moved a part). A record stored before this procedure moved to memorycard may hold
+its block, or only its `**Status**`, in one of those later parts.
 
 The hard no-op only applies to a manifest whose `**Status**` is already `complete` — a
 matching digest never short-circuits a `pending` or `partial` manifest, since an unchanged
@@ -96,7 +106,10 @@ document" rule above.
   `mem_save` call and no `promote` call. Report "unchanged".
 - If the digest matches but `**Status**` is `pending` or `partial`: this is a **resume**, not
   a no-op. Re-run the manifest-first ordering above starting from step 3, using
-  `**Chunk-Status**` to skip chunks already `saved promoted` and land only the missing ones.
+  `**Chunk-Status**`, read in full (when memorycard stored the manifest as parts, its list
+  continues in the memories at `<manifest key>/part-2`, `/part-3`, …, which `mem_search` and
+  `mem_get` read like any other), to skip chunks already `saved promoted` and land only the
+  missing ones.
 - If the digest differs, or no record exists yet: proceed through the manifest-first ordering
   above. The full re-ingestion decision table (including the shrink/grow/origin-changed rows)
   lives in the contract document — consult it before writing, do not improvise the shrink or
@@ -104,7 +117,7 @@ document" rule above.
 
 ## Secret and credential warning
 
-Ingested content is stored in Engram and, once promoted, in a git-tracked vault page,
+Ingested content is stored in memorycard and, once promoted, in a git-tracked vault page,
 **verbatim and unscrubbed**. This procedure performs no secret or credential scrubbing of any
 kind — that is explicitly out of scope for this capability. Before ingesting a document,
 consider whether it contains credentials, private paths, or other sensitive material that
@@ -113,19 +126,19 @@ ingesting.
 
 ## Acceptance checklist (executed during `sdd-verify`)
 
-These scenarios are non-Go and are exercised by hand against real Engram/`longterm-mem`
+These scenarios are non-Go and are exercised by hand against real memorycard/`longterm-mem`
 state, not by a unit test. Record results honestly in the verify report, including any
 scenario that could not be exercised.
 
 1. **R-003 end-to-end.** Ingest one real external source through this procedure. Show the
-   resulting observation via `mem_search` + `mem_get_observation`, and show the promoted page
-   via `longterm-mem query --sources vault,engram-fts`. Confirm the provenance block is
+   resulting observation via `mem_search` + `mem_get`, and show the promoted page
+   via `longterm-mem`'s `query` MCP tool with `sources: ["vault"]`. Confirm the provenance block is
    present in the page body.
 2. **R-004 / OQ-5 unchanged re-ingestion.** Re-ingest the identical source a second time.
-   Confirm the procedure reports "unchanged", `revision_count` did not increment, and no
+   Confirm the procedure reports "unchanged", the version history `mem_get` returns shows no new version, and no
    second topic key was created.
 3. **R-004 / OQ-5 changed re-ingestion.** Edit the source, then re-ingest. Confirm it resolves
-   to the same topic key, `revision_count` increments, and the vault page path is unchanged.
+   to the same topic key, the version history `mem_get` returns shows one new version, and the vault page path is unchanged.
 4. **OQ-4 sync-eligibility.** Take an `ingested/`-keyed observation that was saved but never
    explicitly promoted (e.g. a deliberately interrupted ingestion). Confirm the next `sync`
    promotes it.

@@ -46,6 +46,13 @@ func TestIngestedObservationContractArtifact(t *testing.T) {
 		}
 	})
 
+	t.Run("R002_manifest_provenance_block_first", func(t *testing.T) {
+		const sentence = "A manifest's `content` is the provenance block first"
+		if !strings.Contains(contract, sentence) {
+			t.Fatalf("contract must state that a manifest's provenance block comes first, verbatim %q", sentence)
+		}
+	})
+
 	t.Run("R004_topic_key_shapes_present_verbatim", func(t *testing.T) {
 		for _, required := range []string{
 			"ingested/{source-kind}/{source-id}",

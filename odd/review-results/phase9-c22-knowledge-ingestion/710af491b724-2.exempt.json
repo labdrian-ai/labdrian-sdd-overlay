@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ead187d14d4e55929ec276062555c6886a102db9",
+    "head": "710af491b724f36c381f46db11fb0e43ff577ee3",
+    "diff_sha256": "422c36ea47d14d99b7729d6f91361d01812db78278a5606da30bb77cbd49a9ad",
+    "paths": [
+      "odd/tasks/phase9-c22-knowledge-ingestion.md",
+      "skills/knowledge-ingestion/.approval.json"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git diff --stat ead187d1 710af491",
+        "result": "pass",
+        "output": " odd/tasks/phase9-c22-knowledge-ingestion.md | 1 +\n skills/knowledge-ingestion/.approval.json   | 4 ++--\n 2 files changed, 3 insertions(+), 2 deletions(-)"
+      },
+      {
+        "command": "git show 710af491:skills/knowledge-ingestion/.approval.json",
+        "result": "pass",
+        "output": "{\n  \"version\": 2,\n  \"skill\": \"knowledge-ingestion\",\n  \"sha256\": \"877f0822c93968d5eeda46162289ef924eee8cba998fe33800e2670ff54f95ad\",\n  \"approved_at\": \"2026-11-06T19:29:16Z\",\n  \"approver\": \"labdrian\"\n}"
+      },
+      {
+        "command": "cd engine && go run ./cmd/ skills validate --registry ../skills.registry.yaml --manifest ../overlay.manifest --source-root ../skills",
+        "result": "pass",
+        "output": "registry and manifest aligned (43 skills)\nskills/ on disk matches overlay.manifest (103 files)\nglobal skill approvals verified (43 skills: 43 approved)\nexit=0"
+      },
+      {
+        "command": "cd engine && go test -count=1 ./skills/...",
+        "result": "pass",
+        "output": "ok  github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills 13.678s\nok  github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills/app 0.555s\nok  github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills/engramexport 0.017s\nok  github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills/projectidentity 0.031s\nok  github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills/registryyaml 0.047s\nok  github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills/skillsfs 0.039s"
+      },
+      {
+        "command": "git log -1 --format=%B 710af491",
+        "result": "pass",
+        "output": "chore(skills): record the owner's re-approval of knowledge-ingestion\n\nRisk: none"
+      }
+    ]
+  }
+}

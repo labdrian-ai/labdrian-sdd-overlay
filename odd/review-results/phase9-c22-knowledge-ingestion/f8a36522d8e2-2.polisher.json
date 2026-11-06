@@ -1,0 +1,17 @@
+{
+  "kind": "polisher",
+  "base": "d81165f1ed48fcb245fb9e2466bbc99701fbb805",
+  "head": "f8a36522d8e223a0126765c2bca43592c156d823",
+  "diff_sha256": "dbcd01e21fcb19edd4e2f08caea2ebbf2fbcac927136ea80d1fda00b82cc766e",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the diff /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/c22t7-f8a36522.diff. It adds the 64 KB chunk rule and the manifest-parts resume clause in skills/knowledge-ingestion/SKILL.md.",
+      "Read /home/labdrian/memorycard/internal/memory/save.go. splitInput keeps the original TopicKey on part 1 (index 0) and gives later parts partKey = '<key>/part-i' with i = 2, 3, ... The resume clause's '<manifest key>/part-2, /part-3' matches this exactly, and part 1 stays at the manifest key.",
+      "The same file defines HardCapBytes = 64*1024 and SoftTargetBytes = 16*1024. Save splits only bodies larger than the hard cap. A chunk kept under 64 KB, provenance block included, is therefore never split. The 'under' wording is slightly more conservative than the code's 'larger than', which is harmless.",
+      "Read skills/_shared/ingested-observation-contract.md rule 2, rule 4 and rule 6 (lines 101-115). Chunks put the provenance block last, so a chunk under 64 KB keeps it in part 1. A manifest puts the block first, so Source-SHA256 and Status stay in part 1, where the gate and promote read them. The skill text is consistent with this contract.",
+      "Read the full SKILL.md at the head worktree. The resume branch of the re-ingestion gate reads Chunk-Status in full via the part-i memories, and the digest and Status checks still use part 1. I found no contradiction with the manifest-first ordering and no key collision between '<key>/part-i' and the chunk keys c0001...",
+      "Residual non-defect: promote copies only part 1 of a split manifest to the vault, so the vault page shows a truncated Chunk-Status. Resume reads memorycard, not the vault, so no agent flow depends on it."
+    ]
+  }
+}

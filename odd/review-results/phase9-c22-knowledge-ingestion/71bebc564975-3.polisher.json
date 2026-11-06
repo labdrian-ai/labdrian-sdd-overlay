@@ -1,0 +1,33 @@
+{
+  "kind": "polisher",
+  "base": "9957dc7606fbc409a5a119e7c61152bf2bd88a10",
+  "head": "71bebc564975db57d1359b9247c6348999c08a9a",
+  "diff_sha256": "54cb55d28602d145d630dd2125c4eaf4aef3624dfcc3b198ec1ca754f23c2a02",
+  "findings": {
+    "findings": [
+      {
+        "location": "skills/knowledge-ingestion/SKILL.md:98-104",
+        "severity": "WARNING",
+        "claim": "The new pre-save vault check is not executable as written. It tells the agent to decide on whether a matching page 'carries engram_id and no memorycard_id', but the query tool does not return page frontmatter. The skill also never says to pass the required `project` argument, nor how to read the page.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "longterm-mem/internal/query/result.go:52-58 defines ResultRow. A vault row carries only sources, rank, page_address, page_path, title and a snippet. engram_id is omitted for vault rows ('A vault row leaves both zero') and there is no memorycard_id field.",
+          "longterm-mem/internal/mcpserver/server.go:100-102 makes `project` a required, non-omitempty field of QueryIn. The new text names only `sources: [\"vault\"]` and the Source-Id.",
+          "The frontmatter with engram_id lives only in the page file (/home/labdrian/labdrian-brain/wiki/memory/c-000118.md:15 `engram_id: 3422`; the Source-Id is at line 216, deep in the body). The agent would have to open page_path, and the skill gives no instruction to do so.",
+          "A snippet is cut by the vault retriever, so a hit on the Source-Id may not even surface in it.",
+          "Consequence: an agent can fail to detect a pre-memorycard page. It then runs mem_save, which overwrites the imported memory, and promote refuses afterwards. That is the exact failure D12 meant to prevent. An agent that guesses may instead block a source that is not bridged."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read diff /tmp/.../scratchpad/c22t7-d12.diff in full.",
+      "Read Log L23 and L24 of odd/tasks/phase9-c22-knowledge-ingestion.md in the worktree.",
+      "memorycard internal/mcpserver/server.go:96-106: saveArgs has title, body, type, topic_key, scope, supersedes, project, cwd, directory. The new contract note lists supersedes, cwd and directory correctly, and says content is sent as body.",
+      "memorycard internal/memory/save.go:206-224: parts titled '(part i/N)', keys <key>/part-i, and the importer variant <key>/part-i~<n>. This matches the new SKILL text.",
+      "longterm-mem internal/promote/card.go:77-88: PromoteCard returns BridgedError when scan.bridged is found, before any write. This matches the 'refusal at promote' clause.",
+      "c-000118.md has engram_id 3422 and a Source-Id in its body, which supports the D12 premise that such a page can be recognised on the vault side.",
+      "The change does not contradict other lines I checked. The SKILL line 145 and 151 vault checks and the contract's supersedes row are consistent. I did not check every other contract line."
+    ]
+  }
+}

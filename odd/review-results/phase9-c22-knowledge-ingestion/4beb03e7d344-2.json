@@ -1,0 +1,74 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "0e8d18311e45243d88e5fdcb67688dc4ceb12de2",
+    "head": "4beb03e7d344558bceb3a46185c5ef00bb21c551",
+    "diff_sha256": "6acaf9c3ddf6fb170835bd1e3c2e06413c783bf59269c3de4311cf99b4de9cbe",
+    "paths": [
+      "skills/knowledge-ingestion/SKILL.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "0e8d18311e45243d88e5fdcb67688dc4ceb12de2",
+      "head": "4beb03e7d344558bceb3a46185c5ef00bb21c551",
+      "diff_sha256": "6acaf9c3ddf6fb170835bd1e3c2e06413c783bf59269c3de4311cf99b4de9cbe"
+    },
+    "evidence": [
+      "Read the full diff, which changes only skills/knowledge-ingestion/SKILL.md.",
+      "Read S6 a-f and the T7 line in odd/tasks/phase9-c22-knowledge-ingestion.md. T7 says commit (1) is the eight edits of S6 a-f and nothing else.",
+      "Read server.go:112 and :171-172. The MCP promote tool accepts source engram or memorycard, and the query tool's sources include vault. The CLI side (cmd_promote.go, cmd_query.go) was not opened here.",
+      "Grep of SKILL.md for Engram, mem_get_observation and observation shows no remaining Engram or mem_get_observation. Lines 49-51 and 64 still say observation.",
+      "The S6 a-f edits match their wording: memorycard's mem_save, body, the promote source memorycard with the CLI form, mem_get, the stored in memorycard and real memorycard lines, and the query MCP tool with sources [vault]."
+    ],
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "skills/knowledge-ingestion/SKILL.md:38",
+        "claim": "The promote step now reads \"Promote the resulting memory\" where the base read \"resulting observation\". S6 (c) names only the source: memorycard form for the promote MCP tool and the CLI. S6 says \"nothing else reworded\" and T7 says \"nothing else\". The observation-to-memory change is therefore outside S6. It also makes the line disagree with the unchanged \"save an observation\" and \"one observation id per call\" at lines 49-51, which use the old term.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "diff lines 13-16",
+          "odd/tasks/phase9-c22-knowledge-ingestion.md S6 scope and not-changed list",
+          "SKILL.md:49-51"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "skills/knowledge-ingestion/SKILL.md:122",
+        "claim": "Acceptance item 1 changes \"resulting observation\" to \"resulting memory\". S6 (d) allows only the mem_get_observation to mem_get swap on this line, and (f) allows only the query replacement on the following line. The extra wording change was not asked for, and the two sibling occurrences are now inconsistent.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "diff lines 49-53",
+          "S6 (d) and (f)"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "skills/knowledge-ingestion/SKILL.md:38-40",
+        "claim": "The MCP promote tool takes the memorycard id in a field named engram_id (server.go:171). The new text says N is the memorycard id only for the CLI form, so an agent calling the MCP tool is not told which argument carries the id. S6 (c) does not ask for this, so it is an optional clarification or a follow-up, not a defect against the spec.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/mcpserver/server.go:171-172"
+        ]
+      }
+    ],
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "skills/knowledge-ingestion/SKILL.md"
+      ],
+      "reason": ""
+    }
+  }
+}

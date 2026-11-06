@@ -1,0 +1,50 @@
+{
+  "kind": "polisher",
+  "base": "e3ff284ea1a4924edaa2f0499ddeea423756c247",
+  "head": "7b1c5545f1a21f157a74620d40d2211dae339003",
+  "diff_sha256": "28ffbf66e894c0d04cd135e39698224bd5097d259b5526d3ffc1fe08f11a2bb1",
+  "findings": {
+    "findings": [
+      {
+        "location": "skills/knowledge-ingestion/SKILL.md:35-41,89-92",
+        "severity": "WARNING",
+        "claim": "Re-ingesting any source that was ingested before this retarget breaks. Those sources now live in memorycard as memories imported from Engram, split into parts with the provenance block in the last part, and the Engram observation they came from already has a vault page. When an agent follows the retargeted procedure, the re-ingestion gate reads part 1, finds no **Source-SHA256**, and rewrites the record, so an unchanged source is not reported as \"unchanged\". The `promote --source memorycard` step that follows is then refused with BridgedError, and the skill gives no path for this case. The vault page stays stale and the ingestion ends failed or partial.",
+        "evidence_class": "inferential",
+        "causal_disposition": "behavior-activated",
+        "evidence": [
+          "memorycard project labdrian-sdd-overlay holds imported ingested records: #2347/#2348/#2349 'Ingested: Skills Hub federation and sync ... (part 1/3..3/3)'. #2349 sits at topic ingested/url/github-com-nousresearch-hermes-agent-f810e795/part-3 and is the only part holding the provenance block (**Source-SHA256**, **Status**: complete), although its Chunk-Span is 0-23271 (below 64 KB). It was split by the earlier, smaller cap, so part 1 at the manifest key has no block.",
+          "SKILL.md:89-92 tells the agent to mem_search the key, then mem_get to read **Source-SHA256**. byTopic (/home/labdrian/memorycard/internal/memory/search.go:295-298) returns only the memory whose topic_key equals the key, which is part 1. The digest is absent, so the hard no-op at :100-102 cannot fire, and the agent falls through to 'no record exists yet' and re-saves.",
+          "The vault page /home/labdrian/labdrian-brain/wiki/memory/c-000118.md already exists for this source with engram_id: 3422.",
+          "longterm-mem/internal/promote/card.go:81-88: PromoteCard returns BridgedError whenever scanCardPages finds a page whose engram_id matches the memory's import_map EngramID or a same-content Engram id. That is the case for a memory imported from an Engram observation that has a page, so the promote step this target writes (SKILL.md:39-41, source memorycard) is refused for these sources.",
+          "Before the target, the procedure saved to Engram, where the same topic_key upserts the same observation and promote updates its page in place, so this path worked. The retarget is what routes these sources into the bridged refusal. The rule the target adds (SKILL.md:62-64, contract rule 6) assumes the block is in part 1, which is false for this already-stored data."
+        ]
+      },
+      {
+        "location": "skills/_shared/ingested-observation-contract.md:22-32",
+        "severity": "WARNING",
+        "claim": "The contract's `mem_save` argument table still names `capture_prompt` and `content`. SKILL.md:35-37 tells the agent to use 'exactly the field and metadata shape defined in' that contract. memorycard's mem_save input schema forbids additional properties, so a call that includes `capture_prompt: false` or `content` is rejected before anything is saved. The first save of every ingestion fails until the agent guesses to drop those arguments.",
+        "evidence_class": "inferential",
+        "causal_disposition": "behavior-activated",
+        "evidence": [
+          "/home/labdrian/memorycard/internal/mcpserver/server.go:96-106: saveArgs has only title, body, type, topic_key, scope, supersedes, project, cwd and directory. There is no capture_prompt or content.",
+          "memorycard go.mod uses github.com/google/jsonschema-go v0.4.3, whose infer.go:59 says 'Structs have schema type \"object\", and disallow additionalProperties' (:248 sets AdditionalProperties = falseSchema()). go-sdk v1.8.0 validates tool input against that inferred schema.",
+          "Contract :30 lists `capture_prompt` = `false`, and :32 lists `content` as a mem_save argument. This target edited the :32 row and kept the name. SKILL.md:35-38 says 'using exactly the field and metadata shape defined in' the contract, and mentions `body` only in a parenthetical.",
+          "Under Engram, the store the contract was written for, these arguments were valid. Retargeting the skill to memorycard while keeping the table is what makes them reachable failures. Spec S6/S7 (odd/tasks/phase9-c22-knowledge-ingestion.md:28,33) record that the owner's D7 answer kept these contract rows out of scope. This is a deferred known gap, but it still affects users."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full code diff /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/c22t7-land-code.diff",
+      "Read the head worktree's skills/knowledge-ingestion/SKILL.md and skills/_shared/ingested-observation-contract.md in full",
+      "Read spec odd/tasks/phase9-c22-knowledge-ingestion.md S6-S8, T7 and T6 (lines 20-58)",
+      "/home/labdrian/memorycard/internal/memory/save.go: HardCapBytes = 64 KB, splitInput gives part keys <key>/part-i, savedPartCount archives leftover parts. import.go: splitBody keeps a body of up to HardCapBytes whole, otherwise packs it into parts of 48 KB (chunkTargetBytes). Rule 6 and the 64 KB chunk rule match this code.",
+      "/home/labdrian/memorycard/internal/mcpserver/server.go: the mem_save, mem_search and mem_get schemas. /home/labdrian/memorycard/internal/memory/search.go byTopic does an exact topic_key match.",
+      "longterm-mem/internal/ingest/header.go: Render/ParseHeader. A manifest whose content starts with '---\\n' parses through the HasPrefix branch, and Source-SHA256 and Status are emitted before Chunk-Status.",
+      "longterm-mem/internal/mcpserver/server.go: PromoteIn has engram_id and source memorycard. promoteHandler handles source=memorycard. internal/promote/card.go: PromoteCard updates the page in place for the same memorycard id and refuses with BridgedError for a memory bridged to an Engram observation that has a page.",
+      "longterm-mem/cmd/longterm-mem/cmd_sync.go and app.go: sync reads Engram only. T6 already records that the checklist's scenario 4 is not exercisable, so it is not reported as new.",
+      "The live memorycard project labdrian-sdd-overlay (#2347-#2349 imported ingested records, with the block only in part 3) and the vault page /home/labdrian/labdrian-brain/wiki/memory/c-000118.md (engram_id 3422)",
+      "Interaction with main: skills/adhd-output has no mention of memory, mem_save or ingest. skills.registry.yaml and overlay.manifest only shifted line positions (knowledge-ingestion entry now at :482, manifest :67). The approval binds only skills/knowledge-ingestion/, which main does not touch. The three-tier model policy has no shared surface with these files that I found. I found no bad interaction.",
+      "Not run: go test, skills validate, or any live memorycard or longterm-mem command. No Bash tool was available, and the review is read-only."
+    ]
+  }
+}

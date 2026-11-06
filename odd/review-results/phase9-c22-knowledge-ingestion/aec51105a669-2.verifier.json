@@ -1,0 +1,32 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "base_result": "not-reproduced",
+      "command": "Read skills/knowledge-ingestion/SKILL.md lines 66-118 at head; rg -n 'BridgedError|part-2|partial|do not save' on `git show 01b8d759:skills/knowledge-ingestion/SKILL.md`",
+      "output": "Head 97-99: 'If `promote` refuses a memory as bridged (`BridgedError`...), stop that source: do not retry and do not save again, and report the source as saved but not promoted, naming the refused memory id and the page.' It says nothing about upserting the manifest to `partial`. Step 5 (75-77) requires `partial` for a failed chunk. Lines 110-115 resume from a `pending` or `partial` manifest. Base has no BridgedError rule: the rg hits are only lines 75, 83, 85, 95, 97, 103 and 106, none mentioning BridgedError. The rule is new, so the defect was not present at base."
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "base_result": "not-reproduced",
+      "command": "rg -n 'content|Engram|engram_id|`type`' skills/_shared/ingested-observation-contract.md (head); same rg on `git show 01b8d759:skills/_shared/ingested-observation-contract.md`",
+      "output": "Head 31: '| `body` | the record's `content`: body → `---` → provenance block...'. Head 33: 'memorycard's `mem_save` takes no other argument (no `capture_prompt`, no `content`)'. Head 42: 'The provenance block inside `content`'. Head 61: 'LAST element of its `content`'. Head 62: 'A manifest's `content` is the provenance block first'. Head 106: 'last in a chunk or standalone record's `content`'. Base line 32 named the argument `content`, and base lines 41, 60, 61 and 105 used `content` for the same field, so base was consistent. The inconsistency is new at head."
+    },
+    {
+      "id": "F3",
+      "result": "reproduced",
+      "base_result": "not-reproduced",
+      "command": "Read skills/knowledge-ingestion/SKILL.md lines 92-95 at head; rg -n 'part-2' on `git show 01b8d759:skills/knowledge-ingestion/SKILL.md`",
+      "output": "Head 93-95: 'when the memory at the key holds no `**Source-SHA256**`, read `<key>/part-2`, `/part-3`, … for the block before deciding, and never take its absence there as \"no record exists\"'. It gives no stop condition, such as stopping at the first missing part or at the first part holding the block. At base, the only part-2 hit is line 106, in the manifest Chunk-Status resume context. The legacy-parts clause itself did not exist, so it is new."
+    },
+    {
+      "id": "F4",
+      "result": "reproduced",
+      "base_result": "reproduced",
+      "command": "rg -n 'content|Engram|engram_id|`type`' skills/_shared/ingested-observation-contract.md (head); same rg on `git show 01b8d759:skills/_shared/ingested-observation-contract.md`",
+      "output": "Head 38: 'verifiable ways. None of them depends on the Engram `type` value:'. Head 146: '(same key → same `engram_id` → `findPromotedPage`'s `(project, engram_id)` ...)'. Base has the identical text at line 37 ('None of them depends on the Engram `type` value') and line 145 ('same `engram_id`'). The stale wording was already there at base and was not changed at head."
+    }
+  ]
+}

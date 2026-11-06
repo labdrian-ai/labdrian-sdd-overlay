@@ -1,0 +1,67 @@
+{
+  "kind": "polisher",
+  "base": "01b8d759533ea6d66dbac2ba4d4e926d71c8df51",
+  "head": "aec51105a66989935d6a7b8ee6f3c0a4b416d4bf",
+  "diff_sha256": "67efe8540fb5a0e3c158cabb75c0ca37c9f28b8d10e701f8e7b28354a2715721",
+  "findings": {
+    "findings": [
+      {
+        "location": "skills/knowledge-ingestion/SKILL.md:97-99",
+        "severity": "WARNING",
+        "claim": "The new BridgedError rule conflicts with the manifest-first ordering and with the resume branch of the gate. An agent that follows it leaves a source in a state that the next run resumes, and that run saves again, so the source is never reported honestly and never finishes. For a multi-chunk source that was ingested before the retarget, step 1 has already overwritten the imported manifest (part 1, bridged) with `**Status**: pending` and the new digest before step 2's promote is refused. The rule then says \"do not save again\", which forbids step 5's upsert to `partial`, and \"report the source as saved but not promoted\", although no chunk was saved. On the next run the gate finds a matching digest with `pending`, so the resume bullet (SKILL.md:110-115) re-runs from step 3 and saves the chunks. Their imported memories are bridged too, so promote is refused again. The rule names a stop and a report but gives no resume, which D11 asked for (\"how to resume or report\").",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "SKILL.md:69-77 orders save manifest (pending) -> promote manifest -> chunks, and step 5 requires upserting the manifest to `partial` when a chunk fails; the new rule at :97-99 says \"stop that source: do not retry and do not save again\" and does not name the Status to leave.",
+          "SKILL.md:110-115: a matching digest with `pending` is \"a resume, not a no-op\" and re-runs from step 3 (save each chunk). So the next ingestion of the same source saves again.",
+          "longterm-mem/internal/promote/card.go:85-88: PromoteCard returns BridgedError for any memory whose Engram observation already has a page. Every pre-retarget chunk and manifest that had been promoted is such a memory (L23: #2347-#2349 -> page c-000118).",
+          "memorycard save.go:272-293: a save at an existing topic key updates that same memory id in place (the imported, bridged one), so the refusal repeats on every run.",
+          "odd/tasks/phase9-c22-knowledge-ingestion.md L23, the D11 answer verbatim: \"add a SKILL.md clause for sources ingested before the retarget (the block in a later part, BridgedError: how to resume or report)\""
+        ]
+      },
+      {
+        "location": "skills/_shared/ingested-observation-contract.md:33",
+        "severity": "WARNING",
+        "claim": "The new sentence says memorycard's `mem_save` \"takes no other argument\" beyond the table's six. That is false for the real tool, which also takes `supersedes`, `cwd` and `directory`. `supersedes` is memorycard's way to record a supersession, which is the documented operator step of the origin-changed row (:150). An agent that reads this contract is now told the argument does not exist, and is told it cannot pass `cwd` when it works outside the project directory.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "/home/labdrian/memorycard/internal/mcpserver/server.go:96-106: saveArgs has Title, Body, Type, TopicKey, Scope, Supersedes, Project, Cwd, Directory. The contract's table (:26-31) lists only topic_key, title, type, project, scope, body.",
+          "server.go:113-116 passes Supersedes to memory.Save, and save.go:174-179 marks the superseded memory, so the argument is live.",
+          "contract :150 (unchanged) keeps the origin-changed supersession as an operator step. The new :33 explicitly rules out every mem_save argument outside the table, `supersedes` included."
+        ]
+      },
+      {
+        "location": "skills/knowledge-ingestion/SKILL.md:97-98",
+        "severity": "SUGGESTION",
+        "claim": "The rule identifies the refusal as `BridgedError` and as a memory that \"came from an Engram observation\". The agent never sees the type name, only the error text. The SameContent variant of the same refusal does not contain the word \"bridged\" and is not a memory that came from an observation. An agent may therefore not recognize it and may retry or report a generic failure.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "longterm-mem/internal/promote/card.go:46-53: when SameContent is true the message is \"memorycard memory %d has the same content as Engram observation %d, which already has the page %s ...\", with no \"bridged\" in it. card.go:41-42 says such a memory \"has no bridge\".",
+          "longterm-mem/internal/mcpserver/server.go:353-356 returns the error unchanged to the MCP caller, and cmd_promote.go:124-125 prints it with exit 6, so only the message text reaches the agent."
+        ]
+      },
+      {
+        "location": "skills/knowledge-ingestion/SKILL.md:93-95",
+        "severity": "SUGGESTION",
+        "claim": "The part-reading clause runs only \"when the memory at the key holds no `**Source-SHA256**`\". A pre-retarget manifest (old layout: summary -> inventory -> `---` -> block) whose split falls inside the block keeps `**Source-SHA256**` in part 1 but loses `**Status**` to part 2. The clause does not run, and the gate's own wording (a record with no `Status` field is a single-chunk record, a hard no-op on a matching digest) can then turn an unfinished manifest into \"unchanged\".",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "SKILL.md:107-109: a matching digest on \"a single-chunk, non-manifest record, which has no `Status` field\" is a hard no-op.",
+          "Contract :71 vs :79/:91: `**Source-SHA256**` comes before `**Status**` in the block, so one split point leaves the first in part 1 and the second in a later part (save.go:207-221 splits by size into `<key>/part-i`).",
+          "Spec S7 (f) records the old design's manifest as \"`summary` -> inventory -> `---` -> provenance block\" (design.md:148-149), so pre-retarget manifests put their block last."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the target diff /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/c22t7-d11.diff (contract :31-33, SKILL.md :92-99).",
+      "Read odd/tasks/phase9-c22-knowledge-ingestion.md Specs S6-S8, Tasks T7 and Log L23 (the D11 answer verbatim) in /home/labdrian/labdrian-sdd-overlay-worktrees/review-aec51105a669.",
+      "Read the whole of skills/knowledge-ingestion/SKILL.md and skills/_shared/ingested-observation-contract.md at the head, to check for contradictions.",
+      "Read /home/labdrian/memorycard/internal/mcpserver/server.go:60-170 (saveArgs, save, getArgs) and /home/labdrian/memorycard/internal/memory/save.go in full (HardCapBytes = 64 * 1024, splitInput part keys, savedPartCount, write upsert in place).",
+      "Read longterm-mem/internal/promote/card.go:25-104 (BridgedError, PromoteCard), longterm-mem/cmd/longterm-mem/cmd_promote.go:90-139 and longterm-mem/internal/mcpserver/server.go:339-374 (promote error passthrough).",
+      "No commands or tests were run; the review is read-only source inspection."
+    ]
+  }
+}

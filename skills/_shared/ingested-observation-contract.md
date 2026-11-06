@@ -28,8 +28,9 @@ shape to any record defined by this contract.
 | `type` | `discovery` — deliberately non-load-bearing; see "Marker mechanism" below |
 | `project` | the resolved project |
 | `scope` | `project` |
-| `capture_prompt` | `false` (automated artifact) |
-| `content` | body → `---` → provenance block, below |
+| `body` | the record's `content`: body → `---` → provenance block, below; a manifest: the provenance block first |
+
+memorycard's `mem_save` also takes `supersedes`, `cwd` and `directory`, and nothing else: it has no `capture_prompt` and no `content` argument, and a call with an unknown argument is refused before anything is saved. Below, a record's `content` is its text, sent as `body`.
 
 ## Marker mechanism (non-load-bearing `type`)
 
@@ -38,7 +39,7 @@ verifiable ways. None of them depends on the Engram `type` value:
 
 1. The topic-key namespace's first segment, `ingested/`.
 2. The title prefix, `Ingested: `.
-3. The provenance trailer inside `content` (below) — the only one of the
+3. The provenance block inside `content` (below) — the only one of the
    three that survives into the promoted vault page body.
 
 ## Topic-key grammar
@@ -56,8 +57,9 @@ namespace listing sorts lexically. A source whose chunk count would exceed
 
 ## Provenance block — verbatim shape
 
-Record content is `body` → `---` → provenance block. The block is the LAST
-element of `content`, after the body, never before it.
+A chunk or standalone record's content is `body` → `---` → provenance block.
+The block is the LAST element of its `content`, after the body, never before it.
+A manifest's `content` is the provenance block first: nothing precedes it, and its `**Chunk-Status**` inventory is its last element.
 
 ```markdown
 ---
@@ -101,12 +103,17 @@ Manifest-only additions (a manifest carries no source body):
    with `**Chunk**: 1/1`. No separate chunk observation exists for it.
 3. `**Chunk-Span**` is a byte range into the normalized source (CRLF folded
    to LF), so any chunk is locatable in the original document.
-4. The provenance block is last in `content`, so the embedding window
+4. The provenance block is last in a chunk or standalone record's `content`, so the embedding window
    (`vecindex.DefaultInputLimit`) covers the body first, and truncation
    falls on the block's high-entropy digests instead of the prose.
 5. A record whose body is absent and whose `**Status**` is `retired` is a
    tombstone for a chunk the source no longer has. It is never
    hand-deleted.
+6. A manifest has no body, and its `**Chunk-Status**` inventory grows with N,
+   so its provenance block comes first: memorycard stores a body over 64 KB as
+   parts and only part 1 keeps the manifest's topic key, so `**Source-SHA256**`
+   and `**Status**` stay in part 1, where the re-ingestion gate reads them and
+   `promote` takes them.
 
 ## `Source-Id` derivation
 
@@ -140,7 +147,7 @@ second parallel memory, and never an automatic supersession.
 | exists, **new N < old N**, new N ≥ 1 | — | Surplus keys `c{N+1}…` upsert to a retired tombstone (`**Status**: retired`, trailer preserved, body removed) and are promoted so the vault page updates in place. **Never hand-deleted.** |
 | exists, **new N == 1** (was > 1) | — | The record moves to the manifest key (rule 2: a single-chunk source has no separate chunk observation). Every prior chunk key `c0001…` — including `c0001` — retires to a tombstone the same way; none of them becomes the live record. |
 | exists, **new N > old N** | — | New chunk keys are created and promoted |
-| **origin changed** (new URI ⇒ new `Source-Id`) | — | A different topic key. The old record is NOT touched automatically; `mem_compare(new, old, "supersedes")` is a documented operator step, after which promotion propagates `status: superseded` and the related-link on the next `sync`. |
+| **origin changed** (new URI ⇒ new `Source-Id`) | — | A different topic key. The old record is NOT touched automatically; saving the new manifest (or standalone record) with memorycard's `mem_save` argument `supersedes` set to the memorycard id of the old one is a documented operator step. memorycard marks the old memory superseded; its vault page is not updated, since `sync` reads Engram only. |
 
 The N-change rows (shrink, grow, N==1) apply on top of the **differ** row,
 never instead of it: a re-ingestion with a different chunk count always has

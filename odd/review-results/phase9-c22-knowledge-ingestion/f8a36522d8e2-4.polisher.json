@@ -1,0 +1,20 @@
+{
+  "kind": "polisher",
+  "base": "d81165f1ed48fcb245fb9e2466bbc99701fbb805",
+  "head": "f8a36522d8e223a0126765c2bca43592c156d823",
+  "diff_sha256": "dbcd01e21fcb19edd4e2f08caea2ebbf2fbcac927136ea80d1fda00b82cc766e",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the target diff /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/c22t7-f8a36522.diff. It changes only skills/knowledge-ingestion/SKILL.md: the 64 KB chunk rule at :62-64 and the resume clause at :103-108.",
+      "Checked part-key naming in /home/labdrian/memorycard/internal/memory/save.go:218-235. splitInput gives the overflow parts topic_key partKey(key, i+1) = \"<key>/part-%d\", only for i > 0. Part 1 keeps the original key. Every part's title gets \"(part i/N)\". The skill's wording `<manifest key>/part-2`, `/part-3` matches this exactly.",
+      "Checked the split threshold. save.go:29 sets HardCapBytes = 64*1024. import.go:343-345 splitBody returns the body whole when len(body) <= HardCapBytes. import.go:16 sets chunkTargetBytes = 48 KB, which applies only above the cap. So a chunk body under 64 KB, provenance block included, is never split, and the skill's 'under 64 KB' is stricter than the cap. The cap applies to the body only, not the title. Redaction (save.go:453) can only shrink a body: a <private>...</private> span of at least 19 bytes becomes the 10-byte [REDACTED].",
+      "Checked that the part keys are readable. search.go:295-309 byTopic returns an exact topic_key match. search.go:630-681 lists sibling part ids on hits whose title ends in '(part i/N)'. So mem_search finds `<key>/part-2` and mem_get reads it, as the new resume clause says.",
+      "Checked re-saving a split manifest. save.go:133-184 savedPartCount and the leftover-part archiving keep a manifest that shrinks or grows consistent, and part 1 keeps the key the re-ingestion gate reads.",
+      "Checked consistency with the shared contract skills/_shared/ingested-observation-contract.md:59-61 and :105-115 in the head worktree. A chunk or standalone record has its block last, and a manifest has its block first, so the diff's rationale ('the block, last in a chunk, would land outside part 1') is accurate. Rule 6 already uses the 64 KB / part-1 framing, and the new text does not contradict it.",
+      "Checked whether a split manifest can happen. longterm-mem/internal/ingest/doc.go:26-36 (DefaultMaxChunkBytes 1600, DefaultMaxSourceBytes 4 MiB, MaxChunks 9999) puts a default-size manifest near 61 KB, so a split manifest is rare. When cutRunes splits a long Chunk-Status paragraph mid-line, the worst outcome is that an already-landed chunk is re-saved. That re-save is byte-identical (unchanged), and promote leaves the existing page as it is. Not user-impacting, so not reported.",
+      "Checked the 64 KB cap in the memorycard source: /home/labdrian/memorycard/internal/mcpserver/server.go:47 and README.md:29 state 64 KB. Whether the installed memorycard binary carries this cap was not run (no shell); this is noted, not a finding.",
+      "odd/tasks/phase9-c22-knowledge-ingestion.md in the head worktree ends at L13. It has no S8 and no L17-L20 (those come after the target), so the review relied on T7's text and on the code."
+    ]
+  }
+}

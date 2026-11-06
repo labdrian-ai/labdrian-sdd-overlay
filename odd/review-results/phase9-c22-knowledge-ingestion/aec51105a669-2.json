@@ -1,0 +1,90 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "01b8d759533ea6d66dbac2ba4d4e926d71c8df51",
+    "head": "aec51105a66989935d6a7b8ee6f3c0a4b416d4bf",
+    "diff_sha256": "67efe8540fb5a0e3c158cabb75c0ca37c9f28b8d10e701f8e7b28354a2715721",
+    "paths": [
+      "skills/_shared/ingested-observation-contract.md",
+      "skills/knowledge-ingestion/SKILL.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "01b8d759533ea6d66dbac2ba4d4e926d71c8df51",
+      "head": "aec51105a66989935d6a7b8ee6f3c0a4b416d4bf",
+      "diff_sha256": "67efe8540fb5a0e3c158cabb75c0ca37c9f28b8d10e701f8e7b28354a2715721"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "skills/_shared/ingested-observation-contract.md",
+        "skills/knowledge-ingestion/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "skills/knowledge-ingestion/SKILL.md:97-99",
+        "severity": "WARNING",
+        "claim": "The new BridgedError rule is incomplete against the manifest-first protocol. It says 'stop that source' and 'do not save again'. It does not say whether the manifest is upserted to `partial`, which step 5 requires for a failed chunk. It does not say what happens to the chunks after the refused one. 'Report the source as saved but not promoted' is wrong when later chunks were never saved. A re-run resumes from the `pending` or `partial` manifest, hits the same refusal, and loops. The rule also sits in the 'Re-ingestion gate' section, but it fires at promote time, in the save-then-promote step, so it is hard to find there.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/knowledge-ingestion/SKILL.md:72-77 (chunk loop and partial-manifest step)",
+          "skills/knowledge-ingestion/SKILL.md:101-115 (resume on pending or partial)",
+          "longterm-mem/internal/promote/card.go:30-52 (BridgedError)"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "skills/_shared/ingested-observation-contract.md:31-33",
+        "severity": "WARNING",
+        "claim": "The field table now names the argument `body`, and the new note says memorycard takes no `content` argument. The same contract still uses `content` as the name of the field the provenance block lives in. Line 42 says 'The provenance block inside `content`', line 61 says 'LAST element of its `content`', line 62 says 'A manifest's `content`', and line 106 says 'a chunk or standalone record's `content`'. A reader or agent following the contract can take `content` for a save argument, which the new note says is refused. Line 31 half-bridges the gap with 'the record's `content`'.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/_shared/ingested-observation-contract.md:31,33,42,61,62,106",
+          "/home/labdrian/memorycard/internal/mcpserver/server.go:96-106 (saveArgs has no `content` or `capture_prompt`)"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "skills/knowledge-ingestion/SKILL.md:92-95",
+        "severity": "SUGGESTION",
+        "claim": "The legacy-parts instruction is open-ended and does not say where the block sits. It says to read `part-2`, `part-3`, … with no stop condition, such as the first part that holds `**Source-SHA256**` or the first missing key. The contract puts the block last in a chunk or standalone record, so it is in the final part, whose number is unknown. The title suffix '(part i/N)' gives N, but the text does not point to it. The sentence is also a long run-on that is hard to read.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "/home/labdrian/memorycard/internal/memory/save.go:205-224 (splitInput keys and titles)",
+          "skills/_shared/ingested-observation-contract.md:61"
+        ]
+      },
+      {
+        "id": "F4",
+        "location": "skills/_shared/ingested-observation-contract.md:38-42",
+        "severity": "SUGGESTION",
+        "claim": "The contract still describes Engram mechanics: 'None of them depends on the Engram `type` value' and 'same key → same `engram_id`'. This diff makes memorycard the store. These passages were not updated with the field table, so the document says two things about which store is in use. The `engram_id` wording is partly legitimate, because `promote` still takes the memorycard id in that field, but the text does not say so.",
+        "evidence_class": "inferential",
+        "causal_disposition": "worsened",
+        "proof_refs": [
+          "skills/_shared/ingested-observation-contract.md:38,146",
+          "skills/knowledge-ingestion/SKILL.md:39-41"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the diff file in full.",
+      "Read skills/knowledge-ingestion/SKILL.md lines 30-119 in the worktree.",
+      "Grepped both changed files for capture_prompt, content, Engram and part- references.",
+      "Read memorycard server.go saveArgs at lines 96-106 and save.go splitInput, partKey and the size constants (16 KB soft target, 64 KB hard cap).",
+      "Read longterm-mem promote/card.go BridgedError at lines 30-90.",
+      "Could not read Log entry L23. The grep returned one matching line that was omitted as too long, so the D11 wording was not checked against it."
+    ]
+  }
+}
