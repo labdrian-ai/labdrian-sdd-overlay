@@ -1,0 +1,25 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "cd /home/labdrian/labdrian-sdd-overlay-worktrees/review-ebd620e092ea && eza engine/skills/skills.go; rg -n '^func runSkillsCore' engine/cmd; rg -n 'SkillsCore' openspec/specs/skill-manifest-gen/spec.md",
+      "output": "eza: engine/skills/skills.go: No such file or directory. engine/cmd/skills.go:22 func runSkillsCore and :28 func runSkillsCoreWith. The intro (line 9) names a SkillsCore switch in engine/skills/skills.go and never names runSkillsCore in engine/cmd/skills.go, nor says the file and function were removed. R-610, R-611, SC-551 and SC-552 still say SkillsCore.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "cd /home/labdrian/labdrian-sdd-overlay-worktrees/review-ebd620e092ea && awk 'NR==9' openspec/specs/skill-manifest-gen/spec.md; awk 'NR>=133&&NR<=135' openspec/specs/skill-manifest-gen/spec.md; git show f7f409eb:openspec/specs/skill-manifest-gen/spec.md | awk 'NR==9'",
+      "output": "The intro ends: 'R-609 forbids reading skills.registry.yaml, while R-590, R-596 and R-608 read it; the command reads the registry and never writes it, so R-609 holds for writes only.' R-609 (133-135) still says SHALL NOT read or write skills.registry.yaml, SHALL NOT call AddEntry or RemoveEntry, SHALL NOT call Serialize. The base intro has no R-609 sentence.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F3",
+      "result": "reproduced",
+      "command": "cd /home/labdrian/labdrian-sdd-overlay-worktrees/review-ebd620e092ea && awk 'NR==9' openspec/specs/skill-manifest-gen/spec.md | wc -m; git show f7f409eb:openspec/specs/skill-manifest-gen/spec.md | awk 'NR==9' | wc -m",
+      "output": "Head line 9: 1314 characters; base: 782. It mixes provenance, ID renumbering, the supersession pointer, Go name drift and the R-609 reading.",
+      "base_result": "not-reproduced"
+    }
+  ]
+}

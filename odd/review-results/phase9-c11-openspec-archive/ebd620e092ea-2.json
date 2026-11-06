@@ -1,0 +1,76 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f7f409eb79a68560c0c2edc5f32413434c73c44d",
+    "head": "ebd620e092ead62fc11b57adaf881543dd30146a",
+    "diff_sha256": "98b8dfc9fbbbd175595398d7c9095f248fc0cdea493feee027d58a9af2709890",
+    "paths": [
+      "openspec/specs/skill-manifest-gen/spec.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f7f409eb79a68560c0c2edc5f32413434c73c44d",
+      "head": "ebd620e092ead62fc11b57adaf881543dd30146a",
+      "diff_sha256": "98b8dfc9fbbbd175595398d7c9095f248fc0cdea493feee027d58a9af2709890"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "openspec/specs/skill-manifest-gen/spec.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "openspec/specs/skill-manifest-gen/spec.md:9",
+        "severity": "WARNING",
+        "claim": "The intro points a reader at `engine/skills/skills.go` as the place the section's `SkillsCore` switch lives, but that file does not exist at head. The intro says the code 'has moved them since' and names `engine/cmd/skills_cli.go` as the dispatcher. It never says `skills.go` and `SkillsCore` were removed, and the dispatch is in `runSkillsCore` in `engine/cmd/skills.go`. A reader who follows the path finds nothing. Requirements R-610 to R-611 and SC-551 and SC-552 still say `SkillsCore` in `skills.go`. The fix would be to state that the file and function are gone, or to name `runSkillsCore` in `engine/cmd/skills.go`.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "Read of engine/skills/skills.go in the head worktree: path does not exist",
+          "Grep SkillsCore under engine/: only runSkillsCore, in engine/cmd/skills.go, and tests",
+          "spec.md lines 111-120 and 342-361"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "openspec/specs/skill-manifest-gen/spec.md:9",
+        "severity": "SUGGESTION",
+        "claim": "The intro rewrites R-609 by prose: it says the rule 'holds for writes only' although R-609 literally says 'SHALL NOT read'. R-609 also still names `SyncCore`, `AddEntry`, `RemoveEntry` and `Serialize`, which the intro does not cover. A paragraph above the requirements overrides a normative SHALL while the requirement text is untouched. This resolves F2 from the prior review in practice, but a reader of R-609 alone still gets the contradiction. The cost is low, because the intro is read first and the copy rules forbid editing the copied text.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "spec.md R-609 at lines 133-135",
+          "spec.md R-590, R-596 and R-608 read the registry",
+          "engine/skills/app/sync.go:18 and :39: the registry is only read and never modified"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "openspec/specs/skill-manifest-gen/spec.md:9",
+        "severity": "SUGGESTION",
+        "claim": "The intro is now one paragraph of about 1,500 characters. It mixes provenance, ID renumbering, the supersession pointer, Go name drift and the R-609 reading, which makes it hard to maintain and to scan. Splitting it into short bullets or sentences-per-line would help. This is a maintainability suggestion only.",
+        "evidence_class": "inferential",
+        "causal_disposition": "worsened",
+        "proof_refs": [
+          "diff line 10"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff: one paragraph changed, line 9 of spec.md.",
+      "F3 from the prior review (a 'requirement above this heading' clause with no target): the clause is removed, so it is fixed.",
+      "F1 from the prior review (unmarked stale Go names): the intro now marks them, and the claims I checked are true. `SyncManifest` returns `([]byte, ChangeReport, error)` in engine/skills/sync.go:75, and `app.SyncManifest(p SyncPorts, in SyncInput)` exists in engine/skills/app/sync.go:44. engine/cmd/skills_cli.go registers `\"sync-manifest\": skillsSync`. `[]SyncEvent` appears in R-590. `SyncCore` no longer exists in code, apart from a stale comment at sync.go:87, which is outside this diff. I fixed the new F1 above because the `skills.go` path claim is the one that does not hold.",
+      "The claim that R-590, R-596 and R-608 read the registry is true against spec.md lines 28-30, 63-65 and 126-128.",
+      "The claim that the registry is read and never written matches the app/sync.go comments: 'The registry is only read' and 'the registry is never modified (R-109)'. I did not read the RegistryRepository port to confirm no write path is wired.",
+      "I ran no commands or tests."
+    ]
+  }
+}

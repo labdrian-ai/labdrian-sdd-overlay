@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "c68d5310a3418ad13f456f70a52f02aa7fecf445",
+    "head": "f7f409eb79a68560c0c2edc5f32413434c73c44d",
+    "diff_sha256": "53714f922ab59c62e499dc1aa96ac983c54931dd526c4f1f3f35a059d20c385b",
+    "paths": [
+      "openspec/specs/skill-manifest-gen/spec.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "c68d5310a3418ad13f456f70a52f02aa7fecf445",
+      "head": "f7f409eb79a68560c0c2edc5f32413434c73c44d",
+      "diff_sha256": "53714f922ab59c62e499dc1aa96ac983c54931dd526c4f1f3f35a059d20c385b"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "openspec/specs/skill-manifest-gen/spec.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "openspec/specs/skill-manifest-gen/spec.md:15",
+        "severity": "WARNING",
+        "claim": "The intro says only that later changes supersede parts of the section and sends the reader to the roadmap. The new canonical file presents the slice-4 API as if it were current, and the code no longer matches it. R-590, R-600 and SC-540 to SC-548 give `SyncManifest(reg, bytes) ([]byte, []SyncEvent)`. The code now has `SyncManifest(reg Registry, manifest []byte) ([]byte, ChangeReport, error)` (engine/skills/sync.go:75) and a ports-based `app.SyncManifest` (engine/skills/app/sync.go:44). R-599 and R-601 to R-608 name `SyncCore` and a `SkillsCore` switch in `engine/skills/skills.go`. A grep of engine/skills for `SyncCore` found only a comment at sync.go:87, and the verb list now lives in engine/cmd/skills_cli.go:27. In the earlier slices a reviewer flagged this kind of unmarked conflict as a WARNING and the fix round added a sentence to the intro. A reader cannot tell from this file which R-59x to R-61x and SC-54x requirements still hold. The 'requirement above this heading holds' rule does nothing here, because the Purpose is the only text above the heading. The fix belongs in the intro, as in T2 and T3, since the copy rules forbid editing the copied text.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/sync.go:75",
+          "engine/skills/app/sync.go:44",
+          "engine/cmd/skills_cli.go:27",
+          "openspec/specs/skill-manifest-gen/spec.md:35-36,116-135,210-211"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "openspec/specs/skill-manifest-gen/spec.md:140-141",
+        "severity": "SUGGESTION",
+        "claim": "R-609 says SyncCore SHALL NOT read `skills.registry.yaml`. R-608 requires a failure on a registry read failure or parse error, and R-590 and R-596 take the registry as input, so R-609 contradicts them. The code's intent is that the registry is only read, not written (engine/skills/app/sync.go:18). The contradiction was already in the source text, but it is now canonical text with no marker. The copy rules forbid rewording it, so the fix is an intro note like the one T3 added for SC-320.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "openspec/changes/skill-manifest-gen/specs/spec.md:155-156",
+          "engine/skills/app/sync.go:18"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "openspec/specs/skill-manifest-gen/spec.md:15",
+        "severity": "SUGGESTION",
+        "claim": "The appended sentence 'where it conflicts with a requirement above this heading, the requirement above holds' has no target in a new file. Only the Purpose sits above the heading, and the T2 example (R-203 against R-112) was left out as L4 allows. Any conflicting requirement lives in another spec, for example skill-lifecycle or skill-package-manager, which this sentence does not reach. I found no actual conflict with those files, so this is a maintainability note. It would be clearer to say 'in other specs under openspec/specs/' or to drop the clause.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-c11-openspec-archive.md:68"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff t5.diff (401 added lines, one new file).",
+      "Read the task file up to ## Log and entries L2 to L6.",
+      "Compared the diff with source openspec/changes/skill-manifest-gen/specs/spec.md lines 1-70 and 405-435 by reading. The Definitions table (:22-34) and Requirements (:46-423) match with the renumbering, headings one level deeper, hard-break trailing spaces kept, and the closing blank line and `---` at :424-425 dropped. I did not do a full line-by-line machine diff.",
+      "Grepped the source for R-/SC- tokens: it has only R-090..R-111, SC-40..SC-54 and the out-of-scope R-089. The new file has no old-numbered IDs in the diff, and R-598 and R-599 cross-references are shifted correctly.",
+      "Grepped openspec/specs for R-590..R-611 and SC-540..SC-554 outside the new file. The only 'sync-manifest' hits there are prose in skill-lifecycle:102, anti-generic-design and skill-package-manager:288-297, and none redefines an ID or contradicts the section.",
+      "Compared the spec's API names with engine/skills/sync.go, engine/skills/app/sync.go, engine/cmd/skills_cli.go and engine/cmd/doc.go (F1).",
+      "No commands were run. Not run: go test, archive-reconcile and the anchor gate."
+    ]
+  }
+}
