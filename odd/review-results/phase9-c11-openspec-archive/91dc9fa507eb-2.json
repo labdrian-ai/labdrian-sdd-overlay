@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "d9b3a2a8e9074fd16912f9395c6f58d5ab647f9d",
+    "head": "91dc9fa507eb6ece5162fac2a26b043772af326c",
+    "diff_sha256": "0c68fb4b6dac9bc6dd869fb32fe412891f4f895351a7c061536c1ef55e627235",
+    "paths": [
+      "openspec/specs/skill-lifecycle/spec.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "d9b3a2a8e9074fd16912f9395c6f58d5ab647f9d",
+      "head": "91dc9fa507eb6ece5162fac2a26b043772af326c",
+      "diff_sha256": "0c68fb4b6dac9bc6dd869fb32fe412891f4f895351a7c061536c1ef55e627235"
+    },
+    "evidence": [
+      "Read the full diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/t4a.diff (236 added lines, one file, no removals).",
+      "Read the source /home/labdrian/labdrian-sdd-overlay-worktrees/review-91dc9fa507eb/openspec/changes/skill-lifecycle/specs/spec.md lines 1-260 and compared lines 30-257 with the appended text by eye. Every R-050..R-083 ID became R-450..R-483, including the cross-references (R-078 to R-478, R-064/R-065 to R-464/R-465, R-065/R-072 to R-465/R-472). Headings outside fences are one level deeper. Tables, fences and blank lines are kept. The section ends at the `---` of source line 257.",
+      "Read odd/tasks/phase9-c11-openspec-archive.md in full, including T4 and Log entries L2, L4 and L5. Checked the section heading, the offset +400 and the ranges against the T4 text. The intro matches the L2 template plus the L4 sentence with its example.",
+      "Checked the intro's example (R-462 against R-127 on `--repo`) in openspec/specs/skill-lifecycle/spec.md. R-126..R-130 do cover `skills add --repo` creating an external entry, so the example is accurate.",
+      "Nothing above the new heading changed in the diff (the hunk starts at line 178 and only adds lines).",
+      "Not run: no tests, rg count checks or reverse-mapping diff; this review was read-only inspection."
+    ],
+    "findings": [],
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "openspec/specs/skill-lifecycle/spec.md"
+      ],
+      "reason": ""
+    }
+  }
+}
