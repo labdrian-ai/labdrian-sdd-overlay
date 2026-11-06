@@ -29,7 +29,7 @@ shape to any record defined by this contract.
 | `project` | the resolved project |
 | `scope` | `project` |
 | `capture_prompt` | `false` (automated artifact) |
-| `content` | body → `---` → provenance block, below |
+| `content` | body → `---` → provenance block, below; a manifest: the provenance block first |
 
 ## Marker mechanism (non-load-bearing `type`)
 
@@ -38,7 +38,7 @@ verifiable ways. None of them depends on the Engram `type` value:
 
 1. The topic-key namespace's first segment, `ingested/`.
 2. The title prefix, `Ingested: `.
-3. The provenance trailer inside `content` (below) — the only one of the
+3. The provenance block inside `content` (below) — the only one of the
    three that survives into the promoted vault page body.
 
 ## Topic-key grammar
@@ -56,8 +56,9 @@ namespace listing sorts lexically. A source whose chunk count would exceed
 
 ## Provenance block — verbatim shape
 
-Record content is `body` → `---` → provenance block. The block is the LAST
-element of `content`, after the body, never before it.
+A chunk or standalone record's content is `body` → `---` → provenance block.
+The block is the LAST element of its `content`, after the body, never before it.
+A manifest's `content` is the provenance block first: nothing precedes it, and its `**Chunk-Status**` inventory is its last element.
 
 ```markdown
 ---
@@ -101,12 +102,17 @@ Manifest-only additions (a manifest carries no source body):
    with `**Chunk**: 1/1`. No separate chunk observation exists for it.
 3. `**Chunk-Span**` is a byte range into the normalized source (CRLF folded
    to LF), so any chunk is locatable in the original document.
-4. The provenance block is last in `content`, so the embedding window
+4. The provenance block is last in a chunk or standalone record's `content`, so the embedding window
    (`vecindex.DefaultInputLimit`) covers the body first, and truncation
    falls on the block's high-entropy digests instead of the prose.
 5. A record whose body is absent and whose `**Status**` is `retired` is a
    tombstone for a chunk the source no longer has. It is never
    hand-deleted.
+6. A manifest has no body, and its `**Chunk-Status**` inventory grows with N,
+   so its provenance block comes first: memorycard stores a body over 64 KB as
+   parts and only part 1 keeps the manifest's topic key, so `**Source-SHA256**`
+   and `**Status**` stay in part 1, where the re-ingestion gate reads them and
+   `promote` takes them.
 
 ## `Source-Id` derivation
 

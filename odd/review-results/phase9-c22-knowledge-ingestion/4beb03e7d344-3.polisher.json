@@ -1,0 +1,17 @@
+{
+  "kind": "polisher",
+  "base": "0e8d18311e45243d88e5fdcb67688dc4ceb12de2",
+  "head": "4beb03e7d344558bceb3a46185c5ef00bb21c551",
+  "diff_sha256": "6acaf9c3ddf6fb170835bd1e3c2e06413c783bf59269c3de4311cf99b4de9cbe",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/c22t7.diff.",
+      "Read the whole head skills/knowledge-ingestion/SKILL.md in the review-4beb03e7d344 worktree. A grep for Engram and mem_get_observation across skills/knowledge-ingestion found no match, so no line still sends an agent to Engram.",
+      "longterm-mem/internal/mcpserver/server.go lines 162-173 define a PromoteIn.Source field that accepts engram or memorycard. The memorycard id travels in the engram_id argument, and the tool schema says so. longterm-mem/cmd/longterm-mem/cmd_promote.go line 45 accepts --source with the same two values. This matches the skill's text, 'promote MCP tool with source: \"memorycard\", or CLI promote --source memorycard --id N'.",
+      "The query MCP tool's sources schema (server.go line 112) names vault as a valid source, and the golden tests call it with sources [\"vault\"]. This matches the checklist's sources: [\"vault\"].",
+      "The memorycard tools I could see agree with the skill. mem_save takes the body as the full document (the orchestrator tool-mapping text) and upserts on an existing topic_key. mem_search accepts a topic_key as a query, and mem_get takes an id. I could not read memorycard's own source in the worktree (no memorycard Go source matched), so I did not check its mem_save parameter list beyond that.",
+      "skills/_shared/ingested-observation-contract.md still says content, not body, in its mem_save table (line 32) and in several prose lines. The owner accepted this disagreement as D7. The skill's body is the correct memorycard name, so an agent can still work: the contract's table row says 'body → --- → provenance block', and only the argument name differs. This is not a defect."
+    ]
+  }
+}

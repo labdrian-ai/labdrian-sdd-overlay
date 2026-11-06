@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "d81165f1ed48fcb245fb9e2466bbc99701fbb805",
+    "head": "f8a36522d8e223a0126765c2bca43592c156d823",
+    "diff_sha256": "dbcd01e21fcb19edd4e2f08caea2ebbf2fbcac927136ea80d1fda00b82cc766e",
+    "paths": [
+      "skills/knowledge-ingestion/SKILL.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "d81165f1ed48fcb245fb9e2466bbc99701fbb805",
+      "head": "f8a36522d8e223a0126765c2bca43592c156d823",
+      "diff_sha256": "dbcd01e21fcb19edd4e2f08caea2ebbf2fbcac927136ea80d1fda00b82cc766e"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "skills/knowledge-ingestion/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "skills/knowledge-ingestion/SKILL.md:62",
+        "severity": "SUGGESTION",
+        "claim": "The 64 KB rule is correct against memorycard's hard cap. Save splits only when the body is larger than HardCapBytes (65536). The rule never mentions the 16 KB soft target (SoftTargetBytes), above which Save adds a 'consider splitting it' warning. An agent that cuts chunks to 20-60 KB will get that warning on every save and may read it as a failure. One clause saying the warning is expected below 64 KB would remove the ambiguity. This is optional wording and does not affect correctness.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "/home/labdrian/memorycard/internal/memory/save.go:22-29",
+          "/home/labdrian/memorycard/internal/memory/save_cap_test.go:24"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff: two hunks in skills/knowledge-ingestion/SKILL.md, the 64 KB rule at lines 62-64 and the resume clause at lines 105-108. No other lines changed, so nothing outside the two additions was reworded.",
+      "Resume clause against memorycard: save.go:218-229 splitInput gives parts after the first the topic key partKey(key, i+1), which is '<key>/part-N' (save.go:235). The text '<manifest key>/part-2, /part-3, …' matches that. Parts are stored as ordinary memories, so mem_search and mem_get read them.",
+      "64 KB rule against memorycard: HardCapBytes is 64*1024 (save.go:29) and splitBody splits only when len(body) > HardCapBytes (import.go:343-346). An oversized body becomes parts, and the title of each part gets '(part i/N)'. The provenance block is last in a chunk (contract line 105 and SKILL.md line 37), so it would land in the last part, not part 1. The rationale in the diff is correct.",
+      "The manifest case is consistent: SKILL.md lines 37-38 and the contract lines 61 and 112 put the provenance block first in a manifest. The contract already mentions the 64 KB behaviour, so the new text does not contradict it.",
+      "The text reads correctly and is grammatical. The new rule sits after the N==1 paragraph and before the N>1 ordering. 'Every chunk' also covers a single record, since the previous paragraph treats it as 'Chunk: 1/1'.",
+      "Limit of this check: odd/tasks/phase9-c22-knowledge-ingestion.md in the head worktree ends at L13 and has no S8 or L17-L20 (the spec update is in the later commit 5e65d15e, outside the worktree). I could not compare the lines against S8 or the owner's D9/D10 wording. The check against S8 was done against the stated context and the memorycard source only."
+    ]
+  }
+}

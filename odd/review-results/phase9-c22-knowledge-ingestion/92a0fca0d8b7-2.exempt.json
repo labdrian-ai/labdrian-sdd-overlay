@@ -1,0 +1,72 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "31077251b30be08d7d922c0efc38a3f2f78340d1",
+    "head": "92a0fca0d8b74069d33a36a9350a16d2fd344b92",
+    "diff_sha256": "e278dcc8aff6b4e02b8873943fa490d0c5de7cd8365fdf330491fdc304034847",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "agents/reviewer.md",
+      "agents/verifier.md",
+      "codex/agents/prototyper.toml",
+      "codex/agents/sweeper.toml",
+      "codex/agents/verifier.toml",
+      "docs/architecture/role-design/per-role-design-v3.md",
+      "docs/architecture/role-design/per-role-reviewer.md",
+      "engine/agentgen/roles.go",
+      "engine/agentgen/roles_test.go",
+      "engine/skills/adhd_output_test.go",
+      "engine/skills/role_agents_artifact_test.go",
+      "engine/skills/role_chain_artifact_test.go",
+      "overlay.manifest",
+      "pi/agents/prototyper.md",
+      "pi/agents/reviewer.md",
+      "pi/agents/sweeper.md",
+      "pi/agents/verifier.md",
+      "skills.registry.yaml",
+      "skills/_shared/skill-resolver.md",
+      "skills/adhd-output/.approval.json",
+      "skills/adhd-output/LICENSE",
+      "skills/adhd-output/SKILL.md",
+      "skills/role-chain/.approval.json",
+      "skills/role-chain/SKILL.md",
+      "skills/role-chain/references/models.md"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git diff --stat 31077251 92a0fca0 (files compared with git diff --name-only 8e32ce9e e3ff284e via sort and comm -23)",
+        "result": "pass",
+        "output": "The stat lists 27 files, with 356 insertions and 46 deletions. Main's own diff lists 27 files. comm -23 found no file in the merge diff that is missing from main's list."
+      },
+      {
+        "command": "git diff --name-only 8e32ce9e 31077251 | sort | comm -12 - <(git diff --name-only 8e32ce9e e3ff284e | sort)",
+        "result": "pass",
+        "output": "Empty output, so the two sides share no file."
+      },
+      {
+        "command": "git show --cc --format= 92a0fca0 | head; git show --cc 92a0fca0 | wc -l",
+        "result": "pass",
+        "output": "The first command printed nothing, so there are no combined-diff hunks. The second printed 12, which is only the commit header and message."
+      },
+      {
+        "command": "cd engine && go test -count=1 ./skills/... ./roles/...",
+        "result": "pass",
+        "output": "./roles exists. All 8 packages report ok: skills, skills/app, skills/engramexport, skills/projectidentity, skills/registryyaml, skills/skillsfs, roles, roles/filechain. No failures."
+      },
+      {
+        "command": "cd engine && go run ./cmd/ skills validate --registry ../skills.registry.yaml --manifest ../overlay.manifest --source-root ../skills",
+        "result": "pass",
+        "output": "Exit 0. It printed: registry and manifest aligned (43 skills); skills/ on disk matches overlay.manifest (103 files); global skill approvals verified (43 skills: 43 approved)."
+      },
+      {
+        "command": "git log -1 --format=%B 92a0fca0",
+        "result": "pass",
+        "output": "The subject is 'chore(merge): bring main into feat/phase9-c22-t7'. The body says main gained PR #748 (adhd-output skill) and PR #749 (three-tier model policy) with no file overlap with T7. The last line is 'Risk: none'. There is no Co-Authored-By line."
+      }
+    ]
+  }
+}

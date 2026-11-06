@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "4beb03e7d344558bceb3a46185c5ef00bb21c551",
+    "head": "858cbe10cd66b5a28df1f1530f5d9d80e7466f3c",
+    "diff_sha256": "36e19bf1fd1c3807df7a7db311b117f3bde086e50666d685a7f842a208211696",
+    "paths": [
+      "skills/knowledge-ingestion/SKILL.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "4beb03e7d344558bceb3a46185c5ef00bb21c551",
+      "head": "858cbe10cd66b5a28df1f1530f5d9d80e7466f3c",
+      "diff_sha256": "36e19bf1fd1c3807df7a7db311b117f3bde086e50666d685a7f842a208211696"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "skills/knowledge-ingestion/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "skills/knowledge-ingestion/SKILL.md:126-129",
+        "claim": "The scenario 2 and 3 checks say 'the version history `mem_get` returns shows no new version' and 'shows one new version'. They do not say how to ask for the history. The current memorycard source returns earlier versions from `mem_get` only with `history=true`, and a call without it prints 'N earlier versions not shown'. If the installed build behaves like the source, a reader who calls `mem_get` with `id` only could see no history and wrongly pass scenario 2. The spec records this as unverified: L16 says the installed schema is `id` only, and S6 (g) leaves it to T6's run. The wording matches S6 (g) exactly, so this is a residual risk that T6 must settle, not a deviation from the spec.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "/home/labdrian/memorycard/internal/mcpserver/server.go:51 and :144-152",
+          "/home/labdrian/memorycard/internal/mcpserver/server_test.go:251-254",
+          "odd/tasks/phase9-c22-knowledge-ingestion.md:27 (S6 g, unverified clause)"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "skills/knowledge-ingestion/SKILL.md:126-129",
+        "claim": "The two replaced sentences are long single lines, while the surrounding checklist wraps near 95 columns. The phrase 'the version history `mem_get` returns shows ...' is heavy. Both lines follow the exact text S6 (g) prescribes, so shortening them would mean amending the spec first.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "diff lines 26 and 32",
+          "odd/tasks/phase9-c22-knowledge-ingestion.md:27"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff. It has three hunks, all in skills/knowledge-ingestion/SKILL.md.",
+      "Hunk 1, promote step 3, matches S6 (c) after the L14 fixes. 'observation' is restored, `source: \"memorycard\"` is kept, and `engram_id` is named. This agrees with longterm-mem/internal/mcpserver/server.go:171-172, where `EngramID` is described as 'with source memorycard, the memorycard memory id'.",
+      "Hunk 2, checklist item 1, 'resulting memory' to 'resulting observation', matches the L14 restoration in S6 (f).",
+      "Hunk 3, the two `revision_count` replacements, matches S6 (g) verbatim. They are covered by S6, so my earlier worry that they lacked a spec item no longer applies.",
+      "My earlier F3 (the observation/memory term mix) is withdrawn. The coordinator's spec says the 'observation' wording is restored on purpose.",
+      "Nothing else in the file is reworded. The diff touches only those three hunks and adds no `\\u` escapes or Engram mentions.",
+      "Read the memorycard source for `mem_get`. The source schema has an optional `history` boolean, while the installed schema is `id` only (L16). I judged the text against both.",
+      "Nothing was run; this review only read files."
+    ]
+  }
+}

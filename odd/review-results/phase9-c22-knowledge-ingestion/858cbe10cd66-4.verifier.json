@@ -1,0 +1,18 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "bat -p -r 99:114 /home/labdrian/memorycard/internal/render/render.go; rg -n 'History|Memory\\(' /home/labdrian/memorycard/internal/mcpserver/server.go; rg -n 'mem_get|history' skills/knowledge-ingestion/SKILL.md (in worktree review-858cbe10cd66)",
+      "output": "Without history, render.Memory prints the current text, then \"(N earlier versions not shown; history=true shows them)\" (\"1 earlier version\" when N=1). Nothing is printed when N=0. server.go:144 defines History as optional and server.go:152 passes it to render.Memory with \"history=true\". So a plain mem_get does show the count: no line means no earlier version, and a line gives the count. SKILL.md:126 and :129 do not say how to obtain this. They say \"the version history `mem_get` returns shows no/one new version\", and `history` is not mentioned anywhere in SKILL.md, whose only mem_get mentions are :86 and :122. The gap exists: the lines do not name the \"N earlier versions not shown\" line or `history=true`.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "bat -p -r 124:130 skills/knowledge-ingestion/SKILL.md | awk '{print length\": \"$0}'; rg -n '\\(g\\)' odd/tasks/phase9-c22-knowledge-ingestion.md",
+      "output": "SKILL.md:126 is 112 characters wide and :129 is 124 (:124 is 28), while neighbouring lines are about 90 and 94 wide. The spec's S6 (g) in the task document gives the wording \"the version history `mem_get` returns shows no new version\" and \"... shows one new version\", and both lines contain exactly those phrases. They are long and match S6 (g) verbatim.",
+      "base_result": "not-reproduced"
+    }
+  ]
+}
