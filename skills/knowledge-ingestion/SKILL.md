@@ -32,11 +32,12 @@ There is exactly one sanctioned way for external knowledge to enter long-term me
    a local file, or the operator's pasted text taken verbatim). This is the only step that
    ever touches the network, and it is agent-owned — no Go code in this repository fetches
    anything.
-2. **Save** the extracted content with Engram's `mem_save`, using exactly the field and
+2. **Save** the extracted content with memorycard's `mem_save`, using exactly the field and
    metadata shape defined in `skills/_shared/ingested-observation-contract.md`
-   (`topic_key`, `title`, `type: "discovery"`, `content` = body → `---` → provenance block).
-3. **Promote** the resulting observation with `longterm-mem`'s `promote` (the `promote` MCP
-   tool, or CLI `promote --id N`).
+   (`topic_key`, `title`, `type: "discovery"`, `body` = body → `---` → provenance block).
+3. **Promote** the resulting memory with `longterm-mem`'s `promote` (the `promote` MCP
+   tool with `source: "memorycard"`, or CLI `promote --source memorycard --id N`, N being
+   the memorycard id).
 
 No other intake path exists. Content that was fetched or read but never passed through
 `mem_save` is not "ingested" by this capability, regardless of whether it still sits in the
@@ -82,7 +83,7 @@ the rest exists. Report the partial state honestly.
 
 Before saving anything for a source, derive its `Source-Id` (per the contract's derivation
 rule — a function of the origin only, never the content) and search its topic key:
-`mem_search("ingested/{source-kind}/{source-id}")`, then `mem_get_observation` to read the
+`mem_search("ingested/{source-kind}/{source-id}")`, then `mem_get` to read the
 stored `**Source-SHA256**` and, for a manifest record, `**Status**`.
 
 The hard no-op only applies to a manifest whose `**Status**` is already `complete` — a
@@ -104,7 +105,7 @@ document" rule above.
 
 ## Secret and credential warning
 
-Ingested content is stored in Engram and, once promoted, in a git-tracked vault page,
+Ingested content is stored in memorycard and, once promoted, in a git-tracked vault page,
 **verbatim and unscrubbed**. This procedure performs no secret or credential scrubbing of any
 kind — that is explicitly out of scope for this capability. Before ingesting a document,
 consider whether it contains credentials, private paths, or other sensitive material that
@@ -113,13 +114,13 @@ ingesting.
 
 ## Acceptance checklist (executed during `sdd-verify`)
 
-These scenarios are non-Go and are exercised by hand against real Engram/`longterm-mem`
+These scenarios are non-Go and are exercised by hand against real memorycard/`longterm-mem`
 state, not by a unit test. Record results honestly in the verify report, including any
 scenario that could not be exercised.
 
 1. **R-003 end-to-end.** Ingest one real external source through this procedure. Show the
-   resulting observation via `mem_search` + `mem_get_observation`, and show the promoted page
-   via `longterm-mem query --sources vault,engram-fts`. Confirm the provenance block is
+   resulting memory via `mem_search` + `mem_get`, and show the promoted page
+   via `longterm-mem`'s `query` MCP tool with `sources: ["vault"]`. Confirm the provenance block is
    present in the page body.
 2. **R-004 / OQ-5 unchanged re-ingestion.** Re-ingest the identical source a second time.
    Confirm the procedure reports "unchanged", `revision_count` did not increment, and no
