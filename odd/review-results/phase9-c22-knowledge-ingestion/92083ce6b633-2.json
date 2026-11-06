@@ -1,0 +1,92 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "78be1ce6c5e5961a0ac64ee091dbd457875ddeca",
+    "head": "92083ce6b633e1bb2a9f41e360cb0e0f7ba88f18",
+    "diff_sha256": "70e028863e696a850a8528fd36555de16800eca997f176c3d264393be26cb964",
+    "paths": [
+      "longterm-mem/internal/ingest/header.go",
+      "longterm-mem/internal/ingest/origin_file_test.go",
+      "longterm-mem/internal/ingest/source.go",
+      "longterm-mem/internal/ingest/source_test.go",
+      "longterm-mem/internal/sourcefs/sourcefs_test.go",
+      "odd/goals/phase9-c22-knowledge-ingestion.json",
+      "odd/tasks/phase9-c22-knowledge-ingestion.md",
+      "openspec/changes/longterm-mem-knowledge-ingestion/design.md",
+      "openspec/changes/longterm-mem-knowledge-ingestion/tasks.md",
+      "skills/_shared/ingested-observation-contract.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "78be1ce6c5e5961a0ac64ee091dbd457875ddeca",
+      "head": "92083ce6b633e1bb2a9f41e360cb0e0f7ba88f18",
+      "diff_sha256": "70e028863e696a850a8528fd36555de16800eca997f176c3d264393be26cb964"
+    },
+    "evidence": [
+      "Read the full diff.",
+      "Read canonicalOrigin, SourceID and NormalizeSlug in header.go at head.",
+      "Grepped for Override and IsAbs across longterm-mem at head.",
+      "Grepped S1, T1 and L3 in the task document. Several matching lines were omitted as too long, so I did not read S1 in full and checked it only against the diff's own descriptions.",
+      "Checked the pinned digests only for consistency with the code path. I did not run sha256sum or the tests.",
+      "The new tests do pin that Override is ignored for URL and pasted origins (L3), that an unclean override keeps its bytes, and that ResolveOrigin leaves Override unchanged."
+    ],
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/ingest/header.go:263-268",
+        "claim": "For KindDirectory, a non-empty Override makes SourceID return one fixed id (the hash of the override) whatever the directory. The contract table says directory is 'as file, applied per contained file'. If the T4 directory scan builds each contained file's Origin from the directory Origin (Override included), every file gets the same Source-Id and upserts onto one topic key. That is the fork/collision outcome R-004 exists to prevent. TestSourceIDOfAnOverride pins this ('a directory' gives x-8bfa69fe) without saying how a per-file identity is derived. Nothing in the diff stops T4 from copying the Override onto each file's Origin, so it can happen. Suggested fix: document or enforce in T4 that a directory-level Override is not inherited by contained files, or say how a per-file identity is derived from it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/ingest/header.go:263-268",
+          "longterm-mem/internal/ingest/origin_file_test.go:57"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/ingest/header.go:266-267",
+        "claim": "The readable slug is computed with filepath.Base and filepath.Ext, which are OS-specific. They are also applied to a string the code says is not a path. An override with a trailing slash ('repo://a/specs/') takes its base from the cleaned string, so it reads 'specs'. An override such as 'repo://' or '/' gives an empty slug, so the id becomes '-<hash>'. The same empty-slug case exists for paths and is pre-existing, but Override makes it easier to reach. On a non-POSIX separator the readable part could differ per machine while the hash stays the same. This is cosmetic: the id stays stable and unique through the hash. No test covers these cases.",
+        "evidence_class": "inferential",
+        "causal_disposition": "worsened",
+        "proof_refs": [
+          "longterm-mem/internal/ingest/header.go:266-267",
+          "longterm-mem/internal/ingest/header.go:339-340"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/ingest/source.go:27-35",
+        "claim": "ResolveOrigin still asks the reader for the working directory when a relative URI sits beside an Override, although the id does not depend on that path. If the reader fails (getwd gone), ResolveOrigin errors for an origin whose identity is already fully known. The new test pins this (asked==1). It is defensible if Path is later read from URI, but the doc comment says nothing about why the resolution still happens. A one-line note would help.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/ingest/source_test.go:153"
+        ]
+      }
+    ],
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/ingest/header.go",
+        "longterm-mem/internal/ingest/source.go",
+        "longterm-mem/internal/ingest/origin_file_test.go",
+        "longterm-mem/internal/ingest/source_test.go",
+        "longterm-mem/internal/sourcefs/sourcefs_test.go",
+        "odd/goals/phase9-c22-knowledge-ingestion.json",
+        "odd/tasks/phase9-c22-knowledge-ingestion.md",
+        "openspec/changes/longterm-mem-knowledge-ingestion/design.md",
+        "openspec/changes/longterm-mem-knowledge-ingestion/tasks.md",
+        "skills/_shared/ingested-observation-contract.md"
+      ],
+      "reason": ""
+    }
+  }
+}

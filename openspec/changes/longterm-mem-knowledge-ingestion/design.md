@@ -263,7 +263,7 @@ observation that was never explicitly promoted is promoted by the next `sync`.
 | Kind | Canonical origin | Human part |
 |---|---|---|
 | `url` | lowercase scheme+host, default port stripped, fragment stripped, query kept, trailing `/` stripped unless the path is `/` | `host + path` |
-| `file` | cleaned absolute path, or the caller-supplied `Origin.URI` override when present | base name without extension |
+| `file` | cleaned absolute path, or `Origin.Override` when it is not empty, taken as it is (neither cleaned nor joined to a directory) | base name without extension (of the override when present) |
 | `directory` | as `file`, for each contained file | as `file` |
 | `pasted` | `pasted:` + the operator-supplied label (required) | the label |
 
@@ -275,9 +275,10 @@ document would resolve to a new topic key, upsert would not fire, and every re-i
 would fork a second memory of the same source — precisely what R-004 forbids.
 
 **Known limitation, disclosed**: a `file` origin's canonical form is an absolute path, so
-the same document ingested on two machines gets two ids. `Origin.URI` exists as the override
+the same document ingested on two machines gets two ids. `Origin.Override` exists as the override
 (e.g. `repo://openspec/specs/x.md`) for content that should have a machine-independent
-identity. This is the correct place for that decision — the operator knows whether a path is
+identity: a field of its own, taken as it is, so `URI` stays a path (owner's decision of
+2026-11-06, Phase 9 item C22). This is the correct place for that decision — the operator knows whether a path is
 incidental — and it is a documented step in the skill, not a silent default.
 
 **Where the absolute path comes from (L11)**: `SourceID` derives the id of a path that is
@@ -590,10 +591,11 @@ const (
 // Origin is what a record records as its source of record. The agent supplies
 // it: this package never learns an origin by reaching for it.
 type Origin struct {
-    Kind  SourceKind
-    URI   string // canonical origin; for KindFile it overrides the absolute path
-    Title string
-    Label string // required for KindPasted, ignored otherwise
+    Kind     SourceKind
+    URI      string // for KindFile/KindDirectory, the path; for KindURL, the URL
+    Override string // KindFile/KindDirectory: the identity taken as it is; ignored otherwise
+    Title    string
+    Label    string // required for KindPasted, ignored otherwise
 }
 
 // Request is one Extract call. Text and Path are mutually exclusive. Path is
@@ -729,7 +731,7 @@ Commands: `cd longterm-mem && go vet ./... && go test ./...` and
 | WU-2 | Unit | Every emitted record carries the full contract field set (R-007), and `ParseHeader(Render(h)) == h` round-trips for every kind | Table test + property-style round-trip, `header_test.go` |
 | WU-2 | Unit | `SourceID` determinism: same origin → same id across calls; URL canonicalization (case, default port, fragment, trailing slash); two origins with identical human parts get distinct ids; `pasted` without a label errors; content change does **not** change the id | Table test |
 | WU-2 | Unit (L11) | `SourceID` derives a file or directory origin's id from an absolute path alone, as the contract's formula gives it (the cleaned path, the slug of the base name without its extension, the first 8 hex digits of the sha256 of the path), and refuses a relative one, in both kinds, with an error that names `ResolveOrigin` (`./a.md`, `../a.md` and `.` included); a file or directory origin with no path errors in the same words in both kinds | Table tests in `internal/ingest`: `TestSourceIDOfAnAbsoluteFileOrDirectory` (digests computed with `sha256sum`, not by running the code), `TestSourceIDOfAFileOrDirectoryNeedsAPath`, `TestSourceIDRefusesAFileOrDirectoryOriginThatIsNotAbsolute` |
-| WU-2 | Unit (L11) | `ResolveOrigin` begins a relative file or directory path at the reader's working directory (a path that climbs out of it, `./`, and the `repo://` override, which the code takes for a path, see the open question below) and returns a URL, a pasted text, an absolute path, a file with no path and an unknown kind as they are without asking the reader; the id of a resolved path is the id of its absolute path | `TestResolveOriginBeginsARelativeFileOrDirectoryAtTheWorkingDirectory`, `TestResolveOriginLeavesAnOriginThatNeedsNoDirectoryAsItIsAndDoesNotAsk` and `TestSourceIDOfAResolvedRelativeOriginIsTheIDOfItsAbsolutePath`, over a reader that answers a directory and counts its asks |
+| WU-2 | Unit (L11) | `ResolveOrigin` begins a relative file or directory path at the reader's working directory (a path that climbs out of it, `./`, and a path that looks like a URL, which stays a path: the override is `Origin.Override`, see the closed question below) and returns a URL, a pasted text, an absolute path, a file with no path and an unknown kind as they are without asking the reader; the id of a resolved path is the id of its absolute path | `TestResolveOriginBeginsARelativeFileOrDirectoryAtTheWorkingDirectory`, `TestResolveOriginLeavesAnOriginThatNeedsNoDirectoryAsItIsAndDoesNotAsk` and `TestSourceIDOfAResolvedRelativeOriginIsTheIDOfItsAbsolutePath`, over a reader that answers a directory and counts its asks |
 | WU-2 | Unit (L11) | `ResolveOrigin` returns the reader's failure unchanged (the same error, its words intact, and no origin beside it) and refuses a working directory that is not absolute | `TestResolveOriginTellsTheReadersFailureUnchanged` and `TestResolveOriginRefusesAWorkingDirectoryThatIsNotAbsolute`, over a reader that fails or answers a relative directory |
 | WU-2 | Unit (adapter, L11) | `sourcefs.Reader.WorkingDirectory` answers the absolute directory the process works in, asked at every call, and fails when the process has lost it; through the adapter a relative path has the id of the path from that directory, the same path has another id in another directory, and an absolute path needs no directory at all | `TestReaderAnswersTheAbsoluteDirectoryTheProcessWorksIn`, `TestReaderAnswersTheDirectoryOfTheMomentItIsAsked`, `TestReaderFailsWhenTheDirectoryTheProcessWorksInIsGone`, `TestAResolvedRelativeOriginIsIdentifiedByItsPathFromTheWorkingDirectory`, `TestAResolvedRelativeOriginChangesWithTheDirectoryTheProcessIsIn` and `TestAnAbsoluteOriginNeedsNoWorkingDirectory`, with `t.Chdir` and `t.TempDir()` (the adapter's tests, never `ingest`'s) |
 | WU-2 | Unit | Chunk metadata: `Chunk: n/N` monotone, `Chunk-Span` ranges contiguous and covering the whole normalized source, shared `Source-Id` and `Source-SHA256` across all chunks of one document (R-006's "recoverable as one document") | Table test |
@@ -819,7 +821,7 @@ does not change that and does not silently design past it.
 - [ ] `Chunk-Span` positions are byte offsets into the **normalized** source (CRLF folded to
       LF). For a CRLF original they therefore do not index the original file's bytes. Stated
       in the contract; revisit only if a consumer needs original-file offsets.
-- [ ] The `Origin.URI` override that gives a file a machine-independent identity (e.g.
+- [x] The `Origin.URI` override that gives a file a machine-independent identity (e.g.
       `repo://openspec/specs/x.md`, see "Known limitation" above) is not told apart from a path by
       the code 2a delivered: `canonicalOrigin` took every file or directory `URI` for a path, so
       the override was cleaned (`//` folded to `/`) and, being not absolute, put after the working
@@ -828,3 +830,8 @@ does not change that and does not silently design past it.
       question is a product one: how an override is marked (a separate `Origin` field, or a
       scheme that `ResolveOrigin` and `SourceID` recognize), and what the contract document then
       says. To be decided before 2b.4 builds an `Origin` for a `Path` request.
+      Closed on 2026-11-06 by the owner's answer: "Campo aparte en Origin (Recomendado)" —
+      "`Origin` gana un campo explícito (p. ej. `Override string`) que `ResolveOrigin` y
+      `SourceID` toman tal cual como identidad, sin limpiarlo ni unirlo al directorio de
+      trabajo." `Origin.Override` is built by Phase 9 item C22 T1; on a URL or a pasted origin
+      it is ignored, as `Label` is (the owner's answer to D6).

@@ -31,9 +31,8 @@ func TestResolveOriginBeginsARelativeFileOrDirectoryAtTheWorkingDirectory(t *tes
 		{"a file", KindFile, "/work", "notes/Guide v2.md", "/work/notes/Guide v2.md"},
 		{"a directory", KindDirectory, "/work", "./notes", "/work/notes"},
 		{"a path that climbs out of the working directory", KindFile, "/work/project", "../sibling/x.md", "/work/sibling/x.md"},
-		// The override of the design (repo://openspec/specs/x.md) is taken for a relative path, as it was when the
-		// package asked the process for the directory: pinned as it is, and reported in the ledger of the batch.
-		{"an override that looks like a URL", KindFile, "/work", "repo://openspec/specs/x.md", "/work/repo:/openspec/specs/x.md"},
+		// URI is only ever a path; an identity the caller chooses goes in Override.
+		{"a path that looks like a URL is still a path", KindFile, "/work", "repo://openspec/specs/x.md", "/work/repo:/openspec/specs/x.md"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -84,6 +83,57 @@ func TestResolveOriginLeavesAnOriginThatNeedsNoDirectoryAsItIsAndDoesNotAsk(t *t
 				t.Errorf("the reader was asked %d times, want never", reader.asked)
 			}
 		})
+	}
+}
+
+// ResolveOrigin resolves the path beside an override as it resolves any path, asking the reader only for a
+// relative one, and returns the override as it came; the id of the override is then the same whatever directory
+// the reader works in.
+func TestResolveOriginPassesAnOverrideUnchanged(t *testing.T) {
+	const override = "repo://openspec//specs/./x.md"
+	cases := []struct {
+		name    string
+		uri     string
+		wantURI string
+		asked   int
+	}{
+		{"beside a relative path", "notes/x.md", "/work/notes/x.md", 1},
+		{"beside no path", "", "", 0},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			reader := &directory{dir: "/work"}
+			in := Origin{Kind: KindFile, URI: c.uri, Override: override, Title: "T"}
+
+			got, err := ResolveOrigin(reader, in)
+			if err != nil {
+				t.Fatalf("ResolveOrigin: %v", err)
+			}
+			want := in
+			want.URI = c.wantURI
+			if got != want {
+				t.Errorf("ResolveOrigin = %+v, want %+v (the override unchanged)", got, want)
+			}
+			if reader.asked != c.asked {
+				t.Errorf("the reader was asked %d times, want %d", reader.asked, c.asked)
+			}
+		})
+	}
+
+	idIn := func(dir string) string {
+		t.Helper()
+		resolved, err := ResolveOrigin(&directory{dir: dir}, Origin{Kind: KindFile, URI: "notes/x.md", Override: override})
+		if err != nil {
+			t.Fatal(err)
+		}
+		id, err := SourceID(resolved)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return id
+	}
+	if first, second := idIn("/work"), idIn("/elsewhere"); first != second || first != "x-7fd6464b" {
+		t.Errorf("the override's id is %q in /work and %q in /elsewhere, want %q in both", first, second, "x-7fd6464b")
 	}
 }
 

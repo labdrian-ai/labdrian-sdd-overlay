@@ -125,6 +125,31 @@ func TestAResolvedRelativeOriginChangesWithTheDirectoryTheProcessIsIn(t *testing
 	}
 }
 
+// An override is the identity the caller chose, so the same override has one id in every directory the process
+// works in, while the relative path beside it resolves to a different file in each.
+func TestAnOverrideHasOneIDInEveryWorkingDirectory(t *testing.T) {
+	origin := ingest.Origin{Kind: ingest.KindFile, URI: "notes/x.md", Override: "repo://openspec/specs/x.md"}
+	idIn := func(dir string) string {
+		t.Helper()
+		t.Chdir(dir)
+		resolved, err := ingest.ResolveOrigin(Reader{}, origin)
+		if err != nil {
+			t.Fatal(err)
+		}
+		id, err := ingest.SourceID(resolved)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return id
+	}
+
+	first, second := idIn(t.TempDir()), idIn(t.TempDir())
+
+	if first != second || first != "x-8bfa69fe" {
+		t.Errorf("the override's id is %q and %q in two directories, want %q in both", first, second, "x-8bfa69fe")
+	}
+}
+
 func TestAnAbsoluteOriginNeedsNoWorkingDirectory(t *testing.T) {
 	dir := t.TempDir()
 	t.Chdir(dir)

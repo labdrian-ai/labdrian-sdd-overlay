@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "c8fac8d9031d56f3fb02983ec762ed22942673af",
+    "head": "78be1ce6c5e5961a0ac64ee091dbd457875ddeca",
+    "diff_sha256": "59181c5649f03c3fcb4859ce7ae87a05b00fba25982711783c7c5920a5d1d57c",
+    "paths": [
+      "odd/goals/phase9-c22-knowledge-ingestion.json",
+      "odd/tasks/phase9-c22-knowledge-ingestion.md"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git show --stat --format= 78be1ce6",
+        "result": "pass",
+        "output": " odd/goals/phase9-c22-knowledge-ingestion.json | 23 ++++++++++++\n odd/tasks/phase9-c22-knowledge-ingestion.md   | 50 +++++++++++++++++++++++++++\n 2 files changed, 73 insertions(+)"
+      },
+      {
+        "command": "git show 78be1ce6:odd/goals/phase9-c22-knowledge-ingestion.json | jq -e .goal_id",
+        "result": "pass",
+        "output": "\"phase9-c22-knowledge-ingestion\" (jq exit 0, so the JSON is valid and goal_id matches)"
+      },
+      {
+        "command": "git log -1 --format=%B 78be1ce6 | tail -n 4",
+        "result": "pass",
+        "output": "docs(odd): shape C22, the knowledge ingestion extraction\n\nRisk: none\n(the message ends with the trailer Risk: none)"
+      },
+      {
+        "command": "rg -n '\\\\u[0-9a-fA-F]{4}' odd/tasks/phase9-c22-knowledge-ingestion.md odd/goals/phase9-c22-knowledge-ingestion.json",
+        "result": "pass",
+        "output": "No output; rg exit code 1, meaning no matches."
+      }
+    ]
+  }
+}

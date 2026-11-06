@@ -20,9 +20,12 @@ type SourceReader interface {
 // ResolveOrigin makes the file or directory an origin names absolute: a relative path begins at the reader's
 // working directory, as it did for the operator who typed it. Any other origin, and a path that is already
 // absolute, is returned as it is and the reader is not asked. The reader's failure is returned as it came.
+// Override is returned unchanged in every case: it is the caller's identity, not a path. A relative URI beside it
+// is still resolved, and the reader's failure still returned, because URI is where the source is read from even
+// when the id does not depend on it.
 //
-// SourceID derives an id from an absolute path and refuses any other, so an id is a function of the origin and
-// never of the directory a process happens to be in.
+// SourceID derives an id from an Override as it is, or else from an absolute path and refuses any other, so an id
+// is a function of the origin and never of the directory a process happens to be in.
 func ResolveOrigin(reader SourceReader, o Origin) (Origin, error) {
 	if (o.Kind != KindFile && o.Kind != KindDirectory) || o.URI == "" || filepath.IsAbs(o.URI) {
 		return o, nil

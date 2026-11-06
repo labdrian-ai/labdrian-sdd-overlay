@@ -40,6 +40,65 @@ func TestSourceIDOfAnAbsoluteFileOrDirectory(t *testing.T) {
 	}
 }
 
+// An override is the identity the caller chose for a file or a directory origin, so that one source has one id on
+// every machine: SourceID hashes its exact bytes, neither cleaned nor joined to any directory, and does not read
+// the path beside it. The readable part is the override's base name without its extension, as for a path. On a
+// URL or a pasted origin the override is ignored, as Label is ignored on every kind but pasted.
+//
+// The digests below were computed with sha256sum from the formula, not by running the code.
+func TestSourceIDOfAnOverride(t *testing.T) {
+	cases := []struct {
+		name string
+		in   Origin
+		want string
+	}{
+		{"a file", Origin{Kind: KindFile, URI: "/srv/notes/x.md", Override: "repo://openspec/specs/x.md"}, "x-8bfa69fe"},
+		{"a directory", Origin{Kind: KindDirectory, URI: "/srv/notes", Override: "repo://openspec/specs/x.md"}, "x-8bfa69fe"},
+		{"an unclean override keeps its own bytes", Origin{Kind: KindFile, Override: "repo://openspec//specs/./x.md"}, "x-7fd6464b"},
+		{"beside a relative path", Origin{Kind: KindFile, URI: "notes/a.md", Override: "repo://openspec/specs/x.md"}, "x-8bfa69fe"},
+		{"beside no path", Origin{Kind: KindFile, Override: "repo://openspec/specs/x.md"}, "x-8bfa69fe"},
+		{"the readable part is the base name without its extension", Origin{Kind: KindFile, Override: "repo://openspec/specs/Guide v2.md"}, "guide-v2-31db09a7"},
+		{"a trailing slash is passed over in the readable part, not in the hash", Origin{Kind: KindDirectory, Override: "repo://a/specs/"}, "specs-d4cc6778"},
+		{"an override with no base name has no readable part", Origin{Kind: KindDirectory, Override: "/"}, "-8a5edab2"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got, err := SourceID(c.in)
+			if err != nil {
+				t.Fatalf("SourceID(%+v): %v", c.in, err)
+			}
+			if got != c.want {
+				t.Errorf("SourceID(%+v) = %q, want %q", c.in, got, c.want)
+			}
+		})
+	}
+
+	ignored := []struct {
+		name string
+		in   Origin
+	}{
+		{"a URL", Origin{Kind: KindURL, URI: "https://example.com/docs/config"}},
+		{"a pasted text", Origin{Kind: KindPasted, Label: "my notes"}},
+	}
+	for _, c := range ignored {
+		t.Run(c.name+" ignores the override", func(t *testing.T) {
+			want, err := SourceID(c.in)
+			if err != nil {
+				t.Fatalf("SourceID(%+v): %v", c.in, err)
+			}
+			with := c.in
+			with.Override = "repo://openspec/specs/x.md"
+			got, err := SourceID(with)
+			if err != nil {
+				t.Fatalf("SourceID(%+v): %v", with, err)
+			}
+			if got != want {
+				t.Errorf("SourceID(%+v) = %q, want %q, the id without the override", with, got, want)
+			}
+		})
+	}
+}
+
 // A file or a directory origin with no path has nothing to identify, and says so in the same words in both kinds.
 func TestSourceIDOfAFileOrDirectoryNeedsAPath(t *testing.T) {
 	for _, kind := range []SourceKind{KindFile, KindDirectory} {
