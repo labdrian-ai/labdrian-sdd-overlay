@@ -54,6 +54,8 @@ sdd-tasks/SKILL.md managed
 sdd-verify/SKILL.md managed
 requirements-from-transcripts/SKILL.md custom
 clarify-request/SKILL.md custom
+adhd-output/SKILL.md custom
+adhd-output/LICENSE custom
 chat-thread-analyzer/SKILL.md custom
 project-inception/SKILL.md custom
 inception-pipeline/SKILL.md custom
