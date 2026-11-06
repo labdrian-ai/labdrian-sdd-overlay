@@ -76,8 +76,7 @@ is always readable and resumable:
    `**Chunk-Status**` list showing exactly which chunk keys are saved+promoted and which are
    missing, and report `ingested K of N` plus any skip detail.
 
-**Resuming is simply re-running the same ingestion**, except for a source reported blocked
-(below), which is never re-run. The re-ingestion gate below makes every
+**Resuming is simply re-running the same ingestion.** The re-ingestion gate below makes every
 already-landed chunk a hard no-op, so a second run only does the missing work. There is no
 separate resume command.
 
@@ -95,28 +94,6 @@ before deciding: when memorycard stored it as parts, each part's title ends `(pa
 the rest sits in the memories at `<key>/part-2` … `<key>/part-N` (or `<key>/part-i~<n>` when
 an import moved a part). A record stored before this procedure moved to memorycard may hold
 its block, or only its `**Status**`, in one of those later parts.
-
-**A source ingested before the move to memorycard is blocked.** Unless the hard no-op below
-applies, check the vault before saving anything:
-
-1. Run `longterm-mem`'s `query` MCP tool with `project` (the project as `longterm-mem` names it), `query` set to the
-   source's `Source-Id`, and `sources: ["vault"]`.
-2. If the result's `vault_status` is not `ok`, the vault was not searched: save nothing and
-   report "blocked: vault not searched" with that status. A source is never saved on an
-   unsearched vault.
-3. For each vault row, read the page at its `page_path` (the row itself carries no
-   frontmatter). A page is this source's when its body's `**Source-Id**` equals the derived
-   one exactly.
-4. If such a page has `engram_id` and no `memorycard_id` in its frontmatter, `promote` refuses
-   the memories imported from that Engram observation. Make no `mem_save` and no `promote`
-   call, report "blocked: ingested before the move to memorycard" with the page address, and
-   do not re-run the ingestion of that source: updating such a page is a later change to
-   `longterm-mem`, not this procedure.
-
-If `promote` refuses a memory anyway because an Engram observation already has a page, the
-source is blocked the same way: upsert an already-saved manifest once to `**Status**: partial`
-per step 5 (its own `promote` may be refused too), make no other `mem_save` or `promote`, give
-the same report, and do not re-run.
 
 The hard no-op only applies to a manifest whose `**Status**` is already `complete` — a
 matching digest never short-circuits a `pending` or `partial` manifest, since an unchanged
