@@ -1,0 +1,110 @@
+{
+  "kind": "sweeper",
+  "base": "e3a8bd13863fa42be678b363b85409a9055aadf8",
+  "head": "45eceeececb7794ed0239fa98df3bc640cc1b2b2",
+  "diff_sha256": "64ae538b57500ec10aa84ea0c804fe31acea26b6615b941dad99114f97c3502e",
+  "sweep": "45eceeececb7-3.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 path: openspec/changes/skill-lifecycle/apply-progress.md",
+      "disposition": "live",
+      "evidence": "Pure rename (R100) to openspec/changes/archive/2026-11-06-skill-lifecycle/, content unchanged; the old folder no longer exists under openspec/changes/. rg over the repository outside openspec/ and odd/ finds no reader of the old path; it survives only in historical records (the feature document, the generated openspec/project/roadmap.md mirror, stored receipts and sweep records), left as they are per L2. Answered by the sweeper agent, no edit made."
+    },
+    {
+      "candidate": "T1 path: openspec/changes/skill-lifecycle/design.md",
+      "disposition": "live",
+      "evidence": "Pure rename (R100) to openspec/changes/archive/2026-11-06-skill-lifecycle/, content unchanged; the old folder no longer exists under openspec/changes/. rg over the repository outside openspec/ and odd/ finds no reader of the old path; it survives only in historical records (the feature document, the generated openspec/project/roadmap.md mirror, stored receipts and sweep records), left as they are per L2. Answered by the sweeper agent, no edit made."
+    },
+    {
+      "candidate": "T1 path: openspec/changes/skill-lifecycle/proposal.md",
+      "disposition": "live",
+      "evidence": "Pure rename (R100) to openspec/changes/archive/2026-11-06-skill-lifecycle/, content unchanged; the old folder no longer exists under openspec/changes/. rg over the repository outside openspec/ and odd/ finds no reader of the old path; it survives only in historical records (the feature document, the generated openspec/project/roadmap.md mirror, stored receipts and sweep records), left as they are per L2. Answered by the sweeper agent, no edit made."
+    },
+    {
+      "candidate": "T1 path: openspec/changes/skill-lifecycle/specs/spec.md",
+      "disposition": "live",
+      "evidence": "Pure rename (R100) to openspec/changes/archive/2026-11-06-skill-lifecycle/, content unchanged; the old folder no longer exists under openspec/changes/. rg over the repository outside openspec/ and odd/ finds no reader of the old path; it survives only in historical records (the feature document, the generated openspec/project/roadmap.md mirror, stored receipts and sweep records), left as they are per L2. Answered by the sweeper agent, no edit made."
+    },
+    {
+      "candidate": "T1 path: openspec/changes/skill-lifecycle/tasks.md",
+      "disposition": "live",
+      "evidence": "Pure rename (R100) to openspec/changes/archive/2026-11-06-skill-lifecycle/, content unchanged; the old folder no longer exists under openspec/changes/. rg over the repository outside openspec/ and odd/ finds no reader of the old path; it survives only in historical records (the feature document, the generated openspec/project/roadmap.md mirror, stored receipts and sweep records), left as they are per L2. Answered by the sweeper agent, no edit made."
+    },
+    {
+      "candidate": "T1 path: openspec/changes/skill-manifest-gen/design.md",
+      "disposition": "live",
+      "evidence": "Pure rename (R100) to openspec/changes/archive/2026-11-06-skill-manifest-gen/, content unchanged; the old folder no longer exists under openspec/changes/. rg over the repository outside openspec/ and odd/ finds no reader of the old path; it survives only in historical records (the feature document, the generated openspec/project/roadmap.md mirror, stored receipts and sweep records), left as they are per L2. Answered by the sweeper agent, no edit made."
+    },
+    {
+      "candidate": "T1 path: openspec/changes/skill-manifest-gen/proposal.md",
+      "disposition": "live",
+      "evidence": "Pure rename (R100) to openspec/changes/archive/2026-11-06-skill-manifest-gen/, content unchanged; the old folder no longer exists under openspec/changes/. rg over the repository outside openspec/ and odd/ finds no reader of the old path; it survives only in historical records (the feature document, the generated openspec/project/roadmap.md mirror, stored receipts and sweep records), left as they are per L2. Answered by the sweeper agent, no edit made."
+    },
+    {
+      "candidate": "T1 path: openspec/changes/skill-manifest-gen/specs/spec.md",
+      "disposition": "live",
+      "evidence": "Pure rename (R100) to openspec/changes/archive/2026-11-06-skill-manifest-gen/, content unchanged; the old folder no longer exists under openspec/changes/. rg over the repository outside openspec/ and odd/ finds no reader of the old path; it survives only in historical records (the feature document, the generated openspec/project/roadmap.md mirror, stored receipts and sweep records), left as they are per L2. Answered by the sweeper agent, no edit made."
+    },
+    {
+      "candidate": "T1 path: openspec/changes/skill-manifest-gen/tasks.md",
+      "disposition": "live",
+      "evidence": "Pure rename (R100) to openspec/changes/archive/2026-11-06-skill-manifest-gen/, content unchanged; the old folder no longer exists under openspec/changes/. rg over the repository outside openspec/ and odd/ finds no reader of the old path; it survives only in historical records (the feature document, the generated openspec/project/roadmap.md mirror, stored receipts and sweep records), left as they are per L2. Answered by the sweeper agent, no edit made."
+    },
+    {
+      "candidate": "T1 path: openspec/changes/skill-package-manager/apply-progress.md",
+      "disposition": "live",
+      "evidence": "Pure rename (R100) to openspec/changes/archive/2026-11-06-skill-package-manager/, content unchanged; the old folder no longer exists under openspec/changes/. rg over the repository outside openspec/ and odd/ finds no reader of the old path; it survives only in historical records (the feature document, the generated openspec/project/roadmap.md mirror, stored receipts and sweep records), left as they are per L2. Answered by the sweeper agent, no edit made."
+    },
+    {
+      "candidate": "T1 path: openspec/changes/skill-package-manager/design.md",
+      "disposition": "live",
+      "evidence": "Pure rename (R100) to openspec/changes/archive/2026-11-06-skill-package-manager/, content unchanged; the old folder no longer exists under openspec/changes/. rg over the repository outside openspec/ and odd/ finds no reader of the old path; it survives only in historical records (the feature document, the generated openspec/project/roadmap.md mirror, stored receipts and sweep records), left as they are per L2. Answered by the sweeper agent, no edit made."
+    },
+    {
+      "candidate": "T1 path: openspec/changes/skill-package-manager/proposal.md",
+      "disposition": "live",
+      "evidence": "Pure rename (R100) to openspec/changes/archive/2026-11-06-skill-package-manager/, content unchanged; the old folder no longer exists under openspec/changes/. rg over the repository outside openspec/ and odd/ finds no reader of the old path; it survives only in historical records (the feature document, the generated openspec/project/roadmap.md mirror, stored receipts and sweep records), left as they are per L2. Answered by the sweeper agent, no edit made."
+    },
+    {
+      "candidate": "T1 path: openspec/changes/skill-package-manager/specs/spec.md",
+      "disposition": "live",
+      "evidence": "Pure rename (R100) to openspec/changes/archive/2026-11-06-skill-package-manager/, content unchanged; the old folder no longer exists under openspec/changes/. rg over the repository outside openspec/ and odd/ finds no reader of the old path; it survives only in historical records (the feature document, the generated openspec/project/roadmap.md mirror, stored receipts and sweep records), left as they are per L2. Answered by the sweeper agent, no edit made."
+    },
+    {
+      "candidate": "T1 path: openspec/changes/skill-package-manager/tasks.md",
+      "disposition": "live",
+      "evidence": "Pure rename (R100) to openspec/changes/archive/2026-11-06-skill-package-manager/, content unchanged; the old folder no longer exists under openspec/changes/. rg over the repository outside openspec/ and odd/ finds no reader of the old path; it survives only in historical records (the feature document, the generated openspec/project/roadmap.md mirror, stored receipts and sweep records), left as they are per L2. Answered by the sweeper agent, no edit made."
+    },
+    {
+      "candidate": "T1 path: openspec/changes/skill-package-manager/verify-report.md",
+      "disposition": "live",
+      "evidence": "Pure rename (R100) to openspec/changes/archive/2026-11-06-skill-package-manager/, content unchanged; the old folder no longer exists under openspec/changes/. rg over the repository outside openspec/ and odd/ finds no reader of the old path; it survives only in historical records (the feature document, the generated openspec/project/roadmap.md mirror, stored receipts and sweep records), left as they are per L2. Answered by the sweeper agent, no edit made."
+    },
+    {
+      "candidate": "T1 path: openspec/changes/skill-project-scope/apply-progress.md",
+      "disposition": "live",
+      "evidence": "Pure rename (R100) to openspec/changes/archive/2026-11-06-skill-project-scope/, content unchanged; the old folder no longer exists under openspec/changes/. rg over the repository outside openspec/ and odd/ finds no reader of the old path; it survives only in historical records (the feature document, the generated openspec/project/roadmap.md mirror, stored receipts and sweep records), left as they are per L2. Answered by the sweeper agent, no edit made."
+    },
+    {
+      "candidate": "T1 path: openspec/changes/skill-project-scope/design.md",
+      "disposition": "live",
+      "evidence": "Pure rename (R100) to openspec/changes/archive/2026-11-06-skill-project-scope/, content unchanged; the old folder no longer exists under openspec/changes/. rg over the repository outside openspec/ and odd/ finds no reader of the old path; it survives only in historical records (the feature document, the generated openspec/project/roadmap.md mirror, stored receipts and sweep records), left as they are per L2. Answered by the sweeper agent, no edit made."
+    },
+    {
+      "candidate": "T1 path: openspec/changes/skill-project-scope/proposal.md",
+      "disposition": "live",
+      "evidence": "Pure rename (R100) to openspec/changes/archive/2026-11-06-skill-project-scope/, content unchanged; the old folder no longer exists under openspec/changes/. rg over the repository outside openspec/ and odd/ finds no reader of the old path; it survives only in historical records (the feature document, the generated openspec/project/roadmap.md mirror, stored receipts and sweep records), left as they are per L2. Answered by the sweeper agent, no edit made."
+    },
+    {
+      "candidate": "T1 path: openspec/changes/skill-project-scope/specs/spec.md",
+      "disposition": "live",
+      "evidence": "Pure rename (R100) to openspec/changes/archive/2026-11-06-skill-project-scope/, content unchanged; the old folder no longer exists under openspec/changes/. rg over the repository outside openspec/ and odd/ finds no reader of the old path; it survives only in historical records (the feature document, the generated openspec/project/roadmap.md mirror, stored receipts and sweep records), left as they are per L2. Answered by the sweeper agent, no edit made."
+    },
+    {
+      "candidate": "T1 path: openspec/changes/skill-project-scope/tasks.md",
+      "disposition": "live",
+      "evidence": "Pure rename (R100) to openspec/changes/archive/2026-11-06-skill-project-scope/, content unchanged; the old folder no longer exists under openspec/changes/. rg over the repository outside openspec/ and odd/ finds no reader of the old path; it survives only in historical records (the feature document, the generated openspec/project/roadmap.md mirror, stored receipts and sweep records), left as they are per L2. Answered by the sweeper agent, no edit made."
+    }
+  ]
+}

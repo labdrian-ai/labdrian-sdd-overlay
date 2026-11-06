@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "e3a8bd13863fa42be678b363b85409a9055aadf8",
+    "head": "45eceeececb7794ed0239fa98df3bc640cc1b2b2",
+    "diff_sha256": "64ae538b57500ec10aa84ea0c804fe31acea26b6615b941dad99114f97c3502e",
+    "paths": [
+      "openspec/changes/archive/2026-11-06-skill-lifecycle/apply-progress.md",
+      "openspec/changes/archive/2026-11-06-skill-lifecycle/design.md",
+      "openspec/changes/archive/2026-11-06-skill-lifecycle/proposal.md",
+      "openspec/changes/archive/2026-11-06-skill-lifecycle/specs/spec.md",
+      "openspec/changes/archive/2026-11-06-skill-lifecycle/tasks.md",
+      "openspec/changes/archive/2026-11-06-skill-manifest-gen/design.md",
+      "openspec/changes/archive/2026-11-06-skill-manifest-gen/proposal.md",
+      "openspec/changes/archive/2026-11-06-skill-manifest-gen/specs/spec.md",
+      "openspec/changes/archive/2026-11-06-skill-manifest-gen/tasks.md",
+      "openspec/changes/archive/2026-11-06-skill-package-manager/apply-progress.md",
+      "openspec/changes/archive/2026-11-06-skill-package-manager/design.md",
+      "openspec/changes/archive/2026-11-06-skill-package-manager/proposal.md",
+      "openspec/changes/archive/2026-11-06-skill-package-manager/specs/spec.md",
+      "openspec/changes/archive/2026-11-06-skill-package-manager/tasks.md",
+      "openspec/changes/archive/2026-11-06-skill-package-manager/verify-report.md",
+      "openspec/changes/archive/2026-11-06-skill-project-scope/apply-progress.md",
+      "openspec/changes/archive/2026-11-06-skill-project-scope/design.md",
+      "openspec/changes/archive/2026-11-06-skill-project-scope/proposal.md",
+      "openspec/changes/archive/2026-11-06-skill-project-scope/specs/spec.md",
+      "openspec/changes/archive/2026-11-06-skill-project-scope/tasks.md",
+      "openspec/changes/skill-lifecycle/apply-progress.md",
+      "openspec/changes/skill-lifecycle/design.md",
+      "openspec/changes/skill-lifecycle/proposal.md",
+      "openspec/changes/skill-lifecycle/specs/spec.md",
+      "openspec/changes/skill-lifecycle/tasks.md",
+      "openspec/changes/skill-manifest-gen/design.md",
+      "openspec/changes/skill-manifest-gen/proposal.md",
+      "openspec/changes/skill-manifest-gen/specs/spec.md",
+      "openspec/changes/skill-manifest-gen/tasks.md",
+      "openspec/changes/skill-package-manager/apply-progress.md",
+      "openspec/changes/skill-package-manager/design.md",
+      "openspec/changes/skill-package-manager/proposal.md",
+      "openspec/changes/skill-package-manager/specs/spec.md",
+      "openspec/changes/skill-package-manager/tasks.md",
+      "openspec/changes/skill-package-manager/verify-report.md",
+      "openspec/changes/skill-project-scope/apply-progress.md",
+      "openspec/changes/skill-project-scope/design.md",
+      "openspec/changes/skill-project-scope/proposal.md",
+      "openspec/changes/skill-project-scope/specs/spec.md",
+      "openspec/changes/skill-project-scope/tasks.md"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git diff --find-renames=100% --name-status 45eceeec^ 45eceeec | wc -l, plus an awk test that each line is R100 from openspec/changes/<name>/<path> to openspec/changes/archive/2026-11-06-<name>/<same path>",
+        "result": "pass",
+        "output": "20 lines. Per-name counts of lines that matched: skill-lifecycle 5, skill-manifest-gen 4, skill-package-manager 6, skill-project-scope 5. No line failed the test, and no other names or statuses appear."
+      },
+      {
+        "command": "git show --stat --format= 45eceeec",
+        "result": "pass",
+        "output": "4 rename-brace lines, each ending '| 0'. Summary: '20 files changed, 0 insertions(+), 0 deletions(-)', matching the 20 R100 renames of check 1."
+      },
+      {
+        "command": "git log -1 --format=%B 45eceeec | tail -3",
+        "result": "pass",
+        "output": "The message ends with the line 'Risk: none' followed by a blank line."
+      },
+      {
+        "command": "git status --porcelain -- openspec/ tools/",
+        "result": "pass",
+        "output": "Empty output (rc=0). On the first run two archive-report.md files the parent was writing for the next commit were untracked in the tree; they were moved out and this check was rerun. The full status shows only untracked records under odd/review-results/phase9-c11-openspec-archive/."
+      }
+    ]
+  }
+}
