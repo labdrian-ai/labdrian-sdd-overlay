@@ -1,0 +1,18 @@
+{
+  "kind": "polisher",
+  "base": "dd8dd9b8b5b37aa9b6078e4261fcf64a390f9495",
+  "head": "8f131fd308bacc9f36f0fcdc53bab86937ad0010",
+  "diff_sha256": "25363e512199de9dd149c08764c6b37c4e0aadefc02801d01dddba40f0543395",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the diff /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/c22t7-d13.diff. It changes only skills/knowledge-ingestion/SKILL.md: it removes the pre-memorycard vault check and the promote-refusal 'blocked' rule (former lines 99-119), and it drops the resume exception 'except for a source reported blocked (below), which is never re-run' from line 79.",
+      "Read L26 in /home/labdrian/labdrian-sdd-overlay-worktrees/review-8f131fd308ba/odd/tasks/phase9-c22-knowledge-ingestion.md. D13 says 'Remove the vault check and the promote-refusal rule from SKILL.md. Keep the whole-record part reading and the contract fixes (body, the full argument set, supersedes).' The commit matches that answer: the part-reading text at SKILL.md:92-96 and 108-112 remains, and so does the save shape at SKILL.md:35-41.",
+      "Read the full SKILL.md at head (/home/labdrian/labdrian-sdd-overlay-worktrees/review-8f131fd308ba/skills/knowledge-ingestion/SKILL.md). No dangling cross-reference to the removed rule remains. A grep for 'blocked|before the move|vault check|BridgedError|promote.*refus' in skills/knowledge-ingestion/ and skills/_shared/ingested-observation-contract.md finds nothing. The only 'engram_id' hits are the promote argument name at SKILL.md:40, which is correct per the memorycard mapping (the MCP field keeps the name engram_id), and contract lines 146 and 165, which belong to the Engram-wording carry already recorded in L23/L24 F4.",
+      "Checked SKILL.md:79-81 after the edit: 'Resuming is simply re-running the same ingestion' fits the re-ingestion gate at SKILL.md:98-116, and nothing else depended on the removed exception.",
+      "Checked the 64 KB chunk rule at SKILL.md:62-64 against /home/labdrian/memorycard/internal/memory/save.go:23-29 (SoftTargetBytes = 16 KB, HardCapBytes = 64 KB). The rule is consistent, and this commit does not change it.",
+      "Not reported, per L26 and the brief: a pre-memorycard source on re-ingestion still re-saves its imported memories, and promote then refuses them with BridgedError. This path is reachable again, but it is the carry the owner accepted (L26, to the L13 follow-up). Also not reported: the old origin's chunks are still not superseded (F5).",
+      "Not run: no commands or live memorycard or longterm-mem calls. This judgment rests on static reading only."
+    ]
+  }
+}

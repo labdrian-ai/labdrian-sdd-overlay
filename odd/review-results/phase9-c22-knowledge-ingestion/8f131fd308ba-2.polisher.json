@@ -1,0 +1,16 @@
+{
+  "kind": "polisher",
+  "base": "dd8dd9b8b5b37aa9b6078e4261fcf64a390f9495",
+  "head": "8f131fd308bacc9f36f0fcdc53bab86937ad0010",
+  "diff_sha256": "25363e512199de9dd149c08764c6b37c4e0aadefc02801d01dddba40f0543395",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the diff at /tmp/claude-1000/-home-labdrian/labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/c22t7-d13.diff. It removes 3 lines (the 'except for a source reported blocked' clause) and 22 lines (the vault check and the promote-refusal rule), and adds 1 line.",
+      "Read the full remaining /home/labdrian/labdrian-sdd-overlay-worktrees/review-8f131fd308ba/skills/knowledge-ingestion/SKILL.md. No reference to the removed rule is left: no 'blocked', 'vault_status', 'before the move' or 'never re-run'. The sentence 'Resuming is simply re-running the same ingestion.' agrees with the re-ingestion gate's resume branch for pending and partial manifests.",
+      "The remaining steps still match the tools: mem_save, then promote with source memorycard and the memorycard id in engram_id, and mem_search/mem_get with part reading. The kept paragraph on records stored before the move (block or Status in later parts) is still correct. I did not read memorycard's server.go or save.go.",
+      "Read Log L26 in odd/tasks/phase9-c22-knowledge-ingestion.md. It records D13 as the owner's answer and lists the pre-memorycard pages, the promote BridgedError and the origin-changed supersession as owner-accepted carries. The only reachable behavior left is re-ingesting such a source, where promote refuses and step 5 writes a partial manifest. That is a recorded carry, so I did not report it.",
+      "A grep over the skills tree found no other skill or contract that refers to the removed blocked outcome. Every 'blocked' hit is unrelated SDD or project-architect text."
+    ]
+  }
+}

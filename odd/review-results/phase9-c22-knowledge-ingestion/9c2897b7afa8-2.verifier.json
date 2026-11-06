@@ -1,0 +1,39 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "base_result": "reproduced",
+      "command": "cd /home/labdrian/labdrian-sdd-overlay-worktrees/review-9c2897b7afa8 && rg -n 'DefaultTopN' longterm-mem/internal/query/vault.go; rg -n 'Top ' longterm-mem/internal/mcpserver/server.go; Read skills/knowledge-ingestion/SKILL.md:99-119; git show 9a97ecb8:skills/knowledge-ingestion/SKILL.md | rg -n 'vault|query'",
+      "output": "vault.go:11 `const DefaultTopN = 5`. server.go:103 `Top int json:\"top,omitempty\" ... (default 5 when omitted or 0)`. HEAD SKILL.md:102-103 step 1 sets only project, query=Source-Id and sources:[\"vault\"], with no `top`. Steps 2-4 cover only a non-ok vault_status and a matching page that has engram_id and no memorycard_id. Nothing says what to do when no row matches. At base, lines 99-100 also run `query` with `sources:[\"vault\"]` and no top, and give no no-match rule, so the defect already held at base."
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "base_result": "not-reproduced",
+      "command": "cd /home/labdrian/labdrian-sdd-overlay-worktrees/review-9c2897b7afa8 && rg -n 'PagePath|PageAddress|page_path' longterm-mem/internal/mcpserver/server.go; Read longterm-mem/internal/mcpserver/server.go:263-290 (renderQuery); Read skills/knowledge-ingestion/SKILL.md:107-109; git show 9a97ecb8:skills/knowledge-ingestion/SKILL.md | rg -n 'page_path'",
+      "output": "server.go:178-179 define PageAddress and PagePath on the row struct, and :358-359 fill them. renderQuery (:263-290) builds the label from row.PageAddress, or `engram:<id>` when it is empty. It prints Rank, Sources, Title, Snippet and Standing, and never prints PagePath. HEAD SKILL.md:107 says `read the page at its page_path (the row itself carries no frontmatter)`. The base file has no `page_path` match, because that instruction is new in this commit."
+    },
+    {
+      "id": "F3",
+      "result": "reproduced",
+      "base_result": "not-reproduced",
+      "command": "cd /home/labdrian/labdrian-sdd-overlay-worktrees/review-9c2897b7afa8 && Read skills/knowledge-ingestion/SKILL.md:116-119; git show 9a97ecb8:skills/knowledge-ingestion/SKILL.md | rg -n 'no further|refuse'",
+      "output": "HEAD :116-119 reads `If promote refuses a memory anyway because an Engram observation already has a page, the source is blocked the same way: upsert an already-saved manifest once to **Status**: partial per step 5 ..., make no other mem_save or promote`. That tells the agent to write with mem_save to a manifest already stored, which can be an imported pre-memorycard one. The base text (lines 104-106) said `no further mem_save or promote`, with no manifest upsert."
+    },
+    {
+      "id": "F4",
+      "result": "reproduced",
+      "base_result": "not-reproduced",
+      "command": "cd /home/labdrian/labdrian-sdd-overlay-worktrees/review-9c2897b7afa8 && rg -n '^[0-9]+\\. |step [0-9]' skills/knowledge-ingestion/SKILL.md",
+      "output": "HEAD has two numbered lists. The manifest-first list at lines 69-75 has steps 1-5, and step 5 (:75) is `If a chunk fails: ... upsert the manifest to **Status**: partial`. The new vault-check list at :102-110 has steps 1-4 and sits directly above :118 `per step 5`. No step 5 exists in the adjacent list, so the reference only resolves by guessing the other list. The base has no vault-check list, so the reference could not be confused there."
+    },
+    {
+      "id": "F5",
+      "result": "reproduced",
+      "base_result": "reproduced",
+      "command": "cd /home/labdrian/labdrian-sdd-overlay-worktrees/review-9c2897b7afa8 && Read skills/_shared/ingested-observation-contract.md:150; git show 9a97ecb8:skills/_shared/ingested-observation-contract.md | rg -n 'origin changed'; rg -n 'chunk' skills/_shared/ingested-observation-contract.md | rg -i 'current|old|stale|supersed'",
+      "output": "HEAD :150: `origin changed ... The old record is NOT touched automatically; saving the new manifest (or standalone record) with mem_save argument supersedes set to the memorycard id of the old one is a documented operator step. memorycard marks the old memory superseded; its vault page is not updated, since sync reads Engram only.` It names only the manifest or standalone record. Nothing says the old chunks stay current. The chunk/stale rg returned only line 149, the `new N > old N` row, which does not cover this case. The base row at :150 had the same omission."
+    }
+  ]
+}
