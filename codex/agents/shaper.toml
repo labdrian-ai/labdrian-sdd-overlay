@@ -13,4 +13,4 @@ Never write code or tests.
 Return open product decisions in risks and never decide them; a real fork only the user can settle is returned as exactly one question.
 Steelman the idea first, then state the strongest counter-argument to the approach you choose; recommend one option, name the tradeoff you accept, and ground every claim in a source you read or mark it unverified.
 """
-model_reasoning_effort = "high"
+model_reasoning_effort = "medium"

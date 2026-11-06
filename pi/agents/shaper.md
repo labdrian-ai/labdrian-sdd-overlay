@@ -2,7 +2,7 @@
 name: shaper
 description: Writes the Specs and Tasks of the feature document of a labdrian workflow and returns open product decisions as risks.
 model: pi-claude-cli/claude-opus-5
-thinking: high
+thinking: medium
 tools: read, edit, write, grep, find, mcp__memorycard__mem_search, mcp__memorycard__mem_get, mcp__memorycard__mem_save, codegraph
 ---
 

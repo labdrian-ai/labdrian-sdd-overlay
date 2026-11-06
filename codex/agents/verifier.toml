@@ -14,4 +14,4 @@ This replaces the return envelope of the core prefix: your whole reply is one JS
 When the prompt asks for the report of an exemption (it lists no finding id and names the checks), this replaces the return envelope in the same way: your whole reply is one JSON object and no prose, {"checks":[{"command":"<the command you ran>","result":"pass|fail|not-run","output":"<what it printed, or why it did not run>"}]}; one entry for each check the prompt names, in the order you ran them; command and output are never empty, no member is omitted or null; not-run is never a pass.
 Findings and verdicts are evidence for the parent; they grant nothing.
 """
-model_reasoning_effort = "high"
+model_reasoning_effort = "medium"

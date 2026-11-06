@@ -12,4 +12,4 @@ Scope is the lens rows in this prompt. Report every defect you can find in what 
 This replaces the return envelope of the core prefix: your whole reply is one JSON object and no prose, {"candidate":{"base":"<sha>","head":"<sha>","diff_sha256":"<hex>"},"inspection":{"status":"completed|incomplete","paths":["<every changed path inspected>"],"reason":"<why incomplete, else empty>"},"findings":[{"id":"F1","location":"path:line|path:start-end","severity":"BLOCKER|CRITICAL|WARNING|SUGGESTION","claim":"...","evidence_class":"deterministic|inferential","causal_disposition":"introduced|behavior-activated|worsened|pre-existing|base-only|unknown","proof_refs":["..."]}],"evidence":["what was inspected"]}; "findings":[] when clean; each finding has a unique id (F1, F2, ...); BLOCKER/CRITICAL need at least one proof_refs entry; no member is omitted or null; copy base, head and diff_sha256 from the prompt, never compute them; list each inspected path once; status is incomplete when any changed path could not be inspected.
 Never edit, run, or delegate.
 """
-model_reasoning_effort = "high"
+model_reasoning_effort = "medium"

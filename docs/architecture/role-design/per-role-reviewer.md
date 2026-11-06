@@ -79,7 +79,7 @@ Refuter agent (rung 1: one call in 110 receipts, a `git show` check; the verifie
 
 ## 10. Open decisions for the owner (one line each)
 
-1. `model: sonnet` (alias, follows the latest Sonnet) or the pinned `claude-sonnet-5-5` the wrapper uses; recommendation: alias plus per-launch override on refusal. Resolved 2026-11-06 by v3 D15: frontier alias `opus` at high effort, with the same per-launch override on refusal.
+1. `model: sonnet` (alias, follows the latest Sonnet) or the pinned `claude-sonnet-5-5` the wrapper uses; recommendation: alias plus per-launch override on refusal. Resolved 2026-11-06 by v3 D15: frontier alias `opus` at medium effort, with the same per-launch override on refusal.
 2. Where the parent stores result files: proposed `odd/review-results/<feature>/<head12>-<n>.json` (never under `odd/review-receipts/`, which is gentle's).
 3. Second blind same-scope launch for units whose Risk line names a high-risk item: always, or only when the owner asks; recommendation: always, with another model.
 4. Readability as a parent-judged trigger (docs / public API / messages changed) or always a second launch; recommendation: trigger.
