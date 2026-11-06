@@ -1,0 +1,17 @@
+{
+  "kind": "polisher",
+  "base": "4beb03e7d344558bceb3a46185c5ef00bb21c551",
+  "head": "858cbe10cd66b5a28df1f1530f5d9d80e7466f3c",
+  "diff_sha256": "36e19bf1fd1c3807df7a7db311b117f3bde086e50666d685a7f842a208211696",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the whole target diff /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/c22t7-858cbe10.diff. It changes only skills/knowledge-ingestion/SKILL.md, at lines 38-40 and 122-129.",
+      "Checked /home/labdrian/labdrian-sdd-overlay-worktrees/review-858cbe10cd66/longterm-mem/internal/mcpserver/server.go. Lines 165 and 171-172 show that PromoteIn has `engram_id` (int64) and an optional `source` that accepts \"memorycard\". The field's schema says that with source memorycard, `engram_id` holds the memorycard memory id. So the rewritten Promote step (SKILL.md:38-40) matches the MCP tool's real input.",
+      "Checked the installed memorycard MCP tool schema in this session. `mem_get` takes only `id` and is described as 'Read one memory in full, with its version history.' So the replacement checks at SKILL.md:126 and :129, which read the version history `mem_get` returns, depend on output the tool actually provides.",
+      "Read SKILL.md:82-104, the re-ingestion gate. When the source is unchanged, the procedure makes no `mem_save` call. So 'shows no new version' (line 126) is the expected result, and the changed-source save on the same topic_key updates the existing memory, which matches 'one new version' (line 129).",
+      "Searched skills/ for revision_count, mem_get and version history. No `revision_count` reference remains in knowledge-ingestion/SKILL.md. The only remaining mention is in skills/_shared/ingested-observation-contract.md:152, which the target did not change, so it is not a finding against this commit.",
+      "Line 122's restored 'observation' wording uses the same `mem_search` + `mem_get` read path as SKILL.md:86. I found no behavioral change there."
+    ]
+  }
+}

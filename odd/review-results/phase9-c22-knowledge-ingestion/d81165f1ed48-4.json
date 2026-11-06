@@ -1,0 +1,82 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "858cbe10cd66b5a28df1f1530f5d9d80e7466f3c",
+    "head": "d81165f1ed48fcb245fb9e2466bbc99701fbb805",
+    "diff_sha256": "0afcec9222618cca72aa6abf6fe3ca195e1195ce70ed20460bf497062dd71829",
+    "paths": [
+      "engine/skills/ingested_contract_artifact_test.go",
+      "skills/_shared/ingested-observation-contract.md",
+      "skills/knowledge-ingestion/SKILL.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "858cbe10cd66b5a28df1f1530f5d9d80e7466f3c",
+      "head": "d81165f1ed48fcb245fb9e2466bbc99701fbb805",
+      "diff_sha256": "0afcec9222618cca72aa6abf6fe3ca195e1195ce70ed20460bf497062dd71829"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skills/ingested_contract_artifact_test.go",
+        "skills/_shared/ingested-observation-contract.md",
+        "skills/knowledge-ingestion/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/skills/ingested_contract_artifact_test.go:49-54",
+        "claim": "The subtest pins only the sentence at contract line 61, as S7(d) prescribes. The content-row change (line 32), rule 6 and the SKILL.md wording are not pinned. Deleting or reversing any of them leaves the test green. The match is a substring, so a qualifier added after the sentence would also pass. This follows the spec's own design, so it is a coverage note only.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/ingested_contract_artifact_test.go:49-54",
+          "skills/_shared/ingested-observation-contract.md:32",
+          "skills/_shared/ingested-observation-contract.md:111-115",
+          "skills/knowledge-ingestion/SKILL.md:37-38"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "skills/_shared/ingested-observation-contract.md:105",
+        "claim": "Rule 4's first line now runs well past the file's roughly 80-column wrap. The spec asks for wrapping only for the SKILL.md edit. Line 61 is a long single line because the test needs the fragment unbroken (S7 b). This is a readability nit only.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/_shared/ingested-observation-contract.md:105",
+          "skills/_shared/ingested-observation-contract.md:61"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "skills/_shared/ingested-observation-contract.md:61",
+        "claim": "The sentence 'its `**Chunk-Status**` inventory is its last element' (verbatim from S7 b) is not exact against header.go Render(). The inventory is written only when `len(ChunkStatus) > 0`. Otherwise the manifest ends at `**Chunks-Saved**`. extract.go always fills the inventory when N>1, so no realistic input breaks it.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/ingest/header.go:131-140",
+          "longterm-mem/internal/ingest/extract.go:362-372"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff: 3 files, 4 contract edits plus new rule 6, one SKILL.md line, one subtest.",
+      "Read S7 (a)-(g) and Log L14, L18, L20 in /home/labdrian/labdrian-sdd-overlay/odd/tasks/phase9-c22-knowledge-ingestion.md. The diff matches S7 exactly: content row, marker 3 trailer-to-block, lines 59-61, rule 4, rule 6, the SKILL.md wording, and the subtest name and sentence. No line outside S7 changed.",
+      "S7 (b) authorizes the 'trailer' to 'block' rewording at marker 3. The 'trailer preserved' wording at contract line 146 was not listed in S7 and is untouched, so it is pre-existing.",
+      "Rule 6 text is verbatim from S7. memorycard internal/memory/save.go confirms the claim: HardCapBytes = 64*1024, a body over the cap is split into parts, part 1 keeps the topic key and later parts take <key>/part-i.",
+      "header.go Render() and extract.go:362-385 confirm the manifest content is the block alone and a chunk is text followed by the block. The contract now agrees with what longterm-mem writes.",
+      "Rule 4's narrowing to chunk and standalone records and the new manifest-first rule do not conflict, and the 'manifest carries no source body' heading text is consistent with them.",
+      "Ran no commands. Tests were not run."
+    ]
+  }
+}

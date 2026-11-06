@@ -1,0 +1,20 @@
+{
+  "kind": "polisher",
+  "base": "858cbe10cd66b5a28df1f1530f5d9d80e7466f3c",
+  "head": "d81165f1ed48fcb245fb9e2466bbc99701fbb805",
+  "diff_sha256": "0afcec9222618cca72aa6abf6fe3ca195e1195ce70ed20460bf497062dd71829",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full target diff /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/befdc48e-903a-43ab-9251-fddebbec827d/scratchpad/c22t7-d81165f1.diff. It touches three files: ingested_contract_artifact_test.go, ingested-observation-contract.md and SKILL.md.",
+      "Read head skills/_shared/ingested-observation-contract.md in full. The new rule says a chunk or standalone record is body, then ---, then the provenance block, with the block last. A manifest puts its provenance block first, with Chunk-Status last. This is consistent across the content row (:32), marker 3 (:41), the provenance section (:59-61), rule 4 (:105) and the new rule 6 (:111-115). The topic-key grammar (:47) and rule 2 (:101-102) define the N == 1 record as the single record at the manifest key, and the mem_save table (:26-27) calls it 'standalone'. The new wording therefore keeps the N == 1 record body-first, block-last.",
+      "Read head skills/knowledge-ingestion/SKILL.md in full. :37-38 adds 'for a manifest, the provenance block first'. :58-60 states that N == 1 has no separate manifest. The re-ingestion gate (:85-88) reads the record at the topic key through mem_search and mem_get, which returns part 1. That is where rule 6 now keeps Source-SHA256 and Status.",
+      "The resume gap is pre-existing and not made worse by this commit: a Chunk-Status inventory that spills into <key>/part-i is not read on resume. Before this commit, a manifest with an empty body was already the block followed by the inventory. The next commit, f8a36522, addresses that gap and is outside the target.",
+      "Compared with longterm-mem at head. In internal/ingest/extract.go:363-384, a manifest's content is manifest.Render() alone, so the block comes first. A standalone or chunk record is c.Text + \"\\n\" + header.Render(), so the block comes last. RoleStandalone is documented as 'N == 1: manifest and content in one' (:37). In header.go:110-141, Render starts with ---\\n and emits Source-SHA256 (:118) and Status (:130) before the Chunk-Status inventory (:134-139). ParseHeader (:149-155) accepts content that starts with ---\\n. The new contract order matches what ingest writes, with no contradiction.",
+      "Read /home/labdrian/memorycard/internal/memory/save.go. HardCapBytes is 64 * 1024 (:29), so the commit's '64 KB' matches the current source. splitInput (:216-233) keeps the original topic key only on part 1 and gives later parts <key>/part-i. Save returns part 1's id (:195). This confirms rule 6's claim that Source-SHA256 and Status stay in part 1, where the gate and promote read them.",
+      "Read the spec at the 5e65d15e checkout, /home/labdrian/labdrian-sdd-overlay/odd/tasks/phase9-c22-knowledge-ingestion.md: S7 (a)-(g) and its acceptance, plus L14, L15 and L20. Every edited line in the diff matches S7 (b)-(d) word for word, and the pinned fragment sits on one line as S7 (b) requires. design.md:148-149 still describes the older manifest shape; S7 (f) already records that and chose not to change it.",
+      "The subtest R002_manifest_provenance_block_first checks with strings.Contains that the exact sentence S7 (d) names is present. That is what S7 asks for. It does not cover rule 6 or the rule-4 wording, but S7 asks for nothing more, so I did not file this as a defect.",
+      "Not run: no tests or commands were executed. This was a read-only inspection using Read and Grep only."
+    ]
+  }
+}

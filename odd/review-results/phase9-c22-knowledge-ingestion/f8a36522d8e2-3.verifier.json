@@ -1,0 +1,11 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "bat -p -r 58:66 skills/knowledge-ingestion/SKILL.md; bat -p -r 18:32 /home/labdrian/memorycard/internal/memory/save.go; rg -n 'SoftTargetBytes' save.go",
+      "output": "SKILL.md:62 says \"Every chunk, with its provenance block, stays under 64 KB.\" and says nothing about a soft warning. save.go:22-23 defines SoftTargetBytes = 16 * 1024, and save.go:110-112 adds a warning \"body is %d bytes; consider splitting it (target <= %d)\" when len(Body) > SoftTargetBytes. HardCapBytes is 64 KB (:29). A chunk of 20-60 KB is under the SKILL.md cap but over 16 KB, so Save would warn. The skill does not mention that warning.",
+      "base_result": "not-reproduced"
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "bat -p -r 40:70 engine/skills/ingested_contract_artifact_test.go (in worktree review-d81165f1ed48); contract lines 32 and 61 inspected",
+      "output": "The R002_manifest_provenance_block_first subtest (test lines 49-54) checks only strings.Contains(contract, \"A manifest's `content` is the provenance block first\"). That sentence is at contract :61. Contract :32 (\"a manifest: the provenance block first\" in the `content` row) and rule 6 are not checked, and the test does not read SKILL.md.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "awk '{print length}' on contract lines 105 and 61; awk 'length>80{print NR\": \"length}' skills/_shared/ingested-observation-contract.md",
+      "output": "Line 105 (\"4. The provenance block is last in a chunk...\") is 100 characters. 17 lines in the file are over 80 columns, e.g. 26:135, 27:116, 32:94, 61:132, 105:100, 128:149, 129:198, 145:286. So :105 does run past an ~80-column wrap, but the file does not hold to ~80 columns in general.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F3",
+      "result": "reproduced",
+      "command": "bat -p -r 125:145 longterm-mem/internal/ingest/header.go; bat -p -r 61:61 skills/_shared/ingested-observation-contract.md",
+      "output": "Contract :61 reads \"its `**Chunk-Status**` inventory is its last element\". header.go writes \"**Chunk-Status**:\" and its lines only inside `if h.IsManifest { ... if len(h.ChunkStatus) > 0 {`. With an empty ChunkStatus the manifest has no Chunk-Status inventory, so the last element is `**Chunks-Saved**`. The contract sentence is unconditional.",
+      "base_result": "not-reproduced"
+    }
+  ]
+}
