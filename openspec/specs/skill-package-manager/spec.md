@@ -313,7 +313,7 @@ against `overlay.manifest`.
 
 ## Issue #29 slice 1 (`skill-package-manager`), synced and renumbered
 
-Synced by Phase 9 item C11 from the delta spec of the change `skill-package-manager` (issue #29, slice 1), archived under `openspec/changes/archive/`, which keeps the original numbers. The text is that spec's, but for two things: every requirement and scenario ID is the original plus 200 (R-001 to R-044 are R-201 to R-244, SC-01 to SC-13 are SC-201 to SC-213), and every heading is one level deeper. Its scope, assumptions and non-goals stay in the archive. Later changes supersede parts of it; `openspec/decisions/standalone-platform-roadmap.md` (the row on Phase 8 and these four changes) records which.
+Synced by Phase 9 item C11 from the delta spec of the change `skill-package-manager` (issue #29, slice 1), archived under `openspec/changes/archive/`, which keeps the original numbers. The text is that spec's, but for two things: every requirement and scenario ID is the original plus 200 (R-001 to R-044 are R-201 to R-244, SC-01 to SC-13 are SC-201 to SC-213), and every heading is one level deeper. Its scope, assumptions and non-goals stay in the archive. Later changes supersede parts of it; `openspec/decisions/standalone-platform-roadmap.md` (the row on Phase 8 and these four changes) records which. The section records slice 1 as it was specified, so "this slice" in it means slice 1, and where it conflicts with a requirement above this heading (for example R-203 against R-112 on `external`), the requirement above holds.
 
 ### Part 1 — `skills-registry`: YAML Schema and Parsing
 
@@ -714,5 +714,3 @@ also contains `engine/propagator/propagator.go managed` and
 ```go
 // maps to: TestApplyIgnoresRegistry (integration-style, skippable with -short)
 ```
-
----
