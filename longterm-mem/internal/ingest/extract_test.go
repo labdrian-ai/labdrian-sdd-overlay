@@ -27,6 +27,8 @@ type memFile struct {
 	entry   Entry
 	data    []byte
 	readErr error
+	// lstatErr is what Lstat fails with for this path instead of answering.
+	lstatErr error
 }
 
 var _ SourceReader = (*memTree)(nil)
@@ -42,7 +44,7 @@ func (m *memTree) Lstat(path string) (Entry, error) {
 	if !ok {
 		return Entry{}, fmt.Errorf("lstat %s: %w", path, fs.ErrNotExist)
 	}
-	return f.entry, nil
+	return f.entry, f.lstatErr
 }
 
 func (m *memTree) ReadFile(path string) ([]byte, error) {
@@ -176,6 +178,8 @@ func TestExtractSkipsWhatOneFileCannotYield(t *testing.T) {
 		{"a NUL byte past the first 8 KiB is not binary", "/notes/a.md", textFile(nul(8192, 9000)), 0, "", true},
 		{"unsupported_extension", "/notes/a.pdf", textFile("# A\n"), 0, "unsupported_extension", false},
 		{"too_large", "/notes/a.md", memFile{entry: Entry{Kind: EntryFile, Size: 11}, data: []byte("# A\n")}, 10, "too_large", false},
+		// Lstat's size is only what the reader saw first: the bytes it returns are held to the bound too.
+		{"bytes over the bound though Lstat reported less", "/notes/a.md", memFile{entry: Entry{Kind: EntryFile, Size: 4}, data: []byte("0123456789A")}, 10, "too_large", true},
 		{"as large as the bound is not too_large", "/notes/a.md", textFile("0123456789"), 10, "", true},
 		{"empty", "/notes/a.md", textFile(""), 0, "empty", true},
 		{"whitespace only", "/notes/a.md", textFile(" \n\t\r\n "), 0, "empty", true},
@@ -443,6 +447,9 @@ func TestExtractEveryRecordCarriesOriginTimestampAndTheIngestedMarker(t *testing
 		if len(src.Records) != 4 {
 			t.Fatalf("Records = %d, want the manifest and three chunks", len(src.Records))
 		}
+		if src.Records[0].Role != RoleManifest {
+			t.Fatalf("Records[0] is a %q, want the manifest first", src.Records[0].Role)
+		}
 		w := want
 		w.sha = src.Digest
 		seenSpans := map[[2]int]bool{}
@@ -504,6 +511,52 @@ func TestExtractShapesEveryRecordAsOneMemSaveCall(t *testing.T) {
 			}
 		}
 	})
+}
+
+func TestExtractSkipsAPathItCannotLookAt(t *testing.T) {
+	reader := &memTree{files: map[string]memFile{"/notes/a.md": {lstatErr: fs.ErrPermission}}}
+
+	got, err := Extractor{Reader: reader}.Extract(fileRequest("/notes/a.md"))
+
+	if err != nil {
+		t.Fatalf("Extract: %v: a path that cannot be looked at is a skip, only a missing one is a request error", err)
+	}
+	want := []Skip{{Path: "/notes/a.md", Code: "unreadable", Detail: fs.ErrPermission.Error()}}
+	if len(got.Sources) != 0 || !reflect.DeepEqual(got.Skipped, want) {
+		t.Errorf("Extract = %+v, want no source and the skip %+v", got, want)
+	}
+	if len(reader.reads) != 0 {
+		t.Errorf("ReadFile was asked %d times after Lstat failed, want none", len(reader.reads))
+	}
+}
+
+func TestExtractRefusesAFileNamedByADirectoryOrigin(t *testing.T) {
+	reader := &memTree{files: map[string]memFile{"/notes/a.md": textFile(guideBody)}}
+	req := fileRequest("/notes/a.md")
+	req.Origin.Kind = KindDirectory
+
+	got, err := Extractor{Reader: reader}.Extract(req)
+
+	if err == nil || !strings.Contains(err.Error(), "the origin is a directory but the path names a file") {
+		t.Fatalf("Extract = %+v, %v, want the request refused, not reclassified as a file", got, err)
+	}
+	if len(got.Sources) != 0 || len(reader.reads) != 0 {
+		t.Errorf("Extract = %+v and %d reads, want an empty Result and no read", got, len(reader.reads))
+	}
+}
+
+func TestExtractSkipsPastedTextThatIsOnlyWhitespace(t *testing.T) {
+	reader := &directory{err: errors.New("the reader must not be asked")}
+
+	got, err := Extractor{Reader: reader}.Extract(pastedRequest(" \n\t\n "))
+
+	if err != nil {
+		t.Fatalf("Extract: %v", err)
+	}
+	want := []Skip{{Path: "Meeting notes", Code: "empty", Detail: "no text but whitespace"}}
+	if len(got.Sources) != 0 || !reflect.DeepEqual(got.Skipped, want) {
+		t.Errorf("Extract = %+v, want no source and the skip %+v, its path the label", got, want)
+	}
 }
 
 func TestExtractReadsEveryExtensionOfTheTextAllowlist(t *testing.T) {

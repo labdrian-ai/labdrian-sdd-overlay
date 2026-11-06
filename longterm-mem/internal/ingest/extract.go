@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io/fs"
 	"path/filepath"
 	"strings"
 	"time"
@@ -70,7 +71,8 @@ type Result struct {
 }
 
 // Extractor is the ingestion use case: it extracts through the reader it is handed and reaches for nothing else. A
-// Text request never asks the reader.
+// Text request never asks the reader, and is bounded only by MaxChunks: the caller already holds the text, so
+// MaxSourceBytes, which bounds what is read, does not apply to it.
 type Extractor struct {
 	Reader SourceReader
 }
@@ -124,11 +126,18 @@ func (e Extractor) readFile(req Request) (Origin, string, *Skip, error) {
 		return Origin{}, "", nil, err
 	}
 	entry, err := e.Reader.Lstat(origin.URI)
-	if err != nil {
+	if errors.Is(err, fs.ErrNotExist) {
 		return Origin{}, "", nil, fmt.Errorf("ingest: %w", err)
+	}
+	if err != nil {
+		// Not looking at a path that is there is a per-item failure, as a failed read is.
+		return origin, "", &Skip{Path: origin.URI, Code: "unreadable", Detail: err.Error()}, nil
 	}
 	switch entry.Kind {
 	case EntryFile:
+		if origin.Kind == KindDirectory {
+			return Origin{}, "", nil, fmt.Errorf("ingest: the origin is a directory but the path names a file: %s", origin.URI)
+		}
 	case EntryDirectory:
 		return Origin{}, "", nil, fmt.Errorf("ingest: %s is a directory, and scanning one is not built yet", origin.URI)
 	default:
@@ -153,6 +162,9 @@ func (e Extractor) readFile(req Request) (Origin, string, *Skip, error) {
 	if err != nil {
 		return skip("unreadable", err.Error())
 	}
+	if len(data) > limit {
+		return skip("too_large", fmt.Sprintf("%d bytes read, above the bound of %d", len(data), limit))
+	}
 	if bytes.IndexByte(data[:min(len(data), binarySniffBytes)], 0) >= 0 {
 		return skip("binary", "a NUL byte within the first 8 KiB")
 	}
@@ -174,6 +186,11 @@ func sourceURI(o Origin) string {
 		return o.Override
 	}
 	return o.URI
+}
+
+// chunkSuffix is the four-digit ordinal of a chunk (c0001...), as the topic-key grammar writes it.
+func chunkSuffix(index int) string {
+	return fmt.Sprintf("c%04d", index)
 }
 
 func digest(s string) string {
@@ -205,7 +222,7 @@ func buildSource(req Request, origin Origin, id, text string, chunks []Chunk) So
 		manifest.ChunksExpected = n
 		manifest.Status = StatusPending
 		for i := range chunks {
-			manifest.ChunkStatus = append(manifest.ChunkStatus, fmt.Sprintf("c%04d pending", i+1))
+			manifest.ChunkStatus = append(manifest.ChunkStatus, chunkSuffix(i+1)+" pending")
 		}
 		content := manifest.Render()
 		src.Records = append(src.Records, Record{
@@ -218,8 +235,8 @@ func buildSource(req Request, origin Origin, id, text string, chunks []Chunk) So
 		header.ContentSHA256 = digest(c.Text)
 		record := Record{TopicKey: topic, Title: title, Type: "discovery", Role: RoleStandalone, Header: header}
 		if n > 1 {
-			record.TopicKey = fmt.Sprintf("%s/c%04d", topic, c.Index)
-			record.Title = fmt.Sprintf("%s (%d/%d)", title, c.Index, n)
+			record.TopicKey = topic + "/" + chunkSuffix(c.Index)
+			record.Title = fmt.Sprintf("%s (%d/%d)", title, c.Index, c.Total)
 			record.Role = RoleChunk
 		}
 		record.Content = c.Text + "\n" + header.Render()
