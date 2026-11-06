@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "91dc9fa507eb6ece5162fac2a26b043772af326c",
+    "head": "2d66dcc0607d35175a68f9bfeba52b0b43b3008b",
+    "diff_sha256": "f8714e6f5c4e76ff37df92da128d6eec471164d7a29a222e8d402be772b6b1d8",
+    "paths": [
+      "openspec/specs/skill-lifecycle/spec.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "91dc9fa507eb6ece5162fac2a26b043772af326c",
+      "head": "2d66dcc0607d35175a68f9bfeba52b0b43b3008b",
+      "diff_sha256": "f8714e6f5c4e76ff37df92da128d6eec471164d7a29a222e8d402be772b6b1d8"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "openspec/specs/skill-lifecycle/spec.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the full diff (291 lines). It adds source lines 258-539 to openspec/specs/skill-lifecycle/spec.md. The base section's closing '---' is kept, and the copy drops the blank line and '---' after source line 539, as L4 says.",
+      "Compared every added line with source lines 259-539 of openspec/changes/skill-lifecycle/specs/spec.md. Content matches except for the renumbering. The 19 scenario IDs SC-20..SC-38 became SC-420..SC-438, which is old+400 as the L2 table says. No scenario was dropped, reordered or reworded. This was a read-through, not a mechanical diff.",
+      "The headings moved one level deeper: '## Acceptance Scenarios' became '###', and '### Serializer', '### `skills add`', '### `skills remove`', '### Add + Remove cycle' and '### CLI dispatch' became '####'. No fenced '#' line was changed. The sibling headings under the section ('### Flag Contract', '### Requirements') are at the same level as '### Acceptance Scenarios'.",
+      "Grep of the whole canonical file for leftover old-style tokens (R-0dd, SC-dd, R-1xx to R-3xx). The only hits are lines 14-184, which belong to the earlier R-126..R-134 / SC-65..SC-68 content and sit before this section. The section has no unrenumbered IDs.",
+      "Grep for '**SC-4[23]d**' across openspec/ found 19 hits, all in this file. This section's 19 scenario IDs therefore collide with no other spec.",
+      "No spec text refers to a SC-xx or R-0xx ID from the copied range, so there are no stale cross-references. Nothing was run, because the change is documentation only, with no executable effect."
+    ]
+  }
+}
