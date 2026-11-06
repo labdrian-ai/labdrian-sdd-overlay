@@ -1,0 +1,32 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "base_result": "not-reproduced",
+      "command": "git show HEAD:skills/knowledge-ingestion/SKILL.md | rg -n 'provenance block|N == 1'; git show HEAD:skills/_shared/ingested-observation-contract.md | rg -n 'standalone|first'; same with e3ff284e",
+      "output": "HEAD SKILL.md:37-38 reads 'body = body → --- → provenance block; for a manifest, the provenance block first'. SKILL.md:58 separately says 'N == 1' has no separate manifest, but the :37-38 rule does not tell the two apart. Contract :26-27 calls the N == 1 record 'standalone', and :59-61 and :105 send chunk and standalone records to block-last and manifests to block-first. At e3ff284e SKILL.md:37 has no manifest-first clause, and the contract has no manifest-first rule either (contract :59-60 says the block is always last). The ambiguity was introduced by the merge."
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "base_result": "not-reproduced",
+      "command": "git show HEAD:skills/knowledge-ingestion/SKILL.md | rg -n '`body`|`content`'; git show HEAD:skills/_shared/ingested-observation-contract.md | rg -n '`content`'; same with e3ff284e",
+      "output": "HEAD SKILL.md:37 names the save argument `body` ('`body` = body → `---` → provenance block'). Contract :32 names the field `content`, and :59-61 say 'content'. Neither document maps `body` to `content`. At e3ff284e SKILL.md:37 reads '`content` = body → ...', which matches the contract, so the mismatch was introduced by the merge."
+    },
+    {
+      "id": "F3",
+      "result": "reproduced",
+      "base_result": "reproduced",
+      "command": "rg -n -F 'part-2' -g '!odd/**' -g '!*.md' .; rg -n -F '/part-' -g '*_test.go' .; git show e3ff284e:skills/knowledge-ingestion/SKILL.md | rg -n 'part-|resume'",
+      "output": "Both rg searches for 'part-2' or '/part-' in non-markdown files and in *_test.go files returned no matches, so no test in the worktree pins the part-key behaviour. HEAD SKILL.md:106 states '<manifest key>/part-2, /part-3, …'. At e3ff284e the SKILL.md has no part-key claim (only a resume bullet at :97 with no part keys), so the unpinned claim is new at HEAD. The 'no test pins it' fact holds at base only in the trivial sense that nothing relied on it, so I count it as reproduced at base only for the absence of a test, not for the claim."
+    },
+    {
+      "id": "F4",
+      "result": "reproduced",
+      "base_result": "not-reproduced",
+      "command": "rg -n -o '^- \\*\\*L[0-9]+\\*\\*' odd/tasks/phase9-c22-knowledge-ingestion.md | tail -5; git show e3ff284e:odd/tasks/phase9-c22-knowledge-ingestion.md | rg -n -o '^- \\*\\*L[0-9]+\\*\\*' | tail -4",
+      "output": "HEAD Log order ends at lines 111-115: L18, L19, L21, L22, L20, so L20 comes after L22. At e3ff284e the Log ends L8, L9, L10, L11 in order, with no L19-L22 entries yet."
+    }
+  ]
+}

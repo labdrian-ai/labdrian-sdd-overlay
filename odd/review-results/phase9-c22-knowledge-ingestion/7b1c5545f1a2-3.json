@@ -1,0 +1,143 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "e3ff284ea1a4924edaa2f0499ddeea423756c247",
+    "head": "7b1c5545f1a21f157a74620d40d2211dae339003",
+    "diff_sha256": "28ffbf66e894c0d04cd135e39698224bd5097d259b5526d3ffc1fe08f11a2bb1",
+    "paths": [
+      "engine/skills/ingested_contract_artifact_test.go",
+      "odd/review-results/phase9-c22-knowledge-ingestion/4beb03e7d344-1.sweep.json",
+      "odd/review-results/phase9-c22-knowledge-ingestion/4beb03e7d344-2.json",
+      "odd/review-results/phase9-c22-knowledge-ingestion/4beb03e7d344-2.verifier.json",
+      "odd/review-results/phase9-c22-knowledge-ingestion/4beb03e7d344-3.polisher.json",
+      "odd/review-results/phase9-c22-knowledge-ingestion/4beb03e7d344-4.polisher.json",
+      "odd/review-results/phase9-c22-knowledge-ingestion/858cbe10cd66-1.sweep.json",
+      "odd/review-results/phase9-c22-knowledge-ingestion/858cbe10cd66-2.polisher.json",
+      "odd/review-results/phase9-c22-knowledge-ingestion/858cbe10cd66-3.polisher.json",
+      "odd/review-results/phase9-c22-knowledge-ingestion/858cbe10cd66-4.json",
+      "odd/review-results/phase9-c22-knowledge-ingestion/858cbe10cd66-4.verifier.json",
+      "odd/review-results/phase9-c22-knowledge-ingestion/92a0fca0d8b7-1.sweep.json",
+      "odd/review-results/phase9-c22-knowledge-ingestion/92a0fca0d8b7-2.exempt.json",
+      "odd/review-results/phase9-c22-knowledge-ingestion/d81165f1ed48-1.sweep.json",
+      "odd/review-results/phase9-c22-knowledge-ingestion/d81165f1ed48-2.polisher.json",
+      "odd/review-results/phase9-c22-knowledge-ingestion/d81165f1ed48-3.polisher.json",
+      "odd/review-results/phase9-c22-knowledge-ingestion/d81165f1ed48-4.json",
+      "odd/review-results/phase9-c22-knowledge-ingestion/d81165f1ed48-4.verifier.json",
+      "odd/review-results/phase9-c22-knowledge-ingestion/edc40f9e923f-1.sweep.json",
+      "odd/review-results/phase9-c22-knowledge-ingestion/edc40f9e923f-2.exempt.json",
+      "odd/review-results/phase9-c22-knowledge-ingestion/f8a36522d8e2-1.sweep.json",
+      "odd/review-results/phase9-c22-knowledge-ingestion/f8a36522d8e2-2.polisher.json",
+      "odd/review-results/phase9-c22-knowledge-ingestion/f8a36522d8e2-3.json",
+      "odd/review-results/phase9-c22-knowledge-ingestion/f8a36522d8e2-3.verifier.json",
+      "odd/review-results/phase9-c22-knowledge-ingestion/f8a36522d8e2-4.polisher.json",
+      "odd/tasks/phase9-c22-knowledge-ingestion.md",
+      "skills/_shared/ingested-observation-contract.md",
+      "skills/knowledge-ingestion/.approval.json",
+      "skills/knowledge-ingestion/SKILL.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "e3ff284ea1a4924edaa2f0499ddeea423756c247",
+      "head": "7b1c5545f1a21f157a74620d40d2211dae339003",
+      "diff_sha256": "28ffbf66e894c0d04cd135e39698224bd5097d259b5526d3ffc1fe08f11a2bb1"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skills/ingested_contract_artifact_test.go",
+        "skills/_shared/ingested-observation-contract.md",
+        "skills/knowledge-ingestion/.approval.json",
+        "skills/knowledge-ingestion/SKILL.md",
+        "odd/tasks/phase9-c22-knowledge-ingestion.md",
+        "odd/review-results/phase9-c22-knowledge-ingestion/4beb03e7d344-1.sweep.json",
+        "odd/review-results/phase9-c22-knowledge-ingestion/4beb03e7d344-2.json",
+        "odd/review-results/phase9-c22-knowledge-ingestion/4beb03e7d344-2.verifier.json",
+        "odd/review-results/phase9-c22-knowledge-ingestion/4beb03e7d344-3.polisher.json",
+        "odd/review-results/phase9-c22-knowledge-ingestion/4beb03e7d344-4.polisher.json",
+        "odd/review-results/phase9-c22-knowledge-ingestion/858cbe10cd66-1.sweep.json",
+        "odd/review-results/phase9-c22-knowledge-ingestion/858cbe10cd66-2.polisher.json",
+        "odd/review-results/phase9-c22-knowledge-ingestion/858cbe10cd66-3.polisher.json",
+        "odd/review-results/phase9-c22-knowledge-ingestion/858cbe10cd66-4.json",
+        "odd/review-results/phase9-c22-knowledge-ingestion/858cbe10cd66-4.verifier.json",
+        "odd/review-results/phase9-c22-knowledge-ingestion/92a0fca0d8b7-1.sweep.json",
+        "odd/review-results/phase9-c22-knowledge-ingestion/92a0fca0d8b7-2.exempt.json",
+        "odd/review-results/phase9-c22-knowledge-ingestion/d81165f1ed48-1.sweep.json",
+        "odd/review-results/phase9-c22-knowledge-ingestion/d81165f1ed48-2.polisher.json",
+        "odd/review-results/phase9-c22-knowledge-ingestion/d81165f1ed48-3.polisher.json",
+        "odd/review-results/phase9-c22-knowledge-ingestion/d81165f1ed48-4.json",
+        "odd/review-results/phase9-c22-knowledge-ingestion/d81165f1ed48-4.verifier.json",
+        "odd/review-results/phase9-c22-knowledge-ingestion/edc40f9e923f-1.sweep.json",
+        "odd/review-results/phase9-c22-knowledge-ingestion/edc40f9e923f-2.exempt.json",
+        "odd/review-results/phase9-c22-knowledge-ingestion/f8a36522d8e2-1.sweep.json",
+        "odd/review-results/phase9-c22-knowledge-ingestion/f8a36522d8e2-2.polisher.json",
+        "odd/review-results/phase9-c22-knowledge-ingestion/f8a36522d8e2-3.json",
+        "odd/review-results/phase9-c22-knowledge-ingestion/f8a36522d8e2-3.verifier.json",
+        "odd/review-results/phase9-c22-knowledge-ingestion/f8a36522d8e2-4.polisher.json"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "skills/knowledge-ingestion/SKILL.md:37-38",
+        "claim": "The skill says 'for a manifest, the provenance block first' without separating the multi-chunk manifest from the N == 1 record. The contract calls the N == 1 record 'standalone' (table at line 26, topic-key grammar at line 47) and sends it to block-last at line 59. That N == 1 record also sits at the manifest key, and rule 6 says 'A manifest has no body'. The contract is internally consistent, so I withdraw my earlier WARNING. A reader of SKILL.md alone could still apply block-first to the N == 1 record. One clause such as 'a multi-chunk source's manifest' would remove that reading.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/_shared/ingested-observation-contract.md:26-27,47,59-61,111",
+          "skills/knowledge-ingestion/SKILL.md:37-38"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "skills/knowledge-ingestion/SKILL.md:37",
+        "claim": "SKILL.md names the save argument `body`. The contract table (line 32) and lines 59-61 still name it `content`, and the contract's `content` row keeps its line from before T7. The owner accepted this disagreement (D7, L13), but the edited contract lines make it more visible. Neither document says that `content` means `body`. My earlier location (SKILL.md:98) was wrong. The `body` text is at SKILL.md:37.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "worsened",
+        "proof_refs": [
+          "skills/_shared/ingested-observation-contract.md:32,59-61",
+          "skills/knowledge-ingestion/SKILL.md:37",
+          "odd/tasks/phase9-c22-knowledge-ingestion.md:96,100"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "skills/knowledge-ingestion/SKILL.md:105-107",
+        "claim": "The resume clause relies on part keys `<manifest key>/part-2`, `/part-3` and so on, and on `mem_search` and `mem_get` reading them. The spec cites memorycard `save.go:192-211` for this, but no test in this repository pins it. If the naming differs, a resume reads a truncated Chunk-Status list and redoes chunks already saved. L20 says T6's run is the first end-to-end check of this.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-c22-knowledge-ingestion.md:46,57"
+        ]
+      },
+      {
+        "id": "F4",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-c22-knowledge-ingestion.md:114-115",
+        "claim": "The Log is out of order. L20 (shaper reshape for D9 and D10) comes after L22, so L19 is followed by L21 and L22, and L20 is last. The T7 line cites 'shaped: L20' and 'L14, L21, L22'. A reader following the Log in order sees the approval before the reshape that S8 depends on.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-c22-knowledge-ingestion.md:112-115"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full code diff (c22t7-land-code.diff) for the test, contract, .approval.json and SKILL.md.",
+      "Read the head contract lines 1-120. I confirmed that rule 2 and the table call the N == 1 record 'standalone', that line 59 sends 'chunk or standalone record' to block-last, and that rule 6 matches S7 (b) verbatim.",
+      "Read SKILL.md lines 33-45 and grepped for the 64 KB and part-2 lines. The text matches S6 (a)-(c), S8 (a) and S8 (b).",
+      "Read the feature document in full: S6, S7 and S8 (lines 20-48), the T7 line (57) and Log L12-L22 (91-121). The T7 edit surfaces match the four files in the diff.",
+      "Listed the diff's odd/ paths with grep on c22t7-land.diff. All 26 odd/review-results records, plus the feature document, are the only odd/ changes. Every record name carries one of the T7-bound commit hashes 4beb03e7, 858cbe10, d81165f1, f8a36522, edc40f9e or 92a0fca0 (the merge-in-main commit). I did not open each JSON body line by line. I checked this from the filenames, the diff file list and the Log entries that cite them (L14, L21, L22).",
+      "The untracked 7b1c5545 record in the git status is not part of the diff.",
+      "Not run: no tests, rg or skills validate (read-only review)."
+    ]
+  }
+}
