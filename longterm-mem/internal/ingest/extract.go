@@ -72,7 +72,7 @@ type Result struct {
 
 // Extractor is the ingestion use case: it extracts through the reader it is handed and reaches for nothing else. A
 // Text request never asks the reader, and is bounded only by MaxChunks: the caller already holds the text, so
-// MaxSourceBytes, which bounds what is read, does not apply to it.
+// MaxSourceBytes, which bounds what is read from a path, does not apply to it.
 type Extractor struct {
 	Reader SourceReader
 }
@@ -126,12 +126,14 @@ func (e Extractor) readFile(req Request) (Origin, string, *Skip, error) {
 		return Origin{}, "", nil, err
 	}
 	entry, err := e.Reader.Lstat(origin.URI)
-	if errors.Is(err, fs.ErrNotExist) {
-		return Origin{}, "", nil, fmt.Errorf("ingest: %w", err)
+	if errors.Is(err, fs.ErrPermission) {
+		// Being denied a look at a path that is there is a per-item failure, as a failed read is.
+		return origin, "", &Skip{Path: origin.URI, Code: "unreadable", Detail: err.Error()}, nil
 	}
 	if err != nil {
-		// Not looking at a path that is there is a per-item failure, as a failed read is.
-		return origin, "", &Skip{Path: origin.URI, Code: "unreadable", Detail: err.Error()}, nil
+		// Anything else, a missing path or one that is not usable as given (ENOTDIR, ELOOP, ENAMETOOLONG), is a
+		// request error, so a mistyped Path never ends in success with no source (design.md, OQ-6).
+		return Origin{}, "", nil, fmt.Errorf("ingest: %w", err)
 	}
 	switch entry.Kind {
 	case EntryFile:
@@ -162,6 +164,8 @@ func (e Extractor) readFile(req Request) (Origin, string, *Skip, error) {
 	if err != nil {
 		return skip("unreadable", err.Error())
 	}
+	// A correctness check, not a memory bound: the Lstat Size above is what keeps a large file from being read,
+	// and this catches the file that grew between Lstat and ReadFile, after its bytes are already in memory.
 	if len(data) > limit {
 		return skip("too_large", fmt.Sprintf("%d bytes read, above the bound of %d", len(data), limit))
 	}

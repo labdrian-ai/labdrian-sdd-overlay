@@ -530,6 +530,21 @@ func TestExtractSkipsAPathItCannotLookAt(t *testing.T) {
 	}
 }
 
+func TestExtractRefusesAPathItCannotLookAtForAnyReasonButPermission(t *testing.T) {
+	// ENOTDIR, ELOOP and ENAMETOOLONG name a path that is not usable as given: a request error, as a missing one is.
+	lstatErr := errors.New("not a directory")
+	reader := &memTree{files: map[string]memFile{"/notes/a.md/b.md": {lstatErr: lstatErr}}}
+
+	got, err := Extractor{Reader: reader}.Extract(fileRequest("/notes/a.md/b.md"))
+
+	if !errors.Is(err, lstatErr) {
+		t.Fatalf("Extract = %+v, %v, want the request refused with the Lstat error", got, err)
+	}
+	if len(got.Sources) != 0 || len(got.Skipped) != 0 || len(reader.reads) != 0 {
+		t.Errorf("Extract = %+v and %d reads, want an empty Result and no read", got, len(reader.reads))
+	}
+}
+
 func TestExtractRefusesAFileNamedByADirectoryOrigin(t *testing.T) {
 	reader := &memTree{files: map[string]memFile{"/notes/a.md": textFile(guideBody)}}
 	req := fileRequest("/notes/a.md")
