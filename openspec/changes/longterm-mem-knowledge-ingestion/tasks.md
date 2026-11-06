@@ -229,6 +229,9 @@ the owner's decision D3 (`odd/tasks/phase9-c22-knowledge-ingestion.md`), taken b
   package-level `Extract` that reaches for the machine), and implement `Extract`'s request-validation
   branch — returns a hard `error` only for these cases. Every touch of the machine is a call on
   `Extractor.Reader`; `Text` requests never ask it anything
+  - Done by C22 T2 (2026-11-06): the reading side of the port (`Lstat`, `ReadFile`, `ReadDir`, `Entry`,
+    `EntryKind` in `source.go`), built with 2b.5a and 2b.6a so the adapter compiles against it. The
+    use-case half (the types of `extract.go`, `Extractor`, the validation branch) stays open for C22 T3.
 - [ ] 2b.3 RED `extract_test.go`: per-item skip-code table, one case per code, over an in-memory
   `SourceReader` whose entries, bytes and failures the case sets — `unreadable` (the reader's `ReadFile`
   fails), `binary` (NUL byte within the first 8 KiB of the bytes it returns), `unsupported_extension`
@@ -249,7 +252,7 @@ the owner's decision D3 (`odd/tasks/phase9-c22-knowledge-ingestion.md`), taken b
   when `Request.Recursive` is set; a symlinked entry is skipped and never followed (the reader reports a
   link from `Lstat`; the case fails if the use case lists or reads through it); a directory with zero
   readable files returns success with zero sources and a fully populated `Skipped` list
-- [ ] 2b.5a RED `longterm-mem/internal/sourcefs/sourcefs_test.go` (extend, `t.TempDir()` fixtures):
+- [x] 2b.5a RED `longterm-mem/internal/sourcefs/sourcefs_test.go` (extend, `t.TempDir()` fixtures):
   the reading side of the adapter on a real directory — `Lstat` tells a file, a directory, a link and
   anything else apart and reports a file's size, and does not follow a link (a link to a file outside
   the directory is a link, and the target is never opened); an entry that is not there fails with an
@@ -262,7 +265,7 @@ the owner's decision D3 (`odd/tasks/phase9-c22-knowledge-ingestion.md`), taken b
   detection from the kind `Lstat` reports (a link is a `symlink` skip: never followed, never read), and
   the `outside_root` guard for any entry whose cleaned absolute path is not below the scan root's,
   decided by the use case on the paths (no link is ever resolved, so the port has no `EvalSymlinks`)
-- [ ] 2b.6a GREEN `longterm-mem/internal/sourcefs/sourcefs.go`: implement `Lstat`, `ReadFile` and
+- [x] 2b.6a GREEN `longterm-mem/internal/sourcefs/sourcefs.go`: implement `Lstat`, `ReadFile` and
   `ReadDir` on `Reader` with `os.Lstat`, `os.ReadFile` and `os.ReadDir`, answering in `ingest`'s own
   types (the adapter imports `ingest`, never the other way). The adapter is the only place in the
   extraction that names `os`; its assertion that it satisfies `ingest.SourceReader` stays

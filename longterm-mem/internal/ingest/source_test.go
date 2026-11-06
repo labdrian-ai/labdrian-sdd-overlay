@@ -6,16 +6,36 @@ import (
 )
 
 // directory is a SourceReader that works in the directory it was given and counts the times it was asked, so the
-// cases below are a function of what the reader answers and of nothing about the machine they run on.
+// cases below are a function of what the reader answers and of nothing about the machine they run on. It reads
+// nothing: every reading question fails and is counted, so a case that ends with reads at zero proves that
+// resolving an origin never reads a source.
 type directory struct {
 	dir   string
 	err   error
 	asked int
+	reads int
 }
+
+var errNoReading = errors.New("directory: this reader reads nothing")
 
 func (d *directory) WorkingDirectory() (string, error) {
 	d.asked++
 	return d.dir, d.err
+}
+
+func (d *directory) Lstat(string) (Entry, error) {
+	d.reads++
+	return Entry{}, errNoReading
+}
+
+func (d *directory) ReadFile(string) ([]byte, error) {
+	d.reads++
+	return nil, errNoReading
+}
+
+func (d *directory) ReadDir(string) ([]string, error) {
+	d.reads++
+	return nil, errNoReading
 }
 
 var _ SourceReader = (*directory)(nil)
@@ -48,6 +68,9 @@ func TestResolveOriginBeginsARelativeFileOrDirectoryAtTheWorkingDirectory(t *tes
 			if got != want {
 				t.Errorf("ResolveOrigin = %+v, want %+v (only the path changes)", got, want)
 			}
+			if reader.reads != 0 {
+				t.Errorf("the reader was asked to read %d times, want never", reader.reads)
+			}
 			if reader.asked != 1 {
 				t.Errorf("the reader was asked %d times, want once", reader.asked)
 			}
@@ -78,6 +101,9 @@ func TestResolveOriginLeavesAnOriginThatNeedsNoDirectoryAsItIsAndDoesNotAsk(t *t
 			}
 			if got != c.in {
 				t.Errorf("ResolveOrigin = %+v, want %+v unchanged", got, c.in)
+			}
+			if reader.reads != 0 {
+				t.Errorf("the reader was asked to read %d times, want never", reader.reads)
 			}
 			if reader.asked != 0 {
 				t.Errorf("the reader was asked %d times, want never", reader.asked)
@@ -113,6 +139,9 @@ func TestResolveOriginPassesAnOverrideUnchanged(t *testing.T) {
 			want.URI = c.wantURI
 			if got != want {
 				t.Errorf("ResolveOrigin = %+v, want %+v (the override unchanged)", got, want)
+			}
+			if reader.reads != 0 {
+				t.Errorf("the reader was asked to read %d times, want never", reader.reads)
 			}
 			if reader.asked != c.asked {
 				t.Errorf("the reader was asked %d times, want %d", reader.asked, c.asked)

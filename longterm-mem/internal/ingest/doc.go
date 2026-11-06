@@ -9,8 +9,9 @@
 // implements rather than re-specifies.
 //
 // It reaches no file, directory, process or clock either: what it needs of the
-// machine it asks through the SourceReader port it owns (ResolveOrigin asks
-// where a relative path begins), which internal/sourcefs answers on a file
+// machine it asks through the SourceReader port it owns (where a relative path
+// begins, what an entry is without following a link, a file's bytes, the
+// names in a directory), which internal/sourcefs answers on a file
 // system and the composition root wires. The architecture guard and
 // ingest_purity_guard_test.go hold that, tests included.
 package ingest
