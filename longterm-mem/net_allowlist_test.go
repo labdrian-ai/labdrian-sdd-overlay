@@ -67,6 +67,7 @@ func TestNetImportAllowlistStillRefusesOthers(t *testing.T) {
 		"internal/vecindex/build.go",
 		"internal/query/query.go",
 		"cmd/longterm-mem/main.go",
+		"internal/ingest/extract.go",
 	} {
 		if allowedNetImporters[path] {
 			t.Errorf("%s must not be allowed to reach the network (R-071)", path)

@@ -105,9 +105,6 @@ func (e Extractor) Extract(req Request) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
-	if len(chunks) > 1 {
-		return Result{}, errors.New("ingest: a source of several chunks is not built yet")
-	}
 	return Result{Sources: []Source{buildSource(req, origin, id, text, chunks)}, Skipped: skipped}, nil
 }
 
@@ -184,7 +181,8 @@ func digest(s string) string {
 	return hex.EncodeToString(sum[:])
 }
 
-// buildSource turns a source's one chunk into its standalone record.
+// buildSource turns a source's chunks into its records: one standalone record for a single chunk, otherwise a
+// manifest followed by the chunks. Every record carries the same origin, id, digest and timestamp.
 func buildSource(req Request, origin Origin, id, text string, chunks []Chunk) Source {
 	base := Header{
 		SourceKind:   origin.Kind,
@@ -200,10 +198,30 @@ func buildSource(req Request, origin Origin, id, text string, chunks []Chunk) So
 	title := "Ingested: " + origin.Title
 	src := Source{Origin: origin, ID: id, Digest: base.SourceSHA256}
 
+	n := len(chunks)
+	if n > 1 {
+		manifest := base
+		manifest.IsManifest = true
+		manifest.ChunksExpected = n
+		manifest.Status = StatusPending
+		for i := range chunks {
+			manifest.ChunkStatus = append(manifest.ChunkStatus, fmt.Sprintf("c%04d pending", i+1))
+		}
+		content := manifest.Render()
+		src.Records = append(src.Records, Record{
+			TopicKey: topic, Title: title, Type: "discovery", Role: RoleManifest,
+			Content: content, Header: manifest, Bytes: len(content),
+		})
+	}
 	for _, c := range chunks {
 		header := c.Header(base)
 		header.ContentSHA256 = digest(c.Text)
 		record := Record{TopicKey: topic, Title: title, Type: "discovery", Role: RoleStandalone, Header: header}
+		if n > 1 {
+			record.TopicKey = fmt.Sprintf("%s/c%04d", topic, c.Index)
+			record.Title = fmt.Sprintf("%s (%d/%d)", title, c.Index, n)
+			record.Role = RoleChunk
+		}
 		record.Content = c.Text + "\n" + header.Render()
 		record.Bytes = len(record.Content)
 		src.Records = append(src.Records, record)

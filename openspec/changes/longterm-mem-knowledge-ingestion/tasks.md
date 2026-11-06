@@ -275,14 +275,14 @@ the owner's decision D3 (`odd/tasks/phase9-c22-knowledge-ingestion.md`), taken b
   `ReadDir` on `Reader` with `os.Lstat`, `os.ReadFile` and `os.ReadDir`, answering in `ingest`'s own
   types (the adapter imports `ingest`, never the other way). The adapter is the only place in the
   extraction that names `os`; its assertion that it satisfies `ingest.SourceReader` stays
-- [ ] 2b.7 RED `extract_test.go`: R-007 field-completeness table — a single-unit extraction's one
+- [x] 2b.7 RED `extract_test.go`: R-007 field-completeness table — a single-unit extraction's one
   `Record` carries origin, ingestion timestamp, and the ingested-vs-session marker; a multi-chunk
   extraction's every `Record` independently carries the same three fields, identical across all N
   chunks, differing only in chunk-specific fields (position, `Chunk-Span`, content)
-- [ ] 2b.8 GREEN `extract.go`: ensure every emitted `Record` sets `Type: "discovery"`, the correct
+- [x] 2b.8 GREEN `extract.go`: ensure every emitted `Record` sets `Type: "discovery"`, the correct
   `TopicKey` shape (manifest/standalone vs `.../c{NNNN}` chunk, per 1a.2's grammar), and `Title`
   (`Ingested: {source title}` or `Ingested: {source title} ({n}/{N})` for a chunk)
-- [ ] 2b.9 Modify `longterm-mem/net_allowlist_test.go`: add `internal/ingest/extract.go` to
+- [x] 2b.9 Modify `longterm-mem/net_allowlist_test.go`: add `internal/ingest/extract.go` to
   `TestNetImportAllowlistStillRefusesOthers`'s must-never-be-allowlisted list (one line); do not
   touch `allowedNetImporters` and do not change its `len == 1` assertion
 - [ ] 2b.10 REFACTOR: confirm `extract.go` imports neither `net` nor `net/http` nor `os/exec` nor `os`,

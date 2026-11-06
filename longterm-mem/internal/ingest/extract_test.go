@@ -386,6 +386,126 @@ func TestExtractRefusesAPathThatIsNotAFile(t *testing.T) {
 	}
 }
 
+// threeSections is a file the chunker cuts into three chunks, one per heading.
+const threeSections = "## One\n\nalpha alpha alpha.\n\n## Two\n\nbeta beta beta.\n\n## Three\n\ngamma gamma.\n"
+
+// extractThreeChunks extracts threeSections from the file the one-file cases use, with the bounds that keep the
+// three sections apart.
+func extractThreeChunks(t *testing.T) Source {
+	t.Helper()
+	path := "/notes/Guide v2.md"
+	reader := &memTree{files: map[string]memFile{path: textFile(threeSections)}}
+	req := fileRequest(path)
+	req.MinChunkBytes = 1
+
+	got, err := Extractor{Reader: reader}.Extract(req)
+
+	if err != nil || len(got.Sources) != 1 {
+		t.Fatalf("Extract = %+v, %v, want one source", got, err)
+	}
+	return got.Sources[0]
+}
+
+// provenance is the part of a record that R-007 says every record carries, as the record's own content states it.
+type provenance struct {
+	marker         bool
+	kind           SourceKind
+	uri, id, sha   string
+	title, by      string
+	ingestedAtUnix int64
+}
+
+func provenanceOf(t *testing.T, rec Record) provenance {
+	t.Helper()
+	h, ok := ParseHeader(rec.Content)
+	return provenance{ok, h.SourceKind, h.SourceURI, h.SourceID, h.SourceSHA256, h.SourceTitle, h.IngestedBy, h.IngestedAt.Unix()}
+}
+
+func TestExtractEveryRecordCarriesOriginTimestampAndTheIngestedMarker(t *testing.T) {
+	want := provenance{true, KindFile, "/notes/Guide v2.md", "guide-v2-94059a5c", "", "Guide", "tester", ingestedAt.Unix()}
+
+	t.Run("a single-unit extraction", func(t *testing.T) {
+		path := "/notes/Guide v2.md"
+		reader := &memTree{files: map[string]memFile{path: textFile(guideBody)}}
+		got, err := Extractor{Reader: reader}.Extract(fileRequest(path))
+		if err != nil || len(got.Sources) != 1 || len(got.Sources[0].Records) != 1 {
+			t.Fatalf("Extract = %+v, %v, want one source of one record", got, err)
+		}
+		w := want
+		w.sha = guideDigest
+		if p := provenanceOf(t, got.Sources[0].Records[0]); p != w {
+			t.Errorf("the record's provenance = %+v, want %+v", p, w)
+		}
+	})
+
+	t.Run("a multi-chunk extraction", func(t *testing.T) {
+		src := extractThreeChunks(t)
+		if len(src.Records) != 4 {
+			t.Fatalf("Records = %d, want the manifest and three chunks", len(src.Records))
+		}
+		w := want
+		w.sha = src.Digest
+		seenSpans := map[[2]int]bool{}
+		seenContent := map[string]bool{}
+		for i, rec := range src.Records {
+			if p := provenanceOf(t, rec); p != w {
+				t.Errorf("record %d provenance = %+v, want %+v: identical across the manifest and every chunk", i, p, w)
+			}
+			seenContent[rec.Content] = true
+			if i > 0 {
+				seenSpans[[2]int{rec.Header.ChunkSpanStart, rec.Header.ChunkSpanEnd}] = true
+			}
+		}
+		if len(seenSpans) != 3 || len(seenContent) != 4 {
+			t.Errorf("%d distinct spans and %d distinct contents, want 3 and 4: records differ only in chunk-specific fields", len(seenSpans), len(seenContent))
+		}
+	})
+}
+
+func TestExtractShapesEveryRecordAsOneMemSaveCall(t *testing.T) {
+	const topic = "ingested/file/guide-v2-94059a5c"
+
+	t.Run("one chunk is standalone", func(t *testing.T) {
+		path := "/notes/Guide v2.md"
+		reader := &memTree{files: map[string]memFile{path: textFile(guideBody)}}
+		got, err := Extractor{Reader: reader}.Extract(fileRequest(path))
+		if err != nil || len(got.Sources) != 1 || len(got.Sources[0].Records) != 1 {
+			t.Fatalf("Extract = %+v, %v, want one source of one record", got, err)
+		}
+		rec := got.Sources[0].Records[0]
+		if rec.TopicKey != topic || rec.Title != "Ingested: Guide" || rec.Type != "discovery" || rec.Role != RoleStandalone {
+			t.Errorf("record = %q, %q, %q, %q, want the manifest key, \"Ingested: Guide\", discovery and standalone",
+				rec.TopicKey, rec.Title, rec.Type, rec.Role)
+		}
+	})
+
+	t.Run("several chunks are a manifest and the chunks", func(t *testing.T) {
+		src := extractThreeChunks(t)
+		manifest := src.Records[0]
+		if manifest.TopicKey != topic || manifest.Title != "Ingested: Guide" || manifest.Type != "discovery" || manifest.Role != RoleManifest {
+			t.Errorf("manifest = %q, %q, %q, %q, want the manifest key, \"Ingested: Guide\", discovery and manifest",
+				manifest.TopicKey, manifest.Title, manifest.Type, manifest.Role)
+		}
+		h := manifest.Header
+		if !h.IsManifest || h.ChunksExpected != 3 || h.ChunksSaved != 0 || h.Status != StatusPending ||
+			!reflect.DeepEqual(h.ChunkStatus, []string{"c0001 pending", "c0002 pending", "c0003 pending"}) {
+			t.Errorf("manifest header = %+v, want a pending manifest of three chunks, none saved", h)
+		}
+		if manifest.Content != h.Render() {
+			t.Errorf("manifest content = %q, want the provenance block alone: a manifest carries no source body", manifest.Content)
+		}
+		for i, rec := range src.Records[1:] {
+			n := i + 1
+			wantKey, wantTitle := fmt.Sprintf("%s/c%04d", topic, n), fmt.Sprintf("Ingested: Guide (%d/3)", n)
+			if rec.TopicKey != wantKey || rec.Title != wantTitle || rec.Type != "discovery" || rec.Role != RoleChunk ||
+				rec.Header.ChunkN != n || rec.Header.ChunkTotal != 3 || rec.Header.Status != StatusComplete {
+				t.Errorf("chunk %d = %q, %q, %q, %q, %d/%d, %q, want %q, %q, discovery, chunk, %d/3, complete",
+					n, rec.TopicKey, rec.Title, rec.Type, rec.Role, rec.Header.ChunkN, rec.Header.ChunkTotal, rec.Header.Status, wantKey, wantTitle, n)
+			}
+		}
+	})
+}
+
 func TestExtractReadsEveryExtensionOfTheTextAllowlist(t *testing.T) {
 	for _, ext := range []string{".md", ".markdown", ".txt", ".text", ".rst", ".adoc"} {
 		t.Run(ext, func(t *testing.T) {
