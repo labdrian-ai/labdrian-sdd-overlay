@@ -1,0 +1,11 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "cd /home/labdrian/labdrian-sdd-overlay-worktrees/review-9ed49c461465 && awk 'NR>=66&&NR<=82' and awk 'NR>=358&&NR<=376' and awk 'NR>=383&&NR<=400' on openspec/specs/skill-project-scope/spec.md; rg -n 'SC-322|SC-320|superseded|Superseded' on the same file; git cat-file -e 2bb481a2fd5a:openspec/specs/skill-project-scope/spec.md; git status --short",
+      "output": "Lines 70-80 hold the note 'Superseded (owner decision, 2026-10-06)'. It says 'There is no failure when a repository has no origin: the directory name answers.' Line 80 says 'The text of R-346 and R-347 below is kept for the record and is not a requirement.' rg finds the word superseded only at :70 (the note), :82 (R-346 heading) and :95 (R-347 heading). SC-320 at :362-372 has no marker; it requires exit code != 0 and an identity-resolution error with no git repo or remote. So SC-320 is still an active acceptance scenario that conflicts with the note. SC-322 (:385-396) does NOT contradict the note: its precondition 'current project identity resolves to \"target-repo\"' can still hold under the new chain; only its bare name is a stale example form (also at :328 and :342). git cat-file -e at base printed: fatal: path 'openspec/specs/skill-project-scope/spec.md' exists on disk, but not in '2bb481a2fd5a' (exit 128). git status --short in the worktree printed nothing.",
+      "base_result": "not-run"
+    }
+  ]
+}

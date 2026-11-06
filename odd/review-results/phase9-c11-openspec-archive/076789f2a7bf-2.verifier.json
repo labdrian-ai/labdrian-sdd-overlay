@@ -1,0 +1,11 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "cd /home/labdrian/labdrian-sdd-overlay-worktrees/review-076789f2a7bf && P=openspec/specs/skill-project-scope/spec.md; git rev-parse HEAD; awk 'NR==10' $P; rg -n 'SC-320|^#### R-34[67]' $P",
+      "output": "HEAD is 076789f2a7bf943270e6f460bc73e9d56e78ed91. Line 10 ends: \"The superseded note on R-346 and R-347 also covers SC-320, which tests R-347: under the identity chain the directory name answers, so SC-320 is kept for the record and is not an acceptance scenario.\" rg: 82:`#### R-346 — Identity derived from git remote origin repo name (superseded)`, 95:`#### R-347 — Fail-loud when no project identity is resolvable (superseded)`, 362:`#### SC-320 — Fail-loud when project identity cannot be resolved`. The SC-320 heading has no \"(superseded)\" suffix. At base 9ed49c461465 the same unmarked heading was at :362 and the intro said nothing about SC-320.",
+      "base_result": "reproduced"
+    }
+  ]
+}
