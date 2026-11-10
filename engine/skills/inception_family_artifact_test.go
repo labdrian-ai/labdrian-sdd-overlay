@@ -119,3 +119,52 @@ func TestProjectManifestCompactContract(t *testing.T) {
 	}
 
 }
+
+func TestProjectArchitectCompactContract(t *testing.T) {
+	root := actualsInstrumentationRepoRoot(t)
+	entry := readRepoFile(t, root, "skills/project-architect/SKILL.md")
+	front, body, err := SplitSkillFile([]byte(entry))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n := len([]rune(parseFrontmatterFields(front).Description)); n > 250 {
+		t.Errorf("description has %d runes", n)
+	}
+	if n := EstimateBodyTokens(body); n > 1000 {
+		t.Errorf("body has %d estimated tokens", n)
+	}
+	if hard, _ := LintSkillFile([]byte(entry)); len(hard) != 0 {
+		t.Errorf("hard lint findings: %v", hard)
+	}
+	for _, clause := range []string{"## Activation Contract", "## Hard Rules", "## Decision Gates", "## Execution Steps", "## Output Contract", "references/blocked-response.md", "references/architecture-template.md", "explicitly selects", "Section 15", "memorycard", "readback", "project/{project}/architect/final", "openspec/project/architect/final.md", "one blocking question", "<!-- BEGIN: project-architect-constraints (auto-generated) -->", "<!-- END: project-architect-constraints -->"} {
+		if !strings.Contains(body, clause) {
+			t.Errorf("missing architect obligation %q", clause)
+		}
+	}
+	shared := readRepoFile(t, root, "skills/_shared/pre-sdd-contracts.md")
+	for _, marker := range []string{"<!-- BEGIN: project-architect-constraints (auto-generated) -->", "<!-- END: project-architect-constraints -->"} {
+		if strings.Count(body, marker) != 1 || strings.Count(shared, marker) != 1 {
+			t.Errorf("architect marker mismatch: %s", marker)
+		}
+	}
+	for _, marker := range []string{"<!-- BEGIN: project-manifest-rules (auto-generated) -->", "<!-- END: project-manifest-rules -->"} {
+		if strings.Count(shared, marker) != 1 || strings.Contains(body, marker) {
+			t.Errorf("manifest marker ownership mismatch: %s", marker)
+		}
+	}
+	blocked := readRepoFile(t, root, "skills/project-architect/references/blocked-response.md")
+	for _, clause := range []string{"blocked-no-manifest", "blocked-incomplete-manifest", "1", "2", "3", "inline"} {
+		if !strings.Contains(blocked, clause) {
+			t.Errorf("missing blocked response %q", clause)
+		}
+	}
+	template := readRepoFile(t, root, "skills/project-architect/references/architecture-template.md")
+	for _, clause := range []string{"## 15. Cumplimiento de Reglas del Manifest", "explicitly selected inline context", "do not claim compliance with an absent persisted manifest", "real trade-offs"} {
+		if !strings.Contains(template, clause) {
+			t.Errorf("missing template obligation %q", clause)
+		}
+	}
+	if strings.Contains(template, "Minimum 3 trade-offs") || strings.Contains(template, "/sdd-new") {
+		t.Error("template retains quota or retired route")
+	}
+}

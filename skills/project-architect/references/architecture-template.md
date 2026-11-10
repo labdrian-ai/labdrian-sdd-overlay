@@ -1,6 +1,6 @@
 # project-architect — Architecture Document Template
 
-Use this format exactly. Every section is mandatory except where noted.
+This is an outline: render new artifacts and envelopes in English, except verbatim user quotes. Preserve existing Spanish records. Every section is mandatory except where noted. For explicitly selected inline context, cite its provenance and supplied rules; do not claim compliance with an absent persisted manifest. Mark inferred material `[SUPUESTO SIN MANIFEST]`.
 
 ```markdown
 # Arquitectura Técnica — {Project Name}
@@ -185,7 +185,7 @@ Use this format exactly. Every section is mandatory except where noted.
 **Sacrificamos**: {What we gave up}
 **Por qué fue aceptable**: {Justification tied to manifest constraints}
 
-{Minimum 3 trade-offs for any non-trivial architecture. If you can't find 3, you probably haven't thought hard enough.}
+{Document real trade-offs supported by the decisions and evidence; do not invent choices to fill a quota.}
 
 ---
 
@@ -229,7 +229,7 @@ You may NOT silently skip a rule.}
 **Versión**: {1 if first, n+1 if refinement}
 **Listo para**: Implementation phase (SDD pipeline o trabajo manual)
 **Próximos pasos recomendados**:
-- Si trabajás con SDD: correr `/sdd-init` (si no está) y después `/sdd-new` para el primer change
+- Hand off to the parent; see `../project-inception/SKILL.md` and `../role-chain/SKILL.md` for the current route.
 - Si trabajás manual: esta arquitectura sirve como guía vinculante para el equipo
 - Re-ejecutar `/project-architect` si el manifest cambia significativamente
 ```
@@ -246,22 +246,22 @@ Return EXACTLY this format to the orchestrator:
 **Project**: {project name}
 **Status**: {blocked | proceed | updated}
 **Artifact store mode**: {engram | openspec | hybrid | none}
-**Artifacts**: {list of engram topic keys and/or file paths persisted, or "none" if blocked}
+**Artifacts**: {actual memorycard topic keys and/or file paths persisted, or "none" if blocked}
 
 ### Executive Summary
-{2-3 sentence summary in Spanish of what was produced. If blocked, summarize why.}
+{Summarize what was produced in English. If blocked, summarize why.}
 
 ### Key Decisions
 {If proceed: 3-5 bullet points with the most important architectural decisions. If blocked: "Ninguna — bloqueado por falta de inputs."}
 
 ### Trade-offs Summary
-{If proceed: list the top 3 trade-offs explicitly. If blocked: omit.}
+{If proceed: list the real trade-offs. If blocked: omit.}
 
 ### Next Step
 {What happens next:
 - blocked: "Usuario debe elegir Opción 1, 2 o 3 (ver Step 2a)."
-- proceed: "Arquitectura propuesta lista. Si el proyecto sigue con SDD, correr /sdd-init (si falta) y después /sdd-new para el primer change."
-- updated: "Arquitectura actualizada. Versión previa sobrescrita en engram."}
+- proceed: hand the proposed architecture to the parent, using the current skill paths above.
+- updated: hand the updated architecture and actual storage locators to the parent.}
 
 ### Risks
 - {Top technical risk 1}
