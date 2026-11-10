@@ -377,9 +377,12 @@ func snapshotFiles(t *testing.T, paths ...string) map[string]string {
 func TestLintBaseline_IsWellFormedAndFixed(t *testing.T) {
 	// The count is pinned: adding to or removing from the list is a deliberate, reviewed change that
 	// must update this number with it.
-	const lintBaselineSize = 34
+	const lintBaselineSize = 33
 	if len(lintBaselineSkills) != lintBaselineSize {
 		t.Fatalf("the lint baseline has %d ids, want the fixed %d", len(lintBaselineSkills), lintBaselineSize)
+	}
+	if inLintBaseline("inception-pipeline") {
+		t.Error("inception-pipeline must not retain its lint exemption")
 	}
 	if !sort.StringsAreSorted(lintBaselineSkills) {
 		t.Error("the lint baseline ids must be sorted")

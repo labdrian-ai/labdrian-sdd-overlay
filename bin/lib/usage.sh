@@ -180,7 +180,7 @@ Commands:
                                              APPROVAL_STALE, and approving the skill again writes
                                              a record of version 2
                                              A skill that fails the hard lint is refused, except
-                                             a lint-baseline skill (one of the 34 global skills
+                                             a lint-baseline skill (one of the 33 global skills
                                              that predate the lint budget; the list exempts them
                                              from that lint only, never from approval): for those,
                                              only the size and description findings
@@ -212,8 +212,8 @@ Commands:
                                    The lint baseline (used by approve above and in the README) is the
                                    global skills that existed at the Phase 8 base (main at 53f545d, the
                                    commit the global skill lifecycle was built on) and still do: 37 at
-                                   the base, 34 since gadu-operator and gadu-orchestrate were retired
-                                   and prespec-malandra was replaced by clarify-request. It is a list
+                                   the base, 33 after inception-pipeline met lint, gadu-operator and gadu-orchestrate
+                                   were retired, and prespec-malandra was replaced by clarify-request. It is a list
                                    of ids for the lint, and excuses no skill from approval.
                                    Locking: add, remove, sync-manifest and approve hold an exclusive lock, and
                                    validate and install a shared one, on .skills.registry.yaml.lock beside the

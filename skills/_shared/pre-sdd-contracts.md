@@ -54,7 +54,7 @@ Slug rules:
 | SDD initialization | `sdd-init/{project}` | sdd-init |
 | Delivery plan | `delivery/{change}` | none: only the retired entry assembly wrote it |
 
-> **Note:** Engine keys (`sdd/{change}/{proposal,spec,design,tasks,apply-progress,verify-report,archive-report,state}`) are owned by the SDD engine and are NOT listed here — do not reuse them. The role chain writes none of them: its agents write only where the parent's prompts name (see the Chain entry of `inception-pipeline`), and closure-feedback reads those locators.
+> **Note:** Engine keys (`sdd/{change}/{proposal,spec,design,tasks,apply-progress,verify-report,archive-report,state}`) are owned by the SDD engine and are NOT listed here — do not reuse them. The role chain writes none of them: the parent names `odd/tasks/<feature>.md` for the shaper, builder, and delivery; their handoffs use that document and its Log (see the Chain entry of `inception-pipeline`).
 
 > All automated saves (SDD phase artifacts, schemas, state) use `capture_prompt: false`.
 

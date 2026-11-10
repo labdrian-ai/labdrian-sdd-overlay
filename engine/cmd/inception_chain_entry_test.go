@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
@@ -135,6 +136,34 @@ func inceptionFirstRecordProblems(t *testing.T, skill, wantRole string) []string
 	if !strings.Contains(appended.stdout, stateHome) {
 		problems = append(problems, fmt.Sprintf("`roles append` stored the record outside the isolated state home %s: %s", stateHome, strings.TrimSpace(appended.stdout)))
 	}
+	if appended.stderr != "" {
+		problems = append(problems, fmt.Sprintf("`roles append` wrote stderr: %s", appended.stderr))
+	}
+	storedPath := filepath.Join(stateHome, "labdrian", "role-chains", ids.ProjectID, ids.GoalID, ids.ChainID, "000001.json")
+	storedBytes, err := os.ReadFile(storedPath)
+	if err != nil {
+		return append(problems, fmt.Sprintf("reading the stored first record: %v", err))
+	}
+	var stored struct {
+		PayloadKind string `json:"payload_kind"`
+		PayloadSHA  string `json:"payload_sha256"`
+		Context     struct {
+			Summary string `json:"summary"`
+		} `json:"context"`
+	}
+	if err := json.Unmarshal(storedBytes, &stored); err != nil {
+		return append(problems, fmt.Sprintf("decoding the stored first record: %v", err))
+	}
+	wantKind := "feature-doc"
+	if wantRole == "shaper" {
+		wantKind = "exploration"
+	}
+	if stored.PayloadKind != wantKind || stored.PayloadSHA != strings.Repeat("a", 64) {
+		problems = append(problems, fmt.Sprintf("stored payload kind=%q sha256=%q, want kind=%q sha256=%q", stored.PayloadKind, stored.PayloadSHA, wantKind, strings.Repeat("a", 64)))
+	}
+	if wantRole == "estimator" && !strings.Contains(stored.Context.Summary, "odd/tasks/add-wishlist.md") {
+		problems = append(problems, fmt.Sprintf("stored context summary %q does not name odd/tasks/add-wishlist.md", stored.Context.Summary))
+	}
 
 	resumeArgs, problem := inceptionDocumentedRolesArgs(inceptionSkillSection(skill, "Closure-Feedback"), "Closure-Feedback", "resume", ids.ProjectID, ids.GoalID)
 	if problem != "" {
@@ -143,6 +172,9 @@ func inceptionFirstRecordProblems(t *testing.T, skill, wantRole string) []string
 	resumed := runRolesTest(resumeArgs, "")
 	if resumed.code != 0 {
 		return append(problems, fmt.Sprintf("`roles resume` failed after the append (exit %d): %s", resumed.code, strings.TrimSpace(resumed.stderr)))
+	}
+	if resumed.stderr != "" {
+		problems = append(problems, fmt.Sprintf("`roles resume` wrote stderr: %s", resumed.stderr))
 	}
 	var state struct {
 		Role        string `json:"role"`

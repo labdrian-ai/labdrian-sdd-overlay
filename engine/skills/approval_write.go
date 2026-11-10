@@ -21,7 +21,6 @@ var lintBaselineSkills = []string{
 	"comment-writer",
 	"gentle-ai-bench",
 	"go-testing",
-	"inception-pipeline",
 	"issue-creation",
 	"judgment-day",
 	"knowledge-ingestion",
