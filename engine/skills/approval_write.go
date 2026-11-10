@@ -25,7 +25,6 @@ var lintBaselineSkills = []string{
 	"judgment-day",
 	"knowledge-ingestion",
 	"project-architect",
-	"project-manifest",
 	"rdd-defect-workflow",
 	"requirements-from-transcripts",
 	"roadmap-maker",

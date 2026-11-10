@@ -75,3 +75,47 @@ func TestProjectInceptionCompactCoordinator(t *testing.T) {
 		}
 	}
 }
+
+func TestProjectManifestCompactContract(t *testing.T) {
+	root := actualsInstrumentationRepoRoot(t)
+	entry := readRepoFile(t, root, "skills/project-manifest/SKILL.md")
+	front, body, err := SplitSkillFile([]byte(entry))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n := len([]rune(parseFrontmatterFields(front).Description)); n > 250 {
+		t.Errorf("description has %d runes", n)
+	}
+	if n := EstimateBodyTokens(body); n > 1000 {
+		t.Errorf("body has %d estimated tokens", n)
+	}
+	if hard, _ := LintSkillFile([]byte(entry)); len(hard) != 0 {
+		t.Errorf("hard lint findings: %v", hard)
+	}
+	for _, clause := range []string{"## Activation Contract", "## Hard Rules", "## Decision Gates", "## Execution Steps", "## Output Contract", "conversation_history", "phase_override", "discovery", "draft", "final", "memorycard", "readback", "project/{project}/manifest/{context,mission,rules}", "openspec/project/manifest/", "one blocking question", "references/universal-base-rules.md", "references/phase-templates.md", "<!-- BEGIN: project-manifest-rules (auto-generated) -->", "<!-- END: project-manifest-rules -->"} {
+		if !strings.Contains(body, clause) {
+			t.Errorf("missing manifest obligation %q", clause)
+		}
+	}
+	for _, path := range []string{"skills/project-manifest/references/universal-base-rules.md", "skills/project-manifest/references/phase-templates.md"} {
+		readRepoFile(t, root, path)
+	}
+	shared := readRepoFile(t, root, "skills/_shared/pre-sdd-contracts.md")
+	for _, marker := range []string{"<!-- BEGIN: project-manifest-rules (auto-generated) -->", "<!-- END: project-manifest-rules -->"} {
+		if strings.Count(body, marker) != 1 || strings.Count(shared, marker) != 1 {
+			t.Errorf("manifest marker mismatch: %s", marker)
+		}
+	}
+	for _, marker := range []string{"<!-- BEGIN: project-architect-constraints (auto-generated) -->", "<!-- END: project-architect-constraints -->"} {
+		if strings.Count(shared, marker) != 1 || strings.Contains(body, marker) {
+			t.Errorf("architect marker ownership mismatch: %s", marker)
+		}
+	}
+	phase := readRepoFile(t, root, "skills/project-manifest/references/phase-templates.md")
+	for _, clause := range []string{"at most one blocking question", "render new artifacts and envelopes in English", "Do not translate existing stored records"} {
+		if !strings.Contains(phase, clause) {
+			t.Errorf("missing phase seam %q", clause)
+		}
+	}
+
+}

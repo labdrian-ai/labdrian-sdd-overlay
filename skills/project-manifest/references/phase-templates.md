@@ -1,38 +1,10 @@
 # project-manifest — Phase Output Templates
 
+These templates are outlines: render new artifacts and envelopes in English except verbatim user quotes. Do not translate existing stored records. Include only supported content; expose missing evidence rather than inventing it. The parent retains decisions and confirmations.
+
 ## Discovery Phase Output
 
-```markdown
-# Manifiesto — Descubrimiento: {Project Title}
-
-## Mi Entendimiento
-{Reformulation of the idea — 2-3 sentences max}
-
-## Lo que ya sabemos (desde sdd-init)
-{Stack, testing, conventions detected by sdd-init — 2-4 bullet points. Omit this section if no sdd-init context was found.}
-
-## Supuestos Visibles
-- {Assumption 1 — clearly marked as assumption}
-- {Assumption 2}
-
-## Brechas Críticas Detectadas
-- {Gap 1 — what critical information is missing and which doc it affects}
-- {Gap 2}
-
-## Preguntas Prioritarias
-{3-6 numbered questions ordered by importance. Each question should be concrete, actionable, and tied to a specific manifest document.}
-
-1. **[Doc 1 - Naturaleza]** ¿{Specific question}?
-2. **[Doc 1 - Problema central]** ¿{Specific question}?
-3. **[Doc 2 - Éxito]** ¿{Specific question}?
-4. **[Doc 3 - Restricciones]** ¿{Specific question}?
-
-## Proceso
-Primero levantamos el contexto estratégico del proyecto (Doc 1), después definimos la misión del agente y los criterios de éxito (Doc 2), y finalmente las reglas obligatorias de trabajo (Doc 3). Cuando los tres estén consolidados, actualizamos el skill registry para que todo el pipeline SDD los respete automáticamente.
-
-## Estado
-**Fase**: `discovery`. Se necesitan las respuestas anteriores para avanzar a `draft`.
-```
+Reformulate the supplied idea, identify known context, assumptions and critical gaps by document, and return the concrete missing-input blocker. Ask at most one blocking question per parent interaction. Do not persist discovery.
 
 ---
 
@@ -127,24 +99,13 @@ Primero levantamos el contexto estratégico del proyecto (Doc 1), después defin
 
 ### Reglas de dominio (pendientes de confirmación)
 
-{List domain-specific rules proposed for confirmation — marked as [PENDIENTE] until user agrees.}
-
-9. [PENDIENTE] {Proposed domain rule 1 with rationale}
-10. [PENDIENTE] {Proposed domain rule 2 with rationale}
+{Only genuinely confirmed domain rules belong here; record unconfirmed proposals as open questions, not rules.}
 
 ---
 
-## Preguntas Abiertas
+## Open Questions
 
-### Para Documento 1
-1. {Question}
-2. {Question}
-
-### Para Documento 2
-1. {Question}
-
-### Para Documento 3
-1. {Domain rules confirmation questions}
+{Identify unresolved gaps and ask at most one blocking question for this parent interaction.}
 
 ---
 
@@ -181,7 +142,7 @@ Primero levantamos el contexto estratégico del proyecto (Doc 1), después defin
 
 ## Skill Registry Updated
 ✅ `.atl/skill-registry.md` actualizado con la sección `Project Manifest Rules`
-✅ Engram observation `skill-registry` actualizada (if applicable)
+✅ Project-scoped `skill-registry` record updated and read back (when applicable)
 
 ## Estado
 **Fase**: `final`. Manifiesto consolidado. Listo para `project-architect`.
@@ -191,33 +152,4 @@ Primero levantamos el contexto estratégico del proyecto (Doc 1), después defin
 
 ## Structured Response Envelope
 
-Return EXACTLY this format to the orchestrator:
-
-```markdown
-## Project Manifest — {phase}
-
-**Project**: {project name}
-**Phase**: {discovery | draft | final}
-**Artifact store mode**: {engram | openspec | hybrid | none}
-**Artifacts**: {list of engram topic keys and/or file paths persisted}
-
-### Executive Summary
-{2-3 sentence summary in Spanish of what was analyzed and produced.}
-
-### Questions for User
-{If discovery or draft: list questions that need answers. If final: "Ninguna — manifiesto consolidado listo."}
-
-### Next Step
-{What happens next:
-- discovery: "Respondé las preguntas para avanzar a `draft`. Relanzar este skill con las respuestas en conversation_history."
-- draft: "Confirmá los supuestos y reglas de dominio propuestas. Relanzar con respuestas para pasar a `final`."
-- final: "Manifiesto listo. Próximo paso recomendado: ejecutar `project-architect` para diseñar la arquitectura técnica respetando el manifest."}
-
-### Risks
-- {Strategic risk 1}
-- {Strategic risk 2}
-
-### Warnings
-{If sdd-init context was not found, warn here.}
-{If skill registry could not be updated, warn here.}
-```
+Return `status`, `executive_summary`, `detailed_report`, `artifacts`, `next_recommended`, `risks`, and `skill_resolution` to the parent. Include project, phase, resolved placement (`engram | openspec | hybrid | none`), exact persisted topic keys and/or file paths, the concrete blocker or one blocking question when applicable, and warnings for unavailable context or registry updates. Do not execute the next producer or role.
