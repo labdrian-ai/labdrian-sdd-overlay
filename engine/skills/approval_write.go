@@ -26,7 +26,6 @@ var lintBaselineSkills = []string{
 	"knowledge-ingestion",
 	"rdd-defect-workflow",
 	"requirements-from-transcripts",
-	"roadmap-maker",
 	"sdd-apply",
 	"sdd-archive",
 	"sdd-design",

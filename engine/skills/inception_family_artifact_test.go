@@ -168,3 +168,35 @@ func TestProjectArchitectCompactContract(t *testing.T) {
 		t.Error("template retains quota or retired route")
 	}
 }
+
+func TestRoadmapMakerCompactContract(t *testing.T) {
+	root := actualsInstrumentationRepoRoot(t)
+	entry := readRepoFile(t, root, roadmapMakerSkillRelPath)
+	front, body, err := SplitSkillFile([]byte(entry))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n := len([]rune(parseFrontmatterFields(front).Description)); n > 250 {
+		t.Errorf("description has %d runes", n)
+	}
+	if n := EstimateBodyTokens(body); n > 1000 {
+		t.Errorf("body has %d estimated tokens", n)
+	}
+	if hard, _ := LintSkillFile([]byte(entry)); len(hard) != 0 {
+		t.Errorf("hard lint findings: %v", hard)
+	}
+	for _, clause := range []string{"## Activation Contract", "## Hard Rules", "## Decision Gates", "## Execution Steps", "## Output Contract", "assets/roadmap-template.md", "incremental-insert", "unrelated rows", "actuals and history", "../inception-pipeline/SKILL.md", "../role-chain/SKILL.md", "sdd/{change}/actuals", "memorycard", "readback"} {
+		if !strings.Contains(body, clause) {
+			t.Errorf("missing roadmap obligation %q", clause)
+		}
+	}
+	template := readRepoFile(t, root, "skills/roadmap-maker/assets/roadmap-template.md")
+	for _, clause := range []string{"odd/review-results/<feature>/", "shaper", "estimator", "historical fallback", "[PENDING]", "[NOT MEASURED — reason]"} {
+		if !strings.Contains(template, clause) {
+			t.Errorf("missing template obligation %q", clause)
+		}
+	}
+	if strings.Contains(template, "/sdd-new") || strings.Contains(template, "verify-report.md") {
+		t.Error("template retains retired current source")
+	}
+}
