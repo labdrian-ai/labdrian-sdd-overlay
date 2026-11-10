@@ -252,7 +252,7 @@ If there are merge conflicts, `overlay apply` exits 1 and tells you exactly whic
 labdrian skills approve --id <id> --approver <name>
 ```
 
-An agent cannot do this for you: the approve guard denies it (a speed bump, not a security boundary). A lint-baseline skill (one of the 33 global skills that predate the lint budget) whose only hard-lint findings are its size or its description (`body-hard-budget`, `description-max`, `description-one-line`) is approved with `warning:` lines on stderr instead of being refused; any other hard finding, such as a missing front matter, refuses it like any skill. The lint baseline excuses a skill from that lint only: no skill is excused from approval. Run `skills validate` again until it exits 0. Until you do, the merged skills are deployed but not approved, and `skills validate` keeps exiting 1.
+An agent cannot do this for you: the approve guard denies it (a speed bump, not a security boundary). A lint-baseline skill (one of the 32 global skills that predate the lint budget) whose only hard-lint findings are its size or its description (`body-hard-budget`, `description-max`, `description-one-line`) is approved with `warning:` lines on stderr instead of being refused; any other hard finding, such as a missing front matter, refuses it like any skill. The lint baseline excuses a skill from that lint only: no skill is excused from approval. Run `skills validate` again until it exits 0. Until you do, the merged skills are deployed but not approved, and `skills validate` keeps exiting 1.
 
 ## sync-check — validating gentle-ai sync state
 
@@ -462,7 +462,7 @@ overlay skills <verb>
     approve      --id <id> --approver <label> --source-root <path>                 record a human approval of every file of skills/<id>/ in skills/<id>/.approval.json, bound to one digest of all of them
                  The engine cannot prove a human ran approve: the record only proves it matches the files of the skill beside it. The digest, and how to recompute
                  it with sha256sum, are described below ("What the approval digest covers").
-                 A skill that fails the hard lint is refused, except a lint-baseline skill (one of the 33 global skills that predate the lint budget and will be
+                 A skill that fails the hard lint is refused, except a lint-baseline skill (one of the 32 global skills that predate the lint budget and will be
                  rewritten in a later feature): for those, approve prints each hard finding as a `warning: [lint:<rule>] ... (baseline skill: approved with lint findings)`
                  line on stderr, still records the approval, and exits 0, so an upstream merge that changes one of them can be approved. Only the
                  legacy rules warn (body-hard-budget, description-max, description-one-line); any other hard finding, such as a missing front matter, refuses a
