@@ -111,7 +111,7 @@ func TestInceptionPipelineKeepsActivationAndClosureRules(t *testing.T) {
 
 	closure := markdownSectionBody(t, body, inceptionClosureFeedbackHeading)
 	requireClauses(t, "closure section", closure,
-		"an error because the chain has no records, means it runs: do not fire",
+		"an error because the chain has no records, means it runs: wait, do not fire",
 		"is not closed; wait for landing",
 		"The parent names the landing commit (merge, squash or fast-forward); closure records it as `landing_commit`")
 	rejectClauses(t, "closure section", closure, "merge commit", "default branch")
@@ -126,8 +126,11 @@ func TestInceptionPipelineKeepsActivationAndClosureRules(t *testing.T) {
 		"`landing_commit`, always: the explicitly named commit that landed the successful delivery (the last slice",
 		"A delivered chain that has not landed is not closed",
 		"closure's entry follows delivery's final Log entry")
-	// The landing rule names no branch: neither the default one nor a selected one.
-	rejectClauses(t, "closure reference", ref, "the actual merge commit", "onto the default branch", "integration branch")
+	// The landing rule names no branch, neither the default one nor a selected one, and the
+	// tree-ambiguity rule counts every commit carrying the tree, not those of one branch.
+	requireClauses(t, "closure reference", ref, "more than one commit carries it, the anchor is ambiguous")
+	rejectClauses(t, "closure reference", ref,
+		"the actual merge commit", "onto the default branch", "integration branch", "on the default branch carries it")
 }
 
 func TestProjectInceptionCompactCoordinator(t *testing.T) {
