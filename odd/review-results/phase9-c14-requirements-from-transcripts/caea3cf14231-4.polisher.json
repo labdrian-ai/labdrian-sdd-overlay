@@ -1,0 +1,37 @@
+{
+  "kind": "polisher",
+  "base": "98982e6f63522c9edf5f0bbd8ea83f5b5873b7c4",
+  "head": "caea3cf142314a82c2035835afda6b81a7daf506",
+  "diff_sha256": "af85941d59025884fe132749a8fd384a94b3f5ef9c0c5207dc682c0d90e61fbf",
+  "findings": {
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "skills/requirements-from-transcripts/references/output-template.md:104-106",
+        "summary": "The Change Candidates table still carries an unqualified `Change ID` column, a per-row identifier that can be read as a second change slug beside the brief's single `change-name`; pre-existing, not introduced here.",
+        "evidence": [
+          "output-template.md:104-106 has `## Change Candidates` with a `Change ID` column and no qualifier.",
+          "requirements_from_transcripts_test.go:73-76 pins do not cover `Change ID`."
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "skills/requirements-from-transcripts/references/output-template.md:109",
+        "summary": "L8 claims the handoff table matches the pre-C14 column order; positions hold, but it does not mention that `Required Keywords In SDD` was renamed to `Required Keywords`. No consumer under skills/ reads that header.",
+        "evidence": [
+          "main checkout output-template.md:103 reads `... | Suggested SDD Change | Required Keywords In SDD | Minimum PASS Evidence |`.",
+          "target output-template.md:109 reads `... | Change Name | Required Keywords | Minimum PASS Evidence |`.",
+          "grep of skills/ for both old headers finds only archived openspec requirements."
+        ]
+      }
+    ],
+    "evidence": [
+      "output-template.md:93 has `Proposed slice`, :109 has `Change Name` as column 5, :137 has 'a planning label, never a second `change-name`'.",
+      "No remaining 'Proposed change name' in skills/; no skill reads Roadmap Inputs by column name.",
+      "SKILL.md:20, SKILL.md:33 and patterns-catalog.md:162 agree with a single `change-name`.",
+      "Verdict: fix correct and complete for its scope; no BLOCKER or WARNING."
+    ]
+  }
+}

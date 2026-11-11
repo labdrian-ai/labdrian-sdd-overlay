@@ -1,0 +1,58 @@
+{
+  "kind": "polisher",
+  "base": "de4ad5fb6b488501a1604e0a22ed2696e2668d3c",
+  "head": "abc1a214aba35e7884049eb8625032a006578f99",
+  "diff_sha256": "d72ac5b74427b3111fc60e9bc4c2b216ee97b27c4d3c9bf5f3f7cc6948c12b76",
+  "findings": {
+    "findings": [
+      {
+        "location": "skills/requirements-from-transcripts/references/output-template.md:31-109",
+        "severity": "WARNING",
+        "claim": "The brief template that step 3 tells the model to fill has no `change-name` slot. The brief header (line 31) has no field for it, and the Project-Inception Handoff table (lines 106-108) has no change-name column. S2(a) requires the slug in both places. The rewritten entry still states the requirement (SKILL.md:20, 34), but the commit also removed the old 'in every row of the Project-Inception Handoff table' wording. The template does not carry the requirement either. The S2(a) pin reads only the entry text and the inception-pipeline sentence. It never checks the template, so a brief written from the template can drop the slug and still pass.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "worsened",
+        "evidence": [
+          "Grep for change-name, change_name, Change Name and slug in references/ returns no matches in output-template.md.",
+          "The same grep matches only SKILL.md lines 20, 34, 43 and 50.",
+          "Template lines 31 and 106-107 show the header and handoff columns without a slug.",
+          "The old entry said to emit the slug 'in every row of the Project-Inception Handoff table'. The diff replaces it with the shorter SKILL.md:20.",
+          "The template gap itself existed before this commit, and the commit leaves it unchanged."
+        ]
+      },
+      {
+        "location": "engine/skills/requirements_from_transcripts_test.go:44-74",
+        "severity": "SUGGESTION",
+        "claim": "The S2 pin test reads the consumer side for only some contracts. For (a), (b), (c), (d) it reads inception-pipeline, project-inception, closure-feedback and tier-selection. For (e), the clarify-request brief and prespec transcript input, it checks only the entry text. For (c) and (f) it never reads pre-sdd-contracts.md, which S2 names as the owner of the brief shape and the English rule. A rewording in clarify-request or in pre-sdd-contracts.md would therefore go unnoticed. The S2 text and the L2 test design ask for both sides to be read where the consumer text is readable.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "Test lines 71-73 call requireClauses on the entry body only for clarify-request brief, prespec transcript, English, verbatim and ../_shared/pre-sdd-contracts.md.",
+          "The only consumer files the test reads are inception-pipeline/SKILL.md, project-inception/SKILL.md, closure-feedback.md and tier-selection.md.",
+          "skills/clarify-request/SKILL.md:53 and skills/_shared/pre-sdd-contracts.md are never read by the test."
+        ]
+      },
+      {
+        "location": "engine/skills/requirements_from_transcripts_test.go:89-91",
+        "severity": "SUGGESTION",
+        "claim": "The entry-level rejects are narrow literal strings: capture_prompt, Engram-first, SDD verify agents, sdd/<change-name>/{proposal and before PASS/archive. A reintroduced instruction such as 'save to Engram via mem_save', or an `openspec/` write instruction, would pass the S4 and S5 pins. The entry legitimately contains 'Never write or export Engram', so a blanket 'Engram' reject is not possible on the entry. A reject of `mem_save` or `engram_` could still be added.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "rejectClauses on the entry lists only the five literals above.",
+          "SKILL.md:21 contains 'Never write or export Engram', so a plain 'Engram' reject would fail on the entry.",
+          "Only the two references get the broader 'Engram' reject, at test lines 105-108."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff /var/tmp/c14-polish/3c540201.diff: the new pin test, the SKILL.md rewrite and the edits to both references.",
+      "Read the specs in odd/tasks/phase9-c14-requirements-from-transcripts.md, S1-S9 and L2.",
+      "Grepped the consumers for change-name: inception-pipeline/SKILL.md:28 (line omitted by the tool as too long, so I did not read it in full), project-inception/SKILL.md:26, clarify-request/SKILL.md:18,53,58, pre-sdd-contracts.md:30,45 and tier-selection.md:20,32,54.",
+      "Read closure-feedback.md:11 through the grep output; it has the 'EARS R-NNN requirements' wording.",
+      "Did not read the full files of inception-pipeline/SKILL.md, project-inception/SKILL.md, clarify-request/SKILL.md, tier-selection.md or pre-sdd-contracts.md, and did not run the Go tests. Their consumer clauses were checked by hand against the test's required substrings.",
+      "Read output-template.md lines 28-117 and grepped both references and SKILL.md for Engram, capture_prompt, sdd/, change-name and slug.",
+      "Compared each S3 gating rule against the new SKILL.md Hard Rules and Decision Gates. I found no S3 rule lost: no invented requirements, the pre-analysis with its blocking domains, one issue at a time then stop and wait, named assumptions, one SHALL with banned verbs, one fix per requirement, acceptance evidence and keywords.",
+      "Checked that the S2(c)-(d) and S4-S5 items are present in the entry."
+    ]
+  }
+}

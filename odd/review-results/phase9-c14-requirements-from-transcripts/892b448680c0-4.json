@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "358e51f921ffc25f46385e71624cdabd3558d2e9",
+    "head": "892b448680c043be3e2f693190759eb4435f100f",
+    "diff_sha256": "e12fee26d544f1315927c3887268eb6725dbe8ba40d69cfe798636b572c4b352",
+    "paths": [
+      "engine/skills/requirements_from_transcripts_test.go",
+      "odd/tasks/phase9-c14-requirements-from-transcripts.md",
+      "skills/requirements-from-transcripts/SKILL.md",
+      "skills/requirements-from-transcripts/references/output-template.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "358e51f921ffc25f46385e71624cdabd3558d2e9",
+      "head": "892b448680c043be3e2f693190759eb4435f100f",
+      "diff_sha256": "e12fee26d544f1315927c3887268eb6725dbe8ba40d69cfe798636b572c4b352"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skills/requirements_from_transcripts_test.go",
+        "odd/tasks/phase9-c14-requirements-from-transcripts.md",
+        "skills/requirements-from-transcripts/SKILL.md",
+        "skills/requirements-from-transcripts/references/output-template.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "skills/requirements-from-transcripts/references/output-template.md:109-110",
+        "claim": "The handoff table now has both a new 'Change Name' column and the existing 'Suggested Change Name' column. A brief filler can put different slugs in the two columns, or re-derive a name in the 'Suggested' one. That undercuts the rule that change-name is derived exactly once and inherited verbatim. The template does not say how the two columns relate or which one downstream reads.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/requirements-from-transcripts/references/output-template.md:109-110"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "skills/requirements-from-transcripts/references/output-template.md:109-110",
+        "claim": "The new column is inserted as column 2, which shifts every later column position in the Project-Inception Handoff table. A consumer that reads the table by position (project-inception, roadmap-maker) would misread it. The diff does not show that consumers were checked, and the test only pins the header text.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/requirements-from-transcripts/references/output-template.md:109-110",
+          "engine/skills/requirements_from_transcripts_test.go:70-72"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed all four changed paths from the diff. The table header and separator both have 8 columns, so the markdown is well-formed.",
+      "The test pins match the added SKILL.md and template text: 'catalog read in step 1', 'confirm it matches the brief as drafted', '**change-name:**' and '| Change Name |'.",
+      "The pre-sdd-contracts.md and clarify-request/SKILL.md pins cannot be checked from the diff because those files are not in it."
+    ]
+  }
+}

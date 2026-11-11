@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "0a1e93cb3966f6f3b1b7e38ec26b0e37578c4085",
+    "head": "46543f30df3f595d94336913cbe803f5659ac683",
+    "diff_sha256": "fbe8ea141c69d70a79fba3cf7f3faa7dbaf4d4582bdad9bba7ab4b43d72fb8a2",
+    "paths": [
+      "engine/skills/requirements_from_transcripts_test.go",
+      "odd/tasks/phase9-c14-requirements-from-transcripts.md",
+      "skills/requirements-from-transcripts/.approval.json",
+      "skills/requirements-from-transcripts/SKILL.md",
+      "skills/requirements-from-transcripts/references/output-template.md",
+      "skills/requirements-from-transcripts/references/patterns-catalog.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "0a1e93cb3966f6f3b1b7e38ec26b0e37578c4085",
+      "head": "46543f30df3f595d94336913cbe803f5659ac683",
+      "diff_sha256": "fbe8ea141c69d70a79fba3cf7f3faa7dbaf4d4582bdad9bba7ab4b43d72fb8a2"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skills/requirements_from_transcripts_test.go",
+        "odd/tasks/phase9-c14-requirements-from-transcripts.md",
+        "skills/requirements-from-transcripts/.approval.json",
+        "skills/requirements-from-transcripts/SKILL.md",
+        "skills/requirements-from-transcripts/references/output-template.md",
+        "skills/requirements-from-transcripts/references/patterns-catalog.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "skills/requirements-from-transcripts/.approval.json:4",
+        "claim": "The commit rewrites .approval.json to digest 468c0e1f… while the same commit changes the skill tree bytes afterwards (heading and column renames in SKILL.md and both references). The feature log (L3) states this digest is stale for the changed bytes. The committed record therefore does not match the committed tree, so source validation or the approval gate will report the skill as stale or unapproved at head. This commit introduced the mismatch. It also commits an approval record the log says the owner must reissue, which conflicts with S8's rule that the record is written only once the tree is final.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/requirements-from-transcripts/.approval.json:4",
+          "odd/tasks/phase9-c14-requirements-from-transcripts.md:128"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes the sha256 in .approval.json and edits SKILL.md, output-template.md and patterns-catalog.md in the same commit.",
+      "The L3 log entry states the approval 468c0e1f… is stale for the changed bytes and that T4 reopens for a fresh approval.",
+      "I could not recompute the tree digest from the diff alone, so the mismatch rests on the log's own statement.",
+      "The EARS, topic key, change-name and Tier 3 contract wording is unchanged apart from the SDD terminology renames, so I found no contract regression there."
+    ]
+  }
+}

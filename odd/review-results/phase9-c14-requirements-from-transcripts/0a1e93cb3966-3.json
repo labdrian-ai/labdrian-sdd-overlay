@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "abc1a214aba35e7884049eb8625032a006578f99",
+    "head": "0a1e93cb3966f6f3b1b7e38ec26b0e37578c4085",
+    "diff_sha256": "835e228d1fac2b99a342dfd44602c5661eaba5ce20105f493ab94b36fba07def",
+    "paths": [
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/skills/approval_gate_test.go",
+      "engine/skills/approval_write.go",
+      "engine/skills/registryyaml_adapter_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "abc1a214aba35e7884049eb8625032a006578f99",
+      "head": "0a1e93cb3966f6f3b1b7e38ec26b0e37578c4085",
+      "diff_sha256": "835e228d1fac2b99a342dfd44602c5661eaba5ce20105f493ab94b36fba07def"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/skills/approval_gate_test.go",
+        "engine/skills/approval_write.go",
+        "engine/skills/registryyaml_adapter_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "approval_write.go removes exactly one id (requirements-from-transcripts) from lintBaselineSkills, and the pinned count in approval_gate_test.go drops from 29 to 28 to match.",
+      "README.md (2 places), usage.sh (2 places) and the registryyaml_adapter_test.go comment all change 29 to 28 and name requirements-from-transcripts among the skills that met lint, so the count and prose agree.",
+      "The diff does not contain the skill rewrite itself, so the lint-budget, contract and wording specs (S1-S9) cannot be checked here; this review covers only the baseline-removal bookkeeping in the five changed paths.",
+      "This diff has no change-caused defect: the baseline removal is consistent across the code, the pinned test and the docs."
+    ]
+  }
+}

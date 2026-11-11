@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "0a1e93cb3966f6f3b1b7e38ec26b0e37578c4085",
+    "head": "46543f30df3f595d94336913cbe803f5659ac683",
+    "diff_sha256": "fbe8ea141c69d70a79fba3cf7f3faa7dbaf4d4582bdad9bba7ab4b43d72fb8a2",
+    "paths": [
+      "engine/skills/requirements_from_transcripts_test.go",
+      "odd/tasks/phase9-c14-requirements-from-transcripts.md",
+      "skills/requirements-from-transcripts/.approval.json",
+      "skills/requirements-from-transcripts/SKILL.md",
+      "skills/requirements-from-transcripts/references/output-template.md",
+      "skills/requirements-from-transcripts/references/patterns-catalog.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "0a1e93cb3966f6f3b1b7e38ec26b0e37578c4085",
+      "head": "46543f30df3f595d94336913cbe803f5659ac683",
+      "diff_sha256": "fbe8ea141c69d70a79fba3cf7f3faa7dbaf4d4582bdad9bba7ab4b43d72fb8a2"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skills/requirements_from_transcripts_test.go",
+        "odd/tasks/phase9-c14-requirements-from-transcripts.md",
+        "skills/requirements-from-transcripts/.approval.json",
+        "skills/requirements-from-transcripts/SKILL.md",
+        "skills/requirements-from-transcripts/references/output-template.md",
+        "skills/requirements-from-transcripts/references/patterns-catalog.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "skills/requirements-from-transcripts/.approval.json:4-5",
+        "claim": "The commit records an approval digest (468c0e1f…, 2026-11-11T18:04:25Z) for a tree that this same commit then changes. The task log L3 says this approval is stale for the changed bytes and that T4 reopens for a fresh owner approval. The committed record therefore will not match the skill tree's digest, so source validation would report a stale approval. Anyone reading the approval file as current would be misled.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/requirements-from-transcripts/.approval.json:4-5",
+          "odd/tasks/phase9-c14-requirements-from-transcripts.md L3: 'The approval 468c0e1f… is stale for the changed bytes: T4 reopens for a fresh owner approval.'"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff shows the approval file moving to digest 468c0e1f and, in the same commit, edits to SKILL.md and both references.",
+      "L3 states the owner approved the tree before the SDD-wording edits and that those edits made the approval stale.",
+      "I could not see the unchanged lines of the references. The new test rejects the case-sensitive string 'SDD' in them, and I could not check that no such string remains there."
+    ]
+  }
+}

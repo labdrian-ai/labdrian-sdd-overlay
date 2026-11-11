@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "478381777ea1fd0bd9e32cd9e5450849fe90ed70",
+    "head": "358e51f921ffc25f46385e71624cdabd3558d2e9",
+    "diff_sha256": "de4febbc3091e401e50b70c088f860ab74b928da77ce8e685c5ff88acf6d21a9",
+    "paths": [
+      "engine/skills/requirements_from_transcripts_test.go",
+      "odd/tasks/phase9-c14-requirements-from-transcripts.md",
+      "skills/requirements-from-transcripts/SKILL.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "478381777ea1fd0bd9e32cd9e5450849fe90ed70",
+      "head": "358e51f921ffc25f46385e71624cdabd3558d2e9",
+      "diff_sha256": "de4febbc3091e401e50b70c088f860ab74b928da77ce8e685c5ff88acf6d21a9"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skills/requirements_from_transcripts_test.go",
+        "odd/tasks/phase9-c14-requirements-from-transcripts.md",
+        "skills/requirements-from-transcripts/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/skills/requirements_from_transcripts_test.go:14-18",
+        "claim": "rftRepoRoot is a pure pass-through to actualsInstrumentationRepoRoot, so the pins still depend on the unrelated helper's name and behaviour. The wrapper only renames the call site; if the shared helper changes or is removed, the wrapper breaks the same way. Low value but harmless.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/requirements_from_transcripts_test.go:14-18"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "skills/requirements-from-transcripts/SKILL.md:31-32",
+        "claim": "Step 1 now reads the patterns catalog before gate 2, and step 2 says 'Using the catalog' without re-stating the read. The catalog is read before any blocking issue is returned, so a gate-2 early return still costs the catalog read. This is the intended fix, but step 2 now depends on the step 1 read, so reordering the steps would silently drop the catalog read.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/requirements-from-transcripts/SKILL.md:31-32"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed all three changed paths in the diff. The SKILL.md edits match the stated fixes: the classification read moves into step 1, the persistence rule names its contents and the readback criterion, and IDs are never reused and carried verbatim.",
+      "The new test clauses ('never renumbered or reused', 'carried verbatim downstream', 'every R-NNN item with its `scope`, and the Project-Inception Handoff table', 'confirm it matches') all appear verbatim in the new SKILL.md text, so the pins hold.",
+      "The task document change is a log entry only; it has no behavioural effect."
+    ]
+  }
+}
