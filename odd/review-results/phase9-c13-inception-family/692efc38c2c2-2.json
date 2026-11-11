@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "1816dda0a8aa1b3582a30fbaec96f5dfb771c456",
+    "head": "692efc38c2c2b3b50fd0688ac0d826b02030ebd2",
+    "diff_sha256": "419bd040e7ba97cf423238beea8f6ad52f6693fb8462f3d469a0f4e131995ac1",
+    "paths": [
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/skills/approval_gate_test.go",
+      "engine/skills/approval_write.go",
+      "engine/skills/inception_family_artifact_test.go",
+      "engine/skills/registryyaml_adapter_test.go",
+      "skills/project-manifest/.approval.json",
+      "skills/project-manifest/SKILL.md",
+      "skills/project-manifest/references/phase-templates.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "1816dda0a8aa1b3582a30fbaec96f5dfb771c456",
+      "head": "692efc38c2c2b3b50fd0688ac0d826b02030ebd2",
+      "diff_sha256": "419bd040e7ba97cf423238beea8f6ad52f6693fb8462f3d469a0f4e131995ac1"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/skills/approval_gate_test.go",
+        "engine/skills/approval_write.go",
+        "engine/skills/inception_family_artifact_test.go",
+        "engine/skills/registryyaml_adapter_test.go",
+        "skills/project-manifest/.approval.json",
+        "skills/project-manifest/SKILL.md",
+        "skills/project-manifest/references/phase-templates.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Inspected all nine changed paths through the complete inline canonical diff against the supplied S1–S9 contract and lens rows.",
+      "Checked consistency of the lint-baseline removal, pinned count, README descriptions and CLI help.",
+      "Reviewed manifest phases, persistence modes, continuation merging, registry replacement instructions, output language and parent-owned handoffs.",
+      "No commands, tests, formatters or approval validation were run. Approval digest validity and human provenance were not independently verified."
+    ]
+  }
+}

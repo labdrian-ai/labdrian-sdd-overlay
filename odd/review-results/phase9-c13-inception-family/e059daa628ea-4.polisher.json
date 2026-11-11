@@ -1,0 +1,14 @@
+{
+  "kind": "polisher",
+  "base": "692efc38c2c2b3b50fd0688ac0d826b02030ebd2",
+  "head": "e059daa628eaf28dfc4c3dbb15e75d10d11a5af8",
+  "diff_sha256": "11a35726b6cea3f9bdf2e48cd17f8d8bfdafc7bb50b5f365b05788c0f51710d6",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the complete canonical diff supplied for base 78bee5b947aba7dde1055504d558fbccbffb7639 and head 9619d29efa97a52126193dd5284ad57dfb8b060b; its SHA-256 was independently matched to 513e14c04de0bce29dedb3f48621c316817a69e407aeb7d4a1f3b95630218095 using read-only git diff.",
+      "Additional worktree inspection: skills/project-architect/SKILL.md, skills/project-architect/references/architecture-template.md, skills/project-architect/references/blocked-response.md.",
+      "Tests, formatter, generator, network and model calls not run."
+    ]
+  }
+}

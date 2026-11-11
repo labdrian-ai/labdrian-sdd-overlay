@@ -1,0 +1,11 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "python3 inspect_candidate.py > raw/inspection-numbered.txt\npython3 landing_fixtures.py > raw/fixture-output.txt",
+      "output": "Instruction-level restriction reproduced: head closure-feedback.md:31 requires the default branch; unchanged delivery/body.md:9 supports parent-selected dev/tracker integration. Real dev/tracker fixtures have two-parent merges, matching reviewed trees and resolved timestamps, with main unchanged. Base :27-28 lacks this restriction. No live skill ran. Evidence is retained in report.md, checks.json and integrity.json. Existing bytes and Git metadata remained unchanged; two native report files appeared during verification, so complete source-inventory equality failed.",
+      "base_result": "not-reproduced"
+    }
+  ]
+}

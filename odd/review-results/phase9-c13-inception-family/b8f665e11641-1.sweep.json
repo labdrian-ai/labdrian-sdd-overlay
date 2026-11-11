@@ -1,0 +1,19 @@
+{
+  "kind": "sweep",
+  "base": "1cb1978e0a48b4b60de7b95fc1195f8999567588",
+  "head": "b8f665e1164135be0ab37f5a3fb569522fef7795",
+  "diff_sha256": "3ce297cfce868d6e84715d99528dafbca376370a9c45906baf9110c9fcc4c00f",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": []
+  },
+  "t2": [],
+  "t3": [
+    " M odd/tasks/phase9-c13-inception-family.md"
+  ],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

@@ -1,0 +1,82 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "3390cb89748a7390b85b3c2ccaaaa8d9969737bf",
+    "head": "cc27462943360baae5cfa94ec86a980f09b2f555",
+    "diff_sha256": "3ce297cfce868d6e84715d99528dafbca376370a9c45906baf9110c9fcc4c00f",
+    "paths": [
+      "engine/skills/inception_family_artifact_test.go",
+      "skills/inception-pipeline/.approval.json",
+      "skills/inception-pipeline/SKILL.md",
+      "skills/inception-pipeline/references/closure-feedback.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "3390cb89748a7390b85b3c2ccaaaa8d9969737bf",
+      "head": "cc27462943360baae5cfa94ec86a980f09b2f555",
+      "diff_sha256": "3ce297cfce868d6e84715d99528dafbca376370a9c45906baf9110c9fcc4c00f"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skills/inception_family_artifact_test.go",
+        "skills/inception-pipeline/.approval.json",
+        "skills/inception-pipeline/SKILL.md",
+        "skills/inception-pipeline/references/closure-feedback.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "skills/inception-pipeline/references/closure-feedback.md:40-40",
+        "severity": "WARNING",
+        "claim": "This change removes 'on the default branch' from the tree-ambiguity rule in the closure reference, but two other places still state the scoped rule. The living actuals spec (openspec/specs/actuals-instrumentation/spec.md:118) still reads 'more than one commit on the default branch carries it'. The anchor regression test still describes the rule that way (engine/skills/actuals_instrumentation_d2_anchor_test.go:37-40) and implements it as 'reachable from ref' (resolveTreeToCommitOrAmbiguous, lines 404-419). The closure contract and the authoritative spec plus its pinned regression now disagree on which carriers make an anchor ambiguous. A tree carried by one default-branch commit and by one commit on another ref is ambiguous under the reference but resolvable under the spec and the test. The new requireClauses/rejectClauses pin protects the divergence instead of catching it. Every omission this produces is conservative: t1 is omitted, never wrong.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "diff hunk closure-feedback.md @@ -37,7 +37,7 @@ (line 63 -> 64)",
+          "/home/labdrian/labdrian-sdd-overlay-worktrees/review-b8f665e11641/openspec/specs/actuals-instrumentation/spec.md:118",
+          "/home/labdrian/labdrian-sdd-overlay-worktrees/review-b8f665e11641/engine/skills/actuals_instrumentation_d2_anchor_test.go:37-40",
+          "/home/labdrian/labdrian-sdd-overlay-worktrees/review-b8f665e11641/engine/skills/actuals_instrumentation_d2_anchor_test.go:404-419",
+          "diff hunk inception_family_artifact_test.go @@ -126,8 +126,11 @@"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "skills/inception-pipeline/references/closure-feedback.md:40-40",
+        "severity": "WARNING",
+        "claim": "With the branch scope removed, 'more than one commit carries it' no longer says which commit set is searched: one branch, all local refs, remote-tracking refs, or unreachable objects. Closure is the only actuals writer and writes each record once. Two closures of the same change in clones with different refs, such as a fetched feature branch whose squash reproduces the tree, can therefore reach different verified-or-omitted t1 verdicts. A stored measurement becomes dependent on the environment.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "diff hunk closure-feedback.md @@ -37,7 +37,7 @@ (line 63 -> 64)"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "skills/inception-pipeline/references/closure-feedback.md:40-40",
+        "severity": "SUGGESTION",
+        "claim": "The rewritten bullet still starts with 'If a tree hash is all that is available' and makes only the more-than-one case ambiguous. It therefore implies that a single carrier found by tree search may become the anchor. That is discovery by tree, which the bullet at line 37 forbids ('MUST be used to verify a commit, never to discover one'). The commit kept this contradiction in a line it rewrote.",
+        "evidence_class": "inferential",
+        "causal_disposition": "pre-existing",
+        "proof_refs": [
+          "/home/labdrian/labdrian-sdd-overlay-worktrees/review-b8f665e11641/skills/inception-pipeline/references/closure-feedback.md:37-40"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff file /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/07a89cf6-d9a4-4988-917a-9f99a013181a/scratchpad/c13-fix3.diff (all four hunks).",
+      "Read S1-S9 under '## Specs' in odd/tasks/phase9-c13-inception-family.md in the worktree, stopping before '## Log'; S3, S4, S8 and S9 were applied.",
+      "Searched the worktree (excluding odd/ and openspec/changes/) for 'resolved by position', 'default branch' and 'do not fire', and found the living spec openspec/specs/actuals-instrumentation/spec.md:118 still scoped to the default branch.",
+      "Read engine/skills/actuals_instrumentation_d2_anchor_test.go lines 30-49 and 400-419 (tree-ambiguity regression is ref-scoped).",
+      "Checked that the new requireClauses string 'more than one commit carries it, the anchor is ambiguous' matches closure-feedback.md:40 and that the updated closure-section clause 'means it runs: wait, do not fire' matches SKILL.md:44.",
+      "skills/inception-pipeline/.approval.json: only sha256 and approved_at changed. The hash was not recomputed and human authorship of the approval was not verified (not run).",
+      "No tests or commands were run (read-only review)."
+    ]
+  }
+}

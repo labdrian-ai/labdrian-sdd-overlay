@@ -377,9 +377,24 @@ func snapshotFiles(t *testing.T, paths ...string) map[string]string {
 func TestLintBaseline_IsWellFormedAndFixed(t *testing.T) {
 	// The count is pinned: adding to or removing from the list is a deliberate, reviewed change that
 	// must update this number with it.
-	const lintBaselineSize = 34
+	const lintBaselineSize = 29
 	if len(lintBaselineSkills) != lintBaselineSize {
 		t.Fatalf("the lint baseline has %d ids, want the fixed %d", len(lintBaselineSkills), lintBaselineSize)
+	}
+	if inLintBaseline("roadmap-maker") {
+		t.Error("roadmap-maker must not retain its lint exemption")
+	}
+	if inLintBaseline("project-architect") {
+		t.Error("project-architect must not retain its lint exemption")
+	}
+	if inLintBaseline("project-manifest") {
+		t.Error("project-manifest must not retain its lint exemption")
+	}
+	if inLintBaseline("project-inception") {
+		t.Error("project-inception must not retain its lint exemption")
+	}
+	if inLintBaseline("inception-pipeline") {
+		t.Error("inception-pipeline must not retain its lint exemption")
 	}
 	if !sort.StringsAreSorted(lintBaselineSkills) {
 		t.Error("the lint baseline ids must be sorted")

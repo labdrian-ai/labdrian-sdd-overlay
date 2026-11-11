@@ -131,6 +131,7 @@ project-architect/references/architecture-template.md custom
 project-architect/references/blocked-response.md custom
 requirements-from-transcripts/references/output-template.md custom
 requirements-from-transcripts/references/patterns-catalog.md custom
+inception-pipeline/references/closure-feedback.md custom
 inception-pipeline/references/tier-selection.md custom
 skills.registry.yaml custom
 builder.md               custom   agent

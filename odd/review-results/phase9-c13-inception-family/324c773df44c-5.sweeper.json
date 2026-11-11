@@ -1,0 +1,15 @@
+{
+  "kind": "sweeper",
+  "base": "bd48c1a5d79dd35a9c6c49e412988da99bc40c6f",
+  "head": "324c773df44c0e4702de3345dc337669568bdb75",
+  "diff_sha256": "010cc4d9d6bd53347e677a252bf4c3ec73f323dd22d8bc806e82063d39f541ef",
+  "sweep": "324c773df44c-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T3:  M odd/tasks/phase9-c13-inception-family.md",
+      "disposition": "live",
+      "evidence": "Parent inline judgment, not a separate model execution: git status --short reports the canonical feature document as modified; it holds S1-S9, the Tasks and the retained Log through L34, including the owner's authorizations and approvals for this correction. It is unfinished task bookkeeping that the parent commits at T8 closure, not orphaned or disposable content. Keep it. No deletion, source change or cleanup commit occurred."
+    }
+  ]
+}

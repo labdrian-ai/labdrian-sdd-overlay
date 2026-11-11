@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "1816dda0a8aa1b3582a30fbaec96f5dfb771c456",
+    "head": "692efc38c2c2b3b50fd0688ac0d826b02030ebd2",
+    "diff_sha256": "419bd040e7ba97cf423238beea8f6ad52f6693fb8462f3d469a0f4e131995ac1",
+    "paths": [
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/skills/approval_gate_test.go",
+      "engine/skills/approval_write.go",
+      "engine/skills/inception_family_artifact_test.go",
+      "engine/skills/registryyaml_adapter_test.go",
+      "skills/project-manifest/.approval.json",
+      "skills/project-manifest/SKILL.md",
+      "skills/project-manifest/references/phase-templates.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "1816dda0a8aa1b3582a30fbaec96f5dfb771c456",
+      "head": "692efc38c2c2b3b50fd0688ac0d826b02030ebd2",
+      "diff_sha256": "419bd040e7ba97cf423238beea8f6ad52f6693fb8462f3d469a0f4e131995ac1"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/skills/approval_gate_test.go",
+        "engine/skills/approval_write.go",
+        "engine/skills/inception_family_artifact_test.go",
+        "engine/skills/registryyaml_adapter_test.go",
+        "skills/project-manifest/.approval.json",
+        "skills/project-manifest/SKILL.md",
+        "skills/project-manifest/references/phase-templates.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "skills/project-manifest/references/phase-templates.md:102",
+        "severity": "WARNING",
+        "claim": "The new draft instruction places confirmed domain rules under a heading that labels them pending confirmation. A draft following this template gives readers contradictory information about whether those rules are approved.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/project-manifest/references/phase-templates.md:100",
+          "skills/project-manifest/references/phase-templates.md:102"
+        ]
+      }
+    ],
+    "evidence": [
+      "git rev-parse HEAD returned 78bee5b947aba7dde1055504d558fbccbffb7639.",
+      "git diff --name-only returned the nine changed paths listed in inspection.paths.",
+      "Read the inline candidate diff and the changed sections of all nine paths in the named worktree.",
+      "Tests and formatters: not run."
+    ]
+  }
+}

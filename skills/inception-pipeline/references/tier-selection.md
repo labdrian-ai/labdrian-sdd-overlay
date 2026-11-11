@@ -4,7 +4,7 @@ Conditional-load companion to the tier-selection checklist in `../SKILL.md`. Rea
 
 The checklist, repeated for reference (evaluate in order, stop at the first match):
 
-1. No `project/{project}/manifest/context` in engram → **Tier 1**.
+1. No `project/{project}/manifest/context` using parent-resolved memorycard capabilities → **Tier 1**.
 2. manifest + architect exist AND self-contained, single surface, no new architectural surface, no schema/integration/prod risk → **Tier 3**.
 3. manifest + architect exist AND adds a feature/capability needing roadmap sequencing or cross-cutting work → **Tier 2**.
 4. Ambiguous → **default UP one tier**, record rationale in `sdd/{change}/pipeline-state`, ask ONE question only if genuinely ambiguous.
@@ -13,7 +13,7 @@ The checklist, repeated for reference (evaluate in order, stop at the first matc
 
 ## Example A — New project (Tier 1)
 
-**Signal:** User says "let's build a new invoicing service." No `project/{project}/manifest/context` exists in engram.
+**Signal:** User says "let's build a new invoicing service." No `project/{project}/manifest/context` exists using parent-resolved memorycard capabilities.
 
 **Rule fired:** #1 — no manifest.
 

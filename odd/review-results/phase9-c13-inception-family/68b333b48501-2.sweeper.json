@@ -1,0 +1,15 @@
+{
+  "kind": "sweeper",
+  "base": "e25f0bfe15696c60ded2fd8c6a1563144c05f032",
+  "head": "68b333b48501812dd6ce25b31b4284a6f1be9339",
+  "diff_sha256": "000e167966a501e769f88fcbdc4b7995172c533a53592d34c21f644adcc1294b",
+  "sweep": "68b333b48501-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T2 shellcheck .: engine/shelltest/overlay_longterm_mem_test.sh: note: Expressions don't expand in single quotes, use double quotes for that. [SC2016]",
+      "disposition": "live",
+      "evidence": "Immutable review-bd7ccb066bd2/engine/shelltest/overlay_longterm_mem_test.sh:1569 assigns single-quoted literal \"$root\" to call_line; :1588 uses grep -F against references/closure-feedback.md:85, which contains that exact literal command. Expansion would change the text being asserted. The assertion and managed-skill exclusion are live; no concrete SC2016 defect is established."
+    }
+  ]
+}

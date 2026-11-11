@@ -1,0 +1,129 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "952d4425f21d000b3c3f7902c7566028395d2896",
+    "head": "16820b4b4f484f8d596825f61b3b84378c410c64",
+    "diff_sha256": "bad9f65f30166d68b30369e1359ec0271be4a8f4261ce086ea1743f43fff4bd6",
+    "paths": [
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/cmd/inception_chain_entry_test.go",
+      "engine/shelltest/overlay_longterm_mem_test.sh",
+      "engine/skills/actuals_instrumentation_contract_test.go",
+      "engine/skills/approval_gate_test.go",
+      "engine/skills/approval_write.go",
+      "engine/skills/inception_chain_entry_test.go",
+      "engine/skills/inception_family_artifact_test.go",
+      "engine/skills/registryyaml_adapter_test.go",
+      "overlay.manifest",
+      "skills/_shared/pre-sdd-contracts.md",
+      "skills/inception-pipeline/.approval.json",
+      "skills/inception-pipeline/SKILL.md",
+      "skills/inception-pipeline/references/closure-feedback.md",
+      "skills/inception-pipeline/references/tier-selection.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "952d4425f21d000b3c3f7902c7566028395d2896",
+      "head": "16820b4b4f484f8d596825f61b3b84378c410c64",
+      "diff_sha256": "bad9f65f30166d68b30369e1359ec0271be4a8f4261ce086ea1743f43fff4bd6"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/cmd/inception_chain_entry_test.go",
+        "engine/shelltest/overlay_longterm_mem_test.sh",
+        "engine/skills/actuals_instrumentation_contract_test.go",
+        "engine/skills/approval_gate_test.go",
+        "engine/skills/approval_write.go",
+        "engine/skills/inception_chain_entry_test.go",
+        "engine/skills/inception_family_artifact_test.go",
+        "engine/skills/registryyaml_adapter_test.go",
+        "overlay.manifest",
+        "skills/_shared/pre-sdd-contracts.md",
+        "skills/inception-pipeline/.approval.json",
+        "skills/inception-pipeline/SKILL.md",
+        "skills/inception-pipeline/references/closure-feedback.md",
+        "skills/inception-pipeline/references/tier-selection.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "skills/inception-pipeline/SKILL.md:46",
+        "severity": "WARNING",
+        "claim": "The change removes the base rule that closure waits for the merge. The base text said: 'A terminal chain whose delivery has not merged yet is not closed either. Wait for the merge: t1 and landing_commit come from it.' The new entry says only that '\"terminal\": true is a handoff, not proof of delivery or merge; otherwise wait.' Here 'otherwise wait' covers only the non-terminal case. For a missing landing_commit it then says to 'disclose absence or mismatch and omit t1'. With a terminal but unmerged chain, closure can therefore go ahead, write the single-writer sdd/{change}/actuals and calibration records with t1 and total_wall_clock_hours omitted, and append the Cycle Timestamps entry before the merge exists. A measurement the base would have taken is lost.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "diff hunk skills/inception-pipeline/SKILL.md: removed '4. A terminal chain whose delivery has not merged yet is not closed either. Wait for the merge' (diff line 679)",
+          "diff hunk skills/inception-pipeline/SKILL.md new line 46 (diff line 774)"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "skills/inception-pipeline/references/closure-feedback.md:27-28",
+        "severity": "WARNING",
+        "claim": "In the base, closure itself recorded landing_commit as 'the actual merge commit that merged the change onto the default branch' once the merge had happened. Now closure only writes 'from the explicitly recorded landing identity; it never discovers one', and requires that 'the landing commit is recorded' first. No current role records it. roles/delivery/body.md only appends one final Log entry, before the merge. odd-feature-doc/SKILL.md never mentions a landing or merge commit. Unless someone outside the documented roles records the landing commit, t1 and total_wall_clock_hours will always be omitted for new features. The spec asks for an explicit landing commit, but no artifact names who records it or where.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "diff line 826-827 vs removed base lines 706-707",
+          "/home/labdrian/labdrian-sdd-overlay-worktrees/review-16820b4b4f48/roles/delivery/body.md:8 (no landing commit)",
+          "Grep of skills/odd-feature-doc/SKILL.md for 'landing|merge': no matches"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "skills/inception-pipeline/SKILL.md:3",
+        "severity": "WARNING",
+        "claim": "Hosts choose a skill by its frontmatter description. The new description cuts these from that contract: the 'THIS IS THE FIRST SKILL TO USE when starting any unit of work' priority, all trigger phrases (start project, bootstrap, hotfix, change request, and the Spanish triggers 'arrancá el proyecto', 'nueva feature', 'arreglo chico'), and the 'do not invoke project-inception directly' routing guard. The body keeps a short Activation Contract, but the body is read only after selection. Requests phrased with the removed triggers, especially Spanish ones, may no longer select inception-pipeline, or may go straight to project-inception and skip tier routing. The lint needed a description of 250 runes or less, but 138 of 250 are used, so the trigger list was cut beyond what the budget required.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "diff lines 557-558 (description before/after)"
+        ]
+      },
+      {
+        "id": "F4",
+        "location": "skills/inception-pipeline/references/closure-feedback.md:81",
+        "severity": "SUGGESTION",
+        "claim": "Execute item 3 now appends a NEW closure-feedback Log entry to the feature document after delivery. roles/delivery/body.md tells delivery to 'append one final Log entry and change nothing else'. Delivery's entry is therefore no longer the final one, and nothing tells the delivery role or the odd-feature-doc skill that a later closure entry is expected. A reader or a future check that treats the last Log entry as the delivery close would see the closure entry instead.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "diff line 880",
+          "/home/labdrian/labdrian-sdd-overlay-worktrees/review-16820b4b4f48/roles/delivery/body.md:8"
+        ]
+      },
+      {
+        "id": "F5",
+        "location": "engine/skills/approval_write.go:21-24",
+        "severity": "SUGGESTION",
+        "claim": "Removing inception-pipeline from lintBaselineSkills makes the approve guard stricter for this skill, not looser. Any future hard finding (body-hard-budget, description-max) now refuses approval instead of only warning. The builder log reports the compacted entry at 999 estimated body tokens against the 1000 hard budget. Almost any edit that grows the entry will fail TestInceptionPipelineCompactEntry and make 'labdrian skills approve --id inception-pipeline' refuse, so the skill sits one token from a blocked approval path.",
+        "evidence_class": "inferential",
+        "causal_disposition": "behavior-activated",
+        "proof_refs": [
+          "diff line 277 (removal)",
+          "/home/labdrian/labdrian-sdd-overlay-worktrees/review-16820b4b4f48/engine/skills/approval_write.go:68-79 (BaselineLintDecision refuses non-baseline ids on any hard finding)"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the bound diff /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/1b02436e-7e8e-4520-88e0-eec651828802/scratchpad/c13-review/16820b4b.diff in full (914 lines)",
+      "Read spec S1-S9 and tasks T1-T8 in /home/labdrian/labdrian-sdd-overlay-worktrees/phase9-c13-inception/odd/tasks/phase9-c13-inception-family.md",
+      "Read engine/skills/approval_write.go:50-89 at head (inLintBaseline, BaselineLintDecision, legacyBaselineLintRules)",
+      "Searched head for every use of lintBaselineSkills/inLintBaseline",
+      "Searched roles/delivery/body.md and skills/odd-feature-doc/SKILL.md at head for landing/merge commit recording",
+      "Checked the skills.registry.yaml row for inception-pipeline (custom, global)",
+      "Not run: no tests, lint, validate or approval digest recomputation (reviewer cannot run commands); the .approval.json sha256 was not verified against the new tree"
+    ]
+  }
+}

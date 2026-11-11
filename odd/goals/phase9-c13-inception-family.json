@@ -1,0 +1,38 @@
+{
+  "version": 3,
+  "project_id": "labdrian-sdd-overlay",
+  "goal_id": "phase9-c13-inception-family",
+  "objective": "Complete Phase 9 C13 as shaped in odd/tasks/phase9-c13-inception-family.md: align the five existing custom inception skills with the delivered ODD role contracts while preserving historical identities and measurement invariants.",
+  "scope": "Specs S1-S9 and tasks T1-T8 of odd/tasks/phase9-c13-inception-family.md. One task is opened at a time. The five skill IDs are inception-pipeline, project-inception, project-manifest, project-architect, and roadmap-maker.",
+  "runtime_scope": "Parent-coordinated bounded Codex/OpenAI roles and the existing native Labdrian management CLI. This work does not implement or claim Hermes runtime integration.",
+  "delivery_boundary": "Local task-scoped edits and verification in feat/phase9-c13-inception. Commits, remote publication, merges and deployment require separate owner authorization. Human skill approvals remain human operations after final content stabilizes.",
+  "constraints": [
+    "Implement only a task with a valid shaper design mark and the exact paths it authorizes.",
+    "Observe the named safety net and meaningful RED before changing behavior; preserve failures and use the same test through GREEN.",
+    "Use Codex/OpenAI for all real model calls; do not launch Claude or Anthropic actors.",
+    "Preserve existing topic identities, actuals schemas, anchor semantics, historical evidence and all unrelated edits.",
+    "Use isolated test state and existing toolchains; no live configuration, approval-record fabrication, deployment or package installation.",
+    "New memory persistence uses memorycard; legacy Engram evidence remains read-only and no memorycard sync support is inferred.",
+    "An unresolved consequential product decision blocks only its affected work and returns to the owner."
+  ],
+  "non_goals": [
+    "Continuing the stopped Hermes implementation.",
+    "C14 planning-skill rewrites, including requirements-from-transcripts.",
+    "C22-FU memorycard sync or migration implementation.",
+    "A new runtime, orchestration framework, runner, schema migration or review benchmark.",
+    "Changing generated role agents or approving skills on the owner's behalf."
+  ],
+  "acceptance_criteria": [
+    "Each shaped task has observed results and retained limitations in the feature document; unexecuted work is not marked complete.",
+    "The public role-verb regression proves the documented feature-doc handoff and preserves malformed and ambiguous-example rejection.",
+    "Closure and producer instructions use the current ODD artifacts while preserving the named actuals and historical-anchor invariants.",
+    "All five rewritten skills satisfy the existing lint contract and carry fresh actual human approvals before C16 is considered satisfied for them.",
+    "The named focused, regression and independent checks are executed and reported accurately; no unrun check is treated as a pass."
+  ],
+  "memory_directive": {
+    "version": 1,
+    "scope": "project",
+    "sources": ["engram", "longterm-mem", "procedural-skills"],
+    "write": "none"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "kind": "sweeper",
+  "base": "be1afed67b880800861682c5a96113982561289b",
+  "head": "bd48c1a5d79dd35a9c6c49e412988da99bc40c6f",
+  "diff_sha256": "22723d39e3c3109297769ec290ea4343c5a475d02fe0a414266964dc20d0982c",
+  "sweep": "bd48c1a5d79d-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T3:  M odd/tasks/phase9-c13-inception-family.md",
+      "disposition": "live",
+      "evidence": "Parent inline judgment, not a separate model execution: git status --short reports the canonical shaped feature document as modified; the real existing task document contains S1-S9, Tasks and retained L1-L32 history including genuine approvals and the corrective source commit. It is authorized unfinished task/delivery bookkeeping, not orphaned or disposable code. Keep it. No deletion, source change, cleanup commit, touched-package test or analyzer run occurred."
+    }
+  ]
+}

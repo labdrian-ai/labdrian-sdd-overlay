@@ -1,0 +1,14 @@
+{
+  "kind": "polisher",
+  "base": "2dd727c7ee195f358b4eb18c9a7cd785b85271ff",
+  "head": "78bee5b947aba7dde1055504d558fbccbffb7639",
+  "diff_sha256": "e9e5cbb484967d0507edc061016cf72db00058f93e06a750b84ad239649f66d8",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the complete canonical diff supplied for base 2dd727c7ee195f358b4eb18c9a7cd785b85271ff and head 78bee5b947aba7dde1055504d558fbccbffb7639; its SHA-256 was independently matched to e9e5cbb484967d0507edc061016cf72db00058f93e06a750b84ad239649f66d8 using read-only git diff.",
+      "Additional worktree inspection: skills/project-manifest/SKILL.md, skills/project-manifest/references/phase-templates.md.",
+      "Tests, formatter, generator, network and model calls not run."
+    ]
+  }
+}

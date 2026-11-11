@@ -1,0 +1,11 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "not-reproduced",
+      "command": "cwd: /home/labdrian/labdrian-sdd-overlay-worktrees/review-2dd727c7ee19\ngit --no-optional-locks show bd7ccb066bd2bd8d79bc9658ac40cf243aa5358f:skills/project-inception/SKILL.md\ngit --no-optional-locks diff --no-ext-diff --no-textconv bd7ccb066bd2bd8d79bc9658ac40cf243aa5358f 2dd727c7ee195f358b4eb18c9a7cd785b85271ff -- skills/project-inception/SKILL.md\ngit --no-optional-locks show 2dd727c7ee195f358b4eb18c9a7cd785b85271ff:skills/project-inception/SKILL.md\npython3 /home/labdrian/.hermes/cache/scratch/c13-A-history-2026-11-11/verifier/probe.py 3",
+      "output": "STATIC SOURCE EVIDENCE ONLY. HEAD: The claimed unavoidable contradiction was not reproduced. Head :26 requests citation; it does not command a manifest write. Head :16 prohibits the coordinator authoring producer documents, :22 expressly makes successful reuse read-only and forbids rewriting either foundation, and :27 dispatches the foundation producers only in full mode. With existing nonempty foundations and a newly supplied uncited brief, the literal route loads the brief, keeps foundations read-only and calls roadmap incremental-insert (:28). Requesting a citation is not evidence that the stored manifest was changed, nor an instruction overriding the mode-specific prohibition. BASE: The stronger generic Cite the brief instruction already exists at base :30, alongside explicit read-only reuse :43-48 and :102, which skips foundation-writing phases. Read with those mode-specific gates, no required foundation write in successful reuse was established. The generic citation wording is less explicit about mode but is not an executed contradiction. LIMIT: No producer was executed with the concrete new-brief/existing-uncited-manifest input, and no foundation data was read or mutated. The result refutes an asserted necessary source contradiction under the explicit mode gates; it is not empirical proof of every model response. Logs: /home/labdrian/.hermes/cache/scratch/c13-A-history-2026-11-11/verifier/2dd727c7ee19-3.probe.log.json; all source/diff logs share 2dd727c7ee19-3. prefix. Probe exit 0; expected missing-base-reference or missing-path git exits are retained in the raw logs.",
+      "base_result": "not-reproduced"
+    }
+  ]
+}

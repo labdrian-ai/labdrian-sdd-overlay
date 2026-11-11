@@ -1,0 +1,11 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "cwd: /home/labdrian/labdrian-sdd-overlay-worktrees/review-33f6f5e3c00d\ngit --no-optional-locks show 9619d29efa97a52126193dd5284ad57dfb8b060b:skills/roadmap-maker/SKILL.md\ngit --no-optional-locks show 9619d29efa97a52126193dd5284ad57dfb8b060b:skills/roadmap-maker/assets/roadmap-template.md\ngit --no-optional-locks diff --no-ext-diff --no-textconv 9619d29efa97a52126193dd5284ad57dfb8b060b 33f6f5e3c00d4d564358844937a4d73c8653d6fe -- skills/roadmap-maker/SKILL.md skills/roadmap-maker/assets/roadmap-template.md\ngit --no-optional-locks show 33f6f5e3c00d4d564358844937a4d73c8653d6fe:skills/roadmap-maker/SKILL.md\ngit --no-optional-locks show 33f6f5e3c00d4d564358844937a4d73c8653d6fe:skills/roadmap-maker/assets/roadmap-template.md\npython3 /home/labdrian/.hermes/cache/scratch/c13-A-history-2026-11-11/verifier/probe.py 7",
+      "output": "STATIC SOURCE EVIDENCE ONLY. HEAD: Static path invariant reproduced. Head roadmap-maker/SKILL.md:20 permits openspec/project/roadmap.md, and template :32 emits ../inception-pipeline/SKILL.md and ../role-chain/SKILL.md without a resolution root. From the artifact directory these normalize to openspec/inception-pipeline/SKILL.md and openspec/role-chain/SKILL.md. Exact-head git cat-file -e returns 128 for both; the intended skills/inception-pipeline/SKILL.md and skills/role-chain/SKILL.md return 0. This fails the supplied S7 entry-identity requirement for that documented placement. BASE: Base template :32 supplies /sdd-new {change-id}, not the offending relative paths. This exact newly emitted relative-path defect was not reproduced on the base; the old entry command was not independently endorsed. LIMIT: No roadmap producer or artifact emission ran. The probe resolves the literal template paths from a documented supported artifact location. A later dirty-tree correction is not used to refute the historical head. Logs: /home/labdrian/.hermes/cache/scratch/c13-A-history-2026-11-11/verifier/33f6f5e3c00d-3.probe.log.json; all source/diff logs share 33f6f5e3c00d-3. prefix. Probe exit 0; expected missing-base-reference or missing-path git exits are retained in the raw logs.",
+      "base_result": "not-reproduced"
+    }
+  ]
+}

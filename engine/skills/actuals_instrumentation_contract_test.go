@@ -12,11 +12,12 @@ import (
 )
 
 const (
-	actualsSchemaRelPath           = "skills/_shared/actuals-record.schema.json"
-	timeEstimationSkillRelPath     = "skills/sdd-time-estimation/SKILL.md"
-	inceptionPipelineSkillRelPath  = "skills/inception-pipeline/SKILL.md"
-	roadmapMakerSkillRelPath       = "skills/roadmap-maker/SKILL.md"
-	correctedActualsFixtureRelPath = "engine/skills/testdata/corrected-actuals-sync-check-repo-behind-origin.json"
+	actualsSchemaRelPath             = "skills/_shared/actuals-record.schema.json"
+	timeEstimationSkillRelPath       = "skills/sdd-time-estimation/SKILL.md"
+	inceptionPipelineSkillRelPath    = "skills/inception-pipeline/SKILL.md"
+	inceptionClosureReferenceRelPath = "skills/inception-pipeline/references/closure-feedback.md"
+	roadmapMakerSkillRelPath         = "skills/roadmap-maker/SKILL.md"
+	correctedActualsFixtureRelPath   = "engine/skills/testdata/corrected-actuals-sync-check-repo-behind-origin.json"
 	// correctedActualsSkillsValidateOndiskGateFixtureRelPath mirrors Engram obs #2789
 	// (sdd/skills-validate-ondisk-gate/actuals, revision 3) so spec.md scenario 14
 	// ("Measured record re-based when both anchors resolve") is guarded by a committed
@@ -101,7 +102,7 @@ func TestActualsInstrumentationContract(t *testing.T) {
 		// inverting it to the all-or-nothing rule R-021 exists to abolish, left the whole
 		// suite green (verify round 4, W1). Pinned at its unique site — both substrings
 		// occur exactly once in the file.
-		skill := readRepoFile(t, repoRoot, inceptionPipelineSkillRelPath)
+		skill := readRepoFile(t, repoRoot, inceptionClosureReferenceRelPath)
 		for _, want := range []string{
 			"`total_wall_clock_hours` is validly absent when its anchors do not resolve (R-021)",
 			"every other resolved field is still required",
@@ -123,7 +124,7 @@ func TestActualsInstrumentationContract(t *testing.T) {
 	})
 
 	t.Run("R006_R007_R015_inception_round_trip_and_explicit_zero", func(t *testing.T) {
-		skill := readRepoFile(t, repoRoot, inceptionPipelineSkillRelPath)
+		skill := readRepoFile(t, repoRoot, inceptionClosureReferenceRelPath)
 		for _, want := range []string{
 			"one unit per distinct human round-trip reply",
 			"explicitly zero",
@@ -138,7 +139,7 @@ func TestActualsInstrumentationContract(t *testing.T) {
 	})
 
 	t.Run("R016_R017_R018_closure_feedback_anchor_prose", func(t *testing.T) {
-		skill := readRepoFile(t, repoRoot, inceptionPipelineSkillRelPath)
+		skill := readRepoFile(t, repoRoot, inceptionClosureReferenceRelPath)
 		for _, want := range []string{
 			// D4: boundary co-move, archive → merge.
 			"through merge",
@@ -194,11 +195,11 @@ func TestActualsInstrumentationContract(t *testing.T) {
 			// Timestamps" alone occurs at two sites (this Execute item and the
 			// Gotchas carve-out reference), so deleting the Execute item in full
 			// left the bare pin green — mutation-proven non-covering.
-			"Append a `## Cycle Timestamps` section to the archived",
+			"Append a NEW closure-feedback Log entry containing a fenced Markdown block with a `## Cycle Timestamps` heading",
 			// D1: t0 is read from the typed field, never the rendered footer.
 			"typed `created_at` field",
-			// D1: engram export selected by topic_key, never a rendered footer parse.
-			"engram export",
+			// D1: typed provider metadata selects the exact topic, never a rendered footer parse.
+			"provider exposes typed creation metadata",
 			// D1: a pipeline-state observation with no topic_key is unresolvable.
 			"no `topic_key`",
 			// D1b: t0 falls back to the earliest created_at among the change's own
@@ -207,6 +208,7 @@ func TestActualsInstrumentationContract(t *testing.T) {
 			// exact path this very change takes at its own closure. Previously
 			// unpinned entirely.
 			"t0 falls back to the earliest `created_at` among the change",
+			"otherwise omit unresolved elapsed time and disclose why under R-021",
 			// D4: post-merge archive-authorization lag is excluded from
 			// checkpoint_count's boundary (R-003/4/5 scenario "Post-merge
 			// bookkeeping replies do not count"). Pinned as the operative
@@ -264,7 +266,7 @@ func TestActualsInstrumentationContract(t *testing.T) {
 		// R-019: the three compute-time fields' deferral reason must be stated
 		// in shipped documentation, not only in this change's own proposal/spec
 		// (verify's C3 finding: the rationale existed nowhere else).
-		skill := readRepoFile(t, repoRoot, inceptionPipelineSkillRelPath)
+		skill := readRepoFile(t, repoRoot, inceptionClosureReferenceRelPath)
 		for _, want := range []string{
 			"implementation_hours",
 			"review_gate_hours",
@@ -462,11 +464,8 @@ func TestActualsInstrumentationContract(t *testing.T) {
 	})
 
 	t.Run("R013_roadmap_maker_no_compute_time_source_invariant", func(t *testing.T) {
-		// Invariant, same precedent as D2_D5_closed_schema_invariant: roadmap-maker/SKILL.md
-		// is unchanged versus main (design D6 forbids editing it), so this FORBID-list
-		// regression guard is GREEN-by-construction on both main and HEAD. It is NOT RED
-		// coverage for R-013 — it only guards against a future regression that sources a
-		// tracking-line figure from one of the compute-time/calendar-time fields.
+		// This FORBID-list guards the R-013 tracking-line source invariant in the
+		// rewritten roadmap entry; it is not RED coverage for R-013.
 		skill := readRepoFile(t, repoRoot, roadmapMakerSkillRelPath)
 		for _, forbidden := range []string{
 			"total_wall_clock_hours", "checkpoint_count", "implementation_hours",
@@ -626,6 +625,7 @@ func TestAbolishedVocabularySweptFromCurrentSections(t *testing.T) {
 			proposalRelPath,
 			specRelPath,
 			inceptionPipelineSkillRelPath,
+			inceptionClosureReferenceRelPath,
 			timeEstimationSkillRelPath,
 			actualsSchemaRelPath,
 			correctedActualsFixtureRelPath,
@@ -695,7 +695,7 @@ func TestReviewLensCountIsCountedFromTheRowsOfTheStoredResults(t *testing.T) {
 func TestTheDocumentedCallsOfTheActualsValidatorGiveItTheRepositoryRoot(t *testing.T) {
 	repoRoot := actualsInstrumentationRepoRoot(t)
 	const start = `go run -C "$root/tools/actuals-record-validator" .`
-	for _, rel := range []string{inceptionPipelineSkillRelPath, "skills/_shared/pre-sdd-contracts.md"} {
+	for _, rel := range []string{inceptionClosureReferenceRelPath, "skills/_shared/pre-sdd-contracts.md"} {
 		t.Run(rel, func(t *testing.T) {
 			text := readRepoFile(t, repoRoot, rel)
 			at := strings.Index(text, start)

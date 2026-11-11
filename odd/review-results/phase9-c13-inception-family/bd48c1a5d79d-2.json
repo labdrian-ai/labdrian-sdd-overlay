@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "be1afed67b880800861682c5a96113982561289b",
+    "head": "bd48c1a5d79dd35a9c6c49e412988da99bc40c6f",
+    "diff_sha256": "22723d39e3c3109297769ec290ea4343c5a475d02fe0a414266964dc20d0982c",
+    "paths": [
+      "engine/skills/actuals_instrumentation_contract_test.go",
+      "engine/skills/inception_family_artifact_test.go",
+      "skills/inception-pipeline/.approval.json",
+      "skills/inception-pipeline/SKILL.md",
+      "skills/inception-pipeline/references/closure-feedback.md",
+      "skills/project-architect/.approval.json",
+      "skills/project-architect/SKILL.md",
+      "skills/project-architect/references/architecture-template.md",
+      "skills/project-inception/.approval.json",
+      "skills/project-inception/SKILL.md",
+      "skills/project-manifest/.approval.json",
+      "skills/project-manifest/SKILL.md",
+      "skills/project-manifest/references/phase-templates.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "be1afed67b880800861682c5a96113982561289b",
+      "head": "bd48c1a5d79dd35a9c6c49e412988da99bc40c6f",
+      "diff_sha256": "22723d39e3c3109297769ec290ea4343c5a475d02fe0a414266964dc20d0982c"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skills/actuals_instrumentation_contract_test.go",
+        "engine/skills/inception_family_artifact_test.go",
+        "skills/inception-pipeline/.approval.json",
+        "skills/inception-pipeline/SKILL.md",
+        "skills/inception-pipeline/references/closure-feedback.md",
+        "skills/project-architect/.approval.json",
+        "skills/project-architect/SKILL.md",
+        "skills/project-architect/references/architecture-template.md",
+        "skills/project-inception/.approval.json",
+        "skills/project-inception/SKILL.md",
+        "skills/project-manifest/.approval.json",
+        "skills/project-manifest/SKILL.md",
+        "skills/project-manifest/references/phase-templates.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "skills/inception-pipeline/references/closure-feedback.md:31",
+        "severity": "WARNING",
+        "claim": "Requiring landing onto the default branch excludes supported deliveries into tracker or dev branches. For a successful delivery merged into its parent-selected dev branch, closure now cannot accept that merge as landing_commit, even when its tree matches the reviewed candidate. It must wait for another integration or measure a later boundary. Preserve the selected delivery integration branch rather than imposing the default branch.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "Changed line 31 replaces 'the explicitly recorded commit that landed the successful delivery' with 'the actual merge commit ... onto the default branch'.",
+          "roles/delivery/body.md:9 explicitly supports '--onto' targeting 'main, a tracker branch or a dev branch'; git show confirmed the same contract at the supplied base.",
+          "skills/inception-pipeline/references/closure-feedback.md:30 requires waiting and writing nothing until the prescribed merge."
+        ]
+      }
+    ],
+    "evidence": [
+      "Inspected all 13 changed paths and relevant role-chain, delivery, roadmap, shared-contract, lint and approval-digest definitions within the supplied worktree.",
+      "git diff be1afed67b880800861682c5a96113982561289b bd48c1a5d79dd35a9c6c49e412988da99bc40c6f --stat: exit 0; 13 files changed, 348 insertions(+), 163 deletions(-).",
+      "git show of the base closure reference and delivery body: exit 0; confirmed the before/after evidence cited in F1.",
+      "git status --short: exit 0; empty output.",
+      "Tests, validators, formatters, analyzers and producer execution: not run. No writes, delegation or network operations performed."
+    ]
+  }
+}

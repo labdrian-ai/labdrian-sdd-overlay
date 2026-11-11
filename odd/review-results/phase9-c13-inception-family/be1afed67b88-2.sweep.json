@@ -1,0 +1,32 @@
+{
+  "kind": "sweep",
+  "base": "92677057a0973641935ac4175d2ced9f657bc18a",
+  "head": "be1afed67b880800861682c5a96113982561289b",
+  "diff_sha256": "5273f4fed7568549dcb6650c2691e3a5f89cecab8efbdf8db4e35ee295880252",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": []
+  },
+  "t2": [],
+  "t3": [
+    " M engine/skills/actuals_instrumentation_contract_test.go",
+    " M engine/skills/inception_family_artifact_test.go",
+    " M odd/tasks/phase9-c13-inception-family.md",
+    " M skills/inception-pipeline/.approval.json",
+    " M skills/inception-pipeline/SKILL.md",
+    " M skills/inception-pipeline/references/closure-feedback.md",
+    " M skills/project-architect/.approval.json",
+    " M skills/project-architect/SKILL.md",
+    " M skills/project-architect/references/architecture-template.md",
+    " M skills/project-inception/.approval.json",
+    " M skills/project-inception/SKILL.md",
+    " M skills/project-manifest/.approval.json",
+    " M skills/project-manifest/SKILL.md",
+    " M skills/project-manifest/references/phase-templates.md"
+  ],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

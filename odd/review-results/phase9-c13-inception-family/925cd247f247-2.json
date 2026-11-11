@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "e059daa628eaf28dfc4c3dbb15e75d10d11a5af8",
+    "head": "925cd247f2474c76af53c4199f2e0cb86ea4ad1f",
+    "diff_sha256": "bbce2c8d4912f73e5770544c398131bf5bc57f45742f118dc7764a8fc3f058e3",
+    "paths": [
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/skills/approval_gate_test.go",
+      "engine/skills/approval_write.go",
+      "engine/skills/inception_family_artifact_test.go",
+      "engine/skills/registryyaml_adapter_test.go",
+      "skills/roadmap-maker/.approval.json",
+      "skills/roadmap-maker/SKILL.md",
+      "skills/roadmap-maker/assets/roadmap-template.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "e059daa628eaf28dfc4c3dbb15e75d10d11a5af8",
+      "head": "925cd247f2474c76af53c4199f2e0cb86ea4ad1f",
+      "diff_sha256": "bbce2c8d4912f73e5770544c398131bf5bc57f45742f118dc7764a8fc3f058e3"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/skills/approval_gate_test.go",
+        "engine/skills/approval_write.go",
+        "engine/skills/inception_family_artifact_test.go",
+        "engine/skills/registryyaml_adapter_test.go",
+        "skills/roadmap-maker/.approval.json",
+        "skills/roadmap-maker/SKILL.md",
+        "skills/roadmap-maker/assets/roadmap-template.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Inspected the supplied canonical range diff and integration-only comparison; limited defect evaluation to the integrated S7 route, preserved roadmap/actuals obligations, and regressions from the three integrated files.",
+      "Read the complete bound roadmap skill, template and approval record. Inspected the changed hunks of the other six paths. Read-only head, rg and sed commands exited 0.",
+      "Read skills/inception-pipeline/SKILL.md and skills/role-chain/SKILL.md; both repository skill identities named by the rendered template exist.",
+      "Inspected tracking-source context in skills/sdd-time-estimation/SKILL.md, skills/_shared/pre-sdd-contracts.md and skills/inception-pipeline/references/closure-feedback.md.",
+      "The integrated instructions retain dependency ordering, stable identities, completed foundations, insert-mode history preservation, actuals read-only ownership, source attribution and distinct missing-data sentinels.",
+      "Tests, analyzers, formatters and approval-digest validation: not run. No edits or delegation."
+    ]
+  }
+}

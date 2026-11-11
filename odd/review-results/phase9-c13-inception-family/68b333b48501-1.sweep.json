@@ -1,0 +1,25 @@
+{
+  "kind": "sweep",
+  "base": "e25f0bfe15696c60ded2fd8c6a1563144c05f032",
+  "head": "68b333b48501812dd6ce25b31b4284a6f1be9339",
+  "diff_sha256": "000e167966a501e769f88fcbdc4b7995172c533a53592d34c21f644adcc1294b",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": []
+  },
+  "t2": [
+    {
+      "tool": "shellcheck",
+      "module": ".",
+      "new": [
+        "engine/shelltest/overlay_longterm_mem_test.sh: note: Expressions don't expand in single quotes, use double quotes for that. [SC2016]"
+      ]
+    }
+  ],
+  "t3": [],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

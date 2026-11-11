@@ -86,6 +86,11 @@ func TestInceptionPipelineEntersTheRoleChain(t *testing.T) {
 // skills/inception-pipeline/SKILL.md.
 const inceptionClosureFeedbackHeading = "## Closure-Feedback (plan → validate → execute; single writer)"
 
+func inceptionClosureContent(t *testing.T, root, skill string) string {
+	t.Helper()
+	return markdownSectionBody(t, skill, inceptionClosureFeedbackHeading) + "\n" + readRepoFile(t, root, inceptionClosureReferenceRelPath)
+}
+
 // TestInceptionPipelineClosureFeedbackReadsTheChain pins the closure-feedback inputs of
 // skills/inception-pipeline/SKILL.md after ADR C13-S0 (Decision 3, owner decision 4a):
 // closure-feedback is re-anchored on the labdrian role chain, not deleted. The chain is
@@ -99,7 +104,7 @@ func TestInceptionPipelineClosureFeedbackReadsTheChain(t *testing.T) {
 	skill := readRepoFile(t, repoRoot, inceptionPipelineSkillRelPath)
 
 	t.Run("S5_fires_when_labdrian_roles_resume_reports_the_chain_terminal", func(t *testing.T) {
-		section := markdownSectionBody(t, skill, inceptionClosureFeedbackHeading)
+		section := inceptionClosureContent(t, repoRoot, skill)
 		for _, want := range []string{
 			"labdrian roles resume",
 			"\"terminal\": true",
@@ -111,7 +116,7 @@ func TestInceptionPipelineClosureFeedbackReadsTheChain(t *testing.T) {
 	})
 
 	t.Run("S5_review_inputs_are_the_stored_results_and_the_tree_of_the_reviewed_head", func(t *testing.T) {
-		section := markdownSectionBody(t, skill, inceptionClosureFeedbackHeading)
+		section := inceptionClosureContent(t, repoRoot, skill)
 		for _, want := range []string{
 			"odd/review-results/",
 			"`candidate.head`",
@@ -130,14 +135,14 @@ func TestInceptionPipelineClosureFeedbackReadsTheChain(t *testing.T) {
 			"SDD engine archives",
 			"sdd/{change}/entry",
 		} {
-			if strings.Contains(skill, forbidden) {
+			if strings.Contains(skill+inceptionClosureContent(t, repoRoot, skill), forbidden) {
 				t.Errorf("%s must not contain %q: closure-feedback no longer reads the gentle-ai receipt or the retired entry", inceptionPipelineSkillRelPath, forbidden)
 			}
 		}
 	})
 
 	t.Run("S5_planned_slice_count_comes_from_the_chain_not_the_retired_entry", func(t *testing.T) {
-		section := markdownSectionBody(t, skill, inceptionClosureFeedbackHeading)
+		section := inceptionClosureContent(t, repoRoot, skill)
 		if want := "planned slice count not recorded"; !strings.Contains(section, want) {
 			t.Errorf("the closure-feedback section must say %q when the chain's shaper/estimator record states no planned count", want)
 		}
@@ -148,7 +153,7 @@ func TestInceptionPipelineClosureFeedbackReadsTheChain(t *testing.T) {
 
 	t.Run("S5_archive_anchor_gate_is_history_only", func(t *testing.T) {
 		mentions := 0
-		for _, line := range strings.Split(skill, "\n") {
+		for _, line := range strings.Split(inceptionClosureContent(t, repoRoot, skill), "\n") {
 			if !strings.Contains(line, "archive-anchor-gate") {
 				continue
 			}
@@ -163,38 +168,26 @@ func TestInceptionPipelineClosureFeedbackReadsTheChain(t *testing.T) {
 	})
 }
 
-// TestInceptionPipelineClosureInputsAreLocatedByTheChain pins that every artifact
-// closure-feedback reads, and the one it writes into, has a placement rule that a hop can
-// follow. Correction B1 of the independent verifier (odd/tasks/inception-role-chain.md, T2).
-//
-// A role agent writes only at the paths and topics its prompt names (roles/*/body.md), and
-// agents/delivery.md writes "the archive report" at a path its prompt names. No chain contract
-// puts the Engram topics `sdd/{change}/{archive-report,verify-report,apply-progress,spec}`
-// anywhere: they were the SDD engine's, and the SDD engine is not in the chain. A skill that
-// calls them "the chain's own outputs" sends closure-feedback to targets nothing created, and
-// Execute item 3 (the append that carries the t1 anchor) cannot degrade the way an omitted
-// optional field does. So the Chain entry has the parent name the archive report, the Plan
-// confirms it before the first write, and every other input is read where the chain stores it
-// or at the locator the parent named.
+// TestInceptionPipelineClosureInputsAreLocatedByTheChain pins the current
+// feature-document target, its pre-write guard, and the bound evidence locations.
 func TestInceptionPipelineClosureInputsAreLocatedByTheChain(t *testing.T) {
 	repoRoot := actualsInstrumentationRepoRoot(t)
 	skill := readRepoFile(t, repoRoot, inceptionPipelineSkillRelPath)
 
-	t.Run("B1_chain_entry_has_the_delivery_prompt_name_the_archive_report", func(t *testing.T) {
+	t.Run("C13_chain_entry_names_the_feature_document", func(t *testing.T) {
 		section := markdownSectionBody(t, skill, "## Chain entry")
 		for _, want := range []string{
-			"Have the delivery prompt name the archive report",
-			"`archive-report.md`",
-			"inside the project repository",
+			"The parent names `odd/tasks/<feature>.md`",
+			"delivery adds its final Log entry in place",
 		} {
 			if !strings.Contains(section, want) {
-				t.Errorf("the Chain entry section must say %q: the archive report is the carve-out target of closure-feedback's Execute item 3, and no chain contract places it unless the parent's delivery prompt does", want)
+				t.Errorf("the Chain entry section must say %q: the parent must bind the original document and delivery must close it in place", want)
 			}
 		}
 	})
 
 	t.Run("B1_closure_names_only_the_topics_inception_itself_writes", func(t *testing.T) {
-		section := markdownSectionBody(t, skill, inceptionClosureFeedbackHeading)
+		section := inceptionClosureContent(t, repoRoot, skill)
 		// inception-pipeline writes sdd/{change}/pipeline-state (Tier Selection) and, as the
 		// single writer, sdd/{change}/actuals (Execute item 1). No chain contract places any
 		// other sdd/{change}/<name> topic, so naming one sends closure-feedback to a target
@@ -216,27 +209,48 @@ func TestInceptionPipelineClosureInputsAreLocatedByTheChain(t *testing.T) {
 			"the delivery hop writes `archive-report.md`",
 			"the delivery hop's `archive-report.md`",
 		} {
-			if strings.Contains(skill, forbidden) {
+			if strings.Contains(skill+inceptionClosureContent(t, repoRoot, skill), forbidden) {
 				t.Errorf("%s must not contain %q: agents/delivery.md writes \"the archive report\" at the path its prompt names, and no chain contract names that file or those topics", inceptionPipelineSkillRelPath, forbidden)
 			}
 		}
 	})
 
-	t.Run("B1_archive_report_is_confirmed_before_the_first_write", func(t *testing.T) {
-		section := markdownSectionBody(t, skill, inceptionClosureFeedbackHeading)
+	t.Run("C13_document_is_confirmed_before_the_first_write", func(t *testing.T) {
+		section := inceptionClosureContent(t, repoRoot, skill)
 		for _, want := range []string{
-			"BEFORE the first write",
-			"named no path",
+			"inside the project repository BEFORE the first write",
+			"missing or unreadable",
+			"write nothing",
 		} {
 			if !strings.Contains(section, want) {
-				t.Errorf("the closure-feedback section must say %q: Execute item 3 cannot be skipped, so a missing archive report has to stop closure before actuals or calibration are written, not after", want)
+				t.Errorf("the closure-feedback section must say %q: Execute item 3 cannot be skipped, so a missing or unreadable document must stop all closure writes", want)
+			}
+		}
+	})
+
+	t.Run("C13_current_closure_inputs_and_outcome", func(t *testing.T) {
+		section := inceptionClosureContent(t, repoRoot, skill)
+		for _, want := range []string{
+			"feature document's Specs and builder/delivery Log",
+			"delivery outcome and an explicitly recorded `landing_commit`",
+			"upstream requirements brief", "EARS R-NNN", "otherwise omit `requirement_count`",
+			"NEW closure-feedback Log entry", "fenced Markdown block", "2-row table",
+			"memorycard", "read back", "informational", "not proof of memorycard sync",
+		} {
+			if !strings.Contains(section, want) {
+				t.Errorf("closure-feedback must contain %q", want)
+			}
+		}
+		for _, forbidden := range []string{"engram export", "Builder's apply-progress", "shaper's spec"} {
+			if strings.Contains(section, forbidden) {
+				t.Errorf("current closure must not require %q", forbidden)
 			}
 		}
 	})
 
 	t.Run("B1_verifier_reports_are_read_where_the_chain_stores_them", func(t *testing.T) {
 		const stored = "`<head12>-<n>.verifier.json`"
-		section := markdownSectionBody(t, skill, inceptionClosureFeedbackHeading)
+		section := inceptionClosureContent(t, repoRoot, skill)
 		if !strings.Contains(section, stored) {
 			t.Errorf("the closure-feedback section must read the verifier's report where the chain stores it, %s beside the review result", stored)
 		}

@@ -1,0 +1,80 @@
+{
+  "kind": "sweeper",
+  "base": "92677057a0973641935ac4175d2ced9f657bc18a",
+  "head": "be1afed67b880800861682c5a96113982561289b",
+  "diff_sha256": "5273f4fed7568549dcb6650c2691e3a5f89cecab8efbdf8db4e35ee295880252",
+  "sweep": "be1afed67b88-2.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T3:  M engine/skills/actuals_instrumentation_contract_test.go",
+      "disposition": "live",
+      "evidence": "Go tests include TestActualsInstrumentationContract and read the closure reference and roadmap entry (lines 18-19, 41, 466-475); S4/S9 and L28 retain these actuals contract pins."
+    },
+    {
+      "candidate": "T3:  M engine/skills/inception_family_artifact_test.go",
+      "disposition": "live",
+      "evidence": "Go tests exercise closure activation, exact actuals replacement, architecture paths and the roadmap writer negation (lines 10-18, 251-327); L28-L30 identify the authorized C1/C2/B coverage."
+    },
+    {
+      "candidate": "T3:  M odd/tasks/phase9-c13-inception-family.md",
+      "disposition": "live",
+      "evidence": "Canonical C13 document contains S1-S9, T1-T8 and L1-L30; T8 remains unchecked and L28-L30 record authorization, historical bindings, verification and pending approvals."
+    },
+    {
+      "candidate": "T3:  M skills/inception-pipeline/.approval.json",
+      "disposition": "live",
+      "evidence": "Version 2 human record identifies inception-pipeline, its tree digest, approver and timestamp; S8 and L29-L30 preserve the record and require a fresh human approval for the changed tree."
+    },
+    {
+      "candidate": "T3:  M skills/inception-pipeline/SKILL.md",
+      "disposition": "live",
+      "evidence": "Registered and shipped skill entry (skills.registry.yaml:404-405; overlay.manifest:61); its line 46 requires the live closure reference and reserves actuals writes to closure."
+    },
+    {
+      "candidate": "T3:  M skills/inception-pipeline/references/closure-feedback.md",
+      "disposition": "live",
+      "evidence": "Entry requires this reference before closure (skills/inception-pipeline/SKILL.md:46); overlay.manifest:134 ships it, and its lines 60 and 82 define the validated actuals replacement."
+    },
+    {
+      "candidate": "T3:  M skills/project-architect/.approval.json",
+      "disposition": "live",
+      "evidence": "Version 2 human record identifies project-architect, its tree digest, approver and timestamp; S8 and L29-L30 preserve it and require a fresh human approval for the changed tree."
+    },
+    {
+      "candidate": "T3:  M skills/project-architect/SKILL.md",
+      "disposition": "live",
+      "evidence": "Registered and shipped architecture producer (skills.registry.yaml:430-431; overlay.manifest:63); line 34 loads its architecture template and line 36 returns its handoff."
+    },
+    {
+      "candidate": "T3:  M skills/project-architect/references/architecture-template.md",
+      "disposition": "live",
+      "evidence": "The architect entry loads this template at skills/project-architect/SKILL.md:34; overlay.manifest:130 ships it, including Section 15 at line 212 and the structured response at line 239."
+    },
+    {
+      "candidate": "T3:  M skills/project-inception/.approval.json",
+      "disposition": "live",
+      "evidence": "Version 2 human record identifies project-inception, its tree digest, approver and timestamp; S8 and L26 preserve human approval evidence and L30 identifies the two different stale trees."
+    },
+    {
+      "candidate": "T3:  M skills/project-inception/SKILL.md",
+      "disposition": "live",
+      "evidence": "Registered and shipped coordinator (skills.registry.yaml:391-392; overlay.manifest:60); lines 27 and 29 sequence the producers and return the implementation handoff."
+    },
+    {
+      "candidate": "T3:  M skills/project-manifest/.approval.json",
+      "disposition": "live",
+      "evidence": "Version 2 human record identifies project-manifest, its tree digest, approver and timestamp; S8 and L26 preserve human approval evidence and L30 identifies the two different stale trees."
+    },
+    {
+      "candidate": "T3:  M skills/project-manifest/SKILL.md",
+      "disposition": "live",
+      "evidence": "Registered and shipped manifest producer (skills.registry.yaml:417-418; overlay.manifest:62); line 35 loads its phase templates and universal rules."
+    },
+    {
+      "candidate": "T3:  M skills/project-manifest/references/phase-templates.md",
+      "disposition": "live",
+      "evidence": "The manifest entry loads this reference at skills/project-manifest/SKILL.md:35; overlay.manifest:128 ships it, with discovery, draft, final and structured response sections."
+    }
+  ]
+}

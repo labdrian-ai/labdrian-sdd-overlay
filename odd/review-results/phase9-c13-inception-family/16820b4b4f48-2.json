@@ -1,0 +1,157 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "952d4425f21d000b3c3f7902c7566028395d2896",
+    "head": "16820b4b4f484f8d596825f61b3b84378c410c64",
+    "diff_sha256": "bad9f65f30166d68b30369e1359ec0271be4a8f4261ce086ea1743f43fff4bd6",
+    "paths": [
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/cmd/inception_chain_entry_test.go",
+      "engine/shelltest/overlay_longterm_mem_test.sh",
+      "engine/skills/actuals_instrumentation_contract_test.go",
+      "engine/skills/approval_gate_test.go",
+      "engine/skills/approval_write.go",
+      "engine/skills/inception_chain_entry_test.go",
+      "engine/skills/inception_family_artifact_test.go",
+      "engine/skills/registryyaml_adapter_test.go",
+      "overlay.manifest",
+      "skills/_shared/pre-sdd-contracts.md",
+      "skills/inception-pipeline/.approval.json",
+      "skills/inception-pipeline/SKILL.md",
+      "skills/inception-pipeline/references/closure-feedback.md",
+      "skills/inception-pipeline/references/tier-selection.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "952d4425f21d000b3c3f7902c7566028395d2896",
+      "head": "16820b4b4f484f8d596825f61b3b84378c410c64",
+      "diff_sha256": "bad9f65f30166d68b30369e1359ec0271be4a8f4261ce086ea1743f43fff4bd6"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/cmd/inception_chain_entry_test.go",
+        "engine/shelltest/overlay_longterm_mem_test.sh",
+        "engine/skills/actuals_instrumentation_contract_test.go",
+        "engine/skills/approval_gate_test.go",
+        "engine/skills/approval_write.go",
+        "engine/skills/inception_chain_entry_test.go",
+        "engine/skills/inception_family_artifact_test.go",
+        "engine/skills/registryyaml_adapter_test.go",
+        "overlay.manifest",
+        "skills/_shared/pre-sdd-contracts.md",
+        "skills/inception-pipeline/.approval.json",
+        "skills/inception-pipeline/SKILL.md",
+        "skills/inception-pipeline/references/closure-feedback.md",
+        "skills/inception-pipeline/references/tier-selection.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/skills/inception_family_artifact_test.go:48-49",
+        "severity": "CRITICAL",
+        "claim": "The new test file ends with an extra blank line (`}\\n\\n`; line 49 is empty). gofmt always ends a file with exactly one newline, so `gofmt -l .` lists this file. CI runs that check in engine/ and fails the job when it lists anything (.github/workflows/ci.yml:88-90, `test -z \"$(gofmt -l .)\" || { gofmt -l .; exit 1; }`). So this commit turns the Gofmt step red. gofmt was not run in this review; this follows from gofmt's fixed output format.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "created path in diff: engine/skills/inception_family_artifact_test.go hunk @@ -0,0 +1,49 @@, final added line 49 is empty",
+          "Grep ^$ on the head file matches line 49 (the last line)",
+          ".github/workflows/ci.yml:88-90 Gofmt step, working-directory engine"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "skills/inception-pipeline/references/closure-feedback.md:826-827",
+        "severity": "WARNING",
+        "claim": "Before this change, closure-feedback found the merge commit itself after the merge and wrote `landing_commit` (\"Once the merge has happened, record ... the actual merge commit\"). Now it only writes the anchor \"from the explicitly recorded landing identity\", and SKILL.md requires \"an explicitly recorded `landing_commit` before t1\". No current actor records that identity. agents/delivery.md runs before the merge and only appends a Log entry naming the reviewed head, and the reference forbids searching history. Failure mode: for every new ODD change, t1 and `total_wall_clock_hours` are always omitted and disclosed as absent, so wall-clock measurement quietly stops. S3/S4 ask for an explicitly recorded landing commit, but the spec names no actor that records it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "behavior-activated",
+        "proof_refs": [
+          "diff removed SKILL.md line: 'Once the merge has happened, record in versioned prose ... `landing_commit`, always: the actual merge commit'",
+          "diff added closure-feedback.md:827 'the explicitly recorded commit that landed the successful delivery'",
+          "agents/delivery.md:15-17 (delivery appends one final Log entry; no landing commit recorded)"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "skills/inception-pipeline/SKILL.md:774",
+        "severity": "SUGGESTION",
+        "claim": "The compact firing rule drops the explicit instruction that a `roles resume` error because the chain has no records means \"do not fire\". \"otherwise wait\" only covers a non-terminal result. An agent that gets a resume error could treat it as unknown and continue closure.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "diff removed: '`\"terminal\": false`, or an error because the chain has no records, means the chain is still running: do not fire.'"
+        ]
+      },
+      {
+        "id": "F4",
+        "location": "skills/inception-pipeline/SKILL.md:605",
+        "severity": "SUGGESTION",
+        "claim": "The Tier 1 flow now says only \"optional `requirements_brief_ref`\" and no longer says it takes the value `{change}`. A caller can no longer tell from the skill what value to pass. S2 asks to preserve this parameter.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "diff removed: '`inception_mode: full` and `requirements_brief_ref: {change}`'"
+        ]
+      },
+      {
+        "id": "F5",
+        "location": "engine/skills/actuals_instrumentation_contract_test.go:193-197",
+        "severity": "SUGGESTION",
+        "claim": "Pin comments still explain why the pins are scoped by citing a \"Gotchas carve-out reference\" / \"Gotchas cross-reference sentence\". This change deleted that Gotchas section, and the pins now read only references/closure-feedback.md. The stated mutation rationale no longer matches the file under test, which misleads the next maintainer who checks whether a narrower pin would do.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "worsened",
+        "proof_refs": [
+          "diff removed SKILL.md '## Gotchas (real traps)' section",
+          "actuals_instrumentation_contract_test.go:196 and :225 still reference Gotchas",
+          "original location: engine/skills/actuals_instrumentation_contract_test.go:193-197,220-227"
+        ]
+      },
+      {
+        "id": "F6",
+        "location": "engine/skills/inception_chain_entry_test.go:320-321",
+        "severity": "SUGGESTION",
+        "claim": "The forbidden-term checks now scan SKILL.md plus references/closure-feedback.md, but the failure message still says only `inceptionPipelineSkillRelPath` must not contain the term. A failure caused by the reference points the maintainer at the wrong file.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "diff lines 320-321 and 392-393: strings.Contains(skill+inceptionClosureContent(...)) with t.Errorf naming inceptionPipelineSkillRelPath",
+          "original location: engine/skills/inception_chain_entry_test.go:320-321,391-393"
+        ]
+      },
+      {
+        "id": "F7",
+        "location": "skills/inception-pipeline/references/closure-feedback.md:817",
+        "severity": "SUGGESTION",
+        "claim": "General storage rules (memorycard writes, merge/read-back, legacy engram placement, project-file placement) sit as item 1 under the `#### t0` heading. They govern every closure write, not t0 resolution, so a reader looking for write rules will not find them where they apply.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "closure-feedback.md:815-817"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full bound diff (914 lines)",
+      "Read engine/cmd/inception_chain_entry_test.go:20-144 at head",
+      "Grep engine (non-test) for payload_kind handling: roles/handoff_validate.go only requires it non-blank; workflow/app/open.go already uses \"feature-doc\"",
+      "Read .github/workflows/ci.yml:78-91 (Gofmt step)",
+      "Grep empty lines in engine/skills/inception_family_artifact_test.go (line 49 is last and empty)",
+      "Read agents/delivery.md",
+      "Grep helper definitions in engine/skills (SplitSkillFile, parseFrontmatterFields, EstimateBodyTokens, LintSkillFile, inLintBaseline exist)",
+      "Read engine/skills/actuals_instrumentation_contract_test.go:185-244 at head",
+      "Read spec odd/tasks/phase9-c13-inception-family.md Specs S1-S9 (lines 5-28) and Tasks T1-T3",
+      "No commands, tests, or gofmt were run (read-only review)"
+    ]
+  }
+}

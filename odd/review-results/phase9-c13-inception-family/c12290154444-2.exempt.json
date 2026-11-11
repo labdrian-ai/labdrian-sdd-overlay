@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "7386799431f1358a1aace5501ba57a88e001fd3d",
+    "head": "c12290154444608c73df2791f6451670c3771804",
+    "diff_sha256": "632e0107067df471b3d994edb92d27a80bea7500c49e7bdba5f38d5fcfa0e6e4",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "codex/agents/builder.toml",
+      "codex/agents/polisher.toml",
+      "codex/agents/prototyper.toml",
+      "codex/agents/reviewer.toml",
+      "codex/agents/shaper.toml",
+      "codex/agents/sweeper.toml",
+      "codex/agents/verifier.toml",
+      "docs/architecture/role-design/per-role-design-v3.md",
+      "docs/architecture/role-design/per-role-reviewer.md",
+      "engine/agentgen/roles.go",
+      "engine/agentgen/roles_test.go",
+      "engine/skills/role_chain_artifact_test.go",
+      "pi/agents/builder.md",
+      "pi/agents/polisher.md",
+      "pi/agents/prototyper.md",
+      "pi/agents/reviewer.md",
+      "pi/agents/shaper.md",
+      "pi/agents/sweeper.md",
+      "pi/agents/verifier.md",
+      "skills/role-chain/.approval.json",
+      "skills/role-chain/SKILL.md",
+      "skills/role-chain/references/models.md"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "cd engine && TMPDIR=/var/tmp/c13-go-tmp go test -count=1 ./...",
+        "result": "pass",
+        "output": "Parent-executed on exact c12290154444608c73df2791f6451670c3771804 (merge of origin/main e25f0bfe into the feature branch); exit 0, 85 packages ok, no failing package."
+      },
+      {
+        "command": "cd engine && gofmt -l .",
+        "result": "pass",
+        "output": "Parent-executed on exact c12290154444608c73df2791f6451670c3771804; no file listed."
+      },
+      {
+        "command": "cd engine && go vet ./skills ./cmd",
+        "result": "pass",
+        "output": "Parent-executed on exact c12290154444608c73df2791f6451670c3771804; exit 0."
+      },
+      {
+        "command": "labdrian skills validate --source-root skills --registry skills.registry.yaml --manifest overlay.manifest",
+        "result": "pass",
+        "output": "Parent-executed on exact c12290154444608c73df2791f6451670c3771804; exit 0: global skill approvals verified (43 skills: 43 approved)."
+      },
+      {
+        "command": "git diff --check 73867994 c12290154444608c73df2791f6451670c3771804",
+        "result": "pass",
+        "output": "Parent-executed; exit 0, no output."
+      }
+    ]
+  }
+}

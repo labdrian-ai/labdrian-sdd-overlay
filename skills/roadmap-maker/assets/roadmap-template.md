@@ -29,7 +29,7 @@
 - **Dependencies**: {SDD-ids that must land first, or "none"}
 - **Acceptance evidence**: {observable signal that proves this SDD is done}
 - **Risk if done too early**: {concrete risk of premature execution}
-- **SDD entry command**: `/sdd-new {change-id}`
+- **Entry paths**: repository-relative skill identities `skills/inception-pipeline/SKILL.md`, `skills/role-chain/SKILL.md` (parent executes the route)
 
 #### Tracking (update across the cycle)
 
@@ -41,9 +41,9 @@ such measurement exists" identically is lying about which one it is.
 
 | Field | Value | Source |
 |-------|-------|--------|
-| Estimate (before start) | {… or `[PENDING]`} | Role-chain changes: the estimator's range in the chain's `estimator → builder` record. Changes from before inception-pipeline 3.0.0: `sdd/{change}/entry` — `estimate.planned_range_hours` (the entry is no longer written) |
-| Expected human checkpoints (planned) | {… or `[PENDING]`} | Role-chain changes: no source exists, so it stays `[PENDING]`. Changes from before inception-pipeline 3.0.0: `sdd/{change}/entry` — `estimate.expected_checkpoints` (optional; no producer since the 2026-10-22 estimation rewrite, so it stays `[PENDING]` unless the human sets it) |
-| Planned review slices | {… or `[PENDING]`} | Role-chain changes: the slice count the shaper's or estimator's record states. Changes from before inception-pipeline 3.0.0: `sdd/{change}/entry` — number of `review_slices` entries |
+| Estimate (before start) | {… or `[PENDING]`} | Role-chain changes: the shaper handoff's `estimates[]` ranges and estimator record when stated, with their units and basis; otherwise `[PENDING]`. historical fallback, changes from before inception-pipeline 3.0.0: `sdd/{change}/entry` — `estimate.planned_range_hours` (the entry is no longer written) |
+| Expected human checkpoints (planned) | {… or `[PENDING]`} | Role-chain changes: no source exists, so it stays `[PENDING]`. historical fallback, changes from before inception-pipeline 3.0.0: `sdd/{change}/entry` — `estimate.expected_checkpoints` (optional; no producer since the 2026-10-22 estimation rewrite, so it stays `[PENDING]` unless the human sets it) |
+| Planned review slices | {… or `[PENDING]`} | Role-chain changes: the slice count the shaper's or estimator's record states. historical fallback, changes from before inception-pipeline 3.0.0: `sdd/{change}/entry` — number of `review_slices` entries |
 | **Elapsed calendar time, tiering go-ahead → merge** | {… or `[PENDING]`} | `sdd/{change}/actuals` — `total_wall_clock_hours`. Includes interruption gaps. Right edge is the merge-commit committer timestamp, NOT archive: post-merge archive-authorization lag is bookkeeping and does not count as development time. Mark the value **reconstructed** rather than measured when the record says so. |
 | **Human checkpoints realized (same boundary)** | {… or `[PENDING]`} | `sdd/{change}/actuals` — `checkpoint_count`. One unit per distinct human round-trip reply. Note the durable-vs-reconstructed split the record discloses in prose. |
 | Realized review slices | {… or `[PENDING]`} | `sdd/{change}/actuals` — `realized_slices` figure inside `variance_vs_plan`; there is no structured field for it |
@@ -51,7 +51,7 @@ such measurement exists" identically is lying about which one it is.
 | Verification effort (agent compute) | `[NOT MEASURED — R-019, same reason]` | Same as above. |
 | Post-review fix effort (agent compute) | `[NOT MEASURED — R-019, same reason]` | Same as above. |
 | Human review duration | `[NOT MEASURED — no field exists]` | The actuals record has never carried a human-review-duration field. This is a different fact from the three rows above: those are deferred, this one was never specified. |
-| Review findings | {… or `[PENDING]`} | Prose only, from the change's `verify-report.md` / review receipt — no structured field |
+| Review findings | {… or `[PENDING]`} | Prose only, from bound result and verifier files under `odd/review-results/<feature>/`; preserve their candidate binding and report missing or unreadable sources |
 | Approval decision | {… or `[PENDING]`} | `sdd/{change}/actuals` — `approval_decision` |
 | Deviations from the original plan (and why) | {… or "none"} | `sdd/{change}/actuals` — scope-drift and variance prose |
 | Sequencing impact (reordering/scope) | {… or "none"} | This roadmap's own analysis |
@@ -73,6 +73,4 @@ such measurement exists" identically is lying about which one it is.
 Roadmaps written before this template used the Spanish sentinels `[PENDIENTE]` and
 `[PENDIENTE DE DECISIÓN]`. They remain valid in those files and MUST NOT be
 retro-translated: the Language Rule in `../../_shared/pre-sdd-contracts.md` applies to
-new writes only and explicitly tolerates legacy artifacts until their next full
-regeneration. Use `[PENDING]` / `[PENDING DECISION]` in new roadmaps and in any block
-being fully regenerated; leave existing Spanish sentinels alone otherwise.
+new writes only and explicitly tolerates legacy artifacts without migration. Use `[PENDING]` / `[PENDING DECISION]` in new output; leave existing Spanish sentinels alone.

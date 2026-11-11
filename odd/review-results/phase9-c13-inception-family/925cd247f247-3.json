@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "e059daa628eaf28dfc4c3dbb15e75d10d11a5af8",
+    "head": "925cd247f2474c76af53c4199f2e0cb86ea4ad1f",
+    "diff_sha256": "bbce2c8d4912f73e5770544c398131bf5bc57f45742f118dc7764a8fc3f058e3",
+    "paths": [
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/skills/approval_gate_test.go",
+      "engine/skills/approval_write.go",
+      "engine/skills/inception_family_artifact_test.go",
+      "engine/skills/registryyaml_adapter_test.go",
+      "skills/roadmap-maker/.approval.json",
+      "skills/roadmap-maker/SKILL.md",
+      "skills/roadmap-maker/assets/roadmap-template.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "e059daa628eaf28dfc4c3dbb15e75d10d11a5af8",
+      "head": "925cd247f2474c76af53c4199f2e0cb86ea4ad1f",
+      "diff_sha256": "bbce2c8d4912f73e5770544c398131bf5bc57f45742f118dc7764a8fc3f058e3"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/skills/approval_gate_test.go",
+        "engine/skills/approval_write.go",
+        "engine/skills/inception_family_artifact_test.go",
+        "engine/skills/registryyaml_adapter_test.go",
+        "skills/roadmap-maker/.approval.json",
+        "skills/roadmap-maker/SKILL.md",
+        "skills/roadmap-maker/assets/roadmap-template.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read-only sed and rg commands inspected all nine changed paths; each exited 0.",
+      "rg --files confirmed both repository skill identities named by the rendered template exist; exit 0.",
+      "Read-only inspection of inception-pipeline and role-chain confirmed the current version, handoff, and review-result locations; commands exited 0.",
+      "The supplied integration-only diff limits the recheck to the three integrated roadmap files. Tests, analyzers, and formatters: not run."
+    ]
+  }
+}

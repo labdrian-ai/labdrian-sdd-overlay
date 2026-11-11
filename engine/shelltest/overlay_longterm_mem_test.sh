@@ -1558,12 +1558,13 @@ case_longterm_mem_unknown_subcommand_still_dies() {
 # the "Trigger lives outside the managed skill" scenario: sdd-archive's
 # SKILL.md is managed and gets overwritten on every sync, so the
 # closure-feedback call to sync-trigger must live in inception-pipeline's
-# SKILL.md instead. If the call site ever migrated into the managed skill,
+# required closure reference. If the call site migrated into the managed skill,
 # the next sync would silently drop it with nothing to catch it — this case
 # is that catch.
 case_archive_sync_trigger_call_site_is_only_in_inception_pipeline() {
-  local inception_skill sdd_archive_skill call_line
+  local inception_skill closure_reference sdd_archive_skill call_line
   inception_skill="$REPO_ROOT/skills/inception-pipeline/SKILL.md"
+  closure_reference="$REPO_ROOT/skills/inception-pipeline/references/closure-feedback.md"
   sdd_archive_skill="$REPO_ROOT/skills/sdd-archive/SKILL.md"
   call_line='labdrian longterm-mem sync-trigger --event archive --cwd "$root" || true'
 
@@ -1576,8 +1577,16 @@ case_archive_sync_trigger_call_site_is_only_in_inception_pipeline() {
     return
   fi
 
-  if ! grep -q -F -e "$call_line" "$inception_skill"; then
-    fail "the archive sync-trigger call site is missing from inception-pipeline/SKILL.md" \
+  if ! grep -q -F -e 'Before measuring or writing closure, read `references/closure-feedback.md`' "$inception_skill"; then
+    fail "inception-pipeline must require its closure reference before measurement or writes"
+    return
+  fi
+  if [[ ! -f "$closure_reference" ]]; then
+    fail "inception-pipeline closure reference not found at $closure_reference"
+    return
+  fi
+  if ! grep -q -F -e "$call_line" "$closure_reference"; then
+    fail "the archive sync-trigger call site is missing from inception-pipeline's closure reference" \
       "expected literal line: $call_line"
     return
   fi
@@ -1586,7 +1595,7 @@ case_archive_sync_trigger_call_site_is_only_in_inception_pipeline() {
       "sdd-archive/SKILL.md is overwritten on sync, so any call site there is silently lost"
     return
   fi
-  pass "the archive sync-trigger call site lives only in inception-pipeline/SKILL.md, not the managed sdd-archive/SKILL.md"
+  pass "the archive sync-trigger call site lives in inception-pipeline's required closure reference, not the managed sdd-archive/SKILL.md"
 }
 
 # ---------------------------------------------------------------------------

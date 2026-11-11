@@ -1,0 +1,100 @@
+{
+  "kind": "sweeper",
+  "base": "952d4425f21d000b3c3f7902c7566028395d2896",
+  "head": "bd7ccb066bd2bd8d79bc9658ac40cf243aa5358f",
+  "diff_sha256": "ba2a4aa2cdcb8c8e5d63c9208576ec3de0a2fbd8db4b5c6ea943c8e86739c3e1",
+  "sweep": "bd7ccb066bd2-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T2 shellcheck .: engine/shelltest/overlay_longterm_mem_test.sh: note: Expressions don't expand in single quotes, use double quotes for that. [SC2016]",
+      "disposition": "live",
+      "evidence": "Immutable review-bd7ccb066bd2/engine/shelltest/overlay_longterm_mem_test.sh:1569 assigns single-quoted literal \"$root\" to call_line; :1588 uses grep -F against references/closure-feedback.md:85, which contains that exact literal command. Expansion would change the text being asserted. The assertion and managed-skill exclusion are live; no concrete SC2016 defect is established."
+    },
+    {
+      "candidate": "T3:  M engine/skills/actuals_instrumentation_contract_test.go",
+      "disposition": "live",
+      "evidence": "The current diff updates the R-013 roadmap invariant comment for the rewritten entry; feature S4/S7 and L24-L25 preserve the existing actuals guard. Current source identity: phase9-c13-inception/engine/skills/actuals_instrumentation_contract_test.go. Current bytes and mode match c13-A-history-2026-11-11/before.json."
+    },
+    {
+      "candidate": "T3:  M engine/skills/inception_family_artifact_test.go",
+      "disposition": "live",
+      "evidence": "The current diff adds compact-entry and review-correction contract checks, including the architect label; feature S8-S9 and L24-L25 describe their correction and proof. Current source identity: phase9-c13-inception/engine/skills/inception_family_artifact_test.go. Current bytes and mode match c13-A-history-2026-11-11/before.json."
+    },
+    {
+      "candidate": "T3:  M odd/tasks/phase9-c13-inception-family.md",
+      "disposition": "live",
+      "evidence": "The current diff contains T8 and L24-L26 review, owner decision and approval evidence; S1-S9 and L25-L26 preserve the pending S9 proof limitation and A-only boundary. Current source identity: phase9-c13-inception/odd/tasks/phase9-c13-inception-family.md. Its mode matches before.json; its bytes differ, and the current feature document includes L26 bookkeeping after the before snapshot."
+    },
+    {
+      "candidate": "T3:  M skills/inception-pipeline/.approval.json",
+      "disposition": "live",
+      "evidence": "Current skills/inception-pipeline/.approval.json exactly matches post-human-approval/approval-readback.json for inception-pipeline, including approver labdrian and 2026-11-11T00:16:14Z; feature S8 and L26 record the human approval. Preserve this record. Current bytes and mode match c13-A-history-2026-11-11/before.json."
+    },
+    {
+      "candidate": "T3:  M skills/inception-pipeline/SKILL.md",
+      "disposition": "live",
+      "evidence": "Current diff retains the entry, tier and closure handoff corrections; feature S2-S4 and L24-L25 bind these to review corrections. Current source identity: phase9-c13-inception/skills/inception-pipeline/SKILL.md. Current bytes and mode match c13-A-history-2026-11-11/before.json."
+    },
+    {
+      "candidate": "T3:  M skills/inception-pipeline/references/closure-feedback.md",
+      "disposition": "live",
+      "evidence": "Current diff preserves closure and actuals instruction corrections; feature S3-S4 and L24-L25 identify the retained review corrections. Current source identity: phase9-c13-inception/skills/inception-pipeline/references/closure-feedback.md. Current bytes and mode match c13-A-history-2026-11-11/before.json."
+    },
+    {
+      "candidate": "T3:  M skills/project-architect/.approval.json",
+      "disposition": "live",
+      "evidence": "Current skills/project-architect/.approval.json exactly matches post-human-approval/approval-readback.json for project-architect, including approver labdrian and 2026-11-11T00:16:14Z; feature S8 and L26 record the human approval. Preserve this record. Current bytes and mode match c13-A-history-2026-11-11/before.json."
+    },
+    {
+      "candidate": "T3:  M skills/project-architect/SKILL.md",
+      "disposition": "live",
+      "evidence": "Current diff corrects the architect entry and registry instructions; feature S6 and L24-L25 identify the retained review corrections. Current source identity: phase9-c13-inception/skills/project-architect/SKILL.md. Current bytes and mode match c13-A-history-2026-11-11/before.json."
+    },
+    {
+      "candidate": "T3:  M skills/project-architect/references/architecture-template.md",
+      "disposition": "live",
+      "evidence": "Current diff renders architecture template labels in English, including Backup and recovery; feature S6 and L25 identify that correction. Current source identity: phase9-c13-inception/skills/project-architect/references/architecture-template.md. Current bytes and mode match c13-A-history-2026-11-11/before.json."
+    },
+    {
+      "candidate": "T3:  M skills/project-inception/.approval.json",
+      "disposition": "live",
+      "evidence": "Current skills/project-inception/.approval.json exactly matches post-human-approval/approval-readback.json for project-inception, including approver labdrian and 2026-11-11T00:16:14Z; feature S8 and L26 record the human approval. Preserve this record. Current bytes and mode match c13-A-history-2026-11-11/before.json."
+    },
+    {
+      "candidate": "T3:  M skills/project-inception/SKILL.md",
+      "disposition": "live",
+      "evidence": "Current diff retains the coordinator triggers and foundation sequencing corrections; feature S5 and L24-L25 identify the retained review corrections. Current source identity: phase9-c13-inception/skills/project-inception/SKILL.md. Current bytes and mode match c13-A-history-2026-11-11/before.json."
+    },
+    {
+      "candidate": "T3:  M skills/project-manifest/.approval.json",
+      "disposition": "live",
+      "evidence": "Current skills/project-manifest/.approval.json exactly matches post-human-approval/approval-readback.json for project-manifest, including approver labdrian and 2026-11-11T00:16:14Z; feature S8 and L26 record the human approval. Preserve this record. Current bytes and mode match c13-A-history-2026-11-11/before.json."
+    },
+    {
+      "candidate": "T3:  M skills/project-manifest/SKILL.md",
+      "disposition": "live",
+      "evidence": "Current diff corrects the manifest activation and registry ownership text; feature S6 and L24-L25 identify the retained review corrections. Current source identity: phase9-c13-inception/skills/project-manifest/SKILL.md. Current bytes and mode match c13-A-history-2026-11-11/before.json."
+    },
+    {
+      "candidate": "T3:  M skills/project-manifest/references/phase-templates.md",
+      "disposition": "live",
+      "evidence": "Current diff corrects confirmed domain rules and registry-block output; feature S6 and L24-L25 identify the retained review corrections. Current source identity: phase9-c13-inception/skills/project-manifest/references/phase-templates.md. Current bytes and mode match c13-A-history-2026-11-11/before.json."
+    },
+    {
+      "candidate": "T3:  M skills/roadmap-maker/.approval.json",
+      "disposition": "live",
+      "evidence": "Current skills/roadmap-maker/.approval.json exactly matches post-human-approval/approval-readback.json for roadmap-maker, including approver labdrian and 2026-11-11T00:16:14Z; feature S8 and L26 record the human approval. Preserve this record. Current bytes and mode match c13-A-history-2026-11-11/before.json."
+    },
+    {
+      "candidate": "T3:  M skills/roadmap-maker/SKILL.md",
+      "disposition": "live",
+      "evidence": "Current diff preserves roadmap sequencing and tracking corrections; feature S7 and L24-L25 identify the retained review corrections. Current source identity: phase9-c13-inception/skills/roadmap-maker/SKILL.md. Current bytes and mode match c13-A-history-2026-11-11/before.json."
+    },
+    {
+      "candidate": "T3:  M skills/roadmap-maker/assets/roadmap-template.md",
+      "disposition": "live",
+      "evidence": "Current diff corrects repository-relative entry paths and historical fallback wording; feature S7 and L24-L25 identify the retained review corrections. Current source identity: phase9-c13-inception/skills/roadmap-maker/assets/roadmap-template.md. Current bytes and mode match c13-A-history-2026-11-11/before.json."
+    }
+  ]
+}

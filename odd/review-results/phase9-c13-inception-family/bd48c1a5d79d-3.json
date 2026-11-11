@@ -1,0 +1,72 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "be1afed67b880800861682c5a96113982561289b",
+    "head": "bd48c1a5d79dd35a9c6c49e412988da99bc40c6f",
+    "diff_sha256": "22723d39e3c3109297769ec290ea4343c5a475d02fe0a414266964dc20d0982c",
+    "paths": [
+      "engine/skills/actuals_instrumentation_contract_test.go",
+      "engine/skills/inception_family_artifact_test.go",
+      "skills/inception-pipeline/.approval.json",
+      "skills/inception-pipeline/SKILL.md",
+      "skills/inception-pipeline/references/closure-feedback.md",
+      "skills/project-architect/.approval.json",
+      "skills/project-architect/SKILL.md",
+      "skills/project-architect/references/architecture-template.md",
+      "skills/project-inception/.approval.json",
+      "skills/project-inception/SKILL.md",
+      "skills/project-manifest/.approval.json",
+      "skills/project-manifest/SKILL.md",
+      "skills/project-manifest/references/phase-templates.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "be1afed67b880800861682c5a96113982561289b",
+      "head": "bd48c1a5d79dd35a9c6c49e412988da99bc40c6f",
+      "diff_sha256": "22723d39e3c3109297769ec290ea4343c5a475d02fe0a414266964dc20d0982c"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skills/actuals_instrumentation_contract_test.go",
+        "engine/skills/inception_family_artifact_test.go",
+        "skills/inception-pipeline/.approval.json",
+        "skills/inception-pipeline/SKILL.md",
+        "skills/inception-pipeline/references/closure-feedback.md",
+        "skills/project-architect/.approval.json",
+        "skills/project-architect/SKILL.md",
+        "skills/project-architect/references/architecture-template.md",
+        "skills/project-inception/.approval.json",
+        "skills/project-inception/SKILL.md",
+        "skills/project-manifest/.approval.json",
+        "skills/project-manifest/SKILL.md",
+        "skills/project-manifest/references/phase-templates.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "skills/inception-pipeline/references/closure-feedback.md:30-33",
+        "severity": "WARNING",
+        "claim": "The new requirement to name an actual merge commit is ambiguous for squash and fast-forward landings, which have no Git merge commit. The reference itself anticipates a squashed branch whose reviewed head was deleted. A reader following the new wording may leave an otherwise landed change waiting for closure or omit its resolvable t1.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "Changed lines 30-31 require the parent to name the actual merge commit; line 33 explicitly discusses a squashed branch.",
+          "At the base, lines 27-28 required the explicitly recorded commit that landed delivery without restricting it to a merge commit."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the supplied complete diff and all 13 changed paths in the read-only worktree.",
+      "Read relevant role-chain, roadmap, shared-contract, approval-classification and blocked-response definitions within that worktree.",
+      "git rev-parse HEAD returned bd48c1a5d79dd35a9c6c49e412988da99bc40c6f; git diff --name-only returned the 13 listed paths; git status --short returned no output.",
+      "Tests, validators and formatters: not run."
+    ]
+  }
+}

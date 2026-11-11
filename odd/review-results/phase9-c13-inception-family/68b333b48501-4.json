@@ -1,0 +1,76 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "e25f0bfe15696c60ded2fd8c6a1563144c05f032",
+    "head": "68b333b48501812dd6ce25b31b4284a6f1be9339",
+    "diff_sha256": "000e167966a501e769f88fcbdc4b7995172c533a53592d34c21f644adcc1294b",
+    "paths": [
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/cmd/inception_chain_entry_test.go",
+      "engine/shelltest/overlay_longterm_mem_test.sh",
+      "engine/skills/actuals_instrumentation_contract_test.go",
+      "engine/skills/approval_gate_test.go",
+      "engine/skills/approval_write.go",
+      "engine/skills/inception_chain_entry_test.go",
+      "engine/skills/inception_family_artifact_test.go",
+      "engine/skills/registryyaml_adapter_test.go",
+      "overlay.manifest",
+      "skills/_shared/pre-sdd-contracts.md",
+      "skills/inception-pipeline/.approval.json",
+      "skills/inception-pipeline/SKILL.md",
+      "skills/inception-pipeline/references/closure-feedback.md",
+      "skills/inception-pipeline/references/tier-selection.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "e25f0bfe15696c60ded2fd8c6a1563144c05f032",
+      "head": "68b333b48501812dd6ce25b31b4284a6f1be9339",
+      "diff_sha256": "000e167966a501e769f88fcbdc4b7995172c533a53592d34c21f644adcc1294b"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/cmd/inception_chain_entry_test.go",
+        "engine/shelltest/overlay_longterm_mem_test.sh",
+        "engine/skills/actuals_instrumentation_contract_test.go",
+        "engine/skills/approval_gate_test.go",
+        "engine/skills/approval_write.go",
+        "engine/skills/inception_chain_entry_test.go",
+        "engine/skills/inception_family_artifact_test.go",
+        "engine/skills/registryyaml_adapter_test.go",
+        "overlay.manifest",
+        "skills/_shared/pre-sdd-contracts.md",
+        "skills/inception-pipeline/.approval.json",
+        "skills/inception-pipeline/SKILL.md",
+        "skills/inception-pipeline/references/closure-feedback.md",
+        "skills/inception-pipeline/references/tier-selection.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "skills/inception-pipeline/SKILL.md:39-42",
+        "severity": "WARNING",
+        "claim": "The new first-record example places a feature-document path in context.summary, but the following instruction says to replace only the illustrative IDs and digest. Following that instruction for another feature leaves the add-wishlist path in the handoff and may direct the estimator to the wrong document.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "The changed JSON example names odd/tasks/add-wishlist.md in context.summary.",
+          "The instruction immediately below it says to replace the illustrative IDs and digest, without naming the summary path."
+        ]
+      }
+    ],
+    "evidence": [
+      "Inspected the complete inline candidate diff and stable feature contract for all listed changed paths.",
+      "No commands or checks were run."
+    ]
+  }
+}

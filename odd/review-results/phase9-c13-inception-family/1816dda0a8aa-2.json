@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "68b333b48501812dd6ce25b31b4284a6f1be9339",
+    "head": "1816dda0a8aa1b3582a30fbaec96f5dfb771c456",
+    "diff_sha256": "3537308939520e3d4a210f26f42b6bf1b476f40985698c1c11b167dbe6080e30",
+    "paths": [
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/skills/approval_gate_test.go",
+      "engine/skills/approval_write.go",
+      "engine/skills/inception_family_artifact_test.go",
+      "engine/skills/registryyaml_adapter_test.go",
+      "skills/project-inception/.approval.json",
+      "skills/project-inception/SKILL.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "68b333b48501812dd6ce25b31b4284a6f1be9339",
+      "head": "1816dda0a8aa1b3582a30fbaec96f5dfb771c456",
+      "diff_sha256": "3537308939520e3d4a210f26f42b6bf1b476f40985698c1c11b167dbe6080e30"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/skills/approval_gate_test.go",
+        "engine/skills/approval_write.go",
+        "engine/skills/inception_family_artifact_test.go",
+        "engine/skills/registryyaml_adapter_test.go",
+        "skills/project-inception/.approval.json",
+        "skills/project-inception/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "skills/project-inception/SKILL.md:27",
+        "severity": "WARNING",
+        "claim": "The full-mode sequence no longer explicitly checks manifest readiness before invoking project-architect. It stops only on a blocker, while the remaining final-enough gate applies before the roadmap. A draft or partial manifest without an explicit blocker can therefore advance to architecture prematurely. Restore the manifest readiness gate between these producer invocations.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "The removed Critical Patterns section explicitly required: 'Do NOT produce the architecture until the manifest is final enough.'",
+          "The replacement Execution Steps item 2 invokes project-manifest and then project-architect, requiring only 'stop on a blocker'.",
+          "The replacement Decision Gates paragraph requires final-enough manifest and architecture 'before the roadmap', leaving the earlier transition unspecified."
+        ]
+      }
+    ],
+    "evidence": [
+      "Inspected all eight changed paths through the complete supplied canonical diff and compared the coordinator changes with the supplied S1-S9 contract.",
+      "Worktree files and downstream producer guards were not independently read; the finding concerns the coordinator's changed instructions.",
+      "Tests, validation, formatters, approval-digest verification, and shell commands: not run."
+    ]
+  }
+}
