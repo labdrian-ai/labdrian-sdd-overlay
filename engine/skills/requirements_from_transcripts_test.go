@@ -11,10 +11,17 @@ import (
 
 const rftDir = "skills/requirements-from-transcripts/"
 
+// rftRepoRoot names the repository root these pins read from; it reuses the shared root lookup the other
+// skill-contract tests in this package use.
+func rftRepoRoot(t *testing.T) string {
+	t.Helper()
+	return actualsInstrumentationRepoRoot(t)
+}
+
 // TestRequirementsFromTranscriptsEntryFitsTheLintBudget pins S6: the entry stays inside the lint limits,
 // pinned below the hard budget so one edit cannot reach it, and keeps its activation triggers.
 func TestRequirementsFromTranscriptsEntryFitsTheLintBudget(t *testing.T) {
-	entry := readRepoFile(t, actualsInstrumentationRepoRoot(t), rftDir+"SKILL.md")
+	entry := readRepoFile(t, rftRepoRoot(t), rftDir+"SKILL.md")
 	front, body, err := SplitSkillFile([]byte(entry))
 	if err != nil {
 		t.Fatal(err)
@@ -38,7 +45,7 @@ func TestRequirementsFromTranscriptsEntryFitsTheLintBudget(t *testing.T) {
 // TestRequirementsFromTranscriptsKeepsConsumedContracts pins S2: the contracts inception-pipeline,
 // project-inception, closure-feedback, tier-selection and clarify-request already consume.
 func TestRequirementsFromTranscriptsKeepsConsumedContracts(t *testing.T) {
-	root := actualsInstrumentationRepoRoot(t)
+	root := rftRepoRoot(t)
 	_, body, err := SplitSkillFile([]byte(readRepoFile(t, root, rftDir+"SKILL.md")))
 	if err != nil {
 		t.Fatal(err)
@@ -53,7 +60,11 @@ func TestRequirementsFromTranscriptsKeepsConsumedContracts(t *testing.T) {
 	requireClauses(t, "project-inception", readRepoFile(t, root, "skills/project-inception/SKILL.md"),
 		"project/{project}/requirements/{change}")
 	// (c) EARS R-NNN items with their scope enum, which closure counts.
-	requireClauses(t, "entry", body, "`R-001`", "new-capability | feature | fix", "exactly one SHALL")
+	requireClauses(t, "entry", body, "`R-001`", "new-capability | feature | fix", "exactly one SHALL",
+		"never renumbered or reused", "carried verbatim downstream")
+	// The persisted record holds what its consumers read, and the readback checks it.
+	requireClauses(t, "entry", body,
+		"every R-NNN item with its `scope`, and the Project-Inception Handoff table", "confirm it matches")
 	requireClauses(t, "closure-feedback", readRepoFile(t, root, "skills/inception-pipeline/references/closure-feedback.md"),
 		"EARS R-NNN requirements")
 	// (d) the Tier 3 lightweight object and its switch to the full pipeline.
@@ -70,7 +81,7 @@ func TestRequirementsFromTranscriptsKeepsConsumedContracts(t *testing.T) {
 // TestRequirementsFromTranscriptsKeepsItsGatingRules pins S3, S4 and S5 on the entry: the rules that decide
 // whether a brief may exist, memorycard storage with readback, and the role-chain route.
 func TestRequirementsFromTranscriptsKeepsItsGatingRules(t *testing.T) {
-	_, body, err := SplitSkillFile([]byte(readRepoFile(t, actualsInstrumentationRepoRoot(t), rftDir+"SKILL.md")))
+	_, body, err := SplitSkillFile([]byte(readRepoFile(t, rftRepoRoot(t), rftDir+"SKILL.md")))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -87,7 +98,7 @@ func TestRequirementsFromTranscriptsKeepsItsGatingRules(t *testing.T) {
 // TestRequirementsFromTranscriptsReferencesHoldTheDraftingDetail pins S3 and S5 on the two references: the
 // drafting detail the entry delegates lives there, and neither routes into retired SDD or Engram artifacts.
 func TestRequirementsFromTranscriptsReferencesHoldTheDraftingDetail(t *testing.T) {
-	root := actualsInstrumentationRepoRoot(t)
+	root := rftRepoRoot(t)
 	catalog := readRepoFile(t, root, rftDir+"references/patterns-catalog.md")
 	template := readRepoFile(t, root, rftDir+"references/output-template.md")
 	requireClauses(t, "patterns catalog", catalog,

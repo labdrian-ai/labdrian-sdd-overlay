@@ -16,9 +16,9 @@ Use for transcripts, chats, customer stories, stakeholder or support notes, a cl
 - Do not invent requirements: derive each from evidence or mark it as an assumption. Artifacts are English; stakeholder quotes stay verbatim.
 - Every `**Requirement:**` line is ONE EARS sentence with exactly one SHALL; banned soft verbs are blocking.
 - One fix or feature per requirement; split anything not independently testable.
-- IDs use `R-001` format, assigned once, never renumbered. Each item carries a `scope` of `new-capability | feature | fix`, acceptance evidence and keywords in English and stakeholder language.
+- IDs use `R-001` format, assigned once, never renumbered or reused, and carried verbatim downstream. Each item carries a `scope` of `new-capability | feature | fix`, acceptance evidence and keywords in English and stakeholder language.
 - Derive `change-name` exactly once as a kebab-case slug; emit it in the brief header and the Project-Inception Handoff table. Downstream inherits it verbatim and never re-derives it.
-- Persist the brief through parent-resolved memorycard capabilities to `project/{project}/requirements/{change}`, then read it back; memorycard is the only store.
+- Persist the full brief (every R-NNN item with its `scope`, and the Project-Inception Handoff table) through parent-resolved memorycard capabilities to `project/{project}/requirements/{change}`, then read it back and confirm it matches; memorycard is the only store.
 - The brief feeds project-inception or roadmap-maker, then the role chain (`../inception-pipeline/SKILL.md`). Write nothing but that memorycard record.
 
 ## Decision Gates
@@ -28,8 +28,8 @@ Use for transcripts, chats, customer stories, stakeholder or support notes, a cl
 
 ## Execution Steps
 
-1. Identify the source type; run gate 2, returning the decision prompt of `references/output-template.md` for the first blocking issue.
-2. Read `references/patterns-catalog.md`. Extract anchors, cluster them into concerns, and split each into atomic requirements with ID, scope, type, priority, dependency, keywords, EARS sentence, acceptance scenarios and evidence.
+1. Identify the source type. Read `references/patterns-catalog.md` for the issue classification, then run gate 2, returning the decision prompt of `references/output-template.md` for the first blocking issue.
+2. Using the catalog, extract anchors, cluster them into concerns, and split each into atomic requirements with ID, scope, type, priority, dependency, keywords, EARS sentence, acceptance scenarios and evidence.
 3. Fill the brief from `references/output-template.md`: traceability matrix, order (dependencies first, user-visible fixes next, polish last), Manifest, Architecture and Roadmap Inputs, and its Quality Bar.
 4. Derive `change-name`, add the Project-Inception Handoff table, persist and read back.
 
