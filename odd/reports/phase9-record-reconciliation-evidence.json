@@ -1,0 +1,268 @@
+{
+  "date": "2026-11-09",
+  "status": "local verified, uncommitted/unpublished",
+  "pending_ids": [
+    "C22-FU",
+    "C13",
+    "C14",
+    "C16"
+  ],
+  "pending_count": 4,
+  "next": "C13",
+  "base": "952d4425f21d000b3c3f7902c7566028395d2896",
+  "ledger_sha256": "4b11b9599ee41343551af891810bb2bdd08e2a0ef9c3d7dabd104ac279aa2812",
+  "roadmap_sha256": "87268edd34861069762abd2310a830d0a727395bf31d23e03acbe101e2b5be19",
+  "checks": {
+    "exact_open_set": "passed",
+    "delivery_merge_ancestry": "passed",
+    "historical_progress_preserved": "passed",
+    "only_phase9_roadmap_row_changed": "passed",
+    "c12_51_page_hashes": "passed",
+    "git_diff_check": "passed",
+    "functional_tests": "not run: passive documentation"
+  },
+  "memory_mirror": {
+    "save_receipt": {
+      "source": "/home/labdrian/labdrian-sdd-overlay-worktrees/phase9-c12-closeout/odd/tasks/consolidation-phase9.md",
+      "source_sha256": "4b11b9599ee41343551af891810bb2bdd08e2a0ef9c3d7dabd104ac279aa2812",
+      "source_bytes": 1237784,
+      "command": [
+        "/home/labdrian/.local/bin/memorycard",
+        "save",
+        "--title",
+        "Mirror Phase9 consolidation task document",
+        "--body",
+        "-",
+        "--type",
+        "architecture",
+        "--topic",
+        "odd/consolidation-phase9/tasks",
+        "--scope",
+        "project",
+        "--defer-embed"
+      ],
+      "exit": 0,
+      "stdout": "updated #3270\nparts: #3270 #3271 #3272 #3273 #3274 #4753 #4754 #4755 #4756 #4757 #4758 #4759 #4760 #4761 #4762 #4763 #4764 #4765 #4766 #4767 #4768 #4769 #4770 #4771 #4772 #4773 #4774 #4775 #4776 #4777 #4778 #4779 #4780 #4781 #4782\nwarning: body is 1237783 bytes; saved as 35 parts of at most 49152 bytes\n",
+      "stderr": ""
+    },
+    "readback": {
+      "source": "/home/labdrian/labdrian-sdd-overlay-worktrees/phase9-c12-closeout/odd/tasks/consolidation-phase9.md",
+      "source_sha256": "4b11b9599ee41343551af891810bb2bdd08e2a0ef9c3d7dabd104ac279aa2812",
+      "parts": [
+        {
+          "id": 3270,
+          "part": 1,
+          "bytes": 27081,
+          "sha256": "993fa46cb0a42bba7b3aec21ca66b8cbd2083a1b3bd8aae719e3f5cb88ce2a5a"
+        },
+        {
+          "id": 3271,
+          "part": 2,
+          "bytes": 47648,
+          "sha256": "4a8f41531c788648cd0fa94fa1d033d2b4779dd8d7cbb0ad8013734715f568de"
+        },
+        {
+          "id": 3272,
+          "part": 3,
+          "bytes": 44384,
+          "sha256": "2fef9b96e511baff2dbef5f250c38779fba3e8dce083eaa86c6d738fb1248c12"
+        },
+        {
+          "id": 3273,
+          "part": 4,
+          "bytes": 35636,
+          "sha256": "e08ade7634c07f3b968790cc83d9a6e9516d38e7d1f2b742a3d55199d4032750"
+        },
+        {
+          "id": 3274,
+          "part": 5,
+          "bytes": 48180,
+          "sha256": "b59b6d3d7143c1179b9ceaa13948c1f49cfd7de0f2ad93766c216e3c9c1fcd51"
+        },
+        {
+          "id": 4753,
+          "part": 6,
+          "bytes": 41957,
+          "sha256": "27a8667dce58443926b0047e6c545d787ec2730a60e6a4b4cb2d13ce05fb01a9"
+        },
+        {
+          "id": 4754,
+          "part": 7,
+          "bytes": 46777,
+          "sha256": "b649209e0d32b7abd76b0577dd304cd808a2f85bb2f286aabf60378fd2a186ec"
+        },
+        {
+          "id": 4755,
+          "part": 8,
+          "bytes": 39639,
+          "sha256": "09ffdcf418a45d7d175f21f6586eb9c95623afa45c90e11103440d371d6adf4d"
+        },
+        {
+          "id": 4756,
+          "part": 9,
+          "bytes": 25145,
+          "sha256": "ae1a57e7942ad8b195bb256a7b411671eef570e8419fc58a8ddf11d986572543"
+        },
+        {
+          "id": 4757,
+          "part": 10,
+          "bytes": 49152,
+          "sha256": "3bdda67d6aa8e8d99115f53f456fd39cdceeedefaba289d38a03228971dcddde"
+        },
+        {
+          "id": 4758,
+          "part": 11,
+          "bytes": 5271,
+          "sha256": "78f3fc81d2971dfe1f96f075765bff69c8df36f6155119e995c97fe56b8509e2"
+        },
+        {
+          "id": 4759,
+          "part": 12,
+          "bytes": 45201,
+          "sha256": "1026c163c37030496648ec646d5c09a3900f6223dd8a63e3f90b71a75ecde8bb"
+        },
+        {
+          "id": 4760,
+          "part": 13,
+          "bytes": 42649,
+          "sha256": "42ffb8cabb76950a12453b3479301d402a7bad6de09eb1b4ccc1d73d4446d4d8"
+        },
+        {
+          "id": 4761,
+          "part": 14,
+          "bytes": 26665,
+          "sha256": "32f4af5d3669a141b727bc1120566fac4d173604ead5b5e56c8a3c5d4e924ffe"
+        },
+        {
+          "id": 4762,
+          "part": 15,
+          "bytes": 45996,
+          "sha256": "ca24db621324425c373b33bd84483247518097623cb5bd682735a6ddc14473ad"
+        },
+        {
+          "id": 4763,
+          "part": 16,
+          "bytes": 23755,
+          "sha256": "a0660fa9e7d1e62f1b73c9f3b903aae4adf0e2761a95c23d85d6c4ffe22031f0"
+        },
+        {
+          "id": 4764,
+          "part": 17,
+          "bytes": 27940,
+          "sha256": "3684f5c63512a82ed35f6018141f3e64ef9dd60f7da2fd5488e9248cd74eb494"
+        },
+        {
+          "id": 4765,
+          "part": 18,
+          "bytes": 35051,
+          "sha256": "b9d3310222a6c4dd6d7dadecef0fbd28c85ccdb67406587f6b6846e6d9f83d2d"
+        },
+        {
+          "id": 4766,
+          "part": 19,
+          "bytes": 26420,
+          "sha256": "fbab4275b59874d53b811cb8b71e96a68c84c8fc5af70be5ae52ec6fba64361a"
+        },
+        {
+          "id": 4767,
+          "part": 20,
+          "bytes": 48848,
+          "sha256": "d3a331618993f88420c7f003cd6b57b4ad9955ffc5b3862188433a663f798da2"
+        },
+        {
+          "id": 4768,
+          "part": 21,
+          "bytes": 43731,
+          "sha256": "438a001e14efe550accc444fa4c5e39f0a5c5934f60e0fff4a6b360f1ad0f06d"
+        },
+        {
+          "id": 4769,
+          "part": 22,
+          "bytes": 37250,
+          "sha256": "61a13c0fd94ec4a5cc04a6176fb3aa300b02071e2d35cea02d750aee79b3872c"
+        },
+        {
+          "id": 4770,
+          "part": 23,
+          "bytes": 31973,
+          "sha256": "bdf74d32d100d285c3844ee90d5bc379a51036ae00cafd048826608e577be47e"
+        },
+        {
+          "id": 4771,
+          "part": 24,
+          "bytes": 49152,
+          "sha256": "defa192077d641a0c8c7393fea4ef8411df16075ca2b767ed20fed11caad837b"
+        },
+        {
+          "id": 4772,
+          "part": 25,
+          "bytes": 11243,
+          "sha256": "d017d19139e6f5c025a5931a73df16d09ce89e318fd34e87890abcbc1f6c866e"
+        },
+        {
+          "id": 4773,
+          "part": 26,
+          "bytes": 27253,
+          "sha256": "87aa5d27db3069159535e93b629a2510d83dc6ee2fd769d1ba681b209ef321c5"
+        },
+        {
+          "id": 4774,
+          "part": 27,
+          "bytes": 26787,
+          "sha256": "687f0677900a35c3df4db9f9efadcbb532ed3319a22bab7bd4d529145a0f867f"
+        },
+        {
+          "id": 4775,
+          "part": 28,
+          "bytes": 40465,
+          "sha256": "fc6b0bd54d2fb4af4308a0a8b0327d2a96ea079976d0be56afacce25a029910a"
+        },
+        {
+          "id": 4776,
+          "part": 29,
+          "bytes": 48792,
+          "sha256": "7aaa30e671f1413ad66329723557a7f17f8dd307fa3421a2246af8f7071dd0c3"
+        },
+        {
+          "id": 4777,
+          "part": 30,
+          "bytes": 28870,
+          "sha256": "5a814b9e76ff361fab7f5a5c8077e174cef609cdc667d618517716b3fa6eab87"
+        },
+        {
+          "id": 4778,
+          "part": 31,
+          "bytes": 20707,
+          "sha256": "d3deac9aacb08d77a49fb0efd6ba9162d7e088464bd3980150bf84ea0dea8f05"
+        },
+        {
+          "id": 4779,
+          "part": 32,
+          "bytes": 35128,
+          "sha256": "041a84f4789b62536e382a5a8851754cb1d3737fe48119f5df0a91d6fc5a2593"
+        },
+        {
+          "id": 4780,
+          "part": 33,
+          "bytes": 48872,
+          "sha256": "e4140e77183bd9699a2d320a72970e24c5cbe7c2ae62353b409a97ffa13b3bed"
+        },
+        {
+          "id": 4781,
+          "part": 34,
+          "bytes": 32721,
+          "sha256": "0c9ff367d55dc1a68167a1788efe757775df2234ca22ae442dcb4b98da39f621"
+        },
+        {
+          "id": 4782,
+          "part": 35,
+          "bytes": 21372,
+          "sha256": "22915f4c78dd127ab334d458bb0e5e9d8e0cb40a5ba8a7099940972cbeee1692"
+        }
+      ],
+      "verified": true,
+      "normalization": "Only presentation metadata/history footer and whitespace-only split boundaries; CLI removed final newline. Not whole-file byte equality.",
+      "embedding": "deferred, not refreshed"
+    }
+  }
+}
