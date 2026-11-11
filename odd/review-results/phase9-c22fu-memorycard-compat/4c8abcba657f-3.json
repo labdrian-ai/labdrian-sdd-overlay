@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "623387c730a395888ecdea3dddffbc6fe8d06731",
+    "head": "4c8abcba657ffeadd9e9def9afc9562a339f9482",
+    "diff_sha256": "1ee1e84f742cc789484a89a596a684725b1fe86f5d3e3e9d4ef62e530e2f2cc2",
+    "paths": [
+      "longterm-mem/internal/memorycard/store.go",
+      "longterm-mem/internal/memorycard/store_test.go",
+      "longterm-mem/internal/promote/sync_cards.go",
+      "longterm-mem/internal/promote/sync_cards_test.go",
+      "odd/tasks/phase9-c22fu-memorycard-compat.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "623387c730a395888ecdea3dddffbc6fe8d06731",
+      "head": "4c8abcba657ffeadd9e9def9afc9562a339f9482",
+      "diff_sha256": "1ee1e84f742cc789484a89a596a684725b1fe86f5d3e3e9d4ef62e530e2f2cc2"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/memorycard/store.go",
+        "longterm-mem/internal/memorycard/store_test.go",
+        "longterm-mem/internal/promote/sync_cards.go",
+        "longterm-mem/internal/promote/sync_cards_test.go",
+        "odd/tasks/phase9-c22fu-memorycard-compat.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "sync_cards.go: the new ActionSkippedLocalEdit branch appends to LocalEdits and continues before noteAddress and the Promoted append, so a hand-edited page no longer enters Promoted and no empty address is noted.",
+      "store.go: errors.Join(rows.Err(), rows.Close()) reports both errors on the normal path; the scan-error path closes explicitly with `_ =`. Behavior is otherwise unchanged. The diff does not show store.go's imports, so I could not confirm that errors is imported; the Log says the focused tests and the full suite pass.",
+      "store_test.go: the fixture and store closes moved to t.Cleanup with error checks. The fixture db is closed at test end rather than function return, and the diff shows no conflict from that.",
+      "sync_cards_test.go: the three new tests match the branches they claim to cover; I found no defect in them."
+    ]
+  }
+}

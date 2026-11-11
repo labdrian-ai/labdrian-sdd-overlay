@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "88c4af4e7ad60c06e7138b65bf5929d007d35bd7",
+    "head": "623387c730a395888ecdea3dddffbc6fe8d06731",
+    "diff_sha256": "bef2cbedb7988856a760714d0f2bdebe82701a69f944a823380368d458f03405",
+    "paths": [
+      "longterm-mem/internal/memorycard/store.go",
+      "longterm-mem/internal/memorycard/store_test.go",
+      "longterm-mem/internal/promote/card.go",
+      "longterm-mem/internal/promote/sync_cards.go",
+      "longterm-mem/internal/promote/sync_cards_test.go",
+      "odd/tasks/phase9-c22fu-memorycard-compat.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "88c4af4e7ad60c06e7138b65bf5929d007d35bd7",
+      "head": "623387c730a395888ecdea3dddffbc6fe8d06731",
+      "diff_sha256": "bef2cbedb7988856a760714d0f2bdebe82701a69f944a823380368d458f03405"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/memorycard/store.go",
+        "longterm-mem/internal/memorycard/store_test.go",
+        "longterm-mem/internal/promote/card.go",
+        "longterm-mem/internal/promote/sync_cards.go",
+        "longterm-mem/internal/promote/sync_cards_test.go",
+        "odd/tasks/phase9-c22fu-memorycard-compat.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/promote/sync_cards.go:85-88",
+        "claim": "After applyCard succeeds, SyncCards appends every result to report.Promoted and calls noteAddress without checking Result.Action.Kind. updateCardPage can skip a page that was edited by hand (UpdateInPlace) and return a non-written action. That result is still counted as Promoted, although the doc comment says Promoted lists memories the run wrote a page for. The summary can therefore overstate writes, and the skipped page's address is recorded as if the run had created or refreshed it. A later command that prints or acts on Promoted, such as T2 rebuilding the index, would be misled. It is inferred from the doc comment and the updateCardPage comment, since updateCardPage's body is not in the diff.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/sync_cards.go:85-88",
+          "longterm-mem/internal/promote/card.go:182-186"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/memorycard/store.go:153-158",
+        "claim": "ListMemories runs one extra import_map query per memory (N+1) through bridgeOf. A project with many imported memories pays one round trip each. The bridge could be fetched in a single join or grouped query. The cost is a performance one only; correctness is unaffected.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/memorycard/store.go:153-158"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff of card.go keeps the decision order of the old PromoteCard (bridged, own, unreadable, create). The per-project keying of own and byCardID is equivalent to the old Project filter. I found no regression in explicit promote.",
+      "SyncCards maps cardBridged to Bridged, never to Failed, as specified.",
+      "I could not see UpdateInPlace or updateCardPage's return values for the locally edited case, so F1 is inferential."
+    ]
+  }
+}

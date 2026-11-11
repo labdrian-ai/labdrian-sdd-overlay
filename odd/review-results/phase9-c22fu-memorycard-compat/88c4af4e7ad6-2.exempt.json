@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "d0249fe174f16270dcac3ab59ae855f3bf94eec7",
+    "head": "88c4af4e7ad60c06e7138b65bf5929d007d35bd7",
+    "diff_sha256": "43fb24c4dbe4fc42b08cc2954e4997ce4d9776e5d6b06e1f5f4ecdaa1fa11633",
+    "paths": [
+      "odd/goals/phase9-c22fu-memorycard-compat.json"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git diff --stat 88c4af4e^ 88c4af4e",
+        "result": "pass",
+        "output": "Parent-executed on exact 88c4af4e7ad60c06e7138b65bf5929d007d35bd7; only odd/goals/phase9-c22fu-memorycard-compat.json, a new goal file in the format of the existing goals."
+      },
+      {
+        "command": "jq -e . odd/goals/phase9-c22fu-memorycard-compat.json; labdrian workflow open --feature phase9-c22fu-memorycard-compat --task T1",
+        "result": "pass",
+        "output": "valid JSON; goal_id phase9-c22fu-memorycard-compat; labdrian workflow open accepted it and bound workflow phase9-c22fu-memorycard-compat-t1"
+      }
+    ]
+  }
+}
