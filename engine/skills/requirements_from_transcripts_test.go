@@ -94,15 +94,16 @@ func TestRequirementsFromTranscriptsReferencesHoldTheDraftingDetail(t *testing.T
 		"## EARS Sentence Patterns", "Ubiquitous", "Banned soft verbs", "## Contradiction and Ambiguity Classification")
 	requireClauses(t, "output template", template,
 		"## Contradiction/Ambiguity Decision Prompt", "## Full Requirements Brief Template",
-		"## Manifest Inputs", "## Architecture Inputs", "## SDD Roadmap Inputs", "## Project-Inception Handoff",
+		"## Manifest Inputs", "## Architecture Inputs", "## Roadmap Inputs", "## Project-Inception Handoff",
 		"## Traceability Matrix", "## Quality Bar", "PASS is forbidden when any critical requirement has no evidence")
-	for label, doc := range map[string]string{"patterns catalog": catalog, "output template": template} {
-		rejectClauses(t, label, doc,
-			"capture_prompt", "Engram", "SDD verify agents", "sdd/<change-name>", "before PASS/archive")
-	}
 	_, body, err := SplitSkillFile([]byte(readRepoFile(t, root, rftDir+"SKILL.md")))
 	if err != nil {
 		t.Fatal(err)
+	}
+	// The owner retired SDD (L3): no SDD wording, heading or route survives anywhere in the skill.
+	for label, doc := range map[string]string{"patterns catalog": catalog, "output template": template, "entry": body} {
+		rejectClauses(t, label, doc,
+			"capture_prompt", "Engram", "SDD", "sdd/", "before PASS/archive")
 	}
 	if !strings.Contains(body, "references/patterns-catalog.md") || !strings.Contains(body, "references/output-template.md") {
 		t.Error("entry must tell the reader to load both references at the step that needs them")

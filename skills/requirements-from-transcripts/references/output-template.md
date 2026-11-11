@@ -87,7 +87,7 @@ After all blocking issues are resolved:
 | Requirement | Affected Domains | Likely Surfaces | Data/Permission Impact | Risk | Sizing Notes |
 |---|---|---|---|---|---|
 
-## SDD Roadmap Inputs
+## Roadmap Inputs
 | Order | Requirement IDs | Proposed change name | Depends On | Minimum PASS Evidence | Required Keywords | Split Recommendation | Reviewer-Burden Risk |
 |---:|---|---|---|---|---|---|---|
 
@@ -99,12 +99,12 @@ After all blocking issues are resolved:
 | Item | Reason |
 |---|---|
 
-## SDD Change Candidates
+## Change Candidates
 | Change ID | Requirement IDs | Goal | Keywords | Depends On | Risk | Suggested first phase |
 |---|---|---|---|---|---|---|
 
 ## Project-Inception Handoff
-| Roadmap Order | Requirement ID | Manifest Input | Architecture Input | Suggested SDD Change | Required Keywords In SDD | Minimum PASS Evidence |
+| Roadmap Order | Requirement ID | Manifest Input | Architecture Input | Suggested Change Name | Required Keywords | Minimum PASS Evidence |
 |---:|---|---|---|---|---|---|
 
 ## Verification Gate
@@ -117,7 +117,7 @@ After all blocking issues are resolved:
 - [ ] Atomic requirements are ordered for project-inception.
 - [ ] Manifest Inputs capture mission, product rules, non-goals, and success criteria.
 - [ ] Architecture Inputs capture affected surfaces, data/permission impact, risks, and sizing notes.
-- [ ] SDD Roadmap Inputs preserve atomic requirement IDs instead of broad themes.
+- [ ] Roadmap Inputs preserve atomic requirement IDs instead of broad themes.
 - [ ] Every scenario has evidence type and target surface.
 - [ ] Ambiguous business terms are defined before implementation.
 - [ ] Review-page display values are proven to match submitted payloads.
@@ -132,7 +132,7 @@ Fill each layer explicitly; the roadmap must start from ordered atomic requireme
 
 - **Manifest Inputs**: mission / user outcome, product rules that must not drift, non-goals and explicit exclusions, stakeholder vocabulary and definitions, success criteria in business/user terms, risk of doing nothing.
 - **Architecture Inputs**: affected domains and bounded contexts, likely frontend/backend/contracts/data surfaces, permission and role implications, data continuity or persistence chain, integration points and external dependencies, observability/audit/event/timeline implications, complexity/risk estimate per atomic requirement, unknowns that block safe sizing.
-- **SDD Roadmap Inputs**: ordered atomic requirement IDs, proposed change name per small requirement or tightly coupled group, dependencies and sequencing rationale, minimum PASS evidence, keywords the downstream feature document must carry, split recommendations when a requirement is too large, reviewer-burden risk.
+- **Roadmap Inputs**: ordered atomic requirement IDs, proposed change name per small requirement or tightly coupled group, dependencies and sequencing rationale, minimum PASS evidence, keywords the downstream feature document must carry, split recommendations when a requirement is too large, reviewer-burden risk.
 
 ## Quality Bar
 

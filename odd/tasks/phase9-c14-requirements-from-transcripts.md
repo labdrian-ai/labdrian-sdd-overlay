@@ -8,7 +8,7 @@ Delivery: one PR; the parent owns commits, the PR and its merge after green CI. 
   - `skills/requirements-from-transcripts/SKILL.md` and its existing references `references/output-template.md` and `references/patterns-catalog.md`;
   - their new pin test;
   - the lint-baseline count surfaces listed in L2.
-  
+
   Acceptance: the final diff rewrites no other skill and does not edit `skills/_shared/*`, `skills.registry.yaml`, role bodies or generated agents. It changes no schema or validator. `overlay.manifest` changes only when a reference is added or removed (assumption: none is). The items C13 carried "to C14 or a spec follow-up" (C13 L37-L39: the inception closure wording) are not in this scope.
 
 - **S2 — Contracts other skills consume (invariants).** The rewrite keeps each of these, and the pin test checks each one:
@@ -25,7 +25,7 @@ Delivery: one PR; the parent owns commits, the PR and its merge after green CI. 
   - the EARS rule: one SHALL, banned soft verbs blocking;
   - one fix or feature per requirement;
   - acceptance evidence and keywords on every requirement.
-  
+
   Detail that applies only while drafting may move to the existing references, loaded through an explicit instruction: the full EARS table, the classification and examples, the three downstream input layers, the traceability and quality bar, and the decision-prompt and brief templates. Detail never moves just to escape the token budget. Acceptance: each rule above appears in the entry or in a reference the entry tells the reader to load at the step that needs it, and the test pins where each one lives.
 
 - **S4 — Storage follows the memorycard override.** New writes go to memorycard through capabilities the parent resolves, under the S2(b) topic key, and the writer reads them back. The skill never writes or exports Engram. It never passes a field the store does not have: `capture_prompt` is an Engram `mem_save` argument and does not exist in memorycard `mem_save` (title, body, topic_key, type, scope, project, cwd, directory, supersedes). The precedent is C13 S4 and `skills/project-inception/SKILL.md:16`. Assumption: the shared `pre-sdd-contracts.md:59` line ("use `capture_prompt: false`") stays as it is because S1 keeps `_shared` out of scope; the rewritten skill simply does not repeat it. Acceptance: the entry names the topic key, memorycard and readback, and contains no Engram write or export instruction and no `capture_prompt`.
@@ -34,22 +34,22 @@ Delivery: one PR; the parent owns commits, the PR and its merge after green CI. 
   - to produce candidates for "`sdd/<change-name>/{proposal,spec,design,tasks}` artifacts in Engram" (`SKILL.md:39`);
   - "Genesis SDD artifacts are Engram-first" (`SKILL.md:40`);
   - to write for "future SDD verify agents" (`SKILL.md:108`).
-  
-  Those keys belong to the SDD engine, and the role chain writes none of them (`pre-sdd-contracts.md:57`). Today the route is project-inception or roadmap-maker, then the role chain, as `skills/inception-pipeline/SKILL.md:28-34` describes. The rewritten entry and references name that route. They give no instruction to create `sdd/*` engine artifacts or `openspec/` artifacts, and they keep no "SDD verify agents" or "before PASS/archive" wording. Assumption: the brief's section headings, including `SDD Change Candidates`, `SDD Roadmap Inputs` and `Project-Inception Handoff`, keep their names; no consumer reads them by name (repository grep, L2). Acceptance: the pins reject `sdd/<change-name>/{proposal`, `Engram-first`, `SDD verify agents` and `capture_prompt` in the entry and in both references.
+
+  Those keys belong to the SDD engine, and the role chain writes none of them (`pre-sdd-contracts.md:57`). Today the route is project-inception or roadmap-maker, then the role chain, as `skills/inception-pipeline/SKILL.md:28-34` describes. The rewritten entry and references name that route. They give no instruction to create `sdd/*` engine artifacts or `openspec/` artifacts, and they keep no "SDD verify agents" or "before PASS/archive" wording. Owner, 2026-11-11 (L3): "pero ya no usamos sdd" — no SDD wording survives: the headings become `Roadmap Inputs` and `Change Candidates`, the handoff columns `Suggested Change Name` and `Required Keywords`; `Project-Inception Handoff` keeps its name (S2(a)). Only archived history uses the old headings (repository grep, L3). Acceptance: the pins reject `SDD`, `sdd/`, `Engram`, `before PASS/archive` and `capture_prompt` in the entry and in both references.
 
 - **S6 — Lint limits (C16, part 1).** Same table as C13 S8:
   - description at most 250 runes;
   - body at most 1000 estimated tokens (ceil of UTF-8 bytes / 4), pinned at 950 by the test so one edit cannot reach the hard budget;
   - no hard lint findings;
   - the shape Activation Contract / Hard Rules / Decision Gates / Execution Steps / Output Contract.
-  
+
   The description keeps its activation triggers, including the Spanish "requerimientos desde meets" and "historias de cliente" (a host picks a skill by its description alone). Acceptance: `go -C engine run ./cmd/ skills lint ../skills/requirements-from-transcripts/SKILL.md` exits 0 with no hard findings, and the pin test passes.
 
 - **S7 — Leaves the baseline (C16, part 2).**
   - Remove `"requirements-from-transcripts"` from `lintBaselineSkills` in `engine/skills/approval_write.go:28` and nothing else.
   - The count goes from 29 to 28 in `engine/skills/approval_gate_test.go:380` (`lintBaselineSize`), in `engine/skills/registryyaml_adapter_test.go:159`, in `README.md` (lines 255 and 465) and in `bin/lib/usage.sh` (lines 183 and 215).
   - Guard logic, flags and messages stay unchanged.
-  
+
   Acceptance: `TestLintBaseline_IsWellFormedAndFixed` fails at 29 before the removal and passes at 28 after it.
 
 - **S8 — Owner approval record (C16, part 3).** Only after the skill tree's final bytes, paths and modes are stable, the owner runs `labdrian skills approve --id requirements-from-transcripts --approver <name> --source-root <worktree>/skills --registry <worktree>/skills.registry.yaml --manifest <worktree>/overlay.manifest` from a terminal they control. The approval digest covers the references too (`engine/skills/approval_digest.go`). No agent edits `.approval.json`, runs approve or names an approver. Any later byte change to the tree makes the approval stale and needs a fresh one. Acceptance: source validation reports the skill as approved; while approval is pending, C16 is not done and no check reports GREEN.
@@ -62,9 +62,9 @@ Delivery: one PR; the parent owns commits, the PR and its merge after green CI. 
 
 ## Tasks
 
-- [ ] T1 — S1-S6,S9 — inline — New pin test `engine/skills/requirements_from_transcripts_test.go` (RED on the current skill), then rewrite `skills/requirements-from-transcripts/SKILL.md` to GREEN within the lint limits, preserving every S2 contract and the S3 rules, with storage per S4 and routing per S5 — shaped: L2 — commit: -
-- [ ] T2 — S2-S5,S9 — inline — Align the two references with the rewritten entry: S5 retired-routing and S4 Engram wording out, the drafting detail the entry delegates in, both reference paths unchanged; extend the pins to the references (RED first) — shaped: L2 — commit: -
-- [ ] T3 — S7,S9 — inline — Remove only `requirements-from-transcripts` from `lintBaselineSkills` (RED at 29, GREEN at 28) and update the count surfaces — shaped: L2 — commit: -
+- [x] T1 — S1-S6,S9 — inline — New pin test `engine/skills/requirements_from_transcripts_test.go` (RED on the current skill), then rewrite `skills/requirements-from-transcripts/SKILL.md` to GREEN within the lint limits, preserving every S2 contract and the S3 rules, with storage per S4 and routing per S5 — shaped: L2 — commit: e6aa66a9 and the L3 correction
+- [x] T2 — S2-S5,S9 — inline — Align the two references with the rewritten entry: S5 retired-routing and S4 Engram wording out, the drafting detail the entry delegates in, both reference paths unchanged; extend the pins to the references (RED first) — shaped: L2 — commit: e6aa66a9 and the L3 correction
+- [x] T3 — S7,S9 — inline — Remove only `requirements-from-transcripts` from `lintBaselineSkills` (RED at 29, GREEN at 28) and update the count surfaces — shaped: L2 — commit: 814c3dd6
 - [ ] T4 — S8 — inline — Parent presents the final `skills/requirements-from-transcripts/` tree and the exact approve command; the owner reviews it and runs approve; parent reads back the record and reruns source validation — shaped: L2 — commit: -
 - [ ] T5 — S1-S9 — inline — Final validation: every S9 command once on the approved tree, results recorded per `S#` in this Log, with no approval or check claimed that was not observed — shaped: L2 — commit: -
 
@@ -124,3 +124,5 @@ Delivery: one PR; the parent owns commits, the PR and its merge after green CI. 
   | Total | 230-490 |
 
   The total may exceed the 400-line heuristic. The owner-stated delivery is one PR, and the parent decides whether to disclose a size exception. Risk: item 3 (contracts other skills consume) for T1-T2; item 2 (approval lint gate) for T3.
+
+- **L3** (2026-11-11, owner/parent): T1-T3 ran inline. T1 RED: the four new pins failed on the old skill (body an estimated 3085 tokens, hard-budget lint finding, every S2/S3 clause missing); GREEN after the rewrite (`e6aa66a9`, body 759 tokens, lint warnings only). T3 RED: `TestLintBaseline_IsWellFormedAndFixed` "the lint baseline has 29 ids, want the fixed 28"; GREEN after the removal (`814c3dd6`). The owner reviewed the diff and approved the tree (sha256 `468c0e1f…`). During T5 the owner wrote **"pero ya no usamos sdd"**: the shaper's S5 assumption had kept `SDD Change Candidates`, `SDD Roadmap Inputs` and SDD column names, and the parent had not put that open decision (L2 risk 2) to the owner — the parent's error. Repository grep: only archived history (`openspec/changes/archive/`, `openspec/project/roadmap.md`) uses those headings; no live consumer. S5 rewritten (no SDD wording). Pins extended RED first ("must not contain \"SDD\"" in the entry and both references, "missing \"## Roadmap Inputs\""), then GREEN: headings and columns renamed, the entry's last Engram and `sdd/*` mentions replaced (memorycard is the only store; the brief writes nothing else), body 756 tokens. The approval `468c0e1f…` is stale for the changed bytes: T4 reopens for a fresh owner approval. Also removed trailing whitespace the shaper left in this document.
