@@ -21,7 +21,7 @@ treat an Engram observation as eligible only if it is pinned, OR is
 explicitly targeted by a promote call, OR carries a non-empty `topic_key`
 whose first path segment (the substring before the first `/`, or the whole
 value when it contains no `/`) is itself non-empty AND is not exactly
-`sdd`, `review`, or `delivery`. A `topic_key` starting with `/` splits into
+`sdd`, `review`, `delivery`, `odd`, or `session`. A `topic_key` starting with `/` splits into
 an empty first segment and is therefore not curated. An observation's
 `type` value and its `revision_count` SHALL NOT be used as automatic
 eligibility criteria.
@@ -79,6 +79,15 @@ outside the excluded prefixes now gates automatic eligibility instead.)
   not explicitly targeted
 - WHEN eligibility is evaluated
 - THEN it is not eligible
+
+#### Scenario: odd- and session-prefixed topic_keys are excluded
+
+- GIVEN an observation with `topic_key` `odd/some-feature/tasks` (a feature-
+  document mirror) and, separately, one with `topic_key` `session/<id>` (a
+  session summary), neither pinned nor explicitly targeted
+- WHEN eligibility is evaluated
+- THEN neither is eligible: git already holds the feature document, and a
+  session summary records what a session did, not what it learned
 
 #### Scenario: Prefix exclusion matches only the exact first path segment
 

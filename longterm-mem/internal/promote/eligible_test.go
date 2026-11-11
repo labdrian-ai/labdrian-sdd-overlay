@@ -74,6 +74,26 @@ func TestEligible(t *testing.T) {
 			want: false,
 		},
 		{
+			name: "odd/-prefixed topic_key (a feature-doc mirror) is excluded",
+			obs:  memory.Observation{Type: "architecture", RevisionCount: 5, Pinned: false, TopicKey: "odd/phase9-c22fu-memorycard-compat/tasks"},
+			want: false,
+		},
+		{
+			name: "session/-prefixed topic_key (a session summary) is excluded",
+			obs:  memory.Observation{Type: "session_summary", RevisionCount: 2, Pinned: false, TopicKey: "session/07a89cf6-d9a4-4988-917a-9f99a013181a"},
+			want: false,
+		},
+		{
+			name: "a pinned odd/-prefixed memory stays eligible: the pin overrides the exclusion",
+			obs:  memory.Observation{Type: "architecture", Pinned: true, TopicKey: "odd/some-feature/tasks"},
+			want: true,
+		},
+		{
+			name: "odd-notes/ is not excluded (first segment odd-notes != odd)",
+			obs:  memory.Observation{Type: "discovery", Pinned: false, TopicKey: "odd-notes/x"},
+			want: true,
+		},
+		{
 			name: "sdd-init/ is not excluded (first segment sdd-init != sdd)",
 			obs:  memory.Observation{Type: "discovery", RevisionCount: 0, Pinned: false, TopicKey: "sdd-init/onboarding"},
 			want: true,
