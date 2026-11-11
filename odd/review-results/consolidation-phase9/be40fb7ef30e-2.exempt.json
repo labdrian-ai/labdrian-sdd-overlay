@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "38c11819cec1bb5047d5dfd13bb70f24dcebec83",
+    "head": "be40fb7ef30e6d64791185130942aca96e4b5e8a",
+    "diff_sha256": "725ef825ef46ca339fb7960df53d66e4c47030faf1a64fc9f2b5f4b914ee60ab",
+    "paths": [
+      "odd/reports/phase9-c12-documentation-evidence.json",
+      "odd/reports/phase9-record-reconciliation-evidence.json",
+      "odd/reports/phase9-record-reconciliation.md",
+      "odd/tasks/consolidation-phase9.md",
+      "openspec/decisions/standalone-platform-roadmap.md"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git diff --check origin/main HEAD",
+        "result": "pass",
+        "output": "Parent-executed on exact be40fb7ef30e6d64791185130942aca96e4b5e8a; no whitespace error."
+      },
+      {
+        "command": "git diff --stat origin/main HEAD",
+        "result": "pass",
+        "output": "Only odd/tasks/consolidation-phase9.md, openspec/decisions/standalone-platform-roadmap.md (one Phase 9 row) and odd/reports/ change: passive documentation, no executable file."
+      }
+    ]
+  }
+}
