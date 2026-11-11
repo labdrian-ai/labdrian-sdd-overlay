@@ -151,14 +151,13 @@ func (s *Store) ListMemories(project string) ([]memory.CardMemory, error) {
 	for rows.Next() {
 		m, err := scanMemory(rows)
 		if err != nil {
-			rows.Close()
+			// The scan error is the one to report; a close failure after it adds nothing the caller can act on.
+			_ = rows.Close()
 			return nil, fmt.Errorf("memorycard: read a memory of project %q: %w", project, err)
 		}
 		memories = append(memories, m)
 	}
-	err = rows.Err()
-	rows.Close()
-	if err != nil {
+	if err := errors.Join(rows.Err(), rows.Close()); err != nil {
 		return nil, fmt.Errorf("memorycard: iterate the memories of project %q: %w", project, err)
 	}
 	// The bridge is looked up once the rows are closed, so that no query runs while the listing holds one open.

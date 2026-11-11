@@ -16,7 +16,7 @@ type CardMemories interface {
 }
 
 // CardSyncReport summarizes one SyncCards run, in the shape of SyncReport: Promoted lists every memory the run
-// wrote a page for (create or update); Skipped counts ineligible and already-current memories, neither of which
+// wrote a page for (create or update), and LocalEdits the ones whose hand-edited page it left alone; Skipped counts ineligible and already-current memories, neither of which
 // costs a write; Failed names each memory the run could not process (in SyncFailure.ObservationID, which here is
 // the memorycard memory id); Withheld lists the memories left alone because a page that could not be read may be
 // theirs. Bridged adds what only a memory of memorycard can be: the memories that are bridged to an Engram
@@ -25,6 +25,9 @@ type CardSyncReport struct {
 	SyncReport
 	// Bridged counts the memories the run left alone because PromoteCard would refuse them with a BridgedError.
 	Bridged int
+	// LocalEdits lists the memories whose newer revision was not written because their page was edited by hand
+	// (UpdateInPlace's ActionSkippedLocalEdit); they are not in Promoted, since the run wrote nothing for them.
+	LocalEdits []int64
 }
 
 // SyncCards promotes the eligible memories of memorycard in project that have no page, or whose page is at an
@@ -82,6 +85,11 @@ func SyncCards(ctx context.Context, cards CardMemories, w *Writer, project strin
 		result, err := w.applyCard(ctx, m, scan, decision)
 		if err != nil {
 			report.Failed = append(report.Failed, SyncFailure{ObservationID: m.ID, Err: err})
+			continue
+		}
+		if result.Action.Kind == ActionSkippedLocalEdit {
+			// Nothing was written and the result carries no page: the hand-edited page keeps its address.
+			report.LocalEdits = append(report.LocalEdits, m.ID)
 			continue
 		}
 		// The memories after this one see the page this one has: a successor link names it.

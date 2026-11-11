@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultlayout"
 )
 
 // fakeCards is a CardMemories that serves a fixed list and counts its calls.
@@ -258,5 +259,87 @@ func TestSyncCards_ALinkNamesAPageCreatedEarlierInTheRun(t *testing.T) {
 	page := readPage(t, vaultRoot, report.Promoted[1].Page.Address)
 	if want := "[[" + report.Promoted[0].Page.Address; !strings.Contains(page, want) {
 		t.Errorf("the superseded page does not link its successor %s:\n%s", want, page)
+	}
+}
+
+// A newer revision whose page was edited by hand writes nothing: the memory is listed in LocalEdits, never in
+// Promoted, and the edited page stays byte-identical.
+func TestSyncCards_ALocallyEditedPageIsNotCountedAsPromoted(t *testing.T) {
+	vaultRoot := t.TempDir()
+	w := syncCardsWriter(vaultRoot)
+	first, err := SyncCards(t.Context(), &fakeCards{memories: []memory.CardMemory{eligibleCard(11, 1)}}, w, "memorycard")
+	if err != nil || len(first.Promoted) != 1 {
+		t.Fatalf("setup run = %+v, %v", first, err)
+	}
+	path := filepath.Join(vaultRoot, first.Promoted[0].Page.Path)
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	edited := string(raw) + "\nA human added this.\n"
+	if err := os.WriteFile(path, []byte(edited), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	report, err := SyncCards(t.Context(), &fakeCards{memories: []memory.CardMemory{eligibleCard(11, 2)}}, w, "memorycard")
+	if err != nil {
+		t.Fatalf("SyncCards: %v", err)
+	}
+	if len(report.Promoted) != 0 || len(report.LocalEdits) != 1 || report.LocalEdits[0] != 11 || len(report.Failed) != 0 {
+		t.Fatalf("report = %+v, want memory 11 in LocalEdits and nothing promoted", report)
+	}
+	if after, _ := os.ReadFile(path); string(after) != edited {
+		t.Fatalf("the edited page was overwritten")
+	}
+}
+
+// An eligible memory whose own page cannot be found because a page in the vault cannot be read is withheld:
+// it is left alone, never created a second page and never a failure.
+func TestSyncCards_AnUnreadablePageWithholdsTheMemory(t *testing.T) {
+	vaultRoot := t.TempDir()
+	w := syncCardsWriter(vaultRoot)
+	pages := filepath.Join(vaultRoot, vaultlayout.PagesDir)
+	if err := os.MkdirAll(pages, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(filepath.Join(vaultRoot, "nowhere.md"), filepath.Join(pages, "c-000555.md")); err != nil {
+		t.Skipf("cannot make a link: %v", err)
+	}
+
+	report, err := SyncCards(t.Context(), &fakeCards{memories: []memory.CardMemory{eligibleCard(11, 1)}}, w, "memorycard")
+	if err != nil {
+		t.Fatalf("SyncCards: %v", err)
+	}
+	if len(report.Withheld) != 1 || report.Withheld[0] != 11 || len(report.Promoted) != 0 || len(report.Failed) != 0 {
+		t.Fatalf("report = %+v, want memory 11 withheld and nothing written", report)
+	}
+	if got := pageFiles(t, vaultRoot); len(got) != 1 {
+		t.Errorf("pages = %v, want only the unreadable link", got)
+	}
+}
+
+// failingPages is a page repository whose listing fails.
+type failingPages struct{ PageRepository }
+
+func (failingPages) ListPages() ([]string, error) { return nil, errors.New("pages unreadable") }
+
+// A pages directory that cannot be listed is the failure of every eligible memory; an ineligible one is still
+// skipped, and nothing is written.
+func TestSyncCards_AnUnlistablePagesDirectoryFailsEveryEligibleMemory(t *testing.T) {
+	vaultRoot := t.TempDir()
+	w := syncCardsWriter(vaultRoot)
+	w.Pages = failingPages{PageRepository: pagesIn(vaultRoot)}
+	note := eligibleCard(12, 1)
+	note.Pinned = false
+
+	report, err := SyncCards(t.Context(), &fakeCards{memories: []memory.CardMemory{eligibleCard(11, 1), note, eligibleCard(13, 1)}}, w, "memorycard")
+	if err == nil || !strings.Contains(err.Error(), "pages unreadable") {
+		t.Fatalf("err = %v, want the listing failure", err)
+	}
+	if len(report.Failed) != 2 || report.Failed[0].ObservationID != 11 || report.Failed[1].ObservationID != 13 || report.Skipped != 1 || len(report.Promoted) != 0 {
+		t.Fatalf("report = %+v, want memories 11 and 13 failed and 12 skipped", report)
+	}
+	if got := pageFiles(t, vaultRoot); len(got) != 0 {
+		t.Errorf("pages = %v, want none", got)
 	}
 }

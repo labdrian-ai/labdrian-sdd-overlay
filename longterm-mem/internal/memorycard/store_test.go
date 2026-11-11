@@ -98,7 +98,11 @@ func listFixture(t *testing.T) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.Close()
+	t.Cleanup(func() {
+		if err := db.Close(); err != nil {
+			t.Errorf("close the fixture: %v", err)
+		}
+	})
 	stmt := `insert into memories(id, project, type, title, body, topic_key, pinned, status, content_hash) values
 		(4, 'p', 'decision', 'Gone', 'archived body', 'a/gone', 1, 'archived', 'h4'),
 		(5, 'other', 'decision', 'Elsewhere', 'other project', 'a/else', 1, 'active', 'h5')`
@@ -115,7 +119,11 @@ func TestListMemories_ListsTheProjectsLiveMemoriesMappedAsMemoryByID(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer store.Close()
+	t.Cleanup(func() {
+		if err := store.Close(); err != nil {
+			t.Errorf("close the store: %v", err)
+		}
+	})
 
 	listed, err := store.ListMemories("p")
 	if err != nil {
