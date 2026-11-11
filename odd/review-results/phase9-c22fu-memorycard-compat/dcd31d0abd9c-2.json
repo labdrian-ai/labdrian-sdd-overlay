@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f415971ed9ce22e7d83e6e87c875b8066b0d336d",
+    "head": "dcd31d0abd9ccde939bf23c1ade4c6716b7774e9",
+    "diff_sha256": "f06f63450bbe4494a4a380984250f0398625496bb2996682657d8a7c0bd52d2a",
+    "paths": [
+      "longterm-mem/README.md",
+      "longterm-mem/cmd/longterm-mem/app.go",
+      "longterm-mem/cmd/longterm-mem/cmd_promote.go",
+      "longterm-mem/cmd/longterm-mem/cmd_sync.go",
+      "longterm-mem/cmd/longterm-mem/sync_memorycard_test.go",
+      "longterm-mem/docs/sync-from-memorycard.md",
+      "longterm-mem/internal/promote/sync_cards.go",
+      "longterm-mem/internal/promote/sync_cards_project_test.go",
+      "odd/tasks/phase9-c22fu-memorycard-compat.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f415971ed9ce22e7d83e6e87c875b8066b0d336d",
+      "head": "dcd31d0abd9ccde939bf23c1ade4c6716b7774e9",
+      "diff_sha256": "f06f63450bbe4494a4a380984250f0398625496bb2996682657d8a7c0bd52d2a"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/README.md",
+        "longterm-mem/cmd/longterm-mem/app.go",
+        "longterm-mem/cmd/longterm-mem/cmd_promote.go",
+        "longterm-mem/cmd/longterm-mem/cmd_sync.go",
+        "longterm-mem/cmd/longterm-mem/sync_memorycard_test.go",
+        "longterm-mem/docs/sync-from-memorycard.md",
+        "longterm-mem/internal/promote/sync_cards.go",
+        "longterm-mem/internal/promote/sync_cards_project_test.go",
+        "odd/tasks/phase9-c22fu-memorycard-compat.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/cmd/longterm-mem/cmd_sync.go:99-102",
+        "claim": "The dry run answers exit 1 (exitInternal) when memorycard or Engram cannot list the memories, while the real run answers 4 through CardListError -> MemoryUnavailable -> syncExitCode. The new doc table says 'memorycard or Engram cannot be opened or listed | 4' without limiting it to the real run. Dry run and run diverge on the same failure, and the typed error CardListError is not used by reportCardPlan, so the 'predicts the run' contract fails for exit codes.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/cmd_sync.go:99-102",
+          "longterm-mem/internal/promote/sync_cards.go: SyncCardsProject MemoryUnavailable branch",
+          "longterm-mem/docs/sync-from-memorycard.md exit-code table"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/cmd_promote.go:124-133",
+        "claim": "cardSource.ListMemories runs an Engram ObservationIDsWithCardHash query for every unmapped memory in the project, including ineligible ones that the walk will skip anyway. memorycard holds the imported Engram history (as the doc notes), so a first run or dry run issues one query per unmapped memory on top of the existing per-memory import_map N+1; performance only.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/cmd_promote.go:124-133"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff; the plain Engram sync path and cardLookup behavior are unchanged in logic (withSameContent preserves the Mapped early return).",
+      "The PlanCards error handling returns an error only when no memory failed, matching the command's exit mapping except for the listing case noted in F1."
+    ]
+  }
+}

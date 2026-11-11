@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f415971ed9ce22e7d83e6e87c875b8066b0d336d",
+    "head": "dcd31d0abd9ccde939bf23c1ade4c6716b7774e9",
+    "diff_sha256": "f06f63450bbe4494a4a380984250f0398625496bb2996682657d8a7c0bd52d2a",
+    "paths": [
+      "longterm-mem/README.md",
+      "longterm-mem/cmd/longterm-mem/app.go",
+      "longterm-mem/cmd/longterm-mem/cmd_promote.go",
+      "longterm-mem/cmd/longterm-mem/cmd_sync.go",
+      "longterm-mem/cmd/longterm-mem/sync_memorycard_test.go",
+      "longterm-mem/docs/sync-from-memorycard.md",
+      "longterm-mem/internal/promote/sync_cards.go",
+      "longterm-mem/internal/promote/sync_cards_project_test.go",
+      "odd/tasks/phase9-c22fu-memorycard-compat.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f415971ed9ce22e7d83e6e87c875b8066b0d336d",
+      "head": "dcd31d0abd9ccde939bf23c1ade4c6716b7774e9",
+      "diff_sha256": "f06f63450bbe4494a4a380984250f0398625496bb2996682657d8a7c0bd52d2a"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/README.md",
+        "longterm-mem/cmd/longterm-mem/app.go",
+        "longterm-mem/cmd/longterm-mem/cmd_promote.go",
+        "longterm-mem/cmd/longterm-mem/cmd_sync.go",
+        "longterm-mem/cmd/longterm-mem/sync_memorycard_test.go",
+        "longterm-mem/docs/sync-from-memorycard.md",
+        "longterm-mem/internal/promote/sync_cards.go",
+        "longterm-mem/internal/promote/sync_cards_project_test.go",
+        "odd/tasks/phase9-c22fu-memorycard-compat.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/cmd/longterm-mem/cmd_sync.go:98-100",
+        "claim": "In `sync --source memorycard --dry-run`, any error from PlanCards returns exitInternal (1), including a failure to list memorycard's memories (CardListError). The real run maps the same failure to MemoryUnavailable and so to exit 4, and docs/sync-from-memorycard.md says exit 4 for 'memorycard or Engram cannot be opened or listed'. Dry run and run disagree on the exit code for an unavailable store, and the dry run contradicts the documented table. No test covers this case.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/cmd_sync.go:98-100",
+          "longterm-mem/internal/promote/sync_cards.go: SyncCardsProject maps CardListError to MemoryUnavailable",
+          "longterm-mem/docs/sync-from-memorycard.md: exit code table, row 'memorycard or Engram cannot be opened or listed | 4'"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff only; no tools were available.",
+      "Differential for plain sync and --source engram looks unchanged: cmdSync's default path is untouched apart from the source validation, which runs after flag parsing.",
+      "cardLookup refactor is behavior-preserving: the Mapped early return moved into withSameContent, and the caller still returns (m, true, err).",
+      "walkCards is shared by SyncCards and PlanCards, so the decision is not duplicated; the dry-run error path alone diverges from the run's failure-to-exit mapping."
+    ]
+  }
+}

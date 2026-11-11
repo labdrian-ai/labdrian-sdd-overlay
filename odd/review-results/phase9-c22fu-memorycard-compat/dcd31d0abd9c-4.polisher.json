@@ -1,0 +1,50 @@
+{
+  "kind": "polisher",
+  "base": "f415971ed9ce22e7d83e6e87c875b8066b0d336d",
+  "head": "dcd31d0abd9ccde939bf23c1ade4c6716b7774e9",
+  "diff_sha256": "f06f63450bbe4494a4a380984250f0398625496bb2996682657d8a7c0bd52d2a",
+  "findings": {
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/sync_memorycard_test.go:1-242",
+        "summary": "The command tests never exercise a non-zero exit of sync --source memorycard; reportCardSync and reportCardPlan map failures to 4, 5, 1 and 6 and the docs table promises them, but a swapped code would pass the suite.",
+        "evidence": [
+          "sync_memorycard_test.go asserts only exitOK (lines 46, 72, 95, 177, 194) and exitUsage (line 223).",
+          "cmd_sync.go:125-139 reportCardSync returns syncExitCode(report.Failure) or exitRegistrationConflict; cmd_sync.go:114-118 reportCardPlan returns exitInternal or exitRegistrationConflict.",
+          "sync_cards_project_test.go:68-110 tests the failure mapping at the promote level only."
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/sync_memorycard_test.go:235-242",
+        "summary": "TestSyncSource_EngramIsTheDefault compares plain sync --dry-run with --source engram --dry-run in the same build, so it would pass if both changed together; the base differential is only a manual transcript.",
+        "evidence": [
+          "sync_memorycard_test.go:237-241 runs the new code on both sides.",
+          "cmd_sync.go:52-67 the engram path is textually unchanged apart from the --source check."
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/cmd_sync.go:74-84",
+        "summary": "--source memorycard opens Engram through a.memory() and never calls declareDegradedEngram, and memorycard.Store.Degraded() is never announced, so a run from an immutable=1 snapshot fallback writes pages with no stderr notice; explicit promote --source memorycard behaves the same.",
+        "evidence": [
+          "app.go:95-105 memoryToPromoteFrom declares a degraded Engram open for page-writing commands.",
+          "cmd_sync.go:80-81 the memorycard path calls a.memory() directly.",
+          "store.go:33-35,52,77 the immutable=1 fallback and Degraded() exist; only cmd_status.go:89 reads Degraded()."
+        ]
+      }
+    ],
+    "evidence": [
+      "cmd_sync.go: --source validated before any store opens; default path same call sequence; reportSync and syncExitCode unchanged; both stores closed with defer.",
+      "app.go:40-135: memorycard() and memory() open read-only; dry-run passes readOnly.",
+      "sync_cards.go: PlanCards and SyncCards share walkCards; the plan never calls applyCard.",
+      "cmd_promote.go:85-128: withSameContent is the single Engram query.",
+      "store.go DSN mode=ro with _query_only.",
+      "docs/sync-from-memorycard.md and README.md:87 consistent with the code."
+    ]
+  }
+}

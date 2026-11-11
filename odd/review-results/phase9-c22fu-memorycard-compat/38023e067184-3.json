@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "dcd31d0abd9ccde939bf23c1ade4c6716b7774e9",
+    "head": "38023e06718421624b1686844e6129bdd2d5e518",
+    "diff_sha256": "1f76bcf23867bb9767e73f77252df7267cc6705e2a32d1290e87e89ae17df6f7",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/app.go",
+      "longterm-mem/cmd/longterm-mem/cmd_sync.go",
+      "longterm-mem/cmd/longterm-mem/sync_memorycard_test.go",
+      "longterm-mem/cmd/longterm-mem/sync_source_golden_test.go",
+      "longterm-mem/cmd/longterm-mem/testdata/sync-source-golden/01-plain-sync-dry-run.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/sync-source-golden/02-source-engram-dry-run.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/sync-source-golden/03-plain-sync.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/sync-source-golden/04-source-engram-with-nothing-new.golden",
+      "longterm-mem/docs/sync-from-memorycard.md",
+      "longterm-mem/internal/promote/sync_cards.go",
+      "longterm-mem/internal/promote/sync_cards_project_test.go",
+      "odd/tasks/phase9-c22fu-memorycard-compat.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "dcd31d0abd9ccde939bf23c1ade4c6716b7774e9",
+      "head": "38023e06718421624b1686844e6129bdd2d5e518",
+      "diff_sha256": "1f76bcf23867bb9767e73f77252df7267cc6705e2a32d1290e87e89ae17df6f7"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/app.go",
+        "longterm-mem/cmd/longterm-mem/cmd_sync.go",
+        "longterm-mem/cmd/longterm-mem/sync_memorycard_test.go",
+        "longterm-mem/cmd/longterm-mem/sync_source_golden_test.go",
+        "longterm-mem/cmd/longterm-mem/testdata/sync-source-golden/01-plain-sync-dry-run.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/sync-source-golden/02-source-engram-dry-run.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/sync-source-golden/03-plain-sync.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/sync-source-golden/04-source-engram-with-nothing-new.golden",
+        "longterm-mem/docs/sync-from-memorycard.md",
+        "longterm-mem/internal/promote/sync_cards.go",
+        "longterm-mem/internal/promote/sync_cards_project_test.go",
+        "odd/tasks/phase9-c22fu-memorycard-compat.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "reportCardPlan now returns syncExitCode(promote.CardRunFailure(err)), the same classifier SyncCardsProject uses (sync_cards.go), so the dry run and the run agree on exit 4 for an unlistable store.",
+      "CardRunFailure uses errors.As against *CardListError, which preserves the previous SyncCardsProject behaviour, including for wrapped errors.",
+      "closeStore only warns on stderr and returns no exit code, so it adds no regression to exit codes; the degraded-open declarations are stderr-only additions.",
+      "I found no change-caused defect in the diff. I could not see syncExitCode, the memorycard.Store.Degraded implementation or the fixture layout, so I did not verify the doc's exit code table or the degraded-test directory isolation beyond what the diff shows."
+    ]
+  }
+}

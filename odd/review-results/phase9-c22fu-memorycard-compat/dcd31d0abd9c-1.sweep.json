@@ -1,0 +1,27 @@
+{
+  "kind": "sweep",
+  "base": "f415971ed9ce22e7d83e6e87c875b8066b0d336d",
+  "head": "dcd31d0abd9ccde939bf23c1ade4c6716b7774e9",
+  "diff_sha256": "f06f63450bbe4494a4a380984250f0398625496bb2996682657d8a7c0bd52d2a",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": []
+  },
+  "t2": [
+    {
+      "tool": "errcheck",
+      "module": "longterm-mem",
+      "new": [
+        "cmd/longterm-mem/cmd_sync.go: unchecked error: defer cards.Close()",
+        "cmd/longterm-mem/cmd_sync.go: unchecked error: defer engramStore.Close()",
+        "cmd/longterm-mem/sync_memorycard_test.go: unchecked error: defer conn.Close()"
+      ]
+    }
+  ],
+  "t3": [],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}
