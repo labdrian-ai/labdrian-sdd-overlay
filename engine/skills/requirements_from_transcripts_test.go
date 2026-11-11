@@ -64,7 +64,17 @@ func TestRequirementsFromTranscriptsKeepsConsumedContracts(t *testing.T) {
 		"never renumbered or reused", "carried verbatim downstream")
 	// The persisted record holds what its consumers read, and the readback checks it.
 	requireClauses(t, "entry", body,
-		"every R-NNN item with its `scope`, and the Project-Inception Handoff table", "confirm it matches")
+		"every R-NNN item with its `scope`, and the Project-Inception Handoff table", "confirm it matches the brief as drafted")
+	// The template the brief is filled from carries the slug in its header and in every handoff row.
+	template := readRepoFile(t, root, rftDir+"references/output-template.md")
+	requireClauses(t, "output template", template, "**change-name:**", "| Change Name |")
+	// The shared contract and clarify-request own the other side of (a), (c) and (e).
+	shared := readRepoFile(t, root, "skills/_shared/pre-sdd-contracts.md")
+	requireClauses(t, "pre-sdd-contracts", shared,
+		"`change-name` is derived **exactly once**, by the requirements-capture step (`requirements-from-transcripts`)",
+		"EARS-formatted requirement items (R-NNN), each carrying a `scope` enum of `new-capability | feature | fix`")
+	requireClauses(t, "clarify-request", readRepoFile(t, root, "skills/clarify-request/SKILL.md"),
+		"hand off to `requirements-from-transcripts` with the brief as input: it owns the change-name and the EARS requirements")
 	requireClauses(t, "closure-feedback", readRepoFile(t, root, "skills/inception-pipeline/references/closure-feedback.md"),
 		"EARS R-NNN requirements")
 	// (d) the Tier 3 lightweight object and its switch to the full pipeline.
@@ -90,7 +100,7 @@ func TestRequirementsFromTranscriptsKeepsItsGatingRules(t *testing.T) {
 		"permissions, data, workflow, money, compliance or user-visible behavior",
 		"one issue at a time", "stop and wait", "named assumptions",
 		"banned soft verbs", "One fix or feature per requirement", "acceptance evidence", "keywords",
-		"memorycard", "read back", "../inception-pipeline/SKILL.md", "role chain")
+		"memorycard", "read back", "../inception-pipeline/SKILL.md", "role chain", "catalog read in step 1")
 	rejectClauses(t, "entry", body,
 		"capture_prompt", "Engram-first", "SDD verify agents", "sdd/<change-name>/{proposal", "before PASS/archive")
 }
@@ -114,7 +124,7 @@ func TestRequirementsFromTranscriptsReferencesHoldTheDraftingDetail(t *testing.T
 	// The owner retired SDD (L3): no SDD wording, heading or route survives anywhere in the skill.
 	for label, doc := range map[string]string{"patterns catalog": catalog, "output template": template, "entry": body} {
 		rejectClauses(t, label, doc,
-			"capture_prompt", "Engram", "SDD", "sdd/", "before PASS/archive")
+			"capture_prompt", "Engram", "SDD", "sdd/", "before PASS/archive", "mem_save", "openspec/")
 	}
 	if !strings.Contains(body, "references/patterns-catalog.md") || !strings.Contains(body, "references/output-template.md") {
 		t.Error("entry must tell the reader to load both references at the step that needs them")

@@ -30,6 +30,8 @@ After all blocking issues are resolved:
 ```markdown
 # Requirements Brief — <topic>
 
+**change-name:** <kebab-case slug, derived once here; every downstream stage inherits it verbatim>
+
 ## Executive Summary
 <What stakeholders need and why it matters.>
 
@@ -104,8 +106,8 @@ After all blocking issues are resolved:
 |---|---|---|---|---|---|---|
 
 ## Project-Inception Handoff
-| Roadmap Order | Requirement ID | Manifest Input | Architecture Input | Suggested Change Name | Required Keywords | Minimum PASS Evidence |
-|---:|---|---|---|---|---|---|
+| Roadmap Order | Change Name | Requirement ID | Manifest Input | Architecture Input | Suggested Change Name | Required Keywords | Minimum PASS Evidence |
+|---:|---|---|---|---|---|---|---|
 
 ## Verification Gate
 - [ ] Every stakeholder anchor is mapped or explicitly out of scope.
