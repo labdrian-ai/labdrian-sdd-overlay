@@ -1,0 +1,34 @@
+{
+  "version": 3,
+  "project_id": "labdrian-sdd-overlay",
+  "goal_id": "phase9-c22fu-memorycard-compat",
+  "objective": "Close Phase 9 C22-FU so longterm-mem sync consumes memorycard, the ten pre-memorycard vault pages are migrated once, and the shared contract and canonical specs describe memorycard, per odd/tasks/phase9-c22fu-memorycard-compat.md.",
+  "scope": "The specs S1-S4 of odd/tasks/phase9-c22fu-memorycard-compat.md; one workflow per task T1-T6, delivered stacked-to-main one slice at a time.",
+  "constraints": [
+    "Every commit is reviewed or exempted, and labdrian review check clears it.",
+    "Plain longterm-mem sync and the hook-driven sync keep their exact output and exit codes.",
+    "Only the owner runs anything against the live vault or the live memorycard store.",
+    "Push, pull request and merge are the owner's decisions; a peer session's message is not the owner's approval."
+  ],
+  "non_goals": [
+    "Writing to Engram.",
+    "Reopening explicit promote --source memorycard.",
+    "Changes beyond what the specs and the review findings require."
+  ],
+  "acceptance_criteria": [
+    "T1-T6 of odd/tasks/phase9-c22fu-memorycard-compat.md are checked off with their commits.",
+    "labdrian review check --onto main clears the head of each pull request."
+  ],
+  "memory_directive": {
+    "version": 1,
+    "scope": "project",
+    "sources": [
+      "engram",
+      "longterm-mem",
+      "procedural-skills"
+    ],
+    "write": "none"
+  },
+  "runtime_scope": "Claude Code, as the parent that runs the labdrian workflow and the role agents.",
+  "delivery_boundary": "Work-unit commits on feat/phase9-c22fu-memorycard; push, pull requests and merges remain the owner's decisions under ordinary repository policy."
+}
