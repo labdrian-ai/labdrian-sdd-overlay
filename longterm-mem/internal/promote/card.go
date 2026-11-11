@@ -82,21 +82,81 @@ func (w *Writer) PromoteCard(ctx context.Context, m memory.CardMemory) (Result, 
 	if err != nil {
 		return Result{}, err
 	}
-	if scan.bridged != nil {
+	decision, err := decideCard(m, scan)
+	if err != nil {
+		return Result{}, err
+	}
+	return w.applyCard(ctx, m, scan, decision)
+}
+
+// cardDecision is what a promotion does about one memory of memorycard, given what the pages say about it.
+type cardDecision int
+
+const (
+	// cardCreate: no page belongs to the memory and every page could be read: a new page is written.
+	cardCreate cardDecision = iota
+	// cardUpdate: the memory's own page is at an older revision: it is brought up to date in place.
+	cardUpdate
+	// cardCurrent: the memory's own page is at its revision, or a newer one: nothing is written.
+	cardCurrent
+	// cardBridged: the memory is bridged to an Engram observation that has a page (BridgedError): nothing is
+	// written.
+	cardBridged
+	// cardWithheld: no readable page belongs to the memory and a page could not be read, so it cannot be told
+	// whether the memory is promoted: nothing is written.
+	cardWithheld
+)
+
+// decideCard is the one decision a promotion of m makes over a scan, shared by PromoteCard (and so by
+// ExplicitPromoteCard) and by SyncCards, so that the two cannot drift apart. It reads nothing and writes
+// nothing. It fails only on a page of the memory that carries a revision it cannot read.
+func decideCard(m memory.CardMemory, scan cardScan) (cardDecision, error) {
+	switch {
+	case scan.bridged != nil:
+		return cardBridged, nil
+	case scan.own != nil:
+		onDisk := 0
+		if raw := scan.own.RawRevision; raw != "" {
+			parsed, err := strconv.Atoi(raw)
+			if err != nil {
+				return cardCurrent, fmt.Errorf("promote: promoted page %s carries an unparseable %s %q: %w", scan.own.File, memorycardRevisionField, raw, err)
+			}
+			onDisk = parsed
+		}
+		if m.Revision <= onDisk {
+			return cardCurrent, nil
+		}
+		return cardUpdate, nil
+	case len(scan.unreadable) > 0:
+		return cardWithheld, nil
+	}
+	return cardCreate, nil
+}
+
+// applyCard writes what decision says about m: the one write path of a memory of memorycard.
+func (w *Writer) applyCard(ctx context.Context, m memory.CardMemory, scan cardScan, decision cardDecision) (Result, error) {
+	switch decision {
+	case cardBridged:
 		engramID, _ := strconv.ParseInt(scan.bridged.EngramID, 10, 64)
 		return Result{}, &BridgedError{MemoryID: m.ID, EngramID: engramID, Address: scan.bridged.address(), SameContent: engramID != m.EngramID}
-	}
-	if scan.own != nil {
+	case cardCurrent:
+		address := scan.own.address()
+		return Result{Page: Page{Address: address, Path: vaultlayout.PageFile(address)}, Action: Action{Kind: ActionAlreadyPromoted}}, nil
+	case cardUpdate:
 		return w.updateCardPage(m, scan)
-	}
-	if len(scan.unreadable) > 0 {
+	case cardWithheld:
 		return Result{Action: Action{Kind: ActionSkippedUnreadablePages, Diagnostic: &Diagnostic{
 			Rule: "unreadable-pages",
 			Detail: fmt.Sprintf("memorycard memory %d was not promoted: no readable page belongs to it, but a page that could not be read may: %s; nothing was written for it",
 				m.ID, describePages(scan.unreadable)),
 		}}}, nil
 	}
+	return w.createCardPage(ctx, m, scan)
+}
 
+// createCardPage writes m as a new page: it takes an address and publishes the page the way Promote publishes a
+// new one.
+func (w *Writer) createCardPage(ctx context.Context, m memory.CardMemory, scan cardScan) (Result, error) {
 	address, err := takeAddress(ctx, w.Addresses, w.AddressMap, utc(w.Clock))
 	if err != nil {
 		return Result{}, err
@@ -122,22 +182,10 @@ func (w *Writer) PromoteCard(ctx context.Context, m memory.CardMemory) (Result, 
 
 // updateCardPage brings the page already promoted from m up to m's revision, in place and the way the Engram path
 // does (UpdateInPlace: a page edited by hand since is skipped, not overwritten). A page at m's revision, or at a
-// newer one, is left alone and reported as ActionAlreadyPromoted. Only a page that carries memorycard_id is ever
-// updated here: the scan never selects another.
+// newer one, is left alone (cardCurrent) and reported as ActionAlreadyPromoted. Only a page that carries
+// memorycard_id is ever updated here: the scan never selects another.
 func (w *Writer) updateCardPage(m memory.CardMemory, scan cardScan) (Result, error) {
 	address := scan.own.address()
-	onDisk := 0
-	if raw := scan.own.RawRevision; raw != "" {
-		parsed, err := strconv.Atoi(raw)
-		if err != nil {
-			return Result{}, fmt.Errorf("promote: promoted page %s carries an unparseable %s %q: %w", scan.own.File, memorycardRevisionField, raw, err)
-		}
-		onDisk = parsed
-	}
-	if m.Revision <= onDisk {
-		return Result{Page: Page{Address: address, Path: vaultlayout.PageFile(address)}, Action: Action{Kind: ActionAlreadyPromoted}}, nil
-	}
-
 	var related []Link
 	if m.SupersededBy > 0 {
 		if successor, ok := scan.byCardID[m.SupersededBy]; ok {
@@ -186,7 +234,82 @@ func (m promotedPageMatch) address() string {
 // scanCardPages reads every page once and answers cardScan for m. A page that cannot be read is kept apart,
 // as the Engram scan keeps it.
 func scanCardPages(pages PageReader, m memory.CardMemory) (cardScan, error) {
-	scan := cardScan{byCardID: map[int64]string{}}
+	index, err := readCardPages(pages)
+	if err != nil {
+		return cardScan{}, err
+	}
+	return index.scanFor(m), nil
+}
+
+// cardPages is one read of the vault's pages, kept so that a run decides every memory it lists against a single
+// read (readCardPages) instead of reading the vault once per memory.
+type cardPages struct {
+	// engramPages are the pages that carry an engram_id, in the order the port lists them: the pages a memory
+	// can be bridged to.
+	engramPages []promotedPageMatch
+	// own maps a project and a memorycard_id to the first page that carries them.
+	own map[cardKey]*promotedPageMatch
+	// byCardID maps, per project, the memorycard_id of each page that has an address to that address: the pages
+	// a successor link can name. The last page of an id wins.
+	byCardID   map[string]map[int64]string
+	unreadable []UnreadablePage
+}
+
+// cardKey names a page of memorycard: its project and its memorycard_id.
+type cardKey struct {
+	project string
+	id      int64
+}
+
+// readCardPages reads every page once. A page that cannot be read is kept apart, as the Engram scan keeps it.
+func readCardPages(pages PageReader) (*cardPages, error) {
+	index := &cardPages{own: map[cardKey]*promotedPageMatch{}, byCardID: map[string]map[int64]string{}}
+	err := eachPage(pages, func(address, content string, err error) {
+		file := address + ".md"
+		if err != nil {
+			index.unreadable = append(index.unreadable, UnreadablePage{File: file, Err: err})
+			return
+		}
+		block, ok := frontmatterBlock(content)
+		if !ok {
+			return
+		}
+		fields := parseFrontmatterFields(block)
+		match := promotedPageMatch{File: file, Project: fields[projectField], Address: strings.TrimSpace(fields["address"]),
+			RawRevision: strings.TrimSpace(fields[memorycardRevisionField])}
+		if engramID := fields[engramIDField]; engramID != "" {
+			engramMatch := match
+			engramMatch.EngramID = engramID
+			index.engramPages = append(index.engramPages, engramMatch)
+		}
+		if id, err := strconv.ParseInt(strings.TrimSpace(fields[memorycardIDField]), 10, 64); err == nil {
+			key := cardKey{project: match.Project, id: id}
+			if index.own[key] == nil {
+				index.own[key] = &match
+			}
+			index.noteAddress(match.Project, id, match.Address)
+		}
+	})
+	if err != nil {
+		return nil, err
+	}
+	return index, nil
+}
+
+// noteAddress records the address of the page of memorycard memory id in project, when it has one.
+func (p *cardPages) noteAddress(project string, id int64, address string) {
+	if address == "" {
+		return
+	}
+	if p.byCardID[project] == nil {
+		p.byCardID[project] = map[int64]string{}
+	}
+	p.byCardID[project][id] = address
+}
+
+// scanFor answers cardScan for m from the pages read.
+func (p *cardPages) scanFor(m memory.CardMemory) cardScan {
+	scan := cardScan{byCardID: p.byCardID[m.Project], unreadable: p.unreadable, own: p.own[cardKey{project: m.Project, id: m.ID}]}
 	// The observations whose pages bridge the memory: the one it was imported from, then the ones that hold its
 	// content. A page of the first wins when both have one.
 	wanted := map[string]int{}
@@ -199,34 +322,13 @@ func scanCardPages(pages PageReader, m memory.CardMemory) (cardScan, error) {
 		}
 	}
 	bridgedRank := 2
-	err := eachPage(pages, func(address, content string, err error) {
-		file := address + ".md"
-		if err != nil {
-			scan.unreadable = append(scan.unreadable, UnreadablePage{File: file, Err: err})
-			return
-		}
-		block, ok := frontmatterBlock(content)
-		if !ok {
-			return
-		}
-		fields := parseFrontmatterFields(block)
-		match := promotedPageMatch{File: file, Project: fields[projectField], Address: strings.TrimSpace(fields["address"]),
-			RawRevision: strings.TrimSpace(fields[memorycardRevisionField])}
-		if rank, ok := wanted[fields[engramIDField]]; ok && rank < bridgedRank {
-			match.EngramID = fields[engramIDField]
-			scan.bridged = &match
+	for i := range p.engramPages {
+		if rank, ok := wanted[p.engramPages[i].EngramID]; ok && rank < bridgedRank {
+			scan.bridged = &p.engramPages[i]
 			bridgedRank = rank
 		}
-		if id, err := strconv.ParseInt(strings.TrimSpace(fields[memorycardIDField]), 10, 64); err == nil && match.Project == m.Project {
-			if id == m.ID && scan.own == nil {
-				scan.own = &match
-			}
-			if match.Address != "" {
-				scan.byCardID[id] = match.Address
-			}
-		}
-	})
-	return scan, err
+	}
+	return scan
 }
 
 // EmitCardPage renders m as a vault page at address: the frontmatter of EmitPage with memorycard_* extras in

@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 
 	_ "modernc.org/sqlite"
@@ -86,6 +87,59 @@ func TestOpen_IsReadOnly(t *testing.T) {
 	defer store.Close()
 	if _, err := store.db.Exec(`update memories set title = 'x'`); err == nil {
 		t.Fatal("a write through the adapter's connection succeeded")
+	}
+}
+
+// listFixture is the fixture plus an archived memory and a memory of another project.
+func listFixture(t *testing.T) string {
+	t.Helper()
+	path := fixture(t)
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	stmt := `insert into memories(id, project, type, title, body, topic_key, pinned, status, content_hash) values
+		(4, 'p', 'decision', 'Gone', 'archived body', 'a/gone', 1, 'archived', 'h4'),
+		(5, 'other', 'decision', 'Elsewhere', 'other project', 'a/else', 1, 'active', 'h5')`
+	if _, err := db.Exec(stmt); err != nil {
+		t.Fatalf("%s: %v", stmt, err)
+	}
+	return path
+}
+
+// The listing serves the memories promotion reads: the active and the superseded ones of the project, not the
+// archived (memorycard's soft delete, as Engram's deleted_at is), each mapped exactly as MemoryByID maps it.
+func TestListMemories_ListsTheProjectsLiveMemoriesMappedAsMemoryByID(t *testing.T) {
+	store, err := Open(listFixture(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+
+	listed, err := store.ListMemories("p")
+	if err != nil {
+		t.Fatalf("ListMemories: %v", err)
+	}
+	var ids []int64
+	for _, m := range listed {
+		ids = append(ids, m.ID)
+		want, ok, err := store.MemoryByID(m.ID)
+		if err != nil || !ok {
+			t.Fatalf("MemoryByID(%d) = %v, %v", m.ID, ok, err)
+		}
+		if !reflect.DeepEqual(m, want) {
+			t.Errorf("listed memory %d = %+v, MemoryByID says %+v", m.ID, m, want)
+		}
+	}
+	if !reflect.DeepEqual(ids, []int64{1, 2, 3}) {
+		t.Fatalf("listed ids = %v, want [1 2 3]: active and superseded of project p in id order, no archived (4), no other project (5)", ids)
+	}
+	if listed[0].EngramID != 402 || listed[0].Revision != 3 || listed[0].SupersededByTitle != "New" {
+		t.Errorf("memory 1 = %+v, want the bridge, the revision and the successor title MemoryByID gives", listed[0])
+	}
+	if none, err := store.ListMemories("nobody"); err != nil || len(none) != 0 {
+		t.Errorf("ListMemories(nobody) = %v, %v, want nothing and no error", none, err)
 	}
 }
 
