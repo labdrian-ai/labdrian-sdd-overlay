@@ -1,0 +1,835 @@
+{
+  "status": "documentation-complete-local-closeout",
+  "date": "2026-11-09",
+  "base": "952d4425f21d000b3c3f7902c7566028395d2896",
+  "project": "labdrian-sdd-overlay",
+  "vault": "/home/labdrian/labdrian-brain",
+  "skills": 43,
+  "roles": 8,
+  "total_pages": 51,
+  "authority": "owner requested continuation, authorized first page and explicitly requested promoting remaining documentation; final closeout authorized by bueno adelante",
+  "verification": "All51current page bodies match recorded source digests; unique IDs/pages. Native memory save/readback/promotion/vault-only retrieval previously observed per page. No runtime behavior tests claimed.",
+  "limits": [
+    "No skill or role implementation changed",
+    "Historical source inconsistencies remain documented, not fixed",
+    "C13/C14 rewrites and C16 approvals remain separate",
+    "No commit, push, merge, deployment or native workflow closure claimed"
+  ],
+  "pages": [
+    {
+      "kind": "role",
+      "name": "builder",
+      "memory_id": 4700,
+      "page_path": "/home/labdrian/labdrian-brain/wiki/memory/c-000528.md",
+      "retrieval": {
+        "verified": true,
+        "source": "parent native vault-only query receipt",
+        "receipt_file": "/home/labdrian/.hermes/cache/scratch/phase9-c12-roles/builder-verified.json"
+      },
+      "page_address": "c-000528",
+      "page_sha256": "90a96ddd1ad7f7bc1a7a188169b2fa1e8f08b5a2d1fffb9c469913c94fdd9084",
+      "source_sha256": "fb863a4c826043969fd707e87fb1c3602fcde511fef69cef2dccaa6be0430001",
+      "canonical_origin": "labdrian:phase9/c12/roles/builder.md",
+      "source_id": "builder-7b96cb20"
+    },
+    {
+      "kind": "role",
+      "name": "delivery",
+      "memory_id": 4706,
+      "page_path": "/home/labdrian/labdrian-brain/wiki/memory/c-000534.md",
+      "retrieval": {
+        "verified": true,
+        "source": "parent native vault-only query receipt",
+        "receipt_file": "/home/labdrian/.hermes/cache/scratch/phase9-c12-roles/delivery-verified.json"
+      },
+      "page_address": "c-000534",
+      "page_sha256": "193bdfe6ae9a457bc449cb7e6095b21251d2cfa12b41dd6c140a61121341ec12",
+      "source_sha256": "0aa843f2f2a46e349577a63be64b075679d5d6c872ed59b61f3bd05fd43f1a3d",
+      "canonical_origin": "labdrian:phase9/c12/roles/delivery.md",
+      "source_id": "delivery-995217e0"
+    },
+    {
+      "kind": "role",
+      "name": "polisher",
+      "memory_id": 4703,
+      "page_path": "/home/labdrian/labdrian-brain/wiki/memory/c-000531.md",
+      "retrieval": {
+        "verified": true,
+        "source": "parent native vault-only query receipt",
+        "receipt_file": "/home/labdrian/.hermes/cache/scratch/phase9-c12-roles/polisher-verified.json"
+      },
+      "page_address": "c-000531",
+      "page_sha256": "5c429dac484fd041f5f13a10f38190c5991bc77e6fba24646db247293d14f73f",
+      "source_sha256": "6c87d073106950ed12df064e1021150811028c910947f2f4401c790223f607e3",
+      "canonical_origin": "labdrian:phase9/c12/roles/polisher.md",
+      "source_id": "polisher-cf1c5f20"
+    },
+    {
+      "kind": "role",
+      "name": "prototyper",
+      "memory_id": 4701,
+      "page_path": "/home/labdrian/labdrian-brain/wiki/memory/c-000529.md",
+      "retrieval": {
+        "verified": true,
+        "source": "parent native vault-only query receipt",
+        "receipt_file": "/home/labdrian/.hermes/cache/scratch/phase9-c12-roles/prototyper-verified.json"
+      },
+      "page_address": "c-000529",
+      "page_sha256": "35e55cb913d9d727a78336aa371afb2f48f65badf1f54f9560f0131396631938",
+      "source_sha256": "51d122f7d541f9804e3196158b2fd1f300045358b69f367bb760789051ac7447",
+      "canonical_origin": "labdrian:phase9/c12/roles/prototyper.md",
+      "source_id": "prototyper-c673b83a"
+    },
+    {
+      "kind": "role",
+      "name": "reviewer",
+      "memory_id": 4704,
+      "page_path": "/home/labdrian/labdrian-brain/wiki/memory/c-000532.md",
+      "retrieval": {
+        "verified": true,
+        "source": "parent native vault-only query receipt",
+        "receipt_file": "/home/labdrian/.hermes/cache/scratch/phase9-c12-roles/reviewer-verified.json"
+      },
+      "page_address": "c-000532",
+      "page_sha256": "7a01938e82448de124d430f2d0f46bee3288473fefe81077a107c92596649999",
+      "source_sha256": "18d65505b937caafe24b8bcc901e1b3142168fee2fe5f51bb3f904558356d0d2",
+      "canonical_origin": "labdrian:phase9/c12/roles/reviewer.md",
+      "source_id": "reviewer-200d7110"
+    },
+    {
+      "kind": "role",
+      "name": "shaper",
+      "memory_id": 4698,
+      "page_path": "/home/labdrian/labdrian-brain/wiki/memory/c-000527.md",
+      "retrieval": {
+        "verified": true,
+        "source": "parent native vault-only query in C12 first-page ingestion; memory4708 consolidates completion"
+      },
+      "page_address": "c-000527",
+      "page_sha256": "80f506bd452fd9d9671cfac543415ae9742f41f3da56a2408a5f3a79c3b15cd3",
+      "source_sha256": "2e9b595fd6bdc3d1e502bee6c87c524a5c64db9076567f4cf3e256ec2930560b",
+      "canonical_origin": "/home/labdrian/.hermes/cache/scratch/phase9-c12-shaper-page.draft.md",
+      "source_id": "phase9-c12-shaper-page-draft-83a2f375"
+    },
+    {
+      "kind": "role",
+      "name": "sweeper",
+      "memory_id": 4702,
+      "page_path": "/home/labdrian/labdrian-brain/wiki/memory/c-000530.md",
+      "retrieval": {
+        "verified": true,
+        "source": "parent native vault-only query receipt",
+        "receipt_file": "/home/labdrian/.hermes/cache/scratch/phase9-c12-roles/sweeper-verified.json"
+      },
+      "page_address": "c-000530",
+      "page_sha256": "92aa8be2de543a3b16b99fa1f1ca3422d4bc053fd1766ee8fbfcd6f0c82d6128",
+      "source_sha256": "ade79d53df6bf646eb41906dc9442155d919f2c3a008a39228e04f2b25ab5814",
+      "canonical_origin": "labdrian:phase9/c12/roles/sweeper.md",
+      "source_id": "sweeper-b0127344"
+    },
+    {
+      "kind": "role",
+      "name": "verifier",
+      "memory_id": 4705,
+      "page_path": "/home/labdrian/labdrian-brain/wiki/memory/c-000533.md",
+      "retrieval": {
+        "verified": true,
+        "source": "parent native vault-only query receipt",
+        "receipt_file": "/home/labdrian/.hermes/cache/scratch/phase9-c12-roles/verifier-verified.json"
+      },
+      "page_address": "c-000533",
+      "page_sha256": "e3a2127a318b7eaad769c9615d9eae958e25ed5d5932e704a3e75592fe35c8a2",
+      "source_sha256": "99ab0dc60dcd1da4b4e41a5a48432bc444c7dcdce8d382b49844e5409cc634d1",
+      "canonical_origin": "labdrian:phase9/c12/roles/verifier.md",
+      "source_id": "verifier-1c911837"
+    },
+    {
+      "kind": "skill",
+      "name": "adhd-output",
+      "memory_id": 4735,
+      "page_path": "/home/labdrian/labdrian-brain/wiki/memory/c-000561.md",
+      "retrieval": {
+        "query": "adhd-output skill",
+        "vault_status": "ok",
+        "address": "c-000561"
+      },
+      "page_address": "c-000561",
+      "page_sha256": "fda3d6c87f54678c10ce5aced10f0b485d945e515fe812b80a5f051de5377610",
+      "source_sha256": "88b549704b8d8bb77335777cd46139a413146024cb4215a5dd5f4203a1784e51",
+      "canonical_origin": "labdrian:phase9/c12/skills/adhd-output.md",
+      "source_id": "adhd-output-17223792"
+    },
+    {
+      "kind": "skill",
+      "name": "anti-generic-design",
+      "memory_id": 4743,
+      "page_path": "/home/labdrian/labdrian-brain/wiki/memory/c-000569.md",
+      "retrieval": {
+        "query": "anti-generic-design skill",
+        "vault_status": "ok",
+        "address": "c-000569"
+      },
+      "page_address": "c-000569",
+      "page_sha256": "6f27e7cda33152948215af524c47b44c9ac8c8730eec88f2127189a71e882d88",
+      "source_sha256": "cf801ea3d08401edd8cf309fae75d44c020d8aab95f6034fc903865e57d679c8",
+      "canonical_origin": "labdrian:phase9/c12/skills/anti-generic-design.md",
+      "source_id": "anti-generic-design-969cc468"
+    },
+    {
+      "kind": "skill",
+      "name": "branch-pr",
+      "memory_id": 4722,
+      "page_path": "/home/labdrian/labdrian-brain/wiki/memory/c-000548.md",
+      "retrieval": {
+        "query": "branch-pr skill",
+        "vault_status": "ok",
+        "address": "c-000548"
+      },
+      "page_address": "c-000548",
+      "page_sha256": "be0c616305d59c6216921ec6f73c206aa9faeae2d5b1cd35ab86af932f4cc521",
+      "source_sha256": "1af1221c610a1b689f59c80506e425ed31f9191c4dacbfa0e2fc12c310f0550b",
+      "canonical_origin": "labdrian:phase9/c12/skills/branch-pr.md",
+      "source_id": "branch-pr-bc968cd1"
+    },
+    {
+      "kind": "skill",
+      "name": "chained-pr",
+      "memory_id": 4710,
+      "page_path": "/home/labdrian/labdrian-brain/wiki/memory/c-000536.md",
+      "retrieval": {
+        "query": "chained-pr skill",
+        "vault_status": "ok",
+        "address": "c-000536"
+      },
+      "page_address": "c-000536",
+      "page_sha256": "8c65dc36f5874108d0a1670c8cc9494f89673cf9a897bcb0f2bedb96c5953eb0",
+      "source_sha256": "48792f93779c3a7347ff1296c34d0850b9b41725cd85b70707806190ed044998",
+      "canonical_origin": "labdrian:phase9/c12/skills/chained-pr.md",
+      "source_id": "chained-pr-d80d8248"
+    },
+    {
+      "kind": "skill",
+      "name": "chat-thread-analyzer",
+      "memory_id": 4736,
+      "page_path": "/home/labdrian/labdrian-brain/wiki/memory/c-000562.md",
+      "retrieval": {
+        "query": "chat-thread-analyzer skill",
+        "vault_status": "ok",
+        "address": "c-000562"
+      },
+      "page_address": "c-000562",
+      "page_sha256": "6203c3e33b4a0a0cbc305ecbab0e4b9c7644203f2f6165c695e61cdf55dcbebe",
+      "source_sha256": "90f34d90b8d37c340d0f2e0ef147d1075dd67e71486ef2d899b60fa1c60a65cc",
+      "canonical_origin": "labdrian:phase9/c12/skills/chat-thread-analyzer.md",
+      "source_id": "chat-thread-analyzer-c79f9f18"
+    },
+    {
+      "kind": "skill",
+      "name": "clarify-request",
+      "memory_id": 4734,
+      "page_path": "/home/labdrian/labdrian-brain/wiki/memory/c-000560.md",
+      "retrieval": {
+        "query": "clarify-request skill",
+        "vault_status": "ok",
+        "address": "c-000560"
+      },
+      "page_address": "c-000560",
+      "page_sha256": "2623db54549cbea2b102d544db63dadd77151c502bd43e4a740665278d908ff2",
+      "source_sha256": "a79422df208e4ff0075f6d62ac1dda31015367a1d8c3cff6cf104cbd4a6617ce",
+      "canonical_origin": "labdrian:phase9/c12/skills/clarify-request.md",
+      "source_id": "clarify-request-069797a5"
+    },
+    {
+      "kind": "skill",
+      "name": "cognitive-doc-design",
+      "memory_id": 4715,
+      "page_path": "/home/labdrian/labdrian-brain/wiki/memory/c-000541.md",
+      "retrieval": {
+        "query": "cognitive-doc-design skill",
+        "vault_status": "ok",
+        "address": "c-000541"
+      },
+      "page_address": "c-000541",
+      "page_sha256": "a5111389b287aaad8330a2f5f9965531ecbc14aa5fb12bac3723e1546937b9fe",
+      "source_sha256": "79bcb0c3ed1a72bba312cc191c6099bad35ebd581bd49abc1206f75d2322ab03",
+      "canonical_origin": "labdrian:phase9/c12/skills/cognitive-doc-design.md",
+      "source_id": "cognitive-doc-design-97ae0830"
+    },
+    {
+      "kind": "skill",
+      "name": "comment-writer",
+      "memory_id": 4711,
+      "page_path": "/home/labdrian/labdrian-brain/wiki/memory/c-000537.md",
+      "retrieval": {
+        "query": "comment-writer skill",
+        "vault_status": "ok",
+        "address": "c-000537"
+      },
+      "page_address": "c-000537",
+      "page_sha256": "8dc210cfb3d1c5df675459c002e88ecb8a9b498d00c1143dab1b86bf5599f567",
+      "source_sha256": "277ee95255bc801e75bfef78337b9effc9e18e485f1465b3d55a7f40e70fea9d",
+      "canonical_origin": "labdrian:phase9/c12/skills/comment-writer.md",
+      "source_id": "comment-writer-4ec9ff3c"
+    },
+    {
+      "kind": "skill",
+      "name": "gentle-ai-bench",
+      "memory_id": 4716,
+      "page_path": "/home/labdrian/labdrian-brain/wiki/memory/c-000542.md",
+      "retrieval": {
+        "query": "gentle-ai-bench skill",
+        "vault_status": "ok",
+        "address": "c-000542"
+      },
+      "page_address": "c-000542",
+      "page_sha256": "7339b214e8f2d2b4d56e49fec01474fdafb94010ec5fd967f727ed353e4961cc",
+      "source_sha256": "760c3bc98f9c46579a958f50138583232d4f0b48f9e4cdcf5932b1dc7925e4ba",
+      "canonical_origin": "labdrian:phase9/c12/skills/gentle-ai-bench.md",
+      "source_id": "gentle-ai-bench-ce38022b"
+    },
+    {
+      "kind": "skill",
+      "name": "go-testing",
+      "memory_id": 4717,
+      "page_path": "/home/labdrian/labdrian-brain/wiki/memory/c-000543.md",
+      "retrieval": {
+        "query": "go-testing skill",
+        "vault_status": "ok",
+        "address": "c-000543"
+      },
+      "page_address": "c-000543",
+      "page_sha256": "42a28c75fd3153fdfc51292e9b78ddc8d09f31d4ba4a5c1b730b32885f7d395a",
+      "source_sha256": "a56a18af34afb3c299050fd019bfce49a86e7c4290c592a61e6b478335de2dfc",
+      "canonical_origin": "labdrian:phase9/c12/skills/go-testing.md",
+      "source_id": "go-testing-8c92eb30"
+    },
+    {
+      "kind": "skill",
+      "name": "inception-pipeline",
+      "memory_id": 4738,
+      "page_path": "/home/labdrian/labdrian-brain/wiki/memory/c-000564.md",
+      "retrieval": {
+        "query": "inception-pipeline skill",
+        "vault_status": "ok",
+        "address": "c-000564"
+      },
+      "page_address": "c-000564",
+      "page_sha256": "f18286393eef7b50db07c35a9a8490c0a32abe7a349bedc005cf53824685b894",
+      "source_sha256": "2ff6da0fc2e436b6006dc8e72aacf15a188d4e00e6dc7e6b9fe5ff390b595a02",
+      "canonical_origin": "labdrian:phase9/c12/skills/inception-pipeline.md",
+      "source_id": "inception-pipeline-287c6955"
+    },
+    {
+      "kind": "skill",
+      "name": "issue-creation",
+      "memory_id": 4712,
+      "page_path": "/home/labdrian/labdrian-brain/wiki/memory/c-000538.md",
+      "retrieval": {
+        "query": "issue-creation skill",
+        "vault_status": "ok",
+        "address": "c-000538"
+      },
+      "page_address": "c-000538",
+      "page_sha256": "8684db9622741b88bbc2824e5867783e19747d07ac5785e4296fa4e612c32bb0",
+      "source_sha256": "35e3a8a9f1c82fbce0ad1c6d1d4a32e38045ef69f1a62b14a2fc640a860e3e5d",
+      "canonical_origin": "labdrian:phase9/c12/skills/issue-creation.md",
+      "source_id": "issue-creation-1bc4bcac"
+    },
+    {
+      "kind": "skill",
+      "name": "judgment-day",
+      "memory_id": 4723,
+      "page_path": "/home/labdrian/labdrian-brain/wiki/memory/c-000549.md",
+      "retrieval": {
+        "query": "judgment-day skill",
+        "vault_status": "ok",
+        "address": "c-000549"
+      },
+      "page_address": "c-000549",
+      "page_sha256": "2007965322aae21c130c2a3917e9a726a6c549d08cd95fa28380d1072ea40eb2",
+      "source_sha256": "36d18ea0c779bd0824f2778928fd1d04d82e868e4d61a5978e6d82a62987f309",
+      "canonical_origin": "labdrian:phase9/c12/skills/judgment-day.md",
+      "source_id": "judgment-day-d3f36172"
+    },
+    {
+      "kind": "skill",
+      "name": "knowledge-ingestion",
+      "memory_id": 4744,
+      "page_path": "/home/labdrian/labdrian-brain/wiki/memory/c-000570.md",
+      "retrieval": {
+        "query": "knowledge-ingestion skill",
+        "vault_status": "ok",
+        "address": "c-000570"
+      },
+      "page_address": "c-000570",
+      "page_sha256": "859c53726f552024cd550d5792f58cbcb09550457444e854a9d19146edb0b3a2",
+      "source_sha256": "df6b0b926ba38eabfb3d1f400288424484839fe3f516250439eb9b8512f48da2",
+      "canonical_origin": "labdrian:phase9/c12/skills/knowledge-ingestion.md",
+      "source_id": "knowledge-ingestion-54b5bbf5"
+    },
+    {
+      "kind": "skill",
+      "name": "memory-plan",
+      "memory_id": 4745,
+      "page_path": "/home/labdrian/labdrian-brain/wiki/memory/c-000571.md",
+      "retrieval": {
+        "query": "memory-plan skill",
+        "vault_status": "ok",
+        "address": "c-000571"
+      },
+      "page_address": "c-000571",
+      "page_sha256": "f6549429f8c4bb717cffc38706d994ef82196f76f66e06a00110de0c225fd249",
+      "source_sha256": "52b75300edca77b70651741595e737a2e633e46337a93c74881c6a47f318bf3b",
+      "canonical_origin": "labdrian:phase9/c12/skills/memory-plan.md",
+      "source_id": "memory-plan-66e63ea6"
+    },
+    {
+      "kind": "skill",
+      "name": "odd-feature-doc",
+      "memory_id": 4749,
+      "page_path": "/home/labdrian/labdrian-brain/wiki/memory/c-000575.md",
+      "retrieval": {
+        "query": "odd-feature-doc skill",
+        "vault_status": "ok",
+        "address": "c-000575"
+      },
+      "page_address": "c-000575",
+      "page_sha256": "eab94bf0e63fce5890dd809c282ea54c6c196e275b0ce307366524851442612b",
+      "source_sha256": "07a5922bc3de25d53ba8ad777462ed4f765df0efe65266372d1df3893947a91b",
+      "canonical_origin": "labdrian:phase9/c12/skills/odd-feature-doc.md",
+      "source_id": "odd-feature-doc-f398fafd"
+    },
+    {
+      "kind": "skill",
+      "name": "procedural-candidates",
+      "memory_id": 4746,
+      "page_path": "/home/labdrian/labdrian-brain/wiki/memory/c-000572.md",
+      "retrieval": {
+        "query": "procedural-candidates skill",
+        "vault_status": "ok",
+        "address": "c-000572"
+      },
+      "page_address": "c-000572",
+      "page_sha256": "3ec668a612ed2c540f38caa63b68d4864eb9add8f10c5734afda9afd19016f19",
+      "source_sha256": "c00f4e48943c3066ec2d69fb637e960a9a0e4264d7d4b31ab49632928ab418d0",
+      "canonical_origin": "labdrian:phase9/c12/skills/procedural-candidates.md",
+      "source_id": "procedural-candidates-f0cc9bfd"
+    },
+    {
+      "kind": "skill",
+      "name": "project-architect",
+      "memory_id": 4740,
+      "page_path": "/home/labdrian/labdrian-brain/wiki/memory/c-000566.md",
+      "retrieval": {
+        "query": "project-architect skill",
+        "vault_status": "ok",
+        "address": "c-000566"
+      },
+      "page_address": "c-000566",
+      "page_sha256": "067f0113b7a4be219ea3889d6bb32c188406037dfc0ef24b14c1c710e3652626",
+      "source_sha256": "47a2f1c6dc82695ae286b4c5a5748333aae73e9c19f79d19cb7867f216f65a86",
+      "canonical_origin": "labdrian:phase9/c12/skills/project-architect.md",
+      "source_id": "project-architect-3a63bc9a"
+    },
+    {
+      "kind": "skill",
+      "name": "project-inception",
+      "memory_id": 4737,
+      "page_path": "/home/labdrian/labdrian-brain/wiki/memory/c-000563.md",
+      "retrieval": {
+        "query": "project-inception skill",
+        "vault_status": "ok",
+        "address": "c-000563"
+      },
+      "page_address": "c-000563",
+      "page_sha256": "cbd7e1ba3e6196d7ff5a35a15e2e0a77978822c9891c7e37bc6f72b84c2394e2",
+      "source_sha256": "d2cb672b0e97e29089ecee56e73ed5589a9cd9fcb95e85960ca26bebb1d02691",
+      "canonical_origin": "labdrian:phase9/c12/skills/project-inception.md",
+      "source_id": "project-inception-665d83cb"
+    },
+    {
+      "kind": "skill",
+      "name": "project-manifest",
+      "memory_id": 4739,
+      "page_path": "/home/labdrian/labdrian-brain/wiki/memory/c-000565.md",
+      "retrieval": {
+        "query": "project-manifest skill",
+        "vault_status": "ok",
+        "address": "c-000565"
+      },
+      "page_address": "c-000565",
+      "page_sha256": "ef258c96fb1e7e092d41b8822ace818da9cbcdf1349991ab1c038373b36713ba",
+      "source_sha256": "1488fa04d5bc20e356f7eae420fa0c7010838ade302097016fdb6449b1c07530",
+      "canonical_origin": "labdrian:phase9/c12/skills/project-manifest.md",
+      "source_id": "project-manifest-0011210c"
+    },
+    {
+      "kind": "skill",
+      "name": "rdd-defect-workflow",
+      "memory_id": 4724,
+      "page_path": "/home/labdrian/labdrian-brain/wiki/memory/c-000550.md",
+      "retrieval": {
+        "query": "rdd-defect-workflow skill",
+        "vault_status": "ok",
+        "address": "c-000550"
+      },
+      "page_address": "c-000550",
+      "page_sha256": "a023cacd47be6c4158403fb0f26b3afe633ecf9f48cb4d788aacf37e621c49f1",
+      "source_sha256": "3f86e6c43ed2e9953fbca01f0fd25ca35dbd61fc1d9d2ec3d1adceb48e7a1b85",
+      "canonical_origin": "labdrian:phase9/c12/skills/rdd-defect-workflow.md",
+      "source_id": "rdd-defect-workflow-4c43c0ea"
+    },
+    {
+      "kind": "skill",
+      "name": "requirements-from-transcripts",
+      "memory_id": 4733,
+      "page_path": "/home/labdrian/labdrian-brain/wiki/memory/c-000559.md",
+      "retrieval": {
+        "query": "requirements-from-transcripts skill",
+        "vault_status": "ok",
+        "address": "c-000559"
+      },
+      "page_address": "c-000559",
+      "page_sha256": "09020cbc83eeaf08750d43dd9c9f8aeaaf1d4b414ad6555a7b34da93081803b7",
+      "source_sha256": "716281f44b9c91d03036358a2b9a70cedab875a23885abe77a3893c6d533a29c",
+      "canonical_origin": "labdrian:phase9/c12/skills/requirements-from-transcripts.md",
+      "source_id": "requirements-from-transcripts-9cdad07a"
+    },
+    {
+      "kind": "skill",
+      "name": "roadmap-maker",
+      "memory_id": 4741,
+      "page_path": "/home/labdrian/labdrian-brain/wiki/memory/c-000567.md",
+      "retrieval": {
+        "query": "roadmap-maker skill",
+        "vault_status": "ok",
+        "address": "c-000567"
+      },
+      "page_address": "c-000567",
+      "page_sha256": "db42ecddbf13a4bfd07625c470299457e508fb2500b4fd823fd6b196965bd3ec",
+      "source_sha256": "567b847a209111b014a62e8aa8358efe27473298bfbe2e559ba4d74f5b704dda",
+      "canonical_origin": "labdrian:phase9/c12/skills/roadmap-maker.md",
+      "source_id": "roadmap-maker-c35e3f06"
+    },
+    {
+      "kind": "skill",
+      "name": "role-chain",
+      "memory_id": 4747,
+      "page_path": "/home/labdrian/labdrian-brain/wiki/memory/c-000573.md",
+      "retrieval": {
+        "query": "role-chain skill",
+        "vault_status": "ok",
+        "address": "c-000573"
+      },
+      "page_address": "c-000573",
+      "page_sha256": "4fb0ad7004a517d1c6141bd3dae457e399cdaf254bbefef3a6cd4f4426af29de",
+      "source_sha256": "cd3f6906d6c349b2511fad4a58e9a95aabc92341b7d83ce315ddbd78ac94480c",
+      "canonical_origin": "labdrian:phase9/c12/skills/role-chain.md",
+      "source_id": "role-chain-5120911f"
+    },
+    {
+      "kind": "skill",
+      "name": "sdd-apply",
+      "memory_id": 4725,
+      "page_path": "/home/labdrian/labdrian-brain/wiki/memory/c-000551.md",
+      "retrieval": {
+        "query": "sdd-apply skill",
+        "vault_status": "ok",
+        "address": "c-000551"
+      },
+      "page_address": "c-000551",
+      "page_sha256": "4f4d21d6bac26a10d5c16285a021957936036b3d5e426c2ec67446e53977c681",
+      "source_sha256": "3f60d4942f3628eef36e7dae642c7937beb02e6bec0ef4c5a59e3dc694834ceb",
+      "canonical_origin": "labdrian:phase9/c12/skills/sdd-apply.md",
+      "source_id": "sdd-apply-5773c49b"
+    },
+    {
+      "kind": "skill",
+      "name": "sdd-archive",
+      "memory_id": 4726,
+      "page_path": "/home/labdrian/labdrian-brain/wiki/memory/c-000552.md",
+      "retrieval": {
+        "query": "sdd-archive skill",
+        "vault_status": "ok",
+        "address": "c-000552"
+      },
+      "page_address": "c-000552",
+      "page_sha256": "dee77c97106b7f8460e66582c5d586e27b2b2431b89e545d396671e2389471fc",
+      "source_sha256": "0331761d5a00751028c5d8380552ae959d0ac9f1ade54a6528dd60243a2249d7",
+      "canonical_origin": "labdrian:phase9/c12/skills/sdd-archive.md",
+      "source_id": "sdd-archive-ba62b932"
+    },
+    {
+      "kind": "skill",
+      "name": "sdd-design",
+      "memory_id": 4727,
+      "page_path": "/home/labdrian/labdrian-brain/wiki/memory/c-000553.md",
+      "retrieval": {
+        "query": "sdd-design skill",
+        "vault_status": "ok",
+        "address": "c-000553"
+      },
+      "page_address": "c-000553",
+      "page_sha256": "aaf077a1ed9f235fb55854c2737bdeb21f1e7116493f7f7e648639ec2706bcc9",
+      "source_sha256": "a3111a023bc2d0f015140021224992fe5e562457e6e89b012148770fa175d471",
+      "canonical_origin": "labdrian:phase9/c12/skills/sdd-design.md",
+      "source_id": "sdd-design-a594acee"
+    },
+    {
+      "kind": "skill",
+      "name": "sdd-explore",
+      "memory_id": 4728,
+      "page_path": "/home/labdrian/labdrian-brain/wiki/memory/c-000554.md",
+      "retrieval": {
+        "query": "sdd-explore skill",
+        "vault_status": "ok",
+        "address": "c-000554"
+      },
+      "page_address": "c-000554",
+      "page_sha256": "95f3e0bbf7e64e580aa7b6e352ae9e6fb056ea9dfd33bda55554f74b9126ba37",
+      "source_sha256": "61047f4c528fe3cf820bbe68327d7f45feac20af6cc6829b36206a6b35783c79",
+      "canonical_origin": "labdrian:phase9/c12/skills/sdd-explore.md",
+      "source_id": "sdd-explore-231543d7"
+    },
+    {
+      "kind": "skill",
+      "name": "sdd-init",
+      "memory_id": 4729,
+      "page_path": "/home/labdrian/labdrian-brain/wiki/memory/c-000555.md",
+      "retrieval": {
+        "query": "sdd-init skill",
+        "vault_status": "ok",
+        "address": "c-000555"
+      },
+      "page_address": "c-000555",
+      "page_sha256": "de9f142141ca7d6b5bad44a61fa6c8c8e904974344e8dd4d1750220b8fdbf1d7",
+      "source_sha256": "bb605cdb08cd919b105b21cffca9e31da35b615f085408df3d82da94f134521e",
+      "canonical_origin": "labdrian:phase9/c12/skills/sdd-init.md",
+      "source_id": "sdd-init-bc0a6522"
+    },
+    {
+      "kind": "skill",
+      "name": "sdd-onboard",
+      "memory_id": 4730,
+      "page_path": "/home/labdrian/labdrian-brain/wiki/memory/c-000556.md",
+      "retrieval": {
+        "query": "sdd-onboard skill",
+        "vault_status": "ok",
+        "address": "c-000556"
+      },
+      "page_address": "c-000556",
+      "page_sha256": "e52078b8321fdff0600fb16f8e2b3bd16a6fe47aa0d029ef2ae958611076f021",
+      "source_sha256": "a0616e5fef2566d1786b47d8a3b690d5bab35d5074ffaa9ad1477ec6a5a48b68",
+      "canonical_origin": "labdrian:phase9/c12/skills/sdd-onboard.md",
+      "source_id": "sdd-onboard-f14a6051"
+    },
+    {
+      "kind": "skill",
+      "name": "sdd-propose",
+      "memory_id": 4718,
+      "page_path": "/home/labdrian/labdrian-brain/wiki/memory/c-000544.md",
+      "retrieval": {
+        "query": "sdd-propose skill",
+        "vault_status": "ok",
+        "address": "c-000544"
+      },
+      "page_address": "c-000544",
+      "page_sha256": "13f1a55e4ef7c4d8575ca034cb35fa8402d3d4003fd989286565fa7cdfe13823",
+      "source_sha256": "6fece3c969dbf85f6c1b42b9af17fa6c102cfa35cba4048e1caf60cace95ef03",
+      "canonical_origin": "labdrian:phase9/c12/skills/sdd-propose.md",
+      "source_id": "sdd-propose-a9239c8c"
+    },
+    {
+      "kind": "skill",
+      "name": "sdd-spec",
+      "memory_id": 4709,
+      "page_path": "/home/labdrian/labdrian-brain/wiki/memory/c-000535.md",
+      "retrieval": {
+        "query": "sdd-spec skill",
+        "vault_status": "ok",
+        "address": "c-000535"
+      },
+      "page_address": "c-000535",
+      "page_sha256": "97934bfbb768cdb1e842ba7383f7df2b71e92482b0cbfffb8ebfca64b4fbddb6",
+      "source_sha256": "7e3656f3beaaf8049a17b862d42351921ebcae769b04e26f64920d1336e45590",
+      "canonical_origin": "labdrian:phase9/c12/skills/sdd-spec.md",
+      "source_id": "sdd-spec-a08c7fde"
+    },
+    {
+      "kind": "skill",
+      "name": "sdd-tasks",
+      "memory_id": 4720,
+      "page_path": "/home/labdrian/labdrian-brain/wiki/memory/c-000546.md",
+      "retrieval": {
+        "query": "sdd-tasks skill",
+        "vault_status": "ok",
+        "address": "c-000546"
+      },
+      "page_address": "c-000546",
+      "page_sha256": "fc5b4501bc910c2f6d3aaebd4c45ade4eb6815c19cf28c646d6c09742493347c",
+      "source_sha256": "e877e7a4660540ba13e952b9dd7a5669fb36909a48aaa5f17f206d6b120a8e50",
+      "canonical_origin": "labdrian:phase9/c12/skills/sdd-tasks.md",
+      "source_id": "sdd-tasks-21466162"
+    },
+    {
+      "kind": "skill",
+      "name": "sdd-time-estimation",
+      "memory_id": 4742,
+      "page_path": "/home/labdrian/labdrian-brain/wiki/memory/c-000568.md",
+      "retrieval": {
+        "query": "sdd-time-estimation skill",
+        "vault_status": "ok",
+        "address": "c-000568"
+      },
+      "page_address": "c-000568",
+      "page_sha256": "decd838a1140a2a516f3420c8712e9a1557c4a4f7b1e27b57f74d8055d803bf6",
+      "source_sha256": "5b9fc8d94e5a53df232f001ca69fe6497d79f1b1cc5474dd16132a38edd24d01",
+      "canonical_origin": "labdrian:phase9/c12/skills/sdd-time-estimation.md",
+      "source_id": "sdd-time-estimation-76d8e9f0"
+    },
+    {
+      "kind": "skill",
+      "name": "sdd-verify",
+      "memory_id": 4721,
+      "page_path": "/home/labdrian/labdrian-brain/wiki/memory/c-000547.md",
+      "retrieval": {
+        "query": "sdd-verify skill",
+        "vault_status": "ok",
+        "address": "c-000547"
+      },
+      "page_address": "c-000547",
+      "page_sha256": "3aaa84096dfaf16280ad0bf5448681ca9dad070ed734a3c0b43a556bafea9849",
+      "source_sha256": "0f331c150535b694b4d5c6fcf5ccb9500f6ce9ac68b10e957f308bdc230dfd09",
+      "canonical_origin": "labdrian:phase9/c12/skills/sdd-verify.md",
+      "source_id": "sdd-verify-c8afcd24"
+    },
+    {
+      "kind": "skill",
+      "name": "security-audit",
+      "memory_id": 4751,
+      "page_path": "/home/labdrian/labdrian-brain/wiki/memory/c-000577.md",
+      "retrieval": {
+        "query": "security-audit skill",
+        "vault_status": "ok",
+        "address": "c-000577"
+      },
+      "page_address": "c-000577",
+      "page_sha256": "92768841ae193c533c1c1080da7a388fb710c743473afdd3302008e22cfd371b",
+      "source_sha256": "8f2b81679d1d4f0426e4e37bec9f41e7975e82356b705e7a4c66245130dbfa8f",
+      "canonical_origin": "labdrian:phase9/c12/skills/security-audit.md",
+      "source_id": "security-audit-c2408514"
+    },
+    {
+      "kind": "skill",
+      "name": "skill-creator",
+      "memory_id": 4719,
+      "page_path": "/home/labdrian/labdrian-brain/wiki/memory/c-000545.md",
+      "retrieval": {
+        "query": "skill-creator skill",
+        "vault_status": "ok",
+        "address": "c-000545"
+      },
+      "page_address": "c-000545",
+      "page_sha256": "481bfe5c18834932812b74280dfd4e9a6a5450617644911df9910a7ee63e47d7",
+      "source_sha256": "1680d5d673ea2d34184a20fe64a72b0591f5f7008137a8d7e01f0c25e76beee1",
+      "canonical_origin": "labdrian:phase9/c12/skills/skill-creator.md",
+      "source_id": "skill-creator-ad62ef05"
+    },
+    {
+      "kind": "skill",
+      "name": "skill-improver",
+      "memory_id": 4731,
+      "page_path": "/home/labdrian/labdrian-brain/wiki/memory/c-000557.md",
+      "retrieval": {
+        "query": "skill-improver skill",
+        "vault_status": "ok",
+        "address": "c-000557"
+      },
+      "page_address": "c-000557",
+      "page_sha256": "dfe9df7a49bbec539f1337e4cecb4b93f28531ffeea84bbbbfdb143757ab8091",
+      "source_sha256": "c148163b19708fe0683af83fee5846bc435640fa622ea973bde2a6705275bdd2",
+      "canonical_origin": "labdrian:phase9/c12/skills/skill-improver.md",
+      "source_id": "skill-improver-065b8b44"
+    },
+    {
+      "kind": "skill",
+      "name": "skill-registry",
+      "memory_id": 4732,
+      "page_path": "/home/labdrian/labdrian-brain/wiki/memory/c-000558.md",
+      "retrieval": {
+        "query": "skill-registry skill",
+        "vault_status": "ok",
+        "address": "c-000558"
+      },
+      "page_address": "c-000558",
+      "page_sha256": "073bac4829c4ade1442b9960e0d1163c8ec2bf930be89517772c4e380c5b3d1a",
+      "source_sha256": "819cf0b26cf745352fe0af1bc2d1127483115bd78fe4dca678a80d30c3cabaea",
+      "canonical_origin": "labdrian:phase9/c12/skills/skill-registry.md",
+      "source_id": "skill-registry-173d5aff"
+    },
+    {
+      "kind": "skill",
+      "name": "sweeper",
+      "memory_id": 4748,
+      "page_path": "/home/labdrian/labdrian-brain/wiki/memory/c-000574.md",
+      "retrieval": {
+        "query": "sweeper skill",
+        "vault_status": "ok",
+        "address": "c-000574"
+      },
+      "page_address": "c-000574",
+      "page_sha256": "caffc9e753dd95deb5b476debc9a91d6131713415911860adbb96cd39007fadd",
+      "source_sha256": "e383c85cc3f8a990afbbb838065a28733aa1d8c7fe4afa099d0226598c34dd42",
+      "canonical_origin": "labdrian:phase9/c12/skills/sweeper.md",
+      "source_id": "sweeper-19d12546"
+    },
+    {
+      "kind": "skill",
+      "name": "systemic-issue-triage",
+      "memory_id": 4713,
+      "page_path": "/home/labdrian/labdrian-brain/wiki/memory/c-000539.md",
+      "retrieval": {
+        "query": "systemic-issue-triage skill",
+        "vault_status": "ok",
+        "address": "c-000539"
+      },
+      "page_address": "c-000539",
+      "page_sha256": "9e0795ae4eeb7db70241d87708749442bf20968ad358a02e9df4d31a4ac480ee",
+      "source_sha256": "10c290ac7cb064ebfb24d1d752f2317b62204534c786a8f1d9f1a97af49eee26",
+      "canonical_origin": "labdrian:phase9/c12/skills/systemic-issue-triage.md",
+      "source_id": "systemic-issue-triage-6bc08935"
+    },
+    {
+      "kind": "skill",
+      "name": "test-first",
+      "memory_id": 4750,
+      "page_path": "/home/labdrian/labdrian-brain/wiki/memory/c-000576.md",
+      "retrieval": {
+        "query": "test-first skill",
+        "vault_status": "ok",
+        "address": "c-000576"
+      },
+      "page_address": "c-000576",
+      "page_sha256": "9435da0e6eb0778266c07e75176e39ec98b561a645bda07782f5e93615a2d2aa",
+      "source_sha256": "fe92f3ff7322181a5338f3e60b8a9bc5e2b23cf819f784cfa73c8c316e120633",
+      "canonical_origin": "labdrian:phase9/c12/skills/test-first.md",
+      "source_id": "test-first-254bc30d"
+    },
+    {
+      "kind": "skill",
+      "name": "work-unit-commits",
+      "memory_id": 4714,
+      "page_path": "/home/labdrian/labdrian-brain/wiki/memory/c-000540.md",
+      "retrieval": {
+        "query": "work-unit-commits skill",
+        "vault_status": "ok",
+        "address": "c-000540"
+      },
+      "page_address": "c-000540",
+      "page_sha256": "d6e13f1424b61b3a0940ffaf4670983297bf770e540ca53519d953d999b0201f",
+      "source_sha256": "f6ddfcfcd3a63a9fe2ef678646dced8b3b4d1945c7ab6edfa8ea6a370e0f6214",
+      "canonical_origin": "labdrian:phase9/c12/skills/work-unit-commits.md",
+      "source_id": "work-unit-commits-330d81a4"
+    }
+  ]
+}
