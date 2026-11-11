@@ -1,0 +1,14 @@
+{
+  "kind": "polisher",
+  "base": "e25f0bfe15696c60ded2fd8c6a1563144c05f032",
+  "head": "68b333b48501812dd6ce25b31b4284a6f1be9339",
+  "diff_sha256": "000e167966a501e769f88fcbdc4b7995172c533a53592d34c21f644adcc1294b",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the complete canonical diff supplied for base 952d4425f21d000b3c3f7902c7566028395d2896 and head bd7ccb066bd2bd8d79bc9658ac40cf243aa5358f; its SHA-256 was independently matched to ba2a4aa2cdcb8c8e5d63c9208576ec3de0a2fbd8db4b5c6ea943c8e86739c3e1 using read-only git diff.",
+      "Additional worktree inspection: skills/inception-pipeline/SKILL.md, skills/inception-pipeline/references/closure-feedback.md, engine/skills/actuals_instrumentation_contract_test.go, engine/skills/inception_chain_entry_test.go.",
+      "Tests, formatter, generator, network and model calls not run."
+    ]
+  }
+}

@@ -326,3 +326,23 @@ Delivery: local coherent work units, `ask-on-risk`; the parent owns commit bound
 - **L39** (2026-11-11, owner/parent): Parent presented: accept the Claude-run evidence as it stands with the deviation recorded, or re-review the four commits through Codex. Owner replied **"1"**: the evidence stands. T8 is checked on this basis: the five human approvals are current (43/43 validated at `7db1b599`), the full engine suite passed at each correction commit, and the whole-chain review check is `clear` through `7db1b599d37835aead754811f0fe5c4c71e57f3e`. Not done and not claimed: push, pull request, merge, closure-feedback actuals (the change has not landed), and a Memorycard mirror (the Goal says `write: none`). Carried, unfixed: `7db1b599d378-5/F1` (the default-branch and last-slice pairing, shared with the living spec), the SUGGESTIONs listed in L37 and L38, and the "through merge" boundary wording. Next: the owner decides push and pull request; then C14. Risk: 3 for the correction commits; this bookkeeping commit is Risk: none.
 
 - **L40** (2026-11-11, owner/parent): Owner said **"push y pr"**. Pushed `feat/phase9-c13-inception`; created tracking issue #753 (labelled `status:approved` by the parent on the owner's delivery instruction) and pull request #754 against `main` (`type:refactor`, `size:exception`; one pull request instead of the earlier recorded `feature-branch-chain`, parent's choice, disclosed to the owner). CI: 24 checks passed, `Merge Lands A Reviewed Tree` failed: "the branch did not hold e25f0bfe15696c60ded2fd8c6a1563144c05f032 when it was merged". Fix: merged `origin/main` into the branch as `c12290154444608c73df2791f6451670c3771804` (`Risk: none`; no conflict, `README.md` merged automatically). On that exact commit: full engine suite 85 packages ok, `gofmt` and `go vet ./skills ./cmd` clean, validation 43/43, whitespace clean. Stored sweep `c12290154444-1` (`clean`) and exemption `c12290154444-2`; whole-chain check exits 0, `outcome: clear`. No merge of the pull request: that stays with the owner after green CI.
+
+- **L41** (2026-11-11, owner/parent): The L40 merge did not help: the second CI run refused with "no feature document the merge changes clears e25f0bfe..1cd228a1 … commit 952d4425 …: no sweep record binds the commit". `review anchor` walks the first-parent chain from the tip of `main`, so a branch that merged `main` in never reaches it; the verb accepts only a branch that sits on an unmoved base. Parent presented rebase and rebind, merging red, or one review of the whole branch; owner replied **"1"**: rebase.
+
+  Backup `backup/c13-before-rebase-2026-11-11` keeps the pushed tip `1cd228a1`. The eleven commits `952d4425..7db1b599` were cherry-picked in order onto `e25f0bfe15696c60ded2fd8c6a1563144c05f032` with no conflict; the L40 merge commit and the two earlier bookkeeping commits were not replayed. Outside `odd/` the new tree equals the old tip's tree. Each rebased commit's patch equals its original with only git `index` lines removed from both; the five skill rewrites therefore have new `diff_sha256` values (blob ids in the `index` line of files `main` also changed), the other six keep theirs.
+
+  | Original | Rebased | diff_sha256 |
+  |---|---|---|
+  | bd7ccb066bd2 | 68b333b48501 | changed (index lines only) |
+  | 2dd727c7ee19 | 1816dda0a8aa | changed (index lines only) |
+  | 78bee5b947ab | 692efc38c2c2 | changed (index lines only) |
+  | 9619d29efa97 | e059daa628ea | changed (index lines only) |
+  | 92677057a097 | 925cd247f247 | changed (index lines only) |
+  | be1afed67b88 | 1e8050d1dc42 | same |
+  | bd48c1a5d79d | c19e334f95f8 | same |
+  | 324c773df44c | c4c552d7e088 | same |
+  | 1cb1978e0a48 | 3390cb89748a | same |
+  | b8f665e11641 | cc2746294336 | same |
+  | 7db1b599d378 | 1169a598eed1 | same |
+
+  Stored evidence was re-recorded through the native verbs, not copied: every sweep was run again on the rebased commit (ten `clean`; `68b333b48501` fired on the same single shellcheck SC2016 note, and the stored sweeper judgment of that candidate was carried); each stored reviewer reply was admitted again with only its `candidate` base, head and digest replaced, its rows unchanged; the verifier verdicts, polisher findings and the `Risk: none` exemption were admitted unchanged against the new records. No reviewer, polisher or verifier ran again: the replies are the ones given on the original commits, and their text still cites the original SHAs. The original records stay in this directory as history. Whole-chain `labdrian review check --base e25f0bfe --head` exits 0, `outcome: clear`. Rewriting the pushed branch needs a force push, which the owner's choice of the rebase covers. Risk: none for this bookkeeping.

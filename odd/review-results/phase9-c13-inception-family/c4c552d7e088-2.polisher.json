@@ -1,0 +1,52 @@
+{
+  "kind": "polisher",
+  "base": "c19e334f95f849c12df9142de29f7fd9cc199830",
+  "head": "c4c552d7e088e438f24f2defb001c36d9c88590a",
+  "diff_sha256": "010cc4d9d6bd53347e677a252bf4c3ec73f323dd22d8bc806e82063d39f541ef",
+  "findings": {
+    "findings": [
+      {
+        "location": "skills/inception-pipeline/references/closure-feedback.md:40",
+        "severity": "WARNING",
+        "claim": "The tree-ambiguity rule still says 'more than one commit on the default branch carries it'. The commit generalises the landing target to 'the selected integration branch' everywhere else, so this clause is internally inconsistent. For a non-default integration branch the ambiguity check is scoped to the wrong branch.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "Line 31 of the same file now says 'selected integration branch', and the diff changes line 31 and line 88 for that purpose.",
+          "Line 40 is untouched by the diff and still says 'default branch'.",
+          "The new rejectClauses pin only forbids the exact phrase 'onto the default branch', so it does not catch this leftover."
+        ]
+      },
+      {
+        "location": "skills/inception-pipeline/references/closure-feedback.md:47-48",
+        "severity": "SUGGESTION",
+        "claim": "The t0/t1 wall-clock and checkpoint boundaries are still defined as 'through merge', and post-'merge' replies are excluded. The commit redefines the landing anchor so it can be a squash or fast-forward commit, but the boundary wording is unchanged. A reader can take 'merge' literally for a fast-forward landing, so the boundary is ambiguous.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "Line 48 reads 'from the tiering go-ahead through merge'.",
+          "Line 49 reads 'merge authorization'.",
+          "Neither line is in the diff, while the landing anchor on lines 27 and 30-31 is generalised to merge, squash or fast-forward."
+        ]
+      },
+      {
+        "location": "engine/skills/inception_family_artifact_test.go:101",
+        "severity": "SUGGESTION",
+        "claim": "The doc comment on TestInceptionPipelineKeepsActivationAndClosureRules still says 'closure wait for the merge', although the test now pins 'wait for the landing'.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "Line 101 retains the old wording while lines 115-116 pin 'is not closed; wait for the landing'."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff.",
+      "Read S1-S9 of odd/tasks/phase9-c13-inception-family.md, stopping before '## Log'.",
+      "Grepped skills/inception-pipeline for merge, default branch and landing wording.",
+      "Read the test lines around the new rejectClauses and requireClauses pins.",
+      "Checked that the new positive clauses match the changed text in SKILL.md and closure-feedback.md, and that the reject clauses do not collide with the new wording.",
+      "Not run: go test and the lint and approval hash recomputation."
+    ]
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "925cd247f2474c76af53c4199f2e0cb86ea4ad1f",
+    "head": "1e8050d1dc42cae2abe87cae36ca7b574531aa81",
+    "diff_sha256": "5273f4fed7568549dcb6650c2691e3a5f89cecab8efbdf8db4e35ee295880252",
+    "paths": [
+      "odd/goals/phase9-c13-inception-family.json",
+      "odd/tasks/phase9-c13-inception-family.md"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "cd /home/labdrian/labdrian-sdd-overlay-worktrees/c13-docs-authorized-history-20261111 && /home/labdrian/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/bin/gofmt -l engine/skills/inception_family_artifact_test.go engine/skills/actuals_instrumentation_contract_test.go",
+        "result": "pass",
+        "output": "Parent-executed on exact be1afed67b880800861682c5a96113982561289b; exit 0. Raw: /home/labdrian/.hermes/cache/scratch/c13-authorized-closeout-2026-11-11/historical-checks-be1afed67b88/format.stdout, /home/labdrian/.hermes/cache/scratch/c13-authorized-closeout-2026-11-11/historical-checks-be1afed67b88/format.stderr.\nNo stdout or stderr."
+      },
+      {
+        "command": "cd /home/labdrian/labdrian-sdd-overlay-worktrees/c13-docs-authorized-history-20261111 && /home/labdrian/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/bin/go -C engine vet ./skills ./cmd",
+        "result": "pass",
+        "output": "Parent-executed on exact be1afed67b880800861682c5a96113982561289b; exit 0. Raw: /home/labdrian/.hermes/cache/scratch/c13-authorized-closeout-2026-11-11/historical-checks-be1afed67b88/vet.stdout, /home/labdrian/.hermes/cache/scratch/c13-authorized-closeout-2026-11-11/historical-checks-be1afed67b88/vet.stderr.\nNo stdout or stderr."
+      },
+      {
+        "command": "cd /home/labdrian/labdrian-sdd-overlay-worktrees/c13-docs-authorized-history-20261111 && /home/labdrian/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/bin/go -C engine test -count=1 ./skills ./cmd ./shelltest",
+        "result": "pass",
+        "output": "Parent-executed on exact be1afed67b880800861682c5a96113982561289b; exit 0. Raw: /home/labdrian/.hermes/cache/scratch/c13-authorized-closeout-2026-11-11/historical-checks-be1afed67b88/suite.stdout, /home/labdrian/.hermes/cache/scratch/c13-authorized-closeout-2026-11-11/historical-checks-be1afed67b88/suite.stderr.\nok  \tgithub.com/labdrian-ai/labdrian-sdd-overlay/engine/skills\t8.398s\nok  \tgithub.com/labdrian-ai/labdrian-sdd-overlay/engine/cmd\t71.610s\nok  \tgithub.com/labdrian-ai/labdrian-sdd-overlay/engine/shelltest\t14.129s\n"
+      },
+      {
+        "command": "cd /home/labdrian/labdrian-sdd-overlay-worktrees/c13-docs-authorized-history-20261111 && /home/labdrian/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.1.linux-amd64/bin/go -C engine run ./cmd/ skills validate --registry ../skills.registry.yaml --manifest ../overlay.manifest --source-root ../skills",
+        "result": "pass",
+        "output": "Parent-executed on exact be1afed67b880800861682c5a96113982561289b; exit 0. Raw: /home/labdrian/.hermes/cache/scratch/c13-authorized-closeout-2026-11-11/historical-checks-be1afed67b88/validate.stdout, /home/labdrian/.hermes/cache/scratch/c13-authorized-closeout-2026-11-11/historical-checks-be1afed67b88/validate.stderr.\nregistry and manifest aligned (43 skills)\nskills/ on disk matches overlay.manifest (104 files)\nglobal skill approvals verified (43 skills: 43 approved)\n"
+      },
+      {
+        "command": "cd /home/labdrian/labdrian-sdd-overlay-worktrees/c13-docs-authorized-history-20261111 && git diff --check 'be1afed67b880800861682c5a96113982561289b^' be1afed67b880800861682c5a96113982561289b",
+        "result": "pass",
+        "output": "Parent-executed on exact be1afed67b880800861682c5a96113982561289b; exit 0. Raw: /home/labdrian/.hermes/cache/scratch/c13-authorized-closeout-2026-11-11/historical-checks-be1afed67b88/whitespace.stdout, /home/labdrian/.hermes/cache/scratch/c13-authorized-closeout-2026-11-11/historical-checks-be1afed67b88/whitespace.stderr.\nNo stdout or stderr."
+      }
+    ]
+  }
+}

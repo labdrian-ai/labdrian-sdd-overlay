@@ -1,0 +1,81 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "c19e334f95f849c12df9142de29f7fd9cc199830",
+    "head": "c4c552d7e088e438f24f2defb001c36d9c88590a",
+    "diff_sha256": "010cc4d9d6bd53347e677a252bf4c3ec73f323dd22d8bc806e82063d39f541ef",
+    "paths": [
+      "engine/skills/inception_family_artifact_test.go",
+      "skills/inception-pipeline/.approval.json",
+      "skills/inception-pipeline/SKILL.md",
+      "skills/inception-pipeline/references/closure-feedback.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "c19e334f95f849c12df9142de29f7fd9cc199830",
+      "head": "c4c552d7e088e438f24f2defb001c36d9c88590a",
+      "diff_sha256": "010cc4d9d6bd53347e677a252bf4c3ec73f323dd22d8bc806e82063d39f541ef"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skills/inception_family_artifact_test.go",
+        "skills/inception-pipeline/.approval.json",
+        "skills/inception-pipeline/SKILL.md",
+        "skills/inception-pipeline/references/closure-feedback.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "skills/inception-pipeline/references/closure-feedback.md:40",
+        "severity": "WARNING",
+        "claim": "The ambiguity rule still checks for a tree carried by 'more than one commit on the default branch', but the changed item 2 now places the landing commit on 'the selected integration branch'. When the integration branch is not the default branch, the rule checks the wrong branch. A tree that is ambiguous on the integration branch but unique on the default branch, or the reverse, gets the wrong omit-or-use decision. That conflicts with S4's 'omission on mismatch/ambiguity'. The edit left this line stale, so the rule now contradicts the rest of the anchor section.",
+        "evidence_class": "inferential",
+        "causal_disposition": "worsened",
+        "proof_refs": [
+          "diff hunk closure-feedback.md @@ -24,11 +24,11 @@ changes item 2 to 'landed on the selected integration branch'",
+          "worktree closure-feedback.md:40 unchanged: 'more than one commit on the default branch carries it'"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/skills/inception_family_artifact_test.go:129",
+        "severity": "SUGGESTION",
+        "claim": "The reference-level rejectClauses rejects only 'the actual merge commit' and 'onto the default branch'. The closure section rejects the broader 'merge commit' and 'default branch'. Because the reference check is narrower, the stale 'on the default branch' wording at closure-feedback.md:40 passes the new pins. A future edit that adds default-branch scoping elsewhere in the anchor rules would also pass. Under S9, a missing or inverted clause should still be caught, but this one is not.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "diff test hunk: rejectClauses(t, \"closure reference\", ref, \"the actual merge commit\", \"onto the default branch\") vs rejectClauses(t, \"closure section\", closure, \"merge commit\", \"default branch\")",
+          "worktree closure-feedback.md:40 contains 'on the default branch' and is not rejected"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "skills/inception-pipeline/references/closure-feedback.md:47-48",
+        "severity": "SUGGESTION",
+        "claim": "The Figures boundary still says total_wall_clock_hours and checkpoint_count run 'through merge' and exclude 'post-merge' replies. t1 is now a landing commit that may be a squash or fast-forward with no merge event. For those deliveries the end boundary has no matching event, which makes the figure's end point unclear relative to the t1 anchor.",
+        "evidence_class": "inferential",
+        "causal_disposition": "worsened",
+        "proof_refs": [
+          "diff hunk changes t1 prose to 'After delivery and landing' and accepts 'a merge, squash or fast-forward commit'",
+          "worktree closure-feedback.md:47-48 unchanged 'through merge' / 'post-merge'"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/07a89cf6-d9a4-4988-917a-9f99a013181a/scratchpad/c13-324c.diff (all four paths)",
+      "Read the Specs S1-S9 of /home/labdrian/labdrian-sdd-overlay-worktrees/review-324c773df44c/odd/tasks/phase9-c13-inception-family.md, stopping before ## Log",
+      "Grepped merge/default branch/landing wording in /home/labdrian/labdrian-sdd-overlay-worktrees/review-324c773df44c/skills/inception-pipeline",
+      "Read closure-feedback.md lines 36-60 in the worktree for the remaining anchor and Figures rules",
+      "Checked the new pins against the new text: 'merge commit' does not occur in the new SKILL.md closure paragraph ('(merge, squash or fast-forward)'), and the required reference clauses are present",
+      "Not run: go test, the SKILL.md token-budget (S8) measurement and approval validation; no commands were executed"
+    ]
+  }
+}

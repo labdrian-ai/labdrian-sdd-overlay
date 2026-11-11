@@ -1,0 +1,79 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "e25f0bfe15696c60ded2fd8c6a1563144c05f032",
+    "head": "68b333b48501812dd6ce25b31b4284a6f1be9339",
+    "diff_sha256": "000e167966a501e769f88fcbdc4b7995172c533a53592d34c21f644adcc1294b",
+    "paths": [
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/cmd/inception_chain_entry_test.go",
+      "engine/shelltest/overlay_longterm_mem_test.sh",
+      "engine/skills/actuals_instrumentation_contract_test.go",
+      "engine/skills/approval_gate_test.go",
+      "engine/skills/approval_write.go",
+      "engine/skills/inception_chain_entry_test.go",
+      "engine/skills/inception_family_artifact_test.go",
+      "engine/skills/registryyaml_adapter_test.go",
+      "overlay.manifest",
+      "skills/_shared/pre-sdd-contracts.md",
+      "skills/inception-pipeline/.approval.json",
+      "skills/inception-pipeline/SKILL.md",
+      "skills/inception-pipeline/references/closure-feedback.md",
+      "skills/inception-pipeline/references/tier-selection.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "e25f0bfe15696c60ded2fd8c6a1563144c05f032",
+      "head": "68b333b48501812dd6ce25b31b4284a6f1be9339",
+      "diff_sha256": "000e167966a501e769f88fcbdc4b7995172c533a53592d34c21f644adcc1294b"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/cmd/inception_chain_entry_test.go",
+        "engine/shelltest/overlay_longterm_mem_test.sh",
+        "engine/skills/actuals_instrumentation_contract_test.go",
+        "engine/skills/approval_gate_test.go",
+        "engine/skills/approval_write.go",
+        "engine/skills/inception_chain_entry_test.go",
+        "engine/skills/inception_family_artifact_test.go",
+        "engine/skills/registryyaml_adapter_test.go",
+        "overlay.manifest",
+        "skills/_shared/pre-sdd-contracts.md",
+        "skills/inception-pipeline/.approval.json",
+        "skills/inception-pipeline/SKILL.md",
+        "skills/inception-pipeline/references/closure-feedback.md",
+        "skills/inception-pipeline/references/tier-selection.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "skills/inception-pipeline/references/closure-feedback.md:77",
+        "severity": "WARNING",
+        "claim": "The newly required merge occurs after validation, leaving the persisted actuals object outside the validation guarantee. For example, when correcting an existing actuals record after its landing anchor is rejected, the validated candidate omits total_wall_clock_hours, but merging it into the existing record can retain the previous elapsed value. Readback does not detect this invalid measurement. Construct the final merged replacement before validation, explicitly removing fields whose sources no longer resolve, and persist that exact validated object.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "The added Execute instruction requires merging existing records before writing.",
+          "Validate steps 1–3 validate the candidate before Execute; no validation of the merged record is required.",
+          "The landing-anchor rule requires omitting t1 on mismatch, while Validate step 5 permits unresolved elapsed time to be absent."
+        ]
+      }
+    ],
+    "evidence": [
+      "Inspected all 16 changed paths through the complete inline canonical diff and compared their changes against the supplied stable feature contract and lens rows.",
+      "The base Execute instructions did not require merging existing actuals records; the candidate adds that requirement after validation.",
+      "No commands were run. Tests, formatters, approval validation, and filesystem inspection were not run. No edits or delegation were performed."
+    ]
+  }
+}

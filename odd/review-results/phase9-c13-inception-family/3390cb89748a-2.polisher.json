@@ -1,0 +1,16 @@
+{
+  "kind": "polisher",
+  "base": "c4c552d7e088e438f24f2defb001c36d9c88590a",
+  "head": "3390cb89748a7390b85b3c2ccaaaa8d9969737bf",
+  "diff_sha256": "312f81bdada574ed709dc1f34b7bdb73bbd82c73a85303aeada762795001d653",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/07a89cf6-d9a4-4988-917a-9f99a013181a/scratchpad/c13-fix2.diff.",
+      "Each new test pin string matches the post-change text in SKILL.md and references/closure-feedback.md. The checked pins are \"means it runs: do not fire\", \"is not closed; wait for landing\", the \"once the change has landed (a merge, squash or fast-forward commit, whatever its parent count)\" clause, and the \"`landing_commit`, always: ... (the last slice\" clause.",
+      "Grepped skills/inception-pipeline in the worktree for \"integration branch\", \"default branch\", \"merge commit\" and \"selected\". The only hit is closure-feedback.md:40, a \"default branch\" mention in the tree-hash ambiguity bullet. The test's rejectClauses cover the SKILL.md closure section and the reference, but none of them matches that line, so the new \"integration branch\" rejection does not break it.",
+      "SKILL.md and the reference are consistent on the landing rule. Both say the parent names the landing commit, an unlanded chain is not closed, and `landing_commit` is recorded explicitly. Neither names a branch.",
+      "Did not run `go test`, so the pins are checked against the text but not executed. Did not recompute the sha256 in .approval.json, because only Read and Grep were available. Did not read the S3, S4, S8 and S9 specs in full. A grep of the task file surfaced only the landing_commit and approved_tree Spec line, which matches the diff."
+    ]
+  }
+}

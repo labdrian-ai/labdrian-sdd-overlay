@@ -1,0 +1,11 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "python3 inspect_candidate.py > raw/inspection-numbered.txt\npython3 landing_fixtures.py > raw/fixture-output.txt",
+      "output": "Introduced instruction-level ambiguity reproduced: head :30-31 demands an actual merge commit. Real squash and fast-forward landings on main each have one parent, matching reviewed trees and resolved timestamps. Base :27-28 accepts the recorded landing identity without this topology wording. Head's squash and historical-anchor clauses were considered; they do not explicitly relax the new requirement for fresh landings. This establishes wording ambiguity under the Git merge-commit reading, not an observed live producer rejection.",
+      "base_result": "not-reproduced"
+    }
+  ]
+}

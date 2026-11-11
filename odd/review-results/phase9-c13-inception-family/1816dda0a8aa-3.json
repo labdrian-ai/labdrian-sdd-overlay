@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "68b333b48501812dd6ce25b31b4284a6f1be9339",
+    "head": "1816dda0a8aa1b3582a30fbaec96f5dfb771c456",
+    "diff_sha256": "3537308939520e3d4a210f26f42b6bf1b476f40985698c1c11b167dbe6080e30",
+    "paths": [
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/skills/approval_gate_test.go",
+      "engine/skills/approval_write.go",
+      "engine/skills/inception_family_artifact_test.go",
+      "engine/skills/registryyaml_adapter_test.go",
+      "skills/project-inception/.approval.json",
+      "skills/project-inception/SKILL.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "68b333b48501812dd6ce25b31b4284a6f1be9339",
+      "head": "1816dda0a8aa1b3582a30fbaec96f5dfb771c456",
+      "diff_sha256": "3537308939520e3d4a210f26f42b6bf1b476f40985698c1c11b167dbe6080e30"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/skills/approval_gate_test.go",
+        "engine/skills/approval_write.go",
+        "engine/skills/inception_family_artifact_test.go",
+        "engine/skills/registryyaml_adapter_test.go",
+        "skills/project-inception/.approval.json",
+        "skills/project-inception/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "skills/project-inception/SKILL.md:26",
+        "severity": "BLOCKER",
+        "claim": "With a supplied requirements brief in reuse mode, the coordinator requests a citation in manifest goals while also forbidding changes to that manifest. The instructions cannot both be followed for an existing manifest that does not cite the new brief.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/project-inception/SKILL.md:22",
+          "skills/project-inception/SKILL.md:26"
+        ]
+      }
+    ],
+    "evidence": [
+      "Inspected the complete inline diff for all eight changed paths and the supplied S1–S9 feature contract.",
+      "Commands and checks: not run."
+    ]
+  }
+}
