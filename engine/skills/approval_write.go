@@ -25,7 +25,6 @@ var lintBaselineSkills = []string{
 	"judgment-day",
 	"knowledge-ingestion",
 	"rdd-defect-workflow",
-	"requirements-from-transcripts",
 	"sdd-apply",
 	"sdd-archive",
 	"sdd-design",
