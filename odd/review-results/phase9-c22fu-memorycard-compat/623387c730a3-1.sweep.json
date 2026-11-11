@@ -1,0 +1,27 @@
+{
+  "kind": "sweep",
+  "base": "88c4af4e7ad60c06e7138b65bf5929d007d35bd7",
+  "head": "623387c730a395888ecdea3dddffbc6fe8d06731",
+  "diff_sha256": "bef2cbedb7988856a760714d0f2bdebe82701a69f944a823380368d458f03405",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": []
+  },
+  "t2": [
+    {
+      "tool": "errcheck",
+      "module": "longterm-mem",
+      "new": [
+        "internal/memorycard/store.go: unchecked error: rows.Close()",
+        "internal/memorycard/store_test.go: unchecked error: defer db.Close()",
+        "internal/memorycard/store_test.go: unchecked error: defer store.Close()"
+      ]
+    }
+  ],
+  "t3": [],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

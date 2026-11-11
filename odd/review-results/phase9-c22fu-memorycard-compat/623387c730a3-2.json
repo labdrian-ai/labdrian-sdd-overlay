@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "88c4af4e7ad60c06e7138b65bf5929d007d35bd7",
+    "head": "623387c730a395888ecdea3dddffbc6fe8d06731",
+    "diff_sha256": "bef2cbedb7988856a760714d0f2bdebe82701a69f944a823380368d458f03405",
+    "paths": [
+      "longterm-mem/internal/memorycard/store.go",
+      "longterm-mem/internal/memorycard/store_test.go",
+      "longterm-mem/internal/promote/card.go",
+      "longterm-mem/internal/promote/sync_cards.go",
+      "longterm-mem/internal/promote/sync_cards_test.go",
+      "odd/tasks/phase9-c22fu-memorycard-compat.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "88c4af4e7ad60c06e7138b65bf5929d007d35bd7",
+      "head": "623387c730a395888ecdea3dddffbc6fe8d06731",
+      "diff_sha256": "bef2cbedb7988856a760714d0f2bdebe82701a69f944a823380368d458f03405"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/memorycard/store.go",
+        "longterm-mem/internal/memorycard/store_test.go",
+        "longterm-mem/internal/promote/card.go",
+        "longterm-mem/internal/promote/sync_cards.go",
+        "longterm-mem/internal/promote/sync_cards_test.go",
+        "odd/tasks/phase9-c22fu-memorycard-compat.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "I compared the PromoteCard split against the base. The order of checks is preserved: bridged, then own page (unparseable revision error, then current or update), then withheld, then create.",
+      "The pages index keeps the old matching rules. A page's own match is keyed by project and memorycard_id, the first page wins, the last page of an id wins for byCardID, and the bridged page of lowest rank wins, first in port order.",
+      "ListMemories and MemoryByID share the same select, the same row mapping and the same bridge lookup. The listing closes its rows before running the bridge queries.",
+      "SyncCards counts bridged memories in Bridged and never in Failed. It re-derives the scan for each memory, so a page created earlier in the run is visible to a later memory's successor link through noteAddress.",
+      "I found no defect that this change introduced."
+    ]
+  }
+}

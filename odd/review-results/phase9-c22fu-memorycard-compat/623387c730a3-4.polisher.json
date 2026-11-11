@@ -1,0 +1,40 @@
+{
+  "kind": "polisher",
+  "base": "88c4af4e7ad60c06e7138b65bf5929d007d35bd7",
+  "head": "623387c730a395888ecdea3dddffbc6fe8d06731",
+  "diff_sha256": "bef2cbedb7988856a760714d0f2bdebe82701a69f944a823380368d458f03405",
+  "findings": {
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/sync_cards_test.go:164",
+        "summary": "The Withheld branch of SyncCards (unreadable page, no own page) and the pagesErr branch (every eligible memory counted as Failed) have no test.",
+        "evidence": [
+          "sync_cards.go:61-64 sets Failed for every eligible memory when pagesErr != nil; sync_cards.go:78-80 sets Withheld.",
+          "sync_cards_test.go:50-262 holds eight tests; none writes an unreadable page or makes ListPages fail."
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/sync_cards.go:82-89",
+        "summary": "A cardUpdate ending in ActionSkippedLocalEdit is appended to Promoted, while the CardSyncReport doc says Promoted lists memories the run wrote a page for; Engram Sync appends the same way, but doc and behavior disagree and no test covers a local-edit skip in a sync.",
+        "evidence": [
+          "sync_cards.go:18-21 (doc) versus :89 (unconditional append).",
+          "card.go:203-211 returns the skip action with no write.",
+          "sync.go:120 appends the same way."
+        ]
+      }
+    ],
+    "evidence": [
+      "card.go at 623387c7 against the pre-split PromoteCard and scanCardPages: same results and error text on the explicit path.",
+      "Decision order unchanged: bridged, own, unreadable, create.",
+      "scanFor and the old scan agree on own and byCardID; bridge ranking unchanged.",
+      "noteAddress after each write lets later memories link a page created earlier; own is keyed by unique id, so no duplicate page.",
+      "decideCard revision comparison covered at sync_cards_test.go:71, 103, 192.",
+      "store.go:83-171 ListMemories and MemoryByID share memorySelect, scanMemory and bridgeOf; store_test.go:93-142 pins archived and other-project exclusion.",
+      "sync_cards_test.go:221-244 counts ListPages calls; :164-189 covers bridging by import_map and by same content."
+    ]
+  }
+}
