@@ -41,7 +41,7 @@ The parent names `odd/tasks/<feature>.md`; shaper writes Specs and Tasks; estima
 
 ## Closure-Feedback (plan → validate → execute; single writer)
 
-Run `labdrian roles resume --project {project} --goal {change} --chain {change}`. `"terminal": false`, or an error because the chain has no records, means it still runs: wait. `"terminal": true` is a handoff, not proof of delivery or landing: an unlanded chain is not closed; wait for the landing. The parent names the landing commit (merge, squash or fast-forward); closure records it as `landing_commit`. Require the delivery outcome and an explicitly recorded `landing_commit` before t1; else omit t1 and disclose. A tree hash MUST be used to **verify** a commit, never to **discover** one. When the anchor is ambiguous, omit t1; it is never resolved by position.
+Run `labdrian roles resume --project {project} --goal {change} --chain {change}`. `"terminal": false`, or an error because the chain has no records, means it runs: do not fire. `"terminal": true` is a handoff, not proof of delivery or landing: an unlanded chain is not closed; wait for landing. The parent names the landing commit (merge, squash or fast-forward); closure records it as `landing_commit`. Require the delivery outcome and an explicitly recorded `landing_commit` before t1; else omit t1 and disclose. A tree hash MUST be used to **verify** a commit, never to **discover** one. When the anchor is ambiguous, omit t1; it is never resolved by position.
 
 Before measuring or writing closure, read `references/closure-feedback.md`. Only closure-feedback writes `sdd/{change}/actuals`; stop on partial writes.
 

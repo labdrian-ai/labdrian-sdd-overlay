@@ -98,7 +98,7 @@ func TestInceptionPipelineCompactEntry(t *testing.T) {
 
 // TestInceptionPipelineKeepsActivationAndClosureRules pins what the compaction must not lose:
 // the description's activation triggers (a host picks a skill by its description alone), the
-// closure wait for the merge, who records landing_commit, and the headroom below the hard
+// closure wait for the landing, who records landing_commit, and the headroom below the hard
 // token budget so a small edit cannot block approval.
 func TestInceptionPipelineKeepsActivationAndClosureRules(t *testing.T) {
 	root := actualsInstrumentationRepoRoot(t)
@@ -111,8 +111,8 @@ func TestInceptionPipelineKeepsActivationAndClosureRules(t *testing.T) {
 
 	closure := markdownSectionBody(t, body, inceptionClosureFeedbackHeading)
 	requireClauses(t, "closure section", closure,
-		"an error because the chain has no records",
-		"is not closed; wait for the landing",
+		"an error because the chain has no records, means it runs: do not fire",
+		"is not closed; wait for landing",
 		"The parent names the landing commit (merge, squash or fast-forward); closure records it as `landing_commit`")
 	rejectClauses(t, "closure section", closure, "merge commit", "default branch")
 
@@ -122,11 +122,12 @@ func TestInceptionPipelineKeepsActivationAndClosureRules(t *testing.T) {
 	ref := readRepoFile(t, root, inceptionClosureReferenceRelPath)
 	requireInOrder(t, "closure reference", ref, "#### Storage", "Use the parent's resolved storage", "#### t0", "typed `created_at`")
 	requireClauses(t, "closure reference", ref,
-		"the parent names the actual landing commit once the change has landed on the selected integration branch",
-		"a merge, squash or fast-forward commit, whatever its parent count",
+		"the parent names the actual landing commit once the change has landed (a merge, squash or fast-forward commit, whatever its parent count)",
+		"`landing_commit`, always: the explicitly named commit that landed the successful delivery (the last slice",
 		"A delivered chain that has not landed is not closed",
 		"closure's entry follows delivery's final Log entry")
-	rejectClauses(t, "closure reference", ref, "the actual merge commit", "onto the default branch")
+	// The landing rule names no branch: neither the default one nor a selected one.
+	rejectClauses(t, "closure reference", ref, "the actual merge commit", "onto the default branch", "integration branch")
 }
 
 func TestProjectInceptionCompactCoordinator(t *testing.T) {
