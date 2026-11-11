@@ -1,0 +1,17 @@
+{
+  "kind": "polisher",
+  "base": "0a1e93cb3966f6f3b1b7e38ec26b0e37578c4085",
+  "head": "46543f30df3f595d94336913cbe803f5659ac683",
+  "diff_sha256": "fbe8ea141c69d70a79fba3cf7f3faa7dbaf4d4582bdad9bba7ab4b43d72fb8a2",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff /var/tmp/c14-polish/1c7f7fd4.diff: test, task doc S5/L3, approval record, SKILL.md and both references.",
+      "Grepped the head worktree for the four old headings and column names (SDD Roadmap Inputs, SDD Change Candidates, Suggested SDD Change, Required Keywords In SDD), excluding openspec/changes/archive. Only hits were openspec/project/roadmap.md:24 and the task doc's own Log L3 line, both history or documentation, not live consumers.",
+      "Grepped skills/, roles/, engine/, tools/ and bin/ for Roadmap Inputs, Change Candidates, Required Keywords and Suggested Change. Only the three files this commit edits matched: requirements-from-transcripts SKILL.md, output-template.md and the pin test. No other skill, role, engine or tool reads those names.",
+      "Grepped skills/requirements-from-transcripts for SDD, sdd/, Engram and the old names. There are no SDD, sdd/ or Engram hits left in the entry or either reference. The renamed headings in output-template.md (lines 90, 102, 107) match what SKILL.md:33 and the pin test expect.",
+      "Project-Inception Handoff kept its name: it is unchanged in the diff, still required by the template pin (test line 11), and SKILL.md still refers to it.",
+      "The extended pins now reject SDD, sdd/, Engram, capture_prompt and 'before PASS/archive' in the patterns catalog, the output template and the entry body. They also require '## Roadmap Inputs'. The old 'SDD'-prefixed headings fail the SDD rejection, and the retired Engram and sdd/* mentions in SKILL.md were removed (diff lines 138-141)."
+    ]
+  }
+}

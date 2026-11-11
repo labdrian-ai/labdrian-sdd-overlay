@@ -1,0 +1,30 @@
+{
+  "kind": "polisher",
+  "base": "358e51f921ffc25f46385e71624cdabd3558d2e9",
+  "head": "892b448680c043be3e2f693190759eb4435f100f",
+  "diff_sha256": "e12fee26d544f1315927c3887268eb6725dbe8ba40d69cfe798636b572c4b352",
+  "findings": {
+    "findings": [
+      {
+        "location": "skills/requirements-from-transcripts/references/output-template.md:109",
+        "severity": "SUGGESTION",
+        "claim": "The Project-Inception Handoff table now carries both `Change Name` and the existing `Suggested Change Name` column, and the catalog's 'Project-Inception Handoff Fields' table (patterns-catalog.md:153-164) does not list the new `Change Name` field. The two columns overlap in meaning. A drafter may be unsure whether `Suggested Change Name` should hold the slug or a per-requirement candidate. The template and catalog disagree on the handoff column set.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "The diff adds `Change Name` before `Requirement ID` and keeps `Suggested Change Name`, giving two change-name columns.",
+          "patterns-catalog.md:162 describes only 'Suggested change name' as 'a kebab-case slug the role chain inherits', and has no `Change Name` row.",
+          "No test or doc distinguishes the two columns."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff /var/tmp/c14-polish/10bb2a9b.diff",
+      "Grepped skills, engine and bin in the review tree for 'Project-Inception Handoff', 'Roadmap Order', 'Suggested Change Name' and 'handoff table'. The only consumers are the skill's own SKILL.md, the template, the catalog, the Go pins, and the prose at pre-sdd-contracts.md:76, which does not parse columns. No positional column parser exists, so inserting a column mid-row breaks no consumer.",
+      "Checked the three new consumer-side pins verbatim: skills/_shared/pre-sdd-contracts.md:30 and :76, and skills/clarify-request/SKILL.md:53. All three strings match.",
+      "Checked that `| Change Name |` matches only the new column header and not `| Suggested Change Name |`.",
+      "Read patterns-catalog.md:150-164.",
+      "Did not run the Go tests."
+    ]
+  }
+}

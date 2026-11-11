@@ -1,0 +1,97 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "de4ad5fb6b488501a1604e0a22ed2696e2668d3c",
+    "head": "abc1a214aba35e7884049eb8625032a006578f99",
+    "diff_sha256": "d72ac5b74427b3111fc60e9bc4c2b216ee97b27c4d3c9bf5f3f7cc6948c12b76",
+    "paths": [
+      "engine/skills/requirements_from_transcripts_test.go",
+      "skills/requirements-from-transcripts/SKILL.md",
+      "skills/requirements-from-transcripts/references/output-template.md",
+      "skills/requirements-from-transcripts/references/patterns-catalog.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "de4ad5fb6b488501a1604e0a22ed2696e2668d3c",
+      "head": "abc1a214aba35e7884049eb8625032a006578f99",
+      "diff_sha256": "d72ac5b74427b3111fc60e9bc4c2b216ee97b27c4d3c9bf5f3f7cc6948c12b76"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skills/requirements_from_transcripts_test.go",
+        "skills/requirements-from-transcripts/SKILL.md",
+        "skills/requirements-from-transcripts/references/output-template.md",
+        "skills/requirements-from-transcripts/references/patterns-catalog.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "skills/requirements-from-transcripts/SKILL.md:31-32",
+        "claim": "Execution step 1 runs the contradiction/ambiguity pre-analysis (issue types Contradiction, Ambiguity, Missing rule, Assumption), but the classification table now lives only in patterns-catalog.md, which is first read in step 2. The base entry pointed to the catalog from within the pre-analysis section. A reader following the steps in order classifies blocking issues without the table, which weakens recall of the gate.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/requirements-from-transcripts/SKILL.md:31-32"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "skills/requirements-from-transcripts/SKILL.md:21",
+        "claim": "The persistence rule dropped the base requirement that the saved record include the full EARS R-NNN set with each item's scope and the Project-Inception Handoff table. It now says only 'persist the brief ... then read it back'. project-inception and closure-feedback consume that record, and nothing in the entry or the new test enforces its content. The readback has no stated criterion either.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/requirements-from-transcripts/SKILL.md:21"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "skills/requirements-from-transcripts/SKILL.md:19",
+        "claim": "The base rules that IDs are never reused, and that they carry verbatim into downstream spec, tasks and verify artifacts, were reduced to 'assigned once, never renumbered'. The reuse guarantee and the downstream carry-forward obligation are no longer stated.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/requirements-from-transcripts/SKILL.md:19"
+        ]
+      },
+      {
+        "id": "F4",
+        "severity": "SUGGESTION",
+        "location": "skills/requirements-from-transcripts/references/patterns-catalog.md:130",
+        "claim": "The change removes SDD wording, but the catalog still says 'group many fixes under one SDD', 'SDD roadmap seeds' and 'future SDD artifacts' (line 161). The test's reject list only matches specific strings, so these leftovers are not caught and the wording is inconsistent with the 'Suggested change' edit.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/requirements-from-transcripts/references/patterns-catalog.md:130",
+          "skills/requirements-from-transcripts/references/patterns-catalog.md:161"
+        ]
+      },
+      {
+        "id": "F5",
+        "severity": "SUGGESTION",
+        "location": "engine/skills/requirements_from_transcripts_test.go:17",
+        "claim": "The test reuses actualsInstrumentationRepoRoot, a helper named for an unrelated capability. Coupling to it makes the test unreadable out of context and breaks if that helper is renamed or moved.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/requirements_from_transcripts_test.go:17"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff of 4 files. Compared the base rules with the new entry and found the dropped persistence-content, ID-reuse and verification-checklist obligations.",
+      "Execution order in the entry (step 1 gate before step 2 catalog read) was checked against where the classification table lives."
+    ]
+  }
+}

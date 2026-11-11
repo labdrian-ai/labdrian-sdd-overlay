@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "98982e6f63522c9edf5f0bbd8ea83f5b5873b7c4",
+    "head": "caea3cf142314a82c2035835afda6b81a7daf506",
+    "diff_sha256": "af85941d59025884fe132749a8fd384a94b3f5ef9c0c5207dc682c0d90e61fbf",
+    "paths": [
+      "engine/skills/requirements_from_transcripts_test.go",
+      "odd/tasks/phase9-c14-requirements-from-transcripts.md",
+      "skills/requirements-from-transcripts/references/output-template.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "98982e6f63522c9edf5f0bbd8ea83f5b5873b7c4",
+      "head": "caea3cf142314a82c2035835afda6b81a7daf506",
+      "diff_sha256": "af85941d59025884fe132749a8fd384a94b3f5ef9c0c5207dc682c0d90e61fbf"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skills/requirements_from_transcripts_test.go",
+        "odd/tasks/phase9-c14-requirements-from-transcripts.md",
+        "skills/requirements-from-transcripts/references/output-template.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/skills/requirements_from_transcripts_test.go:73",
+        "claim": "The new reject of \"Proposed change name\" is a literal, case-sensitive substring check. A lowercase or reworded variant (e.g. 'proposed change-name') reintroducing a second slug-like name would pass undetected. The guard is narrow, though it matches the style of the existing reject.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/requirements_from_transcripts_test.go:73"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "skills/requirements-from-transcripts/references/output-template.md:93",
+        "claim": "The Roadmap Inputs column was renamed from 'Proposed change name' to 'Proposed slice'. Any downstream consumer reading that column by its old header (roadmap or architecture skills, or other roles) would no longer match. The diff does not show a consumer check for this rename, whereas earlier rounds pinned consumer-side reads for other contracts. Whether any consumer reads it is unknown.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "skills/requirements-from-transcripts/references/output-template.md:93",
+          "skills/requirements-from-transcripts/references/output-template.md:137"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes the Roadmap Inputs header and its description to 'Proposed slice', and the test pins the new header and the 'never a second change-name' clause while rejecting 'Proposed change name'. This is consistent with the stated fix of one change-name per brief.",
+      "The handoff table fix itself (single Change Name column, catalog row, step 3 derivation) was pinned in earlier lines of the test that the diff shows as context. Only the Roadmap Inputs follow-up is new here.",
+      "The L8 log entry corrects L7's claim about column positions; this is documentation only and introduces no behavior."
+    ]
+  }
+}

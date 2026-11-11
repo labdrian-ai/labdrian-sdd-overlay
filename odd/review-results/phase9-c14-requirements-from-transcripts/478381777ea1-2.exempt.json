@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "46543f30df3f595d94336913cbe803f5659ac683",
+    "head": "478381777ea1fd0bd9e32cd9e5450849fe90ed70",
+    "diff_sha256": "0e4cdfa4067cdaa23968a2b8df80bb112dcbb553de9c7a095f7bdb3626561f0b",
+    "paths": [
+      "odd/tasks/phase9-c14-requirements-from-transcripts.md",
+      "skills/requirements-from-transcripts/.approval.json"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git diff --stat 40060a6a 79d79b25",
+        "result": "pass",
+        "output": "Parent-executed on exact 79d79b25dc70836550aa3f9d2fa586fcfa75c278; only skills/requirements-from-transcripts/.approval.json (written by the owner's skills approve) and the feature document change."
+      },
+      {
+        "command": "labdrian skills validate (engine run, worktree registry and manifest)",
+        "result": "pass",
+        "output": "global skill approvals verified (43 skills: 43 approved)"
+      }
+    ]
+  }
+}

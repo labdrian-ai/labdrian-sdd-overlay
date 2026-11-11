@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "892b448680c043be3e2f693190759eb4435f100f",
+    "head": "98982e6f63522c9edf5f0bbd8ea83f5b5873b7c4",
+    "diff_sha256": "cd3b26f0c3361dd266c593ef29d0d91ee31591d8db7659d64dac6b5319ff8cc2",
+    "paths": [
+      "engine/skills/requirements_from_transcripts_test.go",
+      "odd/tasks/phase9-c14-requirements-from-transcripts.md",
+      "skills/requirements-from-transcripts/SKILL.md",
+      "skills/requirements-from-transcripts/references/output-template.md",
+      "skills/requirements-from-transcripts/references/patterns-catalog.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "892b448680c043be3e2f693190759eb4435f100f",
+      "head": "98982e6f63522c9edf5f0bbd8ea83f5b5873b7c4",
+      "diff_sha256": "cd3b26f0c3361dd266c593ef29d0d91ee31591d8db7659d64dac6b5319ff8cc2"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skills/requirements_from_transcripts_test.go",
+        "odd/tasks/phase9-c14-requirements-from-transcripts.md",
+        "skills/requirements-from-transcripts/SKILL.md",
+        "skills/requirements-from-transcripts/references/output-template.md",
+        "skills/requirements-from-transcripts/references/patterns-catalog.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The handoff table in output-template.md now has one Change Name column. Its header and separator row both have 7 columns, so they are consistent.",
+      "The catalog row now describes Change name as the brief's `change-name`, the same in every row. This matches the template and the new pin in the test.",
+      "SKILL.md step 3 derives change-name before the template is filled. Step 4 only adds the handoff table, so the header slot is no longer filled before the slug exists.",
+      "The new pins match the edited text: the template header row, the catalog row and the step-3 wording. The rejection of 'Suggested Change Name' covers the removed column.",
+      "I could not see the rejectClauses helper or the `body` variable in the test, since neither is in the diff. The earlier log says entry rejects already exist, so both are assumed present."
+    ]
+  }
+}

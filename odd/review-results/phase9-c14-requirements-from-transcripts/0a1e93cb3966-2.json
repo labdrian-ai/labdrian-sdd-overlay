@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "abc1a214aba35e7884049eb8625032a006578f99",
+    "head": "0a1e93cb3966f6f3b1b7e38ec26b0e37578c4085",
+    "diff_sha256": "835e228d1fac2b99a342dfd44602c5661eaba5ce20105f493ab94b36fba07def",
+    "paths": [
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/skills/approval_gate_test.go",
+      "engine/skills/approval_write.go",
+      "engine/skills/registryyaml_adapter_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "abc1a214aba35e7884049eb8625032a006578f99",
+      "head": "0a1e93cb3966f6f3b1b7e38ec26b0e37578c4085",
+      "diff_sha256": "835e228d1fac2b99a342dfd44602c5661eaba5ce20105f493ab94b36fba07def"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/skills/approval_gate_test.go",
+        "engine/skills/approval_write.go",
+        "engine/skills/registryyaml_adapter_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "approval_write.go removes exactly one id (requirements-from-transcripts) from lintBaselineSkills, and approval_gate_test.go lowers the pinned size from 29 to 28 to match.",
+      "README.md (two places), bin/lib/usage.sh (two places) and the registryyaml_adapter_test.go comment all change 29 to 28 consistently, and the added list of skills that met lint now names requirements-from-transcripts.",
+      "The diff does not include the skills/requirements-from-transcripts rewrite, so I could not check the skill content or whether it passes the hard lint. The frozen context lists only these five changed paths, so I treat the rewrite as outside this commit and report nothing on it."
+    ]
+  }
+}

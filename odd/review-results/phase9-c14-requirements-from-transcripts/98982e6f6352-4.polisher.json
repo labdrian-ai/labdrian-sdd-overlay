@@ -1,0 +1,27 @@
+{
+  "kind": "polisher",
+  "base": "892b448680c043be3e2f693190759eb4435f100f",
+  "head": "98982e6f63522c9edf5f0bbd8ea83f5b5873b7c4",
+  "diff_sha256": "cd3b26f0c3361dd266c593ef29d0d91ee31591d8db7659d64dac6b5319ff8cc2",
+  "findings": {
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "skills/requirements-from-transcripts/references/output-template.md:93",
+        "summary": "Roadmap Inputs still has a Proposed change name column (described at line 137 as a proposed change name per small requirement or tightly coupled group), a per-row candidate name distinct from the single derived change-name, so a drafter can still emit a second slug and the template does not say how it relates to Change Name.",
+        "evidence": [
+          "output-template.md:93 Roadmap Inputs header has Proposed change name",
+          "output-template.md:137 describes a proposed change name per small requirement or tightly coupled group"
+        ]
+      }
+    ],
+    "evidence": [
+      "output-template.md:109 one Change Name column in the old position",
+      "patterns-catalog.md:162 row consistent with the template",
+      "SKILL.md:33-34 step 3 derives change-name before the template is filled",
+      "no consumer skill under skills/ reads the handoff columns by name or position",
+      "requirements_from_transcripts_test.go:71-73 pin the header and reject Suggested Change Name"
+    ]
+  }
+}

@@ -23,7 +23,7 @@ One SHALL per requirement — if two behaviors are needed, write two requirement
 | Contradiction | Two or more transcript statements cannot all be true or implemented together as-is. | Quote the conflicting anchors, explain the conflict, propose resolution options, and leave the choice to the user. |
 | Ambiguity | A term or request has multiple valid interpretations. | Explain the possible meanings and ask for/record the needed definition before implementation. |
 | Missing rule | The transcript states desired behavior but omits a policy, boundary, state, role, or data rule needed to implement safely. | Mark as blocking when it affects permissions, persistence, workflow, money, compliance, or user-visible behavior. |
-| Assumption | A likely interpretation is useful for planning but not explicitly stated. | Label it as an assumption and require confirmation before SDD apply. |
+| Assumption | A likely interpretation is useful for planning but not explicitly stated. | Label it as an assumption and require confirmation before implementation. |
 
 ---
 
@@ -56,7 +56,7 @@ For every atomic requirement, create a keyword set:
 - stakeholder language keywords, including Spanish terms from the transcript;
 - canonical technical terms used in code or contracts;
 - likely file/domain terms;
-- SDD/search terms for Engram retrieval.
+- Search terms for memorycard retrieval.
 
 Example:
 
@@ -127,11 +127,11 @@ Each arrow is a potential failure point and needs acceptance evidence.
 - "Improve UX" without observable behavior.
 - Silently resolving a contradiction or ambiguity instead of exposing it and letting the user choose.
 - "Fix priority flow" as one requirement when it contains proposal display, ticket persistence, and responsible edit behavior.
-- Roadmap entries that group many fixes under one SDD without preserving separate requirement IDs and evidence.
-- Missing keywords that make the requirement impossible to find later in Engram.
+- Roadmap entries that group many fixes under one change without preserving separate requirement IDs and evidence.
+- Missing keywords that make the requirement impossible to find later in memorycard.
 - Manifest input that omits the stakeholder problem and only lists implementation ideas.
 - Architecture input that does not mention affected domains, permissions, persistence, or integration risk.
-- SDD roadmap seeds that are broad themes instead of ordered small requirements.
+- Roadmap seeds that are broad themes instead of ordered small requirements.
 - "Responsible user" without defining the exact role/capability.
 - UI acceptance that does not check submitted payload.
 - Backend-only verification for a user-visible issue.
@@ -158,8 +158,8 @@ Each arrow is a potential failure point and needs acceptance evidence.
 | Requirement ID | Stable reference, e.g. `R-001`. |
 | Requirement size | Small / Medium; Large must be split before roadmap. |
 | Change type | Fix, feature, visual correction, permission rule, data continuity, technical debt. |
-| Keywords | Search terms that must appear in future SDD artifacts. |
-| Suggested SDD change | Candidate `sdd/<change-name>`. |
+| Keywords | Search terms that must appear in the downstream feature document. |
+| Change name | The brief's `change-name`, the same in every row; the role chain inherits it verbatim. |
 | Dependency | Prior requirement or external decision needed first. |
 | Acceptance evidence | Minimum proof needed before PASS. |
 
@@ -171,4 +171,4 @@ Each arrow is a potential failure point and needs acceptance evidence.
 |---|---|---|
 | Manifest | stakeholder intent, mission, non-negotiable rules, success criteria, scope/out-of-scope | What outcome do we need and what must never drift? |
 | Architecture | domains, data flows, integrations, permissions, persistence, UI surfaces, risks | What systems/files/contracts are affected and how big is this? |
-| SDD Roadmap | ordered atomic requirements, dependencies, evidence requirements, risk | In what sequence do we implement small accurate changes? |
+| Roadmap | ordered atomic requirements, dependencies, evidence requirements, risk | In what sequence do we implement small accurate changes? |

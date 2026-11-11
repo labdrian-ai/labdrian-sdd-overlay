@@ -1,0 +1,22 @@
+{
+  "kind": "polisher",
+  "base": "478381777ea1fd0bd9e32cd9e5450849fe90ed70",
+  "head": "358e51f921ffc25f46385e71624cdabd3558d2e9",
+  "diff_sha256": "de4febbc3091e401e50b70c088f860ab74b928da77ce8e685c5ff88acf6d21a9",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read /var/tmp/c14-polish/147e855d.diff in full.",
+      "Read the head version of skills/requirements-from-transcripts/SKILL.md in the worktree.",
+      "Step 1 now reads references/patterns-catalog.md for the issue classification before gate 2 (SKILL.md:31). Step 2 builds on the catalog.",
+      "The persistence rule names every R-NNN item with its `scope` and the Project-Inception Handoff table, then reads back and confirms it matches (SKILL.md:21). IDs are never renumbered or reused and are carried verbatim downstream (SKILL.md:19).",
+      "requirements_from_transcripts_test.go pins 'never renumbered or reused', 'carried verbatim downstream', 'every R-NNN item with its `scope`, and the Project-Inception Handoff table' and 'confirm it matches'. Each pin matches a literal string in the head SKILL.md.",
+      "The step 1 ordering (catalog read before gate 2) has no pin. That is the F1 fix, and the commit's four stated new pins cover only the other clauses.",
+      "rftRepoRoot is defined once in the test file and every call site now uses it. It delegates to actualsInstrumentationRepoRoot, defined at actuals_instrumentation_contract_test.go:792.",
+      "The 950 estimated-token pin at requirements_from_transcripts_test.go:33 is unchanged. I did not run the estimator or any test. The 807-token figure in odd/tasks L5 is the commit's own claim, not something I measured. The added wording is small, so I saw no sign it exceeds 950.",
+      "The S2 pins for change-name, the topic key, the scope enum, 'exactly one SHALL' and the Tier 3 yaml are unchanged, and the matching SKILL.md lines (lines 17, 19, 20, 39-43) are intact.",
+      "Read the S2 and S6 spec lines in odd/tasks/phase9-c14-requirements-from-transcripts.md and the L5 entry.",
+      "The stale .approval.json was not reported, as instructed."
+    ]
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "358e51f921ffc25f46385e71624cdabd3558d2e9",
+    "head": "892b448680c043be3e2f693190759eb4435f100f",
+    "diff_sha256": "e12fee26d544f1315927c3887268eb6725dbe8ba40d69cfe798636b572c4b352",
+    "paths": [
+      "engine/skills/requirements_from_transcripts_test.go",
+      "odd/tasks/phase9-c14-requirements-from-transcripts.md",
+      "skills/requirements-from-transcripts/SKILL.md",
+      "skills/requirements-from-transcripts/references/output-template.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "358e51f921ffc25f46385e71624cdabd3558d2e9",
+      "head": "892b448680c043be3e2f693190759eb4435f100f",
+      "diff_sha256": "e12fee26d544f1315927c3887268eb6725dbe8ba40d69cfe798636b572c4b352"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skills/requirements_from_transcripts_test.go",
+        "odd/tasks/phase9-c14-requirements-from-transcripts.md",
+        "skills/requirements-from-transcripts/SKILL.md",
+        "skills/requirements-from-transcripts/references/output-template.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "skills/requirements-from-transcripts/references/output-template.md:109",
+        "claim": "The Project-Inception Handoff table now has two near-identical columns, `Change Name` (new, the derived-once slug) and the existing `Suggested Change Name`, with no wording saying how they differ. A reader or downstream stage can't tell which one it must inherit verbatim. This undercuts the rule that the slug is derived once and never re-derived, because the leftover 'Suggested' column implies a second, adjustable name.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/requirements-from-transcripts/references/output-template.md:109"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "skills/requirements-from-transcripts/SKILL.md:32-33",
+        "claim": "The template header now has a `**change-name:**` slot, but the steps fill the brief from the template in step 3 and only derive `change-name` in step 4. The header slot is therefore filled before the slug exists. The template text says 'derived once here', which also conflicts with step 4 doing the derivation. The step order should put derivation before filling the brief.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/requirements-from-transcripts/SKILL.md:32-33",
+          "skills/requirements-from-transcripts/references/output-template.md:33"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed all four changed paths from the diff. The test pins match the clauses added to SKILL.md and the template.",
+      "The `| Change Name |` pin matches only the new column header, not `Suggested Change Name`, so it asserts the right thing but does not guard the ambiguity in F1."
+    ]
+  }
+}

@@ -156,7 +156,7 @@ func TestTheRealGlobalSkillsAreSkillsAnApprovalCanCover(t *testing.T) {
 
 // TestTheLintBaselineNamesOnlyRegisteredGlobalSkills pins the skills the lint excuses, for the
 // legacy findings it would refuse them for, against this repository's real registry. At the Phase 8
-// base it held the 37 global skills that existed; 29 remain: inception-pipeline, project-inception, project-manifest, project-architect and roadmap-maker met lint, gadu-operator and gadu-orchestrate were
+// base it held the 37 global skills that existed; 28 remain: inception-pipeline, project-inception, project-manifest, project-architect, roadmap-maker and requirements-from-transcripts met lint, gadu-operator and gadu-orchestrate were
 // retired, and prespec-malandra was replaced by clarify-request. A retired or replaced skill leaves
 // the lint baseline deliberately, and so every id on it is a registered global skill.
 func TestTheLintBaselineNamesOnlyRegisteredGlobalSkills(t *testing.T) {

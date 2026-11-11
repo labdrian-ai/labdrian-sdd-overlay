@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "98982e6f63522c9edf5f0bbd8ea83f5b5873b7c4",
+    "head": "caea3cf142314a82c2035835afda6b81a7daf506",
+    "diff_sha256": "af85941d59025884fe132749a8fd384a94b3f5ef9c0c5207dc682c0d90e61fbf",
+    "paths": [
+      "engine/skills/requirements_from_transcripts_test.go",
+      "odd/tasks/phase9-c14-requirements-from-transcripts.md",
+      "skills/requirements-from-transcripts/references/output-template.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "98982e6f63522c9edf5f0bbd8ea83f5b5873b7c4",
+      "head": "caea3cf142314a82c2035835afda6b81a7daf506",
+      "diff_sha256": "af85941d59025884fe132749a8fd384a94b3f5ef9c0c5207dc682c0d90e61fbf"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skills/requirements_from_transcripts_test.go",
+        "odd/tasks/phase9-c14-requirements-from-transcripts.md",
+        "skills/requirements-from-transcripts/references/output-template.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "skills/requirements-from-transcripts/references/output-template.md:93",
+        "claim": "The Roadmap Inputs column was renamed from 'Proposed change name' to 'Proposed slice', which changes what the value means. The diff does not show whether any downstream consumer (roadmap, pre-sdd-contracts, clarify-request) reads the old column header. Only the template and its own test were updated, so a consumer that reads 'Proposed change name' may now miss it. Consumers are not enumerated in this change.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "skills/requirements-from-transcripts/references/output-template.md:93",
+          "engine/skills/requirements_from_transcripts_test.go:73"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-c14-requirements-from-transcripts.md:136",
+        "claim": "Log L8 says 'Corrected here: the handoff table matches the column order consumers read before C14'. This commit's diff does not touch the handoff table; only the Roadmap Inputs header and prose change. The log claims a correction the diff does not show, so a reader cannot verify it from this commit.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-c14-requirements-from-transcripts.md:136"
+        ]
+      }
+    ],
+    "evidence": [
+      "Test pins at requirements_from_transcripts_test.go:73-76 match the template strings changed at output-template.md:93 and :137.",
+      "The handoff table header appears only as unchanged context in the test file; this diff has no change to the template handoff table."
+    ]
+  }
+}

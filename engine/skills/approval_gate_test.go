@@ -377,7 +377,7 @@ func snapshotFiles(t *testing.T, paths ...string) map[string]string {
 func TestLintBaseline_IsWellFormedAndFixed(t *testing.T) {
 	// The count is pinned: adding to or removing from the list is a deliberate, reviewed change that
 	// must update this number with it.
-	const lintBaselineSize = 29
+	const lintBaselineSize = 28
 	if len(lintBaselineSkills) != lintBaselineSize {
 		t.Fatalf("the lint baseline has %d ids, want the fixed %d", len(lintBaselineSkills), lintBaselineSize)
 	}

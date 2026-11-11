@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "892b448680c043be3e2f693190759eb4435f100f",
+    "head": "98982e6f63522c9edf5f0bbd8ea83f5b5873b7c4",
+    "diff_sha256": "cd3b26f0c3361dd266c593ef29d0d91ee31591d8db7659d64dac6b5319ff8cc2",
+    "paths": [
+      "engine/skills/requirements_from_transcripts_test.go",
+      "odd/tasks/phase9-c14-requirements-from-transcripts.md",
+      "skills/requirements-from-transcripts/SKILL.md",
+      "skills/requirements-from-transcripts/references/output-template.md",
+      "skills/requirements-from-transcripts/references/patterns-catalog.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "892b448680c043be3e2f693190759eb4435f100f",
+      "head": "98982e6f63522c9edf5f0bbd8ea83f5b5873b7c4",
+      "diff_sha256": "cd3b26f0c3361dd266c593ef29d0d91ee31591d8db7659d64dac6b5319ff8cc2"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skills/requirements_from_transcripts_test.go",
+        "odd/tasks/phase9-c14-requirements-from-transcripts.md",
+        "skills/requirements-from-transcripts/SKILL.md",
+        "skills/requirements-from-transcripts/references/output-template.md",
+        "skills/requirements-from-transcripts/references/patterns-catalog.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "odd/tasks/phase9-c14-requirements-from-transcripts.md:135",
+        "claim": "L7 says the single Change Name column sits 'in the position the old column held, so no later column moves'. The table shows otherwise. The old Change Name was column 2 and the old Suggested Change Name was column 6. The new Change Name is column 5. Requirement ID, Manifest Input and Architecture Input each moved left by one, and Required Keywords and Minimum PASS Evidence also moved. Any consumer that reads the handoff table by position would see shifted columns. The record asserts a no-shift property the change does not have.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/requirements-from-transcripts/references/output-template.md:109-110",
+          "odd/tasks/phase9-c14-requirements-from-transcripts.md:135"
+        ]
+      }
+    ],
+    "evidence": [
+      "Compared the old and new Project-Inception Handoff header rows in output-template.md: Requirement ID, Manifest Input, Architecture Input, Required Keywords and Minimum PASS Evidence all change column index.",
+      "The SKILL.md step 3/4 reorder matches the new pin clause '3. Derive `change-name`, then fill the brief'.",
+      "The catalog row text matches the pinned string exactly.",
+      "The test calls rejectClauses, a helper not visible in the diff; I assumed it already exists in the test package, since L6 describes entry rejects."
+    ]
+  }
+}

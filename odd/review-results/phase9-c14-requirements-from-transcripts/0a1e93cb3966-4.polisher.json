@@ -1,0 +1,18 @@
+{
+  "kind": "polisher",
+  "base": "abc1a214aba35e7884049eb8625032a006578f99",
+  "head": "0a1e93cb3966f6f3b1b7e38ec26b0e37578c4085",
+  "diff_sha256": "835e228d1fac2b99a342dfd44602c5661eaba5ce20105f493ab94b36fba07def",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read /var/tmp/c14-polish/40b5e27c.diff in full. It removes exactly one line from lintBaselineSkills, and the count changes from 29 to 28 in README.md (2 places), bin/lib/usage.sh (2 places), approval_gate_test.go and registryyaml_adapter_test.go.",
+      "Read engine/skills/approval_write.go:1-44 in the worktree. The list has 28 entries, alphabetically sorted, and no longer contains requirements-from-transcripts. All other ids are intact.",
+      "Read approval_write.go:47-93 (inLintBaseline, BaselineLintDecision, allLegacyBaselineFindings). The diff does not touch these. For this skill, inLintBaseline now returns false, so any hard finding returns refused=true with no warnings. A skill with no hard findings still returns (nil, false). This is the intended S7 behaviour: the skill now meets the whole lint.",
+      "Grepped README.md, bin/, engine/skills and docs for '29'. The only remaining hits are unrelated: the leap-year limit in approval.go:132, a date in test data, and unrelated docs. No stale baseline count of 29 remains.",
+      "The diff changes no flags, guard logic or messages. Only the count wording in prose and comments changed.",
+      "Read S7 in odd/tasks/phase9-c14-requirements-from-transcripts.md:48-51. The diff matches it: remove only that id, update the count in the 4 named files, and leave guard logic, flags and messages unchanged.",
+      "Not run: go test, skills validate, and a lint of the skill's own body size. I did not check whether skills/requirements-from-transcripts actually passes the hard lint, so the claim that it meets lint rests on S7 and the commit message."
+    ]
+  }
+}
