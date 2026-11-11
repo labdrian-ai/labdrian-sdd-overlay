@@ -13,7 +13,7 @@ import (
 
 // TestEligible covers R-007's rewritten predicate: pinned, explicit, or a
 // non-empty topic_key whose first path segment is outside the excluded
-// {sdd, review, delivery} set. Type and revision count are retired as
+// {sdd, review, delivery, odd, session} set. Type and revision count are retired as
 // automatic eligibility criteria (R-003).
 func TestEligible(t *testing.T) {
 	tests := []struct {

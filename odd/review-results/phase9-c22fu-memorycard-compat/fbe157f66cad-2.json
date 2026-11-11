@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "d41b4570487174af4f06e0086efbca1fb49c90c7",
+    "head": "fbe157f66cad50d23bf1f4971c26f2f1046b8d77",
+    "diff_sha256": "cc1c5b39feb6ce012d08d1462ef33ef5f10a9fbfe9863246c850c0ff2ea12e65",
+    "paths": [
+      "longterm-mem/README.md",
+      "longterm-mem/internal/promote/eligible.go",
+      "longterm-mem/internal/promote/eligible_test.go",
+      "odd/tasks/phase9-c22fu-memorycard-compat.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "d41b4570487174af4f06e0086efbca1fb49c90c7",
+      "head": "fbe157f66cad50d23bf1f4971c26f2f1046b8d77",
+      "diff_sha256": "cc1c5b39feb6ce012d08d1462ef33ef5f10a9fbfe9863246c850c0ff2ea12e65"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/README.md",
+        "longterm-mem/internal/promote/eligible.go",
+        "longterm-mem/internal/promote/eligible_test.go",
+        "odd/tasks/phase9-c22fu-memorycard-compat.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "README addition at longterm-mem/README.md:167-169 matches the behavior described in the L16 log entry: pages promoted before the odd/ and session/ exclusion are frozen, sync neither refreshes nor retracts them, and doctor names them.",
+      "eligible.go change only rewraps a comment; the wording is identical, so no behavior change.",
+      "The two new TestEligible rows use goal:g-42/odd/... and goal:g-42/session/... with Pinned false and expect false. They only pin existing goal-prefix stripping behavior; the diff does not show the stripping code, and the feature log says they pass.",
+      "The feature document gains only a log line recording the review round."
+    ]
+  }
+}

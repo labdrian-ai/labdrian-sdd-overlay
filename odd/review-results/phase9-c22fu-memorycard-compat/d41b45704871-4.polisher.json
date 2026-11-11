@@ -1,0 +1,29 @@
+{
+  "kind": "polisher",
+  "base": "280ada729db0aa3209a22fc00cb08b6c12713290",
+  "head": "d41b4570487174af4f06e0086efbca1fb49c90c7",
+  "diff_sha256": "74cf7a57c11b2f43b4bd591d7443bf16988fcf9d67f842486193dad559c7498a",
+  "findings": {
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/eligible_test.go:16",
+        "summary": "The TestEligible doc comment still names the excluded set as {sdd, review, delivery}. The commit added `odd` and `session` to the set but did not update this comment. The commit's other prefix enumerations were updated, but this one was missed.",
+        "evidence": [
+          "eligible_test.go:16 reads 'outside the excluded {sdd, review, delivery} set'.",
+          "eligible.go:20-26 now lists five prefixes: sdd, review, delivery, odd, session."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read eligible.go in full. The map now has five entries and curatedTopicKey does an exact match on the first segment after TopicWithoutGoal.",
+      "Grep for Eligible( callers shows three: sync.go:170 and sync_cards.go:108 pass explicit=false, and writer.go:189 passes the explicit flag from the promote path. A pin or an explicit promote therefore still overrides the exclusion.",
+      "doctor_eligibility.go:90 calls IneligibleReason, which delegates to Eligible, so doctor stays consistent with the rule. The reason text '...is not a curated topic' still fits. The eligible.go:42 comment lists the five prefixes.",
+      "eligible_test.go covers odd/ excluded, session/ excluded, a pinned odd/ memory still eligible, and odd-notes/ not excluded (first segment is odd-notes, not odd).",
+      "Docs naming all five prefixes: openspec/specs/longterm-mem-promotion/spec.md:24, longterm-mem/README.md:87 and :171, longterm-mem/docs/sync-from-memorycard.md:28. A repo-wide grep (archive/ and odd/ excluded) found no other enumeration of the prefixes.",
+      "I did not run the test suite.",
+      "Risk 3 side effects as stated in the commit: pages already promoted are not retracted, and doctor now warns on them. The README documents this. I found no defect here."
+    ]
+  }
+}

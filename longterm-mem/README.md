@@ -165,8 +165,10 @@ or carrying a curated `topic_key`. A page whose observation is not eligible
 a looser rule that no longer applies) stays exactly as it was written, however
 the observation changes later. Such a page is *frozen*, and nothing on it says so.
 Pages promoted from `odd/` (feature-document mirrors) or `session/` (session
-summaries) topics before those prefixes were excluded are frozen this way: `sync`
-neither refreshes nor retracts them, and only `doctor` names them.
+summaries) topics before those prefixes were excluded are frozen this way. `sync`
+still patches their `status:` when their observation is deleted or superseded
+(propagation does not check eligibility), and `doctor` names them while their
+observation is live.
 
 `doctor` says so, in its `promoted-pages-eligible` check. Each finding names the
 page address, the observation id, why the observation is not eligible (it has no
