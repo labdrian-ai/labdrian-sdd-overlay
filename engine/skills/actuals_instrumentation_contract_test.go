@@ -464,11 +464,8 @@ func TestActualsInstrumentationContract(t *testing.T) {
 	})
 
 	t.Run("R013_roadmap_maker_no_compute_time_source_invariant", func(t *testing.T) {
-		// Invariant, same precedent as D2_D5_closed_schema_invariant: roadmap-maker/SKILL.md
-		// is unchanged versus main (design D6 forbids editing it), so this FORBID-list
-		// regression guard is GREEN-by-construction on both main and HEAD. It is NOT RED
-		// coverage for R-013 — it only guards against a future regression that sources a
-		// tracking-line figure from one of the compute-time/calendar-time fields.
+		// This FORBID-list guards the R-013 tracking-line source invariant in the
+		// rewritten roadmap entry; it is not RED coverage for R-013.
 		skill := readRepoFile(t, repoRoot, roadmapMakerSkillRelPath)
 		for _, forbidden := range []string{
 			"total_wall_clock_hours", "checkpoint_count", "implementation_hours",

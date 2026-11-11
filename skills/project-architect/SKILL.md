@@ -1,6 +1,6 @@
 ---
 name: project-architect
-description: "Design a defensible technical architecture from project constraints, with explicit trade-offs and manifest compliance."
+description: "Design architecture after project-manifest: arquitectura técnica, project architect, /project-architect, diseñar arquitectura, architecture proposal, qué stack uso. Explain trade-offs."
 license: MIT
 metadata:
   author: gentleman-programming
@@ -13,11 +13,11 @@ Receive the project name, resolved `artifact_store.mode` (`engram | openspec | h
 
 ## Hard Rules
 
-Search project-scoped records and get full records; merge updates and readback writes. Keep `project/{project}/manifest/{context,mission,rules}`, `sdd-init/{project}`, `project/{project}/architect/final` and `openspec/project/architect/final.md`. Historical `engram` means memory-only, not Engram writes or export; `openspec` uses files, `hybrid` both, `none` inline. Never reopen resolved storage. Report missing capabilities or permission.
+Search project-scoped records and get full records; merge updates and readback writes. Use supplied locators to read manifest `project/{project}/manifest/{context,mission,rules}` and `sdd-init/{project}`; write architecture to `project/{project}/architect/final` and/or `openspec/project/architect/final.md`. Historical `engram` means memory-only, not Engram writes or export; `openspec` uses files, `hybrid` both, `none` inline. Never reopen resolved storage. Report missing capabilities or permission.
 
 Cite the actual constraints behind decisions. Preserve all technical sections and mandatory Section 15 compliance table: cover every applicable mandatory rule, redesign or disclose tension and mitigation, never silently omit a rule. State real uncertainties, trade-offs, rejected alternatives and unsupported scope; do not invent choices or a quota. New artifacts and envelopes are English except user quotes; preserve existing Spanish records.
 
-After persisting, merge and readback `.atl/skill-registry.md` and the project-scoped `skill-registry` record when applicable. Replace only the architecture-owned block idempotently, preserving the manifest block and unrelated bytes; create a block only if absent, never duplicate it. Keep compact imperative constraints, about 15 lines maximum. Exact markers:
+After persisting, create `.atl/skill-registry.md` and its directory if absent, then merge and readback it and the project-scoped `skill-registry` record when applicable. Replace only the architecture-owned block idempotently, preserving the manifest block and unrelated bytes; create a block only if absent, never duplicate it. Keep compact imperative constraints, about 15 lines maximum. Exact markers:
 
 <!-- BEGIN: project-architect-constraints (auto-generated) -->
 <!-- END: project-architect-constraints -->
@@ -32,7 +32,7 @@ After persisting, merge and readback `.atl/skill-registry.md` and the project-sc
 
 1. Retrieve the actual manifest, optional mission, stack and prior architecture through supplied locators; check critical sections using `references/blocked-response.md` when inputs are missing or incomplete.
 2. With sufficient inputs, read `references/architecture-template.md` and design its technical sections. Ground decisions in constraints and evidence; mark unresolved information instead of inventing it.
-3. Persist according to the resolved placement, then update the registry when applicable. Read back each write; report partial failures.
+3. Persist according to the resolved placement, then update the local registry and the project-scoped record when applicable. Read back each write; report partial failures.
 4. Return the template's structured response and handoff to the parent. For subsequent work point to `../project-inception/SKILL.md` and `../role-chain/SKILL.md`; do not execute them.
 
 ## Output Contract

@@ -1,6 +1,6 @@
 ---
 name: project-inception
-description: "Coordinate the manifest, architecture and roadmap trilogy. For tier routing, use inception-pipeline first."
+description: "Project inception trilogy: project inception, bootstrap completo, manifest architect roadmap, quiero hacer un proyecto inception completo. Use inception-pipeline first for tier routing."
 license: Apache-2.0
 metadata:
   author: gentleman-programming
@@ -19,12 +19,12 @@ For current memory operations use the supplied memorycard capabilities: project-
 
 ## Decision Gates
 
-`full` is the default. In `reuse`, read both manifest and architecture read-only and check both exist and are non-empty. If either is missing, report fallback to `full` before sequencing. Otherwise never rewrite either foundation and use roadmap `incremental-insert`. Require final-enough manifest and architecture before the roadmap; return the concrete blocker for missing or incomplete inputs; ask the parent at most one question at a time. Do not expand the existing inline-context exception.
+`full` is the default. In `reuse`, read both manifest and architecture read-only and check both exist and are non-empty. If either is missing, report fallback to `full` before sequencing. Otherwise never rewrite either foundation and use roadmap `incremental-insert`. Require the manifest is final enough before architecture and the architecture is final enough before roadmap; return the concrete blocker for missing or incomplete inputs; ask the parent at most one question at a time. Do not expand the existing inline-context exception.
 
 ## Execution Steps
 
 1. If `requirements_brief_ref` is supplied, load the full `project/{project}/requirements/{change}` record and seed from its EARS requirements, scope and handoff; request citation in manifest goals and the roadmap item's `Derivado de` field. Inherit the upstream change slug unchanged.
-2. In `full`, invoke `../project-manifest/SKILL.md`, then `../project-architect/SKILL.md` with the manifest and resolved inputs. Carry its result and exact locators forward; stop on a blocker.
+2. In `full`, invoke `../project-manifest/SKILL.md`, then `../project-architect/SKILL.md` with the manifest and resolved inputs. Carry both foundation results and exact locators forward; stop on a blocker.
 3. Invoke `../roadmap-maker/SKILL.md` with project, resolved artifact store mode and foundation locators: `build` for `full`, `incremental-insert` for successful `reuse`. Keep its input gates; incremental insert preserves roadmap history and actuals.
 4. Return control to the parent. For the next implementation entry, the parent follows `../inception-pipeline/SKILL.md` Chain entry and `../role-chain/SKILL.md`; this coordinator runs neither.
 

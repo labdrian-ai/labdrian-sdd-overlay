@@ -97,7 +97,7 @@ Reformulate the supplied idea, identify known context, assumptions and critical 
 7. **Si algo está abierto, dejarlo visible.** {full text}
 8. **Priorizar claridad ejecutable sobre completitud artificial.** {full text}
 
-### Reglas de dominio (pendientes de confirmación)
+### Confirmed domain rules
 
 {Only genuinely confirmed domain rules belong here; record unconfirmed proposals as open questions, not rules.}
 
@@ -132,16 +132,21 @@ Reformulate the supplied idea, identify known context, assumptions and critical 
 
 ---
 
-## Compact Rules (para skill registry)
+## Compact Rules (for skill registry)
 
-{One line per rule, imperative mood — this is what goes into .atl/skill-registry.md}
+{Inside the manifest-owned markers, include:
+
+Source: project-manifest skill. Do NOT edit manually.
+Triggers: when working on ANY change in this project.
+One imperative rule per line (about 15 maximum).
+Full rules: `project/{project}/manifest/rules`, `project/{project}/manifest/context`, `project/{project}/manifest/mission`.}
 
 - {Rule 1 imperative}
 - {Rule 2 imperative}
 - ...
 
 ## Skill Registry Updated
-✅ `.atl/skill-registry.md` actualizado con la sección `Project Manifest Rules`
+✅ `.atl/skill-registry.md` updated with the `Project Manifest Rules` section
 ✅ Project-scoped `skill-registry` record updated and read back (when applicable)
 
 ## Estado

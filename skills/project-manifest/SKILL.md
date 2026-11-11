@@ -1,6 +1,6 @@
 ---
 name: project-manifest
-description: "Turn a project idea into a strategic context, agent mission, and mandatory working rules through discovery, draft, and final phases."
+description: "Create project manifest: manifiesto, project manifest, /project-manifest, bootstrap proyecto, definir proyecto, PRD inicial. Produces context, mission and rules; no code or technical architecture."
 license: MIT
 metadata:
   author: gentleman-programming
@@ -22,7 +22,7 @@ In final, merge and readback `.atl/skill-registry.md` and the project-scoped `sk
 <!-- BEGIN: project-manifest-rules (auto-generated) -->
 <!-- END: project-manifest-rules -->
 
-Preserve the architect block in `../_shared/pre-sdd-contracts.md`. Compact rules: imperative, one per line, about 15 lines maximum.
+Preserve the architect block in `.atl/skill-registry.md`. Follow the registry block format in `references/phase-templates.md`: imperative rules, one per line, about 15 lines maximum.
 
 ## Decision Gates
 
