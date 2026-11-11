@@ -165,6 +165,18 @@ func (e *CardListError) Error() string {
 
 func (e *CardListError) Unwrap() error { return e.Err }
 
+// CardRunFailure is what failed when a memorycard pass (SyncCards, PlanCards) could not run at all, in the terms of
+// Failure: a memorycard that cannot be listed (a CardListError, wrapped or not) is MemoryUnavailable, anything else
+// OtherFailure. SyncCardsProject and the command's dry run both classify through it, so the two answer the same
+// exit code for the same failure.
+func CardRunFailure(err error) Failure {
+	var listed *CardListError
+	if errors.As(err, &listed) {
+		return MemoryUnavailable
+	}
+	return OtherFailure
+}
+
 // CardProjectReport is what SyncCardsProject did for one project: SyncCards' report and, when the run failed,
 // why, in the terms ProjectSyncReport's Failure uses.
 type CardProjectReport struct {
@@ -182,9 +194,8 @@ func SyncCardsProject(ctx context.Context, cards CardMemories, w *Writer, index 
 	}
 	report, err := SyncCards(ctx, cards, w, project)
 	out := CardProjectReport{CardSyncReport: report}
-	var listed *CardListError
 	switch {
-	case errors.As(err, &listed):
+	case CardRunFailure(err) == MemoryUnavailable:
 		out.Failure = MemoryUnavailable
 		return out, err
 	case err != nil && len(report.Failed) == 0:

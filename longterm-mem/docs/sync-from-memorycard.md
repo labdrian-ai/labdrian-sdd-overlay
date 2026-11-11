@@ -14,6 +14,12 @@ The memorycard database is opened read-only, at `LONGTERM_MEM_MEMORYCARD_DB` or,
 database is opened read-only too, to find the memories that duplicate one of its pages (below). A database that
 cannot be opened is exit 4. `--source` with any other value is exit 2.
 
+When either database could only be opened through its `immutable=1` fallback, the run works from the snapshot taken
+when the connection was opened and says so on stderr, one line per store (`longterm-mem: sync: memorycard is being
+read through the immutable=1 fallback, ...`), as `sync` and `promote` do for a frozen Engram. It is a declaration, not
+a failure. A store that fails to close once the run is over is a `warning: close ...` line on stderr and changes no
+exit code.
+
 ## What it does
 
 1. Lists the project's memories whose `status` is `active` or `superseded` (an `archived` memory plays the part of
@@ -64,7 +70,9 @@ longterm-mem: sync --source memorycard --dry-run: nothing was written
 ```
 
 The dry run walks the same memories through the same decision as the run and stops where the run would write: no
-page, no precedence entry, no index rebuild and no sync-state record. A page that was edited by hand is only found
+page, no precedence entry, no index rebuild and no sync-state record. It answers the exit code of the run for the
+same failure: 4 when memorycard cannot be listed, 6 when memories are left alone for an unreadable page, 1 for any
+other failure; the index rebuild (5) is a step it does not take. A page that was edited by hand is only found
 when the run tries to write it, so the dry run counts such a memory among those it would promote and the run then
 reports it as left alone.
 

@@ -72,16 +72,16 @@ func (c commands) cmdSync(args []string) int {
 // walks the same decision and writes nothing. Engram is read too, for the one thing only it can say of a memory
 // with no import_map row (withSameContent). A bridged memory is skipped and counted, and is no failure (exit 0).
 func (c commands) syncFromMemorycard(a app, project, vaultRoot string, dryRun bool) int {
-	cards, exit := a.memorycard()
+	cards, exit := a.memorycardToPromoteFrom()
 	if exit != exitOK {
 		return exit
 	}
-	defer cards.Close()
-	engramStore, exit := a.memory()
+	defer a.closeStore("memorycard", cards)
+	engramStore, exit := a.memoryToPromoteFrom()
 	if exit != exitOK {
 		return exit
 	}
-	defer engramStore.Close()
+	defer a.closeStore("engram", engramStore)
 	source := cardSource{cards: cards, engram: engramStore}
 
 	ctx := context.Background()
@@ -97,7 +97,9 @@ func reportCardPlan(ctx context.Context, a app, source promote.CardMemories, pro
 	plan, err := a.planCards(ctx, source, project, vaultRoot)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "longterm-mem: sync --source memorycard --dry-run: %v\n", err)
-		return exitInternal
+		// The run's own mapping (syncExitCode) over the failure the run would have named, so the dry run answers
+		// the exit code of the run for the same failure.
+		return syncExitCode(promote.CardRunFailure(err))
 	}
 	fmt.Printf("longterm-mem: sync --source memorycard --dry-run: would promote %d memory(ies), skip %d, %d bridged, into %s\n", plan.WouldPromote, plan.Skipped, plan.Bridged, vaultRoot)
 	for _, title := range plan.Titles {

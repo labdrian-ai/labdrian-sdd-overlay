@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
@@ -102,6 +103,28 @@ func (a app) memoryToPromoteFrom() (*engram.Store, int) {
 	}
 	declareDegradedEngram(store, a.command)
 	return store, exitOK
+}
+
+// memorycardToPromoteFrom is memorycard for a command that writes pages from what it reads: when memorycard could
+// only be opened through its immutable=1 fallback, the command says so on stderr, as memoryToPromoteFrom does for
+// Engram. memorycard keeps no cause for the fallback, so the line names none.
+func (a app) memorycardToPromoteFrom() (*memorycard.Store, int) {
+	store, exit := a.memorycard()
+	if exit != exitOK {
+		return nil, exit
+	}
+	if store.Degraded() {
+		fmt.Fprintf(os.Stderr, "longterm-mem: %s: memorycard is being read through the immutable=1 fallback, so this run works from the snapshot taken when the connection was opened, not the live database\n", a.command)
+	}
+	return store, exitOK
+}
+
+// closeStore closes a store the command opened. A store opened read-only that fails to close has already given the
+// run everything it read, so the failure is a warning on stderr and not a failure of the run.
+func (a app) closeStore(name string, store io.Closer) {
+	if err := store.Close(); err != nil {
+		fmt.Fprintf(os.Stderr, "longterm-mem: %s: warning: close %s: %v\n", a.command, name, err)
+	}
 }
 
 // syncDeps is what a sync of the vault at vaultRoot runs over: the memory it reads, a Writer of the vault, and the

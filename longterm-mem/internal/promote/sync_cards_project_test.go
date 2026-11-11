@@ -2,6 +2,7 @@ package promote
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
@@ -109,5 +110,23 @@ func TestSyncCardsProject_AFailedMemoryStillRebuildsAndRecords(t *testing.T) {
 	}
 	if index.calls != 1 || len(state.recorded) != 1 {
 		t.Errorf("rebuilds %d, records %d, want 1 of each", index.calls, len(state.recorded))
+	}
+}
+
+// CardRunFailure is the one classification of a pass that could not run, shared by the run (SyncCardsProject) and
+// the command's dry run: an unlistable memorycard, wrapped or not, is MemoryUnavailable; anything else is OtherFailure.
+func TestCardRunFailure_ClassifiesAPassThatCouldNotRun(t *testing.T) {
+	listed := &CardListError{Project: "p", Err: errors.New("no such table")}
+	for name, tc := range map[string]struct {
+		err  error
+		want Failure
+	}{
+		"unlistable":         {listed, MemoryUnavailable},
+		"unlistable wrapped": {fmt.Errorf("outer: %w", listed), MemoryUnavailable},
+		"anything else":      {errors.New("writer cannot be built"), OtherFailure},
+	} {
+		if got := CardRunFailure(tc.err); got != tc.want {
+			t.Errorf("%s: CardRunFailure = %v, want %v", name, got, tc.want)
+		}
 	}
 }

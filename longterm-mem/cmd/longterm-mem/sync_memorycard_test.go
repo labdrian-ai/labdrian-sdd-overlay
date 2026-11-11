@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -20,7 +21,7 @@ func syncMemorycardWorld(t *testing.T) (*promoteGoldenWorld, string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer conn.Close()
+	defer closeDB(t, conn)
 	for _, stmt := range []string{
 		`update memories set topic_key = 'longterm-mem/card-only' where id = 1`,
 		`update memories set topic_key = 'longterm-mem/second-card' where id = 3`,
@@ -121,7 +122,7 @@ func TestSyncSourceMemorycard_ASameContentMemoryIsCountedAsBridged(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer conn.Close()
+	defer closeDB(t, conn)
 	// Memory 5 holds the text of observation 1; make it eligible, as the page of observation 1 is the point.
 	if _, err := conn.Exec(`update memories set pinned = 1 where id = 5`); err != nil {
 		t.Fatal(err)
@@ -167,7 +168,7 @@ func TestSyncSourceMemorycard_ALocallyEditedPageIsNamedAndExitsZero(t *testing.T
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer conn.Close()
+	defer closeDB(t, conn)
 	if _, err := conn.Exec(`insert into memory_versions values (1, 3, 'Card Only', 'A newer body.', '')`); err != nil {
 		t.Fatal(err)
 	}
@@ -231,12 +232,200 @@ func TestSyncSource_UnknownSourceIsUsage(t *testing.T) {
 	}
 }
 
-// Naming the default source changes nothing: the command is the one that has always synced from Engram.
-func TestSyncSource_EngramIsTheDefault(t *testing.T) {
-	enterClockWorld(t)
-	_, plainOut, plainErr := runSync(t, "--dry-run")
-	code, namedOut, namedErr := runSync(t, "--source", "engram", "--dry-run")
-	if code != exitOK || plainOut != namedOut || plainErr != namedErr {
-		t.Fatalf("--source engram differs from plain sync:\nplain: %q / %q\nnamed: %q / %q (exit %d)", plainOut, plainErr, namedOut, namedErr, code)
+// closeDB closes a fixture connection and fails the test when the close fails.
+func closeDB(t *testing.T, conn *sql.DB) {
+	t.Helper()
+	if err := conn.Close(); err != nil {
+		t.Errorf("close the fixture connection: %v", err)
 	}
 }
+
+// unlistableMemorycardDB is a database memorycard.Open accepts and ListMemories cannot read: it has no memories table.
+func unlistableMemorycardDB(t *testing.T) string {
+	t.Helper()
+	path := filepath.Join(realTempDir(t), "memory.db")
+	conn, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer closeDB(t, conn)
+	if _, err := conn.Exec(`create table unrelated (x integer)`); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+// The doc table promises exit 4 when memorycard cannot be listed. The dry run answers what the run answers for the
+// same failure, and neither writes a page.
+func TestSyncSourceMemorycard_AnUnlistableStoreIsExit4InTheDryRunAndTheRun(t *testing.T) {
+	w, _ := syncMemorycardWorld(t)
+	t.Setenv("LONGTERM_MEM_MEMORYCARD_DB", unlistableMemorycardDB(t))
+	treeBefore := renderPromoteGoldenTree(t, w.vaultRoot)
+
+	const listFailure = `promote: sync memorycard: list memories for "golden-project": `
+	for _, tc := range []struct {
+		name         string
+		args         []string
+		wantStdout   string
+		wantStderrIn string
+	}{
+		{"dry run", []string{"--source", "memorycard", "--dry-run"}, "", "longterm-mem: sync --source memorycard --dry-run: " + listFailure},
+		{"run", []string{"--source", "memorycard"}, "longterm-mem: sync --source memorycard promoted 0 memory(ies); skipped 0 bridged; left 0 locally edited page(s) alone\n", "longterm-mem: sync: " + listFailure},
+	} {
+		code, stdout, stderr := runSync(t, tc.args...)
+		if code != exitEngramUnavailable {
+			t.Errorf("%s: exit %d, want %d\nstdout: %s\nstderr: %s", tc.name, code, exitEngramUnavailable, stdout, stderr)
+		}
+		if stdout != tc.wantStdout {
+			t.Errorf("%s: stdout = %q, want %q", tc.name, stdout, tc.wantStdout)
+		}
+		if !strings.HasPrefix(stderr, tc.wantStderrIn) || !strings.Contains(stderr, "no such table: memories") {
+			t.Errorf("%s: stderr = %q, want it to start %q and carry the store's own error", tc.name, stderr, tc.wantStderrIn)
+		}
+	}
+	if after := renderPromoteGoldenTree(t, w.vaultRoot); after != treeBefore {
+		t.Errorf("an unlistable store changed the vault")
+	}
+}
+
+// A page that cannot be read may be a memory's own, so the memories are left alone and the run answers exit 6, as
+// `promote --source memorycard` does for the same refusal.
+func TestSyncSourceMemorycard_AnUnreadablePageWithholdsTheMemoriesWithExit6(t *testing.T) {
+	w, _ := syncMemorycardWorld(t)
+	pages := filepath.Join(w.vaultRoot, "wiki", "memory")
+	if err := os.MkdirAll(pages, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(filepath.Join(w.vaultRoot, "nowhere.md"), filepath.Join(pages, "c-000555.md")); err != nil {
+		t.Skipf("cannot make a link: %v", err)
+	}
+	const withheld = "warning: 3 memory(ies) left alone, nothing was written for them: no readable page belongs to them, and a page that could not be read may (memories 1, 2, 3)\n"
+
+	for _, tc := range []struct {
+		name       string
+		args       []string
+		wantStdout string
+		wantPrefix string
+		wantTail   string
+	}{
+		{"dry run", []string{"--source", "memorycard", "--dry-run"},
+			"longterm-mem: sync --source memorycard --dry-run: would promote 0 memory(ies), skip 1, 0 bridged, into <vault>\nlongterm-mem: sync --source memorycard --dry-run: nothing was written\n",
+			"longterm-mem: sync --source memorycard --dry-run:", withheld},
+		{"run", []string{"--source", "memorycard"},
+			"longterm-mem: sync --source memorycard promoted 0 memory(ies); skipped 0 bridged; left 0 locally edited page(s) alone\n",
+			"longterm-mem: sync:", withheld},
+	} {
+		code, stdout, stderr := runSync(t, tc.args...)
+		if code != exitRegistrationConflict {
+			t.Errorf("%s: exit %d, want %d\nstdout: %s\nstderr: %s", tc.name, code, exitRegistrationConflict, stdout, stderr)
+		}
+		if got := w.normalise(stdout); got != tc.wantStdout {
+			t.Errorf("%s: stdout = %q, want %q", tc.name, got, tc.wantStdout)
+		}
+		if !strings.Contains(stderr, tc.wantPrefix+" warning: ") || !strings.Contains(stderr, "c-000555.md") || !strings.HasSuffix(stderr, tc.wantPrefix+" "+tc.wantTail) {
+			t.Errorf("%s: stderr = %q, want the unreadable page named and the withheld memories counted", tc.name, stderr)
+		}
+	}
+	if names := pageNames(t, w); len(names) != 1 {
+		t.Errorf("pages = %v, want only the unreadable link", names)
+	}
+}
+
+// The index rebuild runs after the pass, so a failing one is the run's failure: exit 5, and the pages the pass wrote
+// stay. The dry run rebuilds nothing, so it has no such failure.
+func TestSyncSourceMemorycard_AFailedIndexRebuildIsExit5(t *testing.T) {
+	w, _ := syncMemorycardWorld(t)
+	if err := os.WriteFile(filepath.Join(w.vaultRoot, "bin", "setup-retrieve.sh"), []byte("#!/bin/sh\nexit 1\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	if code, stdout, stderr := runSync(t, "--source", "memorycard", "--dry-run"); code != exitOK {
+		t.Errorf("dry run: exit %d, want 0\nstdout: %s\nstderr: %s", code, stdout, stderr)
+	}
+	code, stdout, stderr := runSync(t, "--source", "memorycard")
+	if code != exitVaultSubprocessFailed {
+		t.Fatalf("exit %d, want %d\nstdout: %s\nstderr: %s", code, exitVaultSubprocessFailed, stdout, stderr)
+	}
+	if want := "longterm-mem: sync --source memorycard promoted 3 memory(ies); skipped 0 bridged; left 0 locally edited page(s) alone\n"; stdout != want {
+		t.Errorf("stdout = %q, want %q", stdout, want)
+	}
+	if !strings.HasPrefix(stderr, "longterm-mem: sync: ") {
+		t.Errorf("stderr = %q, want the failure named", stderr)
+	}
+}
+
+// degradeFixtureDB makes the SQLite file at path readable only through the immutable=1 fallback: a WAL database
+// with no -wal or -shm on disk, in a directory nobody may write.
+func degradeFixtureDB(t *testing.T, path string) {
+	t.Helper()
+	if os.Geteuid() == 0 {
+		t.Skip("running as root ignores directory permissions; the degraded fallback cannot be forced")
+	}
+	conn, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := conn.Exec("PRAGMA journal_mode=WAL"); err != nil {
+		t.Fatal(err)
+	}
+	closeDB(t, conn)
+	for _, suffix := range []string{"-wal", "-shm"} {
+		_ = os.Remove(path + suffix)
+	}
+	dir := filepath.Dir(path)
+	if err := os.Chmod(dir, 0o555); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(dir, 0o755) })
+}
+
+// A frozen store is declared on stderr, as `sync` and `promote` declare a frozen Engram, for both stores the run reads.
+func TestSyncSourceMemorycard_DeclaresADegradedMemorycard(t *testing.T) {
+	_, db := syncMemorycardWorld(t)
+	degradeFixtureDB(t, db)
+
+	code, stdout, stderr := runSync(t, "--source", "memorycard", "--dry-run")
+	if code != exitOK {
+		t.Fatalf("exit %d\nstdout: %s\nstderr: %s", code, stdout, stderr)
+	}
+	want := "longterm-mem: sync: memorycard is being read through the immutable=1 fallback, so this run works from the snapshot taken when the connection was opened, not the live database\n"
+	if stderr != want {
+		t.Errorf("stderr = %q, want %q", stderr, want)
+	}
+	if !strings.Contains(stdout, "would promote 3 memory(ies)") {
+		t.Errorf("stdout = %q, want the run to go on from the snapshot", stdout)
+	}
+}
+
+func TestSyncSourceMemorycard_DeclaresADegradedEngram(t *testing.T) {
+	w, _ := syncMemorycardWorld(t)
+	degradeFixtureDB(t, w.dbPath)
+
+	code, stdout, stderr := runSync(t, "--source", "memorycard", "--dry-run")
+	if code != exitOK {
+		t.Fatalf("exit %d\nstdout: %s\nstderr: %s", code, stdout, stderr)
+	}
+	if !strings.HasPrefix(stderr, "longterm-mem: sync: engram is being read through the immutable=1 fallback, so this run works from the snapshot taken when the connection was opened, not the live database: ") {
+		t.Errorf("stderr = %q, want the frozen Engram declared", stderr)
+	}
+}
+
+// A store that fails to close is said on stderr, in the style of the other warnings, and is no failure of the run.
+type failingCloser struct{}
+
+func (failingCloser) Close() error { return errors.New("disk on fire") }
+
+func TestCloseStoreNamesAFailedClose(t *testing.T) {
+	a := app{command: "sync"}
+	stderr := captureStderr(t, func() { a.closeStore("memorycard", failingCloser{}) })
+	if want := "longterm-mem: sync: warning: close memorycard: disk on fire\n"; stderr != want {
+		t.Errorf("stderr = %q, want %q", stderr, want)
+	}
+	if stderr := captureStderr(t, func() { a.closeStore("memorycard", nopCloser{}) }); stderr != "" {
+		t.Errorf("a clean close wrote %q", stderr)
+	}
+}
+
+type nopCloser struct{}
+
+func (nopCloser) Close() error { return nil }
