@@ -114,7 +114,7 @@ func TestInceptionPipelineKeepsActivationAndClosureRules(t *testing.T) {
 		"an error because the chain has no records, means it runs: wait, do not fire",
 		"is not closed; wait for landing",
 		"The parent names the landing commit (merge, squash or fast-forward); closure records it as `landing_commit`")
-	rejectClauses(t, "closure section", closure, "merge commit", "default branch")
+	rejectClauses(t, "closure section", closure, "merge commit")
 
 	steps := markdownSectionBody(t, body, "## Execution Steps")
 	requireClauses(t, "execution steps", steps, "`requirements_brief_ref: {change}`")
@@ -122,15 +122,20 @@ func TestInceptionPipelineKeepsActivationAndClosureRules(t *testing.T) {
 	ref := readRepoFile(t, root, inceptionClosureReferenceRelPath)
 	requireInOrder(t, "closure reference", ref, "#### Storage", "Use the parent's resolved storage", "#### t0", "typed `created_at`")
 	requireClauses(t, "closure reference", ref,
-		"the parent names the actual landing commit once the change has landed (a merge, squash or fast-forward commit, whatever its parent count)",
-		"`landing_commit`, always: the explicitly named commit that landed the successful delivery (the last slice",
+		"the parent names the actual landing commit once the change has landed on the default branch (a merge, squash or fast-forward commit, whatever its parent count)",
+		"`landing_commit`, always: the explicitly named commit that landed the successful delivery on the default branch (the last slice",
 		"A delivered chain that has not landed is not closed",
 		"closure's entry follows delivery's final Log entry")
-	// The landing rule names no branch, neither the default one nor a selected one, and the
-	// tree-ambiguity rule counts every commit carrying the tree, not those of one branch.
-	requireClauses(t, "closure reference", ref, "more than one commit carries it, the anchor is ambiguous")
-	rejectClauses(t, "closure reference", ref,
-		"the actual merge commit", "onto the default branch", "integration branch", "on the default branch carries it")
+	// Any commit shape lands a delivery; a two-parent merge is not required.
+	rejectClauses(t, "closure reference", ref, "the actual merge commit", "integration branch")
+
+	// The living actuals spec owns the branch of both anchor rules: the reference repeats its
+	// scope and its ambiguity rule, so neither can move without the other.
+	spec := readRepoFile(t, root, "openspec/specs/actuals-instrumentation/spec.md")
+	requireClauses(t, "actuals spec", spec, "the commit that landed the change on the default branch")
+	const ambiguity = "more than one commit on the default branch carries it, the anchor is ambiguous: t1 "
+	requireClauses(t, "actuals spec", spec, ambiguity+"MUST be omitted and the ambiguity disclosed, never resolved by position")
+	requireClauses(t, "closure reference", ref, ambiguity+"is omitted and the ambiguity is disclosed, never resolved by position")
 }
 
 func TestProjectInceptionCompactCoordinator(t *testing.T) {
