@@ -346,3 +346,14 @@ Delivery: local coherent work units, `ask-on-risk`; the parent owns commit bound
   | 7db1b599d378 | 1169a598eed1 | same |
 
   Stored evidence was re-recorded through the native verbs, not copied: every sweep was run again on the rebased commit (ten `clean`; `68b333b48501` fired on the same single shellcheck SC2016 note, and the stored sweeper judgment of that candidate was carried); each stored reviewer reply was admitted again with only its `candidate` base, head and digest replaced, its rows unchanged; the verifier verdicts, polisher findings and the `Risk: none` exemption were admitted unchanged against the new records. No reviewer, polisher or verifier ran again: the replies are the ones given on the original commits, and their text still cites the original SHAs. The original records stay in this directory as history. Whole-chain `labdrian review check --base e25f0bfe --head` exits 0, `outcome: clear`. Rewriting the pushed branch needs a force push, which the owner's choice of the rebase covers. Risk: none for this bookkeeping.
+
+- **L42** (2026-11-11, closure-feedback, parent): Owner said **"mergealo busca el sha"**; parent merged PR #754 pinned to head `d46fccf0` (merge commits only on this repository). CI on `main` passed for the merge commit (CI and Release Tagging `success`); issue #753 closed. Asked whether to write the actuals although the Goal sets `memory_directive write: none`, owner replied **"1"**: write them and record the deviation here. Deviation: closure wrote memorycard `sdd/phase9-c13-inception-family/actuals` (#4823) and appended Entry 8 to `project/labdrian-sdd-overlay/estimation-calibration` part 2 (#903). The actuals candidate passed `tools/actuals-record-validator` with exit 0 ("review_lens_count: 74 equals the 74 rows recorded in 48 stored review results"); both writes were read back and match. This entry follows delivery's final Log entry by design and is not delivery's close.
+
+  ```markdown
+  ## Cycle Timestamps
+
+  | Anchor | Record |
+  |---|---|
+  | t0 | absent: no `sdd/phase9-c13-inception-family/pipeline-state` or other `sdd/phase9-c13-inception-family/*` record exists, and memorycard exposes no typed `created_at`; `total_wall_clock_hours` omitted (R-021) |
+  | t1 | `landing_commit` `393a58de34471a532dc5e5a0b3ddf2e8b101c1ab` (merge of PR #754), committer timestamp 2026-11-11T14:01:38-03:00; `approved_tree` not recorded (no `reviewer → delivery` record binds a reviewed head); outcome **self-asserted** |
+  ```
