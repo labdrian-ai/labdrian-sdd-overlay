@@ -1,0 +1,14 @@
+{
+  "kind": "polisher",
+  "base": "9619d29efa97a52126193dd5284ad57dfb8b060b",
+  "head": "33f6f5e3c00d4d564358844937a4d73c8653d6fe",
+  "diff_sha256": "d43df44d0dbbfdfabe85ea792caf7c9eb6ca696d783e620a07f2733a6a326d6e",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the complete canonical diff supplied for base 9619d29efa97a52126193dd5284ad57dfb8b060b and head 33f6f5e3c00d4d564358844937a4d73c8653d6fe; its SHA-256 was independently matched to d43df44d0dbbfdfabe85ea792caf7c9eb6ca696d783e620a07f2733a6a326d6e using read-only git diff.",
+      "Additional worktree inspection: skills/roadmap-maker/SKILL.md, skills/roadmap-maker/assets/roadmap-template.md, engine/skills/actuals_instrumentation_contract_test.go, engine/skills/inception_family_artifact_test.go.",
+      "Tests, formatter, generator, network and model calls not run."
+    ]
+  }
+}

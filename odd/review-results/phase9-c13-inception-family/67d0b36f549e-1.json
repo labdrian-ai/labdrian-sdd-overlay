@@ -1,0 +1,116 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f6ed8c184e0439fc69d4c2864618db033fb29bd2",
+    "head": "67d0b36f549e3b3076257042f0b43339744906b2",
+    "diff_sha256": "b977760179821bd31d7ad99635b1337d3f2046e8f84231523e3a67adfa4fc74d",
+    "paths": [
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/skills/approval_gate_test.go",
+      "engine/skills/approval_write.go",
+      "engine/skills/inception_family_artifact_test.go",
+      "engine/skills/registryyaml_adapter_test.go",
+      "skills/roadmap-maker/.approval.json",
+      "skills/roadmap-maker/SKILL.md",
+      "skills/roadmap-maker/assets/roadmap-template.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f6ed8c184e0439fc69d4c2864618db033fb29bd2",
+      "head": "67d0b36f549e3b3076257042f0b43339744906b2",
+      "diff_sha256": "b977760179821bd31d7ad99635b1337d3f2046e8f84231523e3a67adfa4fc74d"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/skills/approval_gate_test.go",
+        "engine/skills/approval_write.go",
+        "engine/skills/inception_family_artifact_test.go",
+        "engine/skills/registryyaml_adapter_test.go",
+        "skills/roadmap-maker/.approval.json",
+        "skills/roadmap-maker/SKILL.md",
+        "skills/roadmap-maker/assets/roadmap-template.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "skills/roadmap-maker/assets/roadmap-template.md:32",
+        "severity": "WARNING",
+        "claim": "The new per-item line `**Entry paths**: ../inception-pipeline/SKILL.md, ../role-chain/SKILL.md` is copied from SKILL.md, where it resolves correctly from skills/roadmap-maker/. It does not resolve from the template's own directory, skills/roadmap-maker/assets/, where it points at skills/roadmap-maker/inception-pipeline/SKILL.md. The same template uses `../../_shared/...` for its own references (line 75), so the author knew the extra level was needed. The line also stops meaning anything once it is rendered into a persisted roadmap (project/{project}/roadmap or openspec/project/roadmap.md). Each rendered roadmap item would carry an entry route that resolves to a missing file. S7 asks for entries that name the existing skill paths.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "diff hunk skills/roadmap-maker/assets/roadmap-template.md @@ -29,7 +29,7 @@ (+ Entry paths line)",
+          "skills/roadmap-maker/assets/roadmap-template.md:75 uses ../../_shared/pre-sdd-contracts.md"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/skills/actuals_instrumentation_contract_test.go:466-471",
+        "severity": "WARNING",
+        "claim": "The comment on the R013 roadmap-maker invariant says that roadmap-maker/SKILL.md 'is unchanged versus main (design D6 forbids editing it)' and that the guard is GREEN by construction. This commit rewrites that SKILL.md completely, so the comment is now false and misleads maintainers about what the guard protects and why. The T7 edit surface in the feature document names the 'relevant roadmap clauses in engine/skills/actuals_instrumentation_contract_test.go', but this commit leaves them as they were.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "worsened",
+        "proof_refs": [
+          "engine/skills/actuals_instrumentation_contract_test.go:467-471",
+          "diff hunk skills/roadmap-maker/SKILL.md @@ -1,165 +1,36 @@",
+          "phase9-c13-inception-family.md:71 (T7 edit surface)"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "skills/roadmap-maker/SKILL.md:164-195",
+        "severity": "WARNING",
+        "claim": "The compacted body drops several rules that governed behavior. It no longer says to update the roadmap when implementation or review shows it is wrong, or to re-open it before each change starts and after closure. It drops the 'no cycles' requirement on dependencies and the 'do not write spec/design/apply detail' boundary. Build mode used to 'produce or replace the entire roadmap'; it now uses the same 'merge and persist' as insert mode. None of these rules survives in the template, which keeps only the status vocabulary. An agent following the new entry could let the roadmap go stale, emit cyclic dependencies, or bleed design detail into roadmap items, and no test pins any of these rules.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "diff removed lines: '### 5. Update the Roadmap When Reality Diverges', 'dependencies form a coherent order, no cycles', '**Do NOT write spec/design/apply detail**', 'Produces or replaces the entire project/{project}/roadmap'"
+        ]
+      },
+      {
+        "id": "F4",
+        "location": "engine/skills/inception_family_artifact_test.go:172-202",
+        "severity": "WARNING",
+        "claim": "TestRoadmapMakerCompactContract pins the actuals contract only through the substring 'sdd/{change}/actuals'. That string also appears in the body's read instruction. Deleting 'only inception closure writes actuals. Never write or infer them from plans or estimates' from the Hard Rules would still pass, and S7 makes that prohibition a core, risk-item-3 requirement. The test also does not pin '[NOT MEASURED' or '[PENDING DECISION]' in the body, or the measured-versus-reconstructed and legacy-sentinel preservation clauses. Removing any of these S7 obligations from the body leaves the test green.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "diff hunk engine/skills/inception_family_artifact_test.go +100 clause list",
+          "skills/roadmap-maker/SKILL.md Hard Rules line containing 'Read `sdd/{change}/actuals`; only inception closure writes actuals'"
+        ]
+      },
+      {
+        "id": "F5",
+        "location": "skills/roadmap-maker/assets/roadmap-template.md:44-46",
+        "severity": "SUGGESTION",
+        "claim": "The historical-fallback cutoff changed from 'before inception-pipeline 3.0.0', a version a reader can check, to 'before C13-S0'. C13-S0 is an internal feature or spec identifier that the template never explains. Readers of the template, and of the roadmaps rendered from it, have no way to decide which changes use the `sdd/{change}/entry` fallback.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "diff hunk skills/roadmap-maker/assets/roadmap-template.md @@ -41,9 +41,9 @@"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full bound diff /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/1b02436e-7e8e-4520-88e0-eec651828802/scratchpad/c13-review/67d0b36f.diff",
+      "Read skills/roadmap-maker/assets/roadmap-template.md at head",
+      "Read engine/skills/actuals_instrumentation_contract_test.go:440-499 at head (R013 roadmap-maker guard and comment)",
+      "Grep at head for roadmapMakerSkillRelPath, roadmap-template and roadmap-maker usages under engine/",
+      "Grep at head of roles/ and skills/ for the shaper 'estimates[]' source: it exists (sdd-time-estimation/SKILL.md:12, _shared/pre-sdd-contracts.md:80)",
+      "Grep at head for leftover '30 global skills' / '30 remain' count text outside odd/: none found",
+      "Read spec S5-S9 (phase9-c13-inception-family.md:19-27) and the T7 task and surface rows",
+      "Not run: go tests, lint, approval digest recomputation for skills/roadmap-maker/.approval.json (reviewer may not execute)"
+    ]
+  }
+}

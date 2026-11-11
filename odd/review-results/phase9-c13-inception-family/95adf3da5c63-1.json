@@ -1,0 +1,130 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "16820b4b4f484f8d596825f61b3b84378c410c64",
+    "head": "95adf3da5c6336b5957a0222021d657925a8cc65",
+    "diff_sha256": "24fc5b83d7dd19e49bcbeb7e380d3aa4d605f7a432a456320207df4f3769627c",
+    "paths": [
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/skills/approval_gate_test.go",
+      "engine/skills/approval_write.go",
+      "engine/skills/inception_family_artifact_test.go",
+      "engine/skills/registryyaml_adapter_test.go",
+      "skills/project-inception/.approval.json",
+      "skills/project-inception/SKILL.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "16820b4b4f484f8d596825f61b3b84378c410c64",
+      "head": "95adf3da5c6336b5957a0222021d657925a8cc65",
+      "diff_sha256": "24fc5b83d7dd19e49bcbeb7e380d3aa4d605f7a432a456320207df4f3769627c"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/skills/approval_gate_test.go",
+        "engine/skills/approval_write.go",
+        "engine/skills/inception_family_artifact_test.go",
+        "engine/skills/registryyaml_adapter_test.go",
+        "skills/project-inception/.approval.json",
+        "skills/project-inception/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "skills/project-inception/SKILL.md:24-30",
+        "severity": "WARNING",
+        "claim": "The rewrite drops the gate between manifest and architecture. The removed text said 'Do NOT produce the architecture until the manifest is final enough.' The new Decision Gates only require a final-enough manifest and architecture 'before the roadmap', and Execution Step 2 calls project-architect right after project-manifest. It stops only 'on a blocker'. project-manifest has discovery, draft and final phases, and a draft result is not a blocker. So the coordinator now lets architecture be produced from a draft manifest. S5 asks for input gates and the manifest -> architecture -> roadmap order.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "diff hunk skills/project-inception/SKILL.md: removed 'Do NOT produce the architecture until the manifest is final enough.'; added 'Require final-enough manifest and architecture before the roadmap' and Step 2 'invoke ../project-manifest/SKILL.md, then ../project-architect/SKILL.md ... stop on a blocker'"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/skills/inception_family_artifact_test.go:50-77",
+        "severity": "SUGGESTION",
+        "claim": "TestProjectInceptionCompactCoordinator only checks that substrings are present, so it misses the regressions that matter most. Deleting 'never rewrite either foundation' (the reuse rule that protects existing records) or 'read-only' still passes. Reordering the producers so that architecture or roadmap runs before manifest also still passes, because order is never checked. Neither is the rule 'Do not ask the parent to choose storage again'. Pins such as 'completed', 'blocked' and 'partial' are generic words. A cheap fix is to pin the reuse no-rewrite clause and assert the index order of the three producer paths.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "diff engine/skills/inception_family_artifact_test.go clause list lines 99-106 contains no 'never rewrite', no 'read-only' and no ordering assertion"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "skills/project-inception/SKILL.md:1-3",
+        "severity": "SUGGESTION",
+        "claim": "The description no longer contains the trigger phrases it had ('project inception', 'bootstrap completo', 'manifest architect roadmap', 'quiero hacer un proyecto inception completo'). A search of the head tree outside odd/ finds no other skill that lists 'bootstrap completo'. Users who type those Spanish phrases will no longer reliably activate any inception skill, unless inception-pipeline's description happens to match them.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "diff skills/project-inception/SKILL.md frontmatter description replaced",
+          "Grep 'bootstrap completo' in head worktree (excluding odd/) returned no match"
+        ]
+      },
+      {
+        "id": "F4",
+        "location": "skills/project-inception/SKILL.md:155-185",
+        "severity": "SUGGESTION",
+        "claim": "The rewrite removes the step 'Resolve Project Aliases Before Blocking' with no replacement. That step ran alias discovery through .atl/skill-registry.md and SDD id patterns before returning a blocked state. Now, if the parent passes a project name that differs from the stored project/{project}/manifest identity, reuse treats the foundations as missing and falls back to `full`. That re-runs project-manifest and project-architect for a project that already exists. The spec neither requires nor removes this step, so the omission should be stated as deliberate.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "diff removed '### 4. Resolve Project Aliases Before Blocking' section"
+        ]
+      },
+      {
+        "id": "F5",
+        "location": "engine/skills/inception_family_artifact_test.go:50-63",
+        "severity": "SUGGESTION",
+        "claim": "Readability: the new test copies line for line the description, body-token and hard-lint block from TestInceptionPipelineCompactEntry. Three more skills (T5-T7) are due for the same treatment. Copying the block each time means a later change to a lint threshold can drift between copies. A shared helper that takes the skill path would remove the duplication.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/inception_family_artifact_test.go:28-42 vs 50-63"
+        ]
+      },
+      {
+        "id": "F6",
+        "location": "engine/skills/inception_family_artifact_test.go:77-78",
+        "severity": "SUGGESTION",
+        "claim": "The file ends with an extra blank line after the closing brace. gofmt would remove it, and CI runs `test -z \"$(gofmt -l .)\"`, which would list this file. The base already had the same trailing blank line (the unchanged blank context line after line 48). The change keeps it rather than introducing it. gofmt was not run.",
+        "evidence_class": "inferential",
+        "causal_disposition": "pre-existing",
+        "proof_refs": []
+      },
+      {
+        "id": "F7",
+        "location": "skills/project-inception/SKILL.md:29",
+        "severity": "SUGGESTION",
+        "claim": "Step 2 says 'Carry its result and exact locators forward'. 'its' could mean the manifest result or the architect result, so it is unclear what is passed to roadmap-maker. Step 3 needs both foundation locators.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": []
+      }
+    ],
+    "evidence": [
+      "Read the whole bound diff /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/1b02436e-7e8e-4520-88e0-eec651828802/scratchpad/c13-review/95adf3da.diff",
+      "Read the spec S1-S9 and the task list in /home/labdrian/labdrian-sdd-overlay-worktrees/phase9-c13-inception/odd/tasks/phase9-c13-inception-family.md (the path the prompt named)",
+      "Read /home/labdrian/labdrian-sdd-overlay-worktrees/review-95adf3da5c63/engine/skills/inception_family_artifact_test.go",
+      "Grep for project-inception consumers, the old output header and old trigger phrases across the head worktree (excluding odd/): no consumer of '## Project Inception —' found",
+      "Glob confirmed that the referenced files exist: skills/_shared/pre-sdd-contracts.md, project-manifest, project-architect, roadmap-maker, inception-pipeline and role-chain SKILL.md",
+      "Grep showed roadmap-maker supports the `build` and `incremental-insert` modes, and inception-pipeline has a '## Chain entry' section",
+      "Read skills.registry.yaml:386-405 (no description copy to drift)",
+      "Grep of .github/workflows/ci.yml shows a gofmt -l check",
+      "Commands, tests, gofmt and the approval digest recompute were not run (this role does not execute anything)"
+    ]
+  }
+}

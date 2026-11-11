@@ -1,0 +1,39 @@
+{
+  "kind": "polisher",
+  "base": "be1afed67b880800861682c5a96113982561289b",
+  "head": "bd48c1a5d79dd35a9c6c49e412988da99bc40c6f",
+  "diff_sha256": "22723d39e3c3109297769ec290ea4343c5a475d02fe0a414266964dc20d0982c",
+  "findings": {
+    "findings": [
+      {
+        "location": "skills/project-architect/SKILL.md:20",
+        "severity": "WARNING",
+        "claim": "The architect now unconditionally creates and updates a local registry even when the resolved placement is inline-only, changing the no-persistence path.",
+        "evidence_class": "inferential",
+        "evidence": [
+          "The target defines artifact_store.mode none as inline at line 16, but lines 20 and 35 direct creation and updating of .atl/skill-registry.md without a placement condition.",
+          "At base be1afed67b880800861682c5a96113982561289b, execution step 3 updated the registry when applicable; the target removes that qualifier for the local registry.",
+          "S4 preserves the resolved placement and S6 requires registry marker behavior; neither authorizes an unconditional local write for inline-only output."
+        ],
+        "causal_disposition": "introduced"
+      },
+      {
+        "location": "skills/inception-pipeline/references/closure-feedback.md:30-31",
+        "severity": "WARNING",
+        "claim": "Closure now requires an actual merge commit onto the default branch, so a successfully landed fast-forward or direct-branch change has no qualifying merge commit and can remain without closure measurements.",
+        "evidence_class": "inferential",
+        "evidence": [
+          "The target says to wait until a merge has happened and requires the actual merge commit onto the default branch; a fast-forward or direct commit can land without creating a merge commit.",
+          "The exact base required the explicitly recorded commit that landed the successful delivery, without requiring that commit to be a merge commit or land on the default branch.",
+          "S3 and S4 require a successful delivery and explicitly recorded landing commit; they do not limit the anchor to a merge commit."
+        ],
+        "causal_disposition": "introduced"
+      }
+    ],
+    "evidence": [
+      "Read source-binding.json, complete source-canonical.diff, stable-feature-contract.md S1-S9 and Tasks, and the specified polisher role.",
+      "Inspected the bound worktree at bd48c1a5d79dd35a9c6c49e412988da99bc40c6f and relevant skill, closure, roadmap, shared-contract and test definitions; compared the supplied diff and relevant base text be1afed67b880800861682c5a96113982561289b.",
+      "No tests, validators, formatters, live producers, or models were executed; binding values are supplied metadata, not independently recomputed."
+    ]
+  }
+}

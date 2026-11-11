@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "78bee5b947aba7dde1055504d558fbccbffb7639",
+    "head": "9619d29efa97a52126193dd5284ad57dfb8b060b",
+    "diff_sha256": "513e14c04de0bce29dedb3f48621c316817a69e407aeb7d4a1f3b95630218095",
+    "paths": [
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/skills/approval_gate_test.go",
+      "engine/skills/approval_write.go",
+      "engine/skills/inception_family_artifact_test.go",
+      "engine/skills/registryyaml_adapter_test.go",
+      "skills/project-architect/.approval.json",
+      "skills/project-architect/SKILL.md",
+      "skills/project-architect/references/architecture-template.md",
+      "skills/project-architect/references/blocked-response.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "78bee5b947aba7dde1055504d558fbccbffb7639",
+      "head": "9619d29efa97a52126193dd5284ad57dfb8b060b",
+      "diff_sha256": "513e14c04de0bce29dedb3f48621c316817a69e407aeb7d4a1f3b95630218095"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/skills/approval_gate_test.go",
+        "engine/skills/approval_write.go",
+        "engine/skills/inception_family_artifact_test.go",
+        "engine/skills/registryyaml_adapter_test.go",
+        "skills/project-architect/.approval.json",
+        "skills/project-architect/SKILL.md",
+        "skills/project-architect/references/architecture-template.md",
+        "skills/project-architect/references/blocked-response.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "skills/project-architect/references/architecture-template.md:232",
+        "severity": "WARNING",
+        "claim": "The new handoff paths are relative to the skill directory, but appear inside the generated architecture document. From the documented output openspec/project/architect/final.md, ../project-inception/SKILL.md resolves to openspec/project/project-inception/SKILL.md, and the role-chain path has the same problem. Consumers following these paths cannot reliably reach the intended skills. Use repository-root-qualified skill locators or explicitly identify their resolution root.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "The added template line supplies ../project-inception/SKILL.md and ../role-chain/SKILL.md inside the architecture output outline.",
+          "The rewritten SKILL.md preserves openspec/project/architect/final.md as the file output location.",
+          "The supplied contract identifies the intended skills under skills/project-inception/ and skills/role-chain/."
+        ]
+      }
+    ],
+    "evidence": [
+      "Statically inspected all ten changed paths through the complete supplied canonical diff against S1–S9 and both lens rows.",
+      "Commands, tests, formatters, approval-digest verification and worktree reads: not run."
+    ]
+  }
+}

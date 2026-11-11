@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "bd48c1a5d79dd35a9c6c49e412988da99bc40c6f",
+    "head": "324c773df44c0e4702de3345dc337669568bdb75",
+    "diff_sha256": "010cc4d9d6bd53347e677a252bf4c3ec73f323dd22d8bc806e82063d39f541ef",
+    "paths": [
+      "engine/skills/inception_family_artifact_test.go",
+      "skills/inception-pipeline/.approval.json",
+      "skills/inception-pipeline/SKILL.md",
+      "skills/inception-pipeline/references/closure-feedback.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "bd48c1a5d79dd35a9c6c49e412988da99bc40c6f",
+      "head": "324c773df44c0e4702de3345dc337669568bdb75",
+      "diff_sha256": "010cc4d9d6bd53347e677a252bf4c3ec73f323dd22d8bc806e82063d39f541ef"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skills/inception_family_artifact_test.go",
+        "skills/inception-pipeline/.approval.json",
+        "skills/inception-pipeline/SKILL.md",
+        "skills/inception-pipeline/references/closure-feedback.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "skills/inception-pipeline/references/closure-feedback.md:30-31",
+        "severity": "WARNING",
+        "claim": "The closure contract used to anchor landing_commit to the commit that landed the delivery 'onto the default branch'. This change replaces that with 'the selected integration branch', and nothing in the skill says who selects that branch or how. That changes what t1 means for actuals and roadmap consumers. With feature-branch-chain delivery, the 'last slice to land' lands on the intermediate feature branch, so the parent can now name that commit. Its committer timestamp comes before the change reaches the default branch, which shortens the elapsed time t0→t1 without any disclosure. The new test only rejects the old wording and does not pin which branch qualifies.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "diff hunk closure-feedback.md @@ -24,11 +24,11 @@: '-   - `landing_commit`, always: the actual merge commit that landed the successful delivery onto the default branch' replaced by '+   - `landing_commit`, always: the explicitly named commit that landed the successful delivery on the selected integration branch (the last slice to land when delivered as chained PRs);'",
+          "diff hunk inception_family_artifact_test.go @@ -111,8 +122,11 @@: rejectClauses(t, \"closure reference\", ref, \"the actual merge commit\", \"onto the default branch\")"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "skills/inception-pipeline/references/closure-feedback.md:40-40",
+        "severity": "WARNING",
+        "claim": "After this change the reference contradicts itself. The anchor can now sit on 'the selected integration branch', but the ambiguity rule still checks only for more than one commit 'on the default branch' carrying the tree. If the anchor lands on a non-default integration branch, the ambiguity check looks at the wrong branch. The new rejectClauses pin bans only the exact phrase 'onto the default branch', so this leftover 'on the default branch' passes the test.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "worktree closure-feedback.md:40 'more than one commit on the default branch carries it' vs :30-31 'selected integration branch'",
+          "diff hunk inception_family_artifact_test.go: rejectClauses(..., \"onto the default branch\") matches only that exact substring"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "skills/inception-pipeline/references/closure-feedback.md:47-48",
+        "severity": "SUGGESTION",
+        "claim": "The boundary for total_wall_clock_hours and checkpoint_count still reads 'through merge' and 'post-merge'. The rewritten t1 now accepts a squash or fast-forward commit with no merge, so these figures name a boundary that may not exist. Their wording no longer matches the new 'landing' terminology.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "worktree closure-feedback.md:47 'through merge, not archive' vs diff +line 'a merge, squash or fast-forward commit, whatever its parent count'"
+        ]
+      },
+      {
+        "id": "F4",
+        "location": "skills/inception-pipeline/SKILL.md:44-44",
+        "severity": "SUGGESTION",
+        "claim": "For a non-terminal chain or an error, the explicit 'do not fire' was shortened to 'wait'. The ban on firing closure-feedback while the chain still runs is now only implied, and no test pins it. The test pins only 'an error because the chain has no records'.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "diff hunk SKILL.md @@ -41,7 +41,7 @@: '-... means it still runs: do not fire.' -> '+... means it still runs: wait.'"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the complete diff file /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/07a89cf6-d9a4-4988-917a-9f99a013181a/scratchpad/c13-324c.diff",
+      "Read ## Specs (lines 5-28) of /home/labdrian/labdrian-sdd-overlay-worktrees/review-324c773df44c/odd/tasks/phase9-c13-inception-family.md; S3, S4, S8 and S9 applied",
+      "Searched merge/default branch/landing in /home/labdrian/labdrian-sdd-overlay-worktrees/review-324c773df44c/skills/inception-pipeline",
+      "Read /home/labdrian/labdrian-sdd-overlay-worktrees/review-324c773df44c/skills/inception-pipeline/references/closure-feedback.md lines 14-49",
+      "Not run: Go tests, skill lint, approval sha256 recomputation (read-only review, no execution)"
+    ]
+  }
+}

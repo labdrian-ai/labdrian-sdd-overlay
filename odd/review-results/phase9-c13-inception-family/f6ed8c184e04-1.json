@@ -1,0 +1,142 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ef8f894e7c07b0a1cedde3c3d7591ae557f566ab",
+    "head": "f6ed8c184e0439fc69d4c2864618db033fb29bd2",
+    "diff_sha256": "e9e10381b92793b8939190be8f84c5f957572c8dbad429ee5d09149505195b92",
+    "paths": [
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/skills/approval_gate_test.go",
+      "engine/skills/approval_write.go",
+      "engine/skills/inception_family_artifact_test.go",
+      "engine/skills/registryyaml_adapter_test.go",
+      "skills/project-architect/.approval.json",
+      "skills/project-architect/SKILL.md",
+      "skills/project-architect/references/architecture-template.md",
+      "skills/project-architect/references/blocked-response.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "ef8f894e7c07b0a1cedde3c3d7591ae557f566ab",
+      "head": "f6ed8c184e0439fc69d4c2864618db033fb29bd2",
+      "diff_sha256": "e9e10381b92793b8939190be8f84c5f957572c8dbad429ee5d09149505195b92"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/skills/approval_gate_test.go",
+        "engine/skills/approval_write.go",
+        "engine/skills/inception_family_artifact_test.go",
+        "engine/skills/registryyaml_adapter_test.go",
+        "skills/project-architect/.approval.json",
+        "skills/project-architect/SKILL.md",
+        "skills/project-architect/references/architecture-template.md",
+        "skills/project-architect/references/blocked-response.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "skills/project-architect/references/architecture-template.md:3-6",
+        "severity": "WARNING",
+        "claim": "The rewritten template now says to render new artifacts and envelopes in English, but the rendered outline still has Spanish literals: '# Arquitectura Técnica', the Spanish section headings, and the Section 15 heading '## 15. Cumplimiento de Reglas del Manifest', which the new test pins. The rewritten Structured Response Envelope also keeps the Spanish strings 'Ninguna — bloqueado por falta de inputs.' and 'Usuario debe elegir Opción 1, 2 o 3 (ver Step 2a).'. An agent following the outline literally writes Spanish artifacts and envelopes, which breaks the new English rule and the Language Rule in skills/_shared/pre-sdd-contracts.md:22. A test that pinned the English rule would fail.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "worsened",
+        "proof_refs": [
+          "diff hunk architecture-template.md @@ -1,6 +1,6 @@ adds the English rendering rule above the unchanged Spanish outline",
+          "diff hunk architecture-template.md @@ -246,22 +246,22 @@ rewrites the envelope but leaves the Spanish blocked strings",
+          "engine/skills/inception_family_artifact_test.go:123 pins the Spanish Section 15 heading",
+          "original location: skills/project-architect/references/architecture-template.md:3-6,212,239-264"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "skills/project-architect/references/architecture-template.md:262",
+        "severity": "WARNING",
+        "claim": "The blocked Next Step string points to 'Step 2a'. No such step exists in the rewritten SKILL.md, which has a 'Decision Gates' section and numbered Execution Steps 1-4, or in blocked-response.md. An agent following this envelope sends the owner to a nonexistent step. The blocked-response.md this commit rewrote uses 'Option 1/2/3' in English, while this line still says 'Opción'.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "worsened",
+        "proof_refs": [
+          "skills/project-architect/SKILL.md (head) has no 'Step 2a'",
+          "Grep 'Step 2a' in skills/project-architect finds only architecture-template.md:262"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "skills/project-architect/SKILL.md:3",
+        "severity": "WARNING",
+        "claim": "The description was reduced to a generic English sentence. It dropped every activation trigger ('arquitectura técnica', 'project architect', '/project-architect', 'diseñar arquitectura', 'architecture proposal', 'qué stack uso') and the prerequisite 'Requires project-manifest to have run first'. Runtimes select skills by description, so a direct Spanish request such as 'diseñar arquitectura' or 'qué stack uso' may no longer activate this skill, and the precondition is no longer visible at selection time. No test checks activation recall. The new test only caps the description length.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "diff hunk SKILL.md line 167-168 replaces the trigger-bearing description"
+        ]
+      },
+      {
+        "id": "F4",
+        "location": "skills/project-architect/SKILL.md:20",
+        "severity": "WARNING",
+        "claim": "The registry update is now conditional on 'when applicable', but nothing defines when it applies. The old instruction to create the .atl/ directory and initialize .atl/skill-registry.md when the file is absent was removed, and 'create a block only if absent' covers only a missing block, not a missing file. In a project without .atl/skill-registry.md the agent can reasonably skip the update. The architectural constraints would then never reach downstream agents, the propagation mechanism that skills/_shared/pre-sdd-contracts.md:118-141 relies on.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "diff removes old SKILL.md 'If it does not exist, create the `.atl/` directory and initialize a minimal registry file.'",
+          "new SKILL.md Execution Step 3 'update the registry when applicable'",
+          "original location: skills/project-architect/SKILL.md:20,30"
+        ]
+      },
+      {
+        "id": "F5",
+        "location": "engine/skills/inception_family_artifact_test.go:117-121",
+        "severity": "SUGGESTION",
+        "claim": "In the blocked-response check, the clauses \"1\", \"2\", \"3\" and \"inline\" are bare substrings. Any digit or the word 'inline' anywhere in the file satisfies them, so the test still passes if the three-option choice, the '1, 2, or 3' answer syntax, or the inline-context option is deleted. Asserting distinctive strings, such as 'Option 2 — Provide context inline' and 'answers `1`, `2`, or `3`', would make the check meaningful.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/inception_family_artifact_test.go:117 clause list"
+        ]
+      },
+      {
+        "id": "F6",
+        "location": "skills/project-architect/references/architecture-template.md:9-14",
+        "severity": "SUGGESTION",
+        "claim": "The new header says that for explicitly selected inline context the agent must cite that context's provenance and not claim compliance with an absent persisted manifest. The outline's '**Basado en**' block still lists the persisted manifest locators unconditionally, so a literal rendering for the inline-context route (Option 2) cites manifest records that do not exist.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "architecture-template.md:3 inline-context rule vs unchanged lines 9-14"
+        ]
+      },
+      {
+        "id": "F7",
+        "location": "skills/project-architect/SKILL.md:16",
+        "severity": "SUGGESTION",
+        "claim": "In Hard Rules, the instruction 'Keep `project/{project}/manifest/{context,mission,rules}`, `sdd-init/{project}`, `project/{project}/architect/final` and `openspec/project/architect/final.md`' does not say which locators are read and which are written. The removed text named the manifest and sdd-init records as reads and architect/final as the only write. This leaves room for an agent to merge-write into manifest records it should only read.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "diff removes 'Reads from (required)' / 'Writes to' lines, replaced by single 'Keep' sentence"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the bound diff file in full: /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/1b02436e-7e8e-4520-88e0-eec651828802/scratchpad/c13-review/f6ed8c18.diff",
+      "Read the head worktree file /home/labdrian/labdrian-sdd-overlay-worktrees/review-f6ed8c184e04/skills/project-architect/references/architecture-template.md in full",
+      "Read lines 20-142 of /home/labdrian/labdrian-sdd-overlay-worktrees/review-f6ed8c184e04/skills/_shared/pre-sdd-contracts.md: Language Rule and Registry-Block Format",
+      "Grep in the worktree for leftover '31' lint-baseline counts outside odd/: none found in README, usage or tests",
+      "Grep in the worktree for 'Step 2a': its only project-architect occurrence is architecture-template.md:262",
+      "Grep in the worktree skills/ for project-architect consumers (project-inception, roadmap-maker, pre-sdd-contracts) and for project-manifest-rules marker ownership",
+      "Not run: go test, skills lint, approval digest recompute, because the reviewer contract forbids running anything",
+      "Not read: the spec file at /home/labdrian/labdrian-sdd-overlay-worktrees/phase9-c13-inception/odd/tasks/phase9-c13-inception-family.md, because it is outside the named worktree; the S1-S9 criteria were not checked"
+    ]
+  }
+}

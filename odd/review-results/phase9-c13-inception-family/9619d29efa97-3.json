@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "78bee5b947aba7dde1055504d558fbccbffb7639",
+    "head": "9619d29efa97a52126193dd5284ad57dfb8b060b",
+    "diff_sha256": "513e14c04de0bce29dedb3f48621c316817a69e407aeb7d4a1f3b95630218095",
+    "paths": [
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/skills/approval_gate_test.go",
+      "engine/skills/approval_write.go",
+      "engine/skills/inception_family_artifact_test.go",
+      "engine/skills/registryyaml_adapter_test.go",
+      "skills/project-architect/.approval.json",
+      "skills/project-architect/SKILL.md",
+      "skills/project-architect/references/architecture-template.md",
+      "skills/project-architect/references/blocked-response.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "78bee5b947aba7dde1055504d558fbccbffb7639",
+      "head": "9619d29efa97a52126193dd5284ad57dfb8b060b",
+      "diff_sha256": "513e14c04de0bce29dedb3f48621c316817a69e407aeb7d4a1f3b95630218095"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/skills/approval_gate_test.go",
+        "engine/skills/approval_write.go",
+        "engine/skills/inception_family_artifact_test.go",
+        "engine/skills/registryyaml_adapter_test.go",
+        "skills/project-architect/.approval.json",
+        "skills/project-architect/SKILL.md",
+        "skills/project-architect/references/architecture-template.md",
+        "skills/project-architect/references/blocked-response.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "skills/project-architect/references/architecture-template.md:3",
+        "severity": "WARNING",
+        "claim": "The new instruction requires English artifacts, but the outline still supplies Spanish literal headings and response text. Copying the outline can produce a new artifact that violates the English output contract.",
+        "evidence_class": "inferential",
+        "causal_disposition": "behavior-activated",
+        "proof_refs": [
+          "skills/project-architect/references/architecture-template.md:3",
+          "skills/project-architect/references/architecture-template.md:6",
+          "skills/project-architect/references/architecture-template.md:253"
+        ]
+      }
+    ],
+    "evidence": [
+      "Inspected all ten changed paths in the complete inline candidate diff.",
+      "Commands run: none. Tests: not run."
+    ]
+  }
+}

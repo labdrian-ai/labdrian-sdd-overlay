@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "324c773df44c0e4702de3345dc337669568bdb75",
+    "head": "1cb1978e0a48b4b60de7b95fc1195f8999567588",
+    "diff_sha256": "312f81bdada574ed709dc1f34b7bdb73bbd82c73a85303aeada762795001d653",
+    "paths": [
+      "engine/skills/inception_family_artifact_test.go",
+      "skills/inception-pipeline/.approval.json",
+      "skills/inception-pipeline/SKILL.md",
+      "skills/inception-pipeline/references/closure-feedback.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "324c773df44c0e4702de3345dc337669568bdb75",
+      "head": "1cb1978e0a48b4b60de7b95fc1195f8999567588",
+      "diff_sha256": "312f81bdada574ed709dc1f34b7bdb73bbd82c73a85303aeada762795001d653"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skills/inception_family_artifact_test.go",
+        "skills/inception-pipeline/.approval.json",
+        "skills/inception-pipeline/SKILL.md",
+        "skills/inception-pipeline/references/closure-feedback.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "skills/inception-pipeline/SKILL.md:44-44",
+        "severity": "WARNING",
+        "claim": "The commit says it only removes branch naming from the landing rule, but it also changes the non-terminal instruction from \"means it still runs: wait\" to \"means it runs: do not fire\". \"do not fire\" has no object anywhere in the skill. The only other use of \"fire\" in this skill tree that is about closure is reference line 85 (\"fire the archive-time sync trigger\"), so a host can read the new text as \"skip the sync trigger\" or \"abandon closure\" instead of \"wait and re-check later\". The explicit wait instruction is gone, so a closure run that finds a still-running chain is no longer told to come back. The new pin in engine/skills/inception_family_artifact_test.go:114 requires this exact ambiguous wording, so a clarifying edit would now fail the test. The change also does nothing toward the stated purpose (no branch named), so its reason is not recorded.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "diff hunk skills/inception-pipeline/SKILL.md @@ -41,7 +41,7 @@ (\"means it still runs: wait\" -> \"means it runs: do not fire\")",
+          "diff hunk engine/skills/inception_family_artifact_test.go @@ -111,8 +111,8 @@ pins \"an error because the chain has no records, means it runs: do not fire\"",
+          "skills/inception-pipeline/references/closure-feedback.md:85 is the only closure-related use of \"fire\" (archive-time sync trigger)"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/07a89cf6-d9a4-4988-917a-9f99a013181a/scratchpad/c13-fix2.diff (the path the prompt named)",
+      "Read the ## Specs section (lines 5-28) of odd/tasks/phase9-c13-inception-family.md in the worktree, stopping before ## Log",
+      "Read skills/inception-pipeline/references/closure-feedback.md lines 20-59 in the worktree: the landing rule on line 30-31 names no branch; pre-existing 'default branch' (line 40) and 'through merge' (lines 47-48) are unchanged, as the prompt said",
+      "Read engine/skills/inception_family_artifact_test.go lines 60-139: the requireClauses/rejectClauses/requireInOrder helpers and the updated pins; the 950-token cap is still asserted",
+      "Grep: 'integration branch' appears nowhere in skills/inception-pipeline or engine/skills except the new rejectClauses argument, so the new reject pin is consistent with the current text",
+      "Grep: no other test pins the removed 'still runs: wait' or 'wait for the landing' wording, so the edit breaks no other pin",
+      "Grep: engine/skills/inception_chain_entry_test.go:235 separately pins 'delivery outcome and an explicitly recorded `landing_commit`' (S3)",
+      "Checked .approval.json: only sha256 and approved_at changed; approver unchanged",
+      "Not run: go test, skill lint/token estimate, approval hash validation (the contract allows no command execution)"
+    ]
+  }
+}

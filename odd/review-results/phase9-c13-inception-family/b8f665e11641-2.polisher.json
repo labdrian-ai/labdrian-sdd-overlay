@@ -1,0 +1,16 @@
+{
+  "kind": "polisher",
+  "base": "1cb1978e0a48b4b60de7b95fc1195f8999567588",
+  "head": "b8f665e1164135be0ab37f5a3fb569522fef7795",
+  "diff_sha256": "3ce297cfce868d6e84715d99528dafbca376370a9c45906baf9110c9fcc4c00f",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff at c13-fix3.diff.",
+      "Read S1-S9 of odd/tasks/phase9-c13-inception-family.md up to ## Log, in the worktree.",
+      "Read skills/inception-pipeline/references/closure-feedback.md lines 28-39 in the worktree. Item 2 already says 'A delivered chain that has not landed is not closed: wait, and write nothing yet.' The new SKILL.md clause 'means it runs: wait, do not fire' agrees with it, and the pinned text matches SKILL.md line 51.",
+      "The reference's tree-ambiguity bullet (line 40) now reads 'more than one commit carries it', with no branch scoping. This agrees with SKILL.md's 'When the anchor is ambiguous, omit t1; never resolved by position'. The test pins this with requireClauses on 'more than one commit carries it, the anchor is ambiguous' and a rejectClauses on 'on the default branch carries it'.",
+      "Not verified: the .approval.json sha256 against the final bytes (no way to compute a hash with the tools available), whether the tests pass (not run), and the SKILL.md body-token budget (not measured; the SKILL.md edit is a net change of a few bytes)."
+    ]
+  }
+}

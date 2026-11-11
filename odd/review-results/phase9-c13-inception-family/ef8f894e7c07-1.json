@@ -1,0 +1,124 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "95adf3da5c6336b5957a0222021d657925a8cc65",
+    "head": "ef8f894e7c07b0a1cedde3c3d7591ae557f566ab",
+    "diff_sha256": "4c539ac1d22ada985d1c5c95a2d6a67afd170a1120066331a7b9f1de0a64027f",
+    "paths": [
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/skills/approval_gate_test.go",
+      "engine/skills/approval_write.go",
+      "engine/skills/inception_family_artifact_test.go",
+      "engine/skills/registryyaml_adapter_test.go",
+      "skills/project-manifest/.approval.json",
+      "skills/project-manifest/SKILL.md",
+      "skills/project-manifest/references/phase-templates.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "95adf3da5c6336b5957a0222021d657925a8cc65",
+      "head": "ef8f894e7c07b0a1cedde3c3d7591ae557f566ab",
+      "diff_sha256": "4c539ac1d22ada985d1c5c95a2d6a67afd170a1120066331a7b9f1de0a64027f"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/skills/approval_gate_test.go",
+        "engine/skills/approval_write.go",
+        "engine/skills/inception_family_artifact_test.go",
+        "engine/skills/registryyaml_adapter_test.go",
+        "skills/project-manifest/.approval.json",
+        "skills/project-manifest/SKILL.md",
+        "skills/project-manifest/references/phase-templates.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "skills/project-manifest/SKILL.md:20-25",
+        "severity": "WARNING",
+        "claim": "The rewrite dropped the content format of the project-manifest-rules registry block. The base SKILL.md defined it as a 'Source: project-manifest skill. Do NOT edit manually' line, a 'Triggers: when working on ANY change in this project' scope line, the compact rules, and a 'Full rules' list pointing to project/{project}/manifest/{rules,context,mission}. The new entry gives only the two markers and 'Compact rules: imperative, one per line, about 15 lines maximum'. skills/_shared/pre-sdd-contracts.md:122-128 shows only '...content...' between the markers, so no file defines the block content anymore. Failure mode: a final-phase run writes a registry block of bare bullets. Downstream consumers lose the do-not-edit provenance, the statement that every change must respect these rules, and the pointer to the full rules and rationale. S6 requires the compact registry rules to be kept, and their consumable shape is now unspecified.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "diff hunk skills/project-manifest/SKILL.md (removed base lines 'Section format for the compact rules block' through 'project/{project}/manifest/mission')",
+          "skills/_shared/pre-sdd-contracts.md:118-141 (format holds only '...content...')"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "skills/project-manifest/SKILL.md:25",
+        "severity": "WARNING",
+        "claim": "'Preserve the architect block in `../_shared/pre-sdd-contracts.md`' names the wrong file. The manifest skill writes the registry blocks into `.atl/skill-registry.md` (line 20). pre-sdd-contracts.md is the shared format specification and holds only template markers. Read literally, the line is an instruction about the shared contract file, not about the project-architect-constraints block in the registry being replaced. Failure mode: an agent that replaces the manifest block in `.atl/skill-registry.md` gets no explicit instruction to leave the sibling architect block there untouched. The only guard is the general phrase 'preserving unrelated bytes'.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/project-manifest/SKILL.md:20,25 at head",
+          "skills/_shared/pre-sdd-contracts.md:130-136"
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "skills/project-manifest/references/phase-templates.md:100-102",
+        "severity": "WARNING",
+        "claim": "The draft template keeps the heading 'Reglas de dominio (pendientes de confirmación)' ('domain rules, pending confirmation'). The changed body under it now says 'Only genuinely confirmed domain rules belong here; record unconfirmed proposals as open questions, not rules.' The heading and body contradict each other. A drafting agent may list unconfirmed proposals under a heading that invites them. S6 and the new SKILL.md Hard Rules ('confirmed domain rules only') forbid that.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "diff hunk phase-templates.md @@ -127,24 +99,13 @@ (heading kept as context, body replaced)"
+        ]
+      },
+      {
+        "id": "F4",
+        "location": "skills/project-manifest/references/phase-templates.md:143-148",
+        "severity": "SUGGESTION",
+        "claim": "The new preamble (line 3) says to render new artifacts and envelopes in English. The final template mixes a changed English line (145) with an unchanged Spanish line beside it (144, '... actualizado con la sección ...') and Spanish headings ('Estado', 'Fase', 'Listo para'). S6 treats templates as outlines, so this is allowed. Still, the half-translated block in the hunk this commit touched invites mixed-language output.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "worsened",
+        "proof_refs": [
+          "diff hunk phase-templates.md @@ -181,7 +142,7 @@"
+        ]
+      },
+      {
+        "id": "F5",
+        "location": "skills/project-manifest/SKILL.md:3",
+        "severity": "SUGGESTION",
+        "claim": "The new description drops every activation trigger phrase that was in the base description ('manifiesto', 'project manifest', '/project-manifest', 'bootstrap proyecto', 'definir proyecto', 'PRD inicial'). It also drops the scope exclusion ('Does NOT write code or propose technical architecture'). Failure mode: description-based skill matching no longer finds this skill for the Spanish or slash-command requests it used to match. Some triggers would fit within the 250-rune lint limit.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "diff hunk skills/project-manifest/SKILL.md line 3"
+        ]
+      },
+      {
+        "id": "F6",
+        "location": "engine/skills/inception_family_artifact_test.go:100-125",
+        "severity": "SUGGESTION",
+        "claim": "Several pins in TestProjectManifestCompactContract are too weak to catch a regression. The single words 'discovery', 'draft' and 'final' each appear many times in the body, so deleting a Decision Gate leaves the test green. No pin covers the 'all eight' universal rules, continuation merging, or the registry block content (see F1). The first loop over the reference paths reads phase-templates.md and discards it, and line 119 reads it again. The obligations S6 names (eight rules, continuation merge, compact registry rules) are not protected by a test that would fail when one is removed.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/inception_family_artifact_test.go:100,105-107,119 at head"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full bound diff /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/1b02436e-7e8e-4520-88e0-eec651828802/scratchpad/c13-review/ef8f894e.diff",
+      "Read skills/project-manifest/references/phase-templates.md at head",
+      "Read skills/_shared/pre-sdd-contracts.md:105-149 at head (Registry-Block Format)",
+      "Searched for marker and uncertainty-marker definitions in skills/project-manifest/** and pre-sdd-contracts.md at head (universal-base-rules.md still defines [SUPUESTO]/[HIPÓTESIS]/[PENDIENTE])",
+      "Confirmed skills/role-chain/SKILL.md and skills/project-inception/SKILL.md exist at head",
+      "Read the spec /home/labdrian/labdrian-sdd-overlay-worktrees/phase9-c13-inception/odd/tasks/phase9-c13-inception-family.md S1-S9 and the Tasks list (T5)",
+      "Not run: go test, lint, and approval digest recomputation (reviewer may not execute anything)"
+    ]
+  }
+}

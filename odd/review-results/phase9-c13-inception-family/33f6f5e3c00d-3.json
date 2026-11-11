@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "9619d29efa97a52126193dd5284ad57dfb8b060b",
+    "head": "33f6f5e3c00d4d564358844937a4d73c8653d6fe",
+    "diff_sha256": "d43df44d0dbbfdfabe85ea792caf7c9eb6ca696d783e620a07f2733a6a326d6e",
+    "paths": [
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/skills/approval_gate_test.go",
+      "engine/skills/approval_write.go",
+      "engine/skills/inception_family_artifact_test.go",
+      "engine/skills/registryyaml_adapter_test.go",
+      "skills/roadmap-maker/.approval.json",
+      "skills/roadmap-maker/SKILL.md",
+      "skills/roadmap-maker/assets/roadmap-template.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "9619d29efa97a52126193dd5284ad57dfb8b060b",
+      "head": "33f6f5e3c00d4d564358844937a4d73c8653d6fe",
+      "diff_sha256": "d43df44d0dbbfdfabe85ea792caf7c9eb6ca696d783e620a07f2733a6a326d6e"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/skills/approval_gate_test.go",
+        "engine/skills/approval_write.go",
+        "engine/skills/inception_family_artifact_test.go",
+        "engine/skills/registryyaml_adapter_test.go",
+        "skills/roadmap-maker/.approval.json",
+        "skills/roadmap-maker/SKILL.md",
+        "skills/roadmap-maker/assets/roadmap-template.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "skills/roadmap-maker/assets/roadmap-template.md:32",
+        "severity": "BLOCKER",
+        "claim": "The new roadmap entry paths are relative to the skill directory, but the template emits them into a roadmap that may be stored at `openspec/project/roadmap.md`. From that artifact, `../inception-pipeline/SKILL.md` resolves under `openspec/`, not to the existing skill. The role-chain path fails the same way, so a generated roadmap does not provide the executable entry paths required by S7.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/roadmap-maker/assets/roadmap-template.md:32",
+          "skills/roadmap-maker/SKILL.md:20",
+          "skills/inception-pipeline/SKILL.md:36"
+        ]
+      }
+    ],
+    "evidence": [
+      "Inspected the complete inline diff for all nine changed paths.",
+      "Read-only `rg` and `sed` commands inspected the roadmap template, roadmap skill, and related role-chain and inception contracts inside the named worktree.",
+      "Tests and formatters: not run."
+    ]
+  }
+}

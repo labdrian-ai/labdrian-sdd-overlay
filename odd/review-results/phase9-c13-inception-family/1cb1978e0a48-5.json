@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "324c773df44c0e4702de3345dc337669568bdb75",
+    "head": "1cb1978e0a48b4b60de7b95fc1195f8999567588",
+    "diff_sha256": "312f81bdada574ed709dc1f34b7bdb73bbd82c73a85303aeada762795001d653",
+    "paths": [
+      "engine/skills/inception_family_artifact_test.go",
+      "skills/inception-pipeline/.approval.json",
+      "skills/inception-pipeline/SKILL.md",
+      "skills/inception-pipeline/references/closure-feedback.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "324c773df44c0e4702de3345dc337669568bdb75",
+      "head": "1cb1978e0a48b4b60de7b95fc1195f8999567588",
+      "diff_sha256": "312f81bdada574ed709dc1f34b7bdb73bbd82c73a85303aeada762795001d653"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skills/inception_family_artifact_test.go",
+        "skills/inception-pipeline/.approval.json",
+        "skills/inception-pipeline/SKILL.md",
+        "skills/inception-pipeline/references/closure-feedback.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "skills/inception-pipeline/references/closure-feedback.md:40-40",
+        "severity": "WARNING",
+        "claim": "The commit says the landing rule names no branch, and the new test comment at engine/skills/inception_family_artifact_test.go:129 says 'The landing rule names no branch: neither the default one nor a selected one.' The landing anchor section still says 'more than one commit on the default branch carries it' (line 40). The landing definition (lines 30-31) no longer names a branch, but the ambiguity check is still limited to the default branch. A change that lands on a non-default tracker or integration branch would be checked against the wrong branch. The new pin cannot catch this: rejectClauses only rejects 'onto the default branch', and line 40 says 'on the default branch'. Line 40 itself is unchanged and was already inconsistent with the earlier 'selected integration branch' wording. The new comment and commit message now state an invariant that the file does not meet.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "pre-existing",
+        "proof_refs": [
+          "skills/inception-pipeline/references/closure-feedback.md:30-31 (branch removed by diff hunk @@ -27,8 +27,8)",
+          "skills/inception-pipeline/references/closure-feedback.md:40 (unchanged; names the default branch)",
+          "engine/skills/inception_family_artifact_test.go:129-130 (new comment and rejectClauses list)"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "skills/inception-pipeline/SKILL.md:63-63",
+        "severity": "SUGGESTION",
+        "claim": "For a non-terminal chain, or an error because the chain has no records, the instruction changed from 'means it still runs: wait' to 'means it runs: do not fire'. The new wording no longer tells the parent to wait and check again. It only forbids firing closure, so a reader could drop closure for that change instead of putting it off. The terminal-but-unlanded case still says 'wait for landing'. The changed requireClauses pin fixes the new wording in place.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "diff hunk skills/inception-pipeline/SKILL.md @@ -41,7 +41,7",
+          "engine/skills/inception_family_artifact_test.go:114 (new pin 'an error because the chain has no records, means it runs: do not fire')"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/07a89cf6-d9a4-4988-917a-9f99a013181a/scratchpad/c13-fix2.diff (all 4 paths)",
+      "Read ## Specs S1-S9 of /home/labdrian/labdrian-sdd-overlay-worktrees/review-1cb1978e0a48/odd/tasks/phase9-c13-inception-family.md, stopping before ## Tasks and ## Log",
+      "Read /home/labdrian/labdrian-sdd-overlay-worktrees/review-1cb1978e0a48/skills/inception-pipeline/references/closure-feedback.md in full at head",
+      "Checked each new requireClauses string against the head text of SKILL.md:63 and closure-feedback.md:30-31. Each string occurs verbatim. This was checked by reading, not by running the test.",
+      "Searched the worktree, excluding odd/, for 'integration branch', 'still runs: wait', 'wait for the landing' and 'landed on the'. closure-feedback.md does not contain 'integration branch'. The remaining hits are the separate delivery --onto contract in roles, agents, README and engine/cmd, which this diff does not change.",
+      "Did not verify the new .approval.json sha256 against the skill tree or that the approval came from a human: hashing and the go test run were not run, because the reviewer contract forbids running anything.",
+      "The S3, S4 and S9 invariants still appear in the closure text: explicit landing_commit, verify not discover, no synthetic approved_tree, and waiting while the chain is unlanded."
+    ]
+  }
+}
