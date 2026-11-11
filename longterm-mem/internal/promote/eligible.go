@@ -39,8 +39,8 @@ func Eligible(obs memory.Observation, explicit bool) bool {
 //
 // An observation that is not pinned is refused for one of two reasons, and the reason says which: it has no
 // topic_key (an empty one, or one of white space), or it has one that is not curated -- its first segment, past
-// a goal's prefix, is empty or is one of the excluded ones (sdd, review, delivery, odd, session). A topic_key is quoted as it
-// is, trimmed of the white space around it.
+// a goal's prefix, is empty or is one of the excluded ones (sdd, review, delivery, odd, session). A topic_key is
+// quoted as it is, trimmed of the white space around it.
 func IneligibleReason(obs memory.Observation) string {
 	if Eligible(obs, false) {
 		return ""

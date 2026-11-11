@@ -84,6 +84,16 @@ func TestEligible(t *testing.T) {
 			want: false,
 		},
 		{
+			name: "a goal's odd/-prefixed topic_key is excluded: the goal prefix is not the first segment",
+			obs:  memory.Observation{Type: "architecture", Pinned: false, TopicKey: "goal:g-42/odd/some-feature/tasks"},
+			want: false,
+		},
+		{
+			name: "a goal's session/-prefixed topic_key is excluded",
+			obs:  memory.Observation{Type: "session_summary", Pinned: false, TopicKey: "goal:g-42/session/abc"},
+			want: false,
+		},
+		{
 			name: "a pinned odd/-prefixed memory stays eligible: the pin overrides the exclusion",
 			obs:  memory.Observation{Type: "architecture", Pinned: true, TopicKey: "odd/some-feature/tasks"},
 			want: true,
