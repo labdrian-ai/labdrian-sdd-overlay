@@ -70,7 +70,10 @@ func TestRequirementsFromTranscriptsKeepsConsumedContracts(t *testing.T) {
 	requireClauses(t, "output template", template, "**change-name:**",
 		"| Roadmap Order | Requirement ID | Manifest Input | Architecture Input | Change Name |")
 	// One slug, one column: a second change-name column would let a brief carry two names.
-	rejectClauses(t, "output template", template, "Suggested Change Name")
+	rejectClauses(t, "output template", template, "Suggested Change Name", "Proposed change name")
+	// Roadmap Inputs names slices, not slugs, so the brief still holds one change-name.
+	requireClauses(t, "output template", template,
+		"| Order | Requirement IDs | Proposed slice |", "a planning label, never a second `change-name`")
 	requireClauses(t, "patterns catalog", readRepoFile(t, root, rftDir+"references/patterns-catalog.md"),
 		"| Change name | The brief's `change-name`, the same in every row; the role chain inherits it verbatim. |")
 	requireClauses(t, "entry", body, "3. Derive `change-name`, then fill the brief")

@@ -90,7 +90,7 @@ After all blocking issues are resolved:
 |---|---|---|---|---|---|
 
 ## Roadmap Inputs
-| Order | Requirement IDs | Proposed change name | Depends On | Minimum PASS Evidence | Required Keywords | Split Recommendation | Reviewer-Burden Risk |
+| Order | Requirement IDs | Proposed slice | Depends On | Minimum PASS Evidence | Required Keywords | Split Recommendation | Reviewer-Burden Risk |
 |---:|---|---|---|---|---|---|---|
 
 ## Open Questions
@@ -134,7 +134,7 @@ Fill each layer explicitly; the roadmap must start from ordered atomic requireme
 
 - **Manifest Inputs**: mission / user outcome, product rules that must not drift, non-goals and explicit exclusions, stakeholder vocabulary and definitions, success criteria in business/user terms, risk of doing nothing.
 - **Architecture Inputs**: affected domains and bounded contexts, likely frontend/backend/contracts/data surfaces, permission and role implications, data continuity or persistence chain, integration points and external dependencies, observability/audit/event/timeline implications, complexity/risk estimate per atomic requirement, unknowns that block safe sizing.
-- **Roadmap Inputs**: ordered atomic requirement IDs, proposed change name per small requirement or tightly coupled group, dependencies and sequencing rationale, minimum PASS evidence, keywords the downstream feature document must carry, split recommendations when a requirement is too large, reviewer-burden risk.
+- **Roadmap Inputs**: ordered atomic requirement IDs, a proposed slice per small requirement or tightly coupled group (a planning label, never a second `change-name`), dependencies and sequencing rationale, minimum PASS evidence, keywords the downstream feature document must carry, split recommendations when a requirement is too large, reviewer-burden risk.
 
 ## Quality Bar
 
