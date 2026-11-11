@@ -82,6 +82,16 @@ func requireClauses(t *testing.T, label, doc string, clauses ...string) {
 	}
 }
 
+// rejectClauses fails for every clause still present in doc.
+func rejectClauses(t *testing.T, label, doc string, clauses ...string) {
+	t.Helper()
+	for _, clause := range clauses {
+		if strings.Contains(doc, clause) {
+			t.Errorf("%s: must not contain %q", label, clause)
+		}
+	}
+}
+
 func TestInceptionPipelineCompactEntry(t *testing.T) {
 	readCompactSkill(t, actualsInstrumentationRepoRoot(t), inceptionPipelineSkillRelPath)
 }
@@ -102,8 +112,9 @@ func TestInceptionPipelineKeepsActivationAndClosureRules(t *testing.T) {
 	closure := markdownSectionBody(t, body, inceptionClosureFeedbackHeading)
 	requireClauses(t, "closure section", closure,
 		"an error because the chain has no records",
-		"is not closed; wait for the merge",
-		"The parent names the actual merge commit; closure records it as `landing_commit`")
+		"is not closed; wait for the landing",
+		"The parent names the landing commit (merge, squash or fast-forward); closure records it as `landing_commit`")
+	rejectClauses(t, "closure section", closure, "merge commit", "default branch")
 
 	steps := markdownSectionBody(t, body, "## Execution Steps")
 	requireClauses(t, "execution steps", steps, "`requirements_brief_ref: {change}`")
@@ -111,8 +122,11 @@ func TestInceptionPipelineKeepsActivationAndClosureRules(t *testing.T) {
 	ref := readRepoFile(t, root, inceptionClosureReferenceRelPath)
 	requireInOrder(t, "closure reference", ref, "#### Storage", "Use the parent's resolved storage", "#### t0", "typed `created_at`")
 	requireClauses(t, "closure reference", ref,
-		"the parent names the actual merge commit",
+		"the parent names the actual landing commit once the change has landed on the selected integration branch",
+		"a merge, squash or fast-forward commit, whatever its parent count",
+		"A delivered chain that has not landed is not closed",
 		"closure's entry follows delivery's final Log entry")
+	rejectClauses(t, "closure reference", ref, "the actual merge commit", "onto the default branch")
 }
 
 func TestProjectInceptionCompactCoordinator(t *testing.T) {
