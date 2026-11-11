@@ -1,0 +1,28 @@
+{
+  "kind": "polisher",
+  "base": "fbe157f66cad50d23bf1f4971c26f2f1046b8d77",
+  "head": "8d2fba82afe3e7866dd22f9e7cd2d1ea4e76bcb3",
+  "diff_sha256": "2c7f5820fe462e105b37c3df076588c9d8964b0950d712979a1974734c402038",
+  "findings": {
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/README.md:168-171",
+        "summary": "The README sentence is accurate but ambiguous about superseded observations: \"live\" means only not soft-deleted, so a superseded (not deleted) observation page gets status: superseded patched and is still named by doctor; only deletion ends the doctor finding.",
+        "evidence": [
+          "cmd/longterm-mem/cmd_doctor.go:114-121 liveObservations calls store.ListObservations, which excludes soft-deleted rows only.",
+          "internal/engram/store.go:150-153 WHERE project = ? AND deleted_at IS NULL, no supersession filter.",
+          "internal/ops/doctor_eligibility.go:84-90 skips a page only when its observation is missing from the live map.",
+          "internal/promote/propagate.go:112-155 and 164-209 never call Eligible."
+        ]
+      }
+    ],
+    "evidence": [
+      "README Frozen pages section and doctor row read.",
+      "eligible.go five prefixes; TestEligible comment names five.",
+      "propagate.go no eligibility check, confirmed from code.",
+      "doctor live semantics confirmed; no defect wrong against the code. No tests run."
+    ]
+  }
+}
