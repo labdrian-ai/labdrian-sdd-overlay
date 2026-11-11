@@ -106,8 +106,8 @@ After all blocking issues are resolved:
 |---|---|---|---|---|---|---|
 
 ## Project-Inception Handoff
-| Roadmap Order | Change Name | Requirement ID | Manifest Input | Architecture Input | Suggested Change Name | Required Keywords | Minimum PASS Evidence |
-|---:|---|---|---|---|---|---|---|
+| Roadmap Order | Requirement ID | Manifest Input | Architecture Input | Change Name | Required Keywords | Minimum PASS Evidence |
+|---:|---|---|---|---|---|---|
 
 ## Verification Gate
 - [ ] Every stakeholder anchor is mapped or explicitly out of scope.

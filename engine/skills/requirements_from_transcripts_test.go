@@ -67,7 +67,13 @@ func TestRequirementsFromTranscriptsKeepsConsumedContracts(t *testing.T) {
 		"every R-NNN item with its `scope`, and the Project-Inception Handoff table", "confirm it matches the brief as drafted")
 	// The template the brief is filled from carries the slug in its header and in every handoff row.
 	template := readRepoFile(t, root, rftDir+"references/output-template.md")
-	requireClauses(t, "output template", template, "**change-name:**", "| Change Name |")
+	requireClauses(t, "output template", template, "**change-name:**",
+		"| Roadmap Order | Requirement ID | Manifest Input | Architecture Input | Change Name |")
+	// One slug, one column: a second change-name column would let a brief carry two names.
+	rejectClauses(t, "output template", template, "Suggested Change Name")
+	requireClauses(t, "patterns catalog", readRepoFile(t, root, rftDir+"references/patterns-catalog.md"),
+		"| Change name | The brief's `change-name`, the same in every row; the role chain inherits it verbatim. |")
+	requireClauses(t, "entry", body, "3. Derive `change-name`, then fill the brief")
 	// The shared contract and clarify-request own the other side of (a), (c) and (e).
 	shared := readRepoFile(t, root, "skills/_shared/pre-sdd-contracts.md")
 	requireClauses(t, "pre-sdd-contracts", shared,

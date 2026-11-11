@@ -159,7 +159,7 @@ Each arrow is a potential failure point and needs acceptance evidence.
 | Requirement size | Small / Medium; Large must be split before roadmap. |
 | Change type | Fix, feature, visual correction, permission rule, data continuity, technical debt. |
 | Keywords | Search terms that must appear in the downstream feature document. |
-| Suggested change name | Candidate change name, a kebab-case slug the role chain inherits. |
+| Change name | The brief's `change-name`, the same in every row; the role chain inherits it verbatim. |
 | Dependency | Prior requirement or external decision needed first. |
 | Acceptance evidence | Minimum proof needed before PASS. |
 

@@ -30,8 +30,8 @@ Use for transcripts, chats, customer stories, stakeholder or support notes, a cl
 
 1. Identify the source type. Read `references/patterns-catalog.md` for the issue classification, then run gate 2, returning the decision prompt of `references/output-template.md` for the first blocking issue.
 2. Using the catalog read in step 1, extract anchors, cluster them into concerns, and split each into atomic requirements with ID, scope, type, priority, dependency, keywords, EARS sentence, acceptance scenarios and evidence.
-3. Fill the brief from `references/output-template.md`: traceability matrix, order (dependencies first, user-visible fixes next, polish last), Manifest, Architecture and Roadmap Inputs, and its Quality Bar.
-4. Derive `change-name`, add the Project-Inception Handoff table, persist and read back.
+3. Derive `change-name`, then fill the brief from `references/output-template.md`: traceability matrix, order (dependencies first, user-visible fixes next, polish last), Manifest, Architecture and Roadmap Inputs, and its Quality Bar.
+4. Add the Project-Inception Handoff table, persist and read back.
 
 Lightweight Mode emits the EARS sentence plus:
 
