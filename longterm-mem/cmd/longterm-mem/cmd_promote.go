@@ -88,12 +88,43 @@ const (
 func cardLookup(cards *memorycard.Store, engramStore *engram.Store) promote.CardLookup {
 	return func(id int64) (memory.CardMemory, bool, error) {
 		m, ok, err := cards.MemoryByID(id)
-		if err != nil || !ok || m.Mapped {
+		if err != nil || !ok {
 			return m, ok, err
 		}
-		m.SameContentEngramIDs, err = engramStore.ObservationIDsWithCardHash(m.Project, m.ContentHash)
+		m, err = withSameContent(m, engramStore)
 		return m, true, err
 	}
+}
+
+// withSameContent fills what only Engram can say of a memory with no import_map row: the observations that hold
+// its content. It is the one query cardLookup and the memory listing of `sync --source memorycard` both ask.
+func withSameContent(m memory.CardMemory, engramStore *engram.Store) (memory.CardMemory, error) {
+	if m.Mapped {
+		return m, nil
+	}
+	var err error
+	m.SameContentEngramIDs, err = engramStore.ObservationIDsWithCardHash(m.Project, m.ContentHash)
+	return m, err
+}
+
+// cardSource is promote.CardMemories over both stores: memorycard lists the project's memories and Engram fills
+// each one's SameContentEngramIDs, as cardLookup does for one.
+type cardSource struct {
+	cards  *memorycard.Store
+	engram *engram.Store
+}
+
+func (s cardSource) ListMemories(project string) ([]memory.CardMemory, error) {
+	memories, err := s.cards.ListMemories(project)
+	if err != nil {
+		return nil, err
+	}
+	for i, m := range memories {
+		if memories[i], err = withSameContent(m, s.engram); err != nil {
+			return nil, err
+		}
+	}
+	return memories, nil
 }
 
 // promoteFromMemorycard promotes the memorycard memory id into the vault at vaultRoot, and only as a new page:
