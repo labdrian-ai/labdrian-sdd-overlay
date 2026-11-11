@@ -87,6 +87,10 @@ After all blocking issues are resolved:
 | Requirement | Affected Domains | Likely Surfaces | Data/Permission Impact | Risk | Sizing Notes |
 |---|---|---|---|---|---|
 
+## SDD Roadmap Inputs
+| Order | Requirement IDs | Proposed change name | Depends On | Minimum PASS Evidence | Required Keywords | Split Recommendation | Reviewer-Burden Risk |
+|---:|---|---|---|---|---|---|---|
+
 ## Open Questions
 | Question | Why it blocks | Suggested owner |
 |---|---|---|
@@ -119,3 +123,25 @@ After all blocking issues are resolved:
 - [ ] Review-page display values are proven to match submitted payloads.
 - [ ] Permission requirements have both capability projection and endpoint guard evidence.
 ```
+
+---
+
+## Downstream Input Layers
+
+Fill each layer explicitly; the roadmap must start from ordered atomic requirements, never from broad themes.
+
+- **Manifest Inputs**: mission / user outcome, product rules that must not drift, non-goals and explicit exclusions, stakeholder vocabulary and definitions, success criteria in business/user terms, risk of doing nothing.
+- **Architecture Inputs**: affected domains and bounded contexts, likely frontend/backend/contracts/data surfaces, permission and role implications, data continuity or persistence chain, integration points and external dependencies, observability/audit/event/timeline implications, complexity/risk estimate per atomic requirement, unknowns that block safe sizing.
+- **SDD Roadmap Inputs**: ordered atomic requirement IDs, proposed change name per small requirement or tightly coupled group, dependencies and sequencing rationale, minimum PASS evidence, keywords the downstream feature document must carry, split recommendations when a requirement is too large, reviewer-burden risk.
+
+## Quality Bar
+
+- Preserve stakeholder language before translating it into technical language; separate facts, interpretations, assumptions and open questions.
+- Treat ambiguous business words as blocking until defined when they affect permissions, data, workflow, money, compliance or user-visible behavior.
+- Never collapse several concerns into one generic requirement such as "improve UX"; split by observable behavior.
+- Requirements must be understandable without the transcript and small by default; split before roadmap planning.
+- Every critical user phrase appears in the traceability matrix or in Out of Scope; the matrix must make missing coverage obvious.
+- Keywords must make memorycard retrieval easy months later.
+- The project-inception handoff preserves atomic requirements instead of merging them into broad roadmap themes.
+- Architecture inputs must make sizing possible before roadmap planning.
+- PASS is forbidden when any critical requirement has no evidence.

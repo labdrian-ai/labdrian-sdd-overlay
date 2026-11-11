@@ -56,7 +56,7 @@ For every atomic requirement, create a keyword set:
 - stakeholder language keywords, including Spanish terms from the transcript;
 - canonical technical terms used in code or contracts;
 - likely file/domain terms;
-- SDD/search terms for Engram retrieval.
+- Search terms for memorycard retrieval.
 
 Example:
 
@@ -128,7 +128,7 @@ Each arrow is a potential failure point and needs acceptance evidence.
 - Silently resolving a contradiction or ambiguity instead of exposing it and letting the user choose.
 - "Fix priority flow" as one requirement when it contains proposal display, ticket persistence, and responsible edit behavior.
 - Roadmap entries that group many fixes under one SDD without preserving separate requirement IDs and evidence.
-- Missing keywords that make the requirement impossible to find later in Engram.
+- Missing keywords that make the requirement impossible to find later in memorycard.
 - Manifest input that omits the stakeholder problem and only lists implementation ideas.
 - Architecture input that does not mention affected domains, permissions, persistence, or integration risk.
 - SDD roadmap seeds that are broad themes instead of ordered small requirements.
@@ -159,7 +159,7 @@ Each arrow is a potential failure point and needs acceptance evidence.
 | Requirement size | Small / Medium; Large must be split before roadmap. |
 | Change type | Fix, feature, visual correction, permission rule, data continuity, technical debt. |
 | Keywords | Search terms that must appear in future SDD artifacts. |
-| Suggested SDD change | Candidate `sdd/<change-name>`. |
+| Suggested SDD change | Candidate change name, a kebab-case slug the role chain inherits. |
 | Dependency | Prior requirement or external decision needed first. |
 | Acceptance evidence | Minimum proof needed before PASS. |
 
