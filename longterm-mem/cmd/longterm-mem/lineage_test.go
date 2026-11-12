@@ -86,13 +86,20 @@ func lineageWorld(t *testing.T) (*engram.Store, *memorycard.Store) {
 	return engramStore, cards
 }
 
+// lineageOf is the identities of the other store a memory is tied to, by an import record or by its content.
 func lineageOf(t *testing.T, source promote.Source, id string) []memory.Identity {
+	t.Helper()
+	m := memoryOf(t, source, id)
+	return append(append([]memory.Identity(nil), m.Lineage...), m.Mirrored...)
+}
+
+func memoryOf(t *testing.T, source promote.Source, id string) memory.Memory {
 	t.Helper()
 	m, ok, err := source.ByID(id)
 	if err != nil || !ok {
 		t.Fatalf("ByID(%s) = %v, %v", id, ok, err)
 	}
-	return m.Lineage
+	return m
 }
 
 // Lineage runs both ways: a memorycard memory names the observation it was imported from (its import_map row) and
@@ -118,6 +125,13 @@ func TestLineageRunsBothWaysBetweenTheTwoStores(t *testing.T) {
 	if got := lineageOf(t, engramSource, "2"); !reflect.DeepEqual(got, []memory.Identity{{Source: "memorycard", ID: "11"}}) {
 		t.Errorf("observation 2 lineage = %v, want memorycard memory 11: the memory mirrored by hand holds its content and has no import_map row, so the twin rule runs in reverse", got)
 	}
+	// An import record names a lineage identity; content alone names a mirror, which a refusal says so about.
+	if m := memoryOf(t, engramSource, "1"); len(m.Lineage) != 1 || len(m.Mirrored) != 0 {
+		t.Errorf("observation 1: lineage = %v, mirrors = %v, want its import record as lineage and no mirror", m.Lineage, m.Mirrored)
+	}
+	if m := memoryOf(t, engramSource, "2"); len(m.Lineage) != 0 || len(m.Mirrored) != 1 {
+		t.Errorf("observation 2: lineage = %v, mirrors = %v, want the memory that only holds its content as a mirror", m.Lineage, m.Mirrored)
+	}
 	if got := lineageOf(t, engramSource, "3"); !reflect.DeepEqual(got, []memory.Identity{{Source: "memorycard", ID: "13"}}) {
 		t.Errorf("observation 3 lineage = %v, want memory 13: a dangling part 1 row hides nothing", got)
 	}
@@ -131,8 +145,8 @@ func TestLineageRunsBothWaysBetweenTheTwoStores(t *testing.T) {
 		t.Fatalf("Candidates(p) = %v, %v", listed, err)
 	}
 	for _, m := range listed {
-		if !reflect.DeepEqual(m.Lineage, want[m.Identity.ID]) {
-			t.Errorf("listed memory %s lineage = %v, want %v", m.Identity.ID, m.Lineage, want[m.Identity.ID])
+		if got := append(append([]memory.Identity(nil), m.Lineage...), m.Mirrored...); !reflect.DeepEqual(got, want[m.Identity.ID]) {
+			t.Errorf("listed memory %s lineage = %v, want %v", m.Identity.ID, got, want[m.Identity.ID])
 		}
 	}
 }

@@ -89,7 +89,7 @@ func TestSourceCandidatesAreTheActiveAndSupersededAndMemoriesIsEveryStatus(t *te
 	}
 }
 
-func TestSourceLineageNamesTheTwinsOfAMemoryWithNoImportMapRowOnly(t *testing.T) {
+func TestSourceMirrorsAreTheTwinsOfAMemoryWithNoImportMapRowOnly(t *testing.T) {
 	var asked [][2]string
 	twins := func(project, contentHash string) ([]memory.Identity, error) {
 		asked = append(asked, [2]string{project, contentHash})
@@ -104,14 +104,17 @@ func TestSourceLineageNamesTheTwinsOfAMemoryWithNoImportMapRowOnly(t *testing.T)
 	if !reflect.DeepEqual(asked, [][2]string{{"p", "h3"}, {"p", "h4"}}) {
 		t.Errorf("twins asked for %v, want the memories with no import_map row (3 and 4) by their project and hash, and not 1 or 2", asked)
 	}
-	wantLineage := []memory.Identity{{Source: "engram", ID: "11"}, {Source: "engram", ID: "12"}}
-	if !reflect.DeepEqual(all[2].Lineage, wantLineage) {
-		t.Errorf("memory 3 lineage = %v, want %v", all[2].Lineage, wantLineage)
+	wantMirrored := []memory.Identity{{Source: "engram", ID: "11"}, {Source: "engram", ID: "12"}}
+	if !reflect.DeepEqual(all[2].Mirrored, wantMirrored) || all[2].Lineage != nil {
+		t.Errorf("memory 3 mirrors = %v and lineage = %v, want the twins as mirrors %v and no lineage: no import record names them", all[2].Mirrored, all[2].Lineage, wantMirrored)
 	}
 	if !reflect.DeepEqual(all[0].Lineage, []memory.Identity{{Source: "engram", ID: "402"}}) {
 		t.Errorf("memory 1 lineage = %v, want its import_map row only", all[0].Lineage)
 	}
-	if all[1].Lineage != nil {
-		t.Errorf("memory 2 lineage = %v, want none (mapped by a source other than engram)", all[1].Lineage)
+	if all[1].Lineage != nil || all[1].Mirrored != nil {
+		t.Errorf("memory 2 lineage = %v and mirrors = %v, want none (mapped by a source other than engram)", all[1].Lineage, all[1].Mirrored)
+	}
+	if all[0].Mirrored != nil {
+		t.Errorf("memory 1 mirrors = %v, want none: it has an import_map row, so its twins are not asked", all[0].Mirrored)
 	}
 }

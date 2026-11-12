@@ -17,8 +17,12 @@ import (
 // memory: the memory of every part its import_map rows name, and the memories mirrored by hand that hold its
 // content (no import_map row, the same project and content hash), the twin rule of newMemorycardSource in
 // reverse. Both are read once for a listing.
+// cards may be nil: with no memorycard store there is no lineage to compose, and no observation has one.
 func newEngramSource(engramStore *engram.Store, cards *memorycard.Store) *engram.Source {
-	return engram.NewSource(engramStore, func(project string, observations []memory.Observation) (map[int64][]memory.Identity, error) {
+	if cards == nil {
+		return engram.NewSource(engramStore, nil)
+	}
+	return engram.NewSource(engramStore, func(project string, observations []memory.Observation) (map[int64]memory.Kin, error) {
 		ids := make([]int64, 0, len(observations))
 		hashes := make([]string, 0, len(observations))
 		for _, o := range observations {
@@ -33,21 +37,24 @@ func newEngramSource(engramStore *engram.Store, cards *memorycard.Store) *engram
 		if err != nil {
 			return nil, err
 		}
-		lineage := map[int64][]memory.Identity{}
+		lineage := map[int64]memory.Kin{}
 		for i, o := range observations {
+			var kin memory.Kin
 			for _, id := range imported[o.ID] {
-				lineage[o.ID] = append(lineage[o.ID], memory.Identity{Source: memorycard.SourceName, ID: strconv.FormatInt(id, 10)})
+				kin.Imported = append(kin.Imported, memory.Identity{Source: memorycard.SourceName, ID: strconv.FormatInt(id, 10)})
 			}
 			for _, id := range mirrored[hashes[i]] {
-				lineage[o.ID] = append(lineage[o.ID], memory.Identity{Source: memorycard.SourceName, ID: strconv.FormatInt(id, 10)})
+				kin.Mirrored = append(kin.Mirrored, memory.Identity{Source: memorycard.SourceName, ID: strconv.FormatInt(id, 10)})
 			}
+			lineage[o.ID] = kin
 		}
 		return lineage, nil
 	})
 }
 
 // newMemorycardSource is the memorycard adapter whose memories, besides the observation their import_map row
-// names, name the observations that hold their content when they have no row: the memories mirrored by hand.
+// names, name the observations that hold their content when they have no row (the memories mirrored by hand) as
+// their mirrors.
 func newMemorycardSource(cards *memorycard.Store, engramStore *engram.Store) *memorycard.Source {
 	return memorycard.NewSource(cards, func(project, contentHash string) ([]memory.Identity, error) {
 		ids, err := engramStore.ObservationIDsWithCardHash(project, contentHash)

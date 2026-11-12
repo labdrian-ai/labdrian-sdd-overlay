@@ -69,21 +69,21 @@ func wantObservation(id string) memory.Memory {
 	case "1":
 		return memory.Memory{
 			Identity: obs("1"), Project: "p", Type: "decision", Title: "Old", Body: "old content", TopicKey: "a/b", Pinned: true,
-			Status: memory.StatusSuperseded, Successor: obs("2"), SuccessorTitle: "New", Revision: 4,
+			Status: memory.StatusSuperseded, Successor: obs("2"), SuccessorTitle: "New", Revision: 4, SyncID: "s-old",
 		}
 	case "2":
-		return memory.Memory{Identity: obs("2"), Project: "p", Type: "decision", Title: "New", Body: "new content", Status: memory.StatusActive, Revision: 1}
+		return memory.Memory{Identity: obs("2"), Project: "p", Type: "decision", Title: "New", Body: "new content", Status: memory.StatusActive, Revision: 1, SyncID: "s-new"}
 	case "3":
-		return memory.Memory{Identity: obs("3"), Project: "p", Type: "learning", Title: "Gone", Body: "gone content", Status: memory.StatusArchived, Revision: 2}
+		return memory.Memory{Identity: obs("3"), Project: "p", Type: "learning", Title: "Gone", Body: "gone content", Status: memory.StatusArchived, Revision: 2, SyncID: "s-gone"}
 	case "4":
 		return memory.Memory{
 			Identity: obs("4"), Project: "p", Type: "learning", Title: "Both", Body: "both content",
-			Status: memory.StatusSuperseded, Successor: obs("2"), SuccessorTitle: "New", Revision: 1,
+			Status: memory.StatusSuperseded, Successor: obs("2"), SuccessorTitle: "New", Revision: 1, SyncID: "s-both",
 		}
 	case "5":
-		return memory.Memory{Identity: obs("5"), Project: "p", Type: "learning", Title: "Loose", Body: "loose content", Status: memory.StatusActive, Revision: 1}
+		return memory.Memory{Identity: obs("5"), Project: "p", Type: "learning", Title: "Loose", Body: "loose content", Status: memory.StatusActive, Revision: 1, SyncID: "s-loose"}
 	default:
-		return memory.Memory{Identity: obs("7"), Project: "p", Type: "learning", Title: "Edge", Body: "edge content", Status: memory.StatusActive, Revision: 1}
+		return memory.Memory{Identity: obs("7"), Project: "p", Type: "learning", Title: "Edge", Body: "edge content", Status: memory.StatusActive, Revision: 1, SyncID: "s-edge"}
 	}
 }
 
@@ -194,13 +194,13 @@ func TestSourceLineageIsAskedOncePerListingForItsObservations(t *testing.T) {
 		ids     []int64
 	}
 	var calls []call
-	lineage := func(project string, observations []memory.Observation) (map[int64][]memory.Identity, error) {
+	lineage := func(project string, observations []memory.Observation) (map[int64]memory.Kin, error) {
 		c := call{project: project}
 		for _, o := range observations {
 			c.ids = append(c.ids, o.ID)
 		}
 		calls = append(calls, c)
-		return map[int64][]memory.Identity{1: {{Source: "memorycard", ID: "9"}}}, nil
+		return map[int64]memory.Kin{1: {Imported: []memory.Identity{{Source: "memorycard", ID: "9"}}, Mirrored: []memory.Identity{{Source: "memorycard", ID: "10"}}}}, nil
 	}
 	source := openEngramSource(t, sourceFixture(t), lineage)
 
@@ -212,12 +212,12 @@ func TestSourceLineageIsAskedOncePerListingForItsObservations(t *testing.T) {
 		t.Fatalf("lineage asked %+v for Candidates(p), want one call for the project and its 4 live observations", calls)
 	}
 	for _, m := range candidates {
-		want := []memory.Identity(nil)
+		want, wantMirrored := []memory.Identity(nil), []memory.Identity(nil)
 		if m.Identity.ID == "1" {
-			want = []memory.Identity{{Source: "memorycard", ID: "9"}}
+			want, wantMirrored = []memory.Identity{{Source: "memorycard", ID: "9"}}, []memory.Identity{{Source: "memorycard", ID: "10"}}
 		}
-		if !reflect.DeepEqual(m.Lineage, want) {
-			t.Errorf("observation %s lineage = %v, want %v", m.Identity.ID, m.Lineage, want)
+		if !reflect.DeepEqual(m.Lineage, want) || !reflect.DeepEqual(m.Mirrored, wantMirrored) {
+			t.Errorf("observation %s lineage = %v and mirrors = %v, want %v and %v", m.Identity.ID, m.Lineage, m.Mirrored, want, wantMirrored)
 		}
 	}
 
@@ -231,6 +231,9 @@ func TestSourceLineageIsAskedOncePerListingForItsObservations(t *testing.T) {
 	}
 	if want := []memory.Identity{{Source: "memorycard", ID: "9"}}; !reflect.DeepEqual(got.Lineage, want) {
 		t.Errorf("ByID(1) lineage = %v, want %v", got.Lineage, want)
+	}
+	if want := []memory.Identity{{Source: "memorycard", ID: "10"}}; !reflect.DeepEqual(got.Mirrored, want) {
+		t.Errorf("ByID(1) mirrors = %v, want %v", got.Mirrored, want)
 	}
 }
 

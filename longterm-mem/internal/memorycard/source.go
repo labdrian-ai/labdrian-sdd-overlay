@@ -97,7 +97,7 @@ func (s *Source) toMemory(card memory.CardMemory) (memory.Memory, error) {
 		if err != nil {
 			return memory.Memory{}, fmt.Errorf("memorycard: find the twins of memory %d: %w", card.ID, err)
 		}
-		m.Lineage = append(m.Lineage, twins...)
+		m.Mirrored = twins
 	}
 	return m, nil
 }

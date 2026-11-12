@@ -12,11 +12,11 @@ import (
 // SourceName is the name Engram's observations carry in an identity.
 const SourceName = "engram"
 
-// LineageFunc answers, for the observations of one project, the identities other stores give the piece of memory each
-// one is: the memorycard memories imported from it, or mirrored by hand with its content. It is asked once for a
-// listing, keyed by observation id, with no entry for an observation that has none. The composition root supplies
-// it, so this adapter names no other adapter.
-type LineageFunc func(project string, observations []memory.Observation) (map[int64][]memory.Identity, error)
+// LineageFunc answers, for the observations of one project, the memories other stores have of the piece of memory each
+// one is: the memorycard memories imported from it (Kin.Imported), and the ones mirrored by hand with its content
+// (Kin.Mirrored). It is asked once for a listing, keyed by observation id, with no entry for an observation that has
+// none. The composition root supplies it, so this adapter names no other adapter.
+type LineageFunc func(project string, observations []memory.Observation) (map[int64]memory.Kin, error)
 
 // Source serves Engram's observations as memory.Memory, the port of promotion (promote.Source). It is as
 // read-only as the Store, and it holds the rule that turns an observation's soft delete and its supersedes edges
@@ -35,19 +35,16 @@ func NewSource(store *Store, lineage LineageFunc) *Source {
 // siblings finds an observation of the same project by its sync id, which is how an edge names one.
 type siblings func(syncID string) (memory.Observation, bool, error)
 
-// Candidates returns the live observations of project (R-020: not soft-deleted), each mapped as ByID maps it.
+// Candidates returns the live observations of project (R-020: not soft-deleted), each mapped as ByID maps it. It lists
+// the live rows alone, as the promotion pass always did, and reads what the status of each needs (the project's edges,
+// and the rows the edges name) only as far as the mapping asks, so a store whose relations cannot be read still lists
+// its candidates: the memories whose status could not be resolved say so (memory.StatusUnknown).
 func (s *Source) Candidates(project string) ([]memory.Memory, error) {
-	every, err := s.store.ObservationsIncludingDeleted(project)
+	live, err := s.store.ListObservations(project)
 	if err != nil {
 		return nil, err
 	}
-	var live []memory.Observation
-	for _, o := range every {
-		if o.DeletedAt == "" {
-			live = append(live, o)
-		}
-	}
-	return s.mapAll(project, live, every)
+	return s.mapAll(project, live, nil)
 }
 
 // Memories returns every observation of project, soft-deleted ones included, each mapped as ByID maps it.
@@ -57,6 +54,13 @@ func (s *Source) Memories(project string) ([]memory.Memory, error) {
 		return nil, err
 	}
 	return s.mapAll(project, every, every)
+}
+
+// Probe asks the store for the relations of an observation id no row can carry, so that the query matches nothing and
+// costs nothing: what is under test is whether the statement can be prepared and run at all (promote.Prober).
+func (s *Source) Probe(string) error {
+	_, err := s.store.RelatedEdges(0)
+	return err
 }
 
 // ByID returns the observation whose id is id, a soft-deleted one included. ok is false, with a nil error, when
@@ -70,40 +74,68 @@ func (s *Source) ByID(id string) (memory.Memory, bool, error) {
 	if err != nil || !ok {
 		return memory.Memory{}, false, err
 	}
-	edges, err := s.store.RelatedEdges(o.ID)
-	if err != nil {
-		return memory.Memory{}, false, err
+	// What became of the observation (its status) is not what a lookup by id is for: when its relations cannot be
+	// read the memory comes back with an unknown status, and only what reads the status reports the cause.
+	unresolved := map[int64]error{}
+	edges, edgesErr := s.store.RelatedEdges(o.ID)
+	if edgesErr != nil {
+		unresolved[o.ID] = edgesErr
 	}
 	find := func(syncID string) (memory.Observation, bool, error) {
 		return s.store.observationBySyncID(o.Project, syncID)
 	}
-	memories, err := s.build(o.Project, []memory.Observation{o}, map[int64][]memory.Edge{o.ID: edges}, find)
+	memories, err := s.build(o.Project, []memory.Observation{o}, map[int64][]memory.Edge{o.ID: edges}, unresolved, find)
 	if err != nil {
 		return memory.Memory{}, false, err
 	}
 	return memories[0], true, nil
 }
 
-// mapAll maps observations, the rows of project that a listing serves, from one read of every row of the project: the
-// sync-id index of the supersedes rule is built from it, and the edges and the lineage are read once for the project.
+// mapAll maps observations, the rows of project that a listing serves. The edges of the project are read once; when
+// they cannot be read, each observation's own are asked for, so that what cannot be read is a failure of that
+// observation's status (memory.StatusUnknown, memory.Memory.StatusCause) and not of the listing. The sync-id index of the supersedes rule is
+// built from every, or from one read of every row of the project the first time an edge needs it when every is nil.
 func (s *Source) mapAll(project string, observations, every []memory.Observation) ([]memory.Memory, error) {
-	bySyncID := make(map[string]memory.Observation, len(every))
-	for _, o := range every {
-		bySyncID[o.SyncID] = o
-	}
-	edges, err := s.store.RelatedEdgesOfProject(project)
-	if err != nil {
-		return nil, err
-	}
-	return s.build(project, observations, edges, func(syncID string) (memory.Observation, bool, error) {
+	var bySyncID map[string]memory.Observation
+	var everyErr error
+	find := func(syncID string) (memory.Observation, bool, error) {
+		if bySyncID == nil && everyErr == nil {
+			rows := every
+			if rows == nil {
+				rows, everyErr = s.store.ObservationsIncludingDeleted(project)
+			}
+			bySyncID = make(map[string]memory.Observation, len(rows))
+			for _, o := range rows {
+				bySyncID[o.SyncID] = o
+			}
+		}
+		if everyErr != nil {
+			return memory.Observation{}, false, everyErr
+		}
 		other, ok := bySyncID[syncID]
 		return other, ok, nil
-	})
+	}
+	unresolved := map[int64]error{}
+	edges, err := s.store.RelatedEdgesOfProject(project)
+	if err != nil {
+		edges = map[int64][]memory.Edge{}
+		for _, o := range observations {
+			own, ownErr := s.store.RelatedEdges(o.ID)
+			if ownErr != nil {
+				unresolved[o.ID] = ownErr
+				continue
+			}
+			edges[o.ID] = own
+		}
+	}
+	return s.build(project, observations, edges, unresolved, find)
 }
 
-// build is the one mapping of observations to memories, given the edges of each (by observation id).
-func (s *Source) build(project string, observations []memory.Observation, edges map[int64][]memory.Edge, find siblings) ([]memory.Memory, error) {
-	var lineage map[int64][]memory.Identity
+// build is the one mapping of observations to memories, given the edges of each (by observation id) and the
+// observations whose edges could not be read: such a memory is kept, with an unknown status and the cause. Any other
+// failure of the mapping is the call's own.
+func (s *Source) build(project string, observations []memory.Observation, edges map[int64][]memory.Edge, unresolved map[int64]error, find siblings) ([]memory.Memory, error) {
+	var lineage map[int64]memory.Kin
 	if s.lineage != nil {
 		var err error
 		if lineage, err = s.lineage(project, observations); err != nil {
@@ -112,14 +144,29 @@ func (s *Source) build(project string, observations []memory.Observation, edges 
 	}
 	var memories []memory.Memory
 	for _, o := range observations {
-		m, err := toMemory(o, edges[o.ID], find)
-		if err != nil {
-			return nil, err
+		var m memory.Memory
+		if cause := unresolved[o.ID]; cause != nil {
+			m = observationMemory(o)
+			m.Status, m.StatusCause = memory.StatusUnknown, cause
+		} else {
+			var err error
+			if m, err = toMemory(o, edges[o.ID], find); err != nil {
+				return nil, err
+			}
 		}
-		m.Lineage = lineage[o.ID]
+		m.Lineage, m.Mirrored = lineage[o.ID].Imported, lineage[o.ID].Mirrored
 		memories = append(memories, m)
 	}
 	return memories, nil
+}
+
+// observationMemory is what an observation says of itself, with no status: the fields both mappings of it share.
+func observationMemory(o memory.Observation) memory.Memory {
+	return memory.Memory{
+		Identity: memory.Identity{Source: SourceName, ID: strconv.FormatInt(o.ID, 10)},
+		Project:  o.Project, Type: o.Type, Title: o.Title, Body: o.Content, TopicKey: o.TopicKey,
+		Pinned: o.Pinned, Revision: o.RevisionCount, SyncID: o.SyncID,
+	}
 }
 
 // toMemory maps an observation to a memory, without its lineage.
@@ -128,11 +175,8 @@ func toMemory(o memory.Observation, edges []memory.Edge, find siblings) (memory.
 	if err != nil {
 		return memory.Memory{}, err
 	}
-	m := memory.Memory{
-		Identity: memory.Identity{Source: SourceName, ID: strconv.FormatInt(o.ID, 10)},
-		Project:  o.Project, Type: o.Type, Title: o.Title, Body: o.Content, TopicKey: o.TopicKey,
-		Pinned: o.Pinned, Status: status, Revision: o.RevisionCount,
-	}
+	m := observationMemory(o)
+	m.Status = status
 	if successor != nil {
 		m.Successor = memory.Identity{Source: SourceName, ID: strconv.FormatInt(successor.ID, 10)}
 		m.SuccessorTitle = successor.Title

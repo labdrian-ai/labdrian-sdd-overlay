@@ -13,6 +13,9 @@ const (
 	StatusActive     = "active"
 	StatusSuperseded = "superseded"
 	StatusArchived   = "archived"
+	// StatusUnknown is the status of a memory whose store could not say what became of it (its relations could not
+	// be read): it is neither active nor retired, no reader may take it for either, and StatusCause says why.
+	StatusUnknown = "unknown"
 )
 
 // Memory is one memory of any store, as promotion reads it: what a page of the vault is built from and what its
@@ -34,9 +37,25 @@ type Memory struct {
 	SuccessorTitle string
 	// Revision is the number a page records to tell whether it is behind its memory.
 	Revision int
-	// Lineage is the identities the same piece of memory has in other stores: the Engram observation a
-	// memorycard memory was imported from, the memorycard memory imported from an observation, or the
-	// observations that hold the content of a memory that was mirrored by hand. A page that carries one of them
-	// is the page of this memory.
+	// Lineage is the identities the same piece of memory has in other stores, as an import record names them: the
+	// Engram observation a memorycard memory was imported from, the memorycard memory imported from an observation.
+	// A page that carries one of them is the page of this memory.
 	Lineage []Identity
+	// Mirrored is the identities that hold the content of this memory in other stores with no import record naming
+	// them: a memory mirrored by hand. A page that carries one of them is the page of this memory too, and is told
+	// from a lineage one because a refusal names which it was.
+	Mirrored []Identity
+	// StatusCause is why the status is StatusUnknown, and is nil for any other status.
+	StatusCause error
+	// SyncID is transitional: the sync id of an Engram observation, which the pages Engram observations produce
+	// still record (engram_sync_id). It is dropped with that key, when pages stop carrying store-specific keys
+	// (T6 of the store-agnostic promotion), and no other store sets it.
+	SyncID string
+}
+
+// Kin is what the stores other than a memory's own say of it: the memories that are the same piece of memory.
+// Imported are the ones an import record names, Mirrored the ones that only hold the same content.
+type Kin struct {
+	Imported []Identity
+	Mirrored []Identity
 }
