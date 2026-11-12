@@ -232,6 +232,163 @@ func TestSyncSource_UnknownSourceIsUsage(t *testing.T) {
 	}
 }
 
+// Status propagation (S1 e): a promoted memory that memorycard has since superseded or archived gets its page's
+// status and related patched on the next `sync --source memorycard`, frontmatter only.
+
+// cardPagePath is the file of the page that carries memorycard_id id.
+func cardPagePath(t *testing.T, w *promoteGoldenWorld, id string) string {
+	t.Helper()
+	for _, name := range pageNames(t, w) {
+		if strings.HasPrefix(name, "c-") && strings.Contains(readVaultFile(t, w, "wiki/memory/"+name), "memorycard_id: "+id+"\n") {
+			return filepath.Join(w.vaultRoot, "wiki", "memory", name)
+		}
+	}
+	t.Fatalf("no page for memorycard memory %s among %v", id, pageNames(t, w))
+	return ""
+}
+
+// pageText is the page at path as a string.
+func pageText(t *testing.T, path string) string {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(data)
+}
+
+// pageBodyOf is what follows the frontmatter block of a page.
+func pageBodyOf(t *testing.T, page string) string {
+	t.Helper()
+	end := strings.Index(page[len("---\n"):], "\n---\n")
+	if !strings.HasPrefix(page, "---\n") || end < 0 {
+		t.Fatalf("no frontmatter block:\n%s", page)
+	}
+	return page[len("---\n")+end+len("\n---\n"):]
+}
+
+// retire runs a statement against the fixture memorycard database, as memorycard's own supersede or archive does:
+// it changes the status and leaves the memory's versions alone.
+func retire(t *testing.T, db, stmt string) {
+	t.Helper()
+	conn, err := sql.Open("sqlite", db)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer closeDB(t, conn)
+	if _, err := conn.Exec(stmt); err != nil {
+		t.Fatalf("%s: %v", stmt, err)
+	}
+}
+
+// A superseded memory's page is still `developing` until the next sync, which patches it to `superseded`, links the
+// successor's page and leaves the body and every other page alone. The status change adds no version, so the
+// promotion pass has nothing to do and says so.
+func TestSyncSourceMemorycard_ASupersededMemorysPageIsPatched(t *testing.T) {
+	w, db := syncMemorycardWorld(t)
+	if code, so, se := runSync(t, "--source", "memorycard"); code != exitOK {
+		t.Fatalf("first run: exit %d: %s %s", code, so, se)
+	}
+	oldPage, successorPage := cardPagePath(t, w, "3"), cardPagePath(t, w, "1")
+	before, successorBefore := pageText(t, oldPage), fileHash(t, successorPage)
+	if !strings.Contains(before, "status: developing\n") {
+		t.Fatalf("setup page is not developing:\n%s", before)
+	}
+	retire(t, db, `update memories set status = 'superseded', superseded_by = 1 where id = 3`)
+
+	code, stdout, stderr := runSync(t, "--source", "memorycard")
+	if code != exitOK {
+		t.Fatalf("exit %d\nstdout: %s\nstderr: %s", code, stdout, stderr)
+	}
+	if !strings.Contains(stdout, "promoted 0 memory(ies); patched 1 page(s)") {
+		t.Errorf("stdout = %q, want nothing promoted and one page patched", stdout)
+	}
+	after := pageText(t, oldPage)
+	if !strings.Contains(after, "status: superseded\n") {
+		t.Errorf("the page is not superseded:\n%s", after)
+	}
+	successorName := strings.TrimSuffix(filepath.Base(successorPage), ".md")
+	if want := "[[" + successorName + "|Card Only]]"; !strings.Contains(after, want) {
+		t.Errorf("the page does not link its successor %s:\n%s", want, after)
+	}
+	if pageBodyOf(t, after) != pageBodyOf(t, before) {
+		t.Errorf("the body changed:\n%s", pageBodyOf(t, after))
+	}
+	if fileHash(t, successorPage) != successorBefore {
+		t.Errorf("the successor's page changed")
+	}
+}
+
+// An archived memory's page becomes archived.
+func TestSyncSourceMemorycard_AnArchivedMemorysPageIsPatched(t *testing.T) {
+	w, db := syncMemorycardWorld(t)
+	if code, so, se := runSync(t, "--source", "memorycard"); code != exitOK {
+		t.Fatalf("first run: exit %d: %s %s", code, so, se)
+	}
+	retire(t, db, `update memories set status = 'archived' where id = 3`)
+
+	code, stdout, stderr := runSync(t, "--source", "memorycard")
+	if code != exitOK || !strings.Contains(stdout, "patched 1 page(s)") {
+		t.Fatalf("exit %d\nstdout: %s\nstderr: %s", code, stdout, stderr)
+	}
+	if page := pageText(t, cardPagePath(t, w, "3")); !strings.Contains(page, "status: archived\n") {
+		t.Errorf("the page is not archived:\n%s", page)
+	}
+}
+
+// A page edited by hand gets its frontmatter patched, and its body, the edit included, is not touched.
+func TestSyncSourceMemorycard_ALocallyEditedPageStillGetsItsStatusPatch(t *testing.T) {
+	w, db := syncMemorycardWorld(t)
+	if code, so, se := runSync(t, "--source", "memorycard"); code != exitOK {
+		t.Fatalf("first run: exit %d: %s %s", code, so, se)
+	}
+	path := cardPagePath(t, w, "3")
+	edited := pageText(t, path) + "\nA hand-written note.\n"
+	if err := os.WriteFile(path, []byte(edited), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	retire(t, db, `update memories set status = 'archived' where id = 3`)
+
+	code, stdout, stderr := runSync(t, "--source", "memorycard")
+	if code != exitOK || !strings.Contains(stdout, "patched 1 page(s)") {
+		t.Fatalf("exit %d\nstdout: %s\nstderr: %s", code, stdout, stderr)
+	}
+	after := pageText(t, path)
+	if !strings.Contains(after, "status: archived\n") || pageBodyOf(t, after) != pageBodyOf(t, edited) || !strings.Contains(after, "A hand-written note.") {
+		t.Errorf("the edited page:\n%s", after)
+	}
+}
+
+// The dry run predicts the patches the run makes, names their pages and writes nothing.
+func TestSyncSourceMemorycard_DryRunPredictsThePatches(t *testing.T) {
+	w, db := syncMemorycardWorld(t)
+	if code, so, se := runSync(t, "--source", "memorycard"); code != exitOK {
+		t.Fatalf("first run: exit %d: %s %s", code, so, se)
+	}
+	retire(t, db, `update memories set status = 'archived' where id = 3`)
+	treeBefore, dbBefore := renderPromoteGoldenTree(t, w.vaultRoot), fileHash(t, db)
+	address := strings.TrimSuffix(filepath.Base(cardPagePath(t, w, "3")), ".md")
+
+	code, stdout, stderr := runSync(t, "--source", "memorycard", "--dry-run")
+	if code != exitOK {
+		t.Fatalf("exit %d\nstdout: %s\nstderr: %s", code, stdout, stderr)
+	}
+	for _, want := range []string{"would promote 0 memory(ies), patch 1 page(s)", "would patch: " + address, "nothing was written"} {
+		if !strings.Contains(stdout, want) {
+			t.Errorf("stdout lacks %q:\n%s", want, stdout)
+		}
+	}
+	if after := renderPromoteGoldenTree(t, w.vaultRoot); after != treeBefore {
+		t.Errorf("--dry-run changed the vault:\nbefore:\n%s\nafter:\n%s", treeBefore, after)
+	}
+	if fileHash(t, db) != dbBefore {
+		t.Errorf("the memorycard database changed")
+	}
+	if _, real, _ := runSync(t, "--source", "memorycard"); !strings.Contains(real, "patched 1 page(s)") {
+		t.Errorf("the run says %q, the dry run predicted one patch", real)
+	}
+}
+
 // closeDB closes a fixture connection and fails the test when the close fails.
 func closeDB(t *testing.T, conn *sql.DB) {
 	t.Helper()
@@ -270,7 +427,7 @@ func TestSyncSourceMemorycard_AnUnlistableStoreIsExit4InTheDryRunAndTheRun(t *te
 		wantStderrIn string
 	}{
 		{"dry run", []string{"--source", "memorycard", "--dry-run"}, "", "longterm-mem: sync --source memorycard --dry-run: " + listFailure},
-		{"run", []string{"--source", "memorycard"}, "longterm-mem: sync --source memorycard promoted 0 memory(ies); skipped 0 bridged; left 0 locally edited page(s) alone\n", "longterm-mem: sync: " + listFailure},
+		{"run", []string{"--source", "memorycard"}, "longterm-mem: sync --source memorycard promoted 0 memory(ies); patched 0 page(s); skipped 0 bridged; left 0 locally edited page(s) alone\n", "longterm-mem: sync: " + listFailure},
 	} {
 		code, stdout, stderr := runSync(t, tc.args...)
 		if code != exitEngramUnavailable {
@@ -309,10 +466,10 @@ func TestSyncSourceMemorycard_AnUnreadablePageWithholdsTheMemoriesWithExit6(t *t
 		wantTail   string
 	}{
 		{"dry run", []string{"--source", "memorycard", "--dry-run"},
-			"longterm-mem: sync --source memorycard --dry-run: would promote 0 memory(ies), skip 1, 0 bridged, into <vault>\nlongterm-mem: sync --source memorycard --dry-run: nothing was written\n",
+			"longterm-mem: sync --source memorycard --dry-run: would promote 0 memory(ies), patch 0 page(s), skip 1, 0 bridged, into <vault>\nlongterm-mem: sync --source memorycard --dry-run: nothing was written\n",
 			"longterm-mem: sync --source memorycard --dry-run:", withheld},
 		{"run", []string{"--source", "memorycard"},
-			"longterm-mem: sync --source memorycard promoted 0 memory(ies); skipped 0 bridged; left 0 locally edited page(s) alone\n",
+			"longterm-mem: sync --source memorycard promoted 0 memory(ies); patched 0 page(s); skipped 0 bridged; left 0 locally edited page(s) alone\n",
 			"longterm-mem: sync:", withheld},
 	} {
 		code, stdout, stderr := runSync(t, tc.args...)
@@ -346,7 +503,7 @@ func TestSyncSourceMemorycard_AFailedIndexRebuildIsExit5(t *testing.T) {
 	if code != exitVaultSubprocessFailed {
 		t.Fatalf("exit %d, want %d\nstdout: %s\nstderr: %s", code, exitVaultSubprocessFailed, stdout, stderr)
 	}
-	if want := "longterm-mem: sync --source memorycard promoted 3 memory(ies); skipped 0 bridged; left 0 locally edited page(s) alone\n"; stdout != want {
+	if want := "longterm-mem: sync --source memorycard promoted 3 memory(ies); patched 0 page(s); skipped 0 bridged; left 0 locally edited page(s) alone\n"; stdout != want {
 		t.Errorf("stdout = %q, want %q", stdout, want)
 	}
 	if !strings.HasPrefix(stderr, "longterm-mem: sync: ") {

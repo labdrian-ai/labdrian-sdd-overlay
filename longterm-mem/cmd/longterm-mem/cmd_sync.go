@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
 )
 
@@ -101,9 +102,12 @@ func reportCardPlan(ctx context.Context, a app, source promote.CardMemories, pro
 		// the exit code of the run for the same failure.
 		return syncExitCode(promote.CardRunFailure(err))
 	}
-	fmt.Printf("longterm-mem: sync --source memorycard --dry-run: would promote %d memory(ies), skip %d, %d bridged, into %s\n", plan.WouldPromote, plan.Skipped, plan.Bridged, vaultRoot)
+	fmt.Printf("longterm-mem: sync --source memorycard --dry-run: would promote %d memory(ies), patch %d page(s), skip %d, %d bridged, into %s\n", plan.WouldPromote, plan.WouldPatch, plan.Skipped, plan.Bridged, vaultRoot)
 	for _, title := range plan.Titles {
 		fmt.Printf("  would promote: %s\n", title)
+	}
+	for _, addr := range plan.PatchAddresses {
+		fmt.Printf("  would patch: %s\n", addr)
 	}
 	for _, f := range plan.Failed {
 		fmt.Fprintf(os.Stderr, "  cannot read promoted state for memory %d: %v\n", f.ObservationID, f.Err)
@@ -125,8 +129,8 @@ func reportCardPlan(ctx context.Context, a app, source promote.CardMemories, pro
 // reportSync: what landed is reported whether or not the run failed, a failed run answers by what failed
 // (syncExitCode), and a bridged memory or a hand-edited page left alone is counted and is no failure.
 func reportCardSync(report promote.CardProjectReport, err error) int {
-	fmt.Printf("longterm-mem: sync --source memorycard promoted %d memory(ies); skipped %d bridged; left %d locally edited page(s) alone\n",
-		len(report.Promoted), report.Bridged, len(report.LocalEdits))
+	fmt.Printf("longterm-mem: sync --source memorycard promoted %d memory(ies); patched %d page(s); skipped %d bridged; left %d locally edited page(s) alone\n",
+		len(report.Promoted), len(report.Patched), report.Bridged, len(report.LocalEdits))
 	const prefix = "longterm-mem: sync:"
 	warnSkippedPages(os.Stderr, prefix, report.Unreadable)
 	warnMemoriesLeftAlone(os.Stderr, prefix, report.Withheld)
@@ -138,6 +142,13 @@ func reportCardSync(report promote.CardProjectReport, err error) int {
 		return exitRegistrationConflict
 	}
 	return exitOK
+}
+
+// ListRetiredMemories is promote.CardMemories' listing of the superseded and archived memories, the ones status
+// propagation reads. Their pages need no Engram query: a page is the memory's own or it is not a page propagation
+// patches.
+func (s cardSource) ListRetiredMemories(project string) ([]memory.CardMemory, error) {
+	return s.cards.ListRetiredMemories(project)
 }
 
 // warnMemoriesLeftAlone is warnLeftAlone for the memories of memorycard: nothing was written for them because no

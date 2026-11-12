@@ -14,6 +14,10 @@ import (
 // tells a memory mirrored by hand from one that is new.
 type CardMemories interface {
 	ListMemories(project string) ([]memory.CardMemory, error)
+	// ListRetiredMemories lists the memories memorycard has superseded or archived: the ones PropagateCards
+	// reads. An archived memory is in no other listing, and a page cannot be patched for a memory that is not
+	// listed.
+	ListRetiredMemories(project string) ([]memory.CardMemory, error)
 }
 
 // CardSyncReport summarizes one SyncCards run, in the shape of SyncReport: Promoted lists every memory the run
@@ -42,8 +46,8 @@ type CardSyncReport struct {
 // and the run returns a non-nil error when anything failed, as Sync does. A pages directory that cannot be listed
 // at all is the failure of every eligible memory.
 //
-// SyncCards does not rebuild the index, record the sync, or propagate status: SyncCardsProject does the first
-// two.
+// SyncCards does not propagate status (PropagateCards), rebuild the index, or record the sync: SyncCardsProject
+// runs all three.
 func SyncCards(ctx context.Context, cards CardMemories, w *Writer, project string) (CardSyncReport, error) {
 	report, _, err := walkCards(ctx, cards, w, project, true)
 	return report, err
@@ -55,6 +59,11 @@ func SyncCards(ctx context.Context, cards CardMemories, w *Writer, project strin
 // the run tries to write it, so the plan counts such a memory among WouldPromote.
 type CardSyncPlan struct {
 	WouldPromote int
+	// WouldPatch is how many already-promoted pages PropagateCards would rewrite for a memory that memorycard has
+	// superseded or archived, and PatchAddresses names them, in the same order. The prediction reads the pages as
+	// they are before the run, so a page the run itself creates is not in it.
+	WouldPatch     int
+	PatchAddresses []string
 	// Titles names the memories WouldPromote counts, in the same order.
 	Titles []string
 	// Skipped counts ineligible and already-current memories; Bridged the memories PromoteCard would refuse.
@@ -76,14 +85,20 @@ func PlanCards(ctx context.Context, cards CardMemories, w *Writer, project strin
 	if err != nil && len(report.Failed) == 0 {
 		return CardSyncPlan{}, err
 	}
+	patches, err := cardPatchCandidates(cards, w, project)
+	if err != nil {
+		return CardSyncPlan{}, err
+	}
 	return CardSyncPlan{
-		WouldPromote: len(titles),
-		Titles:       titles,
-		Skipped:      report.Skipped,
-		Bridged:      report.Bridged,
-		Failed:       report.Failed,
-		Withheld:     report.Withheld,
-		Unreadable:   report.Unreadable,
+		WouldPromote:   len(titles),
+		WouldPatch:     len(patches.addresses),
+		PatchAddresses: patches.addresses,
+		Titles:         titles,
+		Skipped:        report.Skipped,
+		Bridged:        report.Bridged,
+		Failed:         mergeFailures(report.Failed, patches.failed),
+		Withheld:       mergeWithheld(report.Withheld, patches.withheld),
+		Unreadable:     report.Unreadable,
 	}, nil
 }
 
@@ -181,13 +196,15 @@ func CardRunFailure(err error) Failure {
 // why, in the terms ProjectSyncReport's Failure uses.
 type CardProjectReport struct {
 	CardSyncReport
+	Patched []string
 	Failure Failure
 }
 
-// SyncCardsProject is what `longterm-mem sync --source memorycard` does to a project: SyncCards, then the rebuild
-// of the vault's index and the record of the sync's completion, the two steps Sync takes after its own pass
-// (R-031). Like Sync it rebuilds and records even when a memory failed, so one broken memory cannot wedge the
-// sync-state forever, and it stops before them only when the pass could not run at all.
+// SyncCardsProject is what `longterm-mem sync --source memorycard` does to a project: SyncCards, then
+// PropagateCards (R-033), then the rebuild of the vault's index and the record of the sync's completion, the
+// steps Sync takes after its own passes (R-031). Like Sync it rebuilds and records even when a memory failed, so
+// one broken memory cannot wedge the sync-state forever, and it stops before them only when a pass could not run
+// at all.
 func SyncCardsProject(ctx context.Context, cards CardMemories, w *Writer, index IndexRebuilder, project string) (CardProjectReport, error) {
 	if err := w.checkSyncState(); err != nil {
 		return CardProjectReport{Failure: OtherFailure}, fmt.Errorf("promote: sync memorycard: %w", err)
@@ -201,6 +218,23 @@ func SyncCardsProject(ctx context.Context, cards CardMemories, w *Writer, index 
 	case err != nil && len(report.Failed) == 0:
 		out.Failure = OtherFailure
 		return out, err
+	}
+	// Status propagation (S1 e), after the promotion pass, so that a page that pass created before its successor's
+	// page existed gets its successor link now. A memory it could not patch is a failed memory like the others.
+	patches, patchErr := PropagateCards(ctx, cards, w, project)
+	out.Patched = patches.Patched
+	out.Failed = append(out.Failed, patches.Failed...)
+	out.Withheld = mergeWithheld(out.Withheld, patches.Withheld)
+	switch {
+	case CardRunFailure(patchErr) == MemoryUnavailable:
+		out.Failure = MemoryUnavailable
+		return out, patchErr
+	case patchErr != nil && len(patches.Failed) == 0:
+		out.Failure = OtherFailure
+		return out, patchErr
+	}
+	if err == nil {
+		err = patchErr
 	}
 	if !memory.IsMissing(index) {
 		if rebuildErr := index.RebuildIndex(ctx); rebuildErr != nil {

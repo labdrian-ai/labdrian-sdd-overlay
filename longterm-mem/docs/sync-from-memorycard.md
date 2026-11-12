@@ -32,10 +32,32 @@ exit code.
    - a page at an older `memorycard_revision`: the page is updated in place;
    - a page at the memory's revision: nothing is written, not even to the precedence store;
    - bridged (below): skipped and counted.
-4. Rebuilds the vault's index and records the sync's completion, as the Engram `sync` does (R-031).
+4. Propagates status (below): the page of a memory that memorycard has since superseded or archived is patched.
+5. Rebuilds the vault's index and records the sync's completion, as the Engram `sync` does (R-031).
 
 A page the vault holds for a memory is found by `(project, memorycard_id)`. A newer revision of a page that was
 edited by hand since it was written is not written, and the run counts it as left alone.
+
+## Status propagation
+
+A promoted memory whose memorycard `status` becomes `superseded` or `archived` has its page's `status` and `related`
+patched on the next `sync --source memorycard`, the counterpart of what the Engram `sync` does (R-033). memorycard's
+supersede and archive change only the memory's `status` (and `superseded_by`) and add no version, so the page's
+`memorycard_revision` stays current and the promotion pass has nothing to do for it: the two passes are independent.
+
+- Lists the project's `superseded` and `archived` memories (the only listing that shows an archived one) and finds
+  each one's own page by `(project, memorycard_id)`. A memory with no page is left alone. When a page of the vault
+  could not be read and none belongs to the memory, it is left alone and named (exit 6), as for promotion.
+- `status` becomes `superseded` or `archived`. `related` names the successor's page (`superseded_by`) in the form a
+  page render uses, `[[<address>|<successor title>]]`, and is empty when the memory has no successor or the successor
+  has no page. Because the promotion pass runs first, a page it created before its successor's page existed gets its
+  link in the same run.
+- Only those two lines of the frontmatter are written, never the body, even on a page edited by hand. The patch is
+  recorded in the precedence store the way the Engram pass records it: only the frontmatter hash moves, so the
+  body's divergence from the last write is not erased and a later newer revision of that page is still left alone.
+- A page already patched is visited again and rewrites nothing, as on the Engram path; the run counts it.
+- The run and the dry run share one walk (`would patch: <address>` lines, a `patch N page(s)` count). The dry run
+  reads the pages as they are before the run, so it does not predict a link the run adds to a page it creates.
 
 ## Bridged memories
 
@@ -46,7 +68,7 @@ its page stays byte-identical, and the run counts it.
 ## Output and exit codes
 
 ```
-longterm-mem: sync --source memorycard promoted 3 memory(ies); skipped 1 bridged; left 0 locally edited page(s) alone
+longterm-mem: sync --source memorycard promoted 3 memory(ies); patched 1 page(s); skipped 1 bridged; left 0 locally edited page(s) alone
 ```
 
 | Case | Exit |
@@ -64,8 +86,9 @@ rebuild and the sync-state record still run, as for the Engram `sync`.
 ## `--dry-run`
 
 ```
-longterm-mem: sync --source memorycard --dry-run: would promote 3 memory(ies), skip 1, 1 bridged, into <vault>
+longterm-mem: sync --source memorycard --dry-run: would promote 3 memory(ies), patch 1 page(s), skip 1, 1 bridged, into <vault>
   would promote: <title>
+  would patch: <address>
 longterm-mem: sync --source memorycard --dry-run: nothing was written
 ```
 
@@ -78,9 +101,3 @@ reports it as left alone.
 
 Run it before the first real `sync --source memorycard` on a vault: memorycard also holds the imported Engram
 history, so a first run can promote many eligible memories that never had a page.
-
-## Not covered here
-
-Status propagation for pages that carry `memorycard_id` (a memory that became `superseded` or `archived`) is a later
-step of the same follow-up; until then `sync --source memorycard` promotes and updates, and does not patch a page's
-`status`.

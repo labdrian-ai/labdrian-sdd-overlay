@@ -44,25 +44,9 @@ func Propagate(ctx context.Context, deps Deps, project string) (PropagateReport,
 		return PropagateReport{}, err
 	}
 	outcome, err := eachPatchTarget(deps, project, func(t patchTarget) error {
-		// The page is named here for the sake of this pass ("patch <page>: ..."), and again inside the patch for
-		// the sake of its own read ("promote: read <page>: ..."): the repeated path is the message the
-		// commands have always printed, pinned by TestPropagatePatchesThePagesThroughThePort, and both
-		// come from the one PageLocation of the port, so the two cannot name different pages.
-		pagePath := deps.Writer.Pages.PageLocation(t.Address)
-		frontmatterHash, _, err := PatchStatusFields(deps.Writer.Pages, t.Address, t.Status, t.Related)
-		if err != nil {
-			return fmt.Errorf("patch %s: %w", pagePath, err)
+		if err := deps.Writer.patchPage(t); err != nil {
+			return err
 		}
-		// Only the frontmatter hash moves: longterm-mem wrote that block,
-		// and nothing else. Recording the on-disk body as our own last
-		// write would stamp a human's edit as ours and erase the
-		// divergence R-030 depends on, so a later Sync would overwrite
-		// that edit in silence. An absent entry keeps its zero BodyHash,
-		// which UpdateInPlace reads as diverged and refuses -- the safe
-		// side for a page whose body nobody can prove we wrote.
-		entry, _ := deps.Writer.Store.Get(t.Address)
-		entry.FrontmatterHash = frontmatterHash
-		deps.Writer.Store.Set(t.Address, entry)
 		report.Patched = append(report.Patched, t.Address)
 		return nil
 	})
@@ -72,12 +56,48 @@ func Propagate(ctx context.Context, deps Deps, project string) (PropagateReport,
 	report.Failed = outcome.failed
 	report.Withheld = outcome.withheld
 
-	if len(report.Patched) > 0 {
-		if err := deps.Writer.Precedence.SavePrecedence(deps.Writer.Store); err != nil {
-			return report, fmt.Errorf("promote: propagate: persist precedence: %w", err)
-		}
+	if err := deps.Writer.savePatched(len(report.Patched)); err != nil {
+		return report, err
 	}
 	return report, failureError("propagate", report.Failed)
+}
+
+// patchPage rewrites the status and related lines of the page t names and records the patch in the precedence
+// store: the one patcher of the propagation passes, the Engram pass (Propagate) and the memorycard pass
+// (PropagateCards) alike. The caller persists the store once for its run (savePatched).
+func (w *Writer) patchPage(t patchTarget) error {
+	// The page is named here for the sake of this pass ("patch <page>: ..."), and again inside the patch for
+	// the sake of its own read ("promote: read <page>: ..."): the repeated path is the message the
+	// commands have always printed, pinned by TestPropagatePatchesThePagesThroughThePort, and both
+	// come from the one PageLocation of the port, so the two cannot name different pages.
+	pagePath := w.Pages.PageLocation(t.Address)
+	frontmatterHash, _, err := PatchStatusFields(w.Pages, t.Address, t.Status, t.Related)
+	if err != nil {
+		return fmt.Errorf("patch %s: %w", pagePath, err)
+	}
+	// Only the frontmatter hash moves: longterm-mem wrote that block,
+	// and nothing else. Recording the on-disk body as our own last
+	// write would stamp a human's edit as ours and erase the
+	// divergence R-030 depends on, so a later Sync would overwrite
+	// that edit in silence. An absent entry keeps its zero BodyHash,
+	// which UpdateInPlace reads as diverged and refuses -- the safe
+	// side for a page whose body nobody can prove we wrote.
+	entry, _ := w.Store.Get(t.Address)
+	entry.FrontmatterHash = frontmatterHash
+	w.Store.Set(t.Address, entry)
+	return nil
+}
+
+// savePatched persists the precedence store once for a run that patched count pages, and not at all for one that
+// patched none.
+func (w *Writer) savePatched(count int) error {
+	if count == 0 {
+		return nil
+	}
+	if err := w.Precedence.SavePrecedence(w.Store); err != nil {
+		return fmt.Errorf("promote: propagate: persist precedence: %w", err)
+	}
+	return nil
 }
 
 // patchTarget is one already-promoted page the propagation pass would

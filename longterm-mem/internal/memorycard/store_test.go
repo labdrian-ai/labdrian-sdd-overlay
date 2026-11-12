@@ -151,6 +151,46 @@ func TestListMemories_ListsTheProjectsLiveMemoriesMappedAsMemoryByID(t *testing.
 	}
 }
 
+// The retired listing serves what status propagation reads: the superseded and the archived memories of the
+// project, in id order, each mapped exactly as MemoryByID maps it. It is the only listing that shows an archived
+// memory, and it shows no active one.
+func TestListRetiredMemories_ListsTheSupersededAndTheArchivedMappedAsMemoryByID(t *testing.T) {
+	store, err := Open(listFixture(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := store.Close(); err != nil {
+			t.Errorf("close the store: %v", err)
+		}
+	})
+
+	listed, err := store.ListRetiredMemories("p")
+	if err != nil {
+		t.Fatalf("ListRetiredMemories: %v", err)
+	}
+	var ids []int64
+	for _, m := range listed {
+		ids = append(ids, m.ID)
+		want, ok, err := store.MemoryByID(m.ID)
+		if err != nil || !ok {
+			t.Fatalf("MemoryByID(%d) = %v, %v", m.ID, ok, err)
+		}
+		if !reflect.DeepEqual(m, want) {
+			t.Errorf("listed memory %d = %+v, MemoryByID says %+v", m.ID, m, want)
+		}
+	}
+	if !reflect.DeepEqual(ids, []int64{1, 4}) {
+		t.Fatalf("listed ids = %v, want [1 4]: the superseded (1) and the archived (4) of project p, no active one, no other project", ids)
+	}
+	if listed[0].SupersededBy != 2 || listed[0].SupersededByTitle != "New" || listed[1].Status != "archived" {
+		t.Errorf("listed = %+v, want the successor of memory 1 and the archived status of memory 4", listed)
+	}
+	if none, err := store.ListRetiredMemories("nobody"); err != nil || len(none) != 0 {
+		t.Errorf("ListRetiredMemories(nobody) = %v, %v, want nothing and no error", none, err)
+	}
+}
+
 func TestOpen_AMissingDatabaseIsAnErrorAndCreatesNothing(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "absent.db")
 	if _, err := Open(path); err == nil {
