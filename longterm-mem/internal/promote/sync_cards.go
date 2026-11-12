@@ -8,48 +8,39 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 )
 
-// CardMemories is the port SyncCards lists a project's memories of memorycard through: the memories a promotion
-// pass reads, as promote.CardLookup is the port a single explicit promote reads one memory through. A memory it
-// serves has the fields ExplicitPromoteCard's lookup fills, SameContentEngramIDs included, because that is what
-// tells a memory mirrored by hand from one that is new.
-type CardMemories interface {
-	ListMemories(project string) ([]memory.CardMemory, error)
-	// ListAllMemories lists every memory of the project whatever its status (active, superseded, archived): the
-	// ones PropagateCards reads. An archived memory is in no other listing, and a page cannot be patched, or brought
-	// back from a retirement, for a memory that is not listed.
-	ListAllMemories(project string) ([]memory.CardMemory, error)
-}
+// This file is the memorycard dialect of the passes Sync, Plan and SyncProject run for Engram: the same walk
+// (Writer.walk) and the same decision over the memories of a Source, worded, counted and ordered as `sync --source
+// memorycard` has always reported them (a hand-edited page is counted apart from the promotions, the status
+// pass runs before the index is rebuilt, a failure names a memory and not an observation).
 
 // CardSyncReport summarizes one SyncCards run, in the shape of SyncReport: Promoted lists every memory the run
-// wrote a page for (create or update), and LocalEdits the ones whose hand-edited page it left alone; Skipped counts ineligible and already-current memories, neither of which
-// costs a write; Failed names each memory the run could not process (in SyncFailure.ObservationID, which here is
-// the memorycard memory id); Withheld lists the memories left alone because a page that could not be read may be
-// theirs. Bridged adds what only a memory of memorycard can be: the memories that are bridged to an Engram
-// observation that has a page, which are skipped and are not failures.
+// wrote a page for (create or update), and LocalEdits the ones whose hand-edited page it left alone; Skipped counts
+// ineligible and already-current memories, neither of which costs a write; Failed names each memory the run could
+// not process (in SyncFailure.ObservationID, which here is the memorycard memory id); Withheld lists the memories
+// left alone because a page that could not be read may be theirs; Bridged the memories that are the same piece of
+// memory as one of another store that has a page, which are skipped and are not failures.
 type CardSyncReport struct {
 	SyncReport
-	// Bridged counts the memories the run left alone because PromoteCard would refuse them with a BridgedError.
-	Bridged int
 	// LocalEdits lists the memories whose newer revision was not written because their page was edited by hand
 	// (UpdateInPlace's ActionSkippedLocalEdit); they are not in Promoted, since the run wrote nothing for them.
 	LocalEdits []int64
 }
 
-// SyncCards promotes the eligible memories of memorycard in project that have no page, or whose page is at an
-// older revision (S1 b of the C22-FU follow-up). It decides eligibility with Eligible, the predicate of R-007,
-// reads the vault's pages once for the whole run, and decides and writes each memory through the code PromoteCard
-// runs (decideCard and applyCard), so that an explicit promote and a sync cannot treat one memory differently.
+// SyncCards promotes the eligible memories of src in project that have no page, or whose page is at an older
+// revision (S1 b of the C22-FU follow-up). It decides eligibility with Eligible, the predicate of R-007, reads
+// the vault's pages once for the whole run, and decides and writes each memory through the walk and the code an
+// explicit promote runs, so that an explicit promote and a sync cannot treat one memory differently.
 //
 // A memory at the revision its page carries writes nothing: no page and no precedence entry. A memory that is
-// bridged to an Engram observation that has a page is skipped and counted, never a failure and never written.
-// One memory that cannot be processed does not abort the run: it is recorded in Failed and the walk continues,
-// and the run returns a non-nil error when anything failed, as Sync does. A pages directory that cannot be listed
-// at all is the failure of every eligible memory.
+// bridged to a memory of another store that has a page is skipped and counted, never a failure and never
+// written. One memory that cannot be processed does not abort the run: it is recorded in Failed and the walk
+// continues, and the run returns a non-nil error when anything failed, as Sync does. A pages directory that cannot
+// be listed at all is the failure of every eligible memory.
 //
 // SyncCards does not propagate status (PropagateCards), rebuild the index, or record the sync: SyncCardsProject
 // runs all three.
 func SyncCards(ctx context.Context, cards CardMemories, w *Writer, project string) (CardSyncReport, error) {
-	report, _, err := walkCards(ctx, cards, w, project, true)
+	report, _, err := cardPass(ctx, cardsView{cards}, w, project, true)
 	return report, err
 }
 
@@ -66,7 +57,7 @@ type CardSyncPlan struct {
 	PatchAddresses []string
 	// Titles names the memories WouldPromote counts, in the same order.
 	Titles []string
-	// Skipped counts ineligible and already-current memories; Bridged the memories PromoteCard would refuse.
+	// Skipped counts ineligible and already-current memories; Bridged the memories a promote would refuse.
 	Skipped int
 	Bridged int
 	// Failed names each memory whose promoted state could not be decided; Withheld the memories left alone for
@@ -77,15 +68,15 @@ type CardSyncPlan struct {
 }
 
 // PlanCards reports what SyncCards would do for project and writes nothing: it walks the same memories through
-// the same walk and the same decision (decideCard) as SyncCards, stopping where SyncCards would write, so its
-// prediction is the run's own decision and not a second opinion about it. A memory it cannot decide is in
-// Failed, and the plan is still returned; a run that could not start at all is an error and no plan.
+// the same walk and the same decision as SyncCards, stopping where SyncCards would write, so its prediction is
+// the run's own decision and not a second opinion about it. A memory it cannot decide is in Failed, and the plan
+// is still returned; a run that could not start at all is an error and no plan.
 func PlanCards(ctx context.Context, cards CardMemories, w *Writer, project string) (CardSyncPlan, error) {
-	report, titles, err := walkCards(ctx, cards, w, project, false)
+	report, titles, err := cardPass(ctx, cardsView{cards}, w, project, false)
 	if err != nil && len(report.Failed) == 0 {
 		return CardSyncPlan{}, err
 	}
-	patches, err := cardPatchCandidates(cards, w, project)
+	patches, err := cardPatchCandidates(cardsView{cards}, w, project)
 	if err != nil {
 		return CardSyncPlan{}, err
 	}
@@ -102,68 +93,34 @@ func PlanCards(ctx context.Context, cards CardMemories, w *Writer, project strin
 	}, nil
 }
 
-// walkCards is the one walk of SyncCards and PlanCards. With apply it writes each memory the decision says needs a
-// page; without, it names the memory by title and writes nothing, so its report carries no Promoted.
-func walkCards(ctx context.Context, cards CardMemories, w *Writer, project string, apply bool) (CardSyncReport, []string, error) {
+// cardPass is the memorycard dialect of the walk of SyncCards and PlanCards: it lists the candidates of src,
+// walks them, and says what the walk found in the terms of memories. With apply it writes each memory the
+// decision says needs a page; without, it names the memory by title and writes nothing, so its report carries no
+// Promoted.
+func cardPass(ctx context.Context, src Source, w *Writer, project string, apply bool) (CardSyncReport, []string, error) {
 	if err := w.checkPorts(); err != nil {
 		return CardSyncReport{}, nil, fmt.Errorf("promote: sync memorycard: %w", err)
 	}
-	memories, err := cards.ListMemories(project)
+	memories, err := src.Candidates(project)
 	if err != nil {
 		return CardSyncReport{}, nil, &CardListError{Project: project, Err: err}
 	}
-
-	var report CardSyncReport
-	var titles []string
-	pages, pagesErr := readCardPages(w.Pages)
-	if pagesErr == nil {
-		report.Unreadable = pages.unreadable
-	}
-	for _, m := range memories {
-		if !Eligible(memory.Observation{Pinned: m.Pinned, TopicKey: m.TopicKey}, false) {
-			report.Skipped++
-			continue
-		}
-		if pagesErr != nil {
-			report.Failed = append(report.Failed, SyncFailure{ObservationID: m.ID, Err: pagesErr})
-			continue
-		}
-		scan := pages.scanFor(m)
-		decision, err := decideCard(m, scan)
-		if err != nil {
-			report.Failed = append(report.Failed, SyncFailure{ObservationID: m.ID, Err: err})
-			continue
-		}
-		switch decision {
-		case cardBridged:
-			report.Bridged++
-			continue
-		case cardCurrent:
-			report.Skipped++
-			continue
-		case cardWithheld:
-			report.Withheld = append(report.Withheld, m.ID)
-			continue
-		}
-		if !apply {
-			titles = append(titles, m.Title)
-			continue
-		}
-		result, err := w.applyCard(ctx, m, scan, decision)
-		if err != nil {
-			report.Failed = append(report.Failed, SyncFailure{ObservationID: m.ID, Err: err})
-			continue
-		}
-		if result.Action.Kind == ActionSkippedLocalEdit {
+	walked := w.walk(ctx, memories, apply)
+	report := CardSyncReport{SyncReport: SyncReport{
+		Skipped: walked.skipped, Bridged: walked.bridged, Withheld: walked.withheld, Unreadable: walked.unreadable,
+	}}
+	for _, outcome := range walked.written {
+		if outcome.Result.Action.Kind == ActionSkippedLocalEdit {
 			// Nothing was written and the result carries no page: the hand-edited page keeps its address.
-			report.LocalEdits = append(report.LocalEdits, m.ID)
+			report.LocalEdits = append(report.LocalEdits, outcome.ID)
 			continue
 		}
-		// The memories after this one see the page this one has: a successor link names it.
-		pages.noteAddress(m.Project, m.ID, result.Page.Address)
-		report.Promoted = append(report.Promoted, result)
+		report.Promoted = append(report.Promoted, outcome.Result)
 	}
-	return report, titles, cardFailureError(report.Failed)
+	for _, failure := range walked.failed {
+		report.Failed = append(report.Failed, failure.SyncFailure)
+	}
+	return report, walked.titles, cardFailureError(report.Failed)
 }
 
 // CardListError is how SyncCards reports that memorycard could not list the project's memories: a type of its own,

@@ -269,30 +269,29 @@ func TestSyncSkipsAnUnreadablePageAndLeavesAloneTheObservationsItMightBelongTo(t
 	}
 }
 
-// A page that becomes unreadable between the run's decision and the promotion itself is the same case, found by
-// the promotion: the observation is left alone, and the run does not count it as promoted.
-func TestSyncLeavesAloneAnObservationWhoseDecisionTheUnreadablePageChanged(t *testing.T) {
-	// The page of another observation, readable when the run surveys the pages and when it decides (its first two
-	// reads) and not when the promotion reads them.
+// A run reads each page of the vault once, for every memory it decides and promotes, so a page that cannot be read
+// after that read changes nothing: there is no later read for it to fail (it used to be read again by the
+// promotion of each memory, and a page that went unreadable in between left the memory alone).
+func TestSyncReadsEachPageOnceSoALaterUnreadablePageChangesNothing(t *testing.T) {
 	pages := newMemPages(map[string]string{"c-000010": pageCarrying(99, pagesProject, "c-000010", 1)})
 	pages.readHook = func(address string, nth int) error {
-		if nth >= 3 {
+		if nth >= 2 {
 			return errDangling
 		}
 		return nil
 	}
-	w, repo, allocator := pagesWriter(t, pages)
+	w, _, _ := pagesWriter(t, pages)
 
 	report, err := Sync(t.Context(), Deps{Source: &fakeMemory{live: []memory.Observation{pageObservation(1)}}, Writer: w}, pagesProject)
 
 	if err != nil || len(report.Failed) != 0 {
 		t.Fatalf("Sync = (%+v, %v), want a run that finished", report, err)
 	}
-	if len(report.Promoted) != 0 || len(report.Withheld) != 1 || report.Withheld[0] != 1 {
-		t.Errorf("Promoted = %+v, Withheld = %v, want observation 1 left alone and not counted as promoted", report.Promoted, report.Withheld)
+	if len(report.Promoted) != 1 || len(report.Withheld) != 0 {
+		t.Errorf("Promoted = %+v, Withheld = %v, want observation 1 promoted: every page was read once, and readable", report.Promoted, report.Withheld)
 	}
-	if allocator.asked != 0 || repo.saves != 0 || len(pages.writes) != 0 {
-		t.Errorf("allocator asked %d times, precedence saved %d times, writes = %+v, want nothing", allocator.asked, repo.saves, pages.writes)
+	if pages.reads["c-000010"] != 1 {
+		t.Errorf("the page was read %d times, want once for the whole run", pages.reads["c-000010"])
 	}
 }
 

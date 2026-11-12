@@ -190,10 +190,10 @@ func TestPromote_ExplicitCallOverridesAutomaticEligibility(t *testing.T) {
 	obs := memory.Observation{ID: 601, Type: "discovery", Title: "Below Threshold", Content: "Never automatically eligible.", Project: "labdrian-sdd-overlay", RevisionCount: 1, Pinned: false}
 
 	var lookedUp int64
-	result, err := ExplicitPromote(t.Context(), w, func(id int64) (memory.Observation, bool, error) {
+	result, err := ExplicitPromote(t.Context(), w, ObservationLookup(func(id int64) (memory.Observation, bool, error) {
 		lookedUp = id
 		return obs, true, nil
-	}, obs.ID)
+	}), obs.ID)
 	if err != nil {
 		t.Fatalf("ExplicitPromote: %v", err)
 	}
@@ -263,9 +263,9 @@ func TestPromote_InvalidObservationIdRejected(t *testing.T) {
 	vaultRoot := t.TempDir()
 	w := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Clock: &fakeClock{at: testInstant}}
 
-	_, err := ExplicitPromote(t.Context(), w, func(int64) (memory.Observation, bool, error) {
+	_, err := ExplicitPromote(t.Context(), w, ObservationLookup(func(int64) (memory.Observation, bool, error) {
 		return memory.Observation{}, false, nil
-	}, 999)
+	}), 999)
 	if err == nil {
 		t.Fatal("ExplicitPromote = nil error, want a rejection for an invalid observation id")
 	}

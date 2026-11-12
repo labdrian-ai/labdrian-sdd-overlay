@@ -232,7 +232,7 @@ func TestPromoteCard_SameContentAsAnObservationWithAPageIsRefused(t *testing.T) 
 	twin.SameContentEngramIDs = []int64{401, 402}
 	_, err = cardWriter(vaultRoot, store).PromoteCard(t.Context(), twin)
 	var refusal *BridgedError
-	if !errors.As(err, &refusal) || !refusal.SameContent || refusal.Address != "c-000402" || refusal.EngramID != 402 {
+	if !errors.As(err, &refusal) || !refusal.SameContent || refusal.Address != "c-000402" || refusal.Peer != (memory.Identity{Source: engramSource, ID: "402"}) {
 		t.Fatalf("err = %v, want a same-content *BridgedError naming c-000402 and observation 402", err)
 	}
 	if !strings.Contains(err.Error(), "same content") || !strings.Contains(err.Error(), "c-000402") {
@@ -281,7 +281,7 @@ func TestPromoteCard_ImportedButWithoutAPageIsPromoted(t *testing.T) {
 func TestExplicitPromoteCard_UnknownIDIsNotFound(t *testing.T) {
 	w := cardWriter(t.TempDir(), PrecedenceStore{})
 	lookup := func(int64) (memory.CardMemory, bool, error) { return memory.CardMemory{}, false, nil }
-	_, err := ExplicitPromoteCard(t.Context(), w, lookup, 5)
+	_, err := ExplicitPromoteCard(t.Context(), w, CardLookup(lookup), 5)
 	if !errors.Is(err, ErrObservationNotFound) {
 		t.Fatalf("err = %v, want ErrObservationNotFound", err)
 	}

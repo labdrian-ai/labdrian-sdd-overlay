@@ -2,7 +2,6 @@ package promote
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
@@ -120,7 +119,7 @@ type patchOutcome struct {
 }
 
 // eachPatchTarget walks project once and calls visit for every page the
-// propagation pass would rewrite. It returns the observations it could not
+// propagation pass would rewrite. It returns the memories it could not
 // decide or left alone, and an error only when the walk itself could not
 // start.
 //
@@ -131,118 +130,99 @@ type patchOutcome struct {
 // the day they were written and nothing structural kept them agreeing. A
 // filter added here is now added for both, because there is only one here.
 func eachPatchTarget(deps Deps, project string, visit func(patchTarget) error) (patchOutcome, error) {
-	observations, err := deps.Source.ObservationsIncludingDeleted(project)
+	memories, err := engramView{deps.Source}.Memories(project)
 	if err != nil {
 		return patchOutcome{}, fmt.Errorf("promote: propagate: list observations for %q: %w", project, err)
 	}
 
-	bySyncID := make(map[string]memory.Observation, len(observations))
-	for _, obs := range observations {
-		if obs.SyncID != "" {
-			bySyncID[obs.SyncID] = obs
-		}
-	}
-
 	var outcome patchOutcome
-	for _, obs := range observations {
-		promoted, ok, err := findPromotedPage(deps.Writer.Pages, project, int(obs.ID))
-		var unknown *unreadablePagesError
-		if errors.As(err, &unknown) {
-			outcome.withheld = append(outcome.withheld, obs.ID)
-			continue
-		}
+	index, indexErr := readPages(deps.Writer.Pages)
+	for _, m := range memories {
+		id, _ := numericID(m)
+		style, err := styleOf(m.Identity.Source)
 		if err != nil {
-			outcome.failed = append(outcome.failed, SyncFailure{ObservationID: obs.ID, Err: fmt.Errorf("check promoted state: %w", err)})
+			outcome.failed = append(outcome.failed, SyncFailure{ObservationID: id, Err: err})
 			continue
 		}
-		if !ok {
+		if indexErr != nil {
+			outcome.failed = append(outcome.failed, SyncFailure{ObservationID: id, Err: fmt.Errorf("check promoted state: %w", indexErr)})
+			continue
+		}
+		scan := index.scanFor(m)
+		if scan.own == nil {
+			// A page that could not be read may be this memory's own, and a status cannot be patched into a page
+			// that cannot be found.
+			if len(scan.unreadable) > 0 {
+				outcome.withheld = append(outcome.withheld, id)
+			}
+			continue
+		}
+		promoted, err := scan.own.resolve(style.requireAddress)
+		if err != nil {
+			outcome.failed = append(outcome.failed, SyncFailure{ObservationID: id, Err: fmt.Errorf("check promoted state: %w", err)})
 			continue
 		}
 
-		status, related, err := decidePatch(deps, project, obs, bySyncID)
+		status, related, err := decidePatch(index, style, m)
 		if err != nil {
-			outcome.failed = append(outcome.failed, SyncFailure{ObservationID: obs.ID, Err: err})
+			outcome.failed = append(outcome.failed, SyncFailure{ObservationID: id, Err: err})
 			continue
 		}
 		if status == "" {
 			continue
 		}
 
-		if err := visit(patchTarget{ObservationID: obs.ID, Address: promoted.Address, Status: status, Related: related}); err != nil {
-			outcome.failed = append(outcome.failed, SyncFailure{ObservationID: obs.ID, Err: err})
+		if err := visit(patchTarget{ObservationID: id, Address: promoted.Address, Status: status, Related: related}); err != nil {
+			outcome.failed = append(outcome.failed, SyncFailure{ObservationID: id, Err: err})
 		}
 	}
 	return outcome, nil
 }
 
-// resolveStatus determines obs's new status and related wikilinks, or
-// ("", nil, nil) when obs is untouched (R-033 scenario 3: neither
-// soft-deleted nor the older side of a supersedes edge). A supersedes
-// edge only produces a patch for the OLDER side (D11): the newer
-// observation is the survivor and is left alone -- its own turn through
-// this loop finds no edge naming it as the older side, so it is never
-// patched.
-func resolveStatus(deps Deps, project string, obs memory.Observation, bySyncID map[string]memory.Observation) (status string, related []string, err error) {
-	edges, err := deps.Source.RelatedEdges(obs.ID)
-	if err != nil {
-		return "", nil, err
-	}
-	for _, edge := range edges {
-		if edge.Relation != "supersedes" {
-			continue
-		}
-		otherSyncID := edge.SourceSyncID
-		if obs.SyncID != "" && otherSyncID == obs.SyncID {
-			otherSyncID = edge.TargetSyncID
-		}
-		other, ok := bySyncID[otherSyncID]
-		if !ok || other.CreatedAt <= obs.CreatedAt {
-			// obs is the newer side (or the other side is unrecognized):
-			// nothing to patch for obs on this edge.
-			continue
-		}
-		successor, ok, err := findPromotedPage(deps.Writer.Pages, project, int(other.ID))
-		var unknown *unreadablePagesError
-		if err != nil && !errors.As(err, &unknown) {
-			return "", nil, err
-		}
-		if !ok {
-			// The successor has no page yet. It used to be left untouched
-			// here, on the reasoning that there was nothing to link to --
-			// which confuses being unable to DECORATE the fact with being
-			// unable to RECORD it. The link is a convenience; the status
-			// is the warning, and it is the whole point. Dropped, the page
-			// goes on reading as current, and a memory that reads as
-			// current is one an agent acts on and reintroduces: exactly
-			// the failure this machinery exists to prevent. The ledger's
-			// truth does not depend on promotion order, so the status
-			// lands with related left empty, and a later run adds the link
-			// once the successor has a page of its own.
-			return "superseded", nil, nil
-		}
-		return "superseded", []string{wikilink(successor.Address, other.Title)}, nil
-	}
-
-	if obs.DeletedAt != "" {
-		return "archived", nil, nil
-	}
-	return "", nil, nil
-}
-
-// decidePatch answers the one question Propagate asks of each observation
-// that already has a page: does this run rewrite it, and to what?
+// decidePatch answers the one question Propagate asks of each memory that
+// already has a page: does this run rewrite it, and to what? The status is the
+// memory's own (the adapter of its store maps what the store keeps to it, R-033
+// scenario 3): an active memory is untouched, a superseded one is
+// superseded, with related pointing at the successor's page (D11's
+// created_at-newer-wins rule is the adapter's, independent of the edge's
+// stated direction), and an archived one is archived. It returns ("", nil, nil)
+// when the memory is untouched.
 //
-// It is extracted for the same reason decidePromotion is. `sync` runs two
+// It is extracted for the same reason the promotion decision is. `sync` runs two
 // passes and reports two counts, so a preview that predicts only the first
 // tells an operator "nothing will be rewritten" immediately before a
 // re-sync rewrites existing pages. Plan calls this; so does Propagate; and
 // neither holds a second opinion about what the other will do.
-func decidePatch(deps Deps, project string, obs memory.Observation, bySyncID map[string]memory.Observation) (string, []string, error) {
-	status, related, err := resolveStatus(deps, project, obs, bySyncID)
-	if err != nil {
-		return "", nil, fmt.Errorf("resolve status: %w", err)
+func decidePatch(index *pageIndex, style pageStyle, m memory.Memory) (string, []string, error) {
+	switch m.Status {
+	case memory.StatusUnknown:
+		// The store could not say what became of the memory, so there is no status to patch into its page.
+		return "", nil, fmt.Errorf("resolve status: %w", m.StatusCause)
+	case memory.StatusSuperseded:
+		// The successor has no page yet: it used to be left untouched
+		// here, on the reasoning that there was nothing to link to --
+		// which confuses being unable to DECORATE the fact with being
+		// unable to RECORD it. The link is a convenience; the status
+		// is the warning, and it is the whole point. Dropped, the page
+		// goes on reading as current, and a memory that reads as
+		// current is one an agent acts on and reintroduces: exactly
+		// the failure this machinery exists to prevent. The ledger's
+		// truth does not depend on promotion order, so the status
+		// lands with related left empty, and a later run adds the link
+		// once the successor has a page of its own.
+		successor := index.ownPage(m.Project, m.Successor)
+		if successor == nil {
+			return "superseded", nil, nil
+		}
+		page, err := successor.resolve(style.requireAddress)
+		if err != nil {
+			return "", nil, fmt.Errorf("resolve status: %w", err)
+		}
+		return "superseded", []string{wikilink(page.Address, m.SuccessorTitle)}, nil
+	case memory.StatusArchived:
+		return "archived", nil, nil
 	}
-	return status, related, nil
+	return "", nil, nil
 }
 
 // patchCandidates reports the addresses the propagation pass would

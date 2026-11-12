@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultlayout"
 )
 
 // Writer is longterm-mem's single promotion entrypoint (6.8 REFACTOR):
@@ -141,17 +142,17 @@ func (w *Writer) checkPatchPorts() error {
 	return w.checkPages()
 }
 
-// Result reports what Promote did for one observation.
+// Result reports what Promote did for one memory.
 type Result struct {
 	Page   Page
 	Action Action
 }
 
-// Promote renders obs as a vault page and writes it, either as a brand
+// Promote renders m as a vault page and writes it, either as a brand
 // new page (ActionCreated) or, when the observation was already
 // promoted, through UpdateInPlace (ActionUpdated, or ActionSkippedLocalEdit
 // per R-030). explicit is forwarded to Eligible, matching the explicit
-// promote surface's override semantics (R-007); an ineligible obs is left
+// promote surface's override semantics (R-007); an ineligible memory is left
 // untouched and reports a Result with no page and ActionNone (the zero
 // Result) and no error, since ineligibility is a normal skip a scanning
 // caller (sync) must not treat as a failure. Every promotion that actually
@@ -182,36 +183,63 @@ type Result struct {
 // (ExplicitPromote), which re-enters here, takes the update branch, and
 // registers on every write it does not skip. So: doctor names it, and an
 // explicit promote fixes it.
-func (w *Writer) Promote(ctx context.Context, obs memory.Observation, explicit bool) (Result, error) {
+func (w *Writer) Promote(ctx context.Context, m memory.Memory, explicit bool) (Result, error) {
 	if err := w.checkPorts(); err != nil {
 		return Result{}, err
 	}
-	if !Eligible(obs, explicit) {
+	if !Eligible(m, explicit) {
 		return Result{}, nil
 	}
-
-	// Collected before anything is written, but the timing is not what
-	// makes it correct: findMovedPages filters on project != obs.Project,
-	// so the page this run is about to create or update can never appear
-	// in it, whenever the scan runs.
-	moved, err := findMovedPages(w.Pages, obs.Project, int(obs.ID))
+	style, err := styleOf(m.Identity.Source)
 	if err != nil {
 		return Result{}, err
 	}
-
-	address, err := allocateAddress(ctx, w.Pages, obs.Project, int(obs.ID), w.Addresses, w.AddressMap, utc(w.Clock))
-	var unknown *unreadablePagesError
-	if errors.As(err, &unknown) {
-		// A page that could not be read may be this observation's own. Taking an address and writing a page
-		// would make it a second one, so nothing is taken and nothing is written: the observation is reported
-		// as left alone, with the pages that kept it from being decided.
-		return Result{Action: unreadablePagesAction(obs.ID, unknown)}, nil
-	}
+	index, err := readPages(w.Pages)
 	if err != nil {
 		return Result{}, err
 	}
+	scan := index.scanFor(m)
+	chosen, err := decide(m, scan, style, style.rewriteCurrent)
+	if err != nil {
+		return Result{}, err
+	}
+	return w.apply(ctx, m, style, scan, chosen)
+}
 
-	page, err := EmitPage(obs, address, nil, utc(w.Clock))
+// apply does what chosen says about m, over the scan it was decided from: the one write path of every memory,
+// whichever store it comes from. The explicit promote and every pass of a sync reach it through here, so they
+// cannot treat one memory differently.
+func (w *Writer) apply(ctx context.Context, m memory.Memory, style pageStyle, scan pageScan, chosen decision) (Result, error) {
+	switch chosen {
+	case decideBridged:
+		return Result{}, &BridgedError{Memory: m.Identity, Peer: scan.bridgedAs, Address: scan.bridged.address(), SameContent: scan.mirrored}
+	case decideCurrent:
+		address := scan.own.address()
+		return Result{Page: Page{Address: address, Path: vaultlayout.PageFile(address)}, Action: Action{Kind: ActionAlreadyPromoted}}, nil
+	case decideWithheld:
+		// A page that could not be read may be this memory's own. Taking an address and writing a page would make it
+		// a second one, so nothing is taken and nothing is written: the memory is reported as left alone, with the
+		// pages that kept it from being decided.
+		return Result{Action: unreadablePagesAction(style.noun, m.Identity.ID, scan.unreadable)}, nil
+	}
+
+	// The pages the memory left behind in another project were collected before anything is written, but the
+	// timing is not what makes it correct: they are the pages that carry its identity under a project other than
+	// its own, so the page this run is about to create or update can never be among them.
+	var address string
+	if scan.own != nil {
+		address = scan.own.address()
+	} else {
+		var err error
+		if address, err = takeAddress(ctx, w.Addresses, w.AddressMap, utc(w.Clock)); err != nil {
+			return Result{}, err
+		}
+	}
+	var related []Link
+	if style.linksSuccessor {
+		related = scan.successorLinks(m)
+	}
+	page, err := style.emit(m, address, related, utc(w.Clock))
 	if err != nil {
 		return Result{}, err
 	}
@@ -232,16 +260,16 @@ func (w *Writer) Promote(ctx context.Context, obs memory.Observation, explicit b
 			if err := w.Precedence.SavePrecedence(w.Store); err != nil {
 				return Result{}, err
 			}
-			if err := w.register(page.Address, obs.Title); err != nil {
+			if err := w.register(page.Address, m.Title); err != nil {
 				return Result{}, err
 			}
 		}
 		// The successor already exists on disk (this branch was chosen by
 		// its presence), so pointing at it is safe even when the update
-		// itself was skipped: superseding the pages the observation left
+		// itself was skipped: superseding the pages the memory left
 		// behind is independent of whether its current page needed new
 		// content.
-		if err := w.supersedeMoved(moved, page.Address, obs.Title); err != nil {
+		if err := w.supersedeMoved(scan.moved, page.Address, m.Title); err != nil {
 			return Result{}, err
 		}
 		return Result{Page: page, Action: action}, nil
@@ -252,8 +280,8 @@ func (w *Writer) Promote(ctx context.Context, obs memory.Observation, explicit b
 	// two orphan states a killed process may leave behind -- and the two
 	// are not equally recoverable:
 	//
-	//   page without entry (the old order) is unrecoverable. allocateAddress
-	//   reuses the page's own address, PageExists finds it, and UpdateInPlace
+	//   page without entry (the old order) is unrecoverable. The page's own
+	//   address is reused, PageExists finds it, and UpdateInPlace
 	//   refuses it as unknown provenance -- which, being a skip, also
 	//   suppresses the Save and the registration that would have repaired
 	//   it. Every later run repeats that exact skip: a fixed point.
@@ -269,10 +297,10 @@ func (w *Writer) Promote(ctx context.Context, obs memory.Observation, explicit b
 	if err := w.publishNew(address, page, existingPath); err != nil {
 		return Result{}, err
 	}
-	if err := w.register(address, obs.Title); err != nil {
+	if err := w.register(address, m.Title); err != nil {
 		return Result{}, err
 	}
-	if err := w.supersedeMoved(moved, address, obs.Title); err != nil {
+	if err := w.supersedeMoved(scan.moved, address, m.Title); err != nil {
 		return Result{}, err
 	}
 	return Result{Page: page, Action: Action{Kind: ActionCreated}}, nil

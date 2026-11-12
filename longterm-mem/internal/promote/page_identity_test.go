@@ -166,18 +166,19 @@ func TestPageIdentity_CardScanFindsOwnAndBridgedPagesByIdentity(t *testing.T) {
 			t.Fatalf("pages = %v, want only the existing one", got)
 		}
 
-		index, err := readCardPages(pagesIn(vaultRoot))
+		index, err := readPages(pagesIn(vaultRoot))
 		if err != nil {
-			t.Fatalf("readCardPages: %v", err)
+			t.Fatalf("readPages: %v", err)
 		}
-		if got := index.own[cardKey{project: "memorycard", id: 7}]; got == nil || got.RawRevision != "3" || got.Address != "c-000007" {
+		cardSeven := memory.Identity{Source: memorycardSource, ID: "7"}
+		if got := index.ownPage("memorycard", cardSeven); got == nil || got.RawRevision != "3" || got.Address != "c-000007" {
 			t.Fatalf("own page of memory 7 = %+v; want c-000007 at revision 3", got)
 		}
-		if got := index.byCardID["memorycard"][7]; got != "c-000007" {
+		if got := index.addresses[addressKey{project: "memorycard", identity: cardSeven}]; got != "c-000007" {
 			t.Fatalf("successor-link address of memory 7 = %q; want c-000007", got)
 		}
-		if block, ok := index.blocks[cardKey{project: "memorycard", id: 7}]; !ok || !strings.Contains(block, "c-000007") {
-			t.Fatalf("frontmatter block of memory 7 = %q, %v; want the page's block", block, ok)
+		if own := index.ownPage("memorycard", cardSeven); own == nil || !strings.Contains(own.Block, "c-000007") {
+			t.Fatalf("frontmatter block of memory 7 = %+v; want the page's block", own)
 		}
 
 		engramVault := t.TempDir()

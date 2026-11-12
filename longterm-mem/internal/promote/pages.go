@@ -77,17 +77,6 @@ func describePages(pages []UnreadablePage) string {
 	return strings.Join(described, "; ")
 }
 
-// unreadablePagesError is what the lookup of an observation's page answers when no readable page carries the
-// observation and some page could not be read: the observation may already have a page, the unreadable one, and
-// nothing can tell. It is not a failure of the observation; promotion leaves the observation alone (Writer.Promote
-// reports it as ActionSkippedUnreadablePages, Sync and Plan list it as withheld) rather than make a second page
-// for it at a new address.
-type unreadablePagesError struct{ pages []UnreadablePage }
-
-func (e *unreadablePagesError) Error() string {
-	return "promote: no readable page belongs to this observation, but a page that could not be read may: " + describePages(e.pages)
-}
-
 // errNoPageRepository is what a promotion answers when its Writer was built without a PageRepository: a port
 // the caller forgot to wire is named, before anything is written.
 var errNoPageRepository = errors.New("promote: the writer has no page repository")

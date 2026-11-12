@@ -87,7 +87,7 @@ func checkPromotedPagesEligible(promoted PageReader, eligibility func(project st
 		if !isLive {
 			continue
 		}
-		reason := promote.IneligibleReason(memory.Observation{ID: observation.ID, Pinned: observation.Pinned, TopicKey: observation.TopicKey})
+		reason := promote.IneligibleReason(memory.Memory{Pinned: observation.Pinned, TopicKey: observation.TopicKey})
 		if reason == "" {
 			continue
 		}

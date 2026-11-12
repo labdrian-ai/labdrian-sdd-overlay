@@ -31,7 +31,7 @@ func PropagateCards(ctx context.Context, cards CardMemories, w *Writer, project 
 		return PropagateReport{}, fmt.Errorf("promote: propagate memorycard: %w", err)
 	}
 	var report PropagateReport
-	outcome, err := eachCardPatchTarget(cards, w, project, func(t patchTarget) error {
+	outcome, err := eachCardPatchTarget(cardsView{cards}, w, project, func(t patchTarget) error {
 		if err := w.patchPage(t); err != nil {
 			return err
 		}
@@ -52,9 +52,9 @@ func PropagateCards(ctx context.Context, cards CardMemories, w *Writer, project 
 
 // cardPatchCandidates reports the pages PropagateCards would rewrite, through the same eachCardPatchTarget walk
 // PropagateCards itself runs, and writes nothing: the dry run's prediction is the run's own walk.
-func cardPatchCandidates(cards CardMemories, w *Writer, project string) (patchPlan, error) {
+func cardPatchCandidates(src Source, w *Writer, project string) (patchPlan, error) {
 	var plan patchPlan
-	outcome, err := eachCardPatchTarget(cards, w, project, func(t patchTarget) error {
+	outcome, err := eachCardPatchTarget(src, w, project, func(t patchTarget) error {
 		plan.addresses = append(plan.addresses, t.Address)
 		return nil
 	})
@@ -66,15 +66,15 @@ func cardPatchCandidates(cards CardMemories, w *Writer, project string) (patchPl
 }
 
 // eachCardPatchTarget walks the memories of project once, reading the vault's pages once, and calls visit for every
-// page of one of them that is behind its memory: the page that carries the memory's memorycard_id, and whose status
+// page of one of them that is behind its memory: the page that carries the memory's identity, and whose status
 // or related differs from what the memory says (patchedFrontmatter of its block is not its block). A page that
-// already says it is not visited, so a run and a dry run count only real patches. A memory that memorycard has not
+// already says it is not visited, so a run and a dry run count only real patches. A memory that its store has not
 // retired leaves its page alone unless the page still says superseded or archived, which is a memory restored to
-// active: a status a human set by hand on a page memorycard never retired is not propagation's to police. It
+// active: a status a human set by hand on a page its store never retired is not propagation's to police. It
 // returns what it could not decide or left alone, and an error only when the walk could not start. It is the ONE
 // walk of PropagateCards and cardPatchCandidates, as eachPatchTarget is of Propagate and Plan.
-func eachCardPatchTarget(cards CardMemories, w *Writer, project string, visit func(patchTarget) error) (patchOutcome, error) {
-	memories, err := cards.ListAllMemories(project)
+func eachCardPatchTarget(src Source, w *Writer, project string, visit func(patchTarget) error) (patchOutcome, error) {
+	memories, err := src.Memories(project)
 	if err != nil {
 		return patchOutcome{}, &CardListError{Project: project, Err: err}
 	}
@@ -82,62 +82,52 @@ func eachCardPatchTarget(cards CardMemories, w *Writer, project string, visit fu
 	if len(memories) == 0 {
 		return outcome, nil
 	}
-	pages, err := readCardPages(w.Pages)
+	index, err := readPages(w.Pages)
 	if err != nil {
 		// As in the promotion pass: a pages directory that cannot be listed at all is the failure of every memory
 		// that could have been retired; the promotion pass names the eligible ones, and the others have no page to patch.
 		for _, m := range memories {
 			if isRetired(m) {
-				outcome.failed = append(outcome.failed, SyncFailure{ObservationID: m.ID, Err: err})
+				id, _ := numericID(m)
+				outcome.failed = append(outcome.failed, SyncFailure{ObservationID: id, Err: err})
 			}
 		}
 		return outcome, nil
 	}
 	for _, m := range memories {
-		scan := pages.scanFor(m)
+		id, _ := numericID(m)
+		scan := index.scanFor(m)
 		if scan.own == nil {
 			// An unreadable page may be a retired memory's own. An active memory with no page is the promotion
 			// pass's business (it may be ineligible), never withheld here.
 			if isRetired(m) && len(scan.unreadable) > 0 {
-				outcome.withheld = append(outcome.withheld, m.ID)
+				outcome.withheld = append(outcome.withheld, id)
 			}
 			continue
 		}
-		block := pages.blocks[cardKey{project: m.Project, id: m.ID}]
+		block := scan.own.Block
 		if !isRetired(m) && !pageIsRetired(block) {
 			continue
 		}
-		status, related := cardStatus(m), relatedWikilinks(cardRelated(m, scan.byCardID))
+		status, related := cardStatus(m), relatedWikilinks(scan.successorLinks(m))
 		if patchedFrontmatter(block, status, related) == block {
 			continue
 		}
-		target := patchTarget{ObservationID: m.ID, Address: scan.own.address(), Status: status, Related: related}
+		target := patchTarget{ObservationID: id, Address: scan.own.address(), Status: status, Related: related}
 		if err := visit(target); err != nil {
-			outcome.failed = append(outcome.failed, SyncFailure{ObservationID: m.ID, Err: err})
+			outcome.failed = append(outcome.failed, SyncFailure{ObservationID: id, Err: err})
 		}
 	}
 	return outcome, nil
 }
 
-// isRetired reports whether memorycard has superseded or archived m.
-func isRetired(m memory.CardMemory) bool {
-	return m.Status == "superseded" || m.Status == "archived"
+// isRetired reports whether the store of m has superseded or archived it.
+func isRetired(m memory.Memory) bool {
+	return m.Status == memory.StatusSuperseded || m.Status == memory.StatusArchived
 }
 
 // pageIsRetired reports whether the frontmatter block of a page says superseded or archived.
 func pageIsRetired(block string) bool {
 	status := strings.TrimSpace(parseFrontmatterFields(block)[statusField])
 	return status == "superseded" || status == "archived"
-}
-
-// cardRelated is the related list of m's page: the successor's page when m has a successor that has one, named in
-// the form EmitCardPage renders, and nothing otherwise. byCardID maps the memorycard ids of m's project to the
-// addresses of their pages.
-func cardRelated(m memory.CardMemory, byCardID map[int64]string) []Link {
-	if m.SupersededBy > 0 {
-		if successor, ok := byCardID[m.SupersededBy]; ok {
-			return []Link{{Address: successor, Title: m.SupersededByTitle}}
-		}
-	}
-	return nil
 }

@@ -178,12 +178,13 @@ func entryFor(page Page) PrecedenceEntry {
 	return entry
 }
 
-// frontmatterRevision reads the revision a frontmatter block records for Engram (engram_revision, or
-// source_revision beside source: engram, through revisionOf; no id is needed) as an integer. A block missing the field, or carrying something that is not an
-// integer, reports false rather than a zero revision: every caller treats
-// "no readable revision" as no evidence and fails closed, which a silent 0
-// would quietly turn into "revision 0", the smallest possible revision and
-// therefore the most permissive answer.
+// frontmatterRevision reads the revision a frontmatter block records for
+// Engram (engram_revision, or source_revision beside source: engram, through
+// revisionOf; no id is needed) as an integer. A block missing the field, or
+// carrying something that is not an integer, reports false rather than a zero
+// revision: every caller treats "no readable revision" as no evidence and
+// fails closed, which a silent 0 would quietly turn into "revision 0", the
+// smallest possible revision and therefore the most permissive answer.
 func frontmatterRevision(fmBlock string) (int, bool) {
 	raw, _ := revisionOf(parseFrontmatterFields(fmBlock), engramSource)
 	if raw == "" {
@@ -500,15 +501,16 @@ func skippedAction(existingPath, address, reason string) Action {
 	}
 }
 
-// unreadablePagesAction is the skip of an observation that no readable page carries while a page could not be
-// read: it names the observation and every page that could not be read, and says nothing was written.
-func unreadablePagesAction(observationID int64, unknown *unreadablePagesError) Action {
+// unreadablePagesAction is the skip of a memory that no readable page carries while a page could not be read: it
+// names the memory (as a memory of its store is named, noun) and every page that could not be read, and says
+// nothing was written.
+func unreadablePagesAction(noun, id string, unreadable []UnreadablePage) Action {
 	return Action{
 		Kind: ActionSkippedUnreadablePages,
 		Diagnostic: &Diagnostic{
 			Rule: "unreadable-pages",
-			Detail: fmt.Sprintf("observation %d was not promoted: no readable page belongs to it, but a page that could not be read may: %s; nothing was written for it",
-				observationID, describePages(unknown.pages)),
+			Detail: fmt.Sprintf("%s %s was not promoted: no readable page belongs to it, but a page that could not be read may: %s; nothing was written for it",
+				noun, id, describePages(unreadable)),
 		},
 	}
 }

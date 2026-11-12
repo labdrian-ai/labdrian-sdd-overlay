@@ -1,5 +1,3 @@
-//go:build t3next
-
 package promote
 
 import (

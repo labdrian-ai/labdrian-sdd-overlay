@@ -1,6 +1,6 @@
 // Package promote implements longterm-mem's promotion writer: which
-// Engram observations are eligible (R-007) and how an eligible observation
-// becomes a contract-conformant vault page (R-027).
+// memories are eligible (R-007) and how an eligible memory becomes a
+// contract-conformant vault page (R-027), whichever store it comes from.
 package promote
 
 import (
@@ -25,27 +25,27 @@ var excludedTopicPrefixes = map[string]bool{
 	"session":  true,
 }
 
-// Eligible reports whether obs is eligible for promotion (R-007): pinned,
+// Eligible reports whether m is eligible for promotion (R-007): pinned,
 // OR carrying a curated topic_key, OR explicitly targeted by a promote
 // call, which overrides every other criterion.
-func Eligible(obs memory.Observation, explicit bool) bool {
-	return explicit || obs.Pinned || curatedTopicKey(obs.TopicKey)
+func Eligible(m memory.Memory, explicit bool) bool {
+	return explicit || m.Pinned || curatedTopicKey(m.TopicKey)
 }
 
-// IneligibleReason says why obs is not eligible for promotion on its own, with no explicit promote call: it is
-// the reason Eligible(obs, false) is false, worded as the predicate of "observation N", and empty when
-// Eligible(obs, false) is true. It lives beside the rule so that a change to the rule cannot leave the reason it
+// IneligibleReason says why m is not eligible for promotion on its own, with no explicit promote call: it is
+// the reason Eligible(m, false) is false, worded as the predicate of "observation N", and empty when
+// Eligible(m, false) is true. It lives beside the rule so that a change to the rule cannot leave the reason it
 // gives behind: both read the same pinned flag and the same topic_key.
 //
 // An observation that is not pinned is refused for one of two reasons, and the reason says which: it has no
 // topic_key (an empty one, or one of white space), or it has one that is not curated -- its first segment, past
 // a goal's prefix, is empty or is one of the excluded ones (sdd, review, delivery, odd, session). A topic_key is
 // quoted as it is, trimmed of the white space around it.
-func IneligibleReason(obs memory.Observation) string {
-	if Eligible(obs, false) {
+func IneligibleReason(m memory.Memory) string {
+	if Eligible(m, false) {
 		return ""
 	}
-	key := strings.TrimSpace(obs.TopicKey)
+	key := strings.TrimSpace(m.TopicKey)
 	if key == "" {
 		return "is not pinned and has no topic_key"
 	}

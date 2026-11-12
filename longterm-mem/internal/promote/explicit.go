@@ -39,5 +39,5 @@ func ExplicitPromote(ctx context.Context, w *Writer, lookup ObservationLookup, i
 	if !ok {
 		return Result{}, fmt.Errorf("%w: %d", ErrObservationNotFound, id)
 	}
-	return w.Promote(ctx, obs, true)
+	return w.Promote(ctx, memoryOfObservation(obs), true)
 }
