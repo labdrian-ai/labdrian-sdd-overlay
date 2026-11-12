@@ -838,6 +838,32 @@ it, counts it as bridged and does not fail on it.
 Engram observation; an Engram observation whose memorycard memory already had
 a page was promoted again, and `sync --dry-run` planned that promotion.)
 
+A memory that has a page of its own in its project SHALL be decided by that
+page before any bridge: it is updated or left as it is, never refused as
+bridged, and only a memory with no page of its own can be bridged. The same
+walk SHALL apply to a memory of memorycard whose project changed since it was
+promoted: it is promoted into its new project, and the page it left behind in
+the old one is marked superseded by the new page.
+
+(Previously: a memorycard memory was checked for a bridged page before its
+own, and a memorycard page was found only by its memory's current project, so a
+memory that moved to another project got a second page and left the first one
+untouched.)
+
+#### Scenario: A memory with a page of its own is not refused as bridged
+
+- GIVEN a memorycard memory that has a page of its own and whose lineage
+  observation also has a page
+- WHEN sync or an explicit promote runs for it
+- THEN its own page is updated or left current, and no bridge refuses it
+
+#### Scenario: A memorycard memory that changed project supersedes its old page
+
+- GIVEN a promoted memorycard memory whose project changed
+- WHEN sync runs for its new project
+- THEN a page is created in the new project and the page left in the old
+  project is marked superseded by it
+
 #### Scenario: Never-promoted eligible observation is promoted
 
 - GIVEN an eligible, never-promoted observation for project P

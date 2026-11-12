@@ -39,6 +39,8 @@ hand since it was written is left alone (exit 6).
 | The memory has no page in its project | a page is created (`promoted c-NNNNNN (created)`) |
 | The memory has a page in its project at the same revision | nothing is written; exit 0, `memorycard memory N already promoted as c-NNNNNN; the page is left as it is` |
 | The memory has a page in its project and a newer revision | the page is updated in place (`promoted c-NNNNNN (updated)`) |
+| The memory has a page of its own and its lineage observation also has one | the page of its own decides first: it is updated or left as it is, and the memory is never refused as bridged (previously the bridge was checked before the memory's own page) |
+| The memory's project changed since it was promoted | a page is created in the new project and the page left in the old one is marked superseded by it, as for an Engram observation (previously the memory got a second page and the first stayed untouched) |
 | The memory is bridged: its `import_map` row (source `engram`, `source_key` = an Engram observation id) names an observation that already has a page | refused, exit 6 (`registration_conflict`); the message names that page, and the page stays byte-identical. No page is created |
 | The memory has no `import_map` row and its `content_hash` is the hash memorycard would compute for an Engram observation of the same project that already has a page | refused exactly like a bridged memory, the message saying the content is the same |
 | A page of the vault could not be read and none that could be read decides the memory | nothing is written, exit 6, as for an Engram observation |
