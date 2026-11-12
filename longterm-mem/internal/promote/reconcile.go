@@ -214,7 +214,7 @@ func Reconcile(pages PageReader, project, address string, precedence PrecedenceR
 	// revision to record. So is a negative one.
 	revision, ok := frontmatterRevision(fmBlock)
 	if !ok || revision < 0 {
-		return ReconcileOutcome{}, fmt.Errorf("%w: %s carries no readable engram_revision, so there is no revision to record for it; a page promoted at revision 0 is adopted, but a missing or non-numeric one is corruption", ErrUnusablePage, full)
+		return ReconcileOutcome{}, fmt.Errorf("%w: %s carries no readable Engram revision (engram_revision, or source_revision beside source: engram), so there is no revision to record for it; a page promoted at revision 0 is adopted, but a missing or non-numeric one is corruption", ErrUnusablePage, full)
 	}
 
 	store.Set(address, PrecedenceEntry{

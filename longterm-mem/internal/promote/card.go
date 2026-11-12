@@ -119,7 +119,7 @@ func decideCard(m memory.CardMemory, scan cardScan) (cardDecision, error) {
 		if raw := scan.own.RawRevision; raw != "" {
 			parsed, err := strconv.Atoi(raw)
 			if err != nil {
-				return cardCurrent, fmt.Errorf("promote: promoted page %s carries an unparseable %s %q: %w", scan.own.File, memorycardRevisionField, raw, err)
+				return cardCurrent, fmt.Errorf("promote: promoted page %s carries an unparseable %s %q: %w", scan.own.File, scan.own.RevisionKey, raw, err)
 			}
 			onDisk = parsed
 		}
@@ -270,10 +270,11 @@ func readCardPages(pages PageReader) (*cardPages, error) {
 		fields := parseFrontmatterFields(block)
 		match := promotedPageMatch{File: file, Project: fields[projectField], Address: strings.TrimSpace(fields["address"])}
 		card, cardNamed := identityOf(fields, memorycardSource)
-		match.RawRevision = card.Revision
+		match.RawRevision, match.RevisionKey = revisionOf(fields, memorycardSource)
 		if engram, named := identityOf(fields, engramSource); named {
 			engramMatch := match
 			engramMatch.EngramID = engram.ID
+			engramMatch.RawRevision, engramMatch.RevisionKey = "", ""
 			index.engramPages = append(index.engramPages, engramMatch)
 		}
 		if id, err := strconv.ParseInt(strings.TrimSpace(card.ID), 10, 64); cardNamed && err == nil {

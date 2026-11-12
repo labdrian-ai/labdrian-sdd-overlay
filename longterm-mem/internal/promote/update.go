@@ -178,18 +178,18 @@ func entryFor(page Page) PrecedenceEntry {
 	return entry
 }
 
-// frontmatterRevision reads the revision of the Engram identity a frontmatter block names (engram_revision or
-// source_revision, through identityOf) as an integer. A block missing the field, or carrying something that is not an
+// frontmatterRevision reads the revision a frontmatter block records for Engram (engram_revision, or
+// source_revision beside source: engram, through revisionOf; no id is needed) as an integer. A block missing the field, or carrying something that is not an
 // integer, reports false rather than a zero revision: every caller treats
 // "no readable revision" as no evidence and fails closed, which a silent 0
 // would quietly turn into "revision 0", the smallest possible revision and
 // therefore the most permissive answer.
 func frontmatterRevision(fmBlock string) (int, bool) {
-	identity, named := identityOf(parseFrontmatterFields(fmBlock), engramSource)
-	if !named || identity.Revision == "" {
+	raw, _ := revisionOf(parseFrontmatterFields(fmBlock), engramSource)
+	if raw == "" {
 		return 0, false
 	}
-	revision, err := strconv.Atoi(identity.Revision)
+	revision, err := strconv.Atoi(raw)
 	if err != nil {
 		return 0, false
 	}
