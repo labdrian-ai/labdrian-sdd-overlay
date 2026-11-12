@@ -13,7 +13,7 @@ import (
 )
 
 // promoted-pages-eligible joins each promoted page with the observation it was promoted from (the page's
-// engram_id) and reports, as an advisory warning, every page whose observation promote.Eligible(obs, false)
+// engram_id) and reports, as an advisory warning, every page whose observation promote.Eligible(opstest.EngramMemory(obs), false)
 // refuses: sync no longer refreshes it (issue #293). These tests drive it through Doctor, with the pages a reader
 // answers and the observations a function answers, and name no check function of the package.
 
@@ -22,7 +22,7 @@ import (
 func promotedFrom(t *testing.T, obs memory.Observation, address string) [2]string {
 	t.Helper()
 	obs.Type, obs.Title, obs.Content, obs.Project, obs.RevisionCount = "decision", "Widget Decision", "Body content.", doctorTestProject, 1
-	page, err := promote.EmitPage(obs, address, nil, opstest.Instant())
+	page, err := promote.EmitPage(opstest.EngramMemory(obs), address, nil, opstest.Instant())
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
 	}
@@ -160,11 +160,11 @@ func TestDoctorAgreesWithPromoteEligible(t *testing.T) {
 		got := eligibilityCheckOf(t, pages, observations.read)
 
 		wantStatus := CheckWarned
-		if promote.Eligible(obs, false) {
+		if promote.Eligible(opstest.EngramMemory(obs), false) {
 			wantStatus = CheckPassed
 		}
 		if got.Status != wantStatus {
-			t.Errorf("pinned=%v topic_key=%q: promoted-pages-eligible = %+v, want %s (promote.Eligible says %v)", obs.Pinned, obs.TopicKey, got, wantStatus, promote.Eligible(obs, false))
+			t.Errorf("pinned=%v topic_key=%q: promoted-pages-eligible = %+v, want %s (promote.Eligible says %v)", obs.Pinned, obs.TopicKey, got, wantStatus, promote.Eligible(opstest.EngramMemory(obs), false))
 		}
 	}
 }

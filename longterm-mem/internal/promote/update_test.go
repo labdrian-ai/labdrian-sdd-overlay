@@ -46,7 +46,7 @@ func TestUpdate_UnmodifiedPageUpdatesInPlace(t *testing.T) {
 	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 	obs := memory.Observation{ID: 301, Type: "decision", Title: "Widget Decision", Content: "V1 content.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
-	first, err := EmitPage(obs, "c-000301", nil, clock.Now())
+	first, err := EmitPage(obsMemory(obs), "c-000301", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (v1): %v", err)
 	}
@@ -58,7 +58,7 @@ func TestUpdate_UnmodifiedPageUpdatesInPlace(t *testing.T) {
 	clock.Set(time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
 	obs.RevisionCount = 2
 	obs.Content = "V2 content."
-	second, err := EmitPage(obs, "c-000301", nil, clock.Now())
+	second, err := EmitPage(obsMemory(obs), "c-000301", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (v2): %v", err)
 	}
@@ -103,7 +103,7 @@ func TestUpdate_RetitleKeepsSameFile(t *testing.T) {
 	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 	obs := memory.Observation{ID: 302, Type: "pattern", Title: "Original Title", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
-	first, err := EmitPage(obs, "c-000302", nil, clock.Now())
+	first, err := EmitPage(obsMemory(obs), "c-000302", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (original): %v", err)
 	}
@@ -114,7 +114,7 @@ func TestUpdate_RetitleKeepsSameFile(t *testing.T) {
 
 	obs.Title = "Renamed Title"
 	obs.RevisionCount = 2
-	second, err := EmitPage(obs, "c-000302", nil, clock.Now())
+	second, err := EmitPage(obsMemory(obs), "c-000302", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (retitled): %v", err)
 	}
@@ -159,7 +159,7 @@ func TestUpdate_LocallyEditedPageSkippedWithDiagnostic(t *testing.T) {
 	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 	obs := memory.Observation{ID: 303, Type: "decision", Title: "Locally Edited", Content: "Original body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
-	first, err := EmitPage(obs, "c-000303", nil, clock.Now())
+	first, err := EmitPage(obsMemory(obs), "c-000303", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
 	}
@@ -177,7 +177,7 @@ func TestUpdate_LocallyEditedPageSkippedWithDiagnostic(t *testing.T) {
 	}
 
 	obs.RevisionCount = 2
-	second, err := EmitPage(obs, "c-000303", nil, clock.Now())
+	second, err := EmitPage(obsMemory(obs), "c-000303", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (re-promotion): %v", err)
 	}
@@ -214,7 +214,7 @@ func TestUpdate_UnmodifiedPageUpdatesNormally(t *testing.T) {
 	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 	obs := memory.Observation{ID: 304, Type: "decision", Title: "Not Locally Edited", Content: "Same content, no local edit.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
-	page, err := EmitPage(obs, "c-000304", nil, clock.Now())
+	page, err := EmitPage(obsMemory(obs), "c-000304", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
 	}
@@ -251,7 +251,7 @@ func TestUpdate_UnknownProvenancePageIsNotOverwritten(t *testing.T) {
 	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 	obs := memory.Observation{ID: 305, Type: "decision", Title: "Untracked On Disk", Content: "Body nobody tracked.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
-	existing, err := EmitPage(obs, "c-000305", nil, clock.Now())
+	existing, err := EmitPage(obsMemory(obs), "c-000305", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
 	}
@@ -263,7 +263,7 @@ func TestUpdate_UnknownProvenancePageIsNotOverwritten(t *testing.T) {
 
 	obs.RevisionCount = 2
 	obs.Content = "Freshly rendered body."
-	incoming, err := EmitPage(obs, "c-000305", nil, clock.Now())
+	incoming, err := EmitPage(obsMemory(obs), "c-000305", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (re-promotion): %v", err)
 	}
@@ -301,7 +301,7 @@ func TestUpdate_InterruptedPriorWriteReconciles(t *testing.T) {
 	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 	obs := memory.Observation{ID: 306, Type: "decision", Title: "Interrupted Write", Content: "V1 body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
-	first, err := EmitPage(obs, "c-000306", nil, clock.Now())
+	first, err := EmitPage(obsMemory(obs), "c-000306", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
 	}
@@ -313,7 +313,7 @@ func TestUpdate_InterruptedPriorWriteReconciles(t *testing.T) {
 	clock.Set(time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
 	obs.RevisionCount = 2
 	obs.Content = "V2 body."
-	second, err := EmitPage(obs, "c-000306", nil, clock.Now())
+	second, err := EmitPage(obsMemory(obs), "c-000306", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (re-promotion): %v", err)
 	}
@@ -358,7 +358,7 @@ func TestUpdate_UnrecordedOwnWriteIsAdopted(t *testing.T) {
 	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 	obs := memory.Observation{ID: 307, Type: "decision", Title: "Unrecorded Own Write", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
-	onDisk, err := EmitPage(obs, "c-000307", nil, clock.Now())
+	onDisk, err := EmitPage(obsMemory(obs), "c-000307", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (interrupted create): %v", err)
 	}
@@ -370,7 +370,7 @@ func TestUpdate_UnrecordedOwnWriteIsAdopted(t *testing.T) {
 	// A later day, so the re-render differs from disk in exactly the two
 	// date stamps and nothing else.
 	clock.Set(time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
-	incoming, err := EmitPage(obs, "c-000307", nil, clock.Now())
+	incoming, err := EmitPage(obsMemory(obs), "c-000307", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (retry): %v", err)
 	}
@@ -414,7 +414,7 @@ func TestUpdate_UntrackedPageDifferingOnlyInANonVolatileFieldIsNotAdopted(t *tes
 	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 	obs := memory.Observation{ID: 308, Type: "decision", Title: "Hand Edited Status", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
-	page, err := EmitPage(obs, "c-000308", nil, clock.Now())
+	page, err := EmitPage(obsMemory(obs), "c-000308", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
 	}
@@ -429,7 +429,7 @@ func TestUpdate_UntrackedPageDifferingOnlyInANonVolatileFieldIsNotAdopted(t *tes
 	}
 
 	clock.Set(time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
-	incoming, err := EmitPage(obs, "c-000308", nil, clock.Now())
+	incoming, err := EmitPage(obsMemory(obs), "c-000308", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (retry): %v", err)
 	}
@@ -499,7 +499,7 @@ func TestUpdate_InterruptedUpdateRetriedOnALaterDayReconciles(t *testing.T) {
 	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 	obs := memory.Observation{ID: 309, Type: "decision", Title: "Interrupted Across Days", Content: "V1 body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
-	first, err := EmitPage(obs, "c-000309", nil, clock.Now())
+	first, err := EmitPage(obsMemory(obs), "c-000309", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (v1): %v", err)
 	}
@@ -513,7 +513,7 @@ func TestUpdate_InterruptedUpdateRetriedOnALaterDayReconciles(t *testing.T) {
 	clock.Set(time.Date(2026, 8, 10, 0, 0, 0, 0, time.UTC))
 	obs.RevisionCount = 2
 	obs.Content = "V2 body."
-	interrupted, err := EmitPage(obs, "c-000309", nil, clock.Now())
+	interrupted, err := EmitPage(obsMemory(obs), "c-000309", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (interrupted v2): %v", err)
 	}
@@ -524,7 +524,7 @@ func TestUpdate_InterruptedUpdateRetriedOnALaterDayReconciles(t *testing.T) {
 	// The retry, a later day: same observation, so the only divergence from
 	// disk is the two date stamps.
 	clock.Set(time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
-	retry, err := EmitPage(obs, "c-000309", nil, clock.Now())
+	retry, err := EmitPage(obsMemory(obs), "c-000309", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (retry): %v", err)
 	}
@@ -573,7 +573,7 @@ func TestUpdate_InterruptedUpdateFollowedByANewRevisionReconciles(t *testing.T) 
 	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 	obs := memory.Observation{ID: 310, Type: "decision", Title: "Interrupted Then Revised", Content: "V1 body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
-	first, err := EmitPage(obs, "c-000310", nil, clock.Now())
+	first, err := EmitPage(obsMemory(obs), "c-000310", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (v1): %v", err)
 	}
@@ -585,7 +585,7 @@ func TestUpdate_InterruptedUpdateFollowedByANewRevisionReconciles(t *testing.T) 
 	clock.Set(time.Date(2026, 8, 10, 0, 0, 0, 0, time.UTC))
 	obs.RevisionCount = 2
 	obs.Content = "V2 body."
-	interrupted, err := EmitPage(obs, "c-000310", nil, clock.Now())
+	interrupted, err := EmitPage(obsMemory(obs), "c-000310", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (interrupted v2): %v", err)
 	}
@@ -596,7 +596,7 @@ func TestUpdate_InterruptedUpdateFollowedByANewRevisionReconciles(t *testing.T) 
 	clock.Set(time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
 	obs.RevisionCount = 3
 	obs.Content = "V3 body."
-	incoming, err := EmitPage(obs, "c-000310", nil, clock.Now())
+	incoming, err := EmitPage(obsMemory(obs), "c-000310", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (v3): %v", err)
 	}
@@ -649,7 +649,7 @@ func TestUpdate_PageAheadOfTheSidecarWithAnEditedBodyIsStillSkipped(t *testing.T
 	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 	obs := memory.Observation{ID: 311, Type: "decision", Title: "Edited During The Window", Content: "V1 body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
-	first, err := EmitPage(obs, "c-000311", nil, clock.Now())
+	first, err := EmitPage(obsMemory(obs), "c-000311", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (v1): %v", err)
 	}
@@ -661,7 +661,7 @@ func TestUpdate_PageAheadOfTheSidecarWithAnEditedBodyIsStillSkipped(t *testing.T
 	clock.Set(time.Date(2026, 8, 10, 0, 0, 0, 0, time.UTC))
 	obs.RevisionCount = 2
 	obs.Content = "V2 body."
-	interrupted, err := EmitPage(obs, "c-000311", nil, clock.Now())
+	interrupted, err := EmitPage(obsMemory(obs), "c-000311", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (interrupted v2): %v", err)
 	}
@@ -675,7 +675,7 @@ func TestUpdate_PageAheadOfTheSidecarWithAnEditedBodyIsStillSkipped(t *testing.T
 	clock.Set(time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
 	obs.RevisionCount = 3
 	obs.Content = "V3 body."
-	incoming, err := EmitPage(obs, "c-000311", nil, clock.Now())
+	incoming, err := EmitPage(obsMemory(obs), "c-000311", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (v3): %v", err)
 	}
@@ -783,7 +783,7 @@ func TestUpdate_FrontmatterEditInsideTheUpdateWindowIsStillSkipped(t *testing.T)
 				clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 				obs := memory.Observation{ID: 312, Type: "decision", Title: "Edited Frontmatter", Content: "V1 body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
-				first, err := EmitPage(obs, "c-000312", nil, clock.Now())
+				first, err := EmitPage(obsMemory(obs), "c-000312", nil, clock.Now())
 				if err != nil {
 					t.Fatalf("EmitPage (v1): %v", err)
 				}
@@ -797,7 +797,7 @@ func TestUpdate_FrontmatterEditInsideTheUpdateWindowIsStillSkipped(t *testing.T)
 				clock.Set(time.Date(2026, 8, 10, 0, 0, 0, 0, time.UTC))
 				obs.RevisionCount = 2
 				obs.Content = "V2 body."
-				interrupted, err := EmitPage(obs, "c-000312", nil, clock.Now())
+				interrupted, err := EmitPage(obsMemory(obs), "c-000312", nil, clock.Now())
 				if err != nil {
 					t.Fatalf("EmitPage (interrupted v2): %v", err)
 				}
@@ -811,7 +811,7 @@ func TestUpdate_FrontmatterEditInsideTheUpdateWindowIsStillSkipped(t *testing.T)
 				clock.Set(time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
 				obs.RevisionCount = 3
 				obs.Content = "V3 body."
-				incoming, err := EmitPage(obs, "c-000312", nil, clock.Now())
+				incoming, err := EmitPage(obsMemory(obs), "c-000312", nil, clock.Now())
 				if err != nil {
 					t.Fatalf("EmitPage (v3): %v", err)
 				}
@@ -851,7 +851,7 @@ func TestUpdate_PageLevelWithTheSidecarRevisionIsSkipped(t *testing.T) {
 	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 	obs := memory.Observation{ID: 313, Type: "decision", Title: "Level With The Sidecar", Content: "V2 body, first paragraph.", Project: "labdrian-sdd-overlay", RevisionCount: 2}
-	promoted, err := EmitPage(obs, "c-000313", nil, clock.Now())
+	promoted, err := EmitPage(obsMemory(obs), "c-000313", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (v2): %v", err)
 	}
@@ -874,7 +874,7 @@ func TestUpdate_PageLevelWithTheSidecarRevisionIsSkipped(t *testing.T) {
 	clock.Set(time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
 	obs.RevisionCount = 3
 	obs.Content = "V3 body."
-	incoming, err := EmitPage(obs, "c-000313", nil, clock.Now())
+	incoming, err := EmitPage(obsMemory(obs), "c-000313", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (v3): %v", err)
 	}
@@ -906,7 +906,7 @@ func TestUpdate_PageClaimingARevisionEngramHasNotReachedIsSkipped(t *testing.T) 
 	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 	obs := memory.Observation{ID: 314, Type: "decision", Title: "Ahead Of Engram", Content: "V1 body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
-	first, err := EmitPage(obs, "c-000314", nil, clock.Now())
+	first, err := EmitPage(obsMemory(obs), "c-000314", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (v1): %v", err)
 	}
@@ -919,7 +919,7 @@ func TestUpdate_PageClaimingARevisionEngramHasNotReachedIsSkipped(t *testing.T) 
 	clock.Set(time.Date(2026, 8, 10, 0, 0, 0, 0, time.UTC))
 	obs.RevisionCount = 5
 	obs.Content = "A body claiming revision 5."
-	forged, err := EmitPage(obs, "c-000314", nil, clock.Now())
+	forged, err := EmitPage(obsMemory(obs), "c-000314", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (claimed v5): %v", err)
 	}
@@ -931,7 +931,7 @@ func TestUpdate_PageClaimingARevisionEngramHasNotReachedIsSkipped(t *testing.T) 
 	clock.Set(time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
 	obs.RevisionCount = 3
 	obs.Content = "V3 body."
-	incoming, err := EmitPage(obs, "c-000314", nil, clock.Now())
+	incoming, err := EmitPage(obsMemory(obs), "c-000314", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (v3): %v", err)
 	}
@@ -964,7 +964,7 @@ func TestUpdate_LegacyEntryWithABodyEditIsStillSkipped(t *testing.T) {
 	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 	obs := memory.Observation{ID: 316, Type: "decision", Title: "Legacy Body Edit", Content: "V2 body, first paragraph.", Project: "labdrian-sdd-overlay", RevisionCount: 2}
-	promoted, err := EmitPage(obs, "c-000316", nil, clock.Now())
+	promoted, err := EmitPage(obsMemory(obs), "c-000316", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (v2): %v", err)
 	}
@@ -984,7 +984,7 @@ func TestUpdate_LegacyEntryWithABodyEditIsStillSkipped(t *testing.T) {
 	clock.Set(time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
 	obs.RevisionCount = 3
 	obs.Content = "V3 body."
-	incoming, err := EmitPage(obs, "c-000316", nil, clock.Now())
+	incoming, err := EmitPage(obsMemory(obs), "c-000316", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (v3): %v", err)
 	}
@@ -1018,7 +1018,7 @@ func TestUpdate_LegacyEntryLevelWithTheIncomingRevisionIsSkipped(t *testing.T) {
 	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 	obs := memory.Observation{ID: 317, Type: "decision", Title: "Legacy Level With Engram", Content: "V1 body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
-	first, err := EmitPage(obs, "c-000317", nil, clock.Now())
+	first, err := EmitPage(obsMemory(obs), "c-000317", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (v1): %v", err)
 	}
@@ -1032,7 +1032,7 @@ func TestUpdate_LegacyEntryLevelWithTheIncomingRevisionIsSkipped(t *testing.T) {
 	clock.Set(time.Date(2026, 8, 10, 0, 0, 0, 0, time.UTC))
 	obs.RevisionCount = 2
 	obs.Content = "V2 body, first paragraph."
-	second, err := EmitPage(obs, "c-000317", nil, clock.Now())
+	second, err := EmitPage(obsMemory(obs), "c-000317", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (v2): %v", err)
 	}
@@ -1047,7 +1047,7 @@ func TestUpdate_LegacyEntryLevelWithTheIncomingRevisionIsSkipped(t *testing.T) {
 	// Engram is still at revision 2, so the promotion re-renders the same
 	// revision the page already claims.
 	clock.Set(time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
-	incoming, err := EmitPage(obs, "c-000317", nil, clock.Now())
+	incoming, err := EmitPage(obsMemory(obs), "c-000317", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (v2 retry): %v", err)
 	}
@@ -1086,7 +1086,7 @@ func TestUpdate_LegacyEntryOnAHandEditedPageIsRefused(t *testing.T) {
 	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 	obs := memory.Observation{ID: 318, Type: "decision", Title: "Legacy Hand Edit", Content: "V2 body, first paragraph.", Project: "labdrian-sdd-overlay", RevisionCount: 2}
-	promoted, err := EmitPage(obs, "c-000318", nil, clock.Now())
+	promoted, err := EmitPage(obsMemory(obs), "c-000318", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (v2): %v", err)
 	}
@@ -1096,7 +1096,7 @@ func TestUpdate_LegacyEntryOnAHandEditedPageIsRefused(t *testing.T) {
 	store := PrecedenceStore{}
 	store.Set(promoted.Address, legacyEntryFor(promoted))
 
-	editedFM := strings.Replace(promoted.Frontmatter, "status: "+statusFor(obs), "status: evergreen", 1)
+	editedFM := strings.Replace(promoted.Frontmatter, "status: "+statusFor(obsMemory(obs)), "status: evergreen", 1)
 	edited := editedFM + strings.Replace(promoted.Body, "V2 body, first paragraph.", "V2 body, first paragraph.\n\nAnd the human's own second one.", 1)
 	if edited == promoted.Frontmatter+promoted.Body {
 		t.Fatalf("fixture edit changed nothing; page was:\n%s", promoted.Frontmatter+promoted.Body)
@@ -1108,7 +1108,7 @@ func TestUpdate_LegacyEntryOnAHandEditedPageIsRefused(t *testing.T) {
 	clock.Set(time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
 	obs.RevisionCount = 3
 	obs.Content = "V3 body."
-	incoming, err := EmitPage(obs, "c-000318", nil, clock.Now())
+	incoming, err := EmitPage(obsMemory(obs), "c-000318", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (v3): %v", err)
 	}
@@ -1141,7 +1141,7 @@ func TestUpdate_LegacyEntryOnAnUndivergedPageIsBackfilled(t *testing.T) {
 	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 	obs := memory.Observation{ID: 319, Type: "decision", Title: "Legacy Backfill", Content: "V2 body.", Project: "labdrian-sdd-overlay", RevisionCount: 2}
-	promoted, err := EmitPage(obs, "c-000319", nil, clock.Now())
+	promoted, err := EmitPage(obsMemory(obs), "c-000319", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (v2): %v", err)
 	}
@@ -1153,7 +1153,7 @@ func TestUpdate_LegacyEntryOnAnUndivergedPageIsBackfilled(t *testing.T) {
 	clock.Set(time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
 	obs.RevisionCount = 3
 	obs.Content = "V3 body."
-	incoming, err := EmitPage(obs, "c-000319", nil, clock.Now())
+	incoming, err := EmitPage(obsMemory(obs), "c-000319", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (v3): %v", err)
 	}
@@ -1179,7 +1179,7 @@ func TestUpdate_LegacyEntryOnAnUndivergedPageIsBackfilled(t *testing.T) {
 	for _, revision := range []int{4, 5, 6} {
 		obs.RevisionCount = revision
 		obs.Content = fmt.Sprintf("V%d body.", revision)
-		later, err := EmitPage(obs, "c-000319", nil, clock.Now())
+		later, err := EmitPage(obsMemory(obs), "c-000319", nil, clock.Now())
 		if err != nil {
 			t.Fatalf("EmitPage (v%d): %v", revision, err)
 		}
@@ -1217,7 +1217,7 @@ func TestUpdate_InterruptedUpdateWhoseObservationWasRetitledReconciles(t *testin
 			clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 			obs := memory.Observation{ID: 320, Type: "decision", Title: "The Original Title", Content: "V1 body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
-			first, err := EmitPage(obs, "c-000320", nil, clock.Now())
+			first, err := EmitPage(obsMemory(obs), "c-000320", nil, clock.Now())
 			if err != nil {
 				t.Fatalf("EmitPage (v1): %v", err)
 			}
@@ -1231,7 +1231,7 @@ func TestUpdate_InterruptedUpdateWhoseObservationWasRetitledReconciles(t *testin
 			clock.Set(time.Date(2026, 8, 10, 0, 0, 0, 0, time.UTC))
 			obs.RevisionCount = 2
 			obs.Content = "V2 body."
-			interrupted, err := EmitPage(obs, "c-000320", nil, clock.Now())
+			interrupted, err := EmitPage(obsMemory(obs), "c-000320", nil, clock.Now())
 			if err != nil {
 				t.Fatalf("EmitPage (interrupted v2): %v", err)
 			}
@@ -1245,7 +1245,7 @@ func TestUpdate_InterruptedUpdateWhoseObservationWasRetitledReconciles(t *testin
 			obs.RevisionCount = 3
 			obs.Content = "V3 body."
 			tt.apply(&obs)
-			incoming, err := EmitPage(obs, "c-000320", nil, clock.Now())
+			incoming, err := EmitPage(obsMemory(obs), "c-000320", nil, clock.Now())
 			if err != nil {
 				t.Fatalf("EmitPage (v3): %v", err)
 			}
@@ -1314,7 +1314,7 @@ func TestUpdate_InterruptedUpdateWhoseObservationChangedDescriptiveFieldsReconci
 			clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 			obs := memory.Observation{ID: 321, Type: "decision", Title: "Moved Observation", Content: "V1 body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
-			first, err := EmitPage(obs, "c-000321", nil, clock.Now())
+			first, err := EmitPage(obsMemory(obs), "c-000321", nil, clock.Now())
 			if err != nil {
 				t.Fatalf("EmitPage (v1): %v", err)
 			}
@@ -1328,7 +1328,7 @@ func TestUpdate_InterruptedUpdateWhoseObservationChangedDescriptiveFieldsReconci
 			clock.Set(time.Date(2026, 8, 10, 0, 0, 0, 0, time.UTC))
 			obs.RevisionCount = 2
 			obs.Content = "V2 body."
-			interrupted, err := EmitPage(obs, "c-000321", nil, clock.Now())
+			interrupted, err := EmitPage(obsMemory(obs), "c-000321", nil, clock.Now())
 			if err != nil {
 				t.Fatalf("EmitPage (interrupted v2): %v", err)
 			}
@@ -1342,7 +1342,7 @@ func TestUpdate_InterruptedUpdateWhoseObservationChangedDescriptiveFieldsReconci
 			obs.RevisionCount = 3
 			obs.Content = "V3 body."
 			tt.apply(&obs)
-			incoming, err := EmitPage(obs, "c-000321", nil, clock.Now())
+			incoming, err := EmitPage(obsMemory(obs), "c-000321", nil, clock.Now())
 			if err != nil {
 				t.Fatalf("EmitPage (v3): %v", err)
 			}

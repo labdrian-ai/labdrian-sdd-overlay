@@ -48,7 +48,7 @@ func TestWriter_Promote_ProjectMoveSupersedesOldPage(t *testing.T) {
 	moved := obs
 	moved.Project = "p-two"
 	w := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: store, Precedence: &memPrecedence{}, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress), Clock: &fakeClock{at: testInstant}}
-	result, err := w.Promote(t.Context(), moved, false)
+	result, err := w.Promote(t.Context(), obsMemory(moved), false)
 	if err != nil {
 		t.Fatalf("Promote after project move: %v", err)
 	}
@@ -85,7 +85,7 @@ func TestWriter_Promote_ProjectMoveKeepsOldPageOffTheLocalEditPath(t *testing.T)
 	moved := obs
 	moved.Project = "p-two"
 	w := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: store, Precedence: &memPrecedence{}, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress), Clock: &fakeClock{at: testInstant}}
-	if _, err := w.Promote(t.Context(), moved, false); err != nil {
+	if _, err := w.Promote(t.Context(), obsMemory(moved), false); err != nil {
 		t.Fatalf("Promote after project move: %v", err)
 	}
 
@@ -122,7 +122,7 @@ func TestWriter_Promote_ProjectMoveIsIdempotent(t *testing.T) {
 	moved := obs
 	moved.Project = "p-two"
 	w := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: store, Precedence: &memPrecedence{}, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress), Clock: &fakeClock{at: testInstant}}
-	if _, err := w.Promote(t.Context(), moved, false); err != nil {
+	if _, err := w.Promote(t.Context(), obsMemory(moved), false); err != nil {
 		t.Fatalf("first Promote after project move: %v", err)
 	}
 	afterFirst := readPage(t, vaultRoot, oldPage.Address)
@@ -133,7 +133,7 @@ func TestWriter_Promote_ProjectMoveIsIdempotent(t *testing.T) {
 		t.Fatalf("stat old page: %v", err)
 	}
 
-	if _, err := w.Promote(t.Context(), moved, false); err != nil {
+	if _, err := w.Promote(t.Context(), obsMemory(moved), false); err != nil {
 		t.Fatalf("second Promote after project move: %v", err)
 	}
 
@@ -177,7 +177,7 @@ func TestWriter_Promote_ProjectMoveLeavesAnExistingSupersessionAlone(t *testing.
 	moved := obs
 	moved.Project = "p-two"
 	w := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: store, Precedence: &memPrecedence{}, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress), Clock: &fakeClock{at: testInstant}}
-	if _, err := w.Promote(t.Context(), moved, false); err != nil {
+	if _, err := w.Promote(t.Context(), obsMemory(moved), false); err != nil {
 		t.Fatalf("Promote after project move: %v", err)
 	}
 
@@ -201,7 +201,7 @@ func TestWriter_Promote_UnmovedObservationStillReusesItsPage(t *testing.T) {
 	next.RevisionCount = 2
 	next.Content = "V2."
 	w := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: store, Precedence: &memPrecedence{}, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress), Clock: &fakeClock{at: testInstant}}
-	result, err := w.Promote(t.Context(), next, false)
+	result, err := w.Promote(t.Context(), obsMemory(next), false)
 	if err != nil {
 		t.Fatalf("Promote: %v", err)
 	}
@@ -238,7 +238,7 @@ func TestWriter_Promote_DistinctObservationsSharingAProjectDoNotCollide(t *testi
 
 	second := memory.Observation{ID: 327, Type: "decision", Title: "Second", Content: "Two.", Project: "p-one", RevisionCount: 1, TopicKey: "longterm-mem/projectmove-fixture"}
 	w := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: store, Precedence: &memPrecedence{}, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress), Clock: &fakeClock{at: testInstant}}
-	result, err := w.Promote(t.Context(), second, false)
+	result, err := w.Promote(t.Context(), obsMemory(second), false)
 	if err != nil {
 		t.Fatalf("Promote second observation: %v", err)
 	}

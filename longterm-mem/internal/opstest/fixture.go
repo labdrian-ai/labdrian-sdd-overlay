@@ -142,3 +142,7 @@ func RegisterPage(t *testing.T, vaultRoot, address, title string) {
 // Instant is the instant the fixtures render and register at: a test that builds a page here has no reason to
 // care which day it is, and a fixed one keeps the page the same on every run.
 func Instant() time.Time { return time.Date(2026, 8, 31, 0, 0, 0, 0, time.UTC) }
+
+// EngramMemory is an Engram observation as promotion reads it: what a test needs to render the page of an
+// observation (promote.EmitPage) or to ask its eligibility.
+func EngramMemory(o memory.Observation) memory.Observation { return o }

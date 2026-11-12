@@ -29,7 +29,7 @@ func (f recorderFunc) RecordAddress(path, address string, createdAt time.Time) e
 func writePageCarrying(t *testing.T, vaultRoot, address string, engramID int64) {
 	t.Helper()
 	obs := memory.Observation{ID: engramID, Type: "decision", Title: "Already Promoted", Content: "Body.", Project: "labdrian-sdd-overlay"}
-	page, err := EmitPage(obs, address, nil, testInstant)
+	page, err := EmitPage(obsMemory(obs), address, nil, testInstant)
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
 	}
@@ -143,7 +143,7 @@ func TestPromote_AnAddressTheMapCannotRecordMeansNothingIsWritten(t *testing.T) 
 	w := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: store, Precedence: repo, Addresses: staticAddress(testAddress), AddressMap: &memAddressMap{recordErr: errors.New("no")}, Clock: &fakeClock{at: testInstant}}
 	obs := memory.Observation{ID: 704, Type: "decision", Title: "Unrecordable", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1, Pinned: true}
 
-	if result, err := w.Promote(t.Context(), obs, false); err == nil {
+	if result, err := w.Promote(t.Context(), obsMemory(obs), false); err == nil {
 		t.Fatalf("Promote = %+v, nil error, want the failure to record the address", result)
 	}
 	if entries, err := os.ReadDir(vaultRoot); err != nil || len(entries) != 0 {
@@ -162,7 +162,7 @@ func TestPromote_EntersTheNewPageInTheAddressMap(t *testing.T) {
 	w := &Writer{Index: indexIn(root), Log: logIn(root), SyncState: syncStateIn(root), Pages: pagesIn(root), Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Addresses: staticAddress(testAddress), AddressMap: addresses, Clock: &fakeClock{at: testInstant}}
 	obs := memory.Observation{ID: 705, Type: "decision", Title: "Recorded", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1, Pinned: true}
 
-	result, err := w.Promote(t.Context(), obs, false)
+	result, err := w.Promote(t.Context(), obsMemory(obs), false)
 	if err != nil {
 		t.Fatalf("Promote: %v", err)
 	}
@@ -177,7 +177,7 @@ func TestPromote_EntersTheNewPageInTheAddressMap(t *testing.T) {
 // doctor has always used.
 func TestLintPage_ChecksTheAddressMapItIsHanded(t *testing.T) {
 	obs := memory.Observation{ID: 43, Type: "decision", Title: "Checked", Content: "Body.", Project: "labdrian-sdd-overlay"}
-	page, err := EmitPage(obs, "c-000043", nil, testInstant)
+	page, err := EmitPage(obsMemory(obs), "c-000043", nil, testInstant)
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
 	}

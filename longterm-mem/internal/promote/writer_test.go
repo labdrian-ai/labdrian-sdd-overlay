@@ -22,7 +22,7 @@ func TestWriter_Promote_CreatesNewPage(t *testing.T) {
 	w := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Clock: clock, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress)}
 	obs := memory.Observation{ID: 401, Type: "decision", Title: "Fresh Decision", Content: "Never promoted before.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/writer-fixture"}
 
-	result, err := w.Promote(t.Context(), obs, false)
+	result, err := w.Promote(t.Context(), obsMemory(obs), false)
 	if err != nil {
 		t.Fatalf("Promote: %v", err)
 	}
@@ -56,7 +56,7 @@ func TestWriter_Promote_UpdatesExistingPage(t *testing.T) {
 	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 	obs := memory.Observation{ID: 402, Type: "pattern", Title: "Already Promoted", Content: "V1.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/writer-fixture"}
-	first, err := EmitPage(obs, "c-000402", nil, clock.Now())
+	first, err := EmitPage(obsMemory(obs), "c-000402", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (seed v1): %v", err)
 	}
@@ -74,7 +74,7 @@ func TestWriter_Promote_UpdatesExistingPage(t *testing.T) {
 	obs.RevisionCount = 2
 	obs.Content = "V2."
 
-	result, err := w.Promote(t.Context(), obs, false)
+	result, err := w.Promote(t.Context(), obsMemory(obs), false)
 	if err != nil {
 		t.Fatalf("Promote: %v", err)
 	}
@@ -110,7 +110,7 @@ func TestWriter_Promote_SkipsLocalEdit(t *testing.T) {
 	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 	obs := memory.Observation{ID: 403, Type: "decision", Title: "Edited In Vault", Content: "Original.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/writer-fixture"}
-	first, err := EmitPage(obs, "c-000403", nil, clock.Now())
+	first, err := EmitPage(obsMemory(obs), "c-000403", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
 	}
@@ -127,7 +127,7 @@ func TestWriter_Promote_SkipsLocalEdit(t *testing.T) {
 	w := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: store, Precedence: &memPrecedence{}, Clock: clock}
 	obs.RevisionCount = 2
 
-	result, err := w.Promote(t.Context(), obs, false)
+	result, err := w.Promote(t.Context(), obsMemory(obs), false)
 	if err != nil {
 		t.Fatalf("Promote: %v", err)
 	}
@@ -160,7 +160,7 @@ func TestWriter_Promote_PersistsPrecedenceEntry(t *testing.T) {
 	w := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Clock: clock, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress)}
 	obs := memory.Observation{ID: 404, Type: "decision", Title: "Durable Pairing", Content: "Entry must outlive the process.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/writer-fixture"}
 
-	result, err := w.Promote(t.Context(), obs, false)
+	result, err := w.Promote(t.Context(), obsMemory(obs), false)
 	if err != nil {
 		t.Fatalf("Promote: %v", err)
 	}
@@ -182,13 +182,13 @@ func TestWriter_Promote_PersistsPrecedenceEntry(t *testing.T) {
 // returns the second Result -- the update branch's fixture.
 func promoteTwice(t *testing.T, w *Writer, clock *fakeClock, obs memory.Observation) Result {
 	t.Helper()
-	if _, err := w.Promote(t.Context(), obs, false); err != nil {
+	if _, err := w.Promote(t.Context(), obsMemory(obs), false); err != nil {
 		t.Fatalf("Promote (first): %v", err)
 	}
 	clock.Set(time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
 	obs.RevisionCount++
 	obs.Content = "Revised content."
-	result, err := w.Promote(t.Context(), obs, false)
+	result, err := w.Promote(t.Context(), obsMemory(obs), false)
 	if err != nil {
 		t.Fatalf("Promote (second): %v", err)
 	}
@@ -234,7 +234,7 @@ func TestWriter_Promote_SkipDoesNotPersist(t *testing.T) {
 
 	w := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Clock: clock, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress)}
 	obs := memory.Observation{ID: 406, Type: "decision", Title: "Edited By Hand", Content: "Original content.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/writer-fixture"}
-	first, err := w.Promote(t.Context(), obs, false)
+	first, err := w.Promote(t.Context(), obsMemory(obs), false)
 	if err != nil {
 		t.Fatalf("Promote (first): %v", err)
 	}
@@ -252,7 +252,7 @@ func TestWriter_Promote_SkipDoesNotPersist(t *testing.T) {
 	clock.Set(time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
 	obs.RevisionCount = 2
 	obs.Content = "Revised content."
-	second, err := w.Promote(t.Context(), obs, false)
+	second, err := w.Promote(t.Context(), obsMemory(obs), false)
 	if err != nil {
 		t.Fatalf("Promote (second): %v", err)
 	}
@@ -293,7 +293,7 @@ func TestWriter_Promote_CreateRollsBackWhenFingerprintCannotPersist(t *testing.T
 	w := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: PrecedenceStore{}, Precedence: repo, Clock: clock, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress)}
 	obs := memory.Observation{ID: 407, Type: "decision", Title: "Unpersistable", Content: "Fingerprint cannot land.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/writer-fixture"}
 
-	if _, err := w.Promote(t.Context(), obs, false); !errors.Is(err, errTestSave) {
+	if _, err := w.Promote(t.Context(), obsMemory(obs), false); !errors.Is(err, errTestSave) {
 		t.Fatalf("Promote = %v, want the sidecar persistence failure surfaced", err)
 	}
 
@@ -341,7 +341,7 @@ func TestWriter_Promote_CreatePersistsPrecedenceBeforeThePage(t *testing.T) {
 	w := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pages, Store: PrecedenceStore{}, Precedence: repo, Clock: clock, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress)}
 	obs := memory.Observation{ID: 408, Type: "decision", Title: "Unwritable Page", Content: "The page write cannot land.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/writer-fixture"}
 
-	if _, err := w.Promote(t.Context(), obs, false); !errors.Is(err, errTestPageWrite) {
+	if _, err := w.Promote(t.Context(), obsMemory(obs), false); !errors.Is(err, errTestPageWrite) {
 		t.Fatalf("Promote = %v, want the page write failure surfaced", err)
 	}
 
@@ -382,7 +382,7 @@ func TestWriter_Promote_AFailedCreateKeepsTheAddressItRecorded(t *testing.T) {
 	w := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pages, Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Clock: clock, AddressMap: addresses, Addresses: allocator}
 	obs := memory.Observation{ID: 409, Type: "decision", Title: "Unwritable Page", Content: "The page write cannot land.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/writer-fixture"}
 
-	if _, err := w.Promote(t.Context(), obs, false); !errors.Is(err, errTestPageWrite) {
+	if _, err := w.Promote(t.Context(), obsMemory(obs), false); !errors.Is(err, errTestPageWrite) {
 		t.Fatalf("Promote = %v, want the page write failure surfaced", err)
 	}
 
@@ -400,7 +400,7 @@ func TestWriter_Promote_AFailedCreateKeepsTheAddressItRecorded(t *testing.T) {
 
 	// The retry: the write can land now, and the page lands under a fresh address, not under the spent one.
 	pages.writeErr = nil
-	retried, err := w.Promote(t.Context(), obs, false)
+	retried, err := w.Promote(t.Context(), obsMemory(obs), false)
 	if err != nil {
 		t.Fatalf("Promote (retry): %v", err)
 	}
@@ -441,7 +441,7 @@ func TestWriter_Promote_CreateResumesAfterAnUnpairedFingerprint(t *testing.T) {
 
 	w := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Clock: clock, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress)}
 	obs := memory.Observation{ID: 409, Type: "decision", Title: "Entry Without A Page", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/writer-fixture"}
-	first, err := w.Promote(t.Context(), obs, false)
+	first, err := w.Promote(t.Context(), obsMemory(obs), false)
 	if err != nil {
 		t.Fatalf("Promote (first): %v", err)
 	}
@@ -459,7 +459,7 @@ func TestWriter_Promote_CreateResumesAfterAnUnpairedFingerprint(t *testing.T) {
 	}
 
 	clock.Set(time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
-	second, err := w.Promote(t.Context(), obs, false)
+	second, err := w.Promote(t.Context(), obsMemory(obs), false)
 	if err != nil {
 		t.Fatalf("Promote (resume): %v", err)
 	}
@@ -494,7 +494,7 @@ func TestWriter_Promote_AdoptsAnUnrecordedOwnPageAndRepairsRegistration(t *testi
 
 	w := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Clock: clock, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress)}
 	obs := memory.Observation{ID: 410, Type: "decision", Title: "Wedged In The Field", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/writer-fixture"}
-	first, err := w.Promote(t.Context(), obs, false)
+	first, err := w.Promote(t.Context(), obsMemory(obs), false)
 	if err != nil {
 		t.Fatalf("Promote (first): %v", err)
 	}
@@ -515,7 +515,7 @@ func TestWriter_Promote_AdoptsAnUnrecordedOwnPageAndRepairsRegistration(t *testi
 	// reconciliation succeed only on a same-day retry.
 	clock.Set(time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
 	wedged := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Clock: clock, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress)}
-	second, err := wedged.Promote(t.Context(), obs, false)
+	second, err := wedged.Promote(t.Context(), obsMemory(obs), false)
 	if err != nil {
 		t.Fatalf("Promote (wedged retry): %v", err)
 	}
@@ -560,7 +560,7 @@ func TestWriter_Promote_CreateRegistersIndexAndLog(t *testing.T) {
 	w := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Clock: clock, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress)}
 	obs := memory.Observation{ID: 501, Type: "decision", Title: "Catalog Me", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/writer-fixture"}
 
-	result, err := w.Promote(t.Context(), obs, false)
+	result, err := w.Promote(t.Context(), obsMemory(obs), false)
 	if err != nil {
 		t.Fatalf("Promote: %v", err)
 	}
@@ -629,7 +629,7 @@ func TestWriter_Promote_SkipDoesNotRegister(t *testing.T) {
 
 	w := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Clock: clock, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress)}
 	obs := memory.Observation{ID: 503, Type: "decision", Title: "Edited By Hand", Content: "Original content.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/writer-fixture"}
-	first, err := w.Promote(t.Context(), obs, false)
+	first, err := w.Promote(t.Context(), obsMemory(obs), false)
 	if err != nil {
 		t.Fatalf("Promote (first): %v", err)
 	}
@@ -652,7 +652,7 @@ func TestWriter_Promote_SkipDoesNotRegister(t *testing.T) {
 	clock.Set(time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
 	obs.RevisionCount = 2
 	obs.Content = "Revised content."
-	second, err := w.Promote(t.Context(), obs, false)
+	second, err := w.Promote(t.Context(), obsMemory(obs), false)
 	if err != nil {
 		t.Fatalf("Promote (second): %v", err)
 	}
@@ -688,7 +688,7 @@ func TestWriter_Promote_IneligibleDoesNotRegister(t *testing.T) {
 	// untopiced observation is not automatically eligible (R-007).
 	obs := memory.Observation{ID: 504, Type: "note", Title: "Not Eligible", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
 
-	result, err := w.Promote(t.Context(), obs, false)
+	result, err := w.Promote(t.Context(), obsMemory(obs), false)
 	if err != nil {
 		t.Fatalf("Promote: %v", err)
 	}

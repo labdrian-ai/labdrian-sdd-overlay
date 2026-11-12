@@ -178,7 +178,7 @@ func TestPromoteCard_NewerRevisionDoesNotOverwriteALocalEdit(t *testing.T) {
 func TestPromoteCard_BridgedMemoryIsRefused(t *testing.T) {
 	vaultRoot := t.TempDir()
 	engramObs := memory.Observation{ID: 402, Type: "pattern", Title: "Old Engram Page", Content: "Engram.", Project: "memorycard", RevisionCount: 2, TopicKey: "x/y"}
-	seeded, err := EmitPage(engramObs, "c-000402", nil, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+	seeded, err := EmitPage(obsMemory(engramObs), "c-000402", nil, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -219,7 +219,7 @@ func TestPromoteCard_BridgedMemoryIsRefused(t *testing.T) {
 func TestPromoteCard_SameContentAsAnObservationWithAPageIsRefused(t *testing.T) {
 	vaultRoot := t.TempDir()
 	engramObs := memory.Observation{ID: 402, Type: "pattern", Title: "Old Engram Page", Content: "Engram.", Project: "memorycard", RevisionCount: 2, TopicKey: "x/y"}
-	seeded, err := EmitPage(engramObs, "c-000402", nil, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+	seeded, err := EmitPage(obsMemory(engramObs), "c-000402", nil, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -194,7 +194,7 @@ func TestPromoteLeavesAnObservationAloneWhenOnlyAnUnreadablePageMightBeItsPage(t
 	pages, _, _ := pagesWithOneUnreadable(t)
 	w, repo, allocator := pagesWriter(t, pages)
 
-	result, err := w.Promote(t.Context(), pageObservation(1), false)
+	result, err := w.Promote(t.Context(), obsMemory(pageObservation(1)), false)
 
 	if err != nil {
 		t.Fatalf("Promote: %v, want the observation reported as left alone", err)
@@ -225,7 +225,7 @@ func TestPromoteUpdatesAReadablePageBesideAnUnreadableOne(t *testing.T) {
 	three.RevisionCount = 2
 	three.Content = "Revised body."
 
-	result, err := w.Promote(t.Context(), three, false)
+	result, err := w.Promote(t.Context(), obsMemory(three), false)
 
 	if err != nil || result.Action.Kind != ActionUpdated || result.Page.Address != "c-000003" {
 		t.Fatalf("Promote = (%+v, %v), want c-000003 updated", result, err)

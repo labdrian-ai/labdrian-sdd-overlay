@@ -37,7 +37,7 @@ func pagesWriter(t *testing.T, pages PageRepository) (*Writer, *memPrecedence, *
 // renderedPage is the page of obs under address, as a promotion writes it.
 func renderedPage(t *testing.T, obs memory.Observation, address string) Page {
 	t.Helper()
-	page, err := EmitPage(obs, address, nil, testInstant)
+	page, err := EmitPage(obsMemory(obs), address, nil, testInstant)
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
 	}
@@ -50,7 +50,7 @@ func TestPromote_CreatesThePageThroughThePort(t *testing.T) {
 	pages := newMemPages(nil)
 	w, _, _ := pagesWriter(t, pages)
 
-	result, err := w.Promote(t.Context(), pageObservation(501), false)
+	result, err := w.Promote(t.Context(), obsMemory(pageObservation(501)), false)
 	if err != nil {
 		t.Fatalf("Promote: %v", err)
 	}
@@ -82,7 +82,7 @@ func TestPromote_UpdatesThePageThroughThePort(t *testing.T) {
 	obs.RevisionCount = 2
 	obs.Content = "Revised body."
 
-	result, err := w.Promote(t.Context(), obs, false)
+	result, err := w.Promote(t.Context(), obsMemory(obs), false)
 	if err != nil {
 		t.Fatalf("Promote: %v", err)
 	}
@@ -105,7 +105,7 @@ func TestPromote_AFailureToTellWhetherThePageIsThereWritesNothing(t *testing.T) 
 	pages.existsErr = errTestPages
 	w, repo, _ := pagesWriter(t, pages)
 
-	_, err := w.Promote(t.Context(), pageObservation(503), false)
+	_, err := w.Promote(t.Context(), obsMemory(pageObservation(503)), false)
 
 	want := "promote: stat " + pages.PageLocation(testAddress) + ": boom"
 	if err == nil || err.Error() != want {
@@ -127,7 +127,7 @@ func TestWriterWithoutPagesIsRefusedBeforeAnythingIsDone(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			w, repo, allocator := pagesWriter(t, pages)
 
-			if _, err := w.Promote(t.Context(), pageObservation(504), false); !errors.Is(err, errNoPageRepository) {
+			if _, err := w.Promote(t.Context(), obsMemory(pageObservation(504)), false); !errors.Is(err, errNoPageRepository) {
 				t.Errorf("Promote error = %v, want errNoPageRepository", err)
 			}
 			if allocator.asked != 0 || repo.saves != 0 {
@@ -530,7 +530,7 @@ func TestPromoteSupersedesEveryMovedPageEvenWhenOneCannotBeRead(t *testing.T) {
 	moved := pageObservation(510)
 	moved.Project = "p-new"
 
-	_, err := w.Promote(t.Context(), moved, false)
+	_, err := w.Promote(t.Context(), obsMemory(moved), false)
 
 	want := "promote: read superseded page " + pages.PageLocation("c-000001") + ": boom"
 	if err == nil || err.Error() != want {
@@ -563,7 +563,7 @@ func TestPromoteFindsNoPageTheListingDoesNotName(t *testing.T) {
 	w, _, _ := pagesWriter(t, pages)
 	w.Index, w.Log = indexIn(onDisk), logIn(onDisk)
 
-	result, err := w.Promote(context.Background(), obs, false)
+	result, err := w.Promote(context.Background(), obsMemory(obs), false)
 
 	if err != nil || result.Action.Kind != ActionCreated {
 		t.Fatalf("result = %+v, err = %v, want a create: the page on the disk of the vault root is not the port's", result, err)

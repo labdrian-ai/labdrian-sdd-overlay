@@ -168,7 +168,7 @@ func TestSyncCards_AnIneligibleMemoryIsSkipped(t *testing.T) {
 func engramPageIn(t *testing.T, vaultRoot string, store PrecedenceStore, id int64, address string) string {
 	t.Helper()
 	obs := memory.Observation{ID: id, Type: "pattern", Title: "Old Engram Page", Content: "Engram.", Project: "memorycard", RevisionCount: 2, TopicKey: "x/y"}
-	page, err := EmitPage(obs, address, nil, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+	page, err := EmitPage(obsMemory(obs), address, nil, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
 	if err != nil {
 		t.Fatal(err)
 	}

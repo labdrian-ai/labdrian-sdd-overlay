@@ -24,7 +24,7 @@ func wedgedLegacyPage(t *testing.T, id int64, address string) (vaultRoot string,
 	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 	obs = memory.Observation{ID: id, Type: "decision", Title: "Wedged Legacy", Content: "V1 body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
-	first, err := EmitPage(obs, address, nil, clock.Now())
+	first, err := EmitPage(obsMemory(obs), address, nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (v1): %v", err)
 	}
@@ -44,7 +44,7 @@ func wedgedLegacyPage(t *testing.T, id int64, address string) (vaultRoot string,
 	clock.Set(time.Date(2026, 8, 10, 0, 0, 0, 0, time.UTC))
 	obs.RevisionCount = 2
 	obs.Content = "V2 body."
-	diverged, err := EmitPage(obs, address, nil, clock.Now())
+	diverged, err := EmitPage(obsMemory(obs), address, nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (v2): %v", err)
 	}
@@ -76,7 +76,7 @@ func TestReconcile_AdoptsAWedgedLegacyPageAndLeavesTheWedgedState(t *testing.T) 
 	clock := &fakeClock{at: time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC)}
 	obs.RevisionCount = 3
 	obs.Content = "V3 body."
-	next, err := EmitPage(obs, address, nil, clock.Now())
+	next, err := EmitPage(obsMemory(obs), address, nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (v3): %v", err)
 	}
@@ -137,7 +137,7 @@ func TestReconcile_AdoptsAPageWithNoEntryAtAll(t *testing.T) {
 	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 	obs := memory.Observation{ID: 602, Type: "decision", Title: "Untracked", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 4}
-	page, err := EmitPage(obs, address, nil, clock.Now())
+	page, err := EmitPage(obsMemory(obs), address, nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
 	}
@@ -175,7 +175,7 @@ func TestReconcile_RefusesAPageThatIsNotWedged(t *testing.T) {
 		clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 		obs := memory.Observation{ID: 603, Type: "decision", Title: "Healthy", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 2}
-		page, err := EmitPage(obs, address, nil, clock.Now())
+		page, err := EmitPage(obsMemory(obs), address, nil, clock.Now())
 		if err != nil {
 			t.Fatalf("EmitPage: %v", err)
 		}
@@ -202,7 +202,7 @@ func TestReconcile_RefusesAPageThatIsNotWedged(t *testing.T) {
 		clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 		obs := memory.Observation{ID: 604, Type: "decision", Title: "Edited By Hand", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 2}
-		page, err := EmitPage(obs, address, nil, clock.Now())
+		page, err := EmitPage(obsMemory(obs), address, nil, clock.Now())
 		if err != nil {
 			t.Fatalf("EmitPage: %v", err)
 		}
@@ -247,7 +247,7 @@ func TestReconcile_RefusesAPageWithNoUsableRevision(t *testing.T) {
 	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 	obs := memory.Observation{ID: 605, Type: "decision", Title: "No Revision", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 2}
-	page, err := EmitPage(obs, address, nil, clock.Now())
+	page, err := EmitPage(obsMemory(obs), address, nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
 	}

@@ -71,7 +71,7 @@ func TestAllocateAddress_RePromotionReusesExistingAddress(t *testing.T) {
 		t.Fatalf("mkdir %s: %v", memoryDir, err)
 	}
 	obs := memory.Observation{ID: 101, Type: "decision", Title: "Already Promoted", Content: "Body.", Project: "labdrian-sdd-overlay"}
-	page, err := EmitPage(obs, "c-000099", nil, testInstant)
+	page, err := EmitPage(obsMemory(obs), "c-000099", nil, testInstant)
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
 	}
@@ -102,7 +102,7 @@ func TestPromote_AsksTheAllocatorWithTheCallersContext(t *testing.T) {
 	w := &Writer{Index: indexIn(root), Log: logIn(root), SyncState: syncStateIn(root), Pages: pagesIn(root), Store: PrecedenceStore{}, Precedence: &memPrecedence{}, AddressMap: &memAddressMap{}, Addresses: allocator, Clock: &fakeClock{at: testInstant}}
 	obs := memory.Observation{ID: 704, Type: "decision", Title: "Context", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1, Pinned: true}
 
-	if _, err := w.Promote(ctx, obs, false); err != nil {
+	if _, err := w.Promote(ctx, obsMemory(obs), false); err != nil {
 		t.Fatalf("Promote: %v", err)
 	}
 	if allocator.lastAskContext == nil || allocator.lastAskContext.Value(key{}) != "the caller's" {
@@ -143,7 +143,7 @@ func TestPromote_NoAddressMeansNothingIsWritten(t *testing.T) {
 			w := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: store, Precedence: &memPrecedence{}, AddressMap: &memAddressMap{}, Addresses: addresses, Clock: &fakeClock{at: testInstant}}
 			obs := memory.Observation{ID: 704, Type: "decision", Title: "No Address", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1, Pinned: true}
 
-			result, err := w.Promote(t.Context(), obs, false)
+			result, err := w.Promote(t.Context(), obsMemory(obs), false)
 			if err == nil {
 				t.Fatalf("Promote = %+v, nil error, want the failure to get an address", result)
 			}
@@ -222,7 +222,7 @@ func TestAllocateAddress_ReuseWithoutAddressFails(t *testing.T) {
 func TestFindPromotedPage_RevisionRoundTrips(t *testing.T) {
 	vaultRoot := t.TempDir()
 	obs := memory.Observation{ID: 201, Type: "decision", Title: "Revisioned", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 5}
-	page, err := EmitPage(obs, "c-000201", nil, testInstant)
+	page, err := EmitPage(obsMemory(obs), "c-000201", nil, testInstant)
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
 	}

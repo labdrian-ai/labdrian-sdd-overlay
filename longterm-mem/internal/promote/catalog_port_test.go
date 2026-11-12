@@ -159,7 +159,7 @@ func TestPromoteRegistersThePageInTheCatalogAndTheLogThroughTheirPorts(t *testin
 	w, _, _ := pagesWriter(t, newMemPages(nil))
 	index, log, _ := registration(w)
 
-	if _, err := w.Promote(t.Context(), pageObservation(701), false); err != nil {
+	if _, err := w.Promote(t.Context(), obsMemory(pageObservation(701)), false); err != nil {
 		t.Fatalf("Promote: %v", err)
 	}
 
@@ -178,7 +178,7 @@ func TestPromoteDatesTheLogEntryWithTheDayInUTC(t *testing.T) {
 	_, log, _ := registration(w)
 	w.Clock = &fakeClock{at: time.Date(2026, 10, 10, 23, 30, 0, 0, time.FixedZone("UTC-5", -5*60*60))}
 
-	if _, err := w.Promote(t.Context(), pageObservation(709), false); err != nil {
+	if _, err := w.Promote(t.Context(), obsMemory(pageObservation(709)), false); err != nil {
 		t.Fatalf("Promote: %v", err)
 	}
 	if len(log.writes) != 1 || !strings.HasPrefix(log.writes[0], "## [2026-10-11] promote | ") {
@@ -194,7 +194,7 @@ func TestPromoteReportsACatalogItCannotWriteAndLeavesThePage(t *testing.T) {
 	index, log, _ := registration(w)
 	index.writeErr = errCatalogBoom
 
-	_, err := w.Promote(t.Context(), pageObservation(702), false)
+	_, err := w.Promote(t.Context(), obsMemory(pageObservation(702)), false)
 
 	if err != errCatalogBoom {
 		t.Fatalf("Promote error = %v, want the port's own", err)
@@ -212,7 +212,7 @@ func TestPromoteReportsALogItCannotWrite(t *testing.T) {
 	_, log, _ := registration(w)
 	log.writeErr = errCatalogBoom
 
-	if _, err := w.Promote(t.Context(), pageObservation(703), false); err != errCatalogBoom {
+	if _, err := w.Promote(t.Context(), obsMemory(pageObservation(703)), false); err != errCatalogBoom {
 		t.Fatalf("Promote error = %v, want the port's own", err)
 	}
 }
@@ -224,7 +224,7 @@ func TestPromoteRegistersNothingForAnIneligibleObservation(t *testing.T) {
 	process := pageObservation(704)
 	process.TopicKey = "sdd/some-change/progress"
 
-	if _, err := w.Promote(t.Context(), process, false); err != nil {
+	if _, err := w.Promote(t.Context(), obsMemory(process), false); err != nil {
 		t.Fatalf("Promote: %v", err)
 	}
 	if index.reads+len(index.writes)+log.reads+len(log.writes) != 0 {
@@ -252,7 +252,7 @@ func TestWriterWithoutACatalogOrALogIsRefusedBeforeAnythingIsDone(t *testing.T) 
 			w, repo, allocator := pagesWriter(t, newMemPages(nil))
 			tc.unwire(w)
 
-			_, err := w.Promote(t.Context(), pageObservation(705), false)
+			_, err := w.Promote(t.Context(), obsMemory(pageObservation(705)), false)
 			if !errors.Is(err, tc.want) || !strings.Contains(err.Error(), tc.wantNames) {
 				t.Errorf("Promote error = %v, want %v", err, tc.want)
 			}
@@ -353,7 +353,7 @@ func TestSyncWithoutARecorderIsRefusedBeforeAnythingIsDone(t *testing.T) {
 			if len(mem.listed) != 0 || repo.saves != 0 {
 				t.Errorf("listed %v, saved %d times, want nothing done", mem.listed, repo.saves)
 			}
-			if _, err := w.Promote(t.Context(), pageObservation(707), false); err != nil {
+			if _, err := w.Promote(t.Context(), obsMemory(pageObservation(707)), false); err != nil {
 				t.Errorf("Promote = %v, want a promotion not to ask for the recorder", err)
 			}
 		})

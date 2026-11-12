@@ -49,7 +49,7 @@ func asStoreAgnostic(t *testing.T, page Page) Page {
 // enginePage is the page a promotion of observation id writes, in the spelling named by agnostic.
 func enginePage(t *testing.T, obs memory.Observation, address string, agnostic bool) Page {
 	t.Helper()
-	page, err := EmitPage(obs, address, nil, testInstant)
+	page, err := EmitPage(obsMemory(obs), address, nil, testInstant)
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
 	}
@@ -280,7 +280,7 @@ func TestPageIdentity_ProjectMoveSupersedesThePageByIdentity(t *testing.T) {
 		moved := obs
 		moved.Project = "p-two"
 		w := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: store, Precedence: &memPrecedence{}, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress), Clock: &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}}
-		result, err := w.Promote(t.Context(), moved, false)
+		result, err := w.Promote(t.Context(), obsMemory(moved), false)
 		if err != nil {
 			t.Fatalf("Promote after project move: %v", err)
 		}

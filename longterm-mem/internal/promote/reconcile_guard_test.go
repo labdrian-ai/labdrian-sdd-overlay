@@ -34,7 +34,7 @@ func TestReconcile_ShapeCheckIsTheOnlyThingRefusingATraversalThatNamesItself(t *
 	vaultRoot := t.TempDir()
 	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
-	page, err := EmitPage(memory.Observation{ID: 610, Type: "decision", Title: "Outside", Content: "Body.", Project: project, RevisionCount: 2}, "c-000610", nil, clock.Now())
+	page, err := EmitPage(obsMemory(memory.Observation{ID: 610, Type: "decision", Title: "Outside", Content: "Body.", Project: project, RevisionCount: 2}), "c-000610", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
 	}
@@ -85,7 +85,7 @@ func TestReconcile_FollowsASymlinkedPageBecauseTheVaultMayBeOne(t *testing.T) {
 	vaultRoot := t.TempDir()
 	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
-	page, err := EmitPage(memory.Observation{ID: 612, Type: "decision", Title: "Elsewhere", Content: "Body.", Project: project, RevisionCount: 4}, address, nil, clock.Now())
+	page, err := EmitPage(obsMemory(memory.Observation{ID: 612, Type: "decision", Title: "Elsewhere", Content: "Body.", Project: project, RevisionCount: 4}), address, nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
 	}
@@ -150,7 +150,7 @@ func TestReconcile_AnUnreadableRevisionCarriesTheUnusablePageSentinel(t *testing
 		t.Run(name, func(t *testing.T) {
 			const address = "c-000611"
 			vaultRoot := t.TempDir()
-			page, err := EmitPage(memory.Observation{ID: 611, Type: "decision", Title: "Unreadable", Content: "Body.", Project: project, RevisionCount: 2}, address, nil, clock.Now())
+			page, err := EmitPage(obsMemory(memory.Observation{ID: 611, Type: "decision", Title: "Unreadable", Content: "Body.", Project: project, RevisionCount: 2}), address, nil, clock.Now())
 			if err != nil {
 				t.Fatalf("EmitPage: %v", err)
 			}
