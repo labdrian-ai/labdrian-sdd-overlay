@@ -29,7 +29,9 @@ type Memory struct {
 	// TopicKey is empty when the memory has none.
 	TopicKey string
 	Pinned   bool
-	// Status is StatusActive, StatusSuperseded or StatusArchived.
+	// Status is StatusActive, StatusSuperseded, StatusArchived or StatusUnknown. A reader that compares it handles
+	// StatusUnknown by name: it is never an active memory, and nothing is promoted over it as retired or patched
+	// from it.
 	Status string
 	// Successor is the identity of the memory that replaced this one, and SuccessorTitle its title, for the link
 	// a page renders. Both are zero when nothing replaced it.

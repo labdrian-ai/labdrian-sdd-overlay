@@ -105,6 +105,12 @@ func eachCardPatchTarget(src Source, w *Writer, project string, visit func(patch
 			}
 			continue
 		}
+		if m.Status == memory.StatusUnknown {
+			// The store could not say what became of the memory, so there is no status to patch into its page: a
+			// page that says retired is not brought back on a guess, and one that says current is not retired.
+			outcome.failed = append(outcome.failed, SyncFailure{ObservationID: id, Err: fmt.Errorf("resolve status: %w", m.StatusCause)})
+			continue
+		}
 		block := scan.own.Block
 		if !isRetired(m) && !pageIsRetired(block) {
 			continue

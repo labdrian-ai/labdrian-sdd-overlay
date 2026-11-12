@@ -168,12 +168,16 @@ const (
 // memory is mature, any other is developing. emitCardPage renders it and status propagation patches to it, so the
 // two agree.
 func cardStatus(m memory.Memory) string {
-	switch {
-	case m.Status == memory.StatusSuperseded:
+	switch m.Status {
+	case memory.StatusSuperseded:
 		return "superseded"
-	case m.Status == memory.StatusArchived:
+	case memory.StatusArchived:
 		return "archived"
-	case m.Pinned:
+	case memory.StatusUnknown:
+		// The store could not say what became of the memory: a page written now says what is known of it, pinned or
+		// not, and never that it is retired. Propagation patches nothing for such a memory and reports it.
+	}
+	if m.Pinned {
 		return "mature"
 	}
 	return "developing"
