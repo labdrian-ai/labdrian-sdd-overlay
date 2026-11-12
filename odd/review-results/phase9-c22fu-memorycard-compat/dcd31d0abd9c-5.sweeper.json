@@ -1,0 +1,25 @@
+{
+  "kind": "sweeper",
+  "base": "f415971ed9ce22e7d83e6e87c875b8066b0d336d",
+  "head": "dcd31d0abd9ccde939bf23c1ade4c6716b7774e9",
+  "diff_sha256": "f06f63450bbe4494a4a380984250f0398625496bb2996682657d8a7c0bd52d2a",
+  "sweep": "dcd31d0abd9c-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T2 errcheck longterm-mem: cmd/longterm-mem/cmd_sync.go: unchecked error: defer cards.Close()",
+      "disposition": "finding",
+      "evidence": "raised as a finding of dcd31d0a and fixed in its review-fix commit (Log entry of the T2 fix round): the Close errors are checked"
+    },
+    {
+      "candidate": "T2 errcheck longterm-mem: cmd/longterm-mem/cmd_sync.go: unchecked error: defer engramStore.Close()",
+      "disposition": "finding",
+      "evidence": "raised as a finding of dcd31d0a and fixed in its review-fix commit (Log entry of the T2 fix round): the Close errors are checked"
+    },
+    {
+      "candidate": "T2 errcheck longterm-mem: cmd/longterm-mem/sync_memorycard_test.go: unchecked error: defer conn.Close()",
+      "disposition": "finding",
+      "evidence": "raised as a finding of dcd31d0a and fixed in its review-fix commit (Log entry of the T2 fix round): the Close errors are checked"
+    }
+  ]
+}

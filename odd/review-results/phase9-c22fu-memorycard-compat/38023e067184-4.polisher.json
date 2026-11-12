@@ -1,0 +1,27 @@
+{
+  "kind": "polisher",
+  "base": "dcd31d0abd9ccde939bf23c1ade4c6716b7774e9",
+  "head": "38023e06718421624b1686844e6129bdd2d5e518",
+  "diff_sha256": "1f76bcf23867bb9767e73f77252df7267cc6705e2a32d1290e87e89ae17df6f7",
+  "findings": {
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/docs/sync-from-memorycard.md:73-75",
+        "summary": "The docs say the dry run answers the run's exit code for the same failure, which does not hold for an invalid sync-state file: the run fails before the pass with exit 1, while the dry run never checks the sync-state and answers 0.",
+        "evidence": [
+          "sync_cards.go:192-194 SyncCardsProject calls w.checkSyncState() first and returns OtherFailure (exit 1).",
+          "sync_cards.go:74-88 and app.go:152-158 PlanCards and planCards never call checkSyncState."
+        ]
+      }
+    ],
+    "evidence": [
+      "cmd_sync.go:96-103 maps the dry-run error with syncExitCode(promote.CardRunFailure(err)); the run uses the same mapping at cmd_sync.go:135 and sync_cards.go:198.",
+      "sync_memorycard_test.go:260-355 pins exits 4, 6 and 5 with stdout, stderr and vault checks.",
+      "sync_source_golden_test.go:18-41 and testdata/sync-source-golden/01-04 hold args, exit, stdout, stderr and the full vault tree.",
+      "app.go:111-120 and engram_degraded.go:31-37 announce degraded opens on stderr only when degraded; tests at sync_memorycard_test.go:383-411.",
+      "app.go:122-128 closeStore only warns on stderr and cannot change an exit code; plain sync keeps defer store.Close() at cmd_sync.go:56."
+    ]
+  }
+}

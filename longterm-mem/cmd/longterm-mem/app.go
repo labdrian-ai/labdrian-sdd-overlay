@@ -1,8 +1,10 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
@@ -103,6 +105,28 @@ func (a app) memoryToPromoteFrom() (*engram.Store, int) {
 	return store, exitOK
 }
 
+// memorycardToPromoteFrom is memorycard for a command that writes pages from what it reads: when memorycard could
+// only be opened through its immutable=1 fallback, the command says so on stderr, as memoryToPromoteFrom does for
+// Engram. memorycard keeps no cause for the fallback, so the line names none.
+func (a app) memorycardToPromoteFrom() (*memorycard.Store, int) {
+	store, exit := a.memorycard()
+	if exit != exitOK {
+		return nil, exit
+	}
+	if store.Degraded() {
+		fmt.Fprintf(os.Stderr, "longterm-mem: %s: memorycard is being read through the immutable=1 fallback, so this run works from the snapshot taken when the connection was opened, not the live database\n", a.command)
+	}
+	return store, exitOK
+}
+
+// closeStore closes a store the command opened. A store opened read-only that fails to close has already given the
+// run everything it read, so the failure is a warning on stderr and not a failure of the run.
+func (a app) closeStore(name string, store io.Closer) {
+	if err := store.Close(); err != nil {
+		fmt.Fprintf(os.Stderr, "longterm-mem: %s: warning: close %s: %v\n", a.command, name, err)
+	}
+}
+
 // syncDeps is what a sync of the vault at vaultRoot runs over: the memory it reads, a Writer of the vault, and the
 // vault's own rebuild of its index. The error is the Writer's, as its precedence repository reported it.
 func (a app) syncDeps(store *engram.Store, vaultRoot string) (promote.Deps, error) {
@@ -111,6 +135,26 @@ func (a app) syncDeps(store *engram.Store, vaultRoot string) (promote.Deps, erro
 		return promote.Deps{}, err
 	}
 	return promote.Deps{Memory: store, Writer: writer, Index: vault.IndexRebuilder{Root: vaultRoot, Clock: a.clock}}, nil
+}
+
+// syncCards is a sync of the memories of source into the vault at vaultRoot (promote.SyncCardsProject): a Writer of
+// the vault, and the vault's own rebuild of its index. The error is the Writer's, as its precedence repository
+// reported it, when the Writer cannot be built, and the run's own otherwise.
+func (a app) syncCards(ctx context.Context, source promote.CardMemories, project, vaultRoot string) (promote.CardProjectReport, error) {
+	writer, err := newPromoteWriter(vaultRoot, a.clock)
+	if err != nil {
+		return promote.CardProjectReport{Failure: promote.OtherFailure}, err
+	}
+	return promote.SyncCardsProject(ctx, source, writer, vault.IndexRebuilder{Root: vaultRoot, Clock: a.clock}, project)
+}
+
+// planCards is what syncCards would do, and writes nothing (promote.PlanCards).
+func (a app) planCards(ctx context.Context, source promote.CardMemories, project, vaultRoot string) (promote.CardSyncPlan, error) {
+	writer, err := newPromoteWriter(vaultRoot, a.clock)
+	if err != nil {
+		return promote.CardSyncPlan{}, err
+	}
+	return promote.PlanCards(ctx, source, writer, project)
 }
 
 // printJSON prints v on stdout as the result of a command that was asked for JSON: indented by two spaces. A

@@ -19,17 +19,23 @@ import (
 // promote.SyncProject wired to a real Engram connection and a real vault,
 // the same seam shape cmd_index.go and cmd_query.go already use for
 // vault.Rebuild/vault.Retrieve. With --dry-run it reports what promote.Plan
-// says the run would do and writes nothing.
+// says the run would do and writes nothing. With --source memorycard (the default is engram, which is all the hooks
+// run) it promotes memorycard's memories instead: syncFromMemorycard.
 func (c commands) cmdSync(args []string) int {
 	fs := flag.NewFlagSet("sync", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
 	project := fs.String("project", "", projectFlagUsage)
 	vaultDir := fs.String("vault", "", "vault path override")
 	dryRun := fs.Bool("dry-run", false, "report what sync would promote and write nothing")
+	source := fs.String("source", sourceEngram, "store to sync from: engram (the default, what the hooks run) or memorycard (promotes the project's memorycard memories, see docs/sync-from-memorycard.md)")
 	if err := fs.Parse(args); err != nil {
 		return exitUsage
 	}
 	a := c.newApp("sync")
+	if *source != sourceEngram && *source != sourceMemorycard {
+		fmt.Fprintf(os.Stderr, "longterm-mem: sync: --source %q is not a store: use %s or %s\n", *source, sourceEngram, sourceMemorycard)
+		return exitUsage
+	}
 	// A dry run must not record this repository's derived names either: an
 	// operator asking "what would this do" has not asked it to do anything.
 	resolvedProject, exit := a.project(*project, *dryRun)
@@ -39,6 +45,9 @@ func (c commands) cmdSync(args []string) int {
 	vaultRoot, exit := a.vaultRoot(resolvedProject, *vaultDir, *dryRun)
 	if exit != exitOK {
 		return exit
+	}
+	if *source == sourceMemorycard {
+		return c.syncFromMemorycard(a, resolvedProject, vaultRoot, *dryRun)
 	}
 	store, exit := a.memoryToPromoteFrom()
 	if exit != exitOK {
@@ -56,6 +65,93 @@ func (c commands) cmdSync(args []string) int {
 	}
 	report, err := promote.SyncProject(ctx, deps, resolvedProject)
 	return reportSync(report, err)
+}
+
+// syncFromMemorycard is `sync --source memorycard` (S1 c of the C22-FU follow-up): promote.SyncCardsProject over
+// memorycard's memories of the project, both stores opened read-only, or, with dryRun, promote.PlanCards, which
+// walks the same decision and writes nothing. Engram is read too, for the one thing only it can say of a memory
+// with no import_map row (withSameContent). A bridged memory is skipped and counted, and is no failure (exit 0).
+func (c commands) syncFromMemorycard(a app, project, vaultRoot string, dryRun bool) int {
+	cards, exit := a.memorycardToPromoteFrom()
+	if exit != exitOK {
+		return exit
+	}
+	defer a.closeStore("memorycard", cards)
+	engramStore, exit := a.memoryToPromoteFrom()
+	if exit != exitOK {
+		return exit
+	}
+	defer a.closeStore("engram", engramStore)
+	source := cardSource{cards: cards, engram: engramStore}
+
+	ctx := context.Background()
+	if dryRun {
+		return reportCardPlan(ctx, a, source, project, vaultRoot)
+	}
+	report, err := a.syncCards(ctx, source, project, vaultRoot)
+	return reportCardSync(report, err)
+}
+
+// reportCardPlan prints what `sync --source memorycard` would do, and writes nothing.
+func reportCardPlan(ctx context.Context, a app, source promote.CardMemories, project, vaultRoot string) int {
+	plan, err := a.planCards(ctx, source, project, vaultRoot)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "longterm-mem: sync --source memorycard --dry-run: %v\n", err)
+		// The run's own mapping (syncExitCode) over the failure the run would have named, so the dry run answers
+		// the exit code of the run for the same failure.
+		return syncExitCode(promote.CardRunFailure(err))
+	}
+	fmt.Printf("longterm-mem: sync --source memorycard --dry-run: would promote %d memory(ies), skip %d, %d bridged, into %s\n", plan.WouldPromote, plan.Skipped, plan.Bridged, vaultRoot)
+	for _, title := range plan.Titles {
+		fmt.Printf("  would promote: %s\n", title)
+	}
+	for _, f := range plan.Failed {
+		fmt.Fprintf(os.Stderr, "  cannot read promoted state for memory %d: %v\n", f.ObservationID, f.Err)
+	}
+	const prefix = "longterm-mem: sync --source memorycard --dry-run:"
+	warnSkippedPages(os.Stderr, prefix, plan.Unreadable)
+	warnMemoriesLeftAlone(os.Stderr, prefix, plan.Withheld)
+	fmt.Println("longterm-mem: sync --source memorycard --dry-run: nothing was written")
+	switch {
+	case len(plan.Failed) > 0:
+		return exitInternal
+	case len(plan.Withheld) > 0:
+		return exitRegistrationConflict
+	}
+	return exitOK
+}
+
+// reportCardSync prints what `sync --source memorycard` did and answers the exit code of the run, in the shape of
+// reportSync: what landed is reported whether or not the run failed, a failed run answers by what failed
+// (syncExitCode), and a bridged memory or a hand-edited page left alone is counted and is no failure.
+func reportCardSync(report promote.CardProjectReport, err error) int {
+	fmt.Printf("longterm-mem: sync --source memorycard promoted %d memory(ies); skipped %d bridged; left %d locally edited page(s) alone\n",
+		len(report.Promoted), report.Bridged, len(report.LocalEdits))
+	const prefix = "longterm-mem: sync:"
+	warnSkippedPages(os.Stderr, prefix, report.Unreadable)
+	warnMemoriesLeftAlone(os.Stderr, prefix, report.Withheld)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "longterm-mem: sync: %v\n", err)
+		return syncExitCode(report.Failure)
+	}
+	if len(report.Withheld) > 0 {
+		return exitRegistrationConflict
+	}
+	return exitOK
+}
+
+// warnMemoriesLeftAlone is warnLeftAlone for the memories of memorycard: nothing was written for them because no
+// readable page is theirs while a page could not be read.
+func warnMemoriesLeftAlone(w io.Writer, prefix string, withheld []int64) {
+	if len(withheld) == 0 {
+		return
+	}
+	ids := make([]string, len(withheld))
+	for i, id := range withheld {
+		ids[i] = strconv.FormatInt(id, 10)
+	}
+	fmt.Fprintf(w, "%s warning: %d memory(ies) left alone, nothing was written for them: no readable page belongs to them, and a page that could not be read may (memories %s)\n",
+		prefix, len(withheld), strings.Join(ids, ", "))
 }
 
 // reportPlan prints what a sync of the project would do, and writes nothing.

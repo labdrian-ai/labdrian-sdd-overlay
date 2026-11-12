@@ -1,0 +1,23 @@
+args: sync --project golden-project --dry-run
+exit: 0
+--- stdout ---
+longterm-mem: sync --dry-run: would promote 2 observation(s), patch 0 page(s), skip 2, into <vault>
+  would promote: Pinned Decision
+  would promote: Curated Note
+longterm-mem: sync --dry-run: nothing was written
+--- stderr ---
+--- vault ---
+=== bin/setup-retrieve.sh ===
+#!/bin/sh
+exit 0
+=== scripts/allocate-address.sh ===
+#!/bin/sh
+n=900
+[ -f .allocator-counter ] && read n < .allocator-counter
+n=$((n+1))
+echo "$n" > .allocator-counter
+printf 'c-%06d\n' "$n"
+=== scripts/bm25-index.py ===
+
+=== scripts/contextual-prefix.py ===
+
