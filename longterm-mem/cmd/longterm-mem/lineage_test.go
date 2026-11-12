@@ -86,11 +86,17 @@ func lineageWorld(t *testing.T) (*engram.Store, *memorycard.Store) {
 	return engramStore, cards
 }
 
-// lineageOf is the identities of the other store a memory is tied to, by an import record or by its content.
+// lineageOf is the identities of the other store a memory is tied to by an import record, exactly as the source
+// reports them: the memories that only hold its content are mirrorsOf, never merged into it.
 func lineageOf(t *testing.T, source promote.Source, id string) []memory.Identity {
 	t.Helper()
-	m := memoryOf(t, source, id)
-	return append(append([]memory.Identity(nil), m.Lineage...), m.Mirrored...)
+	return memoryOf(t, source, id).Lineage
+}
+
+// mirrorsOf is the identities of the other store that only hold a memory's content, exactly as the source reports them.
+func mirrorsOf(t *testing.T, source promote.Source, id string) []memory.Identity {
+	t.Helper()
+	return memoryOf(t, source, id).Mirrored
 }
 
 func memoryOf(t *testing.T, source promote.Source, id string) memory.Memory {
@@ -111,6 +117,11 @@ func TestLineageRunsBothWaysBetweenTheTwoStores(t *testing.T) {
 
 	want := map[string][]memory.Identity{
 		"10": {{Source: "engram", ID: "1"}},
+		"11": nil,
+		"12": nil,
+	}
+	wantMirrors := map[string][]memory.Identity{
+		"10": nil,
 		"11": {{Source: "engram", ID: "2"}},
 		"12": nil,
 	}
@@ -118,12 +129,18 @@ func TestLineageRunsBothWaysBetweenTheTwoStores(t *testing.T) {
 		if got := lineageOf(t, cardSource, id); !reflect.DeepEqual(got, lineage) {
 			t.Errorf("memorycard memory %s lineage = %v, want %v", id, got, lineage)
 		}
+		if got := mirrorsOf(t, cardSource, id); !reflect.DeepEqual(got, wantMirrors[id]) {
+			t.Errorf("memorycard memory %s mirrors = %v, want %v", id, got, wantMirrors[id])
+		}
 	}
 	if got := lineageOf(t, engramSource, "1"); !reflect.DeepEqual(got, []memory.Identity{{Source: "memorycard", ID: "10"}}) {
 		t.Errorf("observation 1 lineage = %v, want memorycard memory 10 (its import_map row, read in reverse)", got)
 	}
-	if got := lineageOf(t, engramSource, "2"); !reflect.DeepEqual(got, []memory.Identity{{Source: "memorycard", ID: "11"}}) {
-		t.Errorf("observation 2 lineage = %v, want memorycard memory 11: the memory mirrored by hand holds its content and has no import_map row, so the twin rule runs in reverse", got)
+	if got := lineageOf(t, engramSource, "2"); len(got) != 0 {
+		t.Errorf("observation 2 lineage = %v, want none: the memory mirrored by hand has no import_map row", got)
+	}
+	if got := mirrorsOf(t, engramSource, "2"); !reflect.DeepEqual(got, []memory.Identity{{Source: "memorycard", ID: "11"}}) {
+		t.Errorf("observation 2 mirrors = %v, want memorycard memory 11: the memory mirrored by hand holds its content and has no import_map row, so the twin rule runs in reverse", got)
 	}
 	// An import record names a lineage identity; content alone names a mirror, which a refusal says so about.
 	if m := memoryOf(t, engramSource, "1"); len(m.Lineage) != 1 || len(m.Mirrored) != 0 {
@@ -145,8 +162,8 @@ func TestLineageRunsBothWaysBetweenTheTwoStores(t *testing.T) {
 		t.Fatalf("Candidates(p) = %v, %v", listed, err)
 	}
 	for _, m := range listed {
-		if got := append(append([]memory.Identity(nil), m.Lineage...), m.Mirrored...); !reflect.DeepEqual(got, want[m.Identity.ID]) {
-			t.Errorf("listed memory %s lineage = %v, want %v", m.Identity.ID, got, want[m.Identity.ID])
+		if !reflect.DeepEqual(m.Lineage, want[m.Identity.ID]) || !reflect.DeepEqual(m.Mirrored, wantMirrors[m.Identity.ID]) {
+			t.Errorf("listed memory %s lineage = %v, mirrors = %v, want %v and %v", m.Identity.ID, m.Lineage, m.Mirrored, want[m.Identity.ID], wantMirrors[m.Identity.ID])
 		}
 	}
 }
