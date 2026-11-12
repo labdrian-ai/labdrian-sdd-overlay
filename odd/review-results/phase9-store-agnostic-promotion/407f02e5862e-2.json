@@ -1,0 +1,72 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "04e835c1025e76305bfe6e5898918b699a15924f",
+    "head": "407f02e5862ee6c05e5d91a0f9a023ce4a29e773",
+    "diff_sha256": "c457f0485e1e8b61a42099177964095bafbf37eafc3dca50a0156950d906f71b",
+    "paths": [
+      "longterm-mem/internal/promote/address.go",
+      "longterm-mem/internal/promote/card.go",
+      "longterm-mem/internal/promote/page_identity.go",
+      "longterm-mem/internal/promote/page_identity_fields_test.go",
+      "longterm-mem/internal/promote/reconcile.go",
+      "longterm-mem/internal/promote/update.go",
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "04e835c1025e76305bfe6e5898918b699a15924f",
+      "head": "407f02e5862ee6c05e5d91a0f9a023ce4a29e773",
+      "diff_sha256": "c457f0485e1e8b61a42099177964095bafbf37eafc3dca50a0156950d906f71b"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/promote/address.go",
+        "longterm-mem/internal/promote/card.go",
+        "longterm-mem/internal/promote/page_identity.go",
+        "longterm-mem/internal/promote/page_identity_fields_test.go",
+        "longterm-mem/internal/promote/reconcile.go",
+        "longterm-mem/internal/promote/update.go",
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:132",
+        "claim": "The L16 log entry still says a page carrying engram_revision but no engram_id 'no longer yields a revision' and that this is a by-design behavior difference. The same commit's revisionOf/frontmatterRevision change reverses this: such a page yields its revision again, and the new test TestPageIdentity_ARevisionIsReadWithoutAnID pins that. The feature record now contradicts the code and tests, and the T2 tick points at 04e835c1 rather than this fix commit.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/update.go:188-196",
+          "longterm-mem/internal/promote/page_identity.go:50-58",
+          "odd/tasks/phase9-store-agnostic-promotion.md:132"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/card.go:122",
+        "claim": "The unparseable-revision error in decideCard now depends on scan.own.RevisionKey. If any promotedPageMatch reaching this point is built without going through revisionOf (the key defaults to empty), the message degrades to 'unparseable  \"x\"' with no key name. The diff shows only readCardPages setting the key, so no construction path is checked.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/card.go:122",
+          "longterm-mem/internal/promote/address.go:255-259"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the diff only; the pages stored under the engramPages index and their consumers are not visible, so the dropped memorycard revision on Engram-bridged matches is not checked against its readers.",
+      "fieldOf falls back per field to the same store's legacy key and never crosses stores; the new tests cover this."
+    ]
+  }
+}

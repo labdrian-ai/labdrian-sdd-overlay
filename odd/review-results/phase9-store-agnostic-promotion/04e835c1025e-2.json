@@ -1,0 +1,82 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "672151b45751af85e4b08ba321021e2db2e8727c",
+    "head": "04e835c1025e76305bfe6e5898918b699a15924f",
+    "diff_sha256": "b9c367cf26d273e1cdcddb7fa22f7f9085a0ab97f76929aad3d9c9cedda0834b",
+    "paths": [
+      "longterm-mem/internal/engram/source_test.go",
+      "longterm-mem/internal/ops/doctor_identity_test.go",
+      "longterm-mem/internal/promote/address.go",
+      "longterm-mem/internal/promote/card.go",
+      "longterm-mem/internal/promote/page_identity.go",
+      "longterm-mem/internal/promote/page_identity_test.go",
+      "longterm-mem/internal/promote/update.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "672151b45751af85e4b08ba321021e2db2e8727c",
+      "head": "04e835c1025e76305bfe6e5898918b699a15924f",
+      "diff_sha256": "b9c367cf26d273e1cdcddb7fa22f7f9085a0ab97f76929aad3d9c9cedda0834b"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/engram/source_test.go",
+        "longterm-mem/internal/ops/doctor_identity_test.go",
+        "longterm-mem/internal/promote/address.go",
+        "longterm-mem/internal/promote/card.go",
+        "longterm-mem/internal/promote/page_identity.go",
+        "longterm-mem/internal/promote/page_identity_test.go",
+        "longterm-mem/internal/promote/update.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/promote/update.go:187-192",
+        "claim": "frontmatterRevision now reports false whenever the block does not name an Engram id, so a block with engram_revision but no engram_id no longer yields a revision. The base read engram_revision on its own. Reconcile and update corroboration fail closed on such a block where they previously read the revision. This is an unintended narrowing of the previously unchanged behavior.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "update.go:187-192: `identity, named := identityOf(...); if !named || identity.Revision == \"\"` replaces the base's direct lookup of engramRevisionField",
+          "page_identity.go:46-51: the legacy revision is only read when the legacy id is non-empty"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/page_identity.go:38-53",
+        "claim": "When a page names `source: engram` with a `source_id`, the legacy engram_* keys are ignored in full, not per key. A page with `source`/`source_id` plus a legacy `engram_revision` or `engram_type` gets an empty Revision or Type instead of falling back to the legacy value. A half-migrated page therefore loses its revision, so frontmatterRevision returns false and the consumer fails closed. The reader is documented as agnostic-first with a legacy fallback, but the fallback happens per identity, not per field, and no test pins this.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "page_identity.go:39-42: returns early with Revision from source_revision only"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/card.go:271-274",
+        "claim": "RawRevision for every scanned page, including engramMatch copies, is now taken from the memorycard identity, which is only populated when the page names a memorycard id. The base read memorycard_revision unconditionally. A page with memorycard_revision but no memorycard_id loses that revision. Engram-bridged matches carry the memorycard revision slot, not an Engram revision. The slot is semantically muddled, but the observable behavior is unchanged for pages that have an id.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "card.go:271-272: `card, cardNamed := identityOf(...); match.RawRevision = card.Revision`"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff. identityOf matches the base's raw, untrimmed id comparison in scanPromotedPages and readCardPages, so the legacy-keys path is behavior-preserving when an id is present.",
+      "The diff does not show PageObservationID changing; the claimed doctor-join reader path is verifiable only through frontmatterEngramID in update.go, which routes through identityOf.",
+      "The tests cover both spellings per consumer but not partially mixed key families."
+    ]
+  }
+}

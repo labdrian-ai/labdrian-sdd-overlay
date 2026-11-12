@@ -1,0 +1,25 @@
+{
+  "kind": "sweep",
+  "base": "672151b45751af85e4b08ba321021e2db2e8727c",
+  "head": "04e835c1025e76305bfe6e5898918b699a15924f",
+  "diff_sha256": "b9c367cf26d273e1cdcddb7fa22f7f9085a0ab97f76929aad3d9c9cedda0834b",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": []
+  },
+  "t2": [
+    {
+      "tool": "errcheck",
+      "module": "longterm-mem",
+      "new": [
+        "internal/engram/source_test.go: unchecked error: defer store.Close()"
+      ]
+    }
+  ],
+  "t3": [],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}
