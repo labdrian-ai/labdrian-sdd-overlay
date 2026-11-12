@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "af8b087977194f1b0ae2d4ed985557a54e8afa24",
+    "head": "50c7e32fed2a50ab80e567b7155be055a0c3fb82",
+    "diff_sha256": "cc1c5b39feb6ce012d08d1462ef33ef5f10a9fbfe9863246c850c0ff2ea12e65",
+    "paths": [
+      "longterm-mem/README.md",
+      "longterm-mem/internal/promote/eligible.go",
+      "longterm-mem/internal/promote/eligible_test.go",
+      "odd/tasks/phase9-c22fu-memorycard-compat.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "af8b087977194f1b0ae2d4ed985557a54e8afa24",
+      "head": "50c7e32fed2a50ab80e567b7155be055a0c3fb82",
+      "diff_sha256": "cc1c5b39feb6ce012d08d1462ef33ef5f10a9fbfe9863246c850c0ff2ea12e65"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/README.md",
+        "longterm-mem/internal/promote/eligible.go",
+        "longterm-mem/internal/promote/eligible_test.go",
+        "odd/tasks/phase9-c22fu-memorycard-compat.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/README.md:167-169",
+        "claim": "The new README text says `sync` neither refreshes nor retracts frozen odd/ and session/ pages and that only `doctor` names them. It is a behavioral claim about sync that the diff does not verify, and the sentence sits mid-paragraph and could misstate behavior if sync ever handles ineligible pages differently. The preceding text already states the general frozen-page rule, so the addition is partly redundant.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/README.md:167-169"
+        ]
+      }
+    ],
+    "evidence": [
+      "The code change in eligible.go is a comment rewrap only; no behavior changed.",
+      "The two new TestEligible rows (goal:g-42/odd/..., goal:g-42/session/...) assert exclusion and rely on existing goal-prefix stripping, which the diff cannot show; the test file is consistent with the comment in eligible.go.",
+      "The odd/tasks log entry is documentation only."
+    ]
+  }
+}

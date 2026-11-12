@@ -84,7 +84,7 @@ The binary (`longterm-mem <subcommand> [flags]`) currently dispatches:
 | `query` | `[--project P]` `"<text>"` `[--top N]` `[--exclude-types T,...]` `[--goal ID]` `[--vault DIR]` `[--json]` | Query Engram FTS5 (always) and, when named in `sources`, the embedding index and the vault; results are unioned and ranked. The CLI queries FTS only. `--goal` returns that goal's records and the records of no goal, never another goal's (see [Goals](#goals)). |
 | `index` | `[--project P]` `[--vault DIR]` `[--rebuild]` | Provision/refresh the vault's local retrieval index (no LLM). |
 | `index --embeddings` | `[--project P]` `[--embed-model M]` `[--embed-dimension N]` `[--embed-input-limit C]` `[--embed-endpoint URL]` `[--allow-remote-embedder]` | Build or incrementally update the embedding index over Engram rows against a loopback Ollama backend (`nomic-embed-text`, 768 dims by default). Unchanged rows are fingerprinted and reused, so a re-run after a few new observations takes well under a second. |
-| `sync` | `[--project P]` `[--vault DIR]` `[--dry-run]` `[--source engram\|memorycard]` | Promote eligible Engram observations into vault pages; `--dry-run` reports without writing. `--source memorycard` promotes the project's eligible memorycard memories instead, counting the ones bridged to a promoted Engram page and never failing on them (see [Syncing from memorycard](docs/sync-from-memorycard.md)); the default is `engram`, which is what hooks run. An observation is eligible only if it is pinned, explicitly targeted, or carries a curated `topic_key` whose first path segment is not `sdd`, `review`, or `delivery` — an untopiced observation is not automatically eligible. A page already promoted under a previous, looser eligibility rule is neither retracted nor refreshed by `sync` once its observation stops being eligible under the current rule; use an explicit `promote` or a pin to keep such a page current; `doctor` names those pages (see [Frozen pages](#frozen-pages)). |
+| `sync` | `[--project P]` `[--vault DIR]` `[--dry-run]` `[--source engram\|memorycard]` | Promote eligible Engram observations into vault pages; `--dry-run` reports without writing. `--source memorycard` promotes the project's eligible memorycard memories instead, counting the ones bridged to a promoted Engram page and never failing on them (see [Syncing from memorycard](docs/sync-from-memorycard.md)); the default is `engram`, which is what hooks run. An observation is eligible only if it is pinned, explicitly targeted, or carries a curated `topic_key` whose first path segment is not `sdd`, `review`, `delivery`, `odd`, or `session` — an untopiced observation is not automatically eligible. A page already promoted under a previous, looser eligibility rule is neither retracted nor refreshed by `sync` once its observation stops being eligible under the current rule; use an explicit `promote` or a pin to keep such a page current; `doctor` names those pages (see [Frozen pages](#frozen-pages)). |
 | `status` | `[--project P]` `[--vault DIR]` `[--json]` | Report Engram reachability, vault provisioning, last sync, and when the embedding index was built. |
 | `stale` | `[--project P]` | Report the memories this repository's history disagrees with (removed or moved paths). Reports only; never deletes. A path that climbs out of the project (`a/../../x.go`) is unknown: it is not asked of git and the rest of the report prints. |
 | `doctor` | `[--project P]` `[--vault DIR]` `[--json]` | Deeper diagnostics: prerequisites, wiki-lint, registration consistency, embedding index presence/freshness and backend reachability, and an advisory check that names promoted pages `sync` no longer refreshes (see [Frozen pages](#frozen-pages)). Each check answers `PASS`, `FAIL` or `warn`; only a `FAIL` makes the exit code 9, so a `warn` never changes it. |
@@ -164,11 +164,16 @@ or carrying a curated `topic_key`. A page whose observation is not eligible
 (promoted by an explicit `promote --id N` of an untopiced observation, or under
 a looser rule that no longer applies) stays exactly as it was written, however
 the observation changes later. Such a page is *frozen*, and nothing on it says so.
+Pages promoted from `odd/` (feature-document mirrors) or `session/` (session
+summaries) topics before those prefixes were excluded are frozen this way. `sync`
+still patches their `status:` when their observation is deleted or superseded
+(propagation does not check eligibility), and `doctor` names them while their
+observation is live.
 
 `doctor` says so, in its `promoted-pages-eligible` check. Each finding names the
 page address, the observation id, why the observation is not eligible (it has no
 `topic_key`, or its first segment, after any `goal:<id>/` prefix, is empty or one
-of `sdd`, `review` and `delivery`)
+of `sdd`, `review`, `delivery`, `odd` and `session`)
 and the two ways out:
 
 - `longterm-mem promote --id N` refreshes the page now, once;

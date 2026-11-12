@@ -1,0 +1,29 @@
+{
+  "kind": "polisher",
+  "base": "d41b4570487174af4f06e0086efbca1fb49c90c7",
+  "head": "fbe157f66cad50d23bf1f4971c26f2f1046b8d77",
+  "diff_sha256": "cc1c5b39feb6ce012d08d1462ef33ef5f10a9fbfe9863246c850c0ff2ea12e65",
+  "findings": {
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/README.md:167-169",
+        "summary": "The new README sentence says `sync` neither refreshes nor retracts frozen `odd/` and `session/` pages. Sync does retract them when their observation is soft-deleted or superseded: `Propagate` patches the page status to archived or superseded without checking eligibility. The claim holds for refreshing but not for retracting.",
+        "evidence": [
+          "propagate.go:112-155 eachPatchTarget walks ObservationsIncludingDeleted, finds each observation promoted page, and calls decidePatch. It never calls Eligible.",
+          "propagate.go:23-34 documents that Propagate rewrites status:/related: on already-promoted pages whose observation was soft-deleted or superseded.",
+          "project_sync.go:54 shows Propagate runs as part of the project sync.",
+          "doctor_eligibility.go:86-89 skips a page whose observation is no longer live, so deleted-observation pages are never named."
+        ]
+      }
+    ],
+    "evidence": [
+      "eligible.go: the exclusion map includes odd and session; curatedTopicKey strips the goal prefix before testing the first segment.",
+      "eligible_test.go:87-95 goal-prefixed rows match that logic.",
+      "sync.go decidePromotion skips ineligible observations with no write; sync_cards.go:108 the same for memorycard.",
+      "doctor_eligibility.go warns, never FAIL.",
+      "Not run: Go tests."
+    ]
+  }
+}

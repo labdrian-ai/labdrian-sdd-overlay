@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "280ada729db0aa3209a22fc00cb08b6c12713290",
+    "head": "d41b4570487174af4f06e0086efbca1fb49c90c7",
+    "diff_sha256": "74cf7a57c11b2f43b4bd591d7443bf16988fcf9d67f842486193dad559c7498a",
+    "paths": [
+      "longterm-mem/README.md",
+      "longterm-mem/docs/sync-from-memorycard.md",
+      "longterm-mem/internal/promote/eligible.go",
+      "longterm-mem/internal/promote/eligible_test.go",
+      "odd/tasks/phase9-c22fu-memorycard-compat.md",
+      "openspec/specs/longterm-mem-promotion/spec.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "280ada729db0aa3209a22fc00cb08b6c12713290",
+      "head": "d41b4570487174af4f06e0086efbca1fb49c90c7",
+      "diff_sha256": "74cf7a57c11b2f43b4bd591d7443bf16988fcf9d67f842486193dad559c7498a"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/README.md",
+        "longterm-mem/docs/sync-from-memorycard.md",
+        "longterm-mem/internal/promote/eligible.go",
+        "longterm-mem/internal/promote/eligible_test.go",
+        "odd/tasks/phase9-c22fu-memorycard-compat.md",
+        "openspec/specs/longterm-mem-promotion/spec.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/eligible.go:42",
+        "claim": "The updated comment line was extended past the surrounding wrapped width; this is cosmetic only. More substantively, goal-prefixed keys (goal:<id>/odd/...) rely on the existing prefix stripping in curatedTopicKey, which is not shown in the diff and has no new test for the odd/session cases, so exclusion under a goal prefix is unverified by this change.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "longterm-mem/internal/promote/eligible.go:42",
+          "longterm-mem/internal/promote/eligible_test.go:76-95"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/promote/eligible.go:21-26",
+        "claim": "Adding 'odd' and 'session' to the exclusion list changes plain Engram sync behavior for existing observations: pages already promoted from odd/ or session/ topics are frozen (no longer refreshed by sync) and will appear as doctor warnings. The diff notes this consequence but provides no migration or retraction; owners relying on those pages being kept current by sync lose refresh silently, except for the doctor advisory.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/eligible.go:21-26",
+          "odd/tasks/phase9-c22fu-memorycard-compat.md:75"
+        ]
+      }
+    ],
+    "evidence": [
+      "Diff adds odd and session to excludedTopicPrefixes; Eligible and IneligibleReason share the map, so both sync sources and the doctor reason pick them up.",
+      "Tests cover odd/, session/, pinned odd/ override and odd-notes/ non-match; docs, README and spec updated consistently with five prefixes.",
+      "No explicit-option-ignored or regression on previously valid explicit promote paths seen: explicit and pinned paths still bypass the exclusion."
+    ]
+  }
+}

@@ -13,11 +13,16 @@ import (
 // excludedTopicPrefixes are the first path segments curatedTopicKey treats
 // as noise, never as a curated eligibility signal (R-007): SDD, review, and
 // delivery bookkeeping topics that observations accumulate as a side
-// effect of process, not because a human curated them for the vault.
+// effect of process, not because a human curated them for the vault, plus
+// the ODD feature-document mirrors (odd/<feature>/tasks, copies of files
+// git already holds) and session summaries (session/<id>, a log of what a
+// session did, not what it learned).
 var excludedTopicPrefixes = map[string]bool{
 	"sdd":      true,
 	"review":   true,
 	"delivery": true,
+	"odd":      true,
+	"session":  true,
 }
 
 // Eligible reports whether obs is eligible for promotion (R-007): pinned,
@@ -34,8 +39,8 @@ func Eligible(obs memory.Observation, explicit bool) bool {
 //
 // An observation that is not pinned is refused for one of two reasons, and the reason says which: it has no
 // topic_key (an empty one, or one of white space), or it has one that is not curated -- its first segment, past
-// a goal's prefix, is empty or is one of the excluded ones (sdd, review, delivery). A topic_key is quoted as it
-// is, trimmed of the white space around it.
+// a goal's prefix, is empty or is one of the excluded ones (sdd, review, delivery, odd, session). A topic_key is
+// quoted as it is, trimmed of the white space around it.
 func IneligibleReason(obs memory.Observation) string {
 	if Eligible(obs, false) {
 		return ""

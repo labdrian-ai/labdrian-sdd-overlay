@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "fbe157f66cad50d23bf1f4971c26f2f1046b8d77",
+    "head": "8d2fba82afe3e7866dd22f9e7cd2d1ea4e76bcb3",
+    "diff_sha256": "2c7f5820fe462e105b37c3df076588c9d8964b0950d712979a1974734c402038",
+    "paths": [
+      "longterm-mem/README.md",
+      "longterm-mem/internal/promote/eligible_test.go",
+      "odd/review-results/phase9-c22fu-memorycard-compat/d41b45704871-1.sweep.json",
+      "odd/review-results/phase9-c22fu-memorycard-compat/d41b45704871-2.json",
+      "odd/review-results/phase9-c22fu-memorycard-compat/d41b45704871-3.json",
+      "odd/review-results/phase9-c22fu-memorycard-compat/d41b45704871-4.polisher.json",
+      "odd/review-results/phase9-c22fu-memorycard-compat/fbe157f66cad-1.sweep.json",
+      "odd/review-results/phase9-c22fu-memorycard-compat/fbe157f66cad-2.json",
+      "odd/review-results/phase9-c22fu-memorycard-compat/fbe157f66cad-3.json",
+      "odd/review-results/phase9-c22fu-memorycard-compat/fbe157f66cad-4.polisher.json",
+      "odd/tasks/phase9-c22fu-memorycard-compat.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "fbe157f66cad50d23bf1f4971c26f2f1046b8d77",
+      "head": "8d2fba82afe3e7866dd22f9e7cd2d1ea4e76bcb3",
+      "diff_sha256": "2c7f5820fe462e105b37c3df076588c9d8964b0950d712979a1974734c402038"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/README.md",
+        "longterm-mem/internal/promote/eligible_test.go",
+        "odd/review-results/phase9-c22fu-memorycard-compat/d41b45704871-1.sweep.json",
+        "odd/review-results/phase9-c22fu-memorycard-compat/d41b45704871-2.json",
+        "odd/review-results/phase9-c22fu-memorycard-compat/d41b45704871-3.json",
+        "odd/review-results/phase9-c22fu-memorycard-compat/d41b45704871-4.polisher.json",
+        "odd/review-results/phase9-c22fu-memorycard-compat/fbe157f66cad-1.sweep.json",
+        "odd/review-results/phase9-c22fu-memorycard-compat/fbe157f66cad-2.json",
+        "odd/review-results/phase9-c22fu-memorycard-compat/fbe157f66cad-3.json",
+        "odd/review-results/phase9-c22fu-memorycard-compat/fbe157f66cad-4.polisher.json",
+        "odd/tasks/phase9-c22fu-memorycard-compat.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/README.md:168-171",
+        "claim": "The new README text says doctor names frozen pages 'while their observation is live', and sync patches status when the observation is deleted or superseded. A superseded observation may still be live in the doctor's view, so the boundary between the two states is not stated. The claim also rests on polisher evidence about propagate.go and doctor_eligibility.go that the diff does not show, so it cannot be verified here.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/README.md:168-171",
+          "odd/review-results/phase9-c22fu-memorycard-compat/fbe157f66cad-4.polisher.json:15-20"
+        ]
+      }
+    ],
+    "evidence": [
+      "The code change is a comment edit in eligible_test.go listing five prefixes, matching the exclusion map described in the review records; no behavior changed.",
+      "The README rewrite corrects the earlier overclaim that sync never retracts frozen pages, consistent with the polisher's citation of Propagate not checking eligibility.",
+      "The remaining files are review records and a log entry, which are documentation only."
+    ]
+  }
+}

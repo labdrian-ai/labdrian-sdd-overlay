@@ -25,7 +25,7 @@ exit code.
 1. Lists the project's memories whose `status` is `active` or `superseded` (an `archived` memory plays the part of
    Engram's soft-deleted observation and is not listed).
 2. Keeps the memories that are eligible by the rule `promote` and the Engram `sync` use (R-007): pinned, or carrying
-   a curated `topic_key` (not `sdd/`, `review/` or `delivery/`). An `ingested/` key is curated.
+   a curated `topic_key` (not `sdd/`, `review/`, `delivery/`, `odd/` or `session/`). An `ingested/` key is curated.
 3. Reads the vault's pages once, and for each eligible memory decides, with the same decision
    `promote --source memorycard --id N` makes:
    - no page: a page is created;

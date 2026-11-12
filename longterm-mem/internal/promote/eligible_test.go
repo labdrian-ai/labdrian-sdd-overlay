@@ -13,7 +13,7 @@ import (
 
 // TestEligible covers R-007's rewritten predicate: pinned, explicit, or a
 // non-empty topic_key whose first path segment is outside the excluded
-// {sdd, review, delivery} set. Type and revision count are retired as
+// {sdd, review, delivery, odd, session} set. Type and revision count are retired as
 // automatic eligibility criteria (R-003).
 func TestEligible(t *testing.T) {
 	tests := []struct {
@@ -72,6 +72,36 @@ func TestEligible(t *testing.T) {
 			name: "delivery/-prefixed topic_key is excluded",
 			obs:  memory.Observation{Type: "decision", RevisionCount: 5, Pinned: false, TopicKey: "delivery/some-change/receipt"},
 			want: false,
+		},
+		{
+			name: "odd/-prefixed topic_key (a feature-doc mirror) is excluded",
+			obs:  memory.Observation{Type: "architecture", RevisionCount: 5, Pinned: false, TopicKey: "odd/phase9-c22fu-memorycard-compat/tasks"},
+			want: false,
+		},
+		{
+			name: "session/-prefixed topic_key (a session summary) is excluded",
+			obs:  memory.Observation{Type: "session_summary", RevisionCount: 2, Pinned: false, TopicKey: "session/07a89cf6-d9a4-4988-917a-9f99a013181a"},
+			want: false,
+		},
+		{
+			name: "a goal's odd/-prefixed topic_key is excluded: the goal prefix is not the first segment",
+			obs:  memory.Observation{Type: "architecture", Pinned: false, TopicKey: "goal:g-42/odd/some-feature/tasks"},
+			want: false,
+		},
+		{
+			name: "a goal's session/-prefixed topic_key is excluded",
+			obs:  memory.Observation{Type: "session_summary", Pinned: false, TopicKey: "goal:g-42/session/abc"},
+			want: false,
+		},
+		{
+			name: "a pinned odd/-prefixed memory stays eligible: the pin overrides the exclusion",
+			obs:  memory.Observation{Type: "architecture", Pinned: true, TopicKey: "odd/some-feature/tasks"},
+			want: true,
+		},
+		{
+			name: "odd-notes/ is not excluded (first segment odd-notes != odd)",
+			obs:  memory.Observation{Type: "discovery", Pinned: false, TopicKey: "odd-notes/x"},
+			want: true,
 		},
 		{
 			name: "sdd-init/ is not excluded (first segment sdd-init != sdd)",
