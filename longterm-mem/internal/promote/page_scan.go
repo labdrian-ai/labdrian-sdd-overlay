@@ -178,8 +178,9 @@ type pageScan struct {
 	unreadable []UnreadablePage
 }
 
-// scanFor answers pageScan for m from the pages read. The page that bridges a memory is a page of its own project
-// that names a memory of its lineage first, then of its mirrors; among equals, the first page the port lists wins.
+// scanFor answers pageScan for m from the pages read. The page that bridges a memory is the one of its lineage
+// first, then of its mirrors, whatever project that page was promoted under (C22-FU bridges across projects on
+// purpose); among equals, the first page the port lists wins.
 func (p *pageIndex) scanFor(m memory.Memory) pageScan {
 	scan := pageScan{own: p.ownPage(m.Project, m.Identity), unreadable: p.unreadable}
 	for _, match := range p.carriers[m.Identity] {
@@ -194,9 +195,6 @@ func (p *pageIndex) scanFor(m memory.Memory) pageScan {
 	consider := func(kin []memory.Identity, rank int) {
 		for _, identity := range kin {
 			for _, match := range p.carriers[identity] {
-				if match.Project != m.Project {
-					continue
-				}
 				if rank < bestRank || (rank == bestRank && match.order < best.order) {
 					best, bestRank = match, rank
 					scan.bridgedAs, scan.mirrored = identity, rank == 1

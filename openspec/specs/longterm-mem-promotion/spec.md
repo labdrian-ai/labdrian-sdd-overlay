@@ -838,11 +838,6 @@ it, counts it as bridged and does not fail on it.
 Engram observation; an Engram observation whose memorycard memory already had
 a page was promoted again, and `sync --dry-run` planned that promotion.)
 
-A page bridges a memory only when it is a page of the memory's own project: a
-page of the same piece of memory left in another project does not. (Previously:
-a memorycard memory was bridged to a page of its Engram observation whatever
-that page's project.)
-
 A memory that has a page of its own in its project SHALL be decided by that
 page before any bridge: it is updated or left as it is, never refused as
 bridged, and only a memory with no page of its own can be bridged. The same

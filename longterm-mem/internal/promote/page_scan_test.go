@@ -41,20 +41,23 @@ func TestScanFor_ASuccessorPageWithNoAddressIsLinkedByTheNameItsOwnPageResolvesT
 	}
 }
 
-// A page of another store's memory bridges a memory only in the memory's own project: a page of the same piece of
-// memory left in another project is not a page of this project, and the memory is promoted into its own.
-func TestPromote_APageOfTheLineageMemoryInAnotherProjectDoesNotBridge(t *testing.T) {
-	w, _, cardAddress, observation := bridgedWorld(t)
+// A page of another store's memory bridges a memory whatever project the page was promoted under, as it has since
+// C22-FU: a memory whose lineage page is in another project is skipped as bridged, not given a second page.
+func TestSync_AMemoryBridgedByALineagePageInAnotherProjectIsSkippedAsBridged(t *testing.T) {
+	w, vaultRoot, _, observation := bridgedWorld(t)
 	observation.Project = "elsewhere"
 	observation.Lineage = []memory.Identity{cardSevenIdentity}
 
-	result, err := w.Promote(t.Context(), observation, true)
+	report, err := Sync(t.Context(), Deps{Source: fixedSource{memories: []memory.Memory{observation}}, Writer: w}, "elsewhere")
 
 	var refusal *BridgedError
-	if errors.As(err, &refusal) {
-		t.Fatalf("Promote = %v, want the observation promoted into its own project, not bridged to %s", err, refusal.Address)
+	if _, explicitErr := w.Promote(t.Context(), observation, true); !errors.As(explicitErr, &refusal) {
+		t.Errorf("explicit Promote = %v, want a *BridgedError", explicitErr)
 	}
-	if err != nil || result.Action.Kind != ActionCreated || result.Page.Address == cardAddress {
-		t.Fatalf("Promote = (%+v, %v), want a page created of its own", result, err)
+	if err != nil || report.Bridged != 1 || len(report.Promoted) != 0 || len(report.Failed) != 0 {
+		t.Fatalf("Sync = (%+v, %v), want the memory counted bridged and nothing promoted", report, err)
+	}
+	if got := pageFiles(t, vaultRoot); len(got) != 1 {
+		t.Fatalf("pages = %v, want only the lineage memory's", got)
 	}
 }
