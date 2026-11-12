@@ -1,0 +1,86 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "9ad3b1563bd2ec8019d9a8769418abcea1fce30e",
+    "head": "4b11be06bf0ccbbcb7563ce13f0dcb435e6d2c56",
+    "diff_sha256": "b73b337e4ae908a72d43f7dd78fe60c841d115dfffb51a591498b9669cfcaad2",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/lineage.go",
+      "longterm-mem/cmd/longterm-mem/lineage_test.go",
+      "longterm-mem/internal/engram/source.go",
+      "longterm-mem/internal/engram/source_test.go",
+      "longterm-mem/internal/memory/memory.go",
+      "longterm-mem/internal/memory/memory_test.go",
+      "longterm-mem/internal/memory/wire_free_test.go",
+      "longterm-mem/internal/memorycard/source.go",
+      "longterm-mem/internal/memorycard/source_test.go",
+      "longterm-mem/internal/memorycard/store.go",
+      "longterm-mem/internal/memorycard/store_test.go",
+      "longterm-mem/internal/promote/source.go",
+      "longterm-mem/internal/promote/source_guard_test.go",
+      "odd/goals/phase9-store-agnostic-promotion.json",
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "9ad3b1563bd2ec8019d9a8769418abcea1fce30e",
+      "head": "4b11be06bf0ccbbcb7563ce13f0dcb435e6d2c56",
+      "diff_sha256": "b73b337e4ae908a72d43f7dd78fe60c841d115dfffb51a591498b9669cfcaad2"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/lineage.go",
+        "longterm-mem/cmd/longterm-mem/lineage_test.go",
+        "longterm-mem/internal/engram/source.go",
+        "longterm-mem/internal/engram/source_test.go",
+        "longterm-mem/internal/memory/memory.go",
+        "longterm-mem/internal/memory/memory_test.go",
+        "longterm-mem/internal/memory/wire_free_test.go",
+        "longterm-mem/internal/memorycard/source.go",
+        "longterm-mem/internal/memorycard/source_test.go",
+        "longterm-mem/internal/memorycard/store.go",
+        "longterm-mem/internal/memorycard/store_test.go",
+        "longterm-mem/internal/promote/source.go",
+        "longterm-mem/internal/promote/source_guard_test.go",
+        "odd/goals/phase9-store-agnostic-promotion.json",
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/cmd/longterm-mem/lineage.go:14-22",
+        "claim": "Lineage is asymmetric. A memorycard memory mirrored by hand names its Engram twin observations, but the Engram observation's lineage only follows import_map rows. For hand-mirrored content, the observation gets no lineage, and the lineage test pins this. S3 bridges a memory when a page carries one of its lineage identities. Once T3 wires this in, an Engram walk would not recognise a page owned by the hand-mirrored memorycard memory and could promote the same content twice.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/lineage.go:14-22",
+          "longterm-mem/cmd/longterm-mem/lineage_test.go:111-113"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/engram/source.go:44-56",
+        "claim": "Candidates and Memories already read their rows, and mapAll then calls ObservationsIncludingDeleted a second time to build the sync-id index. Memories therefore reads the whole project twice. Each observation also costs a RelatedEdges query and a lineage lookup (an import_map query plus MemoryByID), which is an N+1 pattern over every observation of the project.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/engram/source.go:44-56",
+          "longterm-mem/internal/engram/source.go:77-80"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff by reading only. Nothing was run, and the existence of engram.Store.ObservationIDsWithCardHash was assumed, because its definition is not in the diff."
+    ]
+  }
+}

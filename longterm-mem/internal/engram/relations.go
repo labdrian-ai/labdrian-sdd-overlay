@@ -60,3 +60,44 @@ func (s *Store) RelatedEdges(observationID int64) ([]memory.Edge, error) {
 	}
 	return edges, nil
 }
+
+// RelatedEdgesOfProject returns, in one query, the edges RelatedEdges returns for each observation of project,
+// keyed by observation id: the same filter, on either side of the edge, in the order the relation rows were
+// written. An observation with no accepted edge has no entry.
+func (s *Store) RelatedEdgesOfProject(project string) (map[int64][]memory.Edge, error) {
+	placeholders := strings.TrimSuffix(strings.Repeat("?, ", len(acceptedRelations)), ", ")
+	args := []any{project}
+	for _, relation := range acceptedRelations {
+		args = append(args, relation)
+	}
+	rows, err := s.db.Query(
+		`SELECT o.id, r.relation, r.source_id, r.target_id
+		 FROM observations o JOIN memory_relations r ON (r.source_id = o.sync_id OR r.target_id = o.sync_id)
+		 WHERE o.project = ?
+		   AND r.source_id IS NOT NULL
+		   AND r.target_id IS NOT NULL
+		   AND r.judgment_status = 'judged'
+		   AND r.superseded_at IS NULL
+		   AND r.relation IN (`+placeholders+`)
+		 ORDER BY o.id, r.rowid`,
+		args...,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("engram: related edges for project %q: %w", project, err)
+	}
+	defer rows.Close()
+
+	edges := map[int64][]memory.Edge{}
+	for rows.Next() {
+		var id int64
+		var e memory.Edge
+		if err := rows.Scan(&id, &e.Relation, &e.SourceSyncID, &e.TargetSyncID); err != nil {
+			return nil, fmt.Errorf("engram: scan relation edge row: %w", err)
+		}
+		edges[id] = append(edges[id], e)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("engram: iterate relation edge rows: %w", err)
+	}
+	return edges, nil
+}

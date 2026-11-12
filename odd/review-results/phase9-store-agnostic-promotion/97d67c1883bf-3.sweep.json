@@ -1,0 +1,26 @@
+{
+  "kind": "sweep",
+  "base": "1a0c64138de1025b3a97e9665475bf5aad39abb8",
+  "head": "97d67c1883bf3de0773087773ab149c997f0c7c2",
+  "diff_sha256": "7f6b6ef9ca24f517b523bc1964647df991dff27108c6f099ce1eebe44b9d5115",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": []
+  },
+  "t2": [
+    {
+      "tool": "errcheck",
+      "module": "longterm-mem",
+      "new": [
+        "internal/engram/relations.go: unchecked error: defer rows.Close()",
+        "internal/engram/source_test.go: unchecked error: defer store.Close()"
+      ]
+    }
+  ],
+  "t3": [],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

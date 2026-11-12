@@ -13,7 +13,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
+	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 
@@ -137,6 +139,96 @@ func (s *Store) MemoryByID(id int64) (memory.CardMemory, bool, error) {
 	}
 	return m, true, nil
 }
+
+// MemoryByEngramID returns the memory memorycard imported from Engram observation engramID: the one its import_map
+// row of source engram names, the first part whose memory exists (a dangling row hides no later part), mapped as MemoryByID maps it. ok is
+// false, with a nil error, when no row names the observation or every memory its rows name is gone.
+func (s *Store) MemoryByEngramID(engramID int64) (memory.CardMemory, bool, error) {
+	var memoryID int64
+	err := s.db.QueryRow(`select i.memory_id from import_map i join memories m on m.id = i.memory_id where i.source = 'engram' and i.source_key = ? order by i.part limit 1`, strconv.FormatInt(engramID, 10)).Scan(&memoryID)
+	switch {
+	case errors.Is(err, sql.ErrNoRows):
+		return memory.CardMemory{}, false, nil
+	case err != nil:
+		return memory.CardMemory{}, false, fmt.Errorf("memorycard: look up the memory imported from Engram observation %d: %w", engramID, err)
+	}
+	return s.MemoryByID(memoryID)
+}
+
+// MemoryIDsByEngramIDs returns, for each of the Engram observations engramIDs, the ids of the memories its
+// import_map rows of source engram name: one per part, in part order, without repeats. A row whose memory is
+// gone names nothing and hides no other part. An observation with no such row has no entry.
+func (s *Store) MemoryIDsByEngramIDs(engramIDs []int64) (map[int64][]int64, error) {
+	found := map[int64][]int64{}
+	const chunk = 500
+	for start := 0; start < len(engramIDs); start += chunk {
+		end := min(start+chunk, len(engramIDs))
+		args := make([]any, 0, end-start)
+		for _, id := range engramIDs[start:end] {
+			args = append(args, strconv.FormatInt(id, 10))
+		}
+		rows, err := s.db.Query(`select i.source_key, i.memory_id from import_map i join memories m on m.id = i.memory_id
+			where i.source = 'engram' and i.source_key in (`+placeholders(len(args))+`) order by i.source_key, i.part, i.memory_id`, args...)
+		if err != nil {
+			return nil, fmt.Errorf("memorycard: look up the memories imported from Engram observations: %w", err)
+		}
+		for rows.Next() {
+			var key string
+			var memoryID int64
+			if err := rows.Scan(&key, &memoryID); err != nil {
+				_ = rows.Close()
+				return nil, fmt.Errorf("memorycard: read an import_map row: %w", err)
+			}
+			// A key that is not a number names no observation.
+			engramID, perr := strconv.ParseInt(key, 10, 64)
+			if perr != nil || slices.Contains(found[engramID], memoryID) {
+				continue
+			}
+			found[engramID] = append(found[engramID], memoryID)
+		}
+		if err := errors.Join(rows.Err(), rows.Close()); err != nil {
+			return nil, fmt.Errorf("memorycard: iterate the import_map rows: %w", err)
+		}
+	}
+	return found, nil
+}
+
+// UnmappedMemoryIDsByHash returns, for each of the content hashes, the ids of the memories of project that hold
+// it and have no import_map row of any source, whatever their status (a page outlives its memory): the memories
+// that were mirrored to memorycard by hand. A hash no such memory holds has no entry.
+func (s *Store) UnmappedMemoryIDsByHash(project string, hashes []string) (map[string][]int64, error) {
+	found := map[string][]int64{}
+	const chunk = 500
+	for start := 0; start < len(hashes); start += chunk {
+		end := min(start+chunk, len(hashes))
+		args := []any{project}
+		for _, h := range hashes[start:end] {
+			args = append(args, h)
+		}
+		rows, err := s.db.Query(`select m.content_hash, m.id from memories m
+			where m.project = ? and m.content_hash in (`+placeholders(end-start)+`)
+			and not exists (select 1 from import_map i where i.memory_id = m.id) order by m.id`, args...)
+		if err != nil {
+			return nil, fmt.Errorf("memorycard: look up the memories mirrored by hand in project %q: %w", project, err)
+		}
+		for rows.Next() {
+			var hash string
+			var id int64
+			if err := rows.Scan(&hash, &id); err != nil {
+				_ = rows.Close()
+				return nil, fmt.Errorf("memorycard: read a memory of project %q: %w", project, err)
+			}
+			found[hash] = append(found[hash], id)
+		}
+		if err := errors.Join(rows.Err(), rows.Close()); err != nil {
+			return nil, fmt.Errorf("memorycard: iterate the memories of project %q: %w", project, err)
+		}
+	}
+	return found, nil
+}
+
+// placeholders is n comma-separated question marks, for an in list whose values are bound arguments.
+func placeholders(n int) string { return strings.TrimSuffix(strings.Repeat("?, ", n), ", ") }
 
 // ListMemories returns the memories of project that promotion reads, in id order, each mapped as MemoryByID
 // maps it: the active and the superseded ones. An archived memory is left out, as Engram's ListObservations
