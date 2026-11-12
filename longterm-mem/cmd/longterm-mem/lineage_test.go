@@ -37,7 +37,9 @@ func lineageWorld(t *testing.T) (*engram.Store, *memorycard.Store) {
 			string(schema),
 			`insert into observations (id, sync_id, session_id, type, title, content, project, revision_count, created_at) values
 				(1, 's1', 'x', 'decision', 'Imported', 'Imported body', 'p', 1, '2026-01-01 00:00:00'),
-				(2, 's2', 'x', 'decision', 'Mirrored', 'Mirrored   body', 'p', 1, '2026-01-02 00:00:00')`,
+				(2, 's2', 'x', 'decision', 'Mirrored', 'Mirrored   body', 'p', 1, '2026-01-02 00:00:00'),
+				(3, 's3', 'x', 'decision', 'Split', 'Split body', 'p', 1, '2026-01-03 00:00:00'),
+				(4, 's4', 'x', 'decision', 'Parts', 'Parts body', 'p', 1, '2026-01-04 00:00:00')`,
 		},
 		cardPath: {
 			`create table memories (id integer primary key autoincrement, project text not null, scope text not null default 'project',
@@ -48,8 +50,12 @@ func lineageWorld(t *testing.T) (*engram.Store, *memorycard.Store) {
 			`insert into memories(id, project, type, title, body, content_hash) values
 				(10, 'p', 'decision', 'Imported', 'Imported body', 'ignored'),
 				(11, 'p', 'decision', 'Mirrored', 'Mirrored body', '` + memory.CardContentHash("Mirrored", "Mirrored   body") + `'),
-				(12, 'p', 'decision', 'Alone', 'Alone body', '` + memory.CardContentHash("Alone", "Alone body") + `')`,
-			`insert into import_map values ('engram', '1', 1, 10)`,
+				(12, 'p', 'decision', 'Alone', 'Alone body', '` + memory.CardContentHash("Alone", "Alone body") + `'),
+				(13, 'q', 'decision', 'Split', 'Split body', 'x'),
+				(14, 'q', 'decision', 'Parts one', 'Parts body', 'y'),
+				(15, 'q', 'decision', 'Parts two', 'Parts body', 'z')`,
+			// Observation 3 was imported with a dangling part 1; observation 4 as two parts.
+			`insert into import_map values ('engram', '1', 1, 10), ('engram', '3', 1, 99), ('engram', '3', 2, 13), ('engram', '4', 1, 14), ('engram', '4', 2, 15)`,
 		},
 	} {
 		db, err := sql.Open("sqlite", path)
@@ -109,8 +115,14 @@ func TestLineageRunsBothWaysBetweenTheTwoStores(t *testing.T) {
 	if got := lineageOf(t, engramSource, "1"); !reflect.DeepEqual(got, []memory.Identity{{Source: "memorycard", ID: "10"}}) {
 		t.Errorf("observation 1 lineage = %v, want memorycard memory 10 (its import_map row, read in reverse)", got)
 	}
-	if got := lineageOf(t, engramSource, "2"); got != nil {
-		t.Errorf("observation 2 lineage = %v, want none: a memory mirrored by hand has no import_map row to read in reverse", got)
+	if got := lineageOf(t, engramSource, "2"); !reflect.DeepEqual(got, []memory.Identity{{Source: "memorycard", ID: "11"}}) {
+		t.Errorf("observation 2 lineage = %v, want memorycard memory 11: the memory mirrored by hand holds its content and has no import_map row, so the twin rule runs in reverse", got)
+	}
+	if got := lineageOf(t, engramSource, "3"); !reflect.DeepEqual(got, []memory.Identity{{Source: "memorycard", ID: "13"}}) {
+		t.Errorf("observation 3 lineage = %v, want memory 13: a dangling part 1 row hides nothing", got)
+	}
+	if got := lineageOf(t, engramSource, "4"); !reflect.DeepEqual(got, []memory.Identity{{Source: "memorycard", ID: "14"}, {Source: "memorycard", ID: "15"}}) {
+		t.Errorf("observation 4 lineage = %v, want the memory of every part, 14 and 15", got)
 	}
 
 	// Every memory of the project comes through a listing with its lineage as ByID gives it.

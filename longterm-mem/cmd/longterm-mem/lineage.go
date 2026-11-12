@@ -13,14 +13,36 @@ import (
 // memorycard's import_map is read in both directions, and Engram answers which observations hold a memory's
 // content.
 
-// newEngramSource is the Engram adapter whose observations name the memorycard memory imported from them.
+// newEngramSource is the Engram adapter whose observations name the memorycard memories that are the same piece of
+// memory: the memory of every part its import_map rows name, and the memories mirrored by hand that hold its
+// content (no import_map row, the same project and content hash), the twin rule of newMemorycardSource in
+// reverse. Both are read once for a listing.
 func newEngramSource(engramStore *engram.Store, cards *memorycard.Store) *engram.Source {
-	return engram.NewSource(engramStore, func(observationID int64) ([]memory.Identity, error) {
-		imported, ok, err := cards.MemoryByEngramID(observationID)
-		if err != nil || !ok {
+	return engram.NewSource(engramStore, func(project string, observations []memory.Observation) (map[int64][]memory.Identity, error) {
+		ids := make([]int64, 0, len(observations))
+		hashes := make([]string, 0, len(observations))
+		for _, o := range observations {
+			ids = append(ids, o.ID)
+			hashes = append(hashes, memory.CardContentHash(o.Title, o.Content))
+		}
+		imported, err := cards.MemoryIDsByEngramIDs(ids)
+		if err != nil {
 			return nil, err
 		}
-		return []memory.Identity{{Source: memorycard.SourceName, ID: strconv.FormatInt(imported.ID, 10)}}, nil
+		mirrored, err := cards.UnmappedMemoryIDsByHash(project, hashes)
+		if err != nil {
+			return nil, err
+		}
+		lineage := map[int64][]memory.Identity{}
+		for i, o := range observations {
+			for _, id := range imported[o.ID] {
+				lineage[o.ID] = append(lineage[o.ID], memory.Identity{Source: memorycard.SourceName, ID: strconv.FormatInt(id, 10)})
+			}
+			for _, id := range mirrored[hashes[i]] {
+				lineage[o.ID] = append(lineage[o.ID], memory.Identity{Source: memorycard.SourceName, ID: strconv.FormatInt(id, 10)})
+			}
+		}
+		return lineage, nil
 	})
 }
 

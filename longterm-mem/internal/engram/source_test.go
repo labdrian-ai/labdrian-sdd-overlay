@@ -154,29 +154,84 @@ func TestSourceCandidatesAreTheLiveObservationsAndMemoriesIsEveryRowOfTheProject
 	}
 }
 
-func TestSourceLineageIsWhatTheCompositionRootAnswersForTheObservation(t *testing.T) {
-	var asked []int64
-	lineage := func(observationID int64) ([]memory.Identity, error) {
-		asked = append(asked, observationID)
-		if observationID == 1 {
-			return []memory.Identity{{Source: "memorycard", ID: "9"}}, nil
+// The lineage is asked of the composition root once for a listing, not once per observation, with the project and
+// the observations of the listing; ByID asks for the one observation.
+func TestSourceLineageIsAskedOncePerListingForItsObservations(t *testing.T) {
+	type call struct {
+		project string
+		ids     []int64
+	}
+	var calls []call
+	lineage := func(project string, observations []memory.Observation) (map[int64][]memory.Identity, error) {
+		c := call{project: project}
+		for _, o := range observations {
+			c.ids = append(c.ids, o.ID)
 		}
-		return nil, nil
+		calls = append(calls, c)
+		return map[int64][]memory.Identity{1: {{Source: "memorycard", ID: "9"}}}, nil
 	}
 	source := openEngramSource(t, sourceFixture(t), lineage)
 
+	candidates, err := source.Candidates("p")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(calls) != 1 || calls[0].project != "p" || len(calls[0].ids) != 4 {
+		t.Fatalf("lineage asked %+v for Candidates(p), want one call for the project and its 4 live observations", calls)
+	}
+	for _, m := range candidates {
+		want := []memory.Identity(nil)
+		if m.Identity.ID == "1" {
+			want = []memory.Identity{{Source: "memorycard", ID: "9"}}
+		}
+		if !reflect.DeepEqual(m.Lineage, want) {
+			t.Errorf("observation %s lineage = %v, want %v", m.Identity.ID, m.Lineage, want)
+		}
+	}
+
+	calls = nil
 	got, ok, err := source.ByID("1")
 	if err != nil || !ok {
 		t.Fatalf("ByID(1) = %v, %v", ok, err)
 	}
+	if !reflect.DeepEqual(calls, []call{{project: "p", ids: []int64{1}}}) {
+		t.Errorf("lineage asked %+v for ByID(1), want one call for observation 1", calls)
+	}
 	if want := []memory.Identity{{Source: "memorycard", ID: "9"}}; !reflect.DeepEqual(got.Lineage, want) {
-		t.Errorf("observation 1 lineage = %v, want %v", got.Lineage, want)
+		t.Errorf("ByID(1) lineage = %v, want %v", got.Lineage, want)
 	}
-	if !reflect.DeepEqual(asked, []int64{1}) {
-		t.Errorf("lineage asked for %v, want observation 1 only", asked)
+}
+
+// The edges of a whole project, read in one query, are the edges RelatedEdges answers observation by observation.
+func TestRelatedEdgesOfProject_AreTheEdgesOfEachObservation(t *testing.T) {
+	path := sourceFixture(t)
+	store, err := Open(path)
+	if err != nil {
+		t.Fatal(err)
 	}
-	two, _, _ := source.ByID("2")
-	if two.Lineage != nil {
-		t.Errorf("observation 2 lineage = %v, want none", two.Lineage)
+	defer store.Close()
+
+	got, err := store.RelatedEdgesOfProject("p")
+	if err != nil {
+		t.Fatal(err)
+	}
+	withEdges := 0
+	for _, id := range []int64{1, 2, 3, 4, 5, 7} {
+		want, err := store.RelatedEdges(id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(got[id], want) && !(len(want) == 0 && len(got[id]) == 0) {
+			t.Errorf("edges of observation %d = %+v, RelatedEdges says %+v", id, got[id], want)
+		}
+		if len(want) > 0 {
+			withEdges++
+		}
+	}
+	if withEdges != 5 {
+		t.Fatalf("%d observations of the fixture have edges, want 5 (1, 2, 4, 5 and 7): the comparison would pass over nothing", withEdges)
+	}
+	if _, ok := got[6]; ok {
+		t.Errorf("edges of another project's observation 6 came back: %+v", got[6])
 	}
 }

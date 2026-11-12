@@ -82,6 +82,82 @@ func TestMemoryByEngramID_FindsTheImportedMemoryThroughImportMap(t *testing.T) {
 	}
 }
 
+// addImportRows adds import_map rows to the fixture at path.
+func addImportRows(t *testing.T, path, rows string) {
+	t.Helper()
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`insert into import_map values ` + rows); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func openStore(t *testing.T, path string) *Store {
+	t.Helper()
+	store, err := Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := store.Close(); err != nil {
+			t.Error(err)
+		}
+	})
+	return store
+}
+
+// An observation imported as several parts is several memories: MemoryIDsByEngramIDs names every part's memory,
+// in part order, and a row whose memory is gone, a key of another source and an observation with no row name none.
+func TestMemoryIDsByEngramIDs_NamesTheMemoryOfEveryPartAndSkipsDanglingRows(t *testing.T) {
+	path := fixture(t)
+	addImportRows(t, path, `('engram', '403', 2, 3), ('engram', '406', 1, 99), ('engram', '406', 2, 3), ('engram', '406', 3, 2), ('notes', '407', 1, 2)`)
+	store := openStore(t, path)
+
+	got, err := store.MemoryIDsByEngramIDs([]int64{402, 403, 406, 407, 999})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[int64][]int64{402: {1}, 403: {3}, 406: {3, 2}}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("MemoryIDsByEngramIDs = %v, want %v (part order; the dangling part 1 of 406 hides nothing; no entry for 407 or 999)", got, want)
+	}
+	if none, err := store.MemoryIDsByEngramIDs(nil); err != nil || len(none) != 0 {
+		t.Errorf("MemoryIDsByEngramIDs(nil) = %v, %v, want nothing", none, err)
+	}
+}
+
+// A dangling row of part 1 does not hide the memory a later part names.
+func TestMemoryByEngramID_ADanglingFirstPartDoesNotHideLaterParts(t *testing.T) {
+	path := fixture(t)
+	addImportRows(t, path, `('engram', '406', 1, 99), ('engram', '406', 2, 3)`)
+	store := openStore(t, path)
+
+	got, ok, err := store.MemoryByEngramID(406)
+	if err != nil || !ok || got.ID != 3 {
+		t.Errorf("MemoryByEngramID(406) = %+v, %v, %v, want memory 3, the first part whose memory exists", got, ok, err)
+	}
+}
+
+// The memories mirrored by hand, with no import_map row of any source, that hold a content hash: all statuses,
+// because a page outlives its memory, and only the project's.
+func TestUnmappedMemoryIDsByHash_FindsTheHandMirroredMemoriesOfTheProject(t *testing.T) {
+	store := openStore(t, listFixture(t))
+
+	got, err := store.UnmappedMemoryIDsByHash("p", []string{"h1", "h2", "h3", "h4", "h5", "nobody"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[string][]int64{"h3": {3}, "h4": {4}}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("UnmappedMemoryIDsByHash = %v, want %v (1 and 2 have import_map rows, 5 is another project's)", got, want)
+	}
+}
+
 func TestMemoryByID_MapsTheRowTheBridgeAndTheRevision(t *testing.T) {
 	store, err := Open(fixture(t))
 	if err != nil {
