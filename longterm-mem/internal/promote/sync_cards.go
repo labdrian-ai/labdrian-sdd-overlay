@@ -14,9 +14,9 @@ import (
 // tells a memory mirrored by hand from one that is new.
 type CardMemories interface {
 	ListMemories(project string) ([]memory.CardMemory, error)
-	// ListAllMemories lists the memories memorycard has superseded or archived: the ones PropagateCards
-	// reads. An archived memory is in no other listing, and a page cannot be patched for a memory that is not
-	// listed.
+	// ListAllMemories lists every memory of the project whatever its status (active, superseded, archived): the
+	// ones PropagateCards reads. An archived memory is in no other listing, and a page cannot be patched, or brought
+	// back from a retirement, for a memory that is not listed.
 	ListAllMemories(project string) ([]memory.CardMemory, error)
 }
 

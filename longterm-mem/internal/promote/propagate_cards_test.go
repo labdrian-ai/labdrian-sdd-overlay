@@ -252,7 +252,7 @@ func TestPropagateCards_AFailedPatchIsNamedAndTheRunGoesOn(t *testing.T) {
 	}
 }
 
-// A memorycard that cannot list its retired memories is the typed listing failure, no patch and no panic.
+// A memorycard that cannot list its memories for propagation is the typed listing failure, no patch and no panic.
 func TestPropagateCards_AListingFailureIsTheTypedError(t *testing.T) {
 	w, _, _, _ := cardWorld(t, eligibleCard(43, 1))
 	cards := &fakeCards{allErr: errors.New("store gone")}
@@ -475,8 +475,8 @@ func TestPlanCards_CountsTheWouldPatchPagesAndWritesNothing(t *testing.T) {
 	}
 }
 
-// A listing of the retired memories that fails is no plan, as the promotion pass's listing failing is none.
-func TestPlanCards_AnUnlistableRetiredSetIsAnError(t *testing.T) {
+// A listing of the memories for propagation that fails is no plan, as the promotion pass's listing failing is none.
+func TestPlanCards_AnUnlistablePropagationListingIsAnError(t *testing.T) {
 	cards := &fakeCards{allErr: errors.New("store gone")}
 	_, err := PlanCards(t.Context(), cards, syncCardsWriter(t.TempDir()), "memorycard")
 	var listed *CardListError

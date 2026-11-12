@@ -144,7 +144,7 @@ func reportCardSync(report promote.CardProjectReport, err error) int {
 	return exitOK
 }
 
-// ListAllMemories is promote.CardMemories' listing of the superseded and archived memories, the ones status
+// ListAllMemories is promote.CardMemories' listing of every memory whatever its status, the ones status
 // propagation reads. Their pages need no Engram query: a page is the memory's own or it is not a page propagation
 // patches.
 func (s cardSource) ListAllMemories(project string) ([]memory.CardMemory, error) {

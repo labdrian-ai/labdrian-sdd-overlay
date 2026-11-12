@@ -151,10 +151,10 @@ func TestListMemories_ListsTheProjectsLiveMemoriesMappedAsMemoryByID(t *testing.
 	}
 }
 
-// The retired listing serves what status propagation reads: the superseded and the archived memories of the
-// project, in id order, each mapped exactly as MemoryByID maps it. It is the only listing that shows an archived
-// memory, and it shows no active one.
-func TestListAllMemories_ListsTheSupersededAndTheArchivedMappedAsMemoryByID(t *testing.T) {
+// The full listing serves what status propagation reads: every memory of the project whatever its status (active,
+// superseded, archived), in id order, each mapped exactly as MemoryByID maps it. It is the only listing that shows
+// an archived memory.
+func TestListAllMemories_ListsEveryStatusMappedAsMemoryByID(t *testing.T) {
 	store, err := Open(listFixture(t))
 	if err != nil {
 		t.Fatal(err)
