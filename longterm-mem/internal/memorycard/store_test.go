@@ -154,7 +154,7 @@ func TestListMemories_ListsTheProjectsLiveMemoriesMappedAsMemoryByID(t *testing.
 // The retired listing serves what status propagation reads: the superseded and the archived memories of the
 // project, in id order, each mapped exactly as MemoryByID maps it. It is the only listing that shows an archived
 // memory, and it shows no active one.
-func TestListRetiredMemories_ListsTheSupersededAndTheArchivedMappedAsMemoryByID(t *testing.T) {
+func TestListAllMemories_ListsTheSupersededAndTheArchivedMappedAsMemoryByID(t *testing.T) {
 	store, err := Open(listFixture(t))
 	if err != nil {
 		t.Fatal(err)
@@ -165,9 +165,9 @@ func TestListRetiredMemories_ListsTheSupersededAndTheArchivedMappedAsMemoryByID(
 		}
 	})
 
-	listed, err := store.ListRetiredMemories("p")
+	listed, err := store.ListAllMemories("p")
 	if err != nil {
-		t.Fatalf("ListRetiredMemories: %v", err)
+		t.Fatalf("ListAllMemories: %v", err)
 	}
 	var ids []int64
 	for _, m := range listed {
@@ -180,14 +180,14 @@ func TestListRetiredMemories_ListsTheSupersededAndTheArchivedMappedAsMemoryByID(
 			t.Errorf("listed memory %d = %+v, MemoryByID says %+v", m.ID, m, want)
 		}
 	}
-	if !reflect.DeepEqual(ids, []int64{1, 4}) {
-		t.Fatalf("listed ids = %v, want [1 4]: the superseded (1) and the archived (4) of project p, no active one, no other project", ids)
+	if !reflect.DeepEqual(ids, []int64{1, 2, 3, 4}) {
+		t.Fatalf("listed ids = %v, want [1 2 3 4]: the superseded, active and archived (4) memories of project p, none of another project", ids)
 	}
-	if listed[0].SupersededBy != 2 || listed[0].SupersededByTitle != "New" || listed[1].Status != "archived" {
+	if listed[0].SupersededBy != 2 || listed[0].SupersededByTitle != "New" || listed[3].Status != "archived" || listed[1].Status != "active" {
 		t.Errorf("listed = %+v, want the successor of memory 1 and the archived status of memory 4", listed)
 	}
-	if none, err := store.ListRetiredMemories("nobody"); err != nil || len(none) != 0 {
-		t.Errorf("ListRetiredMemories(nobody) = %v, %v, want nothing and no error", none, err)
+	if none, err := store.ListAllMemories("nobody"); err != nil || len(none) != 0 {
+		t.Errorf("ListAllMemories(nobody) = %v, %v, want nothing and no error", none, err)
 	}
 }
 

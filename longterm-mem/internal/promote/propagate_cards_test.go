@@ -255,7 +255,7 @@ func TestPropagateCards_AFailedPatchIsNamedAndTheRunGoesOn(t *testing.T) {
 // A memorycard that cannot list its retired memories is the typed listing failure, no patch and no panic.
 func TestPropagateCards_AListingFailureIsTheTypedError(t *testing.T) {
 	w, _, _, _ := cardWorld(t, eligibleCard(43, 1))
-	cards := &fakeCards{retiredErr: errors.New("store gone")}
+	cards := &fakeCards{allErr: errors.New("store gone")}
 	_, err := PropagateCards(t.Context(), cards, w, "memorycard")
 	var listed *CardListError
 	if !errors.As(err, &listed) {
@@ -337,18 +337,116 @@ func TestSyncCardsProject_AMemoryWithheldByThePropagationIsInTheReport(t *testin
 	}
 }
 
-// A retired memory that cannot be listed makes the run an unavailable memorycard, as the promotion pass's listing does.
-func TestSyncCardsProject_AnUnlistableRetiredSetIsAnUnavailableStore(t *testing.T) {
+// A memorycard that cannot list its memories for propagation makes the run an unavailable memorycard, but the
+// promotion pass already wrote pages, so the index is still rebuilt and the sync recorded (R-031), as Sync does
+// when a pass fails.
+func TestSyncCardsProject_AnUnlistablePropagationSetIsUnavailableButStillRebuildsAndRecords(t *testing.T) {
 	w := syncCardsWriter(t.TempDir())
+	state := &memSyncState{}
+	w.SyncState = state
 	index := &countingRebuilder{}
-	cards := &fakeCards{memories: []memory.CardMemory{eligibleCard(11, 1)}, retiredErr: errors.New("store gone")}
+	cards := &fakeCards{memories: []memory.CardMemory{eligibleCard(11, 1)}, allErr: errors.New("store gone")}
 
 	report, err := SyncCardsProject(t.Context(), cards, w, index, "memorycard")
 	if err == nil || report.Failure != MemoryUnavailable {
 		t.Fatalf("err = %v, failure = %v, want MemoryUnavailable", err, report.Failure)
 	}
-	if index.calls != 0 {
-		t.Errorf("rebuilds = %d, want none", index.calls)
+	if len(report.Promoted) != 1 || index.calls != 1 || len(state.recorded) != 1 {
+		t.Errorf("promoted %d, rebuilds %d, records %d, want 1 of each", len(report.Promoted), index.calls, len(state.recorded))
+	}
+}
+
+// The walk is change-aware: a page that already says what its memory says is not visited, not counted and not
+// written, on the run and on the dry run alike.
+func TestPropagateCards_APageThatAlreadySaysWhatItsMemorySaysIsNotVisited(t *testing.T) {
+	gone := eligibleCard(43, 1)
+	w, precedence, vaultRoot, address := cardWorld(t, gone)
+	gone.Status = "archived"
+	cards := &fakeCards{memories: []memory.CardMemory{gone}}
+	if report, err := PropagateCards(t.Context(), cards, w, "memorycard"); err != nil || len(report.Patched) != 1 {
+		t.Fatalf("first run = %+v, %v", report, err)
+	}
+	before, saves := readPage(t, vaultRoot, address[43]), precedence.saves
+
+	plan, err := PlanCards(t.Context(), cards, w, "memorycard")
+	if err != nil || plan.WouldPatch != 0 || len(plan.PatchAddresses) != 0 {
+		t.Fatalf("plan = %+v, %v, want nothing to patch", plan, err)
+	}
+	report, err := PropagateCards(t.Context(), cards, w, "memorycard")
+	if err != nil || len(report.Patched) != 0 {
+		t.Fatalf("second run = %+v, %v, want nothing patched", report, err)
+	}
+	if readPage(t, vaultRoot, address[43]) != before || precedence.saves != saves {
+		t.Errorf("a page that was already right was written")
+	}
+}
+
+// A memory that memorycard returned to active brings its page back from superseded or archived to the status and
+// related a render of the active memory gives, and nothing else of the page changes.
+func TestPropagateCards_ARestoredMemorysPageComesBackFromArchived(t *testing.T) {
+	back := eligibleCard(43, 1)
+	w, _, vaultRoot, address := cardWorld(t, back)
+	gone := back
+	gone.Status = "archived"
+	if _, err := PropagateCards(t.Context(), &fakeCards{memories: []memory.CardMemory{gone}}, w, "memorycard"); err != nil {
+		t.Fatal(err)
+	}
+	archived := readPage(t, vaultRoot, address[43])
+	if !strings.Contains(archived, "status: archived\n") {
+		t.Fatalf("setup page is not archived:\n%s", archived)
+	}
+
+	report, err := PropagateCards(t.Context(), &fakeCards{memories: []memory.CardMemory{back}}, w, "memorycard")
+	if err != nil || len(report.Patched) != 1 || report.Patched[0] != address[43] {
+		t.Fatalf("report = %+v, %v, want %s patched", report, err, address[43])
+	}
+	after := readPage(t, vaultRoot, address[43])
+	want, err := EmitCardPage(back, address[43], nil, utc(w.Clock))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if block, _ := frontmatterBlock(after); block != want.Frontmatter {
+		t.Errorf("restored frontmatter:\n%s\nwant the render of the active memory:\n%s", block, want.Frontmatter)
+	}
+	if bodyOf(t, after) != bodyOf(t, archived) {
+		t.Errorf("the body changed")
+	}
+}
+
+// An active memory's page whose status a human set by hand (it is neither superseded nor archived) is left alone:
+// propagation restores a page from a retirement, it does not police the status of a page memorycard never retired.
+func TestPropagateCards_AnActiveMemorysHandSetStatusIsLeftAlone(t *testing.T) {
+	m := eligibleCard(43, 1)
+	w, precedence, vaultRoot, address := cardWorld(t, m)
+	path := filepath.Join(vaultRoot, vaultlayout.PageFile(address[43]))
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(strings.Replace(string(raw), "status: mature\n", "status: seed\n", 1)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	before := readPage(t, vaultRoot, address[43])
+
+	report, err := PropagateCards(t.Context(), &fakeCards{memories: []memory.CardMemory{m}}, w, "memorycard")
+	if err != nil || len(report.Patched) != 0 {
+		t.Fatalf("report = %+v, %v, want nothing patched", report, err)
+	}
+	if readPage(t, vaultRoot, address[43]) != before || precedence.saves != 0 {
+		t.Errorf("a hand-set status was rewritten")
+	}
+}
+
+// A precedence store that cannot be persisted names the pass that patched the pages, the card pass here.
+func TestPropagateCards_AFailedPrecedenceSaveNamesTheCardPass(t *testing.T) {
+	gone := eligibleCard(43, 1)
+	w, precedence, _, _ := cardWorld(t, gone)
+	precedence.saveErr = errTestSave
+	gone.Status = "archived"
+
+	_, err := PropagateCards(t.Context(), &fakeCards{memories: []memory.CardMemory{gone}}, w, "memorycard")
+	if err == nil || !strings.Contains(err.Error(), "promote: propagate memorycard: persist precedence") || !errors.Is(err, errTestSave) {
+		t.Fatalf("err = %v, want it to name the memorycard pass and wrap the save error", err)
 	}
 }
 
@@ -379,7 +477,7 @@ func TestPlanCards_CountsTheWouldPatchPagesAndWritesNothing(t *testing.T) {
 
 // A listing of the retired memories that fails is no plan, as the promotion pass's listing failing is none.
 func TestPlanCards_AnUnlistableRetiredSetIsAnError(t *testing.T) {
-	cards := &fakeCards{retiredErr: errors.New("store gone")}
+	cards := &fakeCards{allErr: errors.New("store gone")}
 	_, err := PlanCards(t.Context(), cards, syncCardsWriter(t.TempDir()), "memorycard")
 	var listed *CardListError
 	if !errors.As(err, &listed) {

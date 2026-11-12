@@ -45,17 +45,23 @@ patched on the next `sync --source memorycard`, the counterpart of what the Engr
 supersede and archive change only the memory's `status` (and `superseded_by`) and add no version, so the page's
 `memorycard_revision` stays current and the promotion pass has nothing to do for it: the two passes are independent.
 
-- Lists the project's `superseded` and `archived` memories (the only listing that shows an archived one) and finds
-  each one's own page by `(project, memorycard_id)`. A memory with no page is left alone. When a page of the vault
-  could not be read and none belongs to the memory, it is left alone and named (exit 6), as for promotion.
-- `status` becomes `superseded` or `archived`. `related` names the successor's page (`superseded_by`) in the form a
+- Lists every memory of the project whatever its status (the only listing that shows an archived one) and finds each
+  one's own page by `(project, memorycard_id)`. A memory with no page is left alone. When a page of the vault could
+  not be read and none belongs to a superseded or archived memory, it is left alone and named (exit 6), as for
+  promotion.
+- A page is patched only when it is behind its memory: its `status` or `related` differs from what the memory says.
+  A page that already says it is not touched, not counted, and not predicted by the dry run.
+- `status` becomes `superseded` or `archived`. A memory that memorycard has restored to active brings its page back
+  from `superseded` or `archived` to what a render of the active memory gives (`mature` when pinned, otherwise
+  `developing`). The status a human set by hand on the page of an active memory is left alone. `related` names the successor's page (`superseded_by`) in the form a
   page render uses, `[[<address>|<successor title>]]`, and is empty when the memory has no successor or the successor
   has no page. Because the promotion pass runs first, a page it created before its successor's page existed gets its
   link in the same run.
 - Only those two lines of the frontmatter are written, never the body, even on a page edited by hand. The patch is
   recorded in the precedence store the way the Engram pass records it: only the frontmatter hash moves, so the
   body's divergence from the last write is not erased and a later newer revision of that page is still left alone.
-- A page already patched is visited again and rewrites nothing, as on the Engram path; the run counts it.
+- If memorycard cannot list the memories for this pass after promotion wrote pages, the index is still rebuilt and
+  the sync recorded, and the run answers exit 4.
 - The run and the dry run share one walk (`would patch: <address>` lines, a `patch N page(s)` count). The dry run
   reads the pages as they are before the run, so it does not predict a link the run adds to a page it creates.
 

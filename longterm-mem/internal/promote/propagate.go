@@ -56,7 +56,7 @@ func Propagate(ctx context.Context, deps Deps, project string) (PropagateReport,
 	report.Failed = outcome.failed
 	report.Withheld = outcome.withheld
 
-	if err := deps.Writer.savePatched(len(report.Patched)); err != nil {
+	if err := deps.Writer.savePatched("propagate", report.Patched); err != nil {
 		return report, err
 	}
 	return report, failureError("propagate", report.Failed)
@@ -88,14 +88,15 @@ func (w *Writer) patchPage(t patchTarget) error {
 	return nil
 }
 
-// savePatched persists the precedence store once for a run that patched count pages, and not at all for one that
-// patched none.
-func (w *Writer) savePatched(count int) error {
-	if count == 0 {
+// savePatched persists the precedence store once for a run of pass that patched pages, and not at all for one that
+// patched none. pass names the run in the error: "propagate" for Engram pages, "propagate memorycard" for the
+// pages of memorycard.
+func (w *Writer) savePatched(pass string, patched []string) error {
+	if len(patched) == 0 {
 		return nil
 	}
 	if err := w.Precedence.SavePrecedence(w.Store); err != nil {
-		return fmt.Errorf("promote: propagate: persist precedence: %w", err)
+		return fmt.Errorf("promote: %s: persist precedence: %w", pass, err)
 	}
 	return nil
 }

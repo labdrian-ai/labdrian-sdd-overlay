@@ -144,11 +144,11 @@ func reportCardSync(report promote.CardProjectReport, err error) int {
 	return exitOK
 }
 
-// ListRetiredMemories is promote.CardMemories' listing of the superseded and archived memories, the ones status
+// ListAllMemories is promote.CardMemories' listing of the superseded and archived memories, the ones status
 // propagation reads. Their pages need no Engram query: a page is the memory's own or it is not a page propagation
 // patches.
-func (s cardSource) ListRetiredMemories(project string) ([]memory.CardMemory, error) {
-	return s.cards.ListRetiredMemories(project)
+func (s cardSource) ListAllMemories(project string) ([]memory.CardMemory, error) {
+	return s.cards.ListAllMemories(project)
 }
 
 // warnMemoriesLeftAlone is warnLeftAlone for the memories of memorycard: nothing was written for them because no

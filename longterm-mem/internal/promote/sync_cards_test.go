@@ -18,9 +18,9 @@ type fakeCards struct {
 	memories []memory.CardMemory
 	err      error
 	listed   []string
-	// retiredErr is what ListRetiredMemories answers when set; retiredListed counts its calls.
-	retiredErr    error
-	retiredListed int
+	// allErr is what ListAllMemories answers when set; allListed counts its calls.
+	allErr    error
+	allListed int
 }
 
 // ListMemories serves the memories of the fixed list that are not archived, as the adapter does.
@@ -35,16 +35,10 @@ func (f *fakeCards) ListMemories(project string) ([]memory.CardMemory, error) {
 	return live, f.err
 }
 
-// ListRetiredMemories serves the memories of the fixed list that are superseded or archived, as the adapter does.
-func (f *fakeCards) ListRetiredMemories(project string) ([]memory.CardMemory, error) {
-	f.retiredListed++
-	var retired []memory.CardMemory
-	for _, m := range f.memories {
-		if m.Status == "superseded" || m.Status == "archived" {
-			retired = append(retired, m)
-		}
-	}
-	return retired, f.retiredErr
+// ListAllMemories serves every memory of the fixed list, whatever its status, as the adapter does.
+func (f *fakeCards) ListAllMemories(project string) ([]memory.CardMemory, error) {
+	f.allListed++
+	return f.memories, f.allErr
 }
 
 // countingPages counts how often a run lists the vault's pages.

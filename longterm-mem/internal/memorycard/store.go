@@ -146,12 +146,12 @@ func (s *Store) ListMemories(project string) ([]memory.CardMemory, error) {
 	return s.listWithStatus(project, `m.status in ('active', 'superseded')`)
 }
 
-// ListRetiredMemories returns the memories of project that memorycard has retired, the superseded and the archived
-// ones, in id order, each mapped as MemoryByID maps it. It is the listing status propagation reads, and the only
-// one that shows an archived memory: ListMemories leaves those out, and shows the superseded ones beside the
-// active ones because promotion reads both.
-func (s *Store) ListRetiredMemories(project string) ([]memory.CardMemory, error) {
-	return s.listWithStatus(project, `m.status in ('superseded', 'archived')`)
+// ListAllMemories returns every memory of project whatever its status, in id order, each mapped as MemoryByID maps
+// it. It is the listing status propagation reads, and the only one that shows an archived memory: ListMemories
+// leaves those out because promotion does. A page can be behind its memory in either direction (the memory was
+// retired, or restored to active), so propagation needs them all.
+func (s *Store) ListAllMemories(project string) ([]memory.CardMemory, error) {
+	return s.listWithStatus(project, `m.status in ('active', 'superseded', 'archived')`)
 }
 
 // listWithStatus is the one listing of a project's memories: it appends statusClause, a constant of this file and

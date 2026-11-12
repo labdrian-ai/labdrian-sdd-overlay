@@ -14,10 +14,10 @@ import (
 // tells a memory mirrored by hand from one that is new.
 type CardMemories interface {
 	ListMemories(project string) ([]memory.CardMemory, error)
-	// ListRetiredMemories lists the memories memorycard has superseded or archived: the ones PropagateCards
+	// ListAllMemories lists the memories memorycard has superseded or archived: the ones PropagateCards
 	// reads. An archived memory is in no other listing, and a page cannot be patched for a memory that is not
 	// listed.
-	ListRetiredMemories(project string) ([]memory.CardMemory, error)
+	ListAllMemories(project string) ([]memory.CardMemory, error)
 }
 
 // CardSyncReport summarizes one SyncCards run, in the shape of SyncReport: Promoted lists every memory the run
@@ -223,13 +223,13 @@ func SyncCardsProject(ctx context.Context, cards CardMemories, w *Writer, index 
 	// page existed gets its successor link now. A memory it could not patch is a failed memory like the others.
 	patches, patchErr := PropagateCards(ctx, cards, w, project)
 	out.Patched = patches.Patched
-	out.Failed = append(out.Failed, patches.Failed...)
+	out.Failed = mergeFailures(out.Failed, patches.Failed)
 	out.Withheld = mergeWithheld(out.Withheld, patches.Withheld)
-	switch {
-	case CardRunFailure(patchErr) == MemoryUnavailable:
-		out.Failure = MemoryUnavailable
-		return out, patchErr
-	case patchErr != nil && len(patches.Failed) == 0:
+	// Memories that cannot be listed for propagation do not stop the run: the promotion pass has written pages, so
+	// the index is rebuilt and the sync recorded as when any pass fails (R-031), and the run then answers
+	// MemoryUnavailable.
+	unavailable := CardRunFailure(patchErr) == MemoryUnavailable
+	if patchErr != nil && !unavailable && len(patches.Failed) == 0 {
 		out.Failure = OtherFailure
 		return out, patchErr
 	}
@@ -246,7 +246,10 @@ func SyncCardsProject(ctx context.Context, cards CardMemories, w *Writer, index 
 		out.Failure = OtherFailure
 		return out, fmt.Errorf("promote: sync memorycard: %w", recordErr)
 	}
-	if err != nil {
+	switch {
+	case unavailable:
+		out.Failure = MemoryUnavailable
+	case err != nil:
 		out.Failure = OtherFailure
 	}
 	return out, err
