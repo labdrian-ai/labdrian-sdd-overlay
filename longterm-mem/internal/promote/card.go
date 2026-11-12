@@ -268,14 +268,15 @@ func readCardPages(pages PageReader) (*cardPages, error) {
 			return
 		}
 		fields := parseFrontmatterFields(block)
-		match := promotedPageMatch{File: file, Project: fields[projectField], Address: strings.TrimSpace(fields["address"]),
-			RawRevision: strings.TrimSpace(fields[memorycardRevisionField])}
-		if engramID := fields[engramIDField]; engramID != "" {
+		match := promotedPageMatch{File: file, Project: fields[projectField], Address: strings.TrimSpace(fields["address"])}
+		card, cardNamed := identityOf(fields, memorycardSource)
+		match.RawRevision = card.Revision
+		if engram, named := identityOf(fields, engramSource); named {
 			engramMatch := match
-			engramMatch.EngramID = engramID
+			engramMatch.EngramID = engram.ID
 			index.engramPages = append(index.engramPages, engramMatch)
 		}
-		if id, err := strconv.ParseInt(strings.TrimSpace(fields[memorycardIDField]), 10, 64); err == nil {
+		if id, err := strconv.ParseInt(strings.TrimSpace(card.ID), 10, 64); cardNamed && err == nil {
 			key := cardKey{project: match.Project, id: id}
 			if index.own[key] == nil {
 				index.own[key] = &match

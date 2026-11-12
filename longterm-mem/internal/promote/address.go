@@ -308,7 +308,8 @@ func scanPromotedPages(pages PageReader, engramID int) (pageScan, error) {
 			return
 		}
 		fields := parseFrontmatterFields(block)
-		if fields[engramIDField] != wantID {
+		identity, named := identityOf(fields, engramSource)
+		if !named || identity.ID != wantID {
 			return
 		}
 		found = append(found, promotedPageMatch{
@@ -316,7 +317,7 @@ func scanPromotedPages(pages PageReader, engramID int) (pageScan, error) {
 			EngramID:    wantID,
 			Project:     fields[projectField],
 			Address:     strings.TrimSpace(fields["address"]),
-			RawRevision: strings.TrimSpace(fields[engramRevisionField]),
+			RawRevision: identity.Revision,
 		})
 	}); err != nil {
 		return pageScan{}, err

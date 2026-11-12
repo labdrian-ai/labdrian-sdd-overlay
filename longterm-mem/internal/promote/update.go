@@ -178,18 +178,18 @@ func entryFor(page Page) PrecedenceEntry {
 	return entry
 }
 
-// frontmatterRevision reads a frontmatter block's engram_revision as an
-// integer. A block missing the field, or carrying something that is not an
+// frontmatterRevision reads the revision of the Engram identity a frontmatter block names (engram_revision or
+// source_revision, through identityOf) as an integer. A block missing the field, or carrying something that is not an
 // integer, reports false rather than a zero revision: every caller treats
 // "no readable revision" as no evidence and fails closed, which a silent 0
 // would quietly turn into "revision 0", the smallest possible revision and
 // therefore the most permissive answer.
 func frontmatterRevision(fmBlock string) (int, bool) {
-	raw, ok := parseFrontmatterFields(fmBlock)[engramRevisionField]
-	if !ok {
+	identity, named := identityOf(parseFrontmatterFields(fmBlock), engramSource)
+	if !named || identity.Revision == "" {
 		return 0, false
 	}
-	revision, err := strconv.Atoi(strings.TrimSpace(raw))
+	revision, err := strconv.Atoi(identity.Revision)
 	if err != nil {
 		return 0, false
 	}
@@ -340,15 +340,16 @@ func revisionsAllowAdoption(entry PrecedenceEntry, onDisk, incoming int) bool {
 	return onDisk > entry.PromotedRevision && onDisk <= incoming
 }
 
-// frontmatterEngramID reads a frontmatter block's engram_id, failing the
+// frontmatterEngramID reads the id of the Engram identity a frontmatter block names (engram_id or source_id,
+// through identityOf), failing the
 // same closed way frontmatterRevision does: an absent or unparseable value
 // reports false rather than observation 0.
 func frontmatterEngramID(fmBlock string) (int64, bool) {
-	raw, ok := parseFrontmatterFields(fmBlock)[engramIDField]
-	if !ok {
+	identity, named := identityOf(parseFrontmatterFields(fmBlock), engramSource)
+	if !named {
 		return 0, false
 	}
-	obsID, err := strconv.ParseInt(strings.TrimSpace(raw), 10, 64)
+	obsID, err := strconv.ParseInt(strings.TrimSpace(identity.ID), 10, 64)
 	if err != nil {
 		return 0, false
 	}
@@ -420,8 +421,8 @@ func withoutVolatileStamps(fmBlock string) string {
 // sources.
 func corroboratingFrontmatter(fmBlock string) string {
 	normalized := blankFrontmatterValues(withoutVolatileStamps(fmBlock),
-		engramRevisionField, statusField, titleField, engramTypeField,
-		engramSyncIDField, projectField)
+		engramRevisionField, sourceRevisionField, statusField, titleField, engramTypeField,
+		sourceTypeField, engramSyncIDField, projectField)
 	for _, key := range []string{relatedField, aliasesField, tagsField} {
 		normalized = blankFrontmatterListSection(normalized, key)
 	}
