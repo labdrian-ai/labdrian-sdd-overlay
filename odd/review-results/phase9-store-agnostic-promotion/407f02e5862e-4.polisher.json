@@ -1,0 +1,31 @@
+{
+  "kind": "polisher",
+  "base": "6dc65848624e48758c84cf45da6d9ea4d1d47997",
+  "head": "407f02e5862ee6c05e5d91a0f9a023ce4a29e773",
+  "diff_sha256": "1ac06ca013f0e18487ab0d2c4444561da15e656abe74e82e34a09b2c4a91d9b3",
+  "findings": {
+    "findings": [
+      {
+        "location": "longterm-mem/internal/promote/update.go:183-186",
+        "severity": "SUGGESTION",
+        "claim": "The rewritten doc comment of frontmatterRevision is left unwrapped. Its second line runs past the ~120-column wrapping used by the neighbouring comments, and the sentence is spliced into the old one. Only readability is affected.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "t2fix.diff:285-286: `// frontmatterRevision reads the revision a frontmatter block records for Engram (engram_revision, or` followed by `// source_revision beside source: engram, through revisionOf; no id is needed) as an integer. A block missing the field, or carrying something that is not an`",
+          "The following comment lines (t2fix.diff:287-290) keep the short wrapping, so the paragraph is ragged."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read /home/labdrian/.cache/c22fu-review/sap/t2fix.diff in full.",
+      "Read page_identity.go, card.go:100-140 and 255-305, address.go:296-330 and update.go:335-360 in the source tree.",
+      "Finding (1) is closed. frontmatterRevision now calls revisionOf directly, so it no longer needs an id (update.go:188-191).",
+      "Finding (2) is closed. readCardPages reads the memorycard revision via revisionOf unconditionally (card.go:273) and clears it on the Engram-bridged match (card.go:277).",
+      "Finding (3) is closed. fieldOf falls back per field to the legacy key of the same source only (page_identity.go:40-47).",
+      "Finding (4) is closed. RevisionKey is set in scanPromotedPages (address.go:317-324) and readCardPages (card.go:273), and both error sites (address.go:278, card.go:122) print it; the only constructors are address.go:318 and card.go:271.",
+      "No other output changed beyond the reconcile refusal message at reconcile.go:217, which no test or golden asserts.",
+      "No Bash tool was available, so no tests or build were run; verdicts come from reading the code."
+    ]
+  }
+}

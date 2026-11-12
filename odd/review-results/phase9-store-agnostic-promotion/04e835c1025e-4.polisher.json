@@ -1,0 +1,54 @@
+{
+  "kind": "polisher",
+  "base": "672151b45751af85e4b08ba321021e2db2e8727c",
+  "head": "04e835c1025e76305bfe6e5898918b699a15924f",
+  "diff_sha256": "b9c367cf26d273e1cdcddb7fa22f7f9085a0ab97f76929aad3d9c9cedda0834b",
+  "findings": {
+    "findings": [
+      {
+        "location": "longterm-mem/internal/promote/update.go:187-195",
+        "claim": "Reconcile now refuses an existing legacy page that carries a readable `engram_revision` but no `engram_id`. Before this commit it adopted that page. This contradicts the claim that every existing output is unchanged. The change comes from `frontmatterRevision` gating on `identityOf`'s `named`, which requires an id. The builder knew of the behavior change but no test pins it, and the reconcile refusal message still says only 'no readable engram_revision', which is now misleading.",
+        "severity": "WARNING",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "base: `raw, ok := parseFrontmatterFields(fmBlock)[engramRevisionField]; if !ok { return 0, false }` read the revision with no id check",
+          "head update.go:188-190: `identity, named := identityOf(parseFrontmatterFields(fmBlock), engramSource); if !named || identity.Revision == \"\" { return 0, false }`",
+          "page_identity.go:51-56 returns named only when `fields[keys.id] != \"\"`",
+          "reconcile.go:175-181 checks only address and project, never `engram_id`; reconcile.go:215-217 then returns ErrUnusablePage for `!ok`",
+          "reconcile.go:217 message: 'carries no readable engram_revision' (the page does carry one)"
+        ]
+      },
+      {
+        "location": "longterm-mem/internal/promote/page_identity.go:40-57",
+        "claim": "When a page carries both key families for the same store, the whole identity is taken from the store-agnostic family, with no per-field fallback. A page with `source: engram`, `source_id` and legacy `engram_revision` but no `source_revision` therefore gets Revision \"\" (identityOf takes the first branch and never reads `engram_revision`). scanPromotedPages and decideCard then read that as revision 0, 'never recorded'. Reconcile refuses the page, and update corroboration reads no revision from it. The precedence is pinned only for ids (page_identity_test.go:127), not for revision or type.",
+        "severity": "SUGGESTION",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "page_identity.go:41-45 returns the agnostic identity with `Revision: strings.TrimSpace(fields[sourceRevisionField])` and never consults the legacy keys",
+          "address.go:262-266 comment: no revision field at all is revision 0, 'never recorded'",
+          "page_identity_test.go:127 covers only the id conflict: `source: engram\\nsource_id: 9\\nengram_id: 5` -> ID 9"
+        ]
+      },
+      {
+        "location": "longterm-mem/internal/promote/address.go:276",
+        "claim": "The unparseable-revision errors name the legacy key even though the value may now come from `source_revision`. address.go:276 still says `engram_revision` and card.go:122 still says `memorycard_revision` (via `memorycardRevisionField`). An error for a store-agnostic page then points at a key the page does not contain.",
+        "severity": "SUGGESTION",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "address.go:276: `carries an unparseable engram_revision %q`, where m.RawRevision is now `identity.Revision` (address.go:320)",
+          "card.go:122: `carries an unparseable %s %q` with `memorycardRevisionField`, where RawRevision is now `card.Revision` (card.go:122 of the diff, `match.RawRevision = card.Revision`)"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read /home/labdrian/.cache/c22fu-review/sap/t2.diff in full",
+      "Grepped the source tree at the head for the legacy field constants and literals, `parseFrontmatterFields`, `frontmatterRevision`, `frontmatterEngramID`, `readCardPages` and `identityOf`",
+      "Every non-test consumer of page identity now goes through identityOf: scanPromotedPages, readCardPages, frontmatterRevision, frontmatterEngramID, PageObservationID, and reconcile via frontmatterRevision. I found none left on the old keys outside the writers, as the claim says.",
+      "Read reconcile.go:165-224, card.go:105-134 and lint.go:75-96. parseFrontmatterFields drops empty values, so for the id checks the old 'field present' tests and the new 'id != empty' tests are equivalent.",
+      "No tests were run. The checks were read-only."
+    ]
+  }
+}

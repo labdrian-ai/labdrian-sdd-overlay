@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "672151b45751af85e4b08ba321021e2db2e8727c",
+    "head": "04e835c1025e76305bfe6e5898918b699a15924f",
+    "diff_sha256": "b9c367cf26d273e1cdcddb7fa22f7f9085a0ab97f76929aad3d9c9cedda0834b",
+    "paths": [
+      "longterm-mem/internal/engram/source_test.go",
+      "longterm-mem/internal/ops/doctor_identity_test.go",
+      "longterm-mem/internal/promote/address.go",
+      "longterm-mem/internal/promote/card.go",
+      "longterm-mem/internal/promote/page_identity.go",
+      "longterm-mem/internal/promote/page_identity_test.go",
+      "longterm-mem/internal/promote/update.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "672151b45751af85e4b08ba321021e2db2e8727c",
+      "head": "04e835c1025e76305bfe6e5898918b699a15924f",
+      "diff_sha256": "b9c367cf26d273e1cdcddb7fa22f7f9085a0ab97f76929aad3d9c9cedda0834b"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/engram/source_test.go",
+        "longterm-mem/internal/ops/doctor_identity_test.go",
+        "longterm-mem/internal/promote/address.go",
+        "longterm-mem/internal/promote/card.go",
+        "longterm-mem/internal/promote/page_identity.go",
+        "longterm-mem/internal/promote/page_identity_test.go",
+        "longterm-mem/internal/promote/update.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/promote/update.go:188-189",
+        "claim": "frontmatterRevision now reads the revision only through identityOf, which reports an identity only when an id is also named. A block that carries engram_revision but no engram_id (or an empty one) previously yielded a revision. It now yields (0,false), so callers fail closed where they used to read the revision. A mixed page (source: engram plus source_id, with legacy engram_revision but no source_revision) also now loses its revision, because the agnostic keys win and the legacy revision is ignored. This contradicts the claim that existing outputs are unchanged. It needs an unusual page, and the new tests only cover pages whose id and revision use the same spelling.",
+        "evidence_class": "inferential",
+        "causal_disposition": "behavior-activated",
+        "proof_refs": [
+          "longterm-mem/internal/promote/update.go:188-189",
+          "longterm-mem/internal/promote/page_identity.go:41-52"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/card.go:271-273",
+        "claim": "RawRevision for the card match was the memorycard_revision value whether or not memorycard_id was present. It is now empty whenever no memorycard identity is named, a small behavior change for pages with a revision but no id. engramMatch copies this RawRevision, so the bridged Engram match now carries the memorycard revision only when a memorycard identity exists.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/card.go:271-273"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the diff only; the consumers outside it (PageObservationID, Reconcile) were not visible.",
+      "identityOf couples the revision to a named id, which is a narrower condition than the base's independent key reads in frontmatterRevision and in card.go's RawRevision."
+    ]
+  }
+}

@@ -3,6 +3,7 @@ package engram
 import (
 	"database/sql"
 	"reflect"
+	"strconv"
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
@@ -151,6 +152,37 @@ func TestSourceCandidatesAreTheLiveObservationsAndMemoriesIsEveryRowOfTheProject
 		if !reflect.DeepEqual(m, gotAll[id]) {
 			t.Errorf("Candidates(p) mapped %s as %+v, Memories as %+v: one mapping", id, m, gotAll[id])
 		}
+	}
+}
+
+// Candidates selects the live rows of ObservationsIncludingDeleted (DeletedAt == ""): it yields the same
+// observations, in the same order, as the Store.ListObservations the promotion walk read before the adapter.
+func TestSourceCandidatesAreTheSameSetInTheSameOrderAsListObservations(t *testing.T) {
+	path := sourceFixture(t)
+	source := openEngramSource(t, path, nil)
+	store, err := Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+
+	listed, err := store.ListObservations("p")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var want []string
+	for _, o := range listed {
+		want = append(want, strconv.FormatInt(o.ID, 10))
+	}
+	if len(want) != 4 {
+		t.Fatalf("fixture lists %v for p; want the four live observations", want)
+	}
+	candidates, err := source.Candidates("p")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := ids(candidates); !reflect.DeepEqual(got, want) {
+		t.Errorf("Candidates(p) = %v, ListObservations(p) = %v: want the same set in the same order", got, want)
 	}
 }
 

@@ -1,0 +1,15 @@
+{
+  "kind": "sweeper",
+  "base": "672151b45751af85e4b08ba321021e2db2e8727c",
+  "head": "04e835c1025e76305bfe6e5898918b699a15924f",
+  "diff_sha256": "b9c367cf26d273e1cdcddb7fa22f7f9085a0ab97f76929aad3d9c9cedda0834b",
+  "sweep": "04e835c1025e-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T2 errcheck longterm-mem: internal/engram/source_test.go: unchecked error: defer store.Close()",
+      "disposition": "live",
+      "evidence": "Test-body store handle closed with a bare defer, the module test idiom: defer store.Close() at store_test.go:104,142,165,204, search_test.go:46,86,120 and relations_test.go:52,97; at the head the carried Candidates test is source_test.go:167 and :244."
+    }
+  ]
+}

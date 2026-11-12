@@ -252,9 +252,11 @@ type promotedPageMatch struct {
 	// Address is its address frontmatter value, trimmed; empty when the
 	// page carries none.
 	Address string
-	// RawRevision is its engram_revision frontmatter value, trimmed and
-	// unparsed; empty when the page carries none.
+	// RawRevision is its Engram revision frontmatter value, trimmed and
+	// unparsed; empty when the page carries none. RevisionKey is the key
+	// it was read from.
 	RawRevision string
+	RevisionKey string
 }
 
 // resolve validates a match into a usable promotedPage. A matched page
@@ -273,7 +275,7 @@ func (m promotedPageMatch) resolve() (promotedPage, error) {
 	if m.RawRevision != "" {
 		parsed, err := strconv.Atoi(m.RawRevision)
 		if err != nil {
-			return promotedPage{}, fmt.Errorf("promote: promoted page %s carries an unparseable engram_revision %q: %w", m.File, m.RawRevision, err)
+			return promotedPage{}, fmt.Errorf("promote: promoted page %s carries an unparseable %s %q: %w", m.File, m.RevisionKey, m.RawRevision, err)
 		}
 		revision = parsed
 	}
@@ -308,15 +310,18 @@ func scanPromotedPages(pages PageReader, engramID int) (pageScan, error) {
 			return
 		}
 		fields := parseFrontmatterFields(block)
-		if fields[engramIDField] != wantID {
+		identity, named := identityOf(fields, engramSource)
+		if !named || identity.ID != wantID {
 			return
 		}
+		revision, revisionKey := revisionOf(fields, engramSource)
 		found = append(found, promotedPageMatch{
 			File:        file,
 			EngramID:    wantID,
 			Project:     fields[projectField],
 			Address:     strings.TrimSpace(fields["address"]),
-			RawRevision: strings.TrimSpace(fields[engramRevisionField]),
+			RawRevision: revision,
+			RevisionKey: revisionKey,
 		})
 	}); err != nil {
 		return pageScan{}, err

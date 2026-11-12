@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "04e835c1025e76305bfe6e5898918b699a15924f",
+    "head": "407f02e5862ee6c05e5d91a0f9a023ce4a29e773",
+    "diff_sha256": "c457f0485e1e8b61a42099177964095bafbf37eafc3dca50a0156950d906f71b",
+    "paths": [
+      "longterm-mem/internal/promote/address.go",
+      "longterm-mem/internal/promote/card.go",
+      "longterm-mem/internal/promote/page_identity.go",
+      "longterm-mem/internal/promote/page_identity_fields_test.go",
+      "longterm-mem/internal/promote/reconcile.go",
+      "longterm-mem/internal/promote/update.go",
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "04e835c1025e76305bfe6e5898918b699a15924f",
+      "head": "407f02e5862ee6c05e5d91a0f9a023ce4a29e773",
+      "diff_sha256": "c457f0485e1e8b61a42099177964095bafbf37eafc3dca50a0156950d906f71b"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/promote/address.go",
+        "longterm-mem/internal/promote/card.go",
+        "longterm-mem/internal/promote/page_identity.go",
+        "longterm-mem/internal/promote/page_identity_fields_test.go",
+        "longterm-mem/internal/promote/reconcile.go",
+        "longterm-mem/internal/promote/update.go",
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:132",
+        "claim": "The L16 log entry still says a page carrying engram_revision but no engram_id no longer yields a revision. This fix round reverses that: revisionOf reads the revision without an id, and the new test pins it. The Log now contradicts the code. The 22-step differential is also stated for the earlier commit, not for this fix.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/update.go:187-192",
+          "longterm-mem/internal/promote/page_identity_fields_test.go:22-45"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/card.go:274-278",
+        "claim": "The Engram-bridged match now has RawRevision and RevisionKey blanked, whereas it previously carried the memorycard revision. If any consumer of engramPages calls resolve() or reads RawRevision, it now sees revision 0 where it saw the memorycard revision before. The diff does not show the consumers, so no regression is proven; the change deserves a check or a pinned test for engramPages consumers.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "longterm-mem/internal/promote/card.go:274-278"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the diff only. Traced fieldOf, revisionOf and identityOf on legacy, store-agnostic and mixed-store pages; per-field fallback stays within the same store.",
+      "The unparseable-revision errors now name RevisionKey as intended; for the empty-value case the key falls back to the legacy key, which is harmless since an empty revision is never parsed.",
+      "The Reconcile error message text changed; any test asserting the old wording would break, but none is visible in the diff."
+    ]
+  }
+}
