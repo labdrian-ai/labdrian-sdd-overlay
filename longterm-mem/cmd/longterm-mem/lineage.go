@@ -29,13 +29,14 @@ func newEngramSource(engramStore *engram.Store, cards *memorycard.Store) *engram
 			ids = append(ids, o.ID)
 			hashes = append(hashes, memory.CardContentHash(o.Title, o.Content))
 		}
+		// A failure to read memorycard is memorycard's, not Engram's: the listing of Engram's observations says so.
 		imported, err := cards.MemoryIDsByEngramIDs(ids)
 		if err != nil {
-			return nil, err
+			return nil, &memory.LineageError{Store: memorycard.SourceName, Err: err}
 		}
 		mirrored, err := cards.UnmappedMemoryIDsByHash(project, hashes)
 		if err != nil {
-			return nil, err
+			return nil, &memory.LineageError{Store: memorycard.SourceName, Err: err}
 		}
 		lineage := map[int64]memory.Kin{}
 		for i, o := range observations {

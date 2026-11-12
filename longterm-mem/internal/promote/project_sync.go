@@ -3,6 +3,8 @@ package promote
 import (
 	"context"
 	"errors"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 )
 
 // Failure says why a run of SyncProject failed, in the terms of what the operator can do about it, so that the
@@ -78,7 +80,11 @@ func SyncProject(ctx context.Context, deps Deps, project string) (ProjectSyncRep
 // unavailable.
 func sourceAnswers(src Source, project string) bool {
 	if _, err := src.Candidates(project); err != nil {
-		return false
+		// A store that could not say the lineage is not this source failing to answer: the error names it.
+		var lineage *memory.LineageError
+		if !errors.As(err, &lineage) {
+			return false
+		}
 	}
 	if probe, ok := src.(Prober); ok {
 		return probe.Probe(project) == nil

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"strings"
 	"testing"
 
@@ -72,6 +73,31 @@ func TestEngramSyncDryRunDoesNotPlanAnObservationWhoseLineageMemoryOwnsAPage(t *
 	}
 	if after := renderPromoteGoldenTree(t, w.vaultRoot); after != treeBefore {
 		t.Errorf("the dry run changed the vault")
+	}
+}
+
+// When memorycard cannot say the lineage, the Engram sync fails (for now) with the failure named as memorycard's:
+// not with the exit code of an Engram that can no longer be listed, which it is not.
+func TestEngramSyncNamesMemorycardWhenItsLineageCannotBeRead(t *testing.T) {
+	_, cardDB := memorycardWorld(t)
+	db, err := sql.Open("sqlite", cardDB)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`drop table import_map`); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	code, stdout, stderr := runSync(t)
+
+	if code != exitInternal {
+		t.Errorf("exit %d, want %d: the store of the memories answers, so it is not %d (Engram unavailable)\nstdout: %s\nstderr: %s", code, exitInternal, exitEngramUnavailable, stdout, stderr)
+	}
+	if !strings.Contains(stderr, "memorycard: read the lineage of the memories") {
+		t.Errorf("stderr = %q, want the failure to name memorycard", stderr)
 	}
 }
 

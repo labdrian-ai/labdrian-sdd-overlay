@@ -92,6 +92,9 @@ func TestSyncProject_SaysWhyARunFailed(t *testing.T) {
 		{"the memory cannot list", &fakeMemory{listErr: errors.New("no such table: observations")}, nil, nil, MemoryUnavailable},
 		{"the memory cannot read its relations, and a step after the listing failed", &fakeMemory{edgesErr: errors.New("no such table: memory_relations")}, nil, stateBoom, MemoryUnavailable},
 		{"the memory answers and a step failed that is not the index", &fakeMemory{}, nil, stateBoom, OtherFailure},
+		// The listing failed for the lineage another store says of the memories, not for the memory: that store is
+		// named in the error, and the memory is not reported as one that can no longer answer.
+		{"the lineage store cannot say the lineage, and the memory answers", &fakeMemory{listErr: &memory.LineageError{Store: "memorycard", Err: errors.New("no such table: import_map")}}, nil, nil, OtherFailure},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
