@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "92628eee4a19278e335a294e96f079a26682309b",
+    "head": "2beb222f217b3652e29e682ed722ea20926eb0ed",
+    "diff_sha256": "f442af82925603f3f8904ef71a067502eedb373d8517936889acfc660f4ee18a",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/cmd_sync.go",
+      "longterm-mem/internal/memorycard/store_test.go",
+      "longterm-mem/internal/promote/propagate_cards_test.go",
+      "longterm-mem/internal/promote/sync_cards.go",
+      "odd/tasks/phase9-c22fu-memorycard-compat.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "92628eee4a19278e335a294e96f079a26682309b",
+      "head": "2beb222f217b3652e29e682ed722ea20926eb0ed",
+      "diff_sha256": "f442af82925603f3f8904ef71a067502eedb373d8517936889acfc660f4ee18a"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/cmd_sync.go",
+        "longterm-mem/internal/memorycard/store_test.go",
+        "longterm-mem/internal/promote/propagate_cards_test.go",
+        "longterm-mem/internal/promote/sync_cards.go",
+        "odd/tasks/phase9-c22fu-memorycard-compat.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff changes only comments, two test function names, and a task-log line; no executable statements are altered.",
+      "Renamed tests TestListAllMemories_ListsEveryStatusMappedAsMemoryByID and TestPlanCards_AnUnlistablePropagationListingIsAnError are declared once each, and the diff shows no references to the old names.",
+      "The updated comments (every status) match the adapter's own comment and the test comment in the same change; no contradiction was found within the diff."
+    ]
+  }
+}

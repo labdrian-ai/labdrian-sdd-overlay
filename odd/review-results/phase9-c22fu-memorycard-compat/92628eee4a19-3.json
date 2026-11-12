@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "fd457276f7f09ec7d3858f6abfc13e96144d90ab",
+    "head": "92628eee4a19278e335a294e96f079a26682309b",
+    "diff_sha256": "c1b64b9dafad4a1aa95974de09eb71df078d5d105ad65134fba70faebbd8153b",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/cmd_sync.go",
+      "longterm-mem/docs/sync-from-memorycard.md",
+      "longterm-mem/internal/memorycard/store.go",
+      "longterm-mem/internal/memorycard/store_test.go",
+      "longterm-mem/internal/promote/card.go",
+      "longterm-mem/internal/promote/frontmatter.go",
+      "longterm-mem/internal/promote/propagate.go",
+      "longterm-mem/internal/promote/propagate_cards.go",
+      "longterm-mem/internal/promote/propagate_cards_test.go",
+      "longterm-mem/internal/promote/sync_cards.go",
+      "longterm-mem/internal/promote/sync_cards_test.go",
+      "odd/tasks/phase9-c22fu-memorycard-compat.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "fd457276f7f09ec7d3858f6abfc13e96144d90ab",
+      "head": "92628eee4a19278e335a294e96f079a26682309b",
+      "diff_sha256": "c1b64b9dafad4a1aa95974de09eb71df078d5d105ad65134fba70faebbd8153b"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/cmd_sync.go",
+        "longterm-mem/docs/sync-from-memorycard.md",
+        "longterm-mem/internal/memorycard/store.go",
+        "longterm-mem/internal/memorycard/store_test.go",
+        "longterm-mem/internal/promote/card.go",
+        "longterm-mem/internal/promote/frontmatter.go",
+        "longterm-mem/internal/promote/propagate.go",
+        "longterm-mem/internal/promote/propagate_cards.go",
+        "longterm-mem/internal/promote/propagate_cards_test.go",
+        "longterm-mem/internal/promote/sync_cards.go",
+        "longterm-mem/internal/promote/sync_cards_test.go",
+        "odd/tasks/phase9-c22fu-memorycard-compat.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/sync_cards.go:17-19",
+        "claim": "The CardMemories interface comment on ListAllMemories still says it lists the memories memorycard has superseded or archived, but the method now returns every memory whatever its status. The same stale wording is in cmd_sync.go (lines 147-149) and in the test name TestListAllMemories_ListsTheSupersededAndTheArchivedMappedAsMemoryByID. An implementer of the port who follows the comment would return only retired memories and silently break restore propagation.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/sync_cards.go:17-19",
+          "longterm-mem/cmd/longterm-mem/cmd_sync.go:147-149"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes the interface method's meaning but not its comment.",
+      "The new test asserts ids [1 2 3 4], which includes active memories, so the comment contradicts the behaviour.",
+      "Beyond the stale comments, I found no other defect this commit introduces in the rewritten walk, the change-aware skip, the restore guard or savePatched."
+    ]
+  }
+}

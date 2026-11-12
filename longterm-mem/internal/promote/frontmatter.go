@@ -35,8 +35,7 @@ func PatchStatusFields(pages PageRepository, address, status string, related []s
 	}
 	body := raw[len(fmBlock):]
 
-	newBlock := setScalarField(fmBlock, statusField, status)
-	newBlock = setListField(newBlock, relatedField, related)
+	newBlock := patchedFrontmatter(fmBlock, status, related)
 
 	if newBlock != fmBlock {
 		if err := pages.WritePage(address, newBlock+body); err != nil {
@@ -44,6 +43,13 @@ func PatchStatusFields(pages PageRepository, address, status string, related []s
 		}
 	}
 	return hashText(newBlock), hashText(body), nil
+}
+
+// patchedFrontmatter is block with its status and related lines set to status and related, and nothing else
+// changed: the one definition of what a status patch writes. PatchStatusFields writes it, and the memorycard walk
+// compares it with block to know whether a page needs a patch at all.
+func patchedFrontmatter(block, status string, related []string) string {
+	return setListField(setScalarField(block, statusField, status), relatedField, related)
 }
 
 // setScalarField replaces block's "key: ..." line with key: value,

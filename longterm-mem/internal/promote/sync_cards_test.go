@@ -18,11 +18,27 @@ type fakeCards struct {
 	memories []memory.CardMemory
 	err      error
 	listed   []string
+	// allErr is what ListAllMemories answers when set; allListed counts its calls.
+	allErr    error
+	allListed int
 }
 
+// ListMemories serves the memories of the fixed list that are not archived, as the adapter does.
 func (f *fakeCards) ListMemories(project string) ([]memory.CardMemory, error) {
 	f.listed = append(f.listed, project)
-	return f.memories, f.err
+	var live []memory.CardMemory
+	for _, m := range f.memories {
+		if m.Status != "archived" {
+			live = append(live, m)
+		}
+	}
+	return live, f.err
+}
+
+// ListAllMemories serves every memory of the fixed list, whatever its status, as the adapter does.
+func (f *fakeCards) ListAllMemories(project string) ([]memory.CardMemory, error) {
+	f.allListed++
+	return f.memories, f.allErr
 }
 
 // countingPages counts how often a run lists the vault's pages.

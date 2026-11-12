@@ -143,7 +143,21 @@ func (s *Store) MemoryByID(id int64) (memory.CardMemory, bool, error) {
 // leaves out a soft-deleted observation (R-020): archiving is how memorycard retires a memory, and Engram's
 // rows have no status of their own, so superseded memories are listed as every live Engram row is.
 func (s *Store) ListMemories(project string) ([]memory.CardMemory, error) {
-	rows, err := s.db.Query(memorySelect+`where m.project = ? and m.status in ('active', 'superseded') order by m.id`, project)
+	return s.listWithStatus(project, `m.status in ('active', 'superseded')`)
+}
+
+// ListAllMemories returns every memory of project whatever its status, in id order, each mapped as MemoryByID maps
+// it. It is the listing status propagation reads, and the only one that shows an archived memory: ListMemories
+// leaves those out because promotion does. A page can be behind its memory in either direction (the memory was
+// retired, or restored to active), so propagation needs them all.
+func (s *Store) ListAllMemories(project string) ([]memory.CardMemory, error) {
+	return s.listWithStatus(project, `m.status in ('active', 'superseded', 'archived')`)
+}
+
+// listWithStatus is the one listing of a project's memories: it appends statusClause, a constant of this file and
+// never caller input, to memorySelect's query, so every listing maps a row as MemoryByID does.
+func (s *Store) listWithStatus(project, statusClause string) ([]memory.CardMemory, error) {
+	rows, err := s.db.Query(memorySelect+`where m.project = ? and `+statusClause+` order by m.id`, project)
 	if err != nil {
 		return nil, fmt.Errorf("memorycard: list memories for project %q: %w", project, err)
 	}

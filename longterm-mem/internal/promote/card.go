@@ -161,12 +161,7 @@ func (w *Writer) createCardPage(ctx context.Context, m memory.CardMemory, scan c
 	if err != nil {
 		return Result{}, err
 	}
-	var related []Link
-	if m.SupersededBy > 0 {
-		if successor, ok := scan.byCardID[m.SupersededBy]; ok {
-			related = append(related, Link{Address: successor, Title: m.SupersededByTitle})
-		}
-	}
+	related := cardRelated(m, scan.byCardID)
 	page, err := EmitCardPage(m, address, related, utc(w.Clock))
 	if err != nil {
 		return Result{}, err
@@ -186,12 +181,7 @@ func (w *Writer) createCardPage(ctx context.Context, m memory.CardMemory, scan c
 // memorycard_id is ever updated here: the scan never selects another.
 func (w *Writer) updateCardPage(m memory.CardMemory, scan cardScan) (Result, error) {
 	address := scan.own.address()
-	var related []Link
-	if m.SupersededBy > 0 {
-		if successor, ok := scan.byCardID[m.SupersededBy]; ok {
-			related = append(related, Link{Address: successor, Title: m.SupersededByTitle})
-		}
-	}
+	related := cardRelated(m, scan.byCardID)
 	page, err := EmitCardPage(m, address, related, utc(w.Clock))
 	if err != nil {
 		return Result{}, err
@@ -249,6 +239,9 @@ type cardPages struct {
 	engramPages []promotedPageMatch
 	// own maps a project and a memorycard_id to the first page that carries them.
 	own map[cardKey]*promotedPageMatch
+	// blocks maps the same key to the frontmatter block of that first page: what status propagation compares a
+	// memory against to see whether the page needs a patch.
+	blocks map[cardKey]string
 	// byCardID maps, per project, the memorycard_id of each page that has an address to that address: the pages
 	// a successor link can name. The last page of an id wins.
 	byCardID   map[string]map[int64]string
@@ -263,7 +256,7 @@ type cardKey struct {
 
 // readCardPages reads every page once. A page that cannot be read is kept apart, as the Engram scan keeps it.
 func readCardPages(pages PageReader) (*cardPages, error) {
-	index := &cardPages{own: map[cardKey]*promotedPageMatch{}, byCardID: map[string]map[int64]string{}}
+	index := &cardPages{own: map[cardKey]*promotedPageMatch{}, blocks: map[cardKey]string{}, byCardID: map[string]map[int64]string{}}
 	err := eachPage(pages, func(address, content string, err error) {
 		file := address + ".md"
 		if err != nil {
@@ -286,6 +279,7 @@ func readCardPages(pages PageReader) (*cardPages, error) {
 			key := cardKey{project: match.Project, id: id}
 			if index.own[key] == nil {
 				index.own[key] = &match
+				index.blocks[key] = block
 			}
 			index.noteAddress(match.Project, id, match.Address)
 		}
@@ -339,15 +333,7 @@ func EmitCardPage(m memory.CardMemory, address string, related []Link, at time.T
 		return Page{}, fmt.Errorf("promote: emit page for memorycard memory %d: address is required", m.ID)
 	}
 	today := at.UTC().Format("2006-01-02")
-	status := "developing"
-	switch {
-	case m.Status == "superseded":
-		status = "superseded"
-	case m.Status == "archived":
-		status = "archived"
-	case m.Pinned:
-		status = "mature"
-	}
+	status := cardStatus(m)
 	tags := []string{"memory", m.Type}
 	if goal, ok := memory.GoalOfTopic(m.TopicKey); ok {
 		tags = append(tags, memory.GoalTag(goal))
@@ -372,6 +358,20 @@ func EmitCardPage(m memory.CardMemory, address string, related []Link, at time.T
 	b.WriteString("---\n")
 
 	return Page{Address: address, Path: vaultlayout.PageFile(address), Frontmatter: b.String(), Body: renderCardBody(m)}, nil
+}
+
+// cardStatus is the status line of m's page: superseded and archived follow the memory, a pinned memory is mature,
+// any other is developing. EmitCardPage renders it and status propagation patches to it, so the two agree.
+func cardStatus(m memory.CardMemory) string {
+	switch {
+	case m.Status == "superseded":
+		return "superseded"
+	case m.Status == "archived":
+		return "archived"
+	case m.Pinned:
+		return "mature"
+	}
+	return "developing"
 }
 
 // renderCardBody is renderBody for a memory of memorycard.

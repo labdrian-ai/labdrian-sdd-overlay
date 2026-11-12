@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "92628eee4a19278e335a294e96f079a26682309b",
+    "head": "2beb222f217b3652e29e682ed722ea20926eb0ed",
+    "diff_sha256": "f442af82925603f3f8904ef71a067502eedb373d8517936889acfc660f4ee18a",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/cmd_sync.go",
+      "longterm-mem/internal/memorycard/store_test.go",
+      "longterm-mem/internal/promote/propagate_cards_test.go",
+      "longterm-mem/internal/promote/sync_cards.go",
+      "odd/tasks/phase9-c22fu-memorycard-compat.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "92628eee4a19278e335a294e96f079a26682309b",
+      "head": "2beb222f217b3652e29e682ed722ea20926eb0ed",
+      "diff_sha256": "f442af82925603f3f8904ef71a067502eedb373d8517936889acfc660f4ee18a"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/cmd_sync.go",
+        "longterm-mem/internal/memorycard/store_test.go",
+        "longterm-mem/internal/promote/propagate_cards_test.go",
+        "longterm-mem/internal/promote/sync_cards.go",
+        "odd/tasks/phase9-c22fu-memorycard-compat.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/cmd_sync.go:148-149",
+        "claim": "The adapter comment was only half updated: the first sentence now says ListAllMemories lists every memory whatever its status, but the following sentence still says 'Their pages need no Engram query', where 'Their' referred to the superseded and archived memories. With every status in scope, 'Their' no longer has a clear referent and the sentence reads as if it applied to active memories too, whose pages may need a query. A reader cannot tell which memories the no-query claim covers. The diff does not show the function body, so whether the claim holds for active ones is unknown.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/cmd_sync.go:147-149"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed all five changed paths: three comment edits, two test renames, and one log entry in the task document; no executable code changed.",
+      "The only readability defect found is the leftover 'Their pages' sentence in the cmd_sync.go comment, which the rewritten first sentence left ambiguous."
+    ]
+  }
+}
