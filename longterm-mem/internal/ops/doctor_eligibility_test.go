@@ -13,7 +13,7 @@ import (
 )
 
 // promoted-pages-eligible joins each promoted page with the observation it was promoted from (the page's
-// engram_id) and reports, as an advisory warning, every page whose observation promote.Eligible(opstest.EngramMemory(obs), false)
+// engram_id) and reports, as an advisory warning, every page whose observation promote.Eligible(obs, false)
 // refuses: sync no longer refreshes it (issue #293). These tests drive it through Doctor, with the pages a reader
 // answers and the observations a function answers, and name no check function of the package.
 

@@ -134,7 +134,7 @@ func readPages(pages PageReader) (*pageIndex, error) {
 			match.RawRevision, match.RevisionKey = revisionOf(fields, source)
 			who := memory.Identity{Source: source, ID: identity.ID}
 			index.carriers[who] = append(index.carriers[who], match)
-			index.noteAddress(match.Project, who, match.Address)
+			index.noteAddress(match.Project, who, match.address())
 		}
 	})
 	if err != nil {
@@ -143,8 +143,8 @@ func readPages(pages PageReader) (*pageIndex, error) {
 	return index, nil
 }
 
-// noteAddress records the address of the page of identity in project, when it has one: the memories after it see
-// the page it has, so a successor link names it.
+// noteAddress records the address of the page of identity in project, as the page resolves to it (its address, or its
+// file when it carries none): the memories after it see the page it has, so a successor link names it.
 func (p *pageIndex) noteAddress(project string, identity memory.Identity, address string) {
 	if address != "" {
 		p.addresses[addressKey{project: project, identity: identity}] = address
@@ -171,15 +171,15 @@ type pageScan struct {
 	bridged   *promotedPageMatch
 	bridgedAs memory.Identity
 	mirrored  bool
-	// moved are the pages the memory left behind in another project, which carry no usable address excluded.
+	// moved are the pages the memory left behind in another project; a page that carries no address is not among them.
 	moved []promotedPage
 	// successor is the address of the page of the memory that replaced this one, in its project, or empty.
 	successor  string
 	unreadable []UnreadablePage
 }
 
-// scanFor answers pageScan for m from the pages read. The page that bridges a memory is the one of its lineage
-// first, then of its mirrors; among equals, the first page the port lists wins.
+// scanFor answers pageScan for m from the pages read. The page that bridges a memory is a page of its own project
+// that names a memory of its lineage first, then of its mirrors; among equals, the first page the port lists wins.
 func (p *pageIndex) scanFor(m memory.Memory) pageScan {
 	scan := pageScan{own: p.ownPage(m.Project, m.Identity), unreadable: p.unreadable}
 	for _, match := range p.carriers[m.Identity] {
@@ -194,6 +194,9 @@ func (p *pageIndex) scanFor(m memory.Memory) pageScan {
 	consider := func(kin []memory.Identity, rank int) {
 		for _, identity := range kin {
 			for _, match := range p.carriers[identity] {
+				if match.Project != m.Project {
+					continue
+				}
 				if rank < bestRank || (rank == bestRank && match.order < best.order) {
 					best, bestRank = match, rank
 					scan.bridgedAs, scan.mirrored = identity, rank == 1

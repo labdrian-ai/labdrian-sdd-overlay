@@ -41,12 +41,17 @@ type walkReport struct {
 
 // walk is the one walk of every promotion pass of every store: it reads the vault's pages once and decides each
 // memory of memories with decide, the decision the explicit promote makes, so that a sync, its dry run and an
-// explicit promote share one decision and one write path (Writer.apply). They differ in one input only: a sync never
-// rewrites a page that is at its memory's revision (decide is called with rewriteCurrent false), where the explicit
-// promote of an Engram observation always does (the pageStyle's rewriteCurrent). With apply it writes each memory the decision says needs
-// a page (Writer.apply); without, it names the memory by title and writes nothing, so a dry run predicts the run.
-// One memory that cannot be processed does not abort the walk: it is recorded in failed and the walk goes on, since
-// one persistently broken memory would otherwise wedge the project's sync forever.
+// explicit promote share one decision and one write path (Writer.apply).
+//
+// They differ in one input only, whether a page that is at its memory's revision is rewritten. A sync never
+// rewrites it: walk calls decide with rewriteCurrent false. An explicit promote does for the stores whose
+// pageStyle says so (pageStyle.rewriteCurrent, which Writer.Promote reads), as the explicit promote of an Engram
+// observation always has.
+//
+// With apply the walk writes each memory the decision says needs a page (Writer.apply); without, it names the
+// memory by title and writes nothing, so a dry run predicts the run. One memory that cannot be processed does not
+// abort the walk: it is recorded in failed and the walk goes on, since one persistently broken memory would
+// otherwise wedge the project's sync forever.
 func (w *Writer) walk(ctx context.Context, memories []memory.Memory, apply bool) walkReport {
 	var report walkReport
 	index, indexErr := readPages(w.Pages)
