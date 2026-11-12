@@ -1,0 +1,19 @@
+{
+  "kind": "polisher",
+  "base": "fd457276f7f09ec7d3858f6abfc13e96144d90ab",
+  "head": "92628eee4a19278e335a294e96f079a26682309b",
+  "diff_sha256": "c1b64b9dafad4a1aa95974de09eb71df078d5d105ad65134fba70faebbd8153b",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "propagate_cards.go: eachCardPatchTarget skips a page when patchedFrontmatter(block, cardStatus(m), related) == block, the same function PatchStatusFields writes with (frontmatter.go:38,51).",
+      "Restore guard propagate_cards.go:107: a non-retired memory is visited only when its page still says superseded or archived; cardStatus (card.go:365) is shared with EmitCardPage.",
+      "Withheld and failed limited to isRetired memories (propagate_cards.go:89-103).",
+      "SyncCardsProject (sync_cards.go:208-256): unlistable propagation still rebuilds and records, then MemoryUnavailable; rebuild failure wins; cmd_sync.go:139 maps through syncExitCode.",
+      "savePatched(pass, patched) names the pass; Engram walk unchanged apart from the label.",
+      "store.go ListAllMemories lists every status through listWithStatus.",
+      "Tests in propagate_cards_test.go cover no-op pages, restore, hand-set status, card-pass precedence error, unlistable set, plan counts. Not run (read tools only).",
+      "Gap, not a defect: no test combines a promotion failure with an unlistable propagation set, or a rebuild failure with an unavailable store."
+    ]
+  }
+}

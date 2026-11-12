@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "16bc9908643dc67b55cd3bfa1543ed796da0e26b",
+    "head": "fd457276f7f09ec7d3858f6abfc13e96144d90ab",
+    "diff_sha256": "7b33f03e770e08fae9101154536549dfa934bd77d44224ad439ce179557cef9f",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/cmd_sync.go",
+      "longterm-mem/cmd/longterm-mem/sync_memorycard_test.go",
+      "longterm-mem/docs/sync-from-memorycard.md",
+      "longterm-mem/internal/memorycard/store.go",
+      "longterm-mem/internal/memorycard/store_test.go",
+      "longterm-mem/internal/promote/propagate.go",
+      "longterm-mem/internal/promote/propagate_cards.go",
+      "longterm-mem/internal/promote/propagate_cards_test.go",
+      "longterm-mem/internal/promote/sync_cards.go",
+      "longterm-mem/internal/promote/sync_cards_test.go",
+      "odd/tasks/phase9-c22fu-memorycard-compat.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "16bc9908643dc67b55cd3bfa1543ed796da0e26b",
+      "head": "fd457276f7f09ec7d3858f6abfc13e96144d90ab",
+      "diff_sha256": "7b33f03e770e08fae9101154536549dfa934bd77d44224ad439ce179557cef9f"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/cmd_sync.go",
+        "longterm-mem/cmd/longterm-mem/sync_memorycard_test.go",
+        "longterm-mem/docs/sync-from-memorycard.md",
+        "longterm-mem/internal/memorycard/store.go",
+        "longterm-mem/internal/memorycard/store_test.go",
+        "longterm-mem/internal/promote/propagate.go",
+        "longterm-mem/internal/promote/propagate_cards.go",
+        "longterm-mem/internal/promote/propagate_cards_test.go",
+        "longterm-mem/internal/promote/sync_cards.go",
+        "longterm-mem/internal/promote/sync_cards_test.go",
+        "odd/tasks/phase9-c22fu-memorycard-compat.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/promote/propagate_cards.go:78-98",
+        "claim": "The walk visits every retired memory that has a page on every run and counts each visit as patched, whether or not the page's status or related actually changed. After the first propagation, each later `sync --source memorycard` rewrites those pages and saves the precedence store again. Each run reports 'patched N page(s)' and each dry run reports 'would patch' for pages that are already correct. That makes the dry-run prediction and the summary count noisy, and the rewrite repeats for the lifetime of the memory. The Log and docs acknowledge this as parity with the Engram path.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/propagate_cards.go:78-98",
+          "longterm-mem/docs/sync-from-memorycard.md:57-58"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/propagate.go:93-100",
+        "claim": "`savePatched` is now shared by the memorycard pass, but its error still reads 'promote: propagate: persist precedence'. A precedence-save failure in the memorycard pass is therefore indistinguishable from an Engram propagate failure in the message. The helper also takes a bare count argument instead of deriving it from the report.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/propagate.go:93-100"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff; no tools were available, so everything rests on the diff itself.",
+      "Engram Propagate keeps its messages and ordering through patchPage and savePatched.",
+      "In SyncCardsProject a listing failure of retired memories maps to MemoryUnavailable, while a patch failure joins Failed and the rebuild and record still run."
+    ]
+  }
+}

@@ -1,0 +1,90 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "16bc9908643dc67b55cd3bfa1543ed796da0e26b",
+    "head": "fd457276f7f09ec7d3858f6abfc13e96144d90ab",
+    "diff_sha256": "7b33f03e770e08fae9101154536549dfa934bd77d44224ad439ce179557cef9f",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/cmd_sync.go",
+      "longterm-mem/cmd/longterm-mem/sync_memorycard_test.go",
+      "longterm-mem/docs/sync-from-memorycard.md",
+      "longterm-mem/internal/memorycard/store.go",
+      "longterm-mem/internal/memorycard/store_test.go",
+      "longterm-mem/internal/promote/propagate.go",
+      "longterm-mem/internal/promote/propagate_cards.go",
+      "longterm-mem/internal/promote/propagate_cards_test.go",
+      "longterm-mem/internal/promote/sync_cards.go",
+      "longterm-mem/internal/promote/sync_cards_test.go",
+      "odd/tasks/phase9-c22fu-memorycard-compat.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "16bc9908643dc67b55cd3bfa1543ed796da0e26b",
+      "head": "fd457276f7f09ec7d3858f6abfc13e96144d90ab",
+      "diff_sha256": "7b33f03e770e08fae9101154536549dfa934bd77d44224ad439ce179557cef9f"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/cmd_sync.go",
+        "longterm-mem/cmd/longterm-mem/sync_memorycard_test.go",
+        "longterm-mem/docs/sync-from-memorycard.md",
+        "longterm-mem/internal/memorycard/store.go",
+        "longterm-mem/internal/memorycard/store_test.go",
+        "longterm-mem/internal/promote/propagate.go",
+        "longterm-mem/internal/promote/propagate_cards.go",
+        "longterm-mem/internal/promote/propagate_cards_test.go",
+        "longterm-mem/internal/promote/sync_cards.go",
+        "longterm-mem/internal/promote/sync_cards_test.go",
+        "odd/tasks/phase9-c22fu-memorycard-compat.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/promote/propagate_cards.go:78-108",
+        "claim": "Every retired memory that has a page is visited and counted as patched on every later run, because PatchStatusFields is idempotent but not change-aware. The summary says `patched N page(s)` and the dry run lists `would patch` for pages already patched, indefinitely. An operator cannot tell a real change from a no-op, and the dry-run prediction is always non-zero once any memory is retired. The log and docs acknowledge this as Engram parity, but it is still a misleading count introduced for the memorycard path.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "propagate_cards.go eachCardPatchTarget calls visit for every scan.own page with no changed-check",
+          "docs/sync-from-memorycard.md: 'A page already patched is visited again and rewrites nothing... the run counts it.'"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/sync_cards.go:222-238",
+        "claim": "If ListRetiredMemories fails after the promotion pass has written pages, SyncCardsProject returns MemoryUnavailable before the index rebuild and the sync-state record. Before this change, the same run rebuilt and recorded after promotion. The comment says rebuild and record happen even when a memory fails, but this new early return makes the promoted pages unindexed until the next successful run.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "sync_cards.go: `case CardRunFailure(patchErr) == MemoryUnavailable: ... return out, patchErr` sits before the RebuildIndex call"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/propagate_cards.go:78-108",
+        "claim": "Propagation walks only the superseded and archived memories. A memory that memorycard returns to `active` keeps its page at `superseded` or `archived`, because the promotion pass sees no new revision and the retired listing no longer includes it. Nothing patches the status back.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "propagate_cards.go eachCardPatchTarget reads only cards.ListRetiredMemories",
+          "store.go ListRetiredMemories filters status in ('superseded','archived')"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff. The Engram patchPage and savePatched extraction keeps the original messages and behavior.",
+      "PlanCards does not call checkPatchPorts, unlike PropagateCards; this is minor and left unreported."
+    ]
+  }
+}

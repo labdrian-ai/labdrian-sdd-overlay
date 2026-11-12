@@ -1,0 +1,45 @@
+{
+  "kind": "polisher",
+  "base": "16bc9908643dc67b55cd3bfa1543ed796da0e26b",
+  "head": "fd457276f7f09ec7d3858f6abfc13e96144d90ab",
+  "diff_sha256": "7b33f03e770e08fae9101154536549dfa934bd77d44224ad439ce179557cef9f",
+  "findings": {
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/promote/sync_cards.go:224-235",
+        "summary": "If the retired-memory listing fails after SyncCards has already written pages, SyncCardsProject returns MemoryUnavailable and skips the index rebuild and the sync-completed record.",
+        "evidence": [
+          "SyncCardsProject returns at lines 229-231 on CardRunFailure(patchErr) == MemoryUnavailable, before RebuildIndex (line 239) and RecordSyncCompleted (line 245).",
+          "SyncCards runs before PropagateCards (line 212), so promoted pages may already be on disk."
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/promote/propagate_cards.go:87-104",
+        "summary": "The walk visits every retired memory that has a page on every run and counts it as patched, so run and dry-run counts do not tell whether anything changed.",
+        "evidence": [
+          "The visit callback appends to report.Patched after patchPage returns nil (propagate_cards.go:32-37).",
+          "eachCardPatchTarget has no check that the page already matches the target status."
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/memorycard/store.go:153-155",
+        "summary": "A memory restored to active after its page was patched is absent from ListRetiredMemories, so its page keeps the stale status.",
+        "evidence": [
+          "ListRetiredMemories selects only status in (superseded, archived) (store.go:154).",
+          "eachCardPatchTarget visits only memories from that list (propagate_cards.go:71, 87)."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read propagate.go, propagate_cards.go, sync_cards.go (PlanCards, walkCards, SyncCardsProject), store.go listing, cmd_sync.go, card.go scan and update paths.",
+      "Engram Propagate uses the shared patchPage/savePatched with the same message formats; only frontmatter_hash moves, as R-030/R-033 require.",
+      "No frontmatter-only or body-hash defect found. No tests run."
+    ]
+  }
+}
