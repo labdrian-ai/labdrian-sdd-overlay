@@ -8,9 +8,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memorycard"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
 )
 
@@ -65,11 +62,24 @@ func (c commands) cmdPromote(args []string) int {
 		return exit
 	}
 	defer store.Close()
+	// Memorycard is read too, for the lineage of the observation: one whose memory already has a page is refused.
+	cards, exit := a.memorycardForLineage()
+	if exit != exitOK {
+		return exit
+	}
+	if cards != nil {
+		defer a.closeStore("memorycard", cards)
+	}
 
-	result, err := runPromote(context.Background(), store, vaultRoot, c.clock, *id)
+	result, err := runPromote(context.Background(), newEngramSource(store, cards), vaultRoot, c.clock, *id)
 	if err != nil {
-		if errors.Is(err, promote.ErrObservationNotFound) {
+		var bridged *promote.BridgedError
+		switch {
+		case errors.Is(err, promote.ErrObservationNotFound):
 			return a.refuse(err, exitNotFound)
+		case errors.As(err, &bridged):
+			// The code of every refusal that leaves a page of the vault alone.
+			return a.refuse(err, exitRegistrationConflict)
 		}
 		return a.refuse(err, exitInternal)
 	}
@@ -81,51 +91,6 @@ const (
 	sourceEngram     = "engram"
 	sourceMemorycard = "memorycard"
 )
-
-// cardLookup is the lookup of a memorycard memory by id (promote.CardLookup): the memory as memorycard holds it
-// and, when it has no import_map row, the observations of Engram that hold its content, which promotion
-// refuses it for when one of them already has a page.
-func cardLookup(cards *memorycard.Store, engramStore *engram.Store) promote.CardLookup {
-	return func(id int64) (memory.CardMemory, bool, error) {
-		m, ok, err := cards.MemoryByID(id)
-		if err != nil || !ok {
-			return m, ok, err
-		}
-		m, err = withSameContent(m, engramStore)
-		return m, true, err
-	}
-}
-
-// withSameContent fills what only Engram can say of a memory with no import_map row: the observations that hold
-// its content. It is the one query cardLookup and the memory listing of `sync --source memorycard` both ask.
-func withSameContent(m memory.CardMemory, engramStore *engram.Store) (memory.CardMemory, error) {
-	if m.Mapped {
-		return m, nil
-	}
-	var err error
-	m.SameContentEngramIDs, err = engramStore.ObservationIDsWithCardHash(m.Project, m.ContentHash)
-	return m, err
-}
-
-// cardSource is promote.CardMemories over both stores: memorycard lists the project's memories and Engram fills
-// each one's SameContentEngramIDs, as cardLookup does for one.
-type cardSource struct {
-	cards  *memorycard.Store
-	engram *engram.Store
-}
-
-func (s cardSource) ListMemories(project string) ([]memory.CardMemory, error) {
-	memories, err := s.cards.ListMemories(project)
-	if err != nil {
-		return nil, err
-	}
-	for i, m := range memories {
-		if memories[i], err = withSameContent(m, s.engram); err != nil {
-			return nil, err
-		}
-	}
-	return memories, nil
-}
 
 // promoteFromMemorycard promotes the memorycard memory id into the vault at vaultRoot, and only as a new page:
 // a memory that already has a page is reported and leaves it as it is, and a memory bridged to an Engram
@@ -149,7 +114,7 @@ func (c commands) promoteFromMemorycard(a app, vaultRoot string, id int64) int {
 	if err != nil {
 		return a.refuse(err, exitInternal)
 	}
-	result, err := promote.ExplicitPromoteCard(context.Background(), writer, cardLookup(store, engramStore), id)
+	result, err := promote.ExplicitPromoteCard(context.Background(), writer, newMemorycardSource(store, engramStore), id)
 	var bridged *promote.BridgedError
 	switch {
 	case errors.As(err, &bridged):

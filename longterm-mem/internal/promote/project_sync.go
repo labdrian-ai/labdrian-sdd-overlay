@@ -62,7 +62,7 @@ func SyncProject(ctx context.Context, deps Deps, project string) (ProjectSyncRep
 	switch {
 	case errors.As(syncErr, &rebuild):
 		report.Failure = IndexRebuildFailed
-	case !memoryAnswers(deps.Source, project):
+	case !sourceAnswers(deps.Source, project):
 		report.Failure = MemoryUnavailable
 	default:
 		report.Failure = OtherFailure
@@ -70,20 +70,19 @@ func SyncProject(ctx context.Context, deps Deps, project string) (ProjectSyncRep
 	return report, err
 }
 
-// memoryAnswers reports whether the memory can still answer the two questions a sync asks of it: the listing of a
-// project's live observations, which the promotion pass reads, and the relations of an observation, which the
-// propagation pass reads. They are two reads of two tables, reported into one joined error, so one probe cannot
-// stand for both: probing the observations alone answered "readable" for a database whose relations table had
-// been dropped or renamed out from under it, which is exactly as unavailable.
-//
-// The relations question is put for an observation id no row can carry, so that the query matches nothing and
-// costs nothing; what is under test is whether the statement can be prepared and run at all.
-func memoryAnswers(m Memory, project string) bool {
-	if _, err := m.ListObservations(project); err != nil {
+// sourceAnswers reports whether the source can still answer the two questions a sync asks of it: the listing of a
+// project's candidates, which the promotion pass reads, and what became of them, which the propagation pass reads
+// (a source with a Prober says so by it, one without by the listing of all its memories). They are two reads,
+// reported into one joined error, so one probe cannot stand for both: probing the candidates alone answered
+// "readable" for a database whose relations table had been dropped or renamed out from under it, which is exactly as
+// unavailable.
+func sourceAnswers(src Source, project string) bool {
+	if _, err := src.Candidates(project); err != nil {
 		return false
 	}
-	if _, err := m.RelatedEdges(0); err != nil {
-		return false
+	if probe, ok := src.(Prober); ok {
+		return probe.Probe(project) == nil
 	}
-	return true
+	_, err := src.Memories(project)
+	return err == nil
 }

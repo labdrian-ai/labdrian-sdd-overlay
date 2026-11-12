@@ -3,8 +3,10 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
@@ -93,6 +95,23 @@ func (a app) memorycard() (*memorycard.Store, int) {
 	return store, exitOK
 }
 
+// memorycardForLineage opens memorycard's database, read-only, for what only it can say of an Engram observation: the
+// memories that are the same piece of memory (its lineage, newEngramSource), which a promotion needs to know so that an
+// observation whose memory already has a page is not promoted a second time. A machine with no memorycard database has
+// no such memory, so there is nothing to open and the store is nil; a database that is there and cannot be opened is
+// the unavailable store memorycard() reports, because promoting without knowing the lineage is how a piece of memory
+// got two pages. The caller closes a store that is not nil.
+func (a app) memorycardForLineage() (*memorycard.Store, int) {
+	store, err := memorycard.Open(os.Getenv(memorycardDBEnvVar))
+	switch {
+	case err == nil:
+		return store, exitOK
+	case errors.Is(err, fs.ErrNotExist):
+		return nil, exitOK
+	}
+	return nil, a.refuse(err, exitEngramUnavailable)
+}
+
 // memoryToPromoteFrom is memory for a command that writes pages from what it reads: when Engram could only be
 // opened through its immutable=1 fallback, so that the run works from a snapshot and not the live database, the
 // command says so on stderr (declareDegradedEngram).
@@ -127,20 +146,20 @@ func (a app) closeStore(name string, store io.Closer) {
 	}
 }
 
-// syncDeps is what a sync of the vault at vaultRoot runs over: the memory it reads, a Writer of the vault, and the
+// syncDeps is what a sync of the vault at vaultRoot runs over: the source it reads, a Writer of the vault, and the
 // vault's own rebuild of its index. The error is the Writer's, as its precedence repository reported it.
-func (a app) syncDeps(store *engram.Store, vaultRoot string) (promote.Deps, error) {
+func (a app) syncDeps(source promote.Source, vaultRoot string) (promote.Deps, error) {
 	writer, err := newPromoteWriter(vaultRoot, a.clock)
 	if err != nil {
 		return promote.Deps{}, err
 	}
-	return promote.Deps{Source: store, Writer: writer, Index: vault.IndexRebuilder{Root: vaultRoot, Clock: a.clock}}, nil
+	return promote.Deps{Source: source, Writer: writer, Index: vault.IndexRebuilder{Root: vaultRoot, Clock: a.clock}}, nil
 }
 
 // syncCards is a sync of the memories of source into the vault at vaultRoot (promote.SyncCardsProject): a Writer of
 // the vault, and the vault's own rebuild of its index. The error is the Writer's, as its precedence repository
 // reported it, when the Writer cannot be built, and the run's own otherwise.
-func (a app) syncCards(ctx context.Context, source promote.CardMemories, project, vaultRoot string) (promote.CardProjectReport, error) {
+func (a app) syncCards(ctx context.Context, source promote.Source, project, vaultRoot string) (promote.CardProjectReport, error) {
 	writer, err := newPromoteWriter(vaultRoot, a.clock)
 	if err != nil {
 		return promote.CardProjectReport{Failure: promote.OtherFailure}, err
@@ -149,7 +168,7 @@ func (a app) syncCards(ctx context.Context, source promote.CardMemories, project
 }
 
 // planCards is what syncCards would do, and writes nothing (promote.PlanCards).
-func (a app) planCards(ctx context.Context, source promote.CardMemories, project, vaultRoot string) (promote.CardSyncPlan, error) {
+func (a app) planCards(ctx context.Context, source promote.Source, project, vaultRoot string) (promote.CardSyncPlan, error) {
 	writer, err := newPromoteWriter(vaultRoot, a.clock)
 	if err != nil {
 		return promote.CardSyncPlan{}, err

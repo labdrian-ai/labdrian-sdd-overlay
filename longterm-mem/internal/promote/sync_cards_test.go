@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -24,21 +25,38 @@ type fakeCards struct {
 }
 
 // ListMemories serves the memories of the fixed list that are not archived, as the adapter does.
-func (f *fakeCards) ListMemories(project string) ([]memory.CardMemory, error) {
+// Candidates serves the memories of the fixed list that are not archived, as the adapter does.
+func (f *fakeCards) Candidates(project string) ([]memory.Memory, error) {
 	f.listed = append(f.listed, project)
+	if f.err != nil {
+		return nil, f.err
+	}
 	var live []memory.CardMemory
 	for _, m := range f.memories {
 		if m.Status != "archived" {
 			live = append(live, m)
 		}
 	}
-	return live, f.err
+	return cardMems(live), nil
 }
 
-// ListAllMemories serves every memory of the fixed list, whatever its status, as the adapter does.
-func (f *fakeCards) ListAllMemories(project string) ([]memory.CardMemory, error) {
+// Memories serves every memory of the fixed list, whatever its status, as the adapter does.
+func (f *fakeCards) Memories(project string) ([]memory.Memory, error) {
 	f.allListed++
-	return f.memories, f.allErr
+	if f.allErr != nil {
+		return nil, f.allErr
+	}
+	return cardMems(f.memories), nil
+}
+
+// ByID serves the memory of the fixed list with the id.
+func (f *fakeCards) ByID(id string) (memory.Memory, bool, error) {
+	for _, m := range f.memories {
+		if strconv.FormatInt(m.ID, 10) == id {
+			return cardMem(m), true, nil
+		}
+	}
+	return memory.Memory{}, false, nil
 }
 
 // countingPages counts how often a run lists the vault's pages.

@@ -14,7 +14,7 @@ import (
 type Deps struct {
 	// Source serves the candidate memories of a project and the history
 	// propagation reads, whichever store they come from.
-	Source Memory
+	Source Source
 	// Writer promotes each eligible, unpromoted-or-revised memory,
 	// and (Propagate) owns the precedence sidecar a status-only patch
 	// updates.
@@ -93,7 +93,7 @@ func Sync(ctx context.Context, deps Deps, project string) (SyncReport, error) {
 	if err := deps.Writer.checkSyncState(); err != nil {
 		return SyncReport{}, fmt.Errorf("promote: sync: %w", err)
 	}
-	memories, err := engramView{deps.Source}.Candidates(project)
+	memories, err := deps.Source.Candidates(project)
 	if err != nil {
 		return SyncReport{}, fmt.Errorf("promote: sync: list observations for %q: %w", project, err)
 	}
@@ -188,7 +188,7 @@ type SyncPlan struct {
 // pass uses and the same walk the propagation pass uses, so its prediction is
 // their own decision rather than a second opinion about it.
 func Plan(ctx context.Context, deps Deps, project string) (SyncPlan, error) {
-	memories, err := engramView{deps.Source}.Candidates(project)
+	memories, err := deps.Source.Candidates(project)
 	if err != nil {
 		return SyncPlan{}, fmt.Errorf("promote: plan: list observations for %q: %w", project, err)
 	}

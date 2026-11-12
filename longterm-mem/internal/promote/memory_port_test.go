@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -27,19 +28,45 @@ type fakeMemory struct {
 	edgesFor []int64
 }
 
-func (f *fakeMemory) ListObservations(project string) ([]memory.Observation, error) {
+// Candidates serves the live observations, as the Engram adapter does.
+func (f *fakeMemory) Candidates(project string) ([]memory.Memory, error) {
 	f.listed = append(f.listed, project)
-	return f.live, f.listErr
+	if f.listErr != nil {
+		return nil, f.listErr
+	}
+	return obsMemories(f.live), nil
 }
 
-func (f *fakeMemory) ObservationsIncludingDeleted(project string) ([]memory.Observation, error) {
+// Memories serves every observation, soft-deleted ones included, with the status the edges and the deletions give
+// them. Edges that cannot be read are the failure of each memory's status, as the adapter reports it.
+func (f *fakeMemory) Memories(project string) ([]memory.Memory, error) {
 	f.history = append(f.history, project)
-	return f.all, f.historyErr
+	if f.historyErr != nil {
+		return nil, f.historyErr
+	}
+	memories := engramMemories(f.all, f.edges)
+	if f.edgesErr != nil {
+		for i := range memories {
+			memories[i].Status, memories[i].StatusCause = memory.StatusUnknown, f.edgesErr
+		}
+	}
+	return memories, nil
 }
 
-func (f *fakeMemory) RelatedEdges(observationID int64) ([]memory.Edge, error) {
-	f.edgesFor = append(f.edgesFor, observationID)
-	return f.edges[observationID], f.edgesErr
+// Probe asks the relations of an observation id no row can carry, as the store does.
+func (f *fakeMemory) Probe(string) error {
+	f.edgesFor = append(f.edgesFor, 0)
+	return f.edgesErr
+}
+
+// ByID serves the observation with the id, from every observation or else from the live ones.
+func (f *fakeMemory) ByID(id string) (memory.Memory, bool, error) {
+	for _, o := range append(append([]memory.Observation{}, f.all...), f.live...) {
+		if strconv.FormatInt(o.ID, 10) == id {
+			return obsMemory(o), true, nil
+		}
+	}
+	return memory.Memory{}, false, nil
 }
 
 func TestSync_ReadsTheLiveObservationsThroughItsMemoryPort(t *testing.T) {

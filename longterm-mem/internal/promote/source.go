@@ -17,3 +17,11 @@ type Source interface {
 	// a nil error, when there is no such memory.
 	ByID(id string) (memory.Memory, bool, error)
 }
+
+// Prober is what a Source says when it can tell whether its store still answers what became of its memories without
+// listing any: the question a sync asks after a failure, to tell a store that went away from a step that failed. A
+// project with no memory has none to carry the failure, so only a probe can tell.
+type Prober interface {
+	// Probe returns nil when the store answers, and why it does not otherwise. It costs nothing: it matches no row.
+	Probe(project string) error
+}

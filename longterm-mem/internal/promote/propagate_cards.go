@@ -26,12 +26,12 @@ import (
 // not be read is withheld, because the unreadable page may be its own (as Propagate withholds an observation). One
 // page that cannot be patched does not abort the run: it is recorded in Failed and the walk goes on, and the run
 // returns a non-nil error when anything failed. A memorycard that cannot list its memories is a CardListError.
-func PropagateCards(ctx context.Context, cards CardMemories, w *Writer, project string) (PropagateReport, error) {
+func PropagateCards(ctx context.Context, src Source, w *Writer, project string) (PropagateReport, error) {
 	if err := w.checkPatchPorts(); err != nil {
 		return PropagateReport{}, fmt.Errorf("promote: propagate memorycard: %w", err)
 	}
 	var report PropagateReport
-	outcome, err := eachCardPatchTarget(cardsView{cards}, w, project, func(t patchTarget) error {
+	outcome, err := eachCardPatchTarget(src, w, project, func(t patchTarget) error {
 		if err := w.patchPage(t); err != nil {
 			return err
 		}

@@ -130,7 +130,7 @@ type patchOutcome struct {
 // the day they were written and nothing structural kept them agreeing. A
 // filter added here is now added for both, because there is only one here.
 func eachPatchTarget(deps Deps, project string, visit func(patchTarget) error) (patchOutcome, error) {
-	memories, err := engramView{deps.Source}.Memories(project)
+	memories, err := deps.Source.Memories(project)
 	if err != nil {
 		return patchOutcome{}, fmt.Errorf("promote: propagate: list observations for %q: %w", project, err)
 	}

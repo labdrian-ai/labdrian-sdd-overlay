@@ -9,8 +9,9 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 )
 
-// engramSourceOf is the Engram store as promotion reads its memories.
-func engramSourceOf(store *engram.Store) *engram.Store { return store }
+// engramSourceOf is the Engram adapter over a store, with no lineage: the Source the sync tests read a real
+// store through.
+func engramSourceOf(store *engram.Store) Source { return engram.NewSource(store, nil) }
 
 // This file is the support the tests of the package share for the model promotion reads. The tests were written
 // over the two models of the two stores (an Engram observation, a memorycard memory); promotion now reads one
@@ -27,15 +28,55 @@ func obsMemory(o memory.Observation) memory.Memory {
 	}
 }
 
+// obsMemories maps a list of observations with obsMemory.
+func obsMemories(observations []memory.Observation) []memory.Memory {
+	var memories []memory.Memory
+	for _, o := range observations {
+		memories = append(memories, obsMemory(o))
+	}
+	return memories
+}
+
+// cardMem is a memorycard memory as the memorycard adapter maps it: the observation it was imported from is its
+// lineage, and the observations that hold its content, when it has no import row, its mirrors.
+func cardMem(c memory.CardMemory) memory.Memory {
+	m := memory.Memory{
+		Identity: memory.Identity{Source: memorycardSource, ID: strconv.FormatInt(c.ID, 10)},
+		Project:  c.Project, Type: c.Type, Title: c.Title, Body: c.Body, TopicKey: c.TopicKey,
+		Pinned: c.Pinned, Status: c.Status, SuccessorTitle: c.SupersededByTitle, Revision: c.Revision,
+	}
+	if c.SupersededBy != 0 {
+		m.Successor = memory.Identity{Source: memorycardSource, ID: strconv.FormatInt(c.SupersededBy, 10)}
+	}
+	if c.EngramID != 0 {
+		m.Lineage = append(m.Lineage, memory.Identity{Source: engramSource, ID: strconv.FormatInt(c.EngramID, 10)})
+	}
+	if !c.Mapped {
+		for _, id := range c.SameContentEngramIDs {
+			m.Mirrored = append(m.Mirrored, memory.Identity{Source: engramSource, ID: strconv.FormatInt(id, 10)})
+		}
+	}
+	return m
+}
+
+// cardMems maps a list of memorycard memories with cardMem.
+func cardMems(cards []memory.CardMemory) []memory.Memory {
+	var memories []memory.Memory
+	for _, c := range cards {
+		memories = append(memories, cardMem(c))
+	}
+	return memories
+}
+
 // PromoteCard promotes a memorycard memory with the one promotion every store goes through: it asks nothing of the
 // memory's eligibility, as the promotion of a memorycard memory never did.
 func (w *Writer) PromoteCard(ctx context.Context, c memory.CardMemory) (Result, error) {
-	return w.Promote(ctx, memoryOfCard(c), true)
+	return w.Promote(ctx, cardMem(c), true)
 }
 
 // EmitCardPage renders a memorycard memory as the page of the vault.
 func EmitCardPage(c memory.CardMemory, address string, related []Link, at time.Time) (Page, error) {
-	return EmitPage(memoryOfCard(c), address, related, at)
+	return EmitPage(cardMem(c), address, related, at)
 }
 
 // legacyScan is what the scan of the pages for one Engram observation answered before the pages were read once
@@ -119,4 +160,83 @@ type unreadablePagesError struct{ pages []UnreadablePage }
 
 func (e *unreadablePagesError) Error() string {
 	return "promote: no readable page belongs to this observation, but a page that could not be read may: " + describePages(e.pages)
+}
+
+// statusOfObservation is the rule of R-033 over the observations of one project, as the Engram adapter applies
+// it: the older side of a supersedes edge is superseded by the newer, a soft-deleted observation is archived.
+func statusOfObservation(o memory.Observation, edges []memory.Edge, all []memory.Observation) (string, *memory.Observation) {
+	for _, edge := range edges {
+		if edge.Relation != "supersedes" {
+			continue
+		}
+		other := edge.SourceSyncID
+		if o.SyncID != "" && other == o.SyncID {
+			other = edge.TargetSyncID
+		}
+		for i := range all {
+			if all[i].SyncID == other && all[i].CreatedAt > o.CreatedAt {
+				return memory.StatusSuperseded, &all[i]
+			}
+		}
+	}
+	if o.DeletedAt != "" {
+		return memory.StatusArchived, nil
+	}
+	return memory.StatusActive, nil
+}
+
+// ObservationLookup is a Source that serves one observation by id: what the tests of the explicit promote and of
+// the reindexing one need of a store.
+type ObservationLookup func(id int64) (memory.Observation, bool, error)
+
+// ByID looks the observation up by its numeric id and maps it as the Engram adapter does.
+func (f ObservationLookup) ByID(id string) (memory.Memory, bool, error) {
+	n, err := strconv.ParseInt(id, 10, 64)
+	if err != nil {
+		return memory.Memory{}, false, nil
+	}
+	o, ok, err := f(n)
+	if err != nil || !ok {
+		return memory.Memory{}, false, err
+	}
+	return obsMemory(o), true, nil
+}
+
+func (f ObservationLookup) Candidates(string) ([]memory.Memory, error) { return nil, nil }
+func (f ObservationLookup) Memories(string) ([]memory.Memory, error)   { return nil, nil }
+
+// CardLookup is the same for a memorycard memory.
+type CardLookup func(id int64) (memory.CardMemory, bool, error)
+
+// ByID looks the memory up by its numeric id and maps it as the memorycard adapter does.
+func (f CardLookup) ByID(id string) (memory.Memory, bool, error) {
+	n, err := strconv.ParseInt(id, 10, 64)
+	if err != nil {
+		return memory.Memory{}, false, nil
+	}
+	c, ok, err := f(n)
+	if err != nil || !ok {
+		return memory.Memory{}, false, err
+	}
+	return cardMem(c), true, nil
+}
+
+func (f CardLookup) Candidates(string) ([]memory.Memory, error) { return nil, nil }
+func (f CardLookup) Memories(string) ([]memory.Memory, error)   { return nil, nil }
+
+// engramMemories maps the observations of a project the way the Engram adapter maps them, with the edges of each
+// by observation id.
+func engramMemories(all []memory.Observation, edges map[int64][]memory.Edge) []memory.Memory {
+	var memories []memory.Memory
+	for _, o := range all {
+		m := obsMemory(o)
+		status, successor := statusOfObservation(o, edges[o.ID], all)
+		m.Status = status
+		if successor != nil {
+			m.Successor = memory.Identity{Source: engramSource, ID: strconv.FormatInt(successor.ID, 10)}
+			m.SuccessorTitle = successor.Title
+		}
+		memories = append(memories, m)
+	}
+	return memories
 }

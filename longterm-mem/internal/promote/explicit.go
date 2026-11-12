@@ -4,40 +4,49 @@ import (
 	"context"
 	"errors"
 	"fmt"
-
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
+	"strconv"
 )
 
-// ObservationLookup resolves one observation of the memory model
-// (memory.Observation, owned by internal/memory) by id, a function seam
-// (matching this package's Deps convention elsewhere) so ExplicitPromote
-// never depends on a concrete store: production callers (cmd_promote.go,
-// the MCP promote tool via cmd_mcp.go) wire it to internal/engram's
-// Store.ObservationByID, which returns that same type, and tests wire it to
-// a fake.
-type ObservationLookup func(id int64) (memory.Observation, bool, error)
-
-// ErrObservationNotFound is ExplicitPromote's error when lookup reports no
-// such observation -- R-032's "rejected with a clear error rather than
+// ErrObservationNotFound is ExplicitPromote's error when the source reports no
+// such memory -- R-032's "rejected with a clear error rather than
 // silently doing nothing", distinguishable via errors.Is so a caller (the
 // CLI's exit 7, not_found) never has to string-match an error message.
 var ErrObservationNotFound = errors.New("promote: observation not found")
 
 // ExplicitPromote promotes the Engram observation named by id through
-// Writer.Promote(obs, explicit=true) (R-032): the same page-emission,
+// Writer.Promote(m, explicit=true) (R-032): the same page-emission,
 // addressing, and registration path Writer.Promote already uses for any
 // other eligible observation, since explicit overrides Eligible's
 // automatic criteria (R-007) rather than bypassing Promote entirely
-// (design.md's explicit directive). It is the one call both the CLI
-// promote subcommand and the MCP promote tool make (task 8b.11), so
-// neither surface can drift from the other.
-func ExplicitPromote(ctx context.Context, w *Writer, lookup ObservationLookup, id int64) (Result, error) {
-	obs, ok, err := lookup(id)
+// (design.md's explicit directive). It reads the observation through src, the
+// port every store is an adapter of, so what makes a memory the same piece of
+// memory as one of another store (its lineage) reaches the decision, and an
+// observation whose lineage memory already has a page is refused with a
+// BridgedError, as a sync leaves it alone. It is the one call both the CLI
+// promote subcommand and the MCP promote tool make (task 8b.11), so neither
+// surface can drift from the other.
+func ExplicitPromote(ctx context.Context, w *Writer, src Source, id int64) (Result, error) {
+	m, ok, err := src.ByID(strconv.FormatInt(id, 10))
 	if err != nil {
 		return Result{}, fmt.Errorf("promote: look up observation %d: %w", id, err)
 	}
 	if !ok {
 		return Result{}, fmt.Errorf("%w: %d", ErrObservationNotFound, id)
 	}
-	return w.Promote(ctx, memoryOfObservation(obs), true)
+	return w.Promote(ctx, m, true)
+}
+
+// ExplicitPromoteCard promotes the memorycard memory named by id (Writer.Promote). Like ExplicitPromote it is
+// explicit: nothing about the memory has to make it eligible. It differs in what it says: a memory, not an
+// observation, is looked up, and the promotion of a memory whose page is already at its revision answers
+// ActionAlreadyPromoted and writes nothing (pageStyle.rewriteCurrent).
+func ExplicitPromoteCard(ctx context.Context, w *Writer, src Source, id int64) (Result, error) {
+	m, ok, err := src.ByID(strconv.FormatInt(id, 10))
+	if err != nil {
+		return Result{}, fmt.Errorf("promote: look up memorycard memory %d: %w", id, err)
+	}
+	if !ok {
+		return Result{}, fmt.Errorf("%w: memorycard memory %d", ErrObservationNotFound, id)
+	}
+	return w.Promote(ctx, m, true)
 }

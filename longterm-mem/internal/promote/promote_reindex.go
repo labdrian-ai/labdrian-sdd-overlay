@@ -26,8 +26,8 @@ type Outcome struct {
 // written. It is Outcome.IndexRebuildErr, beside the result.
 //
 // With no rebuilder wired, or one that holds a nil pointer, nothing is rebuilt, as in Sync.
-func PromoteAndReindex(ctx context.Context, w *Writer, lookup ObservationLookup, id int64, index IndexRebuilder) (Outcome, error) {
-	result, err := ExplicitPromote(ctx, w, lookup, id)
+func PromoteAndReindex(ctx context.Context, w *Writer, src Source, id int64, index IndexRebuilder) (Outcome, error) {
+	result, err := ExplicitPromote(ctx, w, src, id)
 	if err != nil {
 		return Outcome{}, err
 	}
@@ -36,8 +36,8 @@ func PromoteAndReindex(ctx context.Context, w *Writer, lookup ObservationLookup,
 
 // PromoteCardAndReindex is PromoteAndReindex for a memory of memorycard (ExplicitPromoteCard): the index is
 // rebuilt when, and only when, the promotion wrote a page.
-func PromoteCardAndReindex(ctx context.Context, w *Writer, lookup CardLookup, id int64, index IndexRebuilder) (Outcome, error) {
-	result, err := ExplicitPromoteCard(ctx, w, lookup, id)
+func PromoteCardAndReindex(ctx context.Context, w *Writer, src Source, id int64, index IndexRebuilder) (Outcome, error) {
+	result, err := ExplicitPromoteCard(ctx, w, src, id)
 	if err != nil {
 		return Outcome{}, err
 	}
