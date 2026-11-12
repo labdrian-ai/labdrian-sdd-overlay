@@ -138,6 +138,21 @@ func (s *Store) MemoryByID(id int64) (memory.CardMemory, bool, error) {
 	return m, true, nil
 }
 
+// MemoryByEngramID returns the memory memorycard imported from Engram observation engramID: the one its import_map
+// row of source engram names, whatever the part of the row, mapped as MemoryByID maps it. ok is false, with a nil
+// error, when no row names the observation or the memory the row names is gone.
+func (s *Store) MemoryByEngramID(engramID int64) (memory.CardMemory, bool, error) {
+	var memoryID int64
+	err := s.db.QueryRow(`select memory_id from import_map where source = 'engram' and source_key = ? order by part limit 1`, strconv.FormatInt(engramID, 10)).Scan(&memoryID)
+	switch {
+	case errors.Is(err, sql.ErrNoRows):
+		return memory.CardMemory{}, false, nil
+	case err != nil:
+		return memory.CardMemory{}, false, fmt.Errorf("memorycard: look up the memory imported from Engram observation %d: %w", engramID, err)
+	}
+	return s.MemoryByID(memoryID)
+}
+
 // ListMemories returns the memories of project that promotion reads, in id order, each mapped as MemoryByID
 // maps it: the active and the superseded ones. An archived memory is left out, as Engram's ListObservations
 // leaves out a soft-deleted observation (R-020): archiving is how memorycard retires a memory, and Engram's

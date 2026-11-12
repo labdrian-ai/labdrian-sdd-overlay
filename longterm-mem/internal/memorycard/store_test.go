@@ -39,6 +39,49 @@ func fixture(t *testing.T) string {
 	return path
 }
 
+// MemoryByEngramID answers the memory import_map maps an observation to, mapped as MemoryByID maps it, for a
+// key of any part; an observation with no row, a key of another source, and a row whose memory is gone have no
+// memory.
+func TestMemoryByEngramID_FindsTheImportedMemoryThroughImportMap(t *testing.T) {
+	path := fixture(t)
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`insert into import_map values ('engram', '403', 2, 3), ('engram', '404', 1, 99), ('notes', '405', 1, 2)`); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatal(err)
+	}
+	store, err := Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := store.Close(); err != nil {
+			t.Error(err)
+		}
+	})
+
+	want, _, err := store.MemoryByID(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, ok, err := store.MemoryByEngramID(402)
+	if err != nil || !ok || !reflect.DeepEqual(got, want) {
+		t.Errorf("MemoryByEngramID(402) = %+v, %v, %v; want memory 1 as MemoryByID maps it: %+v", got, ok, err, want)
+	}
+	if got, ok, err := store.MemoryByEngramID(403); err != nil || !ok || got.ID != 3 {
+		t.Errorf("MemoryByEngramID(403) = %+v, %v, %v; want memory 3 through its part 2 row", got, ok, err)
+	}
+	for _, id := range []int64{1, 404, 405, 999} {
+		if got, ok, err := store.MemoryByEngramID(id); err != nil || ok {
+			t.Errorf("MemoryByEngramID(%d) = %+v, %v, %v; want no memory (no engram row, a dangling row, a row of another source, no row)", id, got, ok, err)
+		}
+	}
+}
+
 func TestMemoryByID_MapsTheRowTheBridgeAndTheRevision(t *testing.T) {
 	store, err := Open(fixture(t))
 	if err != nil {

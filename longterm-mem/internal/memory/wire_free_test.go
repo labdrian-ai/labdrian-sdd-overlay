@@ -13,7 +13,7 @@ import (
 // client reads.
 func TestTheDomainModelCarriesNoWireFormat(t *testing.T) {
 	for _, model := range []any{
-		memory.Observation{}, memory.Row{}, memory.SearchResult{}, memory.Standing{}, memory.Neighbour{}, memory.Edge{},
+		memory.Observation{}, memory.Memory{}, memory.Identity{}, memory.Row{}, memory.SearchResult{}, memory.Standing{}, memory.Neighbour{}, memory.Edge{},
 	} {
 		typ := reflect.TypeOf(model)
 		for i := 0; i < typ.NumField(); i++ {
