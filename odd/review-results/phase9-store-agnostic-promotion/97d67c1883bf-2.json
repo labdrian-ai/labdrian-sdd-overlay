@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "4b11be06bf0ccbbcb7563ce13f0dcb435e6d2c56",
+    "head": "97d67c1883bf3de0773087773ab149c997f0c7c2",
+    "diff_sha256": "a677255d247114107e19ee61cd37f53dc0c0a9ddf406985f84235e8952318604",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/lineage.go",
+      "longterm-mem/cmd/longterm-mem/lineage_test.go",
+      "longterm-mem/internal/engram/relations.go",
+      "longterm-mem/internal/engram/source.go",
+      "longterm-mem/internal/engram/source_test.go",
+      "longterm-mem/internal/memorycard/store.go",
+      "longterm-mem/internal/memorycard/store_test.go",
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "4b11be06bf0ccbbcb7563ce13f0dcb435e6d2c56",
+      "head": "97d67c1883bf3de0773087773ab149c997f0c7c2",
+      "diff_sha256": "a677255d247114107e19ee61cd37f53dc0c0a9ddf406985f84235e8952318604"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/lineage.go",
+        "longterm-mem/cmd/longterm-mem/lineage_test.go",
+        "longterm-mem/internal/engram/relations.go",
+        "longterm-mem/internal/engram/source.go",
+        "longterm-mem/internal/engram/source_test.go",
+        "longterm-mem/internal/memorycard/store.go",
+        "longterm-mem/internal/memorycard/store_test.go",
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/engram/source.go:40-50",
+        "claim": "Candidates no longer calls ListObservations. It now takes every row from ObservationsIncludingDeleted and keeps those with DeletedAt == \"\". The diff does not show that ObservationsIncludingDeleted fills DeletedAt, nor that ListObservations applied no other filter or ordering. If either differs, the live set or its order changes silently, which conflicts with the claim that behavior is unchanged. A test comparing Candidates with ListObservations would pin this.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "longterm-mem/internal/engram/source.go:40-50"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff shows only the changed lines, so I could not check ObservationsIncludingDeleted or ListObservations; the F1 premise rests on that gap.",
+      "RelatedEdgesOfProject uses the same filter and rowid order as RelatedEdges, on either side of the edge, and a test compares the two.",
+      "The IN-list queries are chunked at 500 values, plus one project argument for UnmappedMemoryIDsByHash, which stays under SQLite's 999-variable limit.",
+      "Observation lineage cannot repeat an identity. Imported memories are deduplicated, and hand-mirrored memories are by definition unmapped."
+    ]
+  }
+}

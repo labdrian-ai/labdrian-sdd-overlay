@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "4b11be06bf0ccbbcb7563ce13f0dcb435e6d2c56",
+    "head": "97d67c1883bf3de0773087773ab149c997f0c7c2",
+    "diff_sha256": "a677255d247114107e19ee61cd37f53dc0c0a9ddf406985f84235e8952318604",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/lineage.go",
+      "longterm-mem/cmd/longterm-mem/lineage_test.go",
+      "longterm-mem/internal/engram/relations.go",
+      "longterm-mem/internal/engram/source.go",
+      "longterm-mem/internal/engram/source_test.go",
+      "longterm-mem/internal/memorycard/store.go",
+      "longterm-mem/internal/memorycard/store_test.go",
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "4b11be06bf0ccbbcb7563ce13f0dcb435e6d2c56",
+      "head": "97d67c1883bf3de0773087773ab149c997f0c7c2",
+      "diff_sha256": "a677255d247114107e19ee61cd37f53dc0c0a9ddf406985f84235e8952318604"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/lineage.go",
+        "longterm-mem/cmd/longterm-mem/lineage_test.go",
+        "longterm-mem/internal/engram/relations.go",
+        "longterm-mem/internal/engram/source.go",
+        "longterm-mem/internal/engram/source_test.go",
+        "longterm-mem/internal/memorycard/store.go",
+        "longterm-mem/internal/memorycard/store_test.go",
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The imported (import_map) and hand-mirrored (no import_map row) lineage sets are disjoint by construction. Each observation therefore gets no duplicate memorycard identity.",
+      "MemoryIDsByEngramIDs joins import_map to memories, so a dangling part is dropped and later parts are kept. It also dedupes repeats and keeps part order. The 500-id chunking plus one project argument stays under SQLite's variable limit.",
+      "Engram Candidates now filters the single ObservationsIncludingDeleted read on DeletedAt == \"\". Edges are read once per project and lineage once per listing. ByID builds through the same path with its own per-observation edges, so behavior matches the base for the paths visible in the diff.",
+      "I could not check from the diff that the old ListObservations ordering and filtering equal the new DeletedAt filter, or that RelatedEdgesOfProject's filter equals RelatedEdges. The new equivalence test compares the two on the fixture, and I found no change-caused defect."
+    ]
+  }
+}

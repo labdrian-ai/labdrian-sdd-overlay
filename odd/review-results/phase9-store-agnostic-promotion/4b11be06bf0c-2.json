@@ -1,0 +1,97 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "9ad3b1563bd2ec8019d9a8769418abcea1fce30e",
+    "head": "4b11be06bf0ccbbcb7563ce13f0dcb435e6d2c56",
+    "diff_sha256": "b73b337e4ae908a72d43f7dd78fe60c841d115dfffb51a591498b9669cfcaad2",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/lineage.go",
+      "longterm-mem/cmd/longterm-mem/lineage_test.go",
+      "longterm-mem/internal/engram/source.go",
+      "longterm-mem/internal/engram/source_test.go",
+      "longterm-mem/internal/memory/memory.go",
+      "longterm-mem/internal/memory/memory_test.go",
+      "longterm-mem/internal/memory/wire_free_test.go",
+      "longterm-mem/internal/memorycard/source.go",
+      "longterm-mem/internal/memorycard/source_test.go",
+      "longterm-mem/internal/memorycard/store.go",
+      "longterm-mem/internal/memorycard/store_test.go",
+      "longterm-mem/internal/promote/source.go",
+      "longterm-mem/internal/promote/source_guard_test.go",
+      "odd/goals/phase9-store-agnostic-promotion.json",
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "9ad3b1563bd2ec8019d9a8769418abcea1fce30e",
+      "head": "4b11be06bf0ccbbcb7563ce13f0dcb435e6d2c56",
+      "diff_sha256": "b73b337e4ae908a72d43f7dd78fe60c841d115dfffb51a591498b9669cfcaad2"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/lineage.go",
+        "longterm-mem/cmd/longterm-mem/lineage_test.go",
+        "longterm-mem/internal/engram/source.go",
+        "longterm-mem/internal/engram/source_test.go",
+        "longterm-mem/internal/memory/memory.go",
+        "longterm-mem/internal/memory/memory_test.go",
+        "longterm-mem/internal/memory/wire_free_test.go",
+        "longterm-mem/internal/memorycard/source.go",
+        "longterm-mem/internal/memorycard/source_test.go",
+        "longterm-mem/internal/memorycard/store.go",
+        "longterm-mem/internal/memorycard/store_test.go",
+        "longterm-mem/internal/promote/source.go",
+        "longterm-mem/internal/promote/source_guard_test.go",
+        "odd/goals/phase9-store-agnostic-promotion.json",
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/memorycard/store.go:146",
+        "claim": "MemoryByEngramID takes only the first import_map part (order by part limit 1). An observation imported as several parts, each a different memory, has a reverse lineage naming only one memory. A page owned by another part's memory would not be recognised as bridged once the walk uses lineage, so the observation could be promoted again. If the part-1 row is dangling, the lookup reports no memory even when later parts resolve.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/memorycard/store.go:146",
+          "longterm-mem/cmd/longterm-mem/lineage.go:14-21"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/lineage.go:14-21",
+        "claim": "Lineage is asymmetric. A hand-mirrored memorycard memory names its Engram twin observation, but that observation names no memorycard memory, and the test pins this. A later walk that bridges by lineage identity will therefore skip the memory side and still promote the observation side. This is the same re-promotion hole the feature aims to close, left open for mirrored memories.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/lineage.go:14-21",
+          "longterm-mem/cmd/longterm-mem/lineage_test.go:113-115"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/engram/source.go:62-66",
+        "claim": "Candidates and Memories query the observations twice. ListObservations or ObservationsIncludingDeleted runs first, and mapAll then runs ObservationsIncludingDeleted again, which can be inconsistent if the data changes between the two reads. RelatedEdges is also queried once per observation, an N+1 pattern.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/engram/source.go:62-66"
+        ]
+      }
+    ],
+    "evidence": [
+      "Diff-only review; the Store methods used but not shown (ObservationsIncludingDeleted, RelatedEdges, ObservationIDsWithCardHash, scanObservationRow) were assumed to exist.",
+      "No caller is switched over and internal/promote imports no store, so no regression on previously valid input was found."
+    ]
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "kind": "sweep",
+  "base": "2cd5073d6e8c7ec0d011c1138c4a66324426cbb0",
+  "head": "4b11be06bf0ccbbcb7563ce13f0dcb435e6d2c56",
+  "diff_sha256": "25c7c3a7e5869d8fdd67763466797de0a50f2225a86cd844cc7ce5b3f290f59a",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": []
+  },
+  "t2": [
+    {
+      "tool": "errcheck",
+      "module": "longterm-mem",
+      "new": [
+        "internal/engram/source_test.go: unchecked error: defer db.Close()"
+      ]
+    },
+    {
+      "tool": "nilerr",
+      "module": "longterm-mem",
+      "new": [
+        "longterm-mem/internal/engram/source.go: error is not nil but it returns nil",
+        "longterm-mem/internal/memorycard/source.go: error is not nil but it returns nil"
+      ]
+    }
+  ],
+  "t3": [],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}
