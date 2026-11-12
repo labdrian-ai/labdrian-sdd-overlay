@@ -50,6 +50,11 @@ collapsed to one space. A copy that was edited after it was mirrored has another
 
 A memory imported from an Engram observation that has no page is not bridged to a page, and is promoted.
 
+The bridge works the other way too: an Engram observation whose memorycard memory (the one imported from it, or one
+holding its content) already has a page is refused by `promote --id N` as a bridged memory is: exit 6, the message
+naming that page, and nothing written. Previously `promote --id N` wrote a second page for it. Memorycard's database is
+read for this when there is one; when there is none, no observation has a lineage and `promote` is what it was.
+
 The accepted tradeoff (feature document `odd/tasks/memorycard-engram-replacement.md`, L16, L18 and L19): the pages
 that carry `engram_id` keep resolving against Engram's database and are never touched, so a bridged memory, and a
 memory with the same content as one of those observations, cannot be promoted from memorycard. Its history stays on
