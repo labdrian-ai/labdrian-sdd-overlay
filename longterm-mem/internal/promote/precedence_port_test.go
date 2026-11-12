@@ -57,7 +57,7 @@ func TestPromote_RefusesATypedNilPrecedenceRepository(t *testing.T) {
 func TestSync_RefusesAWriterWithoutAPrecedenceRepository(t *testing.T) {
 	mem := &fakeMemory{}
 	root := t.TempDir()
-	deps := Deps{Memory: mem, Writer: &Writer{Index: indexIn(root), Log: logIn(root), SyncState: syncStateIn(root), Pages: pagesIn(root), Store: PrecedenceStore{}, Clock: &fakeClock{at: testInstant}}}
+	deps := Deps{Source: mem, Writer: &Writer{Index: indexIn(root), Log: logIn(root), SyncState: syncStateIn(root), Pages: pagesIn(root), Store: PrecedenceStore{}, Clock: &fakeClock{at: testInstant}}}
 
 	if _, err := Sync(t.Context(), deps, "labdrian-sdd-overlay"); !errors.Is(err, errNoPrecedenceRepository) {
 		t.Fatalf("Sync = %v, want errNoPrecedenceRepository", err)
@@ -69,7 +69,7 @@ func TestSync_RefusesAWriterWithoutAPrecedenceRepository(t *testing.T) {
 // never recorded reads as a human's edit from then on.
 func TestPropagate_RefusesAWriterWithoutAPrecedenceRepository(t *testing.T) {
 	root := t.TempDir()
-	deps := Deps{Memory: &fakeMemory{}, Writer: &Writer{Index: indexIn(root), Log: logIn(root), SyncState: syncStateIn(root), Pages: pagesIn(root), Store: PrecedenceStore{}}}
+	deps := Deps{Source: &fakeMemory{}, Writer: &Writer{Index: indexIn(root), Log: logIn(root), SyncState: syncStateIn(root), Pages: pagesIn(root), Store: PrecedenceStore{}}}
 
 	if _, err := Propagate(t.Context(), deps, "labdrian-sdd-overlay"); !errors.Is(err, errNoPrecedenceRepository) {
 		t.Fatalf("Propagate = %v, want errNoPrecedenceRepository", err)
@@ -124,7 +124,7 @@ func TestPropagate_ReportsAPrecedenceStoreThatCannotBePersisted(t *testing.T) {
 	seedPromotedPage(t, vaultRoot, precedence, memory.Observation{ID: ids[1], Type: "decision", Title: "New Decision", Content: "New body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}, "c-000002")
 	w := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: precedence, Precedence: &memPrecedence{saveErr: errTestSave}}
 
-	_, err := Propagate(t.Context(), Deps{Memory: mem, Writer: w}, "labdrian-sdd-overlay")
+	_, err := Propagate(t.Context(), Deps{Source: mem, Writer: w}, "labdrian-sdd-overlay")
 	if !errors.Is(err, errTestSave) {
 		t.Fatalf("Propagate = %v, want the persistence failure", err)
 	}

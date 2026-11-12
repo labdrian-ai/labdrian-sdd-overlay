@@ -50,7 +50,7 @@ func TestSync_ReadsTheLiveObservationsThroughItsMemoryPort(t *testing.T) {
 	process := memory.Observation{ID: 12, Type: "discovery", Title: "Process note", Content: "Not curated.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "sdd/some-change/progress"}
 	mem := &fakeMemory{live: []memory.Observation{curated, process}}
 
-	report, err := Sync(context.Background(), Deps{Memory: mem, Writer: &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Clock: clock, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress)}}, "labdrian-sdd-overlay")
+	report, err := Sync(context.Background(), Deps{Source: mem, Writer: &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Clock: clock, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress)}}, "labdrian-sdd-overlay")
 	if err != nil {
 		t.Fatalf("Sync: %v", err)
 	}
@@ -72,7 +72,7 @@ func TestSync_ReadsTheLiveObservationsThroughItsMemoryPort(t *testing.T) {
 func TestSync_AFailingMemoryPortIsTheRunsError(t *testing.T) {
 	broken := errors.New("memory store offline")
 	root := t.TempDir()
-	deps := Deps{Memory: &fakeMemory{listErr: broken}, Writer: &Writer{Index: indexIn(root), Log: logIn(root), SyncState: syncStateIn(root), Pages: pagesIn(root), Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Clock: &fakeClock{at: testInstant}}}
+	deps := Deps{Source: &fakeMemory{listErr: broken}, Writer: &Writer{Index: indexIn(root), Log: logIn(root), SyncState: syncStateIn(root), Pages: pagesIn(root), Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Clock: &fakeClock{at: testInstant}}}
 
 	if _, err := Sync(context.Background(), deps, "labdrian-sdd-overlay"); !errors.Is(err, broken) {
 		t.Fatalf("Sync = %v, want an error that wraps the port's own", err)
@@ -101,7 +101,7 @@ func TestPropagate_ReadsTheHistoryAndTheEdgesThroughItsMemoryPort(t *testing.T) 
 	seedPromotedPage(t, vaultRoot, precedence, newer, "c-000002")
 	retiredPage := seedPromotedPage(t, vaultRoot, precedence, retired, "c-000003")
 
-	report, err := Propagate(context.Background(), Deps{Memory: mem, Writer: &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: precedence, Precedence: &memPrecedence{}, Clock: clock}}, "labdrian-sdd-overlay")
+	report, err := Propagate(context.Background(), Deps{Source: mem, Writer: &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: precedence, Precedence: &memPrecedence{}, Clock: clock}}, "labdrian-sdd-overlay")
 	if err != nil {
 		t.Fatalf("Propagate: %v", err)
 	}
@@ -135,7 +135,7 @@ func TestPropagate_AFailingMemoryPortIsReportedNotSwallowed(t *testing.T) {
 	writer := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Clock: clock}
 
 	t.Run("the history cannot be read", func(t *testing.T) {
-		_, err := Propagate(context.Background(), Deps{Memory: &fakeMemory{historyErr: broken}, Writer: writer}, "labdrian-sdd-overlay")
+		_, err := Propagate(context.Background(), Deps{Source: &fakeMemory{historyErr: broken}, Writer: writer}, "labdrian-sdd-overlay")
 		if !errors.Is(err, broken) {
 			t.Fatalf("Propagate = %v, want an error that wraps the port's own", err)
 		}
@@ -147,7 +147,7 @@ func TestPropagate_AFailingMemoryPortIsReportedNotSwallowed(t *testing.T) {
 		seedPromotedPage(t, vaultRoot, precedence, obs, "c-000031")
 		writer := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: precedence, Precedence: &memPrecedence{}, Clock: clock}
 
-		report, err := Propagate(context.Background(), Deps{Memory: &fakeMemory{all: []memory.Observation{obs}, edgesErr: broken}, Writer: writer}, "labdrian-sdd-overlay")
+		report, err := Propagate(context.Background(), Deps{Source: &fakeMemory{all: []memory.Observation{obs}, edgesErr: broken}, Writer: writer}, "labdrian-sdd-overlay")
 		if err == nil {
 			t.Fatal("Propagate returned no error although an observation could not be decided")
 		}

@@ -134,7 +134,7 @@ func (a app) syncDeps(store *engram.Store, vaultRoot string) (promote.Deps, erro
 	if err != nil {
 		return promote.Deps{}, err
 	}
-	return promote.Deps{Memory: store, Writer: writer, Index: vault.IndexRebuilder{Root: vaultRoot, Clock: a.clock}}, nil
+	return promote.Deps{Source: store, Writer: writer, Index: vault.IndexRebuilder{Root: vaultRoot, Clock: a.clock}}, nil
 }
 
 // syncCards is a sync of the memories of source into the vault at vaultRoot (promote.SyncCardsProject): a Writer of

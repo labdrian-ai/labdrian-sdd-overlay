@@ -133,10 +133,10 @@ func TestWriterWithoutPagesIsRefusedBeforeAnythingIsDone(t *testing.T) {
 			if allocator.asked != 0 || repo.saves != 0 {
 				t.Errorf("allocator asked %d times, precedence saved %d times, want neither", allocator.asked, repo.saves)
 			}
-			if _, err := Sync(t.Context(), Deps{Memory: &fakeMemory{}, Writer: w}, pagesProject); !errors.Is(err, errNoPageRepository) {
+			if _, err := Sync(t.Context(), Deps{Source: &fakeMemory{}, Writer: w}, pagesProject); !errors.Is(err, errNoPageRepository) {
 				t.Errorf("Sync error = %v, want errNoPageRepository", err)
 			}
-			if _, err := Propagate(t.Context(), Deps{Memory: &fakeMemory{}, Writer: w}, pagesProject); !errors.Is(err, errNoPageRepository) {
+			if _, err := Propagate(t.Context(), Deps{Source: &fakeMemory{}, Writer: w}, pagesProject); !errors.Is(err, errNoPageRepository) {
 				t.Errorf("Propagate error = %v, want errNoPageRepository", err)
 			}
 		})
@@ -149,7 +149,7 @@ func TestPlanWithoutPagesReportsEachObservationItCouldNotCheck(t *testing.T) {
 	w, _, _ := pagesWriter(t, nil)
 	mem := &fakeMemory{live: []memory.Observation{pageObservation(505)}}
 
-	plan, err := Plan(t.Context(), Deps{Memory: mem, Writer: w}, pagesProject)
+	plan, err := Plan(t.Context(), Deps{Source: mem, Writer: w}, pagesProject)
 	if err != nil {
 		t.Fatalf("Plan: %v", err)
 	}
@@ -467,7 +467,7 @@ func TestPropagatePatchesThePagesThroughThePort(t *testing.T) {
 		pages := newMemPages(map[string]string{testAddress: page.Frontmatter + page.Body})
 		w, repo, _ := pagesWriter(t, pages)
 
-		report, err := Propagate(t.Context(), Deps{Memory: mem, Writer: w}, pagesProject)
+		report, err := Propagate(t.Context(), Deps{Source: mem, Writer: w}, pagesProject)
 
 		if err != nil || len(report.Patched) != 1 || report.Patched[0] != testAddress {
 			t.Fatalf("report = %+v, err = %v, want %s patched", report, err, testAddress)
@@ -490,7 +490,7 @@ func TestPropagatePatchesThePagesThroughThePort(t *testing.T) {
 		}
 		w, _, _ := pagesWriter(t, pages)
 
-		report, err := Propagate(t.Context(), Deps{Memory: mem, Writer: w}, pagesProject)
+		report, err := Propagate(t.Context(), Deps{Source: mem, Writer: w}, pagesProject)
 
 		if err == nil || len(report.Failed) != 1 {
 			t.Fatalf("report = %+v, err = %v, want the one observation failed", report, err)

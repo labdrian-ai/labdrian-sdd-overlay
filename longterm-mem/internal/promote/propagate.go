@@ -131,7 +131,7 @@ type patchOutcome struct {
 // the day they were written and nothing structural kept them agreeing. A
 // filter added here is now added for both, because there is only one here.
 func eachPatchTarget(deps Deps, project string, visit func(patchTarget) error) (patchOutcome, error) {
-	observations, err := deps.Memory.ObservationsIncludingDeleted(project)
+	observations, err := deps.Source.ObservationsIncludingDeleted(project)
 	if err != nil {
 		return patchOutcome{}, fmt.Errorf("promote: propagate: list observations for %q: %w", project, err)
 	}
@@ -183,7 +183,7 @@ func eachPatchTarget(deps Deps, project string, visit func(patchTarget) error) (
 // this loop finds no edge naming it as the older side, so it is never
 // patched.
 func resolveStatus(deps Deps, project string, obs memory.Observation, bySyncID map[string]memory.Observation) (status string, related []string, err error) {
-	edges, err := deps.Memory.RelatedEdges(obs.ID)
+	edges, err := deps.Source.RelatedEdges(obs.ID)
 	if err != nil {
 		return "", nil, err
 	}

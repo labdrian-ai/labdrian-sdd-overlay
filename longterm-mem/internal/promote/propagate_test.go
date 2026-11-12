@@ -38,7 +38,7 @@ func TestPropagate(t *testing.T) {
 		seedPromotedPage(t, vaultRoot, precedence, newObs, "c-000002")
 
 		w := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: precedence, Precedence: &memPrecedence{}, Clock: clock}
-		report, err := Propagate(context.Background(), Deps{Memory: store, Writer: w}, "labdrian-sdd-overlay")
+		report, err := Propagate(context.Background(), Deps{Source: store, Writer: w}, "labdrian-sdd-overlay")
 		if err != nil {
 			t.Fatalf("Propagate: %v", err)
 		}
@@ -83,7 +83,7 @@ func TestPropagate(t *testing.T) {
 		page := seedPromotedPage(t, vaultRoot, precedence, obs, "c-000003")
 
 		w := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: precedence, Precedence: &memPrecedence{}, Clock: clock}
-		report, err := Propagate(context.Background(), Deps{Memory: store, Writer: w}, "labdrian-sdd-overlay")
+		report, err := Propagate(context.Background(), Deps{Source: store, Writer: w}, "labdrian-sdd-overlay")
 		if err != nil {
 			t.Fatalf("Propagate: %v", err)
 		}
@@ -117,7 +117,7 @@ func TestPropagate(t *testing.T) {
 		}
 
 		w := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: precedence, Precedence: &memPrecedence{}, Clock: clock}
-		report, err := Propagate(context.Background(), Deps{Memory: store, Writer: w}, "labdrian-sdd-overlay")
+		report, err := Propagate(context.Background(), Deps{Source: store, Writer: w}, "labdrian-sdd-overlay")
 		if err != nil {
 			t.Fatalf("Propagate: %v", err)
 		}
@@ -161,7 +161,7 @@ func TestPropagate(t *testing.T) {
 		// per UpdateInPlace's own detection, deliberately not re-seeded.
 
 		w := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: precedence, Precedence: &memPrecedence{}, Clock: clock}
-		report, err := Propagate(context.Background(), Deps{Memory: store, Writer: w}, "labdrian-sdd-overlay")
+		report, err := Propagate(context.Background(), Deps{Source: store, Writer: w}, "labdrian-sdd-overlay")
 		if err != nil {
 			t.Fatalf("Propagate: %v", err)
 		}
@@ -263,7 +263,7 @@ func TestPropagate_OneBrokenPageDoesNotWedgeTheRun(t *testing.T) {
 	healthy := memory.Observation{ID: ids[1], Type: "decision", Title: "Archivable", Content: "Body two.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
 	seedPromotedPage(t, vaultRoot, w.Store, healthy, "c-000701")
 
-	report, err := Propagate(context.Background(), Deps{Memory: store, Writer: w}, "labdrian-sdd-overlay")
+	report, err := Propagate(context.Background(), Deps{Source: store, Writer: w}, "labdrian-sdd-overlay")
 	if err == nil {
 		t.Fatal("Propagate = nil error, want the broken page surfaced so a partial run cannot pass as clean")
 	}
@@ -301,7 +301,7 @@ func TestPropagate_SupersessionIsRecordedEvenWithNoSuccessorPage(t *testing.T) {
 	oldPage := seedPromotedPage(t, vaultRoot, precedence, oldObs, "c-000001")
 
 	w := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: precedence, Precedence: &memPrecedence{}, Clock: clock}
-	report, err := Propagate(context.Background(), Deps{Memory: store, Writer: w}, "labdrian-sdd-overlay")
+	report, err := Propagate(context.Background(), Deps{Source: store, Writer: w}, "labdrian-sdd-overlay")
 	if err != nil {
 		t.Fatalf("Propagate: %v", err)
 	}
@@ -343,7 +343,7 @@ func TestPropagate_TheLinkAppearsOnceTheSuccessorIsPromoted(t *testing.T) {
 	w := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: precedence, Precedence: &memPrecedence{}, Clock: clock}
 
 	// First run: successor unpromoted. The status lands, the link cannot.
-	if _, err := Propagate(context.Background(), Deps{Memory: store, Writer: w}, "labdrian-sdd-overlay"); err != nil {
+	if _, err := Propagate(context.Background(), Deps{Source: store, Writer: w}, "labdrian-sdd-overlay"); err != nil {
 		t.Fatalf("first Propagate: %v", err)
 	}
 	first, err := os.ReadFile(filepath.Join(vaultRoot, oldPage.Path))
@@ -356,7 +356,7 @@ func TestPropagate_TheLinkAppearsOnceTheSuccessorIsPromoted(t *testing.T) {
 
 	// The successor is promoted, and the same propagation runs again.
 	seedPromotedPage(t, vaultRoot, precedence, newObs, "c-000002")
-	if _, err := Propagate(context.Background(), Deps{Memory: store, Writer: w}, "labdrian-sdd-overlay"); err != nil {
+	if _, err := Propagate(context.Background(), Deps{Source: store, Writer: w}, "labdrian-sdd-overlay"); err != nil {
 		t.Fatalf("second Propagate: %v", err)
 	}
 	second, err := os.ReadFile(filepath.Join(vaultRoot, oldPage.Path))

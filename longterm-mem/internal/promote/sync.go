@@ -8,14 +8,14 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 )
 
-// Deps are Sync's (and Propagate's) dependencies: Memory and Index are ports
+// Deps are Sync's (and Propagate's) dependencies: Source and Index are ports
 // the package owns (a fake or a temp DB behind the Engram adapter in tests, and
 // a fake so tests never need real vault subprocess scripts to prove R-031's
 // wiring), Writer is a concrete production type (a temp vault in tests).
 type Deps struct {
-	// Memory serves the candidate observations of a project and the history
+	// Source serves the candidate observations of a project and the history
 	// propagation reads.
-	Memory Memory
+	Source Memory
 	// Writer promotes each eligible, unpromoted-or-revised observation,
 	// and (Propagate) owns the precedence sidecar a status-only patch
 	// updates.
@@ -87,7 +87,7 @@ func Sync(ctx context.Context, deps Deps, project string) (SyncReport, error) {
 	if err := deps.Writer.checkSyncState(); err != nil {
 		return SyncReport{}, fmt.Errorf("promote: sync: %w", err)
 	}
-	observations, err := deps.Memory.ListObservations(project)
+	observations, err := deps.Source.ListObservations(project)
 	if err != nil {
 		return SyncReport{}, fmt.Errorf("promote: sync: list observations for %q: %w", project, err)
 	}
@@ -225,7 +225,7 @@ type SyncPlan struct {
 // decidePatch those passes use, so its prediction is their own decision
 // rather than a second opinion about it.
 func Plan(ctx context.Context, deps Deps, project string) (SyncPlan, error) {
-	observations, err := deps.Memory.ListObservations(project)
+	observations, err := deps.Source.ListObservations(project)
 	if err != nil {
 		return SyncPlan{}, fmt.Errorf("promote: plan: list observations for %q: %w", project, err)
 	}

@@ -62,7 +62,7 @@ func SyncProject(ctx context.Context, deps Deps, project string) (ProjectSyncRep
 	switch {
 	case errors.As(syncErr, &rebuild):
 		report.Failure = IndexRebuildFailed
-	case !memoryAnswers(deps.Memory, project):
+	case !memoryAnswers(deps.Source, project):
 		report.Failure = MemoryUnavailable
 	default:
 		report.Failure = OtherFailure
