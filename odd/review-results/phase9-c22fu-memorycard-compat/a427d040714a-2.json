@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "50c7e32fed2a50ab80e567b7155be055a0c3fb82",
+    "head": "a427d040714a16d583ab406e301d9df50b67e2b8",
+    "diff_sha256": "2c7f5820fe462e105b37c3df076588c9d8964b0950d712979a1974734c402038",
+    "paths": [
+      "longterm-mem/README.md",
+      "longterm-mem/internal/promote/eligible_test.go",
+      "odd/review-results/phase9-c22fu-memorycard-compat/d41b45704871-1.sweep.json",
+      "odd/review-results/phase9-c22fu-memorycard-compat/d41b45704871-2.json",
+      "odd/review-results/phase9-c22fu-memorycard-compat/d41b45704871-3.json",
+      "odd/review-results/phase9-c22fu-memorycard-compat/d41b45704871-4.polisher.json",
+      "odd/review-results/phase9-c22fu-memorycard-compat/fbe157f66cad-1.sweep.json",
+      "odd/review-results/phase9-c22fu-memorycard-compat/fbe157f66cad-2.json",
+      "odd/review-results/phase9-c22fu-memorycard-compat/fbe157f66cad-3.json",
+      "odd/review-results/phase9-c22fu-memorycard-compat/fbe157f66cad-4.polisher.json",
+      "odd/tasks/phase9-c22fu-memorycard-compat.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "50c7e32fed2a50ab80e567b7155be055a0c3fb82",
+      "head": "a427d040714a16d583ab406e301d9df50b67e2b8",
+      "diff_sha256": "2c7f5820fe462e105b37c3df076588c9d8964b0950d712979a1974734c402038"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/README.md",
+        "longterm-mem/internal/promote/eligible_test.go",
+        "odd/review-results/phase9-c22fu-memorycard-compat/d41b45704871-1.sweep.json",
+        "odd/review-results/phase9-c22fu-memorycard-compat/d41b45704871-2.json",
+        "odd/review-results/phase9-c22fu-memorycard-compat/d41b45704871-3.json",
+        "odd/review-results/phase9-c22fu-memorycard-compat/d41b45704871-4.polisher.json",
+        "odd/review-results/phase9-c22fu-memorycard-compat/fbe157f66cad-1.sweep.json",
+        "odd/review-results/phase9-c22fu-memorycard-compat/fbe157f66cad-2.json",
+        "odd/review-results/phase9-c22fu-memorycard-compat/fbe157f66cad-3.json",
+        "odd/review-results/phase9-c22fu-memorycard-compat/fbe157f66cad-4.polisher.json",
+        "odd/tasks/phase9-c22fu-memorycard-compat.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The README rewrite matches the polisher's evidence on fbe157f6: Propagate patches status: on deleted or superseded observations without an eligibility check, and doctor skips pages whose observation is no longer live. The new wording is accurate against that evidence.",
+      "The eligible_test.go change touches only a comment. It now names five prefixes, consistent with the excluded set described in the feature log.",
+      "The review-result JSON files and the feature-document log entry are records only, with no behavior. They are internally consistent on base, head and path lists.",
+      "I could not see propagate.go or doctor_eligibility.go in the diff, so the README claims rest on the polisher record rather than on source I inspected."
+    ]
+  }
+}

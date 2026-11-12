@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "2f1d81fb45ed658084e7d6fa975518096d513d81",
+    "head": "af8b087977194f1b0ae2d4ed985557a54e8afa24",
+    "diff_sha256": "74cf7a57c11b2f43b4bd591d7443bf16988fcf9d67f842486193dad559c7498a",
+    "paths": [
+      "longterm-mem/README.md",
+      "longterm-mem/docs/sync-from-memorycard.md",
+      "longterm-mem/internal/promote/eligible.go",
+      "longterm-mem/internal/promote/eligible_test.go",
+      "odd/tasks/phase9-c22fu-memorycard-compat.md",
+      "openspec/specs/longterm-mem-promotion/spec.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "2f1d81fb45ed658084e7d6fa975518096d513d81",
+      "head": "af8b087977194f1b0ae2d4ed985557a54e8afa24",
+      "diff_sha256": "74cf7a57c11b2f43b4bd591d7443bf16988fcf9d67f842486193dad559c7498a"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/README.md",
+        "longterm-mem/docs/sync-from-memorycard.md",
+        "longterm-mem/internal/promote/eligible.go",
+        "longterm-mem/internal/promote/eligible_test.go",
+        "odd/tasks/phase9-c22fu-memorycard-compat.md",
+        "openspec/specs/longterm-mem-promotion/spec.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The map in eligible.go gains odd and session, and curatedTopicKey matches the first path segment exactly. The new tests cover exclusion of odd/ and session/, a pinned odd/ memory staying eligible, and odd-notes/ staying eligible.",
+      "The README, sync doc and living spec all list the five prefixes consistently.",
+      "The diff does not show the body of IneligibleReason or any doctor test, so I cannot tell whether a message elsewhere hardcodes the old three-prefix list. I raised no finding on that."
+    ]
+  }
+}
