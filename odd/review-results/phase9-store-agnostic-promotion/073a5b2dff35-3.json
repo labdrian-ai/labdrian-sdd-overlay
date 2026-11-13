@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "4d595b08c5de76be8749adb9642a21e86e5fef7c",
+    "head": "073a5b2dff3525e44cdc77c5b96eb712987fbe38",
+    "diff_sha256": "74920404a7a3c0af34f76964021fc0401727c124355ad6624c3f33fe8c099a85",
+    "paths": [
+      "odd/review-results/phase9-store-agnostic-promotion/4d595b08c5de-1.sweep.json",
+      "odd/review-results/phase9-store-agnostic-promotion/4d595b08c5de-2.json",
+      "odd/review-results/phase9-store-agnostic-promotion/4d595b08c5de-3.json"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "4d595b08c5de76be8749adb9642a21e86e5fef7c",
+      "head": "073a5b2dff3525e44cdc77c5b96eb712987fbe38",
+      "diff_sha256": "74920404a7a3c0af34f76964021fc0401727c124355ad6624c3f33fe8c099a85"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/review-results/phase9-store-agnostic-promotion/4d595b08c5de-1.sweep.json",
+        "odd/review-results/phase9-store-agnostic-promotion/4d595b08c5de-2.json",
+        "odd/review-results/phase9-store-agnostic-promotion/4d595b08c5de-3.json"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff adds three archived review-result JSON files under odd/review-results; no executable code changes, so no runtime risk is introduced.",
+      "The records bind the previous commit's range (base e8a80a41d3f5, head 4d595b08c5de) and are additive archive records; their binding differs from this candidate by design and is not a defect this commit introduces.",
+      "The three file names use the 4d595b08c5de prefix, which matches the head of the range each record binds, consistent with the record naming used by the prior commit.",
+      "The embedded reply paths list e8a80a41d3f5-prefixed files and the planning document, which are the previous review's changed paths, consistent with their own binding."
+    ]
+  }
+}
