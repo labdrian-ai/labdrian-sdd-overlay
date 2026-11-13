@@ -161,16 +161,22 @@ func TestMigrateCardPages_AMemoryTypeEndingInRulesMakesARefusalAndNoWrite(t *tes
 
 // The same refusal on the recovery path: a run stopped after saving the entry of a rewrite that carries the odd type,
 // and the page on disk is still the legacy one. The rerun finds the recorded rewrite through recordedRewrite and must
-// still refuse it, never write it and never back it up. (This is a pin of the second place the identity is chosen:
-// it passes only because the read-back check also covers a recorded rewrite.)
+// still refuse it, never write it and never back it up. It is a pin: it passes on the code that checks the read-back
+// on this path too. With that check disabled in a scratch edit the page is migrated and the test fails (L71).
 func TestMigrateCardPages_AStoppedPageWhoseRecordedRewriteEndsInRulesIsRefusedAndNotBackedUp(t *testing.T) {
 	m := newMigWorld()
 	card := cardOf(7, migProject)
 	card.Type = "learning---"
 	m.memory(card, 31)
 	content := m.put("stopped", "engram_id: 31\nengram_revision: 1\n")
-	block, _ := frontmatterBlock(content)
-	recorded, _ := m.w.Store.Get("stopped")
+	block, ok := frontmatterBlock(content)
+	if !ok {
+		t.Fatalf("setup: the page has no readable block: %q", content)
+	}
+	recorded, tracked := m.w.Store.Get("stopped")
+	if !tracked {
+		t.Fatal("setup: the page has no precedence entry")
+	}
 	recorded.FrontmatterHash = hashText(rewrittenIdentity(block, 7, "1", "learning---"))
 	m.w.Store.Set("stopped", recorded)
 	m.memory(cardOf(8, migProject), 32)
