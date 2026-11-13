@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "74326e32c2c4ef35dd7215b9ed3138741f31662e",
+    "head": "0bc8d01750e46ad9497288e8c0a8c8f6493e7cf8",
+    "diff_sha256": "6e7511f0938a4f2fda24aece2b79d57ab74a1313b2caa8964e8165e3bae94b19",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "74326e32c2c4ef35dd7215b9ed3138741f31662e",
+      "head": "0bc8d01750e46ad9497288e8c0a8c8f6493e7cf8",
+      "diff_sha256": "6e7511f0938a4f2fda24aece2b79d57ab74a1313b2caa8964e8165e3bae94b19"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:3",
+        "claim": "The Objective and the Specs preamble still present T4-T20 and the Engram removal as scope of this feature (a ~4500-6500 line forecast, 'no product decision of this feature is open'). The new L42, added by the same commit, moves T4-T20 to the first feature of the next phase and says T3 closes this feature. A reader of the header gets a scope that L42 contradicts, and nothing in the header or in the task lines marks T4-T20 as moved.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:3 (Objective and forecast over T4-T20)",
+          "odd/tasks/phase9-store-agnostic-promotion.md L42 (T4-T20 move to the next phase)"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only one path changed, a documentation file (odd/tasks/phase9-store-agnostic-promotion.md); no code behaviour is affected.",
+      "The diff folds the decisions L25-L41 into S4-S16 and T4-T20, and the task dependency chain (T4 -> T5 -> T10 -> T6 -> T7, T17 last) is internally consistent.",
+      "The header and preamble were not updated for L42, which is the only inconsistency found."
+    ]
+  }
+}
