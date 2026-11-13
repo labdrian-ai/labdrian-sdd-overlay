@@ -357,30 +357,6 @@ func mapPage(cards CardBridges, index *pageIndex, claimed map[int64]string, proj
 	return moved, 0, "", nil
 }
 
-// withStoreAgnosticIdentity is block with the identity keys of a page that names one memorycard memory by legacy
-// memorycard_* keys replaced by the store-agnostic ones (rewrittenIdentity), keeping the memory, revision and type the
-// page names. Every other block is returned as it is: a page of the store-agnostic keys, a page naming an Engram
-// observation (only the migration can say which memory that is), and a page whose identity lines the line rewriter
-// cannot rewrite whole (simpleIdentityLines).
-func withStoreAgnosticIdentity(block string) string {
-	if !carriesLegacyKeys(block) || !simpleIdentityLines(block) {
-		return block
-	}
-	fields := parseFrontmatterFields(block)
-	if _, engram := identityOf(fields, engramSource); engram {
-		return block
-	}
-	card, named := identityOf(fields, memorycardSource)
-	if !named {
-		return block
-	}
-	memoryID, err := strconv.ParseInt(strings.TrimSpace(card.ID), 10, 64)
-	if err != nil || memoryID <= 0 {
-		return block
-	}
-	return rewrittenIdentity(block, memoryID, card.Revision, card.Type)
-}
-
 // simpleIdentityLines reports whether every identity key of block is a one-line `key: value` at the start of its line,
 // which is what rewrittenIdentity replaces. An indented key, or a value that runs onto indented lines, is not: the
 // rewrite would leave part of the old identity behind, so the page is refused by name instead.

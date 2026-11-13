@@ -102,22 +102,41 @@ func requireSidecarHolds(t *testing.T, w *promoteGoldenWorld, address string) {
 	}
 }
 
-func TestALegacyCardPageWhoseStatusIsPatchedBecomesAStoreAgnosticPage(t *testing.T) {
+// A status patch changes status and related and nothing else: a legacy page keeps its identity lines byte for byte
+// (S6 (c): only the migration, with its backup and its refusals, rewrites the identity of an existing page).
+func TestALegacyCardPageWhoseStatusIsPatchedKeepsItsIdentityLines(t *testing.T) {
 	w, db := legacyCardWorld(t)
+	before := readVaultFile(t, w, "wiki/memory/c-000901.md")
 	execOn(t, db, `UPDATE memories SET status = 'archived' WHERE id = 1`)
 	code, stdout, stderr := runPromoteGolden(t, []string{"sync", "--project", promoteGoldenProject, "--source", "memorycard"})
 	if code != exitOK || !strings.Contains(stdout, "patched 1 page(s)") {
 		t.Fatalf("sync: exit %d, stdout %q, stderr %q, want one page patched", code, stdout, stderr)
 	}
-	page := readVaultFile(t, w, "wiki/memory/c-000901.md")
-	if !strings.Contains(page, "status: archived\n") {
-		t.Errorf("the page was not patched to archived:\n%s", page)
+	want := strings.Replace(before, "status: developing\n", "status: archived\n", 1)
+	if got := readVaultFile(t, w, "wiki/memory/c-000901.md"); got != want {
+		t.Errorf("the patched page =\n%s\nwant the page with only its status changed:\n%s", got, want)
 	}
-	requireStoreAgnosticIdentity(t, page, "3")
 	requireSidecarHolds(t, w, "c-000901")
-	// The page is the memory's own and in step with the sidecar: the next sync patches nothing.
+	// The page is in step with the sidecar: the next sync patches nothing.
 	if code, stdout, stderr := runPromoteGolden(t, []string{"sync", "--project", promoteGoldenProject, "--source", "memorycard"}); code != exitOK || strings.Contains(stdout, "patched 1 page(s)") {
 		t.Errorf("second sync: exit %d, stdout %q, stderr %q, want nothing patched", code, stdout, stderr)
+	}
+}
+
+// A legacy page of a retired memory whose status already says so is no patch target: it is not written and not counted.
+func TestALegacyCardPageWhoseStatusAlreadyMatchesIsNotAPatchTarget(t *testing.T) {
+	w, db := memorycardWorld(t)
+	archived := strings.Replace(legacyCardPage("c-000901", "Card Only", 1, "learning", "3"), "status: developing\n", "status: archived\n", 1)
+	recordPage(t, w, "c-000901", archived, true)
+	execOn(t, db, `UPDATE memories SET status = 'archived' WHERE id = 1`)
+	for _, args := range [][]string{{"sync", "--dry-run"}, {"sync"}} {
+		code, stdout, stderr := runPromoteGolden(t, append(append([]string{}, args...), "--project", promoteGoldenProject, "--source", "memorycard"))
+		if code != exitOK || strings.Contains(stdout, "patched 1 page(s)") || strings.Contains(stdout, "patch 1 page(s)") {
+			t.Errorf("%v: exit %d, stdout %q, stderr %q, want no page patched", args, code, stdout, stderr)
+		}
+	}
+	if got := readVaultFile(t, w, "wiki/memory/c-000901.md"); got != archived {
+		t.Errorf("the page was written:\n%s", got)
 	}
 }
 
