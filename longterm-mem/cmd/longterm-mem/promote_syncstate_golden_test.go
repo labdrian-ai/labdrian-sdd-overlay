@@ -30,8 +30,8 @@ const earlierSync = "{\n  \"schema\": 1,\n  \"last_sync_completed_at\": \"2026-0
 
 func syncStateScenarios() []pagesScenario {
 	status := []string{"status", "--project", promoteGoldenProject}
-	sync := []string{"sync", "--project", promoteGoldenProject}
-	dryRun := []string{"sync", "--project", promoteGoldenProject, "--dry-run"}
+	sync := []string{"sync", "--project", promoteGoldenProject, "--source", "memorycard"}
+	dryRun := []string{"sync", "--project", promoteGoldenProject, "--source", "memorycard", "--dry-run"}
 	statusSyncStatus := [][]string{status, sync, status}
 
 	return []pagesScenario{

@@ -23,8 +23,8 @@ import (
 func vaultLinksScenarios() []pagesScenario {
 	status := []string{"status", "--project", promoteGoldenProject}
 	doctor := []string{"doctor", "--project", promoteGoldenProject}
-	promote := []string{"promote", "--project", promoteGoldenProject, "--id", "1"}
-	sync := []string{"sync", "--project", promoteGoldenProject}
+	promote := []string{"promote", "--project", promoteGoldenProject, "--source", "memorycard", "--id", "1"}
+	sync := []string{"sync", "--project", promoteGoldenProject, "--source", "memorycard"}
 	statusSyncStatus := [][]string{status, sync, status}
 
 	return []pagesScenario{
