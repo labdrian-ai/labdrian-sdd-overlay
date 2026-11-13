@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "174c04754bc9844511f6569ae27f0c2bacc7eb29",
+    "head": "a5c09ab96f7dfdea9025a871339b91a7294e3acd",
+    "diff_sha256": "6bd38b1d89e739ff58d5980d7df5dca26605bade97b24633d9f92dafe94ca4cd",
+    "paths": [
+      "longterm-mem/internal/ops/doctor_eligibility.go",
+      "longterm-mem/internal/promote/reconcile_test.go",
+      "longterm-mem/internal/promote/sync_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "174c04754bc9844511f6569ae27f0c2bacc7eb29",
+      "head": "a5c09ab96f7dfdea9025a871339b91a7294e3acd",
+      "diff_sha256": "6bd38b1d89e739ff58d5980d7df5dca26605bade97b24633d9f92dafe94ca4cd"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/ops/doctor_eligibility.go",
+        "longterm-mem/internal/promote/reconcile_test.go",
+        "longterm-mem/internal/promote/sync_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/sync_test.go:6",
+        "claim": "The blank sqlite driver import is removed on the assumption that it is vestigial. The diff cannot show whether another _test.go file in package promote registers the driver or whether sync_test.go still opens a sqlite store. If neither does, the tests will fail at runtime with 'unknown driver sqlite' instead of at compile time. Confirm that some other file in the package registers the driver.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "longterm-mem/internal/promote/sync_test.go:6"
+        ]
+      }
+    ],
+    "evidence": [
+      "The doctor_eligibility.go refactor keeps the same result. It still reports a finding only when no candidate is eligible, and it uses candidates[0] and its reason, which is the same pair the old code recomputed. The only difference is that it now evaluates every candidate's reason instead of stopping at the first eligible one, which is harmless if IneligibleReason is pure.",
+      "The reconcile_test.go change only renames a test case label."
+    ]
+  }
+}

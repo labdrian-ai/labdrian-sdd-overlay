@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "79563edf72935eb242a79a761ca7683c2bc596eb",
+    "head": "174c04754bc9844511f6569ae27f0c2bacc7eb29",
+    "diff_sha256": "2a6bb73f0db6d284ce29993c00895a629ff9aba89755a0d6f8fdc2a739f6970d",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/cmd_mcp.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "79563edf72935eb242a79a761ca7683c2bc596eb",
+      "head": "174c04754bc9844511f6569ae27f0c2bacc7eb29",
+      "diff_sha256": "2a6bb73f0db6d284ce29993c00895a629ff9aba89755a0d6f8fdc2a739f6970d"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/cmd_mcp.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/cmd_mcp.go:153-160",
+        "claim": "The degraded declaration is now written outside the mutex, so concurrent writes to the shared diagnostics writer are no longer serialized by mu. If the diagnostics writer is not itself goroutine-safe (e.g. a bytes.Buffer in tests, or any non-synchronized writer), concurrent promote calls for different sources can race on it. Previously mu incidentally serialized these writes. A secondary effect is that a concurrent second call for the same source may return and proceed before the first call's declaration has been emitted, so declaration ordering relative to the promotion output is not guaranteed. Neither is shown to be reachable from the diff alone, since the writer type is not visible.",
+        "evidence_class": "inferential",
+        "causal_disposition": "worsened",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/cmd_mcp.go:153-160"
+        ]
+      }
+    ],
+    "evidence": [
+      "The change only moves fmt.Fprintf out of the critical section; the declared-map check-and-set remains atomic under mu, so exactly one caller per source still emits the declaration.",
+      "The diagnostics writer type is not visible in the diff, so thread-safety of concurrent writes cannot be confirmed; os.Stderr is safe for concurrent writes, which makes the risk limited to non-stderr writers."
+    ]
+  }
+}

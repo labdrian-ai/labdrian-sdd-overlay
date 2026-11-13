@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "174c04754bc9844511f6569ae27f0c2bacc7eb29",
+    "head": "a5c09ab96f7dfdea9025a871339b91a7294e3acd",
+    "diff_sha256": "6bd38b1d89e739ff58d5980d7df5dca26605bade97b24633d9f92dafe94ca4cd",
+    "paths": [
+      "longterm-mem/internal/ops/doctor_eligibility.go",
+      "longterm-mem/internal/promote/reconcile_test.go",
+      "longterm-mem/internal/promote/sync_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "174c04754bc9844511f6569ae27f0c2bacc7eb29",
+      "head": "a5c09ab96f7dfdea9025a871339b91a7294e3acd",
+      "diff_sha256": "6bd38b1d89e739ff58d5980d7df5dca26605bade97b24633d9f92dafe94ca4cd"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/ops/doctor_eligibility.go",
+        "longterm-mem/internal/promote/reconcile_test.go",
+        "longterm-mem/internal/promote/sync_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "doctor_eligibility.go: the loop now calls IneligibleReason once per candidate and keeps the results. The eligible-if-any rule and the candidates[0] reason for the finding are unchanged. It now evaluates every candidate with no early break, which only matters if IneligibleReason has side effects, and nothing in the diff suggests it does.",
+      "reconcile_test.go: only a subtest name string is renamed, so there is no behavioral change.",
+      "sync_test.go: the blank sqlite driver import is dropped. The diff cannot show whether another test file in the package registers the driver. The commit calls the import vestigial and the diff offers no evidence against it, so I report no defect."
+    ]
+  }
+}
