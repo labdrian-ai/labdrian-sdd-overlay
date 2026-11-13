@@ -58,7 +58,7 @@ func TestPromoteCard_CreatesOnePage(t *testing.T) {
 	}
 	fm, _ := frontmatterBlock(string(raw))
 	fields := parseFrontmatterFields(fm)
-	for key, want := range map[string]string{"memorycard_id": "7", "memorycard_revision": "3", "memorycard_type": "decision", "project": "memorycard", "address": testAddress} {
+	for key, want := range map[string]string{"source": "memorycard", "source_id": "7", "source_revision": "3", "source_type": "decision", "project": "memorycard", "address": testAddress} {
 		if fields[key] != want {
 			t.Errorf("frontmatter %s = %q, want %q", key, fields[key], want)
 		}
@@ -134,7 +134,7 @@ func TestPromoteCard_NewerRevisionUpdatesThePageInPlace(t *testing.T) {
 		t.Fatalf("pages = %v, want one", got)
 	}
 	raw, _ := os.ReadFile(path)
-	if !strings.Contains(string(raw), "memorycard_revision: 4\n") || !strings.Contains(string(raw), "A new version of the memory.") {
+	if !strings.Contains(string(raw), "source_revision: 4\n") || !strings.Contains(string(raw), "A new version of the memory.") {
 		t.Fatalf("page not brought to revision 4:\n%s", raw)
 	}
 

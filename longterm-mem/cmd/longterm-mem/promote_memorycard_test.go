@@ -106,7 +106,7 @@ func TestPromoteSourceMemorycard_CreatesOnePage(t *testing.T) {
 		t.Fatalf("pages = %v, want one", names)
 	}
 	page := readVaultFile(t, w, "wiki/memory/c-000901.md")
-	for _, want := range []string{"memorycard_id: 1\n", "memorycard_revision: 3\n", "memorycard_type: learning\n", "Lives only in memorycard."} {
+	for _, want := range []string{"source: memorycard\n", "source_id: 1\n", "source_revision: 3\n", "source_type: learning\n", "Lives only in memorycard."} {
 		if !strings.Contains(page, want) {
 			t.Errorf("page lacks %q:\n%s", want, page)
 		}
@@ -273,7 +273,7 @@ func TestTheMCPPromoteToolPromotesFromMemorycardAndNothingElse(t *testing.T) {
 	if _, err := tool(context.Background(), promoteGoldenProject, "memorycard", 1); err != nil {
 		t.Fatalf("memorycard: %v", err)
 	}
-	if page := readVaultFile(t, w, "wiki/memory/c-000902.md"); !strings.Contains(page, "memorycard_id: 1\n") || strings.Contains(page, "engram_id") {
+	if page := readVaultFile(t, w, "wiki/memory/c-000902.md"); !strings.Contains(page, "source_id: 1\n") || strings.Contains(page, "engram_id") {
 		t.Errorf("page promoted from memorycard = %s", page)
 	}
 	if _, err := tool(context.Background(), promoteGoldenProject, "memorycard", 2); err == nil || !strings.Contains(err.Error(), "c-000901") {

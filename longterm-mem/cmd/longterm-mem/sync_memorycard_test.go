@@ -62,7 +62,7 @@ func TestSyncSourceMemorycard_PromotesANeverPromotedEligibleMemory(t *testing.T)
 		t.Fatalf("pages = %v, want the three memories' pages", names)
 	}
 	first := readVaultFile(t, w, "wiki/memory/"+cards[0])
-	if !strings.Contains(first, "memorycard_id: 1\n") || strings.Contains(first, "engram_id") {
+	if !strings.Contains(first, "source_id: 1\n") || strings.Contains(first, "engram_id") {
 		t.Errorf("page of memory 1 = %s", first)
 	}
 	if fileHash(t, db) != dbBefore {
@@ -132,7 +132,7 @@ func TestSyncSourceMemorycard_ASameContentMemoryIsCountedAsBridged(t *testing.T)
 		t.Fatalf("exit %d, stdout %q, want exit 0 and memories 2 and 5 counted as bridged\nstderr: %s", code, stdout, stderr)
 	}
 	for _, name := range pageNames(t, w) {
-		if strings.HasPrefix(name, "c-") && strings.Contains(readVaultFile(t, w, "wiki/memory/"+name), "memorycard_id: 5\n") {
+		if strings.HasPrefix(name, "c-") && strings.Contains(readVaultFile(t, w, "wiki/memory/"+name), "source_id: 5\n") {
 			t.Errorf("memory 5 got the page %s", name)
 		}
 	}
@@ -146,7 +146,7 @@ func TestSyncSourceMemorycard_ALocallyEditedPageIsNamedAndExitsZero(t *testing.T
 	pages := filepath.Join(w.vaultRoot, "wiki", "memory")
 	var edited string
 	for _, name := range pageNames(t, w) {
-		if strings.HasPrefix(name, "c-") && strings.Contains(readVaultFile(t, w, "wiki/memory/"+name), "memorycard_id: 1\n") {
+		if strings.HasPrefix(name, "c-") && strings.Contains(readVaultFile(t, w, "wiki/memory/"+name), "source_id: 1\n") {
 			edited = filepath.Join(pages, name)
 		}
 	}
@@ -216,11 +216,11 @@ func TestSyncSourceMemorycard_DryRunPredictsWhatTheRunDoes(t *testing.T) {
 // Status propagation (S1 e): a promoted memory that memorycard has since superseded or archived gets its page's
 // status and related patched on the next `sync --source memorycard`, frontmatter only.
 
-// cardPagePath is the file of the page that carries memorycard_id id.
+// cardPagePath is the file of the page that carries source_id id.
 func cardPagePath(t *testing.T, w *promoteGoldenWorld, id string) string {
 	t.Helper()
 	for _, name := range pageNames(t, w) {
-		if strings.HasPrefix(name, "c-") && strings.Contains(readVaultFile(t, w, "wiki/memory/"+name), "memorycard_id: "+id+"\n") {
+		if strings.HasPrefix(name, "c-") && strings.Contains(readVaultFile(t, w, "wiki/memory/"+name), "source_id: "+id+"\n") {
 			return filepath.Join(w.vaultRoot, "wiki", "memory", name)
 		}
 	}

@@ -11,11 +11,11 @@ longterm-mem: sync --source memorycard promoted 1 memory(ies); patched 1 page(s)
 {
   "c-000901": {
     "body_hash": "4c302984b209786451aa00b5b0888d97adc0390421234e166ee9d17a31caba15",
-    "frontmatter_hash": "62df649d439d88f7bba992bb5e014252c11043cee6f87f80da038d2a4b1d8d35"
+    "frontmatter_hash": "beacb104d2cffeb55e69be4f119016f4426eed7a012234f330de3ed6ba4308be"
   },
   "c-000902": {
     "body_hash": "5c60c878f8c66023f51766c5c2847417b950a46e8ff6a35dfac35f488e9513d1",
-    "frontmatter_hash": "f225649e76bcf64ed1ef5858345bd46ebf74b18138a1c45d76ce5602cccbfa02"
+    "frontmatter_hash": "1e0017b7616a753c709bf8006a141a4aafe3a80a67dfb5af21acc1cc4c0e4096"
   }
 }
 === .raw/.manifest.json (-rw-------) ===
@@ -84,9 +84,10 @@ tags:
 status: archived
 related: []
 sources: []
-memorycard_id: 1
-memorycard_type: decision
-memorycard_revision: 1
+source: memorycard
+source_id: 1
+source_type: decision
+source_revision: 1
 project: golden-project
 ---
 # Pinned Decision
@@ -112,9 +113,10 @@ tags:
 status: developing
 related: []
 sources: []
-memorycard_id: 2
-memorycard_type: decision
-memorycard_revision: 1
+source: memorycard
+source_id: 2
+source_type: decision
+source_revision: 1
 project: golden-project
 ---
 # Curated Note

@@ -139,9 +139,10 @@ func emitEngramPage(m memory.Memory, address string, related []Link, at time.Tim
 }
 
 // emitCardPage renders a memory of memorycard as a vault page at address: the frontmatter of the Engram page with
-// memorycard_* extras in place of the engram_* ones, related links from the caller-resolved related slice, and a
-// body that carries the body behind an H1 title (omitted when the body already opens with one) and a footer naming
-// the source.
+// the store-agnostic identity keys (source: memorycard, source_id, source_type, source_revision) in place of the
+// engram_* ones, and none of the legacy memorycard_* keys (S6 (b)), related links from the caller-resolved related
+// slice, and a body that carries the body behind an H1 title (omitted when the body already opens with one) and a
+// footer naming the source.
 func emitCardPage(m memory.Memory, address string, related []Link, at time.Time) (Page, error) {
 	if address == "" {
 		return Page{}, fmt.Errorf("promote: emit page for memorycard memory %s: address is required", m.Identity.ID)
@@ -165,9 +166,10 @@ func emitCardPage(m memory.Memory, address string, related []Link, at time.Time)
 	writeField(&b, statusField, cardStatus(m))
 	writeListField(&b, relatedField, relatedWikilinks(related))
 	writeListField(&b, "sources", nil)
-	writeField(&b, memorycardIDField, strconv.FormatInt(id, 10))
-	writeField(&b, memorycardTypeField, m.Type)
-	writeField(&b, memorycardRevisionField, strconv.Itoa(m.Revision))
+	writeField(&b, sourceField, memorycardSource)
+	writeField(&b, sourceIDField, strconv.FormatInt(id, 10))
+	writeField(&b, sourceTypeField, m.Type)
+	writeField(&b, sourceRevisionField, strconv.Itoa(m.Revision))
 	writeField(&b, projectField, m.Project)
 	b.WriteString("---\n")
 
