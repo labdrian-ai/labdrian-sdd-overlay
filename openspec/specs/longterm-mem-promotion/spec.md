@@ -134,6 +134,31 @@ Engram's relation graph and any already-promoted counterpart such that every
 wikilink resolves, using an address-first filename that survives a later
 retitle.
 
+The page SHALL name the memory it was promoted from with the store-agnostic
+keys `source` (the store's name, `memorycard`), `source_id`, `source_revision`
+and `source_type`, in that order, and with no other identity key: neither
+`engram_id`, `engram_sync_id`, `engram_type` and `engram_revision`, nor
+`memorycard_id`, `memorycard_type` and `memorycard_revision`. Every page
+written, whether new, updated in place or status-patched, carries them.
+Pages written before keep their legacy keys, which every reader still reads as
+the identity they name, until `longterm-mem migrate-card-pages --apply` gives
+them the store-agnostic keys of their memorycard memory once (see "Local-Edit
+Precedence").
+
+(Previously: a page carried `memorycard_id`, `memorycard_type` and
+`memorycard_revision` for a memorycard memory, and `engram_id`,
+`engram_sync_id`, `engram_type` and `engram_revision` for an Engram
+observation, one family of keys per store.)
+
+#### Scenario: A page names its memory with the store-agnostic keys only
+
+- GIVEN memorycard memory 1, a learning at revision 3
+- WHEN it is promoted
+- THEN the page's frontmatter carries `source: memorycard`, `source_id: 1`,
+  `source_type: learning` and `source_revision: 3`, and none of the keys
+  `memorycard_id`, `memorycard_type`, `memorycard_revision`, `engram_id`,
+  `engram_type`, `engram_revision` and `engram_sync_id`
+
 #### Scenario: Type is mapped onto the vault's contract enum
 
 - GIVEN an eligible `decision`-typed observation
@@ -209,7 +234,20 @@ Traces to: longterm-mem R-008
 WHEN a previously promoted Engram observation is revised or re-promoted, the
 longterm-mem promotion writer SHALL update the existing vault page in place,
 subject to the local-edit precedence rule, rather than creating a duplicate
-page.
+page. The page is found by the identity its keys name (`source` and
+`source_id`, or the legacy `engram_id` and `memorycard_id`), and the update
+rewrites it with the store-agnostic keys of "Contract-Conformant Page
+Emission", so a page's `source_revision` is the revision it was updated to.
+
+(Previously: the page was found by its `engram_id` or `memorycard_id` and
+rewritten with the keys of its own store.)
+
+#### Scenario: An update rewrites the page with the store-agnostic keys
+
+- GIVEN memory X was promoted at revision 3 and its revision is now 4
+- WHEN promotion runs again
+- THEN the same page is updated in place and carries `source_revision: 4`
+  and no `memorycard_revision`
 
 #### Scenario: Unmodified page updates in place on revision
 
@@ -356,6 +394,41 @@ IF a promoted vault page's on-disk content diverges from what longterm-mem
 itself last wrote for that page, THEN the promotion writer SHALL skip that
 page's content update and emit a diagnostic instead, tracked through a
 sidecar precedence store keyed by the page's address.
+
+The one-time migration of a page's identity keys, `longterm-mem
+migrate-card-pages` (a dry run unless given `--apply`), SHALL follow the same
+rule. It gives every page of the project that carries legacy identity keys the
+store-agnostic keys of its memorycard memory (a page naming Engram observation
+N takes the memory memorycard imported from N, read from its `import_map` row
+alone; a page naming a memorycard memory keeps it), keeping the page's
+address, created date, body and every other key, and rewrites only that page's
+precedence entry's frontmatter hash. Before its first write it copies every
+page it will rewrite and the precedence sidecar to a directory of its own. It
+SHALL leave byte-identical, name, count by reason and go on from, with exit
+code 6, a page that differs from its precedence entry, a page with no entry, a
+page whose observation no `import_map` row names, and a page whose memory
+already has a page of its own; it never matches a page to a memory by content.
+A second run changes nothing.
+
+(Previously: the precedence entry changed only when a promotion wrote the
+page or a status patch rewrote its frontmatter, and the pages of the older
+releases kept their legacy keys.)
+
+#### Scenario: The migration refuses a page that was edited by hand
+
+- GIVEN a page carrying `engram_id: 6` that differs from its precedence entry
+- WHEN `migrate-card-pages --apply` runs
+- THEN the page is left byte-identical, it is named with its reason, the run
+  goes on to the other pages, and the exit code is 6
+
+#### Scenario: The migration rewrites the entry of a migrated page
+
+- GIVEN a tracked page carrying `engram_id: 1`, whose observation memorycard
+  imported as memory 2
+- WHEN `migrate-card-pages --apply` runs
+- THEN the page carries `source: memorycard` and `source_id: 2`, its address,
+  created date and body are unchanged, and its entry's frontmatter hash is
+  the hash of its new frontmatter
 
 #### Scenario: Locally edited page is skipped with a diagnostic
 
