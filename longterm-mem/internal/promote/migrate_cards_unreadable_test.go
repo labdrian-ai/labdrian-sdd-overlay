@@ -2,6 +2,7 @@ package promote
 
 import (
 	"errors"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -152,6 +153,42 @@ func TestMigrateCardPages_AMemoryTypeEndingInRulesMakesARefusalAndNoWrite(t *tes
 	}
 	if page := m.pages.pages["fine"]; !strings.Contains(page, "source_id: 8\n") {
 		t.Errorf("the other page was not migrated: %q", page)
+	}
+	if len(m.backup.calls) != 1 || !slices.Equal(m.backup.calls[0], []string{"fine"}) {
+		t.Errorf("backup calls = %v, want one call naming only the page that is rewritten", m.backup.calls)
+	}
+}
+
+// The same refusal on the recovery path: a run stopped after saving the entry of a rewrite that carries the odd type,
+// and the page on disk is still the legacy one. The rerun finds the recorded rewrite through recordedRewrite and must
+// still refuse it, never write it and never back it up. (This is a pin of the second place the identity is chosen:
+// it passes only because the read-back check also covers a recorded rewrite.)
+func TestMigrateCardPages_AStoppedPageWhoseRecordedRewriteEndsInRulesIsRefusedAndNotBackedUp(t *testing.T) {
+	m := newMigWorld()
+	card := cardOf(7, migProject)
+	card.Type = "learning---"
+	m.memory(card, 31)
+	content := m.put("stopped", "engram_id: 31\nengram_revision: 1\n")
+	block, _ := frontmatterBlock(content)
+	recorded, _ := m.w.Store.Get("stopped")
+	recorded.FrontmatterHash = hashText(rewrittenIdentity(block, 7, "1", "learning---"))
+	m.w.Store.Set("stopped", recorded)
+	m.memory(cardOf(8, migProject), 32)
+	m.put("fine", "engram_id: 32\nengram_revision: 1\n")
+
+	report, err := m.run(true)
+	r, ok := refusalOf(report, "stopped")
+	if err != nil || !ok || r.Kind != RefusedOther || !strings.Contains(r.Reason, "read the rewritten page differently") || len(report.Migrated) != 1 || report.Migrated[0].Address != "fine" {
+		t.Fatalf("report = %+v, err = %v, want the stopped page refused as other and the other page migrated", report, err)
+	}
+	if m.pages.pages["stopped"] != content {
+		t.Errorf("the refused page changed")
+	}
+	if entry, _ := m.w.Store.Get("stopped"); entry != recorded {
+		t.Errorf("the entry of the refused page changed: %+v", entry)
+	}
+	if len(m.backup.calls) != 1 || !slices.Equal(m.backup.calls[0], []string{"fine"}) {
+		t.Errorf("backup calls = %v, want one call naming only the page that is rewritten", m.backup.calls)
 	}
 }
 
