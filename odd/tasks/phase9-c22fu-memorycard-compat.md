@@ -297,3 +297,10 @@ Test runner: `go test` in `longterm-mem/` (`internal/memorycard`, `internal/prom
     - Polisher `8518a6d9` F1 (`**Status**` shown twice in the verbatim shape, :83 and :95): **answered, no change in this feature.** It predates this change; the prose at :86-88 and :62-66 says which applies. Recorded as follow-up F-B1 for the next contract edit.
     - `83eda766`-2 F1 (L26 names no own hash): L26 is `83eda766`.
     - `83eda766`-2 F2 (CI red until approval is only in the Log): **answered.** Do not merge this branch before the owner's approval commit of `skills/knowledge-ingestion/.approval.json`; CI stays red on `TestRegistryLockE2E_ValidateLeavesTheRealTreeUntouched` and `skills validate` until then. T6 stays unticked until it lands.
+- **L28** (2026-11-13, coordinator, review of `37b0ec5c` and `f08e25ca`; this entry is the docs(odd) commit that follows `f08e25ca`. No earlier entry is edited.)
+  - *Polisher `37b0ec5c`:* no findings.
+  - *Answers.*
+    - `37b0ec5c`-3 F1 (row versus procedure): **answered, no change.** The polisher of `37b0ec5c` read `skills/_shared/ingested-observation-contract.md:150-179`: step 2 tombstones every old chunk key and step 3 says an N == 1 source has none, so the row's "if it has any" agrees.
+    - `f08e25ca`-3 F1 (L27 cites contract lines without the file): **answered.** Every `:NN` in L27 refers to `skills/_shared/ingested-observation-contract.md` at `37b0ec5c`.
+    - `f08e25ca`-3 F2 (L27's answer to `83eda766`-2 F1 lacks a verdict): **answered.** That answer is "fixed in L27": L26 is `83eda766`.
+  - *Recall/readability lens on `f08e25ca`:* the first run was refused (unparseable reply); the rerun stored `f08e25cae1b2-3.json`.
