@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memorycard"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
 )
 
@@ -76,21 +77,16 @@ func (c commands) cmdSync(args []string) int {
 }
 
 // syncFromMemorycard is `sync --source memorycard` (S1 c of the C22-FU follow-up): promote.SyncCardsProject over
-// memorycard's memories of the project, both stores opened read-only, or, with dryRun, promote.PlanCards, which
-// walks the same decision and writes nothing. Engram is read too, for the one thing only it can say of a memory
-// with no import_map row (the twin rule of newMemorycardSource). A bridged memory is skipped and counted, and is no failure (exit 0).
+// memorycard's memories of the project, the store opened read-only, or, with dryRun, promote.PlanCards, which
+// walks the same decision and writes nothing. Memorycard says the lineage and the mirrors of its memories itself,
+// so no other store is opened. A bridged memory is skipped and counted, and is no failure (exit 0).
 func (c commands) syncFromMemorycard(a app, project, vaultRoot string, dryRun bool) int {
 	cards, exit := a.memorycardToPromoteFrom()
 	if exit != exitOK {
 		return exit
 	}
 	defer a.closeStore("memorycard", cards)
-	engramStore, exit := a.memoryToPromoteFrom()
-	if exit != exitOK {
-		return exit
-	}
-	defer a.closeStore("engram", engramStore)
-	source := newMemorycardSource(cards, engramStore)
+	source := memorycard.NewSource(cards)
 
 	ctx := context.Background()
 	if dryRun {

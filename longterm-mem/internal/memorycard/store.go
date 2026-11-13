@@ -2,9 +2,9 @@
 // replaces Engram. Every connection this package opens is read-only by construction, as Engram's is
 // (internal/engram): no code path here can write to memorycard's database.
 //
-// It is an adapter: it maps memorycard's rows to the types of internal/memory (CardMemory) and defines no
-// domain type of its own. Promotion reads a memory through the lookup port it owns (promote.CardLookup), which
-// Store.MemoryByID satisfies.
+// It is an adapter: Store maps memorycard's rows to memory.CardMemory, and Source (source.go) serves them as
+// memory.Memory through the port promotion owns (promote.Source), the lineage and the mirrors of a memory read from
+// memorycard's own import_map and content hashes. It defines no domain type of its own beyond what a query answers.
 package memorycard
 
 import (
@@ -107,19 +107,67 @@ func scanMemory(row rowScanner) (memory.CardMemory, error) {
 
 // bridgeOf sets m.EngramID from the memory's import_map row of source engram, when it has one.
 func (s *Store) bridgeOf(m *memory.CardMemory) error {
+	engramID, err := s.engramIDOf(m.ID)
+	m.EngramID = engramID
+	return err
+}
+
+// engramIDOf is the Engram observation the import_map row of source engram of memory memoryID names (the first
+// part's), or 0 when it has none or the key is not a number.
+func (s *Store) engramIDOf(memoryID int64) (int64, error) {
 	var key string
-	err := s.db.QueryRow(`select source_key from import_map where source = 'engram' and memory_id = ? order by part limit 1`, m.ID).Scan(&key)
+	err := s.db.QueryRow(`select source_key from import_map where source = 'engram' and memory_id = ? order by part limit 1`, memoryID).Scan(&key)
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
+		return 0, nil
 	case err != nil:
-		return fmt.Errorf("memorycard: look up the Engram id of memory %d: %w", m.ID, err)
-	default:
-		// A key that is not a number names no observation: the memory is not bridged to one.
-		if engramID, perr := strconv.ParseInt(key, 10, 64); perr == nil && engramID > 0 {
-			m.EngramID = engramID
+		return 0, fmt.Errorf("memorycard: look up the Engram id of memory %d: %w", memoryID, err)
+	}
+	// A key that is not a number names no observation: the memory is not bridged to one.
+	if engramID, perr := strconv.ParseInt(key, 10, 64); perr == nil && engramID > 0 {
+		return engramID, nil
+	}
+	return 0, nil
+}
+
+// Twin is a memory that holds the content hash another memory holds and has an import_map row, with the Engram
+// observation its row of source engram names (0 when it names none).
+type Twin struct {
+	MemoryID int64
+	EngramID int64
+}
+
+// MappedTwins returns the memories of project that hold contentHash and have an import_map row of any source,
+// whatever their status (a page outlives its memory), in id order: what a memory mirrored by hand, one with no
+// row, holds the content of. An empty hash is no content, and holds it with nobody.
+func (s *Store) MappedTwins(project, contentHash string) ([]Twin, error) {
+	if contentHash == "" {
+		return nil, nil
+	}
+	rows, err := s.db.Query(`select m.id from memories m where m.project = ? and m.content_hash = ?
+		and exists (select 1 from import_map i where i.memory_id = m.id) order by m.id`, project, contentHash)
+	if err != nil {
+		return nil, fmt.Errorf("memorycard: look up the imported memories of project %q that hold a content hash: %w", project, err)
+	}
+	var twins []Twin
+	for rows.Next() {
+		var twin Twin
+		if err := rows.Scan(&twin.MemoryID); err != nil {
+			_ = rows.Close()
+			return nil, fmt.Errorf("memorycard: read a memory of project %q: %w", project, err)
+		}
+		twins = append(twins, twin)
+	}
+	if err := errors.Join(rows.Err(), rows.Close()); err != nil {
+		return nil, fmt.Errorf("memorycard: iterate the memories of project %q: %w", project, err)
+	}
+	// The observations are looked up once the rows are closed, so that no query runs while the rows are open.
+	for i := range twins {
+		if twins[i].EngramID, err = s.engramIDOf(twins[i].MemoryID); err != nil {
+			return nil, err
 		}
 	}
-	return nil
+	return twins, nil
 }
 
 // MemoryByID returns the memory identified by id, whatever its status. ok is false, with a nil error, when

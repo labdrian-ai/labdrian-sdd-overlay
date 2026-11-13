@@ -163,9 +163,10 @@ func TestPromoteSourceMemorycard_BridgedMemoryIsRefused(t *testing.T) {
 	}
 }
 
-// A memory mirrored by hand (no import_map row) whose content hash is that of an Engram observation which has a
-// page is refused like a bridged one. Memory 5 holds the text of observation 1 in other case and spacing, memory 6
-// the text of observation 3, which has no page.
+// A memory mirrored by hand (no import_map row) whose content hash is that of an imported memory, whose observation
+// has a page, is refused like a bridged one. Memory 5 holds the text of memory 2 (observation 1) in other case and
+// spacing, memory 6 the text of memory 4 (observation 3, which has no page). Memorycard says which memory holds
+// which content, so the imported memories carry their hash, as an import writes it.
 func addHandMirroredMemories(t *testing.T, dbPath string) {
 	t.Helper()
 	db, err := sql.Open("sqlite", dbPath)
@@ -173,6 +174,11 @@ func addHandMirroredMemories(t *testing.T, dbPath string) {
 		t.Fatal(err)
 	}
 	defer db.Close()
+	for id, content := range map[int][2]string{2: {"Pinned Decision", "A decision somebody pinned."}, 4: {"Below Threshold", "A discovery nobody curated."}} {
+		if _, err := db.Exec(`update memories set content_hash = ? where id = ?`, memory.CardContentHash(content[0], content[1]), id); err != nil {
+			t.Fatal(err)
+		}
+	}
 	// The stored hash is memorycard's: lowercased, white space collapsed over title + "\n" + body.
 	for _, row := range []struct {
 		id          int

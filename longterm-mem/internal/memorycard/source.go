@@ -1,7 +1,6 @@
 package memorycard
 
 import (
-	"fmt"
 	"strconv"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
@@ -14,22 +13,16 @@ const SourceName = "memorycard"
 // imported from. It is the source of the identities a memory's lineage names.
 const engramSource = "engram"
 
-// TwinsFunc answers the identities of the memories of other stores that hold a memory's content: the same
-// project and the same content hash. The composition root supplies it (the stores it knows are its own to
-// join), so this adapter names no other adapter.
-type TwinsFunc func(project, contentHash string) ([]memory.Identity, error)
-
 // Source serves memorycard's memories as memory.Memory, the port of promotion (promote.Source). It maps through
 // Store's one mapping (memorySelect and scanMemory), so a memory reads the same through either, and it is as
 // read-only as the Store.
 type Source struct {
 	store *Store
-	twins TwinsFunc
 }
 
-// NewSource returns the Source over store. twins may be nil, and then a memory's lineage holds the Engram
-// observation its import_map row names and nothing else.
-func NewSource(store *Store, twins TwinsFunc) *Source { return &Source{store: store, twins: twins} }
+// NewSource returns the Source over store. It reads memorycard alone: the lineage and the mirrors of a memory come
+// from its import_map rows and the content hashes of memorycard's own memories, so it opens no other store.
+func NewSource(store *Store) *Source { return &Source{store: store} }
 
 // Candidates returns the memories of project that promotion reads, in id order: the active and the superseded
 // ones (Store.ListMemories).
@@ -90,14 +83,53 @@ func (s *Source) toMemory(card memory.CardMemory) (memory.Memory, error) {
 		m.Successor = memory.Identity{Source: SourceName, ID: strconv.FormatInt(card.SupersededBy, 10)}
 	}
 	if card.EngramID != 0 {
-		m.Lineage = append(m.Lineage, memory.Identity{Source: engramSource, ID: strconv.FormatInt(card.EngramID, 10)})
-	}
-	if !card.Mapped && s.twins != nil {
-		twins, err := s.twins(card.Project, card.ContentHash)
+		lineage, err := s.lineageOf(card)
 		if err != nil {
-			return memory.Memory{}, fmt.Errorf("memorycard: find the twins of memory %d: %w", card.ID, err)
+			return memory.Memory{}, err
 		}
-		m.Mirrored = twins
+		m.Lineage = lineage
+	}
+	if !card.Mapped {
+		mirrors, err := s.mirrorsOf(card)
+		if err != nil {
+			return memory.Memory{}, err
+		}
+		m.Mirrored = mirrors
 	}
 	return m, nil
+}
+
+// lineageOf is the lineage of a memory imported from Engram observation card.EngramID, read from memorycard's
+// import_map alone: the observation, then the other memories imported from it (its parts, in part order), so
+// that a page keyed by one part's memory is still the page of the others.
+func (s *Source) lineageOf(card memory.CardMemory) ([]memory.Identity, error) {
+	lineage := []memory.Identity{{Source: engramSource, ID: strconv.FormatInt(card.EngramID, 10)}}
+	parts, err := s.store.MemoryIDsByEngramIDs([]int64{card.EngramID})
+	if err != nil {
+		return nil, err
+	}
+	for _, id := range parts[card.EngramID] {
+		if id != card.ID {
+			lineage = append(lineage, memory.Identity{Source: SourceName, ID: strconv.FormatInt(id, 10)})
+		}
+	}
+	return lineage, nil
+}
+
+// mirrorsOf is what a memory with no import_map row holds the content of: the memories of its project with the same
+// content hash that have one, each followed by the observation its row names. Memorycard says it alone: it needs
+// no other store to know which memories were imported.
+func (s *Source) mirrorsOf(card memory.CardMemory) ([]memory.Identity, error) {
+	twins, err := s.store.MappedTwins(card.Project, card.ContentHash)
+	if err != nil {
+		return nil, err
+	}
+	var mirrors []memory.Identity
+	for _, twin := range twins {
+		mirrors = append(mirrors, memory.Identity{Source: SourceName, ID: strconv.FormatInt(twin.MemoryID, 10)})
+		if twin.EngramID != 0 {
+			mirrors = append(mirrors, memory.Identity{Source: engramSource, ID: strconv.FormatInt(twin.EngramID, 10)})
+		}
+	}
+	return mirrors, nil
 }

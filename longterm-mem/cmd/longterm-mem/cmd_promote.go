@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memorycard"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
 )
 
@@ -102,19 +103,11 @@ func (c commands) promoteFromMemorycard(a app, vaultRoot string, id int64) int {
 		return exit
 	}
 	defer store.Close()
-	// Engram's database is read too: a memory with no bridge is refused when it holds the content of an
-	// observation that has a page, and only Engram can say which observations hold it.
-	engramStore, exit := a.memory()
-	if exit != exitOK {
-		return exit
-	}
-	defer engramStore.Close()
-
 	writer, err := newPromoteWriter(vaultRoot, c.clock)
 	if err != nil {
 		return a.refuse(err, exitInternal)
 	}
-	result, err := promote.ExplicitPromoteCard(context.Background(), writer, newMemorycardSource(store, engramStore), id)
+	result, err := promote.ExplicitPromoteCard(context.Background(), writer, memorycard.NewSource(store), id)
 	var bridged *promote.BridgedError
 	switch {
 	case errors.As(err, &bridged):
