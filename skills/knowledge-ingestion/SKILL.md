@@ -104,8 +104,9 @@ for a document that is not fully ingested, breaking the "never report success fo
 document" rule above.
 
 - If the digest matches AND `**Status**: complete` (a single-chunk record at the manifest
-  key carries the same field, and `complete` is its live value): this is a **hard no-op**. Make no
-  `mem_save` call and no `promote` call. Report "unchanged".
+  key carries `**Status**` too, `complete` while live, per the contract's chunk `**Status**`
+  rule): this is a **hard no-op**. Make no `mem_save` call and no `promote` call. Report
+  "unchanged".
 - If the digest matches but `**Status**` is `pending` or `partial`: this is a **resume**, not
   a no-op. Re-run the manifest-first ordering above starting from step 3, using
   `**Chunk-Status**`, read in full (when memorycard stored the manifest as parts, its list

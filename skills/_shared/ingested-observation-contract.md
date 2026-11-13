@@ -59,7 +59,9 @@ namespace listing sorts lexically. A source whose chunk count would exceed
 
 A chunk or standalone record's content is `body` → `---` → provenance block.
 The block is the LAST element of its `content`, after the body, never before it.
-A manifest's `content` is the provenance block first: nothing precedes it, and its `**Chunk-Status**` inventory, when it has entries, is its last element.
+A manifest's `content` is the provenance block first: nothing precedes it, and
+its last element is its `**Chunk-Status**` inventory when that has entries,
+otherwise `**Chunks-Saved**`.
 
 ```markdown
 ---
@@ -148,7 +150,24 @@ second parallel memory, and never an automatic supersession.
 | exists, **new N < old N**, new N ≥ 1 | — | Surplus keys `c{N+1}…` upsert to a retired tombstone (`**Status**: retired`, trailer preserved, body removed) and are promoted so the vault page updates in place. **Never hand-deleted.** |
 | exists, **new N == 1** (was > 1) | — | The record moves to the manifest key (rule 2: a single-chunk source has no separate chunk observation). Every prior chunk key `c0001…` — including `c0001` — retires to a tombstone the same way; none of them becomes the live record. |
 | exists, **new N > old N** | — | New chunk keys are created and promoted |
-| **origin changed** (new URI ⇒ new `Source-Id`) | — | A different topic key. The old record is NOT touched automatically; saving the new manifest (or standalone record) with memorycard's `mem_save` argument `supersedes` set to the memorycard id of the old one is a documented operator step. memorycard marks the old memory superseded, and the next `sync` patches its vault page to `superseded`, with the successor's page in `related` when it has one. Every chunk key of the old `Source-Id` (`ingested/{source-kind}/{old-source-id}/c{NNNN}`) is also upserted to a retired tombstone under the shrink row's rule (`**Status**: retired`, trailer preserved, body removed), promoted so its vault page updates in place. **Never hand-deleted.** The old manifest is not tombstoned, since `supersedes` already marks it; an old single-record source (N == 1) has no chunk keys, so this step does nothing for it. |
+| **origin changed** (new URI ⇒ new `Source-Id`) | — | A different topic key. The old record is NOT touched automatically: retiring it is the operator procedure below. |
+
+### Origin-changed procedure (operator steps)
+
+1. Save the new manifest (or standalone record) with memorycard's `mem_save`
+   argument `supersedes` set to the memorycard id of the old one. memorycard
+   marks the old memory superseded.
+2. Upsert every chunk key of the old `Source-Id`
+   (`ingested/{source-kind}/{old-source-id}/c{NNNN}`) to a retired tombstone
+   under the shrink row's rule (`**Status**: retired`, trailer preserved,
+   body removed), and `promote` each one so its vault page updates in place.
+   **Never hand-deleted.**
+3. Do not tombstone the old manifest: `supersedes` already marks it. An old
+   single-record source (N == 1) has no chunk keys, so step 2 does nothing
+   for it.
+4. The next `sync` patches the old memory's vault page to `superseded`, with
+   the successor's page in `related` when it has one: the propagation pass of
+   `longterm-mem/internal/promote/propagate_cards.go`.
 
 The N-change rows (shrink, grow, N==1) apply on top of the **differ** row,
 never instead of it: a re-ingestion with a different chunk count always has
@@ -157,21 +176,19 @@ still governs every retained chunk's content; the N-change rows only add
 what happens to the keys the new count no longer has (or newly has).
 
 The unchanged case is a HARD no-op, not an idempotent re-save. memorycard
-adds no version for a re-save of an identical body (a save on the same
-`topic_key` with the same content hash answers `unchanged`, and a version is
-inserted only on a content update: `memorycard/internal/memory/save.go:287-291`,
-`:377-389`), but the save is still a write: on an archived memory it restores
-the memory (`save.go:281-286`), and the `promote` that follows would run over
-content that did not change. That would make a re-ingestion of unchanged
-content indistinguishable from a real update to anything reading the
-memory's state, including `sync`'s own re-promotion trigger.
+behaves as follows on a save to an existing `topic_key`: an identical body
+adds no version, a changed body adds one, and a save that lands on an
+archived memory restores it. So re-saving unchanged content can restore an
+archived memory, and the `promote` that follows would run over content that
+did not change. That would make a re-ingestion of unchanged content
+indistinguishable from a real update to anything reading the memory's state,
+including `sync`'s own re-promotion trigger.
 
 R-004's "no new dedup store" statement: the only identity/dedup mechanisms
 in use for re-ingestion are memorycard's own `topic_key` upsert and the
 existing page-identity dedup by project and `source`/`source_id` already used
-by promotion. This
-contract introduces no new SQLite database, file-based index, or other
-store.
+by promotion. This contract introduces no new SQLite database, file-based
+index, or other store.
 
 ## Failure vocabulary (`Skip.Code`)
 
