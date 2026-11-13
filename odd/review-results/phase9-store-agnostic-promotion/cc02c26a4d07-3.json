@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "2d0a2a2336cda0cc9eddf59c1bb2d70662d2529d",
+    "head": "cc02c26a4d07434da0a1945ca02d01869729b482",
+    "diff_sha256": "19f769b6d2bae172865daff0fe65543eacc871addbf582392ff09226f070501c",
+    "paths": [
+      "longterm-mem/README.md",
+      "longterm-mem/docs/promote-from-memorycard.md",
+      "longterm-mem/docs/sync-from-memorycard.md",
+      "openspec/specs/longterm-mem-promotion/spec.md",
+      "scripts/rehearse-card-page-migration.sh"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "2d0a2a2336cda0cc9eddf59c1bb2d70662d2529d",
+      "head": "cc02c26a4d07434da0a1945ca02d01869729b482",
+      "diff_sha256": "19f769b6d2bae172865daff0fe65543eacc871addbf582392ff09226f070501c"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/README.md",
+        "longterm-mem/docs/promote-from-memorycard.md",
+        "longterm-mem/docs/sync-from-memorycard.md",
+        "openspec/specs/longterm-mem-promotion/spec.md",
+        "scripts/rehearse-card-page-migration.sh"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "scripts/rehearse-card-page-migration.sh:52",
+        "claim": "live_digest runs `find wiki/memory .raw/.longterm-mem-manifest.json` with stderr suppressed, but the script sets `set -euo pipefail`. If either path is missing in the live vault, such as a vault with no precedence sidecar yet, find exits non-zero. The pipeline then fails and `live_before=\"$(live_digest)\"` aborts the rehearsal silently, before anything is copied. The abort is safe, but it gives the owner no message.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "scripts/rehearse-card-page-migration.sh:52"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only documentation and one new owner-run script. I found no changed code path that alters runtime behavior.",
+      "The documented keys, refusal reasons and exit codes agree across the README, the two guides and the spec.",
+      "The script's guard and live-digest logic is structurally sound, apart from the silent abort noted in F1."
+    ]
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "kind": "polisher",
+  "base": "67b95a4edffe88b497724ec9fed0f5f985ebeacd",
+  "head": "2d0a2a2336cda0cc9eddf59c1bb2d70662d2529d",
+  "diff_sha256": "580f15ea4130f74e04dbafa744d44905533cb8497711bbbb3bf7a12fa156f6b7",
+  "findings": {
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/promote/migrate_cards.go:343-352",
+        "summary": "The page write and the sidecar write are two separate steps. A crash or signal between them leaves a page with new identity keys and a precedence entry holding the old frontmatter hash. The page then reads as a hand edit (RefusedEdited) and is no longer counted as a legacy page, so a rerun neither repairs nor reports it.",
+        "evidence": [
+          "applyMigration calls w.Pages.WritePage(p.Address, ...) and only afterwards w.Store.Set and w.Precedence.SavePrecedence, once per page.",
+          "MatchesPage compares entry.FrontmatterHash with hashText of the current frontmatter block (store.go:51-56), so an old hash against a rewritten block returns false.",
+          "After such a crash the page carries no legacy keys, so the migration no longer counts it (line 182), and a dry run reports it as migrated-nothing.",
+          "Only the backup can undo it. The backup is correct and taken before the first write, so the damage is recoverable, but the error and report mention only the page that failed, not this repair path.",
+          "The ordering and the lack of a pre-write sidecar update are inferred from the code. I did not run a crash test."
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/migrate_cards.go:286",
+        "summary": "An Engram-bridged page keeps its Engram-era body but takes the memory's current revision as source_revision. A memory edited in memorycard after its import therefore looks up to date and its page stays stale until the next edit. The file header documents this on purpose, but the run output never warns about it.",
+        "evidence": [
+          "mapPage returns revision: strconv.Itoa(m.Revision) for the Engram branch.",
+          "applyMigration keeps the old body (raw[len(block):]).",
+          "The file header (lines 22-24) states that a memory edited after import keeps the Engram-era body until its next revision.",
+          "The migration output (reportMigration) mentions nothing about this; it is an inferred consequence of the documented design."
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/migrate_card_pages_test.go",
+        "summary": "Several data-safety paths have no test.",
+        "evidence": [
+          "No test restores from the backup and compares the bytes.",
+          "No test covers a write or sidecar failure partway through the run, which is the F1 window.",
+          "No test covers a page naming an Engram and a memorycard memory at once, an invalid or non-numeric id, or a card page whose memory is missing or in another project. The memorycard_id branch of mapPage (lines 255-260) does no memory existence or project check.",
+          "No test has two legacy pages mapping to one memory in a single run, which exercises the claimed map.",
+          "I read the test file in full and found none of these cases."
+        ]
+      },
+      {
+        "id": "F4",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/migrate_cards.go:156-222",
+        "summary": "The migration takes no lock against a concurrent sync or promote on the same vault. A page edited between the read at line 173 and the write at line 344 is overwritten with the earlier body.",
+        "evidence": [
+          "MigrateCardPages reads the pages and decides the whole plan before applyMigration writes anything, and no lock is taken at any point.",
+          "A grep for lock code in the non-test sources found none on the page, sidecar or vault write path; the only flock is in the vecindex builder.",
+          "The window is narrow and the problem exists for the other commands too, so it is not introduced by this commit. The backup limits the damage."
+        ]
+      }
+    ],
+    "evidence": [
+      "I read migrate_cards.go and cmd_migrate_card_pages.go in full at the target worktree.",
+      "I read the full migrate_card_pages_test.go. It covers the dry-run default, apply keys and sidecar, the byte-identical refusals, the second run, zero legacy pages after a full migration, a failed backup, an unreadable page, a flags-only check, the sync --dry-run plan before and after, and promote answering `already promoted` plus doctor findings before and after.",
+      "I read vaultfs/pages.go. ListPages lists only the pages directory, so the backup under .vault-meta is never taken for pages.",
+      "I read memorycard.Open and MemoryByEngramID. The database is opened read-only and the migration never opens Engram.",
+      "The command passes readOnly=!apply to the project and vault resolution, and exit 6 (registration_conflict) is returned for any refusal in both modes.",
+      "Backup is written before the first write, refuses a directory that already exists, copies the sidecar and each page to be rewritten, and a backup error stops the run with 'nothing was written'.",
+      "I had no shell tool. I could not run `git show` or the tests, so every verdict is from reading the code."
+    ]
+  }
+}

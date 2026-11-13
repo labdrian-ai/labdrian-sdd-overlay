@@ -1,0 +1,50 @@
+{
+  "kind": "sweeper",
+  "base": "c303b6f79b14097f1ebc533f3524fb4d37834052",
+  "head": "67b95a4edffe88b497724ec9fed0f5f985ebeacd",
+  "diff_sha256": "3af8b355cc50dd916653056bcd1ef697c4b6a10b668d3d3875f1e355409025fa",
+  "sweep": "67b95a4edffe-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T2 deadcode longterm-mem: internal/promote/migrate_cards.go: unreachable func: CardMigrationReport.RefusalCounts",
+      "disposition": "live",
+      "evidence": "Called by reportMigration in cmd/longterm-mem/cmd_migrate_card_pages.go, added by the next commit 2d0a2a23, which wires the migration command."
+    },
+    {
+      "candidate": "T2 deadcode longterm-mem: internal/promote/migrate_cards.go: unreachable func: MigrateCardPages",
+      "disposition": "live",
+      "evidence": "Called by the migrate-card-pages command in cmd/longterm-mem/cmd_migrate_card_pages.go, added by the next commit 2d0a2a23."
+    },
+    {
+      "candidate": "T2 deadcode longterm-mem: internal/promote/migrate_cards.go: unreachable func: RefusalKind.String",
+      "disposition": "live",
+      "evidence": "Used by the command's refusal report in cmd_migrate_card_pages.go (2d0a2a23) once MigrateCardPages is called."
+    },
+    {
+      "candidate": "T2 deadcode longterm-mem: internal/promote/migrate_cards.go: unreachable func: applyMigration",
+      "disposition": "live",
+      "evidence": "Called by MigrateCardPages with apply set; reachable from the command added in 2d0a2a23."
+    },
+    {
+      "candidate": "T2 deadcode longterm-mem: internal/promote/migrate_cards.go: unreachable func: candidatePages",
+      "disposition": "live",
+      "evidence": "Called by MigrateCardPages; reachable from the command added in 2d0a2a23."
+    },
+    {
+      "candidate": "T2 deadcode longterm-mem: internal/promote/migrate_cards.go: unreachable func: carriesLegacyKeys",
+      "disposition": "live",
+      "evidence": "Called by MigrateCardPages; reachable from the command added in 2d0a2a23."
+    },
+    {
+      "candidate": "T2 deadcode longterm-mem: internal/promote/migrate_cards.go: unreachable func: mapPage",
+      "disposition": "live",
+      "evidence": "Called by MigrateCardPages; reachable from the command added in 2d0a2a23."
+    },
+    {
+      "candidate": "T2 nilerr longterm-mem: longterm-mem/internal/promote/migrate_cards.go: error is not nil but it returns nil",
+      "disposition": "live",
+      "evidence": "Intended: an unreadable page becomes a named refusal counted in the report instead of an error that stops the run (S6 (c) refuses by name and goes on); the reason is stated in a code comment added by 3a7a9fc6 (L63)."
+    }
+  ]
+}

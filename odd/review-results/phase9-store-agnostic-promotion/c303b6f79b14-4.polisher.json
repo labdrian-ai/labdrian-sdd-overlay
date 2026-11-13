@@ -1,0 +1,52 @@
+{
+  "kind": "polisher",
+  "base": "96b22a0382b3436082a29841ef2d8594d3f15d21",
+  "head": "c303b6f79b14097f1ebc533f3524fb4d37834052",
+  "diff_sha256": "a689c8f2d502e6381ac178629059e22abb29647193816200065dba1152210d52",
+  "findings": {
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/cmd/longterm-mem/page_keys_test.go:38-80",
+        "summary": "The tests do not cover the legacy-page cases the brief names. All three tests (new page, update in place, status patch) start from a page that the new code wrote itself. No test updates in place, or status-patches, a page that carries the legacy `memorycard_*` keys. A legacy page patched for status keeps its legacy keys, and no test pins or states that outcome.",
+        "evidence": [
+          "page_keys_test.go promotes first with the new code in all three tests, so the starting pages only ever carry `source_*` keys.",
+          "propagate_cards.go:127-131 patches only `status` and `related` through `patchedFrontmatter`, so a legacy page keeps `memorycard_*` after a status patch.",
+          "UpdateInPlace (update.go:139-162) rewrites the whole page, so an update in place does replace the keys on a legacy page that the sidecar already tracks. No test pins this.",
+          "UpdateInPlace refuses legacy pages the sidecar does not track, because `isOwnUnrecordedWrite` compares the full render. The ownership checks themselves (`isOwnUnrecordedWrite`, `isOwnUnrecordedUpdate`, `corroboratingFrontmatter`) were not changed or verified for memorycard pages.",
+          "S6 (c), the migration of legacy pages, is a separate task, so this is a coverage gap in this commit, not a proven defect."
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/page_style.go:113-138",
+        "summary": "`emitEngramPage` still writes `engram_*` keys including `engram_sync_id`, and the `EngramSyncID` field is still rendered. S6 (b) says `engram_sync_id` is not written and every page carries `source: memorycard`. If any Engram-source write path is still reachable, it contradicts the spec. S6 (b) itself notes this holds only after S10 makes memorycard the only writer.",
+        "evidence": [
+          "page_style.go:133 sets `EngramSyncID: m.SyncID`, and frontmatter.go:200 renders it.",
+          "The new test only exercises memorycard promotion via `--source memorycard`.",
+          "The `engramSyncIDField` entry in `update.go:448` is still needed by `corroboratingFrontmatter` while Engram pages exist."
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/page_style.go:171",
+        "summary": "`source_type` is written unquoted and raw from `m.Type`, so an empty type renders as `source_type: ` and an unusual type string is not YAML-escaped. The old frontmatter writer did the same, so this is not new, and memorycard types are a closed set.",
+        "evidence": [
+          "`writeField` (frontmatter.go:208-210) does no quoting.",
+          "`quoteYAML` is applied to the title but not to `source_type`."
+        ]
+      }
+    ],
+    "evidence": [
+      "I could not run bash, so I could not read `git show c303b6f7`. I judged the code at the worktree target directly. The tests were not run.",
+      "Read page_style.go: `emitCardPage` renders `source`, `source_id`, `source_type`, `source_revision` and `project`, with no `memorycard_*` and no `engram_*` keys, and `cardStatus` is shared with the status patch.",
+      "Read page_identity.go: `fieldOf`, `identityOf` and `revisionOf` read the store-agnostic keys first and fall back to the legacy keys per field, so pages written with the new keys are still found by the scans.",
+      "Read update.go: `UpdateInPlace` rewrites the whole page. `frontmatterRevision` and `pageRevision` go through `revisionOf`, so they read `source_revision`. `corroboratingFrontmatter` blanks `source_revision` and `source_type`.",
+      "Read propagate_cards.go: the status patch rewrites only `status` and `related`.",
+      "Read page_keys_test.go: it asserts the four store-agnostic keys, the absence of every legacy key including `engram_sync_id`, and a single `source:` line, for a new page, an update in place (revision 4) and a status patch."
+    ]
+  }
+}

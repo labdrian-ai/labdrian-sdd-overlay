@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "cc02c26a4d07434da0a1945ca02d01869729b482",
+    "head": "9901b966616968a6f3cda27c552dbcdd14f29a16",
+    "diff_sha256": "accfe862aa358cac53b7b4db6b7af15a0d86ad060aecad566fb5acc205b9fbd1",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "cc02c26a4d07434da0a1945ca02d01869729b482",
+      "head": "9901b966616968a6f3cda27c552dbcdd14f29a16",
+      "diff_sha256": "accfe862aa358cac53b7b4db6b7af15a0d86ad060aecad566fb5acc205b9fbd1"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:464",
+        "claim": "L62 says the branch has 'four commits, none pushed', but the T6 line and the commits subsection list four code/doc commits plus 'the docs commit that holds L62'. That is a fifth commit, this one. A reader counting commits gets a different number from the one L62 states.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:121",
+          "odd/tasks/phase9-store-agnostic-promotion.md:464"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff only edits the feature document: the T6 line's commit list, and the appended L62 with its sub-bullets.",
+      "I cross-checked the counts L62 states against each other. The 57 re-recorded goldens match 8+17+14+5+12+1. The 10 migrate_card_pages tests match the 10 rows of the RED table. The commit shas on the T6 line match those in L62.",
+      "The T6 line and L62 both say T6 stays unticked, and L62's open items agree with that.",
+      "I found no other inconsistency visible in the diff."
+    ]
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "cc02c26a4d07434da0a1945ca02d01869729b482",
+    "head": "9901b966616968a6f3cda27c552dbcdd14f29a16",
+    "diff_sha256": "accfe862aa358cac53b7b4db6b7af15a0d86ad060aecad566fb5acc205b9fbd1",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "cc02c26a4d07434da0a1945ca02d01869729b482",
+      "head": "9901b966616968a6f3cda27c552dbcdd14f29a16",
+      "diff_sha256": "accfe862aa358cac53b7b4db6b7af15a0d86ad060aecad566fb5acc205b9fbd1"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff changes only the feature document: it fills in the commits on the T6 line and appends L62. No code or behavior is touched.",
+      "T6 stays unticked ([ ]) and the open items state that the owner's rehearsal, the live --apply and the independent verifier are still pending, which matches the commit message.",
+      "The four commits named in L62 are the same four named on the T6 line. The ten command-level tests in the RED table match the stated count of 10 in migrate_card_pages_test.go.",
+      "The decisions that depart from S6 (c) (engram_sync_id dropped, per-project scope) are recorded as the coordinator's to confirm, so they are not hidden."
+    ]
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "67b95a4edffe88b497724ec9fed0f5f985ebeacd",
+    "head": "2d0a2a2336cda0cc9eddf59c1bb2d70662d2529d",
+    "diff_sha256": "580f15ea4130f74e04dbafa744d44905533cb8497711bbbb3bf7a12fa156f6b7",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go",
+      "longterm-mem/cmd/longterm-mem/main.go",
+      "longterm-mem/cmd/longterm-mem/migrate_card_pages_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "67b95a4edffe88b497724ec9fed0f5f985ebeacd",
+      "head": "2d0a2a2336cda0cc9eddf59c1bb2d70662d2529d",
+      "diff_sha256": "580f15ea4130f74e04dbafa744d44905533cb8497711bbbb3bf7a12fa156f6b7"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go",
+        "longterm-mem/cmd/longterm-mem/main.go",
+        "longterm-mem/cmd/longterm-mem/migrate_card_pages_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go:116-146",
+        "claim": "vaultBackup.BackUp creates the backup directory before copying any file and never removes it when a copy fails part-way. A failed run therefore leaves a partial directory that looks like a complete rollback copy. The directory name has one-second resolution, so a retry within the same second fails on os.Mkdir with 'exists', and a later retry produces a second directory. Nothing marks which one is complete.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go:118-123",
+          "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go:128-145"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff of the three changed paths. BackUp is the only code that writes outside the vault pages, and the partial-backup residue on a mid-copy failure is the only defect I could identify in it.",
+      "The report and refusal output logic is consistent with its tests; I found no mismatch between the claimed behavior and the changed lines."
+    ]
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "kind": "polisher",
+  "base": "c303b6f79b14097f1ebc533f3524fb4d37834052",
+  "head": "67b95a4edffe88b497724ec9fed0f5f985ebeacd",
+  "diff_sha256": "3af8b355cc50dd916653056bcd1ef697c4b6a10b668d3d3875f1e355409025fa",
+  "findings": {
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "BLOCKER",
+        "location": "longterm-mem/internal/promote/migrate_cards.go:156",
+        "summary": "The commit adds only a domain function. Nothing calls MigrateCardPages, and nothing implements CardBridges or MigrationBackup. No promote subcommand, no exit 6, no refusal counts output and no backup adapter were added. Several S6 (c) items are therefore not met by this commit: the 'promote' migration command itself, 'exit 6 for hand-edited page', 'refusals by name with counts', and 'backup before first write'. The backup port can only be exercised by a fake.",
+        "evidence": [
+          "Grep for MigrateCardPages|MigrationBackup|BackUp( across longterm-mem/**/*.go matched only migrate_cards.go.",
+          "The commit message claims 'add the page-identity migration to promote', but no file under cmd/ or internal/ops references the function.",
+          "Exit code 6 appears in no migration-related code that I read in this commit."
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "BLOCKER",
+        "location": "longterm-mem/internal/promote/migrate_cards_test.go:7",
+        "summary": "Test adequacy: the only test is TestRewrittenIdentity, a unit test of the string rewrite. No test drives MigrateCardPages, so none of the data-safety behaviours is pinned. Untested: each refusal kind, the precedence-hash rewrite so that MatchesPage still passes, the second run changing nothing, a failed backup writing nothing, the dry run writing nothing, a claimed duplicate memory, and no content-hash matching. A regression in any of these would damage an untracked vault, with the backup as the only way back.",
+        "evidence": [
+          "Grep '^func Test' on migrate_cards_test.go returns only TestRewrittenIdentity.",
+          "The spec's refusal list and the idempotence requirement (S6 (c)) have no corresponding test."
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/promote/migrate_cards.go:255",
+        "summary": "A page that already names a memorycard memory (the hasCard branch) skips every safety check that the Engram branch applies. There is no project check of the memory, no ownPage check, and no claimed-memory check. Two legacy pages naming the same memorycard id, or a page whose memory already has a page with source keys, are both rewritten and end up as two pages for one memory. S6 requires a refusal when the memory already has its own page.",
+        "evidence": [
+          "mapPage returns directly from the hasCard case at lines 255-260, before the index.ownPage and claimed checks at lines 280-285.",
+          "claimed is only checked in the Engram path at line 283, although the plan loop sets it for every migrated page."
+        ]
+      },
+      {
+        "id": "F4",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/promote/migrate_cards.go:343",
+        "summary": "applyMigration is not atomic. WritePage is followed by Set and SavePrecedence for each page. A crash or error between the page write and the SavePrecedence call leaves a rewritten page whose stored precedence hash is stale. The next run, and any later sync, sees it as hand-edited (R-030). The error text does say 'which is already written'. There is no recovery path in this commit, and the backup is the only remedy.",
+        "evidence": [
+          "Lines 344-349: WritePage, then w.Store.Set, then SavePrecedence.",
+          "The failure branch at line 349 returns while the page is already rewritten."
+        ]
+      },
+      {
+        "id": "F5",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/migrate_cards.go:303",
+        "summary": "rewrittenIdentity matches identity keys on the raw line prefix before ':'. A line such as 'engram_id: 5' matches, but an indented or list-nested key would not. Multi-line YAML values under an identity key would be left as orphan lines. This is acceptable for the shapes longterm-mem writes, but it is untested for hand-shaped frontmatter.",
+        "evidence": [
+          "Lines 303-313 use strings.Cut(line, \":\") on the untrimmed line, whereas parseFrontmatterFields in lint.go uses TrimSpace on the line."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read migrate_cards.go in full.",
+      "Read MatchesPage and hashText in store.go and update.go. The hash recomputation over the new block with the unchanged body is consistent with MatchesPage.",
+      "Read frontmatterBlock in address.go, identityOf in page_identity.go, ownPage in page_scan.go and parseFrontmatterFields in lint.go.",
+      "Grepped for callers of MigrateCardPages and for implementers of the two ports.",
+      "Grepped test names in migrate_cards_test.go.",
+      "Did not run any tests."
+    ]
+  }
+}
