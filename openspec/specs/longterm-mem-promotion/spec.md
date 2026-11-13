@@ -668,7 +668,11 @@ be the address named, and its project, when the page carries one, must be the
 project named. A page that predates the project field SHALL NOT be refused for
 lacking it.
 
-The revision recorded SHALL be read from the page itself. A revision of ZERO
+The revision recorded SHALL be read from the page itself, under whichever page
+identity the page carries: `memorycard_revision`, the store-agnostic
+`source_revision` beside the page's `source`, or a legacy `engram_revision`. (Previously: only
+`engram_revision` was read, and a page of any other identity was refused.)
+A revision of ZERO
 SHALL be adopted. Eligibility promotes a pinned or eligible-typed observation
 whose revision count is zero, so zero is an ordinary promoted state reached by
 the ordinary path, and it is exactly the state the precedence-sidecar
@@ -743,7 +747,7 @@ as a generic internal failure and never as a silent success.
 
 #### Scenario: A page whose own revision cannot be read is refused
 
-- GIVEN a file at the named address whose engram_revision is missing,
+- GIVEN a file at the named address whose revision (under its page identity) is missing,
   non-numeric or negative
 - WHEN an operator reconciles that address by name
 - THEN the adoption is refused with the registration-conflict code, not the
