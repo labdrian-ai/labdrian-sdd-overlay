@@ -69,6 +69,25 @@ gamma delta', 'active', ''),
 			(30, 'p', 'decision', 'Quick', 'quick body', 'active', '')`,
 		`insert into import_map values ('engram', '700', 1, 19), ('engram', '700', 2, 20), ('engram', '700', 3, 21),
 			('engram', '800', 1, 98), ('engram', '800', 2, 24), ('engram', '801', 1, 26), ('engram', '510', 1, 28), ('engram', '510', 2, 29)`,
+		// 900 is the title "a" and the text "bc", and 51 the title "ab" and the text "c": the same characters, moved
+		// from the text to the title. 901 holds mixed case and 54 is its text in lower case. 31 is the text of the
+		// single part 801, with its title, "part 1/1" included. 530 holds a text whole that 531 holds cut in the middle
+		// of a word, and 43 is that text (the union case). 540 has two part rows that name one memory, 45, and 46 is
+		// its whole text.
+		`insert into memories(id, project, type, title, body, status, content_hash) values
+			(50, 'p', 'decision', 'a', 'bc', 'active', ''),
+			(51, 'p', 'decision', 'ab', 'c', 'active', ''),
+			(52, 'p', 'decision', 'Case Title', 'MiXed CASE body', 'active', ''),
+			(53, 'p', 'decision', 'Case Title', 'mixed case body', 'active', ''),
+			(31, 'p', 'decision', 'Solo (part 1/1)', 'solo body', 'active', ''),
+			(40, 'p', 'decision', 'Union', 'union body', 'active', '` + memory.CardContentHash("Union", "union body") + `'),
+			(41, 'p', 'decision', 'Union (part 1/2)', 'union b', 'active', ''),
+			(42, 'p', 'decision', 'Union (part 2/2)', 'ody', 'active', ''),
+			(43, 'p', 'decision', 'Union', 'union body', 'active', ''),
+			(45, 'p', 'decision', 'Dup (part 1/2)', 'aa bb', 'active', ''),
+			(46, 'p', 'decision', 'Dup', 'aa bbaa bb', 'active', '')`,
+		`insert into import_map values ('engram', '900', 1, 50), ('engram', '901', 1, 52), ('engram', '530', 1, 40),
+			('engram', '531', 1, 41), ('engram', '531', 2, 42), ('engram', '540', 1, 45), ('engram', '540', 2, 45)`,
 	} {
 		if _, err := db.Exec(stmt); err != nil {
 			t.Fatalf("%s: %v", stmt, err)
@@ -124,11 +143,23 @@ func TestSourceMirrorsAreEveryMemoryOfTheObservationsWhoseRebuiltTextTheyHold(t 
 		"22": {card("19"), card("20"), card("21"), engramObservation("700")},
 		// A memory copied from one part, title as stored, is a mirror of its observation, whole.
 		"23": {card("1"), card("6"), engramObservation("402")},
-		// The part suffix is stripped when only one part row survives, and from a single part.
+		// The part suffix is stripped when the observation has more than one part row, though only one memory
+		// survives; a single part keeps its own title, "part 1/1" included, so "Solo" is not its text, and the text
+		// of its title is.
 		"25": {card("24"), engramObservation("800")},
-		"27": {card("26"), engramObservation("801")},
-		// Found by the stored hash of an imported part, with no rebuilt text read.
+		"27": nil,
+		"31": {card("26"), engramObservation("801")},
+		// A part is found by its text, and so is the part whose stored hash is right.
 		"30": {card("28"), card("29"), engramObservation("510")},
+		// A title and a text that only trade characters are not the same text.
+		"51": nil,
+		// Letter case is not a difference: memorycard's content hash folds it, and an import reuses the memory of an
+		// equal hash, so an observation can be stored in the case of another memory's text.
+		"53": {card("52"), engramObservation("901")},
+		// The union: an observation found by an equal text and another found by the same text cut in a word.
+		"43": {card("40"), engramObservation("530"), card("41"), card("42"), engramObservation("531")},
+		// Two parts that name one memory are both in the rebuilt text.
+		"46": {card("45"), engramObservation("540")},
 		"3":  nil,
 	} {
 		m := memoryOf(t, source, id)

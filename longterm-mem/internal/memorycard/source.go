@@ -3,6 +3,7 @@ package memorycard
 import (
 	"slices"
 	"strconv"
+	"sync"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 )
@@ -17,17 +18,26 @@ const engramSource = "engram"
 // Source serves memorycard's memories as memory.Memory, the port of promotion (promote.Source). It maps through
 // Store's one mapping (memorySelect and scanMemory), so a memory reads the same through either, and it is as
 // read-only as the Store.
+//
+// A Source remembers what it has read of the imports (which observations were imported from which memories, and the
+// text of the ones a hand mirror may hold), so a run that lists a project twice reads them once. That is valid only
+// because Store opens the database read-only (readOnlyDSN) and a Source lives for one run: nothing it has read
+// changes under it. It is safe to share between goroutines; its reads are serialized.
 type Source struct {
 	store *Store
-	// byKey is the imported observations of a project by ContentKey, read the first time a memory needs them: a run
-	// asks for several listings of the same project, and the database is read-only.
-	byKey map[string]map[string][]int64
+
+	mu sync.Mutex
+	// imports is, per project, the index of its imported observations, built the first time a memory of the project
+	// that has no import_map row needs it. A read that fails leaves nothing in it.
+	imports map[string]*observationIndex
+	// parts is the memories imported from each observation read so far, by observation id (nil for none).
+	parts map[int64][]int64
 }
 
 // NewSource returns the Source over store. It reads memorycard alone: the lineage and the mirrors of a memory come
-// from its import_map rows and the content hashes of memorycard's own memories, so it opens no other store.
+// from its import_map rows and the text of memorycard's own memories, so it opens no other store.
 func NewSource(store *Store) *Source {
-	return &Source{store: store, byKey: map[string]map[string][]int64{}}
+	return &Source{store: store, imports: map[string]*observationIndex{}, parts: map[int64][]int64{}}
 }
 
 // Candidates returns the memories of project that promotion reads, in id order: the active and the superseded
@@ -75,14 +85,18 @@ type kin struct {
 	holders map[int64][]int64
 }
 
-// kinOf reads what the lineage and the mirrors of cards need. For a memory with no import_map row it asks first, by
-// one indexed lookup, which observations have an imported memory with the stored content hash of its text (what a
-// hand mirror of one part, or of a record kept whole, finds), and only when that finds nothing reads the imported
-// bodies of its project, once per listing, to compare them by ContentKey. Then it reads the parts of every observation
-// it has named, in one lookup in chunks (MemoryIDsByEngramIDs).
+// kinOf reads what the lineage and the mirrors of cards need. The observations each memory with no import_map row
+// holds the content of are those whose ContentKey it has (observationIndex.holders), asked for all of a project's
+// hand mirrors at once and from the index of the project, built once per Source. Then it reads the parts of every
+// observation it has named, in one lookup in chunks (MemoryIDsByEngramIDs), for the observations not read yet.
 func (s *Source) kinOf(cards []memory.CardMemory) (kin, error) {
-	k := kin{holders: map[int64][]int64{}}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	k := kin{holders: map[int64][]int64{}, parts: map[int64][]int64{}}
 	wanted := map[int64]bool{}
+	var projects []string
+	handMirrors := map[string][]memory.CardMemory{}
 	for _, card := range cards {
 		if card.EngramID != 0 {
 			wanted[card.EngramID] = true
@@ -90,34 +104,68 @@ func (s *Source) kinOf(cards []memory.CardMemory) (kin, error) {
 		if card.Mapped {
 			continue
 		}
-		holders, err := s.store.ObservationsWithStoredHash(card.Project, memory.CardContentHash(card.Title, card.Body))
+		if _, ok := handMirrors[card.Project]; !ok {
+			projects = append(projects, card.Project)
+		}
+		handMirrors[card.Project] = append(handMirrors[card.Project], card)
+	}
+	for _, project := range projects {
+		index, err := s.indexOf(project)
 		if err != nil {
 			return kin{}, err
 		}
-		if len(holders) == 0 {
-			if _, ok := s.byKey[card.Project]; !ok {
-				if s.byKey[card.Project], err = s.store.ObservationsByKey(card.Project); err != nil {
-					return kin{}, err
-				}
+		texts := make([]textOf, len(handMirrors[project]))
+		for i, card := range handMirrors[project] {
+			texts[i] = textOf{title: card.Title, body: card.Body}
+		}
+		holders, err := index.holders(s.store, texts)
+		if err != nil {
+			return kin{}, err
+		}
+		for i, card := range handMirrors[project] {
+			k.holders[card.ID] = holders[i]
+			for _, id := range holders[i] {
+				wanted[id] = true
 			}
-			holders = s.byKey[card.Project][ContentKey(card.Title, card.Body)]
-		}
-		k.holders[card.ID] = holders
-		for _, id := range holders {
-			wanted[id] = true
 		}
 	}
-	observations := make([]int64, 0, len(wanted))
+	var unread []int64
 	for id := range wanted {
-		observations = append(observations, id)
+		if _, ok := s.parts[id]; !ok {
+			unread = append(unread, id)
+		}
 	}
-	slices.Sort(observations)
-	parts, err := s.store.MemoryIDsByEngramIDs(observations)
-	if err != nil {
-		return kin{}, err
+	slices.Sort(unread)
+	if len(unread) > 0 {
+		found, err := s.store.MemoryIDsByEngramIDs(unread)
+		if err != nil {
+			return kin{}, err
+		}
+		for _, id := range unread {
+			s.parts[id] = found[id]
+		}
 	}
-	k.parts = parts
+	for id := range wanted {
+		if parts := s.parts[id]; len(parts) > 0 {
+			k.parts[id] = parts
+		}
+	}
 	return k, nil
+}
+
+// indexOf is the index of the observations imported into project, read the first time it is asked for and kept only
+// when the read succeeded, so a failed read is not remembered as an empty project. The caller holds s.mu.
+func (s *Source) indexOf(project string) (*observationIndex, error) {
+	if index, ok := s.imports[project]; ok {
+		return index, nil
+	}
+	parts, err := s.store.ImportedParts(project)
+	if err != nil {
+		return nil, err
+	}
+	index := newObservationIndex(parts)
+	s.imports[project] = index
+	return index, nil
 }
 
 func (s *Source) mapAll(cards []memory.CardMemory) ([]memory.Memory, error) {
