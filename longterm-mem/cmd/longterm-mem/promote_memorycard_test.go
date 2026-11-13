@@ -340,22 +340,25 @@ func TestPromoteSourceMemorycard_DeclaresADegradedMemorycard(t *testing.T) {
 	}
 }
 
-// The MCP promote tool declares it too, on stderr: the protocol owns stdout, and the call still goes on.
-func TestTheMCPPromoteToolDeclaresADegradedMemorycard(t *testing.T) {
+// The MCP promote tool declares it too, through the diagnostics writer the commands were composed with (the protocol
+// owns stdout), once for the server and not on every call, and the calls still go on.
+func TestTheMCPPromoteToolDeclaresADegradedMemorycardOncePerServer(t *testing.T) {
 	w, db := memorycardWorld(t)
 	degradeFixtureDB(t, db)
-	tool := commands{newEmbedClient: testEmbedClient, clock: promoteGoldenClock}.mcpPromote()
+	var diagnostics strings.Builder
+	tool := commands{newEmbedClient: testEmbedClient, clock: promoteGoldenClock, diagnostics: &diagnostics}.mcpPromote()
 
-	var err error
-	stderr := captureStderr(t, func() { _, err = tool(context.Background(), promoteGoldenProject, "memorycard", 1) })
-	if err != nil {
-		t.Fatal(err)
+	for _, id := range []int64{1, 3} {
+		if _, err := tool(context.Background(), promoteGoldenProject, "memorycard", id); err != nil {
+			t.Fatalf("memory %d: %v", id, err)
+		}
 	}
+	stderr := diagnostics.String()
 	want := "longterm-mem: mcp: promote: memorycard is being read through the immutable=1 fallback, so this run works from the snapshot taken when the connection was opened, not the live database\n"
 	if stderr != want {
 		t.Errorf("stderr = %q, want %q", stderr, want)
 	}
-	if names := pageNames(t, w); len(names) != 1 {
-		t.Errorf("pages = %v, want the one promoted page", names)
+	if names := pageNames(t, w); len(names) != 2 {
+		t.Errorf("pages = %v, want the two promoted pages", names)
 	}
 }
