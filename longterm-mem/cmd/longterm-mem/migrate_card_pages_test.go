@@ -331,8 +331,8 @@ func TestMigrateCardPages_TheDryRunAfterAFullMigrationReportsZeroLegacyPages(t *
 
 func TestMigrateCardPages_AFailedBackupWritesNothing(t *testing.T) {
 	w, _ := migrationWorld(t)
-	// The directory the backup would make is already there: the backup refuses to merge into it.
-	writeVaultFile(t, w, migrationBackupDir+"/keep", "x")
+	// The directory the backup is made in cannot be made: .vault-meta is a file.
+	writeVaultFile(t, w, ".vault-meta", "x")
 	before := cmdVaultSnapshot(t, w.vaultRoot)
 
 	code, stdout, stderr := runMigrate(t, "--apply")

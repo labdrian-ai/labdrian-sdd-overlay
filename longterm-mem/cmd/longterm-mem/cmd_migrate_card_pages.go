@@ -108,20 +108,51 @@ func reportMigration(a app, report promote.CardMigrationReport, err error, vault
 // vaultBackup is promote.MigrationBackup over the files of the vault at root: it copies the pages to rewrite and the
 // precedence sidecar, keeping their vault-relative paths, into a directory of its own under .vault-meta named by the
 // instant it was asked, so that putting the files back is a copy of that directory over the vault. A directory
-// that already exists is an error, never merged into.
+// that already exists is never merged into: a second backup of the same second takes a numbered name, and a copy
+// that fails halfway removes its directory, so a directory that is there is a whole copy.
 type vaultBackup struct {
 	root  string
 	clock promote.Clock
 }
 
 func (b vaultBackup) BackUp(addresses []string) (string, error) {
-	dir := filepath.Join(b.root, filepath.FromSlash(path.Dir(vaultlayout.SyncStateFile)), "card-page-migration-"+b.clock.Now().UTC().Format("20060102T150405Z"))
-	if err := os.MkdirAll(filepath.Dir(dir), 0o700); err != nil {
+	dir, err := b.newDirectory()
+	if err != nil {
 		return "", err
 	}
-	if err := os.Mkdir(dir, 0o700); err != nil {
+	if err := b.copyInto(dir, addresses); err != nil {
+		// A directory that holds part of the copy would read as a complete one: it goes, whole.
+		if removeErr := os.RemoveAll(dir); removeErr != nil {
+			return "", errors.Join(err, fmt.Errorf("remove the partial copy %s: %w", dir, removeErr))
+		}
 		return "", err
 	}
+	return dir, nil
+}
+
+// newDirectory makes the directory of this backup, named by the instant it was asked; a second backup of the same
+// second takes the next free suffix, so a retry never meets the copy of the run before it.
+func (b vaultBackup) newDirectory() (string, error) {
+	base := filepath.Join(b.root, filepath.FromSlash(path.Dir(vaultlayout.SyncStateFile)), "card-page-migration-"+b.clock.Now().UTC().Format("20060102T150405Z"))
+	if err := os.MkdirAll(filepath.Dir(base), 0o700); err != nil {
+		return "", err
+	}
+	for n := 1; ; n++ {
+		dir := base
+		if n > 1 {
+			dir = fmt.Sprintf("%s-%d", base, n)
+		}
+		err := os.Mkdir(dir, 0o700)
+		if err == nil {
+			return dir, nil
+		}
+		if !errors.Is(err, fs.ErrExist) {
+			return "", err
+		}
+	}
+}
+
+func (b vaultBackup) copyInto(dir string, addresses []string) error {
 	rels := []string{vaultlayout.PrecedenceFile}
 	for _, address := range addresses {
 		rels = append(rels, vaultlayout.PageFile(address))
@@ -133,15 +164,15 @@ func (b vaultBackup) BackUp(addresses []string) (string, error) {
 			continue
 		}
 		if err != nil {
-			return "", err
+			return err
 		}
 		target := filepath.Join(dir, filepath.FromSlash(rel))
 		if err := os.MkdirAll(filepath.Dir(target), 0o700); err != nil {
-			return "", err
+			return err
 		}
 		if err := os.WriteFile(target, data, 0o600); err != nil {
-			return "", err
+			return err
 		}
 	}
-	return dir, nil
+	return nil
 }
