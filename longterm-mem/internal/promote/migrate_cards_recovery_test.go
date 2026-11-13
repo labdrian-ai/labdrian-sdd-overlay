@@ -76,8 +76,9 @@ func TestMigrateCardPages_AFailedSaveSaysWhatItCannotKnow(t *testing.T) {
 	}
 }
 
-// A legacy page with no project is still a legacy page: counted and refused by name, never skipped in silence.
-func TestMigrateCardPages_ALegacyPageWithNoProjectIsCountedAndRefused(t *testing.T) {
+// A legacy page with no project belongs to no project's count: it is reported once, apart from the per-project numbers,
+// with the remedy, never skipped in silence and never counted again in every project's run.
+func TestMigrateCardPages_ALegacyPageWithNoProjectIsReportedApartFromTheCounts(t *testing.T) {
 	m := newMigWorld()
 	m.memory(cardOf(7, migProject))
 	content := "---\ntitle: \"T\"\naddress: lost\nmemorycard_id: 7\n---\n# T\n\nBody.\n"
@@ -88,12 +89,103 @@ func TestMigrateCardPages_ALegacyPageWithNoProjectIsCountedAndRefused(t *testing
 	if err != nil {
 		t.Fatal(err)
 	}
-	r, ok := refusalOf(report, "lost")
-	if report.Legacy != 1 || !ok || r.Kind != RefusedOther || !strings.Contains(r.Reason, "no project") || m.pages.pages["lost"] != content {
-		t.Fatalf("report = %+v, want the page with no project counted, refused as having no project and left as it is (a page of another project is not this run's)", report)
+	if report.Legacy != 0 || len(report.Refused) != 0 || len(report.Migrated) != 0 {
+		t.Fatalf("report = %+v, want the page with no project outside the per-project counts and refusals", report)
 	}
-	if m.pages.pages["away"] != other {
-		t.Errorf("a page of another project changed")
+	if len(report.NoProject) != 1 || report.NoProject[0].Address != "lost" || !strings.Contains(report.NoProject[0].Reason, "add a `project:` line") {
+		t.Fatalf("NoProject = %+v, want the page named with the remedy", report.NoProject)
+	}
+	if m.pages.pages["lost"] != content || m.pages.pages["away"] != other {
+		t.Errorf("a page changed")
+	}
+}
+
+// parseFrontmatterFields reads indented lines too: a block scalar that mentions engram_id beside a real
+// memorycard_id must not look like two identities.
+func TestMigrateCardPages_AnEngramKeyInsideABlockScalarBesideARealMemorycardIdentity(t *testing.T) {
+	m := newMigWorld()
+	m.memory(cardOf(7, migProject))
+	m.put("both", "memorycard_id: 7\nmemorycard_revision: 2\nnotes: |\n  engram_id: 5\n")
+	report, err := m.run(true)
+	if err != nil || len(report.Migrated) != 1 || len(report.Refused) != 0 {
+		t.Fatalf("report = %+v, err = %v, want the page migrated, not refused as two identities", report, err)
+	}
+	if page := m.pages.pages["both"]; !strings.Contains(page, "notes: |\n  engram_id: 5\n") || !strings.Contains(page, "source_id: 7\n") {
+		t.Errorf("page = %q", page)
+	}
+}
+
+// stoppedPage leaves a page a run stopped on: its entry already records the rewrite, the page is still legacy, and the
+// memory moved on to revision 15003, type decision, afterwards. It answers the writer of a new process.
+func stoppedPage(t *testing.T, edit func(page string) string) (*migWorld, CardMigrationReport, error) {
+	t.Helper()
+	m := newMigWorld()
+	first := cardOf(7, migProject)
+	first.Revision = 15000
+	m.memory(first, 31)
+	m.put("legacy", "engram_id: 31\nengram_type: learning\nengram_revision: 1\n")
+	m.pages.writeErr = errors.New("disk full")
+	if _, err := m.run(true); err == nil {
+		t.Fatal("the failed write answered no error")
+	}
+	moved := cardOf(7, migProject)
+	moved.Revision, moved.Type = 15003, "decision"
+	m.memory(moved, 31)
+	m.pages.writeErr = nil
+	m.pages.pages["legacy"] = edit(m.pages.pages["legacy"])
+	store, err := m.repo.LoadPrecedence()
+	if err != nil {
+		t.Fatal(err)
+	}
+	m.w = &Writer{Pages: m.pages, Precedence: m.repo, Store: store}
+	report, err := m.run(true)
+	return m, report, err
+}
+
+// The recorded revision is searched from the memory's current one down, with no ceiling.
+func TestMigrateCardPages_AStoppedPageOfAMemoryWithManyRevisionsIsFinished(t *testing.T) {
+	m, report, err := stoppedPage(t, func(page string) string { return page })
+	if err != nil || len(report.Migrated) != 1 || len(report.Refused) != 0 {
+		t.Fatalf("report = %+v, err = %v, want the stopped page finished", report, err)
+	}
+	if page := m.pages.pages["legacy"]; !strings.Contains(page, "source_revision: 15000\n") || !strings.Contains(page, "source_type: learning\n") {
+		t.Errorf("page = %q, want the recorded identity (revision 15000, learning)", page)
+	}
+}
+
+// A frontmatter line that is not an identity line, edited after the stop, is no recorded rewrite: the page is refused
+// by its own name, and the message says where the way back is.
+func TestMigrateCardPages_AStoppedPageWithAnEditedFrontmatterLineIsRefusedAsHalfMigrated(t *testing.T) {
+	edited := ""
+	m, report, err := stoppedPage(t, func(page string) string {
+		edited = strings.Replace(page, "title: \"T\"", "title: \"A new title\"", 1)
+		return edited
+	})
+	r, ok := refusalOf(report, "legacy")
+	if err != nil || len(report.Migrated) != 0 || !ok || r.Kind != RefusedHalfMigrated {
+		t.Fatalf("report = %+v, err = %v, want the page refused as half-migrated", report, err)
+	}
+	for _, want := range []string{".vault-meta/card-page-migration-", "restores"} {
+		if !strings.Contains(r.Reason, want) {
+			t.Errorf("reason %q lacks %q", r.Reason, want)
+		}
+	}
+	if m.pages.pages["legacy"] != edited {
+		t.Errorf("the refused page changed")
+	}
+}
+
+// An edit confined to the identity lines of a stopped page is adopted: those lines are rewritten by the migration
+// anyway, and the backup of the run that stopped holds them as they were.
+func TestMigrateCardPages_AnEditConfinedToTheIdentityLinesOfAStoppedPageIsAdopted(t *testing.T) {
+	m, report, err := stoppedPage(t, func(page string) string {
+		return strings.Replace(page, "engram_revision: 1", "engram_revision: 5", 1)
+	})
+	if err != nil || len(report.Migrated) != 1 || len(report.Refused) != 0 {
+		t.Fatalf("report = %+v, err = %v, want the page finished", report, err)
+	}
+	if page := m.pages.pages["legacy"]; strings.Contains(page, "engram_") || !strings.Contains(page, "source_revision: 15000\n") {
+		t.Errorf("page = %q", page)
 	}
 }
 

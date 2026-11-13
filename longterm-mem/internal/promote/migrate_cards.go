@@ -77,16 +77,22 @@ const (
 	// memorycard identity at once, a legacy key and no memory, identity lines the rewrite cannot replace whole), or
 	// the memory is in another project.
 	RefusedOther
+	// RefusedHalfMigrated: the page's body is the one its entry records, but its frontmatter is neither the recorded
+	// page nor a rewrite a stopped run could have written: a frontmatter line was edited, or a stopped run was followed
+	// by an edit. The way back is the backup of the run that stopped.
+	RefusedHalfMigrated
 )
 
 // RefusalKinds lists the kinds in the order a report counts them.
-var RefusalKinds = []RefusalKind{RefusedEdited, RefusedUntracked, RefusedNoImport, RefusedNoMemory, RefusedHasOwnPage, RefusedOther}
+var RefusalKinds = []RefusalKind{RefusedEdited, RefusedHalfMigrated, RefusedUntracked, RefusedNoImport, RefusedNoMemory, RefusedHasOwnPage, RefusedOther}
 
 // String is how a count of the kind is named.
 func (k RefusalKind) String() string {
 	switch k {
 	case RefusedEdited:
 		return "edited since longterm-mem wrote it"
+	case RefusedHalfMigrated:
+		return "frontmatter differs from the entry and is no recorded rewrite"
 	case RefusedUntracked:
 		return "not recorded as written by longterm-mem"
 	case RefusedNoImport:
@@ -122,6 +128,9 @@ type CardMigrationReport struct {
 	Migrated []MigratedPage
 	Refused  []MigrationRefusal
 	Backup   string
+	// NoProject are the pages that carry a legacy key and name no project: no project owns them, so they are in none
+	// of the per-project numbers above and are reported once, apart, in every run. The migration leaves them alone.
+	NoProject []MigrationRefusal
 }
 
 // RefusalCounts counts the refusals of each kind.
@@ -170,6 +179,19 @@ func carriesLegacyKeys(block string) bool {
 	return false
 }
 
+// topLevelFields is parseFrontmatterFields of the top-level lines of block only: that parser reads indented lines too, so a
+// block scalar that mentions `engram_id:` would otherwise look like an identity the page does not have.
+func topLevelFields(block string) map[string]string {
+	var top []string
+	for _, line := range strings.Split(block, "\n") {
+		if strings.HasPrefix(line, " ") || strings.HasPrefix(line, "\t") {
+			continue
+		}
+		top = append(top, line)
+	}
+	return parseFrontmatterFields(strings.Join(top, "\n"))
+}
+
 // legacyPage is a page of the project that carries a legacy key.
 type legacyPage struct {
 	address, raw, block string
@@ -194,7 +216,7 @@ func legacyPagesOf(pages PageReader, project string) ([]legacyPage, error) {
 		if !ok || !carriesLegacyKeys(block) {
 			return
 		}
-		fields := parseFrontmatterFields(block)
+		fields := topLevelFields(block)
 		// A page that names no project is no other project's page: it is kept, and refused by name, in every run.
 		if owner := fields[projectField]; owner != "" && owner != project {
 			return
@@ -244,13 +266,13 @@ func MigrateCardPages(cards CardBridges, w *Writer, backup MigrationBackup, proj
 	var plan []plannedMigration
 	g := &migrator{cards: cards, index: index, project: project, claimed: map[int64]string{}}
 	for _, page := range pages {
+		if page.fields[projectField] == "" {
+			report.NoProject = append(report.NoProject, MigrationRefusal{Address: page.address, Kind: RefusedOther, Reason: "it carries legacy keys and has no project field: add a `project:` line to the page by hand, then run again"})
+			continue
+		}
 		report.Legacy++
 		refuse := func(kind RefusalKind, reason string) {
 			report.Refused = append(report.Refused, MigrationRefusal{Address: page.address, Kind: kind, Reason: reason})
-		}
-		if page.fields[projectField] == "" {
-			refuse(RefusedOther, "it has no project field, so no project's migration can own it")
-			continue
 		}
 		if !simpleIdentityLines(page.block) {
 			refuse(RefusedOther, "an identity key's value runs over several lines, which the migration does not rewrite")
@@ -275,12 +297,17 @@ func MigrateCardPages(cards CardBridges, w *Writer, backup MigrationBackup, proj
 		case entry.MatchesPage(page.raw):
 		default:
 			// A run that stopped after persisting the entry and before writing the page left an entry that records
-			// the page the run meant to write: the body is the recorded one and the entry's frontmatter hash is the
-			// rewrite of this very block under an identity the memory had then. Nothing a person wrote is lost by
-			// finishing it, and what the memory has become since does not matter: the page is finished as recorded.
-			stopped, ok := moved.recordedRewrite(entry, page.block, body)
-			if !ok {
+			// the page the run meant to write. Only when the body is the recorded one is that worth looking for: the
+			// entry's frontmatter hash must then be the rewrite of this very block under an identity the memory had at
+			// the stop. What the memory has become since does not matter: the page is finished as recorded. Candidates
+			// are built only here, never for a page that matches its entry.
+			if entry.BodyHash != hashText(body) {
 				refuse(RefusedEdited, "the page was edited locally since longterm-mem last wrote it")
+				continue
+			}
+			stopped, ok := moved.recordedRewrite(entry, page.block)
+			if !ok {
+				refuse(RefusedHalfMigrated, "the page's body is the one its entry records, but no rewrite of its frontmatter reproduces the entry: a frontmatter line was edited, or a run that stopped was followed by an edit; nothing was changed, and the backup of the run that stopped (.vault-meta/card-page-migration-<UTC instant>/) restores the page and the sidecar when copied over the vault")
 				continue
 			}
 			newBlock = stopped
@@ -302,28 +329,41 @@ func MigrateCardPages(cards CardBridges, w *Writer, backup MigrationBackup, proj
 	return applyMigration(w, backup, plan, report)
 }
 
-// maxRecordedRevisions bounds the search for the revision a stopped run recorded.
-const maxRecordedRevisions = 10000
-
-// mappedPage is the memory a page maps to, with the revision and type its new keys carry. revisions and kinds are
-// the revisions and types a stopped run may have written for the page, which differ from the chosen ones only when
-// the identity comes from the memory (a page naming an Engram observation), since the memory may have moved on.
+// mappedPage is the memory a page maps to, with the revision and type its new keys carry. A page naming an Engram
+// observation takes both from the memory (fromMemory), which may have moved on since a run that stopped recorded
+// them: memoryRevision is the memory's revision now and ownKind the type the page itself names.
 type mappedPage struct {
 	MigratedPage
-	revision, kind   string
-	revisions, kinds []string
+	revision, kind string
+	fromMemory     bool
+	memoryRevision int
+	ownKind        string
 }
 
-// recordedRewrite is the block a stopped run meant to write for page, when the entry records it: the body is the
-// recorded one and the entry's frontmatter hash is the hash of block rewritten under one of the identities the page
-// could have been given. It reports false for anything else, which is a page changed by someone.
-func (m mappedPage) recordedRewrite(entry PrecedenceEntry, block, body string) (string, bool) {
-	if entry.BodyHash != hashText(body) {
-		return "", false
+// recordedRewrite is the block a stopped run meant to write for block, when the entry records it: the rewrite of
+// block under an identity the page could have been given has the entry's frontmatter hash. A page naming a memorycard
+// memory has one candidate, its own revision and type. A page naming an Engram observation takes the memory's, and
+// revisions only grow, so the candidates are the memory's current revision first and then every revision below it
+// down to 0, each with the memory's current type and the type the page names. They are built here, one at a time,
+// and only for a page whose body is the recorded one and whose frontmatter is not.
+//
+// An edit confined to the identity lines of such a page is adopted: the migration rewrites those lines anyway, and
+// the backup of the run that stopped holds them as they were.
+func (m mappedPage) recordedRewrite(entry PrecedenceEntry, block string) (string, bool) {
+	try := func(revision, kind string) (string, bool) {
+		candidate := rewrittenIdentity(block, m.MemoryID, revision, kind)
+		return candidate, hashText(candidate) == entry.FrontmatterHash
 	}
-	for _, revision := range m.revisions {
-		for _, kind := range m.kinds {
-			if candidate := rewrittenIdentity(block, m.MemoryID, revision, kind); hashText(candidate) == entry.FrontmatterHash {
+	if !m.fromMemory {
+		return try(m.revision, m.kind)
+	}
+	kinds := []string{m.kind}
+	if m.ownKind != m.kind {
+		kinds = append(kinds, m.ownKind)
+	}
+	for revision := m.memoryRevision; revision >= 0; revision-- {
+		for _, kind := range kinds {
+			if candidate, ok := try(strconv.Itoa(revision), kind); ok {
 				return candidate, true
 			}
 		}
@@ -387,8 +427,7 @@ func (g *migrator) viaMemorycard(card PageIdentity) (memory.CardMemory, mappedPa
 	if !found {
 		return memory.CardMemory{}, mappedPage{}, RefusedNoMemory, fmt.Sprintf("memorycard holds no memory %d", memoryID), nil
 	}
-	moved := mappedPage{MigratedPage: MigratedPage{MemoryID: memoryID}, revision: card.Revision, kind: card.Type,
-		revisions: []string{card.Revision}, kinds: []string{card.Type}}
+	moved := mappedPage{MigratedPage: MigratedPage{MemoryID: memoryID}, revision: card.Revision, kind: card.Type}
 	return m, moved, 0, "", nil
 }
 
@@ -406,12 +445,8 @@ func (g *migrator) viaEngram(engram PageIdentity, fields map[string]string) (mem
 	if !found {
 		return memory.CardMemory{}, mappedPage{}, RefusedNoImport, fmt.Sprintf("memorycard holds no memory imported from Engram observation %d (import_map)", engramID), nil
 	}
-	moved := mappedPage{MigratedPage: MigratedPage{EngramID: engramID, MemoryID: m.ID}, revision: strconv.Itoa(m.Revision), kind: m.Type}
-	moved.kinds = []string{m.Type, strings.TrimSpace(fields[engramTypeField]), ""}
-	for revision := min(m.Revision, maxRecordedRevisions); revision >= 0; revision-- {
-		moved.revisions = append(moved.revisions, strconv.Itoa(revision))
-	}
-	moved.revisions = append(moved.revisions, "")
+	moved := mappedPage{MigratedPage: MigratedPage{EngramID: engramID, MemoryID: m.ID}, revision: strconv.Itoa(m.Revision), kind: m.Type,
+		fromMemory: true, memoryRevision: m.Revision, ownKind: strings.TrimSpace(fields[engramTypeField])}
 	return m, moved, 0, "", nil
 }
 

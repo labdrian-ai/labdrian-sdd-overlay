@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/durable"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memorycard"
@@ -83,6 +84,9 @@ func reportMigration(a app, report promote.CardMigrationReport, err error, vault
 	for _, r := range report.Refused {
 		fmt.Fprintf(os.Stderr, "longterm-mem: migrate-card-pages: refused %s: %s\n", r.Address, r.Reason)
 	}
+	for _, r := range report.NoProject {
+		fmt.Fprintf(os.Stderr, "longterm-mem: migrate-card-pages: refused (no project, not counted per project) %s: %s\n", r.Address, r.Reason)
+	}
 	if err != nil {
 		return a.refuse(err, exitInternal)
 	}
@@ -93,14 +97,21 @@ func reportMigration(a app, report promote.CardMigrationReport, err error, vault
 	}
 	counts := report.RefusalCounts()
 	for _, kind := range promote.RefusalKinds {
-		if n := counts[kind]; n > 0 || (kind != promote.RefusedOther && kind != promote.RefusedNoMemory) {
+		if n := counts[kind]; n > 0 || (kind != promote.RefusedOther && kind != promote.RefusedNoMemory && kind != promote.RefusedHalfMigrated) {
 			fmt.Printf("  refused, %s: %d\n", kind, n)
 		}
+	}
+	if len(report.NoProject) > 0 {
+		names := make([]string, len(report.NoProject))
+		for i, r := range report.NoProject {
+			names[i] = r.Address
+		}
+		fmt.Printf("%d page(s) have no project (no project, not counted per project): %s\n", len(names), strings.Join(names, ", "))
 	}
 	if !apply {
 		fmt.Println("nothing was written (pass --apply to migrate)")
 	}
-	if len(report.Refused) > 0 {
+	if len(report.Refused) > 0 || len(report.NoProject) > 0 {
 		return exitRegistrationConflict
 	}
 	return exitOK
