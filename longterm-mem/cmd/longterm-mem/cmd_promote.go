@@ -60,7 +60,7 @@ func (c commands) cmdPromote(args []string) int {
 // identity that has a page is refused (exit 6, registration_conflict, the code of every refusal that leaves a page
 // of the vault alone), naming that page.
 func (c commands) promoteFrom(a app, name, vaultRoot string, id int64) int {
-	source, closer, exit := a.openSource(name, false)
+	source, closer, exit := a.openSource(name, true)
 	if exit != exitOK {
 		return exit
 	}

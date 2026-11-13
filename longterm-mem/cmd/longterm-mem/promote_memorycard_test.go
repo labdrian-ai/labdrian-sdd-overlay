@@ -313,3 +313,42 @@ func TestPromoteSource_OnlyMemorycardIsAStore(t *testing.T) {
 		})
 	}
 }
+
+// A writing command says so when it works from the frozen snapshot: `promote` writes a page from what it reads, as
+// `sync` does, and a frozen corpus is worse on the write side. (Previously: the declaration covered Engram.)
+func TestPromoteSourceMemorycard_DeclaresADegradedMemorycard(t *testing.T) {
+	w, db := memorycardWorld(t)
+	degradeFixtureDB(t, db)
+
+	code, stdout, stderr := runPromoteGolden(t, []string{"promote", "--project", promoteGoldenProject, "--source", "memorycard", "--id", "1"})
+	if code != exitOK {
+		t.Fatalf("exit %d\nstdout: %s\nstderr: %s", code, stdout, stderr)
+	}
+	want := "longterm-mem: promote: memorycard is being read through the immutable=1 fallback, so this run works from the snapshot taken when the connection was opened, not the live database\n"
+	if stderr != want {
+		t.Errorf("stderr = %q, want %q", stderr, want)
+	}
+	if names := pageNames(t, w); len(names) != 1 {
+		t.Errorf("pages = %v, want the one promoted page", names)
+	}
+}
+
+// The MCP promote tool declares it too, on stderr: the protocol owns stdout, and the call still goes on.
+func TestTheMCPPromoteToolDeclaresADegradedMemorycard(t *testing.T) {
+	w, db := memorycardWorld(t)
+	degradeFixtureDB(t, db)
+	tool := commands{newEmbedClient: testEmbedClient, clock: promoteGoldenClock}.mcpPromote()
+
+	var err error
+	stderr := captureStderr(t, func() { _, err = tool(context.Background(), promoteGoldenProject, "memorycard", 1) })
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "longterm-mem: mcp: promote: memorycard is being read through the immutable=1 fallback, so this run works from the snapshot taken when the connection was opened, not the live database\n"
+	if stderr != want {
+		t.Errorf("stderr = %q, want %q", stderr, want)
+	}
+	if names := pageNames(t, w); len(names) != 1 {
+		t.Errorf("pages = %v, want the one promoted page", names)
+	}
+}
