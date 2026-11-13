@@ -140,7 +140,9 @@ func TestPromote_TheLineagePageOutranksAMirrorsPage(t *testing.T) {
 // says nothing of this one. A page whose revision cannot be parsed bridges as any other does, and is no failure.
 func TestBridged_TheRevisionOfTheBridgedPageIsNeverRead(t *testing.T) {
 	vaultRoot := t.TempDir()
-	writeIdentityPage(t, vaultRoot, "c-000402.md", "---\nengram_id: 402\nengram_revision: not-a-number\nproject: memorycard\naddress: c-000402\n---\n\nBody.\n")
+	// The bridge: the memory's lineage names Engram observation 402 (its EngramID, an import_map row), and a page
+	// that is still keyed by the legacy engram_id 402, with a revision that cannot be parsed, is that observation's.
+	writeIdentityPage(t, vaultRoot, "c-000900.md", "---\nengram_id: 402\nengram_revision: not-a-number\nproject: memorycard\naddress: c-000900\n---\n\nBody.\n")
 	w := syncCardsWriter(vaultRoot)
 	bridged := cardMemory()
 	bridged.EngramID = 402
