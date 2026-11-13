@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "17fb3f8792f0ceb18da24f9bc9a61b1d7cd18b11",
+    "head": "6a5a55f21841b90b9f7afda4a3a794afb50982c5",
+    "diff_sha256": "be96f44dc7023e27b72afd3b3bd870ef229867615cb0f4299d8a883fae9aeae7",
+    "paths": [
+      "odd/review-results/phase9-store-agnostic-promotion/f2196397e168-1.sweep.json",
+      "odd/review-results/phase9-store-agnostic-promotion/f2196397e168-2.json",
+      "odd/review-results/phase9-store-agnostic-promotion/f2196397e168-3.json",
+      "odd/review-results/phase9-store-agnostic-promotion/f2196397e168-4.polisher.json",
+      "odd/review-results/phase9-store-agnostic-promotion/f2196397e168-5.sweeper.json"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "17fb3f8792f0ceb18da24f9bc9a61b1d7cd18b11",
+      "head": "6a5a55f21841b90b9f7afda4a3a794afb50982c5",
+      "diff_sha256": "be96f44dc7023e27b72afd3b3bd870ef229867615cb0f4299d8a883fae9aeae7"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/review-results/phase9-store-agnostic-promotion/f2196397e168-1.sweep.json",
+        "odd/review-results/phase9-store-agnostic-promotion/f2196397e168-2.json",
+        "odd/review-results/phase9-store-agnostic-promotion/f2196397e168-3.json",
+        "odd/review-results/phase9-store-agnostic-promotion/f2196397e168-4.polisher.json",
+        "odd/review-results/phase9-store-agnostic-promotion/f2196397e168-5.sweeper.json"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The commit adds five JSON review-record files under odd/review-results/ and changes no executable code, so it adds no runtime behavior.",
+      "The records are internally consistent: each binds the same base e382cd00, head f2196397 and diff_sha256 20df63f3, and the sweeper record references the sweep file by name.",
+      "The findings inside the recorded reviews describe the earlier commit f2196397, not this documentation commit, so they are not defects this commit causes."
+    ]
+  }
+}

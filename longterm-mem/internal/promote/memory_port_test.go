@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -27,19 +28,45 @@ type fakeMemory struct {
 	edgesFor []int64
 }
 
-func (f *fakeMemory) ListObservations(project string) ([]memory.Observation, error) {
+// Candidates serves the live observations, as the Engram adapter does.
+func (f *fakeMemory) Candidates(project string) ([]memory.Memory, error) {
 	f.listed = append(f.listed, project)
-	return f.live, f.listErr
+	if f.listErr != nil {
+		return nil, f.listErr
+	}
+	return obsMemories(f.live), nil
 }
 
-func (f *fakeMemory) ObservationsIncludingDeleted(project string) ([]memory.Observation, error) {
+// Memories serves every observation, soft-deleted ones included, with the status the edges and the deletions give
+// them. Edges that cannot be read are the failure of each memory's status, as the adapter reports it.
+func (f *fakeMemory) Memories(project string) ([]memory.Memory, error) {
 	f.history = append(f.history, project)
-	return f.all, f.historyErr
+	if f.historyErr != nil {
+		return nil, f.historyErr
+	}
+	memories := engramMemories(f.all, f.edges)
+	if f.edgesErr != nil {
+		for i := range memories {
+			memories[i].Status, memories[i].StatusCause = memory.StatusUnknown, f.edgesErr
+		}
+	}
+	return memories, nil
 }
 
-func (f *fakeMemory) RelatedEdges(observationID int64) ([]memory.Edge, error) {
-	f.edgesFor = append(f.edgesFor, observationID)
-	return f.edges[observationID], f.edgesErr
+// Probe asks the relations of an observation id no row can carry, as the store does.
+func (f *fakeMemory) Probe(string) error {
+	f.edgesFor = append(f.edgesFor, 0)
+	return f.edgesErr
+}
+
+// ByID serves the observation with the id, from every observation or else from the live ones.
+func (f *fakeMemory) ByID(id string) (memory.Memory, bool, error) {
+	for _, o := range append(append([]memory.Observation{}, f.all...), f.live...) {
+		if strconv.FormatInt(o.ID, 10) == id {
+			return obsMemory(o), true, nil
+		}
+	}
+	return memory.Memory{}, false, nil
 }
 
 func TestSync_ReadsTheLiveObservationsThroughItsMemoryPort(t *testing.T) {
@@ -50,7 +77,7 @@ func TestSync_ReadsTheLiveObservationsThroughItsMemoryPort(t *testing.T) {
 	process := memory.Observation{ID: 12, Type: "discovery", Title: "Process note", Content: "Not curated.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "sdd/some-change/progress"}
 	mem := &fakeMemory{live: []memory.Observation{curated, process}}
 
-	report, err := Sync(context.Background(), Deps{Memory: mem, Writer: &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Clock: clock, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress)}}, "labdrian-sdd-overlay")
+	report, err := Sync(context.Background(), Deps{Source: mem, Writer: &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Clock: clock, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress)}}, "labdrian-sdd-overlay")
 	if err != nil {
 		t.Fatalf("Sync: %v", err)
 	}
@@ -72,7 +99,7 @@ func TestSync_ReadsTheLiveObservationsThroughItsMemoryPort(t *testing.T) {
 func TestSync_AFailingMemoryPortIsTheRunsError(t *testing.T) {
 	broken := errors.New("memory store offline")
 	root := t.TempDir()
-	deps := Deps{Memory: &fakeMemory{listErr: broken}, Writer: &Writer{Index: indexIn(root), Log: logIn(root), SyncState: syncStateIn(root), Pages: pagesIn(root), Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Clock: &fakeClock{at: testInstant}}}
+	deps := Deps{Source: &fakeMemory{listErr: broken}, Writer: &Writer{Index: indexIn(root), Log: logIn(root), SyncState: syncStateIn(root), Pages: pagesIn(root), Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Clock: &fakeClock{at: testInstant}}}
 
 	if _, err := Sync(context.Background(), deps, "labdrian-sdd-overlay"); !errors.Is(err, broken) {
 		t.Fatalf("Sync = %v, want an error that wraps the port's own", err)
@@ -101,7 +128,7 @@ func TestPropagate_ReadsTheHistoryAndTheEdgesThroughItsMemoryPort(t *testing.T) 
 	seedPromotedPage(t, vaultRoot, precedence, newer, "c-000002")
 	retiredPage := seedPromotedPage(t, vaultRoot, precedence, retired, "c-000003")
 
-	report, err := Propagate(context.Background(), Deps{Memory: mem, Writer: &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: precedence, Precedence: &memPrecedence{}, Clock: clock}}, "labdrian-sdd-overlay")
+	report, err := Propagate(context.Background(), Deps{Source: mem, Writer: &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: precedence, Precedence: &memPrecedence{}, Clock: clock}}, "labdrian-sdd-overlay")
 	if err != nil {
 		t.Fatalf("Propagate: %v", err)
 	}
@@ -135,7 +162,7 @@ func TestPropagate_AFailingMemoryPortIsReportedNotSwallowed(t *testing.T) {
 	writer := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Clock: clock}
 
 	t.Run("the history cannot be read", func(t *testing.T) {
-		_, err := Propagate(context.Background(), Deps{Memory: &fakeMemory{historyErr: broken}, Writer: writer}, "labdrian-sdd-overlay")
+		_, err := Propagate(context.Background(), Deps{Source: &fakeMemory{historyErr: broken}, Writer: writer}, "labdrian-sdd-overlay")
 		if !errors.Is(err, broken) {
 			t.Fatalf("Propagate = %v, want an error that wraps the port's own", err)
 		}
@@ -147,7 +174,7 @@ func TestPropagate_AFailingMemoryPortIsReportedNotSwallowed(t *testing.T) {
 		seedPromotedPage(t, vaultRoot, precedence, obs, "c-000031")
 		writer := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: precedence, Precedence: &memPrecedence{}, Clock: clock}
 
-		report, err := Propagate(context.Background(), Deps{Memory: &fakeMemory{all: []memory.Observation{obs}, edgesErr: broken}, Writer: writer}, "labdrian-sdd-overlay")
+		report, err := Propagate(context.Background(), Deps{Source: &fakeMemory{all: []memory.Observation{obs}, edgesErr: broken}, Writer: writer}, "labdrian-sdd-overlay")
 		if err == nil {
 			t.Fatal("Propagate returned no error although an observation could not be decided")
 		}

@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a8762e417d8a19b939f6ee1688f7eabb99e86ca7",
+    "head": "2fdf3595af81d286b11aa0f5892df07b1d9266ba",
+    "diff_sha256": "2aa32fa66425d0e14126ff850e3a7731cb0645e5a7510ddeb1c2f2ae0acb8478",
+    "paths": [
+      "longterm-mem/README.md",
+      "longterm-mem/docs/promote-from-memorycard.md",
+      "longterm-mem/docs/sync-from-memorycard.md",
+      "openspec/specs/longterm-mem-promotion/spec.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "a8762e417d8a19b939f6ee1688f7eabb99e86ca7",
+      "head": "2fdf3595af81d286b11aa0f5892df07b1d9266ba",
+      "diff_sha256": "2aa32fa66425d0e14126ff850e3a7731cb0645e5a7510ddeb1c2f2ae0acb8478"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/README.md",
+        "longterm-mem/docs/promote-from-memorycard.md",
+        "longterm-mem/docs/sync-from-memorycard.md",
+        "openspec/specs/longterm-mem-promotion/spec.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "openspec/specs/longterm-mem-promotion/spec.md:831-835",
+        "claim": "The spec says the sync 'counts it as bridged', but sync-from-memorycard.md says the run counts such an observation 'among the skipped'. The README says only 'skipping'. The two documents describe different counters for the same behavior, so a reader cannot tell which output counter changes for this case.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "openspec/specs/longterm-mem-promotion/spec.md:831-835",
+          "longterm-mem/docs/sync-from-memorycard.md:74-76"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes documentation only; no code or behavior is visible to check against the prose.",
+      "The spec and the sync guide use different wording for how an Engram observation with a lineage page is counted."
+    ]
+  }
+}

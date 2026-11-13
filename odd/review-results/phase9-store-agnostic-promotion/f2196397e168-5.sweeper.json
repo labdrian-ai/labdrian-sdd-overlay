@@ -1,0 +1,150 @@
+{
+  "kind": "sweeper",
+  "base": "e382cd00856ffe77ee1fc735e7e7fd3b452bee19",
+  "head": "f2196397e1680fe3ce1c87188447616e156649da",
+  "diff_sha256": "20df63f365ae51f873f2bb08c2e2b216440aa07865dc654a878cea9aaed520e5",
+  "sweep": "f2196397e168-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 path: longterm-mem/internal/promote/card.go",
+      "disposition": "finding",
+      "evidence": "Deleted by this commit itself, not by a sweep; no leftover reference at the tip: The file is absent at the tip. Its helpers have no non-odd hit, or live on in page_scan.go and page_style.go."
+    },
+    {
+      "candidate": "T1 name: BridgedError",
+      "disposition": "live",
+      "evidence": "Defined at longterm-mem/internal/promote/page_style.go:74,85, built at writer.go:215, asserted in page_scan_test.go:53 and walk_bridged_test.go:88,111. The cmd_promote.go hit is gone."
+    },
+    {
+      "candidate": "T1 name: TestSyncLeavesAloneAnObservationWhoseDecisionTheUnreadablePageChanged",
+      "disposition": "finding",
+      "evidence": "Deleted by this commit itself, not by a sweep; no leftover reference at the tip: No hit outside odd/ at the tip."
+    },
+    {
+      "candidate": "T1 name: address",
+      "disposition": "live",
+      "evidence": "Generic word. The method promotedPageMatch.address() is at longterm-mem/internal/promote/page_scan.go:60 and Result.Page.Address is read at walk.go:108."
+    },
+    {
+      "candidate": "T1 name: applyCard",
+      "disposition": "finding",
+      "evidence": "Deleted by this commit itself, not by a sweep; no leftover reference at the tip: No hit at the tip."
+    },
+    {
+      "candidate": "T1 name: cardPages",
+      "disposition": "finding",
+      "evidence": "Deleted by this commit itself, not by a sweep; no leftover reference at the tip: No hit at the tip."
+    },
+    {
+      "candidate": "T1 name: cardRelated",
+      "disposition": "finding",
+      "evidence": "Deleted by this commit itself, not by a sweep; no leftover reference at the tip: No hit at the tip."
+    },
+    {
+      "candidate": "T1 name: cardScan",
+      "disposition": "finding",
+      "evidence": "Deleted by this commit itself, not by a sweep; no leftover reference at the tip: No hit at the tip."
+    },
+    {
+      "candidate": "T1 name: cardStatus",
+      "disposition": "live",
+      "evidence": "Defined at longterm-mem/internal/promote/page_style.go:170 and used at page_style.go:148 and propagate_cards.go:118."
+    },
+    {
+      "candidate": "T1 name: createCardPage",
+      "disposition": "finding",
+      "evidence": "Deleted by this commit itself, not by a sweep; no leftover reference at the tip: No hit at the tip."
+    },
+    {
+      "candidate": "T1 name: decideCard",
+      "disposition": "finding",
+      "evidence": "Deleted by this commit itself, not by a sweep; no leftover reference at the tip: No hit at the tip."
+    },
+    {
+      "candidate": "T1 name: decidePromotion",
+      "disposition": "finding",
+      "evidence": "Deleted by this commit itself, not by a sweep; no leftover reference at the tip: The only hit is the unrelated tools/review-bench/precision/labels-c27.json:421, which is prose in a label file. Nothing in the code."
+    },
+    {
+      "candidate": "T1 name: noteAddress",
+      "disposition": "live",
+      "evidence": "Defined at longterm-mem/internal/promote/page_scan.go:148 and called at page_scan.go:137 and walk.go:108."
+    },
+    {
+      "candidate": "T1 name: pageScan",
+      "disposition": "live",
+      "evidence": "Type at longterm-mem/internal/promote/page_scan.go:165, used at :184 and :213."
+    },
+    {
+      "candidate": "T1 name: promotedPage",
+      "disposition": "live",
+      "evidence": "Used at longterm-mem/internal/promote/page_scan.go:72 and support_test.go:109-125."
+    },
+    {
+      "candidate": "T1 name: promotedPageMatch",
+      "disposition": "live",
+      "evidence": "Type at longterm-mem/internal/promote/page_scan.go:36, used at support_test.go:86."
+    },
+    {
+      "candidate": "T1 name: readCardPages",
+      "disposition": "finding",
+      "evidence": "Deleted by this commit itself, not by a sweep; no leftover reference at the tip: No hit at the tip."
+    },
+    {
+      "candidate": "T1 name: resolve",
+      "disposition": "live",
+      "evidence": "Generic word. The method promotedPageMatch.resolve is at longterm-mem/internal/promote/page_scan.go:72."
+    },
+    {
+      "candidate": "T1 name: resolveStatus",
+      "disposition": "finding",
+      "evidence": "The function is deleted at the tip (it was propagate.go:185 at base). I changed the comments at engram/source_test.go:17,98 to statusOf and propagate_test.go:280 to 'The status rule once skipped'. Commit 74326e32. The test name stays. Fixed on top in chore(sweep) 74326e32 (not a child of this commit, so recorded as finding)."
+    },
+    {
+      "candidate": "T1 name: scanCardPages",
+      "disposition": "finding",
+      "evidence": "Deleted by this commit itself, not by a sweep; no leftover reference at the tip: No hit at the tip."
+    },
+    {
+      "candidate": "T1 name: scanFor",
+      "disposition": "live",
+      "evidence": "Defined at longterm-mem/internal/promote/page_scan.go:184 and called at walk.go:80."
+    },
+    {
+      "candidate": "T1 name: updateCardPage",
+      "disposition": "finding",
+      "evidence": "Deleted by this commit itself, not by a sweep; no leftover reference at the tip: No hit at the tip."
+    },
+    {
+      "candidate": "T1 name: walkCards",
+      "disposition": "finding",
+      "evidence": "Deleted by this commit itself, not by a sweep; no leftover reference at the tip: No hit at the tip."
+    },
+    {
+      "candidate": "T2 deadcode longterm-mem: internal/promote/legacy.go: unreachable func: engramView.ByID",
+      "disposition": "finding",
+      "evidence": "Deleted by this commit itself, not by a sweep; no leftover reference at the tip: legacy.go was deleted in 09e2f013. `deadcode -test ./...` in longterm-mem prints nothing at the tip."
+    },
+    {
+      "candidate": "T3:  M longterm-mem/docs/promote-from-memorycard.md",
+      "disposition": "live",
+      "evidence": "Committed in a4191092 and e85ea498. No diff against HEAD."
+    },
+    {
+      "candidate": "T3:  M longterm-mem/internal/promote/page_scan.go",
+      "disposition": "live",
+      "evidence": "Committed in a36b4ae0 and e85ea498. It holds the live scan code above."
+    },
+    {
+      "candidate": "T3:  M longterm-mem/internal/promote/page_scan_test.go",
+      "disposition": "live",
+      "evidence": "Committed. It asserts *BridgedError at :53."
+    },
+    {
+      "candidate": "T3:  M openspec/specs/longterm-mem-promotion/spec.md",
+      "disposition": "live",
+      "evidence": "Committed; the tree has no diff against HEAD for it. The living spec is not a leftover."
+    }
+  ]
+}

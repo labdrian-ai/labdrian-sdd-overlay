@@ -108,7 +108,7 @@ func newFixtureEngramStore(t *testing.T, rows []fixtureObs, relations []fixtureR
 // to simulate a promotion Sync/Propagate must decide whether to touch.
 func seedPromotedPage(t *testing.T, vaultRoot string, store PrecedenceStore, obs memory.Observation, addr string) Page {
 	t.Helper()
-	page, err := EmitPage(obs, addr, nil, testInstant)
+	page, err := EmitPage(obsMemory(obs), addr, nil, testInstant)
 	if err != nil {
 		t.Fatalf("EmitPage (seed): %v", err)
 	}
@@ -148,7 +148,7 @@ func TestSync(t *testing.T) {
 			}
 
 			w := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: precedence, Precedence: &memPrecedence{}, Clock: clock, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress)}
-			report, err := Sync(context.Background(), Deps{Memory: store, Writer: w}, "labdrian-sdd-overlay")
+			report, err := Sync(context.Background(), Deps{Source: engramSourceOf(store), Writer: w}, "labdrian-sdd-overlay")
 			if err != nil {
 				t.Fatalf("Sync: %v", err)
 			}
@@ -198,7 +198,7 @@ func TestSync_IndexAndSyncStateReflectCompletion(t *testing.T) {
 	var rebuildCalled bool
 	w := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Clock: clock, AddressMap: &memAddressMap{}, Addresses: addresses}
 	deps := Deps{
-		Memory: store,
+		Source: engramSourceOf(store),
 		Writer: w,
 		Index: IndexRebuilderFunc(func(ctx context.Context) error {
 			rebuildCalled = true
@@ -270,7 +270,7 @@ func TestSync_OneFailingObservationDoesNotWedgeTheRun(t *testing.T) {
 	var rebuildCalled bool
 	w := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Clock: clock, AddressMap: &memAddressMap{}, Addresses: addresses}
 	deps := Deps{
-		Memory: store,
+		Source: engramSourceOf(store),
 		Writer: w,
 		Index:  IndexRebuilderFunc(func(ctx context.Context) error { rebuildCalled = true; return nil }),
 	}

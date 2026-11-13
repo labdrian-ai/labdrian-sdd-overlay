@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/opstest"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultfs"
 )
@@ -18,10 +19,10 @@ import (
 func vaultWithUnrecordedPage(t *testing.T, address string) string {
 	t.Helper()
 	vaultRoot := t.TempDir()
-	page, err := promote.EmitPage(memory.Observation{
+	page, err := promote.EmitPage(opstest.EngramMemory(memory.Observation{
 		ID: 701, Type: "decision", Title: "Unrecorded", Content: "Body.",
 		Project: "reconcile-project", RevisionCount: 3,
-	}, address, nil, fixtureInstant)
+	}), address, nil, fixtureInstant)
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
 	}

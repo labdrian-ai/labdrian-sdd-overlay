@@ -159,7 +159,7 @@ func TestPromoteRegistersThePageInTheCatalogAndTheLogThroughTheirPorts(t *testin
 	w, _, _ := pagesWriter(t, newMemPages(nil))
 	index, log, _ := registration(w)
 
-	if _, err := w.Promote(t.Context(), pageObservation(701), false); err != nil {
+	if _, err := w.Promote(t.Context(), obsMemory(pageObservation(701)), false); err != nil {
 		t.Fatalf("Promote: %v", err)
 	}
 
@@ -178,7 +178,7 @@ func TestPromoteDatesTheLogEntryWithTheDayInUTC(t *testing.T) {
 	_, log, _ := registration(w)
 	w.Clock = &fakeClock{at: time.Date(2026, 10, 10, 23, 30, 0, 0, time.FixedZone("UTC-5", -5*60*60))}
 
-	if _, err := w.Promote(t.Context(), pageObservation(709), false); err != nil {
+	if _, err := w.Promote(t.Context(), obsMemory(pageObservation(709)), false); err != nil {
 		t.Fatalf("Promote: %v", err)
 	}
 	if len(log.writes) != 1 || !strings.HasPrefix(log.writes[0], "## [2026-10-11] promote | ") {
@@ -194,7 +194,7 @@ func TestPromoteReportsACatalogItCannotWriteAndLeavesThePage(t *testing.T) {
 	index, log, _ := registration(w)
 	index.writeErr = errCatalogBoom
 
-	_, err := w.Promote(t.Context(), pageObservation(702), false)
+	_, err := w.Promote(t.Context(), obsMemory(pageObservation(702)), false)
 
 	if err != errCatalogBoom {
 		t.Fatalf("Promote error = %v, want the port's own", err)
@@ -212,7 +212,7 @@ func TestPromoteReportsALogItCannotWrite(t *testing.T) {
 	_, log, _ := registration(w)
 	log.writeErr = errCatalogBoom
 
-	if _, err := w.Promote(t.Context(), pageObservation(703), false); err != errCatalogBoom {
+	if _, err := w.Promote(t.Context(), obsMemory(pageObservation(703)), false); err != errCatalogBoom {
 		t.Fatalf("Promote error = %v, want the port's own", err)
 	}
 }
@@ -224,7 +224,7 @@ func TestPromoteRegistersNothingForAnIneligibleObservation(t *testing.T) {
 	process := pageObservation(704)
 	process.TopicKey = "sdd/some-change/progress"
 
-	if _, err := w.Promote(t.Context(), process, false); err != nil {
+	if _, err := w.Promote(t.Context(), obsMemory(process), false); err != nil {
 		t.Fatalf("Promote: %v", err)
 	}
 	if index.reads+len(index.writes)+log.reads+len(log.writes) != 0 {
@@ -252,7 +252,7 @@ func TestWriterWithoutACatalogOrALogIsRefusedBeforeAnythingIsDone(t *testing.T) 
 			w, repo, allocator := pagesWriter(t, newMemPages(nil))
 			tc.unwire(w)
 
-			_, err := w.Promote(t.Context(), pageObservation(705), false)
+			_, err := w.Promote(t.Context(), obsMemory(pageObservation(705)), false)
 			if !errors.Is(err, tc.want) || !strings.Contains(err.Error(), tc.wantNames) {
 				t.Errorf("Promote error = %v, want %v", err, tc.want)
 			}
@@ -260,7 +260,7 @@ func TestWriterWithoutACatalogOrALogIsRefusedBeforeAnythingIsDone(t *testing.T) 
 				t.Errorf("allocator asked %d times, precedence saved %d times, want neither", allocator.asked, repo.saves)
 			}
 			mem := &fakeMemory{}
-			if _, err := Sync(t.Context(), Deps{Memory: mem, Writer: w}, pagesProject); !errors.Is(err, tc.want) {
+			if _, err := Sync(t.Context(), Deps{Source: mem, Writer: w}, pagesProject); !errors.Is(err, tc.want) {
 				t.Errorf("Sync error = %v, want %v", err, tc.want)
 			}
 			if len(mem.listed) != 0 {
@@ -272,7 +272,7 @@ func TestWriterWithoutACatalogOrALogIsRefusedBeforeAnythingIsDone(t *testing.T) 
 	t.Run("a patch asks for neither", func(t *testing.T) {
 		w, _, _ := pagesWriter(t, newMemPages(nil))
 		w.Index, w.Log, w.SyncState = nil, nil, nil
-		if _, err := Propagate(t.Context(), Deps{Memory: &fakeMemory{}, Writer: w}, pagesProject); err != nil {
+		if _, err := Propagate(t.Context(), Deps{Source: &fakeMemory{}, Writer: w}, pagesProject); err != nil {
 			t.Errorf("Propagate = %v, want it to run without a catalog, a log or a sync state", err)
 		}
 	})
@@ -285,7 +285,7 @@ func TestSyncRecordsItsCompletionThroughThePort(t *testing.T) {
 		_, _, syncState := registration(w)
 		w.Clock = &fakeClock{at: time.Date(2026, 10, 10, 14, 0, 0, 0, time.FixedZone("UTC+2", 2*60*60))}
 
-		if _, err := Sync(t.Context(), Deps{Memory: &fakeMemory{}, Writer: w}, pagesProject); err != nil {
+		if _, err := Sync(t.Context(), Deps{Source: &fakeMemory{}, Writer: w}, pagesProject); err != nil {
 			t.Fatalf("Sync: %v", err)
 		}
 		if want := []time.Time{registerAt}; len(syncState.recorded) != 1 || !syncState.recorded[0].Equal(want[0]) || syncState.recorded[0].Location() != time.UTC {
@@ -297,7 +297,7 @@ func TestSyncRecordsItsCompletionThroughThePort(t *testing.T) {
 		w, _, _ := pagesWriter(t, newMemPages(nil))
 		_, _, syncState := registration(w)
 		var seenAtRebuild int
-		deps := Deps{Memory: &fakeMemory{}, Writer: w, Index: IndexRebuilderFunc(func(context.Context) error { seenAtRebuild = len(syncState.recorded); return nil })}
+		deps := Deps{Source: &fakeMemory{}, Writer: w, Index: IndexRebuilderFunc(func(context.Context) error { seenAtRebuild = len(syncState.recorded); return nil })}
 
 		if _, err := Sync(t.Context(), deps, pagesProject); err != nil {
 			t.Fatalf("Sync: %v", err)
@@ -310,7 +310,7 @@ func TestSyncRecordsItsCompletionThroughThePort(t *testing.T) {
 	t.Run("not when the rebuild failed", func(t *testing.T) {
 		w, _, _ := pagesWriter(t, newMemPages(nil))
 		_, _, syncState := registration(w)
-		deps := Deps{Memory: &fakeMemory{}, Writer: w, Index: IndexRebuilderFunc(func(context.Context) error { return errCatalogBoom })}
+		deps := Deps{Source: &fakeMemory{}, Writer: w, Index: IndexRebuilderFunc(func(context.Context) error { return errCatalogBoom })}
 
 		_, err := Sync(t.Context(), deps, pagesProject)
 
@@ -324,7 +324,7 @@ func TestSyncRecordsItsCompletionThroughThePort(t *testing.T) {
 		_, _, syncState := registration(w)
 		syncState.err = errCatalogBoom
 
-		report, err := Sync(t.Context(), Deps{Memory: &fakeMemory{live: []memory.Observation{pageObservation(706)}}, Writer: w}, pagesProject)
+		report, err := Sync(t.Context(), Deps{Source: &fakeMemory{live: []memory.Observation{pageObservation(706)}}, Writer: w}, pagesProject)
 
 		if err == nil || err.Error() != "promote: sync: boom" || !errors.Is(err, errCatalogBoom) {
 			t.Errorf("Sync error = %v, want %q", err, "promote: sync: boom")
@@ -345,7 +345,7 @@ func TestSyncWithoutARecorderIsRefusedBeforeAnythingIsDone(t *testing.T) {
 			w.SyncState = recorder
 			mem := &fakeMemory{live: []memory.Observation{pageObservation(707)}}
 
-			_, err := Sync(t.Context(), Deps{Memory: mem, Writer: w}, pagesProject)
+			_, err := Sync(t.Context(), Deps{Source: mem, Writer: w}, pagesProject)
 
 			if !errors.Is(err, errNoSyncStateRecorder) || err.Error() != "promote: sync: promote: the writer has no sync state recorder" {
 				t.Errorf("Sync error = %v, want errNoSyncStateRecorder behind the sync prefix", err)
@@ -353,7 +353,7 @@ func TestSyncWithoutARecorderIsRefusedBeforeAnythingIsDone(t *testing.T) {
 			if len(mem.listed) != 0 || repo.saves != 0 {
 				t.Errorf("listed %v, saved %d times, want nothing done", mem.listed, repo.saves)
 			}
-			if _, err := w.Promote(t.Context(), pageObservation(707), false); err != nil {
+			if _, err := w.Promote(t.Context(), obsMemory(pageObservation(707)), false); err != nil {
 				t.Errorf("Promote = %v, want a promotion not to ask for the recorder", err)
 			}
 		})
@@ -364,7 +364,7 @@ func TestAPlanNeverRecordsASync(t *testing.T) {
 	w, _, _ := pagesWriter(t, newMemPages(nil))
 	index, log, syncState := registration(w)
 
-	if _, err := Plan(t.Context(), Deps{Memory: &fakeMemory{live: []memory.Observation{pageObservation(708)}}, Writer: w}, pagesProject); err != nil {
+	if _, err := Plan(t.Context(), Deps{Source: &fakeMemory{live: []memory.Observation{pageObservation(708)}}, Writer: w}, pagesProject); err != nil {
 		t.Fatalf("Plan: %v", err)
 	}
 	if len(syncState.recorded)+len(index.writes)+len(log.writes) != 0 {

@@ -1,0 +1,111 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "9bb18d804601787b9894692edbc20909a8719a83",
+    "head": "979525fc554d7031fc997c77380720d5a084695b",
+    "diff_sha256": "932c8975284e45dfcb77f5d3c792db86f614166e8b88723593575a2a7216ddd2",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/cmd_promote_reconcile_exitcode_test.go",
+      "longterm-mem/cmd/longterm-mem/cmd_promote_reconcile_test.go",
+      "longterm-mem/cmd/longterm-mem/doctor_eligibility_test.go",
+      "longterm-mem/cmd/longterm-mem/main_test.go",
+      "longterm-mem/internal/ops/doctor_eligibility_test.go",
+      "longterm-mem/internal/ops/doctor_reconcile_test.go",
+      "longterm-mem/internal/opstest/fixture.go",
+      "longterm-mem/internal/promote/address_test.go",
+      "longterm-mem/internal/promote/addressmap_port_test.go",
+      "longterm-mem/internal/promote/card_promote_test.go",
+      "longterm-mem/internal/promote/catalog_port_test.go",
+      "longterm-mem/internal/promote/clock_test.go",
+      "longterm-mem/internal/promote/eligible_test.go",
+      "longterm-mem/internal/promote/lint_index_port_test.go",
+      "longterm-mem/internal/promote/lint_test.go",
+      "longterm-mem/internal/promote/page_goal_test.go",
+      "longterm-mem/internal/promote/page_identity_test.go",
+      "longterm-mem/internal/promote/page_test.go",
+      "longterm-mem/internal/promote/pages_port_test.go",
+      "longterm-mem/internal/promote/pages_unreadable_test.go",
+      "longterm-mem/internal/promote/plan_test.go",
+      "longterm-mem/internal/promote/precedence_port_test.go",
+      "longterm-mem/internal/promote/projectmove_recovery_test.go",
+      "longterm-mem/internal/promote/projectmove_test.go",
+      "longterm-mem/internal/promote/propagate_test.go",
+      "longterm-mem/internal/promote/reconcile_guard_test.go",
+      "longterm-mem/internal/promote/reconcile_repair_test.go",
+      "longterm-mem/internal/promote/reconcile_test.go",
+      "longterm-mem/internal/promote/support_test.go",
+      "longterm-mem/internal/promote/sync_cards_test.go",
+      "longterm-mem/internal/promote/sync_test.go",
+      "longterm-mem/internal/promote/update_test.go",
+      "longterm-mem/internal/promote/writer_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "9bb18d804601787b9894692edbc20909a8719a83",
+      "head": "979525fc554d7031fc997c77380720d5a084695b",
+      "diff_sha256": "932c8975284e45dfcb77f5d3c792db86f614166e8b88723593575a2a7216ddd2"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/cmd_promote_reconcile_exitcode_test.go",
+        "longterm-mem/cmd/longterm-mem/cmd_promote_reconcile_test.go",
+        "longterm-mem/cmd/longterm-mem/doctor_eligibility_test.go",
+        "longterm-mem/cmd/longterm-mem/main_test.go",
+        "longterm-mem/internal/ops/doctor_eligibility_test.go",
+        "longterm-mem/internal/ops/doctor_reconcile_test.go",
+        "longterm-mem/internal/opstest/fixture.go",
+        "longterm-mem/internal/promote/address_test.go",
+        "longterm-mem/internal/promote/addressmap_port_test.go",
+        "longterm-mem/internal/promote/card_promote_test.go",
+        "longterm-mem/internal/promote/catalog_port_test.go",
+        "longterm-mem/internal/promote/clock_test.go",
+        "longterm-mem/internal/promote/eligible_test.go",
+        "longterm-mem/internal/promote/lint_index_port_test.go",
+        "longterm-mem/internal/promote/lint_test.go",
+        "longterm-mem/internal/promote/page_goal_test.go",
+        "longterm-mem/internal/promote/page_identity_test.go",
+        "longterm-mem/internal/promote/page_test.go",
+        "longterm-mem/internal/promote/pages_port_test.go",
+        "longterm-mem/internal/promote/pages_unreadable_test.go",
+        "longterm-mem/internal/promote/plan_test.go",
+        "longterm-mem/internal/promote/precedence_port_test.go",
+        "longterm-mem/internal/promote/projectmove_recovery_test.go",
+        "longterm-mem/internal/promote/projectmove_test.go",
+        "longterm-mem/internal/promote/propagate_test.go",
+        "longterm-mem/internal/promote/reconcile_guard_test.go",
+        "longterm-mem/internal/promote/reconcile_repair_test.go",
+        "longterm-mem/internal/promote/reconcile_test.go",
+        "longterm-mem/internal/promote/support_test.go",
+        "longterm-mem/internal/promote/sync_cards_test.go",
+        "longterm-mem/internal/promote/sync_test.go",
+        "longterm-mem/internal/promote/update_test.go",
+        "longterm-mem/internal/promote/writer_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/support_test.go:16-17",
+        "claim": "cardMem is added but never called anywhere in this diff, so it is dead code today. An unused-symbol linter (staticcheck U1000) may flag it, and the card tests it is meant to centralise still build memory.CardMemory rows directly.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/support_test.go:16-17"
+        ]
+      }
+    ],
+    "evidence": [
+      "Every other change wraps an existing argument in an identity helper (obsMemory, engramSourceOf, opstest.EngramMemory), so behavior is unchanged.",
+      "The types are identical on both sides of each wrapper, so the edits compile.",
+      "The new import in support_test.go (engram, memory) is used by the helpers it defines.",
+      "The cmd doctor_eligibility_test.go edit calls opstest.EngramMemory without adding an import in the diff. I could not see that file's import block, so I assumed opstest was already imported there."
+    ]
+  }
+}

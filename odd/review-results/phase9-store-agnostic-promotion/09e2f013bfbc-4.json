@@ -1,0 +1,93 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f2196397e1680fe3ce1c87188447616e156649da",
+    "head": "09e2f013bfbc31e69f0ba38798e53915d4709202",
+    "diff_sha256": "3d65752ef88fcad186d33e31979c78f0c0ffdbfc738077446bd51b8edfd65155",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/app.go",
+      "longterm-mem/cmd/longterm-mem/cmd_mcp.go",
+      "longterm-mem/cmd/longterm-mem/cmd_promote.go",
+      "longterm-mem/cmd/longterm-mem/cmd_sync.go",
+      "longterm-mem/cmd/longterm-mem/rundeps.go",
+      "longterm-mem/internal/promote/explicit.go",
+      "longterm-mem/internal/promote/legacy.go",
+      "longterm-mem/internal/promote/memory.go",
+      "longterm-mem/internal/promote/memory_port_test.go",
+      "longterm-mem/internal/promote/project_sync.go",
+      "longterm-mem/internal/promote/promote_reindex.go",
+      "longterm-mem/internal/promote/propagate.go",
+      "longterm-mem/internal/promote/propagate_cards.go",
+      "longterm-mem/internal/promote/source.go",
+      "longterm-mem/internal/promote/support_test.go",
+      "longterm-mem/internal/promote/sync.go",
+      "longterm-mem/internal/promote/sync_cards.go",
+      "longterm-mem/internal/promote/sync_cards_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f2196397e1680fe3ce1c87188447616e156649da",
+      "head": "09e2f013bfbc31e69f0ba38798e53915d4709202",
+      "diff_sha256": "3d65752ef88fcad186d33e31979c78f0c0ffdbfc738077446bd51b8edfd65155"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/app.go",
+        "longterm-mem/cmd/longterm-mem/cmd_mcp.go",
+        "longterm-mem/cmd/longterm-mem/cmd_promote.go",
+        "longterm-mem/cmd/longterm-mem/cmd_sync.go",
+        "longterm-mem/cmd/longterm-mem/rundeps.go",
+        "longterm-mem/internal/promote/explicit.go",
+        "longterm-mem/internal/promote/legacy.go",
+        "longterm-mem/internal/promote/memory.go",
+        "longterm-mem/internal/promote/memory_port_test.go",
+        "longterm-mem/internal/promote/project_sync.go",
+        "longterm-mem/internal/promote/promote_reindex.go",
+        "longterm-mem/internal/promote/propagate.go",
+        "longterm-mem/internal/promote/propagate_cards.go",
+        "longterm-mem/internal/promote/source.go",
+        "longterm-mem/internal/promote/support_test.go",
+        "longterm-mem/internal/promote/sync.go",
+        "longterm-mem/internal/promote/sync_cards.go",
+        "longterm-mem/internal/promote/sync_cards_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/cmd/longterm-mem/cmd_mcp.go:144-156",
+        "claim": "A nil *memorycard.Store is passed to newEngramSource when no memorycard database exists. The same pattern appears in cmd_promote.go and cmd_sync.go. If newEngramSource takes an interface for the lineage reader, this is a typed-nil non-nil interface, and a lineage lookup would panic on a machine without memorycard. The diff does not show newEngramSource, so this cannot be confirmed. The tests only pass an untyped nil (engram.NewSource(store, nil)), so this path is untested.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "cmd_mcp.go:cards = nil; newEngramSource(store, cards)",
+          "support_test.go:engram.NewSource(store, nil)"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "longterm-mem/cmd/longterm-mem/app.go:98-112",
+        "claim": "memorycardForLineage, and the inline copy in mcpPromote, treats only errors.Is(err, fs.ErrNotExist) as 'no memorycard database'. If memorycard.Open reports a missing database in any other way (for example a sqlite 'unable to open database file' error), then sync, promote and the MCP promote tool now refuse with exitEngramUnavailable or an error on machines with no memorycard. These commands worked on such machines before this change. Even when ErrNotExist is honoured, a present but unopenable memorycard database now blocks Engram-only sync and promote, which previously did not touch memorycard.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "app.go:case errors.Is(err, fs.ErrNotExist): return nil, exitOK",
+          "app.go:return nil, a.refuse(err, exitEngramUnavailable)",
+          "cmd_mcp.go:default: return mcpserver.PromoteOutcome{}, openErr"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the diff only; newEngramSource, memorycard.Open and Writer.Promote are not visible in it.",
+      "Behavior of the BridgedError refusal and SyncPlan.Bridged was not verifiable from the diff."
+    ]
+  }
+}

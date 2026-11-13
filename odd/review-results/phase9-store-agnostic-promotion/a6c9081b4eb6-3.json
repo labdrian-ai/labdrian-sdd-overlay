@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "0bc8d01750e46ad9497288e8c0a8c8f6493e7cf8",
+    "head": "a6c9081b4eb6dbef742295df7fb4061f1f09a961",
+    "diff_sha256": "7343ef6cc998d32b7b6b06c5bed3f155a871c4682116c0b7d0c7fd7bf069643b",
+    "paths": [
+      "odd/review-results/phase9-store-agnostic-promotion/09e2f013bfbc-1.sweep.json",
+      "odd/review-results/phase9-store-agnostic-promotion/09e2f013bfbc-2.polisher.json",
+      "odd/review-results/phase9-store-agnostic-promotion/09e2f013bfbc-3.json"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "0bc8d01750e46ad9497288e8c0a8c8f6493e7cf8",
+      "head": "a6c9081b4eb6dbef742295df7fb4061f1f09a961",
+      "diff_sha256": "7343ef6cc998d32b7b6b06c5bed3f155a871c4682116c0b7d0c7fd7bf069643b"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/review-results/phase9-store-agnostic-promotion/09e2f013bfbc-1.sweep.json",
+        "odd/review-results/phase9-store-agnostic-promotion/09e2f013bfbc-2.polisher.json",
+        "odd/review-results/phase9-store-agnostic-promotion/09e2f013bfbc-3.json"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The commit only adds three review-result JSON records for the already-reviewed head 09e2f013bfbc. It changes no executable code, so it cannot introduce or worsen a runtime defect.",
+      "All three records bind the same base, head and diff_sha256, and their sequence numbers 1, 2 and 3 are consistent with the claimed chain.",
+      "The finding contents inside the records (the unchecked cards.Close() and the typed-nil concern) are about the earlier reviewed commit, not about this documentation commit."
+    ]
+  }
+}

@@ -162,7 +162,7 @@ func TestEligible(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := Eligible(tt.obs, tt.explicit); got != tt.want {
+			if got := Eligible(obsMemory(tt.obs), tt.explicit); got != tt.want {
 				t.Fatalf("Eligible(%+v, explicit=%v) = %v, want %v", tt.obs, tt.explicit, got, tt.want)
 			}
 		})
@@ -190,10 +190,10 @@ func TestPromote_ExplicitCallOverridesAutomaticEligibility(t *testing.T) {
 	obs := memory.Observation{ID: 601, Type: "discovery", Title: "Below Threshold", Content: "Never automatically eligible.", Project: "labdrian-sdd-overlay", RevisionCount: 1, Pinned: false}
 
 	var lookedUp int64
-	result, err := ExplicitPromote(t.Context(), w, func(id int64) (memory.Observation, bool, error) {
+	result, err := ExplicitPromote(t.Context(), w, ObservationLookup(func(id int64) (memory.Observation, bool, error) {
 		lookedUp = id
 		return obs, true, nil
-	}, obs.ID)
+	}), obs.ID)
 	if err != nil {
 		t.Fatalf("ExplicitPromote: %v", err)
 	}
@@ -239,7 +239,7 @@ func TestPromote_AnIneligibleObservationReportsNoActionAndWritesNothing(t *testi
 	w := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Clock: &fakeClock{at: testInstant}}
 	obs := memory.Observation{ID: 602, Type: "discovery", Title: "Not Curated", Content: "Never automatically eligible.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
 
-	result, err := w.Promote(t.Context(), obs, false)
+	result, err := w.Promote(t.Context(), obsMemory(obs), false)
 	if err != nil {
 		t.Fatalf("Promote: %v", err)
 	}
@@ -263,9 +263,9 @@ func TestPromote_InvalidObservationIdRejected(t *testing.T) {
 	vaultRoot := t.TempDir()
 	w := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Clock: &fakeClock{at: testInstant}}
 
-	_, err := ExplicitPromote(t.Context(), w, func(int64) (memory.Observation, bool, error) {
+	_, err := ExplicitPromote(t.Context(), w, ObservationLookup(func(int64) (memory.Observation, bool, error) {
 		return memory.Observation{}, false, nil
-	}, 999)
+	}), 999)
 	if err == nil {
 		t.Fatal("ExplicitPromote = nil error, want a rejection for an invalid observation id")
 	}

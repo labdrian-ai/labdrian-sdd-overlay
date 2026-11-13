@@ -1,0 +1,73 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f7831fb3496aa95bb49b5e4feacfe3dde646adec",
+    "head": "a20b61d0533cf3f42792dab87f90467984097eba",
+    "diff_sha256": "a15499e6c6e1198e2e00da7417b41c1ecb2d5d067647eaa248522bbe5b8859da",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/lineage.go",
+      "longterm-mem/cmd/longterm-mem/lineage_test.go",
+      "longterm-mem/internal/engram/source.go",
+      "longterm-mem/internal/engram/source_relations_test.go",
+      "longterm-mem/internal/engram/source_test.go",
+      "longterm-mem/internal/memory/memory.go",
+      "longterm-mem/internal/memorycard/source.go",
+      "longterm-mem/internal/memorycard/source_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f7831fb3496aa95bb49b5e4feacfe3dde646adec",
+      "head": "a20b61d0533cf3f42792dab87f90467984097eba",
+      "diff_sha256": "a15499e6c6e1198e2e00da7417b41c1ecb2d5d067647eaa248522bbe5b8859da"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/lineage.go",
+        "longterm-mem/cmd/longterm-mem/lineage_test.go",
+        "longterm-mem/internal/engram/source.go",
+        "longterm-mem/internal/engram/source_relations_test.go",
+        "longterm-mem/internal/engram/source_test.go",
+        "longterm-mem/internal/memory/memory.go",
+        "longterm-mem/internal/memorycard/source.go",
+        "longterm-mem/internal/memorycard/source_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/memorycard/source.go:100",
+        "claim": "Content twins used to be appended to Memory.Lineage, which the promotion pass reads to match a page to its memory. They now go to the new Mirrored field, and the diff changes no promote consumer. Any caller that reads only Lineage stops recognising pages carried under a mirrored identity (memorycard to engram here, and engram to memorycard in lineage.go). The commit's claim that no caller reads the new data is true of Mirrored, but Lineage was already read, and its contents shrank. The tests hide this by merging Lineage and Mirrored in the lineageOf helper.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/memorycard/source.go:100",
+          "longterm-mem/cmd/longterm-mem/lineage.go:44-48",
+          "longterm-mem/cmd/longterm-mem/lineage_test.go:89-94"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/engram/source.go:79-84",
+        "claim": "A store whose relations cannot be read used to fail Candidates and ByID. It now returns memories with StatusUnknown. Any existing consumer that compares only against StatusActive, StatusSuperseded or StatusArchived, or that falls through to a default branch, can silently misclassify such memories instead of failing. The diff does not show the consumers, so none is guarded here.",
+        "evidence_class": "inferential",
+        "causal_disposition": "behavior-activated",
+        "proof_refs": [
+          "longterm-mem/internal/engram/source.go:79-84",
+          "longterm-mem/internal/engram/source.go:147-150"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff only; no consumer code outside the diff was visible.",
+      "Candidates now uses store.ListObservations instead of ObservationsIncludingDeleted plus a DeletedAt filter. Its ordering and field parity could not be verified from the diff."
+    ]
+  }
+}

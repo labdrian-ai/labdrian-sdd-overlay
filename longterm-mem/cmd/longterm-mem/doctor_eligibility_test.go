@@ -46,7 +46,7 @@ func (w *retrievalWorld) promotedPages(t *testing.T, ids ...int64) {
 			t.Fatalf("observation %d of the fixture database: found=%v err=%v", id, found, err)
 		}
 		address := fmt.Sprintf("c-%06d", firstPromotedAddress+i)
-		page, err := promote.EmitPage(obs, address, nil, fixtureInstant)
+		page, err := promote.EmitPage(opstest.EngramMemory(obs), address, nil, fixtureInstant)
 		if err != nil {
 			t.Fatalf("EmitPage for observation %d: %v", id, err)
 		}

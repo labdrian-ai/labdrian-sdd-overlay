@@ -30,7 +30,7 @@ func TestEmitPage_DatesThePageInUTCWhateverZoneTheClockSpeaks(t *testing.T) {
 	at := time.Date(2026, 8, 1, 23, 30, 0, 0, west)
 	obs := memory.Observation{ID: 701, Type: "decision", Title: "Zoned", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
 
-	page, err := EmitPage(obs, "c-000701", nil, at)
+	page, err := EmitPage(obsMemory(obs), "c-000701", nil, at)
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
 	}
@@ -49,7 +49,7 @@ func TestPromote_DatesTheNewPageAndTheLogWithTheWritersClock(t *testing.T) {
 	w := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: PrecedenceStore{}, Precedence: &memPrecedence{}, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress), Clock: clock}
 	obs := memory.Observation{ID: 703, Type: "decision", Title: "Dated", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1, Pinned: true}
 
-	result, err := w.Promote(t.Context(), obs, false)
+	result, err := w.Promote(t.Context(), obsMemory(obs), false)
 	if err != nil {
 		t.Fatalf("Promote: %v", err)
 	}
@@ -75,7 +75,7 @@ func TestPromote_RefusesAWriterWithoutAClockAndWritesNothing(t *testing.T) {
 	w := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: PrecedenceStore{}}
 	obs := memory.Observation{ID: 702, Type: "decision", Title: "No Clock", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1, Pinned: true}
 
-	result, err := w.Promote(t.Context(), obs, false)
+	result, err := w.Promote(t.Context(), obsMemory(obs), false)
 	if err == nil {
 		t.Fatalf("Promote = %+v, nil error, want a writer without a clock refused", result)
 	}
@@ -96,7 +96,7 @@ func TestPromote_RefusesAWriterWithoutAClockAndWritesNothing(t *testing.T) {
 // promoted.
 func TestSync_RefusesAWriterWithoutAClockBeforeTouchingAnything(t *testing.T) {
 	vaultRoot := t.TempDir()
-	deps := Deps{Memory: &fakeMemory{}, Writer: &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: PrecedenceStore{}}}
+	deps := Deps{Source: &fakeMemory{}, Writer: &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: PrecedenceStore{}}}
 
 	if _, err := Sync(t.Context(), deps, "labdrian-sdd-overlay"); err == nil {
 		t.Fatal("Sync = nil error, want a writer without a clock refused")
@@ -123,7 +123,7 @@ func TestPropagate_NeedsNoClock(t *testing.T) {
 	seedPromotedPage(t, vaultRoot, precedence, memory.Observation{ID: ids[1], Type: "decision", Title: "New Decision", Content: "New body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}, "c-000002")
 
 	w := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: precedence, Precedence: &memPrecedence{}}
-	report, err := Propagate(t.Context(), Deps{Memory: store, Writer: w}, "labdrian-sdd-overlay")
+	report, err := Propagate(t.Context(), Deps{Source: engramSourceOf(store), Writer: w}, "labdrian-sdd-overlay")
 	if err != nil {
 		t.Fatalf("Propagate: %v", err)
 	}

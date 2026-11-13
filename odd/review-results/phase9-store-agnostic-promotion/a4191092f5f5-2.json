@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a36b4ae012dfc197027444f518937c1917ef03ba",
+    "head": "a4191092f5f50ee2bc4b3c1facd1e2dd22d81467",
+    "diff_sha256": "276b33c7f505069dfd4337d23c7853be26d40ddc6ea7bf53c481619dc0151f5e",
+    "paths": [
+      "longterm-mem/docs/promote-from-memorycard.md",
+      "openspec/specs/longterm-mem-promotion/spec.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "a36b4ae012dfc197027444f518937c1917ef03ba",
+      "head": "a4191092f5f50ee2bc4b3c1facd1e2dd22d81467",
+      "diff_sha256": "276b33c7f505069dfd4337d23c7853be26d40ddc6ea7bf53c481619dc0151f5e"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/docs/promote-from-memorycard.md",
+        "openspec/specs/longterm-mem-promotion/spec.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "openspec/specs/longterm-mem-promotion/spec.md:841-844",
+        "claim": "The new paragraph states the project-scoping rule as a plain statement, without SHALL. The neighbouring requirement paragraphs use SHALL, so this one reads as narrative rather than a testable requirement. The phrase 'the same piece of memory' is also vague; 'an Engram observation of the same lineage' would match the terms used elsewhere in the spec.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "openspec/specs/longterm-mem-promotion/spec.md:841-844"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff only touches documentation and spec text, so no runtime behavior changes.",
+      "The code behind the project-scoped bridge cannot be seen in this diff, so whether it matches the new wording is unknown and I make no claim about it.",
+      "The doc table row and the spec paragraph state the same rule consistently."
+    ]
+  }
+}

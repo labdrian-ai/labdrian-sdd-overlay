@@ -22,7 +22,7 @@ import (
 func promotedFrom(t *testing.T, obs memory.Observation, address string) [2]string {
 	t.Helper()
 	obs.Type, obs.Title, obs.Content, obs.Project, obs.RevisionCount = "decision", "Widget Decision", "Body content.", doctorTestProject, 1
-	page, err := promote.EmitPage(obs, address, nil, opstest.Instant())
+	page, err := promote.EmitPage(opstest.EngramMemory(obs), address, nil, opstest.Instant())
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
 	}
@@ -160,11 +160,11 @@ func TestDoctorAgreesWithPromoteEligible(t *testing.T) {
 		got := eligibilityCheckOf(t, pages, observations.read)
 
 		wantStatus := CheckWarned
-		if promote.Eligible(obs, false) {
+		if promote.Eligible(opstest.EngramMemory(obs), false) {
 			wantStatus = CheckPassed
 		}
 		if got.Status != wantStatus {
-			t.Errorf("pinned=%v topic_key=%q: promoted-pages-eligible = %+v, want %s (promote.Eligible says %v)", obs.Pinned, obs.TopicKey, got, wantStatus, promote.Eligible(obs, false))
+			t.Errorf("pinned=%v topic_key=%q: promoted-pages-eligible = %+v, want %s (promote.Eligible says %v)", obs.Pinned, obs.TopicKey, got, wantStatus, promote.Eligible(opstest.EngramMemory(obs), false))
 		}
 	}
 }

@@ -46,7 +46,7 @@ func TestPlan_WritesNothingAndPredictsWhatSyncThenDoes(t *testing.T) {
 	}, "c-000900")
 
 	w := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: precedence, Precedence: &memPrecedence{}, Clock: clock, AddressMap: &memAddressMap{}, Addresses: addresses}
-	deps := Deps{Memory: store, Writer: w}
+	deps := Deps{Source: engramSourceOf(store), Writer: w}
 
 	before := vaultSnapshot(t, vaultRoot)
 
@@ -164,7 +164,7 @@ func TestPlan_CountsThePagesPropagateWouldPatch(t *testing.T) {
 		ID: ids[1], Type: "decision", Title: "New Decision", Content: "New body.", Project: "p", RevisionCount: 1,
 	}, "c-000002")
 
-	deps := Deps{Memory: store, Writer: &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: precedence, Precedence: &memPrecedence{}, Clock: clock, AddressMap: &memAddressMap{}, Addresses: addresses}}
+	deps := Deps{Source: engramSourceOf(store), Writer: &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: precedence, Precedence: &memPrecedence{}, Clock: clock, AddressMap: &memAddressMap{}, Addresses: addresses}}
 
 	before := vaultSnapshot(t, vaultRoot)
 
@@ -224,7 +224,7 @@ func TestPlan_OneBrokenObservationIsReportedOnce(t *testing.T) {
 		t.Fatalf("write broken page: %v", err)
 	}
 
-	deps := Deps{Memory: store, Writer: &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Clock: clock, AddressMap: &memAddressMap{}, Addresses: addresses}}
+	deps := Deps{Source: engramSourceOf(store), Writer: &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Clock: clock, AddressMap: &memAddressMap{}, Addresses: addresses}}
 	plan, err := Plan(context.Background(), deps, "p")
 	if err != nil {
 		t.Fatalf("Plan: %v", err)

@@ -1,0 +1,15 @@
+{
+  "kind": "sweeper",
+  "base": "e85ea498aefb96e0f0acc671361b82f1efaf5ade",
+  "head": "74326e32c2c4ef35dd7215b9ed3138741f31662e",
+  "diff_sha256": "fb71654b1481cb9288c6cd4c53740dac7c03ee3d871f93536a07da8b3b2d6644",
+  "sweep": "74326e32c2c4-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T3:  M odd/tasks/phase9-store-agnostic-promotion.md",
+      "disposition": "live",
+      "evidence": "The coordinator's uncommitted Log entries L25-L42 and the reshaped Specs and Tasks; committed in the next docs(odd) commit of this branch, not a leftover of 74326e32."
+    }
+  ]
+}

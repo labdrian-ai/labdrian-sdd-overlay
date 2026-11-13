@@ -194,7 +194,7 @@ func TestPromoteLeavesAnObservationAloneWhenOnlyAnUnreadablePageMightBeItsPage(t
 	pages, _, _ := pagesWithOneUnreadable(t)
 	w, repo, allocator := pagesWriter(t, pages)
 
-	result, err := w.Promote(t.Context(), pageObservation(1), false)
+	result, err := w.Promote(t.Context(), obsMemory(pageObservation(1)), false)
 
 	if err != nil {
 		t.Fatalf("Promote: %v, want the observation reported as left alone", err)
@@ -225,7 +225,7 @@ func TestPromoteUpdatesAReadablePageBesideAnUnreadableOne(t *testing.T) {
 	three.RevisionCount = 2
 	three.Content = "Revised body."
 
-	result, err := w.Promote(t.Context(), three, false)
+	result, err := w.Promote(t.Context(), obsMemory(three), false)
 
 	if err != nil || result.Action.Kind != ActionUpdated || result.Page.Address != "c-000003" {
 		t.Fatalf("Promote = (%+v, %v), want c-000003 updated", result, err)
@@ -242,7 +242,7 @@ func TestSyncSkipsAnUnreadablePageAndLeavesAloneTheObservationsItMightBelongTo(t
 	three.Content = "Revised body."
 	ineligible := memory.Observation{ID: 4, Type: "discovery", Title: "Process note", Content: "Not curated.", Project: pagesProject, RevisionCount: 1, TopicKey: "sdd/some-change/progress"}
 	rebuilt := false
-	deps := Deps{Memory: &fakeMemory{live: []memory.Observation{pageObservation(1), two, three, ineligible}}, Writer: w, Index: IndexRebuilderFunc(func(context.Context) error { rebuilt = true; return nil })}
+	deps := Deps{Source: &fakeMemory{live: []memory.Observation{pageObservation(1), two, three, ineligible}}, Writer: w, Index: IndexRebuilderFunc(func(context.Context) error { rebuilt = true; return nil })}
 
 	report, err := Sync(t.Context(), deps, pagesProject)
 
@@ -269,30 +269,29 @@ func TestSyncSkipsAnUnreadablePageAndLeavesAloneTheObservationsItMightBelongTo(t
 	}
 }
 
-// A page that becomes unreadable between the run's decision and the promotion itself is the same case, found by
-// the promotion: the observation is left alone, and the run does not count it as promoted.
-func TestSyncLeavesAloneAnObservationWhoseDecisionTheUnreadablePageChanged(t *testing.T) {
-	// The page of another observation, readable when the run surveys the pages and when it decides (its first two
-	// reads) and not when the promotion reads them.
+// A run reads each page of the vault once, for every memory it decides and promotes, so a page that cannot be read
+// after that read changes nothing: there is no later read for it to fail (it used to be read again by the
+// promotion of each memory, and a page that went unreadable in between left the memory alone).
+func TestSyncReadsEachPageOnceSoALaterUnreadablePageChangesNothing(t *testing.T) {
 	pages := newMemPages(map[string]string{"c-000010": pageCarrying(99, pagesProject, "c-000010", 1)})
 	pages.readHook = func(address string, nth int) error {
-		if nth >= 3 {
+		if nth >= 2 {
 			return errDangling
 		}
 		return nil
 	}
-	w, repo, allocator := pagesWriter(t, pages)
+	w, _, _ := pagesWriter(t, pages)
 
-	report, err := Sync(t.Context(), Deps{Memory: &fakeMemory{live: []memory.Observation{pageObservation(1)}}, Writer: w}, pagesProject)
+	report, err := Sync(t.Context(), Deps{Source: &fakeMemory{live: []memory.Observation{pageObservation(1)}}, Writer: w}, pagesProject)
 
 	if err != nil || len(report.Failed) != 0 {
 		t.Fatalf("Sync = (%+v, %v), want a run that finished", report, err)
 	}
-	if len(report.Promoted) != 0 || len(report.Withheld) != 1 || report.Withheld[0] != 1 {
-		t.Errorf("Promoted = %+v, Withheld = %v, want observation 1 left alone and not counted as promoted", report.Promoted, report.Withheld)
+	if len(report.Promoted) != 1 || len(report.Withheld) != 0 {
+		t.Errorf("Promoted = %+v, Withheld = %v, want observation 1 promoted: every page was read once, and readable", report.Promoted, report.Withheld)
 	}
-	if allocator.asked != 0 || repo.saves != 0 || len(pages.writes) != 0 {
-		t.Errorf("allocator asked %d times, precedence saved %d times, writes = %+v, want nothing", allocator.asked, repo.saves, pages.writes)
+	if pages.reads["c-000010"] != 1 {
+		t.Errorf("the page was read %d times, want once for the whole run", pages.reads["c-000010"])
 	}
 }
 
@@ -305,7 +304,7 @@ func TestPlanPredictsWhatSyncDoesBesideAnUnreadablePage(t *testing.T) {
 	// The propagation pass walks every observation, ineligible ones too: this one has no page that can be told
 	// from the unreadable one, which only that pass sees.
 	ineligible := memory.Observation{ID: 4, Type: "discovery", Title: "Process note", Content: "Not curated.", Project: pagesProject, RevisionCount: 1, TopicKey: "sdd/some-change/progress"}
-	deps := Deps{Memory: &fakeMemory{live: live, all: append(append([]memory.Observation(nil), live...), ineligible)}, Writer: w}
+	deps := Deps{Source: &fakeMemory{live: live, all: append(append([]memory.Observation(nil), live...), ineligible)}, Writer: w}
 
 	plan, err := Plan(t.Context(), deps, pagesProject)
 
@@ -338,7 +337,7 @@ func TestPropagatePatchesWhatItCanReadBesideAnUnreadablePage(t *testing.T) {
 	two.DeletedAt = "2026-08-02 00:00:00"
 	gone := pageObservation(6)
 	gone.DeletedAt = "2026-08-02 00:00:00"
-	deps := Deps{Memory: &fakeMemory{all: []memory.Observation{two, gone}}, Writer: w}
+	deps := Deps{Source: &fakeMemory{all: []memory.Observation{two, gone}}, Writer: w}
 
 	report, err := Propagate(t.Context(), deps, pagesProject)
 
@@ -368,7 +367,7 @@ func TestPropagateSupersedesWithoutALinkWhenTheSuccessorsPageIsUnreadable(t *tes
 	w.Store.Set("c-000002", entryFor(renderedPage(t, older, "c-000002")))
 	mem := &fakeMemory{all: []memory.Observation{older, newer}, edges: map[int64][]memory.Edge{2: {{Relation: "supersedes", SourceSyncID: "sync-new", TargetSyncID: "sync-old"}}}}
 
-	report, err := Propagate(t.Context(), Deps{Memory: mem, Writer: w}, pagesProject)
+	report, err := Propagate(t.Context(), Deps{Source: mem, Writer: w}, pagesProject)
 
 	if err != nil || len(report.Failed) != 0 || len(report.Patched) != 1 || report.Patched[0] != "c-000002" {
 		t.Fatalf("Propagate = (%+v, %v), want c-000002 superseded and nothing failed", report, err)
@@ -388,7 +387,7 @@ func TestSyncStillFailsEveryObservationWhenThePagesCannotBeListed(t *testing.T) 
 	pages := newMemPages(nil)
 	pages.listErr = errTestPages
 	w, _, _ := pagesWriter(t, pages)
-	deps := Deps{Memory: &fakeMemory{live: []memory.Observation{pageObservation(1), pageObservation(2)}}, Writer: w}
+	deps := Deps{Source: &fakeMemory{live: []memory.Observation{pageObservation(1), pageObservation(2)}}, Writer: w}
 
 	report, err := Sync(t.Context(), deps, pagesProject)
 

@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f7831fb3496aa95bb49b5e4feacfe3dde646adec",
+    "head": "a20b61d0533cf3f42792dab87f90467984097eba",
+    "diff_sha256": "a15499e6c6e1198e2e00da7417b41c1ecb2d5d067647eaa248522bbe5b8859da",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/lineage.go",
+      "longterm-mem/cmd/longterm-mem/lineage_test.go",
+      "longterm-mem/internal/engram/source.go",
+      "longterm-mem/internal/engram/source_relations_test.go",
+      "longterm-mem/internal/engram/source_test.go",
+      "longterm-mem/internal/memory/memory.go",
+      "longterm-mem/internal/memorycard/source.go",
+      "longterm-mem/internal/memorycard/source_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f7831fb3496aa95bb49b5e4feacfe3dde646adec",
+      "head": "a20b61d0533cf3f42792dab87f90467984097eba",
+      "diff_sha256": "a15499e6c6e1198e2e00da7417b41c1ecb2d5d067647eaa248522bbe5b8859da"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/lineage.go",
+        "longterm-mem/cmd/longterm-mem/lineage_test.go",
+        "longterm-mem/internal/engram/source.go",
+        "longterm-mem/internal/engram/source_relations_test.go",
+        "longterm-mem/internal/engram/source_test.go",
+        "longterm-mem/internal/memory/memory.go",
+        "longterm-mem/internal/memorycard/source.go",
+        "longterm-mem/internal/memorycard/source_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/engram/source.go:96-126",
+        "claim": "Candidates used to fail when the relations could not be read. It now succeeds and returns memories with the new Status value \"unknown\". Existing consumers that read Status were written against active/superseded/archived. If any of them tests `Status != archived` or `Status != superseded` instead of `== active`, a store with unreadable relations would silently promote memories that might be superseded. The diff does not show those callers, so I cannot confirm this. The commit says no caller reads the new fields yet, but Status is an existing field whose range was widened.",
+        "evidence_class": "inferential",
+        "causal_disposition": "behavior-activated",
+        "proof_refs": [
+          "longterm-mem/internal/engram/source.go:96-126",
+          "longterm-mem/internal/memory/memory.go:16-18"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes Candidates from a hard failure on unreadable relations to a successful listing with StatusUnknown.",
+      "The consumers of Memory.Status are outside the diff, so whether they handle StatusUnknown safely is unverified.",
+      "The other changes looked consistent. ByID, Memories, Probe, Kin propagation and the memorycard Mirrored mapping match their tests."
+    ]
+  }
+}

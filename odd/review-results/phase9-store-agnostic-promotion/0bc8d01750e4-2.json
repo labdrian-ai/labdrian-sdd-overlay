@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "74326e32c2c4ef35dd7215b9ed3138741f31662e",
+    "head": "0bc8d01750e46ad9497288e8c0a8c8f6493e7cf8",
+    "diff_sha256": "6e7511f0938a4f2fda24aece2b79d57ab74a1313b2caa8964e8165e3bae94b19",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "74326e32c2c4ef35dd7215b9ed3138741f31662e",
+      "head": "0bc8d01750e46ad9497288e8c0a8c8f6493e7cf8",
+      "diff_sha256": "6e7511f0938a4f2fda24aece2b79d57ab74a1313b2caa8964e8165e3bae94b19"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:63",
+        "claim": "S9 (f) still says the L12 question is open and that T9 does not start until it is answered. The rewritten Specs preamble and the rewritten T9 line now say L17 (a) answered it. The document contradicts itself on whether T9 is blocked. This change introduced the contradiction by updating the preamble and T9 and leaving this bullet as it was.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "Specs preamble (head line 8): 'the answer to the L12 question (L17) are folded in'",
+          "T9 task line: 'the L12 question is answered by L17 (a)'",
+          "S9 (f) context line: 'is the open question of L12; until it is answered, T9 does not start'"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:3",
+        "claim": "L42 moves T4-T20 to the first feature of the next phase. The Objective, the branch and forecast line and the Specs preamble still present T4-T20 and the Engram removal as this feature's scope (forecast 'over T4-T20', S10-S16 as this feature's specs). Nothing in the head of the document says that scope now belongs to the next phase, and the only record of it is the last Log entry. A reader of the header would believe this feature still delivers it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "Objective/branch line: 'remaining forecast after T3 ... over T4-T20'",
+          "L42: 'T4-T20 ... move to the first feature of the next phase'"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only one file changed (docs); review limited to internal consistency of the rewritten spec/task/log text.",
+      "S9 (f) is an unchanged context line in the third hunk; its head-side line is 63 (hunk starts at +62)."
+    ]
+  }
+}

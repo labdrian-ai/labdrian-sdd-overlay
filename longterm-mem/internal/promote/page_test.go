@@ -40,7 +40,7 @@ func TestEmitPage_TypeMappedOntoVaultEnum(t *testing.T) {
 		RevisionCount: 1, Pinned: true,
 	}
 
-	page, err := EmitPage(obs, "c-000101", nil, clock.Now())
+	page, err := EmitPage(obsMemory(obs), "c-000101", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
 	}
@@ -72,7 +72,7 @@ func TestEmitPage_RelatedLinksResolve(t *testing.T) {
 	obs := memory.Observation{ID: 102, Type: "discovery", Title: "Follow-up Discovery", Content: "Details.", Project: "labdrian-sdd-overlay", RevisionCount: 3}
 	related := []Link{{Address: "c-000099", Title: "Other Page"}}
 
-	page, err := EmitPage(obs, "c-000102", related, clock.Now())
+	page, err := EmitPage(obsMemory(obs), "c-000102", related, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
 	}
@@ -91,13 +91,13 @@ func TestEmitPage_FilenameSurvivesRetitle(t *testing.T) {
 	clock := &fakeClock{at: time.Date(2026, 8, 30, 0, 0, 0, 0, time.UTC)}
 
 	obs := memory.Observation{ID: 103, Type: "pattern", Title: "Original Title", Content: "Body.", Project: "labdrian-sdd-overlay"}
-	first, err := EmitPage(obs, "c-000103", nil, clock.Now())
+	first, err := EmitPage(obsMemory(obs), "c-000103", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (original title): %v", err)
 	}
 
 	obs.Title = "Renamed Title"
-	second, err := EmitPage(obs, "c-000103", nil, clock.Now())
+	second, err := EmitPage(obsMemory(obs), "c-000103", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (retitled): %v", err)
 	}
@@ -122,7 +122,7 @@ func TestEmitPage_MatchesGolden(t *testing.T) {
 	}
 	related := []Link{{Address: "c-000099", Title: "Other Page"}}
 
-	page, err := EmitPage(obs, "c-000200", related, clock.Now())
+	page, err := EmitPage(obsMemory(obs), "c-000200", related, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
 	}

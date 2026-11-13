@@ -71,6 +71,10 @@ A memory that `promote --source memorycard` would refuse (it is bridged by `impo
 Engram observation that already has a page) is never a failure of `sync`. It is skipped, nothing is written for it,
 its page stays byte-identical, and the run counts it.
 
+The same holds for the Engram source: `sync` (and `sync --dry-run`) skips an Engram observation whose memorycard
+memory already has a page, counting it among the skipped, and never plans or writes a second page for it.
+Previously `sync` promoted it again. Memorycard's database is read for this when there is one.
+
 ## Output and exit codes
 
 ```

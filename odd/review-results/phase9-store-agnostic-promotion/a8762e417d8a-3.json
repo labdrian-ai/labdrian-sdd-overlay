@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "09e2f013bfbc31e69f0ba38798e53915d4709202",
+    "head": "a8762e417d8a19b939f6ee1688f7eabb99e86ca7",
+    "diff_sha256": "f9c086a8576eac609838b468fc849efaaf4d95a2f3df98f7a8bdcf3922fa3f22",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/promote_relations_test.go",
+      "longterm-mem/cmd/longterm-mem/sync_bridged_lineage_test.go",
+      "longterm-mem/internal/promote/walk_bridged_test.go",
+      "longterm-mem/internal/promote/walk_failures_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "09e2f013bfbc31e69f0ba38798e53915d4709202",
+      "head": "a8762e417d8a19b939f6ee1688f7eabb99e86ca7",
+      "diff_sha256": "f9c086a8576eac609838b468fc849efaaf4d95a2f3df98f7a8bdcf3922fa3f22"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/promote_relations_test.go",
+        "longterm-mem/cmd/longterm-mem/sync_bridged_lineage_test.go",
+        "longterm-mem/internal/promote/walk_bridged_test.go",
+        "longterm-mem/internal/promote/walk_failures_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The change adds only four test files and touches no production code, so it cannot regress behavior on input that was valid before.",
+      "I could not run the tests or see the helpers they call (memorycardWorld, runPromoteGolden, syncCardsWriter and others), so I checked each test only for internal consistency.",
+      "The match count of 5 in TestReadPages_EveryMatchNamesTheRevisionKeyItWasReadFrom is consistent with the four fixture pages: one match each for pages 1 to 3 and two for page 4.",
+      "The expected sync counts are consistent with the fixture description: 'would promote 1 ... skip 3' for observation 2 alone, with observation 1 bridged and the other two ineligible.",
+      "The table-driven test in walk_failures_test.go is independent of map iteration order and creates a fresh writer for each subtest."
+    ]
+  }
+}

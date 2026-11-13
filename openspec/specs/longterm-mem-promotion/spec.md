@@ -828,11 +828,55 @@ the Promotion Eligibility Predicate (R-007).
 (Previously: same trigger condition, but eligibility was evaluated under the
 prior type/revision-count-based predicate.)
 
+An observation that is the same piece of memory as a memory of another store
+that already has a page (its memorycard lineage names that memory) SHALL NOT
+be promoted a second time: `sync`, `sync --dry-run` and an explicit promote
+decide it through one walk over the memories of a source, and the sync skips
+it, counts it as bridged and does not fail on it.
+
+(Previously: only a memorycard memory was checked for a page of its bridged
+Engram observation; an Engram observation whose memorycard memory already had
+a page was promoted again, and `sync --dry-run` planned that promotion.)
+
+A memory that has a page of its own in its project SHALL be decided by that
+page before any bridge: it is updated or left as it is, never refused as
+bridged, and only a memory with no page of its own can be bridged. The same
+walk SHALL apply to a memory of memorycard whose project changed since it was
+promoted: it is promoted into its new project, and the page it left behind in
+the old one is marked superseded by the new page.
+
+(Previously: a memorycard memory was checked for a bridged page before its
+own, and a memorycard page was found only by its memory's current project, so a
+memory that moved to another project got a second page and left the first one
+untouched.)
+
+#### Scenario: A memory with a page of its own is not refused as bridged
+
+- GIVEN a memorycard memory that has a page of its own and whose lineage
+  observation also has a page
+- WHEN sync or an explicit promote runs for it
+- THEN its own page is updated or left current, and no bridge refuses it
+
+#### Scenario: A memorycard memory that changed project supersedes its old page
+
+- GIVEN a promoted memorycard memory whose project changed
+- WHEN sync runs for its new project
+- THEN a page is created in the new project and the page left in the old
+  project is marked superseded by it
+
 #### Scenario: Never-promoted eligible observation is promoted
 
 - GIVEN an eligible, never-promoted observation for project P
 - WHEN sync runs for P
 - THEN it is promoted
+
+#### Scenario: Observation whose lineage memory has a page is skipped as bridged
+
+- GIVEN an eligible observation for project P whose memorycard lineage
+  memory already has a page
+- WHEN sync runs for P, with or without `--dry-run`
+- THEN no page is written or planned for the observation, it is counted as
+  bridged, and the run exits 0
 
 #### Scenario: Revised eligible observation is re-promoted
 
@@ -944,6 +988,20 @@ WHEN a user or agent explicitly names an Engram observation id for
 promotion, the longterm-mem component SHALL promote that observation
 through the same page-emission, addressing, and registration path used by
 any other eligible observation, regardless of its automatic eligibility.
+An observation that is the same piece of memory as a memory of another store
+that already has a page SHALL be refused, naming that page and leaving it as
+it is (exit 6, `registration_conflict`, as for a bridged memorycard memory).
+
+(Previously: the refusal existed only for a memorycard memory bridged to an
+Engram observation that has a page; an explicit promote of an observation whose
+memorycard lineage memory had a page wrote a second page.)
+
+#### Scenario: Observation whose lineage memory has a page is refused
+
+- GIVEN an observation whose memorycard lineage memory already has a page
+- WHEN an explicit promote call names it
+- THEN the call is refused, the message names that page, and nothing is
+  written
 
 #### Scenario: Below-threshold observation is promoted via explicit call
 

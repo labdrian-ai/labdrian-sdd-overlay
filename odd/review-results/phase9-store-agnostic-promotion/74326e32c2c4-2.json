@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "e85ea498aefb96e0f0acc671361b82f1efaf5ade",
+    "head": "74326e32c2c4ef35dd7215b9ed3138741f31662e",
+    "diff_sha256": "fb71654b1481cb9288c6cd4c53740dac7c03ee3d871f93536a07da8b3b2d6644",
+    "paths": [
+      "docs/architecture/hexagonal-target.md",
+      "longterm-mem/cmd/longterm-mem/cmd_sync.go",
+      "longterm-mem/internal/engram/source_test.go",
+      "longterm-mem/internal/promote/propagate_test.go",
+      "longterm-mem/internal/promote/source.go",
+      "longterm-mem/internal/promote/sync_cards_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "e85ea498aefb96e0f0acc671361b82f1efaf5ade",
+      "head": "74326e32c2c4ef35dd7215b9ed3138741f31662e",
+      "diff_sha256": "fb71654b1481cb9288c6cd4c53740dac7c03ee3d871f93536a07da8b3b2d6644"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "docs/architecture/hexagonal-target.md",
+        "longterm-mem/cmd/longterm-mem/cmd_sync.go",
+        "longterm-mem/internal/engram/source_test.go",
+        "longterm-mem/internal/promote/propagate_test.go",
+        "longterm-mem/internal/promote/source.go",
+        "longterm-mem/internal/promote/sync_cards_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff changes only comments and one doc table row, so it cannot change behavior. Recall risk is limited to the accuracy of the new prose.",
+      "The removed ListMemories comment in sync_cards_test.go duplicated the Candidates comment, so dropping it improves readability.",
+      "The new references (newMemorycardSource, statusOf, Memories) cannot be checked against code outside the diff. Nothing in the diff contradicts them."
+    ]
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "kind": "sweep",
+  "base": "9bb18d804601787b9894692edbc20909a8719a83",
+  "head": "979525fc554d7031fc997c77380720d5a084695b",
+  "diff_sha256": "932c8975284e45dfcb77f5d3c792db86f614166e8b88723593575a2a7216ddd2",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": []
+  },
+  "t2": [
+    {
+      "tool": "deadcode",
+      "module": "longterm-mem",
+      "new": [
+        "internal/promote/support_test.go: unreachable func: cardMem"
+      ]
+    },
+    {
+      "tool": "staticcheck",
+      "module": "longterm-mem",
+      "new": [
+        "internal/promote/support_test.go: func cardMem is unused (U1000)"
+      ]
+    }
+  ],
+  "t3": [],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

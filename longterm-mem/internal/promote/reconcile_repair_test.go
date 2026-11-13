@@ -38,7 +38,7 @@ func TestReconcile_AdoptsARevisionZeroPageAndLeavesTheWedgedState(t *testing.T) 
 
 	// A pinned observation Engram has never revised: eligible, revision 0.
 	obs := memory.Observation{ID: 606, Type: "decision", Title: "Never Revised", Content: "V1 body.", Project: project, RevisionCount: 0, Pinned: true}
-	first, err := EmitPage(obs, address, nil, clock.Now())
+	first, err := EmitPage(obsMemory(obs), address, nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (v1): %v", err)
 	}
@@ -55,7 +55,7 @@ func TestReconcile_AdoptsARevisionZeroPageAndLeavesTheWedgedState(t *testing.T) 
 	// caught up, so the entry fingerprints bytes that are no longer there.
 	clock.Set(time.Date(2026, 8, 10, 0, 0, 0, 0, time.UTC))
 	obs.Content = "V1 body, republished."
-	diverged, err := EmitPage(obs, address, nil, clock.Now())
+	diverged, err := EmitPage(obsMemory(obs), address, nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (diverged): %v", err)
 	}
@@ -67,7 +67,7 @@ func TestReconcile_AdoptsARevisionZeroPageAndLeavesTheWedgedState(t *testing.T) 
 	clock.Set(time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
 	obs.RevisionCount = 1
 	obs.Content = "V2 body."
-	next, err := EmitPage(obs, address, nil, clock.Now())
+	next, err := EmitPage(obsMemory(obs), address, nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage (v2): %v", err)
 	}
@@ -122,7 +122,7 @@ func TestReconcile_RefusesAnAddressOutsideThePagesDirectory(t *testing.T) {
 	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 	obs := memory.Observation{ID: 607, Type: "decision", Title: "Outside", Content: "Body.", Project: project, RevisionCount: 2}
-	page, err := EmitPage(obs, "c-000607", nil, clock.Now())
+	page, err := EmitPage(obsMemory(obs), "c-000607", nil, clock.Now())
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
 	}
@@ -160,7 +160,7 @@ func TestReconcile_RefusesAPageWhoseFrontmatterDisagrees(t *testing.T) {
 	t.Run("the page names a different address", func(t *testing.T) {
 		const address = "c-000608"
 		vaultRoot := t.TempDir()
-		page, err := EmitPage(memory.Observation{ID: 608, Type: "decision", Title: "Copied", Content: "Body.", Project: project, RevisionCount: 2}, "c-000999", nil, clock.Now())
+		page, err := EmitPage(obsMemory(memory.Observation{ID: 608, Type: "decision", Title: "Copied", Content: "Body.", Project: project, RevisionCount: 2}), "c-000999", nil, clock.Now())
 		if err != nil {
 			t.Fatalf("EmitPage: %v", err)
 		}
@@ -178,7 +178,7 @@ func TestReconcile_RefusesAPageWhoseFrontmatterDisagrees(t *testing.T) {
 	t.Run("the page belongs to another project", func(t *testing.T) {
 		const address = "c-000609"
 		vaultRoot := t.TempDir()
-		page, err := EmitPage(memory.Observation{ID: 609, Type: "decision", Title: "Other Project", Content: "Body.", Project: "someone-elses-project", RevisionCount: 2}, address, nil, clock.Now())
+		page, err := EmitPage(obsMemory(memory.Observation{ID: 609, Type: "decision", Title: "Other Project", Content: "Body.", Project: "someone-elses-project", RevisionCount: 2}), address, nil, clock.Now())
 		if err != nil {
 			t.Fatalf("EmitPage: %v", err)
 		}

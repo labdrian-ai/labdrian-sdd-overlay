@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "2fdf3595af81d286b11aa0f5892df07b1d9266ba",
+    "head": "22b50f7f8b58ad3cd00ea09b78b820bb2d2e473a",
+    "diff_sha256": "dd70d6aa7a70faafcd708cec78f0fc1a10df3d8051f2d74c9e267e44418e78cf",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "2fdf3595af81d286b11aa0f5892df07b1d9266ba",
+      "head": "22b50f7f8b58ad3cd00ea09b78b820bb2d2e473a",
+      "diff_sha256": "dd70d6aa7a70faafcd708cec78f0fc1a10df3d8051f2d74c9e267e44418e78cf"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:168",
+        "claim": "L20 still presents behavior differences 1 and 4 as live, including 'Decision for the owner: accept, or make Candidates read only the live rows'. L21 and L22 supersede them, but L20 carries no in-place marker, so a reader of L20 alone sees an open owner decision and two golden regenerations that were later reverted. L20 also reports the acceptance greps (CardMemory and engram/memorycard deps) only for the old commits. L22's final checks do not repeat them on the re-sliced series.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:168",
+          "odd/tasks/phase9-store-agnostic-promotion.md:175"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:68",
+        "claim": "T3 is ticked with no mention that the owner's decision on the Engram sync/promote refusal when a memorycard database exists but cannot be opened (difference 5 in L20) is still pending (L21: 'the owner decides it separately'). The open item appears only in the Log, not on the task line.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:68",
+          "odd/tasks/phase9-store-agnostic-promotion.md:175"
+        ]
+      }
+    ],
+    "evidence": [
+      "The change only edits the T3 task line and appends Log entries L20-L22 in an odd/ document; no code is touched.",
+      "Commit hashes on the task line match the series listed in L22: five code commits, then tests, then spec/README/docs, plus the re-slice note.",
+      "The consistency issues are in the Log's stale and pending items."
+    ]
+  }
+}

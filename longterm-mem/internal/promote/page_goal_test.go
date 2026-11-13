@@ -20,7 +20,7 @@ func goalTestObservation(topic string) memory.Observation {
 
 func emitGoalTestPage(t *testing.T, topic string) string {
 	t.Helper()
-	page, err := EmitPage(goalTestObservation(topic), "c-000200", []Link{{Address: "c-000099", Title: "Other Page"}}, time.Date(2026, 8, 30, 0, 0, 0, 0, time.UTC))
+	page, err := EmitPage(obsMemory(goalTestObservation(topic)), "c-000200", []Link{{Address: "c-000099", Title: "Other Page"}}, time.Date(2026, 8, 30, 0, 0, 0, 0, time.UTC))
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
 	}

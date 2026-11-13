@@ -1,0 +1,83 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "6a5a55f21841b90b9f7afda4a3a794afb50982c5",
+    "head": "a2caff4dbc514b22b173ac708ba66c28249cd348",
+    "diff_sha256": "06848840f13ea5af90f6e44ec0591f56642e8f36b5b8c31fe01ca22f2eb90cb5",
+    "paths": [
+      "odd/review-results/phase9-store-agnostic-promotion/0bc8d01750e4-1.sweep.json",
+      "odd/review-results/phase9-store-agnostic-promotion/0bc8d01750e4-2.json",
+      "odd/review-results/phase9-store-agnostic-promotion/0bc8d01750e4-3.json",
+      "odd/review-results/phase9-store-agnostic-promotion/17fb3f8792f0-1.sweep.json",
+      "odd/review-results/phase9-store-agnostic-promotion/17fb3f8792f0-2.json",
+      "odd/review-results/phase9-store-agnostic-promotion/17fb3f8792f0-3.json",
+      "odd/review-results/phase9-store-agnostic-promotion/6a5a55f21841-1.sweep.json",
+      "odd/review-results/phase9-store-agnostic-promotion/6a5a55f21841-2.json",
+      "odd/review-results/phase9-store-agnostic-promotion/6a5a55f21841-3.json",
+      "odd/review-results/phase9-store-agnostic-promotion/a6c9081b4eb6-1.sweep.json",
+      "odd/review-results/phase9-store-agnostic-promotion/a6c9081b4eb6-2.json",
+      "odd/review-results/phase9-store-agnostic-promotion/a6c9081b4eb6-3.json",
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "6a5a55f21841b90b9f7afda4a3a794afb50982c5",
+      "head": "a2caff4dbc514b22b173ac708ba66c28249cd348",
+      "diff_sha256": "06848840f13ea5af90f6e44ec0591f56642e8f36b5b8c31fe01ca22f2eb90cb5"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/review-results/phase9-store-agnostic-promotion/0bc8d01750e4-1.sweep.json",
+        "odd/review-results/phase9-store-agnostic-promotion/0bc8d01750e4-2.json",
+        "odd/review-results/phase9-store-agnostic-promotion/0bc8d01750e4-3.json",
+        "odd/review-results/phase9-store-agnostic-promotion/17fb3f8792f0-1.sweep.json",
+        "odd/review-results/phase9-store-agnostic-promotion/17fb3f8792f0-2.json",
+        "odd/review-results/phase9-store-agnostic-promotion/17fb3f8792f0-3.json",
+        "odd/review-results/phase9-store-agnostic-promotion/6a5a55f21841-1.sweep.json",
+        "odd/review-results/phase9-store-agnostic-promotion/6a5a55f21841-2.json",
+        "odd/review-results/phase9-store-agnostic-promotion/6a5a55f21841-3.json",
+        "odd/review-results/phase9-store-agnostic-promotion/a6c9081b4eb6-1.sweep.json",
+        "odd/review-results/phase9-store-agnostic-promotion/a6c9081b4eb6-2.json",
+        "odd/review-results/phase9-store-agnostic-promotion/a6c9081b4eb6-3.json",
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:3",
+        "claim": "The new scope line says T4-T20 and S4-S16 move to the next phase, but the Objective on the following line still presents T4-T20, the Engram removal and the ~4500-6500 line forecast as this feature's scope, and the task lines are not marked as moved. The header now carries two scopes that disagree, so a reader of the Objective still reads the Engram removal as delivered by this feature.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:3 (Scope L42: T4-T20 move to next phase)",
+          "odd/tasks/phase9-store-agnostic-promotion.md:5 (Objective: Engram removed from all of longterm-mem; forecast over T4-T20)"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:65",
+        "claim": "S9 (f) now says L17 (a) answers the question, but the Acceptance line right below still says the registry tests pass unchanged 'except what the L12 answer changes', which reads as if the L12 answer were still pending. The S9 (f) fix was not carried through to this sentence.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:65 (S9 (f) rewritten to cite L17 (a))",
+          "odd/tasks/phase9-store-agnostic-promotion.md:66 (Acceptance: 'except what the L12 answer changes')"
+        ]
+      }
+    ],
+    "evidence": [
+      "The change adds review-result JSON records and edits one documentation file; no executable code changes, so no runtime behavior is affected.",
+      "The records bind consistent base, head and diff_sha256 values within each commit's own files.",
+      "L43 claims the findings of 0bc8d017 are fixed by the header scope line and S9 (f); the S9 (f) and scope-line edits are present, but the Objective line was not updated and the S9 Acceptance line still references the L12 answer."
+    ]
+  }
+}

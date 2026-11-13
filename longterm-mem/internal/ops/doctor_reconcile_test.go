@@ -30,7 +30,7 @@ func TestDoctorAndReconcile_CloseTheLoopOnARevisionZeroPage(t *testing.T) {
 	vaultRoot := t.TempDir()
 
 	obs := memory.Observation{ID: 610, Type: "decision", Title: "Never Revised", Content: "V1 body.", Project: project, RevisionCount: 0, Pinned: true}
-	page, err := promote.EmitPage(obs, address, nil, opstest.Instant())
+	page, err := promote.EmitPage(opstest.EngramMemory(obs), address, nil, opstest.Instant())
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
 	}
@@ -47,7 +47,7 @@ func TestDoctorAndReconcile_CloseTheLoopOnARevisionZeroPage(t *testing.T) {
 
 	// The divergence the sidecar never caught up with.
 	obs.Content = "V1 body, republished."
-	diverged, err := promote.EmitPage(obs, address, nil, opstest.Instant())
+	diverged, err := promote.EmitPage(opstest.EngramMemory(obs), address, nil, opstest.Instant())
 	if err != nil {
 		t.Fatalf("EmitPage (diverged): %v", err)
 	}

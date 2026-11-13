@@ -39,7 +39,7 @@ func TestWriter_Promote_CorruptedPageInAnotherProjectDoesNotBlockThisOne(t *test
 
 	obs := memory.Observation{ID: 905, Type: "decision", Title: "Live Decision", Content: "Body.", Project: "p-two", RevisionCount: 1, TopicKey: "longterm-mem/projectmove-recovery-fixture"}
 	w := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Clock: clock, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress)}
-	result, err := w.Promote(t.Context(), obs, false)
+	result, err := w.Promote(t.Context(), obsMemory(obs), false)
 	if err != nil {
 		t.Fatalf("Promote under p-two was blocked by a corrupted page under p-one: %v", err)
 	}
@@ -83,7 +83,7 @@ func TestWriter_Promote_ProjectMoveSupersedesFromTheUpdateBranch(t *testing.T) {
 	revised.RevisionCount = 2
 	revised.Content = "Body v2."
 	w := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: store, Precedence: &memPrecedence{}, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress), Clock: &fakeClock{at: testInstant}}
-	result, err := w.Promote(t.Context(), revised, false)
+	result, err := w.Promote(t.Context(), obsMemory(revised), false)
 	if err != nil {
 		t.Fatalf("Promote: %v", err)
 	}
@@ -130,7 +130,7 @@ func TestWriter_Promote_ProjectMoveSupersedesEvenWhenTheSuccessorUpdateIsSkipped
 	revised.RevisionCount = 2
 	revised.Content = "Body v2."
 	w := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: store, Precedence: &memPrecedence{}, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress), Clock: &fakeClock{at: testInstant}}
-	result, err := w.Promote(t.Context(), revised, false)
+	result, err := w.Promote(t.Context(), obsMemory(revised), false)
 	if err != nil {
 		t.Fatalf("Promote: %v", err)
 	}
@@ -168,7 +168,7 @@ func TestWriter_Promote_ProjectMoveKeepsPatchedHashesWhenALaterPageFails(t *test
 	moved := obs
 	moved.Project = "p-two"
 	w := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: store, Precedence: &memPrecedence{}, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress), Clock: &fakeClock{at: testInstant}}
-	if _, err := w.Promote(t.Context(), moved, false); err == nil {
+	if _, err := w.Promote(t.Context(), obsMemory(moved), false); err == nil {
 		t.Fatalf("Promote = nil error, want the unreachable second orphan reported")
 	} else if !strings.Contains(err.Error(), "c-999999") {
 		t.Fatalf("error %q does not name the orphan that failed", err)
@@ -218,7 +218,7 @@ func TestWriter_Promote_ProjectMoveKeepsPatchedHashesWhenALaterPageIsUnparseable
 	moved := obs
 	moved.Project = "p-two"
 	w := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: store, Precedence: &memPrecedence{}, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress), Clock: &fakeClock{at: testInstant}}
-	if _, err := w.Promote(t.Context(), moved, false); err == nil {
+	if _, err := w.Promote(t.Context(), obsMemory(moved), false); err == nil {
 		t.Fatalf("Promote = nil error, want the unparseable second orphan reported")
 	} else if !strings.Contains(err.Error(), "c-000003") {
 		t.Fatalf("error %q does not name the orphan that failed to parse", err)

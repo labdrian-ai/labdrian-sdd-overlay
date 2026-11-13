@@ -39,6 +39,8 @@ hand since it was written is left alone (exit 6).
 | The memory has no page in its project | a page is created (`promoted c-NNNNNN (created)`) |
 | The memory has a page in its project at the same revision | nothing is written; exit 0, `memorycard memory N already promoted as c-NNNNNN; the page is left as it is` |
 | The memory has a page in its project and a newer revision | the page is updated in place (`promoted c-NNNNNN (updated)`) |
+| The memory has a page of its own and its lineage observation also has one | the page of its own decides first: it is updated or left as it is, and the memory is never refused as bridged (previously the bridge was checked before the memory's own page) |
+| The memory's project changed since it was promoted | a page is created in the new project and the page left in the old one is marked superseded by it, as for an Engram observation (previously the memory got a second page and the first stayed untouched) |
 | The memory is bridged: its `import_map` row (source `engram`, `source_key` = an Engram observation id) names an observation that already has a page | refused, exit 6 (`registration_conflict`); the message names that page, and the page stays byte-identical. No page is created |
 | The memory has no `import_map` row and its `content_hash` is the hash memorycard would compute for an Engram observation of the same project that already has a page | refused exactly like a bridged memory, the message saying the content is the same |
 | A page of the vault could not be read and none that could be read decides the memory | nothing is written, exit 6, as for an Engram observation |
@@ -49,6 +51,11 @@ The hash is memorycard's: sha256, in hex, of `title + "\n" + body` lowercased wi
 collapsed to one space. A copy that was edited after it was mirrored has another hash and is not caught.
 
 A memory imported from an Engram observation that has no page is not bridged to a page, and is promoted.
+
+The bridge works the other way too: an Engram observation whose memorycard memory (the one imported from it, or one
+holding its content) already has a page is refused by `promote --id N` as a bridged memory is: exit 6, the message
+naming that page, and nothing written. Previously `promote --id N` wrote a second page for it. Memorycard's database is
+read for this when there is one; when there is none, no observation has a lineage and `promote` is what it was.
 
 The accepted tradeoff (feature document `odd/tasks/memorycard-engram-replacement.md`, L16, L18 and L19): the pages
 that carry `engram_id` keep resolving against Engram's database and are never touched, so a bridged memory, and a

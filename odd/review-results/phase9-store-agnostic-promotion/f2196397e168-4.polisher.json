@@ -1,0 +1,51 @@
+{
+  "kind": "polisher",
+  "base": "e382cd00856ffe77ee1fc735e7e7fd3b452bee19",
+  "head": "f2196397e1680fe3ce1c87188447616e156649da",
+  "diff_sha256": "20df63f365ae51f873f2bb08c2e2b216440aa07865dc654a878cea9aaed520e5",
+  "findings": {
+    "findings": [
+      {
+        "location": "longterm-mem/internal/promote/legacy.go:901-909 (diff lines)",
+        "severity": "WARNING",
+        "claim": "The Engram bridge named in the claim is not reachable at this commit. Both Engram entry points go through `memoryOfObservation`, which never sets `Lineage` or `Mirrored`, and the diff touches no cmd or MCP file, so Engram sync, `sync --dry-run` and explicit promote cannot see a memorycard lineage memory's page at this commit.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "evidence": [
+          "legacy.go (diff 901-909): `memoryOfObservation` builds a memory with no kin.",
+          "legacy.go (diff 941-951): `engramView.Candidates` maps only `ListObservations` through it.",
+          "explicit.go (diff 862-863): `w.Promote(ctx, memoryOfObservation(obs), true)`.",
+          "The diff contains no cmd or MCP file and no test that sets `Lineage` on an observation."
+        ]
+      },
+      {
+        "location": "longterm-mem/internal/promote/page_scan.go:137",
+        "severity": "SUGGESTION",
+        "claim": "Activating the tagged walk changes how a page with no `address` frontmatter is treated as a successor target: the new `readPages` records `match.address()`, which falls back to the file name, so a superseded memory whose successor's page lacks `address` is now patched with `[[c-000007.md|Title]]` where it used to get no link.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "Removed card.go readCardPages (diff 640-646) and old noteAddress (diff 656-658) returned on `address == \"\"`.",
+          "page_scan.go:137 `index.noteAddress(match.Project, who, match.address())` and page_scan.go:60-65 (`address()` returns `File` when `Address` is empty)."
+        ]
+      },
+      {
+        "location": "longterm-mem/internal/promote/legacy.go:980-994 (diff lines)",
+        "severity": "SUGGESTION",
+        "claim": "`statusOfObservation` looks up the other side of a supersedes edge with `all[i].SyncID == other` and no guard for an empty id; the old `resolveStatus` built `bySyncID` only from observations with a non-empty `SyncID`, so an edge with an empty sync id can now match a later observation without one and mark the page superseded with a wrong successor.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "Old propagate.go (diff 1340-1345): `if obs.SyncID != \"\" { bySyncID[obs.SyncID] = obs }`.",
+          "New legacy.go (diff 989-993): `if all[i].SyncID == other && all[i].CreatedAt > o.CreatedAt { return memory.StatusSuperseded, &all[i] }`."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full f2196397 diff and walk.go, page_scan.go, page_style.go, source.go and Deps.",
+      "No divergence found in eligibility, own page at or below revision, unparseable revision, withheld on an unreadable page, project move, explicit rewriteCurrent, failure wording, or dry run against real run.",
+      "memoryOfCard maps lineage, mirrors, status, successor, successor title and revision faithfully.",
+      "No build, tests or git were run."
+    ]
+  }
+}

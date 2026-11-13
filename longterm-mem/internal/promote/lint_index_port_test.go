@@ -25,7 +25,7 @@ func (i *indexOf) ReadIndex() (string, error) {
 func pageForTheInboundLink(t *testing.T, address string) Page {
 	t.Helper()
 	obs := memory.Observation{ID: 44, Type: "decision", Title: "Named", Content: "Body.", Project: "labdrian-sdd-overlay"}
-	page, err := EmitPage(obs, address, nil, time.Date(2026, 8, 30, 0, 0, 0, 0, time.UTC))
+	page, err := EmitPage(obsMemory(obs), address, nil, time.Date(2026, 8, 30, 0, 0, 0, 0, time.UTC))
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
 	}

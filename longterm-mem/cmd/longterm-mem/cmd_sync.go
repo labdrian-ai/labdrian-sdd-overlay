@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
 )
 
@@ -55,7 +54,15 @@ func (c commands) cmdSync(args []string) int {
 		return exit
 	}
 	defer store.Close()
-	deps, err := a.syncDeps(store, vaultRoot)
+	// Memorycard is read too, for the lineage of the observations: one whose memory already has a page is bridged.
+	cards, exit := a.memorycardForLineage()
+	if exit != exitOK {
+		return exit
+	}
+	if cards != nil {
+		defer a.closeStore("memorycard", cards)
+	}
+	deps, err := a.syncDeps(newEngramSource(store, cards), vaultRoot)
 	if err != nil {
 		return a.refuse(err, exitInternal)
 	}
@@ -71,7 +78,7 @@ func (c commands) cmdSync(args []string) int {
 // syncFromMemorycard is `sync --source memorycard` (S1 c of the C22-FU follow-up): promote.SyncCardsProject over
 // memorycard's memories of the project, both stores opened read-only, or, with dryRun, promote.PlanCards, which
 // walks the same decision and writes nothing. Engram is read too, for the one thing only it can say of a memory
-// with no import_map row (withSameContent). A bridged memory is skipped and counted, and is no failure (exit 0).
+// with no import_map row (the twin rule of newMemorycardSource). A bridged memory is skipped and counted, and is no failure (exit 0).
 func (c commands) syncFromMemorycard(a app, project, vaultRoot string, dryRun bool) int {
 	cards, exit := a.memorycardToPromoteFrom()
 	if exit != exitOK {
@@ -83,7 +90,7 @@ func (c commands) syncFromMemorycard(a app, project, vaultRoot string, dryRun bo
 		return exit
 	}
 	defer a.closeStore("engram", engramStore)
-	source := cardSource{cards: cards, engram: engramStore}
+	source := newMemorycardSource(cards, engramStore)
 
 	ctx := context.Background()
 	if dryRun {
@@ -94,7 +101,7 @@ func (c commands) syncFromMemorycard(a app, project, vaultRoot string, dryRun bo
 }
 
 // reportCardPlan prints what `sync --source memorycard` would do, and writes nothing.
-func reportCardPlan(ctx context.Context, a app, source promote.CardMemories, project, vaultRoot string) int {
+func reportCardPlan(ctx context.Context, a app, source promote.Source, project, vaultRoot string) int {
 	plan, err := a.planCards(ctx, source, project, vaultRoot)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "longterm-mem: sync --source memorycard --dry-run: %v\n", err)
@@ -144,13 +151,6 @@ func reportCardSync(report promote.CardProjectReport, err error) int {
 	return exitOK
 }
 
-// ListAllMemories is promote.CardMemories' listing of every memory whatever its status, the ones status
-// propagation reads. Their pages need no Engram query: a page is the memory's own or it is not a page propagation
-// patches.
-func (s cardSource) ListAllMemories(project string) ([]memory.CardMemory, error) {
-	return s.cards.ListAllMemories(project)
-}
-
 // warnMemoriesLeftAlone is warnLeftAlone for the memories of memorycard: nothing was written for them because no
 // readable page is theirs while a page could not be read.
 func warnMemoriesLeftAlone(w io.Writer, prefix string, withheld []int64) {
@@ -176,7 +176,7 @@ func reportPlan(ctx context.Context, deps promote.Deps, project, vaultRoot strin
 	// (`promoted N, patched M`). A dry run that named only the
 	// promotions would tell an operator nothing is rewritten
 	// immediately before a re-sync rewrites existing pages.
-	fmt.Printf("longterm-mem: sync --dry-run: would promote %d observation(s), patch %d page(s), skip %d, into %s\n", plan.WouldPromote, plan.WouldPatch, plan.Skipped, vaultRoot)
+	fmt.Printf("longterm-mem: sync --dry-run: would promote %d observation(s), patch %d page(s), skip %d, into %s\n", plan.WouldPromote, plan.WouldPatch, plan.Skipped+plan.Bridged, vaultRoot)
 	for _, title := range plan.Titles {
 		fmt.Printf("  would promote: %s\n", title)
 	}

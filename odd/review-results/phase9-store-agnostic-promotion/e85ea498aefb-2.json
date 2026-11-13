@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "263158c5ece4e9927baa7fb81aa42f17a342032d",
+    "head": "e85ea498aefb96e0f0acc671361b82f1efaf5ade",
+    "diff_sha256": "82b3b0b8cf711f51390c020a7f769e7d2aff83745d37aa1312bb7f5128dbe455",
+    "paths": [
+      "longterm-mem/docs/promote-from-memorycard.md",
+      "longterm-mem/internal/promote/page_scan.go",
+      "longterm-mem/internal/promote/page_scan_test.go",
+      "odd/tasks/phase9-store-agnostic-promotion.md",
+      "openspec/specs/longterm-mem-promotion/spec.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "263158c5ece4e9927baa7fb81aa42f17a342032d",
+      "head": "e85ea498aefb96e0f0acc671361b82f1efaf5ade",
+      "diff_sha256": "82b3b0b8cf711f51390c020a7f769e7d2aff83745d37aa1312bb7f5128dbe455"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/docs/promote-from-memorycard.md",
+        "longterm-mem/internal/promote/page_scan.go",
+        "longterm-mem/internal/promote/page_scan_test.go",
+        "odd/tasks/phase9-store-agnostic-promotion.md",
+        "openspec/specs/longterm-mem-promotion/spec.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "page_scan.go: removing the `match.Project != m.Project` condition in scanFor's consider closure restores the base cross-project bridging. The own-page lookup via ownPage(m.Project, m.Identity) and the address-fallback fix are untouched.",
+      "page_scan_test.go: the new test checks both the Sync path (Bridged == 1, nothing promoted, one page file) and the explicit Promote path (*BridgedError). Together they pin the restored behavior without contradicting the code.",
+      "The docs table row and the spec paragraph that carried the project wording are removed. The remaining spec text and doc rows (own page decides before bridge; content-hash bridge scoped to the same project, which the hash already encodes) stay consistent with the reverted code."
+    ]
+  }
+}

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultlayout"
 )
 
@@ -56,15 +57,15 @@ func TestPageIdentity_ARevisionIsReadWithoutAnID(t *testing.T) {
 func TestPageIdentity_CardScanKeepsTheRevisionSlotsApart(t *testing.T) {
 	vaultRoot := t.TempDir()
 	writeIdentityPage(t, vaultRoot, "c-000803.md", "---\nmemorycard_id: 7\nmemorycard_revision: 3\nengram_id: 402\nproject: memorycard\naddress: c-000803\n---\n\nBody.\n")
-	index, err := readCardPages(pagesIn(vaultRoot))
+	index, err := readPages(pagesIn(vaultRoot))
 	if err != nil {
-		t.Fatalf("readCardPages: %v", err)
+		t.Fatalf("readPages: %v", err)
 	}
-	if got := index.own[cardKey{project: "memorycard", id: 7}]; got == nil || got.RawRevision != "3" {
+	if got := index.ownPage("memorycard", memory.Identity{Source: memorycardSource, ID: "7"}); got == nil || got.RawRevision != "3" || got.RevisionKey != "memorycard_revision" {
 		t.Fatalf("own page of memory 7 = %+v; want its memorycard revision 3", got)
 	}
-	if len(index.engramPages) != 1 || index.engramPages[0].EngramID != "402" || index.engramPages[0].RawRevision != "" {
-		t.Fatalf("engramPages = %+v; want the page of observation 402 with no revision of the memory's", index.engramPages)
+	if got := index.ownPage("memorycard", memory.Identity{Source: engramSource, ID: "402"}); got == nil || got.RawRevision != "" {
+		t.Fatalf("page of observation 402 = %+v; want the page with no revision of the memory's", got)
 	}
 }
 

@@ -1,0 +1,30 @@
+{
+  "kind": "polisher",
+  "base": "54681f1f4e7891018c14dd9cf84b69541337d1a5",
+  "head": "5cb107ef8795d4d9383f121d99a84076abbe561b",
+  "diff_sha256": "90db6f4e87437e844a4ad1904c4ea33baa32d1d2f270f9f81e8a5addadc9e0d9",
+  "findings": {
+    "findings": [
+      {
+        "location": "longterm-mem/internal/promote/project_sync.go:75-81",
+        "severity": "SUGGESTION",
+        "claim": "The doc comment of sourceAnswers was not updated for the new LineageError branch: a failing Candidates listing now counts as answering when the failure is a LineageError. The Source fallback path, `Memories(project)` for a source without a Prober, has no such exemption, so a non-Prober source whose Memories fails with a LineageError would still be reported as MemoryUnavailable. No such source exists today. The two branches are inconsistent and the rule is not documented where it is applied.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "project_sync.go:81-93: the Candidates error is exempted only for *memory.LineageError, while `_, err := src.Memories(project); return err == nil` is not.",
+          "internal/engram/source.go:51-57,137-144: Memories also goes through build and the lineage function, so it can return the same wrapped LineageError for a source with no Prober.",
+          "internal/engram/source.go:61-64: the only real source (Engram) has a Prober, so the Memories fallback is not reached on the production path."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the 5cb107ef diff in full and project_sync.go, cmd/longterm-mem/lineage.go, cmd_sync.go, cmd_promote.go, app.go, internal/engram/source.go.",
+      "Traced LineageError through engram.build -> Source.Candidates -> promote.Sync (%w), so errors.As in sourceAnswers matches.",
+      "Dry run, explicit promote and MCP promote never reach MemoryUnavailable for a lineage error.",
+      "Hook (engine/synctrigger/synctrigger.go:324-341): a lineage failure moves from failure:engram-unavailable (exit 4) to exit 1, the intended change.",
+      "memory.LineageError is constructed only at lineage.go:35 and 39 (memorycard reads), so no non-lineage failure is misclassified.",
+      "No tests were run."
+    ]
+  }
+}

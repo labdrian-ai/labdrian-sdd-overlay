@@ -17,7 +17,7 @@ func TestSyncProject_RunsBothPassesAndHandsBackBothReports(t *testing.T) {
 		all:  []memory.Observation{{ID: 7, Type: "decision", Title: "Pinned", Content: "Body.", Project: pagesProject, RevisionCount: 1, Pinned: true}},
 	}
 
-	report, err := SyncProject(t.Context(), Deps{Memory: mem, Writer: w}, pagesProject)
+	report, err := SyncProject(t.Context(), Deps{Source: mem, Writer: w}, pagesProject)
 
 	if err != nil {
 		t.Fatalf("SyncProject: %v", err)
@@ -42,7 +42,7 @@ func TestSyncProject_TheSecondPassRunsWhenTheFirstFails(t *testing.T) {
 	w := readyWriter(t)
 	mem := &fakeMemory{}
 
-	report, err := SyncProject(t.Context(), Deps{Memory: mem, Writer: w, Index: IndexRebuilderFunc(func(context.Context) error { return boom })}, pagesProject)
+	report, err := SyncProject(t.Context(), Deps{Source: mem, Writer: w, Index: IndexRebuilderFunc(func(context.Context) error { return boom })}, pagesProject)
 
 	if !errors.Is(err, boom) {
 		t.Fatalf("SyncProject = %v, want the rebuild's failure", err)
@@ -62,7 +62,7 @@ func TestSyncProject_TheFailuresOfBothPassesAreOneError(t *testing.T) {
 	syncState.err = syncBoom
 	mem := &fakeMemory{historyErr: propagateBoom}
 
-	_, err := SyncProject(t.Context(), Deps{Memory: mem, Writer: w}, pagesProject)
+	_, err := SyncProject(t.Context(), Deps{Source: mem, Writer: w}, pagesProject)
 
 	if !errors.Is(err, syncBoom) || !errors.Is(err, propagateBoom) {
 		t.Fatalf("SyncProject = %v, want the failures of both passes", err)
@@ -92,13 +92,16 @@ func TestSyncProject_SaysWhyARunFailed(t *testing.T) {
 		{"the memory cannot list", &fakeMemory{listErr: errors.New("no such table: observations")}, nil, nil, MemoryUnavailable},
 		{"the memory cannot read its relations, and a step after the listing failed", &fakeMemory{edgesErr: errors.New("no such table: memory_relations")}, nil, stateBoom, MemoryUnavailable},
 		{"the memory answers and a step failed that is not the index", &fakeMemory{}, nil, stateBoom, OtherFailure},
+		// The listing failed for the lineage another store says of the memories, not for the memory: that store is
+		// named in the error, and the memory is not reported as one that can no longer answer.
+		{"the lineage store cannot say the lineage, and the memory answers", &fakeMemory{listErr: &memory.LineageError{Store: "memorycard", Err: errors.New("no such table: import_map")}}, nil, nil, OtherFailure},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			w := readyWriter(t)
 			_, _, syncState := registration(w)
 			syncState.err = tc.state
-			deps := Deps{Memory: tc.memory, Writer: w}
+			deps := Deps{Source: tc.memory, Writer: w}
 			if tc.rebuild != nil {
 				deps.Index = IndexRebuilderFunc(func(context.Context) error { return tc.rebuild })
 			}
@@ -120,7 +123,7 @@ func TestSyncProject_SaysWhyARunFailed(t *testing.T) {
 func TestSyncProject_AHealthyRunDoesNotProbeTheMemory(t *testing.T) {
 	mem := &fakeMemory{}
 
-	if _, err := SyncProject(t.Context(), Deps{Memory: mem, Writer: readyWriter(t)}, pagesProject); err != nil {
+	if _, err := SyncProject(t.Context(), Deps{Source: mem, Writer: readyWriter(t)}, pagesProject); err != nil {
 		t.Fatalf("SyncProject: %v", err)
 	}
 
@@ -137,7 +140,7 @@ func TestSyncProject_TheProbeAsksTheListingAndTheRelations(t *testing.T) {
 	_, _, syncState := registration(w)
 	syncState.err = errors.New("state offline")
 
-	if _, err := SyncProject(t.Context(), Deps{Memory: mem, Writer: w}, pagesProject); err == nil {
+	if _, err := SyncProject(t.Context(), Deps{Source: mem, Writer: w}, pagesProject); err == nil {
 		t.Fatal("SyncProject succeeded, want the failure that triggers the probe")
 	}
 
@@ -154,7 +157,7 @@ func TestSyncProject_TheProbeAsksTheListingAndTheRelations(t *testing.T) {
 func TestSync_TheRebuildFailureIsATypeOfItsOwnWithTheWordsItAlwaysHad(t *testing.T) {
 	boom := errors.New("scripts offline")
 
-	_, err := Sync(t.Context(), Deps{Memory: &fakeMemory{}, Writer: readyWriter(t), Index: IndexRebuilderFunc(func(context.Context) error { return boom })}, pagesProject)
+	_, err := Sync(t.Context(), Deps{Source: &fakeMemory{}, Writer: readyWriter(t), Index: IndexRebuilderFunc(func(context.Context) error { return boom })}, pagesProject)
 
 	var rebuild *IndexRebuildError
 	if !errors.As(err, &rebuild) {

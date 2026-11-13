@@ -17,6 +17,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 	"time"
 
@@ -48,8 +49,8 @@ func WriteSyncState(t *testing.T, vaultRoot, completedAt string) {
 // split the file it wrote.
 func RenderPage(t *testing.T, address, title string) promote.Page {
 	t.Helper()
-	obs := memory.Observation{ID: 1, Type: "decision", Title: title, Content: "Body content.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
-	page, err := promote.EmitPage(obs, address, nil, Instant())
+	m := memory.Memory{Identity: memory.Identity{Source: "engram", ID: "1"}, Type: "decision", Title: title, Body: "Body content.", Project: "labdrian-sdd-overlay", Revision: 1}
+	page, err := promote.EmitPage(m, address, nil, Instant())
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
 	}
@@ -142,3 +143,14 @@ func RegisterPage(t *testing.T, vaultRoot, address, title string) {
 // Instant is the instant the fixtures render and register at: a test that builds a page here has no reason to
 // care which day it is, and a fixed one keeps the page the same on every run.
 func Instant() time.Time { return time.Date(2026, 8, 31, 0, 0, 0, 0, time.UTC) }
+
+// EngramMemory is an Engram observation as promotion reads it, the way the Engram adapter maps it, without the
+// status and the lineage the adapter finds in the database: what a test needs to render the page of an
+// observation (promote.EmitPage) or to ask its eligibility.
+func EngramMemory(o memory.Observation) memory.Memory {
+	return memory.Memory{
+		Identity: memory.Identity{Source: "engram", ID: strconv.FormatInt(o.ID, 10)},
+		Project:  o.Project, Type: o.Type, Title: o.Title, Body: o.Content, TopicKey: o.TopicKey,
+		Pinned: o.Pinned, Status: memory.StatusActive, Revision: o.RevisionCount, SyncID: o.SyncID,
+	}
+}

@@ -1,0 +1,20 @@
+{
+  "kind": "sweeper",
+  "base": "9bb18d804601787b9894692edbc20909a8719a83",
+  "head": "979525fc554d7031fc997c77380720d5a084695b",
+  "diff_sha256": "932c8975284e45dfcb77f5d3c792db86f614166e8b88723593575a2a7216ddd2",
+  "sweep": "979525fc554d-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T2 deadcode longterm-mem: internal/promote/support_test.go: unreachable func: cardMem",
+      "disposition": "finding",
+      "evidence": "cardMem is unused at 979525fc (commit kept byte-for-byte); the builder resolves it in a follow-up commit on top. The current working tree already calls it at internal/promote/support_test.go:66 (cardMems), :74, :79 and :221. A corrected disposition needs a sweeper commit, which there is none."
+    },
+    {
+      "candidate": "T2 staticcheck longterm-mem: internal/promote/support_test.go: func cardMem is unused (U1000)",
+      "disposition": "finding",
+      "evidence": "Same as the deadcode entry: unused at 979525fc, called at support_test.go:66,74,79,221 in the working tree; fixed by the builder follow-up."
+    }
+  ]
+}

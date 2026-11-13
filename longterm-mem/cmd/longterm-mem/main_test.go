@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/opstest"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
 
 	_ "modernc.org/sqlite"
@@ -224,7 +225,7 @@ func TestCmdDoctor_ReportsEveryCheckDespiteOneFailing(t *testing.T) {
 	const address = "c-000777"
 
 	obs := memory.Observation{ID: 1, Type: "decision", Title: "Unregistered Page", Content: "Body.", Project: "cmd-doctor-project", RevisionCount: 1}
-	page, err := promote.EmitPage(obs, address, nil, fixtureInstant)
+	page, err := promote.EmitPage(opstest.EngramMemory(obs), address, nil, fixtureInstant)
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
 	}

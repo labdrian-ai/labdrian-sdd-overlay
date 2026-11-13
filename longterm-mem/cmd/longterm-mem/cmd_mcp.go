@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"flag"
+	"io/fs"
 	"os"
 	"os/signal"
 	"syscall"
@@ -120,7 +121,8 @@ func mcpGet(store *engram.Store) func(context.Context, int64) (mcpserver.GetOutc
 // then. It writes, so it seeds the vault registry of a machine that has none, as the commands that write do.
 //
 // With source memorycard the id is a memorycard memory id; memorycard's database is opened for the call, read-only,
-// and the session's Engram store answers which observations hold the memory's content.
+// and the session's Engram store answers which observations hold the memory's content. Without it the id is an
+// Engram observation id, and memorycard's database, when there is one, answers which memories are the same piece of memory.
 func (c commands) mcpPromote(store *engram.Store) func(ctx context.Context, project, source string, id int64) (mcpserver.PromoteOutcome, error) {
 	return func(ctx context.Context, project, source string, id int64) (mcpserver.PromoteOutcome, error) {
 		vaultRoot, err := machineVaults().ToWrite(project, "")
@@ -139,9 +141,19 @@ func (c commands) mcpPromote(store *engram.Store) func(ctx context.Context, proj
 				return mcpserver.PromoteOutcome{}, openErr
 			}
 			defer cards.Close()
-			outcome, err = promote.PromoteCardAndReindex(ctx, writer, cardLookup(cards, store), id, index)
+			outcome, err = promote.PromoteCardAndReindex(ctx, writer, newMemorycardSource(cards, store), id, index)
 		} else {
-			outcome, err = promote.PromoteAndReindex(ctx, writer, store.ObservationByID, id, index)
+			// Memorycard is read too, for the lineage of the observation, as the command does.
+			cards, openErr := memorycard.Open(os.Getenv(memorycardDBEnvVar))
+			switch {
+			case openErr == nil:
+				defer cards.Close()
+			case errors.Is(openErr, fs.ErrNotExist):
+				cards = nil
+			default:
+				return mcpserver.PromoteOutcome{}, openErr
+			}
+			outcome, err = promote.PromoteAndReindex(ctx, writer, newEngramSource(store, cards), id, index)
 		}
 		if err != nil {
 			return mcpserver.PromoteOutcome{}, err

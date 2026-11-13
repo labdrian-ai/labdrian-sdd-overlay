@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a36b4ae012dfc197027444f518937c1917ef03ba",
+    "head": "a4191092f5f50ee2bc4b3c1facd1e2dd22d81467",
+    "diff_sha256": "276b33c7f505069dfd4337d23c7853be26d40ddc6ea7bf53c481619dc0151f5e",
+    "paths": [
+      "longterm-mem/docs/promote-from-memorycard.md",
+      "openspec/specs/longterm-mem-promotion/spec.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "a36b4ae012dfc197027444f518937c1917ef03ba",
+      "head": "a4191092f5f50ee2bc4b3c1facd1e2dd22d81467",
+      "diff_sha256": "276b33c7f505069dfd4337d23c7853be26d40ddc6ea7bf53c481619dc0151f5e"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/docs/promote-from-memorycard.md",
+        "openspec/specs/longterm-mem-promotion/spec.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff changes only two documentation/spec files: one table row in promote-from-memorycard.md and one added paragraph in spec.md. No executable code changes, so no behavior can regress from this commit.",
+      "The added spec paragraph and the doc row agree: a page bridges a memory only within the memory's own project. Both state the prior behavior as 'Previously', consistent with the surrounding text.",
+      "The new paragraph does not contradict the following paragraph, which says a memory's own page decides first and only a memory with no page of its own can be bridged.",
+      "Whether the code implements the stated behavior is outside this diff. The commit claims docs only, so I report nothing about it."
+    ]
+  }
+}

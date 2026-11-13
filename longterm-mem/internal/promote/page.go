@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultlayout"
 )
 
 // wikilinkPattern is the D7 alias wikilink shape, `[[c-NNNNNN|Title]]`,
@@ -33,51 +32,34 @@ type Page struct {
 	Body        string
 }
 
-// EmitPage renders obs as a contract-conformant vault page at address
-// (R-027): frontmatter with the Engram type mapped onto the vault's own
-// type contract (concept, D7) plus flat engram_* extras, related links
-// from the caller-resolved related slice, and a body carrying obs.Content
-// behind an H1 title (omitted when the content already opens with one)
-// plus a footer naming the Engram source.
+// EmitPage renders m as a contract-conformant vault page at address
+// (R-027), in the style of the pages of the store m comes from (pageStyle): the
+// frontmatter with the store's type mapped onto the vault's own type contract
+// (concept, D7) plus flat extras that name the memory (engram_*, memorycard_*),
+// related links from the caller-resolved related slice, and a body carrying the
+// memory's content behind an H1 title (omitted when the content already opens
+// with one) plus a footer naming the store.
 //
 // at is the instant the page is rendered at: its created and updated dates
 // are the day it is in UTC, whatever zone at carries. The caller reads the
 // time (the Writer from its Clock), so the same inputs always render the
 // same page.
-func EmitPage(obs memory.Observation, address string, related []Link, at time.Time) (Page, error) {
-	if address == "" {
-		return Page{}, fmt.Errorf("promote: emit page for observation %d: address is required", obs.ID)
+func EmitPage(m memory.Memory, address string, related []Link, at time.Time) (Page, error) {
+	style, err := styleOf(m.Identity.Source)
+	if err != nil {
+		return Page{}, err
 	}
-
-	today := at.UTC().Format("2006-01-02")
-	fm := frontmatter{
-		Title: obs.Title, Address: address, Aliases: []string{obs.Title},
-		Created: today, Updated: today,
-		Tags: pageTags(obs), Status: statusFor(obs),
-		Related:        relatedWikilinks(related),
-		EngramID:       obs.ID,
-		EngramSyncID:   obs.SyncID,
-		EngramType:     obs.Type,
-		EngramRevision: obs.RevisionCount,
-		Project:        obs.Project,
-	}
-
-	return Page{
-		Address:     address,
-		Path:        vaultlayout.PageFile(address),
-		Frontmatter: fm.Render(),
-		Body:        renderBody(obs),
-	}, nil
+	return style.emit(m, address, related, at)
 }
 
-// pageTags are a promoted page's tags: memory and the observation's type, and,
-// when the observation's topic carries the goal prefix (memory.GoalOfTopic),
+// pageTags are a promoted page's tags: memory and the memory's type, and,
+// when the memory's topic carries the goal prefix (memory.GoalOfTopic),
 // the goal's tag after them (ADR C23 M5, decision 2), so a query under a goal
 // can tell the page's goal from its frontmatter. An observation of no goal
 // gets the two tags every page had before goals.
-func pageTags(obs memory.Observation) []string {
-	tags := []string{"memory", obs.Type}
-	if goal, ok := memory.GoalOfTopic(obs.TopicKey); ok {
+func pageTags(m memory.Memory) []string {
+	tags := []string{"memory", m.Type}
+	if goal, ok := memory.GoalOfTopic(m.TopicKey); ok {
 		tags = append(tags, memory.GoalTag(goal))
 	}
 	return tags
@@ -86,8 +68,8 @@ func pageTags(obs memory.Observation) []string {
 // statusFor derives the fresh-promotion status: mature for a pinned
 // observation, developing otherwise; R-033 (slice 7) is the only place
 // that later sets superseded/archived.
-func statusFor(obs memory.Observation) string {
-	if obs.Pinned {
+func statusFor(m memory.Memory) string {
+	if m.Pinned {
 		return "mature"
 	}
 	return "developing"
@@ -106,19 +88,19 @@ func wikilink(address, title string) string {
 	return fmt.Sprintf("[[%s|%s]]", address, title)
 }
 
-// renderBody renders obs.Content behind an H1 title (omitted when the
+// renderBody renders the content of an Engram observation behind an H1 title (omitted when the
 // content already opens with one) plus a footer naming the Engram source.
-func renderBody(obs memory.Observation) string {
-	content := strings.TrimRight(obs.Content, "\n")
+func renderBody(m memory.Memory, id int64) string {
+	content := strings.TrimRight(m.Body, "\n")
 	var b strings.Builder
 	if !strings.HasPrefix(strings.TrimSpace(content), "# ") {
 		b.WriteString("# ")
-		b.WriteString(obs.Title)
+		b.WriteString(m.Title)
 		b.WriteString("\n\n")
 	}
 	b.WriteString(content)
 	b.WriteString("\n\n")
-	b.WriteString(promotionFooter(obs.ID, obs.RevisionCount))
+	b.WriteString(promotionFooter(id, m.Revision))
 	return b.String()
 }
 

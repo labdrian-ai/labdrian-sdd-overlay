@@ -413,6 +413,35 @@ func TestPropagateCards_ARestoredMemorysPageComesBackFromArchived(t *testing.T) 
 	}
 }
 
+// A memory whose store could not say what became of it (memory.StatusUnknown) is not an active one: its page, which
+// says archived, is not brought back to a current status on a guess. It is left as it is and the memory is reported
+// as failed, with the cause the store gave.
+func TestPropagateCards_AMemoryWithAnUnknownStatusLeavesItsPageAloneAndIsReported(t *testing.T) {
+	m := eligibleCard(43, 1)
+	w, _, vaultRoot, address := cardWorld(t, m)
+	gone := m
+	gone.Status = "archived"
+	if _, err := PropagateCards(t.Context(), &fakeCards{memories: []memory.CardMemory{gone}}, w, "memorycard"); err != nil {
+		t.Fatal(err)
+	}
+	before := readPage(t, vaultRoot, address[43])
+	cause := errors.New("relations cannot be read")
+	unknown := cardMem(m)
+	unknown.Status, unknown.StatusCause = memory.StatusUnknown, cause
+
+	report, err := PropagateCards(t.Context(), fixedSource{memories: []memory.Memory{unknown}}, w, "memorycard")
+
+	if err == nil || len(report.Patched) != 0 || len(report.Failed) != 1 {
+		t.Fatalf("PropagateCards = (%+v, %v), want nothing patched and the memory failed", report, err)
+	}
+	if got := report.Failed[0].Err; !errors.Is(got, cause) || !strings.Contains(got.Error(), "resolve status") {
+		t.Errorf("failure = %v, want %q wrapping the store's cause", got, "resolve status")
+	}
+	if after := readPage(t, vaultRoot, address[43]); after != before {
+		t.Errorf("the page changed on a guessed status:\n%s", after)
+	}
+}
+
 // An active memory's page whose status a human set by hand (it is neither superseded nor archived) is left alone:
 // propagation restores a page from a retirement, it does not police the status of a page memorycard never retired.
 func TestPropagateCards_AnActiveMemorysHandSetStatusIsLeftAlone(t *testing.T) {
