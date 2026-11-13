@@ -4,8 +4,6 @@ import (
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
-
-	_ "modernc.org/sqlite"
 )
 
 // seedPromotedPage writes obs as an already-promoted page at address addr,

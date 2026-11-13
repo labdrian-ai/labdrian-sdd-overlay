@@ -342,7 +342,7 @@ func TestReconcile_ReadsTheMemorycardRevisionFirstAndNeverFallsBackFromAMalforme
 		"memorycard malformed beside a valid engram one": {"memorycard_id: 9\nmemorycard_revision: x\nengram_id: 9\nengram_revision: 2\n", 0, true},
 		"engram alone":                         {"engram_id: 9\nengram_revision: 2\n", 2, false},
 		"source_revision before an engram one": {"source: memorycard\nsource_id: 9\nsource_revision: 4\nengram_id: 9\nengram_revision: 2\n", 4, false},
-		"none of the three":                    {"memorycard_id: 9\n", 0, true},
+		"no revision at all":                   {"memorycard_id: 9\n", 0, true},
 	} {
 		t.Run(name, func(t *testing.T) {
 			vaultRoot := t.TempDir()

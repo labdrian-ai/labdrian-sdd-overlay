@@ -114,18 +114,16 @@ func checkPromotedPagesEligible(promoted PageReader, eligibility func(project st
 		if len(candidates) == 0 {
 			continue
 		}
+		reasons := make([]string, len(candidates))
 		eligible := false
-		for _, m := range candidates {
-			if promote.IneligibleReason(memory.Memory{Pinned: m.Pinned, TopicKey: m.TopicKey}) == "" {
-				eligible = true
-				break
-			}
+		for i, m := range candidates {
+			reasons[i] = promote.IneligibleReason(memory.Memory{Pinned: m.Pinned, TopicKey: m.TopicKey})
+			eligible = eligible || reasons[i] == ""
 		}
 		if eligible {
 			continue
 		}
-		m := candidates[0]
-		reason := promote.IneligibleReason(memory.Memory{Pinned: m.Pinned, TopicKey: m.TopicKey})
+		m, reason := candidates[0], reasons[0]
 		findings = append(findings, adviceFor(p.address, m, reason, legacy))
 	}
 	if len(findings) == 0 {
