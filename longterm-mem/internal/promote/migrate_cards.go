@@ -76,7 +76,8 @@ const (
 	RefusedHasOwnPage
 	// RefusedOther: the page's identity cannot be read as one memory (an id that is no number, an Engram and a
 	// memorycard identity at once, a legacy key and no memory, identity lines the rewrite cannot replace whole), or
-	// the memory is in another project.
+	// the memory is in another project, or an identity to write (a type ending in ---) would end the frontmatter
+	// early for the shared reader.
 	RefusedOther
 	// RefusedHalfMigrated: the page's body is the one its entry records, but its frontmatter is neither the recorded
 	// page nor a rewrite a stopped run could have written: a frontmatter line was edited, or a stopped run was followed
