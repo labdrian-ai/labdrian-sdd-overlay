@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "b4b63a2ec9664bf822a20ee78bc2437da4da84b7",
+    "head": "e5a36507d7f3fbf1a4646a2a3803d64095419cf4",
+    "diff_sha256": "23eca772f6562ab636480a231e096de5a23836708e93d2fe71b90dae983c016d",
+    "paths": [
+      "longterm-mem/README.md",
+      "longterm-mem/docs/promote-from-memorycard.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "b4b63a2ec9664bf822a20ee78bc2437da4da84b7",
+      "head": "e5a36507d7f3fbf1a4646a2a3803d64095419cf4",
+      "diff_sha256": "23eca772f6562ab636480a231e096de5a23836708e93d2fe71b90dae983c016d"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/README.md",
+        "longterm-mem/docs/promote-from-memorycard.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/docs/promote-from-memorycard.md:131",
+        "claim": "The note text is wrapped in a single-backtick code span but contains an inner `project:` in backticks, so the span closes early and the note renders broken. The base had the same flaw split across lines, and the rewrite kept it.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "pre-existing",
+        "proof_refs": [
+          "longterm-mem/docs/promote-from-memorycard.md:131"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only two documentation files, so I could not check the new reading rules against the command's behaviour.",
+      "The README row and the guide's table row and rule list use the same causes (CRLF line endings, no closing ---, a BOM, blank line or spaces before the opening ---), and I found no contradiction between them.",
+      "The single-project count comes before the several-project rule, and the note about pages with no project is described as coming after the counts, as the commit claims."
+    ]
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "kind": "sweep",
+  "base": "4d50802546be25a66b93b2723f0276a279ad9518",
+  "head": "b4b63a2ec9664bf822a20ee78bc2437da4da84b7",
+  "diff_sha256": "c976f5fa4c89e1c69d9ec28cbe2058c71f0cc2ed4a404729de7da6f833998d9b",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": [
+      {
+        "name": "unreadableFrontmatter",
+        "hits": [
+          "odd/review-results/phase9-store-agnostic-promotion/9f40b3944465-3.json",
+          "odd/review-results/phase9-store-agnostic-promotion/9f40b3944465-5.polisher.json",
+          "odd/review-results/phase9-store-agnostic-promotion/d58264aee52f-2.json",
+          "odd/review-results/phase9-store-agnostic-promotion/d58264aee52f-3.json",
+          "odd/review-results/phase9-store-agnostic-promotion/d58264aee52f-4.polisher.json"
+        ]
+      }
+    ]
+  },
+  "t2": [],
+  "t3": [],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

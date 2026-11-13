@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "b4b63a2ec9664bf822a20ee78bc2437da4da84b7",
+    "head": "e5a36507d7f3fbf1a4646a2a3803d64095419cf4",
+    "diff_sha256": "23eca772f6562ab636480a231e096de5a23836708e93d2fe71b90dae983c016d",
+    "paths": [
+      "longterm-mem/README.md",
+      "longterm-mem/docs/promote-from-memorycard.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "b4b63a2ec9664bf822a20ee78bc2437da4da84b7",
+      "head": "e5a36507d7f3fbf1a4646a2a3803d64095419cf4",
+      "diff_sha256": "23eca772f6562ab636480a231e096de5a23836708e93d2fe71b90dae983c016d"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/README.md",
+        "longterm-mem/docs/promote-from-memorycard.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/docs/promote-from-memorycard.md:146",
+        "claim": "The closing sentence now says 'the count is the number of pages that still carry a legacy key'. The base wording added 'plus the pages with no project' to the project count. Read alone, the new sentence is false for a run of one project, because pages with no project also still carry a legacy key. The correct vault-wide rule appears only a few paragraphs earlier, so a reader of this paragraph can take the per-project count as the total.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/docs/promote-from-memorycard.md:145-146"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes documentation only: README.md and promote-from-memorycard.md. I compared the new reading rules against the table row, the README row and the note paragraph, and the causes of unreadable frontmatter are consistent across them. The only wording problem I found is the dropped 'plus pages with no project' clause."
+    ]
+  }
+}

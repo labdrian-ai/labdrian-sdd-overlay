@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "bcd942c89a9f066d4d1bcde3e08fc9a3d221fd59",
+    "head": "d3e672cef5d9ba0fc94d4293f936ec36e3e852a2",
+    "diff_sha256": "ceeb6ec40ea292d66aad4382d99b41010e5fd51052621dd17d2123c4c4e35819",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "bcd942c89a9f066d4d1bcde3e08fc9a3d221fd59",
+      "head": "d3e672cef5d9ba0fc94d4293f936ec36e3e852a2",
+      "diff_sha256": "ceeb6ec40ea292d66aad4382d99b41010e5fd51052621dd17d2123c4c4e35819"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:703",
+        "claim": "L68 states the 'Differential against 96b22a03' result as SAME, but the T6 commit list and the entry's own base context are built on 4d508025/bcd942c8; the differential reference commit 96b22a03 appears nowhere else in the log, so the claimed comparison baseline cannot be traced from the document.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:703"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:121",
+        "claim": "The T6 task line says 'this entry's commit (docs(odd), L68)' while the L68 text lists the docs(odd) commit as 'the last of the batch' without a hash; the commit list stays unresolved until a later edit, and L68's note that L67 said L66 'is not edited' creates a self-referential correction chain that readers must reconcile across entries.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:121",
+          "odd/tasks/phase9-store-agnostic-promotion.md:686"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only the odd/tasks feature document: S6 (c) note, T6 task line, and the appended L68 entry.",
+      "D-c is stated consistently between S6 (c) and L68 (readable only when opening with ---, unreadable scanned to the first closing rule, no frontmatter ignored, note after counts).",
+      "No code is changed, so no behavioral regression is possible from this commit; findings are limited to documentation traceability."
+    ]
+  }
+}

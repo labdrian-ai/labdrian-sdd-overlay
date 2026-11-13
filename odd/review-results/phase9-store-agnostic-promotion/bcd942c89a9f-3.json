@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "e5a36507d7f3fbf1a4646a2a3803d64095419cf4",
+    "head": "bcd942c89a9f066d4d1bcde3e08fc9a3d221fd59",
+    "diff_sha256": "9403cb6e0f1a079128d67b0292cec2ab5245e1a32d8f3035d3177551b8905dee",
+    "paths": [
+      "scripts/rehearse-card-page-migration.sh"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "e5a36507d7f3fbf1a4646a2a3803d64095419cf4",
+      "head": "bcd942c89a9f066d4d1bcde3e08fc9a3d221fd59",
+      "diff_sha256": "9403cb6e0f1a079128d67b0292cec2ab5245e1a32d8f3035d3177551b8905dee"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "scripts/rehearse-card-page-migration.sh"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Traced the readable path: a page starting with \"---\\n\" and a closing \"\\n---\\n\" yields the full frontmatter, including the minimal case \"---\\n---\\n\".",
+      "Traced the unreadable path: after the BOM, blank lines, spaces and carriage returns are stripped, a page is U only when its first non-blank line is \"---\". Anything else is skipped. The frontmatter is read up to the first closing \"---\", or to the end of the page when there is none.",
+      "The project rule skips empty and [] values, strips double quotes only, and takes the last such value. It matches the stated rule. The perl body contains no single quote that would break the shell quoting.",
+      "The changed message wording is consistent with the new U definition. The diff does not show how $bad is computed."
+    ]
+  }
+}

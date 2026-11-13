@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "e5a36507d7f3fbf1a4646a2a3803d64095419cf4",
+    "head": "bcd942c89a9f066d4d1bcde3e08fc9a3d221fd59",
+    "diff_sha256": "9403cb6e0f1a079128d67b0292cec2ab5245e1a32d8f3035d3177551b8905dee",
+    "paths": [
+      "scripts/rehearse-card-page-migration.sh"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "e5a36507d7f3fbf1a4646a2a3803d64095419cf4",
+      "head": "bcd942c89a9f066d4d1bcde3e08fc9a3d221fd59",
+      "diff_sha256": "9403cb6e0f1a079128d67b0292cec2ab5245e1a32d8f3035d3177551b8905dee"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "scripts/rehearse-card-page-migration.sh"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "scripts/rehearse-card-page-migration.sh:119-123",
+        "claim": "The empty-value and [] skip runs before double quotes are stripped. A line such as project: \"\" or project: \"[]\" therefore assigns an empty or quoted project and overwrites an earlier real value. The claim says empty values are skipped, so this holds only if parseFrontmatterFields also skips before it strips quotes. That order cannot be confirmed from the diff.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "scripts/rehearse-card-page-migration.sh:119-123"
+        ]
+      }
+    ],
+    "evidence": [
+      "Traced the R and U branches, the index/substr arithmetic and the project parsing in the diff; the happy paths are consistent with the stated rules.",
+      "The only discrepancy found is the order of the skip check and the quote stripping."
+    ]
+  }
+}
