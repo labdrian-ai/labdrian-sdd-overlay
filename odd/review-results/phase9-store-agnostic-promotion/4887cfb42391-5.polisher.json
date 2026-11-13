@@ -1,0 +1,49 @@
+{
+  "kind": "polisher",
+  "base": "1ed8ff9505ef46bff8935ecdb80913700e505940",
+  "head": "4887cfb42391cb6ba71c5b2f226262da9c126341",
+  "diff_sha256": "ad6f7488df606bb14bae72f19cb142e6b081296617f607db184f9899bc92e67c",
+  "findings": {
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/migrate_card_pages_backup_sync_test.go:13-44",
+        "summary": "The tolerance for a file system that cannot sync a directory is not tested. The only sync tests inject a fake syncDir, so the real syncDirectory is never run. Its tolerance for EINVAL, ENOTSUP and ErrUnsupported, and its Windows early return, are unpinned.",
+        "evidence": [
+          "The two new tests set syncDir to a recording closure or to a closure that always fails.",
+          "The branch at cmd_migrate_card_pages.go:271 and the real fsync path are only reached when b.syncDir is nil.",
+          "No test in migrate_card_pages_backup*_test.go leaves syncDir unset on the sync path.",
+          "A regression that turned EINVAL into a fatal error, or dropped the Windows skip, would not be caught."
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go:144-154",
+        "summary": "When the copy fails and is removed, the removal is not made durable. The vault root and .vault-meta are not synced after os.RemoveAll. After a crash a partial directory could reappear and read as a complete backup, which the type comment says must not happen. The window is narrow, and the sync-failure test only checks removal in the live file system.",
+        "evidence": [
+          "BackUp calls removeAll(dir) and returns without a directory sync.",
+          "syncDirectories runs only on the success path, at the end of copyInto."
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/migrate_card_pages_backup_sync_test.go:13-31",
+        "summary": "The 'newly created ancestors' claim is not pinned by the test. The sync assertion does not show that .vault-meta was absent beforehand, so it would pass even if only the existing directories were synced. The code itself is correct: it syncs dir's parent and the vault root, and SyncStateFile is only one level deep (.vault-meta/...).",
+        "evidence": [
+          "The test asserts that .vault-meta and the root appear in the synced list, but never checks whether .vault-meta existed before the call.",
+          "vaultlayout.SyncStateFile is '.vault-meta/longterm-mem-sync-state.json', so filepath.Dir(dir) is .vault-meta and b.root is its parent, which covers every directory newDirectory can create."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read cmd_migrate_card_pages.go:120-276 (BackUp, newDirectory, copyInto, readWithMode, syncDirectories, syncDirectory).",
+      "Cleanup only ever calls removeAll(dir), where dir comes from os.Mkdir in newDirectory. Mkdir fails with ErrExist on an existing directory, so the cleanup can only remove the directory this call created; a numbered suffix keeps retries apart.",
+      "Mode: readWithMode uses one handle for Stat and ReadAll. durable.WriteFile applies the mode through Chmod on the temp file, exactly and without the umask. The redundant chmod is therefore safe to drop. The existing TheCopyKeepsTheModeOfTheSource test covers it.",
+      "Read durable/write.go. Its own directory sync drops errors, which is why the extra syncDirectories pass is needed, and the one at the end of copyInto is the one that reports them.",
+      "Read migrate_card_pages_backup_sync_test.go. Both tests use injected syncDir. I did not run the tests."
+    ]
+  }
+}

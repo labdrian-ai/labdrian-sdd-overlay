@@ -1,0 +1,64 @@
+{
+  "kind": "polisher",
+  "base": "e0686d008aa6e39194f7b2c75aedc2bc51964ce1",
+  "head": "1ed8ff9505ef46bff8935ecdb80913700e505940",
+  "diff_sha256": "06422508fc1ea1b289e2a843c9245c9989a4c69c4f47a5ce1116f84605bf2a3f",
+  "findings": {
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/promote/migrate_cards.go:215-218",
+        "summary": "A page that carries legacy keys but whose frontmatter block cannot be read (CRLF line endings, unterminated delimiter) is skipped without being counted, refused or named. The 'every legacy page is accounted for' promise is not met for these pages.",
+        "evidence": [
+          "legacyPagesOf returns silently when `frontmatterBlock(content)` is not ok, so the page never reaches Legacy, Refused or NoProject.",
+          "The test TestMigrateCardPages_ACrlfPageAndASubdirectoryPageAreNotSeen (migrate_card_pages_scan_test.go:39-56) pins this: a CRLF legacy page is 'neither counted, migrated nor refused'.",
+          "Because such a page still carries legacy keys, a later `promote --source memorycard` or `sync` can promote its memory a second time. This is the duplicate the migration exists to prevent.",
+          "I did not check whether the unreadable-frontmatter skip existed before this commit. If it did, the defect is pre-existing and this commit only left it in place."
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go:114-116",
+        "summary": "Pages with no project make every run exit 6, including a fully successful --apply and every later rerun, until a `project:` line is added by hand. A script that checks the exit code cannot tell 'all migratable pages migrated' from 'pages were refused'.",
+        "evidence": [
+          "`if len(report.Refused) > 0 || len(report.NoProject) > 0 { return exitRegistrationConflict }`.",
+          "NoProject pages are excluded from Legacy and Refused, yet they alone decide the exit code.",
+          "The test migrate_card_pages_scan_test.go:16 pins exit 6 for this case. That matches the spec's 'reported once in every run', but the exit-code consequence is not stated in the spec text I could read (the matching long lines were omitted from my search output)."
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/migrate_cards.go:352-372",
+        "summary": "Recovery adopts an edit confined to the identity lines, and the revision search has no cap. For a page whose body matches its entry but whose frontmatter does not, the cost is (memory revision + 1) × up to 2 kinds of hashes. Many hand-edited pages on memories with high revisions would make that slow.",
+        "evidence": [
+          "recordedRewrite loops `for revision := m.memoryRevision; revision >= 0; revision--`, calling try for each kind.",
+          "It is entered only when the entry does not match the page and the body hash does match, so a typical vault pays nothing.",
+          "A hand edit outside the identity lines changes rewrittenIdentity's output and so the hash. It is refused as RefusedHalfMigrated and I found no path that adopts it. TestMigrateCardPages_AStoppedPageWithAnEditedFrontmatterLineIsRefusedAsHalfMigrated covers this.",
+          "Adoption of identity-line edits is documented at lines 350-351 and relies on the backup of the stopped run."
+        ]
+      },
+      {
+        "id": "F4",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/migrate_cards.go:541-551",
+        "summary": "Data safety is adequate. The backup is taken once before the first write, includes the sidecar, and is durable (fsynced files and directories). The sidecar is rewritten in full for every page, which is O(pages × sidecar size) on a large vault.",
+        "evidence": [
+          "applyMigration calls `w.Precedence.SavePrecedence(w.Store)` inside the per-page loop.",
+          "The entry is persisted before the page is written, and a failed save restores `p.was`.",
+          "The backup covers only the planned addresses, so an earlier backup is the only way back for a page refused as RefusedHalfMigrated. The refusal text names the `.vault-meta/card-page-migration-<UTC instant>/` pattern but not the actual path."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read migrate_cards.go in full at the target worktree.",
+      "Read cmd_migrate_card_pages.go in full.",
+      "Read migrate_card_pages_scan_test.go.",
+      "Grepped the recovery test names in migrate_cards_recovery_test.go (adoption of an identity-line edit, refusal of an edited frontmatter line, a memory with many revisions, a block scalar that mentions `engram_id:`, a page with no project).",
+      "Checked that carriesLegacyKeys, simpleIdentityLines and rewrittenIdentity match top-level keys exactly, and that topLevelFields skips indented lines. A key inside a block scalar is therefore not read as identity.",
+      "No test or build was run (read-only review). The spec L63-L65 text was not readable in my grep output, as the matching long lines were omitted."
+    ]
+  }
+}

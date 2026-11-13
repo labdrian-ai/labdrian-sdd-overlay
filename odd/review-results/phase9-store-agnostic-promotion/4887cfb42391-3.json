@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "1ed8ff9505ef46bff8935ecdb80913700e505940",
+    "head": "4887cfb42391cb6ba71c5b2f226262da9c126341",
+    "diff_sha256": "ad6f7488df606bb14bae72f19cb142e6b081296617f607db184f9899bc92e67c",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go",
+      "longterm-mem/cmd/longterm-mem/migrate_card_pages_backup_sync_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "1ed8ff9505ef46bff8935ecdb80913700e505940",
+      "head": "4887cfb42391cb6ba71c5b2f226262da9c126341",
+      "diff_sha256": "ad6f7488df606bb14bae72f19cb142e6b081296617f607db184f9899bc92e67c"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go",
+        "longterm-mem/cmd/longterm-mem/migrate_card_pages_backup_sync_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go:206-208",
+        "claim": "The explicit os.Chmod is removed on the strength of a comment that durable.WriteFile applies the mode exactly through the handle. The diff does not show durable.WriteFile, and the test seam `write` can be replaced. If the writer only passes perm to OpenFile, the process umask narrows the backup copy's mode (e.g. 0o666 to 0o644), and the copy no longer carries its source's mode. No test in this change asserts the copied file's mode, so the removal is unguarded.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go:206-208"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go:262-274",
+        "claim": "syncDirectory references syscall.ENOTSUP and syscall.EINVAL by name. If the package is built for a platform whose syscall package lacks ENOTSUP (e.g. plan9), the build breaks. The runtime.GOOS check does not help, because the identifiers must resolve at compile time. errors.ErrUnsupported plus a build-tagged helper would be portable.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go:271"
+        ]
+      }
+    ],
+    "evidence": [
+      "The readWithMode refactor preserves the ErrNotExist handling for the precedence file, because os.Open returns the same error class that os.ReadFile did.",
+      "Stat and read now go through one handle, which removes the earlier stat/read race.",
+      "The tests cover that .vault-meta, the vault root and the copy's directories are synced, and that a sync failure fails the copy and removes it. Neither test asserts the copied file's mode."
+    ]
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "kind": "sweeper",
+  "base": "e0686d008aa6e39194f7b2c75aedc2bc51964ce1",
+  "head": "1ed8ff9505ef46bff8935ecdb80913700e505940",
+  "diff_sha256": "06422508fc1ea1b289e2a843c9245c9989a4c69c4f47a5ce1116f84605bf2a3f",
+  "sweep": "1ed8ff9505ef-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 name: maxRecordedRevisions",
+      "disposition": "live",
+      "evidence": "Removed on purpose (L65: the recovery search has no ceiling); hits only in two recorded reviews of 69316290, which are immutable history."
+    }
+  ]
+}

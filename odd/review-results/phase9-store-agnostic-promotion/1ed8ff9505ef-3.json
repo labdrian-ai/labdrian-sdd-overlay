@@ -1,0 +1,72 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "e0686d008aa6e39194f7b2c75aedc2bc51964ce1",
+    "head": "1ed8ff9505ef46bff8935ecdb80913700e505940",
+    "diff_sha256": "06422508fc1ea1b289e2a843c9245c9989a4c69c4f47a5ce1116f84605bf2a3f",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go",
+      "longterm-mem/cmd/longterm-mem/migrate_card_pages_scan_test.go",
+      "longterm-mem/internal/promote/migrate_cards.go",
+      "longterm-mem/internal/promote/migrate_cards_recovery_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "e0686d008aa6e39194f7b2c75aedc2bc51964ce1",
+      "head": "1ed8ff9505ef46bff8935ecdb80913700e505940",
+      "diff_sha256": "06422508fc1ea1b289e2a843c9245c9989a4c69c4f47a5ce1116f84605bf2a3f"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go",
+        "longterm-mem/cmd/longterm-mem/migrate_card_pages_scan_test.go",
+        "longterm-mem/internal/promote/migrate_cards.go",
+        "longterm-mem/internal/promote/migrate_cards_recovery_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/promote/migrate_cards.go:362-372",
+        "claim": "The removed revision ceiling (maxRecordedRevisions) makes the search linear in the memory's current revision. For a page whose body matches but whose frontmatter does not reproduce, every revision from memoryRevision down to 0 builds a rewrite and hashes it. A memory with a very large revision (e.g. billions) makes the migration, including the dry run, appear to hang before it refuses the page as half-migrated.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/migrate_cards.go:362-372"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/promote/migrate_cards.go:362-372",
+        "claim": "The old candidate set for an Engram-sourced page also tried an empty revision and an empty kind (revisions ended with \"\" and kinds with \"\"). The new loop tries only revisions 0..memoryRevision and kinds {memory type, page's own type}. A stopped run that recorded an entry with an empty revision or an empty type is no longer recognised, and its page is now refused as half-migrated instead of being finished. This regresses recovery that worked before.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/migrate_cards.go:362-372"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go:112-116",
+        "claim": "Any no-project legacy page now forces exit code 6 on every run, even after a fully successful --apply of all other pages. It also appears in the run of every project, which contradicts 'reported once' for a multi-project vault. Automation cannot tell a clean migration from a failed one until the owner edits that page by hand.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go:112-116"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff of the four changed paths. Findings rest on the removed code (the revisions/kinds lists including \"\", and maxRecordedRevisions) and on the new recordedRewrite loop and the exit-code condition."
+    ]
+  }
+}

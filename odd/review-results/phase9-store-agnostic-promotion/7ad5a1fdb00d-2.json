@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "017df91a2ee11785cfc2072f93346c8c6b27e03e",
+    "head": "7ad5a1fdb00dd9cc09130f88aac3a1bb6c57c507",
+    "diff_sha256": "a276734b7cd6db64507844a92bc4311d9231448d3b208bb16f4d038cc2addf00",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "017df91a2ee11785cfc2072f93346c8c6b27e03e",
+      "head": "7ad5a1fdb00dd9cc09130f88aac3a1bb6c57c507",
+      "diff_sha256": "a276734b7cd6db64507844a92bc4311d9231448d3b208bb16f4d038cc2addf00"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:603",
+        "claim": "The L65 entry says the missing observed RED messages are now kept for this batch in the table (answering the L64 F3 finding). The row 'no project, through the command' records only 'failed (the output text was not captured)', so the observed RED line the entry promises is absent for that row. The 'one handle, no chmod' row also has no RED, although that case is explained. The record repeats the gap it claims to have closed.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:594",
+          "odd/tasks/phase9-store-agnostic-promotion.md:603"
+        ]
+      }
+    ],
+    "evidence": [
+      "The change touches only odd/tasks/phase9-store-agnostic-promotion.md; the S6 (b) rewrite, the T6 commit list and the L65 hashes are internally consistent with L62-L64.",
+      "The 'Previously' note in S6 (b) matches the L64 decision and the differential statement that the status-patched page is identical to base."
+    ]
+  }
+}

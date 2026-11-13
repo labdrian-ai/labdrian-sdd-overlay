@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "e0686d008aa6e39194f7b2c75aedc2bc51964ce1",
+    "head": "1ed8ff9505ef46bff8935ecdb80913700e505940",
+    "diff_sha256": "06422508fc1ea1b289e2a843c9245c9989a4c69c4f47a5ce1116f84605bf2a3f",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go",
+      "longterm-mem/cmd/longterm-mem/migrate_card_pages_scan_test.go",
+      "longterm-mem/internal/promote/migrate_cards.go",
+      "longterm-mem/internal/promote/migrate_cards_recovery_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "e0686d008aa6e39194f7b2c75aedc2bc51964ce1",
+      "head": "1ed8ff9505ef46bff8935ecdb80913700e505940",
+      "diff_sha256": "06422508fc1ea1b289e2a843c9245c9989a4c69c4f47a5ce1116f84605bf2a3f"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go",
+        "longterm-mem/cmd/longterm-mem/migrate_card_pages_scan_test.go",
+        "longterm-mem/internal/promote/migrate_cards.go",
+        "longterm-mem/internal/promote/migrate_cards_recovery_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/promote/migrate_cards.go:352-368",
+        "claim": "The base recovery search for Engram-named pages also tried an empty revision (\"\") and an empty kind (\"\") as candidates. The new recordedRewrite only tries numeric revisions from the memory's current one down to 0, with the memory's type and the page's own type. A stopped run that wrote a rewrite without a revision or without a type would no longer be recognised and would now be refused as half-migrated, though the base finished it. Nothing in the diff shows those candidates were unreachable.",
+        "evidence_class": "inferential",
+        "causal_disposition": "worsened",
+        "proof_refs": [
+          "longterm-mem/internal/promote/migrate_cards.go:352-368",
+          "base viaEngram: moved.kinds = []string{m.Type, trim(engram_type), \"\"} and moved.revisions = append(moved.revisions, \"\")"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go:87-89",
+        "claim": "The commit says a no-project page is reported once, but reportMigration prints each such page on stderr as a refusal line and again on stdout in the summary line. The page therefore appears twice in one run.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go:87-89",
+          "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go:104-110"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed all four changed files in the diff. F1 comes from comparing the removed candidate lists in viaEngram with the new loop in recordedRewrite. F2 comes from the two places that print report.NoProject."
+    ]
+  }
+}

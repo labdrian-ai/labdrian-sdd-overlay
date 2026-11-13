@@ -1,0 +1,15 @@
+{
+  "kind": "sweeper",
+  "base": "1ed8ff9505ef46bff8935ecdb80913700e505940",
+  "head": "4887cfb42391cb6ba71c5b2f226262da9c126341",
+  "diff_sha256": "ad6f7488df606bb14bae72f19cb142e6b081296617f607db184f9899bc92e67c",
+  "sweep": "4887cfb42391-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T2 errcheck longterm-mem: cmd/longterm-mem/cmd_migrate_card_pages.go: unchecked error: defer f.Close()",
+      "disposition": "live",
+      "evidence": "A deferred Close on a file opened read-only in readWithMode; a close error after a successful read cannot lose data, and the repository's other read-only opens use the same idiom."
+    }
+  ]
+}

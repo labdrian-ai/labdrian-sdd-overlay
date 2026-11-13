@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "69810a6914a792d601358539cccf7e86cde5ba76",
+    "head": "017df91a2ee11785cfc2072f93346c8c6b27e03e",
+    "diff_sha256": "78e9befe75dc8e2a3bf6e42a701b95ec9b9d2ec87cef84405e050d3a5379ed7e",
+    "paths": [
+      "scripts/rehearse-card-page-migration.sh"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "69810a6914a792d601358539cccf7e86cde5ba76",
+      "head": "017df91a2ee11785cfc2072f93346c8c6b27e03e",
+      "diff_sha256": "78e9befe75dc8e2a3bf6e42a701b95ec9b9d2ec87cef84405e050d3a5379ed7e"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "scripts/rehearse-card-page-migration.sh"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Both perl readers now print an ABORT message and exit 2 when opendir fails, which matches the commit's claim (diff lines 92 and 121).",
+      "The vault-copy check at diff line 143 dies before any counting when wiki/memory is missing or unreadable.",
+      "The project_list assignment with a guarded mapfile at diff lines 188-190 yields an empty array and reaches the existing 'no page of the vault names a project' die when there is no output. It also avoids hiding a perl failure the way process substitution did.",
+      "The pgrep pattern '[l]ongterm-mem.* sync' does not match its own command line, because the literal text '[l]ongterm-mem' does not match the regex. The self-excluding check works as described.",
+      "The relabelled '(no project, not counted per project)' key is only printed by the printf loop within the visible diff. I could not see any consumer that parses it, so I found no regression."
+    ]
+  }
+}

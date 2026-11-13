@@ -1,0 +1,25 @@
+{
+  "kind": "sweep",
+  "base": "e0686d008aa6e39194f7b2c75aedc2bc51964ce1",
+  "head": "1ed8ff9505ef46bff8935ecdb80913700e505940",
+  "diff_sha256": "06422508fc1ea1b289e2a843c9245c9989a4c69c4f47a5ce1116f84605bf2a3f",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": [
+      {
+        "name": "maxRecordedRevisions",
+        "hits": [
+          "odd/review-results/phase9-store-agnostic-promotion/693162904268-2.json",
+          "odd/review-results/phase9-store-agnostic-promotion/693162904268-4.polisher.json"
+        ]
+      }
+    ]
+  },
+  "t2": [],
+  "t3": [],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}
