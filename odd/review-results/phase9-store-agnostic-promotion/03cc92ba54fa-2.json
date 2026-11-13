@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "c85e4ed0ebd9c3ca7f7730db32f9a6c2e9b0bf65",
+    "head": "03cc92ba54fa29ea6d90b04f05ae640ce17fdee9",
+    "diff_sha256": "2ab7c62907a47ef0aeb94e7c366da89cba474849cc574672a532a27ec921f7b3",
+    "paths": [
+      "longterm-mem/internal/promote/migrate_cards.go",
+      "longterm-mem/internal/promote/migrate_cards_unreadable_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "c85e4ed0ebd9c3ca7f7730db32f9a6c2e9b0bf65",
+      "head": "03cc92ba54fa29ea6d90b04f05ae640ce17fdee9",
+      "diff_sha256": "2ab7c62907a47ef0aeb94e7c366da89cba474849cc574672a532a27ec921f7b3"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/promote/migrate_cards.go",
+        "longterm-mem/internal/promote/migrate_cards_unreadable_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/migrate_cards_unreadable_test.go:174-176",
+        "claim": "The recovery-path test ignores the error returns of frontmatterBlock and Store.Get, so a setup failure would surface later as a confusing assertion mismatch instead of at the cause. Also, the test's comment says it 'passes only because the read-back check also covers a recorded rewrite', yet the commit claims both tests fail with the check disabled; the recovery test's failure is not demonstrated in the diff.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/migrate_cards_unreadable_test.go:174-176"
+        ]
+      }
+    ],
+    "evidence": [
+      "The production change only edits the refusal string; the removed 'or revision' wording is consistent with the claim that revision is numeric.",
+      "The new test assertions use slices.Equal on backup calls and check the page and store entry are unchanged, which matches the commit message.",
+      "No behavior regression is visible in the diff; only the message text changed in non-test code."
+    ]
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "03cc92ba54fa29ea6d90b04f05ae640ce17fdee9",
+    "head": "b4309a8d6d35f1d3d9f163bf0928069af6f0cb7d",
+    "diff_sha256": "04b15a1897e6ff67cd9b9105a081eedf58efbae3d21d548715c035d02b4e9d0d",
+    "paths": [
+      "longterm-mem/docs/promote-from-memorycard.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "03cc92ba54fa29ea6d90b04f05ae640ce17fdee9",
+      "head": "b4309a8d6d35f1d3d9f163bf0928069af6f0cb7d",
+      "diff_sha256": "04b15a1897e6ff67cd9b9105a081eedf58efbae3d21d548715c035d02b4e9d0d"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/docs/promote-from-memorycard.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/docs/promote-from-memorycard.md:130",
+        "claim": "The rewritten bullet makes the 'counted, refused by name, never rewritten' outcome conditional on finding a legacy key. The base sentence said an unreadable page is still unreadable, refused by name and never rewritten, without that condition. The new text says nothing about an unreadable page with no legacy key, so a reader cannot tell whether it is skipped, refused or rewritten. The bullet that follows covers only unreadable legacy pages.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/docs/promote-from-memorycard.md:130",
+          "longterm-mem/docs/promote-from-memorycard.md:131"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/docs/promote-from-memorycard.md:129",
+        "claim": "The phrase 'a page with them is still unreadable' is ambiguous about what 'them' refers to. The sentence loses the base's explicit statement that trailing spaces make the page's rule lines recognisable but never make the page readable.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/docs/promote-from-memorycard.md:129"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only one documentation file changed; I compared the removed and added bullets and table rows line by line.",
+      "I did not check the refusal-table rows against the code, because the diff does not show it."
+    ]
+  }
+}
