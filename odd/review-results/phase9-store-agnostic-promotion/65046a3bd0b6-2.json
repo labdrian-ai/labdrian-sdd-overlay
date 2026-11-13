@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "2487d6dcf1c7b1e8d42c59118640305b09ece0c9",
+    "head": "65046a3bd0b6603a60a2f960758a3b22ed9ca90c",
+    "diff_sha256": "944b0e9541949cf6390da97312fa0d4365d9cd9c292ff51d267df075dc686495",
+    "paths": [
+      "scripts/rehearse-card-page-migration.sh"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "2487d6dcf1c7b1e8d42c59118640305b09ece0c9",
+      "head": "65046a3bd0b6603a60a2f960758a3b22ed9ca90c",
+      "diff_sha256": "944b0e9541949cf6390da97312fa0d4365d9cd9c292ff51d267df075dc686495"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "scripts/rehearse-card-page-migration.sh"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Only scripts/rehearse-card-page-migration.sh changed. The new legacy_pages reader feeds both legacy_counts and projects_of, so the two cannot disagree on which pages are legacy.",
+      "An empty page list is handled: the here-string adds one blank line, which `next unless length` skips, and the total prints as 0 through `$total || 0`.",
+      "A failed legacy_pages call returns 1 from both callers via `|| return 1`, so the ABORT exit is not swallowed.",
+      "Read with `:raw` and `local $/`, the file is slurped as bytes. A page with CRLF line endings fails the `---\\n` match, becomes a `U` page, and has its carriage returns stripped as intended.",
+      "A trailing carriage return left on a project value inside an `R` block is absorbed by `\\s*$` in the project regex, so it does not leak into the project name.",
+      "Whether the `---\\n(.*?)---\\n` regex matches the command's frontmatter parsing exactly cannot be checked from this diff, because the command's source is not shown. It is not a finding."
+    ]
+  }
+}

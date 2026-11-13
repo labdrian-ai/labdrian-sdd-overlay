@@ -1,0 +1,61 @@
+{
+  "kind": "polisher",
+  "base": "5900c2d3901e62b01d78c5a63740a1ac523e99c9",
+  "head": "d58264aee52f2aad7e654f3055e4a36053d30a33",
+  "diff_sha256": "e20cdd1b653fc2ec2a120bf41892620f12ca4a2ebcf769a9f3b001e7925fb86e",
+  "findings": {
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/promote/migrate_cards.go:237-246",
+        "summary": "A page that frontmatterBlock accepts but whose legacy key sits outside the isolated block is skipped and goes unaccounted, so the 'whatever its first line' guarantee has a gap. frontmatterBlock does SplitN on \"---\\n\" anywhere. A page with a legacy key in the text before its first rule and two later `---` rules (a markdown page with horizontal rules) counts as readable. Its block is only the text between the rules, so carriesLegacyKeys is false and the page is dropped without a count or a refusal. The unreadable path never runs for it.",
+        "evidence": [
+          "legacyPagesOf: `block, ok := frontmatterBlock(content)`; when ok, `else if !carriesLegacyKeys(block) { return }`.",
+          "address.go:81-88: frontmatterBlock returns ok=true for `\"engram_id: 5\\nproject: p\\n---\\ntext\\n---\\nmore\"`, with block `\"---\\ntext\\n---\\n\"`.",
+          "No test covers a readable-by-delimiter page whose legacy key is outside the block. The 'blank' test case uses CRLF, so it goes through the unreadable path.",
+          "I did not run the tests or the code. This is from reading the source."
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/promote/migrate_cards.go:324-326",
+        "summary": "Pre-existing, not introduced by this commit. A page with a byte order mark or leading text before its first `---\\n`, and a closing `---\\n`, counts as readable. The page body is then computed as page.raw[len(page.block):], which ignores the prefix. If such a page is tracked and its hashes match, the rewrite writes newBlock plus a misaligned body, which corrupts the page. The vault is not git-tracked, so there is no recovery except the backup.",
+        "evidence": [
+          "body := page.raw[len(page.block):] assumes the block starts at offset 0 of raw, but frontmatterBlock drops parts[0].",
+          "The new unreadable path is safe (it never writes, and it blanks the block), so the commit adds no new write risk. The test 'bomopen' only covers the no-closing-rule case. Nothing covers BOM or a prefix together with a closing LF rule.",
+          "The risk is limited in practice because MatchesPage and the body hash need the page to equal what longterm-mem wrote, and it never wrote a prefix. I did not run anything to confirm this."
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/migrate_card_pages_scan_test.go",
+        "summary": "The change that prints the no-project note before the error early return has no test where MigrateCardPages returns an error alongside a report with NoProject entries.",
+        "evidence": [
+          "reportMigration calls printNoProjectNote(report) before `if err != nil`.",
+          "The grep for `no project` in the test files found only the success-path note tests (scan_test.go lines 22-106) and none with a failing run."
+        ]
+      },
+      {
+        "id": "F4",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/migrate_cards.go:205-212",
+        "summary": "A prose page with a top-level `engram_id:` or `memorycard_id:` line plus a column-0 `project: <this project>` line is refused as unreadable and the run exits 6, so a non-legacy page can block a clean run. This follows the accepted decision D-a/D-b and the test 'prose', and it is not a defect of the code against that decision. The only remedy is a manual edit of the page.",
+        "evidence": [
+          "unreadableFrontmatter treats any column-0 legacy key in the whole page as a legacy page. The test 'prose' documents this for the no-project case.",
+          "reportMigration returns exitRegistrationConflict when len(report.Refused) > 0."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read cmd_migrate_card_pages.go in full.",
+      "Read promote/migrate_cards.go lines 150-596: carriesLegacyKeys, unreadableFrontmatter, legacyPagesOf, MigrateCardPages, applyMigration.",
+      "Read frontmatterBlock (address.go), eachPage, parseFrontmatterFields (lint.go) and readPages (page_scan.go).",
+      "Read migrate_cards_unreadable_test.go in full and grepped the cmd tests for the no-project note.",
+      "Checked: unreadable pages never enter the plan or the backup list, and no write path reaches them, in dry-run or apply. The no-project note prints before the error return. Exit 6 follows only from the Refused list, and NoProject entries never contribute to it.",
+      "Not run: go test and the binary. This is a static review of the target worktree only."
+    ]
+  }
+}

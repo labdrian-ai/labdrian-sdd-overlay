@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "5900c2d3901e62b01d78c5a63740a1ac523e99c9",
+    "head": "d58264aee52f2aad7e654f3055e4a36053d30a33",
+    "diff_sha256": "e20cdd1b653fc2ec2a120bf41892620f12ca4a2ebcf769a9f3b001e7925fb86e",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go",
+      "longterm-mem/cmd/longterm-mem/migrate_card_pages_scan_test.go",
+      "longterm-mem/internal/promote/migrate_cards.go",
+      "longterm-mem/internal/promote/migrate_cards_unreadable_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "5900c2d3901e62b01d78c5a63740a1ac523e99c9",
+      "head": "d58264aee52f2aad7e654f3055e4a36053d30a33",
+      "diff_sha256": "e20cdd1b653fc2ec2a120bf41892620f12ca4a2ebcf769a9f3b001e7925fb86e"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go",
+        "longterm-mem/cmd/longterm-mem/migrate_card_pages_scan_test.go",
+        "longterm-mem/internal/promote/migrate_cards.go",
+        "longterm-mem/internal/promote/migrate_cards_unreadable_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/promote/migrate_cards.go:201-212",
+        "claim": "unreadableFrontmatter now scans the whole page, with no frontmatter bound and no opening --- required. Any non-legacy page whose frontmatterBlock cannot isolate (plain notes, documents, pages with a different frontmatter shape) is now counted as a legacy page and refused as unreadable if its body has a line like `memorycard_id: 7` or `engram_id: 5` at column 0. Its project may also be taken from a `project:` line in the body. Before, such a page was ignored unless it opened with ---. A refusal makes the exit code non-zero, so a vault holding a page that merely quotes these keys now fails the run on input that was valid before. The doc comment accepts this, but nothing limits the false positives.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/migrate_cards.go:201-212"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go:91",
+        "claim": "printNoProjectNote now runs before the error return and before the per-kind refused summary, so on a successful run the note appears before the summary lines instead of after them. Output order changed. No test pins the order.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go:91"
+        ]
+      }
+    ],
+    "evidence": [
+      "Diff only; no tools used. The base function returned false unless the first line was ---, and stopped at the closing ---; the head removes both limits and joins the whole page."
+    ]
+  }
+}
