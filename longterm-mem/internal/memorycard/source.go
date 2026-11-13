@@ -19,11 +19,16 @@ const engramSource = "engram"
 // read-only as the Store.
 type Source struct {
 	store *Store
+	// byKey is the imported observations of a project by ContentKey, read the first time a memory needs them: a run
+	// asks for several listings of the same project, and the database is read-only.
+	byKey map[string]map[string][]int64
 }
 
 // NewSource returns the Source over store. It reads memorycard alone: the lineage and the mirrors of a memory come
 // from its import_map rows and the content hashes of memorycard's own memories, so it opens no other store.
-func NewSource(store *Store) *Source { return &Source{store: store} }
+func NewSource(store *Store) *Source {
+	return &Source{store: store, byKey: map[string]map[string][]int64{}}
+}
 
 // Candidates returns the memories of project that promotion reads, in id order: the active and the superseded
 // ones (Store.ListMemories).
@@ -78,7 +83,6 @@ type kin struct {
 func (s *Source) kinOf(cards []memory.CardMemory) (kin, error) {
 	k := kin{holders: map[int64][]int64{}}
 	wanted := map[int64]bool{}
-	byKey := map[string]map[string][]int64{}
 	for _, card := range cards {
 		if card.EngramID != 0 {
 			wanted[card.EngramID] = true
@@ -91,12 +95,12 @@ func (s *Source) kinOf(cards []memory.CardMemory) (kin, error) {
 			return kin{}, err
 		}
 		if len(holders) == 0 {
-			if byKey[card.Project] == nil {
-				if byKey[card.Project], err = s.store.ObservationsByKey(card.Project); err != nil {
+			if _, ok := s.byKey[card.Project]; !ok {
+				if s.byKey[card.Project], err = s.store.ObservationsByKey(card.Project); err != nil {
 					return kin{}, err
 				}
 			}
-			holders = byKey[card.Project][ContentKey(card.Title, card.Body)]
+			holders = s.byKey[card.Project][ContentKey(card.Title, card.Body)]
 		}
 		k.holders[card.ID] = holders
 		for _, id := range holders {
