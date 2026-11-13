@@ -5,7 +5,7 @@ import "context"
 // IndexRebuilder is the port through which a sync makes the pages it wrote findable: it rebuilds the vault's
 // retrieval index after the promotion completes (R-031). The package owns it and the vault adapter
 // (internal/vault) satisfies it by running the vault's own index scripts; the composition root hands it to
-// Sync. A failure is the rebuild's own, and Sync reports it without recording the completion of the sync.
+// SyncCards. A failure is the rebuild's own, and SyncCards reports it without recording the completion of the sync.
 type IndexRebuilder interface {
 	RebuildIndex(ctx context.Context) error
 }

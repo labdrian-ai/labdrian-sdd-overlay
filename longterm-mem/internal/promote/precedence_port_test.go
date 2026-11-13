@@ -57,9 +57,9 @@ func TestPromote_RefusesATypedNilPrecedenceRepository(t *testing.T) {
 func TestSync_RefusesAWriterWithoutAPrecedenceRepository(t *testing.T) {
 	mem := &fakeMemory{}
 	root := t.TempDir()
-	deps := Deps{Source: mem, Writer: &Writer{Index: indexIn(root), Log: logIn(root), SyncState: syncStateIn(root), Pages: pagesIn(root), Store: PrecedenceStore{}, Clock: &fakeClock{at: testInstant}}}
+	w := &Writer{Index: indexIn(root), Log: logIn(root), SyncState: syncStateIn(root), Pages: pagesIn(root), Store: PrecedenceStore{}, Clock: &fakeClock{at: testInstant}}
 
-	if _, err := Sync(t.Context(), deps, "labdrian-sdd-overlay"); !errors.Is(err, errNoPrecedenceRepository) {
+	if _, err := SyncCardsProject(t.Context(), mem, w, nil, "labdrian-sdd-overlay"); !errors.Is(err, errNoPrecedenceRepository) {
 		t.Fatalf("Sync = %v, want errNoPrecedenceRepository", err)
 	}
 }
@@ -69,9 +69,9 @@ func TestSync_RefusesAWriterWithoutAPrecedenceRepository(t *testing.T) {
 // never recorded reads as a human's edit from then on.
 func TestPropagate_RefusesAWriterWithoutAPrecedenceRepository(t *testing.T) {
 	root := t.TempDir()
-	deps := Deps{Source: &fakeMemory{}, Writer: &Writer{Index: indexIn(root), Log: logIn(root), SyncState: syncStateIn(root), Pages: pagesIn(root), Store: PrecedenceStore{}}}
+	w := &Writer{Index: indexIn(root), Log: logIn(root), SyncState: syncStateIn(root), Pages: pagesIn(root), Store: PrecedenceStore{}}
 
-	if _, err := Propagate(t.Context(), deps, "labdrian-sdd-overlay"); !errors.Is(err, errNoPrecedenceRepository) {
+	if _, err := PropagateCards(t.Context(), &fakeMemory{}, w, "labdrian-sdd-overlay"); !errors.Is(err, errNoPrecedenceRepository) {
 		t.Fatalf("Propagate = %v, want errNoPrecedenceRepository", err)
 	}
 }
@@ -107,26 +107,6 @@ func TestPromote_ReportsAnUpdateWhosePrecedenceCannotBePersisted(t *testing.T) {
 	repo.saveErr = errTestSave
 	if _, err := w.Promote(t.Context(), obsMemory(obs), false); !errors.Is(err, errTestSave) {
 		t.Fatalf("Promote (update) = %v, want the persistence failure", err)
-	}
-}
-
-// Propagate reports a store it could not persist, naming what it was doing and keeping the cause.
-func TestPropagate_ReportsAPrecedenceStoreThatCannotBePersisted(t *testing.T) {
-	vaultRoot := t.TempDir()
-	mem, ids := newFixtureEngramStore(t, []fixtureObs{
-		{title: "Old Decision", content: "Old body.", project: "labdrian-sdd-overlay", obsType: "decision", revisionCount: 1, syncID: "sync-old", createdAt: "2026-08-01 00:00:00", topicKey: "longterm-mem/old-decision"},
-		{title: "New Decision", content: "New body.", project: "labdrian-sdd-overlay", obsType: "decision", revisionCount: 1, syncID: "sync-new", createdAt: "2026-08-15 00:00:00", topicKey: "longterm-mem/new-decision"},
-	}, []fixtureRelation{
-		{syncID: "rel-1", sourceSyncID: "sync-new", targetSyncID: "sync-old", relation: "supersedes"},
-	})
-	precedence := PrecedenceStore{}
-	seedPromotedPage(t, vaultRoot, precedence, memory.Observation{ID: ids[0], Type: "decision", Title: "Old Decision", Content: "Old body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}, "c-000001")
-	seedPromotedPage(t, vaultRoot, precedence, memory.Observation{ID: ids[1], Type: "decision", Title: "New Decision", Content: "New body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}, "c-000002")
-	w := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: precedence, Precedence: &memPrecedence{saveErr: errTestSave}}
-
-	_, err := Propagate(t.Context(), Deps{Source: engramSourceOf(mem), Writer: w}, "labdrian-sdd-overlay")
-	if !errors.Is(err, errTestSave) {
-		t.Fatalf("Propagate = %v, want the persistence failure", err)
 	}
 }
 

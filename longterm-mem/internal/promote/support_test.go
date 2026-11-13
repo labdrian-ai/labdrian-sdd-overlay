@@ -5,13 +5,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 )
-
-// engramSourceOf is the Engram adapter over a store, with no lineage: the Source the sync tests read a real
-// store through.
-func engramSourceOf(store *engram.Store) Source { return engram.NewSource(store, nil) }
 
 // This file is the support the tests of the package share for the model promotion reads. The tests were written
 // over the two models of the two stores (an Engram observation, a memorycard memory); promotion now reads one
@@ -26,6 +21,17 @@ func obsMemory(o memory.Observation) memory.Memory {
 		Project:  o.Project, Type: o.Type, Title: o.Title, Body: o.Content, TopicKey: o.TopicKey,
 		Pinned: o.Pinned, Status: memory.StatusActive, Revision: o.RevisionCount, SyncID: o.SyncID,
 	}
+}
+
+// asMemorycard is the memories as the one store the commands read serves them: the walks read the page style of the
+// store a memory names, and the stand-in port serves the memories of one.
+func asMemorycard(memories []memory.Memory) []memory.Memory {
+	served := make([]memory.Memory, len(memories))
+	for i, m := range memories {
+		m.Identity.Source = memorycardSource
+		served[i] = m
+	}
+	return served
 }
 
 // obsMemories maps a list of observations with obsMemory.

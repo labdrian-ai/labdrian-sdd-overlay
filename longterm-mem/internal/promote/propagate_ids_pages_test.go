@@ -23,7 +23,7 @@ func propagationWalks(t *testing.T) map[string]propagationWalk {
 			return PropagateCards(t.Context(), src, w, "memorycard")
 		}},
 		"the Engram dialect's walk": {engramSource, func(w *Writer, src Source) (PropagateReport, error) {
-			return Propagate(t.Context(), Deps{Source: src, Writer: w}, "memorycard")
+			return PropagateCards(t.Context(), src, w, "memorycard")
 		}},
 	}
 }

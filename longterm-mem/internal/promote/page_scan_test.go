@@ -48,7 +48,7 @@ func TestSync_AMemoryBridgedByALineagePageInAnotherProjectIsSkippedAsBridged(t *
 	observation.Project = "elsewhere"
 	observation.Lineage = []memory.Identity{cardSevenIdentity}
 
-	report, err := Sync(t.Context(), Deps{Source: fixedSource{memories: []memory.Memory{observation}}, Writer: w}, "elsewhere")
+	report, err := SyncCardsProject(t.Context(), fixedSource{memories: []memory.Memory{observation}}, w, nil, "elsewhere")
 
 	var refusal *BridgedError
 	if _, explicitErr := w.Promote(t.Context(), observation, true); !errors.As(explicitErr, &refusal) {

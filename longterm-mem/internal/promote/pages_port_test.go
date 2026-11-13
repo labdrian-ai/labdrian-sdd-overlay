@@ -133,29 +133,26 @@ func TestWriterWithoutPagesIsRefusedBeforeAnythingIsDone(t *testing.T) {
 			if allocator.asked != 0 || repo.saves != 0 {
 				t.Errorf("allocator asked %d times, precedence saved %d times, want neither", allocator.asked, repo.saves)
 			}
-			if _, err := Sync(t.Context(), Deps{Source: &fakeMemory{}, Writer: w}, pagesProject); !errors.Is(err, errNoPageRepository) {
+			if _, err := SyncCardsProject(t.Context(), &fakeMemory{}, w, nil, pagesProject); !errors.Is(err, errNoPageRepository) {
 				t.Errorf("Sync error = %v, want errNoPageRepository", err)
 			}
-			if _, err := Propagate(t.Context(), Deps{Source: &fakeMemory{}, Writer: w}, pagesProject); !errors.Is(err, errNoPageRepository) {
+			if _, err := PropagateCards(t.Context(), &fakeMemory{}, w, pagesProject); !errors.Is(err, errNoPageRepository) {
 				t.Errorf("Propagate error = %v, want errNoPageRepository", err)
 			}
 		})
 	}
 }
 
-// The plan of a sync has no refusal of its own: a Writer without pages makes each observation's promoted state
-// unreadable, which the plan reports as it reports any other failure.
-func TestPlanWithoutPagesReportsEachObservationItCouldNotCheck(t *testing.T) {
+// The plan of a sync refuses a Writer without pages, as the run does, before it lists a memory.
+func TestPlanCardsRefusesAWriterWithoutPages(t *testing.T) {
 	w, _, _ := pagesWriter(t, nil)
 	mem := &fakeMemory{live: []memory.Observation{pageObservation(505)}}
 
-	plan, err := Plan(t.Context(), Deps{Source: mem, Writer: w}, pagesProject)
-	if err != nil {
-		t.Fatalf("Plan: %v", err)
+	if _, err := PlanCards(t.Context(), mem, w, pagesProject); !errors.Is(err, errNoPageRepository) {
+		t.Fatalf("PlanCards = %v, want errNoPageReader", err)
 	}
-
-	if len(plan.Failed) != 1 || !errors.Is(plan.Failed[0].Err, errNoPageReader) {
-		t.Fatalf("Failed = %+v, want the one observation, unreadable for want of pages", plan.Failed)
+	if len(mem.listed) != 0 {
+		t.Errorf("the plan listed %v before it was refused", mem.listed)
 	}
 }
 
@@ -455,19 +452,23 @@ func TestUpdateInPlaceThroughThePort(t *testing.T) {
 	})
 }
 
-// Propagate patches the pages through the port, and a page it cannot patch is a failure of that observation
+// PropagateCards patches the pages through the port, and a page it cannot patch is a failure of that observation
 // worded around the page's location, while the run goes on.
-func TestPropagatePatchesThePagesThroughThePort(t *testing.T) {
+func TestPropagateCardsPatchesThePagesThroughThePort(t *testing.T) {
 	obs := pageObservation(509)
 	obs.DeletedAt = "2026-08-02 00:00:00"
-	page := renderedPage(t, obs, testAddress)
+	pageOfCard, err := EmitPage(asMemorycard([]memory.Memory{obsMemory(obs)})[0], testAddress, nil, testInstant)
+	if err != nil {
+		t.Fatalf("EmitPage: %v", err)
+	}
+	page := pageOfCard
 	mem := &fakeMemory{all: []memory.Observation{obs}}
 
 	t.Run("patches", func(t *testing.T) {
 		pages := newMemPages(map[string]string{testAddress: page.Frontmatter + page.Body})
 		w, repo, _ := pagesWriter(t, pages)
 
-		report, err := Propagate(t.Context(), Deps{Source: mem, Writer: w}, pagesProject)
+		report, err := PropagateCards(t.Context(), mem, w, pagesProject)
 
 		if err != nil || len(report.Patched) != 1 || report.Patched[0] != testAddress {
 			t.Fatalf("report = %+v, err = %v, want %s patched", report, err, testAddress)
@@ -490,7 +491,7 @@ func TestPropagatePatchesThePagesThroughThePort(t *testing.T) {
 		}
 		w, _, _ := pagesWriter(t, pages)
 
-		report, err := Propagate(t.Context(), Deps{Source: mem, Writer: w}, pagesProject)
+		report, err := PropagateCards(t.Context(), mem, w, pagesProject)
 
 		if err == nil || len(report.Failed) != 1 {
 			t.Fatalf("report = %+v, err = %v, want the one observation failed", report, err)

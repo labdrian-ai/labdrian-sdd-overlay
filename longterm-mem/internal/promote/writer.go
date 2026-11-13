@@ -19,7 +19,7 @@ type Writer struct {
 	// scan for an observation's page, the check for the page about to be
 	// created, the replacement of a page, and the patches that supersede
 	// the pages an observation left behind. A Writer without one is refused
-	// by Promote and Sync before they write anything, and by Propagate
+	// by Promote and SyncCards before they write anything, and by PropagateCards
 	// before it patches anything.
 	Pages PageRepository
 	// Store is the precedence store Promote consults and updates
@@ -40,7 +40,7 @@ type Writer struct {
 	// through, and UsePrecedence sets both from one repository so the
 	// composition root cannot wire a store loaded from one vault to the
 	// repository of another. A Writer without a repository is refused by
-	// Promote, Sync and Propagate before they write anything.
+	// Promote, SyncCards and PropagateCards before they write anything.
 	Precedence PrecedenceRepository
 	// Addresses hands out the address of each new page. It is asked only
 	// when a promotion needs a fresh address: re-promoting a page that
@@ -55,15 +55,15 @@ type Writer struct {
 	// Index is the vault's master catalog and Log its append-only promotion
 	// log: every promotion that wrote a page registers it in both, after
 	// the precedence sidecar is durable. A Writer without either is refused
-	// by Promote and Sync before they write anything.
+	// by Promote and SyncCards before they write anything.
 	Index IndexRepository
 	Log   LogRepository
-	// SyncState records when a sync completed. Only Sync asks for it, and a
-	// Sync that finds none is refused before it does anything.
+	// SyncState records when a sync completed. Only SyncCards asks for it, and a
+	// SyncCards that finds none is refused before it does anything.
 	SyncState SyncStateRecorder
 	// Clock dates the pages, the promotion log and the sync-state record.
 	// The composition root wires a real one; a Writer without one is
-	// refused by Promote and Sync before they touch the vault. Propagate
+	// refused by Promote and SyncCards before they touch the vault. PropagateCards
 	// patches pages in place and never reads the time, so it asks for none.
 	Clock Clock
 }
@@ -106,7 +106,7 @@ func (w *Writer) checkPorts() error {
 }
 
 // checkSyncState reports whether the Writer was handed the recorder of the
-// sync state, which only Sync asks for.
+// sync state, which only SyncCards asks for.
 func (w *Writer) checkSyncState() error {
 	if memory.IsMissing(w.SyncState) {
 		return errNoSyncStateRecorder
@@ -132,7 +132,7 @@ func (w *Writer) checkPages() error {
 	return nil
 }
 
-// checkPatchPorts reports the first port Propagate needs and was not handed:
+// checkPatchPorts reports the first port PropagateCards needs and was not handed:
 // the repository the precedence store is persisted through, and the pages it
 // patches.
 func (w *Writer) checkPatchPorts() error {
@@ -175,12 +175,12 @@ type Result struct {
 //
 // That repair is not automatic, and this comment used to claim otherwise.
 // `doctor` REPORTS the page as unregistered (its wiki-registration-
-// consistency check) and writes nothing, by design. Sync does not reach it
+// consistency check) and writes nothing, by design. SyncCards does not reach it
 // either: an observation already promoted at its current revision is
 // skipped before Writer.Promote is ever called (R-009's true-no-op gate),
 // and a page whose registration failed is exactly that observation. The
 // one path that does repair it is an explicit promote of that observation
-// (ExplicitPromote), which re-enters here, takes the update branch, and
+// (ExplicitPromoteCard), which re-enters here, takes the update branch, and
 // registers on every write it does not skip. So: doctor names it, and an
 // explicit promote fixes it.
 func (w *Writer) Promote(ctx context.Context, m memory.Memory, explicit bool) (Result, error) {
@@ -358,7 +358,7 @@ func (w *Writer) publishNew(address string, page Page, existingPath string) erro
 // because the pointer already looks done. An interruption in the other
 // order leaves the successor page with the orphan still live beside it,
 // which is the same shape as a failed registration twelve lines up, and it
-// heals the same way -- NOT automatically. Sync gates before Writer.Promote
+// heals the same way -- NOT automatically. SyncCards gates before Writer.Promote
 // is ever called (R-009's true-no-op gate), and after an interrupted move
 // the successor already exists at the observation's current revision, so
 // sync skips it and never reaches here. Until the observation's revision
@@ -379,7 +379,7 @@ func (w *Writer) publishNew(address string, page Page, existingPath string) erro
 // its mtime and its precedence entry alone even without this check.
 //
 // A FAILING PAGE DOES NOT DISCARD THE ONES ALREADY PATCHED. A double move
-// produces more than one orphan, so this follows Propagate's shape: record
+// produces more than one orphan, so this follows the shape of PropagateCards: record
 // the failure, carry on, and persist whatever was patched before
 // reporting. Returning early would leave an orphan superseded on disk with
 // a stale sidecar entry, and because a superseded page is skipped from
@@ -388,7 +388,7 @@ func (w *Writer) publishNew(address string, page Page, existingPath string) erro
 // to end.
 //
 // LOCAL-EDIT PRECEDENCE (R-030). The patch is unconditional, exactly as
-// Propagate's is, and for the same reason: it rewrites two frontmatter
+// the one of PropagateCards is, and for the same reason: it rewrites two frontmatter
 // lines and never re-bodies the page, so it destroys no human edit -- a
 // human's prose, their added frontmatter keys, everything else survives
 // byte for byte. Skipping a locally edited orphan would instead leave a

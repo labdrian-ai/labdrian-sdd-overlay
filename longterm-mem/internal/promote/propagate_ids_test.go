@@ -25,7 +25,7 @@ func TestPropagation_AMemoryWhoseIdIsNotANumberIsFailedInItsOwnWordsAndItsPageIs
 		"the Engram dialect's walk": {
 			source: engramSource, idKey: "engram_id",
 			walk: func(w *Writer, src Source) (PropagateReport, error) {
-				return Propagate(t.Context(), Deps{Source: src, Writer: w}, "memorycard")
+				return PropagateCards(t.Context(), src, w, "memorycard")
 			},
 		},
 	} {
