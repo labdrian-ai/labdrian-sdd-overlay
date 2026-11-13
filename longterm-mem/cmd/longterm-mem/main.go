@@ -38,6 +38,8 @@ func (c commands) run(args []string) int {
 		return c.cmdDoctor(args[1:])
 	case "promote":
 		return c.cmdPromote(args[1:])
+	case "migrate-card-pages":
+		return c.cmdMigrateCardPages(args[1:])
 	case "mcp":
 		return c.cmdMCP(args[1:])
 	case "register":
