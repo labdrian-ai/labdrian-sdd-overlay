@@ -85,34 +85,37 @@ copy_db() { # copy_db <live db> <copy>: a consistent copy of a sqlite database, 
   sqlite3 -readonly "$1" ".backup '$2'"
 }
 legacy_counts() { # one line per project: the pages of the vault that still carry a legacy identity key, and the total
-  # The command reads the .md files directly in wiki/memory whose frontmatter lines end in a line feed (a CRLF page has
-  # no frontmatter it can read) and counts a top-level key line only: this does the same, and says how many CRLF pages it skipped.
+  # The command reads the .md files directly in wiki/memory and counts a top-level key line only: this does the same. A
+  # page with such a key whose frontmatter it cannot read (CRLF line endings, a block with no closing ---) is a legacy
+  # page too, which the command refuses by name; this counts it and says how many there are.
   perl -e '
-    my %n; my $total = 0; my $crlf = 0;
+    my %n; my $total = 0; my $bad = 0;
     opendir(my $dh, "$ARGV[0]/wiki/memory") or do { print STDERR "ABORT: cannot read $ARGV[0]/wiki/memory: $!\n"; exit 2; };
     my @files = sort grep { /\.md$/ && -f "$ARGV[0]/wiki/memory/$_" } readdir($dh);
     closedir($dh);
     for my $name (@files) {
       my $f = "$ARGV[0]/wiki/memory/$name";
       open(my $h, "<", $f) or next;
-      my ($project, $legacy) = ("", 0);
+      my ($project, $legacy, $unreadable, $closed) = ("", 0, 0, 0);
       while (<$h>) {
-        if ($. == 1 && $_ eq "---\r\n") { $crlf++; last; }
-        chomp;
-        if ($. == 1) { last unless $_ eq "---"; next; }
-        last if $_ eq "---";
+        my $cr = /\r\n\z/ ? 1 : 0;
+        s/\r?\n\z//;
+        if ($. == 1) { last unless $_ eq "---"; $unreadable = 1 if $cr; next; }
+        if ($_ eq "---") { $closed = 1; $unreadable = 1 if $cr; last; }
         $legacy = 1 if /^(engram_id|engram_revision|engram_type|engram_sync_id|memorycard_id|memorycard_revision|memorycard_type):/;
         $project = $1 if /^project:\s*(.*?)\s*$/;
       }
       close($h);
       next unless $legacy;
+      $unreadable = 1 unless $closed;
       $project =~ s/^["\x27]|["\x27]$//g;
       $n{$project eq "" ? "(no project, not counted per project)" : $project}++;
       $total++;
+      $bad++ if $unreadable;
     }
     printf("  %s: %d\n", $_, $n{$_}) for sort keys %n;
     printf("vault-wide: %d page(s) still carry a legacy identity key\n", $total);
-    printf("(%d page(s) with CRLF line endings skipped: the command does not read their frontmatter)\n", $crlf) if $crlf;
+    printf("(%d of them have frontmatter the command cannot read (CRLF line endings or no closing ---): it refuses them by name as unreadable frontmatter)\n", $bad) if $bad;
   ' "$1"
 }
 projects_of() { # the distinct `project:` values of the pages of the vault at $1, one per line
@@ -124,7 +127,7 @@ projects_of() { # the distinct `project:` values of the pages of the vault at $1
     for my $name (@files) {
       open(my $h, "<", "$ARGV[0]/wiki/memory/$name") or next;
       while (<$h>) {
-        chomp;
+        s/\r?\n\z//;
         if ($. == 1) { last unless $_ eq "---"; next; }
         last if $_ eq "---";
         if (/^project:\s*(.*?)\s*$/) { my $p = $1; $p =~ s/^["\x27]|["\x27]$//g; $seen{$p} = 1 if $p ne ""; last; }
