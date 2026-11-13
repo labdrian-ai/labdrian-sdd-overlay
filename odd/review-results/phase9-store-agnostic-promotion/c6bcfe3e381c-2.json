@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ea095617fc9f9fd797b4e3a4486a99ba97e69871",
+    "head": "c6bcfe3e381ca9334d08c124eed6a3c94525f3f8",
+    "diff_sha256": "67ee342974aa77db1ceef80ced9089136fec64a48ab4143aec7da20b109db0cc",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "ea095617fc9f9fd797b4e3a4486a99ba97e69871",
+      "head": "c6bcfe3e381ca9334d08c124eed6a3c94525f3f8",
+      "diff_sha256": "67ee342974aa77db1ceef80ced9089136fec64a48ab4143aec7da20b109db0cc"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The change rewrites one clause on the T4 line. It now compares the single-id promote cost to base: about 20 ms more, with 29-33 ms at 74a36749 against 10-13 ms at base. The 16-23 ms difference supports 'about 20 ms'.",
+      "The 23-26 ms figure at 94e96b7a is kept as an intermediate point. The cited commit 74a36749 is already in the T4 commit list, so the reference resolves.",
+      "I could not check the L49 table or L50 from the diff. No inconsistency within the changed line was found."
+    ]
+  }
+}

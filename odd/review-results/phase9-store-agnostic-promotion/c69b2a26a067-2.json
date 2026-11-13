@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "74a36749c1d99f9a110a342f580e015876c790df",
+    "head": "c69b2a26a067ce1f6ba574180eca5fe56a3b2b54",
+    "diff_sha256": "1c15fd37346d5114655ff391f80b2062ccf45df738d3f95a2d63ac4c0547665b",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "74a36749c1d99f9a110a342f580e015876c790df",
+      "head": "c69b2a26a067ce1f6ba574180eca5fe56a3b2b54",
+      "diff_sha256": "1c15fd37346d5114655ff391f80b2062ccf45df738d3f95a2d63ac4c0547665b"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:389",
+        "claim": "L49 labels commit 2d3ae79d 'Risk none' although the same entry says it changes the production ImportedParts read, so that a project no longer receives another project's gone import rows. The entry argues that no mirror changes, but a read-behavior change on the shared memorycard path fits the T4 'Risk: item 3' class. The record underrates the risk, and the T4 task line does not carry the distinction.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:389",
+          "odd/tasks/phase9-store-agnostic-promotion.md:392"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only the T4 task line and appends the L49 Log entry in the single changed doc.",
+      "The timing figures and ratios in L49 (0.474/0.374 is about 1.27x, and the single-id rows are at most 37 ms) match the table and the task line's wording.",
+      "No code is changed, so the only defect found is a documentation labeling issue."
+    ]
+  }
+}

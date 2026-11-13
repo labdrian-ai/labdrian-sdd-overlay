@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "8a3bc2cec34a42e77bef0aa4317bc80f41ae2808",
+    "head": "a0f764d5c8429518a589e2221c047cf11fd9c545",
+    "diff_sha256": "0c3820ee817e0852e253f12829b38336756e4042d013cb88d529d85afc997024",
+    "paths": [
+      "longterm-mem/internal/memorycard/observations.go",
+      "longterm-mem/internal/memorycard/source.go",
+      "longterm-mem/internal/memorycard/source_kin_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "8a3bc2cec34a42e77bef0aa4317bc80f41ae2808",
+      "head": "a0f764d5c8429518a589e2221c047cf11fd9c545",
+      "diff_sha256": "0c3820ee817e0852e253f12829b38336756e4042d013cb88d529d85afc997024"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/memorycard/observations.go",
+        "longterm-mem/internal/memorycard/source.go",
+        "longterm-mem/internal/memorycard/source_kin_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/memorycard/observations.go:64-66",
+        "claim": "ImportedParts selects every import_map row of source engram whose memory is gone (m.id is null), whatever project that memory belonged to, because a missing memory carries no project. Every project's index therefore receives the gone rows of other projects' observations. Such rows can raise an observation's row count above one and so change wholeTitle's decision to strip the part suffix. They also enlarge each project's index. The old query joined memories and filtered by project, so it never saw them.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/memorycard/observations.go:64-66"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the three changed files in the diff only; no tools were available to run the tests.",
+      "The finding rests on the left join with 'm.project = ? or m.id is null' in ImportedParts and on wholeTitle's len(parts) > 1 test.",
+      "I found no other defect the commit introduces."
+    ]
+  }
+}

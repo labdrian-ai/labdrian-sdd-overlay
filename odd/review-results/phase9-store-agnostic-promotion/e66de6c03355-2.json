@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "1550c0da86683e70b4bedc2798a9be275f52c2f8",
+    "head": "e66de6c03355d8d0829a3bfb44f773e1be6db200",
+    "diff_sha256": "0c7d38d977a023ec21ba381c1aca8952e8f63fdc8d530b94163eb226935d704c",
+    "paths": [
+      "odd/tasks/phase9-c22fu-memorycard-compat.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "1550c0da86683e70b4bedc2798a9be275f52c2f8",
+      "head": "e66de6c03355d8d0829a3bfb44f773e1be6db200",
+      "diff_sha256": "0c7d38d977a023ec21ba381c1aca8952e8f63fdc8d530b94163eb226935d704c"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-c22fu-memorycard-compat.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The change adds a single Log entry (L20) to odd/tasks/phase9-c22fu-memorycard-compat.md; it is documentation only, with no code or behavior change.",
+      "The entry records the owner's verbatim decision and the resulting scope (C22-FU closes in Phase 9, T4 replaced, T5 and T6 after the other feature's T5), consistent with the commit message.",
+      "No contradiction, broken structure or misleading claim is visible in the diff; cross-references to the other feature document cannot be checked from the diff alone and are not defects introduced here."
+    ]
+  }
+}

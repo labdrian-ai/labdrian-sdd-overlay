@@ -1,0 +1,15 @@
+{
+  "kind": "polisher",
+  "base": "61ec52e545db7dd33c829ba0e9b8921464a30ce8",
+  "head": "8a3bc2cec34a42e77bef0aa4317bc80f41ae2808",
+  "diff_sha256": "956dd7052ab0f25ea82a0da5b720dd7d5479ff41d73d227cb522b413a16aabec",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read page_style.go:35-84: numericID returns *idError naming the id once; Unwrap returns the strconv error so errors.Is ErrSyntax/ErrRange and errors.As *strconv.NumError match; out of range only when ErrRange.",
+      "Checked every caller: walk.go:66, page_style.go:121,149, propagate.go:141, propagate_cards.go:91,98, withIDError in sync.go:64-69.",
+      "Tests in walk_failures_test.go, propagate_ids_test.go, propagate_ids_pages_test.go, page_style_test.go assert the quoted id, not a number, and out of range for 2^63.",
+      "No unrequested change in sync, promote or MCP output found; git diff against the base not run (no shell)."
+    ]
+  }
+}

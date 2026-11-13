@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "44040a23147616e988afac320e48be4ba30e3dd8",
+    "head": "bd07b1e98b19c572dd33ea8f09ea4a56b0174786",
+    "diff_sha256": "d8e2700a18a20e6b2f9f16b032c17c6097a9550bb24dd620f3f6b7c24e26d314",
+    "paths": [
+      "longterm-mem/internal/promote/propagate.go",
+      "longterm-mem/internal/promote/propagate_cards.go",
+      "longterm-mem/internal/promote/propagate_ids_test.go",
+      "longterm-mem/internal/promote/source.go",
+      "longterm-mem/internal/promote/walk_bridged_test.go",
+      "longterm-mem/internal/promote/walk_failures_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "44040a23147616e988afac320e48be4ba30e3dd8",
+      "head": "bd07b1e98b19c572dd33ea8f09ea4a56b0174786",
+      "diff_sha256": "d8e2700a18a20e6b2f9f16b032c17c6097a9550bb24dd620f3f6b7c24e26d314"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/promote/propagate.go",
+        "longterm-mem/internal/promote/propagate_cards.go",
+        "longterm-mem/internal/promote/propagate_ids_test.go",
+        "longterm-mem/internal/promote/source.go",
+        "longterm-mem/internal/promote/walk_bridged_test.go",
+        "longterm-mem/internal/promote/walk_failures_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/propagate_cards.go:100-108",
+        "claim": "The new branches that fail a memory with a non-numeric id when its page is unreadable (no own page, unreadable pages present) in both propagation walks have no test. The new test covers only the readable-page case, so a regression there would go unnoticed.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/propagate_cards.go:100-108",
+          "longterm-mem/internal/promote/propagate.go:156-159",
+          "longterm-mem/internal/promote/propagate_ids_test.go:11-52"
+        ]
+      }
+    ],
+    "evidence": [
+      "Both walks now return the numericID error through SyncFailure when the memory has a page, or an unreadable page that could be its own, and its id is not a number. That matches the claim in the commit message.",
+      "The ordering in propagate.go is unchanged: the styleOf failure is still reported before the id error. A memory with both problems is failed on the style, under id 0 (not a regression).",
+      "The test and doc edits (walk_failures_test.go, walk_bridged_test.go, source.go) change no production behaviour. I could not verify from the diff that the c-000900 page in the bridged fixture still matches cardMemory's address."
+    ]
+  }
+}

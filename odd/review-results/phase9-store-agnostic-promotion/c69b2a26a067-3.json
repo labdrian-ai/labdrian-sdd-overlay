@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "74a36749c1d99f9a110a342f580e015876c790df",
+    "head": "c69b2a26a067ce1f6ba574180eca5fe56a3b2b54",
+    "diff_sha256": "1c15fd37346d5114655ff391f80b2062ccf45df738d3f95a2d63ac4c0547665b",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "74a36749c1d99f9a110a342f580e015876c790df",
+      "head": "c69b2a26a067ce1f6ba574180eca5fe56a3b2b54",
+      "diff_sha256": "1c15fd37346d5114655ff391f80b2062ccf45df738d3f95a2d63ac4c0547665b"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:118",
+        "claim": "The T4 task line is ticked [x] while it also records an unresolved decision (A3: whether a fresh sync may create one page per part memory) and unmeasured live premises as open. L49 says it 'needs your decision (coordinator)', so the tick state overstates completion and a later reader may treat A3 as settled.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:118",
+          "odd/tasks/phase9-store-agnostic-promotion.md:405"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:118",
+        "claim": "The task line says the single-id promote cost was 'accepted by the coordinator' and quotes 'about 30 ms against 17-23 ms', but the L49 timing table gives 29-33 ms against 23-26 ms at 61ec52e5/94e96b7a and 10-13 ms at base. The figures are inconsistent between the task line and the table, and L49 itself notes the machine ran slower. The task line's comparison baseline is not reproducible from the log.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:118",
+          "odd/tasks/phase9-store-agnostic-promotion.md:415"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:395",
+        "claim": "L49 says the accepted +10 ms is 'because restoring the stored-hash shortcut would break the union of D', yet the table shows the stored-hash change (74a36749) adds about 5 ms over 94e96b7a, and the task line attributes +10 ms to 61ec52e5. The attribution of the cost to a specific commit is muddled, so the 'accepted' row may not match the measured delta.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:395",
+          "odd/tasks/phase9-store-agnostic-promotion.md:415"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff only edits odd/tasks/phase9-store-agnostic-promotion.md: one task line and one appended Log entry (L49); no code is changed, so no behavioral regression is possible from this commit.",
+      "Findings concern documentation consistency only, hence SUGGESTION severity."
+    ]
+  }
+}

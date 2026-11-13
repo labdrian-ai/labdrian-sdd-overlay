@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "51d9ef3fafe04f96d92fd9dac960cfdab13a8a26",
+    "head": "dcc676858989e97a64a4848eb17889d01a0fc1f8",
+    "diff_sha256": "642df088b541522193278e40996fe361a4bec7ffb0a6df4468e70643bcc2f7f7",
+    "paths": [
+      "longterm-mem/internal/memorycard/source.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "51d9ef3fafe04f96d92fd9dac960cfdab13a8a26",
+      "head": "dcc676858989e97a64a4848eb17889d01a0fc1f8",
+      "diff_sha256": "642df088b541522193278e40996fe361a4bec7ffb0a6df4468e70643bcc2f7f7"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/memorycard/source.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/memorycard/source.go:99",
+        "claim": "The tuple assignment `s.byKey[card.Project], err = s.store.ObservationsByKey(...)` writes the map entry even when ObservationsByKey fails, so a nil map is cached under the project key. The function returns the error, but the key now exists. The next kinOf call on the same Source takes the `ok` branch, skips the read, and finds no holders (indexing a nil map yields nil). Mirrors are then silently reported as absent, with no error. The base used a per-call local map that was discarded on error, so a retry re-read the data. A transient read failure now becomes a persistent wrong answer for the Source's lifetime.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/memorycard/source.go:98-103"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/memorycard/source.go:24",
+        "claim": "The Source now has mutable cache state (a plain map) with no lock. If a Source is shared across goroutines, concurrent kinOf calls race on the map, which can panic with a concurrent map write. The cache also never invalidates, so it goes stale if the store is written while the Source lives. Both rest on the 'read-only database' assumption, which the diff does not enforce.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/memorycard/source.go:24",
+          "longterm-mem/internal/memorycard/source.go:98-99"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only source.go changed. The per-call local byKey became a Source field, initialised in NewSource.",
+      "A Source built as a struct literal rather than through NewSource would have a nil map and panic on write. The diff shows no such construction, so this is not reported."
+    ]
+  }
+}

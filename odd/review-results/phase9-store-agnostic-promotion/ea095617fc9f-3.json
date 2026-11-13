@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "c69b2a26a067ce1f6ba574180eca5fe56a3b2b54",
+    "head": "ea095617fc9f9fd797b4e3a4486a99ba97e69871",
+    "diff_sha256": "604890cdcbe993b9e2923a4a4bd5b7545c237cea0b7b118d3e69b96566826bcc",
+    "paths": [
+      "longterm-mem/internal/memorycard/observations.go",
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "c69b2a26a067ce1f6ba574180eca5fe56a3b2b54",
+      "head": "ea095617fc9f9fd797b4e3a4486a99ba97e69871",
+      "diff_sha256": "604890cdcbe993b9e2923a4a4bd5b7545c237cea0b7b118d3e69b96566826bcc"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/memorycard/observations.go",
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The only code change is a doc comment edit on ImportedParts in observations.go; no executable behavior changes.",
+      "The markdown change updates the T4 task line and appends log entry L50; the figures it quotes (29-33 ms, 23-26 ms, 10-13 ms) are consistent between the task line and L50.",
+      "No requested behavior is violated and no input valid before the change regresses."
+    ]
+  }
+}

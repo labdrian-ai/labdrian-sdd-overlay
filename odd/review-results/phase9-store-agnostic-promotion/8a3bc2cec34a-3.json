@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "61ec52e545db7dd33c829ba0e9b8921464a30ce8",
+    "head": "8a3bc2cec34a42e77bef0aa4317bc80f41ae2808",
+    "diff_sha256": "956dd7052ab0f25ea82a0da5b720dd7d5479ff41d73d227cb522b413a16aabec",
+    "paths": [
+      "longterm-mem/internal/promote/page_style.go",
+      "longterm-mem/internal/promote/page_style_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "61ec52e545db7dd33c829ba0e9b8921464a30ce8",
+      "head": "8a3bc2cec34a42e77bef0aa4317bc80f41ae2808",
+      "diff_sha256": "956dd7052ab0f25ea82a0da5b720dd7d5479ff41d73d227cb522b413a16aabec"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/promote/page_style.go",
+        "longterm-mem/internal/promote/page_style_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "idError.Unwrap returns the strconv *NumError, so errors.Is reaches ErrSyntax and ErrRange and errors.As reaches *strconv.NumError. This restores what the dropped %w had removed.",
+      "strconv.ParseInt reports ErrRange for any well-formed decimal that overflows int64, negative values included, so the 'out of range' branch is chosen correctly. Empty, signed-garbage and non-digit ids return ErrSyntax and read 'not a number'.",
+      "The message prints the id once, because the strconv error is held as the cause and never formatted into the text. The tests' strings.Count checks hold: the source names 'engram' and 'memorycard' do not contain the ids used.",
+      "No caller behaviour changes except that the error type is now *idError, and callers compared only through the message or wrapped it before; nothing in the diff shows a regression."
+    ]
+  }
+}

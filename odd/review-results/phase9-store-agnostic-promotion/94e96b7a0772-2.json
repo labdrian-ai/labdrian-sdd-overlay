@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "71cb65f889392c056a8dadc3aad8bf0352429c11",
+    "head": "94e96b7a0772d11223f99226d97fea6ad6f86978",
+    "diff_sha256": "60a9fa149c7fdfef0828d11101216841e438fa3cacc8b5f779a6bb277dc9051b",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "71cb65f889392c056a8dadc3aad8bf0352429c11",
+      "head": "94e96b7a0772d11223f99226d97fea6ad6f86978",
+      "diff_sha256": "60a9fa149c7fdfef0828d11101216841e438fa3cacc8b5f779a6bb277dc9051b"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:386",
+        "claim": "L48 says that against 61ec52e5 the behavior differences are 'exactly B (kept: none), C, D and F'. Change A (the length-prefixed ContentKey) is also a behavior change against 61ec52e5, so the list omits it. The same entry's 'trade' world is DIFFERENT and its memory-51 RED test shows the change. The record of what changed since the reviewed head is therefore wrong, and a reader who relies on 'exactly' will miss A's effect on matching. Change E, the query rework, is also left out of the list.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:369",
+          "odd/tasks/phase9-store-agnostic-promotion.md:386"
+        ]
+      }
+    ],
+    "evidence": [
+      "The change only edits the task document, adding the T4 commit list and the L48 log entry.",
+      "The timing arithmetic in L48 is consistent: 0.451/0.358 is about 1.26x, and the single-id rows are all under 40 ms.",
+      "L48 line 369 describes A as a ContentKey behavior change, but line 386 excludes A from the 'exactly' list of behavior differences against 61ec52e5."
+    ]
+  }
+}
