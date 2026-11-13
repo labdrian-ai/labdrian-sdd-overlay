@@ -1,0 +1,86 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "e98c4ca769b19469bcf718890d195bef69cd2648",
+    "head": "8703117ee6b7125812ef80e9b61eb8f41dc0261a",
+    "diff_sha256": "4b3226d79f1202b2427fca9fbfcf20e7c211bd35729cd7a06df37d39da2b4a21",
+    "paths": [
+      "longterm-mem/README.md",
+      "longterm-mem/cmd/longterm-mem/cmd_doctor.go",
+      "longterm-mem/cmd/longterm-mem/doctor_eligibility_test.go",
+      "longterm-mem/internal/ops/doctor.go",
+      "longterm-mem/internal/ops/doctor_eligibility.go",
+      "longterm-mem/internal/ops/doctor_eligibility_memorycard_test.go",
+      "longterm-mem/internal/ops/doctor_eligibility_test.go",
+      "longterm-mem/internal/ops/doctor_identity_test.go",
+      "longterm-mem/internal/ops/testdata/golden/58-a-page-whose-observation-sync-no-longer-keeps-current.golden",
+      "openspec/specs/longterm-mem-ops/spec.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "e98c4ca769b19469bcf718890d195bef69cd2648",
+      "head": "8703117ee6b7125812ef80e9b61eb8f41dc0261a",
+      "diff_sha256": "4b3226d79f1202b2427fca9fbfcf20e7c211bd35729cd7a06df37d39da2b4a21"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/README.md",
+        "longterm-mem/cmd/longterm-mem/cmd_doctor.go",
+        "longterm-mem/cmd/longterm-mem/doctor_eligibility_test.go",
+        "longterm-mem/internal/ops/doctor.go",
+        "longterm-mem/internal/ops/doctor_eligibility.go",
+        "longterm-mem/internal/ops/doctor_eligibility_memorycard_test.go",
+        "longterm-mem/internal/ops/doctor_eligibility_test.go",
+        "longterm-mem/internal/ops/doctor_identity_test.go",
+        "longterm-mem/internal/ops/testdata/golden/58-a-page-whose-observation-sync-no-longer-keeps-current.golden",
+        "openspec/specs/longterm-mem-ops/spec.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/cmd/longterm-mem/cmd_doctor.go:154",
+        "claim": "The docs, spec and the Superseded field comment say archived memories are also never judged, but the mapping only sets Superseded from Status == \"superseded\". If ListMemories returns archived memories, they are judged and can be flagged or can pass a page. The diff does not show that ListMemories filters archived ones, and no test covers it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/cmd_doctor.go:154",
+          "openspec/specs/longterm-mem-ops/spec.md:110-113"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/ops/doctor_eligibility.go:106-124",
+        "claim": "The warning names candidates[0], documented as the first (lowest id) live part. Candidates keep the order the reader returned, so this holds only if ListMemories sorts by id, and nothing enforces or tests that. Which memory the advice names could vary.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/ops/doctor_eligibility.go:106-124"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/ops/doctor_eligibility.go:90-97",
+        "claim": "A legacy page whose only memory is superseded is now skipped silently. Its replacement memory belongs to a different page, so this page is never refreshed and doctor no longer reports it as stale. The comment's assumption that the replacing memory's page keeps it current does not hold for this page.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/ops/doctor_eligibility.go:90-97",
+          "longterm-mem/internal/ops/doctor_eligibility_memorycard_test.go:77"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff. The legacy/memorycard advice split and the live-candidate selection are consistent with the golden and test updates. The remaining risks depend on what ListMemories returns (archived rows, ordering), which the diff does not show."
+    ]
+  }
+}

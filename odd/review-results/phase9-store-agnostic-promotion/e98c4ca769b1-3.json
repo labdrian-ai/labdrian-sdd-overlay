@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "c63f0bb5cae914c5df96a14cbf97837b720c1010",
+    "head": "e98c4ca769b19469bcf718890d195bef69cd2648",
+    "diff_sha256": "b22b1d239c8c1788dbf547a3dea138b0b63741ad6f8198bebd36116a822eb5cf",
+    "paths": [
+      "longterm-mem/internal/promote/page_identity_test.go",
+      "longterm-mem/internal/promote/reconcile_test.go",
+      "longterm-mem/internal/promote/update.go",
+      "openspec/specs/longterm-mem-promotion/spec.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "c63f0bb5cae914c5df96a14cbf97837b720c1010",
+      "head": "e98c4ca769b19469bcf718890d195bef69cd2648",
+      "diff_sha256": "b22b1d239c8c1788dbf547a3dea138b0b63741ad6f8198bebd36116a822eb5cf"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/promote/page_identity_test.go",
+        "longterm-mem/internal/promote/reconcile_test.go",
+        "longterm-mem/internal/promote/update.go",
+        "openspec/specs/longterm-mem-promotion/spec.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/reconcile_test.go:343-345",
+        "claim": "The test table's \"none of the three\" case carries only memorycard_id with no revision field, and the \"engram alone\" cases are misaligned by gofmt-style spacing. More importantly, the spec states source_revision beside source: memorycard is also read, but no test case pins the source_revision path or its precedence against memorycard_revision/engram_revision, so the documented precedence is only partly pinned.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/reconcile_test.go:343-345",
+          "openspec/specs/longterm-mem-promotion/spec.md:675-679"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/update.go:203-208",
+        "claim": "The new doc comment asserts that a present but non-numeric revision never falls back to the other identity and that the first identity whose revision field is present decides. The diff does not show the pageRevision body, so this behavior is only verified through the new test; the comment could drift from the implementation if the loop body is changed, and the comment is the sole in-code statement of the contract.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "longterm-mem/internal/promote/update.go:203-208"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only a comment in update.go, a removed stub comment, one new test, and spec text; no production behavior changes.",
+      "The spec additions and new scenarios match the new test cases (memorycard wins, malformed memorycard refused, none of three refused).",
+      "No observable-harm defect is introduced by this commit."
+    ]
+  }
+}

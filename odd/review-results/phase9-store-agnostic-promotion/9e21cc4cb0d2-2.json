@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "8703117ee6b7125812ef80e9b61eb8f41dc0261a",
+    "head": "9e21cc4cb0d244eef6780f10170c6cecfbed0a69",
+    "diff_sha256": "7320fe76f8825037eb97a054ed6688376bc62912a716f65542e4f846e7a206b5",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "8703117ee6b7125812ef80e9b61eb8f41dc0261a",
+      "head": "9e21cc4cb0d244eef6780f10170c6cecfbed0a69",
+      "diff_sha256": "7320fe76f8825037eb97a054ed6688376bc62912a716f65542e4f846e7a206b5"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:119",
+        "claim": "The rewritten T5 line still says the verifier's blocker B1 (doctor's advice) was 'closed by T10'. The new L56 entry says the recheck found B1 still open for legacy pages and that it was fixed by 8703117e. A reader of the task line gets the stale closure claim, and the correction lives only in the Log. The line is also not updated with the L56 correction to L54's open items, which it keeps citing as L55.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:119",
+          "odd/tasks/phase9-store-agnostic-promotion.md:442-443"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff only touches a docs/Log file; no code or behavior is changed.",
+      "The T5 and T10 commit lists are consistent with the L56 bullet about d83f286d, except that c63f0bb5 is added to T5's list without being named in that bullet.",
+      "The T5 line keeps the 'closed by T10' wording for B1 while L56 records the later legacy-advice fix."
+    ]
+  }
+}

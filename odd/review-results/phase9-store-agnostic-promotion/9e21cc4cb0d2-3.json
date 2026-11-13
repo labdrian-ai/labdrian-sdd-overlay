@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "8703117ee6b7125812ef80e9b61eb8f41dc0261a",
+    "head": "9e21cc4cb0d244eef6780f10170c6cecfbed0a69",
+    "diff_sha256": "7320fe76f8825037eb97a054ed6688376bc62912a716f65542e4f846e7a206b5",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "8703117ee6b7125812ef80e9b61eb8f41dc0261a",
+      "head": "9e21cc4cb0d244eef6780f10170c6cecfbed0a69",
+      "diff_sha256": "7320fe76f8825037eb97a054ed6688376bc62912a716f65542e4f846e7a206b5"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The change only edits a feature document: the T5 and T10 task lines and the appended L56 Log entry. No code or behavior changes.",
+      "The commit lists added to T5 (733db247, 08f07c01, dad94e69, c63f0bb5) and T10 (e64a3ee2, 8703117e, e98c4ca7) match the commits that L56 describes.",
+      "The Log entry cross-references (L54, L55, L56) are consistent with the task lines and the correction to L55.",
+      "L56's Risk-3 correction of 733db247 agrees with the new T5 line, which cites it as 'Risk 3'. The commit message's 'Risk: none' is accurate for this docs-only commit."
+    ]
+  }
+}
