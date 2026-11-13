@@ -49,7 +49,8 @@ func styleOf(source string) (pageStyle, error) {
 func numericID(m memory.Memory) (int64, error) {
 	id, err := strconv.ParseInt(m.Identity.ID, 10, 64)
 	if err != nil {
-		return 0, fmt.Errorf("promote: %s %q has an id that is not a number: %w", m.Identity.Source, m.Identity.ID, err)
+		// The parse error repeats the id, which this message already names.
+		return 0, fmt.Errorf("promote: %s %q has an id that is not a number", m.Identity.Source, m.Identity.ID)
 	}
 	return id, nil
 }

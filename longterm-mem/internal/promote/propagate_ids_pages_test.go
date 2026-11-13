@@ -10,18 +10,15 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultlayout"
 )
 
-// The two propagation walks, for a memory whose id is not a number, whatever state the pages are in: the failure says
-// what the id is (SyncFailure.ObservationID is 0 for it, and the error names the real one). They are told apart
-// by the memory they are handed: a retired memory with an id that is no number, over pages that cannot be listed or
-// over a page that cannot be read.
-func propagationWalks(t *testing.T) map[string]struct {
+// propagationWalk is one of the two propagation walks over a project "memorycard", with the store name its memories carry.
+type propagationWalk struct {
 	source string
 	walk   func(*Writer, Source) (PropagateReport, error)
-} {
-	return map[string]struct {
-		source string
-		walk   func(*Writer, Source) (PropagateReport, error)
-	}{
+}
+
+// propagationWalks returns the walks by name: memorycard's (PropagateCards) and the Engram dialect's (Propagate).
+func propagationWalks(t *testing.T) map[string]propagationWalk {
+	return map[string]propagationWalk{
 		"memorycard's walk": {memorycardSource, func(w *Writer, src Source) (PropagateReport, error) {
 			return PropagateCards(t.Context(), src, w, "memorycard")
 		}},
@@ -31,6 +28,8 @@ func propagationWalks(t *testing.T) map[string]struct {
 	}
 }
 
+// For a memory whose id is not a number, whatever state the pages are in, the failure says what the id is (SyncFailure.ObservationID
+// is 0 for it, and the error names the real one, once).
 func TestPropagation_AnUnlistablePagesDirectoryStillNamesAnIdThatIsNotANumber(t *testing.T) {
 	for name, tc := range propagationWalks(t) {
 		t.Run(name, func(t *testing.T) {
@@ -46,6 +45,9 @@ func TestPropagation_AnUnlistablePagesDirectoryStillNamesAnIdThatIsNotANumber(t 
 			got := report.Failed[0].Err.Error()
 			if !strings.Contains(got, "pages unreadable") || !strings.Contains(got, `"x1"`) || !strings.Contains(got, "not a number") {
 				t.Errorf("failure = %q, want the unlistable pages and the id %q that is not a number", got, "x1")
+			}
+			if n := strings.Count(got, "x1"); n != 1 {
+				t.Errorf("failure = %q names the id %d times, want once", got, n)
 			}
 		})
 	}
