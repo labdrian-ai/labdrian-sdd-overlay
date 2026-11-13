@@ -139,7 +139,8 @@ keys `source` (the store's name, `memorycard`), `source_id`, `source_type`
 and `source_revision`, in that order, and with no other identity key: neither
 `engram_id`, `engram_sync_id`, `engram_type` and `engram_revision`, nor
 `memorycard_id`, `memorycard_type` and `memorycard_revision`. Every page
-written, whether new, updated in place or status-patched, carries them.
+the writer creates or fully re-renders (a new page, an update in place) carries
+them; a status patch changes `status` and `related` only.
 Pages written before keep their legacy keys, which every reader still reads as
 the identity they name, until `longterm-mem migrate-card-pages --apply` gives
 them the store-agnostic keys of their memorycard memory once (see "Local-Edit
