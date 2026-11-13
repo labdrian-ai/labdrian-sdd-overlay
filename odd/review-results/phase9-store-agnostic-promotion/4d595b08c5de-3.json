@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "e8a80a41d3f5b6139f0038c6f4129d4fd9280da9",
+    "head": "4d595b08c5de76be8749adb9642a21e86e5fef7c",
+    "diff_sha256": "7d7724b8878c8857cf812d96f1dec13c0c99fefdd262db5e45775e76cf146eaf",
+    "paths": [
+      "odd/review-results/phase9-store-agnostic-promotion/e8a80a41d3f5-1.sweep.json",
+      "odd/review-results/phase9-store-agnostic-promotion/e8a80a41d3f5-2.json",
+      "odd/review-results/phase9-store-agnostic-promotion/e8a80a41d3f5-3.json",
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "e8a80a41d3f5b6139f0038c6f4129d4fd9280da9",
+      "head": "4d595b08c5de76be8749adb9642a21e86e5fef7c",
+      "diff_sha256": "7d7724b8878c8857cf812d96f1dec13c0c99fefdd262db5e45775e76cf146eaf"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/review-results/phase9-store-agnostic-promotion/e8a80a41d3f5-1.sweep.json",
+        "odd/review-results/phase9-store-agnostic-promotion/e8a80a41d3f5-2.json",
+        "odd/review-results/phase9-store-agnostic-promotion/e8a80a41d3f5-3.json",
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The change edits one planning document and adds three archived review-result JSON files; no executable code changes, so no runtime risk.",
+      "The single Objective sentence is split into 'Objective of this feature (T1-T3, delivered in Phase 9)' and 'Objective of the next phase's first feature (T4-T20, specified here, not delivered by this feature)'. This matches the scope line (L42) in the same document and resolves the earlier review suggestion that the Engram removal read as delivered by this feature.",
+      "The L28 forecast and the Engram removal now sit only under the next-phase Objective. The branch and delivery-strategy sentence is kept in its own paragraph, so no earlier content is lost.",
+      "The added JSON records are additive archive records of the previous head's review; their stale findings are addressed by this commit and are not defects it introduces."
+    ]
+  }
+}

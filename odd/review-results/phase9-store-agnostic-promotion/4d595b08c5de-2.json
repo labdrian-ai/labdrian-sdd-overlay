@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "e8a80a41d3f5b6139f0038c6f4129d4fd9280da9",
+    "head": "4d595b08c5de76be8749adb9642a21e86e5fef7c",
+    "diff_sha256": "7d7724b8878c8857cf812d96f1dec13c0c99fefdd262db5e45775e76cf146eaf",
+    "paths": [
+      "odd/review-results/phase9-store-agnostic-promotion/e8a80a41d3f5-1.sweep.json",
+      "odd/review-results/phase9-store-agnostic-promotion/e8a80a41d3f5-2.json",
+      "odd/review-results/phase9-store-agnostic-promotion/e8a80a41d3f5-3.json",
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "e8a80a41d3f5b6139f0038c6f4129d4fd9280da9",
+      "head": "4d595b08c5de76be8749adb9642a21e86e5fef7c",
+      "diff_sha256": "7d7724b8878c8857cf812d96f1dec13c0c99fefdd262db5e45775e76cf146eaf"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/review-results/phase9-store-agnostic-promotion/e8a80a41d3f5-1.sweep.json",
+        "odd/review-results/phase9-store-agnostic-promotion/e8a80a41d3f5-2.json",
+        "odd/review-results/phase9-store-agnostic-promotion/e8a80a41d3f5-3.json",
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The change edits one markdown document and adds three archived review-result JSON files; no executable code changes.",
+      "The Objective is split into a T1-T3 paragraph and a T4-T20 paragraph. This removes the earlier ambiguity that the previous review's F1 reported, where the Engram removal read as delivered by this feature.",
+      "The T1-T3 objective keeps the model, the page-identity reader and the Source-port walk, and the T4-T20 paragraph carries the Engram removal and the forecast. The two paragraphs agree with the scope line (L42).",
+      "The archived JSON records bind the previous commit's range and contain stale findings that this commit addresses. They are records, not claims about this head."
+    ]
+  }
+}
