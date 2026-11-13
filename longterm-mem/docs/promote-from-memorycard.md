@@ -108,8 +108,9 @@ A page is refused, left byte-identical and named, and the run goes on to the oth
 | the page differs from its precedence entry (a hand edit, R-030) | `edited since longterm-mem wrote it` |
 | the page has no precedence entry | `not recorded as written by longterm-mem` |
 | no `import_map` row names the page's observation, or the memory is gone | `no import_map row names its Engram observation` |
-| the memory already has a page of its own, or is the memory of another page of the run (two pages for one memory) | `its memory already has a page` |
-| the page's id is no number, it names an Engram observation and a memorycard memory at once, or the memory is in another project | `identity cannot be read as one memory` (shown when it is not zero) |
+| the page names a memorycard memory by `memorycard_id` and memorycard holds no memory with that id | `memorycard holds no memory with the id it names` (shown when it is not zero) |
+| the memory already has a page of its own, or is the memory of another page of the run (two pages for one memory; two `memorycard_id` pages of one memory are both refused) | `its memory already has a page` |
+| the page's id is no number, it names an Engram observation and a memorycard memory at once, it carries a legacy key and names no memory, its identity lines are indented or run over several lines, or the memory is in another project | `identity cannot be read as one memory` (shown when it is not zero) |
 
 A refused page is left for the owner: it is never matched to a memory by its content. A page that cannot be read stops
 the run before any write, since it may be a memory's own page. A second run changes nothing: the pages it migrated no
@@ -118,5 +119,29 @@ longer carry legacy keys, so the count it prints is the number of pages left. `p
 After the migration `sync` predicts the same promotions as before it: a memory whose page was migrated is now the
 owner of that page (counted as skipped) and not a bridged memory, and `promote --source memorycard --id N` of it
 answers `already promoted as c-NNNNNN`. `doctor` joins the pages by the same identity and reports the same findings.
+A page that names an Engram observation takes the memory's current revision as its `source_revision` while its body stays
+the one written in the Engram era: the page says "revision N" for the memory and holds the text of its import until the
+memory's next revision rewrites it. A page that carries a legacy key and names no memory (only `engram_sync_id`, say) is a
+legacy page too: it is counted and refused by name, so the count is the number of pages that still carry a legacy key.
+An identity key that is indented, or whose value runs over several lines, is refused the same way (`identity cannot be
+read as one memory`), and so is a page whose `memorycard_id` names a memory that is not in memorycard
+(`memorycard holds no memory with the id it names`, shown when it is not zero).
+
+The command works on one project. Run the dry run and then `--apply` for every project that has pages in the vault (the
+rehearsal script reads the list from the vault's pages and prints a vault-wide count of the pages that still carry a legacy
+key at the end; that count is zero when the vault is ready for the retirement of the legacy keys).
+
+If a run stops partway (a full disk, a killed process), the pages already migrated stay migrated and recorded. Each
+page's precedence entry is saved before the page is written, so a page that was being written reads as the page the
+rerun would write, and running the command again finishes it. The error names the backup directory
+`.vault-meta/card-page-migration-<UTC instant>[-N]/` (a retry in the same second takes a numbered name; a copy that fails
+halfway removes its directory, so one that is there is whole). To go back to the state before the migration, copy the
+files of that directory over the vault (`cp -a <backup>/. <vault>/`): the pages and the sidecar return byte for byte.
+
+There is no lock between the migration and a `sync` that runs at the same time, and the hook-driven `sync`
+(`engine/synctrigger`, fired when an agent session ends or a change is archived) has no switch to turn it off. Run
+`--apply` while no agent session of the project is open, and look at `<state>/logs/sync-trigger.log` for a sync that is
+still running, so that no sync writes a page the migration is rewriting.
+
 Run it first on copies of the vault and of memorycard's database (`scripts/rehearse-card-page-migration.sh` does, and
-changes nothing live), read the counts, and only then run `--apply` on the vault.
+changes nothing live), read the counts, and only then run `--apply` on the vault, project by project.

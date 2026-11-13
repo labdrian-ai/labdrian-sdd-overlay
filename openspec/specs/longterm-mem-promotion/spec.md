@@ -135,8 +135,8 @@ wikilink resolves, using an address-first filename that survives a later
 retitle.
 
 The page SHALL name the memory it was promoted from with the store-agnostic
-keys `source` (the store's name, `memorycard`), `source_id`, `source_revision`
-and `source_type`, in that order, and with no other identity key: neither
+keys `source` (the store's name, `memorycard`), `source_id`, `source_type`
+and `source_revision`, in that order, and with no other identity key: neither
 `engram_id`, `engram_sync_id`, `engram_type` and `engram_revision`, nor
 `memorycard_id`, `memorycard_type` and `memorycard_revision`. Every page
 written, whether new, updated in place or status-patched, carries them.
