@@ -1,6 +1,7 @@
 package memorycard
 
 import (
+	"slices"
 	"strconv"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
@@ -62,37 +63,51 @@ func (s *Source) ByID(id string) (memory.Memory, bool, error) {
 	return memories[0], true, nil
 }
 
-// kin is what a listing reads, once, to say the lineage and the mirrors of all its memories: the memories imported
-// from each observation the listing names, and, for each project with a memory that has no import_map row, the
-// observations imported into it.
+// kin is what a listing reads to say the lineage and the mirrors of all its memories: the memories imported from each
+// observation the listing names or a mirror holds, and the observations each hand mirror holds the content of.
 type kin struct {
-	parts    map[int64][]int64
-	imported map[string]map[string][]ImportedObservation
+	parts   map[int64][]int64
+	holders map[int64][]int64
 }
 
-// kinOf reads what the lineage and the mirrors of cards need: one lookup of the parts of every observation the cards
-// were imported from (in chunks, as MemoryIDsByEngramIDs reads them), and one listing of the imported observations of
-// each project that has a memory mirrored by hand.
+// kinOf reads what the lineage and the mirrors of cards need. For a memory with no import_map row it asks first, by
+// one indexed lookup, which observations have an imported memory with the stored content hash of its text (what a
+// hand mirror of one part, or of a record kept whole, finds), and only when that finds nothing reads the imported
+// bodies of its project, once per listing, to compare them by ContentKey. Then it reads the parts of every observation
+// it has named, in one lookup in chunks (MemoryIDsByEngramIDs).
 func (s *Source) kinOf(cards []memory.CardMemory) (kin, error) {
-	k := kin{imported: map[string]map[string][]ImportedObservation{}}
-	var observations []int64
+	k := kin{holders: map[int64][]int64{}}
+	wanted := map[int64]bool{}
+	byKey := map[string]map[string][]int64{}
 	for _, card := range cards {
 		if card.EngramID != 0 {
-			observations = append(observations, card.EngramID)
+			wanted[card.EngramID] = true
 		}
-		if card.Mapped || k.imported[card.Project] != nil {
+		if card.Mapped {
 			continue
 		}
-		listed, err := s.store.ImportedObservations(card.Project)
+		holders, err := s.store.ObservationsWithStoredHash(card.Project, memory.CardContentHash(card.Title, card.Body))
 		if err != nil {
 			return kin{}, err
 		}
-		byHash := map[string][]ImportedObservation{}
-		for _, o := range listed {
-			byHash[o.Hash] = append(byHash[o.Hash], o)
+		if len(holders) == 0 {
+			if byKey[card.Project] == nil {
+				if byKey[card.Project], err = s.store.ObservationsByKey(card.Project); err != nil {
+					return kin{}, err
+				}
+			}
+			holders = byKey[card.Project][ContentKey(card.Title, card.Body)]
 		}
-		k.imported[card.Project] = byHash
+		k.holders[card.ID] = holders
+		for _, id := range holders {
+			wanted[id] = true
+		}
 	}
+	observations := make([]int64, 0, len(wanted))
+	for id := range wanted {
+		observations = append(observations, id)
+	}
+	slices.Sort(observations)
 	parts, err := s.store.MemoryIDsByEngramIDs(observations)
 	if err != nil {
 		return kin{}, err
@@ -147,22 +162,17 @@ func lineageOf(card memory.CardMemory, k kin) []memory.Identity {
 	return lineage
 }
 
-// mirrorsOf is what a memory with no import_map row holds the content of: the imported observations of its project
-// whose whole text, rebuilt from their parts (Store.ImportedObservations), has the card content hash of the memory's
-// own title and body, in observation id order, each as every memory of its parts, in part order, and the observation.
-// Memorycard says it alone: it needs no other store to know which observations were imported.
+// mirrorsOf is what a memory with no import_map row holds the content of: the imported observations that kinOf found
+// to hold its text (the stored hash of an imported part, else the ContentKey of the whole observation or of a part),
+// in observation id order, each as every memory of its parts, in part order, and the observation. Memorycard says it
+// alone: it needs no other store to know which observations were imported.
 func mirrorsOf(card memory.CardMemory, k kin) []memory.Identity {
 	var mirrors []memory.Identity
-	seen := map[int64]bool{}
-	for _, o := range k.imported[card.Project][memory.CardContentHash(card.Title, card.Body)] {
-		if seen[o.EngramID] {
-			continue
-		}
-		seen[o.EngramID] = true
-		for _, id := range o.MemoryIDs {
+	for _, observation := range k.holders[card.ID] {
+		for _, id := range k.parts[observation] {
 			mirrors = append(mirrors, memory.Identity{Source: SourceName, ID: strconv.FormatInt(id, 10)})
 		}
-		mirrors = append(mirrors, memory.Identity{Source: engramSource, ID: strconv.FormatInt(o.EngramID, 10)})
+		mirrors = append(mirrors, memory.Identity{Source: engramSource, ID: strconv.FormatInt(observation, 10)})
 	}
 	return mirrors
 }

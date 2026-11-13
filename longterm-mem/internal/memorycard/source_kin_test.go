@@ -49,6 +49,26 @@ part two body', 'active', ''),
 		`update memories set title = 'Old (part 1/2)' where id = 1`,
 		`insert into import_map values ('engram', '402', 2, 6), ('engram', '402', 3, 99), ('engram', '500', 1, 9), ('notes', 'n1', 1, 10),
 			('engram', '501', 1, 11), ('engram', '502', 1, 15), ('engram', '503', 1, 14), ('engram', '600', 1, 16), ('engram', '600', 2, 17)`,
+		// 700 is split at a blank line and in the middle of a word (memory 22 is its text); 23 is a copy of part 2 of
+		// 402; 800 has one part row left (its part 1 is gone), 801 is one part whose title says "part 1/1" (25 and 27
+		// are their texts); 510 has a part whose stored hash is right (30 is a copy of it).
+		`insert into memories(id, project, type, title, body, status, content_hash) values
+			(19, 'p', 'decision', 'Mixed (part 1/3)', 'alpha beta', 'active', ''),
+			(20, 'p', 'decision', 'Mixed (part 2/3)', 'gam', 'active', ''),
+			(21, 'p', 'decision', 'Mixed (part 3/3)', 'ma delta', 'active', ''),
+			(22, 'p', 'decision', 'Mixed', 'alpha beta
+
+gamma delta', 'active', ''),
+			(23, 'p', 'decision', 'Old (part 2/2)', 'part two body', 'active', ''),
+			(24, 'p', 'decision', 'Lone (part 2/3)', 'lone body', 'active', ''),
+			(25, 'p', 'decision', 'Lone', 'lone body', 'active', ''),
+			(26, 'p', 'decision', 'Solo (part 1/1)', 'solo body', 'active', ''),
+			(27, 'p', 'decision', 'Solo', 'solo body', 'active', ''),
+			(28, 'p', 'decision', 'Quick', 'quick body', 'active', '` + memory.CardContentHash("Quick", "quick body") + `'),
+			(29, 'p', 'decision', 'Quick (part 2/2)', 'second', 'active', ''),
+			(30, 'p', 'decision', 'Quick', 'quick body', 'active', '')`,
+		`insert into import_map values ('engram', '700', 1, 19), ('engram', '700', 2, 20), ('engram', '700', 3, 21),
+			('engram', '800', 1, 98), ('engram', '800', 2, 24), ('engram', '801', 1, 26), ('engram', '510', 1, 28), ('engram', '510', 2, 29)`,
 	} {
 		if _, err := db.Exec(stmt); err != nil {
 			t.Fatalf("%s: %v", stmt, err)
@@ -100,6 +120,15 @@ func TestSourceMirrorsAreEveryMemoryOfTheObservationsWhoseRebuiltTextTheyHold(t 
 		"18": {card("16"), card("17"), engramObservation("600")},
 		// A memory that holds the content of no imported observation has no mirror.
 		"13": nil,
+		// Parts split at a blank line and in the middle of a word in one observation.
+		"22": {card("19"), card("20"), card("21"), engramObservation("700")},
+		// A memory copied from one part, title as stored, is a mirror of its observation, whole.
+		"23": {card("1"), card("6"), engramObservation("402")},
+		// The part suffix is stripped when only one part row survives, and from a single part.
+		"25": {card("24"), engramObservation("800")},
+		"27": {card("26"), engramObservation("801")},
+		// Found by the stored hash of an imported part, with no rebuilt text read.
+		"30": {card("28"), card("29"), engramObservation("510")},
 		"3":  nil,
 	} {
 		m := memoryOf(t, source, id)
