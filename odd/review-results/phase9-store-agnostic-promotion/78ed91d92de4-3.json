@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "6c010de334ccbe731cf1c6b057e569976683e34f",
+    "head": "78ed91d92de450279d0cbff1d6c430012a1f1348",
+    "diff_sha256": "44e611136bcd6db765969d772331cfe417d849324eb2f1a3d507a690884ba7fa",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "6c010de334ccbe731cf1c6b057e569976683e34f",
+      "head": "78ed91d92de450279d0cbff1d6c430012a1f1348",
+      "diff_sha256": "44e611136bcd6db765969d772331cfe417d849324eb2f1a3d507a690884ba7fa"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:750",
+        "claim": "The L70 hash mapping and the T6 commit list both leave this batch's own docs(odd) commit without a hash and defer it to a later follow-up commit. Until that follow-up lands, the T6 commit trail cannot be traced to a commit. The previous batch had the same open placeholder, which a reviewer raised as F1 on 5813aa1c. This is a deliberate, documented deferral, so the impact is small.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:750",
+          "odd/tasks/phase9-store-agnostic-promotion.md:121"
+        ]
+      }
+    ],
+    "evidence": [
+      "The commit changes only the odd/tasks document: one T6 line is rewritten and the L70 log entry is appended.",
+      "No code or behavior is touched, so the stated Risk: none holds.",
+      "The only defect found is the dangling hash reference for the commit's own docs(odd) commit."
+    ]
+  }
+}

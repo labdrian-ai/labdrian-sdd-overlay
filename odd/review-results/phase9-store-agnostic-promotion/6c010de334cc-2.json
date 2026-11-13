@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "e8d67cf9383762237c2c032ba50b041bf138f997",
+    "head": "6c010de334ccbe731cf1c6b057e569976683e34f",
+    "diff_sha256": "3d06f5f42910b8c3e0150896bf9798aca1de50c55e879a1ce26ae10d2e510ae0",
+    "paths": [
+      "longterm-mem/docs/promote-from-memorycard.md",
+      "longterm-mem/internal/promote/migrate_cards.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "e8d67cf9383762237c2c032ba50b041bf138f997",
+      "head": "6c010de334ccbe731cf1c6b057e569976683e34f",
+      "diff_sha256": "3d06f5f42910b8c3e0150896bf9798aca1de50c55e879a1ce26ae10d2e510ae0"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/docs/promote-from-memorycard.md",
+        "longterm-mem/internal/promote/migrate_cards.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/docs/promote-from-memorycard.md:116",
+        "claim": "The refusal table row is now a single very long sentence listing six causes inline, including a nested parenthetical. It is hard to scan, and the new cause says 'the memory's type or revision' while the example only covers a type ending in ---, so a reader cannot tell whether a revision can trigger it. Splitting the causes or clarifying the revision case would improve readability.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/docs/promote-from-memorycard.md:116"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/docs/promote-from-memorycard.md:124",
+        "claim": "The added sentence about trailing spaces repeats what the preceding sentence in the same bullet already says (trailing spaces and tabs are ignored on the opening and closing line), so the bullet states it twice. The bullet is also long and mixes the definition of an unreadable page with the rule for what happens to it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/docs/promote-from-memorycard.md:124"
+        ]
+      }
+    ],
+    "evidence": [
+      "Diff touches only a docs file and a Go comment; no executable code changed, so there is no behavioral regression.",
+      "The commit message claims the empty and [] test was already stated in the project bullet, and the unchanged context line in the diff confirms that statement.",
+      "The RefusedOther comment and the table row both name the new cause consistently, with the same 'type ending in ---' wording."
+    ]
+  }
+}

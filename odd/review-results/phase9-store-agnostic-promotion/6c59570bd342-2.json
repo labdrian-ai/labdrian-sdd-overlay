@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "78ed91d92de450279d0cbff1d6c430012a1f1348",
+    "head": "6c59570bd342b5bf7f690e5a724506c65e681566",
+    "diff_sha256": "185f8530fe34aab110bb63774e1d3bcfafbcaf5f4e7f97589f20c16313c7d923",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "78ed91d92de450279d0cbff1d6c430012a1f1348",
+      "head": "6c59570bd342b5bf7f690e5a724506c65e681566",
+      "diff_sha256": "185f8530fe34aab110bb63774e1d3bcfafbcaf5f4e7f97589f20c16313c7d923"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff changes only two documentation lines in odd/tasks/phase9-store-agnostic-promotion.md: the T6 commit list now names 78ed91d9 as the docs(odd) commit of L70, and the L70 hash-mapping bullet now says the entry is in 78ed91d9.",
+      "Both edits agree with each other and with the commit claim (write the hash of L70's commit); no code, behavior, or requirement is changed.",
+      "The new hash-mapping wording still says a one-line follow-up writes the hash, which is exactly this commit, so it is not stale in a harmful way."
+    ]
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a6027b3880ae5b02960caf790f6fd757190bd762",
+    "head": "e8d67cf9383762237c2c032ba50b041bf138f997",
+    "diff_sha256": "ac1db3b17de104bc1962396baa49af95c756b1fdf4eeff3d463aa14a3eea3af1",
+    "paths": [
+      "scripts/rehearse-card-page-migration.sh"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "a6027b3880ae5b02960caf790f6fd757190bd762",
+      "head": "e8d67cf9383762237c2c032ba50b041bf138f997",
+      "diff_sha256": "ac1db3b17de104bc1962396baa49af95c756b1fdf4eeff3d463aa14a3eea3af1"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "scripts/rehearse-card-page-migration.sh"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The $SP alternation matches Go's unicode.IsSpace set: ASCII \\t\\n\\v\\f\\r and space, U+0085, U+00A0, U+1680, U+2000-200A, U+2028, U+2029, U+202F, U+205F and U+3000.",
+      "The lead bytes \\xc2, \\xe1, \\xe2 and \\xe3 are never continuation bytes (0x80-0xBF), so a trim cannot start in the middle of another valid character.",
+      "The text stays a byte string with no utf8 flag after utf8::decode and utf8::encode were removed, so the \\x80-\\xff escapes in the regex match single bytes.",
+      "The project key match `\\Aproject$SP*:` and the value trims are consistent with the previous behaviour on valid UTF-8 input.",
+      "The perl program is inside single quotes and the new code adds no single quote, so shell quoting is intact."
+    ]
+  }
+}
