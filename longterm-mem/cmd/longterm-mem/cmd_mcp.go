@@ -125,7 +125,9 @@ func mcpGet(store *engram.Store) func(context.Context, int64) (mcpserver.GetOutc
 // The call must name its source, as the command's --source does: an id means what the store says it means. The
 // store is opened for the call, read-only, and says by itself which memories are the same piece of memory.
 func (c commands) mcpPromote() func(ctx context.Context, project, source string, id int64) (mcpserver.PromoteOutcome, error) {
-	var declared sync.Once
+	// Each source is declared once per server, the first time a call reads it through the fallback.
+	var mu sync.Mutex
+	declared := map[string]bool{}
 	diagnostics := c.diagnostics
 	if diagnostics == nil {
 		diagnostics = os.Stderr
@@ -149,9 +151,12 @@ func (c commands) mcpPromote() func(ctx context.Context, project, source string,
 			return mcpserver.PromoteOutcome{}, err
 		}
 		if opened.degraded {
-			declared.Do(func() {
+			mu.Lock()
+			if !declared[source] {
+				declared[source] = true
 				fmt.Fprintf(diagnostics, "longterm-mem: mcp: promote: %s is being read through the immutable=1 fallback, so this run works from the snapshot taken when the connection was opened, not the live database\n", source)
-			})
+			}
+			mu.Unlock()
 		}
 		defer opened.closer.Close()
 		outcome, err := promote.PromoteCardAndReindex(ctx, writer, opened.source, id, index)
