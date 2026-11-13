@@ -152,7 +152,7 @@ second parallel memory, and never an automatic supersession.
 | exists, **new N < old N**, new N ≥ 1 | — | Surplus keys `c{N+1}…` upsert to a retired tombstone (`**Status**: retired`, trailer preserved, body removed) and are promoted so the vault page updates in place. **Never hand-deleted.** |
 | exists, **new N == 1** (was > 1) | — | The record moves to the manifest key (rule 2: a single-chunk source has no separate chunk observation). Every prior chunk key `c0001…` — including `c0001` — retires to a tombstone the same way; none of them becomes the live record. |
 | exists, **new N > old N** | — | New chunk keys are created and promoted |
-| **origin changed** (new URI ⇒ new `Source-Id`) | — | A different topic key. The old record is NOT touched automatically: retire it with the operator procedure below (supersede the old manifest, tombstone every chunk key of the old `Source-Id`, then the next `sync` patches the old page). |
+| **origin changed** (new URI ⇒ new `Source-Id`) | — | A different topic key. The old record is NOT touched automatically: retire it with the operator procedure below (supersede the old manifest, tombstone every chunk key of the old `Source-Id` if it has any, then the next `sync` patches the old page). |
 
 ### Origin-changed procedure (operator steps)
 
