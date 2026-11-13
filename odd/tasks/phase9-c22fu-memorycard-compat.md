@@ -288,3 +288,12 @@ Test runner: `go test` in `longterm-mem/` (`internal/memorycard`, `internal/prom
     - `848d52b6`-2 F4 (CI red until the owner approves): **answered.** Expected: the owner's approval commit (`.approval.json`) lands on this branch before merge; T6 is ticked after it.
     - `848d52b6`-4 F3 (SKILL.md defers the live value to the contract): **answered, no change.** `SKILL.md:105-106` already states it inline: "`complete` while live".
   - *Checks, coordinator, at `8518a6d9`.* `go test -count=1 ./skills/...` from `engine/`: only `TestRegistryLockE2E_ValidateLeavesTheRealTreeUntouched` fails (APPROVAL_STALE, expected).
+- **L27** (2026-11-13, coordinator, T5/T6, review of `8518a6d9` and `83eda766`; the contract wording is `37b0ec5c`, this entry is the docs(odd) commit that follows it. No earlier entry is edited.)
+  - *Polisher `8518a6d9`:* one SUGGESTION; the field order of contract :62-66 matches `header.go` Render (:111-143), every pinned contract string is present, and the row and procedure agree with `propagate_cards.go`.
+  - *Answers.*
+    - `8518a6d9`-2 F1 (the row restates the procedure; N==1 has no chunk keys): **fixed, `37b0ec5c`.** The row says "if it has any". The restatement stays on purpose: an earlier review (`848d52b6`-2/-4 F1) asked for the actions to be visible from the table.
+    - `8518a6d9`-2 F2 and -3 F2 (step 4 no longer names `propagate_cards.go`): **answered, no change.** It was removed at the request of `848d52b6`-2 F3 (no implementation path in a contract mirrored to every runtime); the trace lives in L26 and here: `longterm-mem/internal/promote/propagate_cards.go`, `eachCardPatchTarget`.
+    - `8518a6d9`-2 F3 and -3 F1 (field order not verifiable from the diff): **answered.** Verified by the polisher of `8518a6d9` against `header.go:111-143`.
+    - Polisher `8518a6d9` F1 (`**Status**` shown twice in the verbatim shape, :83 and :95): **answered, no change in this feature.** It predates this change; the prose at :86-88 and :62-66 says which applies. Recorded as follow-up F-B1 for the next contract edit.
+    - `83eda766`-2 F1 (L26 names no own hash): L26 is `83eda766`.
+    - `83eda766`-2 F2 (CI red until approval is only in the Log): **answered.** Do not merge this branch before the owner's approval commit of `skills/knowledge-ingestion/.approval.json`; CI stays red on `TestRegistryLockE2E_ValidateLeavesTheRealTreeUntouched` and `skills validate` until then. T6 stays unticked until it lands.
