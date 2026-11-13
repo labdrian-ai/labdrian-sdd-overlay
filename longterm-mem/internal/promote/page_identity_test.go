@@ -250,23 +250,8 @@ func TestPageIdentity_ReconcileReadsTheRevisionOffThePage(t *testing.T) {
 	})
 }
 
-// A memorycard page is not an Engram page: reconcile still refuses it for the revision it does not carry, as it
-// does today (it adopts only the revision of an Engram identity).
-func TestPageIdentity_ReconcileStillRefusesAPageThatIsNotEngrams(t *testing.T) {
-	vaultRoot := t.TempDir()
-	page := "---\nsource: memorycard\nsource_id: 7\nsource_revision: 3\nproject: p-one\naddress: c-000007\n---\n\nBody.\n"
-	full := filepath.Join(vaultRoot, vaultlayout.PagesDir, "c-000007.md")
-	if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(full, []byte(page), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	_, err := Reconcile(pagesIn(vaultRoot), "p-one", "c-000007", &memPrecedence{})
-	if !errors.Is(err, ErrUnusablePage) {
-		t.Fatalf("Reconcile err = %v; want ErrUnusablePage", err)
-	}
-}
+// (Previously: reconcile refused a page that was not Engram's, for the revision it does not carry; it now adopts the revision of
+// any identity, TestReconcile_AdoptsAPageOfTheStoreAgnosticKeysAtItsSourceRevision.)
 
 // The project move recognises the page the observation left behind by its identity, in either spelling.
 func TestPageIdentity_ProjectMoveSupersedesThePageByIdentity(t *testing.T) {

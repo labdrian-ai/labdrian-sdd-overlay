@@ -261,3 +261,66 @@ func TestReconcile_RefusesAPageWithNoUsableRevision(t *testing.T) {
 		t.Fatalf("Reconcile adopted a page whose engram_revision cannot be read, recreating the wedge it exists to end")
 	}
 }
+
+// reconcile reads the revision of the identity a page names, whichever store that is (S11): a page that carries
+// memorycard_revision is adopted at that revision, as a page that carries engram_revision is.
+func TestReconcile_AdoptsAMemorycardPageAtItsOwnRevision(t *testing.T) {
+	const address = "c-000606"
+	vaultRoot := t.TempDir()
+	card := eligibleCard(606, 4)
+	card.Project = "labdrian-sdd-overlay"
+	page, err := EmitCardPage(card, address, nil, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+	if err != nil {
+		t.Fatalf("EmitCardPage: %v", err)
+	}
+	writePromotedPage(t, vaultRoot, page)
+	repo := &memPrecedence{}
+
+	outcome, err := Reconcile(pagesIn(vaultRoot), "labdrian-sdd-overlay", address, repo)
+	if err != nil {
+		t.Fatalf("Reconcile of a memorycard page: %v", err)
+	}
+	if !outcome.Adopted || outcome.PromotedRevision != 4 {
+		t.Fatalf("Reconcile outcome = %+v, want the page adopted at revision 4", outcome)
+	}
+	store, err := repo.LoadPrecedence()
+	if err != nil {
+		t.Fatalf("LoadPrecedence: %v", err)
+	}
+	if entry, ok := store.Get(address); !ok || entry.PromotedRevision != 4 || !entry.MatchesPage(page.Frontmatter+page.Body) {
+		t.Errorf("entry = %+v, %v, want revision 4 fingerprinting the page on disk", entry, ok)
+	}
+}
+
+// A page of the store-agnostic keys is adopted at its source_revision too.
+func TestReconcile_AdoptsAPageOfTheStoreAgnosticKeysAtItsSourceRevision(t *testing.T) {
+	const address = "c-000607"
+	vaultRoot := t.TempDir()
+	frontmatter := "---\ntitle: T\naddress: c-000607\nproject: labdrian-sdd-overlay\nstatus: mature\nsource: memorycard\nsource_id: 607\nsource_revision: 5\nsource_type: decision\n---\n"
+	writePromotedPageAt(t, vaultRoot, address, Page{Frontmatter: frontmatter, Body: "\nBody.\n"})
+	repo := &memPrecedence{}
+
+	outcome, err := Reconcile(pagesIn(vaultRoot), "labdrian-sdd-overlay", address, repo)
+	if err != nil || !outcome.Adopted || outcome.PromotedRevision != 5 {
+		t.Fatalf("Reconcile = %+v, %v, want the page adopted at revision 5", outcome, err)
+	}
+}
+
+// A page that names a revision in no identity is still refused, whatever its store.
+func TestReconcile_RefusesAMemorycardPageWithNoUsableRevision(t *testing.T) {
+	const address = "c-000608"
+	vaultRoot := t.TempDir()
+	card := eligibleCard(608, 2)
+	card.Project = "labdrian-sdd-overlay"
+	page, err := EmitCardPage(card, address, nil, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+	if err != nil {
+		t.Fatalf("EmitCardPage: %v", err)
+	}
+	existingPath := writePromotedPage(t, vaultRoot, page)
+	if err := os.WriteFile(existingPath, []byte(blankFrontmatterValues(page.Frontmatter, memorycardRevisionField)+page.Body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Reconcile(pagesIn(vaultRoot), "labdrian-sdd-overlay", address, &memPrecedence{}); !errors.Is(err, ErrUnusablePage) {
+		t.Fatalf("Reconcile = %v, want ErrUnusablePage", err)
+	}
+}
