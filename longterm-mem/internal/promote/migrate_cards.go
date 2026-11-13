@@ -98,7 +98,7 @@ func (k RefusalKind) String() string {
 	case RefusedHalfMigrated:
 		return "frontmatter differs from the entry and is no recorded rewrite"
 	case RefusedUnreadable:
-		return "frontmatter cannot be read (CRLF line endings or no closing ---)"
+		return "frontmatter cannot be read (" + unreadableCauses + ")"
 	case RefusedUntracked:
 		return "not recorded as written by longterm-mem"
 	case RefusedNoImport:
@@ -198,17 +198,56 @@ func topLevelFields(block string) map[string]string {
 	return parseFrontmatterFields(strings.Join(top, "\n"))
 }
 
-// unreadableFrontmatter is the text of a page frontmatterBlock cannot isolate (it needs two lines of --- ending in a line feed),
-// as the lines frontmatter reading takes: the whole page, with a byte order mark and the carriage return of each line taken
-// off. The page is a legacy page when a top-level legacy key is among those lines, whatever its first line is; a page of
-// plain text that has such a key at column 0 is counted too, since only a refusal that writes nothing follows.
-func unreadableFrontmatter(content string) (string, bool) {
-	lines := strings.Split(strings.TrimPrefix(content, "\ufeff"), "\n")
+// unreadableCauses says, in the name of the refusal and in its reason, every way a page that opens with --- can have
+// frontmatter the migration cannot read.
+const unreadableCauses = "CRLF line endings, no closing ---, or a BOM, blank line or spaces before the opening ---"
+
+// pageShape is what a page is to the migration: no frontmatter, frontmatter it can read, or frontmatter it cannot.
+type pageShape int
+
+const (
+	shapeNone pageShape = iota
+	shapeReadable
+	shapeUnreadable
+)
+
+// shapeOf classifies a page and answers the text its legacy keys are looked for in.
+//
+// Readable: the page starts at byte 0 with a line of --- ending in a line feed and has a closing such line; the text is
+// the bytes from 0 to the end of the closing line, so the body that follows it is exactly raw after the block.
+//
+// Unreadable: the first line that is not blank, after a byte order mark, blank lines, spaces and carriage returns are
+// taken off, is ---, but the page is not readable (CRLF line endings, no closing line, a BOM or blank lines or spaces
+// before the opening). The text is the lines between that line and the next line of ---, or the rest of the page when there
+// is none: what the page quotes after its frontmatter is never scanned.
+//
+// None: any other page. Every reader of longterm-mem sees a page that does not open with --- as one with no frontmatter, so
+// it is no promoted page and cannot be promoted twice, and its text is never scanned.
+func shapeOf(raw string) (string, pageShape) {
+	if strings.HasPrefix(raw, "---\n") {
+		if i := strings.Index(raw[3:], "\n---\n"); i >= 0 {
+			return raw[:3+i+5], shapeReadable
+		}
+	}
+	lines := strings.Split(strings.TrimPrefix(raw, "\ufeff"), "\n")
 	for i, line := range lines {
 		lines[i] = strings.TrimSuffix(line, "\r")
 	}
-	block := strings.Join(lines, "\n")
-	return block, carriesLegacyKeys(block)
+	first := 0
+	for first < len(lines) && strings.Trim(lines[first], " \t") == "" {
+		first++
+	}
+	if first == len(lines) || strings.TrimLeft(lines[first], " \t") != "---" {
+		return "", shapeNone
+	}
+	var inside []string
+	for _, line := range lines[first+1:] {
+		if line == "---" {
+			break
+		}
+		inside = append(inside, line)
+	}
+	return strings.Join(inside, "\n"), shapeUnreadable
 }
 
 // legacyPage is a page of the project that carries a legacy key.
@@ -234,15 +273,11 @@ func legacyPagesOf(pages PageReader, project string) ([]legacyPage, error) {
 			failure = fmt.Errorf("read %s: %w", pages.PageLocation(address), err)
 			return
 		}
-		block, ok := frontmatterBlock(content)
-		unreadable := !ok
-		if unreadable {
-			if block, ok = unreadableFrontmatter(content); !ok {
-				return
-			}
-		} else if !carriesLegacyKeys(block) {
+		block, shape := shapeOf(content)
+		if shape == shapeNone || !carriesLegacyKeys(block) {
 			return
 		}
+		unreadable := shape == shapeUnreadable
 		fields := topLevelFields(block)
 		// A page that names no project is no other project's page: it is kept, and refused by name, in every run.
 		if owner := fields[projectField]; owner != "" && owner != project {
@@ -305,7 +340,7 @@ func MigrateCardPages(cards CardBridges, w *Writer, backup MigrationBackup, proj
 			report.Refused = append(report.Refused, MigrationRefusal{Address: page.address, Kind: kind, Reason: reason})
 		}
 		if page.unreadable {
-			refuse(RefusedUnreadable, "unreadable frontmatter (CRLF line endings or no closing ---): longterm-mem reads frontmatter delimited by lines ending in a line feed and closed by ---, so the page was left alone; fix its line endings or close the block, then run again")
+			refuse(RefusedUnreadable, "unreadable frontmatter ("+unreadableCauses+"): longterm-mem reads frontmatter that starts at the first byte with a line of --- and closes with another, both ending in a line feed, so the page was left alone; fix it, then run again")
 			continue
 		}
 		if !simpleIdentityLines(page.block) {

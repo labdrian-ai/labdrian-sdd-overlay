@@ -48,10 +48,10 @@ func TestMigrateCardPages_AnUnreadablePageIsRefusedByNameAndASubdirectoryPageIsN
 	if code != exitRegistrationConflict || !strings.Contains(stdout, "migrated 3 of 8 page(s) carrying legacy keys") {
 		t.Fatalf("exit %d, stdout %q, stderr %q, want the seven legacy pages and the CRLF one, and not the one in the subdirectory", code, stdout, stderr)
 	}
-	if !strings.Contains(stderr, "refused c-000950: unreadable frontmatter (CRLF line endings or no closing ---)") {
+	if !strings.Contains(stderr, "refused c-000950: unreadable frontmatter (CRLF line endings, no closing ---, or a BOM, blank line or spaces before the opening ---)") {
 		t.Errorf("stderr = %s, want the CRLF page refused by name", stderr)
 	}
-	if !strings.Contains(stdout, "  refused, frontmatter cannot be read (CRLF line endings or no closing ---): 1\n") {
+	if !strings.Contains(stdout, "  refused, frontmatter cannot be read (CRLF line endings, no closing ---, or a BOM, blank line or spaces before the opening ---): 1\n") {
 		t.Errorf("stdout = %s, want the count of the kind", stdout)
 	}
 	after := cmdVaultSnapshot(t, w.vaultRoot)
@@ -94,6 +94,37 @@ func TestMigrateCardPages_AFailedRunStillPrintsTheNoProjectNoteOnce(t *testing.T
 	}
 	if n := strings.Count(stdout, "note: 1 page(s) carry legacy keys and name no project"); n != 1 {
 		t.Errorf("the note was printed %d times, want once; stdout %q, stderr %q", n, stdout, stderr)
+	}
+}
+
+// A plain note that quotes a legacy key, with no frontmatter, is no promoted page: it does not count, does not refuse
+// and does not block the run of its project.
+func TestMigrateCardPages_APlainNoteThatQuotesALegacyKeyIsIgnored(t *testing.T) {
+	w, _ := memorycardWorld(t)
+	note := "# Notes on the migration\n\nA page used to say:\n\nengram_id: 5\nproject: " + promoteGoldenProject + "\n"
+	writeVaultFile(t, w, "wiki/memory/c-000980.md", note)
+	code, stdout, stderr := runMigrate(t)
+	if code != exitOK || stderr != "" || !strings.Contains(stdout, "0 page(s) carry legacy keys") || strings.Contains(stdout, "note:") {
+		t.Errorf("exit %d, stdout %q, stderr %q, want 0 pages counted, no refusal and exit 0", code, stdout, stderr)
+	}
+	if got := readVaultFile(t, w, "wiki/memory/c-000980.md"); got != note {
+		t.Errorf("the note changed")
+	}
+}
+
+// The note about pages with no project comes after the summary and the counts, before the closing line, as it did
+// before a failed run had to print it too.
+func TestMigrateCardPages_TheNoProjectNoteComesAfterTheSummaryLines(t *testing.T) {
+	w, _ := migrationWorld(t)
+	lost := strings.Replace(legacyCardPage("c-000960", "Lost", 3, "learning", "3"), "project: "+promoteGoldenProject+"\n", "", 1)
+	recordPage(t, w, "c-000960", lost, true)
+	_, stdout, _ := runMigrate(t)
+	summary := strings.Index(stdout, "page(s) carry legacy keys in ")
+	counts := strings.LastIndex(stdout, "  refused, ")
+	note := strings.Index(stdout, "note: 1 page(s) carry legacy keys and name no project")
+	closing := strings.Index(stdout, "nothing was written")
+	if summary < 0 || counts < summary || note < counts || closing < note {
+		t.Errorf("order summary %d, counts %d, note %d, closing %d, want them in that order; stdout:\n%s", summary, counts, note, closing, stdout)
 	}
 }
 

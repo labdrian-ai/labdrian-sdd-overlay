@@ -9,7 +9,7 @@ import (
 // A page that carries a legacy key whose frontmatter cannot be read is a legacy page the migration cannot rewrite:
 // counted and refused by name, never skipped in silence.
 
-const unreadableFragment = "unreadable frontmatter (CRLF line endings or no closing ---)"
+const unreadableFragment = "unreadable frontmatter (CRLF line endings, no closing ---, or a BOM, blank line or spaces before the opening ---)"
 
 func TestMigrateCardPages_APageWithLegacyKeysAndUnreadableFrontmatterIsCountedAndRefusedByName(t *testing.T) {
 	m := newMigWorld()
@@ -20,8 +20,7 @@ func TestMigrateCardPages_APageWithLegacyKeysAndUnreadableFrontmatterIsCountedAn
 	away := "---\r\ntitle: \"T\"\r\nmemorycard_id: 7\r\nproject: elsewhere\r\n---\r\n"
 	lost := "---\r\ntitle: \"T\"\r\nmemorycard_id: 7\r\n---\r\n"
 	noKey := "---\r\ntitle: \"T\"\r\nproject: " + migProject + "\r\n---\r\n# T\r\n"
-	// No frontmatter, a key at column 0 in the text, and no project: an unreadable page that carries a legacy key, so it is
-	// counted (and, with no project, noted), whatever its first line; the migration writes nothing for it.
+	// No frontmatter: a page whose first non-blank line is not --- is no promoted page, whatever its text quotes.
 	prose := "# T\n\nengram_id: 5\nmemorycard_id: 7\n"
 	for address, content := range map[string]string{"crlf": crlf, "open": open, "away": away, "lost": lost, "nokey": noKey, "prose": prose} {
 		m.pages.pages[address] = content
@@ -44,8 +43,8 @@ func TestMigrateCardPages_APageWithLegacyKeysAndUnreadableFrontmatterIsCountedAn
 			t.Errorf("refusal of %s = %+v, want the unreadable kind with %q", address, r, unreadableFragment)
 		}
 	}
-	if len(report.NoProject) != 2 || report.NoProject[0].Address != "lost" || report.NoProject[1].Address != "prose" {
-		t.Errorf("NoProject = %+v, want the CRLF page and the prose page with a key at column 0, both with no project", report.NoProject)
+	if len(report.NoProject) != 1 || report.NoProject[0].Address != "lost" {
+		t.Errorf("NoProject = %+v, want the CRLF page with no project alone (the prose page has no frontmatter and is ignored)", report.NoProject)
 	}
 	for _, address := range []string{"crlf", "open", "away", "lost", "nokey", "prose"} {
 		if m.pages.pages[address] != before[address] {
@@ -78,6 +77,31 @@ func TestMigrateCardPages_AnUnreadablePageIsCountedWhateverItsFirstLineIs(t *tes
 	m.pages.pages["nameless"] = "\xef\xbb\xbf---\r\nmemorycard_id: 7\r\n---\r\n"
 	if report, err := m.run(false); err != nil || report.Legacy != 0 || len(report.NoProject) != 1 {
 		t.Errorf("report = %+v, err = %v, want the nameless page among the pages with no project", report, err)
+	}
+}
+
+// Only a page whose first non-blank line is --- can be a legacy page. Any other page has no frontmatter, as every reader of
+// longterm-mem sees it, and its text is never scanned, however it quotes a key: it is no promoted page and cannot be
+// promoted twice. An unreadable page is scanned up to its first closing rule only.
+func TestMigrateCardPages_OnlyAPageThatOpensWithARuleCanBeALegacyPage(t *testing.T) {
+	for name, content := range map[string]string{
+		"a plain note quoting keys":     "# Notes\n\nengram_id: 5\nproject: " + migProject + "\n",
+		"a key before the first rule":   "engram_id: 5\nproject: " + migProject + "\n---\ntitle: x\n---\nbody\n",
+		"text before a valid block":     "Some text\n---\nmemorycard_id: 7\nproject: " + migProject + "\n---\nbody\n",
+		"a key quoted after the rule":   "\xef\xbb\xbf---\r\ntitle: t\r\n---\r\n# T\r\n\r\nengram_id: 5\r\nproject: " + migProject + "\r\n",
+		"a valid block, key in body":    "---\ntitle: t\nproject: " + migProject + "\n---\nengram_id: 5\nmemorycard_id: 7\n",
+		"only text before an open rule": "intro\n---\nmemorycard_id: 7\nproject: " + migProject + "\n",
+	} {
+		m := newMigWorld()
+		m.memory(cardOf(7, migProject))
+		m.pages.pages["page"] = content
+		report, err := m.run(true)
+		if err != nil || report.Legacy != 0 || len(report.Refused) != 0 || len(report.Migrated) != 0 || len(report.NoProject) != 0 {
+			t.Errorf("%s: report = %+v, err = %v, want the page ignored", name, report, err)
+		}
+		if m.pages.pages["page"] != content {
+			t.Errorf("%s: the page changed", name)
+		}
 	}
 }
 

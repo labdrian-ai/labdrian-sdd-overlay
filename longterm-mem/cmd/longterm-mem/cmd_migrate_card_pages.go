@@ -88,8 +88,9 @@ func reportMigration(a app, report promote.CardMigrationReport, err error, vault
 	for _, r := range report.Refused {
 		fmt.Fprintf(os.Stderr, "longterm-mem: migrate-card-pages: refused %s: %s\n", r.Address, refusalReason(vaultRoot, r))
 	}
-	printNoProjectNote(report)
 	if err != nil {
+		// A run that fails still shows the note, once: it is not printed again below.
+		printNoProjectNote(report)
 		return a.refuse(err, exitInternal)
 	}
 	if apply {
@@ -103,6 +104,7 @@ func reportMigration(a app, report promote.CardMigrationReport, err error, vault
 			fmt.Printf("  refused, %s: %d\n", kind, n)
 		}
 	}
+	printNoProjectNote(report)
 	if !apply {
 		fmt.Println("nothing was written (pass --apply to migrate)")
 	}
@@ -139,8 +141,8 @@ func refusalReason(vaultRoot string, r promote.MigrationRefusal) string {
 }
 
 // printNoProjectNote prints the note about the pages that carry a legacy key and name no project: no project owns them, so
-// they are no refusal of this run and make no exit code. Every run prints it, failed or not, a project with no legacy page
-// of its own included, and once.
+// they are no refusal of this run and make no exit code. Every run prints it once, after the counts, and a run that fails prints it before its error, a project with no
+// legacy page of its own included.
 func printNoProjectNote(report promote.CardMigrationReport) {
 	if len(report.NoProject) == 0 {
 		return
