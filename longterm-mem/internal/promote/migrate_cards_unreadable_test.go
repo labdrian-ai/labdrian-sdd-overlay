@@ -20,6 +20,8 @@ func TestMigrateCardPages_APageWithLegacyKeysAndUnreadableFrontmatterIsCountedAn
 	away := "---\r\ntitle: \"T\"\r\nmemorycard_id: 7\r\nproject: elsewhere\r\n---\r\n"
 	lost := "---\r\ntitle: \"T\"\r\nmemorycard_id: 7\r\n---\r\n"
 	noKey := "---\r\ntitle: \"T\"\r\nproject: " + migProject + "\r\n---\r\n# T\r\n"
+	// No frontmatter, a key at column 0 in the text, and no project: an unreadable page that carries a legacy key, so it is
+	// counted (and, with no project, noted), whatever its first line; the migration writes nothing for it.
 	prose := "# T\n\nengram_id: 5\nmemorycard_id: 7\n"
 	for address, content := range map[string]string{"crlf": crlf, "open": open, "away": away, "lost": lost, "nokey": noKey, "prose": prose} {
 		m.pages.pages[address] = content
@@ -42,13 +44,40 @@ func TestMigrateCardPages_APageWithLegacyKeysAndUnreadableFrontmatterIsCountedAn
 			t.Errorf("refusal of %s = %+v, want the unreadable kind with %q", address, r, unreadableFragment)
 		}
 	}
-	if len(report.NoProject) != 1 || report.NoProject[0].Address != "lost" {
-		t.Errorf("NoProject = %+v, want the CRLF page with no project", report.NoProject)
+	if len(report.NoProject) != 2 || report.NoProject[0].Address != "lost" || report.NoProject[1].Address != "prose" {
+		t.Errorf("NoProject = %+v, want the CRLF page and the prose page with a key at column 0, both with no project", report.NoProject)
 	}
 	for _, address := range []string{"crlf", "open", "away", "lost", "nokey", "prose"} {
 		if m.pages.pages[address] != before[address] {
 			t.Errorf("%s changed", address)
 		}
+	}
+}
+
+// Whatever the first line of an unreadable page is (a byte order mark, a blank line, spaces), a top-level legacy key
+// makes it a legacy page, counted in the project its readable `project:` line names, else among the pages with none.
+func TestMigrateCardPages_AnUnreadablePageIsCountedWhateverItsFirstLineIs(t *testing.T) {
+	for name, content := range map[string]string{
+		"bom":     "\xef\xbb\xbf---\r\nmemorycard_id: 7\r\nproject: " + migProject + "\r\n---\r\n# T\r\n",
+		"blank":   "\n---\r\nmemorycard_id: 7\r\nproject: " + migProject + "\r\n---\r\n# T\r\n",
+		"spaces":  "  ---\r\nmemorycard_id: 7\r\nproject: " + migProject + "\r\n---\r\n# T\r\n",
+		"bomopen": "\xef\xbb\xbf---\nengram_id: 5\nproject: " + migProject + "\n# T\n",
+	} {
+		m := newMigWorld()
+		m.memory(cardOf(7, migProject))
+		m.pages.pages["page"] = content
+		report, err := m.run(true)
+		if err != nil || report.Legacy != 1 || len(report.Refused) != 1 || report.Refused[0].Kind != RefusedUnreadable || len(report.NoProject) != 0 {
+			t.Errorf("%s: report = %+v, err = %v, want the page counted and refused as unreadable", name, report, err)
+		}
+		if m.pages.pages["page"] != content {
+			t.Errorf("%s: the page changed", name)
+		}
+	}
+	m := newMigWorld()
+	m.pages.pages["nameless"] = "\xef\xbb\xbf---\r\nmemorycard_id: 7\r\n---\r\n"
+	if report, err := m.run(false); err != nil || report.Legacy != 0 || len(report.NoProject) != 1 {
+		t.Errorf("report = %+v, err = %v, want the nameless page among the pages with no project", report, err)
 	}
 }
 

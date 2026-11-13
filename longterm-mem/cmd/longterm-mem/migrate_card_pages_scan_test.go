@@ -77,3 +77,33 @@ func TestMigrateCardPages_APageWithNoProjectDoesNotMakeTheExitCode(t *testing.T)
 		t.Errorf("stdout = %s, want the note", stdout)
 	}
 }
+
+// A run that fails still prints the note once: the failure (here, a backup that cannot be made) is no reason to hide the
+// pages no project's run counts.
+func TestMigrateCardPages_AFailedRunStillPrintsTheNoProjectNoteOnce(t *testing.T) {
+	w, _ := memorycardWorld(t)
+	recordPage(t, w, "c-000903", legacyCardPage("c-000903", "Card Only", 1, "learning", "3"), true)
+	lost := strings.Replace(legacyCardPage("c-000960", "Lost", 2, "learning", "3"), "project: "+promoteGoldenProject+"\n", "", 1)
+	recordPage(t, w, "c-000960", lost, true)
+	// .vault-meta is a file, so the directory of the backup cannot be made and nothing is written.
+	writeVaultFile(t, w, ".vault-meta", "not a directory")
+
+	code, stdout, stderr := runMigrate(t, "--apply")
+	if code == exitOK {
+		t.Fatalf("exit %d, stdout %q, stderr %q, want the failure of the backup", code, stdout, stderr)
+	}
+	if n := strings.Count(stdout, "note: 1 page(s) carry legacy keys and name no project"); n != 1 {
+		t.Errorf("the note was printed %d times, want once; stdout %q, stderr %q", n, stdout, stderr)
+	}
+}
+
+// Every run prints the note, a run of a project with no legacy page of its own included.
+func TestMigrateCardPages_ARunWithNoLegacyPageStillPrintsTheNoProjectNote(t *testing.T) {
+	w, _ := memorycardWorld(t)
+	lost := strings.Replace(legacyCardPage("c-000960", "Lost", 2, "learning", "3"), "project: "+promoteGoldenProject+"\n", "", 1)
+	recordPage(t, w, "c-000960", lost, true)
+	code, stdout, stderr := runMigrate(t)
+	if code != exitOK || stderr != "" || !strings.Contains(stdout, "note: 1 page(s) carry legacy keys and name no project") {
+		t.Errorf("exit %d, stdout %q, stderr %q, want the note and exit 0", code, stdout, stderr)
+	}
+}

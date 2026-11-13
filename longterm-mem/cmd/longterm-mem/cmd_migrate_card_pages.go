@@ -88,6 +88,7 @@ func reportMigration(a app, report promote.CardMigrationReport, err error, vault
 	for _, r := range report.Refused {
 		fmt.Fprintf(os.Stderr, "longterm-mem: migrate-card-pages: refused %s: %s\n", r.Address, refusalReason(vaultRoot, r))
 	}
+	printNoProjectNote(report)
 	if err != nil {
 		return a.refuse(err, exitInternal)
 	}
@@ -101,14 +102,6 @@ func reportMigration(a app, report promote.CardMigrationReport, err error, vault
 		if n := counts[kind]; n > 0 || (kind != promote.RefusedOther && kind != promote.RefusedNoMemory && kind != promote.RefusedHalfMigrated && kind != promote.RefusedUnreadable) {
 			fmt.Printf("  refused, %s: %d\n", kind, n)
 		}
-	}
-	if len(report.NoProject) > 0 {
-		names := make([]string, len(report.NoProject))
-		for i, r := range report.NoProject {
-			names[i] = r.Address
-		}
-		// A note, on stdout only: no project owns these pages, so they are no refusal of this run and make no exit code.
-		fmt.Printf("note: %d page(s) carry legacy keys and name no project, so no project's run counts them: %s; add a `project:` line to each by hand, then run again\n", len(names), strings.Join(names, ", "))
 	}
 	if !apply {
 		fmt.Println("nothing was written (pass --apply to migrate)")
@@ -143,6 +136,20 @@ func refusalReason(vaultRoot string, r promote.MigrationRefusal) string {
 		return r.Reason + "; backups present: none"
 	}
 	return r.Reason + "; backups present: " + strings.Join(found, ", ")
+}
+
+// printNoProjectNote prints the note about the pages that carry a legacy key and name no project: no project owns them, so
+// they are no refusal of this run and make no exit code. Every run prints it, failed or not, a project with no legacy page
+// of its own included, and once.
+func printNoProjectNote(report promote.CardMigrationReport) {
+	if len(report.NoProject) == 0 {
+		return
+	}
+	names := make([]string, len(report.NoProject))
+	for i, r := range report.NoProject {
+		names[i] = r.Address
+	}
+	fmt.Printf("note: %d page(s) carry legacy keys and name no project, so no project's run counts them: %s; add a `project:` line to each by hand, then run again\n", len(names), strings.Join(names, ", "))
 }
 
 // vaultBackup is promote.MigrationBackup over the files of the vault at root: it copies the pages to rewrite and the

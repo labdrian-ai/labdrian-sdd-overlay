@@ -198,24 +198,16 @@ func topLevelFields(block string) map[string]string {
 	return parseFrontmatterFields(strings.Join(top, "\n"))
 }
 
-// unreadableFrontmatter is the frontmatter of a page frontmatterBlock cannot isolate (it reads lines ending in a line feed,
-// closed by a line of ---): the lines after an opening --- up to its closing line, or to the end of the page when there
-// is none, with a carriage return taken off each. It answers false when the page does not open with ---, or when no top-level
-// legacy key is among those lines: such a page is no legacy page, whatever its prose says.
+// unreadableFrontmatter is the text of a page frontmatterBlock cannot isolate (it needs two lines of --- ending in a line feed),
+// as the lines frontmatter reading takes: the whole page, with a byte order mark and the carriage return of each line taken
+// off. The page is a legacy page when a top-level legacy key is among those lines, whatever its first line is; a page of
+// plain text that has such a key at column 0 is counted too, since only a refusal that writes nothing follows.
 func unreadableFrontmatter(content string) (string, bool) {
-	lines := strings.Split(content, "\n")
-	if strings.TrimSuffix(lines[0], "\r") != "---" {
-		return "", false
+	lines := strings.Split(strings.TrimPrefix(content, "\ufeff"), "\n")
+	for i, line := range lines {
+		lines[i] = strings.TrimSuffix(line, "\r")
 	}
-	var opening []string
-	for _, line := range lines[1:] {
-		line = strings.TrimSuffix(line, "\r")
-		if line == "---" {
-			break
-		}
-		opening = append(opening, line)
-	}
-	block := strings.Join(opening, "\n")
+	block := strings.Join(lines, "\n")
 	return block, carriesLegacyKeys(block)
 }
 
