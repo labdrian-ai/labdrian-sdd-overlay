@@ -1,7 +1,7 @@
-args: promote --project golden-project --id 3
+args: promote --project golden-project --source memorycard --id 3
 exit: 0
 --- stdout ---
-longterm-mem: promoted c-000901 (updated)
+longterm-mem: memorycard memory 3 already promoted as c-000901; the page is left as it is
 --- stderr ---
 --- vault ---
 === .allocator-counter ===
@@ -9,9 +9,8 @@ longterm-mem: promoted c-000901 (updated)
 === .raw/.longterm-mem-manifest.json ===
 {
   "c-000901": {
-    "body_hash": "e9580e08dd443aa69587a3668abf35f63512a06260b049075c1189a6cbc4e440",
-    "frontmatter_hash": "d0e83d33b606f21026232023f0e29a2b5a7fc1585f3e7456a1607cd2a767316d",
-    "promoted_revision": 1
+    "body_hash": "29413f2a3459e0ec537f4ebc089948d12eccd6210adb8c6bfbad6dc540821564",
+    "frontmatter_hash": "df35e502e06bfe5612e30a3de7c819502dde1a5bb8c887afd0b2642798760468"
   }
 }
 === .raw/.manifest.json ===
@@ -41,12 +40,7 @@ printf 'c-%06d\n' "$n"
 <!-- longterm-mem:begin -->
 - [[c-000901|Below Threshold]]
 <!-- longterm-mem:end -->
-
 === wiki/log.md ===
-## [2026-10-10] promote | Below Threshold
-
-[[c-000901|Below Threshold]]
-
 ## [2026-10-10] promote | Below Threshold
 
 [[c-000901|Below Threshold]]
@@ -66,10 +60,9 @@ tags:
 status: developing
 related: []
 sources: []
-engram_id: 3
-engram_sync_id: sync-3
-engram_type: discovery
-engram_revision: 1
+memorycard_id: 3
+memorycard_type: discovery
+memorycard_revision: 1
 project: golden-project
 ---
 # Below Threshold
@@ -77,4 +70,4 @@ project: golden-project
 A discovery nobody curated.
 
 ---
-Promoted from Engram observation 3, revision 1.
+Promoted from memorycard memory 3, revision 1.
