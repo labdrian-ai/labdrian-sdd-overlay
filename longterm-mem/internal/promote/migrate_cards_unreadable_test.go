@@ -128,6 +128,33 @@ func TestMigrateCardPages_AFrontmatterLineEndingInRulesIsRefusedAsUnreadableAndN
 	}
 }
 
+// The identity the migration writes comes from the memory (its type) and must not end the frontmatter early for the
+// shared reader: a type that ends in --- would make frontmatterBlock split the rewritten page elsewhere, so the page would
+// fail MatchesPage after the rewrite. Such a page is refused by name and never written, a stopped one included.
+func TestMigrateCardPages_AMemoryTypeEndingInRulesMakesARefusalAndNoWrite(t *testing.T) {
+	m := newMigWorld()
+	card := cardOf(7, migProject)
+	card.Type = "learning---"
+	m.memory(card, 31)
+	m.memory(cardOf(8, migProject), 32)
+	content := m.put("dashes", "engram_id: 31\nengram_revision: 1\n")
+	m.put("fine", "engram_id: 32\nengram_revision: 1\n")
+	report, err := m.run(true)
+	r, ok := refusalOf(report, "dashes")
+	if err != nil || !ok || r.Kind != RefusedOther || !strings.Contains(r.Reason, "read the rewritten page differently") || len(report.Migrated) != 1 || report.Migrated[0].Address != "fine" {
+		t.Fatalf("report = %+v, err = %v, want the page of the odd type refused and the other migrated", report, err)
+	}
+	if m.pages.pages["dashes"] != content {
+		t.Errorf("the refused page changed")
+	}
+	if entry, _ := m.w.Store.Get("dashes"); !entry.MatchesPage(content) {
+		t.Errorf("the entry of the refused page changed: %+v", entry)
+	}
+	if page := m.pages.pages["fine"]; !strings.Contains(page, "source_id: 8\n") {
+		t.Errorf("the other page was not migrated: %q", page)
+	}
+}
+
 // Trailing spaces or tabs on an opening or closing --- line do not make a page invisible: the unreadable scan takes them
 // off, so `--- ` opens and closes like `---`. The readable rule stays exact.
 func TestMigrateCardPages_TrailingSpacesOnARuleLineLeaveAnUnreadablePageCounted(t *testing.T) {

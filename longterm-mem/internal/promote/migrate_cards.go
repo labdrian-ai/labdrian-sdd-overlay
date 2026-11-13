@@ -387,6 +387,13 @@ func MigrateCardPages(cards CardBridges, w *Writer, backup MigrationBackup, proj
 			}
 			newBlock = stopped
 		}
+		// The identity to write comes from the memory (its type) and must not end the frontmatter early for the shared
+		// reader, as a type that ends in --- would: the page would then fail MatchesPage after the rewrite. The page that
+		// would be written must be readable, with exactly newBlock as its block, or it is not written.
+		if written, shape := shapeOf(newBlock + body); shape != shapeReadable || written != newBlock {
+			refuse(RefusedOther, "the identity to write (the memory's type or revision) would make the shared page reader read the rewritten page differently (it would end the frontmatter early), so the page would look hand-edited; nothing was changed")
+			continue
+		}
 
 		g.claimed[moved.MemoryID] = page.address
 		moved.Address = page.address

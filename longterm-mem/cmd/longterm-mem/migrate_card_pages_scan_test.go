@@ -118,6 +118,26 @@ func TestMigrateCardPages_ATrackedPageWithALineEndingInRulesIsRefusedAndKeepsIts
 	}
 }
 
+// A memory whose type ends in --- would make the rewritten frontmatter end early for the shared reader: the page that
+// names it is refused by name and its bytes are unchanged after --apply, and the other pages are migrated.
+func TestMigrateCardPages_AMemoryTypeEndingInRulesIsRefusedAndTheOthersAreMigrated(t *testing.T) {
+	w, db := migrationWorld(t)
+	execOn(t, db, `update memories set type = 'decision---' where id = 2`)
+	before := cmdVaultSnapshot(t, w.vaultRoot)
+
+	code, stdout, stderr := runMigrate(t, "--apply")
+	if code != exitRegistrationConflict || !strings.Contains(stderr, "refused c-000901: ") || !strings.Contains(stderr, "read the rewritten page differently") {
+		t.Fatalf("exit %d, stdout %q, stderr %q, want c-000901 refused by name", code, stdout, stderr)
+	}
+	if !strings.Contains(stdout, "migrated: c-000902") || !strings.Contains(stdout, "migrated: c-000903") {
+		t.Errorf("stdout = %s, want the other pages migrated", stdout)
+	}
+	after := cmdVaultSnapshot(t, w.vaultRoot)
+	if after["wiki/memory/c-000901.md"] != before["wiki/memory/c-000901.md"] {
+		t.Errorf("c-000901 changed")
+	}
+}
+
 // A plain note that quotes a legacy key, with no frontmatter, is no promoted page: it does not count, does not refuse
 // and does not block the run of its project.
 func TestMigrateCardPages_APlainNoteThatQuotesALegacyKeyIsIgnored(t *testing.T) {
