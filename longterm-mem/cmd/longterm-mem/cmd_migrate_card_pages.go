@@ -9,6 +9,7 @@ import (
 	"path"
 	"path/filepath"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/durable"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memorycard"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultlayout"
@@ -113,6 +114,10 @@ func reportMigration(a app, report promote.CardMigrationReport, err error, vault
 type vaultBackup struct {
 	root  string
 	clock promote.Clock
+	// write and removeAll are the file system calls the copy makes; nil means durable.WriteFile and os.RemoveAll. A
+	// test replaces them to fail a write or a cleanup on demand.
+	write     func(path string, data []byte, perm fs.FileMode) error
+	removeAll func(path string) error
 }
 
 func (b vaultBackup) BackUp(addresses []string) (string, error) {
@@ -122,7 +127,11 @@ func (b vaultBackup) BackUp(addresses []string) (string, error) {
 	}
 	if err := b.copyInto(dir, addresses); err != nil {
 		// A directory that holds part of the copy would read as a complete one: it goes, whole.
-		if removeErr := os.RemoveAll(dir); removeErr != nil {
+		removeAll := b.removeAll
+		if removeAll == nil {
+			removeAll = os.RemoveAll
+		}
+		if removeErr := removeAll(dir); removeErr != nil {
 			return "", errors.Join(err, fmt.Errorf("remove the partial copy %s: %w", dir, removeErr))
 		}
 		return "", err
@@ -152,13 +161,21 @@ func (b vaultBackup) newDirectory() (string, error) {
 	}
 }
 
+// copyInto copies the sidecar and each page into dir, under the same vault-relative paths, with the mode each had,
+// and makes the copy durable before it returns: every file is synced as it is written, and so is every directory the
+// copy made, since the copy is the only way back once the pages are rewritten.
 func (b vaultBackup) copyInto(dir string, addresses []string) error {
+	write := b.write
+	if write == nil {
+		write = durable.WriteFile
+	}
 	rels := []string{vaultlayout.PrecedenceFile}
 	for _, address := range addresses {
 		rels = append(rels, vaultlayout.PageFile(address))
 	}
 	for _, rel := range rels {
-		data, err := os.ReadFile(filepath.Join(b.root, filepath.FromSlash(rel)))
+		source := filepath.Join(b.root, filepath.FromSlash(rel))
+		data, err := os.ReadFile(source)
 		if errors.Is(err, fs.ErrNotExist) && rel == vaultlayout.PrecedenceFile {
 			// A vault that never tracked a page has no sidecar to lose.
 			continue
@@ -166,12 +183,50 @@ func (b vaultBackup) copyInto(dir string, addresses []string) error {
 		if err != nil {
 			return err
 		}
+		info, err := os.Stat(source)
+		if err != nil {
+			return err
+		}
 		target := filepath.Join(dir, filepath.FromSlash(rel))
 		if err := os.MkdirAll(filepath.Dir(target), 0o700); err != nil {
 			return err
 		}
-		if err := os.WriteFile(target, data, 0o600); err != nil {
+		if err := write(target, data, info.Mode().Perm()); err != nil {
 			return err
+		}
+		// The write may have been made with the process umask; the copy has the mode of its source.
+		if err := os.Chmod(target, info.Mode().Perm()); err != nil {
+			return err
+		}
+	}
+	return syncDirectories(dir)
+}
+
+// syncDirectories syncs dir, every directory under it and the directory that holds it, so the entries of the copy
+// survive a crash and not only the bytes of its files.
+func syncDirectories(dir string) error {
+	var dirs []string
+	err := filepath.WalkDir(dir, func(p string, d fs.DirEntry, err error) error {
+		if err == nil && d.IsDir() {
+			dirs = append(dirs, p)
+		}
+		return err
+	})
+	if err != nil {
+		return err
+	}
+	dirs = append(dirs, filepath.Dir(dir))
+	for _, d := range dirs {
+		handle, err := os.Open(d)
+		if err != nil {
+			return err
+		}
+		syncErr := handle.Sync()
+		if closeErr := handle.Close(); syncErr == nil {
+			syncErr = closeErr
+		}
+		if syncErr != nil {
+			return fmt.Errorf("sync %s: %w", d, syncErr)
 		}
 	}
 	return nil
