@@ -1,4 +1,4 @@
-args: promote --project labdrian-sdd-overlay --id 1
+args: promote --project labdrian-sdd-overlay --source memorycard --id 1
 exit: 0
 --- stdout ---
 longterm-mem: promoted c-000901 (created)

@@ -1,7 +1,7 @@
-args: sync --project labdrian-sdd-overlay --vault <vault>
+args: sync --project labdrian-sdd-overlay --source memorycard --vault <vault>
 exit: 0
 --- stdout ---
-longterm-mem: sync promoted 2 observation(s), patched 0 page(s)
+longterm-mem: sync --source memorycard promoted 2 memory(ies); patched 0 page(s); skipped 0 bridged; left 0 locally edited page(s) alone
 --- stderr ---
 --- registry ---
 absent

@@ -1,10 +1,10 @@
-args: sync --project labdrian-sdd-overlay --dry-run
+args: sync --project labdrian-sdd-overlay --source memorycard --dry-run
 exit: 0
 --- stdout ---
-longterm-mem: sync --dry-run: would promote 2 observation(s), patch 0 page(s), skip 2, into <home>/labdrian-brain
+longterm-mem: sync --source memorycard --dry-run: would promote 2 memory(ies), patch 0 page(s), skip 2, 0 bridged, into <home>/labdrian-brain
   would promote: Pinned Decision
   would promote: Curated Note
-longterm-mem: sync --dry-run: nothing was written
+longterm-mem: sync --source memorycard --dry-run: nothing was written
 --- stderr ---
 --- registry ---
 absent

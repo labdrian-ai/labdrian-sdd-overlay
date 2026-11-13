@@ -21,9 +21,9 @@ import (
 //
 // and read the diff before committing it.
 func TestFailuresGolden(t *testing.T) {
-	sync := []string{"sync", "--project", promoteGoldenProject}
-	dryRun := []string{"sync", "--project", promoteGoldenProject, "--dry-run"}
-	promote := []string{"promote", "--project", promoteGoldenProject, "--id", "1"}
+	sync := []string{"sync", "--project", promoteGoldenProject, "--source", "memorycard"}
+	dryRun := []string{"sync", "--project", promoteGoldenProject, "--source", "memorycard", "--dry-run"}
+	promote := []string{"promote", "--project", promoteGoldenProject, "--source", "memorycard", "--id", "1"}
 	build := []string{"index", "--project", promoteGoldenProject, "--embeddings", "--embed-dimension", "3"}
 
 	// nowhere is a path that names nothing, under the temporary directory of the world, so that the words of an
@@ -31,16 +31,10 @@ func TestFailuresGolden(t *testing.T) {
 	nowhere := func(w *promoteGoldenWorld, name string) string { return filepath.Join(w.home, "no-such-place", name) }
 
 	runGoldenScenarios(t, "failures-golden", []pagesScenario{
-		// Engram answers the listing and then cannot answer what propagation asks of it: both passes run, the
-		// first one's work stays, and the exit code is the one for a memory that cannot be read.
-		{name: "01-sync-when-the-relations-of-memory-cannot-be-read", seed: func(t *testing.T, w *promoteGoldenWorld) {
-			w.execSQL(t, `DROP TABLE memory_relations`)
-		}, commands: [][]string{sync}},
-
-		// Engram cannot list the observations at all: nothing is promoted, and the dry run, which asks the same
+		// memorycard cannot list the memories at all: nothing is promoted, and the dry run, which asks the same
 		// question, fails with the code of the run that could not plan, not of the memory.
 		{name: "02-sync-when-the-observations-cannot-be-listed", seed: func(t *testing.T, w *promoteGoldenWorld) {
-			w.execSQL(t, `DROP TABLE observations`)
+			w.execCardSQL(t, `DROP TABLE memories`)
 		}, commands: [][]string{sync, dryRun}},
 
 		// One observation whose page cannot be decided about fails on every run; the others are promoted and the
@@ -51,14 +45,14 @@ func TestFailuresGolden(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			broken := strings.Replace(string(data), "engram_revision: 1", "engram_revision: not-a-number", 1)
+			broken := strings.Replace(string(data), "memorycard_revision: 1", "memorycard_revision: not-a-number", 1)
 			if broken == string(data) {
-				t.Fatalf("the page has no engram_revision to break:\n%s", data)
+				t.Fatalf("the page has no memorycard_revision to break:\n%s", data)
 			}
 			if err := os.WriteFile(page, []byte(broken), 0o644); err != nil {
 				t.Fatal(err)
 			}
-			w.execSQL(t, `UPDATE observations SET revision_count = 2 WHERE id = 2`)
+			w.reviseMemory(t, 2, "A note with a curated topic key, revised.")
 		}, commands: [][]string{sync, dryRun}},
 
 		// longterm-mem's own record of what it wrote cannot be read: no command that writes gets as far as a page.
@@ -71,8 +65,9 @@ func TestFailuresGolden(t *testing.T) {
 			return nowhere(w, "vault")
 		}, commands: [][]string{sync, dryRun, promote}},
 
-		// Engram's database cannot be opened.
+		// Neither store's database can be opened.
 		{name: "06-an-engram-database-that-cannot-be-opened", env: func(t *testing.T, w *promoteGoldenWorld) {
+			t.Setenv("LONGTERM_MEM_MEMORYCARD_DB", nowhere(w, "memory.db"))
 			t.Setenv("LONGTERM_MEM_ENGRAM_DB", nowhere(w, "engram.db"))
 		}, commands: [][]string{sync, dryRun, promote, build}},
 

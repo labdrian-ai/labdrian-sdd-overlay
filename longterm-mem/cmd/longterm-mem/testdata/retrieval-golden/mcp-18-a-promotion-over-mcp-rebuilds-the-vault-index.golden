@@ -24,11 +24,11 @@
     "content": [
       {
         "type": "text",
-        "text": "{\"action\":\"updated\",\"page_address\":\"c-000901\",\"page_path\":\"wiki/memory/c-000901.md\"}"
+        "text": "{\"action\":\"already_promoted\",\"page_address\":\"c-000901\",\"page_path\":\"wiki/memory/c-000901.md\"}"
       }
     ],
     "structuredContent": {
-      "action": "updated",
+      "action": "already_promoted",
       "page_address": "c-000901",
       "page_path": "wiki/memory/c-000901.md"
     }
@@ -40,8 +40,6 @@
 --- after ---
 calls:
 setup --no-llm
-prefix --all --no-llm
-bm25 build
 prefix --all --no-llm
 bm25 build
 present: .vault-meta/.longterm-mem-provisioned

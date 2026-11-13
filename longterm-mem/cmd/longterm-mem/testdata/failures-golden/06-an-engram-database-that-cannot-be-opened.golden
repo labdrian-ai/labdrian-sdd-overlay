@@ -1,18 +1,18 @@
-args: sync --project golden-project
+args: sync --project golden-project --source memorycard
 exit: 4
 --- stdout ---
 --- stderr ---
-longterm-mem: sync: engram: connect <home>/no-such-place/engram.db: primary open failed (unable to open database file (14)), fallback open failed: unable to open database file (14)
-args: sync --project golden-project --dry-run
+longterm-mem: sync: memorycard: stat <home>/no-such-place/memory.db: no such file or directory
+args: sync --project golden-project --source memorycard --dry-run
 exit: 4
 --- stdout ---
 --- stderr ---
-longterm-mem: sync: engram: connect <home>/no-such-place/engram.db: primary open failed (unable to open database file (14)), fallback open failed: unable to open database file (14)
-args: promote --project golden-project --id 1
+longterm-mem: sync: memorycard: stat <home>/no-such-place/memory.db: no such file or directory
+args: promote --project golden-project --source memorycard --id 1
 exit: 4
 --- stdout ---
 --- stderr ---
-longterm-mem: promote: engram: connect <home>/no-such-place/engram.db: primary open failed (unable to open database file (14)), fallback open failed: unable to open database file (14)
+longterm-mem: promote: memorycard: stat <home>/no-such-place/memory.db: no such file or directory
 args: index --project golden-project --embeddings --embed-dimension 3
 exit: 4
 --- stdout ---

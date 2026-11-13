@@ -1,17 +1,16 @@
-args: sync --project golden-project
+args: sync --project golden-project --source memorycard
 exit: 1
 --- stdout ---
-longterm-mem: sync promoted 1 observation(s), patched 0 page(s)
+longterm-mem: sync --source memorycard promoted 1 memory(ies); patched 0 page(s); skipped 0 bridged; left 0 locally edited page(s) alone
 --- stderr ---
-longterm-mem: sync: promote: sync: observation 1: check promoted state: promote: promoted page c-000901.md carries an unparseable engram_revision "not-a-number": strconv.Atoi: parsing "not-a-number": invalid syntax
-promote: propagate: observation 1: check promoted state: promote: promoted page c-000901.md carries an unparseable engram_revision "not-a-number": strconv.Atoi: parsing "not-a-number": invalid syntax
-args: sync --project golden-project --dry-run
+longterm-mem: sync: promote: sync memorycard: memory 1: promote: promoted page c-000901.md carries an unparseable memorycard_revision "not-a-number": strconv.Atoi: parsing "not-a-number": invalid syntax
+args: sync --project golden-project --source memorycard --dry-run
 exit: 1
 --- stdout ---
-longterm-mem: sync --dry-run: would promote 0 observation(s), patch 0 page(s), skip 3, into <vault>
-longterm-mem: sync --dry-run: nothing was written
+longterm-mem: sync --source memorycard --dry-run: would promote 0 memory(ies), patch 0 page(s), skip 3, 0 bridged, into <vault>
+longterm-mem: sync --source memorycard --dry-run: nothing was written
 --- stderr ---
-  cannot read promoted state for observation 1: check promoted state: promote: promoted page c-000901.md carries an unparseable engram_revision "not-a-number": strconv.Atoi: parsing "not-a-number": invalid syntax
+  cannot read promoted state for memory 1: promote: promoted page c-000901.md carries an unparseable memorycard_revision "not-a-number": strconv.Atoi: parsing "not-a-number": invalid syntax
 --- vault ---
 === .allocator-counter (-rw-r--r--) ===
 902
@@ -19,14 +18,12 @@ longterm-mem: sync --dry-run: nothing was written
 === .raw/.longterm-mem-manifest.json (-rw-------) ===
 {
   "c-000901": {
-    "body_hash": "43c0c8b5ce7879c8a5268caa403a48eb2d07c43d4dd3a978053c14797ca3e98d",
-    "frontmatter_hash": "1b21326f72b961a3fbb0960a4364c0fba15144fd63a59f907350fd1e30a3a65b",
-    "promoted_revision": 1
+    "body_hash": "4c302984b209786451aa00b5b0888d97adc0390421234e166ee9d17a31caba15",
+    "frontmatter_hash": "5dc27a47a0e6f6ad025a8895eba900f6ffbfb787dee8b0fdc80f37c7d82f9336"
   },
   "c-000902": {
-    "body_hash": "393a1f7bd1e78ed5d27b2032a8b3c2fd142daa7b25cb56865a228799396f8de6",
-    "frontmatter_hash": "6b78be746ae2db038ea31d51b91a2b153da5130d152008fbac8a50295bc203a5",
-    "promoted_revision": 2
+    "body_hash": "02d1dcb41f88823f9b052fc027130ff443c17303f6b673371774c41c584f44eb",
+    "frontmatter_hash": "9f65d95dd09b06cdbf73967067b6b4a3637e49f819caa304876f67a03ca8058e"
   }
 }
 === .raw/.manifest.json (-rw-------) ===
@@ -100,10 +97,9 @@ tags:
 status: mature
 related: []
 sources: []
-engram_id: 1
-engram_sync_id: sync-1
-engram_type: decision
-engram_revision: not-a-number
+memorycard_id: 1
+memorycard_type: decision
+memorycard_revision: not-a-number
 project: golden-project
 ---
 # Pinned Decision
@@ -111,7 +107,7 @@ project: golden-project
 A decision somebody pinned.
 
 ---
-Promoted from Engram observation 1, revision 1.
+Promoted from memorycard memory 1, revision 1.
 === wiki/memory/c-000902.md (-rw-------) ===
 ---
 type: concept
@@ -127,15 +123,14 @@ tags:
 status: developing
 related: []
 sources: []
-engram_id: 2
-engram_sync_id: sync-2
-engram_type: decision
-engram_revision: 2
+memorycard_id: 2
+memorycard_type: decision
+memorycard_revision: 2
 project: golden-project
 ---
 # Curated Note
 
-A note with a curated topic key.
+A note with a curated topic key, revised.
 
 ---
-Promoted from Engram observation 2, revision 2.
+Promoted from memorycard memory 2, revision 2.

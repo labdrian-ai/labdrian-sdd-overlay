@@ -1,4 +1,4 @@
-args: sync --project labdrian-sdd-overlay
+args: sync --project labdrian-sdd-overlay --source memorycard
 exit: 1
 --- stdout ---
 --- stderr ---

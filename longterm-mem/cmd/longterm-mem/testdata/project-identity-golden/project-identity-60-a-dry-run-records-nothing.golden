@@ -1,9 +1,9 @@
-args: sync --dry-run
+args: sync --source memorycard --dry-run
 exit: 0
 --- stdout ---
-longterm-mem: sync --dry-run: would promote 1 observation(s), patch 0 page(s), skip 0, into <vault>
+longterm-mem: sync --source memorycard --dry-run: would promote 1 memory(ies), patch 0 page(s), skip 0, 0 bridged, into <vault>
   would promote: a memory of widgets
-longterm-mem: sync --dry-run: nothing was written
+longterm-mem: sync --source memorycard --dry-run: nothing was written
 --- stderr ---
 longterm-mem: sync: --project not given, adopted "widgets" from the working directory (the memory already lives under this name; derived via the remote rule)
 --- ledger ---

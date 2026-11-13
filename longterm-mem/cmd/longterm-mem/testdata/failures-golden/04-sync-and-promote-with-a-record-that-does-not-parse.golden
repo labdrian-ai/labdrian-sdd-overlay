@@ -1,18 +1,19 @@
-args: sync --project golden-project
+args: sync --project golden-project --source memorycard
 exit: 1
 --- stdout ---
+longterm-mem: sync --source memorycard promoted 0 memory(ies); patched 0 page(s); skipped 0 bridged; left 0 locally edited page(s) alone
 --- stderr ---
 longterm-mem: sync: parse <vault>/.raw/.longterm-mem-manifest.json: invalid character 'n' looking for beginning of object key string
-args: promote --project golden-project --id 1
+args: promote --project golden-project --source memorycard --id 1
 exit: 1
 --- stdout ---
 --- stderr ---
 longterm-mem: promote: parse <vault>/.raw/.longterm-mem-manifest.json: invalid character 'n' looking for beginning of object key string
-args: sync --project golden-project --dry-run
+args: sync --project golden-project --source memorycard --dry-run
 exit: 1
 --- stdout ---
 --- stderr ---
-longterm-mem: sync: parse <vault>/.raw/.longterm-mem-manifest.json: invalid character 'n' looking for beginning of object key string
+longterm-mem: sync --source memorycard --dry-run: parse <vault>/.raw/.longterm-mem-manifest.json: invalid character 'n' looking for beginning of object key string
 --- vault ---
 === .raw/ (directory -rwxr-xr-x) ===
 === .raw/.longterm-mem-manifest.json (-rw-r--r--) ===

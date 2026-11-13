@@ -1,8 +1,8 @@
-args: sync --dry-run
+args: sync --source memorycard --dry-run
 exit: 0
 --- stdout ---
-longterm-mem: sync --dry-run: would promote 0 observation(s), patch 0 page(s), skip 0, into <vault>
-longterm-mem: sync --dry-run: nothing was written
+longterm-mem: sync --source memorycard --dry-run: would promote 0 memory(ies), patch 0 page(s), skip 0, 0 bridged, into <vault>
+longterm-mem: sync --source memorycard --dry-run: nothing was written
 --- stderr ---
 longterm-mem: sync: --project not given, resolved "github.com/acme/widgets" from the working directory (via the remote rule)
 --- ledger ---

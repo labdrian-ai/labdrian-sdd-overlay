@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -83,6 +84,16 @@ func queryCall(args map[string]any) mcpToolCall {
 		merged[k] = v
 	}
 	return mcpToolCall{tool: "query", args: merged}
+}
+
+// withMemorycardMemory3 points the session at a memorycard database that holds, as memory 3, the Dragonscale
+// observation the promote cases promote.
+func withMemorycardMemory3(t *testing.T) {
+	t.Helper()
+	path := filepath.Join(realTempDir(t), "memory.db")
+	execOn(t, path, promoteGoldenMemorycardSchema)
+	execOn(t, path, `INSERT INTO memories (id, project, type, title, body, topic_key) VALUES (3, ?, 'architecture', 'Dragonscale layout', 'dragonscale needle in the middle', 'architecture/dragon')`, queryGoldenProject)
+	t.Setenv(memorycardDBEnvVar, path)
 }
 
 func mcpGoldenCases() []mcpGoldenCase {
@@ -177,11 +188,12 @@ func mcpGoldenCases() []mcpGoldenCase {
 			name: "18-a-promotion-over-mcp-rebuilds-the-vault-index",
 			setup: func(t *testing.T, w *retrievalWorld) {
 				writeIndexStubs(t, w)
+				withMemorycardMemory3(t)
 				w.writeVaultFile(t, "scripts/allocate-address.sh", promoteGoldenAllocator)
 			},
 			calls: []mcpToolCall{
-				{tool: "promote", args: map[string]any{"project": queryGoldenProject, "engram_id": 3}},
-				{tool: "promote", args: map[string]any{"project": queryGoldenProject, "engram_id": 3}},
+				{tool: "promote", args: map[string]any{"project": queryGoldenProject, "engram_id": 3, "source": "memorycard"}},
+				{tool: "promote", args: map[string]any{"project": queryGoldenProject, "engram_id": 3, "source": "memorycard"}},
 			},
 			after: func(t *testing.T, w *retrievalWorld) string { return renderIndexState(t, w) },
 		},
@@ -189,10 +201,11 @@ func mcpGoldenCases() []mcpGoldenCase {
 			name: "19-a-promotion-whose-index-rebuild-fails-still-wrote-the-page",
 			setup: func(t *testing.T, w *retrievalWorld) {
 				writeIndexStubs(t, w)
+				withMemorycardMemory3(t)
 				w.writeVaultFile(t, "scripts/allocate-address.sh", promoteGoldenAllocator)
 				w.writeVaultFile(t, "fail-setup", "")
 			},
-			calls: []mcpToolCall{{tool: "promote", args: map[string]any{"project": queryGoldenProject, "engram_id": 3}}},
+			calls: []mcpToolCall{{tool: "promote", args: map[string]any{"project": queryGoldenProject, "engram_id": 3, "source": "memorycard"}}},
 			after: func(t *testing.T, w *retrievalWorld) string { return renderIndexState(t, w) },
 		},
 		{

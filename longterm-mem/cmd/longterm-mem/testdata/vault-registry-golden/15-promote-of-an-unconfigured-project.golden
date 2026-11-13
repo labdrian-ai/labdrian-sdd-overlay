@@ -1,4 +1,4 @@
-args: promote --project no-such-project --id 1
+args: promote --project no-such-project --source memorycard --id 1
 exit: 3
 --- stdout ---
 --- stderr ---
