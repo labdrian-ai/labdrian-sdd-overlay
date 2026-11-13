@@ -28,6 +28,9 @@ set -euo pipefail
 die() { echo "ABORT: $*" >&2; exit 1; }
 
 real_home="$HOME"
+# The build must keep the Go build cache it already has: the XDG directories are pointed at the scratch directory below,
+# and Go derives its cache directory from XDG_CACHE_HOME unless GOCACHE is set.
+gocache="$(GOTOOLCHAIN=go1.26.1 go env GOCACHE)"
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/../longterm-mem" && pwd)"
 live_vault="$real_home/labdrian-brain"
 live_card_dir="$real_home/.memorycard"
@@ -82,16 +85,23 @@ copy_db() { # copy_db <live db> <copy>: a consistent copy of a sqlite database, 
   sqlite3 -readonly "$1" ".backup '$2'"
 }
 legacy_counts() { # one line per project: the pages of the vault that still carry a legacy identity key, and the total
+  # The command reads the .md files directly in wiki/memory whose frontmatter lines end in a line feed (a CRLF page has
+  # no frontmatter it can read) and counts a top-level key line only: this does the same, and says how many CRLF pages it skipped.
   perl -e '
-    my %n; my $total = 0;
-    for my $f (glob("$ARGV[0]/wiki/memory/*.md")) {
+    my %n; my $total = 0; my $crlf = 0;
+    opendir(my $dh, "$ARGV[0]/wiki/memory") or exit 0;
+    my @files = sort grep { /\.md$/ && -f "$ARGV[0]/wiki/memory/$_" } readdir($dh);
+    closedir($dh);
+    for my $name (@files) {
+      my $f = "$ARGV[0]/wiki/memory/$name";
       open(my $h, "<", $f) or next;
-      my ($line, $in, $project, $legacy) = (0, 0, "", 0);
+      my ($project, $legacy) = ("", 0);
       while (<$h>) {
+        if ($. == 1 && $_ eq "---\r\n") { $crlf++; last; }
         chomp;
-        if ($. == 1) { last unless $_ eq "---"; $in = 1; next; }
+        if ($. == 1) { last unless $_ eq "---"; next; }
         last if $_ eq "---";
-        $legacy = 1 if /^\s*(engram_id|engram_revision|engram_type|engram_sync_id|memorycard_id|memorycard_revision|memorycard_type):/;
+        $legacy = 1 if /^(engram_id|engram_revision|engram_type|engram_sync_id|memorycard_id|memorycard_revision|memorycard_type):/;
         $project = $1 if /^project:\s*(.*?)\s*$/;
       }
       close($h);
@@ -102,13 +112,17 @@ legacy_counts() { # one line per project: the pages of the vault that still carr
     }
     printf("  %s: %d\n", $_, $n{$_}) for sort keys %n;
     printf("vault-wide: %d page(s) still carry a legacy identity key\n", $total);
+    printf("(%d page(s) with CRLF line endings skipped: the command does not read their frontmatter)\n", $crlf) if $crlf;
   ' "$1"
 }
 projects_of() { # the distinct `project:` values of the pages of the vault at $1, one per line
   perl -e '
     my %seen;
-    for my $f (glob("$ARGV[0]/wiki/memory/*.md")) {
-      open(my $h, "<", $f) or next;
+    opendir(my $dh, "$ARGV[0]/wiki/memory") or exit 0;
+    my @files = sort grep { /\.md$/ && -f "$ARGV[0]/wiki/memory/$_" } readdir($dh);
+    closedir($dh);
+    for my $name (@files) {
+      open(my $h, "<", "$ARGV[0]/wiki/memory/$name") or next;
       while (<$h>) {
         chomp;
         if ($. == 1) { last unless $_ eq "---"; next; }
@@ -164,7 +178,7 @@ git -c user.name=rehearsal -c user.email=rehearsal@example.invalid -c commit.gpg
 echo "baseline commit: $(git -C "$vault" rev-parse --short HEAD)"
 
 # The build uses the real HOME for the Go caches only (it reads and writes no vault or database).
-(cd "$repo" && HOME="$real_home" GOTOOLCHAIN=go1.26.1 go build -o "$bin" ./cmd/longterm-mem)
+(cd "$repo" && HOME="$real_home" GOCACHE="$gocache" GOTOOLCHAIN=go1.26.1 go build -o "$bin" ./cmd/longterm-mem)
 echo "built: $bin (from $(git -C "$repo" rev-parse --short HEAD) plus its working tree)"
 
 if (($# > 0)); then
@@ -180,7 +194,7 @@ legacy_counts "$vault"
 
 project=""
 lm() { "$bin" "$@" --project "$project" --vault "$vault"; }
-slug() { printf '%s' "$1" | tr -c 'A-Za-z0-9._-' '_'; }
+slug() { printf '%02d-%s' "$1" "$(printf '%s' "$2" | tr -c 'A-Za-z0-9._-' '_')"; } # slug <index> <project>: an index number first, so two projects never share a file name
 show() { # show <label> <command...>: print the output and the exit code, whatever it is
   local rc=0
   echo
@@ -194,8 +208,9 @@ findings() { # the findings of doctor: each check and its status, and which page
 }
 promotions() { rg '^  would promote:|would promote [0-9]+ memory' "$1" | perl -pe 's/, patch .*//; s/ into .*//'; }
 
+idx=0
 for project in "${projects[@]}"; do
-  s="$(slug "$project")"
+  s="$(slug "$idx" "$project")"; idx=$((idx + 1))
   echo
   echo "################ project: $project ################"
   show "[$project] sync --dry-run BEFORE the migration" lm sync --dry-run | tee "$work/sync-before-$s.txt"
@@ -210,8 +225,9 @@ git -C "$vault" diff --stat | tail -5
 echo "=== git -C <copy> status --short (the backup directories are new, so they show as ??) ==="
 git -C "$vault" status --short | rg -v '^ M wiki/memory/' | head -20 || true
 
+idx=0
 for project in "${projects[@]}"; do
-  s="$(slug "$project")"
+  s="$(slug "$idx" "$project")"; idx=$((idx + 1))
   echo
   echo "################ project: $project (checks after the migration) ################"
   before="$(git -C "$vault" status --short | sha256sum; git -C "$vault" diff | sha256sum)"
