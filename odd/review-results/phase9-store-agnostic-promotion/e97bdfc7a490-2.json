@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "c0ad763baeaf2cf5cfacb08e093c053b091a7216",
+    "head": "e97bdfc7a49033c5fbc40207caa3d0942de15efc",
+    "diff_sha256": "b78bc86f2cc9ee532d396dca96467e7fd0734bdd2264ec9b25aade428e2c42cc",
+    "paths": [
+      "longterm-mem/docs/promote-from-memorycard.md",
+      "longterm-mem/internal/promote/migrate_cards_unreadable_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "c0ad763baeaf2cf5cfacb08e093c053b091a7216",
+      "head": "e97bdfc7a49033c5fbc40207caa3d0942de15efc",
+      "diff_sha256": "b78bc86f2cc9ee532d396dca96467e7fd0734bdd2264ec9b25aade428e2c42cc"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/docs/promote-from-memorycard.md",
+        "longterm-mem/internal/promote/migrate_cards_unreadable_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/docs/promote-from-memorycard.md:134",
+        "claim": "The bullet now says \"What happens to an unreadable page is stated above\" without naming which bullet. The reader must infer the target from the nested (a)/(b) list a few lines up, and the unreadable-page outcome for legacy versus non-legacy pages is not visible from this line. The previous wording stated the outcome directly, so this reduces local recall. Naming the bullet or quoting its heading would remove the ambiguity.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/docs/promote-from-memorycard.md:134"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/migrate_cards_unreadable_test.go:165",
+        "claim": "The comment now carries a long parenthetical on a single line, which makes it much longer than the surrounding wrapped comment lines. It also still points to the Log only by a bare L71 label inside the feature document, so the reference can go stale if the Log is renumbered. Wrapping the line would match the neighbouring comment style.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/migrate_cards_unreadable_test.go:165"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only one documentation bullet and one test comment, with no executable code change.",
+      "The doc edit replaces an explicit statement of the unreadable-page outcome with a back-reference to text outside the diff, which I could not see, so the target bullet is unverified.",
+      "The test comment edit is cosmetic and does not change behaviour."
+    ]
+  }
+}

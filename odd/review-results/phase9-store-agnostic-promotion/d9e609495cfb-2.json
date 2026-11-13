@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "2b315c327fc0f59789a2fa001f3b0e3c4be8b464",
+    "head": "d9e609495cfbee6ec7779248e9999bf8b9dd825d",
+    "diff_sha256": "30996afcf0ce70ee72b3d6014b6f4bb97150908f0e2cc66fd48119c6b29cf9f5",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "2b315c327fc0f59789a2fa001f3b0e3c4be8b464",
+      "head": "d9e609495cfbee6ec7779248e9999bf8b9dd825d",
+      "diff_sha256": "30996afcf0ce70ee72b3d6014b6f4bb97150908f0e2cc66fd48119c6b29cf9f5"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:121",
+        "claim": "The T6 line was edited in this commit but was not updated for the new log entry. It still says L73 is 'the docs(odd) commit that follows e97bdfc7' with no hash, while L74 now states L73 is 7f3d2ce2. It also does not list L74 or the wording-pass commit 2b315c32 under the batches or the commit-to-Log map. Its claim that none of batches 9-11 is unverified debt does not mention the L74 pass. A reader of the task line cannot find L74 or its commits.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:121",
+          "odd/tasks/phase9-store-agnostic-promotion.md:791-793"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:791-797",
+        "claim": "L74 states that the Log is append-only and never renumbered. Yet this commit edits the existing text of L71, L72, L73 and the T6 line in place. L73 says 'L72's text is not edited', and L74 now edits L72 (e). The pointer-edit exception is only partly declared: L74 names L71 and L72 but does not say L73's sentence was also rewritten, apart from a passing 'L73 now say'. The history becomes harder to read.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:778-781",
+          "odd/tasks/phase9-store-agnostic-promotion.md:794-795"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only one changed path, a docs file; the diff covers it completely.",
+      "The first, third and fourth hunks edit L71 (e), L72 (e) and L73 in place. The new L74 describes these edits but does not mark L73's rewrite as a pointer edit.",
+      "The T6 line hunk changes only the verification sentence; the L73 commit-map entry and the batch list were left as before."
+    ]
+  }
+}

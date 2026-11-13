@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "2b315c327fc0f59789a2fa001f3b0e3c4be8b464",
+    "head": "d9e609495cfbee6ec7779248e9999bf8b9dd825d",
+    "diff_sha256": "30996afcf0ce70ee72b3d6014b6f4bb97150908f0e2cc66fd48119c6b29cf9f5",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "2b315c327fc0f59789a2fa001f3b0e3c4be8b464",
+      "head": "d9e609495cfbee6ec7779248e9999bf8b9dd825d",
+      "diff_sha256": "30996afcf0ce70ee72b3d6014b6f4bb97150908f0e2cc66fd48119c6b29cf9f5"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:795",
+        "claim": "L74 states that the Log is append-only and never renumbered, yet this same commit edits the text of L71 (e), L72 (e) and L73 in place. L73 says 'L72's text is not edited', and the commit makes that false. L74 discloses the pointer edits, so the contradiction is minor, but the append-only claim no longer holds as written.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:767",
+          "odd/tasks/phase9-store-agnostic-promotion.md:778",
+          "odd/tasks/phase9-store-agnostic-promotion.md:784",
+          "odd/tasks/phase9-store-agnostic-promotion.md:791"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:121",
+        "claim": "The T6 line was edited in this commit but still says L73 is 'the docs(odd) commit that follows e97bdfc7' with no hash. It also omits the batch 12 commits (2b315c32 and L74's own commit). The only place that maps L73 to 7f3d2ce2 is L74, so the task line's commit map is incomplete and a reader of the task line alone cannot find them.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:121",
+          "odd/tasks/phase9-store-agnostic-promotion.md:792"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only one documentation file, with no code or behavior change, consistent with Risk none.",
+      "The edits to the T6 line, L71 (e), L72 (e) and L73 are consistent with each other, and the new L74 entry accurately describes them.",
+      "The commit hashes cited in L74 are not verifiable from the diff alone."
+    ]
+  }
+}

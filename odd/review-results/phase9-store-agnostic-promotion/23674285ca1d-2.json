@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "d9e609495cfbee6ec7779248e9999bf8b9dd825d",
+    "head": "23674285ca1d6d1b9338825284c7302a0c968bff",
+    "diff_sha256": "d626af2fed5154e4d33df7b741153908c2368e956bef829020591710998ba81d",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "d9e609495cfbee6ec7779248e9999bf8b9dd825d",
+      "head": "23674285ca1d6d1b9338825284c7302a0c968bff",
+      "diff_sha256": "d626af2fed5154e4d33df7b741153908c2368e956bef829020591710998ba81d"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:796",
+        "claim": "The L74 bullet says 'Every in-place edit to an earlier entry is listed here', but this commit also rewrites the L74 F2 answer in place (the 'append-only' sentence) and edits the T6 line again, and neither edit is listed. 'This commit' in L74 is defined by the commit map as the commit holding L74 (d9e60949), yet this follow-up commit adds the sentence. The reader cannot tell which commit made which edit, so the completeness claim is weaker than it reads.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:795",
+          "odd/tasks/phase9-store-agnostic-promotion.md:796"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:796",
+        "claim": "The list item 'the L73 sentence' does not name which sentence. The prose points to the verification sentence, but the list gives a reader no way to find it without rereading the sentence before it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:796"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only one path changed: the T6 line and two Log bullets in odd/tasks/phase9-store-agnostic-promotion.md.",
+      "The T6 line's L73/L74 map is internally consistent with the commit map at line 792 (L73 = 7f3d2ce2, L74 = d9e60949).",
+      "The F2 wording change drops 'append-only' from the L74 bullet, so the bullet no longer contradicts the in-place edits it now lists.",
+      "No code is touched."
+    ]
+  }
+}
