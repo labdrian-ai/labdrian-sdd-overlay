@@ -200,7 +200,7 @@ func topLevelFields(block string) map[string]string {
 
 // unreadableCauses says, in the name of the refusal and in its reason, every way a page that opens with --- can have
 // frontmatter the migration cannot read.
-const unreadableCauses = "CRLF line endings, no closing ---, or a BOM, blank line or spaces before the opening ---"
+const unreadableCauses = "CRLF line endings, no closing ---, a BOM, blank line or spaces before the opening ---, spaces after an opening or closing ---, or a line ending in --- inside the frontmatter"
 
 // pageShape is what a page is to the migration: no frontmatter, frontmatter it can read, or frontmatter it cannot.
 type pageShape int
@@ -214,19 +214,25 @@ const (
 // shapeOf classifies a page and answers the text its legacy keys are looked for in.
 //
 // Readable: the page starts at byte 0 with a line of --- ending in a line feed and has a closing such line; the text is
-// the bytes from 0 to the end of the closing line, so the body that follows it is exactly raw after the block.
+// the bytes from 0 to the end of the closing line, so the body that follows it is exactly raw after the block. The shared
+// reader frontmatterBlock, which MatchesPage and every other reader use, must split the page at the very same place: it
+// takes the first --- line feed anywhere, so a frontmatter line that ends in --- (a word, or a line of four dashes) would
+// make it end the block earlier, and a rewrite would then look like an edit to MatchesPage. Where the two splits
+// disagree the page is not readable.
 //
-// Unreadable: the first line that is not blank, after a byte order mark, blank lines, spaces and carriage returns are
-// taken off, is ---, but the page is not readable (CRLF line endings, no closing line, a BOM or blank lines or spaces
-// before the opening). The text is the lines between that line and the next line of ---, or the rest of the page when there
-// is none: what the page quotes after its frontmatter is never scanned.
+// Unreadable: the first line that is not blank, after a byte order mark, blank lines, spaces, tabs and carriage returns
+// are taken off, is ---, but the page is not readable (see unreadableCauses). The text is the lines between that line and
+// the next line of ---, trailing spaces and tabs ignored on both, or the rest of the page when there is none: what the
+// page quotes after its frontmatter is never scanned. Such a page is never rewritten.
 //
 // None: any other page. Every reader of longterm-mem sees a page that does not open with --- as one with no frontmatter, so
 // it is no promoted page and cannot be promoted twice, and its text is never scanned.
 func shapeOf(raw string) (string, pageShape) {
 	if strings.HasPrefix(raw, "---\n") {
 		if i := strings.Index(raw[3:], "\n---\n"); i >= 0 {
-			return raw[:3+i+5], shapeReadable
+			if shared, ok := frontmatterBlock(raw); ok && shared == raw[:3+i+5] {
+				return shared, shapeReadable
+			}
 		}
 	}
 	lines := strings.Split(strings.TrimPrefix(raw, "\ufeff"), "\n")
@@ -237,12 +243,12 @@ func shapeOf(raw string) (string, pageShape) {
 	for first < len(lines) && strings.Trim(lines[first], " \t") == "" {
 		first++
 	}
-	if first == len(lines) || strings.TrimLeft(lines[first], " \t") != "---" {
+	if first == len(lines) || strings.Trim(lines[first], " \t") != "---" {
 		return "", shapeNone
 	}
 	var inside []string
 	for _, line := range lines[first+1:] {
-		if line == "---" {
+		if strings.TrimRight(line, " \t") == "---" {
 			break
 		}
 		inside = append(inside, line)

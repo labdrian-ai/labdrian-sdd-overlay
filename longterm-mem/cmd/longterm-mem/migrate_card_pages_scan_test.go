@@ -48,10 +48,10 @@ func TestMigrateCardPages_AnUnreadablePageIsRefusedByNameAndASubdirectoryPageIsN
 	if code != exitRegistrationConflict || !strings.Contains(stdout, "migrated 3 of 8 page(s) carrying legacy keys") {
 		t.Fatalf("exit %d, stdout %q, stderr %q, want the seven legacy pages and the CRLF one, and not the one in the subdirectory", code, stdout, stderr)
 	}
-	if !strings.Contains(stderr, "refused c-000950: unreadable frontmatter (CRLF line endings, no closing ---, or a BOM, blank line or spaces before the opening ---)") {
+	if !strings.Contains(stderr, "refused c-000950: unreadable frontmatter (CRLF line endings, no closing ---, a BOM, blank line or spaces before the opening ---, spaces after an opening or closing ---, or a line ending in --- inside the frontmatter)") {
 		t.Errorf("stderr = %s, want the CRLF page refused by name", stderr)
 	}
-	if !strings.Contains(stdout, "  refused, frontmatter cannot be read (CRLF line endings, no closing ---, or a BOM, blank line or spaces before the opening ---): 1\n") {
+	if !strings.Contains(stdout, "  refused, frontmatter cannot be read (CRLF line endings, no closing ---, a BOM, blank line or spaces before the opening ---, spaces after an opening or closing ---, or a line ending in --- inside the frontmatter): 1\n") {
 		t.Errorf("stdout = %s, want the count of the kind", stdout)
 	}
 	after := cmdVaultSnapshot(t, w.vaultRoot)
@@ -94,6 +94,27 @@ func TestMigrateCardPages_AFailedRunStillPrintsTheNoProjectNoteOnce(t *testing.T
 	}
 	if n := strings.Count(stdout, "note: 1 page(s) carry legacy keys and name no project"); n != 1 {
 		t.Errorf("the note was printed %d times, want once; stdout %q, stderr %q", n, stdout, stderr)
+	}
+}
+
+// A tracked page whose recorded hashes match it, and whose frontmatter has a line ending in ---, is refused by name
+// and its bytes are unchanged after --apply: a rewrite would make MatchesPage, which splits the page at the first ---
+// line feed anywhere, see it as edited.
+func TestMigrateCardPages_ATrackedPageWithALineEndingInRulesIsRefusedAndKeepsItsBytes(t *testing.T) {
+	w, _ := memorycardWorld(t)
+	page := strings.Replace(legacyCardPage("c-000990", "Dashes", 1, "learning", "3"), "status: developing\n", "status: developing\nnote: a---\n", 1)
+	recordPage(t, w, "c-000990", page, true)
+	before := cmdVaultSnapshot(t, w.vaultRoot)
+
+	code, stdout, stderr := runMigrate(t, "--apply")
+	if code != exitRegistrationConflict || !strings.Contains(stderr, "refused c-000990: unreadable frontmatter (") || !strings.Contains(stderr, "a line ending in --- inside the frontmatter") {
+		t.Fatalf("exit %d, stdout %q, stderr %q, want the page refused by name", code, stdout, stderr)
+	}
+	if got := readVaultFile(t, w, "wiki/memory/c-000990.md"); got != page {
+		t.Errorf("the page changed")
+	}
+	if after := cmdVaultSnapshot(t, w.vaultRoot); len(changedPaths(before, after)) != 0 {
+		t.Errorf("the vault changed: %v", changedPaths(before, after))
 	}
 }
 

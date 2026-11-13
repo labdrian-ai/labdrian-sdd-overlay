@@ -9,7 +9,7 @@ import (
 // A page that carries a legacy key whose frontmatter cannot be read is a legacy page the migration cannot rewrite:
 // counted and refused by name, never skipped in silence.
 
-const unreadableFragment = "unreadable frontmatter (CRLF line endings, no closing ---, or a BOM, blank line or spaces before the opening ---)"
+const unreadableFragment = "unreadable frontmatter (CRLF line endings, no closing ---, a BOM, blank line or spaces before the opening ---, spaces after an opening or closing ---, or a line ending in --- inside the frontmatter)"
 
 func TestMigrateCardPages_APageWithLegacyKeysAndUnreadableFrontmatterIsCountedAndRefusedByName(t *testing.T) {
 	m := newMigWorld()
@@ -98,6 +98,52 @@ func TestMigrateCardPages_OnlyAPageThatOpensWithARuleCanBeALegacyPage(t *testing
 		report, err := m.run(true)
 		if err != nil || report.Legacy != 0 || len(report.Refused) != 0 || len(report.Migrated) != 0 || len(report.NoProject) != 0 {
 			t.Errorf("%s: report = %+v, err = %v, want the page ignored", name, report, err)
+		}
+		if m.pages.pages["page"] != content {
+			t.Errorf("%s: the page changed", name)
+		}
+	}
+}
+
+// A page whose frontmatter has a line that ends in --- is split differently by the shared reader (MatchesPage and every
+// other reader take the first --- line feed anywhere) than by the migration's line-anchored closing rule, so a rewrite
+// would make the shared reader see the page as edited. It is counted and refused by name, and never rewritten, when a
+// top-level legacy key comes before the line-anchored closing rule.
+func TestMigrateCardPages_AFrontmatterLineEndingInRulesIsRefusedAsUnreadableAndNeverRewritten(t *testing.T) {
+	for name, extra := range map[string]string{"a word ending in ---": "note: a---\n", "a line of four dashes": "----\n"} {
+		m := newMigWorld()
+		m.memory(cardOf(7, migProject))
+		content := m.put("page", "memorycard_id: 7\n"+extra)
+		report, err := m.run(true)
+		r, ok := refusalOf(report, "page")
+		if err != nil || report.Legacy != 1 || len(report.Migrated) != 0 || !ok || r.Kind != RefusedUnreadable || !strings.Contains(r.Reason, unreadableFragment) {
+			t.Errorf("%s: report = %+v, err = %v, want the tracked page refused as unreadable", name, report, err)
+		}
+		if m.pages.pages["page"] != content {
+			t.Errorf("%s: the page changed", name)
+		}
+		if len(m.backup.calls) != 0 {
+			t.Errorf("%s: a backup was asked for a page that is never rewritten", name)
+		}
+	}
+}
+
+// Trailing spaces or tabs on an opening or closing --- line do not make a page invisible: the unreadable scan takes them
+// off, so `--- ` opens and closes like `---`. The readable rule stays exact.
+func TestMigrateCardPages_TrailingSpacesOnARuleLineLeaveAnUnreadablePageCounted(t *testing.T) {
+	for name, content := range map[string]string{
+		"spaces on both":   "--- \nmemorycard_id: 7\nproject: " + migProject + "\n--- \n# T\n",
+		"tab on opening":   "---\t\nmemorycard_id: 7\nproject: " + migProject + "\n---\n# T\n",
+		"spaces closing":   "---\nmemorycard_id: 7\nproject: " + migProject + "\n---  \n# T\n",
+		"closing then key": "---\ntitle: t\n---\t\n# T\n\nengram_id: 5\nproject: " + migProject + "\n",
+	} {
+		m := newMigWorld()
+		m.memory(cardOf(7, migProject))
+		m.pages.pages["page"] = content
+		report, err := m.run(true)
+		wantCounted := name != "closing then key"
+		if err != nil || (report.Legacy == 1) != wantCounted || (wantCounted && (len(report.Refused) != 1 || report.Refused[0].Kind != RefusedUnreadable)) {
+			t.Errorf("%s: report = %+v, err = %v, want counted %v", name, report, err, wantCounted)
 		}
 		if m.pages.pages["page"] != content {
 			t.Errorf("%s: the page changed", name)
