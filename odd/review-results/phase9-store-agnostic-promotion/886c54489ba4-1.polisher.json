@@ -1,0 +1,41 @@
+{
+  "kind": "polisher",
+  "base": "3a7a9fc6fb937e7e23818f63b4e9b8cd2e55e89e",
+  "head": "886c54489ba44b70f4eef0163b0ba9507f934418",
+  "diff_sha256": "a79070c72bca477fe2e27b9e4eec2ac5992d8b382b5153972eff1ba5aca097d0",
+  "findings": {
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go:155-178",
+        "summary": "The copy is not made durable, and file modes are not preserved. The backup files are written with os.WriteFile 0o600 and never synced. The returned directory therefore reads as a whole copy, but a crash or power loss right after BackUp returns and before the rewrites could leave truncated backups. Original page modes are not recorded, so a restore by plain copy resets permissions.",
+        "evidence": [
+          "copyInto uses os.WriteFile with no File.Sync and no directory sync before BackUp returns success.",
+          "applyMigration starts rewriting pages immediately after BackUp returns, so the backup is the only rollback.",
+          "The restore test writes with a fixed 0o644 mode and compares only content, not modes."
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/migrate_card_pages_backup_test.go:13-47",
+        "summary": "The test gaps are narrow. The collision test only checks the second backup (the -2 suffix). The partial-cleanup test covers only a missing page, not a failed MkdirAll or WriteFile mid-copy. The RemoveAll-failure branch that joins the two errors is untested.",
+        "evidence": [
+          "TestVaultBackup_TwoBackupsAtOneInstantDoNotCollide makes two backups at one fixed instant and never a third.",
+          "TestVaultBackup_AFailedCopyLeavesNoPartialDirectory triggers failure only through a nonexistent page.",
+          "No test covers the errors.Join path in BackUp."
+        ]
+      }
+    ],
+    "evidence": [
+      "I read vaultBackup (BackUp, newDirectory, copyInto) in cmd_migrate_card_pages.go.",
+      "Collision handling is sound. os.Mkdir is exclusive, so each call owns its directory. The timestamp name and the -N suffix names cannot overlap, and an existing directory is never merged into.",
+      "Cleanup is safe. RemoveAll targets only the directory this call just created with Mkdir, so it cannot delete an earlier backup or vault content. A failed copy therefore leaves no partial directory that could be mistaken for a whole one.",
+      "The precedence sidecar is skipped only when it does not exist. Every other read error aborts the backup before any write.",
+      "Ordering in applyMigration in internal/promote/migrate_cards.go: BackUp is called once, before the first Store.Set or WritePage. A backup failure returns 'nothing was written'. This satisfies S6 (c).",
+      "I read migrate_card_pages_backup_test.go. It covers same-instant collision, no partial directory after a failed copy with a retry, and a restore round trip that returns the vault to its original bytes.",
+      "I did not run the tests. They were not run."
+    ]
+  }
+}

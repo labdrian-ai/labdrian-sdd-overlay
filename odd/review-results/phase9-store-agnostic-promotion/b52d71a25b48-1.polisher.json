@@ -1,0 +1,45 @@
+{
+  "kind": "polisher",
+  "base": "9901b966616968a6f3cda27c552dbcdd14f29a16",
+  "head": "b52d71a25b48d523817a209db9e04cab96af3e72",
+  "diff_sha256": "b8b7a56f6c8483f432eb6495fa908be823dd40232edea7f91b2f68588a479715",
+  "findings": {
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/promote/frontmatter.go:52-54, longterm-mem/internal/promote/propagate_cards.go:124-130",
+        "summary": "A retired memory's page whose status and related already match is now rewritten, and counted as Patched, solely to convert its legacy memorycard_* keys. The need-a-patch test in the walk, `patchedFrontmatter(block,...) == block`, now also fires on an identity-only difference.",
+        "evidence": [
+          "patchedFrontmatter now wraps withStoreAgnosticIdentity(block) (frontmatter.go:53).",
+          "The walk's skip at propagate_cards.go:128 compares patchedFrontmatter(block, status, related) with block.",
+          "A page of a superseded or archived memory that already says the right status and related, but still carries memorycard_id and memorycard_revision, now differs from its block. It is added as a patch target, written, and listed in Patched and the dry-run count, although its status did not change.",
+          "The scope is limited by the guard at line 124 (`!isRetired(m) && !pageIsRetired(block)` is skipped), so only pages of retired memories, or pages still saying retired, are affected. The write is idempotent: the second run finds nothing.",
+          "The commit's own doc comment at propagate_cards.go:70-73 still says a page that already says it is not visited, which is no longer true for legacy-key pages.",
+          "This is a behaviour change nobody asked for: S6(b) only requires that a status patch carry store-agnostic keys, not that a status-unchanged page be written."
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/promote/propagate.go:21-42, longterm-mem/internal/promote/frontmatter.go:23-46",
+        "summary": "The status-patch path now rewrites the identity keys of existing legacy pages with no backup. It also skips the edited and untracked refusals that MigrateCardPages applies, which weakens the S6(c) guarantee that the one-time migration is the path that rewrites legacy pages. The vault is not git-tracked.",
+        "evidence": [
+          "MigrateCardPages refuses a page that is untracked or fails entry.MatchesPage(raw) as edited locally (migrate_cards.go:198-206). It also backs the pages up first (applyMigration, migrate_cards.go:378-386).",
+          "patchPage and PatchStatusFields do neither. They call WritePage directly with the rewritten identity, and the commit adds an identity rewrite to that same path, so a hand-edited or untracked legacy page of a retired memory loses its memorycard_* lines and gains source_* lines unrecorded and without a backup.",
+          "The rewrite is deterministic and keeps the memory id, revision and type. withStoreAgnosticIdentity returns the block unchanged for Engram pages, for malformed ids, and for non-simple identity lines (migrate_cards.go:294-311). It also drops engram_sync_id and any other identity-family line, as the migration does.",
+          "Status-only patches already wrote without a backup, so the new exposure is the identity rewrite for pages the migration would have refused. It is limited to retired memories' pages."
+        ]
+      }
+    ],
+    "evidence": [
+      "Located the worktree at /home/labdrian/labdrian-sdd-overlay-worktrees/review-b52d71a25b48. The checked-out tree has the commit applied; I did not run git or compare against the base commit.",
+      "Read frontmatter.go (PatchStatusFields, patchedFrontmatter, setScalarField, setListField).",
+      "Read migrate_cards.go (MigrateCardPages, mapPage, withStoreAgnosticIdentity, simpleIdentityLines, rewrittenIdentity, applyMigration).",
+      "Read propagate_cards.go (eachCardPatchTarget gating) and propagate.go (patchPage precedence-hash update).",
+      "Grep showed every caller of patchedFrontmatter and PatchStatusFields: the writer.go:419 supersede path, propagate.go and propagate_cards.go.",
+      "The precedence FrontmatterHash is taken from hashText(newBlock) of the rewritten block, so it stays consistent with the written page.",
+      "I did not run any tests."
+    ]
+  }
+}
