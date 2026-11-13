@@ -107,16 +107,19 @@ A page is refused, left byte-identical and named, and the run goes on to the oth
 | Case | Counted as |
 |---|---|
 | the page's body differs from its precedence entry (a hand edit, R-030) | `edited since longterm-mem wrote it` |
-| the page's body is the recorded one but its frontmatter matches neither the entry nor any rewrite a stopped run could have written (a frontmatter line was edited) | `frontmatter differs from the entry and is no recorded rewrite` (shown when it is not zero); the message names the backup directory and says copying it over the vault restores the page and the sidecar |
+| the page's body is the recorded one but its frontmatter matches neither the entry nor any rewrite a stopped run could have written (a frontmatter line was edited) | `frontmatter differs from the entry and is no recorded rewrite` (shown when it is not zero); the message names the backup directory and says copying it over the vault restores the page and the sidecar, and lists the backup directories the vault has (`backups present: ...`, or `none`) |
+| the page carries a legacy key but its frontmatter cannot be read: CRLF line endings, or a block with no closing `---` | `frontmatter cannot be read (CRLF line endings or no closing ---)` (shown when it is not zero); the reason is `unreadable frontmatter (CRLF line endings or no closing ---)` |
 | the page has no precedence entry | `not recorded as written by longterm-mem` |
 | no `import_map` row names the page's observation, or the memory is gone | `no import_map row names its Engram observation` |
 | the page names a memorycard memory by `memorycard_id` and memorycard holds no memory with that id | `memorycard holds no memory with the id it names` (shown when it is not zero) |
 | the memory already has a page of its own, or is the memory of another page of the run (two pages for one memory; two `memorycard_id` pages of one memory are both refused) | `its memory already has a page` |
 | the page's id is no number, it names an Engram observation and a memorycard memory at once, it carries a legacy key and names no memory, an identity key's value runs over several lines, or the memory is in another project | `identity cannot be read as one memory` (shown when it is not zero) |
 
-A page that carries a legacy key and has no `project` field belongs to no project, so it is in none of the per-project numbers: the
-command reports it once, apart (`N page(s) have no project (no project, not counted per project): <pages>`), names the remedy (add a
-`project:` line to the page by hand, then run again), leaves it alone, and the exit code is 6 while one is left.
+A page that carries a legacy key and has no `project` field belongs to no project, so it is in no project's run: every run prints it
+once, as a note on stdout only (`note: N page(s) carry legacy keys and name no project, so no project's run counts them: <pages>; add a
+`project:` line to each by hand, then run again`), leaves it alone, and it makes no exit code of its own: exit 6 comes only from that
+project's own refusals. The rehearsal script's vault-wide count includes these pages, and that count is what the retirement waits on
+(it must be zero), so no page is hidden.
 
 A refused page is left for the owner: it is never matched to a memory by its content. A page that cannot be read stops
 the run before any write, since it may be a memory's own page. A second run changes nothing: the pages it migrated no
@@ -128,11 +131,13 @@ answers `already promoted as c-NNNNNN`. `doctor` joins the pages by the same ide
 A page that names an Engram observation takes the memory's current revision as its `source_revision` while its body stays
 the one written in the Engram era: the page says "revision N" for the memory and holds the text of its import until the
 memory's next revision rewrites it. Every page of the project that carries a legacy key as a top-level line is counted, and each one that is not migrated is
-refused under one of the names of the table above (a page that names no memory, or no project, is among them), so the
-count is the number of pages that still carry a legacy key. A line that only looks like a key inside a longer value is
-no key. The command reads the pages that are `.md` files directly in `wiki/memory` and whose frontmatter lines end in a
-line feed: a page with CRLF line endings, or in a subdirectory, is not seen, counted or migrated, and the rehearsal
-script's count skips them the same way (it names how many CRLF pages it skipped).
+refused under one of the names of the table above (a page that names no memory is among them), so the
+count of a project plus the pages with no project is the number of pages that still carry a legacy key. A line that only looks like a key inside a longer value is
+no key. The command reads the pages that are `.md` files directly in `wiki/memory`; a page in a subdirectory is not seen, as for
+every other command. It reads frontmatter delimited by lines ending in a line feed and closed by a `---` line: a page that
+carries a top-level legacy key in a frontmatter it cannot read (CRLF line endings, or no closing `---`) is counted as a legacy
+page and refused by name as above, never skipped, and the rehearsal script counts it the same way. Fix its line endings or close
+the block, then run again.
 
 The command works on one project. Run the dry run and then `--apply` for every project that has pages in the vault (the
 rehearsal script reads the list from the vault's pages and prints a vault-wide count of the pages that still carry a legacy
@@ -146,7 +151,7 @@ rerun would write, and running the command again finishes it. The error names th
 halfway removes its directory, so one that is there is whole, and every file is synced and keeps its mode). A page a
 stopped run recorded is finished by the rerun even if its memory has been revised or retyped since: for a page that names an
 Engram observation the rerun searches the revisions from the memory's current one down to 0 (the memory's type and the page's own)
-for the rewrite the entry records, only for a page whose body is the recorded one, and finishes the page with that identity. An edit
+for the rewrite the entry records (also with no type and with no revision), only for a page whose body is the recorded one, and finishes the page with that identity. An edit
 confined to the identity lines of such a page is adopted, since those lines are rewritten anyway and the backup holds them as they
 were; an edit to any other frontmatter line is refused (above). The migration creates and
 renames no page, so to go back to the state before it, copy the files of that directory over the vault
