@@ -1,0 +1,104 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f2196397e1680fe3ce1c87188447616e156649da",
+    "head": "09e2f013bfbc31e69f0ba38798e53915d4709202",
+    "diff_sha256": "3d65752ef88fcad186d33e31979c78f0c0ffdbfc738077446bd51b8edfd65155",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/app.go",
+      "longterm-mem/cmd/longterm-mem/cmd_mcp.go",
+      "longterm-mem/cmd/longterm-mem/cmd_promote.go",
+      "longterm-mem/cmd/longterm-mem/cmd_sync.go",
+      "longterm-mem/cmd/longterm-mem/rundeps.go",
+      "longterm-mem/internal/promote/explicit.go",
+      "longterm-mem/internal/promote/legacy.go",
+      "longterm-mem/internal/promote/memory.go",
+      "longterm-mem/internal/promote/memory_port_test.go",
+      "longterm-mem/internal/promote/project_sync.go",
+      "longterm-mem/internal/promote/promote_reindex.go",
+      "longterm-mem/internal/promote/propagate.go",
+      "longterm-mem/internal/promote/propagate_cards.go",
+      "longterm-mem/internal/promote/source.go",
+      "longterm-mem/internal/promote/support_test.go",
+      "longterm-mem/internal/promote/sync.go",
+      "longterm-mem/internal/promote/sync_cards.go",
+      "longterm-mem/internal/promote/sync_cards_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f2196397e1680fe3ce1c87188447616e156649da",
+      "head": "09e2f013bfbc31e69f0ba38798e53915d4709202",
+      "diff_sha256": "3d65752ef88fcad186d33e31979c78f0c0ffdbfc738077446bd51b8edfd65155"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/app.go",
+        "longterm-mem/cmd/longterm-mem/cmd_mcp.go",
+        "longterm-mem/cmd/longterm-mem/cmd_promote.go",
+        "longterm-mem/cmd/longterm-mem/cmd_sync.go",
+        "longterm-mem/cmd/longterm-mem/rundeps.go",
+        "longterm-mem/internal/promote/explicit.go",
+        "longterm-mem/internal/promote/legacy.go",
+        "longterm-mem/internal/promote/memory.go",
+        "longterm-mem/internal/promote/memory_port_test.go",
+        "longterm-mem/internal/promote/project_sync.go",
+        "longterm-mem/internal/promote/promote_reindex.go",
+        "longterm-mem/internal/promote/propagate.go",
+        "longterm-mem/internal/promote/propagate_cards.go",
+        "longterm-mem/internal/promote/source.go",
+        "longterm-mem/internal/promote/support_test.go",
+        "longterm-mem/internal/promote/sync.go",
+        "longterm-mem/internal/promote/sync_cards.go",
+        "longterm-mem/internal/promote/sync_cards_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/cmd/longterm-mem/cmd_promote.go:74",
+        "claim": "A nil *memorycard.Store (no memorycard database on the machine) is passed to newEngramSource(store, cards). The same happens in cmd_sync.go and in the MCP promote tool, where `cards = nil` is set explicitly. If that constructor's parameter is an interface, the typed nil is a non-nil interface, and the lineage lookup would call methods on a nil store and panic. That is the common case of a machine with no memorycard. newEngramSource is not visible in the diff, so this cannot be confirmed.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/cmd_promote.go:74",
+          "longterm-mem/cmd/longterm-mem/cmd_mcp.go:154"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/cmd_mcp.go:146-155",
+        "claim": "The MCP promote tool repeats the open-memorycard-or-tolerate-missing-database logic of app.memorycardForLineage, which the CLI promote and sync commands use. A raw error is returned here where the CLI path uses a.refuse. The two copies can drift.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/cmd_mcp.go:146-155",
+          "longterm-mem/cmd/longterm-mem/app.go:98-113"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/sync_cards_test.go:27",
+        "claim": "A stale doc comment, \"ListMemories serves...\", is left above the new Candidates comment, so the method carries two comments, one of which names a method that no longer exists.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/sync_cards_test.go:27-29"
+        ]
+      }
+    ],
+    "evidence": [
+      "Inspected the diff only; newEngramSource, newMemorycardSource and engram.NewSource are not in the diff.",
+      "The stale comment is visible as a context line immediately followed by the added Candidates comment."
+    ]
+  }
+}

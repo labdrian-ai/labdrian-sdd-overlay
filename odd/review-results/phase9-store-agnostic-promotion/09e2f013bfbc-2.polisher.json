@@ -1,0 +1,65 @@
+{
+  "kind": "polisher",
+  "base": "f2196397e1680fe3ce1c87188447616e156649da",
+  "head": "09e2f013bfbc31e69f0ba38798e53915d4709202",
+  "diff_sha256": "3d65752ef88fcad186d33e31979c78f0c0ffdbfc738077446bd51b8edfd65155",
+  "findings": {
+    "findings": [
+      {
+        "location": "longterm-mem/internal/memorycard/store.go:6-7",
+        "claim": "The package doc still names promote.CardLookup as the port Store.MemoryByID satisfies, but this commit deletes CardLookup from production code. internal/promote/source.go:8 likewise says the ports above Source (Memory, CardMemories, CardLookup) are the ones it replaces; they no longer exist.",
+        "severity": "SUGGESTION",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "store.go:6-7: \"Promotion reads a memory through the lookup port it owns (promote.CardLookup), which Store.MemoryByID satisfies.\"",
+          "The diff deletes legacy.go, which held `type CardLookup func(id int64) (memory.CardMemory, bool, error)`; only a test-only CardLookup remains in support_test.go.",
+          "internal/promote/source.go:8: \"the ports above it (Memory, CardMemories, CardLookup) are the two-model ones it replaces.\""
+        ]
+      },
+      {
+        "location": "longterm-mem/cmd/longterm-mem/cmd_mcp.go:144-156",
+        "claim": "mcpPromote re-implements the open-or-nil memorycard logic inline that the CLI has in app.memorycardForLineage. The two copies already differ in how they report an unopenable database: the CLI refuses with exitEngramUnavailable and the MCP path returns the raw error.",
+        "severity": "SUGGESTION",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "cmd_mcp.go: `cards, openErr := memorycard.Open(os.Getenv(memorycardDBEnvVar)); switch { case openErr == nil: defer cards.Close() case errors.Is(openErr, fs.ErrNotExist): cards = nil default: return mcpserver.PromoteOutcome{}, openErr }`",
+          "app.go:104-113 (memorycardForLineage): the same switch, written separately in the CLI.",
+          "The comment \"as the command does\" in the MCP branch admits the duplication."
+        ]
+      },
+      {
+        "location": "longterm-mem/cmd/longterm-mem/app.go:104-113",
+        "claim": "The lineage store is opened for Engram sync and promote without declaring a degraded open. memorycard.Open can fall back to immutable=1 and a stale snapshot, and memorycardToPromoteFrom prints a stderr notice in that case; the new path never does, so a run can decide bridged versus not bridged from a stale lineage snapshot with no warning.",
+        "severity": "WARNING",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "app.go:104-112: memorycardForLineage returns the store from memorycard.Open directly and never declares a degraded open.",
+          "app.go:127-134: memorycardToPromoteFrom says so on stderr when memorycard could only be opened through its immutable=1 fallback.",
+          "memorycard/store.go:54-58: the Open fallback returns `&Store{db: fallback, degraded: true}` with no error.",
+          "The MCP branch in cmd_mcp.go has the same gap."
+        ]
+      },
+      {
+        "location": "longterm-mem/cmd/longterm-mem/cmd_sync.go:203-204",
+        "claim": "The real Engram sync summary does not report bridged observations, although the walk counts them (SyncReport.Bridged) and the memorycard sync reports them; the dry run folds them into the skip count. The real run prints no signal for observations it left alone as bridged.",
+        "severity": "SUGGESTION",
+        "evidence_class": "deterministic",
+        "causal_disposition": "worsened",
+        "evidence": [
+          "cmd_sync.go:204 prints promoted and patched counts and ignores report.Sync.Bridged.",
+          "cmd_sync.go:139-140: reportCardSync prints \"skipped %d bridged\".",
+          "cmd_sync.go:179: the dry run prints `plan.Skipped+plan.Bridged` as \"skip\"."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full 09e2f013 diff, cmd/longterm-mem/lineage.go, app.go, cmd_sync.go, internal/engram/source.go and memorycard/store.go.",
+      "Grepped non-test code for the removed ports and helpers; only the stale comments remain.",
+      "CLI sync and promote, MCP promote and sync --source memorycard are each wired to the correct source; internal/ops uses no promote Source.",
+      "No tests or builds were run."
+    ]
+  }
+}
