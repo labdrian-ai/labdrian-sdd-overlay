@@ -2,52 +2,8 @@ package promote
 
 import (
 	"errors"
-	"os"
-	"path/filepath"
 	"testing"
 )
-
-// vaultSnapshot records every file under root and its bytes, so a dry run
-// that touches anything at all is visible -- not just one file a test
-// thought to check.
-func vaultSnapshot(t *testing.T, root string) map[string]string {
-	t.Helper()
-	snap := map[string]string{}
-	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if info.IsDir() {
-			return nil
-		}
-		b, readErr := os.ReadFile(path)
-		if readErr != nil {
-			return readErr
-		}
-		rel, relErr := filepath.Rel(root, path)
-		if relErr != nil {
-			return relErr
-		}
-		snap[rel] = string(b)
-		return nil
-	})
-	if err != nil {
-		t.Fatalf("snapshot vault: %v", err)
-	}
-	return snap
-}
-
-func equalSnapshots(a, b map[string]string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for k, v := range a {
-		if b[k] != v {
-			return false
-		}
-	}
-	return true
-}
 
 // TestMergeFailures_DropsOnlyExactRepeats pins the claim mergeFailures'
 // own doc comment makes. Deduping by observation ID alone passes the

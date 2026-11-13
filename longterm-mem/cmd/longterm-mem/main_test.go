@@ -302,39 +302,6 @@ func TestRun_DispatchesPromoteSubcommand(t *testing.T) {
 	}
 }
 
-// promoteFixtureDB writes a temp Engram DB from the shared schema fixture
-// with one observation row, returning its path and id -- the same
-// building block TestCmdSync_BothPassesRunDespiteAFailingObservation
-// establishes for this file.
-func promoteFixtureDB(t *testing.T, title, project string) (dbPath string, id int64) {
-	t.Helper()
-	schema, err := os.ReadFile(filepath.Join("..", "..", "internal", "engram", "testdata", "schema.sql"))
-	if err != nil {
-		t.Fatalf("read engram schema fixture: %v", err)
-	}
-	dbPath = filepath.Join(t.TempDir(), "engram.db")
-	db, err := sql.Open("sqlite", dbPath)
-	if err != nil {
-		t.Fatalf("open fixture db: %v", err)
-	}
-	if _, err := db.Exec(string(schema)); err != nil {
-		t.Fatalf("apply schema: %v", err)
-	}
-	res, err := db.Exec(`INSERT INTO observations (session_id, type, title, content, project, revision_count, pinned, created_at)
-		 VALUES ('sess-1', 'discovery', ?, 'Below-threshold body.', ?, 1, 0, '2026-08-01 00:00:00')`, title, project)
-	if err != nil {
-		t.Fatalf("insert observation: %v", err)
-	}
-	id, err = res.LastInsertId()
-	if err != nil {
-		t.Fatalf("last insert id: %v", err)
-	}
-	if err := db.Close(); err != nil {
-		t.Fatalf("close fixture db: %v", err)
-	}
-	return dbPath, id
-}
-
 // TestDefaultRegisterConfigRoot (11b.7) pins where each runtime's config
 // is looked for when --config-root is not given. The two rows that matter
 // most are the ones an end-to-end test cannot see: a relative
