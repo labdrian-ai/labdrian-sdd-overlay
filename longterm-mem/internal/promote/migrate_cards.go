@@ -27,8 +27,9 @@ import (
 //
 // A page is refused, and left byte-identical, when the migration cannot show that the rewrite is safe (RefusalKind):
 // it differs from its precedence entry (a hand edit, R-030) or has none, memorycard holds no memory imported from
-// its observation (or none with the id it names), its memory already has a page of its own, or its identity lines
-// are not ones the rewrite can replace whole. The run goes on to the other pages. A page that matches its memory by
+// its observation (or none with the id it names), its memory already has a page of its own, its identity lines
+// are not ones the rewrite can replace whole, or it names no project (a page with no project is kept in every run, as
+// it is no other project's page). The run goes on to the other pages. A page that matches its memory by
 // content is never paired: the owner decides what is left (R5). A page that carries a legacy key and names no memory
 // is a legacy page too: it is counted and refused by name, so the count of legacy pages is the count of pages that
 // still carry a legacy key.
@@ -150,12 +151,13 @@ var legacyIdentityKeys = []string{
 
 var identityKeys = append([]string{sourceField, sourceIDField, sourceRevisionField, sourceTypeField}, legacyIdentityKeys...)
 
-// carriesLegacyKeys reports whether the frontmatter block of a page has a line of any legacy identity key, whatever
-// its value (an empty one included) and however it is indented: the parsed fields skip an empty value, and a page
-// that still has the line still has the key.
+// carriesLegacyKeys reports whether the frontmatter block of a page has a top-level line of any legacy identity key,
+// whatever its value (an empty one included): the parsed fields skip an empty value, and a page that still has the
+// line still has the key. An indented line is text of some other value (a block scalar that mentions `engram_id:`),
+// never a key.
 func carriesLegacyKeys(block string) bool {
 	for _, line := range strings.Split(block, "\n") {
-		key, _, isField := strings.Cut(strings.TrimLeft(line, " \t"), ":")
+		key, _, isField := strings.Cut(line, ":")
 		if !isField {
 			continue
 		}
@@ -193,7 +195,8 @@ func legacyPagesOf(pages PageReader, project string) ([]legacyPage, error) {
 			return
 		}
 		fields := parseFrontmatterFields(block)
-		if fields[projectField] != project {
+		// A page that names no project is no other project's page: it is kept, and refused by name, in every run.
+		if owner := fields[projectField]; owner != "" && owner != project {
 			return
 		}
 		found = append(found, legacyPage{address: address, raw: content, block: block, fields: fields})
@@ -239,18 +242,22 @@ func MigrateCardPages(cards CardBridges, w *Writer, backup MigrationBackup, proj
 	}
 
 	var plan []plannedMigration
-	claimed := map[int64]string{}
+	g := &migrator{cards: cards, index: index, project: project, claimed: map[int64]string{}}
 	for _, page := range pages {
 		report.Legacy++
 		refuse := func(kind RefusalKind, reason string) {
 			report.Refused = append(report.Refused, MigrationRefusal{Address: page.address, Kind: kind, Reason: reason})
 		}
+		if page.fields[projectField] == "" {
+			refuse(RefusedOther, "it has no project field, so no project's migration can own it")
+			continue
+		}
 		if !simpleIdentityLines(page.block) {
-			refuse(RefusedOther, "an identity key is indented or its value runs over several lines, which the migration does not rewrite")
+			refuse(RefusedOther, "an identity key's value runs over several lines, which the migration does not rewrite")
 			continue
 		}
 
-		moved, kind, reason, err := mapPage(cards, index, claimed, project, page.address+".md", page.fields)
+		moved, kind, reason, err := g.mapPage(page.address+".md", page.fields)
 		if err != nil {
 			return report, err
 		}
@@ -258,23 +265,28 @@ func MigrateCardPages(cards CardBridges, w *Writer, backup MigrationBackup, proj
 			refuse(kind, reason)
 			continue
 		}
-		newBlock := rewrittenIdentity(page.block, moved.MemoryID, moved.revision, moved.kind)
 		body := page.raw[len(page.block):]
 		entry, tracked := w.Store.Get(page.address)
+		newBlock := rewrittenIdentity(page.block, moved.MemoryID, moved.revision, moved.kind)
 		switch {
 		case !tracked:
 			refuse(RefusedUntracked, "the page was not recorded as written by longterm-mem, so its provenance is unknown")
 			continue
 		case entry.MatchesPage(page.raw):
-		case entry.FrontmatterHash == hashText(newBlock) && entry.BodyHash == hashText(body):
-			// A run that stopped after persisting this entry and before writing the page: the entry records exactly
-			// the page this run would write, and the page's body is the recorded one, so nothing a person wrote is lost.
 		default:
-			refuse(RefusedEdited, "the page was edited locally since longterm-mem last wrote it")
-			continue
+			// A run that stopped after persisting the entry and before writing the page left an entry that records
+			// the page the run meant to write: the body is the recorded one and the entry's frontmatter hash is the
+			// rewrite of this very block under an identity the memory had then. Nothing a person wrote is lost by
+			// finishing it, and what the memory has become since does not matter: the page is finished as recorded.
+			stopped, ok := moved.recordedRewrite(entry, page.block, body)
+			if !ok {
+				refuse(RefusedEdited, "the page was edited locally since longterm-mem last wrote it")
+				continue
+			}
+			newBlock = stopped
 		}
 
-		claimed[moved.MemoryID] = page.address
+		g.claimed[moved.MemoryID] = page.address
 		moved.Address = page.address
 		updated := entry
 		updated.FrontmatterHash = hashText(newBlock)
@@ -290,85 +302,145 @@ func MigrateCardPages(cards CardBridges, w *Writer, backup MigrationBackup, proj
 	return applyMigration(w, backup, plan, report)
 }
 
-// mappedPage is the memory a page maps to, with the revision and type its new keys carry.
+// maxRecordedRevisions bounds the search for the revision a stopped run recorded.
+const maxRecordedRevisions = 10000
+
+// mappedPage is the memory a page maps to, with the revision and type its new keys carry. revisions and kinds are
+// the revisions and types a stopped run may have written for the page, which differ from the chosen ones only when
+// the identity comes from the memory (a page naming an Engram observation), since the memory may have moved on.
 type mappedPage struct {
 	MigratedPage
-	revision, kind string
+	revision, kind   string
+	revisions, kinds []string
 }
 
-// mapPage decides which memory of project the page with fields (the file is its name, never counted as another page
+// recordedRewrite is the block a stopped run meant to write for page, when the entry records it: the body is the
+// recorded one and the entry's frontmatter hash is the hash of block rewritten under one of the identities the page
+// could have been given. It reports false for anything else, which is a page changed by someone.
+func (m mappedPage) recordedRewrite(entry PrecedenceEntry, block, body string) (string, bool) {
+	if entry.BodyHash != hashText(body) {
+		return "", false
+	}
+	for _, revision := range m.revisions {
+		for _, kind := range m.kinds {
+			if candidate := rewrittenIdentity(block, m.MemoryID, revision, kind); hashText(candidate) == entry.FrontmatterHash {
+				return candidate, true
+			}
+		}
+	}
+	return "", false
+}
+
+// migrator decides, page by page of one run, which memory a page is the page of.
+type migrator struct {
+	cards   CardBridges
+	index   *pageIndex
+	project string
+	// claimed maps a memory to the page of this run that takes it.
+	claimed map[int64]string
+}
+
+// mapPage decides which memory of the project the page with fields (file is its name, never counted as another page
 // of the memory) is the page of. It answers the page migrated (its Address is set by the caller), or a refusal kind
 // and reason, or an error when memorycard could not be read. Whatever the page names, the memory must exist, be of
-// project, have no other page and not be the memory of another page of the run.
-func mapPage(cards CardBridges, index *pageIndex, claimed map[int64]string, project, file string, fields map[string]string) (mappedPage, RefusalKind, string, error) {
+// the project, have no other page and not be the memory of another page of the run: the checks are the same for both
+// families of keys, and only finding the memory differs.
+func (g *migrator) mapPage(file string, fields map[string]string) (mappedPage, RefusalKind, string, error) {
 	engram, hasEngram := identityOf(fields, engramSource)
 	card, hasCard := identityOf(fields, memorycardSource)
+	var m memory.CardMemory
+	var moved mappedPage
+	var kind RefusalKind
+	var reason string
+	var err error
 	switch {
 	case hasEngram && hasCard:
 		return mappedPage{}, RefusedOther, fmt.Sprintf("it names Engram observation %s and memorycard memory %s at once", engram.ID, card.ID), nil
-	case !hasEngram && !hasCard:
+	case hasCard:
+		m, moved, kind, reason, err = g.viaMemorycard(card)
+	case hasEngram:
+		m, moved, kind, reason, err = g.viaEngram(engram, fields)
+	default:
 		return mappedPage{}, RefusedOther, "it carries legacy keys but names no memory", nil
 	}
-
-	var m memory.CardMemory
-	var moved mappedPage
-	if hasCard {
-		memoryID, err := strconv.ParseInt(strings.TrimSpace(card.ID), 10, 64)
-		if err != nil || memoryID <= 0 {
-			// An id that is no number is a page to refuse by name, not a failure of the run: the error is the reason.
-			return mappedPage{}, RefusedOther, fmt.Sprintf("memorycard id %q is not a memory id", card.ID), nil
-		}
-		found := false
-		m, found, err = cards.MemoryByID(memoryID)
-		if err != nil {
-			return mappedPage{}, 0, "", fmt.Errorf("promote: migrate card pages: look up memory %d: %w", memoryID, err)
-		}
-		if !found {
-			return mappedPage{}, RefusedNoMemory, fmt.Sprintf("memorycard holds no memory %d", memoryID), nil
-		}
-		moved = mappedPage{MigratedPage: MigratedPage{MemoryID: memoryID}, revision: card.Revision, kind: card.Type}
-	} else {
-		engramID, err := strconv.ParseInt(strings.TrimSpace(engram.ID), 10, 64)
-		if err != nil || engramID <= 0 {
-			return mappedPage{}, RefusedOther, fmt.Sprintf("engram_id %q is not an observation id", engram.ID), nil
-		}
-		found := false
-		m, found, err = cards.MemoryByEngramID(engramID)
-		if err != nil {
-			return mappedPage{}, 0, "", fmt.Errorf("promote: migrate card pages: look up the memory imported from Engram observation %d: %w", engramID, err)
-		}
-		if !found {
-			return mappedPage{}, RefusedNoImport, fmt.Sprintf("memorycard holds no memory imported from Engram observation %d (import_map)", engramID), nil
-		}
-		moved = mappedPage{MigratedPage: MigratedPage{EngramID: engramID, MemoryID: m.ID}, revision: strconv.Itoa(m.Revision), kind: m.Type}
+	if err != nil || reason != "" {
+		return mappedPage{}, kind, reason, err
 	}
-
-	if m.Project != project {
-		return mappedPage{}, RefusedOther, fmt.Sprintf("memory %d belongs to project %q, not %q", m.ID, m.Project, project), nil
-	}
-	for _, other := range index.carriers[memory.Identity{Source: memorycardSource, ID: strconv.FormatInt(m.ID, 10)}] {
-		if other.Project == project && other.File != file {
-			return mappedPage{}, RefusedHasOwnPage, fmt.Sprintf("memory %d already has the page %s", m.ID, other.address()), nil
-		}
-	}
-	if other, taken := claimed[m.ID]; taken {
-		return mappedPage{}, RefusedHasOwnPage, fmt.Sprintf("memory %d is already the memory of %s in this run", m.ID, other), nil
+	if kind, reason := g.ownership(m, file); reason != "" {
+		return mappedPage{}, kind, reason, nil
 	}
 	return moved, 0, "", nil
 }
 
-// simpleIdentityLines reports whether every identity key of block is a one-line `key: value` at the start of its line,
-// which is what rewrittenIdentity replaces. An indented key, or a value that runs onto indented lines, is not: the
-// rewrite would leave part of the old identity behind, so the page is refused by name instead.
+// viaMemorycard finds the memory of a page that names a memorycard memory by its id; the page keeps its revision and
+// type, so what a stopped run recorded is the one rewrite.
+func (g *migrator) viaMemorycard(card PageIdentity) (memory.CardMemory, mappedPage, RefusalKind, string, error) {
+	memoryID, err := strconv.ParseInt(strings.TrimSpace(card.ID), 10, 64)
+	if err != nil || memoryID <= 0 {
+		// An id that is no number is a page to refuse by name, not a failure of the run: the error is the reason.
+		return memory.CardMemory{}, mappedPage{}, RefusedOther, fmt.Sprintf("memorycard id %q is not a memory id", card.ID), nil
+	}
+	m, found, err := g.cards.MemoryByID(memoryID)
+	if err != nil {
+		return memory.CardMemory{}, mappedPage{}, 0, "", fmt.Errorf("promote: migrate card pages: look up memory %d: %w", memoryID, err)
+	}
+	if !found {
+		return memory.CardMemory{}, mappedPage{}, RefusedNoMemory, fmt.Sprintf("memorycard holds no memory %d", memoryID), nil
+	}
+	moved := mappedPage{MigratedPage: MigratedPage{MemoryID: memoryID}, revision: card.Revision, kind: card.Type,
+		revisions: []string{card.Revision}, kinds: []string{card.Type}}
+	return m, moved, 0, "", nil
+}
+
+// viaEngram finds the memory memorycard imported from the observation a page names; the page takes that memory's
+// revision and type, which a stopped run may have recorded as they were then.
+func (g *migrator) viaEngram(engram PageIdentity, fields map[string]string) (memory.CardMemory, mappedPage, RefusalKind, string, error) {
+	engramID, err := strconv.ParseInt(strings.TrimSpace(engram.ID), 10, 64)
+	if err != nil || engramID <= 0 {
+		return memory.CardMemory{}, mappedPage{}, RefusedOther, fmt.Sprintf("engram_id %q is not an observation id", engram.ID), nil
+	}
+	m, found, err := g.cards.MemoryByEngramID(engramID)
+	if err != nil {
+		return memory.CardMemory{}, mappedPage{}, 0, "", fmt.Errorf("promote: migrate card pages: look up the memory imported from Engram observation %d: %w", engramID, err)
+	}
+	if !found {
+		return memory.CardMemory{}, mappedPage{}, RefusedNoImport, fmt.Sprintf("memorycard holds no memory imported from Engram observation %d (import_map)", engramID), nil
+	}
+	moved := mappedPage{MigratedPage: MigratedPage{EngramID: engramID, MemoryID: m.ID}, revision: strconv.Itoa(m.Revision), kind: m.Type}
+	moved.kinds = []string{m.Type, strings.TrimSpace(fields[engramTypeField]), ""}
+	for revision := min(m.Revision, maxRecordedRevisions); revision >= 0; revision-- {
+		moved.revisions = append(moved.revisions, strconv.Itoa(revision))
+	}
+	moved.revisions = append(moved.revisions, "")
+	return m, moved, 0, "", nil
+}
+
+// ownership is what a memory must be, whichever page names it: of the project, without another page, and not the
+// memory of another page of the run. It answers a refusal, or none.
+func (g *migrator) ownership(m memory.CardMemory, file string) (RefusalKind, string) {
+	if m.Project != g.project {
+		return RefusedOther, fmt.Sprintf("memory %d belongs to project %q, not %q", m.ID, m.Project, g.project)
+	}
+	for _, other := range g.index.carriers[memory.Identity{Source: memorycardSource, ID: strconv.FormatInt(m.ID, 10)}] {
+		if other.Project == g.project && other.File != file {
+			return RefusedHasOwnPage, fmt.Sprintf("memory %d already has the page %s", m.ID, other.address())
+		}
+	}
+	if other, taken := g.claimed[m.ID]; taken {
+		return RefusedHasOwnPage, fmt.Sprintf("memory %d is already the memory of %s in this run", m.ID, other)
+	}
+	return 0, ""
+}
+
+// simpleIdentityLines reports whether every top-level identity key of block is a one-line `key: value`, which is what
+// rewrittenIdentity replaces. A value that runs onto indented lines is not: the rewrite would leave part of the old
+// identity behind, so the page is refused by name instead. An indented line that looks like a key is no key.
 func simpleIdentityLines(block string) bool {
 	lines := strings.Split(block, "\n")
 	for i, line := range lines {
-		key, _, isField := strings.Cut(strings.TrimLeft(line, " \t"), ":")
+		key, _, isField := strings.Cut(line, ":")
 		if !isField || !isIdentityKey(key) {
 			continue
-		}
-		if line != strings.TrimLeft(line, " \t") {
-			return false
 		}
 		if i+1 < len(lines) && strings.TrimSpace(lines[i+1]) != "" && lines[i+1] != strings.TrimLeft(lines[i+1], " \t") {
 			return false
@@ -435,7 +507,7 @@ func applyMigration(w *Writer, backup MigrationBackup, plan []plannedMigration, 
 		w.Store.Set(p.Address, p.entry)
 		if err := w.Precedence.SavePrecedence(w.Store); err != nil {
 			w.Store.Set(p.Address, p.was)
-			return report, fmt.Errorf("promote: migrate card pages: persist the precedence entry of %s: %w; the page was not written, and a rerun migrates it (the pages migrated before it stay migrated; the copy of the pages as they were is in %s)", p.Address, err, location)
+			return report, fmt.Errorf("promote: migrate card pages: persist the precedence entry of %s: %w; the page was not written, and the sidecar on disk may or may not hold its new entry (the pages migrated before it stay migrated and recorded), so a rerun, which finishes or starts it either way, is the way on; the copy of the pages as they were is in %s", p.Address, err, location)
 		}
 		if err := w.Pages.WritePage(p.Address, p.newBlock+p.body); err != nil {
 			return report, fmt.Errorf("promote: migrate card pages: write %s: %w; its precedence entry is already recorded, so a rerun finishes it (the pages migrated before it stay migrated; the copy of the pages as they were is in %s)", p.Address, err, location)
