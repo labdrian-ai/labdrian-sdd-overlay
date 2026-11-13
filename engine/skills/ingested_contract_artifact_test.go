@@ -53,6 +53,14 @@ func TestIngestedObservationContractArtifact(t *testing.T) {
 		}
 	})
 
+	t.Run("R002_rule_6_manifest_first_keeps_the_gate_fields_in_part_1", func(t *testing.T) {
+		const sentence = "only part 1 keeps the manifest's topic key, so `**Source-SHA256**` and `**Status**` stay in part 1, where the re-ingestion gate reads them and `promote` takes them."
+		flat := strings.Join(strings.Fields(contract), " ")
+		if !strings.Contains(flat, sentence) {
+			t.Fatalf("contract rule 6 must state why a manifest's block comes first, verbatim %q", sentence)
+		}
+	})
+
 	t.Run("R004_topic_key_shapes_present_verbatim", func(t *testing.T) {
 		for _, required := range []string{
 			"ingested/{source-kind}/{source-id}",

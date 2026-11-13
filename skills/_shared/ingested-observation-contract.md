@@ -59,7 +59,7 @@ namespace listing sorts lexically. A source whose chunk count would exceed
 
 A chunk or standalone record's content is `body` → `---` → provenance block.
 The block is the LAST element of its `content`, after the body, never before it.
-A manifest's `content` is the provenance block first: nothing precedes it, and its `**Chunk-Status**` inventory is its last element.
+A manifest's `content` is the provenance block first: nothing precedes it, and its `**Chunk-Status**` inventory, when it has entries, is its last element.
 
 ```markdown
 ---
@@ -103,9 +103,10 @@ Manifest-only additions (a manifest carries no source body):
    with `**Chunk**: 1/1`. No separate chunk observation exists for it.
 3. `**Chunk-Span**` is a byte range into the normalized source (CRLF folded
    to LF), so any chunk is locatable in the original document.
-4. The provenance block is last in a chunk or standalone record's `content`, so the embedding window
-   (`vecindex.DefaultInputLimit`) covers the body first, and truncation
-   falls on the block's high-entropy digests instead of the prose.
+4. The provenance block is last in a chunk or standalone record's `content`,
+   so the embedding window (`vecindex.DefaultInputLimit`) covers the body
+   first, and truncation falls on the block's high-entropy digests instead
+   of the prose.
 5. A record whose body is absent and whose `**Status**` is `retired` is a
    tombstone for a chunk the source no longer has. It is never
    hand-deleted.

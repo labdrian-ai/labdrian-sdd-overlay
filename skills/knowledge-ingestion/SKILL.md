@@ -37,7 +37,7 @@ There is exactly one sanctioned way for external knowledge to enter long-term me
    (`topic_key`, `title`, `type: "discovery"`, `body` = body → `---` → provenance block;
    for a manifest, the provenance block first).
 3. **Promote** the resulting observation with `longterm-mem`'s `promote` (the `promote` MCP
-   tool with `source: "memorycard"` and the memorycard id in `engram_id`, or CLI
+   tool with `source: "memorycard"` and the memorycard id in `memory_id`, or CLI
    `promote --source memorycard --id N`, N being the memorycard id).
 
 No other intake path exists. Content that was fetched or read but never passed through
@@ -59,9 +59,11 @@ When the source is small enough for one record (`N == 1`), there is no separate 
 save and promote the single record at the manifest key with `Chunk: 1/1`, per the contract's
 rule 2.
 
-**Every chunk, with its provenance block, stays under 64 KB.** Cut the source into smaller
+**Every chunk, with its provenance block, stays at most 64 KB.** Cut the source into smaller
 chunks otherwise: memorycard stores a larger body as parts, and the block, last in a chunk,
-would land outside part 1, where the re-ingestion gate and `promote` read.
+would land outside part 1, where the re-ingestion gate and `promote` read. memorycard also
+warns on a save above 16 KB, its soft target: the save still succeeds, and a chunk that
+triggers the warning is a hint to cut the source smaller, not a failure.
 
 When the source produces more than one chunk (`N > 1`), order matters so a crash mid-ingestion
 is always readable and resumable:
@@ -101,8 +103,8 @@ source can still have unfinished chunks and a no-op there would silently report 
 for a document that is not fully ingested, breaking the "never report success for a partial
 document" rule above.
 
-- If the digest matches AND `**Status**: complete` (or the record is a single-chunk,
-  non-manifest record, which has no `Status` field): this is a **hard no-op**. Make no
+- If the digest matches AND `**Status**: complete` (a single-chunk record at the manifest
+  key carries the same field, and `complete` is its live value): this is a **hard no-op**. Make no
   `mem_save` call and no `promote` call. Report "unchanged".
 - If the digest matches but `**Status**` is `pending` or `partial`: this is a **resume**, not
   a no-op. Re-run the manifest-first ordering above starting from step 3, using
@@ -135,10 +137,11 @@ scenario that could not be exercised.
    via `longterm-mem`'s `query` MCP tool with `sources: ["vault"]`. Confirm the provenance block is
    present in the page body.
 2. **R-004 / OQ-5 unchanged re-ingestion.** Re-ingest the identical source a second time.
-   Confirm the procedure reports "unchanged", the version history `mem_get` returns shows no new version, and no
-   second topic key was created.
+   Confirm the procedure reports "unchanged", the version history `mem_get` returns shows no
+   new version, and no second topic key was created.
 3. **R-004 / OQ-5 changed re-ingestion.** Edit the source, then re-ingest. Confirm it resolves
-   to the same topic key, the version history `mem_get` returns shows one new version, and the vault page path is unchanged.
+   to the same topic key, the version history `mem_get` returns shows one new version, and
+   the vault page path is unchanged.
 4. **OQ-4 sync-eligibility.** Take an `ingested/`-keyed observation that was saved but never
    explicitly promoted (e.g. a deliberately interrupted ingestion). Confirm the next `sync`
    promotes it.
