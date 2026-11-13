@@ -1,0 +1,20 @@
+{
+  "kind": "sweeper",
+  "base": "0a958be8b09340edeb26568f8771005104ff5294",
+  "head": "21a621a8e0bdf495ceee9aeec1cd94db3b688f74",
+  "diff_sha256": "e4508eacca1053d803c106d532cafcfc5fe795a6f8d1677f06ee88007c934e71",
+  "sweep": "21a621a8e0bd-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 name: MappedTwins",
+      "disposition": "live",
+      "evidence": "Removed by this commit; the only hit is the feature document Log (L45, L46), which records its introduction and removal. A historical record, not code."
+    },
+    {
+      "candidate": "T1 name: Twin",
+      "disposition": "live",
+      "evidence": "The removed type is gone from code; the remaining hits are unrelated fixture text: the title string \"Engram Twin\" at promote/walk_bridged_test.go:40 and SQL title values Twin at memorycard/source_kin_test.go:39-42. Not references to the type."
+    }
+  ]
+}

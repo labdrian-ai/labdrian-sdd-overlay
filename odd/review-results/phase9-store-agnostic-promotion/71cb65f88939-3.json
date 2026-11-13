@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a0f764d5c8429518a589e2221c047cf11fd9c545",
+    "head": "71cb65f889392c056a8dadc3aad8bf0352429c11",
+    "diff_sha256": "380771cca759a758bb6d9e72d5dcd221376984b58f8bf0f1bbf2c6ee0b59a7e6",
+    "paths": [
+      "longterm-mem/internal/memorycard/source_cache_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "a0f764d5c8429518a589e2221c047cf11fd9c545",
+      "head": "71cb65f889392c056a8dadc3aad8bf0352429c11",
+      "diff_sha256": "380771cca759a758bb6d9e72d5dcd221376984b58f8bf0f1bbf2c6ee0b59a7e6"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/memorycard/source_cache_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The change adds one test file and touches no production code, so it cannot regress existing behavior.",
+      "The failed-read test corrupts an import_map row, checks that ByID returns an error, removes the row, and checks that the next read succeeds. That covers the claim that a failed read is not remembered.",
+      "The goroutine test uses an error channel with capacity 16 for 8 senders, so no sender blocks. Each goroutine calls wg.Done on exit and the channel is closed only after wg.Wait returns, so the test has no deadlock or send-on-closed-channel path.",
+      "The helpers kinFixture, openSource, memoryOf, card and engramObservation, and the sqlite driver registration, are not defined in this diff. I assume they exist elsewhere in the package's tests; I cannot confirm that from the diff, and nothing in it contradicts it."
+    ]
+  }
+}

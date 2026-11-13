@@ -1,0 +1,37 @@
+{
+  "kind": "polisher",
+  "base": "e66de6c03355d8d0829a3bfb44f773e1be6db200",
+  "head": "0a958be8b09340edeb26568f8771005104ff5294",
+  "diff_sha256": "5e9b22a0cd6f25717dc55383c7865c9abcbf120c66941b2802d8feeb651479af",
+  "findings": {
+    "findings": [
+      {
+        "location": "longterm-mem/internal/memorycard/observations.go:72-85",
+        "severity": "WARNING",
+        "claim": "The rebuilt-hash rule tries only two readings (every boundary a blank line, or every boundary nothing), so an observation whose parts mix a blank-line boundary with a mid-word cut (short paragraph S then long paragraph L split into [S],[L1],[L2]) gets no hash a hand mirror could match; the hand mirror bridges to nothing and a duplicate page can be written. False negative, not a false bridge; the base never matched multi-part observations either.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "pre-existing",
+        "evidence": [
+          "memorycard import.go:355-367 splitBody flushes, then appends cutRunes pieces of an over-long paragraph, so boundary kinds are chosen per boundary.",
+          "observations.go:72-85 applies one separator from {\"\\n\\n\",\"\"} to every boundary; neither reading equals S + blank line + L1+L2.",
+          "CardContentHash collapses whitespace but cannot repair a missing or spurious word break."
+        ]
+      },
+      {
+        "location": "longterm-mem/internal/memorycard/source.go:76-102",
+        "severity": "SUGGESTION",
+        "claim": "Batching is correct, but every listing and every ByID for an unmapped memory reads the title and body of every imported memory of the project, including the single-id paths of the MCP promote tool and promote --source memorycard.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "observations.go:37 selects m.body for every engram import_map row of the project.",
+          "ByID (source.go:49-63) goes through mapAll and kinOf."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read observations.go, source.go at the branch tip, L46, memorycard import.go (recordParts, splitBody, cutRunes, importRow) and memory.CardContentHash.",
+      "No false bridge found: parts carry distinct (part i/n) titles; identical observations share one memory and dedupe by observation id."
+    ]
+  }
+}

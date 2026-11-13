@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "108bfa99a86c67ec7373a26345203a9d71278852",
+    "head": "08463a808d047d18abfa73b89a9ed97d31f98386",
+    "diff_sha256": "32e5cfcf21459eff6906bfec359ecc590e455cb2db9a3ee0be1d29789a932b1b",
+    "paths": [
+      "odd/review-results/phase9-store-agnostic-promotion/073a5b2dff35-1.sweep.json",
+      "odd/review-results/phase9-store-agnostic-promotion/073a5b2dff35-2.json",
+      "odd/review-results/phase9-store-agnostic-promotion/073a5b2dff35-3.json",
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "108bfa99a86c67ec7373a26345203a9d71278852",
+      "head": "08463a808d047d18abfa73b89a9ed97d31f98386",
+      "diff_sha256": "32e5cfcf21459eff6906bfec359ecc590e455cb2db9a3ee0be1d29789a932b1b"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/review-results/phase9-store-agnostic-promotion/073a5b2dff35-1.sweep.json",
+        "odd/review-results/phase9-store-agnostic-promotion/073a5b2dff35-2.json",
+        "odd/review-results/phase9-store-agnostic-promotion/073a5b2dff35-3.json",
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:7",
+        "claim": "The next-phase objective now covers only T7-T9 and T11-T20, but its forecast still says '~4500-6500 authored changed lines ... over T4-T20'. T4, T5, T6 and T10 are back in Phase 9, so the planning figure no longer matches the scope of the sentence it sits in. L42 also still states that T4-T20 move, and nothing in it points to L44's supersession.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:7"
+        ]
+      }
+    ],
+    "evidence": [
+      "The commit changes a planning document and adds archived review-result JSON files. No executable code changes, so there is no runtime regression.",
+      "The re-opened T4, T5, T10 and T6 keep their dependency order (T4, then T5, then T10, then T6). T7, T8 and T9 stay moved, and T7 depends on T6, which is consistent with L44.",
+      "The archived review records bind the earlier range and list their own paths consistently with that binding. They are additive and not defects of this commit."
+    ]
+  }
+}

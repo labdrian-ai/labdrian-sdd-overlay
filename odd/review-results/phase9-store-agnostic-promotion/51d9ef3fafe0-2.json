@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "657a17100492f2d81f79fbe21f23ff4bd95f0a79",
+    "head": "51d9ef3fafe04f96d92fd9dac960cfdab13a8a26",
+    "diff_sha256": "431ecc75b1002fb2ec49ad72befe314c469c7e708feff7be814b80a44c90e2df",
+    "paths": [
+      "longterm-mem/internal/promote/page_style.go",
+      "longterm-mem/internal/promote/propagate_ids_pages_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "657a17100492f2d81f79fbe21f23ff4bd95f0a79",
+      "head": "51d9ef3fafe04f96d92fd9dac960cfdab13a8a26",
+      "diff_sha256": "431ecc75b1002fb2ec49ad72befe314c469c7e708feff7be814b80a44c90e2df"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/promote/page_style.go",
+        "longterm-mem/internal/promote/propagate_ids_pages_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/promote/page_style.go:52-53",
+        "claim": "numericID no longer wraps the strconv error. The cause is lost: errors.Is(err, strconv.ErrSyntax/ErrRange) and errors.As(*strconv.NumError) stop matching. An all-digit id that overflows int64 used to carry 'value out of range' in the message. It now reports only 'not a number', which is wrong for a numeric id and gives no hint of the real cause. Dropping %w for a purely cosmetic duplication of the id trades away diagnostic information and the error chain. Keeping %w and reporting only the NumError's Err, or stating the range case separately, would have kept the cause without repeating the id.",
+        "evidence_class": "inferential",
+        "causal_disposition": "worsened",
+        "proof_refs": [
+          "longterm-mem/internal/promote/page_style.go:53"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff replaces fmt.Errorf(..., %w, err) with a format that has no %w, so the parse error is discarded.",
+      "The new test only checks that the id string appears once. It does not cover the out-of-range case or error unwrapping."
+    ]
+  }
+}

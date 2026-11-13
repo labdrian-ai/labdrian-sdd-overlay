@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "68a21bb6b5257eb8bfc46f09f76412236d9a892f",
+    "head": "657a17100492f2d81f79fbe21f23ff4bd95f0a79",
+    "diff_sha256": "94ca97cf76c94baca05a29680f2a6193c7c3744c0f25a8f5fd83a33a4662f914",
+    "paths": [
+      "longterm-mem/internal/memorycard/observations.go",
+      "longterm-mem/internal/memorycard/source.go",
+      "longterm-mem/internal/memorycard/source_kin_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "68a21bb6b5257eb8bfc46f09f76412236d9a892f",
+      "head": "657a17100492f2d81f79fbe21f23ff4bd95f0a79",
+      "diff_sha256": "94ca97cf76c94baca05a29680f2a6193c7c3744c0f25a8f5fd83a33a4662f914"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/memorycard/observations.go",
+        "longterm-mem/internal/memorycard/source.go",
+        "longterm-mem/internal/memorycard/source_kin_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/memorycard/source.go:93-100",
+        "claim": "The ContentKey fallback runs only when the stored-hash lookup returns nothing. If one observation holds an imported part with the matching stored hash, any other observation that holds the same text under a different split is never found. The mirror list then depends on whether some part happens to keep its hash. For example, a copy of a part that matches one observation by hash also matches another observation's whole text by key, and only the first is reported. That makes mirrors incomplete and inconsistent between otherwise equivalent memories.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "source.go: `if len(holders) == 0 { ... ObservationsByKey ... }`"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/memorycard/observations.go:18-26",
+        "claim": "ContentKey joins the lowercased title and body with no separator and drops all white space. Pairs such as title 'ab' with body 'c' and title 'a' with body 'bc' therefore produce the same key. Unrelated memories can be reported as mirrors of an observation. Case folding and white-space removal widen this further, so two memories that differ only in case or in white space (code or indentation-sensitive text) are also treated as the same.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "observations.go ContentKey: `strings.ToLower(title) + strings.ToLower(body)` with white space filtered out"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/memorycard/source.go:89-92",
+        "claim": "The indexed hash lookup now runs once per unmapped card, replacing the per-project cache. A listing with many hand-written memories issues one query per memory. ObservationsByKey is also read in full for a project as soon as any one card misses.",
+        "evidence_class": "inferential",
+        "causal_disposition": "worsened",
+        "proof_refs": [
+          "source.go kinOf: `s.store.ObservationsWithStoredHash(card.Project, ...)` inside the per-card loop"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the diff only; I could not check whether other callers of the removed ImportedObservations/ImportedObservation exist outside the changed paths.",
+      "The new tests cover the mixed split, the single-part copy, the surviving part row, the 'part 1/1' title and the hash-first lookup, but not F1 (both a hash hit and a key match on different observations)."
+    ]
+  }
+}

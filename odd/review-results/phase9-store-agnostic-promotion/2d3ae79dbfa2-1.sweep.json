@@ -1,0 +1,25 @@
+{
+  "kind": "sweep",
+  "base": "94e96b7a0772d11223f99226d97fea6ad6f86978",
+  "head": "2d3ae79dbfa2e21fcd139db9faf79131d0e50b24",
+  "diff_sha256": "47560b2bef064b8570bd07c1bc6ebe46cc0853b1a9277c2c3bea72c6fec32713",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": []
+  },
+  "t2": [
+    {
+      "tool": "errcheck",
+      "module": "longterm-mem",
+      "new": [
+        "internal/memorycard/imported_parts_test.go: unchecked error: defer store.Close()"
+      ]
+    }
+  ],
+  "t3": [],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

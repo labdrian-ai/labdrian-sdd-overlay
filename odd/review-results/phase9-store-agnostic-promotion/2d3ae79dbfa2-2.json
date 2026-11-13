@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "94e96b7a0772d11223f99226d97fea6ad6f86978",
+    "head": "2d3ae79dbfa2e21fcd139db9faf79131d0e50b24",
+    "diff_sha256": "47560b2bef064b8570bd07c1bc6ebe46cc0853b1a9277c2c3bea72c6fec32713",
+    "paths": [
+      "longterm-mem/internal/memorycard/imported_parts_test.go",
+      "longterm-mem/internal/memorycard/observations.go",
+      "longterm-mem/internal/memorycard/source_cache_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "94e96b7a0772d11223f99226d97fea6ad6f86978",
+      "head": "2d3ae79dbfa2e21fcd139db9faf79131d0e50b24",
+      "diff_sha256": "47560b2bef064b8570bd07c1bc6ebe46cc0853b1a9277c2c3bea72c6fec32713"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/memorycard/imported_parts_test.go",
+        "longterm-mem/internal/memorycard/observations.go",
+        "longterm-mem/internal/memorycard/source_cache_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The new SQL in observations.go keeps rows whose memory is in project. It keeps a gone row (m.id is null) only when another import_map row of the same source_key has a memory in project. That matches the stated intent, and the two bound parameters match the two placeholders.",
+      "The ordering and the Scan columns are unchanged.",
+      "imported_parts_test.go covers the three cases: another project's gone row, an observation with no memory left, and the project's own gone part. I could not check the fixture's observation 402 part 3 from the diff.",
+      "source_cache_test.go: 'database/sql' is still imported and writeFixture most likely uses it, so removing sql.ErrNoRows does not leave an unused import. The substring assertion on the error text could not be verified against the production error message from the diff."
+    ]
+  }
+}

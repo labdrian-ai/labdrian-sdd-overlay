@@ -1,0 +1,15 @@
+{
+  "kind": "sweeper",
+  "base": "e66de6c03355d8d0829a3bfb44f773e1be6db200",
+  "head": "0a958be8b09340edeb26568f8771005104ff5294",
+  "diff_sha256": "5e9b22a0cd6f25717dc55383c7865c9abcbf120c66941b2802d8feeb651479af",
+  "sweep": "0a958be8b093-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 name: TestSourceMirrorsAreTheMappedMemoriesOfTheSameContentAndTheirObservations",
+      "disposition": "live",
+      "evidence": "Replaced by this commit with TestSourceMirrorsAreEveryMemoryOfTheObservationsWhoseRebuiltTextTheyHold; the only hit is the feature document Log (L45), a historical record of the earlier test. Not code."
+    }
+  ]
+}

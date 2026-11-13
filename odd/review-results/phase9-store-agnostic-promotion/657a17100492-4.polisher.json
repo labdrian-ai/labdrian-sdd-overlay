@@ -1,0 +1,79 @@
+{
+  "kind": "polisher",
+  "base": "68a21bb6b5257eb8bfc46f09f76412236d9a892f",
+  "head": "657a17100492f2d81f79fbe21f23ff4bd95f0a79",
+  "diff_sha256": "94ca97cf76c94baca05a29680f2a6193c7c3744c0f25a8f5fd83a33a4662f914",
+  "findings": {
+    "findings": [
+      {
+        "location": "longterm-mem/internal/memorycard/observations.go:18-26",
+        "severity": "WARNING",
+        "claim": "ContentKey concatenates title and body with no separator before stripping whitespace, so texts whose title/body boundary falls elsewhere share a key (title 'Fix auth' body 'bug in login' vs title 'Fix' body 'authbuginlogin'): a false bridge.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "Line 20 builds strings.ToLower(title)+strings.ToLower(body) and drops unicode.IsSpace runes; no delimiter survives.",
+          "The doc comment claims only whitespace-different texts match."
+        ]
+      },
+      {
+        "location": "longterm-mem/internal/memorycard/observations.go:19-20",
+        "severity": "WARNING",
+        "claim": "ContentKey lowercases title and body, so texts differing only in case (or Unicode case folding, e.g. Kelvin sign) are treated as mirrors, contrary to the doc comment.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "Line 20 applies strings.ToLower.",
+          "The importer (recordParts, splitBody, cutRunes) never changes case, so lowercasing only widens the match."
+        ]
+      },
+      {
+        "location": "longterm-mem/internal/memorycard/observations.go:29,81",
+        "severity": "WARNING",
+        "claim": "The ' (part i/n)' suffix is stripped from the first part's title even for a single-part observation whose own title ends in that suffix, so a hand mirror without the suffix falsely bridges to it.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "Line 81 always applies partSuffix.ReplaceAllString.",
+          "import.go:178 adds the suffix only when len(parts) > 1."
+        ]
+      },
+      {
+        "location": "longterm-mem/internal/memorycard/source.go:93-104",
+        "severity": "WARNING",
+        "claim": "The SQL-first lookup is not equivalent to the ContentKey fallback: when the stored hash matches some observation, whitespace-equivalent holders found only by ContentKey are dropped from mirrors and lineage.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "source.go:93-103 consults ObservationsByKey only when ObservationsWithStoredHash returns nothing.",
+          "ObservationsByKey keys are a superset of the hash matches; importRow dedup makes multi-holder memories plausible."
+        ]
+      },
+      {
+        "location": "longterm-mem/internal/memorycard/observations.go:55",
+        "severity": "SUGGESTION",
+        "claim": "Parts deduplicated by memory id before rebuilding the whole text would silently drop a part if two parts of one observation resolved to the same memory.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "evidence": [
+          "Line 55 skips a part when q.id == p.id.",
+          "import.go:130-137 reuses an existing row on equal hash and project."
+        ]
+      },
+      {
+        "location": "longterm-mem/internal/memorycard/observations.go:20",
+        "severity": "SUGGESTION",
+        "claim": "Redacted spans or a derived title (import.go:165-173) make a hand mirror holding the unredacted text or original title miss its match; a missed match, not a false bridge.",
+        "evidence_class": "inferential",
+        "causal_disposition": "pre-existing",
+        "evidence": [
+          "import.go:165-173 redacts and substitutes a derived title; ContentKey sees stored text only."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read memorycard import.go in full; observations.go and source.go at the branch tip.",
+      "Not run: git diff against the first parent and tests (no shell in the polisher runtime)."
+    ]
+  }
+}

@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "68a21bb6b5257eb8bfc46f09f76412236d9a892f",
+    "head": "657a17100492f2d81f79fbe21f23ff4bd95f0a79",
+    "diff_sha256": "94ca97cf76c94baca05a29680f2a6193c7c3744c0f25a8f5fd83a33a4662f914",
+    "paths": [
+      "longterm-mem/internal/memorycard/observations.go",
+      "longterm-mem/internal/memorycard/source.go",
+      "longterm-mem/internal/memorycard/source_kin_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "68a21bb6b5257eb8bfc46f09f76412236d9a892f",
+      "head": "657a17100492f2d81f79fbe21f23ff4bd95f0a79",
+      "diff_sha256": "94ca97cf76c94baca05a29680f2a6193c7c3744c0f25a8f5fd83a33a4662f914"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/memorycard/observations.go",
+        "longterm-mem/internal/memorycard/source.go",
+        "longterm-mem/internal/memorycard/source_kin_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/memorycard/source.go:88-100",
+        "claim": "The stored-hash lookup short-circuits the ContentKey comparison. When a hand mirror matches the stored hash of one observation's part, any other observation that also holds the same text (for example a whole record or a part of a different observation) is never found, because ObservationsByKey is read only when the hash lookup returns nothing. The mirror set therefore depends on which path happened to answer first, and mirrors can be silently missed.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "source.go: holders from ObservationsWithStoredHash; `if len(holders) == 0` guards the ObservationsByKey read"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/memorycard/observations.go:14-22",
+        "claim": "ContentKey concatenates the lowercased title and body with no separator and strips all white space. Title 'ab' with body 'c' and title 'a' with body 'bc' get the same key. Two different memories can then be reported as mirrors of each other. The doc comment says it can only match texts that differ in white space alone, which is not true at the title/body boundary.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "observations.go: `strings.ToLower(title) + strings.ToLower(body)` iterated with no delimiter"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/memorycard/source.go:80-92",
+        "claim": "ObservationsWithStoredHash runs one query per unmapped card in a listing, where the old code read once per project. A large listing of hand-written memories now issues many round trips.",
+        "evidence_class": "inferential",
+        "causal_disposition": "worsened",
+        "proof_refs": [
+          "source.go: the call to ObservationsWithStoredHash inside the per-card loop"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff of observations.go, source.go and source_kin_test.go; no tools were available, so nothing was run."
+    ]
+  }
+}

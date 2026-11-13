@@ -1,0 +1,15 @@
+{
+  "kind": "sweeper",
+  "base": "94e96b7a0772d11223f99226d97fea6ad6f86978",
+  "head": "2d3ae79dbfa2e21fcd139db9faf79131d0e50b24",
+  "diff_sha256": "47560b2bef064b8570bd07c1bc6ebe46cc0853b1a9277c2c3bea72c6fec32713",
+  "sweep": "2d3ae79dbfa2-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T2 errcheck longterm-mem: internal/memorycard/imported_parts_test.go: unchecked error: defer store.Close()",
+      "disposition": "live",
+      "evidence": "Test fixture closed with a bare defer, the module test idiom also used in this package and in cmd/longterm-mem (promote_relations_test.go:26, sync_bridged_lineage_test.go:51); a read-only test store whose close error carries no assertion."
+    }
+  ]
+}

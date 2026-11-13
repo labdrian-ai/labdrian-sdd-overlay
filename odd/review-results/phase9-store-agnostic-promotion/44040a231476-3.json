@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "4e0bf59c470a6576e65f7236c983776f89abeef8",
+    "head": "44040a23147616e988afac320e48be4ba30e3dd8",
+    "diff_sha256": "f9837ea4f87ee05e2cab7c91c57debddad4608ca074ef1f6a2163f1a3e6eb0db",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/memorycard_lineage_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "4e0bf59c470a6576e65f7236c983776f89abeef8",
+      "head": "44040a23147616e988afac320e48be4ba30e3dd8",
+      "diff_sha256": "f9837ea4f87ee05e2cab7c91c57debddad4608ca074ef1f6a2163f1a3e6eb0db"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/memorycard_lineage_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/memorycard_lineage_test.go:23-34",
+        "claim": "execOnMemorycard opens the memorycard database with a defer closeDB but the helper definitions (closeDB, syncMemorycardWorld, addHandMirroredMemories, runSync, pageNames, readVaultFile) are not visible in the diff; the tests rely on fixtures whose shape (memory ids 1-5, import_map rows, c-000901 page id) is only implicitly assumed, so a fixture change would break these tests with opaque assertion messages rather than a clear signal.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/memorycard_lineage_test.go:36-45"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/memorycard_lineage_test.go:35-45",
+        "claim": "pageOfMemory matches 'memorycard_id: <id>\\n' by substring; a page whose front matter has another key ending in 'memorycard_id: <id>' or a multi-line value could false-match, and the 'absent page' assertions (memory 2, 5, 7 have no page) would then pass or fail for the wrong reason. Low risk, but weakens the negative assertions.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/memorycard_lineage_test.go:40"
+        ]
+      }
+    ],
+    "evidence": [
+      "Single new test file; no production code changed, so no regression risk to existing behavior.",
+      "Tests set LONGTERM_MEM_ENGRAM_DB via t.Setenv to a missing path, which is correctly scoped to the test.",
+      "The first test calls withNoEngramDatabase after the promote of observation 1, matching its comment, so the page exists before the Engram database disappears."
+    ]
+  }
+}

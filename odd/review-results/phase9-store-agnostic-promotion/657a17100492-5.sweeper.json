@@ -1,0 +1,15 @@
+{
+  "kind": "sweeper",
+  "base": "68a21bb6b5257eb8bfc46f09f76412236d9a892f",
+  "head": "657a17100492f2d81f79fbe21f23ff4bd95f0a79",
+  "diff_sha256": "94ca97cf76c94baca05a29680f2a6193c7c3744c0f25a8f5fd83a33a4662f914",
+  "sweep": "657a17100492-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 name: ImportedObservations",
+      "disposition": "live",
+      "evidence": "Only hit is Log entry L46 (odd/tasks/phase9-store-agnostic-promotion.md:349), an append-only historical record of the 0a958be8 batch; Log entries are never rewritten."
+    }
+  ]
+}

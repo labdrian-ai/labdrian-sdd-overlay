@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "bd07b1e98b19c572dd33ea8f09ea4a56b0174786",
+    "head": "1550c0da86683e70b4bedc2798a9be275f52c2f8",
+    "diff_sha256": "8448540388b0f15f2683a8b880f8ab5d502b5467eb78f03995c78bde83da0a22",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "bd07b1e98b19c572dd33ea8f09ea4a56b0174786",
+      "head": "1550c0da86683e70b4bedc2798a9be275f52c2f8",
+      "diff_sha256": "8448540388b0f15f2683a8b880f8ab5d502b5467eb78f03995c78bde83da0a22"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:339",
+        "claim": "L45 says the branch starts from `108bfa99`, 'the docs commit `08463a80` below', but no later text in the entry mentions `08463a80`. The reference dangles, and a reader cannot tell what that commit holds or whether it is the same as the three commits listed. The T4 line also lists only three commits, so the record of what T4 changed is slightly incomplete.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:339"
+        ]
+      }
+    ],
+    "evidence": [
+      "The change only edits one markdown task document: it ticks T4, fills in the commit list, and adds the L45 log entry.",
+      "No code is changed, so there is no runtime regression to attribute to this commit.",
+      "The L45 claims are internally consistent with the T4 task line. The orphan-world difference is stated as expected, and the unrun checks (engine tests, owner rehearsal) are disclosed."
+    ]
+  }
+}

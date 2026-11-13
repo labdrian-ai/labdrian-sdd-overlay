@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "657a17100492f2d81f79fbe21f23ff4bd95f0a79",
+    "head": "51d9ef3fafe04f96d92fd9dac960cfdab13a8a26",
+    "diff_sha256": "431ecc75b1002fb2ec49ad72befe314c469c7e708feff7be814b80a44c90e2df",
+    "paths": [
+      "longterm-mem/internal/promote/page_style.go",
+      "longterm-mem/internal/promote/propagate_ids_pages_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "657a17100492f2d81f79fbe21f23ff4bd95f0a79",
+      "head": "51d9ef3fafe04f96d92fd9dac960cfdab13a8a26",
+      "diff_sha256": "431ecc75b1002fb2ec49ad72befe314c469c7e708feff7be814b80a44c90e2df"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/promote/page_style.go",
+        "longterm-mem/internal/promote/propagate_ids_pages_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/promote/page_style.go:53",
+        "claim": "numericID no longer wraps the strconv error (the %w is removed). A purely numeric id that overflows int64 now yields only 'has an id that is not a number', and the 'value out of range' cause is lost. Any caller using errors.Is/As on strconv.ErrSyntax, ErrRange or *strconv.NumError also stops matching. The diff does not show whether such a caller exists.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/page_style.go:52-53"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only the diff was inspected, not the callers of numericID.",
+      "The test change checks that the id appears exactly once in the message, which the new message satisfies.",
+      "The test refactor, which turns the anonymous struct into a named propagationWalk type, introduces no defect."
+    ]
+  }
+}

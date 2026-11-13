@@ -1,0 +1,15 @@
+{
+  "kind": "polisher",
+  "base": "21a621a8e0bdf495ceee9aeec1cd94db3b688f74",
+  "head": "4e4d81c1ab0de0767b004ea124d2f5e27da8172e",
+  "diff_sha256": "8b4246aee4e46bd64084b62cb7a75bbe9a7e9a3952db292970cd4d5b3f9b29bf",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read propagate.go eachPatchTarget: with scan.own == nil and unreadable pages present, a numeric-id memory has idErr == nil and is still withheld; only a non-numeric id is now failed with the id error.",
+      "Read propagate_cards.go eachCardPatchTarget: same shape, guarded by isRetired; a numeric-id retired memory is withheld as before.",
+      "Read withIDError (sync.go:64) and numericID (page_style.go:49): withIDError returns err unchanged when idErr is nil, so numeric-id output of sync and sync --source memorycard is unchanged.",
+      "Read propagate_ids_pages_test.go:74-75 pinning numeric memory 43 as the only withheld id. No shell: tests not run, tip code read."
+    ]
+  }
+}
