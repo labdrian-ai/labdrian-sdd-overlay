@@ -141,11 +141,11 @@ func eachPatchTarget(deps Deps, project string, visit func(patchTarget) error) (
 		id, idErr := numericID(m)
 		style, err := styleOf(m.Identity.Source)
 		if err != nil {
-			outcome.failed = append(outcome.failed, SyncFailure{ObservationID: id, Err: err})
+			outcome.failed = append(outcome.failed, SyncFailure{ObservationID: id, Err: withIDError(err, idErr)})
 			continue
 		}
 		if indexErr != nil {
-			outcome.failed = append(outcome.failed, SyncFailure{ObservationID: id, Err: fmt.Errorf("check promoted state: %w", indexErr)})
+			outcome.failed = append(outcome.failed, SyncFailure{ObservationID: id, Err: withIDError(fmt.Errorf("check promoted state: %w", indexErr), idErr)})
 			continue
 		}
 		scan := index.scanFor(m)

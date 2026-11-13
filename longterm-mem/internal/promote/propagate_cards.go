@@ -88,8 +88,8 @@ func eachCardPatchTarget(src Source, w *Writer, project string, visit func(patch
 		// that could have been retired; the promotion pass names the eligible ones, and the others have no page to patch.
 		for _, m := range memories {
 			if isRetired(m) {
-				id, _ := numericID(m)
-				outcome.failed = append(outcome.failed, SyncFailure{ObservationID: id, Err: err})
+				id, idErr := numericID(m)
+				outcome.failed = append(outcome.failed, SyncFailure{ObservationID: id, Err: withIDError(err, idErr)})
 			}
 		}
 		return outcome, nil
