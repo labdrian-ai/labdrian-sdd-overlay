@@ -106,12 +106,17 @@ A page is refused, left byte-identical and named, and the run goes on to the oth
 
 | Case | Counted as |
 |---|---|
-| the page differs from its precedence entry (a hand edit, R-030) | `edited since longterm-mem wrote it` |
+| the page's body differs from its precedence entry (a hand edit, R-030) | `edited since longterm-mem wrote it` |
+| the page's body is the recorded one but its frontmatter matches neither the entry nor any rewrite a stopped run could have written (a frontmatter line was edited) | `frontmatter differs from the entry and is no recorded rewrite` (shown when it is not zero); the message names the backup directory and says copying it over the vault restores the page and the sidecar |
 | the page has no precedence entry | `not recorded as written by longterm-mem` |
 | no `import_map` row names the page's observation, or the memory is gone | `no import_map row names its Engram observation` |
 | the page names a memorycard memory by `memorycard_id` and memorycard holds no memory with that id | `memorycard holds no memory with the id it names` (shown when it is not zero) |
 | the memory already has a page of its own, or is the memory of another page of the run (two pages for one memory; two `memorycard_id` pages of one memory are both refused) | `its memory already has a page` |
-| the page's id is no number, it names an Engram observation and a memorycard memory at once, it carries a legacy key and names no memory, an identity key's value runs over several lines, it has no project field, or the memory is in another project | `identity cannot be read as one memory` (shown when it is not zero) |
+| the page's id is no number, it names an Engram observation and a memorycard memory at once, it carries a legacy key and names no memory, an identity key's value runs over several lines, or the memory is in another project | `identity cannot be read as one memory` (shown when it is not zero) |
+
+A page that carries a legacy key and has no `project` field belongs to no project, so it is in none of the per-project numbers: the
+command reports it once, apart (`N page(s) have no project (no project, not counted per project): <pages>`), names the remedy (add a
+`project:` line to the page by hand, then run again), leaves it alone, and the exit code is 6 while one is left.
 
 A refused page is left for the owner: it is never matched to a memory by its content. A page that cannot be read stops
 the run before any write, since it may be a memory's own page. A second run changes nothing: the pages it migrated no
@@ -131,21 +136,26 @@ script's count skips them the same way (it names how many CRLF pages it skipped)
 
 The command works on one project. Run the dry run and then `--apply` for every project that has pages in the vault (the
 rehearsal script reads the list from the vault's pages and prints a vault-wide count of the pages that still carry a legacy
-key at the end; that count is zero when the vault is ready for the retirement of the legacy keys).
+key at the end; that count is the sum of the per-project counts and the pages with no project, and is zero when the vault is ready
+for the retirement of the legacy keys).
 
 If a run stops partway (a full disk, a killed process), the pages already migrated stay migrated and recorded. Each
 page's precedence entry is saved before the page is written, so a page that was being written reads as the page the
 rerun would write, and running the command again finishes it. The error names the backup directory
 `.vault-meta/card-page-migration-<UTC instant>[-N]/` (a retry in the same second takes a numbered name; a copy that fails
 halfway removes its directory, so one that is there is whole, and every file is synced and keeps its mode). A page a
-stopped run recorded is finished by the rerun even if its memory has been revised since. The migration creates and
+stopped run recorded is finished by the rerun even if its memory has been revised or retyped since: for a page that names an
+Engram observation the rerun searches the revisions from the memory's current one down to 0 (the memory's type and the page's own)
+for the rewrite the entry records, only for a page whose body is the recorded one, and finishes the page with that identity. An edit
+confined to the identity lines of such a page is adopted, since those lines are rewritten anyway and the backup holds them as they
+were; an edit to any other frontmatter line is refused (above). The migration creates and
 renames no page, so to go back to the state before it, copy the files of that directory over the vault
 (`cp -a <backup>/. <vault>/`): every page it rewrote and the sidecar return to their prior bytes.
 
 There is no lock between the migration and a `sync`, and the hook-driven `sync` (`engine/synctrigger`, fired when an agent
 session ends or a change is archived) has no switch to turn it off. Before `--apply`, close every agent session that uses
-the vault and check that no sync is running: `pgrep -af 'longterm-mem.* sync'` prints nothing. Then no sync can write a
-page the migration is rewriting.
+the vault and check that no sync is running: `pgrep -af '[l]ongterm-mem.* sync'` prints nothing (the bracket keeps the check from matching itself; any
+output is a sync that is running). Then no sync can write a page the migration is rewriting.
 
 Run it first on copies of the vault and of memorycard's database (`scripts/rehearse-card-page-migration.sh` does, and
 changes nothing live), read the counts, and only then run `--apply` on the vault, project by project.
