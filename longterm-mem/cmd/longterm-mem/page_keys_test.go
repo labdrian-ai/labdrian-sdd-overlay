@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 )
@@ -77,4 +78,61 @@ func TestAPageWhoseStatusIsPatchedCarriesOnlyTheStoreAgnosticKeys(t *testing.T) 
 		t.Errorf("the page was not patched to archived:\n%s", page)
 	}
 	requireStoreAgnosticIdentity(t, page, "3")
+}
+
+// legacyCardWorld is the memorycard world with the page of memory 1 written as an older release wrote it: the
+// memorycard_* keys, tracked in the precedence sidecar.
+func legacyCardWorld(t *testing.T) (*promoteGoldenWorld, string) {
+	t.Helper()
+	w, db := memorycardWorld(t)
+	recordPage(t, w, "c-000901", legacyCardPage("c-000901", "Card Only", 1, "learning", "3"), true)
+	return w, db
+}
+
+func requireSidecarHolds(t *testing.T, w *promoteGoldenWorld, address string) {
+	t.Helper()
+	var entries map[string]map[string]any
+	if err := json.Unmarshal([]byte(readVaultFile(t, w, ".raw/.longterm-mem-manifest.json")), &entries); err != nil {
+		t.Fatal(err)
+	}
+	page := readVaultFile(t, w, "wiki/memory/"+address+".md")
+	end := strings.Index(page[4:], "---\n") + 4 + 4
+	if got := entries[address]["frontmatter_hash"]; got != sha(page[:end]) {
+		t.Errorf("the sidecar's frontmatter hash of %s is %v, want %s (the page as written)", address, got, sha(page[:end]))
+	}
+}
+
+func TestALegacyCardPageWhoseStatusIsPatchedBecomesAStoreAgnosticPage(t *testing.T) {
+	w, db := legacyCardWorld(t)
+	execOn(t, db, `UPDATE memories SET status = 'archived' WHERE id = 1`)
+	code, stdout, stderr := runPromoteGolden(t, []string{"sync", "--project", promoteGoldenProject, "--source", "memorycard"})
+	if code != exitOK || !strings.Contains(stdout, "patched 1 page(s)") {
+		t.Fatalf("sync: exit %d, stdout %q, stderr %q, want one page patched", code, stdout, stderr)
+	}
+	page := readVaultFile(t, w, "wiki/memory/c-000901.md")
+	if !strings.Contains(page, "status: archived\n") {
+		t.Errorf("the page was not patched to archived:\n%s", page)
+	}
+	requireStoreAgnosticIdentity(t, page, "3")
+	requireSidecarHolds(t, w, "c-000901")
+	// The page is the memory's own and in step with the sidecar: the next sync patches nothing.
+	if code, stdout, stderr := runPromoteGolden(t, []string{"sync", "--project", promoteGoldenProject, "--source", "memorycard"}); code != exitOK || strings.Contains(stdout, "patched 1 page(s)") {
+		t.Errorf("second sync: exit %d, stdout %q, stderr %q, want nothing patched", code, stdout, stderr)
+	}
+}
+
+func TestALegacyCardPageUpdatedInPlaceBecomesAStoreAgnosticPage(t *testing.T) {
+	w, db := legacyCardWorld(t)
+	execOn(t, db, `INSERT INTO memory_versions (memory_id, version, title, body, saved_at) VALUES (1, 3, 'Card Only', 'Lives only in memorycard.', '')`)
+	execOn(t, db, `UPDATE memories SET body = ? WHERE id = 1`, "A body revised once.")
+	code, stdout, stderr := runPromoteGolden(t, []string{"promote", "--project", promoteGoldenProject, "--source", "memorycard", "--id", "1"})
+	if code != exitOK || !strings.Contains(stdout, "(updated)") {
+		t.Fatalf("promote: exit %d, stdout %q, stderr %q, want the page updated", code, stdout, stderr)
+	}
+	page := readVaultFile(t, w, "wiki/memory/c-000901.md")
+	requireStoreAgnosticIdentity(t, page, "4")
+	if !strings.Contains(page, "A body revised once.") {
+		t.Errorf("the page does not hold the revised body:\n%s", page)
+	}
+	requireSidecarHolds(t, w, "c-000901")
 }

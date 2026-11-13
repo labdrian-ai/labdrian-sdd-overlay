@@ -286,6 +286,50 @@ func mapPage(cards CardBridges, index *pageIndex, claimed map[int64]string, proj
 	return mappedPage{MigratedPage: MigratedPage{EngramID: engramID, MemoryID: m.ID}, revision: strconv.Itoa(m.Revision), kind: m.Type}, 0, "", nil
 }
 
+// withStoreAgnosticIdentity is block with the identity keys of a page that names one memorycard memory by legacy
+// memorycard_* keys replaced by the store-agnostic ones (rewrittenIdentity), keeping the memory, revision and type the
+// page names. Every other block is returned as it is: a page of the store-agnostic keys, a page naming an Engram
+// observation (only the migration can say which memory that is), and a page whose identity lines the line rewriter
+// cannot rewrite whole (simpleIdentityLines).
+func withStoreAgnosticIdentity(block string) string {
+	fields := parseFrontmatterFields(block)
+	if !carriesLegacyKeys(fields) || !simpleIdentityLines(block) {
+		return block
+	}
+	if _, engram := identityOf(fields, engramSource); engram {
+		return block
+	}
+	card, named := identityOf(fields, memorycardSource)
+	if !named {
+		return block
+	}
+	memoryID, err := strconv.ParseInt(strings.TrimSpace(card.ID), 10, 64)
+	if err != nil || memoryID <= 0 {
+		return block
+	}
+	return rewrittenIdentity(block, memoryID, card.Revision, card.Type)
+}
+
+// simpleIdentityLines reports whether every identity key of block is a one-line `key: value` at the start of its line,
+// which is what rewrittenIdentity replaces. An indented key, or a value that runs onto indented lines, is not: the
+// rewrite would leave part of the old identity behind, so the page is refused by name instead.
+func simpleIdentityLines(block string) bool {
+	lines := strings.Split(block, "\n")
+	for i, line := range lines {
+		key, _, isField := strings.Cut(strings.TrimLeft(line, " \t"), ":")
+		if !isField || !isIdentityKey(key) {
+			continue
+		}
+		if line != strings.TrimLeft(line, " \t") {
+			return false
+		}
+		if i+1 < len(lines) && strings.TrimSpace(lines[i+1]) != "" && lines[i+1] != strings.TrimLeft(lines[i+1], " \t") {
+			return false
+		}
+	}
+	return true
+}
+
 // rewrittenIdentity is block with its identity keys replaced by the four store-agnostic ones, written where the
 // first identity key was, and every other line untouched. An empty revision or type writes no line for it.
 func rewrittenIdentity(block string, memoryID int64, revision, kind string) string {
