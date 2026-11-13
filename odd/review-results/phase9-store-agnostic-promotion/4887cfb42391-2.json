@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "1ed8ff9505ef46bff8935ecdb80913700e505940",
+    "head": "4887cfb42391cb6ba71c5b2f226262da9c126341",
+    "diff_sha256": "ad6f7488df606bb14bae72f19cb142e6b081296617f607db184f9899bc92e67c",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go",
+      "longterm-mem/cmd/longterm-mem/migrate_card_pages_backup_sync_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "1ed8ff9505ef46bff8935ecdb80913700e505940",
+      "head": "4887cfb42391cb6ba71c5b2f226262da9c126341",
+      "diff_sha256": "ad6f7488df606bb14bae72f19cb142e6b081296617f607db184f9899bc92e67c"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go",
+        "longterm-mem/cmd/longterm-mem/migrate_card_pages_backup_sync_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go:257-275",
+        "claim": "The new tolerance in syncDirectory (Windows, EINVAL, ENOTSUP and ErrUnsupported are treated as success) is the commit's stated behavior, but no test reaches it. Both new tests replace the syncDir seam, so syncDirectory itself is never run. A regression that turned those errors into copy failures would not be caught.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go:257-275",
+          "longterm-mem/cmd/longterm-mem/migrate_card_pages_backup_sync_test.go:13-44"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff of both changed paths. The single-handle read, the removal of the redundant chmod, the extra sync of .vault-meta and the vault root, and the syncDir seam are consistent with the commit message. I found no change-caused defect with observable harm. The one gap is the untested unsupported-directory-sync branch."
+    ]
+  }
+}

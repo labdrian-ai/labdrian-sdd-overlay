@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "0c02469d055f28047e79b680575b7cd411f9d4ed",
+    "head": "a6027b3880ae5b02960caf790f6fd757190bd762",
+    "diff_sha256": "762cee1d459da94cb70d4311d30ee788d755bc62b51948bec08ecd0ee2faff01",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/migrate_card_pages_scan_test.go",
+      "longterm-mem/internal/promote/migrate_cards.go",
+      "longterm-mem/internal/promote/migrate_cards_unreadable_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "0c02469d055f28047e79b680575b7cd411f9d4ed",
+      "head": "a6027b3880ae5b02960caf790f6fd757190bd762",
+      "diff_sha256": "762cee1d459da94cb70d4311d30ee788d755bc62b51948bec08ecd0ee2faff01"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/migrate_card_pages_scan_test.go",
+        "longterm-mem/internal/promote/migrate_cards.go",
+        "longterm-mem/internal/promote/migrate_cards_unreadable_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The new guard in migrate_cards.go runs shapeOf(newBlock + body) after the stopped-run block is substituted, so it covers both fresh and stopped pages.",
+      "On refusal it calls refuse and continues before g.claimed or moved.Address are set, so the memory is not claimed and nothing is written. This matches the commit's claim.",
+      "I found no regression on previously valid input from the diff alone. The guard assumes shapeOf returns a block in the same form as newBlock, and the diff does not show shapeOf; the added tests would fail if that form differed.",
+      "Both new tests cover the refused case and the other-pages-migrated case, including the unchanged refused page and its unchanged entry."
+    ]
+  }
+}

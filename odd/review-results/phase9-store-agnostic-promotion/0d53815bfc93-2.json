@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "5813aa1c6acae6991e46d8d8bbdd9601d06ee34b",
+    "head": "0d53815bfc931910e0a77e15593166a588ae2357",
+    "diff_sha256": "af0b5942cb559119b8e77dde3e2ea8514840ddf59127e59cb597c56801c13e5d",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "5813aa1c6acae6991e46d8d8bbdd9601d06ee34b",
+      "head": "0d53815bfc931910e0a77e15593166a588ae2357",
+      "diff_sha256": "af0b5942cb559119b8e77dde3e2ea8514840ddf59127e59cb597c56801c13e5d"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff replaces the L69COMMIT placeholder with 5813aa1c in exactly three places: the T6 task line, the L69 hash-mapping bullet, and the L69 answer to d3e672ce-3 F2.",
+      "5813aa1c is the base commit of this change. That matches the text's description of it as the docs(odd) commit that holds L69, so the placeholder now names a real predecessor commit.",
+      "The T6 line and L69 now agree with each other, and the surrounding prose (a follow-up commit that only writes this hash) still matches what the commit does.",
+      "The diff touches only this one documentation file, and I found no unrelated edits or contradictions."
+    ]
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "b52d71a25b48d523817a209db9e04cab96af3e72",
+    "head": "3a7a9fc6fb937e7e23818f63b4e9b8cd2e55e89e",
+    "diff_sha256": "dd5f8969b3a39574ff1f05e45e6ea832ddd686dadaad93bbf3bf7c059a3a2dc3",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go",
+      "longterm-mem/internal/promote/migrate_cards.go",
+      "longterm-mem/internal/promote/migrate_cards_safety_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "b52d71a25b48d523817a209db9e04cab96af3e72",
+      "head": "3a7a9fc6fb937e7e23818f63b4e9b8cd2e55e89e",
+      "diff_sha256": "dd5f8969b3a39574ff1f05e45e6ea832ddd686dadaad93bbf3bf7c059a3a2dc3"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go",
+        "longterm-mem/internal/promote/migrate_cards.go",
+        "longterm-mem/internal/promote/migrate_cards_safety_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/promote/migrate_cards.go:268-272",
+        "claim": "The rerun recognition of a page whose entry already records the rewrite compares the entry's frontmatter hash with a block rebuilt from the memory's current revision and type. If memorycard changes the memory's revision or type between the stopped run and the rerun, the rebuilt block differs from the recorded one. The page, which is untouched, is then refused as 'edited locally', so the 'rerun finishes it' promise in the error message does not hold. The page stays stuck because its entry no longer matches its content, and it needs manual repair. Nothing in the diff shows this window is reachable, but a stop followed by a later rerun makes it possible.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "migrate_cards.go: case entry.FrontmatterHash == hashText(newBlock) && entry.BodyHash == hashText(body)"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/migrate_cards.go:316-345",
+        "claim": "mapPage now has two near-duplicate lookup branches (id parse, lookup, not-found refusal, moved construction) behind a seven-parameter signature. The `found := false` pre-declaration exists only to enable `m, found, err =` assignment. Extracting a per-source resolver would make the shared project, own-page and claimed checks easier to read and keep in step.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "migrate_cards.go: mapPage if hasCard {...} else {...}"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the three changed paths from the diff only.",
+      "The save-before-write ordering and the in-memory entry rollback on save failure are consistent with the added tests.",
+      "The rerun adoption case depends on the rebuilt newBlock being identical across runs, which holds only while the memory's revision and type are unchanged."
+    ]
+  }
+}

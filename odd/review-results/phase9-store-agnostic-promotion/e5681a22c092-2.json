@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "9f40b3944465e73e313a372588ac2b5c74e2e959",
+    "head": "e5681a22c0921897eddd1696f2e40869a6acf008",
+    "diff_sha256": "3c93c89e63b36805a29564cf6b57a70babb6a4cd0e7d78e06f631dc3d4e270ae",
+    "paths": [
+      "longterm-mem/README.md",
+      "longterm-mem/docs/promote-from-memorycard.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "9f40b3944465e73e313a372588ac2b5c74e2e959",
+      "head": "e5681a22c0921897eddd1696f2e40869a6acf008",
+      "diff_sha256": "3c93c89e63b36805a29564cf6b57a70babb6a4cd0e7d78e06f631dc3d4e270ae"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/README.md",
+        "longterm-mem/docs/promote-from-memorycard.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/docs/promote-from-memorycard.md:118-122",
+        "claim": "The no-project note says it appears 'every run' and the rehearsal count 'includes' these pages, while the same paragraph says the page is 'in no project's run'. The sentence 'no page is hidden' and the claim that the rehearsal count is what retirement waits on are not verifiable from the diff. A reader may be unsure whether a dry run, an --apply run, or a run for a project with zero pages prints the note. The wording could state which runs print it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/docs/promote-from-memorycard.md:118-122"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/docs/promote-from-memorycard.md:134-140",
+        "claim": "The count rule 'count of a project plus the pages with no project is the number of pages that still carry a legacy key' holds only for a single project. With several projects, each run counts only its own, so the sum across projects is needed. The sentence is ambiguous and could mislead a reader running per-project.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/docs/promote-from-memorycard.md:134-135"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed both changed paths, which are documentation only. I cannot verify the described behaviour against code, since the diff holds no source. Findings concern wording clarity only."
+    ]
+  }
+}

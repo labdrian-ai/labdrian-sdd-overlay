@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "6c010de334ccbe731cf1c6b057e569976683e34f",
+    "head": "78ed91d92de450279d0cbff1d6c430012a1f1348",
+    "diff_sha256": "44e611136bcd6db765969d772331cfe417d849324eb2f1a3d507a690884ba7fa",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "6c010de334ccbe731cf1c6b057e569976683e34f",
+      "head": "78ed91d92de450279d0cbff1d6c430012a1f1348",
+      "diff_sha256": "44e611136bcd6db765969d772331cfe417d849324eb2f1a3d507a690884ba7fa"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:121",
+        "claim": "The new T6 commit-list text has a parenthetical, \"(L69 is in `5813aa1c`; evidence in L62 to L70)\", placed right after the L70 docs(odd) commit. It reads as if it describes L70's commit, and it leaves L70's own hash unwritten with no placeholder to mark the gap. A reader looking for L70's commit from the T6 line cannot tell where it is recorded. The hash is only deferred to a follow-up commit that L70 mentions.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:121",
+          "odd/tasks/phase9-store-agnostic-promotion.md:751"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:754",
+        "claim": "L70's \"Scratch, not deleted\" list leaves out the verifier scratch directory `/home/labdrian/.cache/t6-b7-verify.kaLrCJ`, which the Recheck record names. It also omits other scratch files that earlier entries listed, such as `t6-b6-grid.pl` and `scripts/readers.sh`. Someone cleaning up from this list could miss that directory, so the record of what remains on disk is incomplete.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:743",
+          "odd/tasks/phase9-store-agnostic-promotion.md:754"
+        ]
+      }
+    ],
+    "evidence": [
+      "Docs-only change: the T6 task line gains the batch 8 commit mapping, and a new Log entry L70 is added; no code is touched.",
+      "Hashes in the T6 line are consistent with L70's hash mapping (a6027b38, e8d67cf9, 6c010de3).",
+      "The base of this commit is 6c010de3, the docs commit L70 lists, so the ordering matches."
+    ]
+  }
+}

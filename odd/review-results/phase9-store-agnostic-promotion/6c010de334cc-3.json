@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "e8d67cf9383762237c2c032ba50b041bf138f997",
+    "head": "6c010de334ccbe731cf1c6b057e569976683e34f",
+    "diff_sha256": "3d06f5f42910b8c3e0150896bf9798aca1de50c55e879a1ce26ae10d2e510ae0",
+    "paths": [
+      "longterm-mem/docs/promote-from-memorycard.md",
+      "longterm-mem/internal/promote/migrate_cards.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "e8d67cf9383762237c2c032ba50b041bf138f997",
+      "head": "6c010de334ccbe731cf1c6b057e569976683e34f",
+      "diff_sha256": "3d06f5f42910b8c3e0150896bf9798aca1de50c55e879a1ce26ae10d2e510ae0"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/docs/promote-from-memorycard.md",
+        "longterm-mem/internal/promote/migrate_cards.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff changes only one Go comment on RefusedOther and documentation text, so no executable behavior changes.",
+      "The new doc rows describe the identity refusal and the trailing-space handling consistently with the commit message; the diff has no code to contradict them.",
+      "I could not verify the documented behavior against the implementation, since the diff shows no code, and I report no defect from that."
+    ]
+  }
+}

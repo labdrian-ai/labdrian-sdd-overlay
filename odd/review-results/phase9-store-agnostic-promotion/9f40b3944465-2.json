@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "0d384e229301983f697a511f9139af6a874401b3",
+    "head": "9f40b3944465e73e313a372588ac2b5c74e2e959",
+    "diff_sha256": "f1ebdcb87d8f665fede23aa3f09682adc97c1f745e9f5e16b2513c8d1b11236d",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go",
+      "longterm-mem/cmd/longterm-mem/migrate_card_pages_backup_durable_test.go",
+      "longterm-mem/cmd/longterm-mem/migrate_card_pages_backup_sync_test.go",
+      "longterm-mem/cmd/longterm-mem/migrate_card_pages_halfmigrated_test.go",
+      "longterm-mem/cmd/longterm-mem/migrate_card_pages_scan_test.go",
+      "longterm-mem/internal/promote/migrate_cards.go",
+      "longterm-mem/internal/promote/migrate_cards_unreadable_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "0d384e229301983f697a511f9139af6a874401b3",
+      "head": "9f40b3944465e73e313a372588ac2b5c74e2e959",
+      "diff_sha256": "f1ebdcb87d8f665fede23aa3f09682adc97c1f745e9f5e16b2513c8d1b11236d"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go",
+        "longterm-mem/cmd/longterm-mem/migrate_card_pages_backup_durable_test.go",
+        "longterm-mem/cmd/longterm-mem/migrate_card_pages_backup_sync_test.go",
+        "longterm-mem/cmd/longterm-mem/migrate_card_pages_halfmigrated_test.go",
+        "longterm-mem/cmd/longterm-mem/migrate_card_pages_scan_test.go",
+        "longterm-mem/internal/promote/migrate_cards.go",
+        "longterm-mem/internal/promote/migrate_cards_unreadable_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the diff for all seven changed paths and found no defect this commit introduces.",
+      "The unreadable-page detection runs only after frontmatterBlock fails, so pages that were readable before are handled as they were.",
+      "Unreadable pages still go through the project-owner filter, so a page owned by another project is skipped and a page with no project lands in NoProject. The new unreadable test covers the 'away' and 'lost' cases.",
+      "The exit code now comes from report.Refused alone, as the commit claims, and the no-project note prints on stdout only.",
+      "The empty-type and empty-revision recovery candidates are added without dropping any earlier candidate, and the two new tests cover each.",
+      "syncDirectory no longer returns early on Windows, but toleratedDirectorySyncError still treats any Windows sync error as tolerated, so behaviour there is unchanged."
+    ]
+  }
+}

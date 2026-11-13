@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "d58264aee52f2aad7e654f3055e4a36053d30a33",
+    "head": "2487d6dcf1c7b1e8d42c59118640305b09ece0c9",
+    "diff_sha256": "d20c26d09098f637423e9722b8b9ec2945fcf91149c68cc8a8b64a28f42ecf4e",
+    "paths": [
+      "longterm-mem/README.md",
+      "longterm-mem/docs/promote-from-memorycard.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "d58264aee52f2aad7e654f3055e4a36053d30a33",
+      "head": "2487d6dcf1c7b1e8d42c59118640305b09ece0c9",
+      "diff_sha256": "d20c26d09098f637423e9722b8b9ec2945fcf91149c68cc8a8b64a28f42ecf4e"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/README.md",
+        "longterm-mem/docs/promote-from-memorycard.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff changes only two documentation files, so it cannot alter runtime behavior.",
+      "The README and the guide agree with each other on the unreadable-frontmatter rule, the once-per-run note and the vault-wide count rule.",
+      "I could not check the stated behavior against the code, because the diff contains no code. I found no internal contradiction to report."
+    ]
+  }
+}

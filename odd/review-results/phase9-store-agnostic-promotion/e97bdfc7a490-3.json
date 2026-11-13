@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "c0ad763baeaf2cf5cfacb08e093c053b091a7216",
+    "head": "e97bdfc7a49033c5fbc40207caa3d0942de15efc",
+    "diff_sha256": "b78bc86f2cc9ee532d396dca96467e7fd0734bdd2264ec9b25aade428e2c42cc",
+    "paths": [
+      "longterm-mem/docs/promote-from-memorycard.md",
+      "longterm-mem/internal/promote/migrate_cards_unreadable_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "c0ad763baeaf2cf5cfacb08e093c053b091a7216",
+      "head": "e97bdfc7a49033c5fbc40207caa3d0942de15efc",
+      "diff_sha256": "b78bc86f2cc9ee532d396dca96467e7fd0734bdd2264ec9b25aade428e2c42cc"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/docs/promote-from-memorycard.md",
+        "longterm-mem/internal/promote/migrate_cards_unreadable_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/docs/promote-from-memorycard.md:134",
+        "claim": "The reworded bullet now says only 'stated above' for the outcome of an unreadable legacy page; the diff does not show that the earlier bullet states both outcomes (counted and refused by name, never skipped). The pointer is unverifiable from the diff, and the explicit 'never skipped' statement was removed from this bullet. If the above text is not exact, a reader loses that guarantee.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "longterm-mem/docs/promote-from-memorycard.md:134"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only a doc bullet and a Go test comment changed; no executable code is altered.",
+      "The test comment change is inert at runtime and names the feature document and Log L71 as claimed.",
+      "The doc bullet keeps the remedy and the rehearsal script agreement as claimed; the outcome statement is deferred to an earlier bullet outside the diff context."
+    ]
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "4d50802546be25a66b93b2723f0276a279ad9518",
+    "head": "b4b63a2ec9664bf822a20ee78bc2437da4da84b7",
+    "diff_sha256": "c976f5fa4c89e1c69d9ec28cbe2058c71f0cc2ed4a404729de7da6f833998d9b",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go",
+      "longterm-mem/cmd/longterm-mem/migrate_card_pages_scan_test.go",
+      "longterm-mem/internal/promote/migrate_cards.go",
+      "longterm-mem/internal/promote/migrate_cards_unreadable_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "4d50802546be25a66b93b2723f0276a279ad9518",
+      "head": "b4b63a2ec9664bf822a20ee78bc2437da4da84b7",
+      "diff_sha256": "c976f5fa4c89e1c69d9ec28cbe2058c71f0cc2ed4a404729de7da6f833998d9b"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go",
+        "longterm-mem/cmd/longterm-mem/migrate_card_pages_scan_test.go",
+        "longterm-mem/internal/promote/migrate_cards.go",
+        "longterm-mem/internal/promote/migrate_cards_unreadable_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Traced shapeOf for pages that start with ---\\n and have a closing line, for pages that start with ---\\n and have no closing line, and for pages with a BOM, CRLF or leading blank lines. Readable pages return the bytes up to the end of the closing line, and the unreadable cases are scanned up to the first closing --- only.",
+      "Traced the no-project note in reportMigration. It is printed once on the error path and once after the counts on the success path, so no run prints it twice.",
+      "Plain pages that do not open with --- return shapeNone and are never scanned, which matches the claim and the new tests. I found no defect this change causes."
+    ]
+  }
+}

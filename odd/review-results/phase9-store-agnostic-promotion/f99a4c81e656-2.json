@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "90049467e6f95803973f16da5349d4cfc3a05f58",
+    "head": "f99a4c81e656a2c376c0588921f42afc58371f9b",
+    "diff_sha256": "dbc709e4ff285efe7675a8cb0dbc100b7a5092006a6ac5c941a976811ad0d28e",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/page_keys_test.go",
+      "longterm-mem/internal/promote/frontmatter.go",
+      "longterm-mem/internal/promote/migrate_cards.go",
+      "longterm-mem/internal/promote/migrate_cards_identity_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "90049467e6f95803973f16da5349d4cfc3a05f58",
+      "head": "f99a4c81e656a2c376c0588921f42afc58371f9b",
+      "diff_sha256": "dbc709e4ff285efe7675a8cb0dbc100b7a5092006a6ac5c941a976811ad0d28e"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/page_keys_test.go",
+        "longterm-mem/internal/promote/frontmatter.go",
+        "longterm-mem/internal/promote/migrate_cards.go",
+        "longterm-mem/internal/promote/migrate_cards_identity_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The change reverts the identity rewrite in patchedFrontmatter, so a status patch again touches only the status and related lines. That matches the commit's stated intent.",
+      "The removed withStoreAgnosticIdentity and its unit test are deleted together, so no test is left referencing a missing function.",
+      "The new tests assert that a legacy page keeps its identity lines byte for byte under a status patch, and that a page whose status already matches is neither written nor counted.",
+      "From the diff alone I cannot confirm that the strconv import in migrate_cards.go is still used, or that the helper requireStoreAgnosticIdentity is still referenced elsewhere. No defect is evident, and I did not run a build."
+    ]
+  }
+}

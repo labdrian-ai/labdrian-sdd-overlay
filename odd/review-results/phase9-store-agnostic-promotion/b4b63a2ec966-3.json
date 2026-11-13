@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "4d50802546be25a66b93b2723f0276a279ad9518",
+    "head": "b4b63a2ec9664bf822a20ee78bc2437da4da84b7",
+    "diff_sha256": "c976f5fa4c89e1c69d9ec28cbe2058c71f0cc2ed4a404729de7da6f833998d9b",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go",
+      "longterm-mem/cmd/longterm-mem/migrate_card_pages_scan_test.go",
+      "longterm-mem/internal/promote/migrate_cards.go",
+      "longterm-mem/internal/promote/migrate_cards_unreadable_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "4d50802546be25a66b93b2723f0276a279ad9518",
+      "head": "b4b63a2ec9664bf822a20ee78bc2437da4da84b7",
+      "diff_sha256": "c976f5fa4c89e1c69d9ec28cbe2058c71f0cc2ed4a404729de7da6f833998d9b"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go",
+        "longterm-mem/cmd/longterm-mem/migrate_card_pages_scan_test.go",
+        "longterm-mem/internal/promote/migrate_cards.go",
+        "longterm-mem/internal/promote/migrate_cards_unreadable_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "shapeOf: a page starting with ---\\n and containing \\n---\\n in raw[3:] is readable, and the empty block ---\\n---\\n is handled because raw[3:] begins with the newline.",
+      "The unreadable path trims the BOM, carriage returns and blank lines, requires the first non-blank line to be ---, and scans only up to the next --- line, which matches the stated behaviour.",
+      "printNoProjectNote is moved after the counts on success and kept before the error on failure, so it prints once on each path.",
+      "The new tests cover plain notes quoting keys, text before a rule, and keys quoted after the closing rule.",
+      "I found no regression on input that was valid before the change from the diff alone. Pages with text before the opening --- are now deliberately ignored."
+    ]
+  }
+}

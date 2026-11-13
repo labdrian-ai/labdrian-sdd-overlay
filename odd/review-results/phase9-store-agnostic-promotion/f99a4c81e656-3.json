@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "90049467e6f95803973f16da5349d4cfc3a05f58",
+    "head": "f99a4c81e656a2c376c0588921f42afc58371f9b",
+    "diff_sha256": "dbc709e4ff285efe7675a8cb0dbc100b7a5092006a6ac5c941a976811ad0d28e",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/page_keys_test.go",
+      "longterm-mem/internal/promote/frontmatter.go",
+      "longterm-mem/internal/promote/migrate_cards.go",
+      "longterm-mem/internal/promote/migrate_cards_identity_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "90049467e6f95803973f16da5349d4cfc3a05f58",
+      "head": "f99a4c81e656a2c376c0588921f42afc58371f9b",
+      "diff_sha256": "dbc709e4ff285efe7675a8cb0dbc100b7a5092006a6ac5c941a976811ad0d28e"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/page_keys_test.go",
+        "longterm-mem/internal/promote/frontmatter.go",
+        "longterm-mem/internal/promote/migrate_cards.go",
+        "longterm-mem/internal/promote/migrate_cards_identity_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "patchedFrontmatter now applies only setScalarField and setListField to the block, so identity lines are untouched, which matches the stated revert.",
+      "The removed withStoreAgnosticIdentity was the only change to a patch target's identity. The memorycard walk compares patchedFrontmatter against the block, so a legacy page whose status already matches now yields an identical block and is not a patch target. The new tests pin both behaviours.",
+      "The diff does not show whether strconv is still used elsewhere in migrate_cards.go. An unused import would be a compile error, but mapPage and the migration likely parse ids, so I did not report it.",
+      "The deleted unit test covered only the removed function, so no coverage is lost for live code."
+    ]
+  }
+}

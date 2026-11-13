@@ -1,0 +1,44 @@
+{
+  "kind": "polisher",
+  "base": "b52d71a25b48d523817a209db9e04cab96af3e72",
+  "head": "3a7a9fc6fb937e7e23818f63b4e9b8cd2e55e89e",
+  "diff_sha256": "dd5f8969b3a39574ff1f05e45e6ea832ddd686dadaad93bbf3bf7c059a3a2dc3",
+  "findings": {
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/promote/migrate_cards.go:269",
+        "summary": "A stopped page can only be finished while the memory's revision, type and id are unchanged. After a stop, the page is left with its precedence entry already recording the old rewritten block. If the memory's revision changes in memorycard before the rerun, the rerun computes a different newBlock. It fails the new resume branch and the entry-matches-page branch, so it refuses the page as 'edited locally'. The page then stays legacy, and the sidecar entry no longer matches either the legacy page or any new page. Nothing in the report tells the owner that the entry was left half-recorded.",
+        "evidence": [
+          "Lines 261 and 269: newBlock is built from moved.revision, which on the Engram path is strconv.Itoa(m.Revision), read live at line 343.",
+          "Line 269 requires entry.FrontmatterHash == hashText(newBlock), so any drift in revision, type or id since the interrupted run falls through to RefusedEdited at line 273.",
+          "applyMigration (lines 459-465) persists the entry before WritePage, so an interrupted run leaves exactly this state.",
+          "The tests I saw (TestMigrateCardPages_AFailedPageWriteIsFinishedByARerun, TestMigrateCardPages_ARecordedEntryDoesNotAdoptAPageThatIsNotTheOneItRecorded) cover an unchanged memory and a non-matching page, not a revision change between the stop and the rerun. I only read their names and did not run the suite.",
+          "The window is narrow and no data is lost: the backup holds the original page and sidecar. Whether the defect was introduced here is inferred from reading the code, not reproduced."
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/migrate_cards.go:196",
+        "summary": "A page carrying a legacy key but no `project` field is skipped by legacyPagesOf. It is neither counted in Legacy nor refused by name, although the file comment at lines 33-34 says the legacy count is the count of pages that still carry a legacy key. A project-less legacy page would remain, silently uncounted, after a migration that reports a clean run.",
+        "evidence": [
+          "Lines 196-198: `if fields[projectField] != project { return }` runs after the carriesLegacyKeys check, so such a page is dropped without any refusal.",
+          "The comment at lines 33-34 and the S6 (c) requirement of refusals by name with counts both promise an account of every legacy page.",
+          "I did not check whether the vault can hold a legacy page with no project, so I cannot say how likely this is."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole of migrate_cards.go at the target worktree /home/labdrian/labdrian-sdd-overlay-worktrees/review-3a7a9fc6fb93.",
+      "Read the vaultBackup.BackUp adapter in cmd/longterm-mem/cmd_migrate_card_pages.go. It copies the precedence sidecar and every planned page before any write, in a fresh 0700 directory. Mkdir refuses a name collision, which stops the run before any write.",
+      "Checked that PrecedenceStore.Get is safe on a nil map, and that apply requires a non-nil Store, so there is no nil-map write.",
+      "Checked that nil ports are handled: memory.IsMissing(cards), checkPatchPorts, the Store and backup guards, and an error rather than a panic.",
+      "Checked simpleIdentityLines against indented and multi-line identity values.",
+      "Checked the write order in applyMigration: entry persisted before the page, with the in-memory entry restored if the save fails.",
+      "Checked the claimed-memory and carriers logic that refuses two pages for one memory, and that matching by content hash does not appear in the mapping code.",
+      "Listed the test names in migrate_cards_safety_test.go and cmd/longterm-mem/migrate_card_pages_test.go. I did not run them. I did not read the spec's L63 text (only the S6 line was matched); the claims were checked against the code instead."
+    ]
+  }
+}

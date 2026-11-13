@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a6027b3880ae5b02960caf790f6fd757190bd762",
+    "head": "e8d67cf9383762237c2c032ba50b041bf138f997",
+    "diff_sha256": "ac1db3b17de104bc1962396baa49af95c756b1fdf4eeff3d463aa14a3eea3af1",
+    "paths": [
+      "scripts/rehearse-card-page-migration.sh"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "a6027b3880ae5b02960caf790f6fd757190bd762",
+      "head": "e8d67cf9383762237c2c032ba50b041bf138f997",
+      "diff_sha256": "ac1db3b17de104bc1962396baa49af95c756b1fdf4eeff3d463aa14a3eea3af1"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "scripts/rehearse-card-page-migration.sh"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The $SP alternation matches Go's unicode.IsSpace set: ASCII \\t \\n \\v \\f \\r and space, U+0085, U+00A0, U+1680, U+2000-U+200A, U+2028, U+2029, U+202F, U+205F and U+3000. Each is given in its valid UTF-8 encoding.",
+      "Dropping utf8::decode and utf8::encode leaves the project as raw bytes. The byte output is the same as the old round trip for valid UTF-8, and invalid UTF-8 is no longer double-encoded.",
+      "The leading and trailing trims, the key match with $SP*, and the value trims are consistent with each other. A stray byte stops the trim, as it does in Go."
+    ]
+  }
+}

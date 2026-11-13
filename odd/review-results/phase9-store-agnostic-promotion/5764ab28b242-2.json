@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "693162904268c92462d2ace36df93843fec0569c",
+    "head": "5764ab28b242dc1f2d5d3c153da09d48f39167e4",
+    "diff_sha256": "3cd9a58d338cf63d5e76aa8fda9d2911228813f42af33441a87d969d7a276f9e",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go",
+      "longterm-mem/cmd/longterm-mem/migrate_card_pages_backup_more_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "693162904268c92462d2ace36df93843fec0569c",
+      "head": "5764ab28b242dc1f2d5d3c153da09d48f39167e4",
+      "diff_sha256": "3cd9a58d338cf63d5e76aa8fda9d2911228813f42af33441a87d969d7a276f9e"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go",
+        "longterm-mem/cmd/longterm-mem/migrate_card_pages_backup_more_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go:195-198",
+        "claim": "The os.Chmod that restores the source mode runs after durable.WriteFile has already synced the file, and no later fsync covers the file inode. syncDirectories syncs only directory entries, so after a crash the copy can survive with the umask-derived mode rather than the source mode. That is the very property the commit says it keeps (restoring does not change who can read a page). Chmod before the durable write, or sync the file after the chmod.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go:190-198",
+          "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go:203-231"
+        ]
+      }
+    ],
+    "evidence": [
+      "Diff-only review. The write, chmod and directory-sync ordering in copyInto/syncDirectories was read directly from the changed lines.",
+      "The source mode is taken from a separate os.Stat after os.ReadFile, so the data and the mode can come from different moments. This is minor and not reported as a finding.",
+      "The tests cover the mode, the mid-copy write failure, the failed cleanup and the third backup at one instant. None covers the durability of the chmod."
+    ]
+  }
+}

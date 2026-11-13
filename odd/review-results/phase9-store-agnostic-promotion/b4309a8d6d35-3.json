@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "03cc92ba54fa29ea6d90b04f05ae640ce17fdee9",
+    "head": "b4309a8d6d35f1d3d9f163bf0928069af6f0cb7d",
+    "diff_sha256": "04b15a1897e6ff67cd9b9105a081eedf58efbae3d21d548715c035d02b4e9d0d",
+    "paths": [
+      "longterm-mem/docs/promote-from-memorycard.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "03cc92ba54fa29ea6d90b04f05ae640ce17fdee9",
+      "head": "b4309a8d6d35f1d3d9f163bf0928069af6f0cb7d",
+      "diff_sha256": "04b15a1897e6ff67cd9b9105a081eedf58efbae3d21d548715c035d02b4e9d0d"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/docs/promote-from-memorycard.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/docs/promote-from-memorycard.md:130",
+        "claim": "The new 'What happens to an unreadable page' bullet only states the outcome when a legacy key is found. It is silent on what happens to an unreadable page with no legacy key. The old sentence ('such a page is still unreadable, is refused by name and is never rewritten') could be read as covering every unreadable page. A reader can no longer tell from this bullet whether such a page is ignored, skipped or refused. Only a later bullet implies it, and only by omission.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/docs/promote-from-memorycard.md:130"
+        ]
+      }
+    ],
+    "evidence": [
+      "Docs-only change in one file. I checked that the split refusal rows keep the same refusal text and the same causes as the old combined row. The old row's 'or revision' is dropped, as the commit message says.",
+      "The trailing-space rule now appears once, in the line-identification bullet. The legacy-key outcome moved to its own bullet, and the no-legacy-key case is not stated there."
+    ]
+  }
+}

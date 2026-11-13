@@ -30,26 +30,31 @@ fallback, ...`). It is a declaration, not a failure. A store that fails to close
 3. Reads the vault's pages once, and for each eligible memory decides, with the same decision
    `promote --source memorycard --id N` makes:
    - no page: a page is created;
-   - a page at an older `memorycard_revision`: the page is updated in place;
+   - a page at an older `source_revision` (or the legacy `memorycard_revision`): the page is updated in place;
    - a page at the memory's revision: nothing is written, not even to the precedence store;
    - bridged (below): skipped and counted.
 4. Propagates status (below): the page of a memory that memorycard has since superseded or archived is patched.
 5. Rebuilds the vault's index and records the sync's completion (R-031).
 
-A page the vault holds for a memory is found by `(project, memorycard_id)`. A newer revision of a page that was
-edited by hand since it was written is not written, and the run counts it as left alone.
+A page the vault holds for a memory is found by `(project, source_id)` beside `source: memorycard`, or by the legacy
+`memorycard_id` of a page written before the store-agnostic keys (see [Promoting from
+memorycard](promote-from-memorycard.md)); the pages `sync` writes carry the store-agnostic keys only. A newer revision
+of a page that was edited by hand since it was written is not written, and the run counts it as left alone. A page of
+an older release that still carries `engram_id` bridges its memory until `longterm-mem migrate-card-pages --apply`
+makes it the memory's own page: the migration changes the count of bridged memories, never which memories `sync`
+promotes.
 
 ## Status propagation
 
 A promoted memory whose memorycard `status` becomes `superseded` or `archived` has its page's `status` and `related`
 patched on the next `sync` (R-033). memorycard's supersede and archive change only the memory's `status` (and
-`superseded_by`) and add no version, so the page's `memorycard_revision` stays current and the promotion pass has
+`superseded_by`) and add no version, so the page's `source_revision` stays current and the promotion pass has
 nothing to do for it: the two passes are independent. This is the one propagation walk; the Engram one is gone with
 the Engram source. (Previously: `sync` patched pages from Engram's soft deletes and supersedes edges, and counted
 every page it visited.)
 
 - Lists every memory of the project whatever its status (the only listing that shows an archived one) and finds each
-  one's own page by `(project, memorycard_id)`. A memory with no page is left alone. When a page of the vault could
+  one's own page by `(project, source_id)`, or the legacy `memorycard_id`. A memory with no page is left alone. When a page of the vault could
   not be read and none belongs to a superseded or archived memory, it is left alone and named (exit 6), as for
   promotion. A page that still carries only the legacy `engram_*` keys is not a memorycard memory's own page, so it
   is not patched.

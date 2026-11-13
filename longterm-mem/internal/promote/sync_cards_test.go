@@ -155,7 +155,7 @@ func TestSyncCards_ANewerRevisionUpdatesItsPageInPlace(t *testing.T) {
 	if got := pageFiles(t, vaultRoot); len(got) != 1 {
 		t.Fatalf("pages = %v, want one", got)
 	}
-	if page := readPage(t, vaultRoot, address); !strings.Contains(page, "memorycard_revision: 2\n") || !strings.Contains(page, "A new version.") {
+	if page := readPage(t, vaultRoot, address); !strings.Contains(page, "source_revision: 2\n") || !strings.Contains(page, "A new version.") {
 		t.Errorf("page not brought to revision 2:\n%s", page)
 	}
 }
@@ -233,7 +233,7 @@ func TestSyncCards_AFailureIsNamedAndTheRunGoesOn(t *testing.T) {
 	// A page of memory 11 whose revision cannot be read: the memory is a failure, memory 14 is still promoted.
 	path := filepath.Join(vaultRoot, "wiki", "memory", first.Promoted[0].Page.Address+".md")
 	raw, _ := os.ReadFile(path)
-	broken := []byte(strings.Replace(string(raw), "memorycard_revision: 1", "memorycard_revision: one", 1))
+	broken := []byte(strings.Replace(string(raw), "source_revision: 1", "source_revision: one", 1))
 	if err := os.WriteFile(path, broken, 0o644); err != nil {
 		t.Fatal(err)
 	}

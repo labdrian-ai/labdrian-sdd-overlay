@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "c85e4ed0ebd9c3ca7f7730db32f9a6c2e9b0bf65",
+    "head": "03cc92ba54fa29ea6d90b04f05ae640ce17fdee9",
+    "diff_sha256": "2ab7c62907a47ef0aeb94e7c366da89cba474849cc574672a532a27ec921f7b3",
+    "paths": [
+      "longterm-mem/internal/promote/migrate_cards.go",
+      "longterm-mem/internal/promote/migrate_cards_unreadable_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "c85e4ed0ebd9c3ca7f7730db32f9a6c2e9b0bf65",
+      "head": "03cc92ba54fa29ea6d90b04f05ae640ce17fdee9",
+      "diff_sha256": "2ab7c62907a47ef0aeb94e7c366da89cba474849cc574672a532a27ec921f7b3"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/promote/migrate_cards.go",
+        "longterm-mem/internal/promote/migrate_cards_unreadable_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The only production change is a refusal-message string edit in migrate_cards.go; control flow, condition and refusal kind are unchanged.",
+      "The new test and the added backup assertion only read state (backup.calls, page, store entry) and use slices, which is imported in the same diff.",
+      "The added assertions are consistent with the refusal path in the diff: a refused page is skipped via continue before write, so it is not expected in the backup call.",
+      "The message text still contains 'read the rewritten page differently', which the new test matches, so the string edit does not break the assertion.",
+      "No defect caused by this commit found."
+    ]
+  }
+}

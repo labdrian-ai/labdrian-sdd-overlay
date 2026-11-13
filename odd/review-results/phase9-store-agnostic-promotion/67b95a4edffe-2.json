@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "c303b6f79b14097f1ebc533f3524fb4d37834052",
+    "head": "67b95a4edffe88b497724ec9fed0f5f985ebeacd",
+    "diff_sha256": "3af8b355cc50dd916653056bcd1ef697c4b6a10b668d3d3875f1e355409025fa",
+    "paths": [
+      "longterm-mem/internal/promote/migrate_cards.go",
+      "longterm-mem/internal/promote/migrate_cards_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "c303b6f79b14097f1ebc533f3524fb4d37834052",
+      "head": "67b95a4edffe88b497724ec9fed0f5f985ebeacd",
+      "diff_sha256": "3af8b355cc50dd916653056bcd1ef697c4b6a10b668d3d3875f1e355409025fa"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/promote/migrate_cards.go",
+        "longterm-mem/internal/promote/migrate_cards_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/promote/migrate_cards_test.go:1-38",
+        "claim": "The only test covers the pure helper rewrittenIdentity. Nothing exercises MigrateCardPages: refusal kinds, the claimed-memory check, dry run versus apply, backup failure stopping before any write, partial-write failure, or idempotence on a second run. The commit rewrites every page's frontmatter and its precedence hash, and the commit message itself says no test proves the live set. These are the paths where recall of regressions matters.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/migrate_cards_test.go:5-37"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/promote/migrate_cards.go:140-200",
+        "claim": "MigrateCardPages calls cards.MemoryByEngramID without checking that cards is non-nil. Other ports are validated through checkPatchPorts, and the backup is checked with memory.IsMissing. A nil CardBridges therefore panics on the first Engram-keyed page, mid-run, after earlier pages were already planned.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/migrate_cards.go:140-200"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/migrate_cards.go:262-285",
+        "claim": "rewrittenIdentity removes identity keys line by line. A legacy identity key whose value continues on indented lines would leave the continuation lines orphaned in the block, because only the key line is dropped. Such a block would be corrupted, and the precedence hash would be recorded over the corrupted block.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/migrate_cards.go:262-285"
+        ]
+      },
+      {
+        "id": "F4",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/migrate_cards.go:166-175",
+        "claim": "The Legacy count and the candidate set come from index.carriers. A page whose only legacy key is one the index does not treat as a memory carrier (for example only engram_sync_id or engram_type) is skipped silently. It is neither counted nor refused, so the report understates how many pages still carry legacy keys.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/migrate_cards.go:166-175"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed only the diff, with no tool access. The behavior of readPages, ownPage and identityOf was not visible, so findings F2-F4 are inferential."
+    ]
+  }
+}

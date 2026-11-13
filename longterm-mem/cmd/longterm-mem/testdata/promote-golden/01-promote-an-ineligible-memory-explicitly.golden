@@ -10,7 +10,7 @@ longterm-mem: promoted c-000901 (created)
 {
   "c-000901": {
     "body_hash": "29413f2a3459e0ec537f4ebc089948d12eccd6210adb8c6bfbad6dc540821564",
-    "frontmatter_hash": "df35e502e06bfe5612e30a3de7c819502dde1a5bb8c887afd0b2642798760468"
+    "frontmatter_hash": "c71d190af5353a73b3604c22c07478af73d789917ee25eadeaad9948a26e23d6"
   }
 }
 === .raw/.manifest.json ===
@@ -60,9 +60,10 @@ tags:
 status: developing
 related: []
 sources: []
-memorycard_id: 3
-memorycard_type: discovery
-memorycard_revision: 1
+source: memorycard
+source_id: 3
+source_type: discovery
+source_revision: 1
 project: golden-project
 ---
 # Below Threshold

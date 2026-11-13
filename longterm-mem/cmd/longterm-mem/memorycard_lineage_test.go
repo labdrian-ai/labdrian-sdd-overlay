@@ -37,8 +37,8 @@ func pageOfMemory(t *testing.T, w *promoteGoldenWorld, id string) string {
 		if !strings.HasPrefix(name, "c-") {
 			continue
 		}
-		// The exact front-matter line: "memorycard_id: 1" is not the page of memory 10.
-		if slices.Contains(strings.Split(readVaultFile(t, w, "wiki/memory/"+name), "\n"), "memorycard_id: "+id) {
+		// The exact front-matter line: "source_id: 1" is not the page of memory 10.
+		if slices.Contains(strings.Split(readVaultFile(t, w, "wiki/memory/"+name), "\n"), "source_id: "+id) {
 			return name
 		}
 	}

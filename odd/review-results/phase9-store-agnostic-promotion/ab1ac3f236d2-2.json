@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f5a3f40d35dcc45e4924729aa637ab0cc0a0a118",
+    "head": "ab1ac3f236d25665c2839e2af2cc61dd3d23fe65",
+    "diff_sha256": "35dbf57969bbc512a034e8b7b4fb099cfd8044f257ad618d473c999a4e0ae4bb",
+    "paths": [
+      "scripts/rehearse-card-page-migration.sh"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f5a3f40d35dcc45e4924729aa637ab0cc0a0a118",
+      "head": "ab1ac3f236d25665c2839e2af2cc61dd3d23fe65",
+      "diff_sha256": "35dbf57969bbc512a034e8b7b4fb099cfd8044f257ad618d473c999a4e0ae4bb"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "scripts/rehearse-card-page-migration.sh"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "scripts/rehearse-card-page-migration.sh:119-133",
+        "claim": "utf8::decode($text) fails silently when the page holds any invalid UTF-8, leaving a byte string. The /u regexes then treat every byte as a Latin-1 character, so a continuation byte such as 0xA0 or 0x85 inside a valid multibyte project name (for example a trailing 'à' = C3 A0) is trimmed as white space. The later utf8::encode($project) also double-encodes any remaining high bytes. A non-ASCII project name on a page with invalid UTF-8 elsewhere is therefore reported corrupted, where the base read it byte-faithfully. The decode result is never checked, and Go's TrimSpace would not trim those bytes.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "scripts/rehearse-card-page-migration.sh:119",
+          "scripts/rehearse-card-page-migration.sh:125-127",
+          "scripts/rehearse-card-page-migration.sh:133"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only scripts/rehearse-card-page-migration.sh changed; the whole diff was read.",
+      "The readable-page check index($raw,\"---\\n\",4)==$close+4 is arithmetically consistent: the closing line starts at raw offset close+4, including the empty-frontmatter case.",
+      "Perl \\s under /u matches the same set as strings.TrimSpace (U+0085, U+00A0, U+1680, U+2000-200A, U+2028, U+2029, U+202F, U+205F, U+3000), so valid UTF-8 pages are handled as the commit claims.",
+      "The invalid-UTF-8 path (utf8::decode returning false, then /u and utf8::encode) is the only defect found, and it is reasoned from Perl semantics, not run."
+    ]
+  }
+}

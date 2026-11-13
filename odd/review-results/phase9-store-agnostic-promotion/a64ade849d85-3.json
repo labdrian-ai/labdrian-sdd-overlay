@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "2c0b96b8b41ea5aca1594b332eac7dcbfe6a55ec",
+    "head": "a64ade849d85aa80fb3b993ea13fecd489f41088",
+    "diff_sha256": "3ae7e227836521a25dd8b5788aed844ea777a5fb2cacf32d377657213f056290",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "2c0b96b8b41ea5aca1594b332eac7dcbfe6a55ec",
+      "head": "a64ade849d85aa80fb3b993ea13fecd489f41088",
+      "diff_sha256": "3ae7e227836521a25dd8b5788aed844ea777a5fb2cacf32d377657213f056290"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:121",
+        "claim": "The T6 task line's commit list says the correction batch is followed by 'the docs(odd) commit that holds L63' without naming a hash, and the list mixes backticked and unbackticked hashes. The log entry L63 also says 'The commit that holds this entry is the last one of the batch.' Those references are unresolvable from the document alone. Documentation-only, no behavior impact.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:121"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:513-514",
+        "claim": "The RED/GREEN table records 'identity rewriting of a patch' (TestWithStoreAgnosticIdentity) as written with the code, never observed RED, and several 'claim and pairing' tests as passing before the change. The log states the exceptions openly, but the rule 'RED per rule of S6 (b)-(e)' in the task line is only partly met for those rows. The evidence is weaker than the table's heading suggests.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:513-514"
+        ]
+      }
+    ],
+    "evidence": [
+      "The only changed path is the odd/tasks feature document; no code, spec or script is altered in this commit, so there is no runtime regression surface.",
+      "The diff changes the T6 line (appends commit hashes and L63 reference, leaves the task unticked) and appends L63. The unticked state matches the stated claim.",
+      "L63 describes, as the facts of earlier commits, behaviors I cannot verify from this diff; I report only on the document text itself."
+    ]
+  }
+}

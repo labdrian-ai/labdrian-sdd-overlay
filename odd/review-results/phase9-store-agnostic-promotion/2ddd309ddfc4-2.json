@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "65046a3bd0b6603a60a2f960758a3b22ed9ca90c",
+    "head": "2ddd309ddfc47756c2607f919d71992521ceba97",
+    "diff_sha256": "1dd6fa078b3f340ac795e2a4ebf5c2211e3d9abaafbd50a049f36ccd5823e1d2",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "65046a3bd0b6603a60a2f960758a3b22ed9ca90c",
+      "head": "2ddd309ddfc47756c2607f919d71992521ceba97",
+      "diff_sha256": "1dd6fa078b3f340ac795e2a4ebf5c2211e3d9abaafbd50a049f36ccd5823e1d2"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:654",
+        "claim": "The commit edits L66's open item (d) by appending a '(Corrected in L67: ...)' pointer. L67 says it corrects that item 'which L66 itself is not edited for' and that L66 is 'left as it was'. Both statements are contradicted by the diff, so a reader of the Log gets a wrong account of what was changed. The wording also hides that the pointer is the only edit to L66.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:654",
+          "odd/tasks/phase9-store-agnostic-promotion.md:660"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only the docs file odd/tasks/phase9-store-agnostic-promotion.md.",
+      "The rewritten T6 task line is consistent with L67's hash correction: L62 9901b966, L63 a64ade84, L64 f0f7880e, L65 7ad5a1fd, L66 f64077ef.",
+      "The L66 open item (d) line is edited in place, which conflicts with L67's statement that L66 is not edited."
+    ]
+  }
+}

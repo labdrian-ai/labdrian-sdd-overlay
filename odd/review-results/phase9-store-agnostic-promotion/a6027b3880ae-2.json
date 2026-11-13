@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "0c02469d055f28047e79b680575b7cd411f9d4ed",
+    "head": "a6027b3880ae5b02960caf790f6fd757190bd762",
+    "diff_sha256": "762cee1d459da94cb70d4311d30ee788d755bc62b51948bec08ecd0ee2faff01",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/migrate_card_pages_scan_test.go",
+      "longterm-mem/internal/promote/migrate_cards.go",
+      "longterm-mem/internal/promote/migrate_cards_unreadable_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "0c02469d055f28047e79b680575b7cd411f9d4ed",
+      "head": "a6027b3880ae5b02960caf790f6fd757190bd762",
+      "diff_sha256": "762cee1d459da94cb70d4311d30ee788d755bc62b51948bec08ecd0ee2faff01"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/migrate_card_pages_scan_test.go",
+        "longterm-mem/internal/promote/migrate_cards.go",
+        "longterm-mem/internal/promote/migrate_cards_unreadable_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The new guard runs after the stopped-run block has chosen newBlock, so a page recorded by a stopped run is checked too.",
+      "The guard sits before g.claimed[moved.MemoryID] is set, so a refused page does not claim its memory.",
+      "The guard refuses with `continue` before any entry or page write, which matches the stated behavior.",
+      "The refusal reason contains 'read the rewritten page differently', which is the string both new tests assert.",
+      "I found no recall or readability defect that this change introduces. I could only see the diff, so I could not check that newBlock + body is exactly what gets written, or that shapeOf agrees with frontmatterBlock."
+    ]
+  }
+}

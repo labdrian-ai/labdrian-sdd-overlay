@@ -1,0 +1,15 @@
+{
+  "kind": "sweeper",
+  "base": "0d384e229301983f697a511f9139af6a874401b3",
+  "head": "9f40b3944465e73e313a372588ac2b5c74e2e959",
+  "diff_sha256": "f1ebdcb87d8f665fede23aa3f09682adc97c1f745e9f5e16b2513c8d1b11236d",
+  "sweep": "9f40b3944465-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 name: TestMigrateCardPages_ACrlfPageAndASubdirectoryPageAreNotSeen",
+      "disposition": "live",
+      "evidence": "Replaced on purpose by AnUnreadablePageIsRefusedByNameAndASubdirectoryPageIsNotSeen (decision D-b, L66: CRLF legacy pages are refused, no longer unseen); the only hit is the recorded polisher review 1ed8ff9505ef-5.polisher.json, which is immutable history."
+    }
+  ]
+}

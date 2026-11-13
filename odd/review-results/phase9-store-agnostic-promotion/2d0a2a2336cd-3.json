@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "67b95a4edffe88b497724ec9fed0f5f985ebeacd",
+    "head": "2d0a2a2336cda0cc9eddf59c1bb2d70662d2529d",
+    "diff_sha256": "580f15ea4130f74e04dbafa744d44905533cb8497711bbbb3bf7a12fa156f6b7",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go",
+      "longterm-mem/cmd/longterm-mem/main.go",
+      "longterm-mem/cmd/longterm-mem/migrate_card_pages_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "67b95a4edffe88b497724ec9fed0f5f985ebeacd",
+      "head": "2d0a2a2336cda0cc9eddf59c1bb2d70662d2529d",
+      "diff_sha256": "580f15ea4130f74e04dbafa744d44905533cb8497711bbbb3bf7a12fa156f6b7"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go",
+        "longterm-mem/cmd/longterm-mem/main.go",
+        "longterm-mem/cmd/longterm-mem/migrate_card_pages_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "cmd_migrate_card_pages.go:31-33 sets readOnly := !*apply and passes it to project and vault resolution, so the dry run does not touch the registry, as the commit claims.",
+      "vaultBackup.BackUp (lines 111-140) creates the timestamped directory with os.Mkdir, so an existing directory is an error rather than a merge. It copies the sidecar, skipping it only when it does not exist, and then every page to be rewritten, before promote.MigrateCardPages writes anything. promote.MigrateCardPages is outside the diff, so I could not check that it calls BackUp before its first write.",
+      "reportMigration returns exit 6 whenever any page is refused, names each refusal on stderr, and prints the summary counts, matching the claimed behavior. The dry run prints 'nothing was written'.",
+      "The tests exercise the dry run, apply, refusals, second run, backup, unreadable page, sync, promote and doctor paths. I found no defect introduced by the diff itself."
+    ]
+  }
+}

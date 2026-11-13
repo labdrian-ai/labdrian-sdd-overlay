@@ -17,7 +17,7 @@ longterm-mem: sync: promote: sync memorycard: memory 1: promote: promoted page c
 {
   "c-000901": {
     "body_hash": "5c60c878f8c66023f51766c5c2847417b950a46e8ff6a35dfac35f488e9513d1",
-    "frontmatter_hash": "a77e89a1e40fd811766e33bf50a248a73532faaecd28ca87941e9dc4a97d584f"
+    "frontmatter_hash": "552d75294ff97c385e7a97e02e2104b8ede6bf7e01faa54ad5b16575a3590baf"
   }
 }
 === .raw/.manifest.json (-rw-------) ===
@@ -87,9 +87,10 @@ tags:
 status: developing
 related: []
 sources: []
-memorycard_id: 2
-memorycard_type: decision
-memorycard_revision: 1
+source: memorycard
+source_id: 2
+source_type: decision
+source_revision: 1
 project: golden-project
 ---
 # Curated Note

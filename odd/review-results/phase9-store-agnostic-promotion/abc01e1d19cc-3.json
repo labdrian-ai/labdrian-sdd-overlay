@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "5764ab28b242dc1f2d5d3c153da09d48f39167e4",
+    "head": "abc01e1d19cc9324e6721261cb27ab302763549e",
+    "diff_sha256": "f2bc531c82e05a37db337b65b2e2ffa22ad6c6aef90e041798aa3353dd643f7d",
+    "paths": [
+      "longterm-mem/README.md",
+      "longterm-mem/docs/promote-from-memorycard.md",
+      "openspec/specs/longterm-mem-promotion/spec.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "5764ab28b242dc1f2d5d3c153da09d48f39167e4",
+      "head": "abc01e1d19cc9324e6721261cb27ab302763549e",
+      "diff_sha256": "f2bc531c82e05a37db337b65b2e2ffa22ad6c6aef90e041798aa3353dd643f7d"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/README.md",
+        "longterm-mem/docs/promote-from-memorycard.md",
+        "openspec/specs/longterm-mem-promotion/spec.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The change touches documentation and a spec paragraph only, with no executable code, so it cannot cause a runtime regression.",
+      "The README and the guide give the same pgrep check before --apply and the same restore note. The old advice to read sync-trigger.log was replaced by an actionable check.",
+      "The spec now says a status patch changes only status and related, and the guide says the same. The diff cannot show whether the code matches, so the claims about code behaviour (status patch, CRLF pages and subdirectories, file modes in the backup) could not be checked and no defect is reported."
+    ]
+  }
+}

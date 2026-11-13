@@ -1,0 +1,47 @@
+{
+  "kind": "polisher",
+  "base": "4d50802546be25a66b93b2723f0276a279ad9518",
+  "head": "b4b63a2ec9664bf822a20ee78bc2437da4da84b7",
+  "diff_sha256": "c976f5fa4c89e1c69d9ec28cbe2058c71f0cc2ed4a404729de7da6f833998d9b",
+  "findings": {
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/promote/migrate_cards.go:226-230 (against address.go:81-88 and store.go:51-57)",
+        "summary": "shapeOf finds the closing rule with the line-anchored \"\\n---\\n\". Every other longterm-mem reader, including PrecedenceEntry.MatchesPage and the page index, uses frontmatterBlock, which cuts at the first \"---\\n\" anywhere. The migration and MatchesPage can therefore disagree on the block and the body offset for a page whose frontmatter has a line ending in \"---\" (for example `note: a---` or a `----` line). Such a page is migrated with a block and body split that MatchesPage does not share. Afterwards it can read as hand-edited.",
+        "evidence": [
+          "shapeOf returns raw[:3+i+5], where i comes from strings.Index(raw[3:], \"\\n---\\n\"). It requires the closing rule to start a line.",
+          "frontmatterBlock does strings.SplitN(raw, \"---\\n\", 3), so the first \"---\\n\" ends the block even in mid-line (`x---\\n` or `----\\n`).",
+          "For a page whose frontmatter has a line ending in \"---\", frontmatterBlock returns the short block and shapeOf returns the long one.",
+          "In MigrateCardPages the entry check `entry.MatchesPage(page.raw)` uses the short split. But body := page.raw[len(page.block):] and updated.FrontmatterHash = hashText(newBlock) use the long split, and entry.BodyHash is unchanged.",
+          "Reasoning, not run: after the rewrite, MatchesPage compares the entry's FrontmatterHash with the short block of the new page and its BodyHash with the remainder after that block. Both no longer match, so the page looks edited.",
+          "A page that is not tracked as matching takes the default branch. There entry.BodyHash != hashText(body) gives a RefusedEdited refusal, which is safe.",
+          "I could not diff against the base commit (read-only, no git tool), so I cannot say whether the base had this mismatch. Causality is unknown. The spec text, 'a closing \\n---\\n', matches shapeOf, so the divergence may sit in the shared helper."
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/migrate_cards.go:240",
+        "summary": "The opening line `--- ` (trailing spaces or a tab) is classified as no frontmatter. Only leading whitespace and a trailing \\r are stripped. The rule text says spaces are stripped, so a reader could take this to cover trailing spaces. The closing detection at line 245 is also an exact `line == \"---\"` match, so an indented or trailing-space closing rule is not recognised, and the scan runs on to the end of the page.",
+        "evidence": [
+          "Line 240 is `strings.TrimLeft(lines[first], \" \\t\") != \"---\"`, so there is no right trim.",
+          "Line 245 is `if line == \"---\"`, an exact match.",
+          "Other readers also treat `--- ` as no frontmatter, so the effect is limited to a possible miscount of legacy pages (unverified against the readers).",
+          "I could not tell from the spec text whether this is intended."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read in full: longterm-mem/internal/promote/migrate_cards.go and longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go.",
+      "Read: frontmatterBlock (address.go), MatchesPage (store.go) and parseFrontmatterFields (lint.go).",
+      "Listed test function names in migrate_cards_unreadable_test.go and migrate_card_pages_scan_test.go. I did not read the test bodies, so I did not confirm that each rule is pinned through the public interface.",
+      "Readable path: for an empty block (`---\\n---\\n`), strings.Index returns 0 and the block is raw[:8]. The body is raw[len(block):] and the write is newBlock+body, so the bytes are preserved. No offset error found in the shapeOf path itself.",
+      "Note printing: the failure path prints it once before a.refuse and returns. The success path prints once after the counts and before the 'nothing was written' line. I found no double print.",
+      "No-frontmatter pages return shapeNone and are skipped before any scan, so they cannot block a run.",
+      "Unreadable legacy pages are counted and refused by name, with no write path. Apply writes only planned pages, after a backup, with the entry persisted before the page.",
+      "I did not run any tests or commands. The review was read-only, with no shell."
+    ]
+  }
+}

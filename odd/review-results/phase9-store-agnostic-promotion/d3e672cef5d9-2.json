@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "bcd942c89a9f066d4d1bcde3e08fc9a3d221fd59",
+    "head": "d3e672cef5d9ba0fc94d4293f936ec36e3e852a2",
+    "diff_sha256": "ceeb6ec40ea292d66aad4382d99b41010e5fd51052621dd17d2123c4c4e35819",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "bcd942c89a9f066d4d1bcde3e08fc9a3d221fd59",
+      "head": "d3e672cef5d9ba0fc94d4293f936ec36e3e852a2",
+      "diff_sha256": "ceeb6ec40ea292d66aad4382d99b41010e5fd51052621dd17d2123c4c4e35819"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:46",
+        "claim": "S6 (c) now carries two inconsistent rules for the same case. The L66 parenthetical still says a page with a legacy key whose frontmatter has no closing --- is refused by name, while the L68/D-c sentence says a page not opening with --- is ignored and never scanned. The reader has to reconcile 'narrows the first part' by inference. The L66 parenthetical also still says 'CRLF or no closing ---' as the full cause list, while L68 names BOM, blank line and spaces as causes too.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:46"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:693",
+        "claim": "L68 says the coordinator 'left open' a choice, but the entry names no owner or follow-up, and its rule (a page with a legacy key before its first --- and two rules is ignored) is not in the S6 (c) note. Such a page would stay unmigrated and silently invisible to the migration, with no refusal count. The only trace of this choice is in the Log, so a reader of S6 (c) alone would not find it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:46"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:703",
+        "claim": "The RED table row for 'a key before the first rule, a valid block with keys in the body' reads 'pins, passed before the change', which is not a RED line. The 'Test text was changed first' claim therefore covers only part of the rows. The table also mixes the observed RED strings of two different tests in one cell, which is hard to read.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:703"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only one doc file changed; read the diff's S6 (c), T6 task line and L68 additions.",
+      "Compared the L66 parenthetical retained in S6 (c) against the new D-c sentence appended after it.",
+      "Could not verify the claimed commit hashes or test results; no tools."
+    ]
+  }
+}

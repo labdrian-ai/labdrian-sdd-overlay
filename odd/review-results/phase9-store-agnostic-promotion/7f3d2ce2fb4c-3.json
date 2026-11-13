@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "e97bdfc7a49033c5fbc40207caa3d0942de15efc",
+    "head": "7f3d2ce2fb4ce05aa4d009484e90c2df0c870aa9",
+    "diff_sha256": "865392e6eb21b10f0cac35beb4e7867669b6fac4e14c956a36b1808e5c90d854",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "e97bdfc7a49033c5fbc40207caa3d0942de15efc",
+      "head": "7f3d2ce2fb4ce05aa4d009484e90c2df0c870aa9",
+      "diff_sha256": "865392e6eb21b10f0cac35beb4e7867669b6fac4e14c956a36b1808e5c90d854"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:121",
+        "claim": "The T6 line says 'the last independent verification covered batch 8 at 6c59570b (DE1-DE7)', but the same line and its L69-L71 references attribute DE1-DE7 to the recheck at 6c59570b reported in L71 (the batch 9 entry) and the preceding sentence lists 'DD1-DD8 at 0d53815b (L70)'. Batch labelling (batch 8 vs L71/batch 9 numbering) is slightly inconsistent, so a reader cannot tell cleanly which batch the last verification covers.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:121"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:780",
+        "claim": "L73 names itself as 'the docs(odd) commit that follows e97bdfc7' with no hash and no later hash-writing commit, so the Log and the T6 line cannot be resolved to a commit by hash, unlike L62-L72 mostly, which received hashes (L72 was resolved to a050d4a0 in this same change, showing the record is rewritten after the fact). Traceability of L73 depends on a positional description.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:121",
+          "odd/tasks/phase9-store-agnostic-promotion.md:784"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:780",
+        "claim": "L73 states the claim 'none of batches 9-11 is unverified debt' and that gofmt/vet/test results at e97bdfc7 are all green, but nothing in a docs-only diff can evidence this; the claim is self-reported only. Also, L73 says L72's text is not edited while the T6 line was edited to replace L72's 'batch 10 is not yet verified independently', leaving two entries that state different verification wording.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:121",
+          "odd/tasks/phase9-store-agnostic-promotion.md:782"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only one changed path, a markdown feature document; no code or behavior is changed, so no regression is possible.",
+      "T6 line edit appends batch 11 and the L72 hash a050d4a0, and replaces the 'batch 10 is not yet verified independently' sentence with the Risk-none wording; consistent with L73 text.",
+      "Findings are documentation-consistency only, hence SUGGESTION."
+    ]
+  }
+}

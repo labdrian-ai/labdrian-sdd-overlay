@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "2c0b96b8b41ea5aca1594b332eac7dcbfe6a55ec",
+    "head": "a64ade849d85aa80fb3b993ea13fecd489f41088",
+    "diff_sha256": "3ae7e227836521a25dd8b5788aed844ea777a5fb2cacf32d377657213f056290",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "2c0b96b8b41ea5aca1594b332eac7dcbfe6a55ec",
+      "head": "a64ade849d85aa80fb3b993ea13fecd489f41088",
+      "diff_sha256": "3ae7e227836521a25dd8b5788aed844ea777a5fb2cacf32d377657213f056290"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The commit changes one documentation file: it edits the T6 commit list and appends L63. No code is touched.",
+      "The T6 commit list matches the five commits L63 names (b52d71a2, 3a7a9fc6, 886c5448, 82835583, 2c0b96b8) and the 9901b966 commit that L62 refers to.",
+      "L63 corrects L62's 'four commits' to five and leaves L62 unedited. T6 stays unticked, and the open items the task line cites (L62) still hold.",
+      "The test names and case counts in the 'every id answered' list agree with the RED/GREEN table. Rows whose RED was not observed say so in the table or in the note below it.",
+      "I did not check the claims about test results, the 32 passing packages or the script runs. The diff alone cannot confirm them and they do not contradict each other."
+    ]
+  }
+}

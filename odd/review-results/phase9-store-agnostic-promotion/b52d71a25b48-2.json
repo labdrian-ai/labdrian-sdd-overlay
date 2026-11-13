@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "9901b966616968a6f3cda27c552dbcdd14f29a16",
+    "head": "b52d71a25b48d523817a209db9e04cab96af3e72",
+    "diff_sha256": "b8b7a56f6c8483f432eb6495fa908be823dd40232edea7f91b2f68588a479715",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/page_keys_test.go",
+      "longterm-mem/internal/promote/frontmatter.go",
+      "longterm-mem/internal/promote/migrate_cards.go",
+      "longterm-mem/internal/promote/migrate_cards_identity_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "9901b966616968a6f3cda27c552dbcdd14f29a16",
+      "head": "b52d71a25b48d523817a209db9e04cab96af3e72",
+      "diff_sha256": "b8b7a56f6c8483f432eb6495fa908be823dd40232edea7f91b2f68588a479715"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/page_keys_test.go",
+        "longterm-mem/internal/promote/frontmatter.go",
+        "longterm-mem/internal/promote/migrate_cards.go",
+        "longterm-mem/internal/promote/migrate_cards_identity_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/frontmatter.go:50-51",
+        "claim": "The patchedFrontmatter doc comment appends the new sentence to the end of an existing line, producing a line far longer than the wrapped comment around it. The comment is hard to read and breaks the file's wrapping convention.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/frontmatter.go:50"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff shows the four changed paths. withStoreAgnosticIdentity leaves store-agnostic pages, Engram pages, non-numeric ids and non-simple identity lines unchanged, which the new unit test cases pin.",
+      "I found no change-caused behavioral defect from the diff alone: the status patch rewrites legacy pages in the same write, and both new tests check the page and the sidecar hash afterwards."
+    ]
+  }
+}

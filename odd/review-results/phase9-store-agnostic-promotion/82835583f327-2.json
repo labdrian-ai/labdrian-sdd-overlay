@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "886c54489ba44b70f4eef0163b0ba9507f934418",
+    "head": "82835583f3271309190697a086ccdd2a7bc60a0e",
+    "diff_sha256": "2b88cfd8dd4e7eb55ea49446dda373f3544869236dd5d6f80e3e89432425542e",
+    "paths": [
+      "longterm-mem/README.md",
+      "longterm-mem/docs/promote-from-memorycard.md",
+      "openspec/specs/longterm-mem-promotion/spec.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "886c54489ba44b70f4eef0163b0ba9507f934418",
+      "head": "82835583f3271309190697a086ccdd2a7bc60a0e",
+      "diff_sha256": "2b88cfd8dd4e7eb55ea49446dda373f3544869236dd5d6f80e3e89432425542e"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/README.md",
+        "longterm-mem/docs/promote-from-memorycard.md",
+        "openspec/specs/longterm-mem-promotion/spec.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/docs/promote-from-memorycard.md:122-130",
+        "claim": "The new prose repeats the refusal kinds already added to the table just above (legacy key naming no memory, indented or multi-line identity keys, memorycard_id naming a missing memory). Two copies of the same rules can drift apart; the paragraph could point to the table instead.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/docs/promote-from-memorycard.md:111-113",
+          "longterm-mem/docs/promote-from-memorycard.md:122-130"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/docs/promote-from-memorycard.md:142-144",
+        "claim": "The guide tells the owner to look at the sync-trigger log for a sync still running, but gives no way to tell from the log that a sync is in progress. The advice is hard to act on, and the README's shorter 'stop the hook-driven sync' wording suggests a switch that the guide says does not exist.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/README.md:92",
+          "longterm-mem/docs/promote-from-memorycard.md:140-144"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only documentation and one spec sentence; the reordered key list is the same in README, guide and R-027.",
+      "The README row says to 'Stop the hook-driven sync', while the guide says the hook-driven sync has no switch and tells the owner to close agent sessions. The two instructions are worded differently.",
+      "I could not check the described behaviour (the order the writer emits keys, precedence-entry saving order, backup naming) against code, because the diff is the only thing visible to me."
+    ]
+  }
+}

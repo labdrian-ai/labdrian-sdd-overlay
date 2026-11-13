@@ -1,0 +1,41 @@
+{
+  "kind": "polisher",
+  "base": "0c02469d055f28047e79b680575b7cd411f9d4ed",
+  "head": "a6027b3880ae5b02960caf790f6fd757190bd762",
+  "diff_sha256": "762cee1d459da94cb70d4311d30ee788d755bc62b51948bec08ecd0ee2faff01",
+  "findings": {
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/migrate_cards_unreadable_test.go:131-156",
+        "summary": "The test comment says a stopped (recordedRewrite) page is refused too, but no test exercises that path. The test also never checks that a refused page is left out of the backup.",
+        "evidence": [
+          "The guard at migrate_cards.go:393 runs after the switch that sets newBlock = stopped at line 388, so the recovery path is covered by the code.",
+          "The only new unit test, TestMigrateCardPages_AMemoryTypeEndingInRulesMakesARefusalAndNoWrite, uses a plain legacy page with a stored entry that matches it. No half-migrated page is built.",
+          "That test checks that the page bytes and its precedence entry are unchanged. It does not assert on m.backup.calls or on the backup contents for the refused page.",
+          "In the code a refused page never reaches plan, so the backup cannot include it. This is a gap in test pinning, not a defect."
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/migrate_cards.go:394",
+        "summary": "The refusal uses the generic kind RefusedOther. It is identified by its reason text, and the command-line test matches that text as a substring. The text names the memory's type or revision, but only the type can currently trigger it.",
+        "evidence": [
+          "rewrittenIdentity (lines 579-603) writes source as the constant memorycardSource, source_id as FormatInt(memoryID), and revision from m.revision. All are numeric or constant except kind.",
+          "Only the memory type (kind) can currently end the block early, so the 'or revision' wording in the reason is slightly misleading. It is harmless.",
+          "The refusal is appended to report.Refused, and the command-line test sees `refused c-000901:` in stderr with exit exitRegistrationConflict. It is counted and named."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read migrate_cards.go lines 205-462 and 579-640 in the worktree. These cover shapeOf, MigrateCardPages, recordedRewrite, rewrittenIdentity and applyMigration.",
+      "The guard at line 393 runs in the single planning loop, after both the matching-entry case and the recordedRewrite case. Dry-run and --apply share that loop, so one check covers both. Refused pages never enter plan, which is all applyMigration backs up and writes.",
+      "The check is shapeOf(newBlock+body) == newBlock with shapeReadable. shapeOf calls frontmatterBlock and requires it to equal the first \\n---\\n split. Any identity value that ended the block early would be caught.",
+      "frontmatterBlock in address.go (lines 81-88) is unchanged. I did not diff the commit, so that the commit leaves MatchesPage unchanged is not confirmed.",
+      "Read the new unit test (migrate_cards_unreadable_test.go:134) and the command-line test (migrate_card_pages_scan_test.go:123). Both go through the public entry points, MigrateCardPages and runMigrate --apply.",
+      "Not run: the Go tests and any mutation or differential checks. Docs changes were not checked."
+    ]
+  }
+}

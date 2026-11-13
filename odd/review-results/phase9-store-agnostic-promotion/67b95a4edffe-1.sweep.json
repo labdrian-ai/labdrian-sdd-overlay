@@ -1,0 +1,38 @@
+{
+  "kind": "sweep",
+  "base": "c303b6f79b14097f1ebc533f3524fb4d37834052",
+  "head": "67b95a4edffe88b497724ec9fed0f5f985ebeacd",
+  "diff_sha256": "3af8b355cc50dd916653056bcd1ef697c4b6a10b668d3d3875f1e355409025fa",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": []
+  },
+  "t2": [
+    {
+      "tool": "deadcode",
+      "module": "longterm-mem",
+      "new": [
+        "internal/promote/migrate_cards.go: unreachable func: CardMigrationReport.RefusalCounts",
+        "internal/promote/migrate_cards.go: unreachable func: MigrateCardPages",
+        "internal/promote/migrate_cards.go: unreachable func: RefusalKind.String",
+        "internal/promote/migrate_cards.go: unreachable func: applyMigration",
+        "internal/promote/migrate_cards.go: unreachable func: candidatePages",
+        "internal/promote/migrate_cards.go: unreachable func: carriesLegacyKeys",
+        "internal/promote/migrate_cards.go: unreachable func: mapPage"
+      ]
+    },
+    {
+      "tool": "nilerr",
+      "module": "longterm-mem",
+      "new": [
+        "longterm-mem/internal/promote/migrate_cards.go: error is not nil but it returns nil"
+      ]
+    }
+  ],
+  "t3": [],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

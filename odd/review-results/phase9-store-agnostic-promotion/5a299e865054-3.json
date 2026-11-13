@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "2bcd69287edd57d2fd6ef956f53f7c211f9fe577",
+    "head": "5a299e86505480d0f1ed09edb4f6b360ebaec496",
+    "diff_sha256": "eac626eb499f8d8325cdc79c30e189afc8bd9dd43b0dcd0e75271f4f67f38efa",
+    "paths": [
+      "longterm-mem/docs/promote-from-memorycard.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "2bcd69287edd57d2fd6ef956f53f7c211f9fe577",
+      "head": "5a299e86505480d0f1ed09edb4f6b360ebaec496",
+      "diff_sha256": "eac626eb499f8d8325cdc79c30e189afc8bd9dd43b0dcd0e75271f4f67f38efa"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/docs/promote-from-memorycard.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/docs/promote-from-memorycard.md:132",
+        "claim": "The new text says an unreadable page with a legacy key is never 'backed up', but an adjacent unchanged bullet still says an unreadable legacy page is 'counted and refused by name, never skipped'. The two outcomes are now stated twice with different wording, and the claim about backups cannot be checked from this diff. A docs-only inconsistency risk, not a proven defect.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "longterm-mem/docs/promote-from-memorycard.md:132",
+          "longterm-mem/docs/promote-from-memorycard.md:135"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only one documentation file, with no code change.",
+      "The commit message claims behavior matches shapeOf and legacyPagesOf; I cannot verify that without the code.",
+      "The new (a)/(b) split is consistent with the unchanged bullet that says a page which does not open with --- is ignored."
+    ]
+  }
+}

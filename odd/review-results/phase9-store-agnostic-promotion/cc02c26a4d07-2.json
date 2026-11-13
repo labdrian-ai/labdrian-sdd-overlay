@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "2d0a2a2336cda0cc9eddf59c1bb2d70662d2529d",
+    "head": "cc02c26a4d07434da0a1945ca02d01869729b482",
+    "diff_sha256": "19f769b6d2bae172865daff0fe65543eacc871addbf582392ff09226f070501c",
+    "paths": [
+      "longterm-mem/README.md",
+      "longterm-mem/docs/promote-from-memorycard.md",
+      "longterm-mem/docs/sync-from-memorycard.md",
+      "openspec/specs/longterm-mem-promotion/spec.md",
+      "scripts/rehearse-card-page-migration.sh"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "2d0a2a2336cda0cc9eddf59c1bb2d70662d2529d",
+      "head": "cc02c26a4d07434da0a1945ca02d01869729b482",
+      "diff_sha256": "19f769b6d2bae172865daff0fe65543eacc871addbf582392ff09226f070501c"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/README.md",
+        "longterm-mem/docs/promote-from-memorycard.md",
+        "longterm-mem/docs/sync-from-memorycard.md",
+        "openspec/specs/longterm-mem-promotion/spec.md",
+        "scripts/rehearse-card-page-migration.sh"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/docs/promote-from-memorycard.md:26-34",
+        "claim": "The guide says the keys are written 'in this order' and lists source, source_id, source_type, source_revision. The promotion spec and the README give the order source, source_id, source_revision, source_type. The two documents contradict each other on the emitted frontmatter order. A reader checking page output, or a test derived from the doc, will follow the wrong order.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/docs/promote-from-memorycard.md:31-34",
+          "openspec/specs/longterm-mem-promotion/spec.md:137-141",
+          "longterm-mem/README.md:92"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "scripts/rehearse-card-page-migration.sh:56-61",
+        "claim": "The script copies memory.db and then its -wal/-shm files one after another from live databases. If a writer is active between the copies, the snapshot can be inconsistent. The rehearsal could then report counts that do not match the live state. The script also hardcodes /home/labdrian paths and requires ~/.cache to exist.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "scripts/rehearse-card-page-migration.sh:56-61",
+          "scripts/rehearse-card-page-migration.sh:22-23"
+        ]
+      }
+    ],
+    "evidence": [
+      "Compared the key order stated in the promote guide table against the spec requirement text and the README row; they differ in the relative order of source_type and source_revision.",
+      "The remaining doc claims are consistent with each other across the README, both guides and the spec. The script was read only; it was not run."
+    ]
+  }
+}

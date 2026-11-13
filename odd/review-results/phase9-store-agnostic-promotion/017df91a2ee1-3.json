@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "69810a6914a792d601358539cccf7e86cde5ba76",
+    "head": "017df91a2ee11785cfc2072f93346c8c6b27e03e",
+    "diff_sha256": "78e9befe75dc8e2a3bf6e42a701b95ec9b9d2ec87cef84405e050d3a5379ed7e",
+    "paths": [
+      "scripts/rehearse-card-page-migration.sh"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "69810a6914a792d601358539cccf7e86cde5ba76",
+      "head": "017df91a2ee11785cfc2072f93346c8c6b27e03e",
+      "diff_sha256": "78e9befe75dc8e2a3bf6e42a701b95ec9b9d2ec87cef84405e050d3a5379ed7e"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "scripts/rehearse-card-page-migration.sh"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Both perl readers now print ABORT to stderr and exit 2 when wiki/memory cannot be opened (hunks at lines 89 and 118).",
+      "The script checks the copied vault has a readable wiki/memory right after cp -a (line 143), before any count.",
+      "The project list is read through a plain command substitution (lines 188-190), so a failing projects_of is no longer hidden by process substitution. An empty list still reaches the existing 'no page names a project' die.",
+      "The pgrep pattern '[l]ongterm-mem.* sync' does not match its own command line, so the self-exclusion claim holds.",
+      "The diff does not show whether callers of legacy_counts check its exit status, or whether the script runs under set -e. I could not establish a defect from this."
+    ]
+  }
+}

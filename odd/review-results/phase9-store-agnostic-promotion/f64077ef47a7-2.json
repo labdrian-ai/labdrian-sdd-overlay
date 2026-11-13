@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "46479c686c8f3c14fb2c6769d155727810c8a8e9",
+    "head": "f64077ef47a72b3ab020b2fb9c97e91fa3045176",
+    "diff_sha256": "142d990cfc1b5f998d0630aa348bc54e46a43c40f03d1419f9da9a71ea6d3cd7",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "46479c686c8f3c14fb2c6769d155727810c8a8e9",
+      "head": "f64077ef47a72b3ab020b2fb9c97e91fa3045176",
+      "diff_sha256": "142d990cfc1b5f998d0630aa348bc54e46a43c40f03d1419f9da9a71ea6d3cd7"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:121",
+        "claim": "The T6 commit list was edited by inserting the batch 4 text into the middle of the existing tail. The line now reads 'plus the correction batch 4 of L66 ... plus the docs(odd) commit that holds L66 and the S6 (c) note; evidence in L62 to L66; plus the docs(odd) commit that holds L65 and the rewritten S6 (b); evidence in L62, L63, L64 and L65'. The L65 docs-commit clause and a second, narrower evidence range are left after the L66 clause. This is out of order, gives two conflicting evidence ranges, and the L65 docs commit is listed after batch 4 although it belongs before it.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:121"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:121",
+        "claim": "The T6 line still ends with 'open at the writing ...: the independent `verifier` (Risk item 1) is the coordinator's, and the task is not ticked (L62)'. L66 now records that the verifier ran at 7ad5a1fd and met S6 (b)-(e). The open note is therefore stale and contradicts L66.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:121",
+          "odd/tasks/phase9-store-agnostic-promotion.md:638"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "WARNING",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:638",
+        "claim": "Open item (d) says 'The verifier of Risk item 1 ran at `7ad5a1fd`; batch 3 and batch 4 changes since then were not re-verified'. The same entry says 7ad5a1fd is L65's docs commit, which closes batch 3, so the verifier already covered batch 3. Only batch 4 is unverified. The claim overstates what is unverified, and the entry also records a verifier at 7ad5a1fd while naming 0d384e22 as the base it was built on.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:617",
+          "odd/tasks/phase9-store-agnostic-promotion.md:638"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only odd/tasks/phase9-store-agnostic-promotion.md, in S6 (c), the T6 line and the new L66 entry.",
+      "The T6 line in the diff carries two 'evidence in ...' clauses and two docs(odd) commit clauses in inverted order.",
+      "L66's 'Hash mapping' bullet says 7ad5a1fd is L65's docs commit and that batch 4 follows it."
+    ]
+  }
+}

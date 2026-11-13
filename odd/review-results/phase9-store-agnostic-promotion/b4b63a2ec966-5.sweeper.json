@@ -1,0 +1,15 @@
+{
+  "kind": "sweeper",
+  "base": "4d50802546be25a66b93b2723f0276a279ad9518",
+  "head": "b4b63a2ec9664bf822a20ee78bc2437da4da84b7",
+  "diff_sha256": "c976f5fa4c89e1c69d9ec28cbe2058c71f0cc2ed4a404729de7da6f833998d9b",
+  "sweep": "b4b63a2ec966-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 name: unreadableFrontmatter",
+      "disposition": "live",
+      "evidence": "Replaced on purpose by shapeOf (decision D-c, L68: one function now decides readable, unreadable and no-frontmatter); the only hits are recorded reviews of 9f40b394 and d58264ae, which are immutable history."
+    }
+  ]
+}

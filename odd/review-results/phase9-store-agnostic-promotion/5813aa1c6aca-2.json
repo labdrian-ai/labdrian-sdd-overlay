@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "1856f5696e5c973f29e1dbe1d20d8ef8871daacd",
+    "head": "5813aa1c6acae6991e46d8d8bbdd9601d06ee34b",
+    "diff_sha256": "70853bcb31804572466355e6faa93bfb9f3a06438bf282ba012953ec70e58815",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "1856f5696e5c973f29e1dbe1d20d8ef8871daacd",
+      "head": "5813aa1c6acae6991e46d8d8bbdd9601d06ee34b",
+      "diff_sha256": "70853bcb31804572466355e6faa93bfb9f3a06438bf282ba012953ec70e58815"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:121",
+        "claim": "The committed T6 task line holds the literal unresolved token `L69COMMIT` where the hash of this batch's docs(odd) commit should be. A reader or a search for the commit list finds a placeholder, not a hash, until a follow-up commit replaces it. L69 declares this, but the commit list is incomplete as committed, and the token can survive if the follow-up is forgotten.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:121 `L69COMMIT` (docs(odd), L69, with the rewritten reading rules of S6 (c))",
+          "odd/tasks/phase9-store-agnostic-promotion.md:715 L69 says the follow-up commit writes `L69COMMIT`"
+        ]
+      }
+    ],
+    "evidence": [
+      "The change touches only odd/tasks/phase9-store-agnostic-promotion.md and is docs-only.",
+      "The S6 (c) reading rules (i)-(iv) keep the content of the L66 and L68 parentheticals they replace: unreadable-frontmatter refusal, no-frontmatter ignore, and no-project note with no exit code.",
+      "The commit hashes in L69 and in the T6 line agree: f5a3f40d, ab1ac3f2, 1856f569, and d3e672ce for L68.",
+      "The one unresolved item is the `L69COMMIT` placeholder."
+    ]
+  }
+}

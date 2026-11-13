@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "2487d6dcf1c7b1e8d42c59118640305b09ece0c9",
+    "head": "65046a3bd0b6603a60a2f960758a3b22ed9ca90c",
+    "diff_sha256": "944b0e9541949cf6390da97312fa0d4365d9cd9c292ff51d267df075dc686495",
+    "paths": [
+      "scripts/rehearse-card-page-migration.sh"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "2487d6dcf1c7b1e8d42c59118640305b09ece0c9",
+      "head": "65046a3bd0b6603a60a2f960758a3b22ed9ca90c",
+      "diff_sha256": "944b0e9541949cf6390da97312fa0d4365d9cd9c292ff51d267df075dc686495"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "scripts/rehearse-card-page-migration.sh"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "scripts/rehearse-card-page-migration.sh:100",
+        "claim": "The frontmatter regex /---\\n(.*?)---\\n/s is not anchored to line starts. The comment and commit message say it reads the text between the first two `---` lines. This regex also matches a `---` that ends a longer line (e.g. `foo---`) and starts anywhere in the page, even after body text. A page with no real frontmatter, or one whose first line is not `---`, can therefore be classed `R` and have its block cut at the wrong place. The rehearsal could then count or skip legacy keys or projects differently from the command. This holds only if the command anchors to lines; the diff does not show the command's code.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "scripts/rehearse-card-page-migration.sh:100"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "scripts/rehearse-card-page-migration.sh:130",
+        "claim": "projects_of used to take the first `project:` key of each page and stop. It now reads the last `project:` key, because the shared legacy_pages loop overwrites the value. A page with duplicate `project:` keys can therefore list a different project than before. This is consistent with legacy_counts, but it is a silent change in behavior.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "scripts/rehearse-card-page-migration.sh:104-107"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff of the single changed script. The perl slurp, the split into lines and the stdin handoff via <<< handle empty files and empty output correctly. The one real risk is the unanchored frontmatter regex."
+    ]
+  }
+}

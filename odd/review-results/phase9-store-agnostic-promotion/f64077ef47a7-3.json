@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "46479c686c8f3c14fb2c6769d155727810c8a8e9",
+    "head": "f64077ef47a72b3ab020b2fb9c97e91fa3045176",
+    "diff_sha256": "142d990cfc1b5f998d0630aa348bc54e46a43c40f03d1419f9da9a71ea6d3cd7",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "46479c686c8f3c14fb2c6769d155727810c8a8e9",
+      "head": "f64077ef47a72b3ab020b2fb9c97e91fa3045176",
+      "diff_sha256": "142d990cfc1b5f998d0630aa348bc54e46a43c40f03d1419f9da9a71ea6d3cd7"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:121",
+        "claim": "The T6 commit list was edited by inserting the batch 4 segment in the middle of the old tail. The old tail 'plus the docs(odd) commit that holds L65 and the rewritten S6 (b); evidence in L62, L63, L64 and L65;' now appears twice. The first copy is followed by the new 'evidence in L62 to L66' and the second by the old 'evidence in L62, L63, L64 and L65'. The record contradicts itself on which logs are evidence and lists the L65 docs commit twice. The claimed commit-list update did not replace the old tail.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:121"
+        ]
+      }
+    ],
+    "evidence": [
+      "The change touches one markdown file. The T6 line in the diff contains the L65 docs-commit phrase twice, with two different evidence ranges.",
+      "The other additions (L66, the S6 (c) note) are consistent with the commit message and the decisions D-a and D-b."
+    ]
+  }
+}

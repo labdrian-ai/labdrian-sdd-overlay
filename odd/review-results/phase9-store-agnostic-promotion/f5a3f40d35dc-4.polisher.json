@@ -1,0 +1,31 @@
+{
+  "kind": "polisher",
+  "base": "149cb0792bcdb9ece38b6e9b3ac725970e611396",
+  "head": "f5a3f40d35dcc45e4924729aa637ab0cc0a0a118",
+  "diff_sha256": "3413345fb76af1a229514dd6a2ac807faf45b2686ab46bd1d615ba5d1e6bce4d",
+  "findings": {
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/migrate_cards.go:572-596",
+        "summary": "A rewrite could still produce a page that MatchesPage no longer matches, if the memory's type or revision value ends in `---`. The input guard in shapeOf checks only the original block, not the block that rewrittenIdentity builds.",
+        "evidence": [
+          "rewrittenIdentity writes `source_type: <m.Type>` through writeField (frontmatter.go:209, `%s: %s\\n`) with no check on the value.",
+          "If m.Type from memorycard ends in `---`, the new line ends in `---\\n`. frontmatterBlock (address.go:81-87, SplitN on `---\\n`) would then close the block at that line.",
+          "MatchesPage would then see a different frontmatter hash than the one recorded as hashText(newBlock). The page would read as hand-edited on the next run.",
+          "I did not run this and did not check whether memorycard can hold such a type. Pre-existing behavior of the rewrite; this commit did not introduce it. A cheap fix is to re-run the shapeOf agreement check on newBlock+body before planning."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read all of longterm-mem/internal/promote/migrate_cards.go in the worktree. Read frontmatterBlock (address.go:81-88) and writeField (frontmatter.go:209).",
+      "Readable rule in shapeOf: the starts-with `---\\n` check, the `\\n---\\n` index at raw[3:], and equality with frontmatterBlock(raw) over raw[:3+i+5]. I traced `---\\n---\\n`, a `foo---` line, and a missing closing rule by hand. Each ends up classified as the rules intend, and the readable block is byte-identical to the shared reader's.",
+      "Uncounted legacy pages: a page whose first non-blank line is `---` and that is not readable falls into the unreadable scan. That scan trims BOM, blank lines, spaces, tabs and `\\r`, and stops at the first closing rule, ignoring trailing spaces and tabs. I found no `---`-opening page that escapes the legacy-key count.",
+      "Unreadable pages never reach backup or write. legacyPagesOf sets block to \"\" for them. MigrateCardPages refuses them with RefusedUnreadable (lines 348-351) before mapPage and before plan append. applyMigration backs up only the addresses in plan.",
+      "Shared code: shapeOf is only called from legacyPagesOf. I did not run `git diff`, so I did not confirm that address.go and MatchesPage are unchanged. The functions I read looked untouched and are only called, not edited.",
+      "Tests: found test names in internal/promote/migrate_cards_unreadable_test.go, covering the unreadable-by-name, any-first-line, line-ending-in-rule, trailing-spaces and refused-again-on-rerun cases. Also found cmd/longterm-mem/migrate_card_pages_scan_test.go. I did not read the test bodies, so I did not check that they assert on the public interface or pin each rule.",
+      "Not run: go build, go test, or any probe."
+    ]
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "adb17bf797745c26ae1598318e3e24f421ecf26a",
+    "head": "2bcd69287edd57d2fd6ef956f53f7c211f9fe577",
+    "diff_sha256": "b01a514ae13c6aa299c144250d56edd03e9efe870288f49ebc56f8c67ac76b9d",
+    "paths": [
+      "longterm-mem/internal/promote/migrate_cards_unreadable_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "adb17bf797745c26ae1598318e3e24f421ecf26a",
+      "head": "2bcd69287edd57d2fd6ef956f53f7c211f9fe577",
+      "diff_sha256": "b01a514ae13c6aa299c144250d56edd03e9efe870288f49ebc56f8c67ac76b9d"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/promote/migrate_cards_unreadable_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/migrate_cards_unreadable_test.go:165",
+        "claim": "The new comment ends with a bare reference \"(L71)\" that is not defined anywhere in the diff. A reader of this file cannot tell what it points to (a log entry, a line, a spec row). This is a comment-clarity issue only; behaviour is unaffected.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/migrate_cards_unreadable_test.go:165"
+        ]
+      }
+    ],
+    "evidence": [
+      "The only changed file is a test file; the change adds t.Fatalf/t.Fatal guards on the results of frontmatterBlock and Store.Get and rewrites a comment.",
+      "The guards only turn a previously ignored setup failure into an immediate test failure; they cannot make a passing, correctly set up test fail.",
+      "The test's assertions and the production code are untouched, so no regression on previously valid input is introduced.",
+      "The claim of the comment about a scratch-edit mutation cannot be verified from the diff alone."
+    ]
+  }
+}

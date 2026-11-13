@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "5a299e86505480d0f1ed09edb4f6b360ebaec496",
+    "head": "a050d4a0aa933fdedbf94c8ff83f0789bb08ea4b",
+    "diff_sha256": "7fa2243fad9557de914ddf53a48a376ddaa088f282cb0ca351b86e301b7412a5",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "5a299e86505480d0f1ed09edb4f6b360ebaec496",
+      "head": "a050d4a0aa933fdedbf94c8ff83f0789bb08ea4b",
+      "diff_sha256": "7fa2243fad9557de914ddf53a48a376ddaa088f282cb0ca351b86e301b7412a5"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:778",
+        "claim": "L71 recorded that batch 9 had no independent verification, and the old T6 line said 'batch 9 is not yet verified independently'. The new T6 line and L72's Open item (e) replace that with a native review of batch 9 (no code findings) and say only batch 10 is unverified. The native review is not the independent verifier, and no verifier run on batch 9 is recorded, so the open verification debt for batch 9 is silently dropped from the record.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:778",
+          "odd/tasks/phase9-store-agnostic-promotion.md:121"
+        ]
+      }
+    ],
+    "evidence": [
+      "Docs-only diff to one file; the T6 line and L72 were read against each other and against the L71 text visible in the context lines.",
+      "The T6 line maps L71 to 1bc702f0 and adds the batch 10 commits as claimed; L72 names itself as the following docs commit, as the commit message says.",
+      "The other claims in L72 (fixes 5a299e86 and 2bcd6928, check results) cannot be verified from the diff, since the code changes are not part of it."
+    ]
+  }
+}

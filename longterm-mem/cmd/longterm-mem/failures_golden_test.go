@@ -45,9 +45,9 @@ func TestFailuresGolden(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			broken := strings.Replace(string(data), "memorycard_revision: 1", "memorycard_revision: not-a-number", 1)
+			broken := strings.Replace(string(data), "source_revision: 1", "source_revision: not-a-number", 1)
 			if broken == string(data) {
-				t.Fatalf("the page has no memorycard_revision to break:\n%s", data)
+				t.Fatalf("the page has no source_revision to break:\n%s", data)
 			}
 			if err := os.WriteFile(page, []byte(broken), 0o644); err != nil {
 				t.Fatal(err)

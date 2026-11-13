@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "d9e609495cfbee6ec7779248e9999bf8b9dd825d",
+    "head": "23674285ca1d6d1b9338825284c7302a0c968bff",
+    "diff_sha256": "d626af2fed5154e4d33df7b741153908c2368e956bef829020591710998ba81d",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "d9e609495cfbee6ec7779248e9999bf8b9dd825d",
+      "head": "23674285ca1d6d1b9338825284c7302a0c968bff",
+      "diff_sha256": "d626af2fed5154e4d33df7b741153908c2368e956bef829020591710998ba81d"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:796",
+        "claim": "The new sentence says every in-place edit to an earlier entry is listed here (L71 (e), L72 (e), the L73 sentence, the T6 line). The same commit also rewrites, in place, the `e97bdfc7`-2 F2 answer in L74 itself, dropping 'The Log is append-only and never renumbered'. That edit is not listed. The commit message promises that every in-place edit of L74 is listed, so the list is incomplete and this edit is not recorded anywhere.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:795-796"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only the T6 line and two L74 answer bullets in one markdown file, so there is no code risk.",
+      "The F2 bullet's wording change is an in-place edit of L74 and is absent from the enumerated list in the F1 bullet."
+    ]
+  }
+}

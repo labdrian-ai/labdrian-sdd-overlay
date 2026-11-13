@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "886c54489ba44b70f4eef0163b0ba9507f934418",
+    "head": "82835583f3271309190697a086ccdd2a7bc60a0e",
+    "diff_sha256": "2b88cfd8dd4e7eb55ea49446dda373f3544869236dd5d6f80e3e89432425542e",
+    "paths": [
+      "longterm-mem/README.md",
+      "longterm-mem/docs/promote-from-memorycard.md",
+      "openspec/specs/longterm-mem-promotion/spec.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "886c54489ba44b70f4eef0163b0ba9507f934418",
+      "head": "82835583f3271309190697a086ccdd2a7bc60a0e",
+      "diff_sha256": "2b88cfd8dd4e7eb55ea49446dda373f3544869236dd5d6f80e3e89432425542e"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/README.md",
+        "longterm-mem/docs/promote-from-memorycard.md",
+        "openspec/specs/longterm-mem-promotion/spec.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/docs/promote-from-memorycard.md:141-143",
+        "claim": "The guide tells the owner to look at <state>/logs/sync-trigger.log for a sync that is still running. A log file shows past output and does not reliably show an in-flight sync, so the owner may begin --apply while a sync is running, and the doc admits that no lock guards that case. This is a documentation precaution that cannot be verified from the diff.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/docs/promote-from-memorycard.md:141-143"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/docs/promote-from-memorycard.md:131-132",
+        "claim": "The guide says a retry in the same second takes a numbered name `-N`, and that `cp -a <backup>/. <vault>/` restores byte for byte. The restore only overwrites files present in the backup and does not remove pages the run created or renamed. The text promises a return to the pre-migration state without saying so. The claim about numbered names and the cleanup of failed copies cannot be checked from the diff.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/docs/promote-from-memorycard.md:128-134"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/docs/promote-from-memorycard.md:138-140",
+        "claim": "The guide refers to a rehearsal script that reads the project list from the vault and prints a vault-wide count. The diff does not show that the script does this, so the doc may describe behavior the script lacks.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "longterm-mem/docs/promote-from-memorycard.md:138-140"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only documentation and the spec text. The key order source, source_id, source_type, source_revision is consistent across README, guide and spec.",
+      "The new claims about refusal kinds, partial-run recovery, the rehearsal script and the numbered backup directories describe code that this diff does not include, so they cannot be checked here."
+    ]
+  }
+}

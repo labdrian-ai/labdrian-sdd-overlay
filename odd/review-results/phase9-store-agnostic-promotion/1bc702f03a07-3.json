@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "b4309a8d6d35f1d3d9f163bf0928069af6f0cb7d",
+    "head": "1bc702f03a0757adae5e1e69dcd08633fe1bbaa1",
+    "diff_sha256": "ea9cf1659c35bedb369b14b54358c7578b2a6e33f5278f4d8d4ae93f9a327c69",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "b4309a8d6d35f1d3d9f163bf0928069af6f0cb7d",
+      "head": "1bc702f03a0757adae5e1e69dcd08633fe1bbaa1",
+      "diff_sha256": "ea9cf1659c35bedb369b14b54358c7578b2a6e33f5278f4d8d4ae93f9a327c69"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The change touches one documentation file. It rewrites the T6 line and appends the L71 Log entry; no code or behavior changes.",
+      "The T6 line maps L62 to L71 to commits. L69 and L70 give the commits that wrote their hashes. L71 names itself as the docs(odd) commit that follows b4309a8d, which matches the stated decision to have no hash-writing follow-up commit.",
+      "The batch 9 hashes (03cc92ba, b4309a8d), the batch 8 hashes and the verifier records in the T6 line match what L71 says. I found no contradictions within the diff.",
+      "I could not check the claims about the external test runs or the scratch paths from the diff, so I did not flag them."
+    ]
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "kind": "polisher",
+  "base": "f99a4c81e656a2c376c0588921f42afc58371f9b",
+  "head": "693162904268c92462d2ace36df93843fec0569c",
+  "diff_sha256": "af6a0e6d0bb6c3f49630acfa3c7102bf9ff84ff5a5e0cdc4ed9211a6a3b6aae0",
+  "findings": {
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/promote/migrate_cards.go:411",
+        "summary": "A stopped page whose memory has a revision above 10000 is refused as hand-edited, with no sign that the search was capped. The loop starts at min(m.Revision, 10000), so the memory's current revision is never tried. A memory that was not revised since the stopped run therefore also fails, because the revision it recorded is above the cap. The refusal text is the plain 'edited locally' reason, so the cap is invisible to the user.",
+        "evidence": [
+          "viaEngram builds revisions only as 'for revision := min(m.Revision, maxRecordedRevisions); revision >= 0; revision--'.",
+          "With m.Revision = 10500, the recorded revision 10500 is never a candidate in recordedRewrite.",
+          "The refusal path at line 283 says only 'edited locally since longterm-mem last wrote it'.",
+          "migrate_cards_recovery_test.go has no case above 10000 and no test of the cap."
+        ]
+      },
+      {
+        "severity": "SUGGESTION",
+        "id": "F2",
+        "location": "longterm-mem/internal/promote/migrate_cards.go:320-332",
+        "summary": "The recovery search is a brute-force hash over about 3 types x 10002 revisions, roughly 30k string builds and SHA-256 hashes per page that fails MatchesPage. It runs for every hand-edited legacy Engram page, not only for stopped ones. The body-hash check runs first, so pages whose body was edited exit early. Pages with only a frontmatter edit pay the full cost. On a large vault with many such pages this adds up, though it is likely tolerable. Candidates should be generated lazily, or the revision recoverable from the entry should be bounded more tightly. No test covers the cost.",
+        "evidence": [
+          "recordedRewrite calls rewrittenIdentity plus hashText inside a double loop over m.revisions and m.kinds.",
+          "viaEngram fills m.revisions with up to 10001 entries and m.kinds with 3 for every Engram-named page, even when the page matches its entry and the result is never used."
+        ]
+      },
+      {
+        "severity": "SUGGESTION",
+        "id": "F3",
+        "location": "longterm-mem/internal/promote/migrate_cards.go:320-332",
+        "summary": "The recovery adoption path is safe against body and non-identity frontmatter hand edits. An edit confined to the legacy identity lines (for example engram_revision or engram_type) is adopted silently, because rewrittenIdentity discards those lines before the hash comparison. The vault is not git-tracked, but the discarded values are legacy keys that the migration rewrites anyway, and the backup runs first, so this is low risk. The tests cover a body edit only and not a frontmatter edit.",
+        "evidence": [
+          "The test AStoppedPageThatWasEditedMeanwhileIsStillRefused appends a body line only.",
+          "There is no test of an edit to a non-identity frontmatter line, nor of an identity-line-only edit."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read migrate_cards.go lines 154-516: legacyPagesOf, MigrateCardPages, recordedRewrite, mapPage, viaMemorycard, viaEngram, ownership, rewrittenIdentity and the start of applyMigration.",
+      "Read migrate_cards_recovery_test.go lines 13-110, covering stopped-page recovery after the memory was revised and retyped, a stopped page with a body edit, the failed-save message, the page with no project, and the block-scalar key.",
+      "Grepped for maxRecordedRevisions; it appears only at its declaration and in the loop at line 411.",
+      "Did not run the tests."
+    ]
+  }
+}

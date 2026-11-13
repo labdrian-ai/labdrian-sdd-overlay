@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "23674285ca1d6d1b9338825284c7302a0c968bff",
+    "head": "58f83efe2bd93af5d0bf4bf7c2121f43b026d408",
+    "diff_sha256": "1eb6e8c42b5a62915f74e7c0dfd63ab30031e20e88711e43a8ad1e4a691c162a",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "23674285ca1d6d1b9338825284c7302a0c968bff",
+      "head": "58f83efe2bd93af5d0bf4bf7c2121f43b026d408",
+      "diff_sha256": "1eb6e8c42b5a62915f74e7c0dfd63ab30031e20e88711e43a8ad1e4a691c162a"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The change only appends one Log entry (L75) to a documentation file; no earlier text is edited and no code is touched.",
+      "L75 is internally consistent: it lists in-place edits made by 23674285, maps answers to the review findings, and states the append-only rule going forward.",
+      "No recall or readability defect is introduced by the diff: the entry is clearly labelled, structured like prior entries, and does not contradict its own rule."
+    ]
+  }
+}

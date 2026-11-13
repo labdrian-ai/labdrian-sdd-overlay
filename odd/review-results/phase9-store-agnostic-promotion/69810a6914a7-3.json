@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "4887cfb42391cb6ba71c5b2f226262da9c126341",
+    "head": "69810a6914a792d601358539cccf7e86cde5ba76",
+    "diff_sha256": "2464652824450a1c61fc6b853d1a5fb98259b5331fce5655a1aeb202f7328360",
+    "paths": [
+      "longterm-mem/README.md",
+      "longterm-mem/docs/promote-from-memorycard.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "4887cfb42391cb6ba71c5b2f226262da9c126341",
+      "head": "69810a6914a792d601358539cccf7e86cde5ba76",
+      "diff_sha256": "2464652824450a1c61fc6b853d1a5fb98259b5331fce5655a1aeb202f7328360"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/README.md",
+        "longterm-mem/docs/promote-from-memorycard.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The change touches only two documentation files, so no executable behavior changes.",
+      "The README and the guide agree with each other on the pgrep check, the separate reporting of a page with no project, and exit code 6.",
+      "The bracketed pgrep pattern `[l]ongterm-mem.* sync` does not match its own command line, and the guide's wording about it is accurate.",
+      "The guide's other claims (revision search, identity-line edits adopted, other frontmatter edits refused) cannot be checked against the code from the diff alone, and nothing in the diff contradicts them."
+    ]
+  }
+}

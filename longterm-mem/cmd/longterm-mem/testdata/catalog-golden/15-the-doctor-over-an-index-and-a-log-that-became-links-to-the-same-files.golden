@@ -20,7 +20,7 @@ longterm-mem: doctor for golden-project
 {
   "c-000901": {
     "body_hash": "4c302984b209786451aa00b5b0888d97adc0390421234e166ee9d17a31caba15",
-    "frontmatter_hash": "5dc27a47a0e6f6ad025a8895eba900f6ffbfb787dee8b0fdc80f37c7d82f9336"
+    "frontmatter_hash": "a86626e188a2553a272f69173608dc0e23798d5ff9566b33091e2196bc8bc56d"
   }
 }
 === .raw/.manifest.json (-rw-------) ===
@@ -77,9 +77,10 @@ tags:
 status: mature
 related: []
 sources: []
-memorycard_id: 1
-memorycard_type: decision
-memorycard_revision: 1
+source: memorycard
+source_id: 1
+source_type: decision
+source_revision: 1
 project: golden-project
 ---
 # Pinned Decision

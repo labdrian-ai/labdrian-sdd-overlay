@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "d58264aee52f2aad7e654f3055e4a36053d30a33",
+    "head": "2487d6dcf1c7b1e8d42c59118640305b09ece0c9",
+    "diff_sha256": "d20c26d09098f637423e9722b8b9ec2945fcf91149c68cc8a8b64a28f42ecf4e",
+    "paths": [
+      "longterm-mem/README.md",
+      "longterm-mem/docs/promote-from-memorycard.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "d58264aee52f2aad7e654f3055e4a36053d30a33",
+      "head": "2487d6dcf1c7b1e8d42c59118640305b09ece0c9",
+      "diff_sha256": "d20c26d09098f637423e9722b8b9ec2945fcf91149c68cc8a8b64a28f42ecf4e"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/README.md",
+        "longterm-mem/docs/promote-from-memorycard.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/docs/promote-from-memorycard.md:111",
+        "claim": "The table row for unreadable frontmatter now lists 'no two --- lines at all (a leading BOM, blank line or spaces included)' as a cause, but the quoted count label and reason text still say only '(CRLF line endings or no closing ---)'. A reader matching program output against the table gets a label that does not describe the newly documented cases.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/docs/promote-from-memorycard.md:111"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/docs/promote-from-memorycard.md:136-141",
+        "claim": "The paragraph on frontmatter reading is hard to follow: the first sentence says frontmatter is read between two '---' lines, then 'any other page is read whole', with a parenthetical nested inside a long sentence about plain-text pages being refused. It also differs in wording from the README ('no readable frontmatter ... whatever its first line'). Splitting it into short sentences would help.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/docs/promote-from-memorycard.md:136-141",
+          "longterm-mem/README.md:92"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/docs/promote-from-memorycard.md:117-124",
+        "claim": "The note-format sentence was reflowed so that the long literal 'note: N page(s)...' string now sits on one over-long line mid-paragraph, and the new vault-wide-count rule is added after the 'no page is hidden' sentence, mixing the single-project rule with the multi-project rule. 'Top-level line' is also undefined for readers.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/docs/promote-from-memorycard.md:117-124"
+        ]
+      }
+    ],
+    "evidence": [
+      "Diff only touches two docs files; no code was visible, so the doc claims about behavior could not be verified against the implementation.",
+      "The README and guide wording were compared against each other and against the unchanged label strings in the table."
+    ]
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "c303b6f79b14097f1ebc533f3524fb4d37834052",
+    "head": "67b95a4edffe88b497724ec9fed0f5f985ebeacd",
+    "diff_sha256": "3af8b355cc50dd916653056bcd1ef697c4b6a10b668d3d3875f1e355409025fa",
+    "paths": [
+      "longterm-mem/internal/promote/migrate_cards.go",
+      "longterm-mem/internal/promote/migrate_cards_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "c303b6f79b14097f1ebc533f3524fb4d37834052",
+      "head": "67b95a4edffe88b497724ec9fed0f5f985ebeacd",
+      "diff_sha256": "3af8b355cc50dd916653056bcd1ef697c4b6a10b668d3d3875f1e355409025fa"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/promote/migrate_cards.go",
+        "longterm-mem/internal/promote/migrate_cards_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/promote/migrate_cards.go:237",
+        "claim": "The memorycard-identity branch of mapPage never consults `claimed`. The Engram branch refuses a memory already claimed in this run, but a legacy memorycard page naming the same memory is not checked. If an Engram page that maps to memory N is processed first and a memorycard_id: N page comes after it, both are migrated. The result is two pages for one memory, which the RefusedHasOwnPage rule exists to prevent. The outcome depends on page order, and it holds only if index.ownPage does not already count the legacy card page. Two legacy card pages naming the same memory are also both migrated.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/migrate_cards.go:237",
+          "longterm-mem/internal/promote/migrate_cards.go:256"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/migrate_cards_test.go:7",
+        "claim": "The only test covers rewrittenIdentity. MigrateCardPages, mapPage, the refusal kinds, the claimed logic, the backup ordering, a failure part-way through apply and the second-run no-op are all untested. This is the code that rewrites every page and the precedence entries on a vault with no git history to fall back on.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/migrate_cards_test.go:7"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the two added files from the diff alone. The checks in MigrateCardPages, the refusal handling, applyMigration's backup-first ordering, and rewrittenIdentity's line handling are otherwise consistent with the stated spec.",
+      "I could not see readPages, ownPage, identityOf, frontmatterBlock or hashText, so F1 rests on my reading of how mapPage uses them."
+    ]
+  }
+}

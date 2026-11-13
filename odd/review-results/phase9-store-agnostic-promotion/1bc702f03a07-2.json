@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "b4309a8d6d35f1d3d9f163bf0928069af6f0cb7d",
+    "head": "1bc702f03a0757adae5e1e69dcd08633fe1bbaa1",
+    "diff_sha256": "ea9cf1659c35bedb369b14b54358c7578b2a6e33f5278f4d8d4ae93f9a327c69",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "b4309a8d6d35f1d3d9f163bf0928069af6f0cb7d",
+      "head": "1bc702f03a0757adae5e1e69dcd08633fe1bbaa1",
+      "diff_sha256": "ea9cf1659c35bedb369b14b54358c7578b2a6e33f5278f4d8d4ae93f9a327c69"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The commit changes only the T6 line and appends Log entry L71 in odd/tasks/phase9-store-agnostic-promotion.md.",
+      "The T6 line now maps L62-L71 to their holding commits. L69 and L70 give their hash-writing commits (0d53815b, 6c59570b). L71 is defined as the docs(odd) commit that follows b4309a8d, with no later hash-writing commit. This matches the L71 decision text and the commit claim.",
+      "The batch 9 commits named in the T6 line (03cc92ba, b4309a8d) agree with the answers recorded in L71.",
+      "The batch 8 and batch 9 verification statuses and the open items are consistent between the T6 line and L71.",
+      "I found no contradiction between the recorded test and check claims and the stated scope: tests, wording and docs only."
+    ]
+  }
+}

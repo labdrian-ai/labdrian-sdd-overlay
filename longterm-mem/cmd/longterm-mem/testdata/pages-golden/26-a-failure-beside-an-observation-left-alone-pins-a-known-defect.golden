@@ -20,7 +20,7 @@ longterm-mem: sync: warning: 1 memory(ies) left alone, nothing was written for t
 {
   "c-000500.md": {
     "body_hash": "4c302984b209786451aa00b5b0888d97adc0390421234e166ee9d17a31caba15",
-    "frontmatter_hash": "dd4d017591b13482ca7e5fe000e8aea333b6ac1c712ce447a7a9cef3bae60ade"
+    "frontmatter_hash": "86148adbf70c63ac3597d1b5476eae8c9d00231a60f7cb14fe702aa7012f88f7"
   }
 }
 === .vault-meta/ (directory -rwxr-xr-x) ===
@@ -79,9 +79,10 @@ tags:
 status: mature
 related: []
 sources: []
-memorycard_id: 1
-memorycard_type: decision
-memorycard_revision: 1
+source: memorycard
+source_id: 1
+source_type: decision
+source_revision: 1
 project: golden-project
 ---
 # Pinned Decision

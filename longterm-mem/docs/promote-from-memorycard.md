@@ -23,21 +23,30 @@ was opened read-only too, to find the memories that duplicate one of its pages.)
 
 ## What it writes
 
-The page has the frontmatter of an Engram page, with these keys in place of the `engram_*` ones:
+The page has the frontmatter of an Engram page, with these store-agnostic keys, in this order, in place of the
+`engram_*` ones:
 
 | Key | Value |
 |---|---|
-| `memorycard_id` | the memory's id |
-| `memorycard_type` | the memory's type |
-| `memorycard_revision` | the memory's next version number: the highest `memory_versions.version`, plus one |
+| `source` | `memorycard`, the store the memory comes from |
+| `source_id` | the memory's id |
+| `source_type` | the memory's type |
+| `source_revision` | the memory's next version number: the highest `memory_versions.version`, plus one |
 | `project` | the memory's project |
+
+A page the writer creates or fully re-renders (a new page, an update in place) carries these keys and no `engram_*` or
+`memorycard_*` key. A status patch changes `status` and `related` only: it leaves the identity lines of a legacy page as they
+are, because only the migration below rewrites the identity of an existing page. (Previously: `memorycard_id`, `memorycard_type` and `memorycard_revision`, one family of keys per
+store.) Pages written by earlier releases keep their legacy keys, which are read as the identity they name, until the
+one-time migration below rewrites them.
 
 `related` holds the page of the memory in `superseded_by`, when that memory has a page in the same project; no
 other relation of memorycard is read. `status` is `superseded` or `archived` when the memory is, `mature` when it
 is pinned, `developing` otherwise.
 
-A page is found again by `(project, memorycard_id)`. A page that carries `engram_id` (written by a release that
-promoted from Engram) is never written by a promote. A page that carries `memorycard_id` is updated in place when the
+A page is found again by `(project, source_id)` beside `source: memorycard`, or by the legacy `memorycard_id` of a page
+written before. A page that carries `engram_id` (written by a release that promoted from Engram) is never written by
+a promote until the migration gives it its memory's identity. A page of the memory is updated in place when the
 memory's revision is newer than the page's; an equal revision writes nothing, and a page edited by hand since it was
 written is left alone (exit 6).
 
@@ -63,4 +72,111 @@ A memory imported from an Engram observation that has no page is not bridged to 
 
 The accepted tradeoff (feature document `odd/tasks/memorycard-engram-replacement.md`, L16, L18 and L19): the pages
 that carry `engram_id` are never touched, so a bridged memory, and a memory with the same content as one of those
-observations, cannot be promoted from memorycard. Its history stays on the Engram page.
+observations, cannot be promoted from memorycard. Its history stays on the Engram page. The migration below ends the
+tradeoff for every page it can map: the page becomes the memory's own.
+
+## The one-time migration of the pages of older releases
+
+Pages written before the store-agnostic keys carry `engram_id`, `engram_revision`, `engram_type` (and
+`engram_sync_id`), or `memorycard_id`, `memorycard_revision` and `memorycard_type`. `migrate-card-pages` gives every
+such page of a project the keys above, once:
+
+```
+longterm-mem migrate-card-pages [--project P] [--vault DIR] [--apply]
+```
+
+- A page that names Engram observation N takes the identity of the memory memorycard imported from N, found in
+  memorycard's `import_map` (the memory of its first part): `source: memorycard`, that memory's id and type, and its
+  revision at the migration as `source_revision` (so no body changes; a memory edited in memorycard after its import
+  keeps the Engram-era body until its next revision). No Engram database is opened.
+- A page that already names a memorycard memory keeps that memory, its revision and its type.
+- The page keeps its address, `created`, `updated`, body and every key that is not an identity key; the identity keys
+  (and `engram_sync_id`, which nothing reads) are replaced by the four `source*` lines where the first of them was. The
+  precedence entry of the page changes only in its frontmatter hash. The catalog, the log and the address map are not
+  touched: every address, so every wikilink, holds.
+- Without `--apply` it prints what it would migrate and writes nothing. With `--apply` it first copies every page it
+  will rewrite, and the precedence sidecar `.raw/.longterm-mem-manifest.json`, to
+  `.vault-meta/card-page-migration-<UTC instant>/` (the same paths under it, so putting them back is a copy of that
+  directory over the vault; the pages and the sidecar of a vault are not under version control, so this copy is the only
+  way back), says where, and then rewrites the pages. If the copy cannot be made, nothing is written.
+- Both runs print how many pages of the project carry legacy keys and the count of each refusal. The pages it
+  would move or moved are named on stdout, each refusal on stderr with its reason.
+
+A page is refused, left byte-identical and named, and the run goes on to the others; any refusal makes the exit code 6:
+
+| Case | Counted as |
+|---|---|
+| the page's body differs from its precedence entry (a hand edit, R-030) | `edited since longterm-mem wrote it` |
+| the page's body is the recorded one but its frontmatter matches neither the entry nor any rewrite a stopped run could have written (a frontmatter line was edited) | `frontmatter differs from the entry and is no recorded rewrite` (shown when it is not zero); the message names the backup directory and says copying it over the vault restores the page and the sidecar, and lists the backup directories the vault has (`backups present: ...`, or `none`) |
+| the page's first non-blank line is `---` and it carries a legacy key, but its frontmatter cannot be read | `frontmatter cannot be read (CRLF line endings, no closing ---, a BOM, blank line or spaces before the opening ---, spaces after an opening or closing ---, or a line ending in --- inside the frontmatter)` (shown when it is not zero); the reason starts `unreadable frontmatter (` with the same causes |
+| the page has no precedence entry | `not recorded as written by longterm-mem` |
+| no `import_map` row names the page's observation, or the memory is gone | `no import_map row names its Engram observation` |
+| the page names a memorycard memory by `memorycard_id` and memorycard holds no memory with that id | `memorycard holds no memory with the id it names` (shown when it is not zero) |
+| the memory already has a page of its own, or is the memory of another page of the run (two pages for one memory; two `memorycard_id` pages of one memory are both refused) | `its memory already has a page` |
+| the page's id is no number | `identity cannot be read as one memory` (shown when it is not zero) |
+| the page names an Engram observation and a memorycard memory at once | `identity cannot be read as one memory` (shown when it is not zero) |
+| the page carries a legacy key and names no memory | `identity cannot be read as one memory` (shown when it is not zero) |
+| an identity key's value runs over several lines | `identity cannot be read as one memory` (shown when it is not zero) |
+| the identity to write (the memory's type) would end the frontmatter early for the shared page reader, as a type ending in `---` would | `identity cannot be read as one memory` (shown when it is not zero) |
+| the memory is in another project | `identity cannot be read as one memory` (shown when it is not zero) |
+
+How the command reads a page:
+
+- A *top-level line* is a line that starts at column 0. A line indented under another key, such as the text of a block scalar, is never a key.
+- The command reads the `.md` files directly in `wiki/memory`. A page in a subdirectory is not seen, as for every other command.
+- A page is readable when it starts with a line of `---` and has a closing line of `---`, both ending in a line feed, with nothing after the three dashes. Its frontmatter is what lies between them.
+- A page is also not readable when the shared page reader would end its frontmatter somewhere else. That reader, which `sync` and every other command use, ends it at the first `---` followed by a line feed anywhere, so a frontmatter line that ends in `---` (such as `note: a---`, or a line of four dashes) ends it early. The command never rewrites such a page, because the rewrite would look like a hand edit to that reader.
+- A page has unreadable frontmatter when its first non-blank line is `---` but it is not readable (see the causes in the table above). The first non-blank line is taken after a byte order mark, blank lines, spaces, tabs and carriage returns are ignored. To find the rule lines of such a page, trailing spaces and tabs are ignored on the opening and the closing line, so `--- ` opens and closes like `---`; trailing spaces or tabs let the scan recognise the rule lines of the page, but they never make the page readable.
+- What happens to an unreadable page depends on what the scan finds in the lines from the opening `---` up to its first closing `---` (or to the end of the page when there is none):
+  - (a) a top-level legacy key before that closing rule: the page is counted, refused by name, and never rewritten or backed up;
+  - (b) no legacy key there: the page is ignored. It is not counted and not refused, and it is never rewritten. A legacy key after the closing rule is not looked for.
+- A page that does not open with `---` has no frontmatter. It is ignored and its text is never scanned, even when it quotes a legacy key: no reader of longterm-mem takes it for a promoted page.
+- A page is a legacy page when a top-level line of its frontmatter is a legacy key followed by `:`. What happens to an unreadable legacy page is stated in the bullet "What happens to an unreadable page" above: it is counted and refused by name, never skipped and never rewritten. The rehearsal script counts it the same way. To have a refused page migrated, fix its line endings or its opening, or close the block, then run again.
+- The project of a page is the last non-empty value of a top-level `project:` line. Spaces before the colon are allowed, and Unicode white space around the line and the value is trimmed. A value that is empty or `[]` is skipped before any quote is taken off, so `project: ""` replaces an earlier value with an empty one and `project: "[]"` is the project `[]`. Only double quotes are stripped. The rehearsal script reads it by the same rule.
+
+For one project, the count a run prints is the number of its legacy pages, unreadable ones included, in the project their `project:` line names.
+A page that is a legacy page and has no project belongs to no project, so it is in no project's run. Every run (dry or `--apply`, of any
+project, one with zero legacy pages of its own and one that fails included) prints it once, as a note on stdout only, after the counts:
+``note: N page(s) carry legacy keys and name no project, so no project's run counts them: <pages>; add a `project:` line to each by hand, then run again``.
+The note leaves the page alone and makes no exit code of its own: exit 6 comes only from that project's own refusals.
+With several projects the rule is: the sum of every project's legacy count plus the pages with no project is the vault-wide count of
+the rehearsal script. That count is what the retirement waits on (it must be zero), so no page is hidden.
+
+A refused page is left for the owner: it is never matched to a memory by its content. A page the file system cannot read stops
+the run before any write, since it may be a memory's own page. A second run changes nothing: the pages it migrated no
+longer carry legacy keys, so the count it prints is the number of pages left. `promote reconcile` takes no part.
+
+After the migration `sync` predicts the same promotions as before it: a memory whose page was migrated is now the
+owner of that page (counted as skipped) and not a bridged memory, and `promote --source memorycard --id N` of it
+answers `already promoted as c-NNNNNN`. `doctor` joins the pages by the same identity and reports the same findings.
+A page that names an Engram observation takes the memory's current revision as its `source_revision` while its body stays
+the one written in the Engram era: the page says "revision N" for the memory and holds the text of its import until the
+memory's next revision rewrites it. Every legacy page of the project is counted, and each one that is not migrated is refused under one of the names of the table
+above (a page that names no memory is among them), so a project's count is the number of its pages that still carry a legacy key. That per-project count
+leaves out the pages with no project, which the note names; the vault-wide total of the rehearsal script adds them.
+
+The command works on one project. Run the dry run and then `--apply` for every project that has pages in the vault (the
+rehearsal script reads the list from the vault's pages and prints a vault-wide count of the pages that still carry a legacy
+key at the end; that count is the sum of the per-project counts and the pages with no project, and is zero when the vault is ready
+for the retirement of the legacy keys).
+
+If a run stops partway (a full disk, a killed process), the pages already migrated stay migrated and recorded. Each
+page's precedence entry is saved before the page is written, so a page that was being written reads as the page the
+rerun would write, and running the command again finishes it. The error names the backup directory
+`.vault-meta/card-page-migration-<UTC instant>[-N]/` (a retry in the same second takes a numbered name; a copy that fails
+halfway removes its directory, so one that is there is whole, and every file is synced and keeps its mode). A page a
+stopped run recorded is finished by the rerun even if its memory has been revised or retyped since: for a page that names an
+Engram observation the rerun searches the revisions from the memory's current one down to 0 (the memory's type and the page's own)
+for the rewrite the entry records (also with no type and with no revision), only for a page whose body is the recorded one, and finishes the page with that identity. An edit
+confined to the identity lines of such a page is adopted, since those lines are rewritten anyway and the backup holds them as they
+were; an edit to any other frontmatter line is refused (above). The migration creates and
+renames no page, so to go back to the state before it, copy the files of that directory over the vault
+(`cp -a <backup>/. <vault>/`): every page it rewrote and the sidecar return to their prior bytes.
+
+There is no lock between the migration and a `sync`, and the hook-driven `sync` (`engine/synctrigger`, fired when an agent
+session ends or a change is archived) has no switch to turn it off. Before `--apply`, close every agent session that uses
+the vault and check that no sync is running: `pgrep -af '[l]ongterm-mem.* sync'` prints nothing (the bracket keeps the check from matching itself; any
+output is a sync that is running). Then no sync can write a page the migration is rewriting.
+
+Run it first on copies of the vault and of memorycard's database (`scripts/rehearse-card-page-migration.sh` does, and
+changes nothing live), read the counts, and only then run `--apply` on the vault, project by project.

@@ -48,6 +48,7 @@ func PatchStatusFields(pages PageRepository, address, status string, related []s
 // patchedFrontmatter is block with its status and related lines set to status and related, and nothing else
 // changed: the one definition of what a status patch writes. PatchStatusFields writes it, and the memorycard walk
 // compares it with block to know whether a page needs a patch at all.
+// It never touches an identity line: only the one-time migration rewrites the identity of an existing page.
 func patchedFrontmatter(block, status string, related []string) string {
 	return setListField(setScalarField(block, statusField, status), relatedField, related)
 }

@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "78ed91d92de450279d0cbff1d6c430012a1f1348",
+    "head": "6c59570bd342b5bf7f690e5a724506c65e681566",
+    "diff_sha256": "185f8530fe34aab110bb63774e1d3bcfafbcaf5f4e7f97589f20c16313c7d923",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "78ed91d92de450279d0cbff1d6c430012a1f1348",
+      "head": "6c59570bd342b5bf7f690e5a724506c65e681566",
+      "diff_sha256": "185f8530fe34aab110bb63774e1d3bcfafbcaf5f4e7f97589f20c16313c7d923"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The change only edits two lines of the feature document: the T6 commit list and the L70 hash-mapping bullet. No code is touched.",
+      "Both edits replace the placeholder 'the docs(odd) commit of L70' with `78ed91d9`, which is the base commit of this change. The base is the docs(odd) commit that holds L70, so the hash is the right one.",
+      "The two edited lines agree with each other and with the surrounding text, such as the note that L69 is in `5813aa1c`. I found no contradiction or defect."
+    ]
+  }
+}

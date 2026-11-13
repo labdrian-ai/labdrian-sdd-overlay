@@ -10,15 +10,15 @@ longterm-mem: sync --source memorycard promoted 1 memory(ies); patched 1 page(s)
 {
   "c-000901": {
     "body_hash": "39710e9d43bb9fbd36f8b72dfd37fc919f03a2aa0ea1c59687f76fc0309c67e3",
-    "frontmatter_hash": "b24a813db323767a0a6a5f529ea7446c723dfa7338fb51c66b179c1364363894"
+    "frontmatter_hash": "3435535af310696051148ae3315c027f6fc9660148e192fdb6d55e33b3e5e27d"
   },
   "c-000902": {
     "body_hash": "27b2f5b03c64b16f343393e22fa662f984827ff511504d2a1fb6d2b652742e5c",
-    "frontmatter_hash": "7d06412cd90fffff1a6bb2397f8b01e7e5d86f44ed3baef3124d108217c1aa94"
+    "frontmatter_hash": "ed427b91c7736af4791292bd8058b213ed66415728ca0f88ec3fe0813090d89a"
   },
   "c-000903": {
     "body_hash": "5c60c878f8c66023f51766c5c2847417b950a46e8ff6a35dfac35f488e9513d1",
-    "frontmatter_hash": "eb6ee42c368f2ef4c852ec46dc1d4485e7f838e83d722e4659081b4d6a7891fc"
+    "frontmatter_hash": "9ed5569b75baf114b833ebb54119e40bbbc8f4dac449a4e55e58808e669ec245"
   }
 }
 === .raw/.manifest.json ===
@@ -99,9 +99,10 @@ tags:
 status: developing
 related: []
 sources: []
-memorycard_id: 3
-memorycard_type: discovery
-memorycard_revision: 2
+source: memorycard
+source_id: 3
+source_type: discovery
+source_revision: 2
 project: golden-project
 ---
 # Below Threshold
@@ -125,9 +126,10 @@ tags:
 status: mature
 related: []
 sources: []
-memorycard_id: 1
-memorycard_type: decision
-memorycard_revision: 2
+source: memorycard
+source_id: 1
+source_type: decision
+source_revision: 2
 project: golden-project
 ---
 # Pinned Decision
@@ -151,9 +153,10 @@ tags:
 status: archived
 related: []
 sources: []
-memorycard_id: 2
-memorycard_type: decision
-memorycard_revision: 1
+source: memorycard
+source_id: 2
+source_type: decision
+source_revision: 1
 project: golden-project
 ---
 # Curated Note

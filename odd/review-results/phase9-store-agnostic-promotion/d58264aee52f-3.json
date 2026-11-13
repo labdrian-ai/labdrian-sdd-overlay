@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "5900c2d3901e62b01d78c5a63740a1ac523e99c9",
+    "head": "d58264aee52f2aad7e654f3055e4a36053d30a33",
+    "diff_sha256": "e20cdd1b653fc2ec2a120bf41892620f12ca4a2ebcf769a9f3b001e7925fb86e",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go",
+      "longterm-mem/cmd/longterm-mem/migrate_card_pages_scan_test.go",
+      "longterm-mem/internal/promote/migrate_cards.go",
+      "longterm-mem/internal/promote/migrate_cards_unreadable_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "5900c2d3901e62b01d78c5a63740a1ac523e99c9",
+      "head": "d58264aee52f2aad7e654f3055e4a36053d30a33",
+      "diff_sha256": "e20cdd1b653fc2ec2a120bf41892620f12ca4a2ebcf769a9f3b001e7925fb86e"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go",
+        "longterm-mem/cmd/longterm-mem/migrate_card_pages_scan_test.go",
+        "longterm-mem/internal/promote/migrate_cards.go",
+        "longterm-mem/internal/promote/migrate_cards_unreadable_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/promote/migrate_cards.go:205-209",
+        "claim": "unreadableFrontmatter now scans the whole page and drops the requirement that it opens with a frontmatter delimiter. Any vault page without frontmatter that has a line such as `engram_id: 5` or `memorycard_id: 7` at column 0 is now counted as legacy and refused by name. A run over a vault containing such a page used to succeed and now ends with a refusal. The commit states this as intended, but an ordinary note or code snippet can block migration of a whole project. The only remedy is hand-editing that page. Body lines such as `project:` may also be read as the project assignment.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/migrate_cards.go:205-209",
+          "longterm-mem/internal/promote/migrate_cards_unreadable_test.go:57-57"
+        ]
+      }
+    ],
+    "evidence": [
+      "Diff inspected only; the old code returned false when the first line was not ---, and the new code scans every line of the page.",
+      "The no-project note is now printed once before the error return, so a failed run still shows it; the tests cover this."
+    ]
+  }
+}

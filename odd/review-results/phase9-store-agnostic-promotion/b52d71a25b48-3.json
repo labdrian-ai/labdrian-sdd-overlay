@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "9901b966616968a6f3cda27c552dbcdd14f29a16",
+    "head": "b52d71a25b48d523817a209db9e04cab96af3e72",
+    "diff_sha256": "b8b7a56f6c8483f432eb6495fa908be823dd40232edea7f91b2f68588a479715",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/page_keys_test.go",
+      "longterm-mem/internal/promote/frontmatter.go",
+      "longterm-mem/internal/promote/migrate_cards.go",
+      "longterm-mem/internal/promote/migrate_cards_identity_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "9901b966616968a6f3cda27c552dbcdd14f29a16",
+      "head": "b52d71a25b48d523817a209db9e04cab96af3e72",
+      "diff_sha256": "b8b7a56f6c8483f432eb6495fa908be823dd40232edea7f91b2f68588a479715"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/page_keys_test.go",
+        "longterm-mem/internal/promote/frontmatter.go",
+        "longterm-mem/internal/promote/migrate_cards.go",
+        "longterm-mem/internal/promote/migrate_cards_identity_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/promote/frontmatter.go:53",
+        "claim": "patchedFrontmatter is also the comparison the memorycard walk uses to decide whether a page needs a patch. Adding withStoreAgnosticIdentity inside it makes every legacy memorycard_* page differ from its patched form, even when its status and related lines already match the database. The next sync therefore rewrites and re-hashes every legacy page and reports it in 'patched N page(s)'. This goes beyond the commit's stated scope of converting a page 'when its status is patched', and it is a bulk write to the vault that the commit message does not mention. The new tests only cover a page whose status actually changed, so they do not pin this behavior. I could not confirm the walk's comparison from the diff alone.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/frontmatter.go:50-54"
+        ]
+      }
+    ],
+    "evidence": [
+      "The doc comment on patchedFrontmatter states that the memorycard walk compares its result with block to know whether a page needs a patch.",
+      "withStoreAgnosticIdentity now runs unconditionally inside patchedFrontmatter, so its output differs from block for any legacy page.",
+      "The added tests change status or body before syncing and do not cover a legacy page whose status is already current."
+    ]
+  }
+}

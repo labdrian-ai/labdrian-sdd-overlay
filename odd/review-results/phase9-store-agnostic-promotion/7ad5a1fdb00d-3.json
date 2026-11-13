@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "017df91a2ee11785cfc2072f93346c8c6b27e03e",
+    "head": "7ad5a1fdb00dd9cc09130f88aac3a1bb6c57c507",
+    "diff_sha256": "a276734b7cd6db64507844a92bc4311d9231448d3b208bb16f4d038cc2addf00",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "017df91a2ee11785cfc2072f93346c8c6b27e03e",
+      "head": "7ad5a1fdb00dd9cc09130f88aac3a1bb6c57c507",
+      "diff_sha256": "a276734b7cd6db64507844a92bc4311d9231448d3b208bb16f4d038cc2addf00"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:603",
+        "claim": "L65 says that for this batch the observed RED messages are kept in the table, as the remedy for L64's missing RED messages. The row for `APageWithNoProjectIsReportedApartFromTheCounts` records only 'failed (the output text was not captured)', so the record repeats the gap it claims to close.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:603",
+          "odd/tasks/phase9-store-agnostic-promotion.md:594"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff only touches a Markdown feature document: S6 (b) wording, the T6 commit list and the new L65 entry. No code is affected.",
+      "S6 (b)'s rewrite, the 'Previously' note pointing at L64 and the T6 commit list agree with the hashes named in L65 (f0f7880e for L64's docs commit).",
+      "L65's table row for the command-level no-project test lacks an observed RED line, although L65 says the messages are kept for this batch."
+    ]
+  }
+}

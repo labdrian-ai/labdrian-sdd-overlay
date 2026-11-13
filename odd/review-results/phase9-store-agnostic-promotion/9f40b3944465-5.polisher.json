@@ -1,0 +1,43 @@
+{
+  "kind": "polisher",
+  "base": "0d384e229301983f697a511f9139af6a874401b3",
+  "head": "9f40b3944465e73e313a372588ac2b5c74e2e959",
+  "diff_sha256": "f1ebdcb87d8f665fede23aa3f09682adc97c1f745e9f5e16b2513c8d1b11236d",
+  "findings": {
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/promote/migrate_cards.go:205-209",
+        "summary": "A legacy page can still go unaccounted. unreadableFrontmatter only accepts a page whose first line is exactly `---` after dropping a trailing `\\r`. A page that starts with a UTF-8 BOM, a blank line, or leading spaces, and has CRLF endings or no closing `---`, fails both readers. It is then not listed in Legacy, Refused or NoProject, and the run can exit 0 with no mention of it.",
+        "evidence": [
+          "legacyPagesOf calls frontmatterBlock first. frontmatterBlock (address.go:81-88) needs a literal `---\\n` and returns false for CRLF pages or pages with no closing line.",
+          "unreadableFrontmatter then returns (\"\", false) whenever TrimSuffix(lines[0], \"\\r\") != \"---\". A BOM before `---` makes that true, and the page is silently skipped (migrate_cards.go:248-250).",
+          "Tests cover only pages that start with `---` (migrate_cards_unreadable_test.go:18-23). None has a BOM, a leading blank line or leading whitespace, so this gap is untested.",
+          "This is the 'never skipped' guarantee the commit adds for unreadable pages. It holds for pages starting with `---` but not for these starts.",
+          "I did not read L66 or the S6 (c) text. The spec file at the target commit has no D-a or D-b match, so I could not check whether a BOM start is out of scope."
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go:91-112",
+        "summary": "The no-project note is printed only after the `if err != nil { return a.refuse(...) }` early return. A run that fails with an internal error, for example a write or backup failure during --apply, never prints the note about the no-project legacy pages. The commit says each run prints it once.",
+        "evidence": [
+          "In reportMigration the error return at lines 91-93 comes before the note block at lines 105-112.",
+          "The tests for the note (migrate_card_pages_scan_test.go:11 and :66) only exercise successful runs."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read migrate_cards.go lines 60-480 and 523-575: refusal kinds, carriesLegacyKeys, unreadableFrontmatter, legacyPagesOf, MigrateCardPages, recordedRewrite, rewrittenIdentity.",
+      "Read cmd_migrate_card_pages.go in full: reportMigration, exit codes, refusalReason (lists existing backup dirs), BackUp (removal of a failed copy followed by a directory sync), toleratedDirectorySyncError, syncDirectory.",
+      "Read frontmatterBlock and eachPage in address.go.",
+      "Read migrate_cards_unreadable_test.go. Grepped the cmd tests: NoProject exit 0 plus the note (scan_test), the unreadable summary line and refused-by-name line (scan_test:51-54), backups present: none or a list (halfmigrated_test), toleratedDirectorySyncError (backup_durable_test).",
+      "Exit codes are as the commit describes. Any Refused entry, including RefusedUnreadable, gives exit 6. NoProject entries alone give 0 and print the note on stdout. Unreadable pages are never rewritten. The empty-type and empty-revision recovery candidates are present and tested.",
+      "toleratedDirectorySyncError is pure, treats nil as false, and tolerates windows, ErrUnsupported, EINVAL and ENOTSUP. I found no data-safety defect in the failed-copy removal path: the directory is synced after RemoveAll and a sync failure is joined into the error.",
+      "Not run: no tests or builds, because I had no shell. I did not compare the target against the base commit 0d384e22 by diff, so I cannot say whether F1 or F2 were already present at the base.",
+      "Could not read L66 (D-a, D-b). The spec file at the target commit has no D-a or D-b match, and the main checkout's odd/tasks has none either."
+    ]
+  }
+}

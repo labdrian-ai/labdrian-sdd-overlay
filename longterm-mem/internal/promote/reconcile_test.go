@@ -317,7 +317,7 @@ func TestReconcile_RefusesAMemorycardPageWithNoUsableRevision(t *testing.T) {
 		t.Fatalf("EmitCardPage: %v", err)
 	}
 	existingPath := writePromotedPage(t, vaultRoot, page)
-	if err := os.WriteFile(existingPath, []byte(blankFrontmatterValues(page.Frontmatter, memorycardRevisionField)+page.Body), 0o644); err != nil {
+	if err := os.WriteFile(existingPath, []byte(blankFrontmatterValues(page.Frontmatter, sourceRevisionField)+page.Body), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := Reconcile(pagesIn(vaultRoot), "labdrian-sdd-overlay", address, &memPrecedence{}); !errors.Is(err, ErrUnusablePage) {

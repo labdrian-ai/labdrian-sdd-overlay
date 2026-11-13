@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "adb17bf797745c26ae1598318e3e24f421ecf26a",
+    "head": "2bcd69287edd57d2fd6ef956f53f7c211f9fe577",
+    "diff_sha256": "b01a514ae13c6aa299c144250d56edd03e9efe870288f49ebc56f8c67ac76b9d",
+    "paths": [
+      "longterm-mem/internal/promote/migrate_cards_unreadable_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "adb17bf797745c26ae1598318e3e24f421ecf26a",
+      "head": "2bcd69287edd57d2fd6ef956f53f7c211f9fe577",
+      "diff_sha256": "b01a514ae13c6aa299c144250d56edd03e9efe870288f49ebc56f8c67ac76b9d"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/promote/migrate_cards_unreadable_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/migrate_cards_unreadable_test.go:165",
+        "claim": "The comment ends with a bare reference \"(L71)\" that has no stated meaning inside the file. A reader cannot tell whether it points to a line, a log entry or a requirement, and a line number in a comment goes stale as the file changes. Name the check or the log entry instead.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/migrate_cards_unreadable_test.go:165"
+        ]
+      }
+    ],
+    "evidence": [
+      "The only changed file is a test; the diff adds t.Fatalf/t.Fatal guards on the frontmatterBlock ok result and on the Store.Get tracked result, which can only make the setup stricter and cannot hide a failure.",
+      "The guards use the same variable names (ok, tracked) as the values that were previously discarded; the diff shows no shadowing or unused variables.",
+      "The rewritten comment states a scratch-edit observation that cannot be verified from the diff, and it ends with the unexplained reference (L71)."
+    ]
+  }
+}
