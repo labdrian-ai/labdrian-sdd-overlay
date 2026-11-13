@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "82835583f3271309190697a086ccdd2a7bc60a0e",
+    "head": "2c0b96b8b41ea5aca1594b332eac7dcbfe6a55ec",
+    "diff_sha256": "f515167b148bd1be0bba1f933c2e8fd5d4d5e93b47a9731e055281e5f81d7d8e",
+    "paths": [
+      "scripts/rehearse-card-page-migration.sh"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "82835583f3271309190697a086ccdd2a7bc60a0e",
+      "head": "2c0b96b8b41ea5aca1594b332eac7dcbfe6a55ec",
+      "diff_sha256": "f515167b148bd1be0bba1f933c2e8fd5d4d5e93b47a9731e055281e5f81d7d8e"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "scripts/rehearse-card-page-migration.sh"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "scripts/rehearse-card-page-migration.sh:92-93",
+        "claim": "The legacy_counts and projects_of perl readers compare each frontmatter line to the exact string \"---\". chomp strips only \\n, so a page with CRLF line endings fails the first-line test. Such a page is skipped silently. Its project is missing from the discovered list, and its legacy keys are missing from the vault-wide count. The script says a zero count means the vault is ready for retirement of the legacy keys, so this can produce a false zero. The readers also glob only wiki/memory/*.md, not subdirectories. Whether the migration command handles CRLF or subdirectories differently is not visible in the diff.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "scripts/rehearse-card-page-migration.sh:87-93"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "scripts/rehearse-card-page-migration.sh:185",
+        "claim": "slug maps every character outside A-Za-z0-9._- to '_', so distinct project names such as 'a b' and 'a_b' share the same scratch files (sync-before-$s.txt, apply-$s.txt and so on). The later project overwrites the earlier one's results and the before/after comparisons mix them. The global `project` variable, set by the loops and read implicitly by lm, also makes the control flow hard to follow.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "scripts/rehearse-card-page-migration.sh:183-185"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only scripts/rehearse-card-page-migration.sh changed, and the whole diff was read.",
+      "The perl readers rely on the exact line '---' and on a non-recursive glob.",
+      "The per-project artifact file names are derived through the lossy slug function.",
+      "The live-path guard, the sqlite3 .backup copies and the HOME/XDG redirection are consistent with the commit's claims."
+    ]
+  }
+}

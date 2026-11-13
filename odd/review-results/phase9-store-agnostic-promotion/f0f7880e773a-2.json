@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "cd4ba770a69aec7bd76965b713e96fe71b103d29",
+    "head": "f0f7880e773a88fb07dc19ca6ce4e1a4b1940ebf",
+    "diff_sha256": "97a2af35d2958c287742a35299b845607fc7fa10f6988c6c5d90ae2e4575d234",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "cd4ba770a69aec7bd76965b713e96fe71b103d29",
+      "head": "f0f7880e773a88fb07dc19ca6ce4e1a4b1940ebf",
+      "diff_sha256": "97a2af35d2958c287742a35299b845607fc7fa10f6988c6c5d90ae2e4575d234"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:534",
+        "claim": "The reading of S6 (b) that now governs (a status patch leaves a legacy page's identity lines alone) is recorded only in the L64 log entry; the S6 spec text is deliberately left unchanged. A reader who consults S6 alone, without reading L64, may expect a status patch to rewrite identity to the store-agnostic keys, which contradicts the decision. L63's contrary statement is also left in place and is marked superseded only through L64's indirect wording. A pointer from S6 or from the T6 task line to L64's reading would remove the risk of a wrong read.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:534"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only one path changed, a Markdown feature document; no code behavior is affected.",
+      "The T6 commit list names the L64 commits, the docs(odd) holder and the evidence pointer L64, consistent with the new entry.",
+      "The hash mapping, the answered finding ids and the RED/GREEN table are internally consistent within the diff; their claims about code and test results cannot be checked from the diff."
+    ]
+  }
+}

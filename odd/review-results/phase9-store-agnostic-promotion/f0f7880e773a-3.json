@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "cd4ba770a69aec7bd76965b713e96fe71b103d29",
+    "head": "f0f7880e773a88fb07dc19ca6ce4e1a4b1940ebf",
+    "diff_sha256": "97a2af35d2958c287742a35299b845607fc7fa10f6988c6c5d90ae2e4575d234",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "cd4ba770a69aec7bd76965b713e96fe71b103d29",
+      "head": "f0f7880e773a88fb07dc19ca6ce4e1a4b1940ebf",
+      "diff_sha256": "97a2af35d2958c287742a35299b845607fc7fa10f6988c6c5d90ae2e4575d234"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:121",
+        "claim": "The T6 commit list names the docs(odd) commit that holds L64 only by description, without a hash (unlike L63's a64ade84, which the same entry's hash-mapping bullet was added to fix). The reader of the list cannot resolve it to a commit, and the unticked state of T6 depends on this list being traceable. The hash is unknowable inside its own commit, so the gap recurs each batch.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:121",
+          "odd/tasks/phase9-store-agnostic-promotion.md:534"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:533",
+        "claim": "S6 (b) is reinterpreted in the Log only ('the wording lives in this entry only; S6 is not rewritten'), so the spec section S6 still states the earlier reading that a status patch rewrites identity. Readers of S6 get a contradicting requirement and must find L64 to learn it is superseded. Declared openly, but it leaves the living spec and the Log divergent.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:533"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:560",
+        "claim": "The checks claim all 32 packages pass and the differential is SAME, but the RED table records some rows only as 'failed' with no failure message, and the 'GREEN' column is just 'passes'. The AFailedSaveSaysWhatItCannotKnow, ALegacyPageWithNoProjectIsCountedAndRefused and AKeyInsideABlockScalarIsNoLegacyKey rows give no observed reason, so the claim of RED-first is not verifiable from the record.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:548-558"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only odd/tasks/phase9-store-agnostic-promotion.md: one T6 line edit and the appended L64 entry; no code is touched.",
+      "The T6 line stays unticked, consistent with the L64 claim that T6 is not ticked.",
+      "The hash mapping and commit list are consistent with each other (f99a4c81, 69316290, 5764ab28, abc01e1d, cd4ba770).",
+      "Findings are documentation-traceability issues only; no behavior regression is caused by this docs commit."
+    ]
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "693162904268c92462d2ace36df93843fec0569c",
+    "head": "5764ab28b242dc1f2d5d3c153da09d48f39167e4",
+    "diff_sha256": "3cd9a58d338cf63d5e76aa8fda9d2911228813f42af33441a87d969d7a276f9e",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go",
+      "longterm-mem/cmd/longterm-mem/migrate_card_pages_backup_more_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "693162904268c92462d2ace36df93843fec0569c",
+      "head": "5764ab28b242dc1f2d5d3c153da09d48f39167e4",
+      "diff_sha256": "3cd9a58d338cf63d5e76aa8fda9d2911228813f42af33441a87d969d7a276f9e"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go",
+        "longterm-mem/cmd/longterm-mem/migrate_card_pages_backup_more_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go:198-200",
+        "claim": "os.Chmod runs after durable.WriteFile has already synced the file, and neither the chmod nor the later directory syncs fsync the file inode. After a crash the copy can keep the umask-derived mode instead of the source mode. That is the exact property the commit claims to make durable (restoring does not change who can read a page). The mode should be applied before the file is synced, or the file should be synced again after chmod.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "cmd_migrate_card_pages.go:194-200 write (synced) then Chmod, with only directory fsyncs afterwards"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go:216-226",
+        "claim": "syncDirectories opens directories and calls Sync on them. This fails on platforms where a directory handle cannot be synced (Windows). A failure there makes copyInto fail, and BackUp then deletes a complete backup, so migration is refused. The base had no such step.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "cmd_migrate_card_pages.go:219-225 os.Open(d) then handle.Sync() whose error aborts the backup"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go:186-189",
+        "claim": "The source is read and then stat'ed in two separate calls. If the file is replaced between them, the recorded mode can belong to different content than the copied bytes. The window is small.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "cmd_migrate_card_pages.go:178 os.ReadFile, 186 os.Stat"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff of both changed files. Gaps found: the chmod is not made durable, directory fsync is not portable, and the read and stat are separate. The tests cover the failure paths and the mode copy."
+    ]
+  }
+}

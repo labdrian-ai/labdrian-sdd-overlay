@@ -1,0 +1,17 @@
+{
+  "kind": "polisher",
+  "base": "90049467e6f95803973f16da5349d4cfc3a05f58",
+  "head": "f99a4c81e656a2c376c0588921f42afc58371f9b",
+  "diff_sha256": "dbc709e4ff285efe7675a8cb0dbc100b7a5092006a6ac5c941a976811ad0d28e",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read longterm-mem/internal/promote/frontmatter.go in the target worktree. patchedFrontmatter is now only setListField(setScalarField(block, statusField, status), relatedField, related), with no identity handling. PatchStatusFields writes only when newBlock != fmBlock and leaves the body byte-identical.",
+      "Read propagate.go and propagate_cards.go. patchPage calls PatchStatusFields and updates only FrontmatterHash. eachCardPatchTarget skips a page when patchedFrontmatter(block, status, related) == block, so a legacy page whose status already matches is never visited, written or counted. It also skips a non-retired memory whose page is not retired.",
+      "Grepped the promote package for other identity-rewrite paths outside tests (relabel, rewriteKeys, storeAgnostic, migrate*()). None found. The other PatchStatusFields caller, writer.go:419 (supersede), goes through the same identity-free function.",
+      "Read cmd/longterm-mem/page_keys_test.go. TestALegacyCardPageWhoseStatusIsPatchedKeepsItsIdentityLines asserts the patched page equals the original with only the status line changed (byte-for-byte), that the sidecar frontmatter hash matches the page, and that a second sync patches nothing. TestALegacyCardPageWhoseStatusAlreadyMatchesIsNotAPatchTarget runs both dry-run and real sync and asserts no patch is reported and the page is unchanged. TestAPageWhoseStatusIsPatchedCarriesOnlyTheStoreAgnosticKeys covers a store-agnostic page. These match S6 (b) and L64.",
+      "Only residual: a retired memory whose page status matches but whose related lines differ in format or content is still patched. That is a legitimate related patch, not an identity rewrite, and it is not a defect of this commit.",
+      "Not run: no tests were executed, no git diff was available (read-only access to the worktree files), and the base commit was not compared."
+    ]
+  }
+}

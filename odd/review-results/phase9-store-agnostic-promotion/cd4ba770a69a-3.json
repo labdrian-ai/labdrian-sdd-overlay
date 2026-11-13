@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "abc01e1d19cc9324e6721261cb27ab302763549e",
+    "head": "cd4ba770a69aec7bd76965b713e96fe71b103d29",
+    "diff_sha256": "b3e50fa5b50a9dcf953421bc1b06694e0607a314d095e8e786a0882343be5f23",
+    "paths": [
+      "scripts/rehearse-card-page-migration.sh"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "abc01e1d19cc9324e6721261cb27ab302763549e",
+      "head": "cd4ba770a69aec7bd76965b713e96fe71b103d29",
+      "diff_sha256": "b3e50fa5b50a9dcf953421bc1b06694e0607a314d095e8e786a0882343be5f23"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "scripts/rehearse-card-page-migration.sh"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "scripts/rehearse-card-page-migration.sh:91",
+        "claim": "`opendir(...) or exit 0` makes legacy_counts exit silently with no output when wiki/memory is missing or unreadable. The base `glob` returned an empty list, so the function still printed the 'vault-wide: 0 page(s)' line. The rehearsal now loses its count line and gives no diagnostic, so a wrong vault path looks the same as a clean vault. projects_of has the same silent exit, which yields an empty project list.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "scripts/rehearse-card-page-migration.sh:91",
+          "scripts/rehearse-card-page-migration.sh:122"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the single changed script. The CRLF detection, top-level-only key regex, index-prefixed slug and explicit GOCACHE are consistent with the stated intent. Both loops iterate the same projects array in the same order, so the idx numbering matches between the before and after phases. The only defect found is the silent exit on a missing directory."
+    ]
+  }
+}

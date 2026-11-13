@@ -1,0 +1,30 @@
+{
+  "kind": "sweeper",
+  "base": "90049467e6f95803973f16da5349d4cfc3a05f58",
+  "head": "f99a4c81e656a2c376c0588921f42afc58371f9b",
+  "diff_sha256": "dbc709e4ff285efe7675a8cb0dbc100b7a5092006a6ac5c941a976811ad0d28e",
+  "sweep": "f99a4c81e656-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 path: longterm-mem/internal/promote/migrate_cards_identity_test.go",
+      "disposition": "live",
+      "evidence": "Deleted on purpose by the revert (L64): it tested withStoreAgnosticIdentity, which the same commit removes; no file references the path except history."
+    },
+    {
+      "candidate": "T1 name: TestALegacyCardPageWhoseStatusIsPatchedBecomesAStoreAgnosticPage",
+      "disposition": "live",
+      "evidence": "Hits only in odd/tasks/phase9-store-agnostic-promotion.md Log entries L63-L64, which record history; the test was replaced by TestALegacyCardPageWhoseStatusIsPatchedKeepsItsIdentityLines (L64 decision)."
+    },
+    {
+      "candidate": "T1 name: TestWithStoreAgnosticIdentity",
+      "disposition": "live",
+      "evidence": "Hits only in the feature document's Log (L63, L64), which records history; the test went with the deleted function."
+    },
+    {
+      "candidate": "T1 name: withStoreAgnosticIdentity",
+      "disposition": "live",
+      "evidence": "Hits only in the feature document's Log and in the recorded polisher review b52d71a25b48-1.polisher.json, both immutable history; no source references it."
+    }
+  ]
+}

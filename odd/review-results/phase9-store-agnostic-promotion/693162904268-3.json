@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f99a4c81e656a2c376c0588921f42afc58371f9b",
+    "head": "693162904268c92462d2ace36df93843fec0569c",
+    "diff_sha256": "af6a0e6d0bb6c3f49630acfa3c7102bf9ff84ff5a5e0cdc4ed9211a6a3b6aae0",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/migrate_card_pages_scan_test.go",
+      "longterm-mem/internal/promote/migrate_cards.go",
+      "longterm-mem/internal/promote/migrate_cards_recovery_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f99a4c81e656a2c376c0588921f42afc58371f9b",
+      "head": "693162904268c92462d2ace36df93843fec0569c",
+      "diff_sha256": "af6a0e6d0bb6c3f49630acfa3c7102bf9ff84ff5a5e0cdc4ed9211a6a3b6aae0"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/migrate_card_pages_scan_test.go",
+        "longterm-mem/internal/promote/migrate_cards.go",
+        "longterm-mem/internal/promote/migrate_cards_recovery_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/promote/migrate_cards.go:160",
+        "claim": "Only top-level lines now count as legacy keys, but mapPage still reads identities through parseFrontmatterFields, which this diff does not show or change. If that parser also takes indented lines, a block scalar that mentions engram_id: beside a real memorycard_id: would make the page look as if it names both memories and refuse it. The new test only covers memorycard_type inside the scalar, so the engram_id/memorycard_id combination is unpinned.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "longterm-mem/internal/promote/migrate_cards.go:160",
+          "longterm-mem/internal/promote/migrate_cards_recovery_test.go:105"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the diff only. parseFrontmatterFields is outside it, so the F1 interaction is unconfirmed. The other changes read as consistent with the stated claims: recovery by recorded hash, no-project refusal, the split into resolvers, and the sidecar error wording."
+    ]
+  }
+}

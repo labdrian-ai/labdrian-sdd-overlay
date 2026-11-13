@@ -1,0 +1,39 @@
+{
+  "kind": "sweep",
+  "base": "90049467e6f95803973f16da5349d4cfc3a05f58",
+  "head": "f99a4c81e656a2c376c0588921f42afc58371f9b",
+  "diff_sha256": "dbc709e4ff285efe7675a8cb0dbc100b7a5092006a6ac5c941a976811ad0d28e",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [
+      "longterm-mem/internal/promote/migrate_cards_identity_test.go"
+    ],
+    "removed_names": [
+      {
+        "name": "TestALegacyCardPageWhoseStatusIsPatchedBecomesAStoreAgnosticPage",
+        "hits": [
+          "odd/tasks/phase9-store-agnostic-promotion.md"
+        ]
+      },
+      {
+        "name": "TestWithStoreAgnosticIdentity",
+        "hits": [
+          "odd/tasks/phase9-store-agnostic-promotion.md"
+        ]
+      },
+      {
+        "name": "withStoreAgnosticIdentity",
+        "hits": [
+          "odd/review-results/phase9-store-agnostic-promotion/b52d71a25b48-1.polisher.json",
+          "odd/tasks/phase9-store-agnostic-promotion.md"
+        ]
+      }
+    ]
+  },
+  "t2": [],
+  "t3": [],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

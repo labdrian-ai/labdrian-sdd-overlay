@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "5764ab28b242dc1f2d5d3c153da09d48f39167e4",
+    "head": "abc01e1d19cc9324e6721261cb27ab302763549e",
+    "diff_sha256": "f2bc531c82e05a37db337b65b2e2ffa22ad6c6aef90e041798aa3353dd643f7d",
+    "paths": [
+      "longterm-mem/README.md",
+      "longterm-mem/docs/promote-from-memorycard.md",
+      "openspec/specs/longterm-mem-promotion/spec.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "5764ab28b242dc1f2d5d3c153da09d48f39167e4",
+      "head": "abc01e1d19cc9324e6721261cb27ab302763549e",
+      "diff_sha256": "f2bc531c82e05a37db337b65b2e2ffa22ad6c6aef90e041798aa3353dd643f7d"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/README.md",
+        "longterm-mem/docs/promote-from-memorycard.md",
+        "openspec/specs/longterm-mem-promotion/spec.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/README.md:92",
+        "claim": "The new check `pgrep -af 'longterm-mem.* sync'` is given as 'prints nothing' with no caveat. When it is run through `bash -c \"...\"`, a wrapper, or a tool that carries the pattern in its own command line, the parent process command line contains the pattern and matches itself. The output is then non-empty with no sync running. A false 'sync is running' is harmless; the reverse is not. Any reader who treats a non-empty result as noise defeats the guard. The guide and README say nothing about reading the output.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/README.md:92",
+          "longterm-mem/docs/promote-from-memorycard.md:147-148"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/docs/promote-from-memorycard.md:139-142",
+        "claim": "The new sentences 'every file is synced and keeps its mode' and 'a page a stopped run recorded is finished by the rerun even if its memory has been revised since' state behaviours that this diff does not show. Neither is cross-checked in the spec delta. If the code does not do this, the doc over-promises on the recovery path.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/docs/promote-from-memorycard.md:139-142"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only documentation and one spec paragraph. No code is touched, so there is no functional regression.",
+      "The spec and guide now agree that a status patch changes `status` and `related` only. The README row does not mention the CRLF and subdirectory blind spot, but the guide does.",
+      "The removed `sync-trigger.log` advice is replaced by the pgrep check, which is more actionable."
+    ]
+  }
+}

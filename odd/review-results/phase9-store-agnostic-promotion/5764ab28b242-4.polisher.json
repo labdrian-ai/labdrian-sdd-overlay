@@ -1,0 +1,58 @@
+{
+  "kind": "polisher",
+  "base": "693162904268c92462d2ace36df93843fec0569c",
+  "head": "5764ab28b242dc1f2d5d3c153da09d48f39167e4",
+  "diff_sha256": "3cd9a58d338cf63d5e76aa8fda9d2911228813f42af33441a87d969d7a276f9e",
+  "findings": {
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go:205-219",
+        "summary": "syncDirectories syncs the backup directory, its subdirectories and its parent. It does not sync the ancestors that newDirectory may have just created. On a vault with no .vault-meta yet, the new .vault-meta entry in the vault root is not fsynced. A crash could lose that entry, and with it the whole backup, after pages have been rewritten. The window is small and applies only to the first backup of a vault.",
+        "evidence": [
+          "newDirectory runs os.MkdirAll(filepath.Dir(base)), which may create .vault-meta.",
+          "syncDirectories adds only the dirs found by WalkDir(dir) plus filepath.Dir(dir), which is .vault-meta, never the vault root."
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go:194-199",
+        "summary": "The source mode is applied with os.Chmod by name after durable.WriteFile has already synced and renamed the file. That metadata change is not fsynced, and nothing re-syncs the file afterwards. durable.WriteFile already sets the mode on the temp file through the handle when createPerm is passed, so the Chmod is redundant. It is harmless, and only a mode loss on crash is possible, not data loss.",
+        "evidence": [
+          "durable/write.go:82-110 sets perm to createPerm when the target does not exist, then calls tmp.Chmod(perm).",
+          "BackUp passes info.Mode().Perm() as createPerm, so the extra os.Chmod adds only an unsynced metadata write."
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/migrate_card_pages_backup_more_test.go:58-88",
+        "summary": "Test adequacy gaps. The seam tests only cover a failed write and a failed cleanup. Nothing exercises a failure in syncDirectories, or a failure of the os.Chmod step. Nothing asserts that the default path actually uses durable.WriteFile, because every default test would also pass with a plain os.WriteFile. The mid-copy failure test substitutes os.WriteFile, so it does not run the production writer. When cleanup fails, a partial directory stays under .vault-meta looking like a complete copy, and only the error text names it. That is accepted and tested, but no marker file or other signal prevents a later restore from it.",
+        "evidence": [
+          "The tests inject write and removeAll only.",
+          "No test calls syncDirectories directly or injects a sync failure.",
+          "BackUp returns errors.Join(err, remove failure) and leaves dir in place."
+        ]
+      },
+      {
+        "id": "F4",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go:114-121",
+        "summary": "The test seams do not leak into production. The write and removeAll fields are unexported, and the only production construction at line 61 sets root and clock only. A nil seam falls back to durable.WriteFile and os.RemoveAll. The cleanup target is the directory the same call just created with os.Mkdir. That directory is fresh, because Mkdir fails on an existing path with ErrExist and the loop then picks a new suffix. So RemoveAll cannot touch a prior backup or another path. No defect.",
+        "evidence": [
+          "cmd_migrate_card_pages.go:61 constructs vaultBackup{root: vaultRoot, clock: c.clock}.",
+          "newDirectory uses os.Mkdir with a retry on fs.ErrExist."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read cmd_migrate_card_pages.go vaultBackup, BackUp, newDirectory, copyInto and syncDirectories.",
+      "Read internal/durable/write.go WriteFile.",
+      "Read migrate_card_pages_backup_more_test.go and migrate_card_pages_backup_test.go.",
+      "Read internal/promote/migrate_cards.go applyMigration. BackUp runs once before the first write, and a BackUp error returns before any page write or precedence save, so the backup-before-first-write ordering of S6 (c) holds.",
+      "Could not run git diff or go test, since only read-only file tools were available. I judged the commit from the target tree, not from its diff, so I could not tell which of the lines I read changed in 5764ab28."
+    ]
+  }
+}

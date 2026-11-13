@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "3a7a9fc6fb937e7e23818f63b4e9b8cd2e55e89e",
+    "head": "886c54489ba44b70f4eef0163b0ba9507f934418",
+    "diff_sha256": "a79070c72bca477fe2e27b9e4eec2ac5992d8b382b5153972eff1ba5aca097d0",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go",
+      "longterm-mem/cmd/longterm-mem/migrate_card_pages_backup_test.go",
+      "longterm-mem/cmd/longterm-mem/migrate_card_pages_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "3a7a9fc6fb937e7e23818f63b4e9b8cd2e55e89e",
+      "head": "886c54489ba44b70f4eef0163b0ba9507f934418",
+      "diff_sha256": "a79070c72bca477fe2e27b9e4eec2ac5992d8b382b5153972eff1ba5aca097d0"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go",
+        "longterm-mem/cmd/longterm-mem/migrate_card_pages_backup_test.go",
+        "longterm-mem/cmd/longterm-mem/migrate_card_pages_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "newDirectory loops on Mkdir returning fs.ErrExist and takes the next numbered suffix. Any other error returns immediately, so a missing parent or a file at .vault-meta still fails fast, and the loop ends once a free name is found.",
+      "BackUp removes the directory with RemoveAll only when copyInto fails, and only the directory that newDirectory just created, so no earlier backup is touched. A RemoveAll failure is joined into the returned error rather than lost.",
+      "copyInto keeps the original behaviour, with only the return signature changed. The diff has no import hunk, so I could not check that errors, fmt and io/fs are imported. The tests exercising the new code suggest the package compiles.",
+      "The tests cover two backups at one instant, a failed copy leaving no directory with a successful retry, and a byte-for-byte restore. The edit to AFailedBackupWritesNothing keeps the failure path covered by making .vault-meta a file."
+    ]
+  }
+}

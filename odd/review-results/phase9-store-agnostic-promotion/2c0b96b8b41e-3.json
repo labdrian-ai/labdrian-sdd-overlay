@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "82835583f3271309190697a086ccdd2a7bc60a0e",
+    "head": "2c0b96b8b41ea5aca1594b332eac7dcbfe6a55ec",
+    "diff_sha256": "f515167b148bd1be0bba1f933c2e8fd5d4d5e93b47a9731e055281e5f81d7d8e",
+    "paths": [
+      "scripts/rehearse-card-page-migration.sh"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "82835583f3271309190697a086ccdd2a7bc60a0e",
+      "head": "2c0b96b8b41ea5aca1594b332eac7dcbfe6a55ec",
+      "diff_sha256": "f515167b148bd1be0bba1f933c2e8fd5d4d5e93b47a9731e055281e5f81d7d8e"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "scripts/rehearse-card-page-migration.sh"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "scripts/rehearse-card-page-migration.sh:141",
+        "claim": "The change exports XDG_CACHE_HOME (and the other XDG variables) as the scratch home before the go build runs. The build sets HOME to the real home, but Go resolves its default build cache from XDG_CACHE_HOME, so the cache moves into scratch. The build starts cold and writes a large go-build cache into the scratch directory. The real-HOME comment on the build line is no longer accurate for the build cache. The base had no XDG export, so this is new.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "scripts/rehearse-card-page-migration.sh:141",
+          "scripts/rehearse-card-page-migration.sh:168"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "scripts/rehearse-card-page-migration.sh:176",
+        "claim": "slug() maps every character outside [A-Za-z0-9._-] to '_', so two distinct project names such as 'a b' and 'a_b' give the same slug. Their per-project files sync-before-, doctor-before-, apply- and so on then overwrite each other. The before/after comparisons and the id list for the second project would then read the first project's data. This per-project file naming is new in this change.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "scripts/rehearse-card-page-migration.sh:176"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "scripts/rehearse-card-page-migration.sh:117",
+        "claim": "legacy_counts and projects_of pass \"$ARGV[0]/wiki/memory/*.md\" to Perl's glob(), which splits its pattern on whitespace. A vault path containing a space would silently yield no pages, so the vault-wide legacy count could read 0 and the project list could be empty. The legacy count reads 0 to the owner as 'ready for retirement'. The scratch path derives from the owner's HOME, so it is unlikely to contain a space.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "scripts/rehearse-card-page-migration.sh:117"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only scripts/rehearse-card-page-migration.sh changed; I read the whole diff.",
+      "The XDG exports at head line 141 come before the go build at head line 168 and are not undone for it.",
+      "The slug() definition and its use as a per-project file suffix are both introduced in this diff."
+    ]
+  }
+}

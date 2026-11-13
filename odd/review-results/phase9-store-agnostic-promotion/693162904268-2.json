@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f99a4c81e656a2c376c0588921f42afc58371f9b",
+    "head": "693162904268c92462d2ace36df93843fec0569c",
+    "diff_sha256": "af6a0e6d0bb6c3f49630acfa3c7102bf9ff84ff5a5e0cdc4ed9211a6a3b6aae0",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/migrate_card_pages_scan_test.go",
+      "longterm-mem/internal/promote/migrate_cards.go",
+      "longterm-mem/internal/promote/migrate_cards_recovery_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f99a4c81e656a2c376c0588921f42afc58371f9b",
+      "head": "693162904268c92462d2ace36df93843fec0569c",
+      "diff_sha256": "af6a0e6d0bb6c3f49630acfa3c7102bf9ff84ff5a5e0cdc4ed9211a6a3b6aae0"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/migrate_card_pages_scan_test.go",
+        "longterm-mem/internal/promote/migrate_cards.go",
+        "longterm-mem/internal/promote/migrate_cards_recovery_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/promote/migrate_cards.go:394-398",
+        "claim": "viaEngram only searches revisions from min(m.Revision, 10000) down to 0. A stopped run's recorded revision above the current revision, or above 10000, is not found, and a legitimately stopped page is then refused as RefusedEdited. A mismatch also costs up to about 30k block rewrites and hashes per page (10001 revisions times 3 kinds) just to refuse it. The constant bounds the search silently, with no reason reported.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/migrate_cards.go:394-398 (the revisions loop and maxRecordedRevisions)"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/migrate_cards.go:260-262",
+        "claim": "A page with no project is now refused in every project's run, because legacyPagesOf keeps it for each project. In a multi-project vault each run counts it again in Legacy and lists it in Refused. The page can never be migrated by any run, so every run's count includes pages it cannot resolve, and the refusal reason does not say which project should own it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/migrate_cards.go:198-199 (owner != \"\" && owner != project filter)",
+          "longterm-mem/internal/promote/migrate_cards.go:260-262 (refusal for a page with no project)"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff for the three changed paths.",
+      "Checked the stopped-run recognition (recordedRewrite), the top-level-only legacy key detection, the no-project refusal, and the mapPage split; the logic is consistent with the stated behavior.",
+      "Remaining concerns are the bounded revision search and the repeated per-project refusal of no-project pages."
+    ]
+  }
+}

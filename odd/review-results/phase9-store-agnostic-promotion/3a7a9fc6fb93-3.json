@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "b52d71a25b48d523817a209db9e04cab96af3e72",
+    "head": "3a7a9fc6fb937e7e23818f63b4e9b8cd2e55e89e",
+    "diff_sha256": "dd5f8969b3a39574ff1f05e45e6ea832ddd686dadaad93bbf3bf7c059a3a2dc3",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go",
+      "longterm-mem/internal/promote/migrate_cards.go",
+      "longterm-mem/internal/promote/migrate_cards_safety_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "b52d71a25b48d523817a209db9e04cab96af3e72",
+      "head": "3a7a9fc6fb937e7e23818f63b4e9b8cd2e55e89e",
+      "diff_sha256": "dd5f8969b3a39574ff1f05e45e6ea832ddd686dadaad93bbf3bf7c059a3a2dc3"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go",
+        "longterm-mem/internal/promote/migrate_cards.go",
+        "longterm-mem/internal/promote/migrate_cards_safety_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/promote/migrate_cards.go:153-166",
+        "claim": "carriesLegacyKeys now matches any line, trimmed of leading whitespace, whose text before the first colon equals a legacy key. A line inside a multi-line YAML value (for example an indented 'engram_id: 5' in a block-scalar description) is therefore treated as a legacy key. The page is then counted as legacy and refused as 'names no memory'. This makes the refusal count wrong and the page cannot be cleared automatically. withStoreAgnosticIdentity shares the function, so its detection also changed from parsed fields to raw lines.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/migrate_cards.go:153-166"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/migrate_cards.go:456-467",
+        "claim": "If SavePrecedence fails after partially persisting, the in-memory store is rolled back to p.was while the file may already hold the new entry. The rerun-recognition branch covers that case only when a fresh process reloads the store, not when the same process reruns with the rolled-back store. The rollback also does not undo earlier SavePrecedence calls, so the error message's claim about state is only approximately true.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/migrate_cards.go:456-467"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff: mapPage unification, legacyPagesOf, the rerun recognition branch, and the reordered persist-then-write in applyMigration.",
+      "The ordering of the persist and write steps and the rerun branch (entry hash equals the hash of the rewritten block, body hash equals the recorded one) are consistent with the new tests.",
+      "I could not see eachPage, memory.IsMissing or PrecedenceStore.Get, so I did not check nil-store behaviour in the dry-run path."
+    ]
+  }
+}
