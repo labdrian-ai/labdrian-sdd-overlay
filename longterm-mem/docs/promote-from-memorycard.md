@@ -108,7 +108,7 @@ A page is refused, left byte-identical and named, and the run goes on to the oth
 |---|---|
 | the page's body differs from its precedence entry (a hand edit, R-030) | `edited since longterm-mem wrote it` |
 | the page's body is the recorded one but its frontmatter matches neither the entry nor any rewrite a stopped run could have written (a frontmatter line was edited) | `frontmatter differs from the entry and is no recorded rewrite` (shown when it is not zero); the message names the backup directory and says copying it over the vault restores the page and the sidecar, and lists the backup directories the vault has (`backups present: ...`, or `none`) |
-| the page's first non-blank line is `---` and it carries a legacy key, but its frontmatter cannot be read | `frontmatter cannot be read (CRLF line endings, no closing ---, or a BOM, blank line or spaces before the opening ---)` (shown when it is not zero); the reason starts `unreadable frontmatter (` with the same causes |
+| the page's first non-blank line is `---` and it carries a legacy key, but its frontmatter cannot be read | `frontmatter cannot be read (CRLF line endings, no closing ---, a BOM, blank line or spaces before the opening ---, spaces after an opening or closing ---, or a line ending in --- inside the frontmatter)` (shown when it is not zero); the reason starts `unreadable frontmatter (` with the same causes |
 | the page has no precedence entry | `not recorded as written by longterm-mem` |
 | no `import_map` row names the page's observation, or the memory is gone | `no import_map row names its Engram observation` |
 | the page names a memorycard memory by `memorycard_id` and memorycard holds no memory with that id | `memorycard holds no memory with the id it names` (shown when it is not zero) |
@@ -119,16 +119,17 @@ How the command reads a page:
 
 - A *top-level line* is a line that starts at column 0. A line indented under another key, such as the text of a block scalar, is never a key.
 - The command reads the `.md` files directly in `wiki/memory`. A page in a subdirectory is not seen, as for every other command.
-- A page is readable when it starts with a line of `---` and has a closing line of `---`, both ending in a line feed. Its frontmatter is what lies between them.
-- A page has unreadable frontmatter when its first non-blank line is `---` but it is not readable (CRLF line endings, no closing `---`, or a byte order mark, blank lines or spaces before the opening `---`). The first non-blank line is taken after those are ignored. The command looks for a legacy key in the lines up to the first closing `---`, or to the end of the page when there is none.
+- A page is readable when it starts with a line of `---` and has a closing line of `---`, both ending in a line feed, with nothing after the three dashes. Its frontmatter is what lies between them.
+- A page is also not readable when the shared page reader would end its frontmatter somewhere else. That reader, which `sync` and every other command use, ends it at the first `---` followed by a line feed anywhere, so a frontmatter line that ends in `---` (such as `note: a---`, or a line of four dashes) ends it early. The command never rewrites such a page, because the rewrite would look like a hand edit to that reader.
+- A page has unreadable frontmatter when its first non-blank line is `---` but it is not readable (see the causes in the table above). The first non-blank line is taken after a byte order mark, blank lines, spaces, tabs and carriage returns are ignored, and trailing spaces and tabs are ignored on the opening and the closing line, so `--- ` opens and closes like `---`. The command looks for a legacy key in the lines up to the first closing `---`, or to the end of the page when there is none.
 - A page that does not open with `---` has no frontmatter. It is ignored and its text is never scanned, even when it quotes a legacy key: no reader of longterm-mem takes it for a promoted page.
 - A page is a legacy page when a top-level line of its frontmatter is a legacy key followed by `:`. An unreadable page that is a legacy page is counted and refused by name, never skipped, and the rehearsal script counts it the same way. Fix its line endings or its opening, or close the block, then run again.
-- The project of a page is the last non-empty value of a top-level `project:` line. Spaces before the colon are allowed, only double quotes are stripped, and an empty value or `[]` is skipped. The rehearsal script reads it by the same rule.
+- The project of a page is the last non-empty value of a top-level `project:` line. Spaces before the colon are allowed, and Unicode white space around the line and the value is trimmed. A value that is empty or `[]` is skipped before any quote is taken off, so `project: ""` replaces an earlier value with an empty one and `project: "[]"` is the project `[]`. Only double quotes are stripped. The rehearsal script reads it by the same rule.
 
 For one project, the count a run prints is the number of its legacy pages, unreadable ones included, in the project their `project:` line names.
 A page that is a legacy page and has no project belongs to no project, so it is in no project's run. Every run (dry or `--apply`, of any
 project, one with zero legacy pages of its own and one that fails included) prints it once, as a note on stdout only, after the counts:
-`note: N page(s) carry legacy keys and name no project, so no project's run counts them: <pages>; add a `project:` line to each by hand, then run again`.
+``note: N page(s) carry legacy keys and name no project, so no project's run counts them: <pages>; add a `project:` line to each by hand, then run again``.
 The note leaves the page alone and makes no exit code of its own: exit 6 comes only from that project's own refusals.
 With several projects the rule is: the sum of every project's legacy count plus the pages with no project is the vault-wide count of
 the rehearsal script. That count is what the retirement waits on (it must be zero), so no page is hidden.
@@ -143,7 +144,8 @@ answers `already promoted as c-NNNNNN`. `doctor` joins the pages by the same ide
 A page that names an Engram observation takes the memory's current revision as its `source_revision` while its body stays
 the one written in the Engram era: the page says "revision N" for the memory and holds the text of its import until the
 memory's next revision rewrites it. Every legacy page of the project is counted, and each one that is not migrated is refused under one of the names of the table
-above (a page that names no memory is among them), so the count is the number of pages that still carry a legacy key.
+above (a page that names no memory is among them), so a project's count is the number of its pages that still carry a legacy key. That per-project count
+leaves out the pages with no project, which the note names; the vault-wide total of the rehearsal script adds them.
 
 The command works on one project. Run the dry run and then `--apply` for every project that has pages in the vault (the
 rehearsal script reads the list from the vault's pages and prints a vault-wide count of the pages that still carry a legacy
