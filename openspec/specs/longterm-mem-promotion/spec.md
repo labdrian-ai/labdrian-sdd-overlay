@@ -821,29 +821,37 @@ ID: R-009
 Traces to: longterm-mem R-009
 
 WHEN `sync` runs for project P, the longterm-mem component SHALL promote
-every eligible observation for P that is either unpromoted or whose current
-revision count exceeds the revision last promoted, applying eligibility per
-the Promotion Eligibility Predicate (R-007).
+every eligible memory of P that is either unpromoted or whose current
+revision exceeds the revision last promoted, applying eligibility per the
+Promotion Eligibility Predicate (R-007). The memories are those of the one
+registered store, memorycard: `sync` and `sync --source memorycard` are the
+same command, and any other `--source`, `engram` included, SHALL be refused
+with exit 2 and the message `--source "<name>" is not a store: use
+memorycard`.
 
-(Previously: same trigger condition, but eligibility was evaluated under the
-prior type/revision-count-based predicate.)
+(Previously: `sync` promoted the eligible observations of Engram, and
+`--source memorycard` was the other store; the default was `engram`. Before
+that, eligibility was evaluated under the prior type/revision-count-based
+predicate.)
 
-An observation that is the same piece of memory as a memory of another store
-that already has a page (its memorycard lineage names that memory) SHALL NOT
-be promoted a second time: `sync`, `sync --dry-run` and an explicit promote
-decide it through one walk over the memories of a source, and the sync skips
-it, counts it as bridged and does not fail on it.
+A memory that is the same piece of memory as a memory of another store that
+already has a page (its lineage names it, as the memorycard `import_map` and
+the content hash say) SHALL NOT be promoted a second time: `sync`,
+`sync --dry-run` and an explicit promote decide it through one walk over the
+memories of the source, and the sync skips it, counts it as bridged and does
+not fail on it. A page written by a release that promoted from Engram, which
+carries `engram_id`, is one of those pages.
 
-(Previously: only a memorycard memory was checked for a page of its bridged
-Engram observation; an Engram observation whose memorycard memory already had
-a page was promoted again, and `sync --dry-run` planned that promotion.)
+(Previously: the walk served Engram observations and memorycard memories with
+a decision of its own for each, and an Engram observation whose memorycard
+memory already had a page was promoted again.)
 
 A memory that has a page of its own in its project SHALL be decided by that
 page before any bridge: it is updated or left as it is, never refused as
 bridged, and only a memory with no page of its own can be bridged. The same
-walk SHALL apply to a memory of memorycard whose project changed since it was
-promoted: it is promoted into its new project, and the page it left behind in
-the old one is marked superseded by the new page.
+walk SHALL apply to a memory whose project changed since it was promoted: it
+is promoted into its new project, and the page it left behind in the old one
+is marked superseded by the new page.
 
 (Previously: a memorycard memory was checked for a bridged page before its
 own, and a memorycard page was found only by its memory's current project, so a
@@ -864,33 +872,38 @@ untouched.)
 - THEN a page is created in the new project and the page left in the old
   project is marked superseded by it
 
-#### Scenario: Never-promoted eligible observation is promoted
+#### Scenario: Never-promoted eligible memory is promoted
 
-- GIVEN an eligible, never-promoted observation for project P
+- GIVEN an eligible, never-promoted memorycard memory for project P
 - WHEN sync runs for P
 - THEN it is promoted
 
-#### Scenario: Observation whose lineage memory has a page is skipped as bridged
+#### Scenario: A memory bridged to an Engram page is skipped as bridged
 
-- GIVEN an eligible observation for project P whose memorycard lineage
-  memory already has a page
+- GIVEN an eligible memory for project P imported from an Engram observation
+  that already has a page, including a page that carries `engram_id`
 - WHEN sync runs for P, with or without `--dry-run`
-- THEN no page is written or planned for the observation, it is counted as
+- THEN no page is written or planned for the memory, it is counted as
   bridged, and the run exits 0
 
-#### Scenario: Revised eligible observation is re-promoted
+#### Scenario: Revised eligible memory is re-promoted
 
-- GIVEN an eligible observation already promoted at revision 2, now at
-  revision 3
+- GIVEN an eligible memory already promoted at revision 2, now at revision 3
 - WHEN sync runs
-- THEN it is re-promoted
+- THEN its page is updated in place
 
-#### Scenario: Unchanged eligible observation is a no-op
+#### Scenario: Unchanged eligible memory is a no-op
 
-- GIVEN an eligible observation already promoted at its current revision
+- GIVEN an eligible memory already promoted at its current revision
   (unchanged)
 - WHEN sync runs
 - THEN it is not re-promoted
+
+#### Scenario: Any other source is refused
+
+- GIVEN `sync --source engram`, or a `--source` that names no store
+- WHEN the command runs
+- THEN it exits 2 naming memorycard, and nothing is written
 
 #### Scenario: sync --dry-run transcript is the acceptance evidence for the narrowed predicate
 
@@ -907,13 +920,15 @@ untouched.)
 ID: R-031
 Traces to: longterm-mem R-031
 
-WHEN sync completes promoting eligible observations for project P, the
+WHEN sync completes promoting eligible memories for project P, the
 longterm-mem component SHALL rebuild P's vault index and record the sync
 completion timestamp in that vault's own sync-state record.
 
+(Previously: the same, for the eligible observations of Engram.)
+
 #### Scenario: Index and sync-state both reflect the completed sync
 
-- GIVEN a sync run that promoted three observations
+- GIVEN a sync run that promoted three memories
 - WHEN it completes
 - THEN P's vault index reflects the new pages and the vault's sync-state
   record carries the completion timestamp
@@ -923,33 +938,36 @@ completion timestamp in that vault's own sync-state record.
 ID: R-033
 Traces to: longterm-mem R-033
 
-WHEN a promoted observation is soft-deleted or superseded in Engram, the
-next sync SHALL patch that observation's vault page status field (to
-`superseded`, or `archived` for a soft-delete with no successor) and its
-related-links field to reference the successor's page when the successor
+WHEN a promoted memory is superseded or archived in memorycard, or restored to
+active, the next sync SHALL patch that memory's vault page status field (to
+`superseded` or `archived`, or back to what an active memory's page says) and
+its related-links field to reference the successor's page when the successor
 has one — updating only those frontmatter fields, never the page body, even
-on a locally edited page —
-with the patch itself recorded in the precedence store so a later sync does
-not misread it as a human edit.
+on a locally edited page — with the patch itself recorded in the precedence
+store so a later sync does not misread it as a human edit. One walk SHALL do
+this, and it SHALL count and visit only the pages whose frontmatter would
+change.
+
+(Previously: the trigger was an observation soft-deleted or superseded in
+Engram, and a walk of the Engram dialect counted every page it visited and
+never brought a page back from `archived`.)
 
 #### Scenario: Supersession updates status and related, body untouched
 
-- GIVEN a promoted observation later superseded by another already-promoted
-  observation
+- GIVEN a promoted memory later superseded by another already-promoted memory
 - WHEN the next sync runs
 - THEN its vault page's status becomes `superseded` and its related-links
   field points to the successor's page, with the page body unchanged
 
-#### Scenario: Soft-delete with no successor archives the page
+#### Scenario: An archived memory archives the page
 
-- GIVEN a promoted observation later soft-deleted with no successor relation
+- GIVEN a promoted memory later archived with no successor
 - WHEN the next sync runs
 - THEN its vault page's status becomes `archived`
 
 #### Scenario: A supersession lands even when the successor has no page
 
-- GIVEN a promoted observation superseded by one that is not itself
-  promoted
+- GIVEN a promoted memory superseded by one that is not itself promoted
 - WHEN the next sync runs
 - THEN the page's status still becomes `superseded` with its related-links
   field left empty, because the link is a convenience and the status is the
@@ -962,17 +980,16 @@ not misread it as a human edit.
 - THEN the related-links field gains the successor's page and the status is
   unchanged
 
-#### Scenario: Untouched observation keeps its status
+#### Scenario: Untouched memory keeps its status
 
-- GIVEN a promoted observation with neither a soft-delete nor a supersession
-  relation
+- GIVEN a promoted memory that is neither superseded nor archived
 - WHEN sync runs
-- THEN its status remains unchanged
+- THEN its page is not visited, not counted and not written
 
 #### Scenario: Status patch on a locally edited page still lands (canon wins)
 
-- GIVEN a promoted page a human or agent has edited locally, and its
-  observation is now superseded in Engram
+- GIVEN a promoted page a human or agent has edited locally, and its memory
+  is now superseded in memorycard
 - WHEN the next sync runs
 - THEN the status and related-links fields are patched despite the local
   edit, the page body is not rewritten, and the precedence store's recorded
@@ -984,36 +1001,49 @@ not misread it as a human edit.
 ID: R-032
 Traces to: longterm-mem R-032
 
-WHEN a user or agent explicitly names an Engram observation id for
-promotion, the longterm-mem component SHALL promote that observation
-through the same page-emission, addressing, and registration path used by
-any other eligible observation, regardless of its automatic eligibility.
-An observation that is the same piece of memory as a memory of another store
-that already has a page SHALL be refused, naming that page and leaving it as
-it is (exit 6, `registration_conflict`, as for a bridged memorycard memory).
+WHEN a user or agent explicitly names a memorycard memory id for promotion
+(`promote --source memorycard --id N`, or the MCP `promote` tool with `source`
+`memorycard` and the id as `memory_id` or `engram_id`), the longterm-mem
+component SHALL promote that memory through the same page-emission,
+addressing, and registration path used by any other eligible memory,
+regardless of its automatic eligibility. A memory that is the same piece of
+memory as a memory of another store that already has a page SHALL be refused,
+naming that page and leaving it as it is (exit 6, `registration_conflict`).
+A source that is missing, or is not a registered store, SHALL be refused with
+exit 2 (`promote: --source is required: use --source memorycard`, or
+`--source "<name>" is not a store: use memorycard`) before any store is
+opened. The MCP tool's id is `memory_id` or `engram_id`: one given is the id,
+both given with the same value is that id, both given with different values is
+a tool error naming both, and neither is a missing id.
 
-(Previously: the refusal existed only for a memorycard memory bridged to an
-Engram observation that has a page; an explicit promote of an observation whose
-memorycard lineage memory had a page wrote a second page.)
+(Previously: the id named an Engram observation, `--source` was `engram` by
+default or `memorycard`, and the MCP tool took `engram_id` alone with an
+optional `source`.)
 
-#### Scenario: Observation whose lineage memory has a page is refused
+#### Scenario: A memory bridged to a page is refused
 
-- GIVEN an observation whose memorycard lineage memory already has a page
+- GIVEN a memory whose lineage names an Engram observation that already has a
+  page
 - WHEN an explicit promote call names it
 - THEN the call is refused, the message names that page, and nothing is
   written
 
-#### Scenario: Below-threshold observation is promoted via explicit call
+#### Scenario: Below-threshold memory is promoted via explicit call
 
-- GIVEN an observation that is not pinned, not of an eligible type, and
-  below the revision-count threshold
+- GIVEN a memory that is not pinned and has no curated topic key
 - WHEN an explicit promote call names it
 - THEN it is promoted through the same page-emission, addressing, and
-  registration path as any other eligible observation
+  registration path as any other eligible memory
 
-#### Scenario: Invalid observation id is rejected
+#### Scenario: Invalid memory id is rejected
 
-- GIVEN an invalid or nonexistent observation id
+- GIVEN a nonexistent memory id
 - WHEN an explicit promote call is made with it
-- THEN the call is rejected with a clear error rather than silently doing
-  nothing
+- THEN the call is rejected with a clear error (exit 7) rather than silently
+  doing nothing
+
+#### Scenario: A missing or unknown source is refused
+
+- GIVEN `promote --id 1` with no `--source`, or `--source engram`
+- WHEN the command runs
+- THEN it exits 2 naming memorycard, and nothing is written
