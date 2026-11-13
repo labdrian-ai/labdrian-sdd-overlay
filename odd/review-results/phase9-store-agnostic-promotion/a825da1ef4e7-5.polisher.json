@@ -1,0 +1,15 @@
+{
+  "kind": "polisher",
+  "base": "08f07c0119fd8324e1d1b1cc2981654128481a99",
+  "head": "a825da1ef4e765eb4cba2a54ff905d4764bf5c55",
+  "diff_sha256": "de7458f50f6f90fb1d59fa563cc718a9abe88acafea788664bfb2200ec996060",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read update.go:120-250: pageRevision tries memorycard first, then engram, through revisionOf; a blank or absent revision falls through, a present non-numeric value returns (0,false) and is refused with ErrUnusablePage; a negative value is refused by reconcile.go:216.",
+      "revisionOf and fieldOf (page_identity.go:36-58): source_revision is used only when source equals the store asked about, the legacy key is the fallback.",
+      "frontmatterRevision and entryFor (update.go:170-198) are unchanged; pageRevision has exactly one caller, reconcile.go:215, so the promotion paths record the same revisions as before.",
+      "reconcile_test.go:265-326 covers a memorycard page adopted at revision 4, a source_revision page adopted at 5 and a blanked memorycard revision refused; engram tests at 255-262 cover the legacy path. Gap, not a defect: no test of a source: engram page with source_revision or of a negative memorycard revision; both share the tested code path."
+    ]
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "kind": "polisher",
+  "base": "a825da1ef4e765eb4cba2a54ff905d4764bf5c55",
+  "head": "750fc5a50f54d5de5873d9541af272892f6198ff",
+  "diff_sha256": "7237aadc0825b2340ac8462353c3d18b20cad6947c23205947f57a58076cd10a",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "doctor_eligibility.go: a memorycard page joins by memory id, any other page through the import_map-derived EngramID (first in id order, as MemoryByEngramID); a page naming no memory or no live memory is skipped.",
+      "The advice uses the memory's own id: `promote --source memorycard --id M` or a pin in memorycard; golden 58's only changed line is that advice.",
+      "promote.PageMemoryRef checks memorycard identity first, then engram, and requires a positive integer id.",
+      "cmd_doctor.go liveMemoryEligibility opens only memorycard (ListMemories: active and superseded, archived excluded, id order) and makes no Engram call; EngramID is 0 when the import_map key is not numeric.",
+      "Tests: doctor_eligibility_memorycard_test.go (memorycard join, legacy join, no cross-join, pass cases) and cmd doctor_eligibility_test.go (absent Engram DB, memorycard read failure, advice for a frozen memorycard page). Static read only."
+    ]
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "kind": "polisher",
+  "base": "41ec8eb251e5cc996a33bf55aec2fd5f873f508e",
+  "head": "8289ca2e24e0fa6f8f1a65690fac859df55c1284",
+  "diff_sha256": "9db08405b0b2b9692ab2a954417acb1c5212d57ad11d45a879bce61b14fa2d99",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "doctor_eligibility.go:70-146 at head: when no live part is eligible, the advice names candidates[0] with that same part's reason.",
+      "Candidate order follows ListMemories (`order by m.id` in listWithStatus), so candidates[0] is the lowest-id live part.",
+      "Superseded memories are skipped before the maps are built; an empty candidate list continues, so a superseded-only page is never flagged; the memorycard path has one candidate and behaves as before.",
+      "TestDoctorJudgesAPageByTheLiveMemoriesOfItsObservation case 'the named part gives its own reason' (part 8 with TopicKey sdd/x) discriminates the old last-judged reason from the new one. Static read only."
+    ]
+  }
+}

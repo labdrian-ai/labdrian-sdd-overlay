@@ -1,0 +1,25 @@
+{
+  "kind": "polisher",
+  "base": "8289ca2e24e0fa6f8f1a65690fac859df55c1284",
+  "head": "0f28050f986e0f95ac2cb25cee8aac3b6cc24206",
+  "diff_sha256": "009b9bc52b483db9b50d54d92cbd02ee88bbce76dffa3f19ba789a80782f8ad8",
+  "findings": {
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/cmd/longterm-mem/promote_memorycard_test.go:345",
+        "summary": "The test pins neither claimed property: it never declares two different sources and never runs concurrent calls.",
+        "evidence": [
+          "The commit replaces one sync.Once shared by every source with a mutex-guarded map keyed by source (cmd_mcp.go:129-160); the test calls only source memorycard, sequentially, for ids 1 and 3 (promote_memorycard_test.go:351-355).",
+          "Collapsing the map back to one boolean would still pass the test, and removing the lock would not fail it, since nothing runs concurrently."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read cmd_mcp.go:100-174 and promote_memorycard_test.go:320-365 at 0f28050f986e.",
+      "The check, the set and the write happen under one lock, so concurrent calls declare each source at most once; the runtime logic reads correct, the gap is test adequacy.",
+      "No package-level declared-once state remains. Tests and race detector not run by the polisher."
+    ]
+  }
+}
