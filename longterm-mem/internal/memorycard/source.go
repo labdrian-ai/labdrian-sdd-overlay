@@ -116,7 +116,7 @@ func (s *Source) kinOf(cards []memory.CardMemory) (kin, error) {
 		}
 		texts := make([]textOf, len(handMirrors[project]))
 		for i, card := range handMirrors[project] {
-			texts[i] = textOf{title: card.Title, body: card.Body}
+			texts[i] = textOf{title: card.Title, body: card.Body, hash: card.ContentHash}
 		}
 		holders, err := index.holders(s.store, texts)
 		if err != nil {
@@ -215,7 +215,7 @@ func lineageOf(card memory.CardMemory, k kin) []memory.Identity {
 }
 
 // mirrorsOf is what a memory with no import_map row holds the content of: the imported observations that kinOf found
-// to hold its text (the stored hash of an imported part, else the ContentKey of the whole observation or of a part),
+// to hold its text (an imported memory of the same stored hash, or the ContentKey of the whole observation or of a part),
 // in observation id order, each as every memory of its parts, in part order, and the observation. Memorycard says it
 // alone: it needs no other store to know which observations were imported.
 func mirrorsOf(card memory.CardMemory, k kin) []memory.Identity {
