@@ -4,11 +4,14 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
+	"syscall"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/durable"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memorycard"
@@ -129,6 +132,8 @@ type vaultBackup struct {
 	// test replaces them to fail a write or a cleanup on demand.
 	write     func(path string, data []byte, perm fs.FileMode) error
 	removeAll func(path string) error
+	// syncDir syncs one directory; nil means syncDirectory, which ignores a file system that cannot sync a directory.
+	syncDir func(path string) error
 }
 
 func (b vaultBackup) BackUp(addresses []string) (string, error) {
@@ -185,8 +190,8 @@ func (b vaultBackup) copyInto(dir string, addresses []string) error {
 		rels = append(rels, vaultlayout.PageFile(address))
 	}
 	for _, rel := range rels {
-		source := filepath.Join(b.root, filepath.FromSlash(rel))
-		data, err := os.ReadFile(source)
+		// One handle for the stat and the read: the mode and the bytes are of the same file.
+		data, mode, err := readWithMode(filepath.Join(b.root, filepath.FromSlash(rel)))
 		if errors.Is(err, fs.ErrNotExist) && rel == vaultlayout.PrecedenceFile {
 			// A vault that never tracked a page has no sidecar to lose.
 			continue
@@ -194,28 +199,37 @@ func (b vaultBackup) copyInto(dir string, addresses []string) error {
 		if err != nil {
 			return err
 		}
-		info, err := os.Stat(source)
-		if err != nil {
-			return err
-		}
 		target := filepath.Join(dir, filepath.FromSlash(rel))
 		if err := os.MkdirAll(filepath.Dir(target), 0o700); err != nil {
 			return err
 		}
-		if err := write(target, data, info.Mode().Perm()); err != nil {
-			return err
-		}
-		// The write may have been made with the process umask; the copy has the mode of its source.
-		if err := os.Chmod(target, info.Mode().Perm()); err != nil {
+		// durable.WriteFile applies the mode exactly, through the handle, to a file it creates, and the directory is new.
+		if err := write(target, data, mode); err != nil {
 			return err
 		}
 	}
-	return syncDirectories(dir)
+	return b.syncDirectories(dir)
 }
 
-// syncDirectories syncs dir, every directory under it and the directory that holds it, so the entries of the copy
-// survive a crash and not only the bytes of its files.
-func syncDirectories(dir string) error {
+// readWithMode reads the file at path and answers its bytes and permission bits, both through one open handle.
+func readWithMode(path string) ([]byte, fs.FileMode, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer f.Close()
+	info, err := f.Stat()
+	if err != nil {
+		return nil, 0, err
+	}
+	data, err := io.ReadAll(f)
+	return data, info.Mode().Perm(), err
+}
+
+// syncDirectories syncs dir, every directory under it, the directory that holds it (.vault-meta, which the copy may
+// have made) and the vault root that holds that, so the entries of the copy survive a crash and not only the bytes of
+// its files.
+func (b vaultBackup) syncDirectories(dir string) error {
 	var dirs []string
 	err := filepath.WalkDir(dir, func(p string, d fs.DirEntry, err error) error {
 		if err == nil && d.IsDir() {
@@ -226,19 +240,36 @@ func syncDirectories(dir string) error {
 	if err != nil {
 		return err
 	}
-	dirs = append(dirs, filepath.Dir(dir))
+	dirs = append(dirs, filepath.Dir(dir), b.root)
+	syncDir := b.syncDir
+	if syncDir == nil {
+		syncDir = syncDirectory
+	}
 	for _, d := range dirs {
-		handle, err := os.Open(d)
-		if err != nil {
-			return err
-		}
-		syncErr := handle.Sync()
-		if closeErr := handle.Close(); syncErr == nil {
-			syncErr = closeErr
-		}
-		if syncErr != nil {
-			return fmt.Errorf("sync %s: %w", d, syncErr)
+		if err := syncDir(d); err != nil {
+			return fmt.Errorf("sync %s: %w", d, err)
 		}
 	}
 	return nil
+}
+
+// syncDirectory fsyncs one directory. A file system or platform that cannot sync a directory (Windows, or a file
+// system that answers EINVAL or ENOTSUP) is not a failure of the copy: its files were synced, and there is no way
+// to do more there. Any other error is returned.
+func syncDirectory(dir string) error {
+	if runtime.GOOS == "windows" {
+		return nil
+	}
+	handle, err := os.Open(dir)
+	if err != nil {
+		return err
+	}
+	syncErr := handle.Sync()
+	if closeErr := handle.Close(); syncErr == nil {
+		syncErr = closeErr
+	}
+	if errors.Is(syncErr, errors.ErrUnsupported) || errors.Is(syncErr, syscall.EINVAL) || errors.Is(syncErr, syscall.ENOTSUP) {
+		return nil
+	}
+	return syncErr
 }
