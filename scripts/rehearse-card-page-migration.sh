@@ -89,7 +89,7 @@ legacy_counts() { # one line per project: the pages of the vault that still carr
   # no frontmatter it can read) and counts a top-level key line only: this does the same, and says how many CRLF pages it skipped.
   perl -e '
     my %n; my $total = 0; my $crlf = 0;
-    opendir(my $dh, "$ARGV[0]/wiki/memory") or exit 0;
+    opendir(my $dh, "$ARGV[0]/wiki/memory") or do { print STDERR "ABORT: cannot read $ARGV[0]/wiki/memory: $!\n"; exit 2; };
     my @files = sort grep { /\.md$/ && -f "$ARGV[0]/wiki/memory/$_" } readdir($dh);
     closedir($dh);
     for my $name (@files) {
@@ -107,7 +107,7 @@ legacy_counts() { # one line per project: the pages of the vault that still carr
       close($h);
       next unless $legacy;
       $project =~ s/^["\x27]|["\x27]$//g;
-      $n{$project eq "" ? "(no project)" : $project}++;
+      $n{$project eq "" ? "(no project, not counted per project)" : $project}++;
       $total++;
     }
     printf("  %s: %d\n", $_, $n{$_}) for sort keys %n;
@@ -118,7 +118,7 @@ legacy_counts() { # one line per project: the pages of the vault that still carr
 projects_of() { # the distinct `project:` values of the pages of the vault at $1, one per line
   perl -e '
     my %seen;
-    opendir(my $dh, "$ARGV[0]/wiki/memory") or exit 0;
+    opendir(my $dh, "$ARGV[0]/wiki/memory") or do { print STDERR "ABORT: cannot read $ARGV[0]/wiki/memory: $!\n"; exit 2; };
     my @files = sort grep { /\.md$/ && -f "$ARGV[0]/wiki/memory/$_" } readdir($dh);
     closedir($dh);
     for my $name (@files) {
@@ -140,6 +140,7 @@ guard "$vault" "$card_db" "$engram_db" "$home" "$work/state" "$work/tmp" "$bin"
 live_before="$(live_digest)"
 echo "live vault digest before: $live_before"
 cp -a "$live_vault/." "$vault/"
+[[ -d "$vault/wiki/memory" && -r "$vault/wiki/memory" ]] || die "the copy of the vault has no readable wiki/memory directory: $vault"
 copy_db "$live_card_dir/memory.db" "$card_db"
 if [[ -f "$live_engram_dir/engram.db" ]]; then
   copy_db "$live_engram_dir/engram.db" "$engram_db"
@@ -184,7 +185,9 @@ echo "built: $bin (from $(git -C "$repo" rev-parse --short HEAD) plus its workin
 if (($# > 0)); then
   projects=("$@")
 else
-  mapfile -t projects < <(projects_of "$vault")
+  project_list="$(projects_of "$vault")"
+  projects=()
+  if [[ -n "$project_list" ]]; then mapfile -t projects <<<"$project_list"; fi
 fi
 ((${#projects[@]} > 0)) || die "no page of the vault names a project"
 echo "projects to rehearse (${#projects[@]}): ${projects[*]}"
@@ -286,8 +289,8 @@ if [[ "$live_before" == "$live_after" ]]; then echo "the live vault is unchanged
 
 echo
 echo "=== the live run, when the rehearsal is what you expect (one project at a time) ==="
-echo "Stop the hook-driven sync first: no lock guards a concurrent sync, and the hook (engine/synctrigger) has no switch."
-echo "Close every agent session of the vault's projects, and check <state>/logs/sync-trigger.log for a sync still running."
+echo "The hook-driven sync has no switch and no lock guards a concurrent sync. Close every agent session that uses the vault, then"
+echo "run: pgrep -af '[l]ongterm-mem.* sync'   (any output is a sync that is running; the bracket keeps the check from matching itself)"
 for project in "${projects[@]}"; do
   echo "  longterm-mem migrate-card-pages --project '$project'            # dry run, read the counts"
   echo "  longterm-mem migrate-card-pages --project '$project' --apply    # the backup directory it prints is the way back"
