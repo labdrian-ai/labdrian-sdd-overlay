@@ -5,8 +5,9 @@ import (
 	"testing"
 )
 
-// A legacy page with no project is reported once, apart from the per-project numbers, with its remedy; it is left alone
-// and, as every refusal, makes the exit code 6.
+// A legacy page with no project belongs to no project's run: every run prints it once, as a note on stdout (not also on
+// stderr), apart from the per-project numbers, with its remedy; it is left alone and makes no exit code of its own. The
+// exit code 6 here comes from the four pages the world refuses.
 func TestMigrateCardPages_APageWithNoProjectIsReportedApartFromTheCounts(t *testing.T) {
 	w, _ := migrationWorld(t)
 	lost := strings.Replace(legacyCardPage("c-000960", "Lost", 1, "learning", "3"), "project: "+promoteGoldenProject+"\n", "", 1)
@@ -18,14 +19,14 @@ func TestMigrateCardPages_APageWithNoProjectIsReportedApartFromTheCounts(t *test
 	}
 	for _, want := range []string{
 		"7 page(s) carry legacy keys in " + w.vaultRoot + ": would migrate 3, would refuse 4\n",
-		"1 page(s) have no project (no project, not counted per project): c-000960\n",
+		"note: 1 page(s) carry legacy keys and name no project, so no project's run counts them: c-000960; add a `project:` line to each by hand, then run again\n",
 	} {
 		if !strings.Contains(stdout, want) {
 			t.Errorf("stdout lacks %q:\n%s", want, stdout)
 		}
 	}
-	if !strings.Contains(stderr, "no project, not counted per project) c-000960: it carries legacy keys and has no project field: add a `project:` line") {
-		t.Errorf("stderr = %s, want the page named with its remedy", stderr)
+	if strings.Contains(stderr, "c-000960") {
+		t.Errorf("stderr = %s, want the note on stdout only", stderr)
 	}
 	if got := readVaultFile(t, w, "wiki/memory/c-000960.md"); got != lost {
 		t.Errorf("the page changed")
@@ -33,10 +34,10 @@ func TestMigrateCardPages_APageWithNoProjectIsReportedApartFromTheCounts(t *test
 }
 
 // What the command sees of the vault, which the rehearsal script's own count has to agree with: the pages that are
-// regular .md files directly in wiki/memory, whose frontmatter is delimited by `---` lines ending in a line feed. A
-// page with CRLF line endings has no frontmatter the command can read, and a page in a subdirectory is no page of the
-// vault: neither is counted, migrated or refused.
-func TestMigrateCardPages_ACrlfPageAndASubdirectoryPageAreNotSeen(t *testing.T) {
+// regular .md files directly in wiki/memory. A page in a subdirectory is no page of the vault and is not seen. A page
+// with a legacy key whose frontmatter cannot be read (CRLF line endings, a block with no closing `---`) is counted as
+// a legacy page and refused by name, never skipped in silence.
+func TestMigrateCardPages_AnUnreadablePageIsRefusedByNameAndASubdirectoryPageIsNotSeen(t *testing.T) {
 	w, _ := migrationWorld(t)
 	crlf := strings.ReplaceAll(legacyEngramPage("c-000950", "Crlf Page", 1, "decision", "1"), "\n", "\r\n")
 	writeVaultFile(t, w, "wiki/memory/c-000950.md", crlf)
@@ -44,13 +45,35 @@ func TestMigrateCardPages_ACrlfPageAndASubdirectoryPageAreNotSeen(t *testing.T) 
 	before := cmdVaultSnapshot(t, w.vaultRoot)
 
 	code, stdout, stderr := runMigrate(t, "--apply")
-	if code != exitRegistrationConflict || !strings.Contains(stdout, "migrated 3 of 7 page(s) carrying legacy keys") {
-		t.Fatalf("exit %d, stdout %q, stderr %q, want the same seven legacy pages as without the two", code, stdout, stderr)
+	if code != exitRegistrationConflict || !strings.Contains(stdout, "migrated 3 of 8 page(s) carrying legacy keys") {
+		t.Fatalf("exit %d, stdout %q, stderr %q, want the seven legacy pages and the CRLF one, and not the one in the subdirectory", code, stdout, stderr)
+	}
+	if !strings.Contains(stderr, "refused c-000950: unreadable frontmatter (CRLF line endings or no closing ---)") {
+		t.Errorf("stderr = %s, want the CRLF page refused by name", stderr)
+	}
+	if !strings.Contains(stdout, "  refused, frontmatter cannot be read (CRLF line endings or no closing ---): 1\n") {
+		t.Errorf("stdout = %s, want the count of the kind", stdout)
 	}
 	after := cmdVaultSnapshot(t, w.vaultRoot)
 	for _, rel := range []string{"wiki/memory/c-000950.md", "wiki/memory/archive/c-000951.md"} {
 		if after[rel] != before[rel] {
 			t.Errorf("%s changed", rel)
 		}
+	}
+}
+
+// A page with no project is no project's refusal: with nothing else refused, the run exits 0 and still prints the note.
+func TestMigrateCardPages_APageWithNoProjectDoesNotMakeTheExitCode(t *testing.T) {
+	w, _ := memorycardWorld(t)
+	recordPage(t, w, "c-000903", legacyCardPage("c-000903", "Card Only", 1, "learning", "3"), true)
+	lost := strings.Replace(legacyCardPage("c-000960", "Lost", 2, "learning", "3"), "project: "+promoteGoldenProject+"\n", "", 1)
+	recordPage(t, w, "c-000960", lost, true)
+
+	code, stdout, stderr := runMigrate(t)
+	if code != exitOK || stderr != "" {
+		t.Fatalf("exit %d, stderr %q, stdout %q, want 0 and nothing on stderr", code, stderr, stdout)
+	}
+	if !strings.Contains(stdout, "note: 1 page(s) carry legacy keys and name no project") || !strings.Contains(stdout, "c-000960") {
+		t.Errorf("stdout = %s, want the note", stdout)
 	}
 }

@@ -27,7 +27,8 @@ import (
 // is read. Without --apply it reports what it would do and writes nothing. With --apply it first copies the pages it
 // will rewrite and the precedence sidecar to a directory it names, then rewrites them. A page it cannot migrate is
 // refused by name with its reason on stderr and the run goes on; any refusal makes the exit code 6
-// (registration_conflict), the code of every refusal that leaves a page alone.
+// (registration_conflict), the code of every refusal that leaves a page alone. A page with a legacy key and no project
+// is no project's page: each run prints one note about it on stdout and it makes no exit code.
 func (c commands) cmdMigrateCardPages(args []string) int {
 	flags := flag.NewFlagSet("migrate-card-pages", flag.ContinueOnError)
 	flags.SetOutput(os.Stderr)
@@ -85,10 +86,7 @@ func reportMigration(a app, report promote.CardMigrationReport, err error, vault
 		fmt.Printf("%s: %s (memorycard memory %d)\n", verb, p.Address, p.MemoryID)
 	}
 	for _, r := range report.Refused {
-		fmt.Fprintf(os.Stderr, "longterm-mem: migrate-card-pages: refused %s: %s\n", r.Address, r.Reason)
-	}
-	for _, r := range report.NoProject {
-		fmt.Fprintf(os.Stderr, "longterm-mem: migrate-card-pages: refused (no project, not counted per project) %s: %s\n", r.Address, r.Reason)
+		fmt.Fprintf(os.Stderr, "longterm-mem: migrate-card-pages: refused %s: %s\n", r.Address, refusalReason(vaultRoot, r))
 	}
 	if err != nil {
 		return a.refuse(err, exitInternal)
@@ -100,7 +98,7 @@ func reportMigration(a app, report promote.CardMigrationReport, err error, vault
 	}
 	counts := report.RefusalCounts()
 	for _, kind := range promote.RefusalKinds {
-		if n := counts[kind]; n > 0 || (kind != promote.RefusedOther && kind != promote.RefusedNoMemory && kind != promote.RefusedHalfMigrated) {
+		if n := counts[kind]; n > 0 || (kind != promote.RefusedOther && kind != promote.RefusedNoMemory && kind != promote.RefusedHalfMigrated && kind != promote.RefusedUnreadable) {
 			fmt.Printf("  refused, %s: %d\n", kind, n)
 		}
 	}
@@ -109,15 +107,42 @@ func reportMigration(a app, report promote.CardMigrationReport, err error, vault
 		for i, r := range report.NoProject {
 			names[i] = r.Address
 		}
-		fmt.Printf("%d page(s) have no project (no project, not counted per project): %s\n", len(names), strings.Join(names, ", "))
+		// A note, on stdout only: no project owns these pages, so they are no refusal of this run and make no exit code.
+		fmt.Printf("note: %d page(s) carry legacy keys and name no project, so no project's run counts them: %s; add a `project:` line to each by hand, then run again\n", len(names), strings.Join(names, ", "))
 	}
 	if !apply {
 		fmt.Println("nothing was written (pass --apply to migrate)")
 	}
-	if len(report.Refused) > 0 || len(report.NoProject) > 0 {
+	if len(report.Refused) > 0 {
 		return exitRegistrationConflict
 	}
 	return exitOK
+}
+
+// backupDirectoryPrefix starts the name of every directory vaultBackup makes under the vault's .vault-meta.
+const backupDirectoryPrefix = "card-page-migration-"
+
+// refusalReason is the reason of a refusal as the command prints it. A half-migrated page's way back is a backup of this
+// migration, so its reason lists the backup directories the vault has, as paths relative to the vault root.
+func refusalReason(vaultRoot string, r promote.MigrationRefusal) string {
+	if r.Kind != promote.RefusedHalfMigrated {
+		return r.Reason
+	}
+	meta := path.Dir(vaultlayout.SyncStateFile)
+	entries, err := os.ReadDir(filepath.Join(vaultRoot, filepath.FromSlash(meta)))
+	var found []string
+	for _, entry := range entries {
+		if entry.IsDir() && strings.HasPrefix(entry.Name(), backupDirectoryPrefix) {
+			found = append(found, meta+"/"+entry.Name()+"/")
+		}
+	}
+	switch {
+	case err != nil && !errors.Is(err, fs.ErrNotExist):
+		return r.Reason + "; backups present: could not be listed (" + err.Error() + ")"
+	case len(found) == 0:
+		return r.Reason + "; backups present: none"
+	}
+	return r.Reason + "; backups present: " + strings.Join(found, ", ")
 }
 
 // vaultBackup is promote.MigrationBackup over the files of the vault at root: it copies the pages to rewrite and the
@@ -150,6 +175,15 @@ func (b vaultBackup) BackUp(addresses []string) (string, error) {
 		if removeErr := removeAll(dir); removeErr != nil {
 			return "", errors.Join(err, fmt.Errorf("remove the partial copy %s: %w", dir, removeErr))
 		}
+		// The removal is made durable like the copy was: the directory that held it is synced, so a crash cannot bring the
+		// partial copy back.
+		syncDir := b.syncDir
+		if syncDir == nil {
+			syncDir = syncDirectory
+		}
+		if syncErr := syncDir(filepath.Dir(dir)); syncErr != nil {
+			return "", errors.Join(err, fmt.Errorf("sync %s after removing the partial copy: %w", filepath.Dir(dir), syncErr))
+		}
 		return "", err
 	}
 	return dir, nil
@@ -158,7 +192,7 @@ func (b vaultBackup) BackUp(addresses []string) (string, error) {
 // newDirectory makes the directory of this backup, named by the instant it was asked; a second backup of the same
 // second takes the next free suffix, so a retry never meets the copy of the run before it.
 func (b vaultBackup) newDirectory() (string, error) {
-	base := filepath.Join(b.root, filepath.FromSlash(path.Dir(vaultlayout.SyncStateFile)), "card-page-migration-"+b.clock.Now().UTC().Format("20060102T150405Z"))
+	base := filepath.Join(b.root, filepath.FromSlash(path.Dir(vaultlayout.SyncStateFile)), backupDirectoryPrefix+b.clock.Now().UTC().Format("20060102T150405Z"))
 	if err := os.MkdirAll(filepath.Dir(base), 0o700); err != nil {
 		return "", err
 	}
@@ -253,13 +287,19 @@ func (b vaultBackup) syncDirectories(dir string) error {
 	return nil
 }
 
-// syncDirectory fsyncs one directory. A file system or platform that cannot sync a directory (Windows, or a file
-// system that answers EINVAL or ENOTSUP) is not a failure of the copy: its files were synced, and there is no way
-// to do more there. Any other error is returned.
-func syncDirectory(dir string) error {
-	if runtime.GOOS == "windows" {
-		return nil
+// toleratedDirectorySyncError reports whether err, the error of syncing a directory on goos, is no failure of the copy: a
+// platform or file system that cannot sync a directory (Windows, or an answer of EINVAL, ENOTSUP or ErrUnsupported) has
+// no way to do more than the sync of the copy's files. It has no error to tolerate when err is nil.
+func toleratedDirectorySyncError(goos string, err error) bool {
+	if err == nil {
+		return false
 	}
+	return goos == "windows" || errors.Is(err, errors.ErrUnsupported) || errors.Is(err, syscall.EINVAL) || errors.Is(err, syscall.ENOTSUP)
+}
+
+// syncDirectory fsyncs one directory; the errors toleratedDirectorySyncError names are not failures. Any other error is
+// returned.
+func syncDirectory(dir string) error {
 	handle, err := os.Open(dir)
 	if err != nil {
 		return err
@@ -268,7 +308,7 @@ func syncDirectory(dir string) error {
 	if closeErr := handle.Close(); syncErr == nil {
 		syncErr = closeErr
 	}
-	if errors.Is(syncErr, errors.ErrUnsupported) || errors.Is(syncErr, syscall.EINVAL) || errors.Is(syncErr, syscall.ENOTSUP) {
+	if toleratedDirectorySyncError(runtime.GOOS, syncErr) {
 		return nil
 	}
 	return syncErr

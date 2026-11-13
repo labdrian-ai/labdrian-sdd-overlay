@@ -12,6 +12,9 @@ import (
 // included, and a directory that cannot be synced fails the copy and takes it away.
 func TestVaultBackup_SyncsTheCopyAndTheDirectoriesThatHoldIt(t *testing.T) {
 	w, _ := migrationWorld(t)
+	if _, err := os.Stat(filepath.Join(w.vaultRoot, ".vault-meta")); !os.IsNotExist(err) {
+		t.Fatalf(".vault-meta must be absent before the copy, which makes it (stat error: %v)", err)
+	}
 	var synced []string
 	backup := vaultBackup{root: w.vaultRoot, clock: fixedClock{at: migrationInstant},
 		syncDir: func(path string) error { synced = append(synced, path); return nil }}

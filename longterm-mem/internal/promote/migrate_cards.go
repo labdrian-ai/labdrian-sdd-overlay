@@ -3,6 +3,7 @@ package promote
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -81,10 +82,13 @@ const (
 	// page nor a rewrite a stopped run could have written: a frontmatter line was edited, or a stopped run was followed
 	// by an edit. The way back is the backup of the run that stopped.
 	RefusedHalfMigrated
+	// RefusedUnreadable: the page carries a legacy key but its frontmatter cannot be read (CRLF line endings, or a block with
+	// no closing line), so the migration cannot rewrite it; it is counted and named, never skipped.
+	RefusedUnreadable
 )
 
 // RefusalKinds lists the kinds in the order a report counts them.
-var RefusalKinds = []RefusalKind{RefusedEdited, RefusedHalfMigrated, RefusedUntracked, RefusedNoImport, RefusedNoMemory, RefusedHasOwnPage, RefusedOther}
+var RefusalKinds = []RefusalKind{RefusedEdited, RefusedHalfMigrated, RefusedUnreadable, RefusedUntracked, RefusedNoImport, RefusedNoMemory, RefusedHasOwnPage, RefusedOther}
 
 // String is how a count of the kind is named.
 func (k RefusalKind) String() string {
@@ -93,6 +97,8 @@ func (k RefusalKind) String() string {
 		return "edited since longterm-mem wrote it"
 	case RefusedHalfMigrated:
 		return "frontmatter differs from the entry and is no recorded rewrite"
+	case RefusedUnreadable:
+		return "frontmatter cannot be read (CRLF line endings or no closing ---)"
 	case RefusedUntracked:
 		return "not recorded as written by longterm-mem"
 	case RefusedNoImport:
@@ -192,10 +198,34 @@ func topLevelFields(block string) map[string]string {
 	return parseFrontmatterFields(strings.Join(top, "\n"))
 }
 
+// unreadableFrontmatter is the frontmatter of a page frontmatterBlock cannot isolate (it reads lines ending in a line feed,
+// closed by a line of ---): the lines after an opening --- up to its closing line, or to the end of the page when there
+// is none, with a carriage return taken off each. It answers false when the page does not open with ---, or when no top-level
+// legacy key is among those lines: such a page is no legacy page, whatever its prose says.
+func unreadableFrontmatter(content string) (string, bool) {
+	lines := strings.Split(content, "\n")
+	if strings.TrimSuffix(lines[0], "\r") != "---" {
+		return "", false
+	}
+	var opening []string
+	for _, line := range lines[1:] {
+		line = strings.TrimSuffix(line, "\r")
+		if line == "---" {
+			break
+		}
+		opening = append(opening, line)
+	}
+	block := strings.Join(opening, "\n")
+	return block, carriesLegacyKeys(block)
+}
+
 // legacyPage is a page of the project that carries a legacy key.
 type legacyPage struct {
 	address, raw, block string
 	fields              map[string]string
+	// unreadable: the page carries a legacy key but its frontmatter cannot be read, so block is empty and fields come
+	// from the lines the page opens with.
+	unreadable bool
 }
 
 // legacyPagesOf lists the pages of project that carry a legacy key, in the order the port lists them, through the
@@ -213,7 +243,12 @@ func legacyPagesOf(pages PageReader, project string) ([]legacyPage, error) {
 			return
 		}
 		block, ok := frontmatterBlock(content)
-		if !ok || !carriesLegacyKeys(block) {
+		unreadable := !ok
+		if unreadable {
+			if block, ok = unreadableFrontmatter(content); !ok {
+				return
+			}
+		} else if !carriesLegacyKeys(block) {
 			return
 		}
 		fields := topLevelFields(block)
@@ -221,7 +256,10 @@ func legacyPagesOf(pages PageReader, project string) ([]legacyPage, error) {
 		if owner := fields[projectField]; owner != "" && owner != project {
 			return
 		}
-		found = append(found, legacyPage{address: address, raw: content, block: block, fields: fields})
+		if unreadable {
+			block = ""
+		}
+		found = append(found, legacyPage{address: address, raw: content, block: block, fields: fields, unreadable: unreadable})
 	})
 	if err != nil {
 		return nil, err
@@ -273,6 +311,10 @@ func MigrateCardPages(cards CardBridges, w *Writer, backup MigrationBackup, proj
 		report.Legacy++
 		refuse := func(kind RefusalKind, reason string) {
 			report.Refused = append(report.Refused, MigrationRefusal{Address: page.address, Kind: kind, Reason: reason})
+		}
+		if page.unreadable {
+			refuse(RefusedUnreadable, "unreadable frontmatter (CRLF line endings or no closing ---): longterm-mem reads frontmatter delimited by lines ending in a line feed and closed by ---, so the page was left alone; fix its line endings or close the block, then run again")
+			continue
 		}
 		if !simpleIdentityLines(page.block) {
 			refuse(RefusedOther, "an identity key's value runs over several lines, which the migration does not rewrite")
@@ -344,7 +386,7 @@ type mappedPage struct {
 // block under an identity the page could have been given has the entry's frontmatter hash. A page naming a memorycard
 // memory has one candidate, its own revision and type. A page naming an Engram observation takes the memory's, and
 // revisions only grow, so the candidates are the memory's current revision first and then every revision below it
-// down to 0, each with the memory's current type and the type the page names. They are built here, one at a time,
+// down to 0 and then none, each with the memory's current type, the type the page names and none. They are built here, one at a time,
 // and only for a page whose body is the recorded one and whose frontmatter is not.
 //
 // An edit confined to the identity lines of such a page is adopted: the migration rewrites those lines anyway, and
@@ -357,13 +399,21 @@ func (m mappedPage) recordedRewrite(entry PrecedenceEntry, block string) (string
 	if !m.fromMemory {
 		return try(m.revision, m.kind)
 	}
+	// The empty type and the empty revision are candidates too: a memory with no type, and a rewrite that wrote no
+	// revision line, are rewrites a run could have recorded.
 	kinds := []string{m.kind}
-	if m.ownKind != m.kind {
-		kinds = append(kinds, m.ownKind)
+	for _, kind := range []string{m.ownKind, ""} {
+		if !slices.Contains(kinds, kind) {
+			kinds = append(kinds, kind)
+		}
 	}
-	for revision := m.memoryRevision; revision >= 0; revision-- {
+	for revision := m.memoryRevision; revision >= -1; revision-- {
+		text := ""
+		if revision >= 0 {
+			text = strconv.Itoa(revision)
+		}
 		for _, kind := range kinds {
-			if candidate, ok := try(strconv.Itoa(revision), kind); ok {
+			if candidate, ok := try(text, kind); ok {
 				return candidate, true
 			}
 		}
