@@ -2,7 +2,7 @@ args: promote --project golden-project --source memorycard --id 999
 exit: 7
 --- stdout ---
 --- stderr ---
-longterm-mem: promote: promote: observation not found: memorycard memory 999
+longterm-mem: promote: memory not found: memorycard memory 999
 --- vault ---
 === .allocator-counter ===
 903

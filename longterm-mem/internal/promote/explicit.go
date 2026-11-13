@@ -11,7 +11,7 @@ import (
 // such memory -- R-032's "rejected with a clear error rather than
 // silently doing nothing", distinguishable via errors.Is so a caller (the
 // CLI's exit 7, not_found) never has to string-match an error message.
-var ErrObservationNotFound = errors.New("promote: observation not found")
+var ErrObservationNotFound = errors.New("memory not found")
 
 // ExplicitPromoteCard promotes the memorycard memory named by id (Writer.Promote). Like ExplicitPromote it is
 // explicit: nothing about the memory has to make it eligible. It differs in what it says: a memory, not an
