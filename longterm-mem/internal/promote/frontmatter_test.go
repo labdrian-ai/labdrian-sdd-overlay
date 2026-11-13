@@ -8,8 +8,8 @@ import (
 )
 
 // TestPatchStatusFields_ReplacesExistingFieldInPlace: task 7.10 Gap 2
-// coverage. frontmatter.go's PatchStatusFields (7.8 REFACTOR) was until
-// now only exercised indirectly through propagate_test.go; this proves
+// coverage. frontmatter.go's PatchStatusFields (7.8 REFACTOR) is otherwise
+// only exercised indirectly through the propagation tests; this proves
 // the direct contract: an existing status:/related: line is rewritten
 // where it already sits, not appended a second time elsewhere.
 func TestPatchStatusFields_ReplacesExistingFieldInPlace(t *testing.T) {
