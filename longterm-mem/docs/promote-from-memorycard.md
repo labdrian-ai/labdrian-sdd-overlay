@@ -108,18 +108,20 @@ A page is refused, left byte-identical and named, and the run goes on to the oth
 |---|---|
 | the page's body differs from its precedence entry (a hand edit, R-030) | `edited since longterm-mem wrote it` |
 | the page's body is the recorded one but its frontmatter matches neither the entry nor any rewrite a stopped run could have written (a frontmatter line was edited) | `frontmatter differs from the entry and is no recorded rewrite` (shown when it is not zero); the message names the backup directory and says copying it over the vault restores the page and the sidecar, and lists the backup directories the vault has (`backups present: ...`, or `none`) |
-| the page carries a legacy key but its frontmatter cannot be read: CRLF line endings, or a block with no closing `---` | `frontmatter cannot be read (CRLF line endings or no closing ---)` (shown when it is not zero); the reason is `unreadable frontmatter (CRLF line endings or no closing ---)` |
+| the page carries a legacy key but its frontmatter cannot be read: CRLF line endings, a block with no closing `---`, or no two `---` lines at all (a leading byte order mark, blank line or spaces included) | `frontmatter cannot be read (CRLF line endings or no closing ---)` (shown when it is not zero); the reason is `unreadable frontmatter (CRLF line endings or no closing ---)` |
 | the page has no precedence entry | `not recorded as written by longterm-mem` |
 | no `import_map` row names the page's observation, or the memory is gone | `no import_map row names its Engram observation` |
 | the page names a memorycard memory by `memorycard_id` and memorycard holds no memory with that id | `memorycard holds no memory with the id it names` (shown when it is not zero) |
 | the memory already has a page of its own, or is the memory of another page of the run (two pages for one memory; two `memorycard_id` pages of one memory are both refused) | `its memory already has a page` |
 | the page's id is no number, it names an Engram observation and a memorycard memory at once, it carries a legacy key and names no memory, an identity key's value runs over several lines, or the memory is in another project | `identity cannot be read as one memory` (shown when it is not zero) |
 
-A page that carries a legacy key and has no `project` field belongs to no project, so it is in no project's run: every run prints it
-once, as a note on stdout only (`note: N page(s) carry legacy keys and name no project, so no project's run counts them: <pages>; add a
+A page that carries a legacy key and has no `project` field belongs to no project, so it is in no project's run: every run (dry or
+`--apply`, of any project, one with zero legacy pages of its own and one that fails included) prints it once, as a note on stdout only (`note: N page(s) carry legacy keys and name no project, so no project's run counts them: <pages>; add a
 `project:` line to each by hand, then run again`), leaves it alone, and it makes no exit code of its own: exit 6 comes only from that
 project's own refusals. The rehearsal script's vault-wide count includes these pages, and that count is what the retirement waits on
-(it must be zero), so no page is hidden.
+(it must be zero), so no page is hidden. With several projects the rule is: the sum of every project's legacy count plus the pages
+with no project is the vault-wide count. An unreadable page falls in its project when its `project:` line is a top-level line of the
+page, and among the pages with no project otherwise.
 
 A refused page is left for the owner: it is never matched to a memory by its content. A page that cannot be read stops
 the run before any write, since it may be a memory's own page. A second run changes nothing: the pages it migrated no
@@ -134,8 +136,9 @@ memory's next revision rewrites it. Every page of the project that carries a leg
 refused under one of the names of the table above (a page that names no memory is among them), so the
 count of a project plus the pages with no project is the number of pages that still carry a legacy key. A line that only looks like a key inside a longer value is
 no key. The command reads the pages that are `.md` files directly in `wiki/memory`; a page in a subdirectory is not seen, as for
-every other command. It reads frontmatter delimited by lines ending in a line feed and closed by a `---` line: a page that
-carries a top-level legacy key in a frontmatter it cannot read (CRLF line endings, or no closing `---`) is counted as a legacy
+every other command. It reads frontmatter lying between two `---` lines that end in a line feed: any other page is read whole, with a byte order
+mark and the carriage returns taken off, whatever its first line is, and when a top-level legacy key line is anywhere in it (a page of
+plain text with such a line at column 0 included: it is refused, which writes nothing and only reports the page) it is counted as a legacy
 page and refused by name as above, never skipped, and the rehearsal script counts it the same way. Fix its line endings or close
 the block, then run again.
 
