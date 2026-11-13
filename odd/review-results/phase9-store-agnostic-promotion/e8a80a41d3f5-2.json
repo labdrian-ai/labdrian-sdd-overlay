@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a2caff4dbc514b22b173ac708ba66c28249cd348",
+    "head": "e8a80a41d3f5b6139f0038c6f4129d4fd9280da9",
+    "diff_sha256": "b3c4b6e5e0d941110e058a93ea1077919a8209ce0e3941fae84baba4da26ea4e",
+    "paths": [
+      "odd/review-results/phase9-store-agnostic-promotion/a2caff4dbc51-1.sweep.json",
+      "odd/review-results/phase9-store-agnostic-promotion/a2caff4dbc51-2.json",
+      "odd/review-results/phase9-store-agnostic-promotion/a2caff4dbc51-3.json",
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "a2caff4dbc514b22b173ac708ba66c28249cd348",
+      "head": "e8a80a41d3f5b6139f0038c6f4129d4fd9280da9",
+      "diff_sha256": "b3c4b6e5e0d941110e058a93ea1077919a8209ce0e3941fae84baba4da26ea4e"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/review-results/phase9-store-agnostic-promotion/a2caff4dbc51-1.sweep.json",
+        "odd/review-results/phase9-store-agnostic-promotion/a2caff4dbc51-2.json",
+        "odd/review-results/phase9-store-agnostic-promotion/a2caff4dbc51-3.json",
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:5",
+        "claim": "The Objective is now prefixed 'T1-T3 here; the rest in the next phase', but the rest of the same sentence still states the Engram removal, `internal/engram` deletion and the ~4500-6500 line forecast over T4-T20 as the feature's outcome. A reader can still take the Engram removal as delivered by this feature, so the prefix only partly resolves the earlier review finding.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:5 (prefix added, body unchanged: 'Engram is removed from all of longterm-mem', 'over T4-T20')"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff edits one document and adds three review-result JSON records, so no executable behavior changes.",
+      "The S9 Acceptance line now cites L17 (a), consistent with S9 (f) and the T9 line, which resolves the earlier F2 finding.",
+      "T4-T20 are each marked 'moved to the next phase (L42)', consistent with the scope line.",
+      "The Objective prefix is the only remaining place where the scope reads inconsistently."
+    ]
+  }
+}

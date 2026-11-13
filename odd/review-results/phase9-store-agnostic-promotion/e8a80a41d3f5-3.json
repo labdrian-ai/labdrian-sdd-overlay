@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a2caff4dbc514b22b173ac708ba66c28249cd348",
+    "head": "e8a80a41d3f5b6139f0038c6f4129d4fd9280da9",
+    "diff_sha256": "b3c4b6e5e0d941110e058a93ea1077919a8209ce0e3941fae84baba4da26ea4e",
+    "paths": [
+      "odd/review-results/phase9-store-agnostic-promotion/a2caff4dbc51-1.sweep.json",
+      "odd/review-results/phase9-store-agnostic-promotion/a2caff4dbc51-2.json",
+      "odd/review-results/phase9-store-agnostic-promotion/a2caff4dbc51-3.json",
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "a2caff4dbc514b22b173ac708ba66c28249cd348",
+      "head": "e8a80a41d3f5b6139f0038c6f4129d4fd9280da9",
+      "diff_sha256": "b3c4b6e5e0d941110e058a93ea1077919a8209ce0e3941fae84baba4da26ea4e"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/review-results/phase9-store-agnostic-promotion/a2caff4dbc51-1.sweep.json",
+        "odd/review-results/phase9-store-agnostic-promotion/a2caff4dbc51-2.json",
+        "odd/review-results/phase9-store-agnostic-promotion/a2caff4dbc51-3.json",
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The change is documentation and archived review records only; no executable code changes, so there is no runtime risk.",
+      "The Objective is now scoped to T1-T3 and each moved task T4-T20 is marked 'moved to the next phase (L42)', which agrees with the scope line. This resolves the earlier F1 finding about the two disagreeing scopes.",
+      "The S9 Acceptance sentence now cites 'the L17 (a) answer' instead of 'the L12 answer'. This agrees with S9 (f) and the T9 line, and resolves the earlier F2 finding.",
+      "The three review-result JSON files are additive archive records of the previous commit's review. Their stale findings were already addressed by this commit and are not a defect it introduces."
+    ]
+  }
+}

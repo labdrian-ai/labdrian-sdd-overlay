@@ -2,7 +2,11 @@
 
 Scope (L42): this feature closes in Phase 9 with T1-T3; T4-T20 and every Spec they carry (S4-S16) move to the first feature of the next phase, which takes this document as its specification.
 
-Objective (T1-T3 here; the rest in the next phase, per the scope line above): longterm-mem promotes memories into the vault without knowing which store they come from: one memory model with a `source` + `source_id` identity, one walk per pass, each store an adapter, pages with a store-agnostic identity; since L25 and L27, memorycard is the only memory store: Engram is removed from all of longterm-mem (promotion and retrieval) and from the engine's memory plan, projection gate and skills candidates, every page takes its memorycard identity, and `internal/engram` is deleted last. Branch `feat/phase9-store-agnostic-promotion` (from origin/main `9ad3b156`; one branch per task, T3 on `feat/phase9-sap-t3-promotion-walk`); delivery strategy `ask-on-risk` (remaining forecast after T3, L28: ~4500-6500 authored changed lines of production and docs over T4-T20, deletions counted, tests on top; unmeasured, a planning figure).
+Objective of this feature (T1-T3, delivered in Phase 9): longterm-mem promotes memories into the vault without knowing which store they come from: one memory model with a `source` + `source_id` identity, one page-identity reader, and one promotion walk over a `Source` port, each store an adapter.
+
+Objective of the next phase's first feature (T4-T20, specified here, not delivered by this feature): since L25 and L27, memorycard is the only memory store: Engram is removed from all of longterm-mem (promotion and retrieval) and from the engine's memory plan, projection gate and skills candidates, every page takes its memorycard identity, and `internal/engram` is deleted last; forecast (L28): ~4500-6500 authored changed lines of production and docs over T4-T20, deletions counted, tests on top; unmeasured, a planning figure.
+
+Branch `feat/phase9-store-agnostic-promotion` (from origin/main `9ad3b156`; one branch per task, T3 on `feat/phase9-sap-t3-promotion-walk`); delivery strategy `ask-on-risk`.
 Test runner: `go test` in `longterm-mem/` and in `engine/` (`./synctrigger/...`); the owner alone runs anything against the live vault or the live memorycard store.
 
 ## Specs
