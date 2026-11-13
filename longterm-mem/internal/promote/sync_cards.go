@@ -149,7 +149,7 @@ func CardRunFailure(err error) Failure {
 }
 
 // CardProjectReport is what SyncCardsProject did for one project: SyncCards' report and, when the run failed,
-// why, in the terms ProjectSyncReport's Failure uses.
+// why, as a Failure (CardRunFailure).
 type CardProjectReport struct {
 	CardSyncReport
 	Patched []string

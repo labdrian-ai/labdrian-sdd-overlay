@@ -97,8 +97,8 @@ func reportCardPlan(ctx context.Context, a app, source promote.Source, project, 
 	return exitOK
 }
 
-// reportCardSync prints what `sync --source memorycard` did and answers the exit code of the run, in the shape of
-// reportSync: what landed is reported whether or not the run failed, a failed run answers by what failed
+// reportCardSync prints what `sync --source memorycard` did and answers the exit code of the run:
+// what landed is reported whether or not the run failed, a failed run answers by what failed
 // (syncExitCode), and a bridged memory or a hand-edited page left alone is counted and is no failure.
 func reportCardSync(report promote.CardProjectReport, err error) int {
 	fmt.Printf("longterm-mem: sync --source memorycard promoted %d memory(ies); patched %d page(s); skipped %d bridged; left %d locally edited page(s) alone\n",
@@ -151,7 +151,7 @@ func warnSkippedPages(w io.Writer, prefix string, unreadable []promote.Unreadabl
 //   - anything else (a per-observation page write, the sync-state record,
 //     the precedence store) -> exitInternal.
 //
-// What failed is told by promote.SyncProject (promote.Failure), which asks
+// What failed is told by promote.SyncCardsProject (promote.Failure), which asks
 // the memory itself and never matches a message, so the code stays bound to
 // the condition it names instead of to a string.
 func syncExitCode(failure promote.Failure) int {

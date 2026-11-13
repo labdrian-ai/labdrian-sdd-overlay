@@ -63,8 +63,8 @@ func TestPromoteCardAndReindex_APromotionThatDidNotHappenRebuildsNothing(t *test
 		lookup ObservationLookup
 		want   error
 	}{
-		"an observation that does not exist": {lookupOf(), ErrMemoryNotFound},
-		"a lookup that fails":                {func(int64) (memory.Observation, bool, error) { return memory.Observation{}, false, broken }, broken},
+		"a memory that does not exist": {lookupOf(), ErrMemoryNotFound},
+		"a lookup that fails":          {func(int64) (memory.Observation, bool, error) { return memory.Observation{}, false, broken }, broken},
 	} {
 		t.Run(name, func(t *testing.T) {
 			rebuilder := &countingRebuilder{}

@@ -77,7 +77,7 @@ func (c commands) cmdMCP(args []string) int {
 
 // mcpDeps are the tools of the MCP session. Each resolves its own project's vault fresh on every call (a session
 // can serve more than one project) and then calls the same construction and use cases the CLI subcommands do
-// (queryDeps, promote.PromoteAndReindex), so the CLI and MCP surfaces cannot drift -- the query tool's Embed and
+// (queryDeps, promote.PromoteCardAndReindex), so the CLI and MCP surfaces cannot drift -- the query tool's Embed and
 // index cache being the one deliberate exception (issue #286): this session's shared client, load cache and Builder (its
 // wiring, app.sessionQueryWiring), not runQuery's per-call construction.
 func (c commands) mcpDeps(store *engram.Store, wiring queryWiring) mcpserver.Deps {
