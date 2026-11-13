@@ -1,15 +1,14 @@
-args: promote --project golden-project --id 1
+args: promote --project golden-project --source memorycard --id 1
 exit: 1
 --- stdout ---
 --- stderr ---
-longterm-mem: promote: promote: promoted page c-000500.md carries an unparseable engram_revision "x": strconv.Atoi: parsing "x": invalid syntax
-args: sync --project golden-project
+longterm-mem: promote: promote: promoted page c-000500.md carries an unparseable memorycard_revision "x": strconv.Atoi: parsing "x": invalid syntax
+args: sync --project golden-project --source memorycard
 exit: 1
 --- stdout ---
-longterm-mem: sync promoted 1 observation(s), patched 0 page(s)
+longterm-mem: sync --source memorycard promoted 1 memory(ies); patched 0 page(s); skipped 0 bridged; left 0 locally edited page(s) alone
 --- stderr ---
-longterm-mem: sync: promote: sync: observation 1: check promoted state: promote: promoted page c-000500.md carries an unparseable engram_revision "x": strconv.Atoi: parsing "x": invalid syntax
-promote: propagate: observation 1: check promoted state: promote: promoted page c-000500.md carries an unparseable engram_revision "x": strconv.Atoi: parsing "x": invalid syntax
+longterm-mem: sync: promote: sync memorycard: memory 1: promote: promoted page c-000500.md carries an unparseable memorycard_revision "x": strconv.Atoi: parsing "x": invalid syntax
 --- vault ---
 === .allocator-counter (-rw-r--r--) ===
 901
@@ -17,9 +16,8 @@ promote: propagate: observation 1: check promoted state: promote: promoted page 
 === .raw/.longterm-mem-manifest.json (-rw-------) ===
 {
   "c-000901": {
-    "body_hash": "70afa7604aeb5073bd50562c32fa0b91859333766ee7be33b869d338f6ccc784",
-    "frontmatter_hash": "a0e731e4938f9c8a2795de3708f120b70de5a7ea1631a63e00346614c1fe07f3",
-    "promoted_revision": 1
+    "body_hash": "5c60c878f8c66023f51766c5c2847417b950a46e8ff6a35dfac35f488e9513d1",
+    "frontmatter_hash": "a77e89a1e40fd811766e33bf50a248a73532faaecd28ca87941e9dc4a97d584f"
   }
 }
 === .raw/.manifest.json (-rw-------) ===
@@ -69,8 +67,8 @@ printf 'c-%06d\n' "$n"
 === wiki/memory/c-000500.md (-rw-r--r--) ===
 ---
 address: c-000500
-engram_id: 1
-engram_revision: x
+memorycard_id: 1
+memorycard_revision: x
 project: golden-project
 ---
 A page whose revision is not a number.
@@ -89,10 +87,9 @@ tags:
 status: developing
 related: []
 sources: []
-engram_id: 2
-engram_sync_id: sync-2
-engram_type: decision
-engram_revision: 1
+memorycard_id: 2
+memorycard_type: decision
+memorycard_revision: 1
 project: golden-project
 ---
 # Curated Note
@@ -100,4 +97,4 @@ project: golden-project
 A note with a curated topic key.
 
 ---
-Promoted from Engram observation 2, revision 1.
+Promoted from memorycard memory 2, revision 1.

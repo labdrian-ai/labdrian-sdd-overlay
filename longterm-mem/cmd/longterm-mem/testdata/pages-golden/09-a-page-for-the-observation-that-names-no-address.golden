@@ -1,25 +1,26 @@
-args: promote --project golden-project --id 1
-exit: 1
+args: promote --project golden-project --source memorycard --id 1
+exit: 0
 --- stdout ---
+longterm-mem: promoted c-000500.md (created)
 --- stderr ---
-longterm-mem: promote: promote: promoted page c-000500.md matches engram_id 1 but carries no address
-args: sync --project golden-project
-exit: 1
+args: sync --project golden-project --source memorycard
+exit: 0
 --- stdout ---
-longterm-mem: sync promoted 1 observation(s), patched 0 page(s)
+longterm-mem: sync --source memorycard promoted 2 memory(ies); patched 0 page(s); skipped 0 bridged; left 0 locally edited page(s) alone
 --- stderr ---
-longterm-mem: sync: promote: sync: observation 1: check promoted state: promote: promoted page c-000500.md matches engram_id 1 but carries no address
-promote: propagate: observation 1: check promoted state: promote: promoted page c-000500.md matches engram_id 1 but carries no address
 --- vault ---
 === .allocator-counter (-rw-r--r--) ===
 901
 === .raw/ (directory -rwxr-xr-x) ===
 === .raw/.longterm-mem-manifest.json (-rw-------) ===
 {
+  "c-000500.md": {
+    "body_hash": "4c302984b209786451aa00b5b0888d97adc0390421234e166ee9d17a31caba15",
+    "frontmatter_hash": "dd4d017591b13482ca7e5fe000e8aea333b6ac1c712ce447a7a9cef3bae60ade"
+  },
   "c-000901": {
-    "body_hash": "70afa7604aeb5073bd50562c32fa0b91859333766ee7be33b869d338f6ccc784",
-    "frontmatter_hash": "a0e731e4938f9c8a2795de3708f120b70de5a7ea1631a63e00346614c1fe07f3",
-    "promoted_revision": 1
+    "body_hash": "5c60c878f8c66023f51766c5c2847417b950a46e8ff6a35dfac35f488e9513d1",
+    "frontmatter_hash": "a77e89a1e40fd811766e33bf50a248a73532faaecd28ca87941e9dc4a97d584f"
   }
 }
 === .raw/.manifest.json (-rw-------) ===
@@ -60,18 +61,54 @@ printf 'c-%06d\n' "$n"
 <!-- longterm-mem:begin -->
 - [[c-000901|Curated Note]]
 <!-- longterm-mem:end -->
+
+
 === wiki/log.md (-rw-------) ===
 ## [2026-10-10] promote | Curated Note
 
 [[c-000901|Curated Note]]
 
+## [2026-10-10] promote | Pinned Decision
+
+[[c-000500.md|Pinned Decision]]
+
+## [2026-10-10] promote | Pinned Decision
+
+[[c-000500.md|Pinned Decision]]
+
 === wiki/memory/ (directory -rwxr-xr-x) ===
 === wiki/memory/c-000500.md (-rw-r--r--) ===
 ---
-engram_id: 1
+memorycard_id: 1
 project: golden-project
 ---
 A page that names no address.
+=== wiki/memory/c-000500.md.md (-rw-------) ===
+---
+type: concept
+title: "Pinned Decision"
+address: c-000500.md
+aliases:
+  - "Pinned Decision"
+created: 2026-10-10
+updated: 2026-10-10
+tags:
+  - "memory"
+  - "decision"
+status: mature
+related: []
+sources: []
+memorycard_id: 1
+memorycard_type: decision
+memorycard_revision: 1
+project: golden-project
+---
+# Pinned Decision
+
+A decision somebody pinned.
+
+---
+Promoted from memorycard memory 1, revision 1.
 === wiki/memory/c-000901.md (-rw-------) ===
 ---
 type: concept
@@ -87,10 +124,9 @@ tags:
 status: developing
 related: []
 sources: []
-engram_id: 2
-engram_sync_id: sync-2
-engram_type: decision
-engram_revision: 1
+memorycard_id: 2
+memorycard_type: decision
+memorycard_revision: 1
 project: golden-project
 ---
 # Curated Note
@@ -98,4 +134,4 @@ project: golden-project
 A note with a curated topic key.
 
 ---
-Promoted from Engram observation 2, revision 1.
+Promoted from memorycard memory 2, revision 1.

@@ -10,7 +10,7 @@ longterm-mem: reconciled c-000901 at revision 1
 === .raw/.longterm-mem-manifest.json (-rw-------) ===
 {
   "c-000901": {
-    "body_hash": "43c0c8b5ce7879c8a5268caa403a48eb2d07c43d4dd3a978053c14797ca3e98d",
+    "body_hash": "ea76b38ccd5dcf10bc0e95a2764dda80f5a653287b2e0792c31ad2fa3a8cd5e7",
     "frontmatter_hash": "1b21326f72b961a3fbb0960a4364c0fba15144fd63a59f907350fd1e30a3a65b",
     "promoted_revision": 1
   }
@@ -56,6 +56,7 @@ A decision somebody pinned.
 
 ---
 Promoted from Engram observation 1, revision 1.
+
 === scripts/ (directory -rwxr-xr-x) ===
 === scripts/allocate-address.sh (-rwxr-xr-x) ===
 #!/bin/sh

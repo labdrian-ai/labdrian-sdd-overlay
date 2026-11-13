@@ -1,12 +1,12 @@
-args: promote --project other-project --id 1
+args: promote --project other-project --source memorycard --id 1
 exit: 0
 --- stdout ---
 longterm-mem: promoted c-000902 (created)
 --- stderr ---
-args: sync --project other-project
+args: sync --project other-project --source memorycard
 exit: 0
 --- stdout ---
-longterm-mem: sync promoted 0 observation(s), patched 0 page(s)
+longterm-mem: sync --source memorycard promoted 0 memory(ies); patched 0 page(s); skipped 0 bridged; left 0 locally edited page(s) alone
 --- stderr ---
 --- vault ---
 === .allocator-counter (-rw-r--r--) ===
@@ -15,14 +15,12 @@ longterm-mem: sync promoted 0 observation(s), patched 0 page(s)
 === .raw/.longterm-mem-manifest.json (-rw-------) ===
 {
   "c-000901": {
-    "body_hash": "43c0c8b5ce7879c8a5268caa403a48eb2d07c43d4dd3a978053c14797ca3e98d",
-    "frontmatter_hash": "010e47c8b0f0c03c337aaf3290a08bef8dcf6c1b713dc497f970d883f39480a8",
-    "promoted_revision": 1
+    "body_hash": "4c302984b209786451aa00b5b0888d97adc0390421234e166ee9d17a31caba15",
+    "frontmatter_hash": "75a752b9c5d0465d5d10e852feb48dd1986e41db5e6e9d23fce78e9425c82789"
   },
   "c-000902": {
-    "body_hash": "43c0c8b5ce7879c8a5268caa403a48eb2d07c43d4dd3a978053c14797ca3e98d",
-    "frontmatter_hash": "4a48fad4a960477151f268993f3893929072b72d39a31e30c822a2527696574d",
-    "promoted_revision": 1
+    "body_hash": "4c302984b209786451aa00b5b0888d97adc0390421234e166ee9d17a31caba15",
+    "frontmatter_hash": "4087e617c27450521083e07986b4ffe44024c619ae44262127583958ff218096"
   }
 }
 === .raw/.manifest.json (-rw-------) ===
@@ -92,10 +90,9 @@ status: superseded
 related:
   - "[[c-000902|Pinned Decision]]"
 sources: []
-engram_id: 1
-engram_sync_id: sync-1
-engram_type: decision
-engram_revision: 1
+memorycard_id: 1
+memorycard_type: decision
+memorycard_revision: 1
 project: golden-project
 ---
 # Pinned Decision
@@ -103,7 +100,7 @@ project: golden-project
 A decision somebody pinned.
 
 ---
-Promoted from Engram observation 1, revision 1.
+Promoted from memorycard memory 1, revision 1.
 === wiki/memory/c-000902.md (-rw-------) ===
 ---
 type: concept
@@ -119,10 +116,9 @@ tags:
 status: mature
 related: []
 sources: []
-engram_id: 1
-engram_sync_id: sync-1
-engram_type: decision
-engram_revision: 1
+memorycard_id: 1
+memorycard_type: decision
+memorycard_revision: 1
 project: other-project
 ---
 # Pinned Decision
@@ -130,4 +126,4 @@ project: other-project
 A decision somebody pinned.
 
 ---
-Promoted from Engram observation 1, revision 1.
+Promoted from memorycard memory 1, revision 1.
