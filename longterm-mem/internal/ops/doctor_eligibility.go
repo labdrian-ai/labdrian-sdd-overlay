@@ -108,22 +108,24 @@ func checkPromotedPagesEligible(promoted PageReader, eligibility func(project st
 		} else if m, isLive := liveByMemoryID[p.ref.ID]; isLive {
 			candidates = []MemoryEligibility{m}
 		}
-		// No live memory: nothing to judge the page by. One observation imported as several parts has several: the page
-		// is kept current when any of them is eligible, and otherwise the first (lowest id) is the one named.
+		// No live memory: nothing to judge the page by (a superseded memory's page is marked superseded by propagation,
+		// R-033). One observation imported as several parts has several: the page is kept current when any of them is
+		// eligible, and otherwise the first (lowest id: the reader lists in id order) is named, with its own reason.
 		if len(candidates) == 0 {
 			continue
 		}
-		reason := ""
+		eligible := false
 		for _, m := range candidates {
-			reason = promote.IneligibleReason(memory.Memory{Pinned: m.Pinned, TopicKey: m.TopicKey})
-			if reason == "" {
+			if promote.IneligibleReason(memory.Memory{Pinned: m.Pinned, TopicKey: m.TopicKey}) == "" {
+				eligible = true
 				break
 			}
 		}
-		if reason == "" {
+		if eligible {
 			continue
 		}
 		m := candidates[0]
+		reason := promote.IneligibleReason(memory.Memory{Pinned: m.Pinned, TopicKey: m.TopicKey})
 		findings = append(findings, adviceFor(p.address, m, reason, legacy))
 	}
 	if len(findings) == 0 {

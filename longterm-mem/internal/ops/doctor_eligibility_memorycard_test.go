@@ -76,11 +76,12 @@ func TestDoctorJudgesAPageByTheLiveMemoriesOfItsObservation(t *testing.T) {
 		rows []MemoryEligibility
 		want string
 	}{
-		"a superseded part is never flagged": {"legacy", []MemoryEligibility{{ID: 7, EngramID: 41, Superseded: true}}, ""},
-		"the live part is the one named":     {"legacy", []MemoryEligibility{{ID: 7, EngramID: 41, Superseded: true}, {ID: 8, EngramID: 41}}, "c-000012: memory 8 is not pinned"},
-		"any live part eligible passes":      {"legacy", []MemoryEligibility{{ID: 7, EngramID: 41}, {ID: 8, EngramID: 41, Pinned: true}}, ""},
-		"no live part eligible warns":        {"legacy", []MemoryEligibility{{ID: 7, EngramID: 41}, {ID: 8, EngramID: 41}}, "c-000012: memory 7 is not pinned"},
-		"a superseded memorycard memory":     {"memorycard", []MemoryEligibility{{ID: 12, Superseded: true}}, ""},
+		"a superseded part is never flagged":  {"legacy", []MemoryEligibility{{ID: 7, EngramID: 41, Superseded: true}}, ""},
+		"the live part is the one named":      {"legacy", []MemoryEligibility{{ID: 7, EngramID: 41, Superseded: true}, {ID: 8, EngramID: 41}}, "c-000012: memory 8 is not pinned"},
+		"any live part eligible passes":       {"legacy", []MemoryEligibility{{ID: 7, EngramID: 41}, {ID: 8, EngramID: 41, Pinned: true}}, ""},
+		"no live part eligible warns":         {"legacy", []MemoryEligibility{{ID: 7, EngramID: 41}, {ID: 8, EngramID: 41}}, "c-000012: memory 7 is not pinned"},
+		"a superseded memorycard memory":      {"memorycard", []MemoryEligibility{{ID: 12, Superseded: true}}, ""},
+		"the named part gives its own reason": {"legacy", []MemoryEligibility{{ID: 7, EngramID: 41}, {ID: 8, EngramID: 41, TopicKey: "sdd/x"}}, "c-000012: memory 7 is not pinned and has no topic_key"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			page := promotedFrom(t, memory.Observation{ID: 41}, "c-000012")
