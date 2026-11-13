@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "6c39dddc60fbcb9683b4f7ab93b8315c93a4e9e6",
+    "head": "54681f1f4e7891018c14dd9cf84b69541337d1a5",
+    "diff_sha256": "5b6f373718432837924c363ef5c9ef0c429e009ffc3632f92d4e7a6c3aac6b43",
+    "paths": [
+      "longterm-mem/internal/memory/memory.go",
+      "longterm-mem/internal/promote/page_style.go",
+      "longterm-mem/internal/promote/propagate_cards.go",
+      "longterm-mem/internal/promote/propagate_cards_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "6c39dddc60fbcb9683b4f7ab93b8315c93a4e9e6",
+      "head": "54681f1f4e7891018c14dd9cf84b69541337d1a5",
+      "diff_sha256": "5b6f373718432837924c363ef5c9ef0c429e009ffc3632f92d4e7a6c3aac6b43"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/memory/memory.go",
+        "longterm-mem/internal/promote/page_style.go",
+        "longterm-mem/internal/promote/propagate_cards.go",
+        "longterm-mem/internal/promote/propagate_cards_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/propagate_cards.go:108-112",
+        "claim": "The new failure wraps m.StatusCause with %w without checking it is non-nil. If a store sets StatusUnknown without a cause, the reported error is the garbled text 'resolve status: %!w(<nil>)', and errors.Is/Unwrap have nothing to follow. Nothing in the diff guarantees that StatusUnknown always carries a cause.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/propagate_cards.go:111"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff. The new StatusUnknown guard in eachCardPatchTarget skips the patch and records a failure, so a retired page is no longer restored on a guess.",
+      "cardStatus keeps its previous results for every status: unknown still maps to mature when pinned and to developing otherwise.",
+      "The test covers the archived page left untouched, the wrapped cause, and the failed report."
+    ]
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "09e2f013bfbc31e69f0ba38798e53915d4709202",
+    "head": "a8762e417d8a19b939f6ee1688f7eabb99e86ca7",
+    "diff_sha256": "f9c086a8576eac609838b468fc849efaaf4d95a2f3df98f7a8bdcf3922fa3f22",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/promote_relations_test.go",
+      "longterm-mem/cmd/longterm-mem/sync_bridged_lineage_test.go",
+      "longterm-mem/internal/promote/walk_bridged_test.go",
+      "longterm-mem/internal/promote/walk_failures_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "09e2f013bfbc31e69f0ba38798e53915d4709202",
+      "head": "a8762e417d8a19b939f6ee1688f7eabb99e86ca7",
+      "diff_sha256": "f9c086a8576eac609838b468fc849efaaf4d95a2f3df98f7a8bdcf3922fa3f22"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/promote_relations_test.go",
+        "longterm-mem/cmd/longterm-mem/sync_bridged_lineage_test.go",
+        "longterm-mem/internal/promote/walk_bridged_test.go",
+        "longterm-mem/internal/promote/walk_failures_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/walk_failures_test.go:27",
+        "claim": "The failure test only asserts that the message lacks \"check promoted state\". It does not pin that the failure names the memory, so an empty or unrelated message passes. This is weaker than the stated intent of wording the failure as about the memory.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/walk_failures_test.go:27-29"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/promote_relations_test.go:29",
+        "claim": "The MCP half of the unreadable-relations test discards the tool result and checks only that err is nil. A tool that returned an empty or wrong result would still pass. The test also does not check that the MCP promote of observation 2 actually wrote a page.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/promote_relations_test.go:29-31"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/walk_bridged_test.go:155",
+        "claim": "TestBridged_TheRevisionOfTheBridgedPageIsNeverRead writes the page \"c-000402.md\" with engram_id: 402, and the memorycard memory it bridges through is set via the EngramID field. The test's reliance on that field for the bridge is implicit. The name \"c-000402\" also reads like a memorycard address, which makes the fixture harder to follow.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/walk_bridged_test.go:155-160"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff adds four test files only, with no production code, so no behavioral regression can come from it.",
+      "The tests are self-consistent with the claims in the commit message. Residual issues are limited to assertion strength and fixture readability."
+    ]
+  }
+}

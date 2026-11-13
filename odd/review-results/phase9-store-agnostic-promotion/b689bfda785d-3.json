@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "5cb107ef8795d4d9383f121d99a84076abbe561b",
+    "head": "b689bfda785df1c35d31acc7a91b999929406bdf",
+    "diff_sha256": "95493045daa7687f8e28fd225f472cafe5aad4211a8fc0da3de5124ea65f6686",
+    "paths": [
+      "longterm-mem/docs/promote-from-memorycard.md",
+      "openspec/specs/longterm-mem-promotion/spec.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "5cb107ef8795d4d9383f121d99a84076abbe561b",
+      "head": "b689bfda785df1c35d31acc7a91b999929406bdf",
+      "diff_sha256": "95493045daa7687f8e28fd225f472cafe5aad4211a8fc0da3de5124ea65f6686"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/docs/promote-from-memorycard.md",
+        "openspec/specs/longterm-mem-promotion/spec.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/docs/promote-from-memorycard.md:42-43",
+        "claim": "The new table rows describe the walk order but the bridged-memory row that follows still reads as if the bridge refusal applies to any memory whose import_map row names an observation with a page. It does not say that this holds only when the memory has no page of its own, so the guide can be read two ways on a memory that has both. The two new rows resolve this by implication, so it is only a minor clarity gap. This is docs-only with no behavioral change.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/docs/promote-from-memorycard.md:44"
+        ]
+      }
+    ],
+    "evidence": [
+      "Diff changes only two documentation/spec files; no code is touched, so no runtime regression is possible from this commit.",
+      "The spec paragraph and its scenarios are consistent with the guide rows: own page decides before the bridge, and a project move supersedes the old page.",
+      "The Previously notes match the guide text, so the documented before/after behavior is internally consistent.",
+      "The spec text sits after the observation-side Previously note and before the Never-promoted scenario, so existing scenarios are not displaced."
+    ]
+  }
+}

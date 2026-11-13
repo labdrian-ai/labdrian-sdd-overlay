@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "263158c5ece4e9927baa7fb81aa42f17a342032d",
+    "head": "e85ea498aefb96e0f0acc671361b82f1efaf5ade",
+    "diff_sha256": "82b3b0b8cf711f51390c020a7f769e7d2aff83745d37aa1312bb7f5128dbe455",
+    "paths": [
+      "longterm-mem/docs/promote-from-memorycard.md",
+      "longterm-mem/internal/promote/page_scan.go",
+      "longterm-mem/internal/promote/page_scan_test.go",
+      "odd/tasks/phase9-store-agnostic-promotion.md",
+      "openspec/specs/longterm-mem-promotion/spec.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "263158c5ece4e9927baa7fb81aa42f17a342032d",
+      "head": "e85ea498aefb96e0f0acc671361b82f1efaf5ade",
+      "diff_sha256": "82b3b0b8cf711f51390c020a7f769e7d2aff83745d37aa1312bb7f5128dbe455"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/docs/promote-from-memorycard.md",
+        "longterm-mem/internal/promote/page_scan.go",
+        "longterm-mem/internal/promote/page_scan_test.go",
+        "odd/tasks/phase9-store-agnostic-promotion.md",
+        "openspec/specs/longterm-mem-promotion/spec.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "page_scan.go: the only code change removes the `match.Project != m.Project` skip in scanFor's consider closure. That restores the base's cross-project bridging, which the commit says is intentional (C22-FU). The own-page-first lookup via ownPage(m.Project, m.Identity) is untouched, so the address-fallback fix stays.",
+      "page_scan_test.go: the replacement test drives Sync and an explicit Promote against a lineage page in another project. It asserts Bridged==1, nothing promoted, and a single page file. That matches the restored behavior.",
+      "Docs and spec: the 'in the memory's project' wording is removed from the bridged-memory row of promote-from-memorycard.md and from the spec paragraph. The retained own-page-first paragraph in the spec and the matching row in the docs remain consistent with the code. I found no contradiction left behind."
+    ]
+  }
+}

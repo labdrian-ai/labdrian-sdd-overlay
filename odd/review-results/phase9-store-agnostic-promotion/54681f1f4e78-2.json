@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "6c39dddc60fbcb9683b4f7ab93b8315c93a4e9e6",
+    "head": "54681f1f4e7891018c14dd9cf84b69541337d1a5",
+    "diff_sha256": "5b6f373718432837924c363ef5c9ef0c429e009ffc3632f92d4e7a6c3aac6b43",
+    "paths": [
+      "longterm-mem/internal/memory/memory.go",
+      "longterm-mem/internal/promote/page_style.go",
+      "longterm-mem/internal/promote/propagate_cards.go",
+      "longterm-mem/internal/promote/propagate_cards_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "6c39dddc60fbcb9683b4f7ab93b8315c93a4e9e6",
+      "head": "54681f1f4e7891018c14dd9cf84b69541337d1a5",
+      "diff_sha256": "5b6f373718432837924c363ef5c9ef0c429e009ffc3632f92d4e7a6c3aac6b43"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/memory/memory.go",
+        "longterm-mem/internal/promote/page_style.go",
+        "longterm-mem/internal/promote/propagate_cards.go",
+        "longterm-mem/internal/promote/propagate_cards_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "propagate_cards.go:108-113: a memory with StatusUnknown is appended to outcome.failed and skipped before the retired/page comparison, so its page is never patched back to a current status.",
+      "page_style.go cardStatus: the empty StatusUnknown case does not fall through in Go; the unknown case reaches the Pinned check and yields mature or developing, never a retired value, matching the new comment.",
+      "propagate_cards_test.go: the new test archives the page first, then propagates an unknown-status memory. It asserts nothing is patched, one failure wrapping the store's cause, and the page text unchanged.",
+      "Residual, not a defect: if StatusCause is nil on an unknown memory, fmt.Errorf with %w would render a '%!w(<nil>)' message, but the error is still non-nil and the page is still untouched. The diff does not show whether the store can produce that case."
+    ]
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "22b50f7f8b58ad3cd00ea09b78b820bb2d2e473a",
+    "head": "6c39dddc60fbcb9683b4f7ab93b8315c93a4e9e6",
+    "diff_sha256": "3c95e7b53198be06fe44406f97b4ecb82d03b2dbe7aa4b672e27c9b924432c87",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/lineage_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "22b50f7f8b58ad3cd00ea09b78b820bb2d2e473a",
+      "head": "6c39dddc60fbcb9683b4f7ab93b8315c93a4e9e6",
+      "diff_sha256": "3c95e7b53198be06fe44406f97b4ecb82d03b2dbe7aa4b672e27c9b924432c87"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/lineage_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/lineage_test.go:129-131",
+        "claim": "The test now compares Lineage and Mirrored straight from the source with reflect.DeepEqual against nil expectations. The old helper built a fresh slice with append(nil...), so an empty non-nil slice from a source normalised to nil. If a source ever returns an empty non-nil slice for a memory with no lineage or mirrors, DeepEqual fails even though the two are semantically equal. The test is therefore stricter about nil versus empty, which the change does not state as intended. I cannot show from the diff that any source does this.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/lineage_test.go:129-131"
+        ]
+      }
+    ],
+    "evidence": [
+      "The change touches only a test file. The helpers now return Lineage and Mirrored separately, and the assertions are pinned per field.",
+      "Each per-field expectation matches the identities the old merged assertions listed (10 has lineage engram 1; 11 and engram obs 2 have mirrors); I found no regression in them.",
+      "I could not see the source implementations, so the nil versus empty slice behaviour is unverified."
+    ]
+  }
+}

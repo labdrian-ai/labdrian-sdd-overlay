@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "b689bfda785df1c35d31acc7a91b999929406bdf",
+    "head": "a36b4ae012dfc197027444f518937c1917ef03ba",
+    "diff_sha256": "f2349c3c500cd4976f300d11a07fe970eefc06c2c6a2d708dc2ce90f62dbe180",
+    "paths": [
+      "longterm-mem/internal/ops/doctor_eligibility_test.go",
+      "longterm-mem/internal/promote/page_scan.go",
+      "longterm-mem/internal/promote/page_scan_test.go",
+      "longterm-mem/internal/promote/walk.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "b689bfda785df1c35d31acc7a91b999929406bdf",
+      "head": "a36b4ae012dfc197027444f518937c1917ef03ba",
+      "diff_sha256": "f2349c3c500cd4976f300d11a07fe970eefc06c2c6a2d708dc2ce90f62dbe180"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/ops/doctor_eligibility_test.go",
+        "longterm-mem/internal/promote/page_scan.go",
+        "longterm-mem/internal/promote/page_scan_test.go",
+        "longterm-mem/internal/promote/walk.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "page_scan.go readPages now passes match.address() to noteAddress, the same resolution ownPage uses, so a page with no address is linked by its file name. noteAddress still skips an empty value, which is harmless.",
+      "page_scan.go consider() skips carriers whose Project differs from m.Project, which matches the stated fix. The pre-existing first loop over m.Identity carriers is outside the diff.",
+      "The new tests rely on helpers not in the diff (bridgedWorld, pagesIn, cardSevenIdentity, memorycardSource). I could not verify them, but nothing in the diff shows a defect.",
+      "The walk.go and doctor_eligibility_test.go changes are comment-only."
+    ]
+  }
+}

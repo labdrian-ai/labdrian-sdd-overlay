@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a20b61d0533cf3f42792dab87f90467984097eba",
+    "head": "9bb18d804601787b9894692edbc20909a8719a83",
+    "diff_sha256": "3a9461ea34f97c8b1dd1d778e594dfe83a1fc6fdb5bb7687ce807f6bbf9985bd",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/app.go",
+      "longterm-mem/internal/promote/catalog_port_test.go",
+      "longterm-mem/internal/promote/clock_test.go",
+      "longterm-mem/internal/promote/memory_port_test.go",
+      "longterm-mem/internal/promote/pages_port_test.go",
+      "longterm-mem/internal/promote/pages_unreadable_test.go",
+      "longterm-mem/internal/promote/plan_test.go",
+      "longterm-mem/internal/promote/precedence_port_test.go",
+      "longterm-mem/internal/promote/project_sync.go",
+      "longterm-mem/internal/promote/project_sync_test.go",
+      "longterm-mem/internal/promote/propagate.go",
+      "longterm-mem/internal/promote/propagate_test.go",
+      "longterm-mem/internal/promote/reindex_port_test.go",
+      "longterm-mem/internal/promote/sync.go",
+      "longterm-mem/internal/promote/sync_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "a20b61d0533cf3f42792dab87f90467984097eba",
+      "head": "9bb18d804601787b9894692edbc20909a8719a83",
+      "diff_sha256": "3a9461ea34f97c8b1dd1d778e594dfe83a1fc6fdb5bb7687ce807f6bbf9985bd"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/app.go",
+        "longterm-mem/internal/promote/catalog_port_test.go",
+        "longterm-mem/internal/promote/clock_test.go",
+        "longterm-mem/internal/promote/memory_port_test.go",
+        "longterm-mem/internal/promote/pages_port_test.go",
+        "longterm-mem/internal/promote/pages_unreadable_test.go",
+        "longterm-mem/internal/promote/plan_test.go",
+        "longterm-mem/internal/promote/precedence_port_test.go",
+        "longterm-mem/internal/promote/project_sync.go",
+        "longterm-mem/internal/promote/project_sync_test.go",
+        "longterm-mem/internal/promote/propagate.go",
+        "longterm-mem/internal/promote/propagate_test.go",
+        "longterm-mem/internal/promote/reindex_port_test.go",
+        "longterm-mem/internal/promote/sync.go",
+        "longterm-mem/internal/promote/sync_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff renames Deps.Memory to Deps.Source with the type unchanged (Memory) and every shown use site (app.go, sync.go, propagate.go, project_sync.go) updated consistently; no behavior change.",
+      "All composite literals and field reads visible in the diff use Source; I found no remaining deps.Memory reference in the diff hunks. Any use outside the diff would be a compile error, not a silent behavior change.",
+      "The doc comment in sync.go still describes the field as a Memory port, which is accurate since the type is still named Memory."
+    ]
+  }
+}

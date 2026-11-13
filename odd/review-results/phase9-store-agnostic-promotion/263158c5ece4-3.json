@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a4191092f5f50ee2bc4b3c1facd1e2dd22d81467",
+    "head": "263158c5ece4e9927baa7fb81aa42f17a342032d",
+    "diff_sha256": "13df399ad8cd1b1ee870da12cbfca246cb27062e1e1eef391d50e5b0763f4ca9",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "a4191092f5f50ee2bc4b3c1facd1e2dd22d81467",
+      "head": "263158c5ece4e9927baa7fb81aa42f17a342032d",
+      "diff_sha256": "13df399ad8cd1b1ee870da12cbfca246cb27062e1e1eef391d50e5b0763f4ca9"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:68",
+        "claim": "T3 stays ticked [x] although its stated check (S3's differential, with output SAME against the base) no longer holds. L23 records that the tip's main-run differential differs from the base for `sync --source memorycard` (3 promoted, 0 bridged, against 2 promoted, 1 bridged), and that A'3's failure-versus-continue decision is still open. The task record therefore reads as complete while its own acceptance check is unmet and two owner decisions are pending.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:68",
+          "odd/tasks/phase9-store-agnostic-promotion.md:192",
+          "odd/tasks/phase9-store-agnostic-promotion.md:195"
+        ]
+      }
+    ],
+    "evidence": [
+      "The change only edits the feature document. It rewrites the T3 commit list and appends the L23 log entry.",
+      "The commit hashes in T3 and in L23 agree with each other.",
+      "L23 states the 32-step differential differs from the base and lists 'Needs your decision', while T3's checks require the differential to match and T3 is marked [x]."
+    ]
+  }
+}

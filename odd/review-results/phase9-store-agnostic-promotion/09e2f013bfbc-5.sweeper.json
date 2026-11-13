@@ -1,0 +1,105 @@
+{
+  "kind": "sweeper",
+  "base": "f2196397e1680fe3ce1c87188447616e156649da",
+  "head": "09e2f013bfbc31e69f0ba38798e53915d4709202",
+  "diff_sha256": "3d65752ef88fcad186d33e31979c78f0c0ffdbfc738077446bd51b8edfd65155",
+  "sweep": "09e2f013bfbc-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 path: longterm-mem/internal/promote/legacy.go",
+      "disposition": "finding",
+      "evidence": "Deleted by this commit itself, not by a sweep; no leftover reference at the tip: File absent at the tip."
+    },
+    {
+      "candidate": "T1 path: longterm-mem/internal/promote/memory.go",
+      "disposition": "finding",
+      "evidence": "Deleted by this commit itself, not by a sweep; no leftover reference at the tip: File absent at the tip. promote.Source (source.go:7) replaces it."
+    },
+    {
+      "candidate": "T1 name: --source",
+      "disposition": "live",
+      "evidence": "Documented in longterm-mem/README.md:87,91,138, pinned by cmd/longterm-mem/sync_source_golden_test.go:10, and a public flag."
+    },
+    {
+      "candidate": "T1 name: CardMemories",
+      "disposition": "finding",
+      "evidence": "The port is deleted. I fixed the comments at promote/sync_cards_test.go:17,22 and promote/source.go:8. Commit 74326e32. Fixed on top in chore(sweep) 74326e32 (not a child of this commit, so recorded as finding)."
+    },
+    {
+      "candidate": "T1 name: HistoryReader",
+      "disposition": "finding",
+      "evidence": "The port is deleted. I fixed the architecture doc row at docs/architecture/hexagonal-target.md:119 to name promote.Source. Commit 74326e32. Fixed on top in chore(sweep) 74326e32 (not a child of this commit, so recorded as finding)."
+    },
+    {
+      "candidate": "T1 name: ListAllMemories",
+      "disposition": "live",
+      "evidence": "It is the memorycard Store method, used at longterm-mem/internal/memorycard/source.go:47 and tested at store_test.go:287. I changed only the fake's comment at sync_cards_test.go:22 to say Memories."
+    },
+    {
+      "candidate": "T1 name: ListMemories",
+      "disposition": "live",
+      "evidence": "memorycard.Store.ListMemories is tested at longterm-mem/internal/memorycard/store_test.go:247,268 and named at cmd/longterm-mem/sync_memorycard_test.go:400. I dropped the stale duplicate comment at sync_cards_test.go:26."
+    },
+    {
+      "candidate": "T1 name: ListObservations",
+      "disposition": "live",
+      "evidence": "engram.Store method, referenced at longterm-mem/internal/ops/doctor.go:173,189 and cmd_doctor.go:120."
+    },
+    {
+      "candidate": "T1 name: Lister",
+      "disposition": "finding",
+      "evidence": "The port is gone. I fixed the architecture doc row at hexagonal-target.md:119, commit 74326e32. skillstale.ObservationLister is a separate live port. Fixed on top in chore(sweep) 74326e32 (not a child of this commit, so recorded as finding)."
+    },
+    {
+      "candidate": "T1 name: Memory",
+      "disposition": "finding",
+      "evidence": "promote.Memory is gone. The comment at promote/source.go:8 no longer names it, and the doc row names promote.Source. The memory.Memory type is live. Commit 74326e32. Fixed on top in chore(sweep) 74326e32 (not a child of this commit, so recorded as finding)."
+    },
+    {
+      "candidate": "T1 name: ObservationsIncludingDeleted",
+      "disposition": "live",
+      "evidence": "Defined at longterm-mem/internal/engram/store.go:221 and called at :180."
+    },
+    {
+      "candidate": "T1 name: RelatedEdges",
+      "disposition": "live",
+      "evidence": "Called at longterm-mem/internal/engram/source.go:62,80,123."
+    },
+    {
+      "candidate": "T1 name: cardLookup",
+      "disposition": "finding",
+      "evidence": "Deleted by this commit itself, not by a sweep; no leftover reference at the tip: No hit at the tip."
+    },
+    {
+      "candidate": "T1 name: cardSource",
+      "disposition": "live",
+      "evidence": "Local variable in longterm-mem/cmd/longterm-mem/lineage_test.go:116-160."
+    },
+    {
+      "candidate": "T1 name: list",
+      "disposition": "live",
+      "evidence": "Generic word with 894 hits (Go identifiers and prose). Nothing named list was removed as a symbol."
+    },
+    {
+      "candidate": "T1 name: memoryAnswers",
+      "disposition": "finding",
+      "evidence": "Deleted by this commit itself, not by a sweep; no leftover reference at the tip: No hit at the tip."
+    },
+    {
+      "candidate": "T1 name: withSameContent",
+      "disposition": "finding",
+      "evidence": "The function was deleted from cmd_promote.go. I changed the cmd_sync.go:81 comment to the twin rule of newMemorycardSource (lineage.go:18). Commit 74326e32. Fixed on top in chore(sweep) 74326e32 (not a child of this commit, so recorded as finding)."
+    },
+    {
+      "candidate": "T2 errcheck longterm-mem: cmd/longterm-mem/cmd_mcp.go: unchecked error: defer cards.Close()",
+      "disposition": "live",
+      "evidence": "Module idiom for production handles: bare defer store.Close() at cmd_mcp.go:48, cmd_promote.go:64,104,111, cmd_query.go:67, cmd_status.go:82 and others. The same errcheck flag is accepted for cmd_sync.go in a20b61d0533c-4. The sites are cmd_mcp.go:143 and :150."
+    },
+    {
+      "candidate": "T2 nilerr longterm-mem: longterm-mem/internal/promote/support_test.go: error is not nil but it returns nil",
+      "disposition": "live",
+      "evidence": "Intentional: ObservationLookup.ByID and CardLookup.ByID (support_test.go:194-196, 213-215) turn a non-numeric id into memory not found (false, nil), as the Source contract at source.go:15-17 says. A test reads that behaviour."
+    }
+  ]
+}

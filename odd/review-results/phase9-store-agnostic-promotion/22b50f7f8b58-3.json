@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "2fdf3595af81d286b11aa0f5892df07b1d9266ba",
+    "head": "22b50f7f8b58ad3cd00ea09b78b820bb2d2e473a",
+    "diff_sha256": "dd70d6aa7a70faafcd708cec78f0fc1a10df3d8051f2d74c9e267e44418e78cf",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "2fdf3595af81d286b11aa0f5892df07b1d9266ba",
+      "head": "22b50f7f8b58ad3cd00ea09b78b820bb2d2e473a",
+      "diff_sha256": "dd70d6aa7a70faafcd708cec78f0fc1a10df3d8051f2d74c9e267e44418e78cf"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The change touches only a documentation file: it ticks T3, records the re-sliced commit hashes, and appends Log entries L20-L22.",
+      "L20 and L21 name the pre-re-slice commits, and L22 says it replaces them, so the history stays internally consistent.",
+      "The commit body's Risk: none is accurate for a docs-only commit, and the task line's Risk: item 3 describes the code commits.",
+      "The diff changes no code or behavior, so I found no change-caused defect."
+    ]
+  }
+}

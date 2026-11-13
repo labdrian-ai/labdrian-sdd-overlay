@@ -1,0 +1,19 @@
+{
+  "kind": "sweep",
+  "base": "e85ea498aefb96e0f0acc671361b82f1efaf5ade",
+  "head": "74326e32c2c4ef35dd7215b9ed3138741f31662e",
+  "diff_sha256": "fb71654b1481cb9288c6cd4c53740dac7c03ee3d871f93536a07da8b3b2d6644",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": []
+  },
+  "t2": [],
+  "t3": [
+    " M odd/tasks/phase9-store-agnostic-promotion.md"
+  ],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

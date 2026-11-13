@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "979525fc554d7031fc997c77380720d5a084695b",
+    "head": "e382cd00856ffe77ee1fc735e7e7fd3b452bee19",
+    "diff_sha256": "d073cbe04e98b15864eb4327e97f65b0accf4a766dbb13cb3ae9d0e3169b1847",
+    "paths": [
+      "longterm-mem/internal/promote/page_scan.go",
+      "longterm-mem/internal/promote/page_style.go",
+      "longterm-mem/internal/promote/walk.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "979525fc554d7031fc997c77380720d5a084695b",
+      "head": "e382cd00856ffe77ee1fc735e7e7fd3b452bee19",
+      "diff_sha256": "d073cbe04e98b15864eb4327e97f65b0accf4a766dbb13cb3ae9d0e3169b1847"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/promote/page_scan.go",
+        "longterm-mem/internal/promote/page_style.go",
+        "longterm-mem/internal/promote/walk.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/page_scan.go:186-196",
+        "claim": "scanFor picks the bridged page from carriers of the lineage and mirrored identities without comparing the page's project to the memory's project. A page of a peer memory promoted under a different project could bridge this memory and suppress its promotion, whereas ownPage and the moved list are project-aware. The comment about mirrors speaks of the same project, but the code does not enforce it. The code is gated behind the t3next tag, so nothing runs it yet. The intended behaviour cannot be confirmed from the diff.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "longterm-mem/internal/promote/page_scan.go:186-196"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff adds three files behind the t3next build tag, so no existing behaviour can regress.",
+      "Reviewed the readPages, scanFor, decide, walk and emit paths for ordering, nil-pointer and error-handling defects and found none beyond F1.",
+      "Symbols such as engramSource, eachPage and frontmatter are not defined in the diff. I could not check them, and no finding rests on them."
+    ]
+  }
+}

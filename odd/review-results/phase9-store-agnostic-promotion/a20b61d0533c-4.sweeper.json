@@ -1,0 +1,15 @@
+{
+  "kind": "sweeper",
+  "base": "f7831fb3496aa95bb49b5e4feacfe3dde646adec",
+  "head": "a20b61d0533cf3f42792dab87f90467984097eba",
+  "diff_sha256": "a15499e6c6e1198e2e00da7417b41c1ecb2d5d067647eaa248522bbe5b8859da",
+  "sweep": "a20b61d0533c-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T2 errcheck longterm-mem: internal/engram/source_relations_test.go: unchecked error: defer db.Close()",
+      "disposition": "live",
+      "evidence": "Fixture-setup handle closed with a bare defer, the module test idiom: defer setup.Close() at store_test.go:34,55,79,277,346 and relations_test.go:17,85; source_relations_test.go:19 at the working tree."
+    }
+  ]
+}

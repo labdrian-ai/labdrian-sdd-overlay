@@ -1,0 +1,26 @@
+{
+  "kind": "sweep",
+  "base": "09e2f013bfbc31e69f0ba38798e53915d4709202",
+  "head": "a8762e417d8a19b939f6ee1688f7eabb99e86ca7",
+  "diff_sha256": "f9c086a8576eac609838b468fc849efaaf4d95a2f3df98f7a8bdcf3922fa3f22",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": []
+  },
+  "t2": [
+    {
+      "tool": "errcheck",
+      "module": "longterm-mem",
+      "new": [
+        "cmd/longterm-mem/promote_relations_test.go: unchecked error: defer store.Close()",
+        "cmd/longterm-mem/sync_bridged_lineage_test.go: unchecked error: defer store.Close()"
+      ]
+    }
+  ],
+  "t3": [],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

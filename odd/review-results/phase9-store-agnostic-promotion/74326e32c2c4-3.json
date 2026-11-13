@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "e85ea498aefb96e0f0acc671361b82f1efaf5ade",
+    "head": "74326e32c2c4ef35dd7215b9ed3138741f31662e",
+    "diff_sha256": "fb71654b1481cb9288c6cd4c53740dac7c03ee3d871f93536a07da8b3b2d6644",
+    "paths": [
+      "docs/architecture/hexagonal-target.md",
+      "longterm-mem/cmd/longterm-mem/cmd_sync.go",
+      "longterm-mem/internal/engram/source_test.go",
+      "longterm-mem/internal/promote/propagate_test.go",
+      "longterm-mem/internal/promote/source.go",
+      "longterm-mem/internal/promote/sync_cards_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "e85ea498aefb96e0f0acc671361b82f1efaf5ade",
+      "head": "74326e32c2c4ef35dd7215b9ed3138741f31662e",
+      "diff_sha256": "fb71654b1481cb9288c6cd4c53740dac7c03ee3d871f93536a07da8b3b2d6644"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "docs/architecture/hexagonal-target.md",
+        "longterm-mem/cmd/longterm-mem/cmd_sync.go",
+        "longterm-mem/internal/engram/source_test.go",
+        "longterm-mem/internal/promote/propagate_test.go",
+        "longterm-mem/internal/promote/source.go",
+        "longterm-mem/internal/promote/sync_cards_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff changes only comments and one architecture doc table row; no executable code, signatures or behavior change.",
+      "The only non-comment-text removal is a stale doc comment line on fakeCards in sync_cards_test.go, directly above the Candidates method that replaced the removed ListMemories; no code is removed.",
+      "The renamed references (statusOf, newMemorycardSource, Memories) cannot be checked from the diff alone. A wrong name would only make a comment inaccurate, which is style and not a finding."
+    ]
+  }
+}

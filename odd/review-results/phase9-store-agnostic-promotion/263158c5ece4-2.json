@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a4191092f5f50ee2bc4b3c1facd1e2dd22d81467",
+    "head": "263158c5ece4e9927baa7fb81aa42f17a342032d",
+    "diff_sha256": "13df399ad8cd1b1ee870da12cbfca246cb27062e1e1eef391d50e5b0763f4ca9",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "a4191092f5f50ee2bc4b3c1facd1e2dd22d81467",
+      "head": "263158c5ece4e9927baa7fb81aa42f17a342032d",
+      "diff_sha256": "13df399ad8cd1b1ee870da12cbfca246cb27062e1e1eef391d50e5b0763f4ca9"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:68",
+        "claim": "T3 is ticked [x] while the L23 entry records an open 'Needs your decision'. The tip's differential against the base now differs in the main run (`sync --source memorycard` output changes from `1 bridged` to `0 bridged`). T3's own checks require S3's differential to stay unchanged, so the tick records completion before that deviation is accepted or reverted.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:68",
+          "odd/tasks/phase9-store-agnostic-promotion.md:195"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only the T3 line and appends L23 to the feature document. The T3 line keeps the check 'plus S3's differential and the existing goldens unchanged' and is ticked [x].",
+      "L23 says the 32-step differential differs from the base in the main run because of A'5's project rule, and that the owner still has to decide on it.",
+      "The commit list in T3 matches the commits named in L23."
+    ]
+  }
+}

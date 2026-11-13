@@ -1,0 +1,76 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "979525fc554d7031fc997c77380720d5a084695b",
+    "head": "e382cd00856ffe77ee1fc735e7e7fd3b452bee19",
+    "diff_sha256": "d073cbe04e98b15864eb4327e97f65b0accf4a766dbb13cb3ae9d0e3169b1847",
+    "paths": [
+      "longterm-mem/internal/promote/page_scan.go",
+      "longterm-mem/internal/promote/page_style.go",
+      "longterm-mem/internal/promote/walk.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "979525fc554d7031fc997c77380720d5a084695b",
+      "head": "e382cd00856ffe77ee1fc735e7e7fd3b452bee19",
+      "diff_sha256": "d073cbe04e98b15864eb4327e97f65b0accf4a766dbb13cb3ae9d0e3169b1847"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/promote/page_scan.go",
+        "longterm-mem/internal/promote/page_style.go",
+        "longterm-mem/internal/promote/walk.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/walk.go:46-54",
+        "claim": "The walk doc comment has one over-long line where the rewriteCurrent sentence is spliced in mid-paragraph. It says the explicit promote uses the pageStyle's rewriteCurrent, but walk hardcodes decide(..., false) and never reads style.rewriteCurrent, so a reader cannot tell where that value is consumed.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/walk.go:46-54",
+          "longterm-mem/internal/promote/walk.go:81"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/page_scan.go:151-152",
+        "claim": "The comment on pageScan.moved is ungrammatical ('which carry no usable address excluded'). It does not say clearly that pages without an address are dropped from the moved list.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/page_scan.go:151-152",
+          "longterm-mem/internal/promote/page_scan.go:192"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/page_scan.go:111-112",
+        "claim": "The address index drops a page that carries no address frontmatter, even though match.address() falls back to the file name. A successor whose page has no address therefore gets no successor link, which is inconsistent with how the same page is resolved elsewhere. This is silent, and only reachable once the tag is dropped.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/page_scan.go:111-112",
+          "longterm-mem/internal/promote/page_scan.go:140-144"
+        ]
+      }
+    ],
+    "evidence": [
+      "The change is entirely behind the t3next build tag, so no runtime regression is possible from this commit.",
+      "I checked scanFor's consider closure for a nil dereference of best. It is safe, because bestRank starts at 2 and rank is always 0 or 1, so the first match always takes the rank < bestRank branch.",
+      "In walk, index is only used after the indexErr guard, so the nil index is not dereferenced."
+    ]
+  }
+}

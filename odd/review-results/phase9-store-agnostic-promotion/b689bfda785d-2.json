@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "5cb107ef8795d4d9383f121d99a84076abbe561b",
+    "head": "b689bfda785df1c35d31acc7a91b999929406bdf",
+    "diff_sha256": "95493045daa7687f8e28fd225f472cafe5aad4211a8fc0da3de5124ea65f6686",
+    "paths": [
+      "longterm-mem/docs/promote-from-memorycard.md",
+      "openspec/specs/longterm-mem-promotion/spec.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "5cb107ef8795d4d9383f121d99a84076abbe561b",
+      "head": "b689bfda785df1c35d31acc7a91b999929406bdf",
+      "diff_sha256": "95493045daa7687f8e28fd225f472cafe5aad4211a8fc0da3de5124ea65f6686"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/docs/promote-from-memorycard.md",
+        "openspec/specs/longterm-mem-promotion/spec.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/docs/promote-from-memorycard.md:42",
+        "claim": "The new guide rows describe the previous behavior in parentheses ('previously ...'), which will go stale in a how-to table and mixes change history into reference documentation. The spec already carries the history in its Previously note, so the guide duplicates it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/docs/promote-from-memorycard.md:42-43"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "openspec/specs/longterm-mem-promotion/spec.md:841-847",
+        "claim": "The requirement paragraph says 'only a memory with no page of its own can be bridged' but does not state what happens when the memory's own page is in a different project (moved case) and the old-project page's lineage observation also has a page. The ordering between the move rule and the bridge check is left unspecified, so the two scenarios do not cover that combination.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "openspec/specs/longterm-mem-promotion/spec.md:841-847",
+          "openspec/specs/longterm-mem-promotion/spec.md:855-866"
+        ]
+      }
+    ],
+    "evidence": [
+      "Diff touches only two documentation files: the memorycard promote guide and the promotion spec.",
+      "Guide rows and the spec paragraph are consistent with each other on the two behaviors (own page decides before bridge; moved project supersedes the old page).",
+      "No code is changed, so no runtime regression is attributable to this commit; findings are documentation-quality only."
+    ]
+  }
+}

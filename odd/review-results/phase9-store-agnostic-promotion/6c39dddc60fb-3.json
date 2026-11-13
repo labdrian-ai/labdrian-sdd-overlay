@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "22b50f7f8b58ad3cd00ea09b78b820bb2d2e473a",
+    "head": "6c39dddc60fbcb9683b4f7ab93b8315c93a4e9e6",
+    "diff_sha256": "3c95e7b53198be06fe44406f97b4ecb82d03b2dbe7aa4b672e27c9b924432c87",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/lineage_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "22b50f7f8b58ad3cd00ea09b78b820bb2d2e473a",
+      "head": "6c39dddc60fbcb9683b4f7ab93b8315c93a4e9e6",
+      "diff_sha256": "3c95e7b53198be06fe44406f97b4ecb82d03b2dbe7aa4b672e27c9b924432c87"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/lineage_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/lineage_test.go:129-131",
+        "claim": "The loop over card ids 10-12 compares lineageOf against the variable `lineage`, which is defined outside the diff hunk, presumably iterating a map or the want map. The new `want` map keeps \"11\": nil and \"12\": nil, so the loop likely compares against want[id]. If the loop variable `lineage` is want's value, then DeepEqual(nil slice, nil slice) is fine. However, DeepEqual distinguishes a nil slice from an empty non-nil slice, so if a source ever returns an empty non-nil Lineage or Mirrored, these exact-equality checks would fail. This is brittle but not wrong for the current source behaviour.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/lineage_test.go:117-131"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only a test file changed; production code is untouched.",
+      "lineageOf now returns Lineage only, mirrorsOf returns Mirrored; callers updated consistently in the diff.",
+      "Assertions for observation 1, observation 2 and listed memories pin each field separately, matching the claimed intent."
+    ]
+  }
+}

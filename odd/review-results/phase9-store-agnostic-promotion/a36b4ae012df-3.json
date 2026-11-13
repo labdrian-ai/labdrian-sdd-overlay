@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "b689bfda785df1c35d31acc7a91b999929406bdf",
+    "head": "a36b4ae012dfc197027444f518937c1917ef03ba",
+    "diff_sha256": "f2349c3c500cd4976f300d11a07fe970eefc06c2c6a2d708dc2ce90f62dbe180",
+    "paths": [
+      "longterm-mem/internal/ops/doctor_eligibility_test.go",
+      "longterm-mem/internal/promote/page_scan.go",
+      "longterm-mem/internal/promote/page_scan_test.go",
+      "longterm-mem/internal/promote/walk.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "b689bfda785df1c35d31acc7a91b999929406bdf",
+      "head": "a36b4ae012dfc197027444f518937c1917ef03ba",
+      "diff_sha256": "f2349c3c500cd4976f300d11a07fe970eefc06c2c6a2d708dc2ce90f62dbe180"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/ops/doctor_eligibility_test.go",
+        "longterm-mem/internal/promote/page_scan.go",
+        "longterm-mem/internal/promote/page_scan_test.go",
+        "longterm-mem/internal/promote/walk.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "page_scan.go: noteAddress now receives match.address(), which falls back to the page's file name, so successor links and a page's own address resolve to the same name. The empty-address guard in noteAddress is unchanged.",
+      "page_scan.go: the new `match.Project != m.Project` skip applies only to the lineage and mirror candidates in consider. The own-identity loop is untouched. This matches the stated intent that a page left in another project no longer bridges.",
+      "doctor_eligibility_test.go and walk.go: comment-only changes. page_scan_test.go: new tests, whose helpers (bridgedWorld, pagesIn and the card identities) are not in the diff, so I could not confirm they exist. I found no defect from the diff alone."
+    ]
+  }
+}

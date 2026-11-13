@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "54681f1f4e7891018c14dd9cf84b69541337d1a5",
+    "head": "5cb107ef8795d4d9383f121d99a84076abbe561b",
+    "diff_sha256": "90db6f4e87437e844a4ad1904c4ea33baa32d1d2f270f9f81e8a5addadc9e0d9",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/lineage.go",
+      "longterm-mem/cmd/longterm-mem/sync_bridged_lineage_test.go",
+      "longterm-mem/internal/memory/memory.go",
+      "longterm-mem/internal/promote/project_sync.go",
+      "longterm-mem/internal/promote/project_sync_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "54681f1f4e7891018c14dd9cf84b69541337d1a5",
+      "head": "5cb107ef8795d4d9383f121d99a84076abbe561b",
+      "diff_sha256": "90db6f4e87437e844a4ad1904c4ea33baa32d1d2f270f9f81e8a5addadc9e0d9"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/lineage.go",
+        "longterm-mem/cmd/longterm-mem/sync_bridged_lineage_test.go",
+        "longterm-mem/internal/memory/memory.go",
+        "longterm-mem/internal/promote/project_sync.go",
+        "longterm-mem/internal/promote/project_sync_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/project_sync.go:83-87",
+        "claim": "Only the SyncProject probe recognises memory.LineageError. Any other caller that classifies a failed Candidates call from this source (for example a non-sync promote or dry-run path) still reports a memorycard lineage failure as Engram unavailable. The diff does not show those callers, so this is unproven. The wrapped error is now a new type, so those callers' behavior cannot be confirmed from the diff.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "longterm-mem/internal/promote/project_sync.go:83-87",
+          "longterm-mem/cmd/longterm-mem/lineage.go:32-40"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/memory/memory.go:75-77",
+        "claim": "LineageError.Error dereferences e.Err without a nil check, so a LineageError constructed with a nil Err panics when printed. The only construction in this diff passes a non-nil error.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/memory/memory.go:75-77"
+        ]
+      }
+    ],
+    "evidence": [
+      "The lineage.go wrapping and the errors.As branch in sourceAnswers are consistent with each other. After a LineageError, the probe falls through to the optional Prober check, which is the intended behavior.",
+      "The tests cover the new classification (OtherFailure) and the stderr message naming memorycard."
+    ]
+  }
+}

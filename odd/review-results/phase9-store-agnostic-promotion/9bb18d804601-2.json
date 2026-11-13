@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a20b61d0533cf3f42792dab87f90467984097eba",
+    "head": "9bb18d804601787b9894692edbc20909a8719a83",
+    "diff_sha256": "3a9461ea34f97c8b1dd1d778e594dfe83a1fc6fdb5bb7687ce807f6bbf9985bd",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/app.go",
+      "longterm-mem/internal/promote/catalog_port_test.go",
+      "longterm-mem/internal/promote/clock_test.go",
+      "longterm-mem/internal/promote/memory_port_test.go",
+      "longterm-mem/internal/promote/pages_port_test.go",
+      "longterm-mem/internal/promote/pages_unreadable_test.go",
+      "longterm-mem/internal/promote/plan_test.go",
+      "longterm-mem/internal/promote/precedence_port_test.go",
+      "longterm-mem/internal/promote/project_sync.go",
+      "longterm-mem/internal/promote/project_sync_test.go",
+      "longterm-mem/internal/promote/propagate.go",
+      "longterm-mem/internal/promote/propagate_test.go",
+      "longterm-mem/internal/promote/reindex_port_test.go",
+      "longterm-mem/internal/promote/sync.go",
+      "longterm-mem/internal/promote/sync_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "a20b61d0533cf3f42792dab87f90467984097eba",
+      "head": "9bb18d804601787b9894692edbc20909a8719a83",
+      "diff_sha256": "3a9461ea34f97c8b1dd1d778e594dfe83a1fc6fdb5bb7687ce807f6bbf9985bd"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/app.go",
+        "longterm-mem/internal/promote/catalog_port_test.go",
+        "longterm-mem/internal/promote/clock_test.go",
+        "longterm-mem/internal/promote/memory_port_test.go",
+        "longterm-mem/internal/promote/pages_port_test.go",
+        "longterm-mem/internal/promote/pages_unreadable_test.go",
+        "longterm-mem/internal/promote/plan_test.go",
+        "longterm-mem/internal/promote/precedence_port_test.go",
+        "longterm-mem/internal/promote/project_sync.go",
+        "longterm-mem/internal/promote/project_sync_test.go",
+        "longterm-mem/internal/promote/propagate.go",
+        "longterm-mem/internal/promote/propagate_test.go",
+        "longterm-mem/internal/promote/reindex_port_test.go",
+        "longterm-mem/internal/promote/sync.go",
+        "longterm-mem/internal/promote/sync_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff is a mechanical rename of the Deps field Memory to Source; the field type stays Memory and no logic changes.",
+      "Every changed read site (Sync, Plan, eachPatchTarget, resolveStatus, memoryAnswers) and every Deps literal shown in the diff uses the new name consistently.",
+      "The diff cannot show whether any other file, such as a cmd test or another package, still uses Deps{Memory:...} or deps.Memory, so a compile break there cannot be ruled out from this view."
+    ]
+  }
+}

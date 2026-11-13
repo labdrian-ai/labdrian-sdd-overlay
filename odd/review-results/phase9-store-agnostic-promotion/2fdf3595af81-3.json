@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a8762e417d8a19b939f6ee1688f7eabb99e86ca7",
+    "head": "2fdf3595af81d286b11aa0f5892df07b1d9266ba",
+    "diff_sha256": "2aa32fa66425d0e14126ff850e3a7731cb0645e5a7510ddeb1c2f2ae0acb8478",
+    "paths": [
+      "longterm-mem/README.md",
+      "longterm-mem/docs/promote-from-memorycard.md",
+      "longterm-mem/docs/sync-from-memorycard.md",
+      "openspec/specs/longterm-mem-promotion/spec.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "a8762e417d8a19b939f6ee1688f7eabb99e86ca7",
+      "head": "2fdf3595af81d286b11aa0f5892df07b1d9266ba",
+      "diff_sha256": "2aa32fa66425d0e14126ff850e3a7731cb0645e5a7510ddeb1c2f2ae0acb8478"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/README.md",
+        "longterm-mem/docs/promote-from-memorycard.md",
+        "longterm-mem/docs/sync-from-memorycard.md",
+        "openspec/specs/longterm-mem-promotion/spec.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/docs/sync-from-memorycard.md:74-75",
+        "claim": "The spec says the sync counts a lineage-bridged Engram observation 'as bridged', but this guide says it is counted 'among the skipped'. The two documents describe the report category differently, so a reader cannot tell whether the run output has a separate bridged counter or only a skipped counter for the Engram source.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "openspec/specs/longterm-mem-promotion/spec.md:831-835",
+          "longterm-mem/docs/sync-from-memorycard.md:74-75"
+        ]
+      }
+    ],
+    "evidence": [
+      "The change is documentation and spec text only, so no runtime behavior is modified.",
+      "The exit code 6 and registration_conflict wording is consistent across the README, the promote guide and the spec.",
+      "The only inconsistency found is the bridged versus skipped counter wording between the spec and the sync guide."
+    ]
+  }
+}

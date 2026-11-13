@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "54681f1f4e7891018c14dd9cf84b69541337d1a5",
+    "head": "5cb107ef8795d4d9383f121d99a84076abbe561b",
+    "diff_sha256": "90db6f4e87437e844a4ad1904c4ea33baa32d1d2f270f9f81e8a5addadc9e0d9",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/lineage.go",
+      "longterm-mem/cmd/longterm-mem/sync_bridged_lineage_test.go",
+      "longterm-mem/internal/memory/memory.go",
+      "longterm-mem/internal/promote/project_sync.go",
+      "longterm-mem/internal/promote/project_sync_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "54681f1f4e7891018c14dd9cf84b69541337d1a5",
+      "head": "5cb107ef8795d4d9383f121d99a84076abbe561b",
+      "diff_sha256": "90db6f4e87437e844a4ad1904c4ea33baa32d1d2f270f9f81e8a5addadc9e0d9"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/lineage.go",
+        "longterm-mem/cmd/longterm-mem/sync_bridged_lineage_test.go",
+        "longterm-mem/internal/memory/memory.go",
+        "longterm-mem/internal/promote/project_sync.go",
+        "longterm-mem/internal/promote/project_sync_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "lineage.go wraps both memorycard lookups in memory.LineageError, and the wrap happens only after the Engram listing has already succeeded. An Engram listing failure therefore still reaches sourceAnswers as a plain error and still reports unavailable.",
+      "sourceAnswers falls through to the Probe check only when errors.As finds a LineageError, so a real source failure keeps its previous behaviour.",
+      "The new unit test and the new integration test cover the changed classification. The integration test checks both the exit code and that stderr names memorycard."
+    ]
+  }
+}

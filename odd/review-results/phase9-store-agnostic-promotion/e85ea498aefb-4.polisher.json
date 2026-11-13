@@ -1,0 +1,16 @@
+{
+  "kind": "polisher",
+  "base": "263158c5ece4e9927baa7fb81aa42f17a342032d",
+  "head": "e85ea498aefb96e0f0acc671361b82f1efaf5ade",
+  "diff_sha256": "82b3b0b8cf711f51390c020a7f769e7d2aff83745d37aa1312bb7f5128dbe455",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the e85ea498 diff in full: the same-project check is gone from scanFor; remaining project comparisons (ownPage, moved) predate the reverted commit.",
+      "Address-fallback code intact (page_scan.go:131,137,148,192).",
+      "No leftover same-project wording for bridging in longterm-mem or the spec.",
+      "page_scan_test.go:44-76 pins cross-project bridging: Bridged == 1, explicit promote returns *BridgedError, one page.",
+      "No tests run."
+    ]
+  }
+}
