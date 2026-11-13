@@ -53,8 +53,8 @@ func removeFromVault(t *testing.T, w *promoteGoldenWorld, rel string) {
 }
 
 func catalogScenarios() []pagesScenario {
-	promote := []string{"promote", "--project", promoteGoldenProject, "--id", "1"}
-	sync := []string{"sync", "--project", promoteGoldenProject}
+	promote := []string{"promote", "--project", promoteGoldenProject, "--source", "memorycard", "--id", "1"}
+	sync := []string{"sync", "--project", promoteGoldenProject, "--source", "memorycard"}
 	doctor := []string{"doctor", "--project", promoteGoldenProject}
 	status := []string{"status", "--project", promoteGoldenProject}
 	openBlock := "<!-- longterm-mem:begin -->\n- [[c-000001|An entry above the end of the block]]\n"

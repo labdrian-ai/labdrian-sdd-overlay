@@ -216,6 +216,7 @@ func TestPromoteAddressMapGolden(t *testing.T) {
 			w := newPromoteGoldenWorld(t)
 			t.Setenv("HOME", w.home)
 			t.Setenv("LONGTERM_MEM_ENGRAM_DB", w.dbPath)
+			t.Setenv("LONGTERM_MEM_MEMORYCARD_DB", w.cardPath)
 			t.Setenv("LONGTERM_MEM_VAULT", w.vaultRoot)
 			t.Setenv("LONGTERM_MEM_VAULTS_FILE", "")
 			t.Chdir(t.TempDir())
@@ -223,8 +224,8 @@ func TestPromoteAddressMapGolden(t *testing.T) {
 
 			var out strings.Builder
 			for _, args := range [][]string{
-				{"promote", "--project", promoteGoldenProject, "--id", "1"},
-				{"sync", "--project", promoteGoldenProject},
+				{"promote", "--project", promoteGoldenProject, "--source", "memorycard", "--id", "1"},
+				{"sync", "--project", promoteGoldenProject, "--source", "memorycard"},
 			} {
 				code, stdout, stderr := runPromoteGolden(t, args)
 				fmt.Fprintf(&out, "args: %s\nexit: %d\n--- stdout ---\n%s--- stderr ---\n%s", strings.Join(args, " "), code, stdout, stderr)
