@@ -55,25 +55,68 @@ func (s *Source) ByID(id string) (memory.Memory, bool, error) {
 	if err != nil || !ok {
 		return memory.Memory{}, false, err
 	}
-	m, err := s.toMemory(card)
-	return m, err == nil, err
+	memories, err := s.mapAll([]memory.CardMemory{card})
+	if err != nil {
+		return memory.Memory{}, false, err
+	}
+	return memories[0], true, nil
+}
+
+// kin is what a listing reads, once, to say the lineage and the mirrors of all its memories: the memories imported
+// from each observation the listing names, and, for each project with a memory that has no import_map row, the
+// observations imported into it.
+type kin struct {
+	parts    map[int64][]int64
+	imported map[string]map[string][]ImportedObservation
+}
+
+// kinOf reads what the lineage and the mirrors of cards need: one lookup of the parts of every observation the cards
+// were imported from (in chunks, as MemoryIDsByEngramIDs reads them), and one listing of the imported observations of
+// each project that has a memory mirrored by hand.
+func (s *Source) kinOf(cards []memory.CardMemory) (kin, error) {
+	k := kin{imported: map[string]map[string][]ImportedObservation{}}
+	var observations []int64
+	for _, card := range cards {
+		if card.EngramID != 0 {
+			observations = append(observations, card.EngramID)
+		}
+		if card.Mapped || k.imported[card.Project] != nil {
+			continue
+		}
+		listed, err := s.store.ImportedObservations(card.Project)
+		if err != nil {
+			return kin{}, err
+		}
+		byHash := map[string][]ImportedObservation{}
+		for _, o := range listed {
+			byHash[o.Hash] = append(byHash[o.Hash], o)
+		}
+		k.imported[card.Project] = byHash
+	}
+	parts, err := s.store.MemoryIDsByEngramIDs(observations)
+	if err != nil {
+		return kin{}, err
+	}
+	k.parts = parts
+	return k, nil
 }
 
 func (s *Source) mapAll(cards []memory.CardMemory) ([]memory.Memory, error) {
+	k, err := s.kinOf(cards)
+	if err != nil {
+		return nil, err
+	}
 	var memories []memory.Memory
 	for _, card := range cards {
-		m, err := s.toMemory(card)
-		if err != nil {
-			return nil, err
-		}
-		memories = append(memories, m)
+		memories = append(memories, toMemory(card, k))
 	}
 	return memories, nil
 }
 
 // toMemory is the one mapping of a card to a memory. The lineage is the Engram observation the import_map row
-// names and, for a memory with no import_map row of any source, the twins the composition root finds.
-func (s *Source) toMemory(card memory.CardMemory) (memory.Memory, error) {
+// names and the other memories imported from it; a memory with no import_map row of any source has as mirrors the
+// imported memories that hold its content (mirrorsOf).
+func toMemory(card memory.CardMemory, k kin) memory.Memory {
 	m := memory.Memory{
 		Identity: memory.Identity{Source: SourceName, ID: strconv.FormatInt(card.ID, 10)},
 		Project:  card.Project, Type: card.Type, Title: card.Title, Body: card.Body, TopicKey: card.TopicKey,
@@ -83,53 +126,43 @@ func (s *Source) toMemory(card memory.CardMemory) (memory.Memory, error) {
 		m.Successor = memory.Identity{Source: SourceName, ID: strconv.FormatInt(card.SupersededBy, 10)}
 	}
 	if card.EngramID != 0 {
-		lineage, err := s.lineageOf(card)
-		if err != nil {
-			return memory.Memory{}, err
-		}
-		m.Lineage = lineage
+		m.Lineage = lineageOf(card, k)
 	}
 	if !card.Mapped {
-		mirrors, err := s.mirrorsOf(card)
-		if err != nil {
-			return memory.Memory{}, err
-		}
-		m.Mirrored = mirrors
+		m.Mirrored = mirrorsOf(card, k)
 	}
-	return m, nil
+	return m
 }
 
 // lineageOf is the lineage of a memory imported from Engram observation card.EngramID, read from memorycard's
 // import_map alone: the observation, then the other memories imported from it (its parts, in part order), so
 // that a page keyed by one part's memory is still the page of the others.
-func (s *Source) lineageOf(card memory.CardMemory) ([]memory.Identity, error) {
+func lineageOf(card memory.CardMemory, k kin) []memory.Identity {
 	lineage := []memory.Identity{{Source: engramSource, ID: strconv.FormatInt(card.EngramID, 10)}}
-	parts, err := s.store.MemoryIDsByEngramIDs([]int64{card.EngramID})
-	if err != nil {
-		return nil, err
-	}
-	for _, id := range parts[card.EngramID] {
+	for _, id := range k.parts[card.EngramID] {
 		if id != card.ID {
 			lineage = append(lineage, memory.Identity{Source: SourceName, ID: strconv.FormatInt(id, 10)})
 		}
 	}
-	return lineage, nil
+	return lineage
 }
 
-// mirrorsOf is what a memory with no import_map row holds the content of: the memories of its project with the same
-// content hash that have one, each followed by the observation its row names. Memorycard says it alone: it needs
-// no other store to know which memories were imported.
-func (s *Source) mirrorsOf(card memory.CardMemory) ([]memory.Identity, error) {
-	twins, err := s.store.MappedTwins(card.Project, card.ContentHash)
-	if err != nil {
-		return nil, err
-	}
+// mirrorsOf is what a memory with no import_map row holds the content of: the imported observations of its project
+// whose whole text, rebuilt from their parts (Store.ImportedObservations), has the card content hash of the memory's
+// own title and body, in observation id order, each as every memory of its parts, in part order, and the observation.
+// Memorycard says it alone: it needs no other store to know which observations were imported.
+func mirrorsOf(card memory.CardMemory, k kin) []memory.Identity {
 	var mirrors []memory.Identity
-	for _, twin := range twins {
-		mirrors = append(mirrors, memory.Identity{Source: SourceName, ID: strconv.FormatInt(twin.MemoryID, 10)})
-		if twin.EngramID != 0 {
-			mirrors = append(mirrors, memory.Identity{Source: engramSource, ID: strconv.FormatInt(twin.EngramID, 10)})
+	seen := map[int64]bool{}
+	for _, o := range k.imported[card.Project][memory.CardContentHash(card.Title, card.Body)] {
+		if seen[o.EngramID] {
+			continue
 		}
+		seen[o.EngramID] = true
+		for _, id := range o.MemoryIDs {
+			mirrors = append(mirrors, memory.Identity{Source: SourceName, ID: strconv.FormatInt(id, 10)})
+		}
+		mirrors = append(mirrors, memory.Identity{Source: engramSource, ID: strconv.FormatInt(o.EngramID, 10)})
 	}
-	return mirrors, nil
+	return mirrors
 }
