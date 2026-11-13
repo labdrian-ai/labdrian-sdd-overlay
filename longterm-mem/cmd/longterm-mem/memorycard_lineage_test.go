@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -33,7 +34,11 @@ func execOnMemorycard(t *testing.T, dbPath string, stmts ...string) {
 func pageOfMemory(t *testing.T, w *promoteGoldenWorld, id string) string {
 	t.Helper()
 	for _, name := range pageNames(t, w) {
-		if strings.HasPrefix(name, "c-") && strings.Contains(readVaultFile(t, w, "wiki/memory/"+name), "memorycard_id: "+id+"\n") {
+		if !strings.HasPrefix(name, "c-") {
+			continue
+		}
+		// The exact front-matter line: "memorycard_id: 1" is not the page of memory 10.
+		if slices.Contains(strings.Split(readVaultFile(t, w, "wiki/memory/"+name), "\n"), "memorycard_id: "+id) {
 			return name
 		}
 	}
@@ -79,7 +84,7 @@ func TestMemorycardMirrorsAreFoundInMemorycardAlone(t *testing.T) {
 
 // Observation 3 was imported as two parts: memory 4 (part 1) and memory 7 (part 2). Memory 4 has a page of its own,
 // keyed by its memory, as every page is after the migration, so memory 7, which has none, is the same piece of
-// memory as a page that exists: bridged.
+// memory as a page that exists: bridged, with no Engram database to say so.
 func TestAMemoryOfAnotherPartOfAnObservationIsBridgedToThePageOfItsSiblingPart(t *testing.T) {
 	w, db := syncMemorycardWorld(t)
 	execOnMemorycard(t, db,
@@ -88,6 +93,7 @@ func TestAMemoryOfAnotherPartOfAnObservationIsBridgedToThePageOfItsSiblingPart(t
 	if code, so, se := runPromoteGolden(t, []string{"promote", "--project", promoteGoldenProject, "--source", "memorycard", "--id", "4"}); code != exitOK {
 		t.Fatalf("promote memory 4: exit %d: %s %s", code, so, se)
 	}
+	withNoEngramDatabase(t)
 
 	code, stdout, stderr := runSync(t, "--source", "memorycard", "--dry-run")
 	if code != exitOK || !strings.Contains(stdout, "would promote 3 memory(ies)") || !strings.Contains(stdout, "1 bridged") || stderr != "" {

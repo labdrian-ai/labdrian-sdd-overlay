@@ -130,46 +130,6 @@ func (s *Store) engramIDOf(memoryID int64) (int64, error) {
 	return 0, nil
 }
 
-// Twin is a memory that holds the content hash another memory holds and has an import_map row, with the Engram
-// observation its row of source engram names (0 when it names none).
-type Twin struct {
-	MemoryID int64
-	EngramID int64
-}
-
-// MappedTwins returns the memories of project that hold contentHash and have an import_map row of any source,
-// whatever their status (a page outlives its memory), in id order: what a memory mirrored by hand, one with no
-// row, holds the content of. An empty hash is no content, and holds it with nobody.
-func (s *Store) MappedTwins(project, contentHash string) ([]Twin, error) {
-	if contentHash == "" {
-		return nil, nil
-	}
-	rows, err := s.db.Query(`select m.id from memories m where m.project = ? and m.content_hash = ?
-		and exists (select 1 from import_map i where i.memory_id = m.id) order by m.id`, project, contentHash)
-	if err != nil {
-		return nil, fmt.Errorf("memorycard: look up the imported memories of project %q that hold a content hash: %w", project, err)
-	}
-	var twins []Twin
-	for rows.Next() {
-		var twin Twin
-		if err := rows.Scan(&twin.MemoryID); err != nil {
-			_ = rows.Close()
-			return nil, fmt.Errorf("memorycard: read a memory of project %q: %w", project, err)
-		}
-		twins = append(twins, twin)
-	}
-	if err := errors.Join(rows.Err(), rows.Close()); err != nil {
-		return nil, fmt.Errorf("memorycard: iterate the memories of project %q: %w", project, err)
-	}
-	// The observations are looked up once the rows are closed, so that no query runs while the rows are open.
-	for i := range twins {
-		if twins[i].EngramID, err = s.engramIDOf(twins[i].MemoryID); err != nil {
-			return nil, err
-		}
-	}
-	return twins, nil
-}
-
 // MemoryByID returns the memory identified by id, whatever its status. ok is false, with a nil error, when
 // there is no such memory. Revision is the memory's next version number (the highest memory_versions.version
 // plus one, or 1 when it has none); EngramID is the Engram observation id named by its import_map row of source
