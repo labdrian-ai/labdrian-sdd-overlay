@@ -22,7 +22,7 @@ func TestSync_AMemoryThatCannotBePromotedAtAllIsNotToldToCheckPromotedState(t *t
 		t.Run(name, func(t *testing.T) {
 			w := syncCardsWriter(t.TempDir())
 
-			report, err := Sync(t.Context(), Deps{Source: fixedSource{memories: []memory.Memory{tc.m}}, Writer: w}, "memorycard")
+			report, err := SyncCardsProject(t.Context(), fixedSource{memories: []memory.Memory{tc.m}}, w, nil, "memorycard")
 
 			if err == nil || len(report.Failed) != 1 {
 				t.Fatalf("Sync = (%+v, %v), want the memory failed", report, err)

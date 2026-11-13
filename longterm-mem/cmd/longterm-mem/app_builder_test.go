@@ -66,16 +66,11 @@ func TestApp_TwoAppsShareNoBuilder(t *testing.T) {
 // index: it has no Builder to share, and an index built by a query top-up is not one it can race. (A promotion that
 // reindexed the embeddings too would have to be handed the session's Builder; this holds the reason it is not.)
 func TestMCPPromoteTool_BuildsNoEmbeddingIndex(t *testing.T) {
-	w := enterClockWorld(t)
+	memorycardWorld(t)
 	stateDir := t.TempDir()
 	t.Setenv("LONGTERM_MEM_STATE_DIR", stateDir)
-	store, err := engram.Open(w.dbPath)
-	if err != nil {
-		t.Fatalf("open the Engram database: %v", err)
-	}
-	defer store.Close()
 
-	if _, err := (commands{newEmbedClient: testEmbedClient, clock: promoteGoldenClock}).mcpPromote(store)(context.Background(), promoteGoldenProject, "engram", 1); err != nil {
+	if _, err := (commands{newEmbedClient: testEmbedClient, clock: promoteGoldenClock}).mcpPromote()(context.Background(), promoteGoldenProject, "memorycard", 1); err != nil {
 		t.Fatalf("the promote tool: %v", err)
 	}
 

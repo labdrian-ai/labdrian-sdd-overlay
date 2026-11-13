@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "8289ca2e24e0fa6f8f1a65690fac859df55c1284",
+    "head": "0f28050f986e0f95ac2cb25cee8aac3b6cc24206",
+    "diff_sha256": "009b9bc52b483db9b50d54d92cbd02ee88bbce76dffa3f19ba789a80782f8ad8",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/cmd_mcp.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "8289ca2e24e0fa6f8f1a65690fac859df55c1284",
+      "head": "0f28050f986e0f95ac2cb25cee8aac3b6cc24206",
+      "diff_sha256": "009b9bc52b483db9b50d54d92cbd02ee88bbce76dffa3f19ba789a80782f8ad8"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/cmd_mcp.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/cmd_mcp.go:154-159",
+        "claim": "The diagnostic Fprintf runs while holding mu, so a slow or blocked diagnostics writer (e.g. a stalled stderr pipe) would block every concurrent promote call that reaches the degraded branch. Setting the flag under the lock and printing after unlock would avoid this. Minor; no realistic trigger shown.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/cmd_mcp.go:153-159"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff replaces a single sync.Once with a mutex-guarded map keyed by source, which matches the stated per-source declaration. The map check and set both happen under the lock, so there is no race.",
+      "The closure-scoped map and mutex are shared across calls of one server, which matches the 'once per server' comment. The map is bounded by the number of distinct sources, so it does not grow without limit.",
+      "The old behavior declared only the first degraded source, so a second degraded source went undeclared; the change fixes this. I found no regression."
+    ]
+  }
+}

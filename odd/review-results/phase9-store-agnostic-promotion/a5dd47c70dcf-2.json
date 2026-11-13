@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a7de0f3e344996a19b2be6c57b4d220c47a39f15",
+    "head": "a5dd47c70dcfc6b90a8038103013c979ee3bac49",
+    "diff_sha256": "1a28e52296bba62214f3320f99e06dcd21494924257fda1407991ccec8cac1e2",
+    "paths": [
+      "longterm-mem/internal/engram/source.go",
+      "longterm-mem/internal/engram/source_relations_test.go",
+      "longterm-mem/internal/engram/source_test.go",
+      "longterm-mem/internal/memory/memory.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "a7de0f3e344996a19b2be6c57b4d220c47a39f15",
+      "head": "a5dd47c70dcfc6b90a8038103013c979ee3bac49",
+      "diff_sha256": "1a28e52296bba62214f3320f99e06dcd21494924257fda1407991ccec8cac1e2"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/engram/source.go",
+        "longterm-mem/internal/engram/source_relations_test.go",
+        "longterm-mem/internal/engram/source_test.go",
+        "longterm-mem/internal/memory/memory.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/engram/source_test.go:1",
+        "claim": "The only test of Store.RelatedEdgesOfProject (TestRelatedEdgesOfProject_AreTheEdgesOfEachObservation) was deleted along with source_test.go. The only non-test caller visible in the diff was Source.mapAll, which is also deleted. If no other reader uses it, the method is now dead, and if one does, it has lost its equivalence test against RelatedEdges. The same holds for other Store methods that were exercised through the sourceFixture helper, such as RelatedEdges and ObservationByID. Check whether these Store methods still have a caller and a test.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/engram/source_test.go:TestRelatedEdgesOfProject_AreTheEdgesOfEachObservation (deleted)",
+          "longterm-mem/internal/engram/source.go:mapAll (deleted)"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff only deletes engram.Source, its tests and memory.LineageError. It cannot show whether anything else still references engram.SourceName, NewSource, LineageFunc, memory.LineageError, or the deleted test helpers (sourceFixture, dropTable, openEngramSource, ids, obs). If another file does, the package would fail to compile; the claim says promotion moved to memorycard.",
+      "Store methods that stay (ListObservations, ObservationsIncludingDeleted, RelatedEdges, RelatedEdgesOfProject, ObservationByID) lose the tests that covered them through the Source."
+    ]
+  }
+}

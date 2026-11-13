@@ -1,17 +1,16 @@
-args: promote --project golden-project --id 1
+args: promote --project golden-project --source memorycard --id 1
 exit: 6
 --- stdout ---
-longterm-mem: refused observation 1 (skipped_unreadable_pages)
+longterm-mem: refused memorycard memory 1 (skipped_unreadable_pages)
 --- stderr ---
-longterm-mem: promote: observation 1 was not promoted: no readable page belongs to it, but a page that could not be read may: promoted page c-000901.md could not be read: read <vault>/wiki/memory/c-000901.md: is a directory; nothing was written for it
-args: sync --project golden-project
+longterm-mem: promote: memorycard memory 1 was not promoted: no readable page belongs to it, but a page that could not be read may: promoted page c-000901.md could not be read: read <vault>/wiki/memory/c-000901.md: is a directory; nothing was written for it
+args: sync --project golden-project --source memorycard
 exit: 6
 --- stdout ---
-longterm-mem: sync promoted 0 observation(s), patched 0 page(s)
+longterm-mem: sync --source memorycard promoted 0 memory(ies); patched 0 page(s); skipped 0 bridged; left 0 locally edited page(s) alone
 --- stderr ---
 longterm-mem: sync: warning: promoted page c-000901.md could not be read: read <vault>/wiki/memory/c-000901.md: is a directory; it was skipped
-longterm-mem: sync: warning: 2 observation(s) left alone, nothing was written for them: no readable page belongs to them, and a page that could not be read may (observations 1, 2)
-longterm-mem: sync: warning: 4 observation(s) left alone, nothing was patched for them: no readable page belongs to them, and a page that could not be read may (observations 1, 2, 3, 4)
+longterm-mem: sync: warning: 2 memory(ies) left alone, nothing was written for them: no readable page belongs to them, and a page that could not be read may (memories 1, 2)
 --- vault ---
 === .allocator-counter (-rw-r--r--) ===
 901
@@ -19,9 +18,8 @@ longterm-mem: sync: warning: 4 observation(s) left alone, nothing was patched fo
 === .raw/.longterm-mem-manifest.json (-rw-------) ===
 {
   "c-000901": {
-    "body_hash": "43c0c8b5ce7879c8a5268caa403a48eb2d07c43d4dd3a978053c14797ca3e98d",
-    "frontmatter_hash": "1b21326f72b961a3fbb0960a4364c0fba15144fd63a59f907350fd1e30a3a65b",
-    "promoted_revision": 1
+    "body_hash": "4c302984b209786451aa00b5b0888d97adc0390421234e166ee9d17a31caba15",
+    "frontmatter_hash": "5dc27a47a0e6f6ad025a8895eba900f6ffbfb787dee8b0fdc80f37c7d82f9336"
   }
 }
 === .raw/.manifest.json (-rw-------) ===

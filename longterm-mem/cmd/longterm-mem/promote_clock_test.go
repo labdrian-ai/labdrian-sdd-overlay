@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vault"
 )
 
@@ -34,6 +33,7 @@ func enterClockWorld(t *testing.T) *promoteGoldenWorld {
 	w := newPromoteGoldenWorld(t)
 	t.Setenv("HOME", w.home)
 	t.Setenv("LONGTERM_MEM_ENGRAM_DB", w.dbPath)
+	t.Setenv("LONGTERM_MEM_MEMORYCARD_DB", w.cardPath)
 	t.Setenv("LONGTERM_MEM_VAULT", w.vaultRoot)
 	t.Setenv("LONGTERM_MEM_VAULTS_FILE", "")
 	t.Chdir(t.TempDir())
@@ -68,7 +68,7 @@ func TestPromoteDatesWhatItWritesWithTheClockItWasGiven(t *testing.T) {
 	w := enterClockWorld(t)
 	var code int
 	captureStreams(t, func() {
-		code = commands{newEmbedClient: testEmbedClient, clock: fixedClock{at: clockE2EInstant}}.run([]string{"promote", "--project", promoteGoldenProject, "--id", "1"})
+		code = commands{newEmbedClient: testEmbedClient, clock: fixedClock{at: clockE2EInstant}}.run([]string{"promote", "--project", promoteGoldenProject, "--source", "memorycard", "--id", "1"})
 	})
 	if code != exitOK {
 		t.Fatalf("promote exited %d", code)
@@ -85,7 +85,7 @@ func TestSyncDatesWhatItWritesWithTheClockItWasGiven(t *testing.T) {
 	w := enterClockWorld(t)
 	var code int
 	captureStreams(t, func() {
-		code = commands{newEmbedClient: testEmbedClient, clock: fixedClock{at: clockE2EInstant}}.run([]string{"sync", "--project", promoteGoldenProject})
+		code = commands{newEmbedClient: testEmbedClient, clock: fixedClock{at: clockE2EInstant}}.run([]string{"sync", "--project", promoteGoldenProject, "--source", "memorycard"})
 	})
 	if code != exitOK {
 		t.Fatalf("sync exited %d", code)
@@ -103,13 +103,7 @@ func TestSyncDatesWhatItWritesWithTheClockItWasGiven(t *testing.T) {
 
 func TestTheMCPPromoteToolDatesWhatItWritesWithTheClockItWasGiven(t *testing.T) {
 	w := enterClockWorld(t)
-	store, err := engram.Open(w.dbPath)
-	if err != nil {
-		t.Fatalf("open the Engram database: %v", err)
-	}
-	defer store.Close()
-
-	outcome, err := commands{newEmbedClient: testEmbedClient, clock: fixedClock{at: clockE2EInstant}}.mcpPromote(store)(context.Background(), promoteGoldenProject, "engram", 1)
+	outcome, err := commands{newEmbedClient: testEmbedClient, clock: fixedClock{at: clockE2EInstant}}.mcpPromote()(context.Background(), promoteGoldenProject, "memorycard", 1)
 	if err != nil {
 		t.Fatalf("the promote tool: %v", err)
 	}

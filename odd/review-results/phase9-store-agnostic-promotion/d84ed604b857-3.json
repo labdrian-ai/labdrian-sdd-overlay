@@ -1,0 +1,76 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "811541a1328fc33714464c07ced0de9b2164ba18",
+    "head": "d84ed604b8577a0518efd254df623b36e63eef1d",
+    "diff_sha256": "d888255bd3c747bd0b152e094735553a02a3251b66b6a5504143f7c7fbb4652e",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/promote_clock_test.go",
+      "longterm-mem/cmd/longterm-mem/promote_golden_test.go",
+      "longterm-mem/cmd/longterm-mem/testdata/promote-golden/01-promote-an-ineligible-observation-explicitly.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/promote-golden/02-promote-it-again.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/promote-golden/03-sync-dry-run.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/promote-golden/04-sync-promotes-the-eligible-ones.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/promote-golden/05-sync-with-nothing-new.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/promote-golden/06-sync-after-a-revision-and-a-soft-delete.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/promote-golden/07-promote-a-page-edited-by-hand-is-refused.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/promote-golden/08-promote-an-observation-that-does-not-exist.golden"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "811541a1328fc33714464c07ced0de9b2164ba18",
+      "head": "d84ed604b8577a0518efd254df623b36e63eef1d",
+      "diff_sha256": "d888255bd3c747bd0b152e094735553a02a3251b66b6a5504143f7c7fbb4652e"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/promote_clock_test.go",
+        "longterm-mem/cmd/longterm-mem/promote_golden_test.go",
+        "longterm-mem/cmd/longterm-mem/testdata/promote-golden/01-promote-an-ineligible-observation-explicitly.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/promote-golden/02-promote-it-again.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/promote-golden/03-sync-dry-run.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/promote-golden/04-sync-promotes-the-eligible-ones.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/promote-golden/05-sync-with-nothing-new.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/promote-golden/06-sync-after-a-revision-and-a-soft-delete.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/promote-golden/07-promote-a-page-edited-by-hand-is-refused.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/promote-golden/08-promote-an-observation-that-does-not-exist.golden"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/cmd/longterm-mem/testdata/promote-golden/07-promote-a-page-edited-by-hand-is-refused.golden:1-5",
+        "claim": "Step 07 is still named 'promote-a-page-edited-by-hand-is-refused', but its re-recorded golden now shows exit 0 and 'already promoted as c-000901; the page is left as it is'. The old golden pinned exit 6, 'refused c-000901 (skipped_local_edit)' and the local-edit stderr. The re-record absorbed this change, so no golden scenario now pins the local-edit refusal on an explicit promote. The scenario's name and intent no longer match what it asserts, and the guarantee that a hand-edited page is not overwritten by an explicit promote lost its pinned coverage.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "07-promote-a-page-edited-by-hand-is-refused.golden:1-5 (exit: 6 -> exit: 0; refusal lines removed)"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/testdata/promote-golden/02-promote-it-again.golden:1-4",
+        "claim": "Step 02 changed from 'promoted c-000901 (updated)' to 'already promoted ... left as it is', which is a no-op. After this commit every golden step uses --source memorycard, so the Engram promote and sync path (revision bump, soft-delete, engram_* identity keys, update-on-repromote) has no end-to-end golden. The Engram fixture database is still built and its env var still set, but no step reads it. Re-promote-updates-the-page is also no longer pinned anywhere.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "promote_golden_test.go:158-164 (all steps pass --source memorycard)",
+          "02-promote-it-again.golden:1-4"
+        ]
+      }
+    ],
+    "evidence": [
+      "Diff inspected in full; every changed path was reviewed.",
+      "Golden 07 and 02 outputs change behavior class (refusal and update become a no-op), not only wording.",
+      "Test helper changes (reviseMemory, execCardSQL, normalise, mcpPromote(nil)) look internally consistent with the memorycard schema declared in the fixture."
+    ]
+  }
+}

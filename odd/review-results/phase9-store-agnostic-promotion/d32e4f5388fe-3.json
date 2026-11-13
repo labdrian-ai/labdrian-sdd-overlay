@@ -1,0 +1,97 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "31567f0d48a88e092931d754b8f941b68964c952",
+    "head": "d32e4f5388feae3e9ca52cf5ae9e35ef88273f40",
+    "diff_sha256": "b9e41d341d6eb0227903abbdedaec3da84c05b22a53504a4cdd0a1bb5627bafc",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/app_builder_test.go",
+      "longterm-mem/cmd/longterm-mem/cmd_mcp.go",
+      "longterm-mem/cmd/longterm-mem/cmd_promote.go",
+      "longterm-mem/cmd/longterm-mem/cmd_sync.go",
+      "longterm-mem/cmd/longterm-mem/degraded_write_test.go",
+      "longterm-mem/cmd/longterm-mem/exit_codes_test.go",
+      "longterm-mem/cmd/longterm-mem/main_test.go",
+      "longterm-mem/cmd/longterm-mem/memorycard_lineage_test.go",
+      "longterm-mem/cmd/longterm-mem/project_resolve_test.go",
+      "longterm-mem/cmd/longterm-mem/promote_allocator_test.go",
+      "longterm-mem/cmd/longterm-mem/promote_clock_test.go",
+      "longterm-mem/cmd/longterm-mem/promote_memorycard_test.go",
+      "longterm-mem/cmd/longterm-mem/promote_relations_test.go",
+      "longterm-mem/cmd/longterm-mem/sources.go",
+      "longterm-mem/cmd/longterm-mem/sync_bridged_lineage_test.go",
+      "longterm-mem/cmd/longterm-mem/sync_dryrun_test.go",
+      "longterm-mem/cmd/longterm-mem/sync_memorycard_test.go",
+      "longterm-mem/cmd/longterm-mem/sync_source_golden_test.go",
+      "longterm-mem/cmd/longterm-mem/testdata/retrieval-golden/mcp-00-the-handshake-and-the-tools.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/sync-source-golden/01-plain-sync-dry-run.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/sync-source-golden/02-source-engram-dry-run.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/sync-source-golden/03-plain-sync.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/sync-source-golden/04-source-engram-with-nothing-new.golden",
+      "longterm-mem/cmd/longterm-mem/vault_registry_golden_test.go",
+      "longterm-mem/internal/mcpserver/server.go",
+      "longterm-mem/internal/mcpserver/server_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "31567f0d48a88e092931d754b8f941b68964c952",
+      "head": "d32e4f5388feae3e9ca52cf5ae9e35ef88273f40",
+      "diff_sha256": "b9e41d341d6eb0227903abbdedaec3da84c05b22a53504a4cdd0a1bb5627bafc"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/app_builder_test.go",
+        "longterm-mem/cmd/longterm-mem/cmd_mcp.go",
+        "longterm-mem/cmd/longterm-mem/cmd_promote.go",
+        "longterm-mem/cmd/longterm-mem/cmd_sync.go",
+        "longterm-mem/cmd/longterm-mem/degraded_write_test.go",
+        "longterm-mem/cmd/longterm-mem/exit_codes_test.go",
+        "longterm-mem/cmd/longterm-mem/main_test.go",
+        "longterm-mem/cmd/longterm-mem/memorycard_lineage_test.go",
+        "longterm-mem/cmd/longterm-mem/project_resolve_test.go",
+        "longterm-mem/cmd/longterm-mem/promote_allocator_test.go",
+        "longterm-mem/cmd/longterm-mem/promote_clock_test.go",
+        "longterm-mem/cmd/longterm-mem/promote_memorycard_test.go",
+        "longterm-mem/cmd/longterm-mem/promote_relations_test.go",
+        "longterm-mem/cmd/longterm-mem/sources.go",
+        "longterm-mem/cmd/longterm-mem/sync_bridged_lineage_test.go",
+        "longterm-mem/cmd/longterm-mem/sync_dryrun_test.go",
+        "longterm-mem/cmd/longterm-mem/sync_memorycard_test.go",
+        "longterm-mem/cmd/longterm-mem/sync_source_golden_test.go",
+        "longterm-mem/cmd/longterm-mem/testdata/retrieval-golden/mcp-00-the-handshake-and-the-tools.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/sync-source-golden/01-plain-sync-dry-run.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/sync-source-golden/02-source-engram-dry-run.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/sync-source-golden/03-plain-sync.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/sync-source-golden/04-source-engram-with-nothing-new.golden",
+        "longterm-mem/cmd/longterm-mem/vault_registry_golden_test.go",
+        "longterm-mem/internal/mcpserver/server.go",
+        "longterm-mem/internal/mcpserver/server_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/cmd/longterm-mem/cmd_promote.go:63",
+        "claim": "promoteFrom opens the store with declareDegraded=false, so `promote` stays silent when the store is only reachable through the immutable=1 snapshot fallback. The base default promote path (Engram) declared this, and the deleted TestCmdPromote_DeclaresADegradedEngramSnapshot required it. The openSource doc comment says declaration applies to \"a command that writes pages from what it reads\", which promote is. The MCP promote tool (mcpPromote) never declares it either. The removed test's rationale (a frozen corpus is worse on the write side) is unaddressed. No replacement coverage for the memorycard path appears in the diff.",
+        "evidence_class": "inferential",
+        "causal_disposition": "worsened",
+        "proof_refs": [
+          "cmd_promote.go:63 a.openSource(name, false)",
+          "sources.go openSource declareDegraded gate",
+          "degraded_write_test.go deleted"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff. Source registry, sync and promote command wiring, MCP id aliasing (IDFromEitherName) and the source refusal wording are consistent with the claimed behavior and with the new tests.",
+      "The only finding is the missing degraded-snapshot declaration on promote. Whether the base memorycard promote path declared it could not be established from the diff."
+    ]
+  }
+}

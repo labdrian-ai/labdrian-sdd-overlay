@@ -1,0 +1,15 @@
+{
+  "kind": "sweeper",
+  "base": "6126f2bc5f3d95bf29e0f2c2ef1d4a024cddbc4e",
+  "head": "31567f0d48a88e092931d754b8f941b68964c952",
+  "diff_sha256": "9be38b3c269f4ff8a7a14fb629bfdb824900dbcbc03555a22019b8f0a6b2b07b",
+  "sweep": "31567f0d48a8-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 path: longterm-mem/cmd/longterm-mem/testdata/failures-golden/01-sync-when-the-relations-of-memory-cannot-be-read.golden",
+      "disposition": "live",
+      "evidence": "deleted or renamed on purpose by 31567f0d (test(longterm-mem): run the registry, identity, MCP and failure goldens against memorycard) (T5 deletes the Engram dialect; renamed goldens have their new file, L56); outside immutable history no file names it any more (the one stale comment, frontmatter_test.go:12, was corrected, L58)"
+    }
+  ]
+}

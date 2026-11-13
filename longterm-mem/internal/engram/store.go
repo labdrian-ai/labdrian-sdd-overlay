@@ -253,7 +253,7 @@ func (s *Store) ObservationsIncludingDeleted(project string) ([]memory.Observati
 // an explicit promote call (R-032, task 8b.6) names an id directly rather
 // than scanning a project-scoped list). ok is false, with a zero
 // Observation and a nil error, when no row with that id exists -- a
-// caller (promote.ExplicitPromote) turns that into R-032's "rejected with
+// caller turns that into R-032's "rejected with
 // a clear error" outcome; ObservationByID itself only reports a genuine
 // database error as err.
 func (s *Store) ObservationByID(id int64) (memory.Observation, bool, error) {

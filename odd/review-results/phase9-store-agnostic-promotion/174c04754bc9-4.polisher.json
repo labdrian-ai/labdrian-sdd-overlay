@@ -1,0 +1,35 @@
+{
+  "kind": "polisher",
+  "base": "79563edf72935eb242a79a761ca7683c2bc596eb",
+  "head": "174c04754bc9844511f6569ae27f0c2bacc7eb29",
+  "diff_sha256": "2a6bb73f0db6d284ce29993c00895a629ff9aba89755a0d6f8fdc2a739f6970d",
+  "findings": {
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/cmd/longterm-mem/promote_memorycard_test.go:345-364",
+        "summary": "The concurrency property the commit claims has no test: the only degraded-declaration test is sequential and single-source.",
+        "evidence": [
+          "The test calls the tool in a plain loop over ids 1 and 3, with no goroutines, one source and a strings.Builder.",
+          "A regression to a non-atomic check-then-set or a declaration that fires twice would still pass; no -race or concurrent-call test accompanies the Risk 4 change."
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/cmd_mcp.go:153-161",
+        "summary": "With the write outside the lock, calls for two different sources can write to the diagnostics writer at the same time.",
+        "evidence": [
+          "The claim is keyed by source and the Fprintf runs after Unlock, so two distinct sources produce two unserialised writes.",
+          "In production the writer is os.Stderr and each message is one Fprintf, so lines do not interleave; an injected non-thread-safe writer would race, and the field comment does not require Write to be safe for concurrent use."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read cmd_mcp.go at head: membership is claimed under mu, then Fprintf after Unlock, before the promote.",
+      "Read promote_memorycard_test.go:326-364: the MCP test is sequential and single-source.",
+      "Tests and race detector not run by the polisher."
+    ]
+  }
+}

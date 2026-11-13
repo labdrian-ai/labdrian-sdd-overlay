@@ -6,7 +6,7 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 )
 
-// Outcome is what PromoteAndReindex did: the result of the promotion, and the failure of the index rebuild that
+// Outcome is what PromoteCardAndReindex did: the result of the promotion, and the failure of the index rebuild that
 // followed a page being written, which sits beside a promotion that succeeded and is not its failure.
 type Outcome struct {
 	Result Result
@@ -15,27 +15,11 @@ type Outcome struct {
 	IndexRebuildErr error
 }
 
-// PromoteAndReindex promotes the observation named by id explicitly (ExplicitPromote) and, when that promotion
-// wrote a page, rebuilds the vault's index before it returns. It is what the MCP promote tool does: a page promoted
-// over MCP used to stay invisible to MCP query until somebody ran `sync` out of band, because the sync rebuilds the
-// index and the promotion did not.
-//
-// The error is the promotion's: the observation not found, a lookup that failed, a page that could not be written.
-// The rebuild's failure is NOT the promotion's and is not reported as one: the page is already written and durable
-// by the time the rebuild runs, so failing the call would tell the caller that a page it can see on disk was never
-// written. It is Outcome.IndexRebuildErr, beside the result.
-//
-// With no rebuilder wired, or one that holds a nil pointer, nothing is rebuilt, as in Sync.
-func PromoteAndReindex(ctx context.Context, w *Writer, src Source, id int64, index IndexRebuilder) (Outcome, error) {
-	result, err := ExplicitPromote(ctx, w, src, id)
-	if err != nil {
-		return Outcome{}, err
-	}
-	return Outcome{Result: result, IndexRebuildErr: reindexAfterPromote(ctx, result, index)}, nil
-}
-
-// PromoteCardAndReindex is PromoteAndReindex for a memory of memorycard (ExplicitPromoteCard): the index is
-// rebuilt when, and only when, the promotion wrote a page.
+// PromoteCardAndReindex promotes the memory named by id explicitly (ExplicitPromoteCard) and, when that promotion wrote
+// a page, rebuilds the vault's index before it returns: what the MCP promote tool does, so that a page promoted over MCP is
+// found by MCP query without somebody running `sync` out of band. The error is the promotion's; the rebuild's failure
+// is Outcome.IndexRebuildErr, beside the result, because the page is already written and durable by then.
+// With no rebuilder wired, or one that holds a nil pointer, nothing is rebuilt.
 func PromoteCardAndReindex(ctx context.Context, w *Writer, src Source, id int64, index IndexRebuilder) (Outcome, error) {
 	result, err := ExplicitPromoteCard(ctx, w, src, id)
 	if err != nil {

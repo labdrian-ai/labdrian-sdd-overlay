@@ -9,13 +9,13 @@ import (
 )
 
 // PropagateCards is the propagation pass of `sync --source memorycard` (S1 e of the C22-FU follow-up, the memorycard
-// counterpart of Propagate and R-033): every page that is behind its memory, because memorycard has superseded or
+// R-033): every page that is behind its memory, because memorycard has superseded or
 // archived the memory since the page was written, or restored it to active since, gets its status and related
 // lines patched, and nothing else of the page. A page that already says what its memory says is left alone and not
 // counted. The body, and every
 // other frontmatter line, stay as they were, even on a page a human has edited by hand, and the patch is recorded
-// in the precedence store the way Propagate records it: only the frontmatter hash moves, so the body's divergence
-// is not erased (Writer.patchPage is the one patcher, shared with Propagate).
+// in the precedence store the way every patch is recorded: only the frontmatter hash moves, so the body's divergence
+// is not erased (Writer.patchPage is the one patcher, the one patcher of the pass).
 //
 // memorycard's supersede and archive change a memory's status and add no version, so the revision a page carries
 // stays current and the promotion pass (SyncCards) has nothing to do for them: the two passes are independent, and
@@ -23,7 +23,7 @@ import (
 // before its successor's page existed get its successor link on the same run.
 //
 // A retired memory that has no page of its own is left alone, and one with no readable page while a page could
-// not be read is withheld, because the unreadable page may be its own (as Propagate withholds an observation). One
+// not be read is withheld, because the unreadable page may be its own (a status cannot be patched into a page that cannot be found). One
 // page that cannot be patched does not abort the run: it is recorded in Failed and the walk goes on, and the run
 // returns a non-nil error when anything failed. A memorycard that cannot list its memories is a CardListError.
 func PropagateCards(ctx context.Context, src Source, w *Writer, project string) (PropagateReport, error) {
@@ -72,7 +72,7 @@ func cardPatchCandidates(src Source, w *Writer, project string) (patchPlan, erro
 // retired leaves its page alone unless the page still says superseded or archived, which is a memory restored to
 // active: a status a human set by hand on a page its store never retired is not propagation's to police. It
 // returns what it could not decide or left alone, and an error only when the walk could not start. It is the ONE
-// walk of PropagateCards and cardPatchCandidates, as eachPatchTarget is of Propagate and Plan.
+// walk of PropagateCards and cardPatchCandidates.
 func eachCardPatchTarget(src Source, w *Writer, project string, visit func(patchTarget) error) (patchOutcome, error) {
 	memories, err := src.Memories(project)
 	if err != nil {

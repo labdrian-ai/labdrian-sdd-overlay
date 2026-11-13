@@ -1,0 +1,45 @@
+{
+  "kind": "sweeper",
+  "base": "ec72d0f17230e11ca3849d0e0f55d1c86a2d8a1d",
+  "head": "914326e08904e83b150408c5c1724aee237e7023",
+  "diff_sha256": "e9a646cf304cbc0c50f5b9b0460853fd5b6e00b5d7cf3ece17e4074bc00bd201",
+  "sweep": "914326e08904-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 name: equalSnapshots",
+      "disposition": "live",
+      "evidence": "only immutable history names it (odd/review-results/phase9-store-agnostic-promotion/a7de0f3e3449-1.sweep.json): review records, archived changes and the Log are kept as written"
+    },
+    {
+      "candidate": "T1 name: fixtureObs",
+      "disposition": "live",
+      "evidence": "only immutable history names it (odd/review-results/phase9-store-agnostic-promotion/a7de0f3e3449-1.sweep.json, openspec/changes/archive/2026-09-09-longterm-mem-promotion-scoping/apply-progress.md, openspec/changes/archive/2026-09-09-longterm-mem-promotion-scoping/archive-report.md): review records, archived changes and the Log are kept as written"
+    },
+    {
+      "candidate": "T1 name: fixtureRelation",
+      "disposition": "live",
+      "evidence": "only immutable history names it (odd/review-results/phase9-store-agnostic-promotion/a7de0f3e3449-1.sweep.json): review records, archived changes and the Log are kept as written"
+    },
+    {
+      "candidate": "T1 name: memorycard",
+      "disposition": "live",
+      "evidence": "the name still names a different, live symbol or flag: agents/builder.md, agents/delivery.md, agents/polisher.md and others; comments that named the deleted one were corrected (L58)"
+    },
+    {
+      "candidate": "T1 name: newFixtureEngramStore",
+      "disposition": "live",
+      "evidence": "the name still names a different, live symbol or flag: longterm-mem/internal/query/default_sources_test.go, longterm-mem/internal/query/query_test.go; comments that named the deleted one were corrected (L58)"
+    },
+    {
+      "candidate": "T1 name: promoteFixtureDB",
+      "disposition": "live",
+      "evidence": "only immutable history names it (odd/review-results/phase9-store-agnostic-promotion/d32e4f5388fe-1.sweep.json): review records, archived changes and the Log are kept as written"
+    },
+    {
+      "candidate": "T1 name: vaultSnapshot",
+      "disposition": "live",
+      "evidence": "only immutable history names it (odd/review-results/phase9-store-agnostic-promotion/a7de0f3e3449-1.sweep.json): review records, archived changes and the Log are kept as written"
+    }
+  ]
+}

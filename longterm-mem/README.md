@@ -84,11 +84,11 @@ The binary (`longterm-mem <subcommand> [flags]`) currently dispatches:
 | `query` | `[--project P]` `"<text>"` `[--top N]` `[--exclude-types T,...]` `[--goal ID]` `[--vault DIR]` `[--json]` | Query Engram FTS5 (always) and, when named in `sources`, the embedding index and the vault; results are unioned and ranked. The CLI queries FTS only. `--goal` returns that goal's records and the records of no goal, never another goal's (see [Goals](#goals)). |
 | `index` | `[--project P]` `[--vault DIR]` `[--rebuild]` | Provision/refresh the vault's local retrieval index (no LLM). |
 | `index --embeddings` | `[--project P]` `[--embed-model M]` `[--embed-dimension N]` `[--embed-input-limit C]` `[--embed-endpoint URL]` `[--allow-remote-embedder]` | Build or incrementally update the embedding index over Engram rows against a loopback Ollama backend (`nomic-embed-text`, 768 dims by default). Unchanged rows are fingerprinted and reused, so a re-run after a few new observations takes well under a second. |
-| `sync` | `[--project P]` `[--vault DIR]` `[--dry-run]` `[--source engram\|memorycard]` | Promote eligible Engram observations into vault pages, skipping one whose memorycard memory already has a page; `--dry-run` reports without writing. `--source memorycard` promotes the project's eligible memorycard memories instead, counting the ones bridged to a promoted Engram page and never failing on them (see [Syncing from memorycard](docs/sync-from-memorycard.md)); the default is `engram`, which is what hooks run. An observation is eligible only if it is pinned, explicitly targeted, or carries a curated `topic_key` whose first path segment is not `sdd`, `review`, `delivery`, `odd`, or `session` — an untopiced observation is not automatically eligible. A page already promoted under a previous, looser eligibility rule is neither retracted nor refreshed by `sync` once its observation stops being eligible under the current rule; use an explicit `promote` or a pin to keep such a page current; `doctor` names those pages (see [Frozen pages](#frozen-pages)). |
+| `sync` | `[--project P]` `[--vault DIR]` `[--dry-run]` `[--source memorycard]` | Promote the project's eligible memorycard memories into vault pages, counting the ones bridged to a promoted Engram page and never failing on them; `--dry-run` reports without writing. memorycard is the one store, and the default, which is what hooks run; any other `--source`, `engram` included, is exit 2 (see [Syncing from memorycard](docs/sync-from-memorycard.md)). A memory is eligible only if it is pinned, explicitly targeted, or carries a curated `topic_key` whose first path segment is not `sdd`, `review`, `delivery`, `odd`, or `session` — an untopiced memory is not automatically eligible. A page already promoted under a previous, looser eligibility rule is neither retracted nor refreshed by `sync` once its memory stops being eligible under the current rule; use an explicit `promote` or a pin to keep such a page current; `doctor` names those pages (see [Frozen pages](#frozen-pages)). (Previously: `--source engram\|memorycard`, default `engram`.) |
 | `status` | `[--project P]` `[--vault DIR]` `[--json]` | Report Engram reachability, vault provisioning, last sync, and when the embedding index was built. |
 | `stale` | `[--project P]` | Report the memories this repository's history disagrees with (removed or moved paths). Reports only; never deletes. A path that climbs out of the project (`a/../../x.go`) is unknown: it is not asked of git and the rest of the report prints. |
 | `doctor` | `[--project P]` `[--vault DIR]` `[--json]` | Deeper diagnostics: prerequisites, wiki-lint, registration consistency, embedding index presence/freshness and backend reachability, and an advisory check that names promoted pages `sync` no longer refreshes (see [Frozen pages](#frozen-pages)). Each check answers `PASS`, `FAIL` or `warn`; only a `FAIL` makes the exit code 9, so a `warn` never changes it. |
-| `promote` | `[--project P]` `--id N` `[--vault DIR]` `[--source engram\|memorycard]` | Explicitly promote one Engram observation by id (refused, exit 6, when its memorycard memory already has a page). With `--source memorycard`, `--id` is a memorycard memory id; see [Promoting from memorycard](docs/promote-from-memorycard.md). `promote reconcile <address>` adopts one already-promoted page whose precedence entry cannot tell longterm-mem's own write from a human edit, so promotion stops refusing it; deliberately one address at a time. |
+| `promote` | `[--project P]` `--source memorycard` `--id N` `[--vault DIR]` | Explicitly promote one memorycard memory by id (refused, exit 6, when it is bridged to a page that already exists). `--source memorycard` is required: without it, or with another name, the command is exit 2; see [Promoting from memorycard](docs/promote-from-memorycard.md). (Previously: `--source engram\|memorycard`, default `engram`, and `--id` was an Engram observation id.) `promote reconcile <address>` adopts one already-promoted page whose precedence entry cannot tell longterm-mem's own write from a human edit, so promotion stops refusing it; deliberately one address at a time. |
 | `mcp` | — | Run the MCP stdio server (`query`, `get`, `promote` tools). |
 | `register` | `--target claude\|opencode\|codex\|all` `[--binary PATH]` `[--config-root DIR]` `[--state-dir DIR]` | Write this binary's MCP entry into the runtime's config file (ownership-tagged, idempotent). |
 | `unregister` | `--target claude\|opencode\|codex\|all` `[--config-root DIR]` `[--state-dir DIR]` | Remove the entry `register` wrote; an entry it does not own is left untouched and reported as `unmanaged`. |
@@ -135,7 +135,7 @@ not the project's.
 
 Global env overrides: `LONGTERM_MEM_ENGRAM_DB` (Engram database path),
 `LONGTERM_MEM_MEMORYCARD_DB` (memorycard database path, read by
-`promote --source memorycard`; default `~/.memorycard/memory.db`),
+`sync` and `promote`; default `~/.memorycard/memory.db`),
 `LONGTERM_MEM_VAULT` (vault path), `LONGTERM_MEM_VAULTS_FILE` (vault
 registry path), `LONGTERM_MEM_STATE_DIR` (state directory, default
 `~/.labdrian-overlay/longterm-mem`).
@@ -159,33 +159,44 @@ Without a goal nothing changes.
 
 ### Frozen pages
 
-`sync` refreshes a promoted page only while its observation is eligible: pinned,
-or carrying a curated `topic_key`. A page whose observation is not eligible
-(promoted by an explicit `promote --id N` of an untopiced observation, or under
+`sync` refreshes a promoted page only while its memory is eligible: pinned,
+or carrying a curated `topic_key`. A page whose memory is not eligible
+(promoted by an explicit `promote --source memorycard --id N` of an untopiced memory, or under
 a looser rule that no longer applies) stays exactly as it was written, however
-the observation changes later. Such a page is *frozen*, and nothing on it says so.
+the memory changes later. Such a page is *frozen*, and nothing on it says so.
 Pages promoted from `odd/` (feature-document mirrors) or `session/` (session
 summaries) topics before those prefixes were excluded are frozen this way. `sync`
-still patches their `status:` when their observation is deleted or superseded
+still patches their `status:` when their memory is archived or superseded
 (propagation does not check eligibility), and `doctor` names them while their
-observation is live.
+memory is live.
 
 `doctor` says so, in its `promoted-pages-eligible` check. Each finding names the
-page address, the observation id, why the observation is not eligible (it has no
+page address, the memorycard memory id, why the memory is not eligible (it has no
 `topic_key`, or its first segment, after any `goal:<id>/` prefix, is empty or one
 of `sdd`, `review`, `delivery`, `odd` and `session`)
 and the two ways out:
 
-- `longterm-mem promote --id N` refreshes the page now, once;
-- pinning observation N in Engram makes `sync` keep the page current from then on.
+- `longterm-mem promote --source memorycard --id N` refreshes the page now, once;
+- pinning memory N in memorycard makes `sync` keep the page current from then on.
+
+That is the advice for a page that carries a memorycard identity. A page of an earlier release (it carries only an
+`engram_id`) is refused by `promote` as bridged, so for it `doctor` names no `promote` command: it says the page
+predates memorycard identity and is refreshed only after the one-time vault migration, and that pinning memory N in
+memorycard keeps it current after it.
+
+`doctor` joins a page to its memory by the identity the page names: its `memorycard_id`, or, for a page an earlier
+release promoted from Engram, its `engram_id` through memorycard's `import_map`. Only live memories (not superseded, not archived) are judged; when one observation was imported as several
+memories, the page is kept current if any live one is eligible, and a warning names the first. It reads no Engram
+database for this check. (Previously: it joined by `engram_id` over the live observations of Engram, and advised `promote --id N` and
+pinning observation N in Engram.)
 
 The check is advisory. It answers `warn`, never `FAIL`: the text form prints
 `[warn] promoted-pages-eligible (...)`, `--json` carries `"status": "warn"`, and
 the exit code is the one `doctor` would have answered without it (9 for a
 `FAIL`, 0 otherwise). Nothing records that a page was promoted explicitly, so an
-explicitly promoted page whose observation is not eligible is named too, until
-the observation is pinned. A page whose observation was deleted, or is a row of
-another project, is not named; when the pages or the observations cannot be
+explicitly promoted page whose memory is not eligible is named too, until
+the memory is pinned. A page whose memory is archived, or is a row of
+another project, is not named; when the pages or the memories cannot be
 read, the check says it cannot judge, as a warning.
 
 ## MCP registration
@@ -203,9 +214,10 @@ runtime's, not the project's):
   records and the records of no goal (see [Goals](#goals)). Responses are
   byte-budgeted and carry `diagnostics` naming anything that degraded.
 - `get` — read one Engram observation whole by `engram_id`.
-- `promote` — explicitly promote one observation into the vault. The optional
-  `source` (`engram`, the default, or `memorycard`) names the store `engram_id`
-  is an id of; see [Promoting from memorycard](docs/promote-from-memorycard.md).
+- `promote` — explicitly promote one memorycard memory into the vault. `source`
+  is required and is `memorycard`; the id is `memory_id` or `engram_id` (its former
+  name; both given must be equal). (Previously: `source` was optional, `engram` by
+  default, and the id was `engram_id` alone.) See [Promoting from memorycard](docs/promote-from-memorycard.md).
 
 Two records describe a registration: the engine-owned view
 (`~/.labdrian-overlay/longterm-mem-registration.json`, reported by `overlay

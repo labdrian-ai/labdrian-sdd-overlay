@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -178,9 +177,9 @@ func TestServer_PromoteRoundTripsOverStdio(t *testing.T) {
 	}
 }
 
-// The promote tool takes an optional source: absent it is engram, memorycard is forwarded as such, and any other
-// value is an error that reaches no store.
-func TestServer_PromoteForwardsTheSource(t *testing.T) {
+// The promote tool hands the source to its dependency as the caller gave it, an absent one as empty: which sources
+// there are is the dependency's to say, so the tool names none.
+func TestServer_PromoteForwardsTheSourceAsGiven(t *testing.T) {
 	var sources []string
 	deps := Deps{
 		Promote: func(_ context.Context, _, source string, _ int64) (PromoteOutcome, error) {
@@ -189,25 +188,70 @@ func TestServer_PromoteForwardsTheSource(t *testing.T) {
 		},
 	}
 	session := connectInMemory(t, deps)
-	call := func(args map[string]any) error {
+	for _, args := range []map[string]any{
+		{"project": "p", "memory_id": 1},
+		{"project": "p", "memory_id": 1, "source": "memorycard"},
+		{"project": "p", "memory_id": 1, "source": "notes"},
+	} {
 		res, err := session.CallTool(context.Background(), &mcp.CallToolParams{Name: "promote", Arguments: args})
-		if err == nil && res.IsError {
-			err = fmt.Errorf("the tool reported an error")
+		if err != nil || res.IsError {
+			t.Fatalf("%v: err = %v, tool error = %v", args, err, res != nil && res.IsError)
 		}
-		return err
 	}
+	if len(sources) != 3 || sources[0] != "" || sources[1] != "memorycard" || sources[2] != "notes" {
+		t.Fatalf("sources reaching the dependency = %q, want [\"\" memorycard notes]", sources)
+	}
+}
 
-	if err := call(map[string]any{"project": "p", "engram_id": 1}); err != nil {
-		t.Fatal(err)
+// The id of the promote tool is memory_id or engram_id, its former name: one given is the id, both equal is that
+// id, both different is an error naming both, neither is a missing id (S12 h). The dependency is not reached by
+// a refused call.
+func TestServer_PromoteTakesTheIDUnderEitherName(t *testing.T) {
+	cases := []struct {
+		name    string
+		args    map[string]any
+		wantID  int64
+		wantErr string
+	}{
+		{"memory_id only", map[string]any{"memory_id": 7}, 7, ""},
+		{"engram_id only", map[string]any{"engram_id": 7}, 7, ""},
+		{"both equal", map[string]any{"memory_id": 7, "engram_id": 7}, 7, ""},
+		{"both different", map[string]any{"memory_id": 7, "engram_id": 8}, 0, "memory_id 7 and engram_id 8 name different memories"},
+		{"neither", map[string]any{}, 0, "memory_id is required"},
+		{"zero counts as not given", map[string]any{"memory_id": 0, "engram_id": 9}, 9, ""},
 	}
-	if err := call(map[string]any{"project": "p", "engram_id": 1, "source": "memorycard"}); err != nil {
-		t.Fatal(err)
-	}
-	if err := call(map[string]any{"project": "p", "engram_id": 1, "source": "notes"}); err == nil {
-		t.Fatal("an unknown source was accepted")
-	}
-	if len(sources) != 2 || sources[0] != "engram" || sources[1] != "memorycard" {
-		t.Fatalf("sources reaching the dependency = %v, want [engram memorycard]", sources)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var ids []int64
+			session := connectInMemory(t, Deps{
+				Promote: func(_ context.Context, _, _ string, id int64) (PromoteOutcome, error) {
+					ids = append(ids, id)
+					return PromoteOutcome{}, nil
+				},
+			})
+			args := map[string]any{"project": "p", "source": "memorycard"}
+			for k, v := range tc.args {
+				args[k] = v
+			}
+			res, err := session.CallTool(context.Background(), &mcp.CallToolParams{Name: "promote", Arguments: args})
+			if tc.wantErr == "" {
+				if err != nil || res.IsError || len(ids) != 1 || ids[0] != tc.wantID {
+					t.Fatalf("err = %v, ids = %v, want the id %d", err, ids, tc.wantID)
+				}
+				return
+			}
+			got := ""
+			if err != nil {
+				got = err.Error()
+			} else if res.IsError && len(res.Content) > 0 {
+				if text, ok := res.Content[0].(*mcp.TextContent); ok {
+					got = text.Text
+				}
+			}
+			if !strings.Contains(got, tc.wantErr) || len(ids) != 0 {
+				t.Fatalf("error = %q, ids = %v, want an error containing %q and no call", got, ids, tc.wantErr)
+			}
+		})
 	}
 }
 

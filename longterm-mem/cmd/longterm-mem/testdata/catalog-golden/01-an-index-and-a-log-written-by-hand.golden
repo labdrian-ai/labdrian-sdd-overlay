@@ -1,12 +1,12 @@
-args: promote --project golden-project --id 1
+args: promote --project golden-project --source memorycard --id 1
 exit: 0
 --- stdout ---
 longterm-mem: promoted c-000901 (created)
 --- stderr ---
-args: sync --project golden-project
+args: sync --project golden-project --source memorycard
 exit: 0
 --- stdout ---
-longterm-mem: sync promoted 1 observation(s), patched 0 page(s)
+longterm-mem: sync --source memorycard promoted 1 memory(ies); patched 0 page(s); skipped 0 bridged; left 0 locally edited page(s) alone
 --- stderr ---
 --- vault ---
 === .allocator-counter (-rw-r--r--) ===
@@ -15,14 +15,12 @@ longterm-mem: sync promoted 1 observation(s), patched 0 page(s)
 === .raw/.longterm-mem-manifest.json (-rw-------) ===
 {
   "c-000901": {
-    "body_hash": "43c0c8b5ce7879c8a5268caa403a48eb2d07c43d4dd3a978053c14797ca3e98d",
-    "frontmatter_hash": "1b21326f72b961a3fbb0960a4364c0fba15144fd63a59f907350fd1e30a3a65b",
-    "promoted_revision": 1
+    "body_hash": "4c302984b209786451aa00b5b0888d97adc0390421234e166ee9d17a31caba15",
+    "frontmatter_hash": "5dc27a47a0e6f6ad025a8895eba900f6ffbfb787dee8b0fdc80f37c7d82f9336"
   },
   "c-000902": {
-    "body_hash": "70afa7604aeb5073bd50562c32fa0b91859333766ee7be33b869d338f6ccc784",
-    "frontmatter_hash": "906bc83202434ae3445991d6b0a38182691609456c3c620a9f515748d055bbcd",
-    "promoted_revision": 1
+    "body_hash": "5c60c878f8c66023f51766c5c2847417b950a46e8ff6a35dfac35f488e9513d1",
+    "frontmatter_hash": "f225649e76bcf64ed1ef5858345bd46ebf74b18138a1c45d76ce5602cccbfa02"
   }
 }
 === .raw/.manifest.json (-rw-------) ===
@@ -100,10 +98,9 @@ tags:
 status: mature
 related: []
 sources: []
-engram_id: 1
-engram_sync_id: sync-1
-engram_type: decision
-engram_revision: 1
+memorycard_id: 1
+memorycard_type: decision
+memorycard_revision: 1
 project: golden-project
 ---
 # Pinned Decision
@@ -111,7 +108,7 @@ project: golden-project
 A decision somebody pinned.
 
 ---
-Promoted from Engram observation 1, revision 1.
+Promoted from memorycard memory 1, revision 1.
 === wiki/memory/c-000902.md (-rw-------) ===
 ---
 type: concept
@@ -127,10 +124,9 @@ tags:
 status: developing
 related: []
 sources: []
-engram_id: 2
-engram_sync_id: sync-2
-engram_type: decision
-engram_revision: 1
+memorycard_id: 2
+memorycard_type: decision
+memorycard_revision: 1
 project: golden-project
 ---
 # Curated Note
@@ -138,4 +134,4 @@ project: golden-project
 A note with a curated topic key.
 
 ---
-Promoted from Engram observation 2, revision 1.
+Promoted from memorycard memory 2, revision 1.

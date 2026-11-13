@@ -1,0 +1,215 @@
+{
+  "kind": "sweeper",
+  "base": "47e9a648538ead0fc4321aadf1db4c07f829f406",
+  "head": "a7de0f3e344996a19b2be6c57b4d220c47a39f15",
+  "diff_sha256": "8388aeb5750130ec5d92078968e862bba4a98f5559adec678b1938d541b98157",
+  "sweep": "a7de0f3e3449-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 path: longterm-mem/internal/promote/propagate_test.go",
+      "disposition": "live",
+      "evidence": "deleted or renamed on purpose by a7de0f3e3449 (refactor(longterm-mem): delete the Engram dialect of the promotion walks) (T5 deletes the Engram dialect; renamed goldens have their new file, L56); outside immutable history no file names it any more (the one stale comment, frontmatter_test.go:12, was corrected, L58)"
+    },
+    {
+      "candidate": "T1 name: Deps",
+      "disposition": "live",
+      "evidence": "the name still names a different, live symbol or flag: baseline.md, docs/architecture/hexagonal-target.md, engine/cmd/skills.go and others; comments that named the deleted one were corrected (L58)"
+    },
+    {
+      "candidate": "T1 name: ExplicitPromote",
+      "disposition": "live",
+      "evidence": "the name still names a different, live symbol or flag: docs/architecture/hexagonal-target.md, longterm-mem/internal/engram/store.go, longterm-mem/internal/engram/store_test.go; comments that named the deleted one were corrected (L58)"
+    },
+    {
+      "candidate": "T1 name: Plan",
+      "disposition": "live",
+      "evidence": "the name still names a different, live symbol or flag: docs/architecture/laya-system-one-overlay-plan.md, engine/cmd/memory.go, engine/cmd/testdata/shaper-golden/ready-v2.golden and others; comments that named the deleted one were corrected (L58)"
+    },
+    {
+      "candidate": "T1 name: Probe",
+      "disposition": "live",
+      "evidence": "the name still names a different, live symbol or flag: bin/lib/discovery_tools.sh, docs/e1-durability-probe.md, engine/capability/presence/presence.go and others; comments that named the deleted one were corrected (L58)"
+    },
+    {
+      "candidate": "T1 name: Prober",
+      "disposition": "live",
+      "evidence": "the name still names a different, live symbol or flag: engine/capability/presence/presence.go, engine/capability/presence/presence_test.go, engine/capability/presence/procedural_test.go and others; comments that named the deleted one were corrected (L58)"
+    },
+    {
+      "candidate": "T1 name: ProjectSyncReport",
+      "disposition": "live",
+      "evidence": "the name still names a different, live symbol or flag: docs/architecture/hexagonal-target.md; comments that named the deleted one were corrected (L58)"
+    },
+    {
+      "candidate": "T1 name: PromoteAndReindex",
+      "disposition": "live",
+      "evidence": "the name still names a different, live symbol or flag: docs/architecture/hexagonal-target.md, longterm-mem/cmd/longterm-mem/cmd_mcp.go; comments that named the deleted one were corrected (L58)"
+    },
+    {
+      "candidate": "T1 name: Propagate",
+      "disposition": "live",
+      "evidence": "the name still names a different, live symbol or flag: docs/architecture/hexagonal-target.md, engine/cmd/main_test.go, engine/propagator/app/doc.go and others; comments that named the deleted one were corrected (L58)"
+    },
+    {
+      "candidate": "T1 name: Sync",
+      "disposition": "live",
+      "evidence": "the name still names a different, live symbol or flag: engine/atomicfile/atomicfile.go, engine/atomicfile/atomicfile_test.go, engine/projection/evidencelog/log.go and others; comments that named the deleted one were corrected (L58)"
+    },
+    {
+      "candidate": "T1 name: SyncPlan",
+      "disposition": "live",
+      "evidence": "only immutable history names it (odd/review-results/phase9-store-agnostic-promotion/09e2f013bfbc-4.json): review records, archived changes and the Log are kept as written"
+    },
+    {
+      "candidate": "T1 name: SyncProject",
+      "disposition": "live",
+      "evidence": "the name still names a different, live symbol or flag: docs/architecture/hexagonal-target.md, longterm-mem/cmd/longterm-mem/cmd_sync.go; comments that named the deleted one were corrected (L58)"
+    },
+    {
+      "candidate": "T1 name: TestPlanWithoutPagesReportsEachObservationItCouldNotCheck",
+      "disposition": "live",
+      "evidence": "only immutable history names it (odd/tasks/consolidation-phase9.md): review records, archived changes and the Log are kept as written"
+    },
+    {
+      "candidate": "T1 name: TestPlan_OneBrokenObservationIsReportedOnce",
+      "disposition": "live",
+      "evidence": "only immutable history names it (openspec/changes/archive/2026-09-07-union-retrieval/judgment/ledger-pr5-round2.md): review records, archived changes and the Log are kept as written"
+    },
+    {
+      "candidate": "T1 name: TestPlan_WritesNothingAndPredictsWhatSyncThenDoes",
+      "disposition": "live",
+      "evidence": "only immutable history names it (openspec/changes/archive/2026-09-09-longterm-mem-promotion-scoping/apply-progress.md, openspec/changes/archive/2026-09-09-longterm-mem-promotion-scoping/tasks.md, openspec/changes/archive/2026-09-09-longterm-mem-promotion-scoping/verify-report.md): review records, archived changes and the Log are kept as written"
+    },
+    {
+      "candidate": "T1 name: TestPromote_ExplicitCallOverridesAutomaticEligibility",
+      "disposition": "live",
+      "evidence": "only immutable history names it (openspec/changes/archive/2026-09-02-longterm-mem/apply-progress.md, openspec/changes/archive/2026-09-02-longterm-mem/tasks.md, openspec/changes/archive/2026-09-02-longterm-mem/verify-report.md): review records, archived changes and the Log are kept as written"
+    },
+    {
+      "candidate": "T1 name: TestPromote_InvalidObservationIdRejected",
+      "disposition": "live",
+      "evidence": "only immutable history names it (openspec/changes/archive/2026-09-02-longterm-mem/apply-progress.md, openspec/changes/archive/2026-09-02-longterm-mem/tasks.md, openspec/changes/archive/2026-09-02-longterm-mem/verify-report.md): review records, archived changes and the Log are kept as written"
+    },
+    {
+      "candidate": "T1 name: TestPropagate",
+      "disposition": "live",
+      "evidence": "only immutable history names it (openspec/changes/archive/2026-09-02-longterm-mem/apply-progress.md, openspec/changes/archive/2026-09-02-longterm-mem/tasks.md, openspec/changes/archive/2026-09-02-longterm-mem/verify-report.md): review records, archived changes and the Log are kept as written"
+    },
+    {
+      "candidate": "T1 name: TestPropagatePatchesThePagesThroughThePort",
+      "disposition": "live",
+      "evidence": "only immutable history names it (odd/tasks/consolidation-phase9.md): review records, archived changes and the Log are kept as written"
+    },
+    {
+      "candidate": "T1 name: TestPropagate_AFailingMemoryPortIsReportedNotSwallowed",
+      "disposition": "live",
+      "evidence": "only immutable history names it (odd/tasks/phase9-store-agnostic-promotion.md): review records, archived changes and the Log are kept as written"
+    },
+    {
+      "candidate": "T1 name: TestPropagate_NeedsNoClock",
+      "disposition": "live",
+      "evidence": "only immutable history names it (odd/tasks/consolidation-phase9.md): review records, archived changes and the Log are kept as written"
+    },
+    {
+      "candidate": "T1 name: TestPropagate_OneBrokenPageDoesNotWedgeTheRun",
+      "disposition": "live",
+      "evidence": "only immutable history names it (openspec/changes/archive/2026-09-02-longterm-mem/apply-progress.md): review records, archived changes and the Log are kept as written"
+    },
+    {
+      "candidate": "T1 name: TestSync",
+      "disposition": "live",
+      "evidence": "only immutable history names it (odd/tasks/phase9-c22fu-memorycard-compat.md, openspec/changes/archive/2026-09-02-longterm-mem/apply-progress.md, openspec/changes/archive/2026-09-02-longterm-mem/tasks.md): review records, archived changes and the Log are kept as written"
+    },
+    {
+      "candidate": "T1 name: TestSyncProject_SaysWhyARunFailed",
+      "disposition": "live",
+      "evidence": "only immutable history names it (odd/tasks/phase9-store-agnostic-promotion.md): review records, archived changes and the Log are kept as written"
+    },
+    {
+      "candidate": "T1 name: TestSyncReadsEachPageOnceSoALaterUnreadablePageChangesNothing",
+      "disposition": "live",
+      "evidence": "only immutable history names it (odd/tasks/phase9-store-agnostic-promotion.md): review records, archived changes and the Log are kept as written"
+    },
+    {
+      "candidate": "T1 name: TestSync_IndexAndSyncStateReflectCompletion",
+      "disposition": "live",
+      "evidence": "only immutable history names it (openspec/changes/archive/2026-09-02-longterm-mem/apply-progress.md, openspec/changes/archive/2026-09-02-longterm-mem/tasks.md, openspec/changes/archive/2026-09-02-longterm-mem/verify-report.md): review records, archived changes and the Log are kept as written"
+    },
+    {
+      "candidate": "T1 name: TestSync_OneFailingObservationDoesNotWedgeTheRun",
+      "disposition": "live",
+      "evidence": "only immutable history names it (openspec/changes/archive/2026-09-02-longterm-mem/apply-progress.md): review records, archived changes and the Log are kept as written"
+    },
+    {
+      "candidate": "T1 name: decidePatch",
+      "disposition": "live",
+      "evidence": "only immutable history names it (odd/review-results/phase9-c22fu-memorycard-compat/50c7e32fed2a-4.polisher.json, odd/review-results/phase9-c22fu-memorycard-compat/fbe157f66cad-4.polisher.json, odd/tasks/phase9-store-agnostic-promotion.md): review records, archived changes and the Log are kept as written"
+    },
+    {
+      "candidate": "T1 name: eachPatchTarget",
+      "disposition": "live",
+      "evidence": "only immutable history names it (odd/review-results/phase9-c22-knowledge-ingestion/71bebc564975-4.polisher.json, odd/review-results/phase9-c22fu-memorycard-compat/50c7e32fed2a-4.polisher.json, odd/review-results/phase9-c22fu-memorycard-compat/fbe157f66cad-4.polisher.json): review records, archived changes and the Log are kept as written"
+    },
+    {
+      "candidate": "T1 name: engramSourceOf",
+      "disposition": "live",
+      "evidence": "only immutable history names it (odd/review-results/phase9-store-agnostic-promotion/979525fc554d-3.json, odd/tasks/phase9-store-agnostic-promotion.md): review records, archived changes and the Log are kept as written"
+    },
+    {
+      "candidate": "T1 name: sourceAnswers",
+      "disposition": "live",
+      "evidence": "only immutable history names it (odd/review-results/phase9-store-agnostic-promotion/5cb107ef8795-1.polisher.json, odd/review-results/phase9-store-agnostic-promotion/5cb107ef8795-3.json, odd/review-results/phase9-store-agnostic-promotion/5cb107ef8795-4.json): review records, archived changes and the Log are kept as written"
+    },
+    {
+      "candidate": "T2 deadcode longterm-mem: internal/memory/memory.go: unreachable func: LineageError.Error",
+      "disposition": "finding",
+      "evidence": "unreachable at this commit because the deletion is staged across commits (L54); deleted by a5dd47c7 in the same chain, absent at head"
+    },
+    {
+      "candidate": "T2 deadcode longterm-mem: internal/memory/memory.go: unreachable func: LineageError.Unwrap",
+      "disposition": "finding",
+      "evidence": "unreachable at this commit because the deletion is staged across commits (L54); deleted by a5dd47c7 in the same chain, absent at head"
+    },
+    {
+      "candidate": "T2 deadcode longterm-mem: internal/promote/plan_test.go: unreachable func: equalSnapshots",
+      "disposition": "finding",
+      "evidence": "unused at head too (staticcheck U1000); deleted later in the chain by the coordinator's sweep 914326e0, absent at head"
+    },
+    {
+      "candidate": "T2 deadcode longterm-mem: internal/promote/plan_test.go: unreachable func: vaultSnapshot",
+      "disposition": "finding",
+      "evidence": "unused at head too (staticcheck U1000); deleted later in the chain by the coordinator's sweep 914326e0, absent at head"
+    },
+    {
+      "candidate": "T2 deadcode longterm-mem: internal/promote/sync_test.go: unreachable func: newFixtureEngramStore",
+      "disposition": "finding",
+      "evidence": "unused at head too (staticcheck U1000); deleted later in the chain by the coordinator's sweep 914326e0, absent at head"
+    },
+    {
+      "candidate": "T2 staticcheck longterm-mem: internal/promote/plan_test.go: func equalSnapshots is unused (U1000)",
+      "disposition": "finding",
+      "evidence": "unused at head too (staticcheck U1000); deleted later in the chain by the coordinator's sweep 914326e0, absent at head"
+    },
+    {
+      "candidate": "T2 staticcheck longterm-mem: internal/promote/plan_test.go: func vaultSnapshot is unused (U1000)",
+      "disposition": "finding",
+      "evidence": "unused at head too (staticcheck U1000); deleted later in the chain by the coordinator's sweep 914326e0, absent at head"
+    },
+    {
+      "candidate": "T2 staticcheck longterm-mem: internal/promote/sync_test.go: func newFixtureEngramStore is unused (U1000)",
+      "disposition": "finding",
+      "evidence": "unused at head too (staticcheck U1000); deleted later in the chain by the coordinator's sweep 914326e0, absent at head"
+    },
+    {
+      "candidate": "T2 staticcheck longterm-mem: internal/promote/sync_test.go: type fixtureObs is unused (U1000)",
+      "disposition": "finding",
+      "evidence": "unused at head too (staticcheck U1000); deleted later in the chain by the coordinator's sweep 914326e0, absent at head"
+    },
+    {
+      "candidate": "T2 staticcheck longterm-mem: internal/promote/sync_test.go: type fixtureRelation is unused (U1000)",
+      "disposition": "finding",
+      "evidence": "unused at head too (staticcheck U1000); deleted later in the chain by the coordinator's sweep 914326e0, absent at head"
+    }
+  ]
+}

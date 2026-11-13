@@ -41,42 +41,6 @@ func bridgedWorld(t *testing.T) (w *Writer, vaultRoot, cardAddress string, obser
 	return w, vaultRoot, promoted.Page.Address, observation
 }
 
-// An Engram observation whose lineage memory owns a page is the same piece of memory as that page's: a sync skips
-// it and counts it bridged, as it has always done for a memorycard memory bridged to an observation, and no page
-// is written for it.
-func TestSync_AnObservationWhoseLineageMemoryOwnsAPageIsBridgedNotPromoted(t *testing.T) {
-	w, vaultRoot, _, observation := bridgedWorld(t)
-	observation.Lineage = []memory.Identity{cardSevenIdentity}
-	deps := Deps{Source: fixedSource{memories: []memory.Memory{observation}}, Writer: w}
-
-	report, err := Sync(t.Context(), deps, "memorycard")
-
-	if err != nil {
-		t.Fatalf("Sync: %v, want a run that finished", err)
-	}
-	if len(report.Promoted) != 0 || report.Bridged != 1 || report.Skipped != 0 || len(report.Failed) != 0 {
-		t.Fatalf("report = %+v, want the observation counted bridged and nothing promoted, skipped or failed", report)
-	}
-	if got := pageFiles(t, vaultRoot); len(got) != 1 {
-		t.Fatalf("pages = %v, want only the memorycard memory's", got)
-	}
-}
-
-// The plan predicts the run: the observation is counted bridged, not as one the sync would promote.
-func TestPlan_AnObservationWhoseLineageMemoryOwnsAPageIsBridgedNotPromoted(t *testing.T) {
-	w, _, _, observation := bridgedWorld(t)
-	observation.Lineage = []memory.Identity{cardSevenIdentity}
-
-	plan, err := Plan(t.Context(), Deps{Source: fixedSource{memories: []memory.Memory{observation}}, Writer: w}, "memorycard")
-
-	if err != nil {
-		t.Fatalf("Plan: %v", err)
-	}
-	if plan.WouldPromote != 0 || plan.Bridged != 1 || len(plan.Titles) != 0 || len(plan.Failed) != 0 {
-		t.Fatalf("plan = %+v, want the observation counted bridged and none promoted", plan)
-	}
-}
-
 // An explicit promote of such an observation is refused as a bridged memorycard memory is: a *BridgedError that
 // names the page of the memory it is bridged to and the memory, and writes nothing.
 func TestPromote_AnObservationWhoseLineageMemoryOwnsAPageIsRefused(t *testing.T) {

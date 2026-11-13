@@ -55,6 +55,45 @@ func pageOf(w *promoteGoldenWorld, address string) string {
 	return filepath.Join(w.vaultRoot, "wiki", "memory", address+".md")
 }
 
+// testPackageDir is where the package's tests started: the scenarios change the working directory, and the
+// fixtures under testdata are found from here.
+var testPackageDir, _ = os.Getwd()
+
+// seedLegacyPromotedPage leaves the vault as `promote --id 1` of the Engram observation left it: the page c-000901
+// carrying the legacy Engram keys (engram_id, engram_revision), its precedence entry, its place in the address map,
+// the catalog and the log. Reading a page of that shape is what `promote reconcile` does until it reads any page
+// identity (T10), and no command writes one any more, so the scenarios of reconcile start from files recorded when
+// one did (testdata/legacy-promoted-vault).
+func seedLegacyPromotedPage(t *testing.T, w *promoteGoldenWorld) {
+	t.Helper()
+	root := filepath.Join(testPackageDir, "testdata", "legacy-promoted-vault")
+	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return err
+		}
+		rel, err := filepath.Rel(root, path)
+		if err != nil {
+			return err
+		}
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		target := filepath.Join(w.vaultRoot, rel)
+		if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+			return err
+		}
+		mode := os.FileMode(0o600)
+		if rel == ".allocator-counter" {
+			mode = 0o644
+		}
+		return os.WriteFile(target, data, mode)
+	})
+	if err != nil {
+		t.Fatalf("seed the legacy promoted page: %v", err)
+	}
+}
+
 // writeVaultFile writes content to the vault-relative path rel, creating its directories.
 func writeVaultFile(t *testing.T, w *promoteGoldenWorld, rel, content string) {
 	t.Helper()
@@ -114,14 +153,14 @@ func removeSidecar(t *testing.T, w *promoteGoldenWorld) {
 }
 
 func pagesScenarios() []pagesScenario {
-	promote := []string{"promote", "--project", promoteGoldenProject, "--id", "1"}
-	sync := []string{"sync", "--project", promoteGoldenProject}
+	promote := []string{"promote", "--project", promoteGoldenProject, "--source", "memorycard", "--id", "1"}
+	sync := []string{"sync", "--project", promoteGoldenProject, "--source", "memorycard"}
 	reconcile := []string{"promote", "reconcile", "--project", promoteGoldenProject, "c-000901"}
 	revise := func(t *testing.T, w *promoteGoldenWorld) {
-		w.execSQL(t, `UPDATE observations SET revision_count = 2, content = 'Revised body.' WHERE id = 1`)
+		w.reviseMemory(t, 1, "Revised body.")
 	}
-	withoutAddress := "---\nengram_id: 1\nproject: " + promoteGoldenProject + "\n---\nA page that names no address.\n"
-	withBadRevision := "---\naddress: c-000500\nengram_id: 1\nengram_revision: x\nproject: " + promoteGoldenProject + "\n---\nA page whose revision is not a number.\n"
+	withoutAddress := "---\nmemorycard_id: 1\nproject: " + promoteGoldenProject + "\n---\nA page that names no address.\n"
+	withBadRevision := "---\naddress: c-000500\nmemorycard_id: 1\nmemorycard_revision: x\nproject: " + promoteGoldenProject + "\n---\nA page whose revision is not a number.\n"
 
 	return []pagesScenario{
 		{name: "01-the-page-is-gone-but-the-sidecar-remembers-it", prepare: [][]string{promote}, seed: func(t *testing.T, w *promoteGoldenWorld) {
@@ -153,22 +192,24 @@ func pagesScenarios() []pagesScenario {
 		}, commands: [][]string{promote, sync}},
 		{name: "07-an-edited-page-whose-observation-was-then-deleted", prepare: [][]string{promote}, seed: func(t *testing.T, w *promoteGoldenWorld) {
 			appendToPage(t, w, "c-000901")
-			w.execSQL(t, `UPDATE observations SET deleted_at = '2026-08-02 00:00:00' WHERE id = 1`)
+			w.execCardSQL(t, `UPDATE memories SET status = 'archived' WHERE id = 1`)
 		}, commands: [][]string{sync}},
 		{name: "08-text-without-frontmatter-where-the-new-page-belongs", seed: func(t *testing.T, w *promoteGoldenWorld) {
 			writeVaultFile(t, w, "wiki/memory/c-000901.md", "Just text, no frontmatter.\n")
 		}, commands: [][]string{promote, sync}},
-		{name: "09-a-page-for-the-observation-that-names-no-address", seed: func(t *testing.T, w *promoteGoldenWorld) {
+		// Pinned as found (known defect F-A1): a page with a memorycard_id and no address is written again beside
+		// itself as c-000500.md.md; the same happens at the base, so the golden records it rather than endorses it.
+		{name: "09-a-page-that-names-no-address-pins-a-known-defect", seed: func(t *testing.T, w *promoteGoldenWorld) {
 			writeVaultFile(t, w, "wiki/memory/c-000500.md", withoutAddress)
 		}, commands: [][]string{promote, sync}},
 		{name: "10-a-page-for-the-observation-with-a-revision-that-is-not-a-number", seed: func(t *testing.T, w *promoteGoldenWorld) {
 			writeVaultFile(t, w, "wiki/memory/c-000500.md", withBadRevision)
 		}, commands: [][]string{promote, sync}},
 		{name: "11-an-observation-moved-to-another-project-supersedes-its-old-page", prepare: [][]string{promote}, seed: func(t *testing.T, w *promoteGoldenWorld) {
-			w.execSQL(t, `UPDATE observations SET project = 'other-project' WHERE id = 1`)
+			w.execCardSQL(t, `UPDATE memories SET project = 'other-project' WHERE id = 1`)
 		}, commands: [][]string{
-			{"promote", "--project", "other-project", "--id", "1"},
-			{"sync", "--project", "other-project"},
+			{"promote", "--project", "other-project", "--source", "memorycard", "--id", "1"},
+			{"sync", "--project", "other-project", "--source", "memorycard"},
 		}},
 		{name: "12-the-pages-directory-is-a-file", seed: func(t *testing.T, w *promoteGoldenWorld) {
 			writeVaultFile(t, w, "wiki/memory", "not a directory")
@@ -189,24 +230,28 @@ func pagesScenarios() []pagesScenario {
 			symlinkOrSkip(t, "../notes/absent", filepath.Join(w.vaultRoot, "wiki", "memory"))
 		}, commands: [][]string{promote, sync}},
 		{name: "15-files-beside-the-pages-that-are-not-pages", seed: func(t *testing.T, w *promoteGoldenWorld) {
-			writeVaultFile(t, w, "wiki/memory/notes.txt", "---\nengram_id: 1\n---\n")
-			writeVaultFile(t, w, "wiki/memory/C-000999.MD", "---\nengram_id: 1\n---\n")
+			writeVaultFile(t, w, "wiki/memory/notes.txt", "---\nmemorycard_id: 1\n---\n")
+			writeVaultFile(t, w, "wiki/memory/C-000999.MD", "---\nmemorycard_id: 1\n---\n")
 			if err := os.MkdirAll(filepath.Join(w.vaultRoot, "wiki", "memory", "folder.md"), 0o755); err != nil {
 				t.Fatal(err)
 			}
 		}, commands: [][]string{promote, sync}},
 		{name: "16-reconcile-a-page-that-is-gone", commands: [][]string{reconcile}},
-		{name: "17-reconcile-a-page-without-frontmatter", prepare: [][]string{promote}, seed: func(t *testing.T, w *promoteGoldenWorld) {
+		{name: "17-reconcile-a-page-without-frontmatter", seed: func(t *testing.T, w *promoteGoldenWorld) {
+			seedLegacyPromotedPage(t, w)
 			writeVaultFile(t, w, "wiki/memory/c-000901.md", "Just text, no frontmatter.\n")
 		}, commands: [][]string{reconcile}},
-		{name: "18-reconcile-an-edited-page-nobody-recorded-adopts-it", prepare: [][]string{promote}, seed: func(t *testing.T, w *promoteGoldenWorld) {
+		{name: "18-reconcile-an-edited-page-nobody-recorded-adopts-it", seed: func(t *testing.T, w *promoteGoldenWorld) {
+			seedLegacyPromotedPage(t, w)
 			removeSidecar(t, w)
 			appendToPage(t, w, "c-000901")
 		}, commands: [][]string{reconcile}},
-		{name: "19-reconcile-an-edited-page-with-a-recorded-revision-is-refused", prepare: [][]string{promote}, seed: func(t *testing.T, w *promoteGoldenWorld) {
+		{name: "19-reconcile-an-edited-page-with-a-recorded-revision-is-refused", seed: func(t *testing.T, w *promoteGoldenWorld) {
+			seedLegacyPromotedPage(t, w)
 			appendToPage(t, w, "c-000901")
 		}, commands: [][]string{reconcile}},
-		{name: "20-reconcile-a-page-that-is-a-link", prepare: [][]string{promote}, seed: func(t *testing.T, w *promoteGoldenWorld) {
+		{name: "20-reconcile-a-page-that-is-a-link", seed: func(t *testing.T, w *promoteGoldenWorld) {
+			seedLegacyPromotedPage(t, w)
 			removeSidecar(t, w)
 			movePageToNotes(t, w, "c-000901")
 		}, commands: [][]string{reconcile}},
@@ -215,14 +260,13 @@ func pagesScenarios() []pagesScenario {
 				t.Fatal(err)
 			}
 		}, commands: [][]string{reconcile}},
-		{name: "22-reconcile-a-page-of-another-project", prepare: [][]string{promote}, seed: func(t *testing.T, w *promoteGoldenWorld) {
+		{name: "22-reconcile-a-page-of-another-project", seed: func(t *testing.T, w *promoteGoldenWorld) {
+			seedLegacyPromotedPage(t, w)
 			removeSidecar(t, w)
-			w.execSQL(t, `UPDATE observations SET project = 'other-project' WHERE id = 1`)
+			w.execCardSQL(t, `UPDATE memories SET project = 'other-project' WHERE id = 1`)
 		}, commands: [][]string{{"promote", "reconcile", "--project", "other-project", "c-000901"}}},
 		{name: "23-an-observation-superseded-by-a-newer-one", prepare: [][]string{sync}, seed: func(t *testing.T, w *promoteGoldenWorld) {
-			w.execSQL(t, `UPDATE observations SET created_at = '2026-08-05 00:00:00' WHERE id = 2`)
-			w.execSQL(t, `INSERT INTO memory_relations (sync_id, source_id, target_id, relation, judgment_status)
-				VALUES ('rel-1', 'sync-2', 'sync-1', 'supersedes', 'judged')`)
+			w.execCardSQL(t, `UPDATE memories SET status = 'superseded', superseded_by = 2 WHERE id = 1`)
 		}, commands: [][]string{sync}},
 		// A page that cannot be read beside the page of an observation that can: the observation is promoted as
 		// ever, the page is named and skipped, and the observation no readable page is the page of is left alone,
@@ -230,7 +274,7 @@ func pagesScenarios() []pagesScenario {
 		{name: "24-a-page-that-cannot-be-read-beside-the-page-of-an-observation", prepare: [][]string{promote}, seed: func(t *testing.T, w *promoteGoldenWorld) {
 			symlinkOrSkip(t, "../../notes/absent.md", pageOf(w, "c-000999"))
 			revise(t, w)
-		}, commands: [][]string{promote, {"sync", "--project", promoteGoldenProject, "--dry-run"}, sync}},
+		}, commands: [][]string{promote, {"sync", "--project", promoteGoldenProject, "--source", "memorycard", "--dry-run"}, sync}},
 		// Every observation sync promotes has its page, and one more page cannot be read. The promotion pass
 		// leaves no observation alone, so the run has no "nothing was written for them" warning. The propagation
 		// pass still cannot tell the observations that have no page (the ones sync never promotes, 3 and 4) from
@@ -244,10 +288,10 @@ func pagesScenarios() []pagesScenario {
 		// observation 1 and names no address, so its promoted state cannot be read (a failure), and a page that
 		// cannot be read withholds observation 2: the failure outranks the observations left alone, in the dry
 		// run as in the run, which exit 1 where a run with only the withheld ones exits 6 (scenarios 24 and 25).
-		{name: "26-a-failure-beside-an-observation-left-alone", seed: func(t *testing.T, w *promoteGoldenWorld) {
+		{name: "26-a-failure-beside-an-observation-left-alone-pins-a-known-defect", seed: func(t *testing.T, w *promoteGoldenWorld) {
 			writeVaultFile(t, w, "wiki/memory/c-000500.md", withoutAddress)
 			symlinkOrSkip(t, "../../notes/absent.md", pageOf(w, "c-000999"))
-		}, commands: [][]string{{"sync", "--project", promoteGoldenProject, "--dry-run"}, sync}},
+		}, commands: [][]string{{"sync", "--project", promoteGoldenProject, "--source", "memorycard", "--dry-run"}, sync}},
 	}
 }
 
@@ -273,6 +317,7 @@ func runGoldenScenarios(t *testing.T, goldenSubdir string, scenarios []pagesScen
 			w := newPromoteGoldenWorld(t)
 			t.Setenv("HOME", w.home)
 			t.Setenv("LONGTERM_MEM_ENGRAM_DB", w.dbPath)
+			t.Setenv("LONGTERM_MEM_MEMORYCARD_DB", w.cardPath)
 			t.Setenv("LONGTERM_MEM_VAULT", w.vaultRoot)
 			t.Setenv("LONGTERM_MEM_VAULTS_FILE", "")
 			t.Chdir(t.TempDir())

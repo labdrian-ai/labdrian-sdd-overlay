@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"flag"
-	"io/fs"
+	"fmt"
 	"os"
 	"os/signal"
+	"strings"
+	"sync"
 	"syscall"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -14,7 +16,6 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/embed"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/mcpserver"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memorycard"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/query"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vault"
@@ -76,14 +77,14 @@ func (c commands) cmdMCP(args []string) int {
 
 // mcpDeps are the tools of the MCP session. Each resolves its own project's vault fresh on every call (a session
 // can serve more than one project) and then calls the same construction and use cases the CLI subcommands do
-// (queryDeps, promote.PromoteAndReindex), so the CLI and MCP surfaces cannot drift -- the query tool's Embed and
+// (queryDeps, promote.PromoteCardAndReindex), so the CLI and MCP surfaces cannot drift -- the query tool's Embed and
 // index cache being the one deliberate exception (issue #286): this session's shared client, load cache and Builder (its
 // wiring, app.sessionQueryWiring), not runQuery's per-call construction.
 func (c commands) mcpDeps(store *engram.Store, wiring queryWiring) mcpserver.Deps {
 	return mcpserver.Deps{
 		Query:   c.mcpQuery(store, wiring),
 		Get:     mcpGet(store),
-		Promote: c.mcpPromote(store),
+		Promote: c.mcpPromote(),
 	}
 }
 
@@ -115,16 +116,26 @@ func mcpGet(store *engram.Store) func(context.Context, int64) (mcpserver.GetOutc
 }
 
 // mcpPromote is the promote tool of the MCP session: it resolves the vault of the call's project and promotes the
-// observation with the clock the commands were composed with (promote.PromoteAndReindex), which rebuilds the vault
-// index when the promotion wrote a page, before the call returns, exactly as a sync does. The rebuild's failure is
-// reported beside a SUCCESSFUL promotion rather than as the call's error -- the page is written and durable by
-// then. It writes, so it seeds the vault registry of a machine that has none, as the commands that write do.
+// memory of the registered store the call names with the clock the commands were composed with
+// (promote.PromoteCardAndReindex), which rebuilds the vault index when the promotion wrote a page, before the call
+// returns, exactly as a sync does. The rebuild's failure is reported beside a SUCCESSFUL promotion rather than as the
+// call's error -- the page is written and durable by then. It writes, so it seeds the vault registry of a machine
+// that has none, as the commands that write do.
 //
-// With source memorycard the id is a memorycard memory id; memorycard's database is opened for the call, read-only,
-// and says by itself which memories and observations are the same piece of memory. Without it the id is an
-// Engram observation id, and memorycard's database, when there is one, answers which memories are the same piece of memory.
-func (c commands) mcpPromote(store *engram.Store) func(ctx context.Context, project, source string, id int64) (mcpserver.PromoteOutcome, error) {
+// The call must name its source, as the command's --source does: an id means what the store says it means. The
+// store is opened for the call, read-only, and says by itself which memories are the same piece of memory.
+func (c commands) mcpPromote() func(ctx context.Context, project, source string, id int64) (mcpserver.PromoteOutcome, error) {
+	// Each source is declared once per server, the first time a call reads it through the fallback.
+	var mu sync.Mutex
+	declared := map[string]bool{}
+	diagnostics := c.diagnostics
+	if diagnostics == nil {
+		diagnostics = os.Stderr
+	}
 	return func(ctx context.Context, project, source string, id int64) (mcpserver.PromoteOutcome, error) {
+		if refusal := sourceRefusal(source, true); refusal != "" {
+			return mcpserver.PromoteOutcome{}, fmt.Errorf("mcpserver: promote: %s", mcpSourceWords(refusal))
+		}
 		vaultRoot, err := machineVaults().ToWrite(project, "")
 		if err != nil {
 			return mcpserver.PromoteOutcome{}, err
@@ -134,30 +145,30 @@ func (c commands) mcpPromote(store *engram.Store) func(ctx context.Context, proj
 			return mcpserver.PromoteOutcome{}, err
 		}
 		index := vault.IndexRebuilder{Root: vaultRoot, Clock: c.clock}
-		var outcome promote.Outcome
-		if source == mcpserver.SourceMemorycard {
-			cards, openErr := memorycard.Open(os.Getenv(memorycardDBEnvVar))
-			if openErr != nil {
-				return mcpserver.PromoteOutcome{}, openErr
-			}
-			defer cards.Close()
-			outcome, err = promote.PromoteCardAndReindex(ctx, writer, memorycard.NewSource(cards), id, index)
-		} else {
-			// Memorycard is read too, for the lineage of the observation, as the command does.
-			cards, openErr := memorycard.Open(os.Getenv(memorycardDBEnvVar))
-			switch {
-			case openErr == nil:
-				defer cards.Close()
-			case errors.Is(openErr, fs.ErrNotExist):
-				cards = nil
-			default:
-				return mcpserver.PromoteOutcome{}, openErr
-			}
-			outcome, err = promote.PromoteAndReindex(ctx, writer, newEngramSource(store, cards), id, index)
+		entry, _ := registeredSourceNamed(source)
+		opened, err := entry.open()
+		if err != nil {
+			return mcpserver.PromoteOutcome{}, err
 		}
+		if opened.degraded {
+			mu.Lock()
+			first := !declared[source]
+			declared[source] = true
+			mu.Unlock()
+			if first {
+				fmt.Fprintf(diagnostics, "longterm-mem: mcp: promote: %s is being read through the immutable=1 fallback, so this run works from the snapshot taken when the connection was opened, not the live database\n", source)
+			}
+		}
+		defer opened.closer.Close()
+		outcome, err := promote.PromoteCardAndReindex(ctx, writer, opened.source, id, index)
 		if err != nil {
 			return mcpserver.PromoteOutcome{}, err
 		}
 		return mcpserver.PromoteOutcome{Result: outcome.Result, IndexRebuildErr: outcome.IndexRebuildErr}, nil
 	}
+}
+
+// mcpSourceWords is a --source refusal worded for the tool, whose input is called source and not --source.
+func mcpSourceWords(refusal string) string {
+	return strings.ReplaceAll(refusal, "--source", "source")
 }

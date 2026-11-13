@@ -194,17 +194,3 @@ func newPromoteWriter(vaultRoot string, clock promote.Clock) (*promote.Writer, e
 	}
 	return writer, nil
 }
-
-// runPromote builds a Writer for vaultRoot and calls
-// promote.ExplicitPromote against source (task 8b.11): the construction+call
-// path of cmdPromote, the CLI promote subcommand. The MCP promote tool
-// (cmd_mcp.go) builds its Writer the same way, with newPromoteWriter, and
-// promotes through promote.PromoteAndReindex, which is this call and the
-// rebuild of the index that follows a page being written.
-func runPromote(ctx context.Context, source promote.Source, vaultRoot string, clock promote.Clock, engramID int64) (promote.Result, error) {
-	writer, err := newPromoteWriter(vaultRoot, clock)
-	if err != nil {
-		return promote.Result{}, err
-	}
-	return promote.ExplicitPromote(ctx, writer, source, engramID)
-}

@@ -1,0 +1,27 @@
+{
+  "kind": "sweep",
+  "base": "57bafc5599e4c4dde570bf913bcfa546eb5e2eef",
+  "head": "733db247ba7eb84427ec37dce0546c2457ca7834",
+  "diff_sha256": "37abb572e9a5f7805ac0d9d3399fa3c2bf66d9d724b980c96feaaba96056941b",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [
+      "longterm-mem/cmd/longterm-mem/testdata/failures-golden/02-sync-when-the-observations-cannot-be-listed.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/failures-golden/03-sync-with-an-observation-that-cannot-be-decided-about.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/failures-golden/06-an-engram-database-that-cannot-be-opened.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/pages-golden/09-a-page-for-the-observation-that-names-no-address.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/pages-golden/26-a-failure-beside-an-observation-left-alone.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/promote-golden/01-promote-an-ineligible-observation-explicitly.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/promote-golden/02-promote-it-again.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/promote-golden/08-promote-an-observation-that-does-not-exist.golden",
+      "longterm-mem/internal/promote/project_sync_test.go"
+    ],
+    "removed_names": []
+  },
+  "t2": [],
+  "t3": [],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

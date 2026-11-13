@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "0f28050f986e0f95ac2cb25cee8aac3b6cc24206",
+    "head": "5c3257c0a9223ccf94e72740d5093da989773339",
+    "diff_sha256": "a039bedf3d17f2bf18a78e6032f1df5318301441825eb396fe2a7bcb5a6504de",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/cmd_promote.go",
+      "longterm-mem/internal/engram/store_test.go",
+      "longterm-mem/internal/promote/card_promote_test.go",
+      "longterm-mem/internal/promote/explicit.go",
+      "longterm-mem/internal/promote/promote_reindex_test.go",
+      "longterm-mem/internal/promote/reconcile_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "0f28050f986e0f95ac2cb25cee8aac3b6cc24206",
+      "head": "5c3257c0a9223ccf94e72740d5093da989773339",
+      "diff_sha256": "a039bedf3d17f2bf18a78e6032f1df5318301441825eb396fe2a7bcb5a6504de"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/cmd_promote.go",
+        "longterm-mem/internal/engram/store_test.go",
+        "longterm-mem/internal/promote/card_promote_test.go",
+        "longterm-mem/internal/promote/explicit.go",
+        "longterm-mem/internal/promote/promote_reindex_test.go",
+        "longterm-mem/internal/promote/reconcile_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The change renames ErrObservationNotFound to ErrMemoryNotFound. The declaration, its one producer in ExplicitPromoteCard, the CLI errors.Is check and the two tests are all updated in this diff.",
+      "The error message text 'memory not found' is unchanged, so the CLI exit-code mapping (exitNotFound) and any message-based behavior are unaffected.",
+      "The remaining edits are comment trims and one new test case for source_revision precedence in reconcile_test.go. I cannot see the reconcile implementation, so whether the new case passes is unverified, but nothing in the diff shows a defect.",
+      "Because the diff is the only view I have, a leftover reference to the old name outside these six files would fail the build. Nothing in the diff shows one."
+    ]
+  }
+}

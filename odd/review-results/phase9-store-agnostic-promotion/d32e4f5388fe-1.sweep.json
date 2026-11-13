@@ -1,0 +1,149 @@
+{
+  "kind": "sweep",
+  "base": "31567f0d48a88e092931d754b8f941b68964c952",
+  "head": "d32e4f5388feae3e9ca52cf5ae9e35ef88273f40",
+  "diff_sha256": "b9e41d341d6eb0227903abbdedaec3da84c05b22a53504a4cdd0a1bb5627bafc",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [
+      "longterm-mem/cmd/longterm-mem/degraded_write_test.go",
+      "longterm-mem/cmd/longterm-mem/promote_relations_test.go",
+      "longterm-mem/cmd/longterm-mem/sync_bridged_lineage_test.go",
+      "longterm-mem/cmd/longterm-mem/sync_source_golden_test.go",
+      "longterm-mem/cmd/longterm-mem/testdata/sync-source-golden/01-plain-sync-dry-run.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/sync-source-golden/02-source-engram-dry-run.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/sync-source-golden/03-plain-sync.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/sync-source-golden/04-source-engram-with-nothing-new.golden"
+    ],
+    "removed_names": [
+      {
+        "name": "TestCmdPromote_InvalidIdExits7",
+        "hits": [
+          "openspec/changes/archive/2026-09-02-longterm-mem/apply-progress.md",
+          "openspec/changes/archive/2026-09-02-longterm-mem/verify-report.md"
+        ]
+      },
+      {
+        "name": "TestCmdPromote_PromotesObservationAndPrintsResult",
+        "hits": [
+          "odd/tasks/consolidation-phase9.md",
+          "openspec/changes/archive/2026-09-02-longterm-mem/apply-progress.md"
+        ]
+      },
+      {
+        "name": "TestCmdSync_BothPassesRunDespiteAFailingObservation",
+        "hits": [
+          "odd/tasks/consolidation-phase9.md"
+        ]
+      },
+      {
+        "name": "TestCmdSync_RebuildFailureExitsVaultSubprocessFailed",
+        "hits": [
+          "odd/tasks/consolidation-phase9.md"
+        ]
+      },
+      {
+        "name": "TestEngramPromoteRefusesAnObservationWhoseLineageMemoryOwnsAPage",
+        "hits": [
+          "odd/tasks/phase9-store-agnostic-promotion.md"
+        ]
+      },
+      {
+        "name": "TestEngramSyncDoesNotPromoteAnObservationWhoseLineageMemoryOwnsAPage",
+        "hits": [
+          "odd/tasks/phase9-store-agnostic-promotion.md"
+        ]
+      },
+      {
+        "name": "TestEngramSyncDryRunDoesNotPlanAnObservationWhoseLineageMemoryOwnsAPage",
+        "hits": [
+          "odd/tasks/phase9-store-agnostic-promotion.md"
+        ]
+      },
+      {
+        "name": "TestEngramSyncNamesMemorycardWhenItsLineageCannotBeRead",
+        "hits": [
+          "odd/tasks/phase9-store-agnostic-promotion.md"
+        ]
+      },
+      {
+        "name": "TestExplicitPromoteDoesNotFailOnUnreadableRelations",
+        "hits": [
+          "odd/tasks/phase9-store-agnostic-promotion.md"
+        ]
+      },
+      {
+        "name": "TestSyncSourceEngramDefaultGolden",
+        "hits": [
+          "odd/tasks/phase9-c22fu-memorycard-compat.md"
+        ]
+      },
+      {
+        "name": "TestSyncSource_UnknownSourceIsUsage",
+        "hits": [
+          "odd/tasks/phase9-c22fu-memorycard-compat.md"
+        ]
+      },
+      {
+        "name": "TestTheMCPPromoteToolPromotesFromMemorycardWhenAskedTo",
+        "hits": [
+          "odd/tasks/phase9-store-agnostic-promotion.md"
+        ]
+      },
+      {
+        "name": "syncFromMemorycard",
+        "hits": [
+          "odd/tasks/phase9-c22fu-memorycard-compat.md"
+        ]
+      }
+    ]
+  },
+  "t2": [
+    {
+      "tool": "deadcode",
+      "module": "longterm-mem",
+      "new": [
+        "cmd/longterm-mem/app.go: unreachable func: app.memoryToPromoteFrom",
+        "cmd/longterm-mem/app.go: unreachable func: app.memorycard",
+        "cmd/longterm-mem/app.go: unreachable func: app.memorycardForLineage",
+        "cmd/longterm-mem/app.go: unreachable func: app.memorycardToPromoteFrom",
+        "cmd/longterm-mem/app.go: unreachable func: app.syncDeps",
+        "cmd/longterm-mem/cmd_sync.go: unreachable func: reportPlan",
+        "cmd/longterm-mem/cmd_sync.go: unreachable func: reportSync",
+        "cmd/longterm-mem/cmd_sync.go: unreachable func: warnLeftAlone",
+        "cmd/longterm-mem/engram_degraded.go: unreachable func: declareDegradedEngram",
+        "cmd/longterm-mem/main_test.go: unreachable func: promoteFixtureDB",
+        "cmd/longterm-mem/rundeps.go: unreachable func: runPromote"
+      ]
+    },
+    {
+      "tool": "staticcheck",
+      "module": "longterm-mem",
+      "new": [
+        "cmd/longterm-mem/app.go: func app.memoryToPromoteFrom is unused (U1000)",
+        "cmd/longterm-mem/app.go: func app.memorycard is unused (U1000)",
+        "cmd/longterm-mem/app.go: func app.memorycardForLineage is unused (U1000)",
+        "cmd/longterm-mem/app.go: func app.memorycardToPromoteFrom is unused (U1000)",
+        "cmd/longterm-mem/app.go: func app.syncDeps is unused (U1000)",
+        "cmd/longterm-mem/cmd_sync.go: func reportPlan is unused (U1000)",
+        "cmd/longterm-mem/cmd_sync.go: func reportSync is unused (U1000)",
+        "cmd/longterm-mem/cmd_sync.go: func warnLeftAlone is unused (U1000)",
+        "cmd/longterm-mem/engram_degraded.go: func declareDegradedEngram is unused (U1000)",
+        "cmd/longterm-mem/main_test.go: func promoteFixtureDB is unused (U1000)",
+        "cmd/longterm-mem/rundeps.go: func runPromote is unused (U1000)"
+      ]
+    },
+    {
+      "tool": "errcheck",
+      "module": "longterm-mem",
+      "new": [
+        "cmd/longterm-mem/cmd_mcp.go: unchecked error: defer opened.closer.Close()"
+      ]
+    }
+  ],
+  "t3": [],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

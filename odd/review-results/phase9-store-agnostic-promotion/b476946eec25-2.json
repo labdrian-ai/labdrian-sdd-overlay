@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "5c3257c0a9223ccf94e72740d5093da989773339",
+    "head": "b476946eec253d6d2239de151a38a85c6c9e521c",
+    "diff_sha256": "0009f9f3beb917e82afd39da67ddd0f84f24e65dc08ce6c7063b5a2ae077a8f3",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "5c3257c0a9223ccf94e72740d5093da989773339",
+      "head": "b476946eec253d6d2239de151a38a85c6c9e521c",
+      "diff_sha256": "0009f9f3beb917e82afd39da67ddd0f84f24e65dc08ce6c7063b5a2ae077a8f3"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:119",
+        "claim": "L57 records fix commits 56f73b84 (T5 surface, Risk item 4), 61c8bf1b and bc725cea (T10 surface). The T5 and T10 `commit:` lists are not extended with them. L56 says the lists are kept current (d83f286d), and T10's `evidence in L55` does not point to L57. The task lines therefore no longer list every commit that touched them, and 56f73b84's Risk item 4 appears on neither line.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:119",
+          "odd/tasks/phase9-store-agnostic-promotion.md:453-459"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:119",
+        "claim": "The T5 line now says B1 was 'rechecked not-reproduced at 9e21cc4c'. L57 then records bc725cea, which changes the doctor advice logic of 8703117e (the named part's own reason). That fix comes after the recheck, so the not-reproduced verdict is not for the final head. L57 does not say the recheck was or was not repeated after it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:119",
+          "odd/tasks/phase9-store-agnostic-promotion.md:457"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:457",
+        "claim": "The entry is hard to read. 'F3 and F1 of the second lens (archived)' does not say which finding is which, and the 'second lens' is never named. A reader cannot tell which finding concerned archived memories and which was resolved by design.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:457"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes one documentation file: the T5 line gains the B1 closure wording, and the Log gains entry L57.",
+      "The hunk line numbers were counted from the @@ headers: the T5 line is 119 and the L57 block is 453-459.",
+      "The commit lists and the recheck chronology were checked against the L57 text only, since no other file is visible."
+    ]
+  }
+}

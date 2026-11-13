@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "c63f0bb5cae914c5df96a14cbf97837b720c1010",
+    "head": "e98c4ca769b19469bcf718890d195bef69cd2648",
+    "diff_sha256": "b22b1d239c8c1788dbf547a3dea138b0b63741ad6f8198bebd36116a822eb5cf",
+    "paths": [
+      "longterm-mem/internal/promote/page_identity_test.go",
+      "longterm-mem/internal/promote/reconcile_test.go",
+      "longterm-mem/internal/promote/update.go",
+      "openspec/specs/longterm-mem-promotion/spec.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "c63f0bb5cae914c5df96a14cbf97837b720c1010",
+      "head": "e98c4ca769b19469bcf718890d195bef69cd2648",
+      "diff_sha256": "b22b1d239c8c1788dbf547a3dea138b0b63741ad6f8198bebd36116a822eb5cf"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/promote/page_identity_test.go",
+        "longterm-mem/internal/promote/reconcile_test.go",
+        "longterm-mem/internal/promote/update.go",
+        "openspec/specs/longterm-mem-promotion/spec.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "update.go changes only the doc comment on pageRevision; no behavior changes, so no regression is possible from that file.",
+      "The new spec text and scenarios match the new test cases (both present, malformed memorycard beside a valid engram one, engram alone, none of the three).",
+      "The removed stub comment in page_identity_test.go is a comment-only deletion.",
+      "The pageRevision body is not in the diff, so the claim that the first identity present decides could not be checked against the code. The new test would catch a mismatch."
+    ]
+  }
+}

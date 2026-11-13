@@ -1,0 +1,100 @@
+{
+  "kind": "sweeper",
+  "base": "d32e4f5388feae3e9ca52cf5ae9e35ef88273f40",
+  "head": "47e9a648538ead0fc4321aadf1db4c07f829f406",
+  "diff_sha256": "27d82bbe26baf089134a7a1f409315102d379e2f0871e332260f0bba85747aa6",
+  "sweep": "47e9a648538e-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 path: longterm-mem/cmd/longterm-mem/engram_degraded.go",
+      "disposition": "live",
+      "evidence": "deleted or renamed on purpose by 47e9a648 (refactor(longterm-mem): delete the Engram promotion wiring of the commands) (T5 deletes the Engram dialect; renamed goldens have their new file, L56); outside immutable history no file names it any more (the one stale comment, frontmatter_test.go:12, was corrected, L58)"
+    },
+    {
+      "candidate": "T1 path: longterm-mem/cmd/longterm-mem/lineage.go",
+      "disposition": "live",
+      "evidence": "deleted or renamed on purpose by 47e9a648 (refactor(longterm-mem): delete the Engram promotion wiring of the commands) (T5 deletes the Engram dialect; renamed goldens have their new file, L56); outside immutable history no file names it any more (the one stale comment, frontmatter_test.go:12, was corrected, L58)"
+    },
+    {
+      "candidate": "T1 path: longterm-mem/cmd/longterm-mem/lineage_test.go",
+      "disposition": "live",
+      "evidence": "deleted or renamed on purpose by 47e9a648 (refactor(longterm-mem): delete the Engram promotion wiring of the commands) (T5 deletes the Engram dialect; renamed goldens have their new file, L56); outside immutable history no file names it any more (the one stale comment, frontmatter_test.go:12, was corrected, L58)"
+    },
+    {
+      "candidate": "T1 name: --dry-run",
+      "disposition": "live",
+      "evidence": "the name still names a different, live symbol or flag: README.md, bin/lib/usage.sh, docs/architecture/hexagonal-target.md and others; comments that named the deleted one were corrected (L58)"
+    },
+    {
+      "candidate": "T1 name: --id",
+      "disposition": "live",
+      "evidence": "the name still names a different, live symbol or flag: CHANGELOG.md, README.md, bin/lib/usage.sh and others; comments that named the deleted one were corrected (L58)"
+    },
+    {
+      "candidate": "T1 name: TestLineageRunsBothWaysBetweenTheTwoStores",
+      "disposition": "live",
+      "evidence": "only immutable history names it (odd/tasks/phase9-store-agnostic-promotion.md): review records, archived changes and the Log are kept as written"
+    },
+    {
+      "candidate": "T1 name: declareDegradedEngram",
+      "disposition": "live",
+      "evidence": "only immutable history names it (odd/review-results/phase9-c22fu-memorycard-compat/dcd31d0abd9c-4.polisher.json, odd/tasks/phase9-c22fu-memorycard-compat.md, odd/tasks/phase9-store-agnostic-promotion.md): review records, archived changes and the Log are kept as written"
+    },
+    {
+      "candidate": "T1 name: lineageOf",
+      "disposition": "live",
+      "evidence": "the name still names a different, live symbol or flag: longterm-mem/internal/memorycard/source.go; comments that named the deleted one were corrected (L58)"
+    },
+    {
+      "candidate": "T1 name: memoryOf",
+      "disposition": "live",
+      "evidence": "the name still names a different, live symbol or flag: longterm-mem/internal/embedindex/embedindex_test.go, longterm-mem/internal/memorycard/source_cache_test.go, longterm-mem/internal/memorycard/source_hash_test.go and others; comments that named the deleted one were corrected (L58)"
+    },
+    {
+      "candidate": "T1 name: memoryToPromoteFrom",
+      "disposition": "live",
+      "evidence": "the name still names a different, live symbol or flag: docs/architecture/hexagonal-target.md; comments that named the deleted one were corrected (L58)"
+    },
+    {
+      "candidate": "T1 name: memorycardForLineage",
+      "disposition": "live",
+      "evidence": "only immutable history names it (odd/review-results/phase9-store-agnostic-promotion/09e2f013bfbc-2.polisher.json, odd/review-results/phase9-store-agnostic-promotion/09e2f013bfbc-3.json, odd/review-results/phase9-store-agnostic-promotion/09e2f013bfbc-4.json): review records, archived changes and the Log are kept as written"
+    },
+    {
+      "candidate": "T1 name: memorycardToPromoteFrom",
+      "disposition": "live",
+      "evidence": "only immutable history names it (odd/review-results/phase9-c22fu-memorycard-compat/38023e067184-2.json, odd/review-results/phase9-store-agnostic-promotion/09e2f013bfbc-2.polisher.json, odd/tasks/phase9-c22fu-memorycard-compat.md): review records, archived changes and the Log are kept as written"
+    },
+    {
+      "candidate": "T1 name: mirrorsOf",
+      "disposition": "live",
+      "evidence": "the name still names a different, live symbol or flag: longterm-mem/internal/memorycard/source.go; comments that named the deleted one were corrected (L58)"
+    },
+    {
+      "candidate": "T1 name: newEngramSource",
+      "disposition": "live",
+      "evidence": "only immutable history names it (odd/review-results/phase9-store-agnostic-promotion/09e2f013bfbc-3.json, odd/review-results/phase9-store-agnostic-promotion/09e2f013bfbc-4.json, odd/tasks/phase9-store-agnostic-promotion.md): review records, archived changes and the Log are kept as written"
+    },
+    {
+      "candidate": "T1 name: reportPlan",
+      "disposition": "live",
+      "evidence": "the name still names a different, live symbol or flag: docs/architecture/hexagonal-target.md; comments that named the deleted one were corrected (L58)"
+    },
+    {
+      "candidate": "T1 name: reportSync",
+      "disposition": "live",
+      "evidence": "the name still names a different, live symbol or flag: docs/architecture/hexagonal-target.md; comments that named the deleted one were corrected (L58)"
+    },
+    {
+      "candidate": "T1 name: runPromote",
+      "disposition": "live",
+      "evidence": "only immutable history names it (odd/tasks/consolidation-phase9.md, openspec/changes/archive/2026-09-02-longterm-mem/apply-progress.md, openspec/changes/archive/2026-09-02-longterm-mem/tasks.md): review records, archived changes and the Log are kept as written"
+    },
+    {
+      "candidate": "T1 name: syncDeps",
+      "disposition": "live",
+      "evidence": "the name still names a different, live symbol or flag: docs/architecture/hexagonal-target.md; comments that named the deleted one were corrected (L58)"
+    }
+  ]
+}

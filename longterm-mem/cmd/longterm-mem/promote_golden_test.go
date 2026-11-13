@@ -78,6 +78,9 @@ type promoteGoldenWorld struct {
 	vaultRoot string
 	dbPath    string
 	home      string
+	// cardPath is the memorycard database that holds the same four memories as the Engram database holds
+	// observations (memory N is observation N), the store `sync` and `promote` read.
+	cardPath string
 }
 
 // realTempDir is a fresh temporary directory named by its resolved path: /var is /private/var on macOS,
@@ -155,22 +158,26 @@ func TestPromoteGoldenMaskFindsTheSentinelInTheRealRenderings(t *testing.T) {
 
 func promoteGoldenSteps() []promoteGoldenStep {
 	promote := func(id string) []string {
-		return []string{"promote", "--project", promoteGoldenProject, "--id", id}
+		return []string{"promote", "--project", promoteGoldenProject, "--source", "memorycard", "--id", id}
 	}
 	sync := func(extra ...string) []string {
-		return append([]string{"sync", "--project", promoteGoldenProject}, extra...)
+		return append([]string{"sync", "--project", promoteGoldenProject, "--source", "memorycard"}, extra...)
 	}
 	return []promoteGoldenStep{
-		{name: "01-promote-an-ineligible-observation-explicitly", args: promote("3")},
-		{name: "02-promote-it-again", args: promote("3")},
+		{name: "01-promote-an-ineligible-memory-explicitly", args: promote("3")},
+		{
+			name:   "02-promote-it-again-after-a-revision",
+			before: func(t *testing.T, w *promoteGoldenWorld) { w.reviseMemory(t, 3, "A body revised once.") },
+			args:   promote("3"),
+		},
 		{name: "03-sync-dry-run", args: sync("--dry-run")},
 		{name: "04-sync-promotes-the-eligible-ones", args: sync()},
 		{name: "05-sync-with-nothing-new", args: sync()},
 		{
 			name: "06-sync-after-a-revision-and-a-soft-delete",
 			before: func(t *testing.T, w *promoteGoldenWorld) {
-				w.execSQL(t, `UPDATE observations SET revision_count = 2, content = 'Revised body.' WHERE id = 1`)
-				w.execSQL(t, `UPDATE observations SET deleted_at = '2026-08-02 00:00:00' WHERE id = 2`)
+				w.reviseMemory(t, 1, "Revised body.")
+				w.execCardSQL(t, `UPDATE memories SET status = 'archived' WHERE id = 2`)
 			},
 			args: sync(),
 		},
@@ -185,10 +192,12 @@ func promoteGoldenSteps() []promoteGoldenStep {
 				if err := os.WriteFile(page, append(data, []byte("\nA line a person added.\n")...), 0o644); err != nil {
 					t.Fatalf("edit the page: %v", err)
 				}
+				// A newer revision is what a page edited by hand refuses: the same revision writes nothing at all.
+				w.reviseMemory(t, 3, "A body revised again.")
 			},
 			args: promote("3"),
 		},
-		{name: "08-promote-an-observation-that-does-not-exist", args: promote("999")},
+		{name: "08-promote-a-memory-that-does-not-exist", args: promote("999")},
 	}
 }
 
@@ -205,6 +214,7 @@ func TestPromoteGolden(t *testing.T) {
 	// database.
 	t.Setenv("HOME", w.home)
 	t.Setenv("LONGTERM_MEM_ENGRAM_DB", w.dbPath)
+	t.Setenv("LONGTERM_MEM_MEMORYCARD_DB", w.cardPath)
 	t.Setenv("LONGTERM_MEM_VAULT", w.vaultRoot)
 	t.Setenv("LONGTERM_MEM_VAULTS_FILE", "")
 	// A directory that is not a repository, so no warning about the working directory is part of the output.
@@ -261,12 +271,55 @@ func newPromoteGoldenWorld(t *testing.T) *promoteGoldenWorld {
 			VALUES ('sess-1', ?, ?, ?, ?, ?, 1, ?, '2026-08-01 00:00:00', NULLIF(?, ''))`,
 			row.syncID, row.kind, row.title, row.content, promoteGoldenProject, row.pinned, row.topicKey)
 	}
+	w.cardPath = filepath.Join(realTempDir(t), "memory.db")
+	w.execCardSQL(t, promoteGoldenMemorycardSchema)
+	for id, row := range []struct {
+		kind, title, body, topicKey string
+		pinned                      int
+	}{
+		{"decision", "Pinned Decision", "A decision somebody pinned.", "", 1},
+		{"decision", "Curated Note", "A note with a curated topic key.", "longterm-mem/curated-note", 0},
+		{"discovery", "Below Threshold", "A discovery nobody curated.", "", 0},
+		{"decision", "Process Bookkeeping", "Bookkeeping a sync leaves alone.", "sdd/some-change/proposal", 0},
+	} {
+		w.execCardSQL(t, `INSERT INTO memories (id, project, type, title, body, topic_key, pinned, status, created_at, updated_at)
+			VALUES (?, ?, ?, ?, ?, NULLIF(?, ''), ?, 'active', '2026-08-01 00:00:00', '2026-08-01 00:00:00')`,
+			id+1, promoteGoldenProject, row.kind, row.title, row.body, row.topicKey, row.pinned)
+	}
 	return w
 }
 
+// promoteGoldenMemorycardSchema is the part of memorycard's schema longterm-mem reads.
+const promoteGoldenMemorycardSchema = `
+	CREATE TABLE memories (id integer primary key autoincrement, project text not null, scope text not null default 'project',
+		type text not null default 'manual', title text not null, body text not null, topic_key text, content_hash text not null default '',
+		pinned integer not null default 0, status text not null default 'active', superseded_by integer, created_at text not null default '', updated_at text not null default '');
+	CREATE TABLE memory_versions (memory_id integer not null, version integer not null, title text not null, body text not null, saved_at text not null, primary key (memory_id, version));
+	CREATE TABLE import_map (source text not null, source_key text not null, part integer not null default 1, memory_id integer not null, primary key (source, source_key, part));`
+
 func (w *promoteGoldenWorld) execSQL(t *testing.T, statement string, args ...any) {
 	t.Helper()
-	db, err := sql.Open("sqlite", w.dbPath)
+	execOn(t, w.dbPath, statement, args...)
+}
+
+// reviseMemory gives memory id a new body, the way memorycard does: the version it had is kept, so the memory is
+// at its next revision.
+func (w *promoteGoldenWorld) reviseMemory(t *testing.T, id int, body string) {
+	t.Helper()
+	w.execCardSQL(t, `INSERT INTO memory_versions (memory_id, version, title, body, saved_at)
+		SELECT id, coalesce((SELECT max(version) FROM memory_versions WHERE memory_id = ?), 0) + 1, title, body, '' FROM memories WHERE id = ?`, id, id)
+	w.execCardSQL(t, `UPDATE memories SET body = ? WHERE id = ?`, body, id)
+}
+
+// execCardSQL is execSQL on the memorycard database.
+func (w *promoteGoldenWorld) execCardSQL(t *testing.T, statement string, args ...any) {
+	t.Helper()
+	execOn(t, w.cardPath, statement, args...)
+}
+
+func execOn(t *testing.T, dbPath, statement string, args ...any) {
+	t.Helper()
+	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {
 		t.Fatalf("open the fixture database: %v", err)
 	}
@@ -282,6 +335,9 @@ func (w *promoteGoldenWorld) normalise(text string) string {
 	text = strings.ReplaceAll(text, w.vaultRoot, "<vault>")
 	text = strings.ReplaceAll(text, w.home, "<home>")
 	text = strings.ReplaceAll(text, w.dbPath, "<engram-db>")
+	if w.cardPath != "" {
+		text = strings.ReplaceAll(text, w.cardPath, "<memorycard-db>")
+	}
 	return promoteGoldenSentinel.ReplaceAllString(text, "${1}<now>")
 }
 

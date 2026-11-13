@@ -23,8 +23,8 @@ import (
 func vaultLinksScenarios() []pagesScenario {
 	status := []string{"status", "--project", promoteGoldenProject}
 	doctor := []string{"doctor", "--project", promoteGoldenProject}
-	promote := []string{"promote", "--project", promoteGoldenProject, "--id", "1"}
-	sync := []string{"sync", "--project", promoteGoldenProject}
+	promote := []string{"promote", "--project", promoteGoldenProject, "--source", "memorycard", "--id", "1"}
+	sync := []string{"sync", "--project", promoteGoldenProject, "--source", "memorycard"}
 	statusSyncStatus := [][]string{status, sync, status}
 
 	return []pagesScenario{
@@ -47,6 +47,7 @@ func vaultLinksScenarios() []pagesScenario {
 		{name: "13-a-vault-root-that-is-not-there", vaultAs: func(t *testing.T, w *promoteGoldenWorld) string {
 			return filepath.Join(w.vaultRoot, "absent")
 		}, commands: [][]string{promote, sync, status, doctor}},
+		// Pinned as found (follow-up F-A2): `sync` prints its zero summary before the failure, as it did at 831419f3.
 		{name: "14-a-vault-root-that-is-a-file", vaultAs: func(t *testing.T, w *promoteGoldenWorld) string {
 			file := filepath.Join(w.home, "vault-file")
 			if err := os.WriteFile(file, []byte("not a directory"), 0o644); err != nil {

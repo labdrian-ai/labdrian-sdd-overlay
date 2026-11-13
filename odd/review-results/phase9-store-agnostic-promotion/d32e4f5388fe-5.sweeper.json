@@ -1,0 +1,230 @@
+{
+  "kind": "sweeper",
+  "base": "31567f0d48a88e092931d754b8f941b68964c952",
+  "head": "d32e4f5388feae3e9ca52cf5ae9e35ef88273f40",
+  "diff_sha256": "b9e41d341d6eb0227903abbdedaec3da84c05b22a53504a4cdd0a1bb5627bafc",
+  "sweep": "d32e4f5388fe-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 path: longterm-mem/cmd/longterm-mem/degraded_write_test.go",
+      "disposition": "live",
+      "evidence": "deleted or renamed on purpose by d32e4f5388fe (feat(longterm-mem): read sync, promote and the MCP promote tool from the one registered store) (T5 deletes the Engram dialect; renamed goldens have their new file, L56); outside immutable history no file names it any more (the one stale comment, frontmatter_test.go:12, was corrected, L58)"
+    },
+    {
+      "candidate": "T1 path: longterm-mem/cmd/longterm-mem/promote_relations_test.go",
+      "disposition": "live",
+      "evidence": "deleted or renamed on purpose by d32e4f5388fe (feat(longterm-mem): read sync, promote and the MCP promote tool from the one registered store) (T5 deletes the Engram dialect; renamed goldens have their new file, L56); outside immutable history no file names it any more (the one stale comment, frontmatter_test.go:12, was corrected, L58)"
+    },
+    {
+      "candidate": "T1 path: longterm-mem/cmd/longterm-mem/sync_bridged_lineage_test.go",
+      "disposition": "live",
+      "evidence": "deleted or renamed on purpose by d32e4f5388fe (feat(longterm-mem): read sync, promote and the MCP promote tool from the one registered store) (T5 deletes the Engram dialect; renamed goldens have their new file, L56); outside immutable history no file names it any more (the one stale comment, frontmatter_test.go:12, was corrected, L58)"
+    },
+    {
+      "candidate": "T1 path: longterm-mem/cmd/longterm-mem/sync_source_golden_test.go",
+      "disposition": "live",
+      "evidence": "deleted or renamed on purpose by d32e4f5388fe (feat(longterm-mem): read sync, promote and the MCP promote tool from the one registered store) (T5 deletes the Engram dialect; renamed goldens have their new file, L56); outside immutable history no file names it any more (the one stale comment, frontmatter_test.go:12, was corrected, L58)"
+    },
+    {
+      "candidate": "T1 path: longterm-mem/cmd/longterm-mem/testdata/sync-source-golden/01-plain-sync-dry-run.golden",
+      "disposition": "live",
+      "evidence": "deleted or renamed on purpose by d32e4f5388fe (feat(longterm-mem): read sync, promote and the MCP promote tool from the one registered store) (T5 deletes the Engram dialect; renamed goldens have their new file, L56); outside immutable history no file names it any more (the one stale comment, frontmatter_test.go:12, was corrected, L58)"
+    },
+    {
+      "candidate": "T1 path: longterm-mem/cmd/longterm-mem/testdata/sync-source-golden/02-source-engram-dry-run.golden",
+      "disposition": "live",
+      "evidence": "deleted or renamed on purpose by d32e4f5388fe (feat(longterm-mem): read sync, promote and the MCP promote tool from the one registered store) (T5 deletes the Engram dialect; renamed goldens have their new file, L56); outside immutable history no file names it any more (the one stale comment, frontmatter_test.go:12, was corrected, L58)"
+    },
+    {
+      "candidate": "T1 path: longterm-mem/cmd/longterm-mem/testdata/sync-source-golden/03-plain-sync.golden",
+      "disposition": "live",
+      "evidence": "deleted or renamed on purpose by d32e4f5388fe (feat(longterm-mem): read sync, promote and the MCP promote tool from the one registered store) (T5 deletes the Engram dialect; renamed goldens have their new file, L56); outside immutable history no file names it any more (the one stale comment, frontmatter_test.go:12, was corrected, L58)"
+    },
+    {
+      "candidate": "T1 path: longterm-mem/cmd/longterm-mem/testdata/sync-source-golden/04-source-engram-with-nothing-new.golden",
+      "disposition": "live",
+      "evidence": "deleted or renamed on purpose by d32e4f5388fe (feat(longterm-mem): read sync, promote and the MCP promote tool from the one registered store) (T5 deletes the Engram dialect; renamed goldens have their new file, L56); outside immutable history no file names it any more (the one stale comment, frontmatter_test.go:12, was corrected, L58)"
+    },
+    {
+      "candidate": "T1 name: TestCmdPromote_InvalidIdExits7",
+      "disposition": "live",
+      "evidence": "only immutable history names it (openspec/changes/archive/2026-09-02-longterm-mem/apply-progress.md, openspec/changes/archive/2026-09-02-longterm-mem/verify-report.md): review records, archived changes and the Log are kept as written"
+    },
+    {
+      "candidate": "T1 name: TestCmdPromote_PromotesObservationAndPrintsResult",
+      "disposition": "live",
+      "evidence": "only immutable history names it (odd/tasks/consolidation-phase9.md, openspec/changes/archive/2026-09-02-longterm-mem/apply-progress.md): review records, archived changes and the Log are kept as written"
+    },
+    {
+      "candidate": "T1 name: TestCmdSync_BothPassesRunDespiteAFailingObservation",
+      "disposition": "live",
+      "evidence": "only immutable history names it (odd/tasks/consolidation-phase9.md): review records, archived changes and the Log are kept as written"
+    },
+    {
+      "candidate": "T1 name: TestCmdSync_RebuildFailureExitsVaultSubprocessFailed",
+      "disposition": "live",
+      "evidence": "only immutable history names it (odd/tasks/consolidation-phase9.md): review records, archived changes and the Log are kept as written"
+    },
+    {
+      "candidate": "T1 name: TestEngramPromoteRefusesAnObservationWhoseLineageMemoryOwnsAPage",
+      "disposition": "live",
+      "evidence": "only immutable history names it (odd/tasks/phase9-store-agnostic-promotion.md): review records, archived changes and the Log are kept as written"
+    },
+    {
+      "candidate": "T1 name: TestEngramSyncDoesNotPromoteAnObservationWhoseLineageMemoryOwnsAPage",
+      "disposition": "live",
+      "evidence": "only immutable history names it (odd/tasks/phase9-store-agnostic-promotion.md): review records, archived changes and the Log are kept as written"
+    },
+    {
+      "candidate": "T1 name: TestEngramSyncDryRunDoesNotPlanAnObservationWhoseLineageMemoryOwnsAPage",
+      "disposition": "live",
+      "evidence": "only immutable history names it (odd/tasks/phase9-store-agnostic-promotion.md): review records, archived changes and the Log are kept as written"
+    },
+    {
+      "candidate": "T1 name: TestEngramSyncNamesMemorycardWhenItsLineageCannotBeRead",
+      "disposition": "live",
+      "evidence": "only immutable history names it (odd/tasks/phase9-store-agnostic-promotion.md): review records, archived changes and the Log are kept as written"
+    },
+    {
+      "candidate": "T1 name: TestExplicitPromoteDoesNotFailOnUnreadableRelations",
+      "disposition": "live",
+      "evidence": "only immutable history names it (odd/tasks/phase9-store-agnostic-promotion.md): review records, archived changes and the Log are kept as written"
+    },
+    {
+      "candidate": "T1 name: TestSyncSourceEngramDefaultGolden",
+      "disposition": "live",
+      "evidence": "only immutable history names it (odd/tasks/phase9-c22fu-memorycard-compat.md): review records, archived changes and the Log are kept as written"
+    },
+    {
+      "candidate": "T1 name: TestSyncSource_UnknownSourceIsUsage",
+      "disposition": "live",
+      "evidence": "only immutable history names it (odd/tasks/phase9-c22fu-memorycard-compat.md): review records, archived changes and the Log are kept as written"
+    },
+    {
+      "candidate": "T1 name: TestTheMCPPromoteToolPromotesFromMemorycardWhenAskedTo",
+      "disposition": "live",
+      "evidence": "only immutable history names it (odd/tasks/phase9-store-agnostic-promotion.md): review records, archived changes and the Log are kept as written"
+    },
+    {
+      "candidate": "T1 name: syncFromMemorycard",
+      "disposition": "live",
+      "evidence": "only immutable history names it (odd/tasks/phase9-c22fu-memorycard-compat.md): review records, archived changes and the Log are kept as written"
+    },
+    {
+      "candidate": "T2 deadcode longterm-mem: cmd/longterm-mem/app.go: unreachable func: app.memoryToPromoteFrom",
+      "disposition": "finding",
+      "evidence": "unreachable at this commit because the deletion is staged across commits (L54); deleted by 47e9a648 in the same chain, absent at head"
+    },
+    {
+      "candidate": "T2 deadcode longterm-mem: cmd/longterm-mem/app.go: unreachable func: app.memorycard",
+      "disposition": "finding",
+      "evidence": "unused at head too (staticcheck U1000); deleted later in the chain by the coordinator's sweep 914326e0, absent at head"
+    },
+    {
+      "candidate": "T2 deadcode longterm-mem: cmd/longterm-mem/app.go: unreachable func: app.memorycardForLineage",
+      "disposition": "finding",
+      "evidence": "unreachable at this commit because the deletion is staged across commits (L54); deleted by 47e9a648 in the same chain, absent at head"
+    },
+    {
+      "candidate": "T2 deadcode longterm-mem: cmd/longterm-mem/app.go: unreachable func: app.memorycardToPromoteFrom",
+      "disposition": "finding",
+      "evidence": "unreachable at this commit because the deletion is staged across commits (L54); deleted by 47e9a648 in the same chain, absent at head"
+    },
+    {
+      "candidate": "T2 deadcode longterm-mem: cmd/longterm-mem/app.go: unreachable func: app.syncDeps",
+      "disposition": "finding",
+      "evidence": "unreachable at this commit because the deletion is staged across commits (L54); deleted by 47e9a648 in the same chain, absent at head"
+    },
+    {
+      "candidate": "T2 deadcode longterm-mem: cmd/longterm-mem/cmd_sync.go: unreachable func: reportPlan",
+      "disposition": "finding",
+      "evidence": "unreachable at this commit because the deletion is staged across commits (L54); deleted by 47e9a648 in the same chain, absent at head"
+    },
+    {
+      "candidate": "T2 deadcode longterm-mem: cmd/longterm-mem/cmd_sync.go: unreachable func: reportSync",
+      "disposition": "finding",
+      "evidence": "unreachable at this commit because the deletion is staged across commits (L54); deleted by 47e9a648 in the same chain, absent at head"
+    },
+    {
+      "candidate": "T2 deadcode longterm-mem: cmd/longterm-mem/cmd_sync.go: unreachable func: warnLeftAlone",
+      "disposition": "finding",
+      "evidence": "unreachable at this commit because the deletion is staged across commits (L54); deleted by 47e9a648 in the same chain, absent at head"
+    },
+    {
+      "candidate": "T2 deadcode longterm-mem: cmd/longterm-mem/engram_degraded.go: unreachable func: declareDegradedEngram",
+      "disposition": "finding",
+      "evidence": "unreachable at this commit because the deletion is staged across commits (L54); deleted by 47e9a648 in the same chain, absent at head"
+    },
+    {
+      "candidate": "T2 deadcode longterm-mem: cmd/longterm-mem/main_test.go: unreachable func: promoteFixtureDB",
+      "disposition": "finding",
+      "evidence": "unused at head too (staticcheck U1000); deleted later in the chain by the coordinator's sweep 914326e0, absent at head"
+    },
+    {
+      "candidate": "T2 deadcode longterm-mem: cmd/longterm-mem/rundeps.go: unreachable func: runPromote",
+      "disposition": "finding",
+      "evidence": "unreachable at this commit because the deletion is staged across commits (L54); deleted by 47e9a648 in the same chain, absent at head"
+    },
+    {
+      "candidate": "T2 staticcheck longterm-mem: cmd/longterm-mem/app.go: func app.memoryToPromoteFrom is unused (U1000)",
+      "disposition": "finding",
+      "evidence": "unreachable at this commit because the deletion is staged across commits (L54); deleted by 47e9a648 in the same chain, absent at head"
+    },
+    {
+      "candidate": "T2 staticcheck longterm-mem: cmd/longterm-mem/app.go: func app.memorycard is unused (U1000)",
+      "disposition": "finding",
+      "evidence": "unused at head too (staticcheck U1000); deleted later in the chain by the coordinator's sweep 914326e0, absent at head"
+    },
+    {
+      "candidate": "T2 staticcheck longterm-mem: cmd/longterm-mem/app.go: func app.memorycardForLineage is unused (U1000)",
+      "disposition": "finding",
+      "evidence": "unreachable at this commit because the deletion is staged across commits (L54); deleted by 47e9a648 in the same chain, absent at head"
+    },
+    {
+      "candidate": "T2 staticcheck longterm-mem: cmd/longterm-mem/app.go: func app.memorycardToPromoteFrom is unused (U1000)",
+      "disposition": "finding",
+      "evidence": "unreachable at this commit because the deletion is staged across commits (L54); deleted by 47e9a648 in the same chain, absent at head"
+    },
+    {
+      "candidate": "T2 staticcheck longterm-mem: cmd/longterm-mem/app.go: func app.syncDeps is unused (U1000)",
+      "disposition": "finding",
+      "evidence": "unreachable at this commit because the deletion is staged across commits (L54); deleted by 47e9a648 in the same chain, absent at head"
+    },
+    {
+      "candidate": "T2 staticcheck longterm-mem: cmd/longterm-mem/cmd_sync.go: func reportPlan is unused (U1000)",
+      "disposition": "finding",
+      "evidence": "unreachable at this commit because the deletion is staged across commits (L54); deleted by 47e9a648 in the same chain, absent at head"
+    },
+    {
+      "candidate": "T2 staticcheck longterm-mem: cmd/longterm-mem/cmd_sync.go: func reportSync is unused (U1000)",
+      "disposition": "finding",
+      "evidence": "unreachable at this commit because the deletion is staged across commits (L54); deleted by 47e9a648 in the same chain, absent at head"
+    },
+    {
+      "candidate": "T2 staticcheck longterm-mem: cmd/longterm-mem/cmd_sync.go: func warnLeftAlone is unused (U1000)",
+      "disposition": "finding",
+      "evidence": "unreachable at this commit because the deletion is staged across commits (L54); deleted by 47e9a648 in the same chain, absent at head"
+    },
+    {
+      "candidate": "T2 staticcheck longterm-mem: cmd/longterm-mem/engram_degraded.go: func declareDegradedEngram is unused (U1000)",
+      "disposition": "finding",
+      "evidence": "unreachable at this commit because the deletion is staged across commits (L54); deleted by 47e9a648 in the same chain, absent at head"
+    },
+    {
+      "candidate": "T2 staticcheck longterm-mem: cmd/longterm-mem/main_test.go: func promoteFixtureDB is unused (U1000)",
+      "disposition": "finding",
+      "evidence": "unused at head too (staticcheck U1000); deleted later in the chain by the coordinator's sweep 914326e0, absent at head"
+    },
+    {
+      "candidate": "T2 staticcheck longterm-mem: cmd/longterm-mem/rundeps.go: func runPromote is unused (U1000)",
+      "disposition": "finding",
+      "evidence": "unreachable at this commit because the deletion is staged across commits (L54); deleted by 47e9a648 in the same chain, absent at head"
+    },
+    {
+      "candidate": "T2 errcheck longterm-mem: cmd/longterm-mem/cmd_mcp.go: unchecked error: defer opened.closer.Close()",
+      "disposition": "live",
+      "evidence": "a deferred Close of a read-only handle or test fixture, the package idiom (store_test.go:166, :206); a close failure after the read loses nothing"
+    }
+  ]
+}

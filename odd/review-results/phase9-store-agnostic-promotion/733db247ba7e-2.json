@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "57bafc5599e4c4dde570bf913bcfa546eb5e2eef",
+    "head": "733db247ba7eb84427ec37dce0546c2457ca7834",
+    "diff_sha256": "37abb572e9a5f7805ac0d9d3399fa3c2bf66d9d724b980c96feaaba96056941b",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/cmd_mcp.go",
+      "longterm-mem/cmd/longterm-mem/cmd_promote.go",
+      "longterm-mem/cmd/longterm-mem/promote_memorycard_test.go",
+      "longterm-mem/cmd/longterm-mem/testdata/failures-golden/02-sync-when-the-memories-cannot-be-listed.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/failures-golden/02-sync-when-the-observations-cannot-be-listed.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/failures-golden/03-sync-with-a-memory-that-cannot-be-decided-about.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/failures-golden/03-sync-with-an-observation-that-cannot-be-decided-about.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/failures-golden/06-a-memorycard-database-that-cannot-be-opened.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/failures-golden/06-an-engram-database-that-cannot-be-opened.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/pages-golden/09-a-page-for-the-observation-that-names-no-address.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/pages-golden/09-a-page-that-names-no-address-pins-a-known-defect.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/pages-golden/26-a-failure-beside-an-observation-left-alone-pins-a-known-defect.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/pages-golden/26-a-failure-beside-an-observation-left-alone.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/promote-golden/01-promote-an-ineligible-observation-explicitly.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/promote-golden/02-promote-it-again.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/promote-golden/08-promote-an-observation-that-does-not-exist.golden",
+      "longterm-mem/internal/promote/project_sync_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "57bafc5599e4c4dde570bf913bcfa546eb5e2eef",
+      "head": "733db247ba7eb84427ec37dce0546c2457ca7834",
+      "diff_sha256": "37abb572e9a5f7805ac0d9d3399fa3c2bf66d9d724b980c96feaaba96056941b"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/cmd_mcp.go",
+        "longterm-mem/cmd/longterm-mem/cmd_promote.go",
+        "longterm-mem/cmd/longterm-mem/promote_memorycard_test.go",
+        "longterm-mem/cmd/longterm-mem/testdata/failures-golden/02-sync-when-the-memories-cannot-be-listed.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/failures-golden/02-sync-when-the-observations-cannot-be-listed.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/failures-golden/03-sync-with-a-memory-that-cannot-be-decided-about.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/failures-golden/03-sync-with-an-observation-that-cannot-be-decided-about.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/failures-golden/06-a-memorycard-database-that-cannot-be-opened.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/failures-golden/06-an-engram-database-that-cannot-be-opened.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/pages-golden/09-a-page-for-the-observation-that-names-no-address.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/pages-golden/09-a-page-that-names-no-address-pins-a-known-defect.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/pages-golden/26-a-failure-beside-an-observation-left-alone-pins-a-known-defect.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/pages-golden/26-a-failure-beside-an-observation-left-alone.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/promote-golden/01-promote-an-ineligible-observation-explicitly.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/promote-golden/02-promote-it-again.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/promote-golden/08-promote-an-observation-that-does-not-exist.golden",
+        "longterm-mem/internal/promote/project_sync_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "cmd_mcp.go: the degraded declaration is emitted after the error return and before the deferred close, on stderr, so it does not touch the protocol's stdout.",
+      "cmd_promote.go: openSource's flag changes from false to true; the new test asserts the exact stderr text and that exactly one page is written.",
+      "Golden changes are renames with identical blob hashes, plus the deletion of an empty-import test file. I could not see the Go sources that name these goldens, so I cannot tell whether the deleted promote-golden files are still referenced."
+    ]
+  }
+}

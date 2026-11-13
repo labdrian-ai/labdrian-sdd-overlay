@@ -1,0 +1,55 @@
+{
+  "kind": "sweeper",
+  "base": "57bafc5599e4c4dde570bf913bcfa546eb5e2eef",
+  "head": "733db247ba7eb84427ec37dce0546c2457ca7834",
+  "diff_sha256": "37abb572e9a5f7805ac0d9d3399fa3c2bf66d9d724b980c96feaaba96056941b",
+  "sweep": "733db247ba7e-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 path: longterm-mem/cmd/longterm-mem/testdata/failures-golden/02-sync-when-the-observations-cannot-be-listed.golden",
+      "disposition": "live",
+      "evidence": "deleted or renamed on purpose by 733db247 (fix(longterm-mem): promote declares a degraded memorycard snapshot) (T5 deletes the Engram dialect; renamed goldens have their new file, L56); outside immutable history no file names it any more (the one stale comment, frontmatter_test.go:12, was corrected, L58)"
+    },
+    {
+      "candidate": "T1 path: longterm-mem/cmd/longterm-mem/testdata/failures-golden/03-sync-with-an-observation-that-cannot-be-decided-about.golden",
+      "disposition": "live",
+      "evidence": "deleted or renamed on purpose by 733db247 (fix(longterm-mem): promote declares a degraded memorycard snapshot) (T5 deletes the Engram dialect; renamed goldens have their new file, L56); outside immutable history no file names it any more (the one stale comment, frontmatter_test.go:12, was corrected, L58)"
+    },
+    {
+      "candidate": "T1 path: longterm-mem/cmd/longterm-mem/testdata/failures-golden/06-an-engram-database-that-cannot-be-opened.golden",
+      "disposition": "live",
+      "evidence": "deleted or renamed on purpose by 733db247 (fix(longterm-mem): promote declares a degraded memorycard snapshot) (T5 deletes the Engram dialect; renamed goldens have their new file, L56); outside immutable history no file names it any more (the one stale comment, frontmatter_test.go:12, was corrected, L58)"
+    },
+    {
+      "candidate": "T1 path: longterm-mem/cmd/longterm-mem/testdata/pages-golden/09-a-page-for-the-observation-that-names-no-address.golden",
+      "disposition": "live",
+      "evidence": "deleted or renamed on purpose by 733db247 (fix(longterm-mem): promote declares a degraded memorycard snapshot) (T5 deletes the Engram dialect; renamed goldens have their new file, L56); outside immutable history no file names it any more (the one stale comment, frontmatter_test.go:12, was corrected, L58)"
+    },
+    {
+      "candidate": "T1 path: longterm-mem/cmd/longterm-mem/testdata/pages-golden/26-a-failure-beside-an-observation-left-alone.golden",
+      "disposition": "live",
+      "evidence": "deleted or renamed on purpose by 733db247 (fix(longterm-mem): promote declares a degraded memorycard snapshot) (T5 deletes the Engram dialect; renamed goldens have their new file, L56); outside immutable history no file names it any more (the one stale comment, frontmatter_test.go:12, was corrected, L58)"
+    },
+    {
+      "candidate": "T1 path: longterm-mem/cmd/longterm-mem/testdata/promote-golden/01-promote-an-ineligible-observation-explicitly.golden",
+      "disposition": "live",
+      "evidence": "deleted or renamed on purpose by 733db247 (fix(longterm-mem): promote declares a degraded memorycard snapshot) (T5 deletes the Engram dialect; renamed goldens have their new file, L56); outside immutable history no file names it any more (the one stale comment, frontmatter_test.go:12, was corrected, L58)"
+    },
+    {
+      "candidate": "T1 path: longterm-mem/cmd/longterm-mem/testdata/promote-golden/02-promote-it-again.golden",
+      "disposition": "live",
+      "evidence": "deleted or renamed on purpose by 733db247 (fix(longterm-mem): promote declares a degraded memorycard snapshot) (T5 deletes the Engram dialect; renamed goldens have their new file, L56); outside immutable history no file names it any more (the one stale comment, frontmatter_test.go:12, was corrected, L58)"
+    },
+    {
+      "candidate": "T1 path: longterm-mem/cmd/longterm-mem/testdata/promote-golden/08-promote-an-observation-that-does-not-exist.golden",
+      "disposition": "live",
+      "evidence": "deleted or renamed on purpose by 733db247 (fix(longterm-mem): promote declares a degraded memorycard snapshot) (T5 deletes the Engram dialect; renamed goldens have their new file, L56); outside immutable history no file names it any more (the one stale comment, frontmatter_test.go:12, was corrected, L58)"
+    },
+    {
+      "candidate": "T1 path: longterm-mem/internal/promote/project_sync_test.go",
+      "disposition": "live",
+      "evidence": "deleted or renamed on purpose by 733db247 (fix(longterm-mem): promote declares a degraded memorycard snapshot) (T5 deletes the Engram dialect; renamed goldens have their new file, L56); outside immutable history no file names it any more (the one stale comment, frontmatter_test.go:12, was corrected, L58)"
+    }
+  ]
+}

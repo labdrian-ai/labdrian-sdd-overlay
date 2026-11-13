@@ -183,14 +183,15 @@ type DoctorDeps struct {
 	// the client. Required.
 	EmbeddingBackendCheck func(ctx context.Context) error
 
-	// LiveObservationEligibility returns, for every live (non-soft-deleted) observation of project, what
-	// promotion's eligibility rule reads of it (ObservationEligibility), so that promoted-pages-eligible can say
-	// which promoted pages sync no longer keeps current. A read-only port: it names no observation to change.
-	// Production wires engram.Store.ListObservations (already R-020-scoped), mapped to those fields.
+	// LiveMemoryEligibility returns, for every live memorycard memory of project, what promotion's eligibility
+	// rule reads of it (MemoryEligibility), with the Engram observation it was imported from, so that
+	// promoted-pages-eligible can say which promoted pages sync no longer keeps current. A read-only port: it
+	// names no memory to change. Production wires memorycard.Store.ListMemories, mapped to those fields; no Engram
+	// database is read for this check. (Previously: the live observations of Engram.)
 	//
-	// Not required to build a Doctor: the check asks it only when a promoted page names an observation, and a
-	// Doctor built without it says, as a warning, that it cannot judge those pages.
-	LiveObservationEligibility func(project string) ([]ObservationEligibility, error)
+	// Not required to build a Doctor: the check asks it only when a promoted page names a memory, and a Doctor
+	// built without it says, as a warning, that it cannot judge those pages.
+	LiveMemoryEligibility func(project string) ([]MemoryEligibility, error)
 }
 
 // DoctorReport is Doctor's output: each check's individual result, in the order the checks run.
@@ -226,7 +227,7 @@ func Doctor(ctx context.Context, deps DoctorDeps, project string) (DoctorReport,
 			checkEmbeddingIndexPresent(deps, project),
 			checkEmbeddingIndexFresh(deps, project),
 			checkEmbeddingBackendReachable(ctx, deps),
-			checkPromotedPagesEligible(deps.Pages, deps.LiveObservationEligibility, project),
+			checkPromotedPagesEligible(deps.Pages, deps.LiveMemoryEligibility, project),
 		},
 	}, nil
 }

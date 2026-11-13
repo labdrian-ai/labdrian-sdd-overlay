@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "914326e08904e83b150408c5c1724aee237e7023",
+    "head": "49242be4889c00f54043f68bff04e4bb0b3a7d66",
+    "diff_sha256": "bdb4bc3eb0b6a0bf17927f700f15abaa8a25334956abaa3088ef782092aae86a",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "914326e08904e83b150408c5c1724aee237e7023",
+      "head": "49242be4889c00f54043f68bff04e4bb0b3a7d66",
+      "diff_sha256": "bdb4bc3eb0b6a0bf17927f700f15abaa8a25334956abaa3088ef782092aae86a"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The change touches one documentation file. It replaces replayed commit shas in the T5 and T10 task lines, in L57 and in L58, and adds the L59 entry.",
+      "Cross-check of the replacements: T5 lists 0f28050f, and T10 lists 8289ca2e and 5c3257c0. L57 and L58 name the same new shas, and L59 lists the replay mapping (8289ca2e, 0f28050f, 5c3257c0, b476946e, 0269687c, ec72d0f1). I found no stale old sha (56f73b84, bc725cea, 61c8bf1b, 7719a40b) left in the changed lines.",
+      "The L59 claim that 914326e0 deleted the unused symbols matches the base of this review (914326e0), so it is consistent with the diff."
+    ]
+  }
+}

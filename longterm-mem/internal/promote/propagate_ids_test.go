@@ -22,10 +22,10 @@ func TestPropagation_AMemoryWhoseIdIsNotANumberIsFailedInItsOwnWordsAndItsPageIs
 				return PropagateCards(t.Context(), src, w, "memorycard")
 			},
 		},
-		"the Engram dialect's walk": {
+		"memorycard's walk over a page keyed by the legacy engram_id": {
 			source: engramSource, idKey: "engram_id",
 			walk: func(w *Writer, src Source) (PropagateReport, error) {
-				return Propagate(t.Context(), Deps{Source: src, Writer: w}, "memorycard")
+				return PropagateCards(t.Context(), src, w, "memorycard")
 			},
 		},
 	} {

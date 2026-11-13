@@ -1,0 +1,27 @@
+{
+  "kind": "sweep",
+  "base": "a825da1ef4e765eb4cba2a54ff905d4764bf5c55",
+  "head": "750fc5a50f54d5de5873d9541af272892f6198ff",
+  "diff_sha256": "7237aadc0825b2340ac8462353c3d18b20cad6947c23205947f57a58076cd10a",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": []
+  },
+  "t2": [
+    {
+      "tool": "errcheck",
+      "module": "longterm-mem",
+      "new": [
+        "cmd/longterm-mem/cmd_doctor.go: unchecked error: defer store.Close()",
+        "cmd/longterm-mem/doctor_eligibility_test.go: unchecked error: defer db.Close()",
+        "cmd/longterm-mem/doctor_eligibility_test.go: unchecked error: defer rows.Close()"
+      ]
+    }
+  ],
+  "t3": [],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

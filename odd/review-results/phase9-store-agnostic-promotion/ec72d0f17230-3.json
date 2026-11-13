@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "0269687cbe078b67ce48486be4e55f5699c9b2b5",
+    "head": "ec72d0f17230e11ca3849d0e0f55d1c86a2d8a1d",
+    "diff_sha256": "f43b8a5946f7a9d7e4d669df72f54e71712e497c4e291024fbb72ff6b4c8334d",
+    "paths": [
+      "longterm-mem/internal/promote/frontmatter_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "0269687cbe078b67ce48486be4e55f5699c9b2b5",
+      "head": "ec72d0f17230e11ca3849d0e0f55d1c86a2d8a1d",
+      "diff_sha256": "f43b8a5946f7a9d7e4d669df72f54e71712e497c4e291024fbb72ff6b4c8334d"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/promote/frontmatter_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff changes only a comment in frontmatter_test.go (lines 11-13); no executable code, test logic, or imports are touched, so no behavior can change."
+    ]
+  }
+}

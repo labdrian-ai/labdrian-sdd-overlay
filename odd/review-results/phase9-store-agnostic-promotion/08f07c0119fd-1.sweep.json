@@ -1,0 +1,28 @@
+{
+  "kind": "sweep",
+  "base": "733db247ba7eb84427ec37dce0546c2457ca7834",
+  "head": "08f07c0119fd8324e1d1b1cc2981654128481a99",
+  "diff_sha256": "765986578cf5c0b414ed572cb6ed3fb80cf940656df9fd50e4759b1799dcbe7c",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": [
+      {
+        "name": "RelatedEdgesOfProject",
+        "hits": [
+          "odd/review-results/phase9-store-agnostic-promotion/97d67c1883bf-1.json",
+          "odd/review-results/phase9-store-agnostic-promotion/97d67c1883bf-2.json",
+          "odd/review-results/phase9-store-agnostic-promotion/a5dd47c70dcf-2.json",
+          "odd/review-results/phase9-store-agnostic-promotion/a5dd47c70dcf-3.json",
+          "odd/tasks/phase9-store-agnostic-promotion.md"
+        ]
+      }
+    ]
+  },
+  "t2": [],
+  "t3": [],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

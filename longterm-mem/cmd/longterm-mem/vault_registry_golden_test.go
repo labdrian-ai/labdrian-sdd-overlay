@@ -62,9 +62,9 @@ func registryScenarios() []registryScenario {
 		{name: "02-status-json", commands: [][]string{with(registryDefaultProject, "status", "--json")}},
 		{name: "03-doctor", commands: [][]string{with(registryDefaultProject, "doctor")}},
 		{name: "04-query", commands: [][]string{with(registryDefaultProject, "query", "pinned")}},
-		{name: "05-sync-dry-run", commands: [][]string{with(registryDefaultProject, "sync", "--dry-run")}},
-		{name: "06-sync", commands: [][]string{with(registryDefaultProject, "sync")}},
-		{name: "07-promote", commands: [][]string{{"promote", "--project", registryDefaultProject, "--id", "1"}}},
+		{name: "05-sync-dry-run", commands: [][]string{with(registryDefaultProject, "sync", "--source", "memorycard", "--dry-run")}},
+		{name: "06-sync", commands: [][]string{with(registryDefaultProject, "sync", "--source", "memorycard")}},
+		{name: "07-promote", commands: [][]string{{"promote", "--project", registryDefaultProject, "--source", "memorycard", "--id", "1"}}},
 		{name: "08-promote-reconcile", commands: [][]string{{"promote", "reconcile", "--project", registryDefaultProject, "c-000901"}}},
 		{name: "09-index", commands: [][]string{with(registryDefaultProject, "index")}},
 
@@ -73,26 +73,26 @@ func registryScenarios() []registryScenario {
 		{name: "10-status-of-an-unconfigured-project", commands: [][]string{with(unconfigured, "status")}},
 		{name: "11-doctor-of-an-unconfigured-project", commands: [][]string{with(unconfigured, "doctor")}},
 		{name: "12-query-of-an-unconfigured-project", commands: [][]string{with(unconfigured, "query", "pinned")}},
-		{name: "13-sync-dry-run-of-an-unconfigured-project", commands: [][]string{with(unconfigured, "sync", "--dry-run")}},
-		{name: "14-sync-of-an-unconfigured-project", commands: [][]string{with(unconfigured, "sync")}},
-		{name: "15-promote-of-an-unconfigured-project", commands: [][]string{{"promote", "--project", unconfigured, "--id", "1"}}},
+		{name: "13-sync-dry-run-of-an-unconfigured-project", commands: [][]string{with(unconfigured, "sync", "--source", "memorycard", "--dry-run")}},
+		{name: "14-sync-of-an-unconfigured-project", commands: [][]string{with(unconfigured, "sync", "--source", "memorycard")}},
+		{name: "15-promote-of-an-unconfigured-project", commands: [][]string{{"promote", "--project", unconfigured, "--source", "memorycard", "--id", "1"}}},
 		{name: "16-index-of-an-unconfigured-project", commands: [][]string{with(unconfigured, "index")}},
 
 		// The vault is given, by flag or by environment: the registry is not consulted, and not created.
 		{name: "17-status-with-the-vault-flag", commands: [][]string{with(registryDefaultProject, "status", "--vault", vaultFlag)}},
-		{name: "18-sync-with-the-vault-flag", commands: [][]string{with(registryDefaultProject, "sync", "--vault", vaultFlag)}},
+		{name: "18-sync-with-the-vault-flag", commands: [][]string{with(registryDefaultProject, "sync", "--source", "memorycard", "--vault", vaultFlag)}},
 		{name: "19-doctor-with-the-vault-in-the-environment", vaultEnv: vaultFlag, commands: [][]string{with(unconfigured, "doctor")}},
 
 		// A registry that is there is never touched, whatever it says and whichever command reads it.
 		{name: "20-status-with-the-default-row-deleted", registry: registryContent(`{"schema": 1, "vaults": {}}` + "\n"), commands: [][]string{with(registryDefaultProject, "status")}},
-		{name: "21-sync-with-the-default-row-deleted", registry: registryContent(`{"schema": 1, "vaults": {}}` + "\n"), commands: [][]string{with(registryDefaultProject, "sync")}},
+		{name: "21-sync-with-the-default-row-deleted", registry: registryContent(`{"schema": 1, "vaults": {}}` + "\n"), commands: [][]string{with(registryDefaultProject, "sync", "--source", "memorycard")}},
 		{name: "22-status-with-a-registry-that-is-not-json", registry: registryContent("{ not json"), commands: [][]string{with(registryDefaultProject, "status")}},
-		{name: "23-sync-with-a-registry-that-is-not-json", registry: registryContent("{ not json"), commands: [][]string{with(registryDefaultProject, "sync")}},
+		{name: "23-sync-with-a-registry-that-is-not-json", registry: registryContent("{ not json"), commands: [][]string{with(registryDefaultProject, "sync", "--source", "memorycard")}},
 		{name: "24-status-with-the-default-row-pointing-elsewhere", registry: registryContent(`{"schema": 1, "vaults": {"labdrian-sdd-overlay": {"path": "{vault}"}}}` + "\n"), commands: [][]string{with(registryDefaultProject, "status")}},
 
 		// A read and then a write, from a registry nobody has made: the order is the whole point.
-		{name: "25-status-then-sync", commands: [][]string{with(registryDefaultProject, "status"), with(registryDefaultProject, "sync")}},
-		{name: "26-sync-then-status", commands: [][]string{with(registryDefaultProject, "sync"), with(registryDefaultProject, "status")}},
+		{name: "25-status-then-sync", commands: [][]string{with(registryDefaultProject, "status"), with(registryDefaultProject, "sync", "--source", "memorycard")}},
+		{name: "26-sync-then-status", commands: [][]string{with(registryDefaultProject, "sync", "--source", "memorycard"), with(registryDefaultProject, "status")}},
 	}
 }
 
@@ -110,6 +110,7 @@ func TestVaultRegistryGolden(t *testing.T) {
 			w := newRegistryWorld(t)
 			t.Setenv("HOME", w.home)
 			t.Setenv("LONGTERM_MEM_ENGRAM_DB", w.dbPath)
+			t.Setenv("LONGTERM_MEM_MEMORYCARD_DB", w.cardPath)
 			t.Setenv("LONGTERM_MEM_VAULT", strings.ReplaceAll(scenario.vaultEnv, "{vault}", w.vaultRoot))
 			t.Setenv("LONGTERM_MEM_VAULTS_FILE", "")
 			t.Chdir(t.TempDir())
@@ -155,7 +156,7 @@ func TestVaultRegistry_WhatTheMCPToolsLeave(t *testing.T) {
 			}
 		}},
 		"the promote tool": {seeded: true, call: func(t *testing.T, c commands, store *engram.Store) {
-			if _, err := c.mcpPromote(store)(context.Background(), registryDefaultProject, "engram", 1); err != nil {
+			if _, err := c.mcpPromote()(context.Background(), registryDefaultProject, "memorycard", 1); err != nil {
 				t.Fatalf("the promote tool: %v", err)
 			}
 		}},
@@ -164,6 +165,7 @@ func TestVaultRegistry_WhatTheMCPToolsLeave(t *testing.T) {
 			fixedUmask(t)
 			w := newRegistryWorld(t)
 			t.Setenv("HOME", w.home)
+			t.Setenv("LONGTERM_MEM_MEMORYCARD_DB", w.cardPath)
 			t.Setenv("LONGTERM_MEM_VAULT", "")
 			t.Setenv("LONGTERM_MEM_VAULTS_FILE", "")
 			t.Chdir(t.TempDir())
@@ -203,6 +205,7 @@ func newRegistryWorld(t *testing.T) *registryWorld {
 	t.Helper()
 	w := &registryWorld{newPromoteGoldenWorld(t)}
 	w.execSQL(t, `UPDATE observations SET project = ?`, registryDefaultProject)
+	w.execCardSQL(t, `UPDATE memories SET project = ?`, registryDefaultProject)
 	symlinkOrSkip(t, w.vaultRoot, filepath.Join(w.home, "labdrian-brain"))
 	return w
 }

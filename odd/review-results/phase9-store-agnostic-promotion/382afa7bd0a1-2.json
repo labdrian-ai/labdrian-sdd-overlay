@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a5c09ab96f7dfdea9025a871339b91a7294e3acd",
+    "head": "382afa7bd0a1d26812a21b363a80b9176d39fcdc",
+    "diff_sha256": "5a900da66fff8717ace86ef7f82daf23d27c4b52959b335b96dfcb474275efaf",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "a5c09ab96f7dfdea9025a871339b91a7294e3acd",
+      "head": "382afa7bd0a1d26812a21b363a80b9176d39fcdc",
+      "diff_sha256": "5a900da66fff8717ace86ef7f82daf23d27c4b52959b335b96dfcb474275efaf"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:462",
+        "claim": "L60 describes `5c3257c0` F1 as the case \"none of the three\" becoming \"no revision at all\". L58 (an earlier entry in the same Log) records `5c3257c0` F1 as the test label \"an observation that does not exist\" becoming \"a memory that does not exist\". The two entries give the same finding id different content and no lens qualifier separates them. A reader cannot tell whether these are two findings or one is misattributed. The Log is the audit trail for these findings, so this weakens its traceability.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:462"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff adds one Log line (L60) to a documentation file and touches no code.",
+      "L60's `5c3257c0` F1 text conflicts with the `5c3257c0` F1 text in L58, which appears as context just above the hunk.",
+      "I found no other defect I could prove from the diff alone."
+    ]
+  }
+}

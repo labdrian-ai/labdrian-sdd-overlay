@@ -1,0 +1,88 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "e98c4ca769b19469bcf718890d195bef69cd2648",
+    "head": "8703117ee6b7125812ef80e9b61eb8f41dc0261a",
+    "diff_sha256": "4b3226d79f1202b2427fca9fbfcf20e7c211bd35729cd7a06df37d39da2b4a21",
+    "paths": [
+      "longterm-mem/README.md",
+      "longterm-mem/cmd/longterm-mem/cmd_doctor.go",
+      "longterm-mem/cmd/longterm-mem/doctor_eligibility_test.go",
+      "longterm-mem/internal/ops/doctor.go",
+      "longterm-mem/internal/ops/doctor_eligibility.go",
+      "longterm-mem/internal/ops/doctor_eligibility_memorycard_test.go",
+      "longterm-mem/internal/ops/doctor_eligibility_test.go",
+      "longterm-mem/internal/ops/doctor_identity_test.go",
+      "longterm-mem/internal/ops/testdata/golden/58-a-page-whose-observation-sync-no-longer-keeps-current.golden",
+      "openspec/specs/longterm-mem-ops/spec.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "e98c4ca769b19469bcf718890d195bef69cd2648",
+      "head": "8703117ee6b7125812ef80e9b61eb8f41dc0261a",
+      "diff_sha256": "4b3226d79f1202b2427fca9fbfcf20e7c211bd35729cd7a06df37d39da2b4a21"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/README.md",
+        "longterm-mem/cmd/longterm-mem/cmd_doctor.go",
+        "longterm-mem/cmd/longterm-mem/doctor_eligibility_test.go",
+        "longterm-mem/internal/ops/doctor.go",
+        "longterm-mem/internal/ops/doctor_eligibility.go",
+        "longterm-mem/internal/ops/doctor_eligibility_memorycard_test.go",
+        "longterm-mem/internal/ops/doctor_eligibility_test.go",
+        "longterm-mem/internal/ops/doctor_identity_test.go",
+        "longterm-mem/internal/ops/testdata/golden/58-a-page-whose-observation-sync-no-longer-keeps-current.golden",
+        "openspec/specs/longterm-mem-ops/spec.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/ops/doctor_eligibility.go:116-126",
+        "claim": "When a legacy page's observation has several live parts and none is eligible, the loop leaves `reason` set from the LAST candidate, but the finding names `candidates[0]`. The memory id and the stated reason can then disagree. Example: memory 7 has no topic_key and memory 8 has topic `sdd/x`. The output reads 'memory 7 is not pinned and its topic_key \"sdd/x\" is not a curated topic', which is false for memory 7. The new test only covers parts with identical reasons, so it misses this.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/ops/doctor_eligibility.go:117-120",
+          "longterm-mem/internal/ops/doctor_eligibility.go:126"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/ops/doctor_eligibility.go:111-112",
+        "claim": "The comment, README and spec say the part named is 'the first (lowest id)'. The code takes the first in the order the port returns memories and never sorts. The claim holds only if ListMemories returns rows ordered by id, which the diff does not show. Neither the code nor a test enforces the ordering.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/ops/doctor_eligibility.go:98",
+          "longterm-mem/internal/ops/doctor_eligibility.go:126"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/cmd_doctor.go:154",
+        "claim": "The docs and spec promise that archived memories are not judged ('not superseded, not archived'). The mapping only sets Superseded from Status == \"superseded\" and nothing filters archived status. If ListMemories returns archived memories, they are still judged. The diff does not show whether it does.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/cmd_doctor.go:154"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff of the legacy advice, superseded filtering and multi-part candidate selection in checkPromotedPagesEligible and adviceFor.",
+      "F1 follows from the loop at doctor_eligibility.go:116-122 overwriting `reason` on each ineligible candidate while the finding names candidates[0] at line 126."
+    ]
+  }
+}

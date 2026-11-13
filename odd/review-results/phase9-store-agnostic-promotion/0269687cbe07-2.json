@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "b476946eec253d6d2239de151a38a85c6c9e521c",
+    "head": "0269687cbe078b67ce48486be4e55f5699c9b2b5",
+    "diff_sha256": "f0759b130d2c411ff251fc4f4c93b4210caad68290fd46f4c0298885284e68e2",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/cmd_mcp.go",
+      "longterm-mem/cmd/longterm-mem/cmd_sync.go",
+      "longterm-mem/internal/engram/store.go",
+      "longterm-mem/internal/promote/promote_reindex_test.go",
+      "longterm-mem/internal/promote/sync_cards.go",
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "b476946eec253d6d2239de151a38a85c6c9e521c",
+      "head": "0269687cbe078b67ce48486be4e55f5699c9b2b5",
+      "diff_sha256": "f0759b130d2c411ff251fc4f4c93b4210caad68290fd46f4c0298885284e68e2"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/cmd_mcp.go",
+        "longterm-mem/cmd/longterm-mem/cmd_sync.go",
+        "longterm-mem/internal/engram/store.go",
+        "longterm-mem/internal/promote/promote_reindex_test.go",
+        "longterm-mem/internal/promote/sync_cards.go",
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff changes only comments, one test case label (a map key string, which t.Run uses as the subtest name), and Log and task-line text in the feature document. It changes no executable logic.",
+      "The renamed comment references (promote.PromoteCardAndReindex, promote.SyncCardsProject, CardRunFailure) are consistent with the identifiers visible elsewhere in the diff (TestPromoteCardAndReindex_..., SyncCardsProject, CardRunFailure).",
+      "The T5 and T10 task-line edits add the commits named in L58 (56f73b84, bc725cea, 61c8bf1b) and match what L58 says it records."
+    ]
+  }
+}

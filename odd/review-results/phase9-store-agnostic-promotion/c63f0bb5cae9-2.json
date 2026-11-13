@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "dad94e69429264cf87dd0ba2f131bfb24fbf3b0c",
+    "head": "c63f0bb5cae914c5df96a14cbf97837b720c1010",
+    "diff_sha256": "5d2766b76c571a2d0fd0f3c307d6dea4a60775ad0ba98af87115410ccd683bf9",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/testdata/promote-golden/08-promote-a-memory-that-does-not-exist.golden",
+      "longterm-mem/internal/promote/explicit.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "dad94e69429264cf87dd0ba2f131bfb24fbf3b0c",
+      "head": "c63f0bb5cae914c5df96a14cbf97837b720c1010",
+      "diff_sha256": "5d2766b76c571a2d0fd0f3c307d6dea4a60775ad0ba98af87115410ccd683bf9"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/testdata/promote-golden/08-promote-a-memory-that-does-not-exist.golden",
+        "longterm-mem/internal/promote/explicit.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/promote/explicit.go:14",
+        "claim": "The shared sentinel ErrObservationNotFound is reworded globally to 'memory not found'. The comment in the diff says it covers the case where there is no such memory, and ExplicitPromoteCard is one of its users. The sentinel is named for observations and the neighbouring doc contrasts 'a memory, not an observation'. If the Engram-observation path (ExplicitPromote) returns the same sentinel, its message changes too. Only the memorycard golden (08) was updated, so any other golden or test asserting the old 'observation not found' text for an observation promote would break or be silently mislabeled. The name/message mismatch also hurts readability.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/explicit.go:14"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only the sentinel's message text and one golden file. Other users of the sentinel and other goldens are not visible, so the impact on the observation path cannot be confirmed."
+    ]
+  }
+}

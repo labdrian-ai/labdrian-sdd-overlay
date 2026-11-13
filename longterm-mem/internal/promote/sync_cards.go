@@ -8,9 +8,8 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 )
 
-// This file is the memorycard dialect of the passes Sync, Plan and SyncProject run for Engram: the same walk
-// (Writer.walk) and the same decision over the memories of a Source, worded, counted and ordered as `sync --source
-// memorycard` has always reported them (a hand-edited page is counted apart from the promotions, the status
+// This file is the passes of `sync`: the walk (Writer.walk) and the one decision over the memories of a Source, worded,
+// counted and ordered as `sync --source memorycard` has always reported them (a hand-edited page is counted apart from the promotions, the status
 // pass runs before the index is rebuilt, a failure names a memory and not an observation).
 
 // CardSyncReport summarizes one SyncCards run, in the shape of SyncReport: Promoted lists every memory the run
@@ -34,7 +33,7 @@ type CardSyncReport struct {
 // A memory at the revision its page carries writes nothing: no page and no precedence entry. A memory that is
 // bridged to a memory of another store that has a page is skipped and counted, never a failure and never
 // written. One memory that cannot be processed does not abort the run: it is recorded in Failed and the walk
-// continues, and the run returns a non-nil error when anything failed, as Sync does. A pages directory that cannot
+// continues, and the run returns a non-nil error when anything failed, as a sync always did. A pages directory that cannot
 // be listed at all is the failure of every eligible memory.
 //
 // SyncCards does not propagate status (PropagateCards), rebuild the index, or record the sync: SyncCardsProject
@@ -150,7 +149,7 @@ func CardRunFailure(err error) Failure {
 }
 
 // CardProjectReport is what SyncCardsProject did for one project: SyncCards' report and, when the run failed,
-// why, in the terms ProjectSyncReport's Failure uses.
+// why, as a Failure (CardRunFailure).
 type CardProjectReport struct {
 	CardSyncReport
 	Patched []string

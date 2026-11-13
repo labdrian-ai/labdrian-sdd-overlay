@@ -448,8 +448,8 @@ func TestGolden(t *testing.T) {
 				EmbeddingBackendCheck: func(context.Context) error { return nil },
 				// The page every scenario starts from is promoted from observation 1, which Engram keeps pinned
 				// unless the scenario says it does not.
-				LiveObservationEligibility: func(string) ([]ObservationEligibility, error) {
-					return []ObservationEligibility{{ID: 1, Pinned: !scenario.unpinned}}, nil
+				LiveMemoryEligibility: func(string) ([]MemoryEligibility, error) {
+					return []MemoryEligibility{{ID: 1, EngramID: 1, Pinned: !scenario.unpinned}}, nil
 				},
 			}, doctorTestProject)
 			if err != nil {

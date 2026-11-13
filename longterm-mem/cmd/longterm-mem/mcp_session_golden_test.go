@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -83,6 +84,28 @@ func queryCall(args map[string]any) mcpToolCall {
 		merged[k] = v
 	}
 	return mcpToolCall{tool: "query", args: merged}
+}
+
+// withMemorycardMemory3 points the session at a memorycard database that holds, as memory 3, the Dragonscale
+// observation the promote cases promote.
+func withMemorycardMemory3(t *testing.T) {
+	t.Helper()
+	path := filepath.Join(realTempDir(t), "memory.db")
+	execOn(t, path, promoteGoldenMemorycardSchema)
+	execOn(t, path, `INSERT INTO memories (id, project, type, title, body, topic_key) VALUES (3, ?, 'architecture', 'Dragonscale layout', 'dragonscale needle in the middle', 'architecture/dragon')`, queryGoldenProject)
+	t.Setenv(memorycardDBEnvVar, path)
+}
+
+// promoteMemory3BeforeTheSession promotes memory 3 with the command and then gives it a newer revision, so that a
+// promotion over MCP has a page to update.
+func promoteMemory3BeforeTheSession(t *testing.T) {
+	t.Helper()
+	args := []string{"promote", "--project", queryGoldenProject, "--source", "memorycard", "--id", "3"}
+	if code, stdout, stderr := runPromoteGolden(t, args); code != exitOK {
+		t.Fatalf("promote before the session: exit %d\nstdout: %s\nstderr: %s", code, stdout, stderr)
+	}
+	execOn(t, os.Getenv(memorycardDBEnvVar), `INSERT INTO memory_versions (memory_id, version, title, body, saved_at) VALUES (3, 1, 'Dragonscale layout', 'dragonscale needle in the middle', '')`)
+	execOn(t, os.Getenv(memorycardDBEnvVar), `UPDATE memories SET body = 'dragonscale needle, revised' WHERE id = 3`)
 }
 
 func mcpGoldenCases() []mcpGoldenCase {
@@ -177,11 +200,15 @@ func mcpGoldenCases() []mcpGoldenCase {
 			name: "18-a-promotion-over-mcp-rebuilds-the-vault-index",
 			setup: func(t *testing.T, w *retrievalWorld) {
 				writeIndexStubs(t, w)
+				withMemorycardMemory3(t)
 				w.writeVaultFile(t, "scripts/allocate-address.sh", promoteGoldenAllocator)
+				// The memory was promoted before the session and has a newer revision since, so the first call updates its
+				// page (and rebuilds the index) and the second finds it current (and rebuilds nothing).
+				promoteMemory3BeforeTheSession(t)
 			},
 			calls: []mcpToolCall{
-				{tool: "promote", args: map[string]any{"project": queryGoldenProject, "engram_id": 3}},
-				{tool: "promote", args: map[string]any{"project": queryGoldenProject, "engram_id": 3}},
+				{tool: "promote", args: map[string]any{"project": queryGoldenProject, "engram_id": 3, "source": "memorycard"}},
+				{tool: "promote", args: map[string]any{"project": queryGoldenProject, "engram_id": 3, "source": "memorycard"}},
 			},
 			after: func(t *testing.T, w *retrievalWorld) string { return renderIndexState(t, w) },
 		},
@@ -189,10 +216,11 @@ func mcpGoldenCases() []mcpGoldenCase {
 			name: "19-a-promotion-whose-index-rebuild-fails-still-wrote-the-page",
 			setup: func(t *testing.T, w *retrievalWorld) {
 				writeIndexStubs(t, w)
+				withMemorycardMemory3(t)
 				w.writeVaultFile(t, "scripts/allocate-address.sh", promoteGoldenAllocator)
 				w.writeVaultFile(t, "fail-setup", "")
 			},
-			calls: []mcpToolCall{{tool: "promote", args: map[string]any{"project": queryGoldenProject, "engram_id": 3}}},
+			calls: []mcpToolCall{{tool: "promote", args: map[string]any{"project": queryGoldenProject, "engram_id": 3, "source": "memorycard"}}},
 			after: func(t *testing.T, w *retrievalWorld) string { return renderIndexState(t, w) },
 		},
 		{

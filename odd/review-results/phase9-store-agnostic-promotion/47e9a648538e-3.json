@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "d32e4f5388feae3e9ca52cf5ae9e35ef88273f40",
+    "head": "47e9a648538ead0fc4321aadf1db4c07f829f406",
+    "diff_sha256": "27d82bbe26baf089134a7a1f409315102d379e2f0871e332260f0bba85747aa6",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/app.go",
+      "longterm-mem/cmd/longterm-mem/cmd_sync.go",
+      "longterm-mem/cmd/longterm-mem/engram_degraded.go",
+      "longterm-mem/cmd/longterm-mem/lineage.go",
+      "longterm-mem/cmd/longterm-mem/lineage_test.go",
+      "longterm-mem/cmd/longterm-mem/rundeps.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "d32e4f5388feae3e9ca52cf5ae9e35ef88273f40",
+      "head": "47e9a648538ead0fc4321aadf1db4c07f829f406",
+      "diff_sha256": "27d82bbe26baf089134a7a1f409315102d379e2f0871e332260f0bba85747aa6"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/app.go",
+        "longterm-mem/cmd/longterm-mem/cmd_sync.go",
+        "longterm-mem/cmd/longterm-mem/engram_degraded.go",
+        "longterm-mem/cmd/longterm-mem/lineage.go",
+        "longterm-mem/cmd/longterm-mem/lineage_test.go",
+        "longterm-mem/cmd/longterm-mem/rundeps.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/lineage_test.go:1",
+        "claim": "Deleting lineage_test.go also removes the only visible coverage of the memorycard adapter's own lineage and mirror reporting (memorycard.NewSource, cardSource.Candidates and ByID) and the compile-time assertion that *memorycard.Source satisfies promote.Source. Only the Engram-side reverse composition was deleted by this change. memorycard.NewSource remains in use, so its behavior is now untested from this package unless it is covered elsewhere, which the diff does not show.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/lineage_test.go:1-175"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff only removes code from app.go, cmd_sync.go and rundeps.go; the retained imports and call sites are not visible, so a compile break from an import left unused cannot be confirmed or ruled out.",
+      "The removed Engram promotion functions are not referenced by any retained line in the diff.",
+      "The deleted TestLineageRunsBothWaysBetweenTheTwoStores asserted memorycard-side lineage and mirror outputs as well as the Engram side."
+    ]
+  }
+}

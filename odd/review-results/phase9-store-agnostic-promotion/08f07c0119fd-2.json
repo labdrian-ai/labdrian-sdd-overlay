@@ -1,0 +1,93 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "733db247ba7eb84427ec37dce0546c2457ca7834",
+    "head": "08f07c0119fd8324e1d1b1cc2981654128481a99",
+    "diff_sha256": "765986578cf5c0b414ed572cb6ed3fb80cf940656df9fd50e4759b1799dcbe7c",
+    "paths": [
+      "longterm-mem/README.md",
+      "longterm-mem/cmd/longterm-mem/failures_golden_test.go",
+      "longterm-mem/cmd/longterm-mem/mcp_session_golden_test.go",
+      "longterm-mem/cmd/longterm-mem/promote_catalog_golden_test.go",
+      "longterm-mem/cmd/longterm-mem/promote_golden_test.go",
+      "longterm-mem/cmd/longterm-mem/promote_pages_golden_test.go",
+      "longterm-mem/cmd/longterm-mem/promote_vaultlinks_golden_test.go",
+      "longterm-mem/cmd/longterm-mem/sources.go",
+      "longterm-mem/cmd/longterm-mem/testdata/catalog-golden/11-the-catalog-and-the-log-of-an-earlier-promotion.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/legacy-promoted-vault/wiki/memory/c-000901.md",
+      "longterm-mem/cmd/longterm-mem/testdata/pages-golden/18-reconcile-an-edited-page-nobody-recorded-adopts-it.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/pages-golden/19-reconcile-an-edited-page-with-a-recorded-revision-is-refused.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/pages-golden/20-reconcile-a-page-that-is-a-link.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/pages-golden/22-reconcile-a-page-of-another-project.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/promote-golden/01-promote-an-ineligible-memory-explicitly.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/promote-golden/02-promote-it-again-after-a-revision.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/promote-golden/03-sync-dry-run.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/promote-golden/04-sync-promotes-the-eligible-ones.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/promote-golden/05-sync-with-nothing-new.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/promote-golden/06-sync-after-a-revision-and-a-soft-delete.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/promote-golden/07-promote-a-page-edited-by-hand-is-refused.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/promote-golden/08-promote-a-memory-that-does-not-exist.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/retrieval-golden/mcp-18-a-promotion-over-mcp-rebuilds-the-vault-index.golden",
+      "longterm-mem/docs/promote-from-memorycard.md",
+      "longterm-mem/internal/engram/relations.go",
+      "longterm-mem/internal/promote/promote_reindex_test.go",
+      "longterm-mem/internal/promote/propagate_cards_test.go",
+      "longterm-mem/internal/promote/propagate_ids_pages_test.go",
+      "longterm-mem/internal/promote/propagate_ids_test.go",
+      "longterm-mem/internal/promote/source.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "733db247ba7eb84427ec37dce0546c2457ca7834",
+      "head": "08f07c0119fd8324e1d1b1cc2981654128481a99",
+      "diff_sha256": "765986578cf5c0b414ed572cb6ed3fb80cf940656df9fd50e4759b1799dcbe7c"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/README.md",
+        "longterm-mem/cmd/longterm-mem/failures_golden_test.go",
+        "longterm-mem/cmd/longterm-mem/mcp_session_golden_test.go",
+        "longterm-mem/cmd/longterm-mem/promote_catalog_golden_test.go",
+        "longterm-mem/cmd/longterm-mem/promote_golden_test.go",
+        "longterm-mem/cmd/longterm-mem/promote_pages_golden_test.go",
+        "longterm-mem/cmd/longterm-mem/promote_vaultlinks_golden_test.go",
+        "longterm-mem/cmd/longterm-mem/sources.go",
+        "longterm-mem/cmd/longterm-mem/testdata/catalog-golden/11-the-catalog-and-the-log-of-an-earlier-promotion.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/legacy-promoted-vault/wiki/memory/c-000901.md",
+        "longterm-mem/cmd/longterm-mem/testdata/pages-golden/18-reconcile-an-edited-page-nobody-recorded-adopts-it.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/pages-golden/19-reconcile-an-edited-page-with-a-recorded-revision-is-refused.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/pages-golden/20-reconcile-a-page-that-is-a-link.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/pages-golden/22-reconcile-a-page-of-another-project.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/promote-golden/01-promote-an-ineligible-memory-explicitly.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/promote-golden/02-promote-it-again-after-a-revision.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/promote-golden/03-sync-dry-run.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/promote-golden/04-sync-promotes-the-eligible-ones.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/promote-golden/05-sync-with-nothing-new.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/promote-golden/06-sync-after-a-revision-and-a-soft-delete.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/promote-golden/07-promote-a-page-edited-by-hand-is-refused.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/promote-golden/08-promote-a-memory-that-does-not-exist.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/retrieval-golden/mcp-18-a-promotion-over-mcp-rebuilds-the-vault-index.golden",
+        "longterm-mem/docs/promote-from-memorycard.md",
+        "longterm-mem/internal/engram/relations.go",
+        "longterm-mem/internal/promote/promote_reindex_test.go",
+        "longterm-mem/internal/promote/propagate_cards_test.go",
+        "longterm-mem/internal/promote/propagate_ids_pages_test.go",
+        "longterm-mem/internal/promote/propagate_ids_test.go",
+        "longterm-mem/internal/promote/source.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff changes only tests, goldens, docs and comments, plus the removal of RelatedEdgesOfProject. Nothing in it shows a defect the change caused.",
+      "The updated goldens are consistent with the seeds the change added: the revisions in the scenario setup produce the 'updated' action, the local-edit refusal with exit 6, and the bumped revision numbers in the manifests.",
+      "I could not confirm from the diff that RelatedEdgesOfProject has no remaining callers, or that the strings and fmt imports in relations.go are still used after the removal. The base RelatedEdges likely uses both, and a missing caller would fail the build rather than hide, so I raise no finding."
+    ]
+  }
+}

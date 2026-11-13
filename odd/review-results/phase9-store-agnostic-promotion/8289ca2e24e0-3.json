@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "41ec8eb251e5cc996a33bf55aec2fd5f873f508e",
+    "head": "8289ca2e24e0fa6f8f1a65690fac859df55c1284",
+    "diff_sha256": "9db08405b0b2b9692ab2a954417acb1c5212d57ad11d45a879bce61b14fa2d99",
+    "paths": [
+      "longterm-mem/internal/ops/doctor_eligibility.go",
+      "longterm-mem/internal/ops/doctor_eligibility_memorycard_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "41ec8eb251e5cc996a33bf55aec2fd5f873f508e",
+      "head": "8289ca2e24e0fa6f8f1a65690fac859df55c1284",
+      "diff_sha256": "9db08405b0b2b9692ab2a954417acb1c5212d57ad11d45a879bce61b14fa2d99"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/ops/doctor_eligibility.go",
+        "longterm-mem/internal/ops/doctor_eligibility_memorycard_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "In the base, the loop assigned reason on every iteration. When no candidate was eligible, reason held the last candidate's reason, but the finding named candidates[0]. That mismatch is the bug this commit fixes.",
+      "In the head, reason is recomputed from candidates[0] after the loop. It is reached only when no candidate is eligible, so the reason is non-empty and matches the named memory.",
+      "Eligible and single-candidate cases behave as before. The new test case checks that memory 7 is named with its own 'not pinned and has no topic_key' reason, not memory 8's reason.",
+      "The calls to IneligibleReason are pure, so computing the reason twice has no side effects. I found no defect caused by this change."
+    ]
+  }
+}

@@ -1,12 +1,8 @@
 package promote
 
 import (
-	"errors"
 	"os"
-	"path/filepath"
-	"strings"
 	"testing"
-	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 )
@@ -169,67 +165,6 @@ func TestEligible(t *testing.T) {
 	}
 }
 
-// TestPromote_ExplicitCallOverridesAutomaticEligibility (task 8b.4, R-032):
-// an observation that is not pinned and carries no topic_key --
-// Eligible(obs, false) reports false, per TestEligible's "untopiced
-// observation is not eligible" case above -- must still be promoted
-// through the same page-emission, addressing, and registration path any
-// other eligible observation uses once an explicit promote call names it.
-// This exercises
-// ExplicitPromote (explicit.go), the id-lookup entrypoint the CLI promote
-// subcommand (8b.6) and the MCP promote tool (8b.7) both call, proving
-// design.md's directive that R-032 flows through Writer.Promote's existing
-// explicit-bool parameter rather than a second bypass: the page actually
-// lands under wiki/memory/ and is registered in wiki/index.md/wiki/log.md,
-// not merely accepted without writing anything.
-func TestPromote_ExplicitCallOverridesAutomaticEligibility(t *testing.T) {
-	vaultRoot := t.TempDir()
-	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
-
-	w := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Clock: clock, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress)}
-	obs := memory.Observation{ID: 601, Type: "discovery", Title: "Below Threshold", Content: "Never automatically eligible.", Project: "labdrian-sdd-overlay", RevisionCount: 1, Pinned: false}
-
-	var lookedUp int64
-	result, err := ExplicitPromote(t.Context(), w, ObservationLookup(func(id int64) (memory.Observation, bool, error) {
-		lookedUp = id
-		return obs, true, nil
-	}), obs.ID)
-	if err != nil {
-		t.Fatalf("ExplicitPromote: %v", err)
-	}
-	if lookedUp != obs.ID {
-		t.Fatalf("lookup called with id %d, want %d", lookedUp, obs.ID)
-	}
-	if result.Action.Kind != ActionCreated {
-		t.Fatalf("Action.Kind = %v, want ActionCreated: an explicit call on a below-threshold observation must still write a page", result.Action.Kind)
-	}
-
-	full := filepath.Join(vaultRoot, result.Page.Path)
-	got, err := os.ReadFile(full)
-	if err != nil {
-		t.Fatalf("read %s: %v", full, err)
-	}
-	if !strings.Contains(string(got), "Never automatically eligible.") {
-		t.Fatalf("written page missing observation content; got:\n%s", got)
-	}
-
-	indexData, err := os.ReadFile(filepath.Join(vaultRoot, "wiki", "index.md"))
-	if err != nil {
-		t.Fatalf("read wiki/index.md: %v", err)
-	}
-	if !strings.Contains(string(indexData), "[["+result.Page.Address+"|Below Threshold]]") {
-		t.Fatalf("wiki/index.md does not list the explicitly-promoted page (registration path skipped); got:\n%s", indexData)
-	}
-
-	logData, err := os.ReadFile(filepath.Join(vaultRoot, "wiki", "log.md"))
-	if err != nil {
-		t.Fatalf("read wiki/log.md: %v", err)
-	}
-	if !strings.Contains(string(logData), "promote | Below Threshold") {
-		t.Fatalf("wiki/log.md does not record the explicit promotion (registration path skipped); got:\n%s", logData)
-	}
-}
-
 // TestPromote_AnIneligibleObservationReportsNoActionAndWritesNothing: an
 // observation that is not eligible is a normal skip for a scanning caller,
 // and the Result says so in its own words (ActionNone, no page) rather than
@@ -255,29 +190,6 @@ func TestPromote_AnIneligibleObservationReportsNoActionAndWritesNothing(t *testi
 	}
 }
 
-// TestPromote_InvalidObservationIdRejected (task 8b.5, R-032): an invalid
-// or nonexistent observation id must be rejected with a clear,
-// distinguishable error, never a silent no-op that leaves the caller
-// unable to tell "nothing to do" from "the id was wrong".
-func TestPromote_InvalidObservationIdRejected(t *testing.T) {
-	vaultRoot := t.TempDir()
-	w := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Clock: &fakeClock{at: testInstant}}
-
-	_, err := ExplicitPromote(t.Context(), w, ObservationLookup(func(int64) (memory.Observation, bool, error) {
-		return memory.Observation{}, false, nil
-	}), 999)
-	if err == nil {
-		t.Fatal("ExplicitPromote = nil error, want a rejection for an invalid observation id")
-	}
-	if !errors.Is(err, ErrObservationNotFound) {
-		t.Fatalf("ExplicitPromote error = %v, want errors.Is(err, ErrObservationNotFound)", err)
-	}
-
-	if _, statErr := os.Stat(filepath.Join(vaultRoot, "wiki", "index.md")); !os.IsNotExist(statErr) {
-		t.Fatalf("wiki/index.md exists after a rejected promote call (stat err = %v); an invalid id must do nothing, not partially register", statErr)
-	}
-}
-
 // A page names an observation only by a positive engram_id: zero is no observation, so no page is joined
 // to an observation it does not name.
 func TestPageObservationIDNamesOnlyAPositiveID(t *testing.T) {
@@ -294,5 +206,32 @@ func TestPageObservationIDNamesOnlyAPositiveID(t *testing.T) {
 		if id != tc.wantID || named != tc.wantNamed {
 			t.Errorf("PageObservationID(%q) = %d, %v; want %d, %v", tc.frontmatter, id, named, tc.wantID, tc.wantNamed)
 		}
+	}
+}
+
+// PageMemoryRef names the memory a page was promoted from, in either store's keys, and nothing for a page that
+// names none or a number that is not positive (S11: the join of doctor's promoted-pages-eligible).
+func TestPageMemoryRef_NamesTheMemoryOfAPageOfEitherStore(t *testing.T) {
+	for name, tc := range map[string]struct {
+		frontmatter string
+		want        MemoryRef
+		named       bool
+	}{
+		"memorycard_id":        {"---\naddress: c-000001\nmemorycard_id: 12\n---\n", MemoryRef{Source: memorycardSource, ID: 12}, true},
+		"source memorycard":    {"---\naddress: c-000001\nsource: memorycard\nsource_id: 12\n---\n", MemoryRef{Source: memorycardSource, ID: 12}, true},
+		"engram_id":            {"---\naddress: c-000001\nengram_id: 41\n---\n", MemoryRef{Source: engramSource, ID: 41}, true},
+		"source engram":        {"---\naddress: c-000001\nsource: engram\nsource_id: 41\n---\n", MemoryRef{Source: engramSource, ID: 41}, true},
+		"memorycard wins":      {"---\nmemorycard_id: 12\nengram_id: 41\n---\n", MemoryRef{Source: memorycardSource, ID: 12}, true},
+		"zero names none":      {"---\nmemorycard_id: 0\n---\n", MemoryRef{}, false},
+		"not a number":         {"---\nmemorycard_id: x\n---\n", MemoryRef{}, false},
+		"no identity":          {"---\naddress: c-000001\n---\n", MemoryRef{}, false},
+		"no frontmatter block": {"Body only.\n", MemoryRef{}, false},
+	} {
+		t.Run(name, func(t *testing.T) {
+			got, named := PageMemoryRef(Page{Frontmatter: tc.frontmatter})
+			if got != tc.want || named != tc.named {
+				t.Errorf("PageMemoryRef(%q) = %+v, %v; want %+v, %v", tc.frontmatter, got, named, tc.want, tc.named)
+			}
+		})
 	}
 }

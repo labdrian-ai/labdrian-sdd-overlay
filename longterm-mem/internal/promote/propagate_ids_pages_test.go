@@ -10,20 +10,17 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultlayout"
 )
 
-// propagationWalk is one of the two propagation walks over a project "memorycard", with the store name its memories carry.
+// propagationWalk is the propagation walk over a project "memorycard", with the store name its memories carry.
 type propagationWalk struct {
 	source string
 	walk   func(*Writer, Source) (PropagateReport, error)
 }
 
-// propagationWalks returns the walks by name: memorycard's (PropagateCards) and the Engram dialect's (Propagate).
+// propagationWalks returns the walk by name: memorycard's (PropagateCards), the only one there is.
 func propagationWalks(t *testing.T) map[string]propagationWalk {
 	return map[string]propagationWalk{
 		"memorycard's walk": {memorycardSource, func(w *Writer, src Source) (PropagateReport, error) {
 			return PropagateCards(t.Context(), src, w, "memorycard")
-		}},
-		"the Engram dialect's walk": {engramSource, func(w *Writer, src Source) (PropagateReport, error) {
-			return Propagate(t.Context(), Deps{Source: src, Writer: w}, "memorycard")
 		}},
 	}
 }

@@ -4,10 +4,7 @@ import (
 	"database/sql"
 	"os"
 	"path/filepath"
-	"strconv"
 	"testing"
-
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vault"
 
 	_ "modernc.org/sqlite"
 )
@@ -54,7 +51,7 @@ func vaultResolvingSubcommands(project string) []struct {
 		{"sync", []string{"sync", "--project", project}},
 		{"status", []string{"status", "--project", project}},
 		{"doctor", []string{"doctor", "--project", project}},
-		{"promote", []string{"promote", "--project", project, "--id", "1"}},
+		{"promote", []string{"promote", "--source", "memorycard", "--project", project, "--id", "1"}},
 	}
 }
 
@@ -162,57 +159,5 @@ func TestCmdSync_EngramListingFailureExitsEngramUnavailable(t *testing.T) {
 
 	if exit := runQuietly(t, []string{"sync", "--project", "engram-broken-project"}); exit != 4 {
 		t.Fatalf("run([sync ...]) = %d, want 4 (engram_unavailable): the listing failed before any vault subprocess ran, so this is not a vault_subprocess_failed", exit)
-	}
-}
-
-// TestCmdSync_RebuildFailureExitsVaultSubprocessFailed is the case exit 5
-// genuinely names: Engram lists cleanly, there is nothing to promote, and
-// the vault's own index rebuild is what fails.
-func TestCmdSync_RebuildFailureExitsVaultSubprocessFailed(t *testing.T) {
-	dbPath, _ := promoteFixtureDB(t, "Irrelevant", "other-project")
-
-	t.Setenv("HOME", t.TempDir())
-	t.Setenv("LONGTERM_MEM_VAULT", t.TempDir())
-	t.Setenv("LONGTERM_MEM_ENGRAM_DB", dbPath)
-
-	if exit := runQuietly(t, []string{"sync", "--project", "empty-project"}); exit != 5 {
-		t.Fatalf("run([sync ...]) = %d, want 5 (vault_subprocess_failed): the index rebuild is the only step that failed", exit)
-	}
-}
-
-// TestCmdSync_PerObservationFailureExitsInternal: a single observation the
-// run could not process is a longterm-mem-side fault (exit 1, internal),
-// not a vault subprocess failure. The fixture vault here rebuilds
-// successfully, so exit 5 could only come from sync flattening every
-// failure into one code -- which is exactly what it used to do.
-func TestCmdSync_PerObservationFailureExitsInternal(t *testing.T) {
-	if !vault.PrerequisitePresent("python3") {
-		t.Skip("python3 not on PATH; the fixture vault's index-refresh entrypoints cannot run")
-	}
-
-	vaultRoot := t.TempDir()
-	writeResidualFixtureVault(t, vaultRoot)
-	dbPath, id := promoteFixtureDB(t, "Broken", "per-observation-project")
-
-	// The observation is already promoted to a page whose engram_revision
-	// cannot be parsed, so deciding anything about it fails on every run
-	// (main_test.go's TestCmdSync_BothPassesRunDespiteAFailingObservation
-	// establishes this fixture shape).
-	memoryDir := filepath.Join(vaultRoot, "wiki", "memory")
-	if err := os.MkdirAll(memoryDir, 0o755); err != nil {
-		t.Fatalf("mkdir %s: %v", memoryDir, err)
-	}
-	broken := "---\ntype: concept\ntitle: \"Broken\"\naddress: c-000902\nstatus: seed\nengram_id: " +
-		strconv.FormatInt(id, 10) + "\nengram_revision: not-a-number\nproject: per-observation-project\n---\n\nBody.\n"
-	if err := os.WriteFile(filepath.Join(memoryDir, "c-000902.md"), []byte(broken), 0o644); err != nil {
-		t.Fatalf("write broken page: %v", err)
-	}
-
-	t.Setenv("HOME", t.TempDir())
-	t.Setenv("LONGTERM_MEM_VAULT", vaultRoot)
-	t.Setenv("LONGTERM_MEM_ENGRAM_DB", dbPath)
-
-	if exit := runQuietly(t, []string{"sync", "--project", "per-observation-project"}); exit != 1 {
-		t.Fatalf("run([sync ...]) = %d, want 1 (internal): the vault's index rebuilt cleanly, so a per-observation failure must not be reported as vault_subprocess_failed", exit)
 	}
 }

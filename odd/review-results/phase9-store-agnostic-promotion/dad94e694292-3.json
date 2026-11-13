@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "563948302163a07dfd67cb1ca017e7394da5ba49",
+    "head": "dad94e69429264cf87dd0ba2f131bfb24fbf3b0c",
+    "diff_sha256": "1f4fdbfcb275c4e58ef94d8424582349153580536192d10a64283d99d7164e45",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/cmd_mcp.go",
+      "longterm-mem/cmd/longterm-mem/commands.go",
+      "longterm-mem/cmd/longterm-mem/promote_memorycard_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "563948302163a07dfd67cb1ca017e7394da5ba49",
+      "head": "dad94e69429264cf87dd0ba2f131bfb24fbf3b0c",
+      "diff_sha256": "1f4fdbfcb275c4e58ef94d8424582349153580536192d10a64283d99d7164e45"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/cmd_mcp.go",
+        "longterm-mem/cmd/longterm-mem/commands.go",
+        "longterm-mem/cmd/longterm-mem/promote_memorycard_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/cmd/longterm-mem/cmd_mcp.go:151-155",
+        "claim": "A single sync.Once guards the degraded declaration for every source. The message names the source and the store is opened per call, so a call for one source that is degraded consumes the Once. A later call for a different degraded source, if the source check admits more than one, is then silently read from a snapshot with no declaration. Even for one source, a later call opens a fresh connection and snapshot, and that is also never declared. The Once should be keyed per source, or per snapshot.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/cmd_mcp.go:128",
+          "longterm-mem/cmd/longterm-mem/cmd_mcp.go:152-154"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/promote_memorycard_test.go:343-363",
+        "claim": "The test covers only one source and two calls. It does not check that the diagnostics writer is used instead of os.Stderr, that a nil writer falls back, or that a different degraded source is declared. The per-source gap in F1 therefore goes unnoticed.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/promote_memorycard_test.go:347-361"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff adds a sync.Once at the closure level of mcpPromote, outside the per-call function.",
+      "The degraded message interpolates source, which varies per call, but the Once suppresses all later declarations regardless of source."
+    ]
+  }
+}

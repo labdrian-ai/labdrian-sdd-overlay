@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "563948302163a07dfd67cb1ca017e7394da5ba49",
+    "head": "dad94e69429264cf87dd0ba2f131bfb24fbf3b0c",
+    "diff_sha256": "1f4fdbfcb275c4e58ef94d8424582349153580536192d10a64283d99d7164e45",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/cmd_mcp.go",
+      "longterm-mem/cmd/longterm-mem/commands.go",
+      "longterm-mem/cmd/longterm-mem/promote_memorycard_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "563948302163a07dfd67cb1ca017e7394da5ba49",
+      "head": "dad94e69429264cf87dd0ba2f131bfb24fbf3b0c",
+      "diff_sha256": "1f4fdbfcb275c4e58ef94d8424582349153580536192d10a64283d99d7164e45"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/cmd_mcp.go",
+        "longterm-mem/cmd/longterm-mem/commands.go",
+        "longterm-mem/cmd/longterm-mem/promote_memorycard_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/cmd/longterm-mem/cmd_mcp.go:151-155",
+        "claim": "The single sync.Once is shared across every source and every call, but the message names the source and the degraded state is per call (the store is reopened each call). If one source is declared degraded, a later degraded read of a different source is never declared. A source that recovers and degrades again is not declared a second time either, so the snapshot caveat is silently dropped for those calls. The sentence 'snapshot taken when the connection was opened' also reads as if it covered later calls that open their own connections. The once should be keyed per source, or the wording should say it covers the first call only. The test exercises only the 'memorycard' source, so this is not covered.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/cmd_mcp.go:128",
+          "longterm-mem/cmd/longterm-mem/cmd_mcp.go:151-155"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff replaces a per-call Fprintf to os.Stderr with declared.Do(...), a once-per-closure guard that is independent of the source argument.",
+      "The message text embeds %s of source, so the one-time guard conflates distinct declarations."
+    ]
+  }
+}

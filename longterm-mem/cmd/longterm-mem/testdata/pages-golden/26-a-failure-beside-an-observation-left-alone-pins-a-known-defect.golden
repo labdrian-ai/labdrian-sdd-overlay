@@ -1,0 +1,93 @@
+args: sync --project golden-project --source memorycard --dry-run
+exit: 6
+--- stdout ---
+longterm-mem: sync --source memorycard --dry-run: would promote 1 memory(ies), patch 0 page(s), skip 2, 0 bridged, into <vault>
+  would promote: Pinned Decision
+longterm-mem: sync --source memorycard --dry-run: nothing was written
+--- stderr ---
+longterm-mem: sync --source memorycard --dry-run: warning: promoted page c-000999.md could not be read: open <vault>/wiki/memory/c-000999.md: no such file or directory; it was skipped
+longterm-mem: sync --source memorycard --dry-run: warning: 1 memory(ies) left alone, nothing was written for them: no readable page belongs to them, and a page that could not be read may (memories 2)
+args: sync --project golden-project --source memorycard
+exit: 6
+--- stdout ---
+longterm-mem: sync --source memorycard promoted 1 memory(ies); patched 0 page(s); skipped 0 bridged; left 0 locally edited page(s) alone
+--- stderr ---
+longterm-mem: sync: warning: promoted page c-000999.md could not be read: open <vault>/wiki/memory/c-000999.md: no such file or directory; it was skipped
+longterm-mem: sync: warning: 1 memory(ies) left alone, nothing was written for them: no readable page belongs to them, and a page that could not be read may (memories 2)
+--- vault ---
+=== .raw/ (directory -rwxr-xr-x) ===
+=== .raw/.longterm-mem-manifest.json (-rw-------) ===
+{
+  "c-000500.md": {
+    "body_hash": "4c302984b209786451aa00b5b0888d97adc0390421234e166ee9d17a31caba15",
+    "frontmatter_hash": "dd4d017591b13482ca7e5fe000e8aea333b6ac1c712ce447a7a9cef3bae60ade"
+  }
+}
+=== .vault-meta/ (directory -rwxr-xr-x) ===
+=== .vault-meta/.longterm-mem-provisioned (-rw-r--r--) ===
+<now>
+=== .vault-meta/longterm-mem-sync-state.json (-rw-------) ===
+{
+  "schema": 1,
+  "last_sync_completed_at": "2026-10-10T12:00:00Z"
+}
+=== bin/ (directory -rwxr-xr-x) ===
+=== bin/setup-retrieve.sh (-rwxr-xr-x) ===
+#!/bin/sh
+exit 0
+=== scripts/ (directory -rwxr-xr-x) ===
+=== scripts/allocate-address.sh (-rwxr-xr-x) ===
+#!/bin/sh
+n=900
+[ -f .allocator-counter ] && read n < .allocator-counter
+n=$((n+1))
+echo "$n" > .allocator-counter
+printf 'c-%06d\n' "$n"
+=== scripts/bm25-index.py (-rwxr-xr-x) ===
+
+=== scripts/contextual-prefix.py (-rwxr-xr-x) ===
+
+=== wiki/ (directory -rwxr-xr-x) ===
+=== wiki/index.md (-rw-------) ===
+<!-- longterm-mem:begin -->
+- [[c-000500.md|Pinned Decision]]
+<!-- longterm-mem:end -->
+=== wiki/log.md (-rw-------) ===
+## [2026-10-10] promote | Pinned Decision
+
+[[c-000500.md|Pinned Decision]]
+
+=== wiki/memory/ (directory -rwxr-xr-x) ===
+=== wiki/memory/c-000500.md (-rw-r--r--) ===
+---
+memorycard_id: 1
+project: golden-project
+---
+A page that names no address.
+=== wiki/memory/c-000500.md.md (-rw-------) ===
+---
+type: concept
+title: "Pinned Decision"
+address: c-000500.md
+aliases:
+  - "Pinned Decision"
+created: 2026-10-10
+updated: 2026-10-10
+tags:
+  - "memory"
+  - "decision"
+status: mature
+related: []
+sources: []
+memorycard_id: 1
+memorycard_type: decision
+memorycard_revision: 1
+project: golden-project
+---
+# Pinned Decision
+
+A decision somebody pinned.
+
+---
+Promoted from memorycard memory 1, revision 1.
+=== wiki/memory/c-000999.md (link to ../../notes/absent.md) ===

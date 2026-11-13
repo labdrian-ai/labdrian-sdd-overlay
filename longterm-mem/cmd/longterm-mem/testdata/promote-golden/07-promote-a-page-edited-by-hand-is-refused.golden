@@ -1,4 +1,4 @@
-args: promote --project golden-project --id 3
+args: promote --project golden-project --source memorycard --id 3
 exit: 6
 --- stdout ---
 longterm-mem: refused c-000901 (skipped_local_edit)
@@ -10,19 +10,16 @@ longterm-mem: promote: <vault>/wiki/memory/c-000901.md (address c-000901) was ed
 === .raw/.longterm-mem-manifest.json ===
 {
   "c-000901": {
-    "body_hash": "e9580e08dd443aa69587a3668abf35f63512a06260b049075c1189a6cbc4e440",
-    "frontmatter_hash": "d0e83d33b606f21026232023f0e29a2b5a7fc1585f3e7456a1607cd2a767316d",
-    "promoted_revision": 1
+    "body_hash": "39710e9d43bb9fbd36f8b72dfd37fc919f03a2aa0ea1c59687f76fc0309c67e3",
+    "frontmatter_hash": "b24a813db323767a0a6a5f529ea7446c723dfa7338fb51c66b179c1364363894"
   },
   "c-000902": {
-    "body_hash": "1db257745d6aaa7bf9458affe0438344a6352f6bf22e597bc70d2bc16c89bd93",
-    "frontmatter_hash": "b1978147f7aa8993916fe87d93cb981e3fe4a683236ca390279bd81d26218ec3",
-    "promoted_revision": 2
+    "body_hash": "27b2f5b03c64b16f343393e22fa662f984827ff511504d2a1fb6d2b652742e5c",
+    "frontmatter_hash": "7d06412cd90fffff1a6bb2397f8b01e7e5d86f44ed3baef3124d108217c1aa94"
   },
   "c-000903": {
-    "body_hash": "70afa7604aeb5073bd50562c32fa0b91859333766ee7be33b869d338f6ccc784",
-    "frontmatter_hash": "66913be201fd2430e579d1d70b993953f5dbfee17a632a323f340e3bdced1e99",
-    "promoted_revision": 1
+    "body_hash": "5c60c878f8c66023f51766c5c2847417b950a46e8ff6a35dfac35f488e9513d1",
+    "frontmatter_hash": "eb6ee42c368f2ef4c852ec46dc1d4485e7f838e83d722e4659081b4d6a7891fc"
   }
 }
 === .raw/.manifest.json ===
@@ -103,18 +100,17 @@ tags:
 status: developing
 related: []
 sources: []
-engram_id: 3
-engram_sync_id: sync-3
-engram_type: discovery
-engram_revision: 1
+memorycard_id: 3
+memorycard_type: discovery
+memorycard_revision: 2
 project: golden-project
 ---
 # Below Threshold
 
-A discovery nobody curated.
+A body revised once.
 
 ---
-Promoted from Engram observation 3, revision 1.
+Promoted from memorycard memory 3, revision 2.
 
 A line a person added.
 === wiki/memory/c-000902.md ===
@@ -132,10 +128,9 @@ tags:
 status: mature
 related: []
 sources: []
-engram_id: 1
-engram_sync_id: sync-1
-engram_type: decision
-engram_revision: 2
+memorycard_id: 1
+memorycard_type: decision
+memorycard_revision: 2
 project: golden-project
 ---
 # Pinned Decision
@@ -143,7 +138,7 @@ project: golden-project
 Revised body.
 
 ---
-Promoted from Engram observation 1, revision 2.
+Promoted from memorycard memory 1, revision 2.
 === wiki/memory/c-000903.md ===
 ---
 type: concept
@@ -159,10 +154,9 @@ tags:
 status: archived
 related: []
 sources: []
-engram_id: 2
-engram_sync_id: sync-2
-engram_type: decision
-engram_revision: 1
+memorycard_id: 2
+memorycard_type: decision
+memorycard_revision: 1
 project: golden-project
 ---
 # Curated Note
@@ -170,4 +164,4 @@ project: golden-project
 A note with a curated topic key.
 
 ---
-Promoted from Engram observation 2, revision 1.
+Promoted from memorycard memory 2, revision 1.

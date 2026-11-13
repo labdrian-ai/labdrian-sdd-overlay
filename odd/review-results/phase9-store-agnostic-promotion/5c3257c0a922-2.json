@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "0f28050f986e0f95ac2cb25cee8aac3b6cc24206",
+    "head": "5c3257c0a9223ccf94e72740d5093da989773339",
+    "diff_sha256": "a039bedf3d17f2bf18a78e6032f1df5318301441825eb396fe2a7bcb5a6504de",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/cmd_promote.go",
+      "longterm-mem/internal/engram/store_test.go",
+      "longterm-mem/internal/promote/card_promote_test.go",
+      "longterm-mem/internal/promote/explicit.go",
+      "longterm-mem/internal/promote/promote_reindex_test.go",
+      "longterm-mem/internal/promote/reconcile_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "0f28050f986e0f95ac2cb25cee8aac3b6cc24206",
+      "head": "5c3257c0a9223ccf94e72740d5093da989773339",
+      "diff_sha256": "a039bedf3d17f2bf18a78e6032f1df5318301441825eb396fe2a7bcb5a6504de"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/cmd_promote.go",
+        "longterm-mem/internal/engram/store_test.go",
+        "longterm-mem/internal/promote/card_promote_test.go",
+        "longterm-mem/internal/promote/explicit.go",
+        "longterm-mem/internal/promote/promote_reindex_test.go",
+        "longterm-mem/internal/promote/reconcile_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/reconcile_test.go:345",
+        "claim": "The case label \"none of the three\" is now stale: the table has a fourth source (source_revision) after this change, so the label misdescribes what the case exercises.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/reconcile_test.go:343-345"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/promote_reindex_test.go:66",
+        "claim": "The case label \"an observation that does not exist\" still uses observation wording, while the sentinel it expects was renamed to ErrMemoryNotFound. The old name is thereby only half-removed, and the label no longer matches the sentinel it checks.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/promote_reindex_test.go:66"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff is a pure rename of ErrObservationNotFound to ErrMemoryNotFound, with all visible references updated (cmd_promote.go, explicit.go, two tests).",
+      "I found no behavioral regression in the visible diff. The new reconcile test case only pins existing precedence behavior."
+    ]
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "kind": "sweep",
+  "base": "6126f2bc5f3d95bf29e0f2c2ef1d4a024cddbc4e",
+  "head": "31567f0d48a88e092931d754b8f941b68964c952",
+  "diff_sha256": "9be38b3c269f4ff8a7a14fb629bfdb824900dbcbc03555a22019b8f0a6b2b07b",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [
+      "longterm-mem/cmd/longterm-mem/testdata/failures-golden/01-sync-when-the-relations-of-memory-cannot-be-read.golden"
+    ],
+    "removed_names": []
+  },
+  "t2": [],
+  "t3": [],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

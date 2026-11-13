@@ -1,18 +1,18 @@
-args: sync --project golden-project
+args: sync --project golden-project --source memorycard
 exit: 5
 --- stdout ---
-longterm-mem: sync promoted 0 observation(s), patched 0 page(s)
+longterm-mem: sync --source memorycard promoted 0 memory(ies); patched 0 page(s); skipped 0 bridged; left 0 locally edited page(s) alone
 --- stderr ---
 longterm-mem: sync: promote: sync: rebuild index: vault: provision index: vault: resolve vault root <home>/no-such-place/vault: lstat <home>/no-such-place: no such file or directory
-args: sync --project golden-project --dry-run
+args: sync --project golden-project --source memorycard --dry-run
 exit: 0
 --- stdout ---
-longterm-mem: sync --dry-run: would promote 2 observation(s), patch 0 page(s), skip 2, into <home>/no-such-place/vault
+longterm-mem: sync --source memorycard --dry-run: would promote 2 memory(ies), patch 0 page(s), skip 2, 0 bridged, into <home>/no-such-place/vault
   would promote: Pinned Decision
   would promote: Curated Note
-longterm-mem: sync --dry-run: nothing was written
+longterm-mem: sync --source memorycard --dry-run: nothing was written
 --- stderr ---
-args: promote --project golden-project --id 1
+args: promote --project golden-project --source memorycard --id 1
 exit: 1
 --- stdout ---
 --- stderr ---

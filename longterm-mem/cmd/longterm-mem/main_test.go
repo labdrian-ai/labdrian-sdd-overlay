@@ -5,7 +5,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -74,109 +73,6 @@ func TestRun_DispatchesSyncSubcommand(t *testing.T) {
 	got := run([]string{"sync", "--project", "definitely-unconfigured-project"})
 	if got != 3 {
 		t.Fatalf("run([sync --project ...]) = %d, want 3 (vault_not_configured), proving sync dispatches into cmdSync rather than the unknown-subcommand fallback", got)
-	}
-}
-
-// TestCmdSync_BothPassesRunDespiteAFailingObservation: promote.Sync steps
-// over a broken observation rather than letting it wedge the run, but that
-// hardening is worthless if the command treats Sync's error as fatal --
-// one unpromotable observation would then stop promote.Propagate from ever
-// running, so R-033's soft-delete and supersession statuses would never
-// again land for that project, identically on every retry (review finding
-// R4-sync-error-aborts-propagate). The command must run both passes,
-// report what landed, and exit non-zero.
-func TestCmdSync_BothPassesRunDespiteAFailingObservation(t *testing.T) {
-	vaultRoot := t.TempDir()
-
-	scriptsDir := filepath.Join(vaultRoot, "scripts")
-	if err := os.MkdirAll(scriptsDir, 0o755); err != nil {
-		t.Fatalf("mkdir %s: %v", scriptsDir, err)
-	}
-	if err := os.WriteFile(filepath.Join(scriptsDir, "allocate-address.sh"), []byte("#!/bin/sh\nprintf 'c-000900\\n'\n"), 0o755); err != nil {
-		t.Fatalf("write allocate fixture: %v", err)
-	}
-
-	schema, err := os.ReadFile(filepath.Join("..", "..", "internal", "engram", "testdata", "schema.sql"))
-	if err != nil {
-		t.Fatalf("read engram schema fixture: %v", err)
-	}
-	dbPath := filepath.Join(t.TempDir(), "engram.db")
-	db, err := sql.Open("sqlite", dbPath)
-	if err != nil {
-		t.Fatalf("open fixture db: %v", err)
-	}
-	if _, err := db.Exec(string(schema)); err != nil {
-		t.Fatalf("apply schema: %v", err)
-	}
-	res, err := db.Exec(`INSERT INTO observations (session_id, sync_id, type, title, content, project, revision_count, pinned, created_at)
-		 VALUES ('sess-1', 'sync-broken', 'decision', 'Broken', 'Body.', 'cmd-sync-project', 1, 0, '2026-08-01 00:00:00')`)
-	if err != nil {
-		t.Fatalf("insert observation: %v", err)
-	}
-	id, err := res.LastInsertId()
-	if err != nil {
-		t.Fatalf("last insert id: %v", err)
-	}
-	if err := db.Close(); err != nil {
-		t.Fatalf("close fixture db: %v", err)
-	}
-
-	// The observation is already promoted to a page whose engram_revision
-	// cannot be parsed, so deciding anything about it fails on every run.
-	memoryDir := filepath.Join(vaultRoot, "wiki", "memory")
-	if err := os.MkdirAll(memoryDir, 0o755); err != nil {
-		t.Fatalf("mkdir %s: %v", memoryDir, err)
-	}
-	broken := "---\ntype: concept\ntitle: \"Broken\"\naddress: c-000900\nstatus: seed\nengram_id: " +
-		strconv.FormatInt(id, 10) + "\nengram_revision: not-a-number\nproject: cmd-sync-project\n---\n\nBody.\n"
-	if err := os.WriteFile(filepath.Join(memoryDir, "c-000900.md"), []byte(broken), 0o644); err != nil {
-		t.Fatalf("write broken page: %v", err)
-	}
-
-	t.Setenv("HOME", t.TempDir())
-	t.Setenv("LONGTERM_MEM_VAULT", vaultRoot)
-	t.Setenv("LONGTERM_MEM_ENGRAM_DB", dbPath)
-
-	stderrPath := filepath.Join(t.TempDir(), "stderr.txt")
-	captured, err := os.Create(stderrPath)
-	if err != nil {
-		t.Fatalf("create stderr capture: %v", err)
-	}
-	realStderr := os.Stderr
-	os.Stderr = captured
-	exit := run([]string{"sync", "--project", "cmd-sync-project"})
-	os.Stderr = realStderr
-	if err := captured.Close(); err != nil {
-		t.Fatalf("close stderr capture: %v", err)
-	}
-
-	// The exact code, not merely "non-zero": a bare non-zero assertion
-	// cannot tell a correct code from a wrong one, which is how sync
-	// answered 5 for every failure it met for as long as it did. This
-	// fixture vault carries no bin/setup-retrieve.sh, so its index rebuild
-	// genuinely fails -- 5 (vault_subprocess_failed) is the right code
-	// here, and exit_codes_test.go covers the two failures that are not.
-	if exit != 5 {
-		t.Fatalf("run([sync ...]) = %d, want 5 (vault_subprocess_failed): the failing observation must be reported, and this fixture's index rebuild is what failed", exit)
-	}
-	stderr, err := os.ReadFile(stderrPath)
-	if err != nil {
-		t.Fatalf("read stderr capture: %v", err)
-	}
-	// Propagate's own error can only appear if the command ran the second
-	// pass -- which is exactly what treating Sync's error as fatal would
-	// have prevented.
-	if !strings.Contains(string(stderr), "propagate") {
-		t.Fatalf("the second pass never ran: Sync's failure aborted the command instead of being reported alongside it; stderr:\n%s", stderr)
-	}
-	// The exit code above is the INDEX REBUILD's, and an assertion on it
-	// alone would hold just as well with the broken observation deleted --
-	// Sync reaches its RebuildIndex step either way, so 5 is reachable
-	// independently of the failure this test is named for. The failing
-	// observation is therefore pinned where it is actually visible: in the
-	// diagnostics the command reports.
-	if !strings.Contains(string(stderr), "c-000900") {
-		t.Fatalf("the failing observation was never reported: only the index rebuild's failure reached stderr, so nothing here would notice Sync silently skipping it; stderr:\n%s", stderr)
 	}
 }
 
@@ -400,197 +296,9 @@ func TestRun_DispatchesPromoteSubcommand(t *testing.T) {
 	t.Setenv("LONGTERM_MEM_VAULT", "")
 	t.Setenv("LONGTERM_MEM_VAULTS_FILE", "")
 
-	got := run([]string{"promote", "--project", "definitely-unconfigured-project", "--id", "1"})
+	got := run([]string{"promote", "--source", "memorycard", "--project", "definitely-unconfigured-project", "--id", "1"})
 	if got != 3 {
 		t.Fatalf("run([promote --project ... --id 1]) = %d, want 3 (vault_not_configured), proving promote dispatches into cmdPromote rather than the unknown-subcommand fallback", got)
-	}
-}
-
-// promoteFixtureDB writes a temp Engram DB from the shared schema fixture
-// with one observation row, returning its path and id -- the same
-// building block TestCmdSync_BothPassesRunDespiteAFailingObservation
-// establishes for this file.
-func promoteFixtureDB(t *testing.T, title, project string) (dbPath string, id int64) {
-	t.Helper()
-	schema, err := os.ReadFile(filepath.Join("..", "..", "internal", "engram", "testdata", "schema.sql"))
-	if err != nil {
-		t.Fatalf("read engram schema fixture: %v", err)
-	}
-	dbPath = filepath.Join(t.TempDir(), "engram.db")
-	db, err := sql.Open("sqlite", dbPath)
-	if err != nil {
-		t.Fatalf("open fixture db: %v", err)
-	}
-	if _, err := db.Exec(string(schema)); err != nil {
-		t.Fatalf("apply schema: %v", err)
-	}
-	res, err := db.Exec(`INSERT INTO observations (session_id, type, title, content, project, revision_count, pinned, created_at)
-		 VALUES ('sess-1', 'discovery', ?, 'Below-threshold body.', ?, 1, 0, '2026-08-01 00:00:00')`, title, project)
-	if err != nil {
-		t.Fatalf("insert observation: %v", err)
-	}
-	id, err = res.LastInsertId()
-	if err != nil {
-		t.Fatalf("last insert id: %v", err)
-	}
-	if err := db.Close(); err != nil {
-		t.Fatalf("close fixture db: %v", err)
-	}
-	return dbPath, id
-}
-
-// TestCmdPromote_PromotesObservationAndPrintsResult (8b.6 runtime-harness
-// evidence, R-032): an observation that would never qualify automatically
-// (type "discovery", revision 1, unpinned -- see TestEligible) is promoted
-// end to end through the built command, proving cmd_promote.go's own
-// wiring: the page lands on disk, is registered in the vault's catalog and
-// log (R-029, reused by the explicit path per design.md), and the command
-// prints the address and outcome.
-func TestCmdPromote_PromotesObservationAndPrintsResult(t *testing.T) {
-	vaultRoot := t.TempDir()
-	scriptsDir := filepath.Join(vaultRoot, "scripts")
-	if err := os.MkdirAll(scriptsDir, 0o755); err != nil {
-		t.Fatalf("mkdir %s: %v", scriptsDir, err)
-	}
-	if err := os.WriteFile(filepath.Join(scriptsDir, "allocate-address.sh"), []byte("#!/bin/sh\nprintf 'c-000901\\n'\n"), 0o755); err != nil {
-		t.Fatalf("write allocate fixture: %v", err)
-	}
-
-	dbPath, id := promoteFixtureDB(t, "Explicitly Promoted", "cmd-promote-project")
-
-	t.Setenv("HOME", t.TempDir())
-	t.Setenv("LONGTERM_MEM_VAULT", vaultRoot)
-	t.Setenv("LONGTERM_MEM_ENGRAM_DB", dbPath)
-
-	var exit int
-	stdout := captureStdout(t, func() {
-		exit = run([]string{"promote", "--project", "cmd-promote-project", "--id", strconv.FormatInt(id, 10)})
-	})
-	if exit != 0 {
-		t.Fatalf("run([promote ...]) = %d, want 0; stdout:\n%s", exit, stdout)
-	}
-	if !strings.Contains(stdout, "c-000901") || !strings.Contains(stdout, "created") {
-		t.Fatalf("promote output = %q, want it to name the new address and the created action", stdout)
-	}
-
-	page := filepath.Join(vaultRoot, "wiki", "memory", "c-000901.md")
-	if _, err := os.Stat(page); err != nil {
-		t.Fatalf("promoted page %s does not exist: %v", page, err)
-	}
-	indexData, err := os.ReadFile(filepath.Join(vaultRoot, "wiki", "index.md"))
-	if err != nil {
-		t.Fatalf("read wiki/index.md: %v", err)
-	}
-	if !strings.Contains(string(indexData), "c-000901") {
-		t.Fatalf("wiki/index.md does not register the promoted page; got:\n%s", indexData)
-	}
-}
-
-// TestCmdPromote_RefusedPageExits6AndNeverClaimsItWasPromoted: a
-// promotion that deliberately wrote nothing (ActionSkippedLocalEdit, the
-// R-030 refusal) reported "longterm-mem: promoted <addr>
-// (skipped_local_edit)" and exit 0 -- a refusal wearing the word for a
-// success, and an exit code a caller cannot distinguish from a real one. A
-// vault wedged by the create path's crash window returned that exit 0 on
-// every run forever, so nothing in a script, a CI job, or an agent loop
-// could ever notice.
-//
-// The refusal maps onto exit 6 (registration_conflict), the code this
-// binary already uses for exactly this shape: an artifact exists at the
-// target location, longterm-mem cannot prove it owns it, so it refuses and
-// leaves the file byte-identical (cmd_register.go/cmd_unregister.go's own
-// untagged-entry refusal).
-func TestCmdPromote_RefusedPageExits6AndNeverClaimsItWasPromoted(t *testing.T) {
-	vaultRoot := t.TempDir()
-	scriptsDir := filepath.Join(vaultRoot, "scripts")
-	if err := os.MkdirAll(scriptsDir, 0o755); err != nil {
-		t.Fatalf("mkdir %s: %v", scriptsDir, err)
-	}
-	if err := os.WriteFile(filepath.Join(scriptsDir, "allocate-address.sh"), []byte("#!/bin/sh\nprintf 'c-000902\\n'\n"), 0o755); err != nil {
-		t.Fatalf("write allocate fixture: %v", err)
-	}
-
-	dbPath, id := promoteFixtureDB(t, "Refused Promotion", "cmd-promote-project")
-
-	t.Setenv("HOME", t.TempDir())
-	t.Setenv("LONGTERM_MEM_VAULT", vaultRoot)
-	t.Setenv("LONGTERM_MEM_ENGRAM_DB", dbPath)
-
-	args := []string{"promote", "--project", "cmd-promote-project", "--id", strconv.FormatInt(id, 10)}
-	if exit := run(args); exit != 0 {
-		t.Fatalf("run([promote ...]) (first) = %d, want 0", exit)
-	}
-
-	// A human edits the page directly in the vault: the next promote is a
-	// genuine R-030 refusal, not an interrupted write of our own.
-	pagePath := filepath.Join(vaultRoot, "wiki", "memory", "c-000902.md")
-	original, err := os.ReadFile(pagePath)
-	if err != nil {
-		t.Fatalf("read %s: %v", pagePath, err)
-	}
-	edited := string(original) + "\nA human wrote this line, longterm-mem never did.\n"
-	if err := os.WriteFile(pagePath, []byte(edited), 0o644); err != nil {
-		t.Fatalf("write local edit: %v", err)
-	}
-
-	var exit int
-	stdout := captureStdout(t, func() { exit = run(args) })
-
-	if exit != 6 {
-		t.Fatalf("run([promote ...]) after a local edit = %d, want 6 (registration_conflict): a page that was deliberately NOT written must not report success", exit)
-	}
-	if strings.Contains(stdout, "promoted") {
-		t.Fatalf("promote output = %q, want it to describe a refusal; nothing was promoted", stdout)
-	}
-	if !strings.Contains(stdout, "c-000902") || !strings.Contains(stdout, promote.ActionSkippedLocalEdit.String()) {
-		t.Fatalf("promote output = %q, want it to name the page and the refusal's own outcome", stdout)
-	}
-
-	got, err := os.ReadFile(pagePath)
-	if err != nil {
-		t.Fatalf("read %s (after): %v", pagePath, err)
-	}
-	if string(got) != edited {
-		t.Fatalf("the refused page was modified; got:\n%s", got)
-	}
-}
-
-// TestCmdPromote_InvalidIdExits7 (8b.6, R-032's "Invalid observation id is
-// rejected" scenario): an id with no matching row must exit 7
-// (not_found), never a silent success, and must never write a page.
-func TestCmdPromote_InvalidIdExits7(t *testing.T) {
-	vaultRoot := t.TempDir()
-	dbPath, _ := promoteFixtureDB(t, "Unrelated", "cmd-promote-project")
-
-	t.Setenv("HOME", t.TempDir())
-	t.Setenv("LONGTERM_MEM_VAULT", vaultRoot)
-	t.Setenv("LONGTERM_MEM_ENGRAM_DB", dbPath)
-
-	stderrPath := filepath.Join(t.TempDir(), "stderr.txt")
-	captured, err := os.Create(stderrPath)
-	if err != nil {
-		t.Fatalf("create stderr capture: %v", err)
-	}
-	realStderr := os.Stderr
-	os.Stderr = captured
-	exit := run([]string{"promote", "--project", "cmd-promote-project", "--id", "999999"})
-	os.Stderr = realStderr
-	if err := captured.Close(); err != nil {
-		t.Fatalf("close stderr capture: %v", err)
-	}
-
-	if exit != 7 {
-		t.Fatalf("run([promote --id 999999]) = %d, want 7 (not_found)", exit)
-	}
-	stderr, err := os.ReadFile(stderrPath)
-	if err != nil {
-		t.Fatalf("read stderr capture: %v", err)
-	}
-	if !strings.Contains(string(stderr), "not found") {
-		t.Fatalf("stderr = %q, want it to name the observation as not found", stderr)
-	}
-	if _, statErr := os.Stat(filepath.Join(vaultRoot, "wiki", "index.md")); !os.IsNotExist(statErr) {
-		t.Fatalf("wiki/index.md exists after a rejected promote call (stat err = %v)", statErr)
 	}
 }
 
@@ -1171,13 +879,13 @@ func TestCLI_NoResidualProcessAfterAnySubcommand(t *testing.T) {
 
 	vaultRoot := t.TempDir()
 	writeResidualFixtureVault(t, vaultRoot)
-	dbPath, id := promoteFixtureDB(t, "Residual Check Target", "cli-residual-project")
+	dbPath := memorycardFixture(t)
 
 	home := t.TempDir()
 	env := append(os.Environ(),
 		"HOME="+home,
 		"LONGTERM_MEM_VAULT="+vaultRoot,
-		"LONGTERM_MEM_ENGRAM_DB="+dbPath,
+		"LONGTERM_MEM_MEMORYCARD_DB="+dbPath,
 	)
 
 	// doctor is not among them: it starts no vault subprocess (its prerequisite check only looks the
@@ -1188,7 +896,7 @@ func TestCLI_NoResidualProcessAfterAnySubcommand(t *testing.T) {
 		{"status", "--project", "cli-residual-project"},
 		{"index", "--project", "cli-residual-project"},
 		{"query", "--project", "cli-residual-project", "hello"},
-		{"promote", "--project", "cli-residual-project", "--id", strconv.FormatInt(id, 10)},
+		{"promote", "--source", "memorycard", "--project", "cli-residual-project", "--id", "1"},
 		{"sync", "--project", "cli-residual-project"},
 	}
 

@@ -1,0 +1,104 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "6126f2bc5f3d95bf29e0f2c2ef1d4a024cddbc4e",
+    "head": "31567f0d48a88e092931d754b8f941b68964c952",
+    "diff_sha256": "9be38b3c269f4ff8a7a14fb629bfdb824900dbcbc03555a22019b8f0a6b2b07b",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/failures_golden_test.go",
+      "longterm-mem/cmd/longterm-mem/mcp_session_golden_test.go",
+      "longterm-mem/cmd/longterm-mem/project_identity_golden_test.go",
+      "longterm-mem/cmd/longterm-mem/testdata/failures-golden/01-sync-when-the-relations-of-memory-cannot-be-read.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/failures-golden/02-sync-when-the-observations-cannot-be-listed.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/failures-golden/03-sync-with-an-observation-that-cannot-be-decided-about.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/failures-golden/04-sync-and-promote-with-a-record-that-does-not-parse.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/failures-golden/05-a-vault-that-is-not-there.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/failures-golden/06-an-engram-database-that-cannot-be-opened.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/project-identity-golden/project-identity-60-a-dry-run-records-nothing.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/project-identity-golden/project-identity-61-a-dry-run-leaves-the-ledger-as-it-was.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/retrieval-golden/mcp-18-a-promotion-over-mcp-rebuilds-the-vault-index.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/vault-registry-golden/05-sync-dry-run.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/vault-registry-golden/06-sync.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/vault-registry-golden/07-promote.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/vault-registry-golden/13-sync-dry-run-of-an-unconfigured-project.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/vault-registry-golden/14-sync-of-an-unconfigured-project.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/vault-registry-golden/15-promote-of-an-unconfigured-project.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/vault-registry-golden/18-sync-with-the-vault-flag.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/vault-registry-golden/21-sync-with-the-default-row-deleted.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/vault-registry-golden/23-sync-with-a-registry-that-is-not-json.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/vault-registry-golden/25-status-then-sync.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/vault-registry-golden/26-sync-then-status.golden",
+      "longterm-mem/cmd/longterm-mem/vault_registry_golden_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "6126f2bc5f3d95bf29e0f2c2ef1d4a024cddbc4e",
+      "head": "31567f0d48a88e092931d754b8f941b68964c952",
+      "diff_sha256": "9be38b3c269f4ff8a7a14fb629bfdb824900dbcbc03555a22019b8f0a6b2b07b"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/failures_golden_test.go",
+        "longterm-mem/cmd/longterm-mem/mcp_session_golden_test.go",
+        "longterm-mem/cmd/longterm-mem/project_identity_golden_test.go",
+        "longterm-mem/cmd/longterm-mem/testdata/failures-golden/01-sync-when-the-relations-of-memory-cannot-be-read.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/failures-golden/02-sync-when-the-observations-cannot-be-listed.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/failures-golden/03-sync-with-an-observation-that-cannot-be-decided-about.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/failures-golden/04-sync-and-promote-with-a-record-that-does-not-parse.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/failures-golden/05-a-vault-that-is-not-there.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/failures-golden/06-an-engram-database-that-cannot-be-opened.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/project-identity-golden/project-identity-60-a-dry-run-records-nothing.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/project-identity-golden/project-identity-61-a-dry-run-leaves-the-ledger-as-it-was.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/retrieval-golden/mcp-18-a-promotion-over-mcp-rebuilds-the-vault-index.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/vault-registry-golden/05-sync-dry-run.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/vault-registry-golden/06-sync.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/vault-registry-golden/07-promote.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/vault-registry-golden/13-sync-dry-run-of-an-unconfigured-project.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/vault-registry-golden/14-sync-of-an-unconfigured-project.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/vault-registry-golden/15-promote-of-an-unconfigured-project.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/vault-registry-golden/18-sync-with-the-vault-flag.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/vault-registry-golden/21-sync-with-the-default-row-deleted.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/vault-registry-golden/23-sync-with-a-registry-that-is-not-json.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/vault-registry-golden/25-status-then-sync.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/vault-registry-golden/26-sync-then-status.golden",
+        "longterm-mem/cmd/longterm-mem/vault_registry_golden_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/mcp_session_golden_test.go:194-197",
+        "claim": "Case 18 promotes memory 3 twice to show that a promotion rebuilds the vault index. Re-recorded against memorycard, the second call returns already_promoted and the golden no longer shows the second prefix and bm25 rebuild. The scenario now pins one index rebuild fewer than before, and the 'updated' path through MCP is no longer covered. The case name still says the promotion rebuilds the index.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/testdata/retrieval-golden/mcp-18-a-promotion-over-mcp-rebuilds-the-vault-index.golden:27-31",
+          "longterm-mem/cmd/longterm-mem/testdata/retrieval-golden/mcp-18-a-promotion-over-mcp-rebuilds-the-vault-index.golden:42-46"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/testdata/failures-golden/04-sync-and-promote-with-a-record-that-does-not-parse.golden:4",
+        "claim": "Under memorycard, a sync that fails with exit 1 because the manifest cannot be parsed now prints a success-style summary ('promoted 0 memory(ies)...') on stdout. The base golden had empty stdout for this case. The re-recording pins that summary as expected behavior, though it could mislead callers that read stdout.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/testdata/failures-golden/04-sync-and-promote-with-a-record-that-does-not-parse.golden:1-6"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only test files and golden files. The changed lines in the golden diffs match the three changes the commit message lists: the sync summary words, the store named in failures, and exit 4 for an unavailable store.",
+      "Each golden's args line matches the new --source memorycard commands in the tests.",
+      "Scenarios 01 and 06 were changed deliberately. 01 is removed along with its golden, and 06 now points both store database variables at nonexistent paths."
+    ]
+  }
+}

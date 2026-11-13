@@ -1,12 +1,12 @@
-args: promote --project golden-project --id 1
+args: promote --project golden-project --source memorycard --id 1
 exit: 0
 --- stdout ---
 longterm-mem: promoted c-000901 (updated)
 --- stderr ---
-args: sync --project golden-project
+args: sync --project golden-project --source memorycard
 exit: 0
 --- stdout ---
-longterm-mem: sync promoted 1 observation(s), patched 0 page(s)
+longterm-mem: sync --source memorycard promoted 1 memory(ies); patched 0 page(s); skipped 0 bridged; left 0 locally edited page(s) alone
 --- stderr ---
 --- vault ---
 === .allocator-counter (-rw-r--r--) ===
@@ -15,14 +15,12 @@ longterm-mem: sync promoted 1 observation(s), patched 0 page(s)
 === .raw/.longterm-mem-manifest.json (-rw-------) ===
 {
   "c-000901": {
-    "body_hash": "1db257745d6aaa7bf9458affe0438344a6352f6bf22e597bc70d2bc16c89bd93",
-    "frontmatter_hash": "0c595cec7dea797f8fc14702c255727bff4ce8e872b9bcedc493e191dea7d669",
-    "promoted_revision": 2
+    "body_hash": "27b2f5b03c64b16f343393e22fa662f984827ff511504d2a1fb6d2b652742e5c",
+    "frontmatter_hash": "15db743058184f884da42f82bdad7c98720dcf9fb08c295f2e287f5eadd6c2d8"
   },
   "c-000902": {
-    "body_hash": "70afa7604aeb5073bd50562c32fa0b91859333766ee7be33b869d338f6ccc784",
-    "frontmatter_hash": "906bc83202434ae3445991d6b0a38182691609456c3c620a9f515748d055bbcd",
-    "promoted_revision": 1
+    "body_hash": "5c60c878f8c66023f51766c5c2847417b950a46e8ff6a35dfac35f488e9513d1",
+    "frontmatter_hash": "f225649e76bcf64ed1ef5858345bd46ebf74b18138a1c45d76ce5602cccbfa02"
   }
 }
 === .raw/.manifest.json (-rw-------) ===
@@ -63,10 +61,9 @@ tags:
 status: mature
 related: []
 sources: []
-engram_id: 1
-engram_sync_id: sync-1
-engram_type: decision
-engram_revision: 2
+memorycard_id: 1
+memorycard_type: decision
+memorycard_revision: 2
 project: golden-project
 ---
 # Pinned Decision
@@ -74,7 +71,7 @@ project: golden-project
 Revised body.
 
 ---
-Promoted from Engram observation 1, revision 2.
+Promoted from memorycard memory 1, revision 2.
 === scripts/ (directory -rwxr-xr-x) ===
 === scripts/allocate-address.sh (-rwxr-xr-x) ===
 #!/bin/sh
@@ -125,10 +122,9 @@ tags:
 status: developing
 related: []
 sources: []
-engram_id: 2
-engram_sync_id: sync-2
-engram_type: decision
-engram_revision: 1
+memorycard_id: 2
+memorycard_type: decision
+memorycard_revision: 1
 project: golden-project
 ---
 # Curated Note
@@ -136,4 +132,4 @@ project: golden-project
 A note with a curated topic key.
 
 ---
-Promoted from Engram observation 2, revision 1.
+Promoted from memorycard memory 2, revision 1.

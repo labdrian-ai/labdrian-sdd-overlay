@@ -22,13 +22,13 @@ func lookupOf(observations ...memory.Observation) ObservationLookup {
 
 // A promotion that wrote a page rebuilds the index once before it returns, so the page is found by the next query
 // and not only after somebody syncs out of band; the outcome carries the result of the promotion.
-func TestPromoteAndReindex_RebuildsTheIndexAfterAPageWasWritten(t *testing.T) {
+func TestPromoteCardAndReindex_RebuildsTheIndexAfterAPageWasWritten(t *testing.T) {
 	rebuilder := &countingRebuilder{}
 
-	outcome, err := PromoteAndReindex(t.Context(), readyWriter(t), lookupOf(pageObservation(501)), 501, rebuilder)
+	outcome, err := PromoteCardAndReindex(t.Context(), readyWriter(t), lookupOf(pageObservation(501)), 501, rebuilder)
 
 	if err != nil {
-		t.Fatalf("PromoteAndReindex: %v", err)
+		t.Fatalf("PromoteCardAndReindex: %v", err)
 	}
 	if outcome.Result.Action.Kind != ActionCreated {
 		t.Errorf("action = %v, want ActionCreated", outcome.Result.Action.Kind)
@@ -40,13 +40,13 @@ func TestPromoteAndReindex_RebuildsTheIndexAfterAPageWasWritten(t *testing.T) {
 
 // The page is written and durable by the time the rebuild runs, so the rebuild's failure is not the promotion's:
 // the call succeeds, the page is in the result, and the failure sits beside it.
-func TestPromoteAndReindex_ARebuildFailureIsBesideASuccessfulPromotion(t *testing.T) {
+func TestPromoteCardAndReindex_ARebuildFailureIsBesideASuccessfulPromotion(t *testing.T) {
 	boom := errors.New("scripts offline")
 
-	outcome, err := PromoteAndReindex(t.Context(), readyWriter(t), lookupOf(pageObservation(502)), 502, &countingRebuilder{err: boom})
+	outcome, err := PromoteCardAndReindex(t.Context(), readyWriter(t), lookupOf(pageObservation(502)), 502, &countingRebuilder{err: boom})
 
 	if err != nil {
-		t.Fatalf("PromoteAndReindex = %v, want the promotion to have succeeded", err)
+		t.Fatalf("PromoteCardAndReindex = %v, want the promotion to have succeeded", err)
 	}
 	if outcome.Result.Action.Kind != ActionCreated || outcome.Result.Page.Address == "" {
 		t.Errorf("result = %+v, want the page that was written", outcome.Result)
@@ -57,22 +57,22 @@ func TestPromoteAndReindex_ARebuildFailureIsBesideASuccessfulPromotion(t *testin
 }
 
 // A promotion that did not happen is an error and rebuilds nothing: not found, and a failure of the lookup.
-func TestPromoteAndReindex_APromotionThatDidNotHappenRebuildsNothing(t *testing.T) {
+func TestPromoteCardAndReindex_APromotionThatDidNotHappenRebuildsNothing(t *testing.T) {
 	broken := errors.New("memory offline")
 	for name, tc := range map[string]struct {
 		lookup ObservationLookup
 		want   error
 	}{
-		"an observation that does not exist": {lookupOf(), ErrObservationNotFound},
-		"a lookup that fails":                {func(int64) (memory.Observation, bool, error) { return memory.Observation{}, false, broken }, broken},
+		"a memory that does not exist": {lookupOf(), ErrMemoryNotFound},
+		"a lookup that fails":          {func(int64) (memory.Observation, bool, error) { return memory.Observation{}, false, broken }, broken},
 	} {
 		t.Run(name, func(t *testing.T) {
 			rebuilder := &countingRebuilder{}
 
-			_, err := PromoteAndReindex(t.Context(), readyWriter(t), tc.lookup, 9, rebuilder)
+			_, err := PromoteCardAndReindex(t.Context(), readyWriter(t), tc.lookup, 9, rebuilder)
 
 			if !errors.Is(err, tc.want) {
-				t.Errorf("PromoteAndReindex = %v, want %v", err, tc.want)
+				t.Errorf("PromoteCardAndReindex = %v, want %v", err, tc.want)
 			}
 			if rebuilder.calls != 0 {
 				t.Errorf("the index was rebuilt %d times for a promotion that did not happen", rebuilder.calls)
@@ -83,14 +83,14 @@ func TestPromoteAndReindex_APromotionThatDidNotHappenRebuildsNothing(t *testing.
 
 // With no rebuilder wired, or one that holds a nil pointer, the promotion is made and nothing is rebuilt, as Sync
 // does.
-func TestPromoteAndReindex_WithoutARebuilderPromotesAndRebuildsNothing(t *testing.T) {
+func TestPromoteCardAndReindex_WithoutARebuilderPromotesAndRebuildsNothing(t *testing.T) {
 	var typedNil *countingRebuilder
 	for name, rebuilder := range map[string]IndexRebuilder{"none": nil, "a nil pointer": typedNil} {
 		t.Run(name, func(t *testing.T) {
-			outcome, err := PromoteAndReindex(t.Context(), readyWriter(t), lookupOf(pageObservation(503)), 503, rebuilder)
+			outcome, err := PromoteCardAndReindex(t.Context(), readyWriter(t), lookupOf(pageObservation(503)), 503, rebuilder)
 
 			if err != nil || outcome.IndexRebuildErr != nil || outcome.Result.Action.Kind != ActionCreated {
-				t.Errorf("PromoteAndReindex = %+v, %v; want the page created and no failure", outcome, err)
+				t.Errorf("PromoteCardAndReindex = %+v, %v; want the page created and no failure", outcome, err)
 			}
 		})
 	}

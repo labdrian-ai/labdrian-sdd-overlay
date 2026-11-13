@@ -1,0 +1,15 @@
+{
+  "kind": "polisher",
+  "base": "563948302163a07dfd67cb1ca017e7394da5ba49",
+  "head": "dad94e69429264cf87dd0ba2f131bfb24fbf3b0c",
+  "diff_sha256": "1f4fdbfcb275c4e58ef94d8424582349153580536192d10a64283d99d7164e45",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "mcpPromote (cmd_mcp.go:127-163): the sync.Once and the nil-to-os.Stderr default are created once per mcpPromote() call; mcpDeps (cmd_mcp.go:83-88) calls it once per server, so the declaration is once per server.",
+      "The write goes to c.diagnostics (default os.Stderr); nothing in the promote path writes to stdout, so the MCP protocol stream is untouched; the declaration fires only when opened.degraded and precedes the deferred Close.",
+      "commands.go:24-25 documents the diagnostics field (nil means os.Stderr); the production constructor leaves it nil.",
+      "TestTheMCPPromoteToolDeclaresADegradedMemorycardOncePerServer (promote_memorycard_test.go:345-364) promotes two ids and asserts one exact declaration line and two pages. The nil-to-os.Stderr default is not directly tested: a gap, not a defect."
+    ]
+  }
+}

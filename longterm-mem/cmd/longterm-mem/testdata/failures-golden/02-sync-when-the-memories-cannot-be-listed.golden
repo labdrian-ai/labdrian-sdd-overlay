@@ -1,0 +1,28 @@
+args: sync --project golden-project --source memorycard
+exit: 4
+--- stdout ---
+longterm-mem: sync --source memorycard promoted 0 memory(ies); patched 0 page(s); skipped 0 bridged; left 0 locally edited page(s) alone
+--- stderr ---
+longterm-mem: sync: promote: sync memorycard: list memories for "golden-project": memorycard: list memories for project "golden-project": SQL logic error: no such table: memories (1)
+args: sync --project golden-project --source memorycard --dry-run
+exit: 4
+--- stdout ---
+--- stderr ---
+longterm-mem: sync --source memorycard --dry-run: promote: sync memorycard: list memories for "golden-project": memorycard: list memories for project "golden-project": SQL logic error: no such table: memories (1)
+--- vault ---
+=== bin/ (directory -rwxr-xr-x) ===
+=== bin/setup-retrieve.sh (-rwxr-xr-x) ===
+#!/bin/sh
+exit 0
+=== scripts/ (directory -rwxr-xr-x) ===
+=== scripts/allocate-address.sh (-rwxr-xr-x) ===
+#!/bin/sh
+n=900
+[ -f .allocator-counter ] && read n < .allocator-counter
+n=$((n+1))
+echo "$n" > .allocator-counter
+printf 'c-%06d\n' "$n"
+=== scripts/bm25-index.py (-rwxr-xr-x) ===
+
+=== scripts/contextual-prefix.py (-rwxr-xr-x) ===
+

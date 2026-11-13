@@ -1,10 +1,10 @@
-args: sync --project golden-project --dry-run
+args: sync --project golden-project --source memorycard --dry-run
 exit: 0
 --- stdout ---
-longterm-mem: sync --dry-run: would promote 2 observation(s), patch 0 page(s), skip 2, into <vault>
+longterm-mem: sync --source memorycard --dry-run: would promote 2 memory(ies), patch 0 page(s), skip 2, 0 bridged, into <vault>
   would promote: Pinned Decision
   would promote: Curated Note
-longterm-mem: sync --dry-run: nothing was written
+longterm-mem: sync --source memorycard --dry-run: nothing was written
 --- stderr ---
 --- vault ---
 === .allocator-counter ===
@@ -12,9 +12,8 @@ longterm-mem: sync --dry-run: nothing was written
 === .raw/.longterm-mem-manifest.json ===
 {
   "c-000901": {
-    "body_hash": "e9580e08dd443aa69587a3668abf35f63512a06260b049075c1189a6cbc4e440",
-    "frontmatter_hash": "d0e83d33b606f21026232023f0e29a2b5a7fc1585f3e7456a1607cd2a767316d",
-    "promoted_revision": 1
+    "body_hash": "39710e9d43bb9fbd36f8b72dfd37fc919f03a2aa0ea1c59687f76fc0309c67e3",
+    "frontmatter_hash": "b24a813db323767a0a6a5f529ea7446c723dfa7338fb51c66b179c1364363894"
   }
 }
 === .raw/.manifest.json ===
@@ -69,15 +68,14 @@ tags:
 status: developing
 related: []
 sources: []
-engram_id: 3
-engram_sync_id: sync-3
-engram_type: discovery
-engram_revision: 1
+memorycard_id: 3
+memorycard_type: discovery
+memorycard_revision: 2
 project: golden-project
 ---
 # Below Threshold
 
-A discovery nobody curated.
+A body revised once.
 
 ---
-Promoted from Engram observation 3, revision 1.
+Promoted from memorycard memory 3, revision 2.

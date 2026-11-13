@@ -235,7 +235,7 @@ const (
 	decideWithheld
 )
 
-// decide is the one decision a promotion makes about m over a scan, shared by Sync, Plan and the explicit promote,
+// decide is the one decision a promotion makes about m over a scan, shared by SyncCards, PlanCards and the explicit promote,
 // so that they cannot drift apart. It reads nothing and writes nothing. The memory's own page decides first: at
 // its revision or newer, nothing is written (rewriteCurrent says a promote that rewrites a page at its revision
 // anyway, as the explicit promote of an Engram observation always has), at an older one, it is updated. A memory

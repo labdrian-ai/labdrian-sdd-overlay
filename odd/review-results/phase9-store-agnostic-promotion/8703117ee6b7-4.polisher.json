@@ -1,0 +1,16 @@
+{
+  "kind": "polisher",
+  "base": "e98c4ca769b19469bcf718890d195bef69cd2648",
+  "head": "8703117ee6b7125812ef80e9b61eb8f41dc0261a",
+  "diff_sha256": "4b3226d79f1202b2427fca9fbfcf20e7c211bd35729cd7a06df37d39da2b4a21",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "doctor_eligibility.go at head: superseded memories are skipped; a memorycard page joins by memory id, a legacy page through liveByEngramID; a page is flagged only when no live part is eligible and the first live part is named; adviceFor gives a legacy page the migration wording with a pin and no promote command, a memorycard page the promote advice.",
+      "eligible.go PageMemoryRef tries the memorycard identity before the Engram one.",
+      "cmd_doctor.go and memorycard/store.go: ListMemories returns active and superseded memories in id order; EngramID comes from the memory's first import_map row of source engram.",
+      "Tests: doctor_eligibility_memorycard_test.go (superseded part never flagged, live part named, any live eligible part passes, none eligible warns the first, superseded memorycard memory, no cross-join); cmd doctor_eligibility_test.go pins the legacy text, the JSON detail and runs the memorycard advice with exit 0.",
+      "Golden 58's detail line matches the new legacy wording and README:184 repeats it. Static read only."
+    ]
+  }
+}

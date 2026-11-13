@@ -1,0 +1,96 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a825da1ef4e765eb4cba2a54ff905d4764bf5c55",
+    "head": "750fc5a50f54d5de5873d9541af272892f6198ff",
+    "diff_sha256": "7237aadc0825b2340ac8462353c3d18b20cad6947c23205947f57a58076cd10a",
+    "paths": [
+      "longterm-mem/README.md",
+      "longterm-mem/cmd/longterm-mem/cmd_doctor.go",
+      "longterm-mem/cmd/longterm-mem/doctor_eligibility_test.go",
+      "longterm-mem/cmd/longterm-mem/promote_memorycard_test.go",
+      "longterm-mem/internal/ops/doctor.go",
+      "longterm-mem/internal/ops/doctor_eligibility.go",
+      "longterm-mem/internal/ops/doctor_eligibility_memorycard_test.go",
+      "longterm-mem/internal/ops/doctor_eligibility_test.go",
+      "longterm-mem/internal/ops/doctor_identity_test.go",
+      "longterm-mem/internal/ops/doctor_test.go",
+      "longterm-mem/internal/ops/golden_test.go",
+      "longterm-mem/internal/ops/testdata/golden/58-a-page-whose-observation-sync-no-longer-keeps-current.golden",
+      "longterm-mem/internal/promote/eligible.go",
+      "longterm-mem/internal/promote/eligible_test.go",
+      "openspec/specs/longterm-mem-ops/spec.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "a825da1ef4e765eb4cba2a54ff905d4764bf5c55",
+      "head": "750fc5a50f54d5de5873d9541af272892f6198ff",
+      "diff_sha256": "7237aadc0825b2340ac8462353c3d18b20cad6947c23205947f57a58076cd10a"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/README.md",
+        "longterm-mem/cmd/longterm-mem/cmd_doctor.go",
+        "longterm-mem/cmd/longterm-mem/doctor_eligibility_test.go",
+        "longterm-mem/cmd/longterm-mem/promote_memorycard_test.go",
+        "longterm-mem/internal/ops/doctor.go",
+        "longterm-mem/internal/ops/doctor_eligibility.go",
+        "longterm-mem/internal/ops/doctor_eligibility_memorycard_test.go",
+        "longterm-mem/internal/ops/doctor_eligibility_test.go",
+        "longterm-mem/internal/ops/doctor_identity_test.go",
+        "longterm-mem/internal/ops/doctor_test.go",
+        "longterm-mem/internal/ops/golden_test.go",
+        "longterm-mem/internal/ops/testdata/golden/58-a-page-whose-observation-sync-no-longer-keeps-current.golden",
+        "longterm-mem/internal/promote/eligible.go",
+        "longterm-mem/internal/promote/eligible_test.go",
+        "openspec/specs/longterm-mem-ops/spec.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/ops/doctor_eligibility.go:108-110",
+        "claim": "For a legacy page (engram_id joined through import_map) the finding advises `promote --source memorycard --id M`. The README added in this same commit says `promote` refuses such a page as bridged until the vault is migrated. So for legacy pages the advice names a command that does not work, contradicting the commit's claim of a working command and the spec text that the advice names a command that works. The only tested working-command case is a native memorycard page.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/README.md:186-189",
+          "longterm-mem/internal/ops/doctor_eligibility.go:108-110"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "longterm-mem/cmd/longterm-mem/cmd_doctor.go:143-146",
+        "claim": "The check now opens memorycard unconditionally. A vault with promoted pages but no memorycard database configured, or not yet migrated, previously got a real judgement from Engram. It now gets only an 'eligibility cannot be judged' warning, so frozen pages go unreported. This is a behavioural regression for users who have not adopted memorycard, though only advisory and without an exit-code effect.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/cmd_doctor.go:143-146"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/ops/doctor_eligibility.go:85-91",
+        "claim": "The legacy join keeps only the first memory for an engram id (id order). Memorycard's import_map has a `part` column, so one observation can map to several memories. The page is then judged by an arbitrary first part, and ListMemories also includes superseded memories, which can be flagged although the README says only live ones are named.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/ops/doctor_eligibility.go:85-91",
+          "longterm-mem/cmd/longterm-mem/cmd_doctor.go:138-141"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff; behaviour traced from PageMemoryRef through the byMemoryID/byEngramID join to the advice string, and compared with the README statement on bridged pages."
+    ]
+  }
+}

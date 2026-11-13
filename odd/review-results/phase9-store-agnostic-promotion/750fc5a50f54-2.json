@@ -1,0 +1,96 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a825da1ef4e765eb4cba2a54ff905d4764bf5c55",
+    "head": "750fc5a50f54d5de5873d9541af272892f6198ff",
+    "diff_sha256": "7237aadc0825b2340ac8462353c3d18b20cad6947c23205947f57a58076cd10a",
+    "paths": [
+      "longterm-mem/README.md",
+      "longterm-mem/cmd/longterm-mem/cmd_doctor.go",
+      "longterm-mem/cmd/longterm-mem/doctor_eligibility_test.go",
+      "longterm-mem/cmd/longterm-mem/promote_memorycard_test.go",
+      "longterm-mem/internal/ops/doctor.go",
+      "longterm-mem/internal/ops/doctor_eligibility.go",
+      "longterm-mem/internal/ops/doctor_eligibility_memorycard_test.go",
+      "longterm-mem/internal/ops/doctor_eligibility_test.go",
+      "longterm-mem/internal/ops/doctor_identity_test.go",
+      "longterm-mem/internal/ops/doctor_test.go",
+      "longterm-mem/internal/ops/golden_test.go",
+      "longterm-mem/internal/ops/testdata/golden/58-a-page-whose-observation-sync-no-longer-keeps-current.golden",
+      "longterm-mem/internal/promote/eligible.go",
+      "longterm-mem/internal/promote/eligible_test.go",
+      "openspec/specs/longterm-mem-ops/spec.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "a825da1ef4e765eb4cba2a54ff905d4764bf5c55",
+      "head": "750fc5a50f54d5de5873d9541af272892f6198ff",
+      "diff_sha256": "7237aadc0825b2340ac8462353c3d18b20cad6947c23205947f57a58076cd10a"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/README.md",
+        "longterm-mem/cmd/longterm-mem/cmd_doctor.go",
+        "longterm-mem/cmd/longterm-mem/doctor_eligibility_test.go",
+        "longterm-mem/cmd/longterm-mem/promote_memorycard_test.go",
+        "longterm-mem/internal/ops/doctor.go",
+        "longterm-mem/internal/ops/doctor_eligibility.go",
+        "longterm-mem/internal/ops/doctor_eligibility_memorycard_test.go",
+        "longterm-mem/internal/ops/doctor_eligibility_test.go",
+        "longterm-mem/internal/ops/doctor_identity_test.go",
+        "longterm-mem/internal/ops/doctor_test.go",
+        "longterm-mem/internal/ops/golden_test.go",
+        "longterm-mem/internal/ops/testdata/golden/58-a-page-whose-observation-sync-no-longer-keeps-current.golden",
+        "longterm-mem/internal/promote/eligible.go",
+        "longterm-mem/internal/promote/eligible_test.go",
+        "openspec/specs/longterm-mem-ops/spec.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/ops/doctor_eligibility.go:108-110",
+        "claim": "The advice line is the same for a legacy page joined through engram_id/import_map, but the README added in this same diff says `promote` refuses such a page as bridged until the vault migration. For those pages doctor advises `promote --source memorycard --id M`, a command its own documentation says is refused. This contradicts the claim that doctor advises a working command; the new tests only exercise the command for a page that already carries memorycard_id.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/ops/doctor_eligibility.go:108-110",
+          "longterm-mem/README.md:187-189"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/ops/doctor.go:186",
+        "claim": "The comment has a typo, \"promotion.s eligibility\", in the new doc text.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/ops/doctor.go:186"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/ops/doctor_eligibility.go:85-91",
+        "claim": "When several memories share one engram_id (import_map has a `part` column, so one observation can map to several memories), the code silently keeps the lowest-id memory. A legacy page is then judged by an arbitrary part and nothing documents this choice.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/ops/doctor_eligibility.go:85-91"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff. The join logic in checkPromotedPagesEligible and PageMemoryRef is consistent with its tests. The legacy-page advice is inconsistent with the README statement that promote refuses such pages."
+    ]
+  }
+}

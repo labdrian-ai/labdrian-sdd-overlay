@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a7de0f3e344996a19b2be6c57b4d220c47a39f15",
+    "head": "a5dd47c70dcfc6b90a8038103013c979ee3bac49",
+    "diff_sha256": "1a28e52296bba62214f3320f99e06dcd21494924257fda1407991ccec8cac1e2",
+    "paths": [
+      "longterm-mem/internal/engram/source.go",
+      "longterm-mem/internal/engram/source_relations_test.go",
+      "longterm-mem/internal/engram/source_test.go",
+      "longterm-mem/internal/memory/memory.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "a7de0f3e344996a19b2be6c57b4d220c47a39f15",
+      "head": "a5dd47c70dcfc6b90a8038103013c979ee3bac49",
+      "diff_sha256": "1a28e52296bba62214f3320f99e06dcd21494924257fda1407991ccec8cac1e2"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/engram/source.go",
+        "longterm-mem/internal/engram/source_relations_test.go",
+        "longterm-mem/internal/engram/source_test.go",
+        "longterm-mem/internal/memory/memory.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/engram/source_test.go:1-272",
+        "claim": "The deleted source_test.go held the only visible test of Store.RelatedEdgesOfProject (TestRelatedEdgesOfProject_AreTheEdgesOfEachObservation), which compared it against RelatedEdges for each observation. The commit says the Engram Store stays for readers not yet moved to memorycard. If those readers use RelatedEdgesOfProject, RelatedEdges or ObservationsIncludingDeleted, the store methods keep running in production while their direct tests are gone. The diff does not show whether the other tests in the package cover them, so this is unproven.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/engram/source_test.go:244-272"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff only deletes code (the Source type, SourceName, LineageFunc, Store.observationBySyncID, memory.LineageError) and their tests.",
+      "Whether any remaining code references these removed symbols cannot be seen from the diff. The commit states that nothing does, and CI compilation would catch such a reference.",
+      "No behavioral regression is visible in the retained code."
+    ]
+  }
+}

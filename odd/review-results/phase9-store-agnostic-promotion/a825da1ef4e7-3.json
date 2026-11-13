@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "08f07c0119fd8324e1d1b1cc2981654128481a99",
+    "head": "a825da1ef4e765eb4cba2a54ff905d4764bf5c55",
+    "diff_sha256": "de7458f50f6f90fb1d59fa563cc718a9abe88acafea788664bfb2200ec996060",
+    "paths": [
+      "longterm-mem/internal/promote/page_identity_test.go",
+      "longterm-mem/internal/promote/reconcile.go",
+      "longterm-mem/internal/promote/reconcile_test.go",
+      "longterm-mem/internal/promote/update.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "08f07c0119fd8324e1d1b1cc2981654128481a99",
+      "head": "a825da1ef4e765eb4cba2a54ff905d4764bf5c55",
+      "diff_sha256": "de7458f50f6f90fb1d59fa563cc718a9abe88acafea788664bfb2200ec996060"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/promote/page_identity_test.go",
+        "longterm-mem/internal/promote/reconcile.go",
+        "longterm-mem/internal/promote/reconcile_test.go",
+        "longterm-mem/internal/promote/update.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/update.go:205-214",
+        "claim": "pageRevision checks memorycard first and returns on the first non-empty raw value. A malformed memorycard revision therefore reports unusable without trying the Engram revision, and a page carrying both memorycard_revision and engram_revision is adopted at the memorycard one. Before this change, reconcile read the Engram revision for such a page. This is unlikely for real pages and the diff does not show the helper's own semantics, so the harm is unproven.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/update.go:205-214"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff replaces frontmatterRevision with pageRevision only in Reconcile, so the promotion paths keep reading the Engram revision, as the commit claims.",
+      "The new tests cover a memorycard_revision page, a source_revision beside source: memorycard page, and a blanked memorycard_revision page.",
+      "The refusal test blanks only memorycardRevisionField. It passes only if EmitCardPage does not also emit a readable source_revision beside source: memorycard, which I cannot confirm from the diff.",
+      "revisionOf's behavior is not visible in the diff, so I could not check how it treats a mismatched source."
+    ]
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "41ec8eb251e5cc996a33bf55aec2fd5f873f508e",
+    "head": "8289ca2e24e0fa6f8f1a65690fac859df55c1284",
+    "diff_sha256": "9db08405b0b2b9692ab2a954417acb1c5212d57ad11d45a879bce61b14fa2d99",
+    "paths": [
+      "longterm-mem/internal/ops/doctor_eligibility.go",
+      "longterm-mem/internal/ops/doctor_eligibility_memorycard_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "41ec8eb251e5cc996a33bf55aec2fd5f873f508e",
+      "head": "8289ca2e24e0fa6f8f1a65690fac859df55c1284",
+      "diff_sha256": "9db08405b0b2b9692ab2a954417acb1c5212d57ad11d45a879bce61b14fa2d99"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/ops/doctor_eligibility.go",
+        "longterm-mem/internal/ops/doctor_eligibility_memorycard_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/ops/doctor_eligibility.go:127-128",
+        "claim": "The reason for the named part is computed by calling promote.IneligibleReason a second time on candidates[0], which the loop already evaluated. This duplicates the call and the memory.Memory construction. It also relies on the first candidate having been judged ineligible, which holds only because every candidate is ineligible when eligible is false. A helper or a stored first reason would remove the repetition and that implicit coupling. Behavior is correct as written.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/ops/doctor_eligibility.go:117-128"
+        ]
+      }
+    ],
+    "evidence": [
+      "Before the change, reason was overwritten on each loop iteration, so when no candidate was eligible it held the last candidate's reason while the finding named candidates[0]. The change fixes that mismatch by recomputing the reason from candidates[0].",
+      "With eligible false, every candidate returned a non-empty reason, so candidates[0] always has a non-empty reason and the finding is never emitted with an empty one.",
+      "The added test case 'the named part gives its own reason' covers the fixed scenario: part 7 is unpinned with no topic key, part 8 has a topic key, and the expected message names part 7 with its own reason."
+    ]
+  }
+}

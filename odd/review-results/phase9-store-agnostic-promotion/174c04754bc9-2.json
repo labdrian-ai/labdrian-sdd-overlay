@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "79563edf72935eb242a79a761ca7683c2bc596eb",
+    "head": "174c04754bc9844511f6569ae27f0c2bacc7eb29",
+    "diff_sha256": "2a6bb73f0db6d284ce29993c00895a629ff9aba89755a0d6f8fdc2a739f6970d",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/cmd_mcp.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "79563edf72935eb242a79a761ca7683c2bc596eb",
+      "head": "174c04754bc9844511f6569ae27f0c2bacc7eb29",
+      "diff_sha256": "2a6bb73f0db6d284ce29993c00895a629ff9aba89755a0d6f8fdc2a739f6970d"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/cmd_mcp.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/cmd_mcp.go:155-160",
+        "claim": "After the change the declared flag is set under the lock but the diagnostic is written after unlocking. Two concurrent promotes for the same source can have the first caller claim the declaration while a second caller proceeds with its promotion before the message is emitted, so the message is no longer ordered ahead of later work. Writes to a shared diagnostics writer are also now unsynchronized by this mutex, so if the writer is not itself concurrency-safe, concurrent declarations for different sources could interleave. This is the intended trade-off of the commit, but the diff gives no evidence that diagnostics is safe for concurrent use.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/cmd_mcp.go:155-160"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only the lock scope: the check-and-set of declared[source] remains atomic under mu, so exactly one caller per source prints the declaration, and Unlock is no longer deferred past the Fprintf.",
+      "The behavior is correct for the stated purpose (not holding the lock during I/O); the residual risk is only concurrent-writer safety of diagnostics, which cannot be verified from the diff."
+    ]
+  }
+}

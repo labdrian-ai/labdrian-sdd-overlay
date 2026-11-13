@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ec72d0f17230e11ca3849d0e0f55d1c86a2d8a1d",
+    "head": "914326e08904e83b150408c5c1724aee237e7023",
+    "diff_sha256": "e9a646cf304cbc0c50f5b9b0460853fd5b6e00b5d7cf3ece17e4074bc00bd201",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/app.go",
+      "longterm-mem/cmd/longterm-mem/main_test.go",
+      "longterm-mem/internal/promote/plan_test.go",
+      "longterm-mem/internal/promote/sync_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "ec72d0f17230e11ca3849d0e0f55d1c86a2d8a1d",
+      "head": "914326e08904e83b150408c5c1724aee237e7023",
+      "diff_sha256": "e9a646cf304cbc0c50f5b9b0460853fd5b6e00b5d7cf3ece17e4074bc00bd201"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/app.go",
+        "longterm-mem/cmd/longterm-mem/main_test.go",
+        "longterm-mem/internal/promote/plan_test.go",
+        "longterm-mem/internal/promote/sync_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff only deletes code: the app.memorycard method, the promoteFixtureDB helper, vaultSnapshot, equalSnapshots, fixtureObs, fixtureRelation and newFixtureEngramStore. The commit message says none of these has a caller.",
+      "The imports each file drops (memorycard, database/sql, os, path/filepath, engram) were used only by the deleted code, as far as the diff shows. Imports the remaining code needs (errors, testing, memory, the blank sqlite driver) are kept.",
+      "The diff does not show main_test.go's import block or the rest of that file, so I cannot rule out a compile problem there. promoteFixtureDB's body used os, filepath and sql, and if the rest of the file does not use them, those imports would now be unused. I cannot demonstrate that from the diff, so I raise no finding.",
+      "The diff shows no behavior change in production code beyond removing an uncalled method."
+    ]
+  }
+}

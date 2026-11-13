@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "38cfcadda47f20595c13e0968ba5188b5c68f5fa",
+    "head": "4772f5c13de720a7d2a001ba314e7ac8b71a27e2",
+    "diff_sha256": "6746b03d2cda55a986e7e586dfd5bcc458d4cc4646cba78500f434d4f6efa389",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/commands.go",
+      "longterm-mem/cmd/longterm-mem/promote_memorycard_test.go",
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "38cfcadda47f20595c13e0968ba5188b5c68f5fa",
+      "head": "4772f5c13de720a7d2a001ba314e7ac8b71a27e2",
+      "diff_sha256": "6746b03d2cda55a986e7e586dfd5bcc458d4cc4646cba78500f434d4f6efa389"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/commands.go",
+        "longterm-mem/cmd/longterm-mem/promote_memorycard_test.go",
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The change adds one test, a comment on the diagnostics field, and a Log entry. No production logic changes.",
+      "The test builds a fresh mcpPromote closure after the first promotion, which used io.Discard. The claim state is therefore not shared with the earlier server, and exactly one declaration line is the correct expectation.",
+      "lockedWriter guards both Write and String with a mutex, so the test's own diagnostics writer does not introduce a data race.",
+      "The errs channel has capacity 8 for 8 goroutines, so no sender can block, and it is closed only after wg.Wait.",
+      "The doc comment on commands.diagnostics matches the behavior the test relies on.",
+      "Whether removing the lock actually fails the test under -race cannot be checked from the diff alone. The Log L61 records a mutation run that shows it does."
+    ]
+  }
+}

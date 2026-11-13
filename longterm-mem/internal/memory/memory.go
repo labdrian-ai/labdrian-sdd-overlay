@@ -61,18 +61,3 @@ type Kin struct {
 	Imported []Identity
 	Mirrored []Identity
 }
-
-// LineageError is the failure to read what another store says of a memory (its Kin). A source that lists memories
-// wraps it into the error of the listing, so that whoever reports the failure can tell a store that could not be
-// asked for the lineage from the store of the memories that could not be listed.
-type LineageError struct {
-	// Store names the store that could not be read.
-	Store string
-	Err   error
-}
-
-func (e *LineageError) Error() string {
-	return e.Store + ": read the lineage of the memories: " + e.Err.Error()
-}
-
-func (e *LineageError) Unwrap() error { return e.Err }

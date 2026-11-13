@@ -110,6 +110,19 @@ func (w *identityWorld) holdsMemory(t *testing.T, project string, deleted bool) 
 	}
 }
 
+// cardHoldsMemory points the commands at a memorycard database of its own that holds a memory of project (none when
+// project is empty): what `sync` reads.
+func (w *identityWorld) cardHoldsMemory(t *testing.T, project string) {
+	t.Helper()
+	path := filepath.Join(realTempDir(t), "memory.db")
+	execOn(t, path, promoteGoldenMemorycardSchema)
+	if project != "" {
+		execOn(t, path, `INSERT INTO memories (project, type, title, body, topic_key) VALUES (?, 'decision', ?, ?, ?)`,
+			project, "a memory of "+project, "**What**: a thing\n", "identity/"+project)
+	}
+	t.Setenv(memorycardDBEnvVar, path)
+}
+
 // vaultRegistry writes the registry file the commands read (under the world's home) with a row for each name.
 func (w *identityWorld) vaultRegistry(t *testing.T, names ...string) {
 	t.Helper()
@@ -455,14 +468,16 @@ func identityCases() []identityCase {
 		}},
 
 		// The commands that record nothing, and the one that adopts nothing.
-		{name: "60-a-dry-run-records-nothing", args: func(w *identityWorld) []string { return []string{"sync", "--dry-run"} }, setup: func(t *testing.T, w *identityWorld) {
+		{name: "60-a-dry-run-records-nothing", args: func(w *identityWorld) []string { return []string{"sync", "--source", "memorycard", "--dry-run"} }, setup: func(t *testing.T, w *identityWorld) {
 			w.repo(t)
 			w.git(t, "remote", "add", "origin", widgetsRemote)
 			w.holdsMemory(t, "widgets", false)
+			w.cardHoldsMemory(t, "widgets")
 		}},
-		{name: "61-a-dry-run-leaves-the-ledger-as-it-was", args: func(w *identityWorld) []string { return []string{"sync", "--dry-run"} }, setup: func(t *testing.T, w *identityWorld) {
+		{name: "61-a-dry-run-leaves-the-ledger-as-it-was", args: func(w *identityWorld) []string { return []string{"sync", "--source", "memorycard", "--dry-run"} }, setup: func(t *testing.T, w *identityWorld) {
 			w.repo(t)
 			w.git(t, "remote", "add", "origin", widgetsRemote)
+			w.cardHoldsMemory(t, "")
 			w.seedLedger(t, filepath.Join(w.root, ".git"), identityledger.Name{Name: "former-name", Rule: "declared", Adoptable: true})
 		}},
 		{name: "62-status-resolves-and-records", args: func(w *identityWorld) []string { return []string{"status"} }, setup: func(t *testing.T, w *identityWorld) {

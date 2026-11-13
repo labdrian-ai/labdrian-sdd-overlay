@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "2ee0317e72e4c773c4d561ae790978d47199fa39",
+    "head": "e7b5921e0b8edc48e9fe6f7d87f25dc0b61425a7",
+    "diff_sha256": "b54bab9e1ed5a145d5e2598453cc1dbf21949fa0e3d5481c2424dae4b76a583f",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "2ee0317e72e4c773c4d561ae790978d47199fa39",
+      "head": "e7b5921e0b8edc48e9fe6f7d87f25dc0b61425a7",
+      "diff_sha256": "b54bab9e1ed5a145d5e2598453cc1dbf21949fa0e3d5481c2424dae4b76a583f"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:119",
+        "claim": "T5 is ticked [x] although its own acceptance requires the independent verifier to run once (Risk items 3 and 5), and L54 states the verifier was not run (\"the coordinator's\"). The commit field also says the verifier is the coordinator's. The task is closed with a required check still pending, so a reader of the checklist will take T5 as verified.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:119",
+          "odd/tasks/phase9-store-agnostic-promotion.md:421"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:432",
+        "claim": "L54 lists seven items 'left open, for the coordinator to decide'. These include the Engram page style not deleted, which S10 (a) may require, and a changed paragraph order in R-009. The tick at line 119 neither mentions nor links them, unlike T4's tick, which names what is open. Closing the task hides undecided scope.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:119",
+          "odd/tasks/phase9-store-agnostic-promotion.md:432"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:420",
+        "claim": "L54 is one very long paragraph block, with several multi-hundred-word sentences listing tests and commits. This is hard to scan. It also records that a7de0f3e is about 2000 changed lines, against the task's stated ~400-line commit unit, without flagging the deviation.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:420"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only the odd/ task document changed: the T5 line was ticked and L54 was appended.",
+      "The T5 text requires 'the independent verifier once'; L54 says 'Not run: the independent verifier (the coordinator's)'.",
+      "L54 ends with seven open items for the coordinator, while T5 is marked [x]."
+    ]
+  }
+}

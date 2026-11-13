@@ -41,7 +41,7 @@ func TestSyncAsksTheRebuilderOnceAndWrapsItsFailure(t *testing.T) {
 	rebuilder := &countingRebuilder{err: boom}
 	w := readyWriter(t)
 
-	_, err := Sync(t.Context(), Deps{Source: &fakeMemory{}, Writer: w, Index: rebuilder}, pagesProject)
+	_, err := SyncCardsProject(t.Context(), &fakeMemory{}, w, rebuilder, pagesProject)
 
 	if rebuilder.calls != 1 {
 		t.Errorf("the rebuilder was asked %d times, want once", rebuilder.calls)
@@ -59,7 +59,7 @@ func TestSyncWithoutARebuilderSkipsTheRebuild(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			w := readyWriter(t)
 
-			if _, err := Sync(t.Context(), Deps{Source: &fakeMemory{}, Writer: w, Index: rebuilder}, pagesProject); err != nil {
+			if _, err := SyncCardsProject(t.Context(), &fakeMemory{}, w, rebuilder, pagesProject); err != nil {
 				t.Fatalf("Sync: %v", err)
 			}
 		})

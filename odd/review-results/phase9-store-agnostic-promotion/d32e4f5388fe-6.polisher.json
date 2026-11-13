@@ -1,0 +1,16 @@
+{
+  "kind": "polisher",
+  "base": "31567f0d48a88e092931d754b8f941b68964c952",
+  "head": "d32e4f5388feae3e9ca52cf5ae9e35ef88273f40",
+  "diff_sha256": "b9e41d341d6eb0227903abbdedaec3da84c05b22a53504a4cdd0a1bb5627bafc",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "sources.go: one registry entry, memorycard; sourceRefusal gives `--source %q is not a store: use memorycard` for any unregistered name and `--source is required: use --source memorycard` when a source is required and absent.",
+      "cmd_sync.go and cmd_promote.go refuse with exitUsage right after flag parsing, before project and vault resolution, store open and writer, so a refusal opens and writes nothing; plain sync takes the same syncFrom path as --source memorycard.",
+      "cmd_mcp.go mcpPromote refuses before machineVaults().ToWrite, so a refused call seeds no registry; server.go resolves the id through IDFromEitherName (one, both equal, both different, neither, 0 as not given).",
+      "Tests: sync_memorycard_test.go:572 and :590, promote_memorycard_test.go:259, :288, :301, server_test.go:182 and :209. Gaps, not defects: no test of --dry-run with a refused source, of an explicit empty --source on sync, or that an MCP refusal leaves the registry unseeded.",
+      "Static read only; tests not run by the polisher."
+    ]
+  }
+}

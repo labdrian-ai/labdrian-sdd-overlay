@@ -260,7 +260,7 @@ func TestWriterWithoutACatalogOrALogIsRefusedBeforeAnythingIsDone(t *testing.T) 
 				t.Errorf("allocator asked %d times, precedence saved %d times, want neither", allocator.asked, repo.saves)
 			}
 			mem := &fakeMemory{}
-			if _, err := Sync(t.Context(), Deps{Source: mem, Writer: w}, pagesProject); !errors.Is(err, tc.want) {
+			if _, err := SyncCardsProject(t.Context(), mem, w, nil, pagesProject); !errors.Is(err, tc.want) {
 				t.Errorf("Sync error = %v, want %v", err, tc.want)
 			}
 			if len(mem.listed) != 0 {
@@ -272,7 +272,7 @@ func TestWriterWithoutACatalogOrALogIsRefusedBeforeAnythingIsDone(t *testing.T) 
 	t.Run("a patch asks for neither", func(t *testing.T) {
 		w, _, _ := pagesWriter(t, newMemPages(nil))
 		w.Index, w.Log, w.SyncState = nil, nil, nil
-		if _, err := Propagate(t.Context(), Deps{Source: &fakeMemory{}, Writer: w}, pagesProject); err != nil {
+		if _, err := PropagateCards(t.Context(), &fakeMemory{}, w, pagesProject); err != nil {
 			t.Errorf("Propagate = %v, want it to run without a catalog, a log or a sync state", err)
 		}
 	})
@@ -285,7 +285,7 @@ func TestSyncRecordsItsCompletionThroughThePort(t *testing.T) {
 		_, _, syncState := registration(w)
 		w.Clock = &fakeClock{at: time.Date(2026, 10, 10, 14, 0, 0, 0, time.FixedZone("UTC+2", 2*60*60))}
 
-		if _, err := Sync(t.Context(), Deps{Source: &fakeMemory{}, Writer: w}, pagesProject); err != nil {
+		if _, err := SyncCardsProject(t.Context(), &fakeMemory{}, w, nil, pagesProject); err != nil {
 			t.Fatalf("Sync: %v", err)
 		}
 		if want := []time.Time{registerAt}; len(syncState.recorded) != 1 || !syncState.recorded[0].Equal(want[0]) || syncState.recorded[0].Location() != time.UTC {
@@ -297,9 +297,9 @@ func TestSyncRecordsItsCompletionThroughThePort(t *testing.T) {
 		w, _, _ := pagesWriter(t, newMemPages(nil))
 		_, _, syncState := registration(w)
 		var seenAtRebuild int
-		deps := Deps{Source: &fakeMemory{}, Writer: w, Index: IndexRebuilderFunc(func(context.Context) error { seenAtRebuild = len(syncState.recorded); return nil })}
+		deps := IndexRebuilderFunc(func(context.Context) error { seenAtRebuild = len(syncState.recorded); return nil })
 
-		if _, err := Sync(t.Context(), deps, pagesProject); err != nil {
+		if _, err := SyncCardsProject(t.Context(), &fakeMemory{}, w, deps, pagesProject); err != nil {
 			t.Fatalf("Sync: %v", err)
 		}
 		if seenAtRebuild != 0 || len(syncState.recorded) != 1 {
@@ -310,9 +310,9 @@ func TestSyncRecordsItsCompletionThroughThePort(t *testing.T) {
 	t.Run("not when the rebuild failed", func(t *testing.T) {
 		w, _, _ := pagesWriter(t, newMemPages(nil))
 		_, _, syncState := registration(w)
-		deps := Deps{Source: &fakeMemory{}, Writer: w, Index: IndexRebuilderFunc(func(context.Context) error { return errCatalogBoom })}
+		deps := IndexRebuilderFunc(func(context.Context) error { return errCatalogBoom })
 
-		_, err := Sync(t.Context(), deps, pagesProject)
+		_, err := SyncCardsProject(t.Context(), &fakeMemory{}, w, deps, pagesProject)
 
 		if !errors.Is(err, errCatalogBoom) || len(syncState.recorded) != 0 {
 			t.Errorf("Sync = %v after records %v, want the rebuild's failure and no record", err, syncState.recorded)
@@ -324,10 +324,10 @@ func TestSyncRecordsItsCompletionThroughThePort(t *testing.T) {
 		_, _, syncState := registration(w)
 		syncState.err = errCatalogBoom
 
-		report, err := Sync(t.Context(), Deps{Source: &fakeMemory{live: []memory.Observation{pageObservation(706)}}, Writer: w}, pagesProject)
+		report, err := SyncCardsProject(t.Context(), &fakeMemory{live: []memory.Observation{pageObservation(706)}}, w, nil, pagesProject)
 
-		if err == nil || err.Error() != "promote: sync: boom" || !errors.Is(err, errCatalogBoom) {
-			t.Errorf("Sync error = %v, want %q", err, "promote: sync: boom")
+		if err == nil || err.Error() != "promote: sync memorycard: boom" || !errors.Is(err, errCatalogBoom) {
+			t.Errorf("Sync error = %v, want %q", err, "promote: sync memorycard: boom")
 		}
 		if len(report.Promoted) != 1 {
 			t.Errorf("report = %+v, want what was promoted reported beside the failure", report)
@@ -345,9 +345,9 @@ func TestSyncWithoutARecorderIsRefusedBeforeAnythingIsDone(t *testing.T) {
 			w.SyncState = recorder
 			mem := &fakeMemory{live: []memory.Observation{pageObservation(707)}}
 
-			_, err := Sync(t.Context(), Deps{Source: mem, Writer: w}, pagesProject)
+			_, err := SyncCardsProject(t.Context(), mem, w, nil, pagesProject)
 
-			if !errors.Is(err, errNoSyncStateRecorder) || err.Error() != "promote: sync: promote: the writer has no sync state recorder" {
+			if !errors.Is(err, errNoSyncStateRecorder) || err.Error() != "promote: sync memorycard: promote: the writer has no sync state recorder" {
 				t.Errorf("Sync error = %v, want errNoSyncStateRecorder behind the sync prefix", err)
 			}
 			if len(mem.listed) != 0 || repo.saves != 0 {
@@ -364,7 +364,7 @@ func TestAPlanNeverRecordsASync(t *testing.T) {
 	w, _, _ := pagesWriter(t, newMemPages(nil))
 	index, log, syncState := registration(w)
 
-	if _, err := Plan(t.Context(), Deps{Source: &fakeMemory{live: []memory.Observation{pageObservation(708)}}, Writer: w}, pagesProject); err != nil {
+	if _, err := PlanCards(t.Context(), &fakeMemory{live: []memory.Observation{pageObservation(708)}}, w, pagesProject); err != nil {
 		t.Fatalf("Plan: %v", err)
 	}
 	if len(syncState.recorded)+len(index.writes)+len(log.writes) != 0 {

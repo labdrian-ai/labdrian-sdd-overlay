@@ -1,0 +1,15 @@
+{
+  "kind": "sweeper",
+  "base": "08f07c0119fd8324e1d1b1cc2981654128481a99",
+  "head": "a825da1ef4e765eb4cba2a54ff905d4764bf5c55",
+  "diff_sha256": "de7458f50f6f90fb1d59fa563cc718a9abe88acafea788664bfb2200ec996060",
+  "sweep": "a825da1ef4e7-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 name: TestPageIdentity_ReconcileStillRefusesAPageThatIsNotEngrams",
+      "disposition": "live",
+      "evidence": "only immutable history names it (odd/tasks/phase9-store-agnostic-promotion.md): review records, archived changes and the Log are kept as written"
+    }
+  ]
+}

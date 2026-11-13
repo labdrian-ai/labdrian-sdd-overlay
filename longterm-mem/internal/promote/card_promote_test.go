@@ -282,8 +282,8 @@ func TestExplicitPromoteCard_UnknownIDIsNotFound(t *testing.T) {
 	w := cardWriter(t.TempDir(), PrecedenceStore{})
 	lookup := func(int64) (memory.CardMemory, bool, error) { return memory.CardMemory{}, false, nil }
 	_, err := ExplicitPromoteCard(t.Context(), w, CardLookup(lookup), 5)
-	if !errors.Is(err, ErrObservationNotFound) {
-		t.Fatalf("err = %v, want ErrObservationNotFound", err)
+	if !errors.Is(err, ErrMemoryNotFound) {
+		t.Fatalf("err = %v, want ErrMemoryNotFound", err)
 	}
 }
 

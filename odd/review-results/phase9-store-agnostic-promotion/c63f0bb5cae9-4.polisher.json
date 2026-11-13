@@ -1,0 +1,16 @@
+{
+  "kind": "polisher",
+  "base": "dad94e69429264cf87dd0ba2f131bfb24fbf3b0c",
+  "head": "c63f0bb5cae914c5df96a14cbf97837b720c1010",
+  "diff_sha256": "5d2766b76c571a2d0fd0f3c307d6dea4a60775ad0ba98af87115410ccd683bf9",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "explicit.go: the sentinel reads \"memory not found\" and its only wrap, in ExplicitPromoteCard, adds no promote: prefix, so the doubling is gone.",
+      "cmd_promote.go:72-81 classifies by errors.Is and returns exitNotFound; the %w wrap keeps exit 7; app.refuse prints the single command prefix.",
+      "Golden 08 asserts exit 7, empty stdout, stderr \"longterm-mem: promote: memory not found: memorycard memory 999\" and the unchanged vault; it is the one changed golden.",
+      "No other consumer matches the message outside history records; other users of the sentinel match by identity (card_promote_test.go:285, promote_reindex_test.go:66).",
+      "Static read only; tests not run by the polisher."
+    ]
+  }
+}

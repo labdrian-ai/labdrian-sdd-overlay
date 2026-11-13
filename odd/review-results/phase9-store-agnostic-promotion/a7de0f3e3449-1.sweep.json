@@ -1,0 +1,590 @@
+{
+  "kind": "sweep",
+  "base": "47e9a648538ead0fc4321aadf1db4c07f829f406",
+  "head": "a7de0f3e344996a19b2be6c57b4d220c47a39f15",
+  "diff_sha256": "8388aeb5750130ec5d92078968e862bba4a98f5559adec678b1938d541b98157",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [
+      "longterm-mem/internal/promote/propagate_test.go"
+    ],
+    "removed_names": [
+      {
+        "name": "Deps",
+        "hits": [
+          "baseline.md",
+          "docs/architecture/hexagonal-target.md",
+          "engine/cmd/skills.go",
+          "engine/cmd/skills_approve_cli_test.go",
+          "engine/cmd/skills_candidates_cli.go",
+          "engine/cmd/skills_candidates_test.go",
+          "engine/cmd/skills_cli.go",
+          "engine/cmd/skills_cli_test.go",
+          "engine/cmd/skills_deps.go",
+          "engine/cmd/skills_install_cli.go",
+          "engine/cmd/skills_install_cli_test.go",
+          "engine/cmd/skills_install_lockkey_test.go",
+          "engine/cmd/skills_overlay_cli.go",
+          "engine/cmd/skills_overlay_cli_test.go",
+          "engine/cmd/skills_program_entry_test.go",
+          "engine/cmd/skills_project_cli.go",
+          "engine/cmd/skills_project_cli_test.go",
+          "engine/cmd/skills_uninstall_cli_test.go",
+          "engine/cmd/skills_validate_test.go",
+          "engine/skills/deps.go",
+          "longterm-mem/cmd/longterm-mem/cmd_mcp.go",
+          "longterm-mem/cmd/longterm-mem/rundeps.go",
+          "longterm-mem/internal/mcpserver/server.go",
+          "longterm-mem/internal/mcpserver/server_goal_test.go",
+          "longterm-mem/internal/mcpserver/server_test.go",
+          "longterm-mem/internal/ops/status.go",
+          "longterm-mem/internal/query/coverage_test.go",
+          "longterm-mem/internal/query/default_sources_test.go",
+          "longterm-mem/internal/query/diagnostics.go",
+          "longterm-mem/internal/query/embedarm.go",
+          "longterm-mem/internal/query/gate_blind_test.go",
+          "longterm-mem/internal/query/goal_test.go",
+          "longterm-mem/internal/query/index_port_test.go",
+          "longterm-mem/internal/query/memory.go",
+          "longterm-mem/internal/query/memory_port_test.go",
+          "longterm-mem/internal/query/query.go",
+          "longterm-mem/internal/query/query_test.go",
+          "longterm-mem/internal/query/union_golden_test.go",
+          "longterm-mem/internal/query/vault.go",
+          "longterm-mem/internal/query/vault_port_test.go",
+          "odd/review-results/phase9-store-agnostic-promotion/9bb18d804601-2.json",
+          "odd/review-results/phase9-store-agnostic-promotion/9bb18d804601-3.json",
+          "odd/review-results/phase9-store-agnostic-promotion/f2196397e168-4.polisher.json",
+          "odd/tasks/consolidation-phase9.md",
+          "openspec/changes/archive/2026-09-02-longterm-mem/apply-progress.md",
+          "openspec/changes/archive/2026-09-02-longterm-mem/tasks.md",
+          "openspec/changes/archive/2026-09-07-union-retrieval/apply-progress.md",
+          "openspec/changes/archive/2026-11-06-skill-package-manager/design.md",
+          "tui/internal/ui/fakes_test.go",
+          "tui/internal/ui/model.go",
+          "tui/main.go"
+        ]
+      },
+      {
+        "name": "ExplicitPromote",
+        "hits": [
+          "docs/architecture/hexagonal-target.md",
+          "longterm-mem/internal/engram/store.go",
+          "longterm-mem/internal/engram/store_test.go",
+          "odd/tasks/consolidation-phase9.md",
+          "odd/tasks/phase9-store-agnostic-promotion.md",
+          "openspec/changes/archive/2026-09-02-longterm-mem/apply-progress.md",
+          "openspec/changes/archive/2026-09-02-longterm-mem/tasks.md",
+          "openspec/changes/archive/2026-09-02-longterm-mem/verify-report.md",
+          "openspec/changes/archive/2026-11-06-longterm-mem-knowledge-ingestion/design.md",
+          "openspec/changes/archive/2026-11-06-longterm-mem-knowledge-ingestion/exploration.md",
+          "openspec/changes/archive/2026-11-06-longterm-mem-knowledge-ingestion/proposal.md"
+        ]
+      },
+      {
+        "name": "Plan",
+        "hits": [
+          "docs/architecture/laya-system-one-overlay-plan.md",
+          "engine/cmd/memory.go",
+          "engine/cmd/testdata/shaper-golden/ready-v2.golden",
+          "engine/cmd/testdata/shaper-golden/ready-v3.golden",
+          "engine/cmd/testdata/shaper-golden/ready-v4.golden",
+          "engine/memoryscope/memoryscope.go",
+          "engine/memoryscope/memoryscope_test.go",
+          "engine/projection/context.go",
+          "engine/projection/gate.go",
+          "engine/projection/render.go",
+          "engine/shaper/disclosure.go",
+          "engine/workflow/plan.go",
+          "odd/review-receipts/inception-role-chain/review-9bceb2ac6fb71431.review-state.json",
+          "odd/review-results/phase9-store-agnostic-promotion/9bb18d804601-2.json",
+          "odd/review-results/phase9-store-agnostic-promotion/f2196397e168-3.json",
+          "odd/tasks/consolidation-phase9.md",
+          "odd/tasks/inception-role-chain.md",
+          "odd/tasks/phase5-closeout.md",
+          "odd/tasks/phase9-c22fu-memorycard-compat.md",
+          "odd/tasks/phase9-store-agnostic-promotion.md",
+          "openspec/changes/archive/2026-06-27-gadu-portable-operator/tasks.md",
+          "openspec/changes/archive/2026-07-03-claude-runtime-lifecycle/proposal.md",
+          "openspec/changes/archive/2026-07-05-codex-runtime-lifecycle/proposal.md",
+          "openspec/changes/archive/2026-07-07-overlay-coherence-mini-fix/proposal.md",
+          "openspec/changes/archive/2026-07-08-anti-generic-ai-design-skill/proposal.md",
+          "openspec/changes/archive/2026-07-08-oo-quality-contract-runtime-wiring/proposal.md",
+          "openspec/changes/archive/2026-07-08-oo-quality-contract/proposal.md",
+          "openspec/changes/archive/2026-07-10-anti-generic-design-token-anchors/design.md",
+          "openspec/changes/archive/2026-07-10-anti-generic-design-token-anchors/proposal.md",
+          "openspec/changes/archive/2026-07-10-skill-external-provenance/proposal.md",
+          "openspec/changes/archive/2026-07-11-sync-check-repo-behind-origin/proposal.md",
+          "openspec/changes/archive/2026-07-21-restore-skill-registry-scoped-blocks/proposal.md",
+          "openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/proposal.md",
+          "openspec/changes/archive/2026-07-30-actuals-calendar-checkpoint-instrumentation/tasks.md",
+          "openspec/changes/archive/2026-08-05-deterministic-verification-evidence/proposal.md",
+          "openspec/changes/archive/2026-08-05-skills-validate-ondisk-gate/proposal.md",
+          "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/archive-report.md",
+          "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/design.md",
+          "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/exploration.md",
+          "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/proposal.md",
+          "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/tasks.md",
+          "openspec/changes/archive/2026-08-24-tui-self-update-offer/proposal.md",
+          "openspec/changes/archive/2026-09-02-longterm-mem/apply-progress.md",
+          "openspec/changes/archive/2026-09-02-longterm-mem/proposal.md",
+          "openspec/changes/archive/2026-09-07-union-retrieval/judgment/ledger-pr5-round1.md",
+          "openspec/changes/archive/2026-09-07-union-retrieval/judgment/ledger-pr5-round2.md",
+          "openspec/changes/archive/2026-09-07-union-retrieval/proposal.md",
+          "openspec/changes/archive/2026-09-09-longterm-mem-promotion-scoping/apply-progress.md",
+          "openspec/changes/archive/2026-09-09-longterm-mem-promotion-scoping/archive-report.md",
+          "openspec/changes/archive/2026-09-09-longterm-mem-promotion-scoping/design.md",
+          "openspec/changes/archive/2026-09-09-longterm-mem-promotion-scoping/proposal.md",
+          "openspec/changes/archive/2026-09-09-longterm-mem-promotion-scoping/tasks.md",
+          "openspec/changes/archive/2026-09-09-longterm-mem-promotion-scoping/verify-report.md",
+          "openspec/changes/archive/2026-09-10-longterm-mem-sync-triggers/apply-progress.md",
+          "openspec/changes/archive/2026-09-10-longterm-mem-sync-triggers/proposal.md",
+          "openspec/changes/archive/2026-09-11-pi-runtime-target/apply-progress.md",
+          "openspec/changes/archive/2026-09-11-pi-runtime-target/proposal.md",
+          "openspec/changes/archive/2026-09-13-pi-package-hardening/apply-progress.md",
+          "openspec/changes/archive/2026-09-13-pi-package-hardening/design.md",
+          "openspec/changes/archive/2026-09-13-pi-package-hardening/proposal.md",
+          "openspec/changes/archive/2026-09-13-pi-package-hardening/tasks.md",
+          "openspec/changes/archive/2026-09-13-pi-package-hardening/verify-report.md",
+          "openspec/changes/archive/2026-09-18-procedural-candidate-detection/proposal.md",
+          "openspec/changes/archive/2026-09-21-procedural-memory-lifecycle/proposal.md",
+          "openspec/changes/archive/2026-10-31-overlay-versioned-releases/proposal.md",
+          "openspec/changes/archive/2026-11-06-longterm-mem-knowledge-ingestion/proposal.md",
+          "openspec/changes/archive/2026-11-06-skill-lifecycle/proposal.md",
+          "openspec/changes/archive/2026-11-06-skill-manifest-gen/proposal.md",
+          "openspec/changes/archive/2026-11-06-skill-manifest-gen/tasks.md",
+          "openspec/changes/archive/2026-11-06-skill-package-manager/proposal.md",
+          "skills/_shared/procedural-candidate-detection.md",
+          "skills/_shared/sdd-orchestrator-workflow.md",
+          "skills/branch-pr/SKILL.md",
+          "skills/inception-pipeline/references/closure-feedback.md",
+          "skills/sdd-apply/SKILL.md",
+          "skills/sdd-propose/SKILL.md",
+          "skills/work-unit-commits/SKILL.md",
+          "tools/entry-contract-validator/pipeline_vocabulary_pins_test.go",
+          "tools/review-bench/corpus.json"
+        ]
+      },
+      {
+        "name": "Probe",
+        "hits": [
+          "bin/lib/discovery_tools.sh",
+          "docs/e1-durability-probe.md",
+          "engine/capability/presence/presence.go",
+          "engine/capability/presence/presence_test.go",
+          "engine/capability/presence/procedural_test.go",
+          "engine/cmd/deps_nil_test.go",
+          "engine/cmd/procedural_presence_test.go",
+          "engine/cmd/procedural_probe_test.go",
+          "engine/cmd/profile_golden_test.go",
+          "engine/cmd/runtime_probe.go",
+          "engine/cmd/session_availability.go",
+          "engine/cmd/session_availability_test.go",
+          "engine/cmd/workflow_presence_test.go",
+          "engine/projection/app/hook.go",
+          "engine/projection/app/ports.go",
+          "engine/projection/app/session_start_test.go",
+          "engine/workflow/lifecycle.go",
+          "engine/workflow/lifecycle_test.go",
+          "longterm-mem/internal/engram/source.go",
+          "longterm-mem/internal/engram/source_relations_test.go",
+          "odd/review-results/own-rdd/2681ab4d7b77-5.verifier.json",
+          "odd/review-results/own-rdd/2681ab4d7b77-6.verifier.json",
+          "odd/review-results/phase9-c13-inception-family/1816dda0a8aa-2.verifier.json",
+          "odd/review-results/phase9-c13-inception-family/1816dda0a8aa-3.verifier.json",
+          "odd/review-results/phase9-c13-inception-family/2dd727c7ee19-2.verifier.json",
+          "odd/review-results/phase9-c13-inception-family/2dd727c7ee19-3.verifier.json",
+          "odd/review-results/phase9-c13-inception-family/33f6f5e3c00d-3.verifier.json",
+          "odd/review-results/phase9-c13-inception-family/68b333b48501-3.verifier.json",
+          "odd/review-results/phase9-c13-inception-family/68b333b48501-4.verifier.json",
+          "odd/review-results/phase9-c13-inception-family/692efc38c2c2-3.verifier.json",
+          "odd/review-results/phase9-c13-inception-family/78bee5b947ab-3.verifier.json",
+          "odd/review-results/phase9-c13-inception-family/9619d29efa97-2.verifier.json",
+          "odd/review-results/phase9-c13-inception-family/9619d29efa97-3.verifier.json",
+          "odd/review-results/phase9-c13-inception-family/bd7ccb066bd2-2.verifier.json",
+          "odd/review-results/phase9-c13-inception-family/bd7ccb066bd2-3.verifier.json",
+          "odd/review-results/phase9-c13-inception-family/e059daa628ea-2.verifier.json",
+          "odd/review-results/phase9-c13-inception-family/e059daa628ea-3.verifier.json",
+          "odd/review-results/phase9-c22-knowledge-ingestion/3ce397065ab4-2.verifier.json",
+          "odd/review-results/phase9-c22-knowledge-ingestion/92083ce6b633-2.verifier.json",
+          "odd/review-results/phase9-store-agnostic-promotion/5cb107ef8795-3.json",
+          "odd/review-results/phase9-store-agnostic-promotion/a20b61d0533c-2.json",
+          "odd/tasks/inception-role-chain.md",
+          "odd/tasks/phase5-closeout.md",
+          "odd/tasks/phase9-store-agnostic-promotion.md",
+          "odd/tasks/workflow-lifecycle.md",
+          "openspec/changes/archive/2026-06-25-prespec-malandra/specs/prespec-malandra.md",
+          "openspec/changes/archive/2026-06-27-gadu-portable-operator/tasks.md",
+          "openspec/changes/archive/2026-08-05-skills-validate-ondisk-gate/verify-report.md",
+          "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/apply-progress.md",
+          "openspec/changes/archive/2026-08-24-tui-self-update-offer/archive-report.md",
+          "openspec/changes/archive/2026-08-24-tui-self-update-offer/specs/tui-self-update/spec.md",
+          "openspec/changes/archive/2026-08-24-tui-self-update-offer/tasks.md",
+          "openspec/changes/archive/2026-08-24-tui-self-update-offer/verify-report.md",
+          "openspec/changes/archive/2026-09-11-pi-runtime-target/design.md",
+          "openspec/changes/archive/2026-09-13-pi-package-hardening/entry.json",
+          "openspec/changes/archive/2026-09-21-procedural-memory-lifecycle/codex-smoke.md",
+          "openspec/changes/archive/2026-09-21-procedural-memory-lifecycle/review-receipts/review-9ea42239d8e2080b.review-state.json",
+          "openspec/specs/tui-self-update/spec.md",
+          "skills/project-manifest/references/universal-base-rules.md",
+          "tui/internal/ui/fakes_test.go",
+          "tui/internal/ui/model.go",
+          "tui/internal/ui/probe_model_test.go",
+          "tui/main.go"
+        ]
+      },
+      {
+        "name": "Prober",
+        "hits": [
+          "engine/capability/presence/presence.go",
+          "engine/capability/presence/presence_test.go",
+          "engine/capability/presence/procedural_test.go",
+          "engine/capability/presence/project.go",
+          "engine/cmd/deps.go",
+          "engine/cmd/workflow_presence_test.go",
+          "longterm-mem/internal/engram/source.go",
+          "odd/review-results/phase9-store-agnostic-promotion/5cb107ef8795-1.polisher.json",
+          "odd/review-results/phase9-store-agnostic-promotion/5cb107ef8795-4.json",
+          "odd/tasks/consolidation-phase9.md",
+          "odd/tasks/phase9-store-agnostic-promotion.md",
+          "odd/tasks/runtime-adapters.md",
+          "openspec/decisions/standalone-platform-roadmap.md"
+        ]
+      },
+      {
+        "name": "ProjectSyncReport",
+        "hits": [
+          "docs/architecture/hexagonal-target.md"
+        ]
+      },
+      {
+        "name": "PromoteAndReindex",
+        "hits": [
+          "docs/architecture/hexagonal-target.md",
+          "longterm-mem/cmd/longterm-mem/cmd_mcp.go",
+          "odd/tasks/consolidation-phase9.md"
+        ]
+      },
+      {
+        "name": "Propagate",
+        "hits": [
+          "docs/architecture/hexagonal-target.md",
+          "engine/cmd/main_test.go",
+          "engine/propagator/app/doc.go",
+          "engine/propagator/app/propagate.go",
+          "engine/propagator/app/propagate_test.go",
+          "engine/propagator/config_test.go",
+          "engine/propagator/propagator.go",
+          "engine/propagator/propagator_test.go",
+          "engine/propagator/role_scope_pin_test.go",
+          "engine/propagator/scan_pin_test.go",
+          "longterm-mem/internal/engram/store.go",
+          "longterm-mem/internal/engram/store_test.go",
+          "longterm-mem/internal/promote/frontmatter_test.go",
+          "longterm-mem/internal/promote/projectmove_recovery_test.go",
+          "longterm-mem/internal/promote/update.go",
+          "longterm-mem/internal/promote/update_test.go",
+          "odd/review-results/phase9-c22-knowledge-ingestion/71bebc564975-4.polisher.json",
+          "odd/review-results/phase9-c22fu-memorycard-compat/50c7e32fed2a-4.polisher.json",
+          "odd/review-results/phase9-c22fu-memorycard-compat/8d2fba82afe3-2.json",
+          "odd/review-results/phase9-c22fu-memorycard-compat/8d2fba82afe3-3.json",
+          "odd/review-results/phase9-c22fu-memorycard-compat/a427d040714a-2.json",
+          "odd/review-results/phase9-c22fu-memorycard-compat/a427d040714a-3.json",
+          "odd/review-results/phase9-c22fu-memorycard-compat/fbe157f66cad-4.polisher.json",
+          "odd/review-results/phase9-c22fu-memorycard-compat/fd457276f7f0-3.json",
+          "odd/review-results/phase9-c22fu-memorycard-compat/fd457276f7f0-4.polisher.json",
+          "odd/tasks/consolidation-phase9.md",
+          "odd/tasks/phase9-c22fu-memorycard-compat.md",
+          "odd/tasks/phase9-store-agnostic-promotion.md",
+          "openspec/changes/archive/2026-07-08-anti-generic-design-runtime-wiring/design.md",
+          "openspec/changes/archive/2026-07-08-anti-generic-design-runtime-wiring/tasks.md",
+          "openspec/changes/archive/2026-07-08-anti-generic-design-runtime-wiring/verify-report.md",
+          "openspec/changes/archive/2026-07-10-fix-propagate-foreign-writer-race/design.md",
+          "openspec/changes/archive/2026-07-10-fix-propagate-foreign-writer-race/specs/skill-registry-propagate/spec.md",
+          "openspec/changes/archive/2026-07-10-fix-propagate-foreign-writer-race/verify-report.md",
+          "openspec/changes/archive/2026-07-21-restore-skill-registry-scoped-blocks/requirements.md",
+          "openspec/changes/archive/2026-07-21-restore-skill-registry-scoped-blocks/specs/skill-registry-propagate/spec.md",
+          "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/tasks.md",
+          "openspec/changes/archive/2026-09-02-longterm-mem/apply-progress.md",
+          "openspec/changes/archive/2026-09-02-longterm-mem/specs/longterm-mem-promotion/spec.md",
+          "openspec/changes/archive/2026-09-02-longterm-mem/tasks.md",
+          "openspec/changes/archive/2026-09-07-union-retrieval/judgment/ledger-pr5-round1.md",
+          "openspec/changes/archive/2026-09-07-union-retrieval/judgment/ledger-pr5-round2.md",
+          "openspec/changes/archive/2026-09-09-longterm-mem-promotion-scoping/design.md",
+          "openspec/specs/longterm-mem-promotion/spec.md",
+          "openspec/specs/skill-registry-propagate/spec.md",
+          "tools/entry-contract-validator/testdata/valid-entry-contract.json"
+        ]
+      },
+      {
+        "name": "Sync",
+        "hits": [
+          "engine/atomicfile/atomicfile.go",
+          "engine/atomicfile/atomicfile_test.go",
+          "engine/projection/evidencelog/log.go",
+          "engine/projection/fsstore/store.go",
+          "engine/propagator/fsstore/fsstore.go",
+          "engine/review/fsstore/bypath.go",
+          "engine/review/fsstore/fsstore.go",
+          "engine/review/fsstore/held_linux.go",
+          "engine/reviewreceipt/fsstore/store.go",
+          "engine/runtime/codex.go",
+          "engine/runtime/ownership/fsstore/fsstore.go",
+          "engine/settings/settingsfile/settings_test.go",
+          "engine/skills/skillsfs/project.go",
+          "engine/statestore/statestore.go",
+          "engine/statestore/statestore_test.go",
+          "engine/workflow/filelog/store.go",
+          "longterm-mem/cmd/longterm-mem/cmd_sync.go",
+          "longterm-mem/internal/durable/write.go",
+          "longterm-mem/internal/promote/address_test.go",
+          "longterm-mem/internal/promote/projectmove_recovery_test.go",
+          "longterm-mem/internal/promote/propagate_cards_test.go",
+          "longterm-mem/internal/promote/sync_cards_project_test.go",
+          "longterm-mem/internal/promote/sync_cards_test.go",
+          "odd/review-results/phase9-c22-knowledge-ingestion/71bebc564975-4.polisher.json",
+          "odd/review-results/phase9-c22fu-memorycard-compat/50c7e32fed2a-4.polisher.json",
+          "odd/review-results/phase9-c22fu-memorycard-compat/623387c730a3-4.polisher.json",
+          "odd/review-results/phase9-c22fu-memorycard-compat/fbe157f66cad-4.polisher.json",
+          "odd/review-results/phase9-store-agnostic-promotion/09e2f013bfbc-2.polisher.json",
+          "odd/review-results/phase9-store-agnostic-promotion/5cb107ef8795-1.polisher.json",
+          "odd/review-results/phase9-store-agnostic-promotion/9bb18d804601-2.json",
+          "odd/review-results/phase9-store-agnostic-promotion/e85ea498aefb-2.json",
+          "odd/review-results/phase9-store-agnostic-promotion/e85ea498aefb-3.json",
+          "odd/review-results/phase9-store-agnostic-promotion/f2196397e168-3.json",
+          "odd/tasks/consolidation-phase9.md",
+          "odd/tasks/phase9-c22-knowledge-ingestion.md",
+          "odd/tasks/phase9-c22fu-memorycard-compat.md",
+          "odd/tasks/phase9-store-agnostic-promotion.md",
+          "openspec/changes/archive/2026-06-27-gadu-portable-operator/apply-progress.md",
+          "openspec/changes/archive/2026-06-27-gadu-portable-operator/proposal.md",
+          "openspec/changes/archive/2026-06-27-gadu-portable-operator/specs/overlay-agent-route/spec.md",
+          "openspec/changes/archive/2026-07-10-skill-external-provenance/design.md",
+          "openspec/changes/archive/2026-07-10-skill-external-provenance/specs/spec.md",
+          "openspec/changes/archive/2026-07-21-restore-skill-registry-scoped-blocks/archive-report.md",
+          "openspec/changes/archive/2026-09-02-longterm-mem/apply-progress.md",
+          "openspec/changes/archive/2026-09-02-longterm-mem/specs/longterm-mem-promotion/spec.md",
+          "openspec/changes/archive/2026-09-02-longterm-mem/tasks.md",
+          "openspec/changes/archive/2026-09-07-union-retrieval/judgment/ledger-pr5-round1.md",
+          "openspec/changes/archive/2026-09-09-longterm-mem-promotion-scoping/apply-progress.md",
+          "openspec/changes/archive/2026-09-09-longterm-mem-promotion-scoping/archive-report.md",
+          "openspec/changes/archive/2026-09-09-longterm-mem-promotion-scoping/design.md",
+          "openspec/changes/archive/2026-09-09-longterm-mem-promotion-scoping/specs/longterm-mem-promotion/spec.md",
+          "openspec/changes/archive/2026-09-09-longterm-mem-promotion-scoping/tasks.md",
+          "openspec/changes/archive/2026-09-09-longterm-mem-promotion-scoping/verify-report.md",
+          "openspec/changes/archive/2026-09-10-longterm-mem-sync-triggers/archive-report.md",
+          "openspec/changes/archive/2026-09-10-longterm-mem-sync-triggers/specs/longterm-mem-sync-triggers/spec.md",
+          "openspec/changes/archive/2026-09-10-longterm-mem-sync-triggers/tasks.md",
+          "openspec/changes/archive/2026-09-10-longterm-mem-sync-triggers/verify-report.md",
+          "openspec/changes/archive/2026-09-11-pi-runtime-target/specs/pi-runtime-target/spec.md",
+          "openspec/changes/archive/2026-09-11-pi-runtime-target/verify-report.md",
+          "openspec/changes/archive/2026-09-13-pi-package-hardening/specs/pi-build-provenance/spec.md",
+          "openspec/changes/archive/2026-09-13-pi-package-hardening/specs/pi-runtime-target/spec.md",
+          "openspec/changes/archive/2026-09-13-pi-package-hardening/verify-report.md",
+          "openspec/changes/archive/2026-10-31-overlay-versioned-releases/design.md",
+          "openspec/changes/archive/2026-11-06-skill-lifecycle/apply-progress.md",
+          "openspec/changes/archive/2026-11-06-skill-lifecycle/design.md",
+          "openspec/changes/archive/2026-11-06-skill-lifecycle/tasks.md",
+          "openspec/changes/archive/2026-11-06-skill-manifest-gen/tasks.md",
+          "openspec/specs/longterm-mem-promotion/spec.md",
+          "openspec/specs/longterm-mem-sync-triggers/spec.md",
+          "openspec/specs/overlay-agent-route/spec.md",
+          "openspec/specs/pi-build-provenance/spec.md",
+          "openspec/specs/pi-runtime-target/spec.md",
+          "openspec/specs/skill-package-manager/spec.md",
+          "skills/sdd-archive/SKILL.md",
+          "tools/review-bench/scores/ours.json"
+        ]
+      },
+      {
+        "name": "SyncPlan",
+        "hits": [
+          "odd/review-results/phase9-store-agnostic-promotion/09e2f013bfbc-4.json"
+        ]
+      },
+      {
+        "name": "SyncProject",
+        "hits": [
+          "docs/architecture/hexagonal-target.md",
+          "longterm-mem/cmd/longterm-mem/cmd_sync.go",
+          "odd/review-results/phase9-c22-knowledge-ingestion/71bebc564975-4.polisher.json",
+          "odd/review-results/phase9-store-agnostic-promotion/5cb107ef8795-4.json",
+          "odd/tasks/consolidation-phase9.md",
+          "odd/tasks/phase9-store-agnostic-promotion.md"
+        ]
+      },
+      {
+        "name": "TestPlanWithoutPagesReportsEachObservationItCouldNotCheck",
+        "hits": [
+          "odd/tasks/consolidation-phase9.md"
+        ]
+      },
+      {
+        "name": "TestPlan_OneBrokenObservationIsReportedOnce",
+        "hits": [
+          "openspec/changes/archive/2026-09-07-union-retrieval/judgment/ledger-pr5-round2.md"
+        ]
+      },
+      {
+        "name": "TestPlan_WritesNothingAndPredictsWhatSyncThenDoes",
+        "hits": [
+          "openspec/changes/archive/2026-09-09-longterm-mem-promotion-scoping/apply-progress.md",
+          "openspec/changes/archive/2026-09-09-longterm-mem-promotion-scoping/tasks.md",
+          "openspec/changes/archive/2026-09-09-longterm-mem-promotion-scoping/verify-report.md"
+        ]
+      },
+      {
+        "name": "TestPromote_ExplicitCallOverridesAutomaticEligibility",
+        "hits": [
+          "openspec/changes/archive/2026-09-02-longterm-mem/apply-progress.md",
+          "openspec/changes/archive/2026-09-02-longterm-mem/tasks.md",
+          "openspec/changes/archive/2026-09-02-longterm-mem/verify-report.md",
+          "openspec/changes/archive/2026-09-09-longterm-mem-promotion-scoping/apply-progress.md",
+          "openspec/changes/archive/2026-09-09-longterm-mem-promotion-scoping/tasks.md"
+        ]
+      },
+      {
+        "name": "TestPromote_InvalidObservationIdRejected",
+        "hits": [
+          "openspec/changes/archive/2026-09-02-longterm-mem/apply-progress.md",
+          "openspec/changes/archive/2026-09-02-longterm-mem/tasks.md",
+          "openspec/changes/archive/2026-09-02-longterm-mem/verify-report.md"
+        ]
+      },
+      {
+        "name": "TestPropagate",
+        "hits": [
+          "openspec/changes/archive/2026-09-02-longterm-mem/apply-progress.md",
+          "openspec/changes/archive/2026-09-02-longterm-mem/tasks.md",
+          "openspec/changes/archive/2026-09-02-longterm-mem/verify-report.md"
+        ]
+      },
+      {
+        "name": "TestPropagatePatchesThePagesThroughThePort",
+        "hits": [
+          "odd/tasks/consolidation-phase9.md"
+        ]
+      },
+      {
+        "name": "TestPropagate_AFailingMemoryPortIsReportedNotSwallowed",
+        "hits": [
+          "odd/tasks/phase9-store-agnostic-promotion.md"
+        ]
+      },
+      {
+        "name": "TestPropagate_NeedsNoClock",
+        "hits": [
+          "odd/tasks/consolidation-phase9.md"
+        ]
+      },
+      {
+        "name": "TestPropagate_OneBrokenPageDoesNotWedgeTheRun",
+        "hits": [
+          "openspec/changes/archive/2026-09-02-longterm-mem/apply-progress.md"
+        ]
+      },
+      {
+        "name": "TestSync",
+        "hits": [
+          "odd/tasks/phase9-c22fu-memorycard-compat.md",
+          "openspec/changes/archive/2026-09-02-longterm-mem/apply-progress.md",
+          "openspec/changes/archive/2026-09-02-longterm-mem/tasks.md",
+          "openspec/changes/archive/2026-09-02-longterm-mem/verify-report.md",
+          "openspec/changes/archive/2026-09-09-longterm-mem-promotion-scoping/verify-report.md"
+        ]
+      },
+      {
+        "name": "TestSyncProject_SaysWhyARunFailed",
+        "hits": [
+          "odd/tasks/phase9-store-agnostic-promotion.md"
+        ]
+      },
+      {
+        "name": "TestSyncReadsEachPageOnceSoALaterUnreadablePageChangesNothing",
+        "hits": [
+          "odd/tasks/phase9-store-agnostic-promotion.md"
+        ]
+      },
+      {
+        "name": "TestSync_IndexAndSyncStateReflectCompletion",
+        "hits": [
+          "openspec/changes/archive/2026-09-02-longterm-mem/apply-progress.md",
+          "openspec/changes/archive/2026-09-02-longterm-mem/tasks.md",
+          "openspec/changes/archive/2026-09-02-longterm-mem/verify-report.md"
+        ]
+      },
+      {
+        "name": "TestSync_OneFailingObservationDoesNotWedgeTheRun",
+        "hits": [
+          "openspec/changes/archive/2026-09-02-longterm-mem/apply-progress.md"
+        ]
+      },
+      {
+        "name": "decidePatch",
+        "hits": [
+          "odd/review-results/phase9-c22fu-memorycard-compat/50c7e32fed2a-4.polisher.json",
+          "odd/review-results/phase9-c22fu-memorycard-compat/fbe157f66cad-4.polisher.json",
+          "odd/tasks/phase9-store-agnostic-promotion.md"
+        ]
+      },
+      {
+        "name": "eachPatchTarget",
+        "hits": [
+          "odd/review-results/phase9-c22-knowledge-ingestion/71bebc564975-4.polisher.json",
+          "odd/review-results/phase9-c22fu-memorycard-compat/50c7e32fed2a-4.polisher.json",
+          "odd/review-results/phase9-c22fu-memorycard-compat/fbe157f66cad-4.polisher.json",
+          "odd/review-results/phase9-store-agnostic-promotion/4e4d81c1ab0d-1.polisher.json",
+          "odd/review-results/phase9-store-agnostic-promotion/9bb18d804601-2.json",
+          "odd/review-results/phase9-store-agnostic-promotion/f2196397e168-3.json",
+          "odd/tasks/phase9-store-agnostic-promotion.md",
+          "openspec/changes/archive/2026-09-07-union-retrieval/judgment/ledger-pr5-round2.md"
+        ]
+      },
+      {
+        "name": "engramSourceOf",
+        "hits": [
+          "odd/review-results/phase9-store-agnostic-promotion/979525fc554d-3.json",
+          "odd/tasks/phase9-store-agnostic-promotion.md"
+        ]
+      },
+      {
+        "name": "sourceAnswers",
+        "hits": [
+          "odd/review-results/phase9-store-agnostic-promotion/5cb107ef8795-1.polisher.json",
+          "odd/review-results/phase9-store-agnostic-promotion/5cb107ef8795-3.json",
+          "odd/review-results/phase9-store-agnostic-promotion/5cb107ef8795-4.json",
+          "odd/tasks/phase9-store-agnostic-promotion.md"
+        ]
+      }
+    ]
+  },
+  "t2": [
+    {
+      "tool": "deadcode",
+      "module": "longterm-mem",
+      "new": [
+        "internal/memory/memory.go: unreachable func: LineageError.Error",
+        "internal/memory/memory.go: unreachable func: LineageError.Unwrap",
+        "internal/promote/plan_test.go: unreachable func: equalSnapshots",
+        "internal/promote/plan_test.go: unreachable func: vaultSnapshot",
+        "internal/promote/sync_test.go: unreachable func: newFixtureEngramStore"
+      ]
+    },
+    {
+      "tool": "staticcheck",
+      "module": "longterm-mem",
+      "new": [
+        "internal/promote/plan_test.go: func equalSnapshots is unused (U1000)",
+        "internal/promote/plan_test.go: func vaultSnapshot is unused (U1000)",
+        "internal/promote/sync_test.go: func newFixtureEngramStore is unused (U1000)",
+        "internal/promote/sync_test.go: type fixtureObs is unused (U1000)",
+        "internal/promote/sync_test.go: type fixtureRelation is unused (U1000)"
+      ]
+    }
+  ],
+  "t3": [],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

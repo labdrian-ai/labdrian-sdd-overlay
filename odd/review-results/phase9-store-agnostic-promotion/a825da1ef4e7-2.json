@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "08f07c0119fd8324e1d1b1cc2981654128481a99",
+    "head": "a825da1ef4e765eb4cba2a54ff905d4764bf5c55",
+    "diff_sha256": "de7458f50f6f90fb1d59fa563cc718a9abe88acafea788664bfb2200ec996060",
+    "paths": [
+      "longterm-mem/internal/promote/page_identity_test.go",
+      "longterm-mem/internal/promote/reconcile.go",
+      "longterm-mem/internal/promote/reconcile_test.go",
+      "longterm-mem/internal/promote/update.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "08f07c0119fd8324e1d1b1cc2981654128481a99",
+      "head": "a825da1ef4e765eb4cba2a54ff905d4764bf5c55",
+      "diff_sha256": "de7458f50f6f90fb1d59fa563cc718a9abe88acafea788664bfb2200ec996060"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/promote/page_identity_test.go",
+        "longterm-mem/internal/promote/reconcile.go",
+        "longterm-mem/internal/promote/reconcile_test.go",
+        "longterm-mem/internal/promote/update.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/reconcile_test.go:265-266",
+        "claim": "The test comment cites spec item \"S11\", but the feature document defines only S1-S9. A reader cannot trace the reference.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/reconcile_test.go:265"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/page_identity_test.go:253-254",
+        "claim": "The deleted refusal test is replaced by a comment-only stub (\"Previously: ...\") that points to a test by name. This is change history left in the source and the pointer will go stale if the test is renamed. Dropping the stub would read better. The stub's own text also records that the old refusal test was deleted and not rewritten, so the removed test's \"source: memorycard\" refusal is now covered only indirectly.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/page_identity_test.go:253-254"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/update.go:206-214",
+        "claim": "pageRevision stops at the first identity that has a non-empty raw revision. If memorycard_revision is present but non-numeric, it reports unreadable even when a valid engram_revision exists on the same page. This is probably the intended strictness, but nothing documents or tests it, and it discards the error from revisionOf.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/update.go:206-214"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff shows reconcile.go swapping frontmatterRevision for pageRevision. pageRevision tries the memorycard identity first and then the Engram one, as the commit message claims.",
+      "The new tests cover adoption through memorycard_revision, adoption through source_revision, and refusal when no revision is readable.",
+      "I found no behavioural regression in the diff. Promotion paths still use frontmatterRevision. I could not see the revisionOf implementation, so how it gates source_revision on the source value is unverified."
+    ]
+  }
+}

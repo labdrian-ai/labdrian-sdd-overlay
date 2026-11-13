@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "4772f5c13de720a7d2a001ba314e7ac8b71a27e2",
+    "head": "daa36240104ee97c5c237bbc0c53c1c60dd69a3d",
+    "diff_sha256": "3588fada332af2e7f0fec7b84f27091e9547514b8af6d9f35d03be451797869c",
+    "paths": [
+      "odd/review-results/phase9-store-agnostic-promotion/0f28050f986e-4.polisher.json",
+      "odd/review-results/phase9-store-agnostic-promotion/174c04754bc9-4.polisher.json",
+      "odd/review-results/phase9-store-agnostic-promotion/750fc5a50f54-5.polisher.json",
+      "odd/review-results/phase9-store-agnostic-promotion/8289ca2e24e0-4.polisher.json",
+      "odd/review-results/phase9-store-agnostic-promotion/8703117ee6b7-4.polisher.json",
+      "odd/review-results/phase9-store-agnostic-promotion/a825da1ef4e7-5.polisher.json",
+      "odd/review-results/phase9-store-agnostic-promotion/c63f0bb5cae9-4.polisher.json",
+      "odd/review-results/phase9-store-agnostic-promotion/d32e4f5388fe-6.polisher.json",
+      "odd/review-results/phase9-store-agnostic-promotion/dad94e694292-4.polisher.json"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "4772f5c13de720a7d2a001ba314e7ac8b71a27e2",
+      "head": "daa36240104ee97c5c237bbc0c53c1c60dd69a3d",
+      "diff_sha256": "3588fada332af2e7f0fec7b84f27091e9547514b8af6d9f35d03be451797869c"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/review-results/phase9-store-agnostic-promotion/0f28050f986e-4.polisher.json",
+        "odd/review-results/phase9-store-agnostic-promotion/174c04754bc9-4.polisher.json",
+        "odd/review-results/phase9-store-agnostic-promotion/750fc5a50f54-5.polisher.json",
+        "odd/review-results/phase9-store-agnostic-promotion/8289ca2e24e0-4.polisher.json",
+        "odd/review-results/phase9-store-agnostic-promotion/8703117ee6b7-4.polisher.json",
+        "odd/review-results/phase9-store-agnostic-promotion/a825da1ef4e7-5.polisher.json",
+        "odd/review-results/phase9-store-agnostic-promotion/c63f0bb5cae9-4.polisher.json",
+        "odd/review-results/phase9-store-agnostic-promotion/d32e4f5388fe-6.polisher.json",
+        "odd/review-results/phase9-store-agnostic-promotion/dad94e694292-4.polisher.json"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff adds nine JSON review-record files only, with no executable code, so the commit cannot change runtime behavior.",
+      "Each record is well-formed JSON with kind, base, head, diff_sha256 and findings members; no malformed or inconsistent structure seen.",
+      "Open findings recorded inside the records (test adequacy for the MCP degraded declaration) describe earlier commits, not defects this commit introduces."
+    ]
+  }
+}

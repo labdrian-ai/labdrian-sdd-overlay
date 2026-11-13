@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "5c3257c0a9223ccf94e72740d5093da989773339",
+    "head": "b476946eec253d6d2239de151a38a85c6c9e521c",
+    "diff_sha256": "0009f9f3beb917e82afd39da67ddd0f84f24e65dc08ce6c7063b5a2ae077a8f3",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "5c3257c0a9223ccf94e72740d5093da989773339",
+      "head": "b476946eec253d6d2239de151a38a85c6c9e521c",
+      "diff_sha256": "0009f9f3beb917e82afd39da67ddd0f84f24e65dc08ce6c7063b5a2ae077a8f3"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:119",
+        "claim": "L57 records fixes with declared Risk items (56f73b84: Risk item 4, the MCP once-per-source declaration) but the T5 'commit:' ledger was edited in this same commit and does not list 56f73b84, 61c8bf1b or bc725cea. L56 states the convention that the T5 and T10 commit lists gain the commits of each batch, and it already corrected an earlier Risk-3 omission. The ledger is now incomplete for a Risk-bearing commit, and the Risk-line audit relies on it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:119",
+          "odd/tasks/phase9-store-agnostic-promotion.md:453"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only the T5 task line (B1 closure and recheck wording) and appends Log entry L57 in one markdown file; there is no code or behavior change.",
+      "The T5 commit list ends at c63f0bb5 and was not extended with the commits named in L57, although L57 itself assigns Risk item 4 to 56f73b84."
+    ]
+  }
+}
