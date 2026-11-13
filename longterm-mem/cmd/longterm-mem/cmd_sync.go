@@ -130,85 +130,11 @@ func warnMemoriesLeftAlone(w io.Writer, prefix string, withheld []int64) {
 		prefix, len(withheld), strings.Join(ids, ", "))
 }
 
-// reportPlan prints what a sync of the project would do, and writes nothing.
-func reportPlan(ctx context.Context, deps promote.Deps, project, vaultRoot string) int {
-	plan, err := promote.Plan(ctx, deps, project)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "longterm-mem: sync --dry-run: %v\n", err)
-		return exitInternal
-	}
-	// Both counts, in the same shape the real run reports them
-	// (`promoted N, patched M`). A dry run that named only the
-	// promotions would tell an operator nothing is rewritten
-	// immediately before a re-sync rewrites existing pages.
-	fmt.Printf("longterm-mem: sync --dry-run: would promote %d observation(s), patch %d page(s), skip %d, into %s\n", plan.WouldPromote, plan.WouldPatch, plan.Skipped+plan.Bridged, vaultRoot)
-	for _, title := range plan.Titles {
-		fmt.Printf("  would promote: %s\n", title)
-	}
-	for _, addr := range plan.PatchAddresses {
-		fmt.Printf("  would patch: %s\n", addr)
-	}
-	for _, f := range plan.Failed {
-		fmt.Fprintf(os.Stderr, "  cannot read promoted state for observation %d: %v\n", f.ObservationID, f.Err)
-	}
-	warnSkippedPages(os.Stderr, "longterm-mem: sync --dry-run:", plan.Unreadable)
-	warnLeftAlone(os.Stderr, "longterm-mem: sync --dry-run:", "would be left alone, nothing would be written for them", plan.Withheld)
-	fmt.Println("longterm-mem: sync --dry-run: nothing was written")
-	switch {
-	case len(plan.Failed) > 0:
-		return exitInternal
-	case len(plan.Withheld) > 0:
-		return exitRegistrationConflict
-	}
-	return exitOK
-}
-
-// reportSync prints what a sync did and answers the exit code of the run: what landed is reported whether or not
-// the run failed, and a run that failed answers by what failed (syncExitCode).
-func reportSync(report promote.ProjectSyncReport, err error) int {
-	fmt.Printf("longterm-mem: sync promoted %d observation(s), patched %d page(s)\n", len(report.Sync.Promoted), len(report.Propagate.Patched))
-
-	// A page that cannot be read is skipped and named, as the doctor names it, and the observations it keeps
-	// from being decided are left alone: the run did everything else.
-	warnSkippedPages(os.Stderr, "longterm-mem: sync:", report.Sync.Unreadable)
-	warnLeftAlone(os.Stderr, "longterm-mem: sync:", "left alone, nothing was written for them", report.Sync.Withheld)
-	warnLeftAlone(os.Stderr, "longterm-mem: sync:", "left alone, nothing was patched for them", report.Propagate.Withheld)
-
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "longterm-mem: sync: %v\n", err)
-		return syncExitCode(report.Failure)
-	}
-	if len(report.Sync.Withheld)+len(report.Propagate.Withheld) > 0 {
-		// Nothing failed, but an observation was refused on the grounds that its page could not be told from
-		// an unreadable one, and left byte-identical: the code `promote --id` answers for the same refusal.
-		return exitRegistrationConflict
-	}
-	return exitOK
-}
-
 // warnSkippedPages names, one line each and on w, the pages a run could not read and skipped.
 func warnSkippedPages(w io.Writer, prefix string, unreadable []promote.UnreadablePage) {
 	for _, page := range unreadable {
 		fmt.Fprintf(w, "%s warning: %s; it was skipped\n", prefix, page)
 	}
-}
-
-// warnLeftAlone says, on w, how many observations a run left alone because no readable page is theirs while a
-// page could not be read, and which. It says nothing when there are none.
-func warnLeftAlone(w io.Writer, prefix, outcome string, withheld []int64) {
-	if len(withheld) == 0 {
-		return
-	}
-	ids := make([]string, len(withheld))
-	for i, id := range withheld {
-		ids[i] = strconv.FormatInt(id, 10)
-	}
-	noun := "observations"
-	if len(withheld) == 1 {
-		noun = "observation"
-	}
-	fmt.Fprintf(w, "%s warning: %d observation(s) %s: no readable page belongs to them, and a page that could not be read may (%s %s)\n",
-		prefix, len(withheld), outcome, noun, strings.Join(ids, ", "))
 }
 
 // syncExitCode classifies a failed sync run.
