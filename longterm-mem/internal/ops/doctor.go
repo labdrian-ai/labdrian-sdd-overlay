@@ -183,7 +183,7 @@ type DoctorDeps struct {
 	// the client. Required.
 	EmbeddingBackendCheck func(ctx context.Context) error
 
-	// LiveMemoryEligibility returns, for every live memorycard memory of project, what promotion.s eligibility
+	// LiveMemoryEligibility returns, for every live memorycard memory of project, what promotion's eligibility
 	// rule reads of it (MemoryEligibility), with the Engram observation it was imported from, so that
 	// promoted-pages-eligible can say which promoted pages sync no longer keeps current. A read-only port: it
 	// names no memory to change. Production wires memorycard.Store.ListMemories, mapped to those fields; no Engram

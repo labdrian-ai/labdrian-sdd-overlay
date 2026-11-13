@@ -65,27 +65,27 @@ func TestDoctorWarnsOfAPageWhoseObservationIsNotEligible(t *testing.T) {
 		{
 			name: "no topic_key",
 			obs:  MemoryEligibility{ID: 41, EngramID: 41},
-			want: "c-000012: memory 41 is not pinned and has no topic_key, so sync does not refresh this page; run `longterm-mem promote --source memorycard --id 41` to refresh it now, or pin memory 41 in memorycard so sync keeps it current",
+			want: "c-000012: memory 41 is not pinned and has no topic_key, so sync does not refresh this page; the page predates memorycard identity and is refreshed only after the one-time vault migration; pin memory 41 in memorycard so sync keeps it current after it",
 		},
 		{
 			name: "a whitespace topic_key is no topic_key",
 			obs:  MemoryEligibility{ID: 41, EngramID: 41, TopicKey: "  "},
-			want: "c-000012: memory 41 is not pinned and has no topic_key, so sync does not refresh this page; run `longterm-mem promote --source memorycard --id 41` to refresh it now, or pin memory 41 in memorycard so sync keeps it current",
+			want: "c-000012: memory 41 is not pinned and has no topic_key, so sync does not refresh this page; the page predates memorycard identity and is refreshed only after the one-time vault migration; pin memory 41 in memorycard so sync keeps it current after it",
 		},
 		{
 			name: "an sdd/ topic",
 			obs:  MemoryEligibility{ID: 41, EngramID: 41, TopicKey: "sdd/some-change/tasks"},
-			want: "c-000012: memory 41 is not pinned and its topic_key \"sdd/some-change/tasks\" is not a curated topic, so sync does not refresh this page; run `longterm-mem promote --source memorycard --id 41` to refresh it now, or pin memory 41 in memorycard so sync keeps it current",
+			want: "c-000012: memory 41 is not pinned and its topic_key \"sdd/some-change/tasks\" is not a curated topic, so sync does not refresh this page; the page predates memorycard identity and is refreshed only after the one-time vault migration; pin memory 41 in memorycard so sync keeps it current after it",
 		},
 		{
 			name: "a review/ topic",
 			obs:  MemoryEligibility{ID: 41, EngramID: 41, TopicKey: "review/some-change/verdict"},
-			want: "c-000012: memory 41 is not pinned and its topic_key \"review/some-change/verdict\" is not a curated topic, so sync does not refresh this page; run `longterm-mem promote --source memorycard --id 41` to refresh it now, or pin memory 41 in memorycard so sync keeps it current",
+			want: "c-000012: memory 41 is not pinned and its topic_key \"review/some-change/verdict\" is not a curated topic, so sync does not refresh this page; the page predates memorycard identity and is refreshed only after the one-time vault migration; pin memory 41 in memorycard so sync keeps it current after it",
 		},
 		{
 			name: "a delivery/ topic",
 			obs:  MemoryEligibility{ID: 41, EngramID: 41, TopicKey: "delivery/some-change/receipt"},
-			want: "c-000012: memory 41 is not pinned and its topic_key \"delivery/some-change/receipt\" is not a curated topic, so sync does not refresh this page; run `longterm-mem promote --source memorycard --id 41` to refresh it now, or pin memory 41 in memorycard so sync keeps it current",
+			want: "c-000012: memory 41 is not pinned and its topic_key \"delivery/some-change/receipt\" is not a curated topic, so sync does not refresh this page; the page predates memorycard identity and is refreshed only after the one-time vault migration; pin memory 41 in memorycard so sync keeps it current after it",
 		},
 		{
 			// A page promoted by an explicit `promote --id N` of an observation that never was eligible: nothing on
@@ -93,7 +93,7 @@ func TestDoctorWarnsOfAPageWhoseObservationIsNotEligible(t *testing.T) {
 			// observation is pinned.
 			name: "a page promoted explicitly",
 			obs:  MemoryEligibility{ID: 7, EngramID: 7},
-			want: "c-000012: memory 7 is not pinned and has no topic_key, so sync does not refresh this page; run `longterm-mem promote --source memorycard --id 7` to refresh it now, or pin memory 7 in memorycard so sync keeps it current",
+			want: "c-000012: memory 7 is not pinned and has no topic_key, so sync does not refresh this page; the page predates memorycard identity and is refreshed only after the one-time vault migration; pin memory 7 in memorycard so sync keeps it current after it",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -244,8 +244,8 @@ func TestDoctorNamesEveryFrozenPageInTheOrderOfThePages(t *testing.T) {
 
 	got := eligibilityCheckOf(t, pages, observations.read)
 
-	const first = "c-000001: memory 21 is not pinned and has no topic_key, so sync does not refresh this page; run `longterm-mem promote --source memorycard --id 21` to refresh it now, or pin memory 21 in memorycard so sync keeps it current"
-	const third = "c-000003: memory 23 is not pinned and its topic_key \"sdd/x/tasks\" is not a curated topic, so sync does not refresh this page; run `longterm-mem promote --source memorycard --id 23` to refresh it now, or pin memory 23 in memorycard so sync keeps it current"
+	const first = "c-000001: memory 21 is not pinned and has no topic_key, so sync does not refresh this page; the page predates memorycard identity and is refreshed only after the one-time vault migration; pin memory 21 in memorycard so sync keeps it current after it"
+	const third = "c-000003: memory 23 is not pinned and its topic_key \"sdd/x/tasks\" is not a curated topic, so sync does not refresh this page; the page predates memorycard identity and is refreshed only after the one-time vault migration; pin memory 23 in memorycard so sync keeps it current after it"
 	if got.Status != CheckWarned || got.Detail != first+"; "+third {
 		t.Errorf("promoted-pages-eligible = %+v, want a warning with %q then %q", got, first, third)
 	}

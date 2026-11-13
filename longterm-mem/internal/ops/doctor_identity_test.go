@@ -11,7 +11,7 @@ import (
 // names it: the same finding for a page with `engram_id` and for the same page with `source: engram` and
 // `source_id`.
 func TestDoctorJoinsAPageToItsObservationByItsStoreAgnosticIdentity(t *testing.T) {
-	const want = "c-000012: memory 41 is not pinned and has no topic_key, so sync does not refresh this page; run `longterm-mem promote --source memorycard --id 41` to refresh it now, or pin memory 41 in memorycard so sync keeps it current"
+	const want = "c-000012: memory 41 is not pinned and has no topic_key, so sync does not refresh this page; the page predates memorycard identity and is refreshed only after the one-time vault migration; pin memory 41 in memorycard so sync keeps it current after it"
 	legacy := promotedFrom(t, memory.Observation{ID: 41}, "c-000012")
 	agnostic := [2]string{legacy[0], strings.Replace(legacy[1], "engram_id: 41\n", "source: engram\nsource_id: 41\n", 1)}
 	if agnostic[1] == legacy[1] || strings.Contains(agnostic[1], "engram_id") {

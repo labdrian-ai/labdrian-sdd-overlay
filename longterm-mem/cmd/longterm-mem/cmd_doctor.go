@@ -151,7 +151,7 @@ func liveMemoryEligibility(project string) ([]ops.MemoryEligibility, error) {
 	}
 	eligibility := make([]ops.MemoryEligibility, len(memories))
 	for i, m := range memories {
-		eligibility[i] = ops.MemoryEligibility{ID: m.ID, EngramID: m.EngramID, Pinned: m.Pinned, TopicKey: m.TopicKey}
+		eligibility[i] = ops.MemoryEligibility{ID: m.ID, EngramID: m.EngramID, Superseded: m.Status == "superseded", Pinned: m.Pinned, TopicKey: m.TopicKey}
 	}
 	return eligibility, nil
 }

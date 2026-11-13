@@ -179,11 +179,16 @@ and the two ways out:
 - `longterm-mem promote --source memorycard --id N` refreshes the page now, once;
 - pinning memory N in memorycard makes `sync` keep the page current from then on.
 
+That is the advice for a page that carries a memorycard identity. A page of an earlier release (it carries only an
+`engram_id`) is refused by `promote` as bridged, so for it `doctor` names no `promote` command: it says the page
+predates memorycard identity and is refreshed only after the one-time vault migration, and that pinning memory N in
+memorycard keeps it current after it.
+
 `doctor` joins a page to its memory by the identity the page names: its `memorycard_id`, or, for a page an earlier
-release promoted from Engram, its `engram_id` through memorycard's `import_map`. It reads no Engram database for this
-check. (Previously: it joined by `engram_id` over the live observations of Engram, and advised `promote --id N` and
-pinning observation N in Engram.) A page of an earlier release is refused by `promote` as bridged until the one-time
-migration of the vault gives it its memorycard identity.
+release promoted from Engram, its `engram_id` through memorycard's `import_map`. Only live memories (not superseded, not archived) are judged; when one observation was imported as several
+memories, the page is kept current if any live one is eligible, and a warning names the first. It reads no Engram
+database for this check. (Previously: it joined by `engram_id` over the live observations of Engram, and advised `promote --id N` and
+pinning observation N in Engram.)
 
 The check is advisory. It answers `warn`, never `FAIL`: the text form prints
 `[warn] promoted-pages-eligible (...)`, `--json` carries `"status": "warn"`, and

@@ -19,6 +19,9 @@ type MemoryEligibility struct {
 	// EngramID is the id of the Engram observation the memory was imported from, or 0 when it was not imported
 	// from one: the engram_id of a page an earlier release promoted from that observation.
 	EngramID int64
+	// Superseded is whether memorycard has retired the memory for another: such a memory is never judged, for the page
+	// of the memory that replaced it is the one sync keeps current.
+	Superseded bool
 	// Pinned is whether the memory is pinned.
 	Pinned bool
 	// TopicKey is the memory's topic_key, empty when it has none.
@@ -48,6 +51,10 @@ var errNoMemoryEligibilityReader = errors.New("ops: no memory eligibility reader
 // vault it cannot judge -- the pages cannot be listed, the live memories cannot be read, a port was not wired --
 // is a warning that says so, in the words of what failed. A page that cannot be read is the page checks' finding,
 // which they word, and does not stop the pages after it from being judged.
+//
+// A superseded memory is never judged: only the live ones (not superseded, not archived) of a page's memory count. A page
+// of an earlier release may name an observation memorycard imported as several parts; it is kept current when any live part
+// is eligible, and a warning names the first live part.
 //
 // The live memories are asked for once, and only when a page names a memory to look up.
 func checkPromotedPagesEligible(promoted PageReader, eligibility func(project string) ([]MemoryEligibility, error), project string) Check {
@@ -80,37 +87,58 @@ func checkPromotedPagesEligible(promoted PageReader, eligibility func(project st
 	if err != nil {
 		return cannotBeJudged(fmt.Errorf("could not read the live memories of %s: %w", project, err))
 	}
-	byMemoryID := make(map[int64]MemoryEligibility, len(live))
-	byEngramID := make(map[int64]MemoryEligibility, len(live))
+	liveByMemoryID := make(map[int64]MemoryEligibility, len(live))
+	liveByEngramID := map[int64][]MemoryEligibility{}
 	for _, m := range live {
-		byMemoryID[m.ID] = m
+		if m.Superseded {
+			continue
+		}
+		liveByMemoryID[m.ID] = m
 		if m.EngramID > 0 {
-			if _, taken := byEngramID[m.EngramID]; !taken {
-				byEngramID[m.EngramID] = m
-			}
+			liveByEngramID[m.EngramID] = append(liveByEngramID[m.EngramID], m)
 		}
 	}
 
 	var findings []string
 	for _, p := range promotions {
-		join := byMemoryID
-		if p.ref.Source != "memorycard" {
-			join = byEngramID
+		var candidates []MemoryEligibility
+		legacy := p.ref.Source != "memorycard"
+		if legacy {
+			candidates = liveByEngramID[p.ref.ID]
+		} else if m, isLive := liveByMemoryID[p.ref.ID]; isLive {
+			candidates = []MemoryEligibility{m}
 		}
-		m, isLive := join[p.ref.ID]
-		if !isLive {
+		// No live memory: nothing to judge the page by. One observation imported as several parts has several: the page
+		// is kept current when any of them is eligible, and otherwise the first (lowest id) is the one named.
+		if len(candidates) == 0 {
 			continue
 		}
-		reason := promote.IneligibleReason(memory.Memory{Pinned: m.Pinned, TopicKey: m.TopicKey})
+		reason := ""
+		for _, m := range candidates {
+			reason = promote.IneligibleReason(memory.Memory{Pinned: m.Pinned, TopicKey: m.TopicKey})
+			if reason == "" {
+				break
+			}
+		}
 		if reason == "" {
 			continue
 		}
-		findings = append(findings, fmt.Sprintf(
-			"%s: memory %d %s, so sync does not refresh this page; run `longterm-mem promote --source memorycard --id %d` to refresh it now, or pin memory %d in memorycard so sync keeps it current",
-			p.address, m.ID, reason, m.ID, m.ID))
+		m := candidates[0]
+		findings = append(findings, adviceFor(p.address, m, reason, legacy))
 	}
 	if len(findings) == 0 {
 		return Check{Name: CheckPromotedPagesEligible, Status: CheckPassed}
 	}
 	return Check{Name: CheckPromotedPagesEligible, Status: CheckWarned, Detail: strings.Join(findings, "; ")}
+}
+
+// adviceFor words one finding. A page that names its memorycard memory is refreshed by promoting that memory again
+// or kept current by pinning it. A page of an earlier release is neither: promote refuses it as bridged until the
+// one-time migration gives it its memorycard identity, so the advice names no promote command, only the pin that
+// takes effect after the migration.
+func adviceFor(address string, m MemoryEligibility, reason string, legacy bool) string {
+	if legacy {
+		return fmt.Sprintf("%s: memory %d %s, so sync does not refresh this page; the page predates memorycard identity and is refreshed only after the one-time vault migration; pin memory %d in memorycard so sync keeps it current after it", address, m.ID, reason, m.ID)
+	}
+	return fmt.Sprintf("%s: memory %d %s, so sync does not refresh this page; run `longterm-mem promote --source memorycard --id %d` to refresh it now, or pin memory %d in memorycard so sync keeps it current", address, m.ID, reason, m.ID, m.ID)
 }

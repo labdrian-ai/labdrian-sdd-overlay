@@ -107,7 +107,10 @@ page to the memorycard memory the page names -- its `memorycard_id`, or, for a p
 promotion eligibility rule no longer accepts, so that `sync` no longer refreshes it. The check SHALL read no
 Engram database, and its advice SHALL name the memory by its memorycard id and a command that works:
 `longterm-mem promote --source memorycard --id M` to refresh the page now, or pinning memory M in memorycard
-so that `sync` keeps it current. (Previously: the check joined each page to a live Engram observation by its
+so that `sync` keeps it current. For a page of an earlier release, which `promote` refuses as bridged until the
+one-time vault migration, the advice SHALL name no `promote` command: it says the page is refreshed only after the
+migration and names the pin. Only live memories (not superseded, not archived) SHALL be judged, and a page whose
+observation was imported as several memories SHALL pass when any live one is eligible. (Previously: the check joined each page to a live Engram observation by its
 `engram_id` and advised `longterm-mem promote --id N` or pinning observation N in Engram.)
 
 #### Scenario: A frozen memorycard page names its memory and a promote that works
@@ -122,7 +125,8 @@ so that `sync` keeps it current. (Previously: the check joined each page to a li
 - GIVEN a page that names Engram observation N by its engram_id, and memorycard's import_map names memory M
   as imported from N
 - WHEN doctor runs and M is not eligible
-- THEN promoted-pages-eligible warns for that page with memory M, and no Engram database was read
+- THEN promoted-pages-eligible warns for that page with memory M, advising no `promote` command but the one-time
+  migration and the pin in memorycard, and no Engram database was read
 
 ### Requirement: MCP Stdio Server Exposes Query and Promote
 
