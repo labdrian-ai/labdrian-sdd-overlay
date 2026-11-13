@@ -131,7 +131,7 @@ How the command reads a page:
   - (a) a top-level legacy key before that closing rule: the page is counted, refused by name, and never rewritten or backed up;
   - (b) no legacy key there: the page is ignored. It is not counted and not refused, and it is never rewritten. A legacy key after the closing rule is not looked for.
 - A page that does not open with `---` has no frontmatter. It is ignored and its text is never scanned, even when it quotes a legacy key: no reader of longterm-mem takes it for a promoted page.
-- A page is a legacy page when a top-level line of its frontmatter is a legacy key followed by `:`. An unreadable page that is a legacy page is counted and refused by name, never skipped, and the rehearsal script counts it the same way. Fix its line endings or its opening, or close the block, then run again.
+- A page is a legacy page when a top-level line of its frontmatter is a legacy key followed by `:`. What happens to an unreadable page is stated above. The rehearsal script counts it the same way. To have a refused page migrated, fix its line endings or its opening, or close the block, then run again.
 - The project of a page is the last non-empty value of a top-level `project:` line. Spaces before the colon are allowed, and Unicode white space around the line and the value is trimmed. A value that is empty or `[]` is skipped before any quote is taken off, so `project: ""` replaces an earlier value with an empty one and `project: "[]"` is the project `[]`. Only double quotes are stripped. The rehearsal script reads it by the same rule.
 
 For one project, the count a run prints is the number of its legacy pages, unreadable ones included, in the project their `project:` line names.

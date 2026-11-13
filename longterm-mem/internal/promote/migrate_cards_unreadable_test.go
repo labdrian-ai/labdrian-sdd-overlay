@@ -162,7 +162,7 @@ func TestMigrateCardPages_AMemoryTypeEndingInRulesMakesARefusalAndNoWrite(t *tes
 // The same refusal on the recovery path: a run stopped after saving the entry of a rewrite that carries the odd type,
 // and the page on disk is still the legacy one. The rerun finds the recorded rewrite through recordedRewrite and must
 // still refuse it, never write it and never back it up. It is a pin: it passes on the code that checks the read-back
-// on this path too. With that check disabled in a scratch edit the page is migrated and the test fails (L71).
+// on this path too. With that check disabled in a scratch edit the page is migrated and the test fails (feature document odd/tasks/phase9-store-agnostic-promotion.md, Log L71).
 func TestMigrateCardPages_AStoppedPageWhoseRecordedRewriteEndsInRulesIsRefusedAndNotBackedUp(t *testing.T) {
 	m := newMigWorld()
 	card := cardOf(7, migProject)
