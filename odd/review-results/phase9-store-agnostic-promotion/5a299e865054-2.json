@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "2bcd69287edd57d2fd6ef956f53f7c211f9fe577",
+    "head": "5a299e86505480d0f1ed09edb4f6b360ebaec496",
+    "diff_sha256": "eac626eb499f8d8325cdc79c30e189afc8bd9dd43b0dcd0e75271f4f67f38efa",
+    "paths": [
+      "longterm-mem/docs/promote-from-memorycard.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "2bcd69287edd57d2fd6ef956f53f7c211f9fe577",
+      "head": "5a299e86505480d0f1ed09edb4f6b360ebaec496",
+      "diff_sha256": "eac626eb499f8d8325cdc79c30e189afc8bd9dd43b0dcd0e75271f4f67f38efa"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/docs/promote-from-memorycard.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The change is documentation-only and touches a single file.",
+      "The new outcomes (a) and (b) for an unreadable page agree with the neighbouring bullet that says an unreadable legacy page is counted and refused by name.",
+      "The new trailing-spaces sentence repeats the earlier rule-line rule without contradicting it.",
+      "I could not read shapeOf or legacyPagesOf from the diff, so I could not check the wording against the code."
+    ]
+  }
+}

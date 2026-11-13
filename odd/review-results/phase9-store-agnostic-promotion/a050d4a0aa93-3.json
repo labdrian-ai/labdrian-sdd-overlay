@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "5a299e86505480d0f1ed09edb4f6b360ebaec496",
+    "head": "a050d4a0aa933fdedbf94c8ff83f0789bb08ea4b",
+    "diff_sha256": "7fa2243fad9557de914ddf53a48a376ddaa088f282cb0ca351b86e301b7412a5",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "5a299e86505480d0f1ed09edb4f6b360ebaec496",
+      "head": "a050d4a0aa933fdedbf94c8ff83f0789bb08ea4b",
+      "diff_sha256": "7fa2243fad9557de914ddf53a48a376ddaa088f282cb0ca351b86e301b7412a5"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff changes only the T6 task line and appends the L72 Log entry in one markdown file; it touches no code.",
+      "The T6 line maps L71 to 1bc702f0, adds batch 10 as 2bcd6928 and 5a299e86, and says L72 is the docs(odd) commit that follows 5a299e86 with no later hash-writing commit. The L72 entry says the same, so the two agree.",
+      "The L72 entry says the T6 task is still not ticked, matching the unticked [ ] checkbox, and it keeps the owner's rehearsal and live --apply listed as open.",
+      "I could not check the cited line numbers in docs/promote-from-memorycard.md or the test file, or the cited commit contents, from this diff alone. The entry's claims about them are unverified, not contradicted."
+    ]
+  }
+}
