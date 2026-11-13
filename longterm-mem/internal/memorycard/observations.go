@@ -57,12 +57,16 @@ type ImportedPart struct {
 }
 
 // ImportedParts returns the import_map rows of source engram of the observations imported into project, titles only:
-// the rows whose memory belongs to project, and the rows whose memory is gone. A key that is not a number names no
+// the rows whose memory belongs to project, and the rows whose memory is gone, for an observation that has a memory
+// in project (import_map names no project, so a gone row can only be told by its observation; an observation with no
+// memory left in project is not the project's and has nothing to match). A key that is not a number names no
 // observation and is left out.
 func (s *Store) ImportedParts(project string) ([]ImportedPart, error) {
 	rows, err := s.db.Query(`select i.source_key, i.part, coalesce(m.id, 0), coalesce(m.title, '') from import_map i
-		left join memories m on m.id = i.memory_id where i.source = 'engram' and (m.project = ? or m.id is null)
-		order by i.source_key, i.part`, project)
+		left join memories m on m.id = i.memory_id where i.source = 'engram' and (m.project = ? or (m.id is null and exists (
+			select 1 from import_map j join memories n on n.id = j.memory_id
+			where j.source = 'engram' and j.source_key = i.source_key and n.project = ?)))
+		order by i.source_key, i.part`, project, project)
 	if err != nil {
 		return nil, fmt.Errorf("memorycard: list the observations imported into project %q: %w", project, err)
 	}

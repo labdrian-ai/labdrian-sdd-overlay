@@ -2,7 +2,9 @@ package memorycard
 
 import (
 	"database/sql"
+	"fmt"
 	"reflect"
+	"strings"
 	"sync"
 	"testing"
 
@@ -28,15 +30,20 @@ func writeFixture(t *testing.T, path string, statements ...string) {
 }
 
 // A read of a project's imported observations that fails is reported, and it is not remembered: the next call
-// reads again. The part number of an import_map row that is not a number makes the read fail here; the listing, which
-// never reads it, does not.
+// reads again. The part number of an import_map row that is not a number makes the read fail here (the row names
+// memory 1, which is in project p, so the read of p's imports takes it); the listing, which never reads it, does not.
+// The failure must be that read's: an error of any other kind would not show that a failed read is not remembered.
 func TestSourceReadsTheImportsAgainAfterAReadThatFailed(t *testing.T) {
 	path := kinFixture(t)
-	writeFixture(t, path, `insert into import_map values ('engram', '990', 'x', 60)`)
+	writeFixture(t, path, `insert into import_map values ('engram', '990', 'x', 1)`)
 	source := openSource(t, path)
 
-	if m, ok, err := source.ByID("22"); err == nil {
+	m, ok, err := source.ByID("22")
+	if err == nil {
 		t.Fatalf("ByID(22) with an unreadable import_map row = %+v, %v, nil error, want an error", m, ok)
+	}
+	if want := `read an import_map row of project "p"`; !strings.Contains(err.Error(), want) {
+		t.Fatalf("ByID(22) failed with %q, want the error of the read of the imports: %q", err, want)
 	}
 	writeFixture(t, path, `delete from import_map where source_key = '990'`)
 
@@ -64,7 +71,7 @@ func TestSourceIsSafeToShareAcrossGoroutines(t *testing.T) {
 			defer wg.Done()
 			got, err := source.Memories("p")
 			if err == nil && !reflect.DeepEqual(got, want) {
-				err = sql.ErrNoRows
+				err = fmt.Errorf("a shared Source listed %+v, want %+v", got, want)
 			}
 			if _, _, byIDErr := source.ByID("22"); err == nil {
 				err = byIDErr
