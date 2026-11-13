@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "38cfcadda47f20595c13e0968ba5188b5c68f5fa",
+    "head": "4772f5c13de720a7d2a001ba314e7ac8b71a27e2",
+    "diff_sha256": "6746b03d2cda55a986e7e586dfd5bcc458d4cc4646cba78500f434d4f6efa389",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/commands.go",
+      "longterm-mem/cmd/longterm-mem/promote_memorycard_test.go",
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "38cfcadda47f20595c13e0968ba5188b5c68f5fa",
+      "head": "4772f5c13de720a7d2a001ba314e7ac8b71a27e2",
+      "diff_sha256": "6746b03d2cda55a986e7e586dfd5bcc458d4cc4646cba78500f434d4f6efa389"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/commands.go",
+        "longterm-mem/cmd/longterm-mem/promote_memorycard_test.go",
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The commit adds a test, a doc comment and a Log entry. It changes no production logic.",
+      "The test uses a mutex-guarded writer and a fresh tool closure, so the first server's discarded declaration cannot affect the count. It asserts no errors, exactly one declaration line and one page, which matches the stated claim.",
+      "The diff alone cannot confirm the lock-removal mutation result that L61 reports. That is a claim about test strength, not a defect the commit introduces."
+    ]
+  }
+}
