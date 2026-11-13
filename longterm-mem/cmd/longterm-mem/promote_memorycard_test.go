@@ -21,18 +21,7 @@ import (
 // promote it), 4 was imported from observation 3, which never gets a page.
 func memorycardFixture(t *testing.T) string {
 	t.Helper()
-	path := filepath.Join(realTempDir(t), "memory.db")
-	db, err := sql.Open("sqlite", path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.Close()
-	for _, stmt := range []string{
-		`create table memories (id integer primary key autoincrement, project text not null, scope text not null default 'project',
-			type text not null default 'manual', title text not null, body text not null, topic_key text, content_hash text not null default '',
-			pinned integer not null default 0, status text not null default 'active', superseded_by integer, created_at text not null default '', updated_at text not null default '')`,
-		`create table memory_versions (memory_id integer not null, version integer not null, title text not null, body text not null, saved_at text not null, primary key (memory_id, version))`,
-		`create table import_map (source text not null, source_key text not null, part integer not null default 1, memory_id integer not null, primary key (source, source_key, part))`,
+	return memorycardDatabase(t,
 		`insert into memories(id, project, type, title, body) values
 			(1, 'golden-project', 'learning', 'Card Only', 'Lives only in memorycard.'),
 			(2, 'golden-project', 'decision', 'Pinned Decision', 'A decision somebody pinned.'),
@@ -40,7 +29,25 @@ func memorycardFixture(t *testing.T) string {
 			(4, 'golden-project', 'discovery', 'Below Threshold', 'A discovery nobody curated.')`,
 		`insert into memory_versions values (1, 1, 'Card Only', 'Lives only in memorycard.', ''), (1, 2, 'Card Only', 'Lives only in memorycard.', '')`,
 		`insert into import_map values ('engram', '1', 1, 2), ('engram', '3', 1, 4)`,
-	} {
+	)
+}
+
+// memorycardDatabase builds a memorycard database with the tables the adapter reads and runs statements on it.
+func memorycardDatabase(t *testing.T, statements ...string) string {
+	t.Helper()
+	path := filepath.Join(realTempDir(t), "memory.db")
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	for _, stmt := range append([]string{
+		`create table memories (id integer primary key autoincrement, project text not null, scope text not null default 'project',
+			type text not null default 'manual', title text not null, body text not null, topic_key text, content_hash text not null default '',
+			pinned integer not null default 0, status text not null default 'active', superseded_by integer, created_at text not null default '', updated_at text not null default '')`,
+		`create table memory_versions (memory_id integer not null, version integer not null, title text not null, body text not null, saved_at text not null, primary key (memory_id, version))`,
+		`create table import_map (source text not null, source_key text not null, part integer not null default 1, memory_id integer not null, primary key (source, source_key, part))`,
+	}, statements...) {
 		if _, err := db.Exec(stmt); err != nil {
 			t.Fatalf("%s: %v", stmt, err)
 		}

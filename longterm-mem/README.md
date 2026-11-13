@@ -159,33 +159,39 @@ Without a goal nothing changes.
 
 ### Frozen pages
 
-`sync` refreshes a promoted page only while its observation is eligible: pinned,
-or carrying a curated `topic_key`. A page whose observation is not eligible
-(promoted by an explicit `promote --id N` of an untopiced observation, or under
+`sync` refreshes a promoted page only while its memory is eligible: pinned,
+or carrying a curated `topic_key`. A page whose memory is not eligible
+(promoted by an explicit `promote --source memorycard --id N` of an untopiced memory, or under
 a looser rule that no longer applies) stays exactly as it was written, however
-the observation changes later. Such a page is *frozen*, and nothing on it says so.
+the memory changes later. Such a page is *frozen*, and nothing on it says so.
 Pages promoted from `odd/` (feature-document mirrors) or `session/` (session
 summaries) topics before those prefixes were excluded are frozen this way. `sync`
-still patches their `status:` when their observation is deleted or superseded
+still patches their `status:` when their memory is archived or superseded
 (propagation does not check eligibility), and `doctor` names them while their
-observation is live.
+memory is live.
 
 `doctor` says so, in its `promoted-pages-eligible` check. Each finding names the
-page address, the observation id, why the observation is not eligible (it has no
+page address, the memorycard memory id, why the memory is not eligible (it has no
 `topic_key`, or its first segment, after any `goal:<id>/` prefix, is empty or one
 of `sdd`, `review`, `delivery`, `odd` and `session`)
 and the two ways out:
 
-- `longterm-mem promote --id N` refreshes the page now, once;
-- pinning observation N in Engram makes `sync` keep the page current from then on.
+- `longterm-mem promote --source memorycard --id N` refreshes the page now, once;
+- pinning memory N in memorycard makes `sync` keep the page current from then on.
+
+`doctor` joins a page to its memory by the identity the page names: its `memorycard_id`, or, for a page an earlier
+release promoted from Engram, its `engram_id` through memorycard's `import_map`. It reads no Engram database for this
+check. (Previously: it joined by `engram_id` over the live observations of Engram, and advised `promote --id N` and
+pinning observation N in Engram.) A page of an earlier release is refused by `promote` as bridged until the one-time
+migration of the vault gives it its memorycard identity.
 
 The check is advisory. It answers `warn`, never `FAIL`: the text form prints
 `[warn] promoted-pages-eligible (...)`, `--json` carries `"status": "warn"`, and
 the exit code is the one `doctor` would have answered without it (9 for a
 `FAIL`, 0 otherwise). Nothing records that a page was promoted explicitly, so an
-explicitly promoted page whose observation is not eligible is named too, until
-the observation is pinned. A page whose observation was deleted, or is a row of
-another project, is not named; when the pages or the observations cannot be
+explicitly promoted page whose memory is not eligible is named too, until
+the memory is pinned. A page whose memory is archived, or is a row of
+another project, is not named; when the pages or the memories cannot be
 read, the check says it cannot judge, as a warning.
 
 ## MCP registration

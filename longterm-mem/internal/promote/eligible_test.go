@@ -208,3 +208,30 @@ func TestPageObservationIDNamesOnlyAPositiveID(t *testing.T) {
 		}
 	}
 }
+
+// PageMemoryRef names the memory a page was promoted from, in either store's keys, and nothing for a page that
+// names none or a number that is not positive (S11: the join of doctor's promoted-pages-eligible).
+func TestPageMemoryRef_NamesTheMemoryOfAPageOfEitherStore(t *testing.T) {
+	for name, tc := range map[string]struct {
+		frontmatter string
+		want        MemoryRef
+		named       bool
+	}{
+		"memorycard_id":        {"---\naddress: c-000001\nmemorycard_id: 12\n---\n", MemoryRef{Source: memorycardSource, ID: 12}, true},
+		"source memorycard":    {"---\naddress: c-000001\nsource: memorycard\nsource_id: 12\n---\n", MemoryRef{Source: memorycardSource, ID: 12}, true},
+		"engram_id":            {"---\naddress: c-000001\nengram_id: 41\n---\n", MemoryRef{Source: engramSource, ID: 41}, true},
+		"source engram":        {"---\naddress: c-000001\nsource: engram\nsource_id: 41\n---\n", MemoryRef{Source: engramSource, ID: 41}, true},
+		"memorycard wins":      {"---\nmemorycard_id: 12\nengram_id: 41\n---\n", MemoryRef{Source: memorycardSource, ID: 12}, true},
+		"zero names none":      {"---\nmemorycard_id: 0\n---\n", MemoryRef{}, false},
+		"not a number":         {"---\nmemorycard_id: x\n---\n", MemoryRef{}, false},
+		"no identity":          {"---\naddress: c-000001\n---\n", MemoryRef{}, false},
+		"no frontmatter block": {"Body only.\n", MemoryRef{}, false},
+	} {
+		t.Run(name, func(t *testing.T) {
+			got, named := PageMemoryRef(Page{Frontmatter: tc.frontmatter})
+			if got != tc.want || named != tc.named {
+				t.Errorf("PageMemoryRef(%q) = %+v, %v; want %+v, %v", tc.frontmatter, got, named, tc.want, tc.named)
+			}
+		})
+	}
+}

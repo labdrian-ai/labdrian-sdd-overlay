@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -75,8 +76,41 @@ func eligibilityWorld(t *testing.T, edit func(t *testing.T, w *retrievalWorld), 
 	if edit != nil {
 		edit(t, w)
 	}
+	w.mirrorToMemorycard(t)
 	w.buildIndexOfLiveRows(t, nil, nil)
 	return w
+}
+
+// mirrorToMemorycard gives the world the memorycard database `doctor` joins the pages to: a memory of every observation
+// of the Engram database that is not soft-deleted, under the same id, with its project, topic and pin, and the
+// import_map row that names the observation it was imported from, as it is when the edits to the world are done.
+func (w *retrievalWorld) mirrorToMemorycard(t *testing.T) {
+	t.Helper()
+	db, err := sql.Open("sqlite", w.dbPath)
+	if err != nil {
+		t.Fatalf("open the fixture database: %v", err)
+	}
+	defer db.Close()
+	rows, err := db.Query(`select id, project, coalesce(topic_key, ''), pinned from observations where deleted_at is null order by id`)
+	if err != nil {
+		t.Fatalf("read the observations: %v", err)
+	}
+	defer rows.Close()
+	var statements []string
+	for rows.Next() {
+		var id, pinned int64
+		var project, topic string
+		if err := rows.Scan(&id, &project, &topic, &pinned); err != nil {
+			t.Fatal(err)
+		}
+		statements = append(statements,
+			fmt.Sprintf(`insert into memories(id, project, title, body, topic_key, pinned) values (%d, '%s', 'Memory %d', 'Body.', nullif('%s', ''), %d)`, id, project, id, topic, pinned),
+			fmt.Sprintf(`insert into import_map values ('engram', '%d', 1, %d)`, id, id))
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv(memorycardDBEnvVar, memorycardDatabase(t, statements...))
 }
 
 // pinObservation12 is the edit that keeps the page promoted from observation 12 current.
@@ -92,7 +126,7 @@ func doctorOf(t *testing.T, w *retrievalWorld, extra ...string) (code int, stdou
 }
 
 // frozenLine is the line the text form prints for the frozen page c-000901, promoted from observation 12.
-const frozenLine = "  [warn] promoted-pages-eligible (c-000901: observation 12 is not pinned and has no topic_key, so sync does not refresh this page; run `longterm-mem promote --id 12` to refresh it now, or pin observation 12 in Engram so sync keeps it current)\n"
+const frozenLine = "  [warn] promoted-pages-eligible (c-000901: memory 12 is not pinned and has no topic_key, so sync does not refresh this page; run `longterm-mem promote --source memorycard --id 12` to refresh it now, or pin memory 12 in memorycard so sync keeps it current)\n"
 
 // A frozen page is a warning in the text form, naming the page, the observation, why it is not eligible and the
 // two ways out; the command exits as it does for the same vault whose observation is pinned, which is 0.
@@ -237,11 +271,11 @@ func TestCmdDoctor_PagesKeptCurrentAndPagesWithoutALiveObservationPass(t *testin
 	}
 }
 
-// An Engram database the check cannot read is said as a warning that it cannot judge, not as a failure of its
-// own: the command exits 9 here, but for the check that reads the same database and fails, embedding-index-fresh.
-func TestCmdDoctor_AnEngramDatabaseThatCannotBeReadIsAWarningOfThisCheck(t *testing.T) {
+// A memorycard database the check cannot read is said as a warning that it cannot judge, not as a failure of its own:
+// nothing else reads memorycard, so the command exits as it would without the check.
+func TestCmdDoctor_AMemorycardDatabaseThatCannotBeReadIsAWarningOfThisCheck(t *testing.T) {
 	w := eligibilityWorld(t, nil, 12)
-	t.Setenv(engramDBEnvVar, filepath.Join(w.home, "absent", "engram.db"))
+	t.Setenv(memorycardDBEnvVar, filepath.Join(w.home, "absent", "memory.db"))
 
 	code, stdout, _ := doctorOf(t, w)
 
@@ -251,11 +285,28 @@ func TestCmdDoctor_AnEngramDatabaseThatCannotBeReadIsAWarningOfThisCheck(t *test
 			line = l
 		}
 	}
-	if !strings.HasPrefix(line, "  [warn] promoted-pages-eligible (eligibility cannot be judged: could not read the live observations of goldenproj: ") {
+	if !strings.HasPrefix(line, "  [warn] promoted-pages-eligible (eligibility cannot be judged: could not read the live memories of goldenproj: ") {
 		t.Errorf("the eligibility line is %q, want a warning that it cannot judge", line)
 	}
+	if code != exitOK {
+		t.Errorf("doctor exited %d with only a warning to report, want %d:\n%s", code, exitOK, stdout)
+	}
+}
+
+// The check reads no Engram database (S11): with Engram out of reach the frozen page is still named, and the command
+// exits 9 only for the freshness check that does read it. (Previously: the check read the observations of Engram, and
+// said it could not judge.)
+func TestCmdDoctor_TheEligibilityCheckReadsNoEngramDatabase(t *testing.T) {
+	w := eligibilityWorld(t, nil, 12)
+	t.Setenv(engramDBEnvVar, filepath.Join(w.home, "absent", "engram.db"))
+
+	code, stdout, _ := doctorOf(t, w)
+
+	if !strings.Contains(stdout, frozenLine) {
+		t.Errorf("stdout lacks the warning:\n%s\nwant the line\n%s", stdout, frozenLine)
+	}
 	if !strings.Contains(stdout, "  [FAIL] embedding-index-fresh") || code != exitDoctorChecksFailed {
-		t.Errorf("doctor exited %d, want %d for the freshness check that reads the same database:\n%s", code, exitDoctorChecksFailed, stdout)
+		t.Errorf("doctor exited %d, want %d for the freshness check that reads the Engram database:\n%s", code, exitDoctorChecksFailed, stdout)
 	}
 }
 
@@ -294,56 +345,95 @@ func TestCmdDoctor_HelpNamesTheThreeStatuses(t *testing.T) {
 	}
 }
 
-// The Engram reads the check is wired to are the live rows of the project, as embedding-index-fresh's are: the
-// soft-deleted row and the row of another project are not among them, and the eligibility fields travel with the
-// id. liveObservationIDs is held to what it always answered, now that both read through one listing.
-func TestEngramReadsOfTheDoctorAreTheLiveRowsOfTheProject(t *testing.T) {
+// The Engram read of the freshness check is the live rows of the project: the soft-deleted row and the row of
+// another project are not among them. liveObservationIDs is held to what it always answered.
+func TestTheEngramReadOfTheDoctorIsTheLiveRowsOfTheProject(t *testing.T) {
 	t.Setenv(engramDBEnvVar, queryGoldenDatabase(t))
 
 	ids, err := liveObservationIDs(queryGoldenProject)
 	if err != nil {
 		t.Fatalf("liveObservationIDs: %v", err)
 	}
-	rows, err := liveObservationEligibility(queryGoldenProject)
-	if err != nil {
-		t.Fatalf("liveObservationEligibility: %v", err)
-	}
 
 	sort.Slice(ids, func(i, j int) bool { return ids[i] < ids[j] })
 	if want := []int64{1, 2, 3, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}; fmt.Sprint(ids) != fmt.Sprint(want) {
 		t.Errorf("liveObservationIDs = %v, want %v", ids, want)
 	}
-	byID := map[int64]ops.ObservationEligibility{}
-	for _, row := range rows {
-		byID[row.ID] = row
-	}
-	if len(rows) != len(ids) || len(byID) != len(ids) {
-		t.Errorf("liveObservationEligibility returned %d rows (%d distinct ids), want the %d live rows once each", len(rows), len(byID), len(ids))
-	}
-	for id, want := range map[int64]ops.ObservationEligibility{
-		1:  {ID: 1, Pinned: true, TopicKey: "architecture/auth-model"},
-		2:  {ID: 2, TopicKey: "bugfix/register-order"},
-		12: {ID: 12},
-	} {
-		if got := byID[id]; got != want {
-			t.Errorf("liveObservationEligibility for observation %d = %+v, want %+v", id, got, want)
-		}
-	}
-	for _, gone := range []int64{4, 5} {
-		if _, there := byID[gone]; there {
-			t.Errorf("liveObservationEligibility returned observation %d, which is soft-deleted or of another project", gone)
-		}
+	if _, err := liveObservationIDs(queryGoldenProject + "-absent"); err != nil {
+		t.Errorf("liveObservationIDs of a project with no rows: %v", err)
 	}
 }
 
-// A database that is not there is the error of both reads, in the words of the adapter.
-func TestEngramReadsOfTheDoctorFailWithTheDatabaseThatIsNotThere(t *testing.T) {
-	t.Setenv(engramDBEnvVar, filepath.Join(t.TempDir(), "absent", "engram.db"))
+// The eligibility check reads memorycard (S11): the live memories of the project, each with the fields promotion's
+// rule reads and the Engram observation it was imported from, which is how a page of an earlier release is joined.
+// A memory of another project, and a memory that was archived, are not among them. (Previously: the live rows of
+// the Engram database.)
+func TestTheMemorycardReadOfTheDoctorIsTheLiveMemoriesOfTheProject(t *testing.T) {
+	path := memorycardDatabase(t,
+		`insert into memories(id, project, title, body, topic_key, pinned, status) values
+			(1, 'golden-project', 'Card Only', 'Body.', 'bugfix/register-order', 1, 'active'),
+			(2, 'golden-project', 'Imported', 'Body.', NULL, 0, 'active'),
+			(3, 'golden-project', 'Replaced', 'Body.', 'sdd/x/tasks', 0, 'superseded'),
+			(4, 'golden-project', 'Archived', 'Body.', NULL, 0, 'archived'),
+			(5, 'another-project', 'Elsewhere', 'Body.', NULL, 0, 'active')`,
+		`insert into import_map values ('engram', '41', 1, 2)`)
+	t.Setenv(memorycardDBEnvVar, path)
 
-	if _, err := liveObservationIDs(queryGoldenProject); err == nil {
-		t.Error("liveObservationIDs answered no error for a database that is not there")
+	rows, err := liveMemoryEligibility(promoteGoldenProject)
+	if err != nil {
+		t.Fatalf("liveMemoryEligibility: %v", err)
 	}
-	if _, err := liveObservationEligibility(queryGoldenProject); err == nil {
-		t.Error("liveObservationEligibility answered no error for a database that is not there")
+
+	want := []ops.MemoryEligibility{
+		{ID: 1, Pinned: true, TopicKey: "bugfix/register-order"},
+		{ID: 2, EngramID: 41},
+		{ID: 3, TopicKey: "sdd/x/tasks"},
+	}
+	if fmt.Sprint(rows) != fmt.Sprint(want) {
+		t.Errorf("liveMemoryEligibility = %+v, want %+v", rows, want)
+	}
+}
+
+// A database that is not there is the error of the read, in the words of the adapter.
+func TestTheMemorycardReadOfTheDoctorFailsWithTheDatabaseThatIsNotThere(t *testing.T) {
+	t.Setenv(memorycardDBEnvVar, filepath.Join(t.TempDir(), "absent", "memory.db"))
+
+	if _, err := liveMemoryEligibility(promoteGoldenProject); err == nil {
+		t.Error("liveMemoryEligibility answered no error for a database that is not there")
+	}
+}
+
+// The advice of promoted-pages-eligible names a command that works (S11, the verifier's B1): for a page the
+// memorycard memory 1 was promoted to, `doctor` says to run `promote --source memorycard --id 1`, and running it is
+// accepted (exit 0, the page is left as it is), where `promote --id 1` alone is refused for want of a source.
+func TestCmdDoctor_TheAdviceOfAFrozenMemorycardPageIsACommandThatWorks(t *testing.T) {
+	memorycardWorld(t)
+	if code, stdout, stderr := runPromoteGolden(t, []string{"promote", "--project", promoteGoldenProject, "--source", "memorycard", "--id", "1"}); code != exitOK {
+		t.Fatalf("promote: exit %d\nstdout: %s\nstderr: %s", code, stdout, stderr)
+	}
+
+	_, stdout, _ := runPromoteGolden(t, []string{"doctor", "--project", promoteGoldenProject, "--json"})
+
+	var report ops.DoctorReport
+	if err := json.Unmarshal([]byte(stdout), &report); err != nil {
+		t.Fatalf("decode the JSON: %v\n%s", err, stdout)
+	}
+	var detail string
+	for _, check := range report.Checks {
+		if check.Name == "promoted-pages-eligible" {
+			detail = check.Detail
+		}
+	}
+	const advised = "longterm-mem promote --source memorycard --id 1"
+	if !strings.Contains(detail, "c-000901: memory 1 is not pinned and has no topic_key") || !strings.Contains(detail, "run `"+advised+"` to refresh it now") {
+		t.Fatalf("promoted-pages-eligible detail = %q, want the memory and a promote that names its source", detail)
+	}
+
+	code, stdout, stderr := runPromoteGolden(t, strings.Fields(strings.TrimPrefix(advised, "longterm-mem ")+" --project "+promoteGoldenProject))
+	if code != exitOK || !strings.Contains(stdout, "already promoted as c-000901") {
+		t.Errorf("the advised command: exit %d, stdout %q, stderr %q, want exit 0 and the page left as it is", code, stdout, stderr)
+	}
+	if code, _, stderr := runPromoteGolden(t, []string{"promote", "--project", promoteGoldenProject, "--id", "1"}); code != exitUsage || !strings.Contains(stderr, "--source is required") {
+		t.Errorf("the old advice: exit %d, stderr %q, want usage for want of --source", code, stderr)
 	}
 }

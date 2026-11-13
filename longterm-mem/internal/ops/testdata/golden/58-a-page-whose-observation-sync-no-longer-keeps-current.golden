@@ -37,7 +37,7 @@
     {
       "name": "promoted-pages-eligible",
       "status": "warn",
-      "detail": "c-000042: observation 1 is not pinned and has no topic_key, so sync does not refresh this page; run `longterm-mem promote --id 1` to refresh it now, or pin observation 1 in Engram so sync keeps it current"
+      "detail": "c-000042: memory 1 is not pinned and has no topic_key, so sync does not refresh this page; run `longterm-mem promote --source memorycard --id 1` to refresh it now, or pin memory 1 in memorycard so sync keeps it current"
     }
   ]
 }

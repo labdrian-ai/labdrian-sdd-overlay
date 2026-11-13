@@ -9,6 +9,7 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/embed"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memorycard"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/ops"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vault"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vecindex"
@@ -89,23 +90,23 @@ func (c commands) cmdDoctor(args []string) int {
 // This command takes no --embed-endpoint/--embed-model flags of its own (unlike `index --embeddings`), so
 // embedding-backend-reachable probes the same defaults `index --embeddings` uses when none are given.
 //
-// LiveObservationEligibility backs promoted-pages-eligible: it reads the same live observations of Engram as
-// LiveObservationIDs, through the same adapter, and answers only what promotion's eligibility rule reads of them.
+// LiveMemoryEligibility backs promoted-pages-eligible: it reads the live memories of memorycard, and answers only
+// what promotion's eligibility rule reads of them and the observation each was imported from.
 func (a app) doctorDeps(vaultRoot string) ops.DoctorDeps {
 	vaultFiles := openVault(vaultRoot)
 	return ops.DoctorDeps{
-		VaultRoot:                  vaultRoot,
-		Root:                       vaultFiles,
-		Index:                      vaultFiles,
-		Log:                        vaultFiles,
-		Precedence:                 vaultFiles,
-		Pages:                      vaultFiles,
-		AddressMap:                 vaultFiles,
-		PrerequisitePresent:        vault.PrerequisitePresent,
-		EmbeddingIndex:             embeddingIndexReader(defaultStateDir()),
-		LiveObservationIDs:         liveObservationIDs,
-		EmbeddingBackendCheck:      a.probeEmbeddingBackend,
-		LiveObservationEligibility: liveObservationEligibility,
+		VaultRoot:             vaultRoot,
+		Root:                  vaultFiles,
+		Index:                 vaultFiles,
+		Log:                   vaultFiles,
+		Precedence:            vaultFiles,
+		Pages:                 vaultFiles,
+		AddressMap:            vaultFiles,
+		PrerequisitePresent:   vault.PrerequisitePresent,
+		EmbeddingIndex:        embeddingIndexReader(defaultStateDir()),
+		LiveObservationIDs:    liveObservationIDs,
+		EmbeddingBackendCheck: a.probeEmbeddingBackend,
+		LiveMemoryEligibility: liveMemoryEligibility,
 	}
 }
 
@@ -134,16 +135,23 @@ func liveObservationIDs(project string) ([]int64, error) {
 	return ids, nil
 }
 
-// liveObservationEligibility is, for each live observation of project in the order Engram lists them, the id with
-// the two fields promotion's eligibility rule reads (R-007): whether it is pinned and its topic_key.
-func liveObservationEligibility(project string) ([]ops.ObservationEligibility, error) {
-	observations, err := liveObservations(project)
+// liveMemoryEligibility is, for each live memory of project in id order (memorycard.Store.ListMemories: the active
+// and the superseded ones), its id and the Engram observation it was imported from, with the two fields promotion's
+// eligibility rule reads (R-007): whether it is pinned and its topic_key. It opens memorycard for the question and
+// closes it, and reads no Engram database.
+func liveMemoryEligibility(project string) ([]ops.MemoryEligibility, error) {
+	store, err := memorycard.Open(os.Getenv(memorycardDBEnvVar))
 	if err != nil {
 		return nil, err
 	}
-	eligibility := make([]ops.ObservationEligibility, len(observations))
-	for i, o := range observations {
-		eligibility[i] = ops.ObservationEligibility{ID: o.ID, Pinned: o.Pinned, TopicKey: o.TopicKey}
+	defer store.Close()
+	memories, err := store.ListMemories(project)
+	if err != nil {
+		return nil, err
+	}
+	eligibility := make([]ops.MemoryEligibility, len(memories))
+	for i, m := range memories {
+		eligibility[i] = ops.MemoryEligibility{ID: m.ID, EngramID: m.EngramID, Pinned: m.Pinned, TopicKey: m.TopicKey}
 	}
 	return eligibility, nil
 }

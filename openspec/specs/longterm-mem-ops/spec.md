@@ -101,6 +101,29 @@ reason the code exists.
 - THEN it exits with the generic internal code rather than 9, so a failure
   of longterm-mem's own is never mistaken for a finding about the vault
 
+Beyond those five, doctor SHALL report the advisory check `promoted-pages-eligible`, which joins each promoted
+page to the memorycard memory the page names -- its `memorycard_id`, or, for a page of an earlier release, its
+`engram_id` through memorycard's `import_map` -- and warns, never fails, for every page whose memory the
+promotion eligibility rule no longer accepts, so that `sync` no longer refreshes it. The check SHALL read no
+Engram database, and its advice SHALL name the memory by its memorycard id and a command that works:
+`longterm-mem promote --source memorycard --id M` to refresh the page now, or pinning memory M in memorycard
+so that `sync` keeps it current. (Previously: the check joined each page to a live Engram observation by its
+`engram_id` and advised `longterm-mem promote --id N` or pinning observation N in Engram.)
+
+#### Scenario: A frozen memorycard page names its memory and a promote that works
+
+- GIVEN a page promoted from memorycard memory M that is not pinned and has no curated topic_key
+- WHEN doctor runs
+- THEN promoted-pages-eligible warns, naming the page, memory M, why it is not eligible, `longterm-mem
+  promote --source memorycard --id M` and the pin in memorycard
+
+#### Scenario: A page of an earlier release is joined to the memory imported from its observation
+
+- GIVEN a page that names Engram observation N by its engram_id, and memorycard's import_map names memory M
+  as imported from N
+- WHEN doctor runs and M is not eligible
+- THEN promoted-pages-eligible warns for that page with memory M, and no Engram database was read
+
 ### Requirement: MCP Stdio Server Exposes Query and Promote
 
 ID: R-012

@@ -5,6 +5,7 @@ package promote
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
@@ -63,6 +64,36 @@ func PageObservationID(page Page) (int64, bool) {
 	}
 	id, named := frontmatterEngramID(block)
 	return id, named && id > 0
+}
+
+// MemoryRef is the memory a page was promoted from, in the terms of the store it names: the store (Source) and
+// the id of the memory there.
+type MemoryRef struct {
+	Source string
+	ID     int64
+}
+
+// PageMemoryRef is the memory a page was promoted from, whichever store wrote its identity: the memorycard
+// memory its memorycard_id (or source_id beside source: memorycard) names, or, failing that, the Engram
+// observation its engram_id (or source_id beside source: engram) names, which a page of an earlier release
+// carries until the migration of the vault. It reports false for a page that names none -- no frontmatter block, no
+// id, one that is not a positive number -- so that no page is joined to a memory it does not name.
+func PageMemoryRef(page Page) (MemoryRef, bool) {
+	block, ok := frontmatterBlock(page.Frontmatter)
+	if !ok {
+		return MemoryRef{}, false
+	}
+	fields := parseFrontmatterFields(block)
+	for _, source := range []string{memorycardSource, engramSource} {
+		identity, named := identityOf(fields, source)
+		if !named {
+			continue
+		}
+		if id, err := strconv.ParseInt(strings.TrimSpace(identity.ID), 10, 64); err == nil && id > 0 {
+			return MemoryRef{Source: source, ID: id}, true
+		}
+	}
+	return MemoryRef{}, false
 }
 
 // curatedTopicKey reports whether key is a non-empty topic_key whose first

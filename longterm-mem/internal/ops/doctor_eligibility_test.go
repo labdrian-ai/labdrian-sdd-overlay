@@ -31,22 +31,22 @@ func promotedFrom(t *testing.T, obs memory.Observation, address string) [2]strin
 
 // observationsOf answers the live observations it holds and records the projects it was asked for.
 type observationsOf struct {
-	rows  []ObservationEligibility
+	rows  []MemoryEligibility
 	err   error
 	asked []string
 }
 
-func (o *observationsOf) read(project string) ([]ObservationEligibility, error) {
+func (o *observationsOf) read(project string) ([]MemoryEligibility, error) {
 	o.asked = append(o.asked, project)
 	return o.rows, o.err
 }
 
 // eligibilityCheckOf is the promoted-pages-eligible check of a Doctor whose pages are the reader's and whose
 // live observations are the function's, the rest of the vault being whatever pagesDoctorDeps builds.
-func eligibilityCheckOf(t *testing.T, pages PageReader, observations func(string) ([]ObservationEligibility, error)) Check {
+func eligibilityCheckOf(t *testing.T, pages PageReader, observations func(string) ([]MemoryEligibility, error)) Check {
 	t.Helper()
 	deps := pagesDoctorDeps(t, pages)
-	deps.LiveObservationEligibility = observations
+	deps.LiveMemoryEligibility = observations
 	report, err := Doctor(context.Background(), deps, doctorTestProject)
 	if err != nil {
 		t.Fatalf("Doctor: %v", err)
@@ -59,46 +59,46 @@ func eligibilityCheckOf(t *testing.T, pages PageReader, observations func(string
 func TestDoctorWarnsOfAPageWhoseObservationIsNotEligible(t *testing.T) {
 	for _, tc := range []struct {
 		name string
-		obs  ObservationEligibility
+		obs  MemoryEligibility
 		want string
 	}{
 		{
 			name: "no topic_key",
-			obs:  ObservationEligibility{ID: 41},
-			want: "c-000012: observation 41 is not pinned and has no topic_key, so sync does not refresh this page; run `longterm-mem promote --id 41` to refresh it now, or pin observation 41 in Engram so sync keeps it current",
+			obs:  MemoryEligibility{ID: 41, EngramID: 41},
+			want: "c-000012: memory 41 is not pinned and has no topic_key, so sync does not refresh this page; run `longterm-mem promote --source memorycard --id 41` to refresh it now, or pin memory 41 in memorycard so sync keeps it current",
 		},
 		{
 			name: "a whitespace topic_key is no topic_key",
-			obs:  ObservationEligibility{ID: 41, TopicKey: "  "},
-			want: "c-000012: observation 41 is not pinned and has no topic_key, so sync does not refresh this page; run `longterm-mem promote --id 41` to refresh it now, or pin observation 41 in Engram so sync keeps it current",
+			obs:  MemoryEligibility{ID: 41, EngramID: 41, TopicKey: "  "},
+			want: "c-000012: memory 41 is not pinned and has no topic_key, so sync does not refresh this page; run `longterm-mem promote --source memorycard --id 41` to refresh it now, or pin memory 41 in memorycard so sync keeps it current",
 		},
 		{
 			name: "an sdd/ topic",
-			obs:  ObservationEligibility{ID: 41, TopicKey: "sdd/some-change/tasks"},
-			want: "c-000012: observation 41 is not pinned and its topic_key \"sdd/some-change/tasks\" is not a curated topic, so sync does not refresh this page; run `longterm-mem promote --id 41` to refresh it now, or pin observation 41 in Engram so sync keeps it current",
+			obs:  MemoryEligibility{ID: 41, EngramID: 41, TopicKey: "sdd/some-change/tasks"},
+			want: "c-000012: memory 41 is not pinned and its topic_key \"sdd/some-change/tasks\" is not a curated topic, so sync does not refresh this page; run `longterm-mem promote --source memorycard --id 41` to refresh it now, or pin memory 41 in memorycard so sync keeps it current",
 		},
 		{
 			name: "a review/ topic",
-			obs:  ObservationEligibility{ID: 41, TopicKey: "review/some-change/verdict"},
-			want: "c-000012: observation 41 is not pinned and its topic_key \"review/some-change/verdict\" is not a curated topic, so sync does not refresh this page; run `longterm-mem promote --id 41` to refresh it now, or pin observation 41 in Engram so sync keeps it current",
+			obs:  MemoryEligibility{ID: 41, EngramID: 41, TopicKey: "review/some-change/verdict"},
+			want: "c-000012: memory 41 is not pinned and its topic_key \"review/some-change/verdict\" is not a curated topic, so sync does not refresh this page; run `longterm-mem promote --source memorycard --id 41` to refresh it now, or pin memory 41 in memorycard so sync keeps it current",
 		},
 		{
 			name: "a delivery/ topic",
-			obs:  ObservationEligibility{ID: 41, TopicKey: "delivery/some-change/receipt"},
-			want: "c-000012: observation 41 is not pinned and its topic_key \"delivery/some-change/receipt\" is not a curated topic, so sync does not refresh this page; run `longterm-mem promote --id 41` to refresh it now, or pin observation 41 in Engram so sync keeps it current",
+			obs:  MemoryEligibility{ID: 41, EngramID: 41, TopicKey: "delivery/some-change/receipt"},
+			want: "c-000012: memory 41 is not pinned and its topic_key \"delivery/some-change/receipt\" is not a curated topic, so sync does not refresh this page; run `longterm-mem promote --source memorycard --id 41` to refresh it now, or pin memory 41 in memorycard so sync keeps it current",
 		},
 		{
 			// A page promoted by an explicit `promote --id N` of an observation that never was eligible: nothing on
 			// the page records that it was promoted explicitly, so it is flagged all the same, until the
 			// observation is pinned.
 			name: "a page promoted explicitly",
-			obs:  ObservationEligibility{ID: 7},
-			want: "c-000012: observation 7 is not pinned and has no topic_key, so sync does not refresh this page; run `longterm-mem promote --id 7` to refresh it now, or pin observation 7 in Engram so sync keeps it current",
+			obs:  MemoryEligibility{ID: 7, EngramID: 7},
+			want: "c-000012: memory 7 is not pinned and has no topic_key, so sync does not refresh this page; run `longterm-mem promote --source memorycard --id 7` to refresh it now, or pin memory 7 in memorycard so sync keeps it current",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			pages := newFakePages(promotedFrom(t, memory.Observation{ID: tc.obs.ID}, "c-000012"))
-			observations := &observationsOf{rows: []ObservationEligibility{tc.obs}}
+			observations := &observationsOf{rows: []MemoryEligibility{tc.obs}}
 
 			got := eligibilityCheckOf(t, pages, observations.read)
 
@@ -115,17 +115,17 @@ func TestDoctorWarnsOfAPageWhoseObservationIsNotEligible(t *testing.T) {
 func TestDoctorPassesAPageWhoseObservationIsEligible(t *testing.T) {
 	for _, tc := range []struct {
 		name string
-		obs  ObservationEligibility
+		obs  MemoryEligibility
 	}{
-		{"pinned", ObservationEligibility{ID: 41, Pinned: true}},
-		{"a curated topic", ObservationEligibility{ID: 41, TopicKey: "longterm-mem/promotion-eligibility-policy"}},
-		{"a curated topic of a goal", ObservationEligibility{ID: 41, TopicKey: "goal:g-42/longterm-mem/policy"}},
-		{"pinned, whatever the topic", ObservationEligibility{ID: 41, Pinned: true, TopicKey: "sdd/some-change/tasks"}},
-		{"sdd-init/ is not sdd/", ObservationEligibility{ID: 41, TopicKey: "sdd-init/onboarding"}},
+		{"pinned", MemoryEligibility{ID: 41, EngramID: 41, Pinned: true}},
+		{"a curated topic", MemoryEligibility{ID: 41, EngramID: 41, TopicKey: "longterm-mem/promotion-eligibility-policy"}},
+		{"a curated topic of a goal", MemoryEligibility{ID: 41, EngramID: 41, TopicKey: "goal:g-42/longterm-mem/policy"}},
+		{"pinned, whatever the topic", MemoryEligibility{ID: 41, EngramID: 41, Pinned: true, TopicKey: "sdd/some-change/tasks"}},
+		{"sdd-init/ is not sdd/", MemoryEligibility{ID: 41, EngramID: 41, TopicKey: "sdd-init/onboarding"}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			pages := newFakePages(promotedFrom(t, memory.Observation{ID: tc.obs.ID}, "c-000012"))
-			observations := &observationsOf{rows: []ObservationEligibility{tc.obs}}
+			observations := &observationsOf{rows: []MemoryEligibility{tc.obs}}
 
 			got := eligibilityCheckOf(t, pages, observations.read)
 
@@ -155,7 +155,7 @@ func TestDoctorAgreesWithPromoteEligible(t *testing.T) {
 		{ID: 41, Pinned: true, TopicKey: "review/some-change/verdict"},
 	} {
 		pages := newFakePages(promotedFrom(t, memory.Observation{ID: obs.ID}, "c-000012"))
-		observations := &observationsOf{rows: []ObservationEligibility{{ID: obs.ID, Pinned: obs.Pinned, TopicKey: obs.TopicKey}}}
+		observations := &observationsOf{rows: []MemoryEligibility{{ID: obs.ID, EngramID: obs.ID, Pinned: obs.Pinned, TopicKey: obs.TopicKey}}}
 
 		got := eligibilityCheckOf(t, pages, observations.read)
 
@@ -176,19 +176,19 @@ func TestDoctorSkipsAPageWhoseObservationIsNotLive(t *testing.T) {
 		promotedFrom(t, memory.Observation{ID: 90}, "c-000010"),
 		promotedFrom(t, memory.Observation{ID: 41}, "c-000011"),
 	)
-	observations := &observationsOf{rows: []ObservationEligibility{{ID: 41}}}
+	observations := &observationsOf{rows: []MemoryEligibility{{ID: 41, EngramID: 41}}}
 
 	got := eligibilityCheckOf(t, pages, observations.read)
 
-	if got.Status != CheckWarned || !strings.HasPrefix(got.Detail, "c-000011: observation 41 ") {
+	if got.Status != CheckWarned || !strings.HasPrefix(got.Detail, "c-000011: memory 41 ") {
 		t.Fatalf("promoted-pages-eligible = %+v, want a warning about c-000011 alone", got)
 	}
-	if strings.Contains(got.Detail, "c-000010") || strings.Contains(got.Detail, "observation 90") {
+	if strings.Contains(got.Detail, "c-000010") || strings.Contains(got.Detail, "memory 90") {
 		t.Errorf("promoted-pages-eligible detail %q names the page whose observation is not live", got.Detail)
 	}
 
 	only := newFakePages(promotedFrom(t, memory.Observation{ID: 90}, "c-000010"))
-	if got := eligibilityCheckOf(t, only, (&observationsOf{rows: []ObservationEligibility{{ID: 41}}}).read); got.Status != CheckPassed || got.Detail != "" {
+	if got := eligibilityCheckOf(t, only, (&observationsOf{rows: []MemoryEligibility{{ID: 41, EngramID: 41}}}).read); got.Status != CheckPassed || got.Detail != "" {
 		t.Errorf("promoted-pages-eligible = %+v, want PASS: the one page's observation is not live", got)
 	}
 }
@@ -202,7 +202,7 @@ func TestDoctorSkipsAPageThatNamesNoObservation(t *testing.T) {
 		[2]string{"c-000053", ""},
 	)
 	// The one row Doctor could join those pages to, if it read an absent or unparseable engram_id as 0.
-	observations := &observationsOf{rows: []ObservationEligibility{{ID: 0}}}
+	observations := &observationsOf{rows: []MemoryEligibility{{ID: 0, EngramID: 0}}}
 
 	got := eligibilityCheckOf(t, pages, observations.read)
 
@@ -219,12 +219,12 @@ func TestDoctorSkipsAPageThatNamesNoObservation(t *testing.T) {
 func TestDoctorReadsTheObservationOfAPageFromItsFrontmatterAlone(t *testing.T) {
 	page := promotedFrom(t, memory.Observation{ID: 21}, "c-000001")
 	page[1] += "\nengram_id: 99\n"
-	observations := &observationsOf{rows: []ObservationEligibility{{ID: 21}, {ID: 99, Pinned: true}}}
+	observations := &observationsOf{rows: []MemoryEligibility{{ID: 21, EngramID: 21}, {ID: 99, EngramID: 99, Pinned: true}}}
 
 	got := eligibilityCheckOf(t, newFakePages(page), observations.read)
 
-	if got.Status != CheckWarned || !strings.HasPrefix(got.Detail, "c-000001: observation 21 ") || strings.Contains(got.Detail, "observation 99") {
-		t.Errorf("promoted-pages-eligible = %+v, want a warning about observation 21, the page's own", got)
+	if got.Status != CheckWarned || !strings.HasPrefix(got.Detail, "c-000001: memory 21 ") || strings.Contains(got.Detail, "memory 99") {
+		t.Errorf("promoted-pages-eligible = %+v, want a warning about memory 21, the page's own", got)
 	}
 }
 
@@ -236,16 +236,16 @@ func TestDoctorNamesEveryFrozenPageInTheOrderOfThePages(t *testing.T) {
 		promotedFrom(t, memory.Observation{ID: 22}, "c-000002"),
 		promotedFrom(t, memory.Observation{ID: 23}, "c-000003"),
 	)
-	observations := &observationsOf{rows: []ObservationEligibility{
-		{ID: 23, TopicKey: "sdd/x/tasks"},
-		{ID: 22, Pinned: true},
-		{ID: 21},
+	observations := &observationsOf{rows: []MemoryEligibility{
+		{ID: 23, EngramID: 23, TopicKey: "sdd/x/tasks"},
+		{ID: 22, EngramID: 22, Pinned: true},
+		{ID: 21, EngramID: 21},
 	}}
 
 	got := eligibilityCheckOf(t, pages, observations.read)
 
-	const first = "c-000001: observation 21 is not pinned and has no topic_key, so sync does not refresh this page; run `longterm-mem promote --id 21` to refresh it now, or pin observation 21 in Engram so sync keeps it current"
-	const third = "c-000003: observation 23 is not pinned and its topic_key \"sdd/x/tasks\" is not a curated topic, so sync does not refresh this page; run `longterm-mem promote --id 23` to refresh it now, or pin observation 23 in Engram so sync keeps it current"
+	const first = "c-000001: memory 21 is not pinned and has no topic_key, so sync does not refresh this page; run `longterm-mem promote --source memorycard --id 21` to refresh it now, or pin memory 21 in memorycard so sync keeps it current"
+	const third = "c-000003: memory 23 is not pinned and its topic_key \"sdd/x/tasks\" is not a curated topic, so sync does not refresh this page; run `longterm-mem promote --source memorycard --id 23` to refresh it now, or pin memory 23 in memorycard so sync keeps it current"
 	if got.Status != CheckWarned || got.Detail != first+"; "+third {
 		t.Errorf("promoted-pages-eligible = %+v, want a warning with %q then %q", got, first, third)
 	}
@@ -289,11 +289,11 @@ func TestDoctorLeavesAnUnreadablePageToThePageChecks(t *testing.T) {
 		promotedFrom(t, memory.Observation{ID: 21}, "c-000051"),
 	)
 	pages.readErrs = map[string]error{"c-000050": errors.New("read c-000050.md: is a directory")}
-	observations := &observationsOf{rows: []ObservationEligibility{{ID: 21}}}
+	observations := &observationsOf{rows: []MemoryEligibility{{ID: 21, EngramID: 21}}}
 
 	got := eligibilityCheckOf(t, pages, observations.read)
 
-	if got.Status != CheckWarned || !strings.HasPrefix(got.Detail, "c-000051: observation 21 ") || strings.Contains(got.Detail, "c-000050") {
+	if got.Status != CheckWarned || !strings.HasPrefix(got.Detail, "c-000051: memory 21 ") || strings.Contains(got.Detail, "c-000050") {
 		t.Errorf("promoted-pages-eligible = %+v, want a warning about c-000051 alone", got)
 	}
 }
@@ -309,20 +309,20 @@ func TestDoctorSaysEligibilityCannotBeJudgedAndNeverFailsForIt(t *testing.T) {
 	for _, tc := range []struct {
 		name         string
 		pages        PageReader
-		observations func(string) ([]ObservationEligibility, error)
+		observations func(string) ([]MemoryEligibility, error)
 		want         string
 	}{
 		{
 			name:         "the observations cannot be read",
 			pages:        onePage(),
 			observations: (&observationsOf{err: errors.New("database is locked")}).read,
-			want:         "eligibility cannot be judged: could not read the live observations of labdrian-sdd-overlay: database is locked",
+			want:         "eligibility cannot be judged: could not read the live memories of labdrian-sdd-overlay: database is locked",
 		},
 		{
 			name:         "no reader of the observations was wired",
 			pages:        onePage(),
 			observations: nil,
-			want:         "eligibility cannot be judged: ops: no observation eligibility reader was wired",
+			want:         "eligibility cannot be judged: ops: no memory eligibility reader was wired",
 		},
 		{
 			name:         "the pages cannot be listed",
@@ -370,8 +370,8 @@ func TestPromotedPagesEligibleNeverAnswersFAIL(t *testing.T) {
 	failing := newFakePages(promotedFrom(t, memory.Observation{ID: 21}, "c-000001"))
 	failing.listErr = errors.New("boom")
 	for name, check := range map[string]Check{
-		"frozen":              eligibilityCheckOf(t, newFakePages(promotedFrom(t, memory.Observation{ID: 21}, "c-000001")), (&observationsOf{rows: []ObservationEligibility{{ID: 21}}}).read),
-		"healthy":             eligibilityCheckOf(t, newFakePages(promotedFrom(t, memory.Observation{ID: 21}, "c-000001")), (&observationsOf{rows: []ObservationEligibility{{ID: 21, Pinned: true}}}).read),
+		"frozen":              eligibilityCheckOf(t, newFakePages(promotedFrom(t, memory.Observation{ID: 21}, "c-000001")), (&observationsOf{rows: []MemoryEligibility{{ID: 21, EngramID: 21}}}).read),
+		"healthy":             eligibilityCheckOf(t, newFakePages(promotedFrom(t, memory.Observation{ID: 21}, "c-000001")), (&observationsOf{rows: []MemoryEligibility{{ID: 21, EngramID: 21, Pinned: true}}}).read),
 		"engram unreadable":   eligibilityCheckOf(t, newFakePages(promotedFrom(t, memory.Observation{ID: 21}, "c-000001")), (&observationsOf{err: errors.New("boom")}).read),
 		"reader not wired":    eligibilityCheckOf(t, newFakePages(promotedFrom(t, memory.Observation{ID: 21}, "c-000001")), nil),
 		"pages not listable":  eligibilityCheckOf(t, failing, (&observationsOf{}).read),
@@ -387,7 +387,7 @@ func TestPromotedPagesEligibleNeverAnswersFAIL(t *testing.T) {
 // reports both, each at its own severity.
 func TestDoctorReportsAWarningBesideAFailure(t *testing.T) {
 	deps := pagesDoctorDeps(t, newFakePages(promotedFrom(t, memory.Observation{ID: 21}, "c-000001")))
-	deps.LiveObservationEligibility = (&observationsOf{rows: []ObservationEligibility{{ID: 21}}}).read
+	deps.LiveMemoryEligibility = (&observationsOf{rows: []MemoryEligibility{{ID: 21, EngramID: 21}}}).read
 
 	report, err := Doctor(context.Background(), deps, doctorTestProject)
 	if err != nil {
@@ -409,7 +409,7 @@ func TestDoctorKeepsItsEightChecksInTheirOrderAndAddsTheEligibilityCheckLast(t *
 	index, live := newHealthyEmbeddingDeps(t)
 	deps := doctorDepsWith(t, index, live...)
 	// The healthy vault's one page is promoted from observation 1.
-	deps.LiveObservationEligibility = (&observationsOf{rows: []ObservationEligibility{{ID: 1, Pinned: true}}}).read
+	deps.LiveMemoryEligibility = (&observationsOf{rows: []MemoryEligibility{{ID: 1, EngramID: 1, Pinned: true}}}).read
 
 	report, err := Doctor(context.Background(), deps, doctorTestProject)
 	if err != nil {
