@@ -74,7 +74,7 @@ func (c commands) promoteFrom(a app, name, vaultRoot string, id int64) int {
 	switch {
 	case errors.As(err, &bridged):
 		return a.refuse(err, exitRegistrationConflict)
-	case errors.Is(err, promote.ErrObservationNotFound):
+	case errors.Is(err, promote.ErrMemoryNotFound):
 		return a.refuse(err, exitNotFound)
 	case err != nil:
 		return a.refuse(err, exitInternal)

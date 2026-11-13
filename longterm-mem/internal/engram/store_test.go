@@ -472,7 +472,7 @@ func TestObservationByID_ReturnsTheMatchingRow(t *testing.T) {
 // TestObservationByID_UnknownIDReportsNotFoundNotAnError (R-032's "clear
 // error rather than silently doing nothing" starts here: ObservationByID
 // itself must distinguish "no such row" from a genuine database failure,
-// so a caller (promote.ExplicitPromote) can turn the former into its own
+// so a caller can turn the former into its own
 // distinguishable error).
 func TestObservationByID_UnknownIDReportsNotFoundNotAnError(t *testing.T) {
 	dir := t.TempDir()
