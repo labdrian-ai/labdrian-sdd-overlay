@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "1d99ea35c923b5722271f3de4c88a3234ae85a58",
+    "head": "50b4fd1a07e5b548f58ce5c96940d3b83ac9496f",
+    "diff_sha256": "704eb4ef305e7b52bb9ed4f011cc04c5203d8e906c770c36767a7b7c74203faf",
+    "paths": [
+      "odd/tasks/phase9-c22fu-memorycard-compat.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "1d99ea35c923b5722271f3de4c88a3234ae85a58",
+      "head": "50b4fd1a07e5b548f58ce5c96940d3b83ac9496f",
+      "diff_sha256": "704eb4ef305e7b52bb9ed4f011cc04c5203d8e906c770c36767a7b7c74203faf"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-c22fu-memorycard-compat.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "odd/tasks/phase9-c22fu-memorycard-compat.md:75",
+        "claim": "T4 is marked [x] (checked) while the same line says the box stays for the coordinator or delivery to close, and L21 says the shaper never checks a box and 'box left open'. The head contradicts L21's own statement; the checkbox state is inconsistent with the log and may misreport T4 as built.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-c22fu-memorycard-compat.md:75",
+          "odd/tasks/phase9-c22fu-memorycard-compat.md:240"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "odd/tasks/phase9-c22fu-memorycard-compat.md:77",
+        "claim": "T5's check says `rg -n 'reads Engram only|sync --source memorycard'` over the contract must print nothing, but S1 still describes opt-in `sync --source memorycard` as T2 built it (default engram), and S4(a)'s replacement text is stated to name the next plain `sync`. The check is fine for the contract, but T6's check `rg -n 'sync --source' SKILL.md prints nothing` conflicts with the unchanged S1 acceptance (still text saying scenario 4 passes with `sync --source memorycard`), leaving S1's acceptance bullet for the scratch end-to-end run stale against main where `--source engram` is exit 2 and the Differential acceptance (`--source engram` identical to base) can no longer hold.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-c22fu-memorycard-compat.md:26",
+          "odd/tasks/phase9-c22fu-memorycard-compat.md:28"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-c22fu-memorycard-compat.md:42",
+        "claim": "The S3 contract scope cites '`:158-161`' for the revision_count sentence while the S3 task line and T5 use the same range, but the S4(a) note cites contract `:150` 'still at' on `1d99ea35` and the heading says line numbers 'equal to those at 50209573 except the last' without naming which is the last; ambiguous referent (the `:163-165` vs earlier `:163-167`).",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-c22fu-memorycard-compat.md:42"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only one path changed, a planning document; findings derive from internal inconsistencies visible in the diff.",
+      "T4 line shows [x] while its own text and L21 say the box was left open for the coordinator."
+    ]
+  }
+}

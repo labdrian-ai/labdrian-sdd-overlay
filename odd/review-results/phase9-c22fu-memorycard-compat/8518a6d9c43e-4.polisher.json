@@ -1,0 +1,25 @@
+{
+  "kind": "polisher",
+  "base": "848d52b647f8fd6ad0d680393798584b416384c1",
+  "head": "8518a6d9c43ea5f32ae62d91eba6e6e24bee573a",
+  "diff_sha256": "c8abadc2a0be5e03a2ad420f3a8673b3d88b323232f97f1f94bb3b0cb79e6ad5",
+  "findings": {
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "skills/_shared/ingested-observation-contract.md:92-100",
+        "summary": "The verbatim shape lists **Status** twice for a manifest (line 83 in the main block, line 95 under Manifest-only additions); a reader building a manifest from the example could emit it twice. Not a regression: the commit did not change those lines.",
+        "evidence": [
+          "header.go Render writes **Status** once for every record type"
+        ]
+      }
+    ],
+    "evidence": [
+      "(a) Contract :62-66 matches header.go Render (:111-143).",
+      "Every string pinned by engine/skills/ingested_contract_artifact_test.go is still present.",
+      "(b) and (c) map to procedure steps 1, 2 and 4 and agree with propagate_cards.go eachCardPatchTarget.",
+      "No tests run; read-only."
+    ]
+  }
+}

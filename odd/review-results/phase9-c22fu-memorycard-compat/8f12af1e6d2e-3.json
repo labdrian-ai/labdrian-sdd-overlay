@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "08c63163e4d4410090178baab718bd49a898d760",
+    "head": "8f12af1e6d2e15c85bb73d294ea7165ee0cfb3b1",
+    "diff_sha256": "8a70bb271ad4ab0621f5e103fc1d590140b8c0a41f1a46aa1bfd0eac3346a53f",
+    "paths": [
+      "odd/tasks/phase9-c22fu-memorycard-compat.md",
+      "openspec/specs/knowledge-ingestion/spec.md",
+      "skills/_shared/ingested-observation-contract.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "08c63163e4d4410090178baab718bd49a898d760",
+      "head": "8f12af1e6d2e15c85bb73d294ea7165ee0cfb3b1",
+      "diff_sha256": "8a70bb271ad4ab0621f5e103fc1d590140b8c0a41f1a46aa1bfd0eac3346a53f"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-c22fu-memorycard-compat.md",
+        "openspec/specs/knowledge-ingestion/spec.md",
+        "skills/_shared/ingested-observation-contract.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "skills/_shared/ingested-observation-contract.md:158-164",
+        "claim": "The normative contract, mirrored to every runtime, cites line numbers in an external repository (memorycard/internal/memory/save.go:287-291, :377-389, :281-286). These will drift silently and no test checks them. The rationale for keeping the hard no-op also became weaker: the save adds no version, so the remaining reason (archived restore, a promote over unchanged content) is less clear to a reader.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/_shared/ingested-observation-contract.md:158-164"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "skills/_shared/ingested-observation-contract.md:150",
+        "claim": "The origin-changed row is now a single very long table cell holding several procedural steps (supersede, page patch, chunk tombstoning, manifest exception, N==1 exception). It is hard to scan, and agents following the operator procedure may miss the tombstone step. It also asserts that the next `sync` patches the old page to `superseded`, which depends on propagation behaviour that this docs-only change does not verify.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/_shared/ingested-observation-contract.md:150"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff of the three changed paths; this is a docs-only change and I ran no code.",
+      "The contract row at :150 and the hard no-op paragraph at :158-164 carry the new behavioural claims.",
+      "The spec edits match the contract wording and keep the R-ids and the Previously notes."
+    ]
+  }
+}

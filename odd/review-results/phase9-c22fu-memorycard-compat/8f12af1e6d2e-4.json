@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "08c63163e4d4410090178baab718bd49a898d760",
+    "head": "8f12af1e6d2e15c85bb73d294ea7165ee0cfb3b1",
+    "diff_sha256": "8a70bb271ad4ab0621f5e103fc1d590140b8c0a41f1a46aa1bfd0eac3346a53f",
+    "paths": [
+      "odd/tasks/phase9-c22fu-memorycard-compat.md",
+      "openspec/specs/knowledge-ingestion/spec.md",
+      "skills/_shared/ingested-observation-contract.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "08c63163e4d4410090178baab718bd49a898d760",
+      "head": "8f12af1e6d2e15c85bb73d294ea7165ee0cfb3b1",
+      "diff_sha256": "8a70bb271ad4ab0621f5e103fc1d590140b8c0a41f1a46aa1bfd0eac3346a53f"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-c22fu-memorycard-compat.md",
+        "openspec/specs/knowledge-ingestion/spec.md",
+        "skills/_shared/ingested-observation-contract.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "skills/_shared/ingested-observation-contract.md:158-164",
+        "claim": "The normative contract, which is mirrored to every runtime, now cites line numbers in an external repository's source file (memorycard/internal/memory/save.go:287-291, :377-389, :281-286). Those files are not shipped with the overlay, and the line numbers drift whenever memorycard changes. No test pins them, so the contract can silently go stale. The rationale for the hard no-op also now rests on behaviour that agents cannot verify from the contract alone.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/_shared/ingested-observation-contract.md:158-164 (added lines citing save.go:287-291, :377-389, :281-286)"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed all three changed paths. The edits are wording changes (Engram to memorycard), added Previously notes, and a rewritten origin-changed row.",
+      "The origin-changed row's claim that the next sync patches the old page to superseded depends on propagation work (T3) that the task file records as done; I could not verify it from the diff.",
+      "No behavioural code changed in this diff."
+    ]
+  }
+}
