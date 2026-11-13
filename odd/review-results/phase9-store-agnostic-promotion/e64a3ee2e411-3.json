@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "d83f286d3facd1d2b60337cf8c070b966d0214b8",
+    "head": "e64a3ee2e411496f837c44bfe7fd18db8aa39cda",
+    "diff_sha256": "3213be644b8350cb9df1133863ad97412187614c6babb6accd5b57dc58b30afb",
+    "paths": [
+      "openspec/specs/longterm-mem-promotion/spec.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "d83f286d3facd1d2b60337cf8c070b966d0214b8",
+      "head": "e64a3ee2e411496f837c44bfe7fd18db8aa39cda",
+      "diff_sha256": "3213be644b8350cb9df1133863ad97412187614c6babb6accd5b57dc58b30afb"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "openspec/specs/longterm-mem-promotion/spec.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "openspec/specs/longterm-mem-promotion/spec.md:671-675",
+        "claim": "The requirement now names three page identities (memorycard_revision, source_revision beside source, legacy engram_revision) but does not say what happens when a page carries more than one, or which wins. Readers could disagree on the revision adopted for a page with conflicting fields. The adjacent scenario says only 'under its page identity' and does not define identity precedence or conflict handling.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "openspec/specs/longterm-mem-promotion/spec.md:671-675"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "openspec/specs/longterm-mem-promotion/spec.md:671-675",
+        "claim": "The inline '(Previously: ...)' changelog note is embedded in normative requirement text. It will go stale as history and does not belong in a living spec; a SHALL requirement should state only current behavior.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "openspec/specs/longterm-mem-promotion/spec.md:673-675"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "openspec/specs/longterm-mem-promotion/spec.md:750-751",
+        "claim": "The refusal scenario was loosened to 'revision (under its page identity) is missing, non-numeric or negative'. It no longer covers a page that carries none of the three identities, which the removed 'engram_revision' wording and the old 'page of any other identity was refused' behavior addressed. Whether such a page is refused for the revision or for identity is now unspecified.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "openspec/specs/longterm-mem-promotion/spec.md:750-751"
+        ]
+      }
+    ],
+    "evidence": [
+      "Single-file spec change; only the revision-reading requirement and one scenario GIVEN were edited.",
+      "No code changed, so no runtime regression is possible from this diff; findings concern spec precision only."
+    ]
+  }
+}

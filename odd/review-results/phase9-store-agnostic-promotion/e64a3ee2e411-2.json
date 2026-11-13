@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "d83f286d3facd1d2b60337cf8c070b966d0214b8",
+    "head": "e64a3ee2e411496f837c44bfe7fd18db8aa39cda",
+    "diff_sha256": "3213be644b8350cb9df1133863ad97412187614c6babb6accd5b57dc58b30afb",
+    "paths": [
+      "openspec/specs/longterm-mem-promotion/spec.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "d83f286d3facd1d2b60337cf8c070b966d0214b8",
+      "head": "e64a3ee2e411496f837c44bfe7fd18db8aa39cda",
+      "diff_sha256": "3213be644b8350cb9df1133863ad97412187614c6babb6accd5b57dc58b30afb"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "openspec/specs/longterm-mem-promotion/spec.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "openspec/specs/longterm-mem-promotion/spec.md:671-674",
+        "claim": "The requirement does not say what happens when a page carries more than one revision field (for example both `engram_revision` and `source_revision`), or which field wins. Two implementations could read different revisions from the same page, so the requirement is ambiguous.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "spec.md:671-674 lists three alternative identities with no precedence or conflict rule"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "openspec/specs/longterm-mem-promotion/spec.md:673-674",
+        "claim": "A '(Previously: ...)' history note sits inside a normative SHALL paragraph of the living spec. This is change-log prose in a requirement, which becomes stale and blurs what is required. It belongs in the Log or the change document.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "spec.md:673-674 '(Previously: only `engram_revision` was read, and a page of any other identity was refused.)'"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "openspec/specs/longterm-mem-promotion/spec.md:751",
+        "claim": "The scenario now reads 'revision (under its page identity)', which is vaguer than the original. It no longer names the concrete fields (`memorycard_revision`, `source_revision`, `engram_revision`), so the scenario does not cover each identity as a separate case. A missing `source_revision` or `memorycard_revision` is not explicitly pinned to the refusal.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "spec.md:751 replaces 'engram_revision' with 'revision (under its page identity)'"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only the spec text changed; no code is touched, so no behavioral regression can be shown from the diff.",
+      "Line numbers are counted from the head-side hunk headers (+668 and +747)."
+    ]
+  }
+}

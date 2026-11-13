@@ -1,0 +1,24 @@
+{
+  "kind": "sweep",
+  "base": "08f07c0119fd8324e1d1b1cc2981654128481a99",
+  "head": "a825da1ef4e765eb4cba2a54ff905d4764bf5c55",
+  "diff_sha256": "de7458f50f6f90fb1d59fa563cc718a9abe88acafea788664bfb2200ec996060",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": [
+      {
+        "name": "TestPageIdentity_ReconcileStillRefusesAPageThatIsNotEngrams",
+        "hits": [
+          "odd/tasks/phase9-store-agnostic-promotion.md"
+        ]
+      }
+    ]
+  },
+  "t2": [],
+  "t3": [],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

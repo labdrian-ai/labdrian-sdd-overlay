@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "750fc5a50f54d5de5873d9541af272892f6198ff",
+    "head": "d83f286d3facd1d2b60337cf8c070b966d0214b8",
+    "diff_sha256": "d514d1715073f94347d560a3b75f1a57a6a06a976e5922e21176d471917c86df",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "750fc5a50f54d5de5873d9541af272892f6198ff",
+      "head": "d83f286d3facd1d2b60337cf8c070b966d0214b8",
+      "diff_sha256": "d514d1715073f94347d560a3b75f1a57a6a06a976e5922e21176d471917c86df"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:120",
+        "claim": "The T5 task line's `commit:` list stops at the docs commits 43a74858 and 2ee0317e. The correction-batch commits 733db247 and 08f07c01 are named only in L55. T4's line lists its correction batches in its `commit:` field, so T5 is inconsistent with that convention. Anyone tracing T5's commits from the task line misses the batch that changed goldens and the degraded-snapshot declaration.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:120"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:434",
+        "claim": "L55's 'six open items of L54' does not match L54, which lists seven. The numbering is also shifted. L54 (5) is the MCP registration spec being unchanged and L54 (6) is `promoted_revision` absent from the sidecar (T10). L55 reads (5) as 'the T10 gaps' and (6) as `TestPropagate_NeedsNoClock`, which L54's list does not contain. The decision record is therefore hard to map back to the items it resolves. The Log is append-only, so a clarifying note is the only fix.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:434"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff touches only odd/tasks/phase9-store-agnostic-promotion.md: it ticks T5 and T10, fills in their commit fields, and appends Log entry L55.",
+      "No code or behaviour changes, so there is no runtime regression to report; both findings are documentation-consistency issues."
+    ]
+  }
+}

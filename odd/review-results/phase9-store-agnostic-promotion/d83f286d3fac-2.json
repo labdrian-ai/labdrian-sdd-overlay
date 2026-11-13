@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "750fc5a50f54d5de5873d9541af272892f6198ff",
+    "head": "d83f286d3facd1d2b60337cf8c070b966d0214b8",
+    "diff_sha256": "d514d1715073f94347d560a3b75f1a57a6a06a976e5922e21176d471917c86df",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "750fc5a50f54d5de5873d9541af272892f6198ff",
+      "head": "d83f286d3facd1d2b60337cf8c070b966d0214b8",
+      "diff_sha256": "d514d1715073f94347d560a3b75f1a57a6a06a976e5922e21176d471917c86df"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:434",
+        "claim": "L55 claims to record coordinator decisions on 'the six open items of L54', but its numbering does not match the L54 list visible in the diff. L54's (5) is 'the MCP registration spec has no promote text, so it is unchanged' and its (6) is 'pages of the memorycard walk carry no promoted_revision (T10)'. L55 instead reads (5) as 'the T10 gaps are T10's' and (6) as the NeedsNoClock question, which L54 files under the 'Tests deleted' paragraph and not under its six open items. The promoted_revision item gets no numbered decision and is handled only in a separate builder bullet. The MCP-spec item gets no decision at all. A reader cross-referencing L54 to L55 will pair the wrong items, and one open item looks undecided.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:434",
+          "odd/tasks/phase9-store-agnostic-promotion.md:437"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:439",
+        "claim": "The correction batch is recorded as 'Risk none' for both commits, yet 733db247 makes `promote` and the MCP `promote` tool newly print a degraded-snapshot declaration on stderr. This is observable output of a consumed surface, which the task's own Risk item 3 describes. The Risk label understates the change. The same line sends the reader to 08f07c01 for 'everything else', and that commit includes deleted dead code and changed goldens.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:439"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff only edits the task file: it ticks T5 and T10 and adds the L55 log entry.",
+      "The L54 numbered list, shown in the diff context, was compared against the numbering L55 claims to decide, and the two disagree at items 5 and 6.",
+      "T10's commit list names 750fc5a5, which is the base of this diff, so it is consistent."
+    ]
+  }
+}
