@@ -57,7 +57,7 @@ type ImportedPart struct {
 	Hash        string
 }
 
-// ImportedParts returns the import_map rows of source engram of the observations imported into project, titles only:
+// ImportedParts returns the import_map rows of source engram of the observations imported into project, with each row's title and stored content hash:
 // the rows whose memory belongs to project, and the rows whose memory is gone, for an observation that has a memory
 // in project (import_map names no project, so a gone row can only be told by its observation; an observation with no
 // memory left in project is not the project's and has nothing to match). A key that is not a number names no
