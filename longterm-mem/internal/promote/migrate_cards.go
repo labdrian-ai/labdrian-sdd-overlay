@@ -3,7 +3,6 @@ package promote
 import (
 	"errors"
 	"fmt"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -14,7 +13,7 @@ import (
 // store-agnostic keys carry one of two families of identity keys: engram_id, engram_revision, engram_type (and
 // engram_sync_id) for a page promoted from an Engram observation, memorycard_id, memorycard_revision and
 // memorycard_type for a page promoted from a memorycard memory. The migration gives every such page of a project the
-// store-agnostic keys of its memorycard memory (source: memorycard, source_id, source_revision, source_type) and
+// store-agnostic keys of its memorycard memory (source: memorycard, source_id, source_type, source_revision) and
 // takes the legacy ones away, so that from then on the page is the memory's own page: `promote --source memorycard`
 // answers `already promoted`, and `sync` never promotes the memory a second time.
 //
@@ -28,16 +27,27 @@ import (
 //
 // A page is refused, and left byte-identical, when the migration cannot show that the rewrite is safe (RefusalKind):
 // it differs from its precedence entry (a hand edit, R-030) or has none, memorycard holds no memory imported from
-// its observation, or its memory already has a page of its own. The run goes on to the other pages. A page that
-// matches its memory by content is never paired: the owner decides what is left (R5).
+// its observation (or none with the id it names), its memory already has a page of its own, or its identity lines
+// are not ones the rewrite can replace whole. The run goes on to the other pages. A page that matches its memory by
+// content is never paired: the owner decides what is left (R5). A page that carries a legacy key and names no memory
+// is a legacy page too: it is counted and refused by name, so the count of legacy pages is the count of pages that
+// still carry a legacy key.
 
 // errNoMigrationBackup is what a migration that must write answers when it was handed no way to keep a copy.
 var errNoMigrationBackup = errors.New("promote: the migration has no backup")
 
+// errNoCardBridges is what a migration answers when it was handed no way to find the memory of a page.
+var errNoCardBridges = errors.New("promote: the migration has no memorycard bridge")
+
+// errNoPrecedenceStore is what a migration that must write answers when the writer holds no precedence store.
+var errNoPrecedenceStore = errors.New("promote: the writer has no precedence store")
+
 // CardBridges is the port the migration finds a page's memory through: the memory memorycard imported from an
-// Engram observation (its import_map row). ok is false, with a nil error, when there is none.
+// Engram observation (its import_map row), and a memory by its own id, for a page that already names one. ok is
+// false, with a nil error, when there is none.
 type CardBridges interface {
 	MemoryByEngramID(engramID int64) (memory.CardMemory, bool, error)
+	MemoryByID(memoryID int64) (memory.CardMemory, bool, error)
 }
 
 // MigrationBackup keeps a copy of what a migration is about to rewrite: the pages named by address, and the
@@ -57,16 +67,19 @@ const (
 	RefusedUntracked
 	// RefusedNoImport: no import_map row names the Engram observation the page names, or the memory it names is gone.
 	RefusedNoImport
+	// RefusedNoMemory: the page names a memorycard memory by its id and memorycard holds no memory with it.
+	RefusedNoMemory
 	// RefusedHasOwnPage: the memory the page maps to already has a page of its own, or is the memory of another page
 	// of the run: two pages for one memory.
 	RefusedHasOwnPage
 	// RefusedOther: the page's identity cannot be read as one memory (an id that is no number, an Engram and a
-	// memorycard identity at once), or the memory is in another project.
+	// memorycard identity at once, a legacy key and no memory, identity lines the rewrite cannot replace whole), or
+	// the memory is in another project.
 	RefusedOther
 )
 
 // RefusalKinds lists the kinds in the order a report counts them.
-var RefusalKinds = []RefusalKind{RefusedEdited, RefusedUntracked, RefusedNoImport, RefusedHasOwnPage, RefusedOther}
+var RefusalKinds = []RefusalKind{RefusedEdited, RefusedUntracked, RefusedNoImport, RefusedNoMemory, RefusedHasOwnPage, RefusedOther}
 
 // String is how a count of the kind is named.
 func (k RefusalKind) String() string {
@@ -77,6 +90,8 @@ func (k RefusalKind) String() string {
 		return "not recorded as written by longterm-mem"
 	case RefusedNoImport:
 		return "no import_map row names its Engram observation"
+	case RefusedNoMemory:
+		return "memorycard holds no memory with the id it names"
 	case RefusedHasOwnPage:
 		return "its memory already has a page"
 	}
@@ -122,11 +137,12 @@ type plannedMigration struct {
 	MigratedPage
 	body     string
 	newBlock string
-	entry    PrecedenceEntry
+	// was is the precedence entry the page had, and entry the one it has once migrated.
+	was, entry PrecedenceEntry
 }
 
 // legacyIdentityKeys are the keys that say what a page of an older release was promoted from; the migration takes
-// them away. The store-agnostic keys are listed too: a page that carries both has its identity rewritten once.
+// them away. The store-agnostic keys are listed in identityKeys: a page that carries both has its identity rewritten once.
 var legacyIdentityKeys = []string{
 	engramIDField, engramRevisionField, engramTypeField, engramSyncIDField,
 	memorycardIDField, memorycardRevisionField, memorycardTypeField,
@@ -134,29 +150,81 @@ var legacyIdentityKeys = []string{
 
 var identityKeys = append([]string{sourceField, sourceIDField, sourceRevisionField, sourceTypeField}, legacyIdentityKeys...)
 
-// carriesLegacyKeys reports whether a page's fields hold any legacy identity key.
-func carriesLegacyKeys(fields map[string]string) bool {
-	for _, key := range legacyIdentityKeys {
-		if _, ok := fields[key]; ok {
-			return true
+// carriesLegacyKeys reports whether the frontmatter block of a page has a line of any legacy identity key, whatever
+// its value (an empty one included) and however it is indented: the parsed fields skip an empty value, and a page
+// that still has the line still has the key.
+func carriesLegacyKeys(block string) bool {
+	for _, line := range strings.Split(block, "\n") {
+		key, _, isField := strings.Cut(strings.TrimLeft(line, " \t"), ":")
+		if !isField {
+			continue
+		}
+		for _, legacy := range legacyIdentityKeys {
+			if key == legacy {
+				return true
+			}
 		}
 	}
 	return false
+}
+
+// legacyPage is a page of the project that carries a legacy key.
+type legacyPage struct {
+	address, raw, block string
+	fields              map[string]string
+}
+
+// legacyPagesOf lists the pages of project that carry a legacy key, in the order the port lists them, through the
+// same read as every page. A page that cannot be read fails the run: the caller has already stopped on the ones
+// the index could not read, so this one changed since.
+func legacyPagesOf(pages PageReader, project string) ([]legacyPage, error) {
+	var found []legacyPage
+	var failure error
+	err := eachPage(pages, func(address, content string, err error) {
+		if failure != nil {
+			return
+		}
+		if err != nil {
+			failure = fmt.Errorf("read %s: %w", pages.PageLocation(address), err)
+			return
+		}
+		block, ok := frontmatterBlock(content)
+		if !ok || !carriesLegacyKeys(block) {
+			return
+		}
+		fields := parseFrontmatterFields(block)
+		if fields[projectField] != project {
+			return
+		}
+		found = append(found, legacyPage{address: address, raw: content, block: block, fields: fields})
+	})
+	if err != nil {
+		return nil, err
+	}
+	return found, failure
 }
 
 // MigrateCardPages gives the pages of project that carry legacy keys the store-agnostic identity of their
 // memorycard memory. With apply false it decides everything and writes nothing.
 //
 // A vault with a page that cannot be read stops the run before any write, because that page may be a memory's own.
-// A failed lookup or backup does too. With apply true the pages to rewrite are backed up first, once, and then each
-// is written and its precedence entry persisted in turn: a failure leaves the pages before it migrated and
-// recorded, and the error names the page that failed. The catalog, the log and the address map are not touched: the
-// pages keep their addresses. A second run finds no page carrying legacy keys among the migrated ones and changes
-// nothing.
+// A failed lookup or backup does too. With apply true the pages to rewrite are backed up first, once, and then for
+// each its precedence entry is persisted and its page written, in that order: a run that stops between the two
+// leaves a page whose entry already records what the page becomes, and the next run recognizes that page and
+// finishes it, where the other order would leave a migrated page that reads as hand-edited. A failure leaves the
+// pages before it migrated and recorded, and the error names the page that failed. The catalog, the log and the
+// address map are not touched: the pages keep their addresses. A second run finds no page carrying legacy keys
+// among the migrated ones and changes nothing.
 func MigrateCardPages(cards CardBridges, w *Writer, backup MigrationBackup, project string, apply bool) (CardMigrationReport, error) {
 	var report CardMigrationReport
+	if memory.IsMissing(cards) {
+		return report, errNoCardBridges
+	}
 	if err := w.checkPatchPorts(); err != nil {
 		return report, fmt.Errorf("promote: migrate card pages: %w", err)
+	}
+	if apply && w.Store == nil {
+		return report, fmt.Errorf("promote: migrate card pages: %w", errNoPrecedenceStore)
 	}
 	index, err := readPages(w.Pages)
 	if err != nil {
@@ -165,29 +233,24 @@ func MigrateCardPages(cards CardBridges, w *Writer, backup MigrationBackup, proj
 	if len(index.unreadable) > 0 {
 		return report, fmt.Errorf("promote: migrate card pages: %s; nothing was written", describePages(index.unreadable))
 	}
+	pages, err := legacyPagesOf(w.Pages, project)
+	if err != nil {
+		return report, fmt.Errorf("promote: migrate card pages: %w", err)
+	}
 
 	var plan []plannedMigration
 	claimed := map[int64]string{}
-	for _, match := range candidatePages(index, project) {
-		address := strings.TrimSuffix(match.File, ".md")
-		raw, err := w.Pages.ReadPage(address)
-		if err != nil {
-			return report, fmt.Errorf("promote: migrate card pages: read %s: %w", w.Pages.PageLocation(address), err)
-		}
-		block, ok := frontmatterBlock(raw)
-		if !ok {
-			continue
-		}
-		fields := parseFrontmatterFields(block)
-		if !carriesLegacyKeys(fields) {
-			continue
-		}
+	for _, page := range pages {
 		report.Legacy++
 		refuse := func(kind RefusalKind, reason string) {
-			report.Refused = append(report.Refused, MigrationRefusal{Address: address, Kind: kind, Reason: reason})
+			report.Refused = append(report.Refused, MigrationRefusal{Address: page.address, Kind: kind, Reason: reason})
+		}
+		if !simpleIdentityLines(page.block) {
+			refuse(RefusedOther, "an identity key is indented or its value runs over several lines, which the migration does not rewrite")
+			continue
 		}
 
-		moved, kind, reason, err := mapPage(cards, index, claimed, project, fields)
+		moved, kind, reason, err := mapPage(cards, index, claimed, project, page.address+".md", page.fields)
 		if err != nil {
 			return report, err
 		}
@@ -195,21 +258,27 @@ func MigrateCardPages(cards CardBridges, w *Writer, backup MigrationBackup, proj
 			refuse(kind, reason)
 			continue
 		}
-		entry, tracked := w.Store.Get(address)
+		newBlock := rewrittenIdentity(page.block, moved.MemoryID, moved.revision, moved.kind)
+		body := page.raw[len(page.block):]
+		entry, tracked := w.Store.Get(page.address)
 		switch {
 		case !tracked:
 			refuse(RefusedUntracked, "the page was not recorded as written by longterm-mem, so its provenance is unknown")
 			continue
-		case !entry.MatchesPage(raw):
+		case entry.MatchesPage(page.raw):
+		case entry.FrontmatterHash == hashText(newBlock) && entry.BodyHash == hashText(body):
+			// A run that stopped after persisting this entry and before writing the page: the entry records exactly
+			// the page this run would write, and the page's body is the recorded one, so nothing a person wrote is lost.
+		default:
 			refuse(RefusedEdited, "the page was edited locally since longterm-mem last wrote it")
 			continue
 		}
 
-		claimed[moved.MemoryID] = address
-		moved.Address = address
-		newBlock := rewrittenIdentity(block, moved.MemoryID, moved.revision, moved.kind)
-		entry.FrontmatterHash = hashText(newBlock)
-		plan = append(plan, plannedMigration{MigratedPage: moved.MigratedPage, body: raw[len(block):], newBlock: newBlock, entry: entry})
+		claimed[moved.MemoryID] = page.address
+		moved.Address = page.address
+		updated := entry
+		updated.FrontmatterHash = hashText(newBlock)
+		plan = append(plan, plannedMigration{MigratedPage: moved.MigratedPage, body: body, newBlock: newBlock, was: entry, entry: updated})
 	}
 
 	if !apply {
@@ -221,69 +290,71 @@ func MigrateCardPages(cards CardBridges, w *Writer, backup MigrationBackup, proj
 	return applyMigration(w, backup, plan, report)
 }
 
-// candidatePages are the pages of project that name a memory, once each, in the order the port lists them.
-func candidatePages(index *pageIndex, project string) []*promotedPageMatch {
-	seen := map[string]bool{}
-	var pages []*promotedPageMatch
-	for _, matches := range index.carriers {
-		for _, match := range matches {
-			if match.Project != project || seen[match.File] {
-				continue
-			}
-			seen[match.File] = true
-			pages = append(pages, match)
-		}
-	}
-	sort.Slice(pages, func(i, j int) bool { return pages[i].order < pages[j].order })
-	return pages
-}
-
 // mappedPage is the memory a page maps to, with the revision and type its new keys carry.
 type mappedPage struct {
 	MigratedPage
 	revision, kind string
 }
 
-// mapPage decides which memory of project the page with fields is the page of. It answers the page migrated (its
-// Address is set by the caller), or a refusal kind and reason, or an error when memorycard could not be read.
-func mapPage(cards CardBridges, index *pageIndex, claimed map[int64]string, project string, fields map[string]string) (mappedPage, RefusalKind, string, error) {
+// mapPage decides which memory of project the page with fields (the file is its name, never counted as another page
+// of the memory) is the page of. It answers the page migrated (its Address is set by the caller), or a refusal kind
+// and reason, or an error when memorycard could not be read. Whatever the page names, the memory must exist, be of
+// project, have no other page and not be the memory of another page of the run.
+func mapPage(cards CardBridges, index *pageIndex, claimed map[int64]string, project, file string, fields map[string]string) (mappedPage, RefusalKind, string, error) {
 	engram, hasEngram := identityOf(fields, engramSource)
 	card, hasCard := identityOf(fields, memorycardSource)
 	switch {
 	case hasEngram && hasCard:
 		return mappedPage{}, RefusedOther, fmt.Sprintf("it names Engram observation %s and memorycard memory %s at once", engram.ID, card.ID), nil
-	case hasCard:
-		memoryID, err := strconv.ParseInt(strings.TrimSpace(card.ID), 10, 64)
-		if err != nil || memoryID <= 0 {
-			return mappedPage{}, RefusedOther, fmt.Sprintf("memorycard id %q is not a memory id", card.ID), nil
-		}
-		return mappedPage{MigratedPage: MigratedPage{MemoryID: memoryID}, revision: card.Revision, kind: card.Type}, 0, "", nil
-	case !hasEngram:
+	case !hasEngram && !hasCard:
 		return mappedPage{}, RefusedOther, "it carries legacy keys but names no memory", nil
 	}
 
-	engramID, err := strconv.ParseInt(strings.TrimSpace(engram.ID), 10, 64)
-	if err != nil || engramID <= 0 {
-		return mappedPage{}, RefusedOther, fmt.Sprintf("engram_id %q is not an observation id", engram.ID), nil
+	var m memory.CardMemory
+	var moved mappedPage
+	if hasCard {
+		memoryID, err := strconv.ParseInt(strings.TrimSpace(card.ID), 10, 64)
+		if err != nil || memoryID <= 0 {
+			// An id that is no number is a page to refuse by name, not a failure of the run: the error is the reason.
+			return mappedPage{}, RefusedOther, fmt.Sprintf("memorycard id %q is not a memory id", card.ID), nil
+		}
+		found := false
+		m, found, err = cards.MemoryByID(memoryID)
+		if err != nil {
+			return mappedPage{}, 0, "", fmt.Errorf("promote: migrate card pages: look up memory %d: %w", memoryID, err)
+		}
+		if !found {
+			return mappedPage{}, RefusedNoMemory, fmt.Sprintf("memorycard holds no memory %d", memoryID), nil
+		}
+		moved = mappedPage{MigratedPage: MigratedPage{MemoryID: memoryID}, revision: card.Revision, kind: card.Type}
+	} else {
+		engramID, err := strconv.ParseInt(strings.TrimSpace(engram.ID), 10, 64)
+		if err != nil || engramID <= 0 {
+			return mappedPage{}, RefusedOther, fmt.Sprintf("engram_id %q is not an observation id", engram.ID), nil
+		}
+		found := false
+		m, found, err = cards.MemoryByEngramID(engramID)
+		if err != nil {
+			return mappedPage{}, 0, "", fmt.Errorf("promote: migrate card pages: look up the memory imported from Engram observation %d: %w", engramID, err)
+		}
+		if !found {
+			return mappedPage{}, RefusedNoImport, fmt.Sprintf("memorycard holds no memory imported from Engram observation %d (import_map)", engramID), nil
+		}
+		moved = mappedPage{MigratedPage: MigratedPage{EngramID: engramID, MemoryID: m.ID}, revision: strconv.Itoa(m.Revision), kind: m.Type}
 	}
-	m, found, err := cards.MemoryByEngramID(engramID)
-	if err != nil {
-		return mappedPage{}, 0, "", fmt.Errorf("promote: migrate card pages: look up the memory imported from Engram observation %d: %w", engramID, err)
-	}
-	memoryID := strconv.FormatInt(m.ID, 10)
-	switch {
-	case !found:
-		return mappedPage{}, RefusedNoImport, fmt.Sprintf("memorycard holds no memory imported from Engram observation %d (import_map)", engramID), nil
-	case m.Project != project:
+
+	if m.Project != project {
 		return mappedPage{}, RefusedOther, fmt.Sprintf("memory %d belongs to project %q, not %q", m.ID, m.Project, project), nil
 	}
-	if own := index.ownPage(project, memory.Identity{Source: memorycardSource, ID: memoryID}); own != nil {
-		return mappedPage{}, RefusedHasOwnPage, fmt.Sprintf("memory %d already has the page %s", m.ID, own.address()), nil
+	for _, other := range index.carriers[memory.Identity{Source: memorycardSource, ID: strconv.FormatInt(m.ID, 10)}] {
+		if other.Project == project && other.File != file {
+			return mappedPage{}, RefusedHasOwnPage, fmt.Sprintf("memory %d already has the page %s", m.ID, other.address()), nil
+		}
 	}
 	if other, taken := claimed[m.ID]; taken {
 		return mappedPage{}, RefusedHasOwnPage, fmt.Sprintf("memory %d is already the memory of %s in this run", m.ID, other), nil
 	}
-	return mappedPage{MigratedPage: MigratedPage{EngramID: engramID, MemoryID: m.ID}, revision: strconv.Itoa(m.Revision), kind: m.Type}, 0, "", nil
+	return moved, 0, "", nil
 }
 
 // withStoreAgnosticIdentity is block with the identity keys of a page that names one memorycard memory by legacy
@@ -292,10 +363,10 @@ func mapPage(cards CardBridges, index *pageIndex, claimed map[int64]string, proj
 // observation (only the migration can say which memory that is), and a page whose identity lines the line rewriter
 // cannot rewrite whole (simpleIdentityLines).
 func withStoreAgnosticIdentity(block string) string {
-	fields := parseFrontmatterFields(block)
-	if !carriesLegacyKeys(fields) || !simpleIdentityLines(block) {
+	if !carriesLegacyKeys(block) || !simpleIdentityLines(block) {
 		return block
 	}
+	fields := parseFrontmatterFields(block)
 	if _, engram := identityOf(fields, engramSource); engram {
 		return block
 	}
@@ -367,7 +438,7 @@ func isIdentityKey(key string) bool {
 	return false
 }
 
-// applyMigration backs the planned pages up, then writes each and persists its precedence entry.
+// applyMigration backs the planned pages up, then for each persists its precedence entry and writes its page.
 func applyMigration(w *Writer, backup MigrationBackup, plan []plannedMigration, report CardMigrationReport) (CardMigrationReport, error) {
 	if len(plan) == 0 {
 		return report, nil
@@ -385,12 +456,13 @@ func applyMigration(w *Writer, backup MigrationBackup, plan []plannedMigration, 
 	}
 	report.Backup = location
 	for _, p := range plan {
-		if err := w.Pages.WritePage(p.Address, p.newBlock+p.body); err != nil {
-			return report, fmt.Errorf("promote: migrate card pages: write %s: %w; the pages migrated before it stay migrated", p.Address, err)
-		}
 		w.Store.Set(p.Address, p.entry)
 		if err := w.Precedence.SavePrecedence(w.Store); err != nil {
-			return report, fmt.Errorf("promote: migrate card pages: persist the precedence entry of %s, which is already written: %w", p.Address, err)
+			w.Store.Set(p.Address, p.was)
+			return report, fmt.Errorf("promote: migrate card pages: persist the precedence entry of %s: %w; the page was not written, and a rerun migrates it (the pages migrated before it stay migrated; the copy of the pages as they were is in %s)", p.Address, err, location)
+		}
+		if err := w.Pages.WritePage(p.Address, p.newBlock+p.body); err != nil {
+			return report, fmt.Errorf("promote: migrate card pages: write %s: %w; its precedence entry is already recorded, so a rerun finishes it (the pages migrated before it stay migrated; the copy of the pages as they were is in %s)", p.Address, err, location)
 		}
 		report.Migrated = append(report.Migrated, p.MigratedPage)
 	}

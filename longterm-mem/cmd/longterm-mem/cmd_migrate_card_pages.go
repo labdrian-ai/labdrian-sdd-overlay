@@ -92,7 +92,7 @@ func reportMigration(a app, report promote.CardMigrationReport, err error, vault
 	}
 	counts := report.RefusalCounts()
 	for _, kind := range promote.RefusalKinds {
-		if n := counts[kind]; n > 0 || kind != promote.RefusedOther {
+		if n := counts[kind]; n > 0 || (kind != promote.RefusedOther && kind != promote.RefusedNoMemory) {
 			fmt.Printf("  refused, %s: %d\n", kind, n)
 		}
 	}
