@@ -60,8 +60,10 @@ namespace listing sorts lexically. A source whose chunk count would exceed
 A chunk or standalone record's content is `body` → `---` → provenance block.
 The block is the LAST element of its `content`, after the body, never before it.
 A manifest's `content` is the provenance block first: nothing precedes it, and
-its last element is its `**Chunk-Status**` inventory when that has entries,
-otherwise `**Chunks-Saved**`.
+the block ends with these fields, in this order: `**Status**`,
+`**Chunks-Expected**`, `**Chunks-Saved**`, then the `**Chunk-Status**`
+inventory when that has entries. So the last element is `**Chunk-Status**`
+when the inventory has entries, otherwise `**Chunks-Saved**`.
 
 ```markdown
 ---
@@ -150,7 +152,7 @@ second parallel memory, and never an automatic supersession.
 | exists, **new N < old N**, new N ≥ 1 | — | Surplus keys `c{N+1}…` upsert to a retired tombstone (`**Status**: retired`, trailer preserved, body removed) and are promoted so the vault page updates in place. **Never hand-deleted.** |
 | exists, **new N == 1** (was > 1) | — | The record moves to the manifest key (rule 2: a single-chunk source has no separate chunk observation). Every prior chunk key `c0001…` — including `c0001` — retires to a tombstone the same way; none of them becomes the live record. |
 | exists, **new N > old N** | — | New chunk keys are created and promoted |
-| **origin changed** (new URI ⇒ new `Source-Id`) | — | A different topic key. The old record is NOT touched automatically: retiring it is the operator procedure below. |
+| **origin changed** (new URI ⇒ new `Source-Id`) | — | A different topic key. The old record is NOT touched automatically: retire it with the operator procedure below (supersede the old manifest, tombstone every chunk key of the old `Source-Id`, then the next `sync` patches the old page). |
 
 ### Origin-changed procedure (operator steps)
 
@@ -165,9 +167,9 @@ second parallel memory, and never an automatic supersession.
 3. Do not tombstone the old manifest: `supersedes` already marks it. An old
    single-record source (N == 1) has no chunk keys, so step 2 does nothing
    for it.
-4. The next `sync` patches the old memory's vault page to `superseded`, with
-   the successor's page in `related` when it has one: the propagation pass of
-   `longterm-mem/internal/promote/propagate_cards.go`.
+4. After steps 1 and 2 (the tombstones promoted), the next `sync` patches
+   the old memory's vault page to `superseded`, with the successor's page in
+   `related` when it has one.
 
 The N-change rows (shrink, grow, N==1) apply on top of the **differ** row,
 never instead of it: a re-ingestion with a different chunk count always has
