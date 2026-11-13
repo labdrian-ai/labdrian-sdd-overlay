@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "94e96b7a0772d11223f99226d97fea6ad6f86978",
+    "head": "2d3ae79dbfa2e21fcd139db9faf79131d0e50b24",
+    "diff_sha256": "47560b2bef064b8570bd07c1bc6ebe46cc0853b1a9277c2c3bea72c6fec32713",
+    "paths": [
+      "longterm-mem/internal/memorycard/imported_parts_test.go",
+      "longterm-mem/internal/memorycard/observations.go",
+      "longterm-mem/internal/memorycard/source_cache_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "94e96b7a0772d11223f99226d97fea6ad6f86978",
+      "head": "2d3ae79dbfa2e21fcd139db9faf79131d0e50b24",
+      "diff_sha256": "47560b2bef064b8570bd07c1bc6ebe46cc0853b1a9277c2c3bea72c6fec32713"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/memorycard/imported_parts_test.go",
+        "longterm-mem/internal/memorycard/observations.go",
+        "longterm-mem/internal/memorycard/source_cache_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "observations.go: the gone-row branch (m.id is null) now also requires an exists subquery that joins import_map to memories on the same source_key with n.project = ?. Both placeholders are bound to project, so the argument count matches.",
+      "A gone row is kept only when a sibling row of the same observation has a memory in the project. A project's own observation therefore keeps its gone parts, and other projects' gone rows are dropped, which is the stated intent.",
+      "imported_parts_test.go covers a foreign gone row (960), an observation with no memory left (961), and the project's own gone part 3 of observation 402. The 402 fixture and the q result length of 2 depend on kinFixture, which the diff does not show.",
+      "source_cache_test.go: the injected failure now names memory 1, and the error text is asserted. That text depends on error wording that the diff does not show. The fmt.Errorf replacement for sql.ErrNoRows is harmless, and database/sql is likely still used by writeFixture."
+    ]
+  }
+}

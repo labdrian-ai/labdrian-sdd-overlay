@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "08463a808d047d18abfa73b89a9ed97d31f98386",
+    "head": "4e0bf59c470a6576e65f7236c983776f89abeef8",
+    "diff_sha256": "3e7ec9a5a33871fb81e59e541dc8877d8ac7446106658f370b63b4acbc22ef7a",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/cmd_mcp.go",
+      "longterm-mem/cmd/longterm-mem/cmd_promote.go",
+      "longterm-mem/cmd/longterm-mem/cmd_sync.go",
+      "longterm-mem/cmd/longterm-mem/lineage.go",
+      "longterm-mem/cmd/longterm-mem/lineage_test.go",
+      "longterm-mem/cmd/longterm-mem/promote_memorycard_test.go",
+      "longterm-mem/cmd/longterm-mem/sync_memorycard_test.go",
+      "longterm-mem/internal/memorycard/source.go",
+      "longterm-mem/internal/memorycard/source_test.go",
+      "longterm-mem/internal/memorycard/store.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "08463a808d047d18abfa73b89a9ed97d31f98386",
+      "head": "4e0bf59c470a6576e65f7236c983776f89abeef8",
+      "diff_sha256": "3e7ec9a5a33871fb81e59e541dc8877d8ac7446106658f370b63b4acbc22ef7a"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/cmd_mcp.go",
+        "longterm-mem/cmd/longterm-mem/cmd_promote.go",
+        "longterm-mem/cmd/longterm-mem/cmd_sync.go",
+        "longterm-mem/cmd/longterm-mem/lineage.go",
+        "longterm-mem/cmd/longterm-mem/lineage_test.go",
+        "longterm-mem/cmd/longterm-mem/promote_memorycard_test.go",
+        "longterm-mem/cmd/longterm-mem/sync_memorycard_test.go",
+        "longterm-mem/internal/memorycard/source.go",
+        "longterm-mem/internal/memorycard/source_test.go",
+        "longterm-mem/internal/memorycard/store.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/memorycard/source.go:121-137",
+        "claim": "Recall regression: a hand-mirrored memory (no import_map row) now finds a mirror only through other memorycard memories that have an import_map row with the same hash. Before, any Engram observation with the same card hash counted. If the observation has a page but no imported memory, the memory is no longer treated as bridged. Promote and sync may then create a duplicate page where they previously refused or skipped. The commit message acknowledges this, but it is still a recall loss on input that used to be handled.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/memorycard/source.go:121-137",
+          "longterm-mem/cmd/longterm-mem/lineage.go:55-70 (newMemorycardSource and its Engram twin query removed)",
+          "longterm-mem/cmd/longterm-mem/lineage_test.go:129-133 (observation 2 'is not found')"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/memorycard/source.go:121-137",
+        "claim": "The mirrors of a hand-mirrored memory include each twin's own memory id and its observation id, but not the other parts of that twin's observation. A page keyed by a sibling part's memory is therefore not found, although lineageOf already expands parts for mapped memories. When two twins come from the same observation, the observation id is also listed twice in Mirrored.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/memorycard/source.go:121-137",
+          "longterm-mem/internal/memorycard/source.go:105-119"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/memorycard/store.go:139-170",
+        "claim": "MappedTwins runs one extra engramIDOf query per twin, and it is called once per unmapped memory in each listing. A project with many hand-mirrored memories and many twins therefore does an N+1 query pattern on every sync or Candidates call. No batch lookup is used, although MemoryIDsByEngramIDs-style batching already exists.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/memorycard/store.go:163-168"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the whole diff: the Engram twin lookup is replaced by memorycard-only lineageOf, mirrorsOf and MappedTwins, and the callers no longer open an Engram store.",
+      "The tests were changed to encode the new narrower mirror semantics, including the deliberate loss of observation 2."
+    ]
+  }
+}

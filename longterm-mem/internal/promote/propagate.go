@@ -138,14 +138,14 @@ func eachPatchTarget(deps Deps, project string, visit func(patchTarget) error) (
 	var outcome patchOutcome
 	index, indexErr := readPages(deps.Writer.Pages)
 	for _, m := range memories {
-		id, _ := numericID(m)
+		id, idErr := numericID(m)
 		style, err := styleOf(m.Identity.Source)
 		if err != nil {
-			outcome.failed = append(outcome.failed, SyncFailure{ObservationID: id, Err: err})
+			outcome.failed = append(outcome.failed, SyncFailure{ObservationID: id, Err: withIDError(err, idErr)})
 			continue
 		}
 		if indexErr != nil {
-			outcome.failed = append(outcome.failed, SyncFailure{ObservationID: id, Err: fmt.Errorf("check promoted state: %w", indexErr)})
+			outcome.failed = append(outcome.failed, SyncFailure{ObservationID: id, Err: withIDError(fmt.Errorf("check promoted state: %w", indexErr), idErr)})
 			continue
 		}
 		scan := index.scanFor(m)
@@ -153,8 +153,17 @@ func eachPatchTarget(deps Deps, project string, visit func(patchTarget) error) (
 			// A page that could not be read may be this memory's own, and a status cannot be patched into a page
 			// that cannot be found.
 			if len(scan.unreadable) > 0 {
+				if idErr != nil {
+					outcome.failed = append(outcome.failed, SyncFailure{ObservationID: id, Err: idErr})
+					continue
+				}
 				outcome.withheld = append(outcome.withheld, id)
 			}
+			continue
+		}
+		if idErr != nil {
+			// The memory has a page and no id to name it by in a failure or a patch: it is failed in its own words.
+			outcome.failed = append(outcome.failed, SyncFailure{ObservationID: id, Err: idErr})
 			continue
 		}
 		promoted, err := scan.own.resolve(style.requireAddress)

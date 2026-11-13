@@ -1,6 +1,7 @@
 package promote
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -45,11 +46,27 @@ func styleOf(source string) (pageStyle, error) {
 	return style, nil
 }
 
-// numericID is the id of m as the integer the pages of the stores record it as.
+// idError is what is wrong with an id that is no usable integer. Its message names the id once; it unwraps to the
+// strconv error, so errors.Is reaches strconv.ErrSyntax and strconv.ErrRange and errors.As reaches *strconv.NumError.
+type idError struct {
+	message string
+	cause   error
+}
+
+func (e *idError) Error() string { return e.message }
+func (e *idError) Unwrap() error { return e.cause }
+
+// numericID is the id of m as the integer the pages of the stores record it as. An id that is not an integer is
+// refused in words that name it once and say why: it is no number, or it is a number out of the int64 range.
 func numericID(m memory.Memory) (int64, error) {
 	id, err := strconv.ParseInt(m.Identity.ID, 10, 64)
 	if err != nil {
-		return 0, fmt.Errorf("promote: %s %q has an id that is not a number: %w", m.Identity.Source, m.Identity.ID, err)
+		// strconv's own message repeats the id, which this one names, so it is kept as the cause and not printed.
+		why := "not a number"
+		if errors.Is(err, strconv.ErrRange) {
+			why = "out of range"
+		}
+		return 0, &idError{message: fmt.Sprintf("promote: %s %q has an id that is %s", m.Identity.Source, m.Identity.ID, why), cause: err}
 	}
 	return id, nil
 }

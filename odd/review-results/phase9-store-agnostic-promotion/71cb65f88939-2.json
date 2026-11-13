@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a0f764d5c8429518a589e2221c047cf11fd9c545",
+    "head": "71cb65f889392c056a8dadc3aad8bf0352429c11",
+    "diff_sha256": "380771cca759a758bb6d9e72d5dcd221376984b58f8bf0f1bbf2c6ee0b59a7e6",
+    "paths": [
+      "longterm-mem/internal/memorycard/source_cache_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "a0f764d5c8429518a589e2221c047cf11fd9c545",
+      "head": "71cb65f889392c056a8dadc3aad8bf0352429c11",
+      "diff_sha256": "380771cca759a758bb6d9e72d5dcd221376984b58f8bf0f1bbf2c6ee0b59a7e6"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/memorycard/source_cache_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/memorycard/source_cache_test.go:70-72",
+        "claim": "The goroutine test reports a mismatch of the Memories result by assigning sql.ErrNoRows, an unrelated sentinel, so the failure message ('answered differently or failed: sql: no rows in result set') misleads the reader about what went wrong. A dedicated error (fmt.Errorf with got/want) would be readable. Also, the ByID error is checked only when the Memories check passed, and the ByID result itself is discarded without verifying it, so the 'every reader gets the same memories' comment is only partly pinned.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/memorycard/source_cache_test.go:70-76"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/memorycard/source_cache_test.go:34-47",
+        "claim": "The failed-read test only proves a non-error result on the retry, not that the failure itself was not cached from the imports read specifically: ByID(22) is asserted to error, but the error is not checked to be from the import_map read (any error, e.g. an unrelated one, passes). The test depends on the 'kinFixture' import_map schema accepting a non-numeric part number at insert time; if the column were typed strictly the setup would fail instead of exercising the path. The 'sql.Open(\"sqlite\")' driver registration is also assumed from other test files in the package.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/memorycard/source_cache_test.go:38-42"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only one new test file was added; helpers kinFixture, openSource, memoryOf, card and engramObservation are not visible in the diff and were assumed to exist in the package.",
+      "Findings are limited to test readability and assertion strength; no production code changed."
+    ]
+  }
+}

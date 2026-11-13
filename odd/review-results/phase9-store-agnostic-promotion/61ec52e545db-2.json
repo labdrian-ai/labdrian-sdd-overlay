@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "dcc676858989e97a64a4848eb17889d01a0fc1f8",
+    "head": "61ec52e545db7dd33c829ba0e9b8921464a30ce8",
+    "diff_sha256": "8053d1673e488305eedd1b9f28b6470e2b0a7e82b886bc1f1f55e00d5a6f7e66",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "dcc676858989e97a64a4848eb17889d01a0fc1f8",
+      "head": "61ec52e545db7dd33c829ba0e9b8921464a30ce8",
+      "diff_sha256": "8053d1673e488305eedd1b9f28b6470e2b0a7e82b886bc1f1f55e00d5a6f7e66"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:118",
+        "claim": "The rewritten T4 task line still ends its commit list at the L46 correction batch (0a958be8, 21a621a8, 4e4d81c1). L47 says this second batch added 657a1710, 51d9ef3f and dcc67685. The task line is the record the feature document uses to list every T4 commit, and the L47 entry itself says the header was updated so that L45 'lists every T4 commit'. The same edit rewrites this line's open-items text to cite L47, so the omission looks like a missed update. A reader or a later review chain that binds the T4 commits from this line will miss those three.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:118",
+          "odd/tasks/phase9-store-agnostic-promotion.md:357"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:361",
+        "claim": "L47 says 'Every single-id promote is under 1 s, so no escalation', but the same entry reports a 'promote --source memorycard --id' of about 0.40 s and a dry run that grew from 0.36 s to 1.39 s. The 1 s dry-run regression is left to 'the coordinator's judgement'. The no-escalation wording is easy to read as covering the dry run too, which weakens the record of a measured regression.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:361"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only the T4 task line (118) and appends the L47 log entry (356-365) in odd/tasks/phase9-store-agnostic-promotion.md.",
+      "The T4 commit list at line 118 does not contain 657a1710, 51d9ef3f or dcc67685, which L47 (line 357) names as the second correction batch."
+    ]
+  }
+}

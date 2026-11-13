@@ -1,0 +1,17 @@
+{
+  "kind": "sweep",
+  "base": "dcc676858989e97a64a4848eb17889d01a0fc1f8",
+  "head": "61ec52e545db7dd33c829ba0e9b8921464a30ce8",
+  "diff_sha256": "8053d1673e488305eedd1b9f28b6470e2b0a7e82b886bc1f1f55e00d5a6f7e66",
+  "outcome": "clean",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": []
+  },
+  "t2": [],
+  "t3": [],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

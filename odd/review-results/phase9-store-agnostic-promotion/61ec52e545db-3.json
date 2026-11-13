@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "dcc676858989e97a64a4848eb17889d01a0fc1f8",
+    "head": "61ec52e545db7dd33c829ba0e9b8921464a30ce8",
+    "diff_sha256": "8053d1673e488305eedd1b9f28b6470e2b0a7e82b886bc1f1f55e00d5a6f7e66",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "dcc676858989e97a64a4848eb17889d01a0fc1f8",
+      "head": "61ec52e545db7dd33c829ba0e9b8921464a30ce8",
+      "diff_sha256": "8053d1673e488305eedd1b9f28b6470e2b0a7e82b886bc1f1f55e00d5a6f7e66"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:118",
+        "claim": "The T4 line is ticked and its commit list was edited to point at L47, but the list still ends with the L46 correction batch (0a958be8, 21a621a8, 4e4d81c1). The commits L47 says belong to T4 (657a1710, 51d9ef3f, dcc67685, plus the docs commit) are not listed. The task line is therefore incomplete as the record of T4 commits, and it contradicts L47's own statement that the L46 and L47 lists are the T4 commits.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:118",
+          "odd/tasks/phase9-store-agnostic-promotion.md:356"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff only touches a markdown feature document; no code behaviour changes.",
+      "L47 (head, around line 356) names commits 657a1710, 51d9ef3f, dcc67685 as the second correction batch. The T4 task line's commit list at line 118 does not include them.",
+      "L47 itself records that the 51d9ef3f trailer Risk: none should be Risk: 3 and that the commit cannot be amended. That is disclosed in the log, so I did not count it as a defect of this commit."
+    ]
+  }
+}

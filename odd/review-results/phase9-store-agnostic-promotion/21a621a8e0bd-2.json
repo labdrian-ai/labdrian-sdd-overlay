@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "0a958be8b09340edeb26568f8771005104ff5294",
+    "head": "21a621a8e0bdf495ceee9aeec1cd94db3b688f74",
+    "diff_sha256": "e4508eacca1053d803c106d532cafcfc5fe795a6f8d1677f06ee88007c934e71",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/memorycard_lineage_test.go",
+      "longterm-mem/cmd/longterm-mem/promote_memorycard_test.go",
+      "longterm-mem/internal/memorycard/store.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "0a958be8b09340edeb26568f8771005104ff5294",
+      "head": "21a621a8e0bdf495ceee9aeec1cd94db3b688f74",
+      "diff_sha256": "e4508eacca1053d803c106d532cafcfc5fe795a6f8d1677f06ee88007c934e71"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/memorycard_lineage_test.go",
+        "longterm-mem/cmd/longterm-mem/promote_memorycard_test.go",
+        "longterm-mem/internal/memorycard/store.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff removes Store.MappedTwins and Twin from store.go. It shows no remaining caller, and a caller outside the diff would be a compile error that the diff cannot reveal.",
+      "The `errors` and `fmt` imports in store.go cannot be checked for leftover use from the diff alone.",
+      "pageOfMemory now matches the exact front-matter line via slices.Contains over strings.Split, which fixes the prefix ambiguity between memory 1 and memory 10.",
+      "The sibling-part test calls withNoEngramDatabase, which is not defined in the diff. I assume it is an existing helper in the same package.",
+      "The hand-mirrored memories' hashes are still set by the loop after the removed block, so the changed test comment matches the code."
+    ]
+  }
+}

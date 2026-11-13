@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "4d595b08c5de76be8749adb9642a21e86e5fef7c",
+    "head": "073a5b2dff3525e44cdc77c5b96eb712987fbe38",
+    "diff_sha256": "74920404a7a3c0af34f76964021fc0401727c124355ad6624c3f33fe8c099a85",
+    "paths": [
+      "odd/review-results/phase9-store-agnostic-promotion/4d595b08c5de-1.sweep.json",
+      "odd/review-results/phase9-store-agnostic-promotion/4d595b08c5de-2.json",
+      "odd/review-results/phase9-store-agnostic-promotion/4d595b08c5de-3.json"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "4d595b08c5de76be8749adb9642a21e86e5fef7c",
+      "head": "073a5b2dff3525e44cdc77c5b96eb712987fbe38",
+      "diff_sha256": "74920404a7a3c0af34f76964021fc0401727c124355ad6624c3f33fe8c099a85"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/review-results/phase9-store-agnostic-promotion/4d595b08c5de-1.sweep.json",
+        "odd/review-results/phase9-store-agnostic-promotion/4d595b08c5de-2.json",
+        "odd/review-results/phase9-store-agnostic-promotion/4d595b08c5de-3.json"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The change adds three archived review-result JSON files and no executable code, so there is no runtime behavior to regress.",
+      "Each file's binding names the previous range (base e8a80a41, head 4d595b08), which is the range the archived review covered. The new base 4d595b08 is that earlier head, so the records sit in the commit that follows the reviewed one and are consistent as archive records.",
+      "The archived replies carry empty findings arrays and completed inspection status, so they record clean reviews and assert nothing false about this head.",
+      "The files are new JSON additions with consistent structure; no readability or recall defect is introduced."
+    ]
+  }
+}

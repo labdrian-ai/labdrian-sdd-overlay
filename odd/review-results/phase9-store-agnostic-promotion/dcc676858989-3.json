@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "51d9ef3fafe04f96d92fd9dac960cfdab13a8a26",
+    "head": "dcc676858989e97a64a4848eb17889d01a0fc1f8",
+    "diff_sha256": "642df088b541522193278e40996fe361a4bec7ffb0a6df4468e70643bcc2f7f7",
+    "paths": [
+      "longterm-mem/internal/memorycard/source.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "51d9ef3fafe04f96d92fd9dac960cfdab13a8a26",
+      "head": "dcc676858989e97a64a4848eb17889d01a0fc1f8",
+      "diff_sha256": "642df088b541522193278e40996fe361a4bec7ffb0a6df4468e70643bcc2f7f7"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/memorycard/source.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/memorycard/source.go:98-102",
+        "claim": "The cache entry is assigned in the same statement that receives the error from ObservationsByKey: `s.byKey[card.Project], err = s.store.ObservationsByKey(...)`. If the read fails, s.byKey[project] is left present with a nil map, and the error is returned. The next kinOf call for that project passes the `_, ok` check and indexes the nil map. It then gets empty holders for every unmatched card and returns no error, so a transient read failure silently becomes 'no mirrors found'. Before the change the map was local to the call, so a later call retried the read. The error is now remembered as empty data for the life of the Source.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/memorycard/source.go:98-102"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/memorycard/source.go:20-24",
+        "claim": "The byKey map on Source is read and written without synchronization. If one Source is shared across goroutines, concurrent kinOf calls race on the map. The base kept this map local to each call, so it had no shared state. The cache also never invalidates, which is correct only while the database is read-only as the comment asserts.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/memorycard/source.go:20-31"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only the diff was reviewed. The previous byKey was a local variable in kinOf and the new one is a Source field. The `ok` check treats a key holding a nil map as a cache hit."
+    ]
+  }
+}

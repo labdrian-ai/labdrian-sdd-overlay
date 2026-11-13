@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ea095617fc9f9fd797b4e3a4486a99ba97e69871",
+    "head": "c6bcfe3e381ca9334d08c124eed6a3c94525f3f8",
+    "diff_sha256": "67ee342974aa77db1ceef80ced9089136fec64a48ab4143aec7da20b109db0cc",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "ea095617fc9f9fd797b4e3a4486a99ba97e69871",
+      "head": "c6bcfe3e381ca9334d08c124eed6a3c94525f3f8",
+      "diff_sha256": "67ee342974aa77db1ceef80ced9089136fec64a48ab4143aec7da20b109db0cc"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The change edits only the T4 line of the feature document and no code. It replaces 'about 10 ms more than at 61ec52e5' with 'about 20 ms more than at base' and names 74a36749 as the measured commit.",
+      "The new comparison is arithmetically consistent with the figures on the same line: 29-33 ms minus 10-13 ms at base is about 16-23 ms, so about 20 ms. The old '10 ms' did not match the 23-26 ms and 29-33 ms pair it was compared against.",
+      "The diff cannot show whether 74a36749 is the right commit for the 29-33 ms figure or what L50 says, so I could not check those references and raise no finding on them."
+    ]
+  }
+}

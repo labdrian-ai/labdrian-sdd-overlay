@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "21a621a8e0bdf495ceee9aeec1cd94db3b688f74",
+    "head": "4e4d81c1ab0de0767b004ea124d2f5e27da8172e",
+    "diff_sha256": "8b4246aee4e46bd64084b62cb7a75bbe9a7e9a3952db292970cd4d5b3f9b29bf",
+    "paths": [
+      "longterm-mem/internal/promote/propagate.go",
+      "longterm-mem/internal/promote/propagate_cards.go",
+      "longterm-mem/internal/promote/propagate_ids_pages_test.go",
+      "longterm-mem/internal/promote/sync.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "21a621a8e0bdf495ceee9aeec1cd94db3b688f74",
+      "head": "4e4d81c1ab0de0767b004ea124d2f5e27da8172e",
+      "diff_sha256": "8b4246aee4e46bd64084b62cb7a75bbe9a7e9a3952db292970cd4d5b3f9b29bf"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/promote/propagate.go",
+        "longterm-mem/internal/promote/propagate_cards.go",
+        "longterm-mem/internal/promote/propagate_ids_pages_test.go",
+        "longterm-mem/internal/promote/sync.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "withIDError returns err unchanged when idErr is nil, so memories with numeric ids keep their previous error text and ObservationID in both walks.",
+      "Both changed failure sites in propagate.go and the one in propagate_cards.go keep the original ObservationID and only add the id error to Err, so no previously valid input behaves differently.",
+      "fmt.Errorf with two %w verbs is valid in Go 1.20 and later, and the new tests use t.Context(), so the module needs Go 1.24 or later; neither is a defect visible in the diff.",
+      "I could not see numericID or the test helpers (failingPages, fixedSource, syncCardsWriter), so I could not confirm the exact 'not a number' wording the new tests assert; I found no defect from the diff alone."
+    ]
+  }
+}

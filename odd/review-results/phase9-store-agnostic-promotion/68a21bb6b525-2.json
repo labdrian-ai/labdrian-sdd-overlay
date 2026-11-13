@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "4e4d81c1ab0de0767b004ea124d2f5e27da8172e",
+    "head": "68a21bb6b5257eb8bfc46f09f76412236d9a892f",
+    "diff_sha256": "bf3a8299d7f57a54d340bee46ef67db13edb1b6fec869832daccb5a6eb944656",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "4e4d81c1ab0de0767b004ea124d2f5e27da8172e",
+      "head": "68a21bb6b5257eb8bfc46f09f76412236d9a892f",
+      "diff_sha256": "bf3a8299d7f57a54d340bee46ef67db13edb1b6fec869832daccb5a6eb944656"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:342",
+        "claim": "L46 supersedes statements in L45 that were left unmarked, and L45 was edited in place in this commit. L45 'Existing tests changed' says addHandMirroredMemories gives memories 2 and 4 a content hash, but L46 says the helper no longer sets them. L45 'Done' presents MappedTwins as new, but L46 deletes it and Twin. L45 'Open' (line 346) says the stored content_hash premise is unmeasured and an edited import is a mirror of nothing, but L46 says the stored hash is no longer read. A reader of L45 alone gets the superseded design, and the commit's open-items note points at L26's premise that L46 has made obsolete. L45 should carry a 'superseded by L46' pointer.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:342",
+          "odd/tasks/phase9-store-agnostic-promotion.md:346",
+          "odd/tasks/phase9-store-agnostic-promotion.md:349"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:339",
+        "claim": "L45 still opens with 'three commits, 350 + 120 + 107 changed lines', but the edited header now lists four commits plus the correction batch. The line counts cover only three, so the entry reads as inconsistent.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:339"
+        ]
+      }
+    ],
+    "evidence": [
+      "Docs-only change to one file; the hunks were read in full and line numbers were derived from the hunk headers.",
+      "L45 and L46 describe the same adapter with conflicting details; L45 was not annotated."
+    ]
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "4e4d81c1ab0de0767b004ea124d2f5e27da8172e",
+    "head": "68a21bb6b5257eb8bfc46f09f76412236d9a892f",
+    "diff_sha256": "bf3a8299d7f57a54d340bee46ef67db13edb1b6fec869832daccb5a6eb944656",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "4e4d81c1ab0de0767b004ea124d2f5e27da8172e",
+      "head": "68a21bb6b5257eb8bfc46f09f76412236d9a892f",
+      "diff_sha256": "bf3a8299d7f57a54d340bee46ef67db13edb1b6fec869832daccb5a6eb944656"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:118",
+        "claim": "The T4 tick lists as still open the live premise 'imported memories with an empty content_hash'. The same commit's L46 says the stored content_hash of imported memories is no longer read, because mirrors are matched by the rebuilt text hash. That premise therefore no longer bears on the shipped behavior, and the tick overstates what is open. The tick also still points at L26's premise that the hash equals the observation's hash. L45's 'Open' paragraph says the same and was left unamended, so the record contradicts itself on what T4 depends on. A reader deciding whether T5 may start would be told to wait on a measurement that no longer matters.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:118",
+          "odd/tasks/phase9-store-agnostic-promotion.md:349"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:349",
+        "claim": "L46 supersedes parts of L45 without marking them: L45's 'Done' text names `MappedTwins`, `Twin` and the hash-equality rule, and L45's 'Existing tests changed' says `addHandMirroredMemories` sets the hashes. L46 deletes those mechanisms and reverses that helper. L45 is edited in place only for its header line, so its body now describes behavior the code no longer has. The N+1 fix also names no commit.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:349",
+          "odd/tasks/phase9-store-agnostic-promotion.md:350"
+        ]
+      }
+    ],
+    "evidence": [
+      "Docs-only diff to one feature document; no code is changed, so I checked internal consistency only.",
+      "L46 states the stored content_hash is no longer read, while the tick and L45 still treat the empty-hash and hash-equality premises as open.",
+      "I did not verify any commit hash, file path or test name against the repository."
+    ]
+  }
+}

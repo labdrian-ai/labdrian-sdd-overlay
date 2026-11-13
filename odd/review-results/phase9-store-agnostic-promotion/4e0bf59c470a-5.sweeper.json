@@ -1,0 +1,25 @@
+{
+  "kind": "sweeper",
+  "base": "08463a808d047d18abfa73b89a9ed97d31f98386",
+  "head": "4e0bf59c470a6576e65f7236c983776f89abeef8",
+  "diff_sha256": "3e7ec9a5a33871fb81e59e541dc8877d8ac7446106658f370b63b4acbc22ef7a",
+  "sweep": "4e0bf59c470a-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 name: TestSyncSourceMemorycard_DeclaresADegradedEngram",
+      "disposition": "live",
+      "evidence": "Renamed by this commit; the only hit is odd/tasks/phase9-c22fu-memorycard-compat.md, a Log that records the test by its name at the time. A historical record, not code; nothing to sweep."
+    },
+    {
+      "candidate": "T1 name: TwinsFunc",
+      "disposition": "live",
+      "evidence": "Removed by this commit; the only hit is the feature document odd/tasks/phase9-store-agnostic-promotion.md, whose Specs and Log describe the T3 design that had it. A historical record, not code."
+    },
+    {
+      "candidate": "T1 name: newMemorycardSource",
+      "disposition": "live",
+      "evidence": "Removed by this commit; the hits are stored review records (09e2f013bfbc-3.json, 09e2f013bfbc-5.sweeper.json, 74326e32c2c4-2/3.json) and the feature document, all immutable or historical records of earlier commits. No code or doc of the module names it at the tip."
+    }
+  ]
+}

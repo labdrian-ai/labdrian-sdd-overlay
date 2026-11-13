@@ -21,7 +21,8 @@ var (
 
 // lineageWorld builds one Engram database and one memorycard database that hold the same pieces of memory:
 // observation 1 was imported into memory 10 (an import_map row), observation 2 was mirrored by hand into memory
-// 11 (no row, the same content), and memory 12 has no counterpart.
+// 11 (no row, the same content), and memory 12 has no counterpart. Memory 16 holds the content of memory 11 and was
+// imported from observation 9, which Engram does not hold: memorycard says by itself that memory 11 mirrors it.
 func lineageWorld(t *testing.T) (*engram.Store, *memorycard.Store) {
 	t.Helper()
 	dir := realTempDir(t)
@@ -53,9 +54,10 @@ func lineageWorld(t *testing.T) (*engram.Store, *memorycard.Store) {
 				(12, 'p', 'decision', 'Alone', 'Alone body', '` + memory.CardContentHash("Alone", "Alone body") + `'),
 				(13, 'q', 'decision', 'Split', 'Split body', 'x'),
 				(14, 'q', 'decision', 'Parts one', 'Parts body', 'y'),
-				(15, 'q', 'decision', 'Parts two', 'Parts body', 'z')`,
+				(15, 'q', 'decision', 'Parts two', 'Parts body', 'z'),
+				(16, 'p', 'decision', 'Mirrored', 'Mirrored body', '` + memory.CardContentHash("Mirrored", "Mirrored   body") + `')`,
 			// Observation 3 was imported with a dangling part 1; observation 4 as two parts.
-			`insert into import_map values ('engram', '1', 1, 10), ('engram', '3', 1, 99), ('engram', '3', 2, 13), ('engram', '4', 1, 14), ('engram', '4', 2, 15)`,
+			`insert into import_map values ('engram', '1', 1, 10), ('engram', '3', 1, 99), ('engram', '3', 2, 13), ('engram', '4', 1, 14), ('engram', '4', 2, 15), ('engram', '9', 1, 16)`,
 		},
 	} {
 		db, err := sql.Open("sqlite", path)
@@ -113,17 +115,21 @@ func memoryOf(t *testing.T, source promote.Source, id string) memory.Memory {
 func TestLineageRunsBothWaysBetweenTheTwoStores(t *testing.T) {
 	engramStore, cards := lineageWorld(t)
 	engramSource := newEngramSource(engramStore, cards)
-	cardSource := newMemorycardSource(cards, engramStore)
+	cardSource := memorycard.NewSource(cards)
 
 	want := map[string][]memory.Identity{
 		"10": {{Source: "engram", ID: "1"}},
 		"11": nil,
 		"12": nil,
+		"16": {{Source: "engram", ID: "9"}},
 	}
+	// Memory 11 mirrors memory 16, which holds its content and has an import_map row, and the observation 9 of that row:
+	// memorycard says it alone, and observation 2, which only Engram knows holds the same content, is not found.
 	wantMirrors := map[string][]memory.Identity{
 		"10": nil,
-		"11": {{Source: "engram", ID: "2"}},
+		"11": {{Source: "memorycard", ID: "16"}, {Source: "engram", ID: "9"}},
 		"12": nil,
+		"16": nil,
 	}
 	for id, lineage := range want {
 		if got := lineageOf(t, cardSource, id); !reflect.DeepEqual(got, lineage) {
@@ -158,7 +164,7 @@ func TestLineageRunsBothWaysBetweenTheTwoStores(t *testing.T) {
 
 	// Every memory of the project comes through a listing with its lineage as ByID gives it.
 	listed, err := cardSource.Candidates("p")
-	if err != nil || len(listed) != 3 {
+	if err != nil || len(listed) != 4 {
 		t.Fatalf("Candidates(p) = %v, %v", listed, err)
 	}
 	for _, m := range listed {

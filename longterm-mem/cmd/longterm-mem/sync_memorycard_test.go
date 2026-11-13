@@ -554,16 +554,15 @@ func TestSyncSourceMemorycard_DeclaresADegradedMemorycard(t *testing.T) {
 	}
 }
 
-func TestSyncSourceMemorycard_DeclaresADegradedEngram(t *testing.T) {
+// The run reads memorycard alone (S10 c), so a frozen Engram database is not the run's to declare: it is not opened.
+// (Previously: the run read Engram for the twins of a memory with no import_map row and declared it frozen.)
+func TestSyncSourceMemorycard_ReadsNoEngramDatabaseSoDeclaresNone(t *testing.T) {
 	w, _ := syncMemorycardWorld(t)
 	degradeFixtureDB(t, w.dbPath)
 
 	code, stdout, stderr := runSync(t, "--source", "memorycard", "--dry-run")
-	if code != exitOK {
-		t.Fatalf("exit %d\nstdout: %s\nstderr: %s", code, stdout, stderr)
-	}
-	if !strings.HasPrefix(stderr, "longterm-mem: sync: engram is being read through the immutable=1 fallback, so this run works from the snapshot taken when the connection was opened, not the live database: ") {
-		t.Errorf("stderr = %q, want the frozen Engram declared", stderr)
+	if code != exitOK || stderr != "" || !strings.Contains(stdout, "would promote 3 memory(ies)") {
+		t.Fatalf("exit %d\nstdout: %s\nstderr: %s\nwant exit 0, three memories to promote and nothing on stderr: a frozen Engram is not read", code, stdout, stderr)
 	}
 }
 

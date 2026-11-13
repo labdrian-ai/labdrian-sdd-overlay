@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "61ec52e545db7dd33c829ba0e9b8921464a30ce8",
+    "head": "8a3bc2cec34a42e77bef0aa4317bc80f41ae2808",
+    "diff_sha256": "956dd7052ab0f25ea82a0da5b720dd7d5479ff41d73d227cb522b413a16aabec",
+    "paths": [
+      "longterm-mem/internal/promote/page_style.go",
+      "longterm-mem/internal/promote/page_style_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "61ec52e545db7dd33c829ba0e9b8921464a30ce8",
+      "head": "8a3bc2cec34a42e77bef0aa4317bc80f41ae2808",
+      "diff_sha256": "956dd7052ab0f25ea82a0da5b720dd7d5479ff41d73d227cb522b413a16aabec"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/promote/page_style.go",
+        "longterm-mem/internal/promote/page_style_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "idError.Unwrap returns the *strconv.NumError, and NumError.Unwrap returns its Err, so errors.Is reaches ErrSyntax and ErrRange and errors.As reaches *strconv.NumError, as the commit claims.",
+      "strconv.ParseInt returns ErrRange only for syntactically valid overflowing input, so the 'out of range' wording appears only for real overflows. Every other parse failure, including the empty id, keeps 'not a number'.",
+      "The message names the id once through the single %q, and the strconv text that repeats it is kept only as the cause.",
+      "The new tests cover valid ids, a syntax failure, and an int64 overflow. They check the message and the unwrap chain for each case. I found no regression or unreachable cause in the diff."
+    ]
+  }
+}

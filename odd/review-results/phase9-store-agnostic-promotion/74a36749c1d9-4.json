@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "2d3ae79dbfa2e21fcd139db9faf79131d0e50b24",
+    "head": "74a36749c1d99f9a110a342f580e015876c790df",
+    "diff_sha256": "2759767e80e5b256ecd3466863a7e0ea6d3e1754a169bac43aec4e5a0ce82b52",
+    "paths": [
+      "longterm-mem/internal/memorycard/observations.go",
+      "longterm-mem/internal/memorycard/source.go",
+      "longterm-mem/internal/memorycard/source_hash_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "2d3ae79dbfa2e21fcd139db9faf79131d0e50b24",
+      "head": "74a36749c1d99f9a110a342f580e015876c790df",
+      "diff_sha256": "2759767e80e5b256ecd3466863a7e0ea6d3e1754a169bac43aec4e5a0ce82b52"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/memorycard/observations.go",
+        "longterm-mem/internal/memorycard/source.go",
+        "longterm-mem/internal/memorycard/source_hash_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "observations.go: the ImportedParts query now selects coalesce(m.content_hash,''). The project filter is unchanged, so another project's import cannot reach the hash index.",
+      "observations.go: only parts with Memory != 0 and a non-empty Hash enter ix.hashes, and slices.Contains keeps each observation listed once per hash. holders skips the hash lookup when t.hash is empty.",
+      "observations.go: holders sorts and compacts the union of hash matches and ContentKey matches, so the result stays in ascending observation id order and has no duplicates. An empty result stays nil, which is what the tests expect.",
+      "source.go: the hash is passed from card.ContentHash only for hand-mirror texts, and import_map rows from another source are not in the index, so the tests' exclusion cases hold.",
+      "I could not see the code before line 141 in observations.go (candidate selection) or the ContentHash field on memory.CardMemory, so I assumed both behave as the commit message says."
+    ]
+  }
+}

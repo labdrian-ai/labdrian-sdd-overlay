@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "0a958be8b09340edeb26568f8771005104ff5294",
+    "head": "21a621a8e0bdf495ceee9aeec1cd94db3b688f74",
+    "diff_sha256": "e4508eacca1053d803c106d532cafcfc5fe795a6f8d1677f06ee88007c934e71",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/memorycard_lineage_test.go",
+      "longterm-mem/cmd/longterm-mem/promote_memorycard_test.go",
+      "longterm-mem/internal/memorycard/store.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "0a958be8b09340edeb26568f8771005104ff5294",
+      "head": "21a621a8e0bdf495ceee9aeec1cd94db3b688f74",
+      "diff_sha256": "e4508eacca1053d803c106d532cafcfc5fe795a6f8d1677f06ee88007c934e71"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/memorycard_lineage_test.go",
+        "longterm-mem/cmd/longterm-mem/promote_memorycard_test.go",
+        "longterm-mem/internal/memorycard/store.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff removes Store.MappedTwins and the Twin type, and the commit message says they are dropped. No remaining caller is visible in the diff, so a dangling reference or an unused import (errors in store.go, memory in promote_memorycard_test.go) cannot be shown from it; I report no finding.",
+      "The pageOfMemory change matches the exact front-matter line via slices.Contains over strings.Split, which is equivalent or stricter than the prior substring match, so it introduces no regression.",
+      "The test now calls withNoEngramDatabase(t) and no longer sets hashes on imported memories. This only narrows what the test depends on, and the hand-mirrored rows 5 and 6 still receive their hashes in the remaining loop."
+    ]
+  }
+}

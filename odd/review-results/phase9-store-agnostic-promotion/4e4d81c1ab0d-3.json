@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "21a621a8e0bdf495ceee9aeec1cd94db3b688f74",
+    "head": "4e4d81c1ab0de0767b004ea124d2f5e27da8172e",
+    "diff_sha256": "8b4246aee4e46bd64084b62cb7a75bbe9a7e9a3952db292970cd4d5b3f9b29bf",
+    "paths": [
+      "longterm-mem/internal/promote/propagate.go",
+      "longterm-mem/internal/promote/propagate_cards.go",
+      "longterm-mem/internal/promote/propagate_ids_pages_test.go",
+      "longterm-mem/internal/promote/sync.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "21a621a8e0bdf495ceee9aeec1cd94db3b688f74",
+      "head": "4e4d81c1ab0de0767b004ea124d2f5e27da8172e",
+      "diff_sha256": "8b4246aee4e46bd64084b62cb7a75bbe9a7e9a3952db292970cd4d5b3f9b29bf"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/promote/propagate.go",
+        "longterm-mem/internal/promote/propagate_cards.go",
+        "longterm-mem/internal/promote/propagate_ids_pages_test.go",
+        "longterm-mem/internal/promote/sync.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/propagate_ids_pages_test.go:14-28",
+        "claim": "The anonymous struct type is written out twice, in the return type and again in the composite literal of propagationWalks, which makes the helper hard to read. A named type would remove the duplication. The doc comment above the helper also describes the behavior under test rather than the helper, so it reads as if it belonged to a test.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/propagate_ids_pages_test.go:14-28"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/sync.go:68-73",
+        "claim": "withIDError wraps with a second %w, so a message already naming the id gets the not-a-number text appended and may repeat it. If numericID's error already embeds the id in the error chain on another path, the text could be duplicated. The diff cannot show whether this happens.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "longterm-mem/internal/promote/sync.go:68-73"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed all four changed paths from the diff alone. The behavior change is that the three failure sites in the two walks (styleOf error, index error, unlistable-pages error) now add the id error through withIDError when numericID fails. No behavioral defect found in those hunks.",
+      "The tests assert both the unlistable-pages case and the unreadable-page case for both walks. I could not see the code that fails the odd-id memory in the unreadable-page case, so I did not verify that path."
+    ]
+  }
+}

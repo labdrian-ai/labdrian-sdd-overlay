@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "4e0bf59c470a6576e65f7236c983776f89abeef8",
+    "head": "44040a23147616e988afac320e48be4ba30e3dd8",
+    "diff_sha256": "f9837ea4f87ee05e2cab7c91c57debddad4608ca074ef1f6a2163f1a3e6eb0db",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/memorycard_lineage_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "4e0bf59c470a6576e65f7236c983776f89abeef8",
+      "head": "44040a23147616e988afac320e48be4ba30e3dd8",
+      "diff_sha256": "f9837ea4f87ee05e2cab7c91c57debddad4608ca074ef1f6a2163f1a3e6eb0db"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/memorycard_lineage_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/cmd/longterm-mem/memorycard_lineage_test.go:84-108",
+        "claim": "TestAMemoryOfAnotherPartOfAnObservationIsBridgedToThePageOfItsSiblingPart never calls withNoEngramDatabase, so it does not pin the sibling-part bridge without an Engram database. The file header and the commit message say these tests point LONGTERM_MEM_ENGRAM_DB at a missing file. If the sibling-part lookup were to read Engram, this test would still pass, and the stated no-Engram guarantee for that bridge would go unguarded.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/memorycard_lineage_test.go:84-108",
+          "longterm-mem/cmd/longterm-mem/memorycard_lineage_test.go:10-12"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff adds one test file. withNoEngramDatabase is called in the first and third tests but not in the second, the sibling-part test."
+    ]
+  }
+}

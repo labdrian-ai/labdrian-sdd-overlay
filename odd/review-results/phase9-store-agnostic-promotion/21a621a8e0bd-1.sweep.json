@@ -1,0 +1,31 @@
+{
+  "kind": "sweep",
+  "base": "0a958be8b09340edeb26568f8771005104ff5294",
+  "head": "21a621a8e0bdf495ceee9aeec1cd94db3b688f74",
+  "diff_sha256": "e4508eacca1053d803c106d532cafcfc5fe795a6f8d1677f06ee88007c934e71",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": [
+      {
+        "name": "MappedTwins",
+        "hits": [
+          "odd/tasks/phase9-store-agnostic-promotion.md"
+        ]
+      },
+      {
+        "name": "Twin",
+        "hits": [
+          "longterm-mem/internal/memorycard/source_kin_test.go",
+          "longterm-mem/internal/promote/walk_bridged_test.go"
+        ]
+      }
+    ]
+  },
+  "t2": [],
+  "t3": [],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

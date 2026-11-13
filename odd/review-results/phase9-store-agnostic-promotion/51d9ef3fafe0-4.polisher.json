@@ -1,0 +1,28 @@
+{
+  "kind": "polisher",
+  "base": "657a17100492f2d81f79fbe21f23ff4bd95f0a79",
+  "head": "51d9ef3fafe04f96d92fd9dac960cfdab13a8a26",
+  "diff_sha256": "431ecc75b1002fb2ec49ad72befe314c469c7e708feff7be814b80a44c90e2df",
+  "findings": {
+    "findings": [
+      {
+        "location": "longterm-mem/internal/promote/page_style.go:49-56",
+        "severity": "SUGGESTION",
+        "claim": "The target changes the shared numericID error text but its trailer says Risk: none; L47 is right that it is Risk 3. Every caller still reports a correct message naming the id and saying it is not a number; only the strconv parse detail is dropped.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "numericID returns `promote: %s %q has an id that is not a number`.",
+          "Callers walk.go:66, propagate.go:141-166, propagate_cards.go:91-114 and page_style.go:105,133 use the error whole.",
+          "Tests assert only the substrings \"x1\" and `not a number`; no golden under cmd/longterm-mem/testdata holds the wording.",
+          "update.go:353 and the engram/memorycard sources call strconv.ParseInt directly and are unaffected."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read page_style.go:35-154, sync.go:50-100, walk.go:55-84.",
+      "Grepped the worktree for numericID, idErr, withIDError, not a number, ParseInt, has an id.",
+      "Not run: git diff against the first parent and the test suite (no shell in the polisher runtime)."
+    ]
+  }
+}

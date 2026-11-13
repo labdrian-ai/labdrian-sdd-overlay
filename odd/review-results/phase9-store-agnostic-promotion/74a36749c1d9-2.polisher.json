@@ -1,0 +1,16 @@
+{
+  "kind": "polisher",
+  "base": "2d3ae79dbfa2e21fcd139db9faf79131d0e50b24",
+  "head": "74a36749c1d99f9a110a342f580e015876c790df",
+  "diff_sha256": "2759767e80e5b256ecd3466863a7e0ea6d3e1754a169bac43aec4e5a0ce82b52",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "memorycard save.go:453-457 contentHash and longterm-mem internal/memory/card.go:48-52 CardContentHash match; the union bridges only texts memorycard treats as identical.",
+      "import.go:237-264 importRow dedups by (project, content_hash); stored hashes are memorycard hashes of the stored text.",
+      "ImportedParts (observations.go:65-70) is restricted to source engram and the project; kinOf groups by card.Project; mapped cards skipped at source.go:104, so no cross-project or cross-source bridge.",
+      "newObservationIndex (observations.go:159-169) keeps per-hash lists ascending and deduplicated; holders sorts and compacts the union; empty hashes and gone rows are not indexed.",
+      "Only output change is extra Mirrored identities for hand mirrors, the requested behavior; tests and git show not run (no shell)."
+    ]
+  }
+}

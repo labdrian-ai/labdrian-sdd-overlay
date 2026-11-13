@@ -121,7 +121,7 @@ func mcpGet(store *engram.Store) func(context.Context, int64) (mcpserver.GetOutc
 // then. It writes, so it seeds the vault registry of a machine that has none, as the commands that write do.
 //
 // With source memorycard the id is a memorycard memory id; memorycard's database is opened for the call, read-only,
-// and the session's Engram store answers which observations hold the memory's content. Without it the id is an
+// and says by itself which memories and observations are the same piece of memory. Without it the id is an
 // Engram observation id, and memorycard's database, when there is one, answers which memories are the same piece of memory.
 func (c commands) mcpPromote(store *engram.Store) func(ctx context.Context, project, source string, id int64) (mcpserver.PromoteOutcome, error) {
 	return func(ctx context.Context, project, source string, id int64) (mcpserver.PromoteOutcome, error) {
@@ -141,7 +141,7 @@ func (c commands) mcpPromote(store *engram.Store) func(ctx context.Context, proj
 				return mcpserver.PromoteOutcome{}, openErr
 			}
 			defer cards.Close()
-			outcome, err = promote.PromoteCardAndReindex(ctx, writer, newMemorycardSource(cards, store), id, index)
+			outcome, err = promote.PromoteCardAndReindex(ctx, writer, memorycard.NewSource(cards), id, index)
 		} else {
 			// Memorycard is read too, for the lineage of the observation, as the command does.
 			cards, openErr := memorycard.Open(os.Getenv(memorycardDBEnvVar))

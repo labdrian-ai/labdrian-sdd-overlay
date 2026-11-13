@@ -1,0 +1,40 @@
+{
+  "kind": "sweep",
+  "base": "08463a808d047d18abfa73b89a9ed97d31f98386",
+  "head": "4e0bf59c470a6576e65f7236c983776f89abeef8",
+  "diff_sha256": "3e7ec9a5a33871fb81e59e541dc8877d8ac7446106658f370b63b4acbc22ef7a",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": [
+      {
+        "name": "TestSyncSourceMemorycard_DeclaresADegradedEngram",
+        "hits": [
+          "odd/tasks/phase9-c22fu-memorycard-compat.md"
+        ]
+      },
+      {
+        "name": "TwinsFunc",
+        "hits": [
+          "odd/tasks/phase9-store-agnostic-promotion.md"
+        ]
+      },
+      {
+        "name": "newMemorycardSource",
+        "hits": [
+          "odd/review-results/phase9-store-agnostic-promotion/09e2f013bfbc-3.json",
+          "odd/review-results/phase9-store-agnostic-promotion/09e2f013bfbc-5.sweeper.json",
+          "odd/review-results/phase9-store-agnostic-promotion/74326e32c2c4-2.json",
+          "odd/review-results/phase9-store-agnostic-promotion/74326e32c2c4-3.json",
+          "odd/tasks/phase9-store-agnostic-promotion.md"
+        ]
+      }
+    ]
+  },
+  "t2": [],
+  "t3": [],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

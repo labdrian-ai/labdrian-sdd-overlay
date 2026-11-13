@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "e66de6c03355d8d0829a3bfb44f773e1be6db200",
+    "head": "0a958be8b09340edeb26568f8771005104ff5294",
+    "diff_sha256": "5e9b22a0cd6f25717dc55383c7865c9abcbf120c66941b2802d8feeb651479af",
+    "paths": [
+      "longterm-mem/internal/memorycard/observations.go",
+      "longterm-mem/internal/memorycard/source.go",
+      "longterm-mem/internal/memorycard/source_kin_test.go",
+      "longterm-mem/internal/memorycard/source_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "e66de6c03355d8d0829a3bfb44f773e1be6db200",
+      "head": "0a958be8b09340edeb26568f8771005104ff5294",
+      "diff_sha256": "5e9b22a0cd6f25717dc55383c7865c9abcbf120c66941b2802d8feeb651479af"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/memorycard/observations.go",
+        "longterm-mem/internal/memorycard/source.go",
+        "longterm-mem/internal/memorycard/source_kin_test.go",
+        "longterm-mem/internal/memorycard/source_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/memorycard/source.go:84-90",
+        "claim": "ByID now goes through mapAll/kinOf. For any memory without an import_map row, kinOf calls Store.ImportedObservations, which reads every imported memory of the project, body included, and hashes each observation. The base ran one MappedTwins query keyed by content hash. A single-memory lookup therefore costs time and memory proportional to the size of the project's import history. It repeats on every ByID call for a hand-written memory, because nothing is cached.",
+        "evidence_class": "inferential",
+        "causal_disposition": "worsened",
+        "proof_refs": [
+          "source.go:58 ByID calls s.mapAll",
+          "source.go:87 s.store.ImportedObservations(card.Project) per unmapped card's project",
+          "observations.go:36-52 full-project import_map join that loads bodies"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/memorycard/observations.go:71-86",
+        "claim": "The hash of a single part is no longer a hash an observation answers to when it has several parts. A hand mirror that holds the text of one part (for example, a memory copied from just that part) matched through the stored content_hash in the base and is now missed. The rebuilt text also depends on every part's memory still existing. If a sibling part's memory is gone, the remaining part keeps its ' (part i/n)' title because the len(ps)>1 check fails, so it never matches its original text.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "observations.go:78-80 the title suffix is stripped only when len(ps) > 1",
+          "observations.go:82-86 only whole-text hashes are emitted",
+          "source.go: mirrorsOf looks up only CardContentHash(card.Title, card.Body) in k.imported"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed all four changed paths from the diff alone; no tools were available.",
+      "The listing path reads lineage and mirrors once (kinOf), and the ByID path reuses that logic for a single card.",
+      "The multi-part dedup in mirrorsOf (seen by EngramID) correctly collapses the two separator readings of one observation."
+    ]
+  }
+}

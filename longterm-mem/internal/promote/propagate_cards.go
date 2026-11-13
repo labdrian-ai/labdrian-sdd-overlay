@@ -88,21 +88,30 @@ func eachCardPatchTarget(src Source, w *Writer, project string, visit func(patch
 		// that could have been retired; the promotion pass names the eligible ones, and the others have no page to patch.
 		for _, m := range memories {
 			if isRetired(m) {
-				id, _ := numericID(m)
-				outcome.failed = append(outcome.failed, SyncFailure{ObservationID: id, Err: err})
+				id, idErr := numericID(m)
+				outcome.failed = append(outcome.failed, SyncFailure{ObservationID: id, Err: withIDError(err, idErr)})
 			}
 		}
 		return outcome, nil
 	}
 	for _, m := range memories {
-		id, _ := numericID(m)
+		id, idErr := numericID(m)
 		scan := index.scanFor(m)
 		if scan.own == nil {
 			// An unreadable page may be a retired memory's own. An active memory with no page is the promotion
 			// pass's business (it may be ineligible), never withheld here.
 			if isRetired(m) && len(scan.unreadable) > 0 {
+				if idErr != nil {
+					outcome.failed = append(outcome.failed, SyncFailure{ObservationID: id, Err: idErr})
+					continue
+				}
 				outcome.withheld = append(outcome.withheld, id)
 			}
+			continue
+		}
+		if idErr != nil {
+			// The memory has a page and no id to name it by in a failure or a patch: it is failed in its own words.
+			outcome.failed = append(outcome.failed, SyncFailure{ObservationID: id, Err: idErr})
 			continue
 		}
 		if m.Status == memory.StatusUnknown {

@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "1550c0da86683e70b4bedc2798a9be275f52c2f8",
+    "head": "e66de6c03355d8d0829a3bfb44f773e1be6db200",
+    "diff_sha256": "0c7d38d977a023ec21ba381c1aca8952e8f63fdc8d530b94163eb226935d704c",
+    "paths": [
+      "odd/tasks/phase9-c22fu-memorycard-compat.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "1550c0da86683e70b4bedc2798a9be275f52c2f8",
+      "head": "e66de6c03355d8d0829a3bfb44f773e1be6db200",
+      "diff_sha256": "0c7d38d977a023ec21ba381c1aca8952e8f63fdc8d530b94163eb226935d704c"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-c22fu-memorycard-compat.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff adds a single documentation log entry (L20) to odd/tasks/phase9-c22fu-memorycard-compat.md; no code, specs or tests change.",
+      "The entry is internally consistent: it records the owner's decision that C22-FU closes in Phase 9, T4 closes as replaced, and T5 and T6 follow the feature's T5.",
+      "The cross-references (D5, L10, L44, L25-L41 of the other feature) cannot be checked from this diff alone, and nothing in the entry contradicts the visible context."
+    ]
+  }
+}

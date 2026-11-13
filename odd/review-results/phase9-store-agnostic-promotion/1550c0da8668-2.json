@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "bd07b1e98b19c572dd33ea8f09ea4a56b0174786",
+    "head": "1550c0da86683e70b4bedc2798a9be275f52c2f8",
+    "diff_sha256": "8448540388b0f15f2683a8b880f8ab5d502b5467eb78f03995c78bde83da0a22",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "bd07b1e98b19c572dd33ea8f09ea4a56b0174786",
+      "head": "1550c0da86683e70b4bedc2798a9be275f52c2f8",
+      "diff_sha256": "8448540388b0f15f2683a8b880f8ab5d502b5467eb78f03995c78bde83da0a22"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:339",
+        "claim": "L45 says the branch starts 'from `108bfa99`, the docs commit `08463a80` below', but no later text in the entry mentions `08463a80`. The docs commit is also not the head being reviewed (1550c0da). A reader cannot tell which commit is the docs commit, or whether the 'three commits' count includes it. The differential is based on `108bfa99`, while the T4 task line says it is against the T3 tip, and the log never says whether the two are the same commit.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:339"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:118",
+        "claim": "T4 is ticked [x] while L45 itself records that the memorycard mirror of this document is not updated (pending for the coordinator). It also records the unmeasured live-store premise that an imported memory's content hash equals its observation's hash, and the DIFFERENT orphan-world result. The tick does not point at these open items. The task line also grew an unexplained trailing '; L45' after the commit list, and the committed work is about 577 lines against the '~150-250' estimate in the same line, with no note reconciling them.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:118",
+          "odd/tasks/phase9-store-agnostic-promotion.md:339"
+        ]
+      }
+    ],
+    "evidence": [
+      "The only changed file is a task document. The diff ticks T4 and adds log entry L45.",
+      "No code behavior is touched. The findings are limited to recall and readability of the recorded evidence."
+    ]
+  }
+}

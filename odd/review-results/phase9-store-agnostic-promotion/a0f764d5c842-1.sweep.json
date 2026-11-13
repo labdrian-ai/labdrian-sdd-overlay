@@ -1,0 +1,30 @@
+{
+  "kind": "sweep",
+  "base": "8a3bc2cec34a42e77bef0aa4317bc80f41ae2808",
+  "head": "a0f764d5c8429518a589e2221c047cf11fd9c545",
+  "diff_sha256": "0c3820ee817e0852e253f12829b38336756e4042d013cb88d529d85afc997024",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": [
+      {
+        "name": "ObservationsByKey",
+        "hits": [
+          "odd/tasks/phase9-store-agnostic-promotion.md"
+        ]
+      },
+      {
+        "name": "ObservationsWithStoredHash",
+        "hits": [
+          "odd/tasks/phase9-store-agnostic-promotion.md"
+        ]
+      }
+    ]
+  },
+  "t2": [],
+  "t3": [],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

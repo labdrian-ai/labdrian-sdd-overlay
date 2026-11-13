@@ -52,10 +52,20 @@ type SyncReport struct {
 }
 
 // SyncFailure is one memory Sync could not process, kept per
-// memory rather than aborting the run (see Sync). ObservationID is the memory's id in its store.
+// memory rather than aborting the run (see Sync). ObservationID is the memory's id in its store; it is 0 when the
+// id is not a number, and then Err names the real id.
 type SyncFailure struct {
 	ObservationID int64
 	Err           error
+}
+
+// withIDError is err, and, when the memory's id is not a number (idErr, from numericID), what says so: a failure
+// recorded under ObservationID 0 must still name the memory.
+func withIDError(err, idErr error) error {
+	if idErr == nil {
+		return err
+	}
+	return fmt.Errorf("%w (%w)", err, idErr)
 }
 
 // Sync promotes every eligible, unpromoted-or-revised memory for

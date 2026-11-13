@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "44040a23147616e988afac320e48be4ba30e3dd8",
+    "head": "bd07b1e98b19c572dd33ea8f09ea4a56b0174786",
+    "diff_sha256": "d8e2700a18a20e6b2f9f16b032c17c6097a9550bb24dd620f3f6b7c24e26d314",
+    "paths": [
+      "longterm-mem/internal/promote/propagate.go",
+      "longterm-mem/internal/promote/propagate_cards.go",
+      "longterm-mem/internal/promote/propagate_ids_test.go",
+      "longterm-mem/internal/promote/source.go",
+      "longterm-mem/internal/promote/walk_bridged_test.go",
+      "longterm-mem/internal/promote/walk_failures_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "44040a23147616e988afac320e48be4ba30e3dd8",
+      "head": "bd07b1e98b19c572dd33ea8f09ea4a56b0174786",
+      "diff_sha256": "d8e2700a18a20e6b2f9f16b032c17c6097a9550bb24dd620f3f6b7c24e26d314"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/promote/propagate.go",
+        "longterm-mem/internal/promote/propagate_cards.go",
+        "longterm-mem/internal/promote/propagate_ids_test.go",
+        "longterm-mem/internal/promote/source.go",
+        "longterm-mem/internal/promote/walk_bridged_test.go",
+        "longterm-mem/internal/promote/walk_failures_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/propagate.go:141-170",
+        "claim": "The new failures still carry ObservationID 0, the zero value numericID returns on error. The error text names the real id, but any consumer of the structured SyncFailure.ObservationID field (aggregation or dedup by id) still sees memory 0. The commit message says the old bug reported the memory as 0, and this only fixes the wording. The same holds in propagate_cards.go.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "longterm-mem/internal/promote/propagate.go:141",
+          "longterm-mem/internal/promote/propagate.go:157",
+          "longterm-mem/internal/promote/propagate_cards.go:98-114"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/propagate_cards.go:101-109",
+        "claim": "A retired memory with a non-numeric id and an unreadable page is now reported as failed instead of withheld. Withheld means the page may be its own and the walk waits. Failed, with a message about the id, replaces that. This is a deliberate behavior change that the new test does not cover: the test only exercises the readable-page path.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/propagate_cards.go:103-107",
+          "longterm-mem/internal/promote/propagate.go:156-160"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the diff only. numericID and the scan helpers are not visible, so the exact failure wording the new test asserts could not be verified.",
+      "The control flow of both walks was traced: a memory with a bad id and a readable own page is failed and not patched, and a memory with no page is skipped as before.",
+      "The test-only changes (walk_bridged_test.go, walk_failures_test.go) and the doc comment in source.go carry no runtime risk."
+    ]
+  }
+}

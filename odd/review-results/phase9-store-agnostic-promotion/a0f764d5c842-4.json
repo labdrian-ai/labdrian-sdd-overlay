@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "8a3bc2cec34a42e77bef0aa4317bc80f41ae2808",
+    "head": "a0f764d5c8429518a589e2221c047cf11fd9c545",
+    "diff_sha256": "0c3820ee817e0852e253f12829b38336756e4042d013cb88d529d85afc997024",
+    "paths": [
+      "longterm-mem/internal/memorycard/observations.go",
+      "longterm-mem/internal/memorycard/source.go",
+      "longterm-mem/internal/memorycard/source_kin_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "8a3bc2cec34a42e77bef0aa4317bc80f41ae2808",
+      "head": "a0f764d5c8429518a589e2221c047cf11fd9c545",
+      "diff_sha256": "0c3820ee817e0852e253f12829b38336756e4042d013cb88d529d85afc997024"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/memorycard/observations.go",
+        "longterm-mem/internal/memorycard/source.go",
+        "longterm-mem/internal/memorycard/source_kin_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/memorycard/observations.go:88-92",
+        "claim": "The ImportedParts query keeps every import_map row of source engram whose memory is gone (`m.id is null`), whatever project that row was imported into. A project's index therefore loads the orphan rows of all other projects. Such an observation has no survivor and is dropped in newObservationIndex, so results stay correct. The cost is wasted rows and memory per project index, and it grows with the orphan rows of unrelated projects. An observation whose rows span projects can also have its part count (the `len(parts) > 1` test in wholeTitle) skewed by the project filter, which would change whether the suffix is stripped. I cannot show that realistic data reaches that case.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/memorycard/observations.go:88-92",
+          "longterm-mem/internal/memorycard/observations.go:157-163"
+        ]
+      }
+    ],
+    "evidence": [
+      "I read the diff only; I did not build or run it. The helper `placeholders` is not visible in the diff and is assumed to exist elsewhere in the package.",
+      "Checked and found no defect: the length-prefixed ContentKey, the part-suffix stripping only when the observation has more than one import_map row, the once-per-Source index with the mutex, the body reads batched across a listing, and the failed-read path leaving no cache entry.",
+      "The changed expectation for memory 27 (now nil) is the stated behavior: a single part keeps its own title, `(part 1/1)` included."
+    ]
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "kind": "polisher",
+  "base": "08463a808d047d18abfa73b89a9ed97d31f98386",
+  "head": "4e0bf59c470a6576e65f7236c983776f89abeef8",
+  "diff_sha256": "3e7ec9a5a33871fb81e59e541dc8877d8ac7446106658f370b63b4acbc22ef7a",
+  "findings": {
+    "findings": [
+      {
+        "location": "longterm-mem/internal/memorycard/source.go:119-135",
+        "severity": "WARNING",
+        "claim": "A hand-mirrored memory (no import_map row) whose content equals a whole Engram observation imported as several parts no longer finds that observation: mirrorsOf matches only mapped memories with the same content hash, and a part holds only part of the content, so the memory is not bridged to a page keyed engram:O and could be promoted a second time.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "Before: the Engram composition hashed the full observation (CardContentHash(o.Title, o.Content), lineage.go:30). After: mirrorsOf calls MappedTwins(card.Project, card.ContentHash), matching m.content_hash among memories with an import_map row (store.go:147-148).",
+          "A part of a split observation holds partial content, so its hash cannot equal the whole observation hash; L41 lists the multi-part count as unverified; no test covers it."
+        ]
+      },
+      {
+        "location": "longterm-mem/internal/memorycard/source.go:74-75",
+        "severity": "SUGGESTION",
+        "claim": "The toMemory doc comment still says unmapped lineage comes from the twins the composition root finds; the adapter now computes the mirrors itself.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "source.go:74-75 versus source.go:92-98 calling s.mirrorsOf; lineage.go:13-14 says the memorycard adapter composes nothing."
+        ]
+      },
+      {
+        "location": "longterm-mem/internal/memorycard/source.go:76-100",
+        "severity": "SUGGESTION",
+        "claim": "toMemory issues per-memory queries (MemoryIDsByEngramIDs per bridged memory, MappedTwins per unmapped memory, engramIDOf per twin) where the Engram composition batched them in chunks of 500; same result, more round trips on a large project.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "mapAll (source.go:62-72) calls toMemory per card.",
+          "lineage.go:33-37 previously read imports and mirrors once per listing."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read T4, S10 (c)-(d), memorycard/source.go and store.go, cmd/longterm-mem/lineage.go, cmd_sync.go, cmd_promote.go, cmd_mcp.go:144 and promote/page_scan.go scanFor.",
+      "No shell: read the branch tip bd07b1e9, which contains the target commit."
+    ]
+  }
+}

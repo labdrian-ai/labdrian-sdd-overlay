@@ -1,0 +1,30 @@
+{
+  "kind": "polisher",
+  "base": "44040a23147616e988afac320e48be4ba30e3dd8",
+  "head": "bd07b1e98b19c572dd33ea8f09ea4a56b0174786",
+  "diff_sha256": "d8e2700a18a20e6b2f9f16b032c17c6097a9550bb24dd620f3f6b7c24e26d314",
+  "findings": {
+    "findings": [
+      {
+        "location": "longterm-mem/internal/promote/propagate_cards.go:91",
+        "severity": "SUGGESTION",
+        "claim": "The L26 carry item 'numericID errors discarded in the walks' (f2196397-2 F5) is only partly fixed. When the pages directory cannot be listed, this loop still does `id, _ := numericID(m)`. A retired memory with a non-numeric id is then reported as ObservationID 0 with the directory error, and the 'id is not a number' error is lost. The Engram walk has the same gap at propagate.go:147-149. There, `indexErr != nil` fails the memory with `id` and `idErr` is never consulted. No test pins either path; the new test only covers the patch path.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "pre-existing",
+        "evidence": [
+          "propagate_cards.go:89-94 discards the numericID error and records SyncFailure{ObservationID: id}, where id is 0 when parsing fails.",
+          "propagate.go:141-150 computes idErr but, on indexErr, appends a failure using only the index error.",
+          "propagate_ids_test.go covers only the case where the page is found. It does not cover an unreadable pages directory.",
+          "The L26 table marks f2196397-2 F5 as 'still applicable, T4'. Both gaps remain in the tree I read."
+        ]
+      }
+    ],
+    "evidence": [
+      "The shell was unavailable, so I could not run `git show bd07b1e9`. I read the worktree files, which may be at or after that commit, so I could not confirm that what I read is exactly the commit's content. I did not diff the commit against its base.",
+      "Read propagate_cards.go in full, propagate.go lines 120-219, and propagate_ids_test.go in full.",
+      "Read numericID and its callers (walk.go:66, page_style.go:104 and 132) via grep.",
+      "In both walks, a memory with a non-numeric id and a page is now failed with the numericID error. Before, it was patched and named memory 0. Only non-numeric ids change output. Memorycard and Engram ids are integers, so `sync`, `sync --source memorycard`, `promote` and propagation output is unchanged for numeric ids.",
+      "The new test asserts that the failure message names \"x1\" and says 'not a number', that nothing is patched, and that the page bytes are unchanged, for both walks."
+    ]
+  }
+}

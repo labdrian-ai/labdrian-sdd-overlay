@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "e66de6c03355d8d0829a3bfb44f773e1be6db200",
+    "head": "0a958be8b09340edeb26568f8771005104ff5294",
+    "diff_sha256": "5e9b22a0cd6f25717dc55383c7865c9abcbf120c66941b2802d8feeb651479af",
+    "paths": [
+      "longterm-mem/internal/memorycard/observations.go",
+      "longterm-mem/internal/memorycard/source.go",
+      "longterm-mem/internal/memorycard/source_kin_test.go",
+      "longterm-mem/internal/memorycard/source_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "e66de6c03355d8d0829a3bfb44f773e1be6db200",
+      "head": "0a958be8b09340edeb26568f8771005104ff5294",
+      "diff_sha256": "5e9b22a0cd6f25717dc55383c7865c9abcbf120c66941b2802d8feeb651479af"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/memorycard/observations.go",
+        "longterm-mem/internal/memorycard/source.go",
+        "longterm-mem/internal/memorycard/source_kin_test.go",
+        "longterm-mem/internal/memorycard/source_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/memorycard/observations.go:38",
+        "claim": "ImportedObservations loads the title and full body of every imported memory in the project. kinOf calls it for each project that has an unmapped memory, and ByID goes through mapAll and kinOf. As a result, every ByID call on a hand-mirrored memory, and every listing, scans, rebuilds and hashes all imported bodies. The base made one indexed MappedTwins lookup by content hash. Cost now grows with project size per single-memory read.",
+        "evidence_class": "inferential",
+        "causal_disposition": "worsened",
+        "proof_refs": [
+          "longterm-mem/internal/memorycard/observations.go:38",
+          "longterm-mem/internal/memorycard/source.go:55-62"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/memorycard/observations.go:76",
+        "claim": "The rebuild only strips the part suffix from the title when more than one part row survives the join with memories. If one part of a multi-part observation is gone, or an observation holds a single part whose title carries a '(part i/n)' suffix, the rebuilt title and text differ from the original. Its hash then matches no hand mirror, so the mirror is silently missed. The same applies if a re-import leaves two memories under the same key and part number, since they are then concatenated as parts. These cases are plausible but not shown by the diff.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/memorycard/observations.go:73-80"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff of the four changed files. I did not run the code.",
+      "mirrorsOf deduplicates by EngramID and byHash preserves observation id order, so the doubled hash entries for multi-part observations do not duplicate mirrors.",
+      "kinOf and lineageOf keep the previous lineage behaviour via MemoryIDsByEngramIDs."
+    ]
+  }
+}

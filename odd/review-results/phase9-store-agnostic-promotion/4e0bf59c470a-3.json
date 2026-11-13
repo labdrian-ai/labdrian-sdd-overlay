@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "08463a808d047d18abfa73b89a9ed97d31f98386",
+    "head": "4e0bf59c470a6576e65f7236c983776f89abeef8",
+    "diff_sha256": "3e7ec9a5a33871fb81e59e541dc8877d8ac7446106658f370b63b4acbc22ef7a",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/cmd_mcp.go",
+      "longterm-mem/cmd/longterm-mem/cmd_promote.go",
+      "longterm-mem/cmd/longterm-mem/cmd_sync.go",
+      "longterm-mem/cmd/longterm-mem/lineage.go",
+      "longterm-mem/cmd/longterm-mem/lineage_test.go",
+      "longterm-mem/cmd/longterm-mem/promote_memorycard_test.go",
+      "longterm-mem/cmd/longterm-mem/sync_memorycard_test.go",
+      "longterm-mem/internal/memorycard/source.go",
+      "longterm-mem/internal/memorycard/source_test.go",
+      "longterm-mem/internal/memorycard/store.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "08463a808d047d18abfa73b89a9ed97d31f98386",
+      "head": "4e0bf59c470a6576e65f7236c983776f89abeef8",
+      "diff_sha256": "3e7ec9a5a33871fb81e59e541dc8877d8ac7446106658f370b63b4acbc22ef7a"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/cmd_mcp.go",
+        "longterm-mem/cmd/longterm-mem/cmd_promote.go",
+        "longterm-mem/cmd/longterm-mem/cmd_sync.go",
+        "longterm-mem/cmd/longterm-mem/lineage.go",
+        "longterm-mem/cmd/longterm-mem/lineage_test.go",
+        "longterm-mem/cmd/longterm-mem/promote_memorycard_test.go",
+        "longterm-mem/cmd/longterm-mem/sync_memorycard_test.go",
+        "longterm-mem/internal/memorycard/source.go",
+        "longterm-mem/internal/memorycard/source_test.go",
+        "longterm-mem/internal/memorycard/store.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/memorycard/source.go:112-128",
+        "claim": "The mirror detection now depends on imported memories carrying a non-empty content_hash in memorycard. The promote_memorycard_test fixture had to be patched to set the hash on imported memories 2 and 4, which suggests imports may leave it empty. If a real imported memory has an empty hash, a hand-mirrored memory with the same text is no longer seen as holding the content of a paged observation. Promote and sync would then write a duplicate page where they previously refused it as bridged. MappedTwins also returns nothing for an empty hash, so this fails silently. I cannot confirm from the diff what real imports store.",
+        "evidence_class": "inferential",
+        "causal_disposition": "behavior-activated",
+        "proof_refs": [
+          "longterm-mem/internal/memorycard/store.go MappedTwins: if contentHash == \"\" return nil",
+          "longterm-mem/cmd/longterm-mem/promote_memorycard_test.go: the test sets content_hash on memories 2 and 4 before the hand-mirrored check"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/memorycard/source.go:83-100",
+        "claim": "toMemory now runs extra queries per memory: lineageOf, and mirrorsOf (MappedTwins plus one engramIDOf per twin). A listing over Candidates or Memories therefore issues N+1 queries on memorycard. This is probably cheap on a local SQLite file, but it is a cost the diff adds to sync of large projects.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/memorycard/source.go toMemory calls s.lineageOf and s.mirrorsOf for each card",
+          "longterm-mem/internal/memorycard/store.go MappedTwins loops engramIDOf over the twins"
+        ]
+      }
+    ],
+    "evidence": [
+      "I read only the diff; the implementations of MemoryIDsByEngramIDs and the Mapped field are not shown.",
+      "Removing the Engram handle from sync, promote and the MCP promote tool with source memorycard looks consistent: the imports and the unused variables were cleaned up.",
+      "The loss of hand-mirror detection when the twin has no imported memory is stated in the commit and covered by tests, so I did not count it as a defect."
+    ]
+  }
+}

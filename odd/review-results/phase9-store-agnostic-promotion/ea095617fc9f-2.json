@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "c69b2a26a067ce1f6ba574180eca5fe56a3b2b54",
+    "head": "ea095617fc9f9fd797b4e3a4486a99ba97e69871",
+    "diff_sha256": "604890cdcbe993b9e2923a4a4bd5b7545c237cea0b7b118d3e69b96566826bcc",
+    "paths": [
+      "longterm-mem/internal/memorycard/observations.go",
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "c69b2a26a067ce1f6ba574180eca5fe56a3b2b54",
+      "head": "ea095617fc9f9fd797b4e3a4486a99ba97e69871",
+      "diff_sha256": "604890cdcbe993b9e2923a4a4bd5b7545c237cea0b7b118d3e69b96566826bcc"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/memorycard/observations.go",
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:118",
+        "claim": "The T4 task line says the single-id promote costs 'about 10 ms more than at 61ec52e5', but the figures in the same parenthesis (29-33 ms against 23-26 ms at 94e96b7a) compare to 94e96b7a, not to 61ec52e5. L50 gives the 29-33 vs 23-26 comparison between 74a36749 and 94e96b7a, and gives no 61ec52e5 figure. The reference point of the quoted delta is therefore inconsistent and the reader cannot verify it. The task line also does not list the docs commit that holds L50 among its commits, although it lists the docs commits of earlier batches.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:118 'about 10 ms more than at `61ec52e5` (29-33 ms against 23-26 ms at `94e96b7a` and 10-13 ms at base'",
+          "odd/tasks/phase9-store-agnostic-promotion.md:416 L50 'rose to 23-26 ms at `94e96b7a` ... 29-33 ms at `74a36749`'"
+        ]
+      }
+    ],
+    "evidence": [
+      "Both changed paths were read in full from the diff. The Go change only rewrites a doc comment; the new wording ('title and stored content hash') matches what L50 says the rows carry since 74a36749, and no code changes.",
+      "The remaining changes are documentation: the T4 task line and the new Log entry L50. The only inconsistency I found is the baseline of the quoted latency delta."
+    ]
+  }
+}
