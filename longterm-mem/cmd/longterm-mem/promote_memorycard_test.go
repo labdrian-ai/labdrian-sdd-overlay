@@ -4,9 +4,11 @@ import (
 	"context"
 	"crypto/sha256"
 	"database/sql"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
@@ -360,5 +362,60 @@ func TestTheMCPPromoteToolDeclaresADegradedMemorycardOncePerServer(t *testing.T)
 	}
 	if names := pageNames(t, w); len(names) != 2 {
 		t.Errorf("pages = %v, want the two promoted pages", names)
+	}
+}
+
+// lockedWriter is a diagnostics writer safe for concurrent use, as commands.diagnostics requires.
+type lockedWriter struct {
+	mu  sync.Mutex
+	buf strings.Builder
+}
+
+func (l *lockedWriter) Write(p []byte) (int, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.buf.Write(p)
+}
+
+func (l *lockedWriter) String() string {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.buf.String()
+}
+
+// Concurrent calls on a degraded memorycard claim the declaration once between them: exactly one line, however many
+// calls race for it (run under -race, the claim and the write are checked too). The memory is promoted first by another
+// server, so the racing calls only find it already promoted and write no page.
+func TestTheMCPPromoteToolDeclaresADegradedSourceOnceUnderConcurrentCalls(t *testing.T) {
+	w, db := memorycardWorld(t)
+	degradeFixtureDB(t, db)
+	if _, err := (commands{newEmbedClient: testEmbedClient, clock: promoteGoldenClock, diagnostics: io.Discard}.mcpPromote())(context.Background(), promoteGoldenProject, "memorycard", 1); err != nil {
+		t.Fatalf("first promotion: %v", err)
+	}
+	var diagnostics lockedWriter
+	tool := commands{newEmbedClient: testEmbedClient, clock: promoteGoldenClock, diagnostics: &diagnostics}.mcpPromote()
+
+	var wg sync.WaitGroup
+	errs := make(chan error, 8)
+	for range 8 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if _, err := tool(context.Background(), promoteGoldenProject, "memorycard", 1); err != nil {
+				errs <- err
+			}
+		}()
+	}
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		t.Errorf("concurrent call: %v", err)
+	}
+	want := "longterm-mem: mcp: promote: memorycard is being read through the immutable=1 fallback, so this run works from the snapshot taken when the connection was opened, not the live database\n"
+	if got := diagnostics.String(); got != want {
+		t.Errorf("diagnostics = %q, want exactly one declaration %q", got, want)
+	}
+	if names := pageNames(t, w); len(names) != 1 {
+		t.Errorf("pages = %v, want the one page of the first promotion", names)
 	}
 }

@@ -21,7 +21,8 @@ type commands struct {
 	// clock dates what `promote`, `sync` and the MCP promote tool write: the pages, the promotion log, the
 	// address map and the sync-state record. A test hands one that tells a fixed instant.
 	clock promote.Clock
-	// diagnostics is where the MCP session says what it works from, never the protocol's stdout; nil is os.Stderr.
+	// diagnostics is where the MCP session says what it works from, never the protocol's stdout; nil is os.Stderr. Its
+	// Write must be safe for concurrent use: concurrent tool calls for different sources may each write a line.
 	diagnostics io.Writer
 }
 
