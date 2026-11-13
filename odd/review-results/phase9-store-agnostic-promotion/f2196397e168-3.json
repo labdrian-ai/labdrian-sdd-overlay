@@ -1,0 +1,104 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "e382cd00856ffe77ee1fc735e7e7fd3b452bee19",
+    "head": "f2196397e1680fe3ce1c87188447616e156649da",
+    "diff_sha256": "20df63f365ae51f873f2bb08c2e2b216440aa07865dc654a878cea9aaed520e5",
+    "paths": [
+      "longterm-mem/internal/ops/doctor_eligibility.go",
+      "longterm-mem/internal/opstest/fixture.go",
+      "longterm-mem/internal/promote/address.go",
+      "longterm-mem/internal/promote/card.go",
+      "longterm-mem/internal/promote/card_promote_test.go",
+      "longterm-mem/internal/promote/eligible.go",
+      "longterm-mem/internal/promote/eligible_test.go",
+      "longterm-mem/internal/promote/explicit.go",
+      "longterm-mem/internal/promote/legacy.go",
+      "longterm-mem/internal/promote/page.go",
+      "longterm-mem/internal/promote/page_identity_fields_test.go",
+      "longterm-mem/internal/promote/page_identity_test.go",
+      "longterm-mem/internal/promote/page_scan.go",
+      "longterm-mem/internal/promote/page_style.go",
+      "longterm-mem/internal/promote/pages.go",
+      "longterm-mem/internal/promote/pages_unreadable_test.go",
+      "longterm-mem/internal/promote/propagate.go",
+      "longterm-mem/internal/promote/propagate_cards.go",
+      "longterm-mem/internal/promote/support_test.go",
+      "longterm-mem/internal/promote/sync.go",
+      "longterm-mem/internal/promote/sync_cards.go",
+      "longterm-mem/internal/promote/update.go",
+      "longterm-mem/internal/promote/walk.go",
+      "longterm-mem/internal/promote/writer.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "e382cd00856ffe77ee1fc735e7e7fd3b452bee19",
+      "head": "f2196397e1680fe3ce1c87188447616e156649da",
+      "diff_sha256": "20df63f365ae51f873f2bb08c2e2b216440aa07865dc654a878cea9aaed520e5"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/ops/doctor_eligibility.go",
+        "longterm-mem/internal/opstest/fixture.go",
+        "longterm-mem/internal/promote/address.go",
+        "longterm-mem/internal/promote/card.go",
+        "longterm-mem/internal/promote/card_promote_test.go",
+        "longterm-mem/internal/promote/eligible.go",
+        "longterm-mem/internal/promote/eligible_test.go",
+        "longterm-mem/internal/promote/explicit.go",
+        "longterm-mem/internal/promote/legacy.go",
+        "longterm-mem/internal/promote/page.go",
+        "longterm-mem/internal/promote/page_identity_fields_test.go",
+        "longterm-mem/internal/promote/page_identity_test.go",
+        "longterm-mem/internal/promote/page_scan.go",
+        "longterm-mem/internal/promote/page_style.go",
+        "longterm-mem/internal/promote/pages.go",
+        "longterm-mem/internal/promote/pages_unreadable_test.go",
+        "longterm-mem/internal/promote/propagate.go",
+        "longterm-mem/internal/promote/propagate_cards.go",
+        "longterm-mem/internal/promote/support_test.go",
+        "longterm-mem/internal/promote/sync.go",
+        "longterm-mem/internal/promote/sync_cards.go",
+        "longterm-mem/internal/promote/update.go",
+        "longterm-mem/internal/promote/walk.go",
+        "longterm-mem/internal/promote/writer.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/promote/legacy.go:115-122",
+        "claim": "statusOfObservation matches the other side of a supersedes edge by scanning all[i].SyncID == other with no guard for an empty sync id. The replaced resolveStatus built bySyncID only from observations with a non-empty SyncID, so an empty edge endpoint never resolved. Now an edge with an empty SourceSyncID/TargetSyncID can match any observation with an empty SyncID and a newer CreatedAt, marking a page superseded and linking it to an unrelated successor. Duplicate sync ids also resolve differently: the old map kept the last, the scan takes the first newer one.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/legacy.go:115-122",
+          "longterm-mem/internal/promote/propagate.go: removed bySyncID construction guarded by obs.SyncID != \"\""
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/legacy.go:89-96",
+        "claim": "engramView.Memories calls RelatedEdges for every observation of the project, including those with no page. The old propagation loop looked up the page first and only fetched edges for promoted observations. This adds a store query per unpromoted or deleted observation on every sync, plan and propagate. The failure semantics are unchanged because the failure is only reported for observations that have a page.",
+        "evidence_class": "inferential",
+        "causal_disposition": "worsened",
+        "proof_refs": [
+          "longterm-mem/internal/promote/legacy.go:89-96",
+          "longterm-mem/internal/promote/propagate.go: eachPatchTarget now calls engramView.Memories before the page lookup"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff only. walk.go, page_style.go and page_scan.go were un-tagged but their bodies are not in the diff, so decide(), pageIndex and the style code were not inspected.",
+      "The refactor of Sync, Plan, Promote and the card passes onto one walk looks behavior-preserving as far as the visible code shows; the one test change (TestSyncReadsEachPageOnce...) matches the stated read-once design."
+    ]
+  }
+}
