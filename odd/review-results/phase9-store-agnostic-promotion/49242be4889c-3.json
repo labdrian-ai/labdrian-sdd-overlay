@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "914326e08904e83b150408c5c1724aee237e7023",
+    "head": "49242be4889c00f54043f68bff04e4bb0b3a7d66",
+    "diff_sha256": "bdb4bc3eb0b6a0bf17927f700f15abaa8a25334956abaa3088ef782092aae86a",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "914326e08904e83b150408c5c1724aee237e7023",
+      "head": "49242be4889c00f54043f68bff04e4bb0b3a7d66",
+      "diff_sha256": "bdb4bc3eb0b6a0bf17927f700f15abaa8a25334956abaa3088ef782092aae86a"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The change touches only one documentation file, odd/tasks/phase9-store-agnostic-promotion.md, so no code behavior changes.",
+      "The sha replacements are consistent: 56f73b84 becomes 0f28050f, bc725cea becomes 8289ca2e and 61c8bf1b becomes 5c3257c0. The T5 line, the T10 line, L57 and L58 all use the new shas, and L59 lists them.",
+      "The shas left unreplaced (9e21cc4c, e7b5921e, dad94e69, c63f0bb5, e98c4ca7, 8703117e) precede the reworded commits, so a replay from 41ec8eb2 would not change them.",
+      "L59 mentions the sweep commit 914326e0, which matches the base of this change."
+    ]
+  }
+}

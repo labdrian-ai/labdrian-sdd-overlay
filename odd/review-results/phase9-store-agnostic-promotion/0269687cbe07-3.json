@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "b476946eec253d6d2239de151a38a85c6c9e521c",
+    "head": "0269687cbe078b67ce48486be4e55f5699c9b2b5",
+    "diff_sha256": "f0759b130d2c411ff251fc4f4c93b4210caad68290fd46f4c0298885284e68e2",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/cmd_mcp.go",
+      "longterm-mem/cmd/longterm-mem/cmd_sync.go",
+      "longterm-mem/internal/engram/store.go",
+      "longterm-mem/internal/promote/promote_reindex_test.go",
+      "longterm-mem/internal/promote/sync_cards.go",
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "b476946eec253d6d2239de151a38a85c6c9e521c",
+      "head": "0269687cbe078b67ce48486be4e55f5699c9b2b5",
+      "diff_sha256": "f0759b130d2c411ff251fc4f4c93b4210caad68290fd46f4c0298885284e68e2"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/cmd_mcp.go",
+        "longterm-mem/cmd/longterm-mem/cmd_sync.go",
+        "longterm-mem/internal/engram/store.go",
+        "longterm-mem/internal/promote/promote_reindex_test.go",
+        "longterm-mem/internal/promote/sync_cards.go",
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Every Go change is a comment edit or a test-case label string. The new comments name PromoteCardAndReindex, SyncCardsProject and CardRunFailure, which the diff and the L58 entry present as live symbols; I could not check them against the tree.",
+      "The only test change renames a map key to 'a memory that does not exist', which affects the subtest name but not its inputs or assertions.",
+      "The task-document edits add commit ids to the T5 and T10 lines and append the L58 log entry. Its description of the comment fixes matches the comment edits in the diff."
+    ]
+  }
+}

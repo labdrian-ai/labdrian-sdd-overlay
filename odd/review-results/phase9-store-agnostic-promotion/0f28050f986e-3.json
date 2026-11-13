@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "8289ca2e24e0fa6f8f1a65690fac859df55c1284",
+    "head": "0f28050f986e0f95ac2cb25cee8aac3b6cc24206",
+    "diff_sha256": "009b9bc52b483db9b50d54d92cbd02ee88bbce76dffa3f19ba789a80782f8ad8",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/cmd_mcp.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "8289ca2e24e0fa6f8f1a65690fac859df55c1284",
+      "head": "0f28050f986e0f95ac2cb25cee8aac3b6cc24206",
+      "diff_sha256": "009b9bc52b483db9b50d54d92cbd02ee88bbce76dffa3f19ba789a80782f8ad8"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/cmd_mcp.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/cmd_mcp.go:154-159",
+        "claim": "The declaration set is keyed by the raw `source` string. If the same underlying source can be named by different spellings (e.g. differing case, trailing slash, alias), the diagnostic would be emitted more than once per real source, which the commit says it prevents. The diff does not show whether `source` is normalized or validated before this point, so this is unproven.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/cmd_mcp.go:154-159"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff replaces sync.Once with a mutex-guarded map[string]bool keyed by source; locking covers both the check and the set, so concurrent MCP calls cannot emit a duplicate for the same source.",
+      "The mutex is released before the print-free remainder of the call and is not held across I/O other than the single Fprintf to diagnostics; the Fprintf runs under the lock, which only serializes diagnostic writes and cannot deadlock.",
+      "The map is closure-local and bounded by the number of distinct sources a caller passes; an unbounded growth would need unbounded distinct source strings, which is unlikely in practice.",
+      "The behavior change from one declaration per server to one per source matches the commit message."
+    ]
+  }
+}

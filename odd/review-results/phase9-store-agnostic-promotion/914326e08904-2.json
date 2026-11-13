@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ec72d0f17230e11ca3849d0e0f55d1c86a2d8a1d",
+    "head": "914326e08904e83b150408c5c1724aee237e7023",
+    "diff_sha256": "e9a646cf304cbc0c50f5b9b0460853fd5b6e00b5d7cf3ece17e4074bc00bd201",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/app.go",
+      "longterm-mem/cmd/longterm-mem/main_test.go",
+      "longterm-mem/internal/promote/plan_test.go",
+      "longterm-mem/internal/promote/sync_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "ec72d0f17230e11ca3849d0e0f55d1c86a2d8a1d",
+      "head": "914326e08904e83b150408c5c1724aee237e7023",
+      "diff_sha256": "e9a646cf304cbc0c50f5b9b0460853fd5b6e00b5d7cf3ece17e4074bc00bd201"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/app.go",
+        "longterm-mem/cmd/longterm-mem/main_test.go",
+        "longterm-mem/internal/promote/plan_test.go",
+        "longterm-mem/internal/promote/sync_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/sync_test.go:8",
+        "claim": "The blank import of modernc.org/sqlite stays in sync_test.go, but the only code in the file that opened a SQLite database (newFixtureEngramStore, via database/sql) was deleted. If no other test file in the package opens a database, the import is now vestigial and misleads readers about the file's dependencies. The diff cannot show whether other files in the package need the driver.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "longterm-mem/internal/promote/sync_test.go:3-9"
+        ]
+      }
+    ],
+    "evidence": [
+      "All four files are pure deletions of unused helpers plus the import lines they required. Within the visible hunks, every import removed from app.go, plan_test.go and sync_test.go is consistent with its deleted users.",
+      "I found no compile-breaking defect in the visible diff. Whether the remaining imports in main_test.go (os, filepath, sql) are still used elsewhere is not visible, but the doc comment on the deleted helper refers to TestCmdSync_BothPassesRunDespiteAFailingObservation, which suggests it uses them.",
+      "memorycardDBEnvVar, which app.memorycard used, may now be unreferenced. The diff does not show its declaration, so I cannot tell whether it is still used elsewhere."
+    ]
+  }
+}
