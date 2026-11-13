@@ -18,7 +18,7 @@ longterm-mem promote [--project P] [--vault DIR] --source memorycard --id N
 
 `N` is a memorycard memory id. The memorycard database is opened read-only, at `LONGTERM_MEM_MEMORYCARD_DB` or, when
 that is unset, `~/.memorycard/memory.db`. Nothing else is opened: the bridge to the pages of earlier releases (below)
-is read from memorycard's own `import_map`. A database that cannot be opened is exit 4. (Previously: Engram's database
+is read from memorycard's own tables: its `import_map`, and, for a memory with no `import_map` row, the content hash it stores for each memory. A database that cannot be opened is exit 4. (Previously: Engram's database
 was opened read-only too, to find the memories that duplicate one of its pages.)
 
 ## What it writes

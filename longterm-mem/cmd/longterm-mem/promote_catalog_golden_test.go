@@ -88,12 +88,16 @@ func catalogScenarios() []pagesScenario {
 			directoryInVault(t, w, "wiki/log.md")
 		}, commands: [][]string{promote, sync}},
 		{name: "09-a-wiki-directory-that-is-a-file", seed: func(t *testing.T, w *promoteGoldenWorld) {
+			// A retired memory is what the propagation pass fails on when the pages cannot be listed.
+			w.execCardSQL(t, `UPDATE memories SET status = 'archived' WHERE id = 4`)
 			writeVaultFile(t, w, "wiki", "not a directory")
 		}, commands: [][]string{promote, sync}},
 		{name: "10-a-log-that-is-not-in-order", seed: func(t *testing.T, w *promoteGoldenWorld) {
 			writeVaultFile(t, w, "wiki/log.md", "## [2027-01-01] ingest | Later\n\nA later entry.\n\n## [2025-01-01] ingest | Earlier\n\nAn earlier entry.\n")
 		}, commands: [][]string{promote}},
-		{name: "11-the-catalog-and-the-log-of-an-earlier-promotion", prepare: [][]string{promote}, commands: [][]string{promote, sync}},
+		{name: "11-the-catalog-and-the-log-of-an-earlier-promotion", prepare: [][]string{promote}, seed: func(t *testing.T, w *promoteGoldenWorld) {
+			w.reviseMemory(t, 1, "A revised body.")
+		}, commands: [][]string{promote, sync}},
 		{name: "12-an-empty-index-and-an-empty-log", seed: func(t *testing.T, w *promoteGoldenWorld) {
 			writeVaultFile(t, w, "wiki/index.md", "")
 			writeVaultFile(t, w, "wiki/log.md", "")

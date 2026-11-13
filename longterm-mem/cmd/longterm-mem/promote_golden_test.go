@@ -164,8 +164,12 @@ func promoteGoldenSteps() []promoteGoldenStep {
 		return append([]string{"sync", "--project", promoteGoldenProject, "--source", "memorycard"}, extra...)
 	}
 	return []promoteGoldenStep{
-		{name: "01-promote-an-ineligible-observation-explicitly", args: promote("3")},
-		{name: "02-promote-it-again", args: promote("3")},
+		{name: "01-promote-an-ineligible-memory-explicitly", args: promote("3")},
+		{
+			name:   "02-promote-it-again-after-a-revision",
+			before: func(t *testing.T, w *promoteGoldenWorld) { w.reviseMemory(t, 3, "A body revised once.") },
+			args:   promote("3"),
+		},
 		{name: "03-sync-dry-run", args: sync("--dry-run")},
 		{name: "04-sync-promotes-the-eligible-ones", args: sync()},
 		{name: "05-sync-with-nothing-new", args: sync()},
@@ -188,10 +192,12 @@ func promoteGoldenSteps() []promoteGoldenStep {
 				if err := os.WriteFile(page, append(data, []byte("\nA line a person added.\n")...), 0o644); err != nil {
 					t.Fatalf("edit the page: %v", err)
 				}
+				// A newer revision is what a page edited by hand refuses: the same revision writes nothing at all.
+				w.reviseMemory(t, 3, "A body revised again.")
 			},
 			args: promote("3"),
 		},
-		{name: "08-promote-an-observation-that-does-not-exist", args: promote("999")},
+		{name: "08-promote-a-memory-that-does-not-exist", args: promote("999")},
 	}
 }
 

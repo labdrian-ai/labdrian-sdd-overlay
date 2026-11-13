@@ -9,8 +9,8 @@ longterm-mem: sync --source memorycard promoted 1 memory(ies); patched 1 page(s)
 === .raw/.longterm-mem-manifest.json ===
 {
   "c-000901": {
-    "body_hash": "29413f2a3459e0ec537f4ebc089948d12eccd6210adb8c6bfbad6dc540821564",
-    "frontmatter_hash": "df35e502e06bfe5612e30a3de7c819502dde1a5bb8c887afd0b2642798760468"
+    "body_hash": "39710e9d43bb9fbd36f8b72dfd37fc919f03a2aa0ea1c59687f76fc0309c67e3",
+    "frontmatter_hash": "b24a813db323767a0a6a5f529ea7446c723dfa7338fb51c66b179c1364363894"
   },
   "c-000902": {
     "body_hash": "27b2f5b03c64b16f343393e22fa662f984827ff511504d2a1fb6d2b652742e5c",
@@ -62,6 +62,7 @@ printf 'c-%06d\n' "$n"
 
 
 
+
 === wiki/log.md ===
 ## [2026-10-10] promote | Pinned Decision
 
@@ -74,6 +75,10 @@ printf 'c-%06d\n' "$n"
 ## [2026-10-10] promote | Pinned Decision
 
 [[c-000902|Pinned Decision]]
+
+## [2026-10-10] promote | Below Threshold
+
+[[c-000901|Below Threshold]]
 
 ## [2026-10-10] promote | Below Threshold
 
@@ -96,15 +101,15 @@ related: []
 sources: []
 memorycard_id: 3
 memorycard_type: discovery
-memorycard_revision: 1
+memorycard_revision: 2
 project: golden-project
 ---
 # Below Threshold
 
-A discovery nobody curated.
+A body revised once.
 
 ---
-Promoted from memorycard memory 3, revision 1.
+Promoted from memorycard memory 3, revision 2.
 === wiki/memory/c-000902.md ===
 ---
 type: concept

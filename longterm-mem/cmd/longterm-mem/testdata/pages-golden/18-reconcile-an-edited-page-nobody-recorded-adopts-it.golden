@@ -10,7 +10,7 @@ longterm-mem: reconciled c-000901 at revision 1
 === .raw/.longterm-mem-manifest.json (-rw-------) ===
 {
   "c-000901": {
-    "body_hash": "2cdb1c3dc66b6d3316ea6453741df4a5a358c681a5c9e33b955d334a6b1e7b73",
+    "body_hash": "09e246176a0439fc4c0bbefb1d52079158c56390678a7ea5caa53b47dd7747ee",
     "frontmatter_hash": "1b21326f72b961a3fbb0960a4364c0fba15144fd63a59f907350fd1e30a3a65b",
     "promoted_revision": 1
   }
@@ -78,6 +78,5 @@ A decision somebody pinned.
 
 ---
 Promoted from Engram observation 1, revision 1.
-
 
 A line a person added.

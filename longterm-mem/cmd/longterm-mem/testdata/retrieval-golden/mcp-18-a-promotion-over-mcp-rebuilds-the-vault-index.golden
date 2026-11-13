@@ -6,11 +6,11 @@
     "content": [
       {
         "type": "text",
-        "text": "{\"action\":\"created\",\"page_address\":\"c-000901\",\"page_path\":\"wiki/memory/c-000901.md\"}"
+        "text": "{\"action\":\"updated\",\"page_address\":\"c-000901\",\"page_path\":\"wiki/memory/c-000901.md\"}"
       }
     ],
     "structuredContent": {
-      "action": "created",
+      "action": "updated",
       "page_address": "c-000901",
       "page_path": "wiki/memory/c-000901.md"
     }

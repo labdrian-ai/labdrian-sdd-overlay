@@ -76,6 +76,9 @@ func sourceRefusal(name string, required bool) string {
 	return ""
 }
 
+// The memorycard adapter is the port promotion reads.
+var _ promote.Source = (*memorycard.Source)(nil)
+
 // openSource opens the registered store called name for the command. When it could only be opened through the
 // immutable=1 fallback and declareDegraded is set (a command that writes pages from what it reads), the command
 // says so on stderr. The caller closes what it gets with closeStore. exitOK, or the exit code to return after

@@ -1,0 +1,78 @@
+args: promote --project golden-project --source memorycard --id 3
+exit: 0
+--- stdout ---
+longterm-mem: promoted c-000901 (updated)
+--- stderr ---
+--- vault ---
+=== .allocator-counter ===
+901
+=== .raw/.longterm-mem-manifest.json ===
+{
+  "c-000901": {
+    "body_hash": "39710e9d43bb9fbd36f8b72dfd37fc919f03a2aa0ea1c59687f76fc0309c67e3",
+    "frontmatter_hash": "b24a813db323767a0a6a5f529ea7446c723dfa7338fb51c66b179c1364363894"
+  }
+}
+=== .raw/.manifest.json ===
+{
+  "address_map": {
+    "wiki/memory/c-000901.md": "c-000901"
+  },
+  "created": "2026-10-10",
+  "sources": {},
+  "version": 1
+}
+=== bin/setup-retrieve.sh ===
+#!/bin/sh
+exit 0
+=== scripts/allocate-address.sh ===
+#!/bin/sh
+n=900
+[ -f .allocator-counter ] && read n < .allocator-counter
+n=$((n+1))
+echo "$n" > .allocator-counter
+printf 'c-%06d\n' "$n"
+=== scripts/bm25-index.py ===
+
+=== scripts/contextual-prefix.py ===
+
+=== wiki/index.md ===
+<!-- longterm-mem:begin -->
+- [[c-000901|Below Threshold]]
+<!-- longterm-mem:end -->
+
+=== wiki/log.md ===
+## [2026-10-10] promote | Below Threshold
+
+[[c-000901|Below Threshold]]
+
+## [2026-10-10] promote | Below Threshold
+
+[[c-000901|Below Threshold]]
+
+=== wiki/memory/c-000901.md ===
+---
+type: concept
+title: "Below Threshold"
+address: c-000901
+aliases:
+  - "Below Threshold"
+created: 2026-10-10
+updated: 2026-10-10
+tags:
+  - "memory"
+  - "discovery"
+status: developing
+related: []
+sources: []
+memorycard_id: 3
+memorycard_type: discovery
+memorycard_revision: 2
+project: golden-project
+---
+# Below Threshold
+
+A body revised once.
+
+---
+Promoted from memorycard memory 3, revision 2.

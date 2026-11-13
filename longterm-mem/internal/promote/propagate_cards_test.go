@@ -513,3 +513,22 @@ func TestPlanCards_AnUnlistablePropagationListingIsAnError(t *testing.T) {
 		t.Fatalf("err = %v, want a CardListError", err)
 	}
 }
+
+// PropagateCards patches pages in place and never reads the time (the Writer's doc comment says so): a Writer
+// without a clock still propagates a retired memory, and writes the page patched.
+func TestPropagateCards_NeedsNoClock(t *testing.T) {
+	successor, old := eligibleCard(41, 1), eligibleCard(42, 1)
+	w, _, vaultRoot, address := cardWorld(t, successor, old)
+	w.Clock = nil
+
+	report, err := PropagateCards(t.Context(), &fakeCards{memories: []memory.CardMemory{successor, supersededBy(old, successor)}}, w, "memorycard")
+	if err != nil {
+		t.Fatalf("PropagateCards without a clock: %v", err)
+	}
+	if len(report.Patched) != 1 || report.Patched[0] != address[42] {
+		t.Fatalf("report = %+v, want only %s patched", report, address[42])
+	}
+	if page := readPage(t, vaultRoot, address[42]); !strings.Contains(page, "status: superseded\n") {
+		t.Errorf("page not patched:\n%s", page)
+	}
+}

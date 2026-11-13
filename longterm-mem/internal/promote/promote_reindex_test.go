@@ -28,7 +28,7 @@ func TestPromoteCardAndReindex_RebuildsTheIndexAfterAPageWasWritten(t *testing.T
 	outcome, err := PromoteCardAndReindex(t.Context(), readyWriter(t), lookupOf(pageObservation(501)), 501, rebuilder)
 
 	if err != nil {
-		t.Fatalf("PromoteAndReindex: %v", err)
+		t.Fatalf("PromoteCardAndReindex: %v", err)
 	}
 	if outcome.Result.Action.Kind != ActionCreated {
 		t.Errorf("action = %v, want ActionCreated", outcome.Result.Action.Kind)
@@ -46,7 +46,7 @@ func TestPromoteCardAndReindex_ARebuildFailureIsBesideASuccessfulPromotion(t *te
 	outcome, err := PromoteCardAndReindex(t.Context(), readyWriter(t), lookupOf(pageObservation(502)), 502, &countingRebuilder{err: boom})
 
 	if err != nil {
-		t.Fatalf("PromoteAndReindex = %v, want the promotion to have succeeded", err)
+		t.Fatalf("PromoteCardAndReindex = %v, want the promotion to have succeeded", err)
 	}
 	if outcome.Result.Action.Kind != ActionCreated || outcome.Result.Page.Address == "" {
 		t.Errorf("result = %+v, want the page that was written", outcome.Result)
@@ -72,7 +72,7 @@ func TestPromoteCardAndReindex_APromotionThatDidNotHappenRebuildsNothing(t *test
 			_, err := PromoteCardAndReindex(t.Context(), readyWriter(t), tc.lookup, 9, rebuilder)
 
 			if !errors.Is(err, tc.want) {
-				t.Errorf("PromoteAndReindex = %v, want %v", err, tc.want)
+				t.Errorf("PromoteCardAndReindex = %v, want %v", err, tc.want)
 			}
 			if rebuilder.calls != 0 {
 				t.Errorf("the index was rebuilt %d times for a promotion that did not happen", rebuilder.calls)
@@ -90,7 +90,7 @@ func TestPromoteCardAndReindex_WithoutARebuilderPromotesAndRebuildsNothing(t *te
 			outcome, err := PromoteCardAndReindex(t.Context(), readyWriter(t), lookupOf(pageObservation(503)), 503, rebuilder)
 
 			if err != nil || outcome.IndexRebuildErr != nil || outcome.Result.Action.Kind != ActionCreated {
-				t.Errorf("PromoteAndReindex = %+v, %v; want the page created and no failure", outcome, err)
+				t.Errorf("PromoteCardAndReindex = %+v, %v; want the page created and no failure", outcome, err)
 			}
 		})
 	}

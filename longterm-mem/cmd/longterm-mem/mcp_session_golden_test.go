@@ -96,6 +96,18 @@ func withMemorycardMemory3(t *testing.T) {
 	t.Setenv(memorycardDBEnvVar, path)
 }
 
+// promoteMemory3BeforeTheSession promotes memory 3 with the command and then gives it a newer revision, so that a
+// promotion over MCP has a page to update.
+func promoteMemory3BeforeTheSession(t *testing.T) {
+	t.Helper()
+	args := []string{"promote", "--project", queryGoldenProject, "--source", "memorycard", "--id", "3"}
+	if code, stdout, stderr := runPromoteGolden(t, args); code != exitOK {
+		t.Fatalf("promote before the session: exit %d\nstdout: %s\nstderr: %s", code, stdout, stderr)
+	}
+	execOn(t, os.Getenv(memorycardDBEnvVar), `INSERT INTO memory_versions (memory_id, version, title, body, saved_at) VALUES (3, 1, 'Dragonscale layout', 'dragonscale needle in the middle', '')`)
+	execOn(t, os.Getenv(memorycardDBEnvVar), `UPDATE memories SET body = 'dragonscale needle, revised' WHERE id = 3`)
+}
+
 func mcpGoldenCases() []mcpGoldenCase {
 	return []mcpGoldenCase{
 		{name: "00-the-handshake-and-the-tools", handshake: true},
@@ -190,6 +202,9 @@ func mcpGoldenCases() []mcpGoldenCase {
 				writeIndexStubs(t, w)
 				withMemorycardMemory3(t)
 				w.writeVaultFile(t, "scripts/allocate-address.sh", promoteGoldenAllocator)
+				// The memory was promoted before the session and has a newer revision since, so the first call updates its
+				// page (and rebuilds the index) and the second finds it current (and rebuilds nothing).
+				promoteMemory3BeforeTheSession(t)
 			},
 			calls: []mcpToolCall{
 				{tool: "promote", args: map[string]any{"project": queryGoldenProject, "engram_id": 3, "source": "memorycard"}},

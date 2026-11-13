@@ -197,7 +197,9 @@ func pagesScenarios() []pagesScenario {
 		{name: "08-text-without-frontmatter-where-the-new-page-belongs", seed: func(t *testing.T, w *promoteGoldenWorld) {
 			writeVaultFile(t, w, "wiki/memory/c-000901.md", "Just text, no frontmatter.\n")
 		}, commands: [][]string{promote, sync}},
-		{name: "09-a-page-for-the-observation-that-names-no-address", seed: func(t *testing.T, w *promoteGoldenWorld) {
+		// Pinned as found (known defect F-A1): a page with a memorycard_id and no address is written again beside
+		// itself as c-000500.md.md; the same happens at the base, so the golden records it rather than endorses it.
+		{name: "09-a-page-that-names-no-address-pins-a-known-defect", seed: func(t *testing.T, w *promoteGoldenWorld) {
 			writeVaultFile(t, w, "wiki/memory/c-000500.md", withoutAddress)
 		}, commands: [][]string{promote, sync}},
 		{name: "10-a-page-for-the-observation-with-a-revision-that-is-not-a-number", seed: func(t *testing.T, w *promoteGoldenWorld) {
@@ -286,7 +288,7 @@ func pagesScenarios() []pagesScenario {
 		// observation 1 and names no address, so its promoted state cannot be read (a failure), and a page that
 		// cannot be read withholds observation 2: the failure outranks the observations left alone, in the dry
 		// run as in the run, which exit 1 where a run with only the withheld ones exits 6 (scenarios 24 and 25).
-		{name: "26-a-failure-beside-an-observation-left-alone", seed: func(t *testing.T, w *promoteGoldenWorld) {
+		{name: "26-a-failure-beside-an-observation-left-alone-pins-a-known-defect", seed: func(t *testing.T, w *promoteGoldenWorld) {
 			writeVaultFile(t, w, "wiki/memory/c-000500.md", withoutAddress)
 			symlinkOrSkip(t, "../../notes/absent.md", pageOf(w, "c-000999"))
 		}, commands: [][]string{{"sync", "--project", promoteGoldenProject, "--source", "memorycard", "--dry-run"}, sync}},

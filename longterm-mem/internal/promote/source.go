@@ -4,8 +4,7 @@ import "github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory
 
 // Source is the port through which promotion reads one store's memories, whichever store it is: each store is an
 // adapter that maps its own rows to memory.Memory (today the memorycard adapter in internal/memorycard), wired by the
-// composition root. It is the one port of the
-// store-agnostic model.
+// composition root. It is the one port of the store-agnostic model.
 type Source interface {
 	// Candidates returns the memories of project that promotion may write a page for: the live ones, in the
 	// store's order.
