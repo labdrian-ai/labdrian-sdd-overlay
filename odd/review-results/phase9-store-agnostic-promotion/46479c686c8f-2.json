@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "e5681a22c0921897eddd1696f2e40869a6acf008",
+    "head": "46479c686c8f3c14fb2c6769d155727810c8a8e9",
+    "diff_sha256": "220ca2f68d39a329e790c49e152e6adca7080141b7302c1515808050b31b5883",
+    "paths": [
+      "scripts/rehearse-card-page-migration.sh"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "e5681a22c0921897eddd1696f2e40869a6acf008",
+      "head": "46479c686c8f3c14fb2c6769d155727810c8a8e9",
+      "diff_sha256": "220ca2f68d39a329e790c49e152e6adca7080141b7302c1515808050b31b5883"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "scripts/rehearse-card-page-migration.sh"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "legacy_counts: CR is stripped per line, so CRLF pages now reach the legacy-key check; $unreadable is set when the opening or closing --- line has a CR, or when no closing --- is seen, and $bad is incremented only for pages with $legacy.",
+      "Both readers use the same line-ending strip, so a CRLF page now contributes to projects_of and to the per-project counts consistently.",
+      "The end-of-file edge cases, a closing --- with no trailing newline and a file that ends before any closing ---, are handled correctly by s/\\r?\\n\\z// and by $closed.",
+      "$. is reset by close($h) between files, so the line-1 check is correct for every page.",
+      "I found no defect that this commit introduces. Whether the command really refuses an unclosed block cannot be checked from the diff alone."
+    ]
+  }
+}

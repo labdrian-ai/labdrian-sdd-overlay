@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "0d384e229301983f697a511f9139af6a874401b3",
+    "head": "9f40b3944465e73e313a372588ac2b5c74e2e959",
+    "diff_sha256": "f1ebdcb87d8f665fede23aa3f09682adc97c1f745e9f5e16b2513c8d1b11236d",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go",
+      "longterm-mem/cmd/longterm-mem/migrate_card_pages_backup_durable_test.go",
+      "longterm-mem/cmd/longterm-mem/migrate_card_pages_backup_sync_test.go",
+      "longterm-mem/cmd/longterm-mem/migrate_card_pages_halfmigrated_test.go",
+      "longterm-mem/cmd/longterm-mem/migrate_card_pages_scan_test.go",
+      "longterm-mem/internal/promote/migrate_cards.go",
+      "longterm-mem/internal/promote/migrate_cards_unreadable_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "0d384e229301983f697a511f9139af6a874401b3",
+      "head": "9f40b3944465e73e313a372588ac2b5c74e2e959",
+      "diff_sha256": "f1ebdcb87d8f665fede23aa3f09682adc97c1f745e9f5e16b2513c8d1b11236d"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go",
+        "longterm-mem/cmd/longterm-mem/migrate_card_pages_backup_durable_test.go",
+        "longterm-mem/cmd/longterm-mem/migrate_card_pages_backup_sync_test.go",
+        "longterm-mem/cmd/longterm-mem/migrate_card_pages_halfmigrated_test.go",
+        "longterm-mem/cmd/longterm-mem/migrate_card_pages_scan_test.go",
+        "longterm-mem/internal/promote/migrate_cards.go",
+        "longterm-mem/internal/promote/migrate_cards_unreadable_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/migrate_cards.go:204-221",
+        "claim": "For a page that opens with --- but has no closing line, unreadableFrontmatter treats every remaining line of the page as frontmatter. A prose page that opens with a horizontal rule and has a column-0 line such as `engram_id: 5` or `memorycard_id: 7` in its body is counted as a legacy page and refused. Before this change such a page was skipped. The trigger is unusual, and a refusal only reports the page; nothing is written.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/migrate_cards.go:204-221"
+        ]
+      }
+    ],
+    "evidence": [
+      "I read only the diff. The new unreadableFrontmatter scan, the unreadable branch in legacyPagesOf, the refusal in MigrateCardPages, the stdout-only no-project note with the exit code now coming from report.Refused alone, and the extra recovery candidates (empty type, empty revision) are consistent with the claimed behavior and their tests.",
+      "The directory-sync change moves the platform tolerance into toleratedDirectorySyncError. The sync after removing a failed copy is called through the injectable syncDir, and its failure is joined to the copy error. I found no regression there."
+    ]
+  }
+}

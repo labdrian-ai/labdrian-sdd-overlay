@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "9f40b3944465e73e313a372588ac2b5c74e2e959",
+    "head": "e5681a22c0921897eddd1696f2e40869a6acf008",
+    "diff_sha256": "3c93c89e63b36805a29564cf6b57a70babb6a4cd0e7d78e06f631dc3d4e270ae",
+    "paths": [
+      "longterm-mem/README.md",
+      "longterm-mem/docs/promote-from-memorycard.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "9f40b3944465e73e313a372588ac2b5c74e2e959",
+      "head": "e5681a22c0921897eddd1696f2e40869a6acf008",
+      "diff_sha256": "3c93c89e63b36805a29564cf6b57a70babb6a4cd0e7d78e06f631dc3d4e270ae"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/README.md",
+        "longterm-mem/docs/promote-from-memorycard.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/docs/promote-from-memorycard.md:135",
+        "claim": "The guide says a project's count plus the pages with no project equals the number of pages that still carry a legacy key. The same change adds a category of pages whose frontmatter cannot be read (CRLF line endings, no closing ---). Such a page's project field is also unreadable, so it may belong to neither count, or to both. The diff does not show which, so the arithmetic claim may not hold for these pages.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "longterm-mem/docs/promote-from-memorycard.md:135",
+          "longterm-mem/docs/promote-from-memorycard.md:110"
+        ]
+      }
+    ],
+    "evidence": [
+      "The change touches only documentation (README and guide), so I checked internal consistency between the two files and within the guide.",
+      "The README and guide agree on the no-project note (stdout, no exit code of its own), on the unreadable-frontmatter refusal, and on the subdirectory exclusion.",
+      "I could not check the claims against code, because the diff contains no code."
+    ]
+  }
+}

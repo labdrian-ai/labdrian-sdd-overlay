@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "e5681a22c0921897eddd1696f2e40869a6acf008",
+    "head": "46479c686c8f3c14fb2c6769d155727810c8a8e9",
+    "diff_sha256": "220ca2f68d39a329e790c49e152e6adca7080141b7302c1515808050b31b5883",
+    "paths": [
+      "scripts/rehearse-card-page-migration.sh"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "e5681a22c0921897eddd1696f2e40869a6acf008",
+      "head": "46479c686c8f3c14fb2c6769d155727810c8a8e9",
+      "diff_sha256": "220ca2f68d39a329e790c49e152e6adca7080141b7302c1515808050b31b5883"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "scripts/rehearse-card-page-migration.sh"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "scripts/rehearse-card-page-migration.sh:130",
+        "claim": "projects_of now strips CR, so CRLF pages (which the command cannot read) contribute their project values to the distinct project list, and so does an unclosed-frontmatter page scanned to EOF. The caller may now iterate projects that have no readable or legacy pages, which it skipped before. This is inconsistent with the claim that only the legacy count changes, and projects_of does not require a legacy key the way legacy_counts does.",
+        "evidence_class": "inferential",
+        "causal_disposition": "behavior-activated",
+        "proof_refs": [
+          "scripts/rehearse-card-page-migration.sh:130"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only scripts/rehearse-card-page-migration.sh changed. In legacy_counts, the CR detection on the opening and closing --- lines, the $closed flag and the $bad counter are consistent with the stated intent. $. is reset by close($h) for each file. The change to projects_of widens its project set to include unreadable pages, with no matching check that the page carries a legacy key."
+    ]
+  }
+}
