@@ -672,6 +672,11 @@ The revision recorded SHALL be read from the page itself, under whichever page
 identity the page carries: `memorycard_revision`, the store-agnostic
 `source_revision` beside the page's `source`, or a legacy `engram_revision`. (Previously: only
 `engram_revision` was read, and a page of any other identity was refused.)
+When a page carries the revision of more than one identity, the memorycard one is read first and decides: a
+page carrying both `memorycard_revision` and `engram_revision` is adopted at the memorycard one, and a
+revision that is present but not an integer makes the page unreadable without falling back to the other
+identity, so that a conflicting page is refused rather than adopted at a guess. A page carrying none of the
+three is refused.
 A revision of ZERO
 SHALL be adopted. Eligibility promotes a pinned or eligible-typed observation
 whose revision count is zero, so zero is an ordinary promoted state reached by
@@ -747,11 +752,23 @@ as a generic internal failure and never as a silent success.
 
 #### Scenario: A page whose own revision cannot be read is refused
 
-- GIVEN a file at the named address whose revision (under its page identity) is missing,
-  non-numeric or negative
+- GIVEN a file at the named address whose `memorycard_revision`, `source_revision` or
+  `engram_revision` is missing, non-numeric or negative, or that carries none of the three
 - WHEN an operator reconciles that address by name
 - THEN the adoption is refused with the registration-conflict code, not the
   internal-failure code, and the precedence store is left unchanged
+
+#### Scenario: A page carrying two revisions is adopted at the memorycard one
+
+- GIVEN a file at the named address carrying `memorycard_revision: 5` and `engram_revision: 2`
+- WHEN an operator reconciles that address by name
+- THEN the precedence entry records revision 5
+
+#### Scenario: A malformed memorycard revision is not rescued by an Engram one
+
+- GIVEN a file at the named address carrying `memorycard_revision: x` and `engram_revision: 2`
+- WHEN an operator reconciles that address by name
+- THEN the adoption is refused and the precedence store is left unchanged
 
 #### Scenario: A file that is not that page is refused
 

@@ -324,3 +324,44 @@ func TestReconcile_RefusesAMemorycardPageWithNoUsableRevision(t *testing.T) {
 		t.Fatalf("Reconcile = %v, want ErrUnusablePage", err)
 	}
 }
+
+// A page that carries the revision of more than one identity is adopted at the memorycard one; a memorycard revision
+// that is present but malformed is not rescued by an Engram one (the page is refused, not adopted at a guess); a page
+// that carries none of the three is refused.
+func TestReconcile_ReadsTheMemorycardRevisionFirstAndNeverFallsBackFromAMalformedOne(t *testing.T) {
+	const address = "c-000609"
+	page := func(extra string) string {
+		return "---\ntitle: T\naddress: c-000609\nproject: labdrian-sdd-overlay\nstatus: mature\n" + extra + "---\n"
+	}
+	for name, tc := range map[string]struct {
+		extra   string
+		want    int
+		refused bool
+	}{
+		"both present: memorycard wins":                  {"memorycard_id: 9\nmemorycard_revision: 5\nengram_id: 9\nengram_revision: 2\n", 5, false},
+		"memorycard malformed beside a valid engram one": {"memorycard_id: 9\nmemorycard_revision: x\nengram_id: 9\nengram_revision: 2\n", 0, true},
+		"engram alone":      {"engram_id: 9\nengram_revision: 2\n", 2, false},
+		"none of the three": {"memorycard_id: 9\n", 0, true},
+	} {
+		t.Run(name, func(t *testing.T) {
+			vaultRoot := t.TempDir()
+			writePromotedPageAt(t, vaultRoot, address, Page{Frontmatter: page(tc.extra), Body: "\nBody.\n"})
+			repo := &memPrecedence{}
+
+			outcome, err := Reconcile(pagesIn(vaultRoot), "labdrian-sdd-overlay", address, repo)
+
+			if tc.refused {
+				if !errors.Is(err, ErrUnusablePage) {
+					t.Fatalf("Reconcile = %+v, %v, want ErrUnusablePage", outcome, err)
+				}
+				if store, _ := repo.LoadPrecedence(); len(store) != 0 {
+					t.Errorf("a refused page changed the precedence store: %v", store)
+				}
+				return
+			}
+			if err != nil || !outcome.Adopted || outcome.PromotedRevision != tc.want {
+				t.Fatalf("Reconcile = %+v, %v, want the page adopted at revision %d", outcome, err, tc.want)
+			}
+		})
+	}
+}

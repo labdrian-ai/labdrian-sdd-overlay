@@ -250,9 +250,6 @@ func TestPageIdentity_ReconcileReadsTheRevisionOffThePage(t *testing.T) {
 	})
 }
 
-// (Previously: reconcile refused a page that was not Engram's, for the revision it does not carry; it now adopts the revision of
-// any identity, TestReconcile_AdoptsAPageOfTheStoreAgnosticKeysAtItsSourceRevision.)
-
 // The project move recognises the page the observation left behind by its identity, in either spelling.
 func TestPageIdentity_ProjectMoveSupersedesThePageByIdentity(t *testing.T) {
 	spellings(t, func(t *testing.T, agnostic bool) {

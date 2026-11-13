@@ -200,7 +200,12 @@ func frontmatterRevision(fmBlock string) (int, bool) {
 // pageRevision reads the revision a frontmatter block records for whatever identity it names: memorycard's
 // (memorycard_revision, or source_revision beside source: memorycard), else Engram's as frontmatterRevision reads it.
 // Only `promote reconcile` reads a page's revision this way; the promotion paths keep reading the Engram one, so
-// what they record does not change. A block with no readable revision reports false, as frontmatterRevision does.
+// what they record does not change.
+//
+// Precedence and strictness: the memorycard identity is read first, then the Engram one, and the first identity
+// whose revision field is present decides. A present but non-numeric revision reports false and never falls back to
+// the other identity, so a conflicting page is refused rather than adopted at a guess. A block with no revision in
+// either identity reports false, as frontmatterRevision does.
 func pageRevision(fmBlock string) (int, bool) {
 	fields := parseFrontmatterFields(fmBlock)
 	for _, source := range []string{memorycardSource, engramSource} {
