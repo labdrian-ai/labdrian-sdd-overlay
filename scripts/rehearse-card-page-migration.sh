@@ -85,10 +85,14 @@ copy_db() { # copy_db <live db> <copy>: a consistent copy of a sqlite database, 
   sqlite3 -readonly "$1" ".backup '$2'"
 }
 legacy_pages() { # one line per legacy page of the vault at $1: `R` or `U`, a tab, and the page's project (empty when it names none)
-  # The command reads the .md files directly in wiki/memory and counts a top-level legacy key line only: this does the same.
-  # A page whose frontmatter the command can read has two lines of --- ending in a line feed, and its frontmatter is what
-  # lies between the first two (`R`). Any other page is read whole, with a byte order mark and the carriage returns of its
-  # lines taken off, whatever its first line is (`U`): the command refuses it by name as unreadable frontmatter.
+  # The command reads the .md files directly in wiki/memory. A page is READABLE (`R`) when it starts at byte 0 with a
+  # line of --- ending in a line feed and has a closing such line: its frontmatter is those bytes. A page whose first
+  # line that is not blank, after a byte order mark, blank lines, spaces and carriage returns are taken off, is --- but
+  # is not readable is UNREADABLE (`U`): its frontmatter is the lines up to the next line of --- (or the rest of the page
+  # when there is none). Any other page has no frontmatter and is ignored, whatever its text quotes. A page is a legacy
+  # page when a line of its frontmatter starts, at column 0, with a legacy identity key and a colon. Its project is the
+  # last non-empty value of a `project:` line at column 0 (spaces before the colon allowed, only double quotes stripped,
+  # `[]` and an empty value skipped), as parseFrontmatterFields reads it.
   perl -e '
     opendir(my $dh, "$ARGV[0]/wiki/memory") or do { print STDERR "ABORT: cannot read $ARGV[0]/wiki/memory: $!\n"; exit 2; };
     my @files = sort grep { /\.md$/ && -f "$ARGV[0]/wiki/memory/$_" } readdir($dh);
@@ -96,16 +100,30 @@ legacy_pages() { # one line per legacy page of the vault at $1: `R` or `U`, a ta
     for my $name (@files) {
       open(my $h, "<:raw", "$ARGV[0]/wiki/memory/$name") or next;
       local $/; my $raw = <$h>; close($h);
-      my ($block, $kind);
-      if ($raw =~ /---\n(.*?)---\n/s) { ($block, $kind) = ($1, "R"); }
-      else { ($block, $kind) = ($raw, "U"); $block =~ s/\A\xef\xbb\xbf//; $block =~ s/\r(?=\n|\z)//g; }
+      my ($text, $kind);
+      my $close = substr($raw, 0, 4) eq "---\n" ? index(substr($raw, 3), "\n---\n") : -1;
+      if ($close >= 0) { ($text, $kind) = (substr($raw, 0, 3 + $close + 5), "R"); }
+      else {
+        my $t = $raw; $t =~ s/\A\xef\xbb\xbf//;
+        my @l = split(/\n/, $t, -1); s/\r\z// for @l;
+        shift @l while @l && $l[0] =~ /\A[ \t]*\z/;
+        next unless @l; (my $first = $l[0]) =~ s/\A[ \t]+//;
+        next unless $first eq "---";
+        shift @l; my @inside;
+        for (@l) { last if $_ eq "---"; push @inside, $_; }
+        ($text, $kind) = (join("\n", @inside), "U");
+      }
       my ($project, $legacy) = ("", 0);
-      for my $line (split /\n/, $block) {
+      for my $line (split /\n/, $text) {
         $legacy = 1 if $line =~ /^(engram_id|engram_revision|engram_type|engram_sync_id|memorycard_id|memorycard_revision|memorycard_type):/;
-        $project = $1 if $line =~ /^project:\s*(.*?)\s*$/;
+        if ($line =~ /^project[ \t]*:(.*)\z/) {
+          (my $v = $1) =~ s/\A\s+|\s+\z//g;
+          next if $v eq "" || $v eq "[]";
+          $v =~ s/\A"+|"+\z//g;
+          $project = $v;
+        }
       }
       next unless $legacy;
-      $project =~ s/^["\x27]|["\x27]$//g;
       print "$kind\t$project\n";
     }
   ' "$1"
@@ -122,7 +140,7 @@ legacy_counts() { # one line per project: the pages of the vault that still carr
     }
     printf("  %s: %d\n", $_, $n{$_}) for sort keys %n;
     printf("vault-wide: %d page(s) still carry a legacy identity key\n", $total || 0);
-    printf("(%d of them have frontmatter the command cannot read (CRLF line endings, no closing ---, whatever the first line): it refuses them by name as unreadable frontmatter)\n", $bad) if $bad;
+    printf("(%d of them have frontmatter the command cannot read (CRLF line endings, no closing ---, or a BOM, blank line or spaces before the opening ---): it refuses them by name as unreadable frontmatter)\n", $bad) if $bad;
   ' <<<"$pages"
 }
 projects_of() { # the distinct `project:` values of the legacy pages of the vault at $1, one per line: a project with no legacy page is not listed
