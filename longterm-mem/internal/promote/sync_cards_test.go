@@ -14,17 +14,16 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultlayout"
 )
 
-// fakeCards is a CardMemories that serves a fixed list and counts its calls.
+// fakeCards is a promote.Source that serves a fixed list and counts its calls.
 type fakeCards struct {
 	memories []memory.CardMemory
 	err      error
 	listed   []string
-	// allErr is what ListAllMemories answers when set; allListed counts its calls.
+	// allErr is what Memories answers when set; allListed counts its calls.
 	allErr    error
 	allListed int
 }
 
-// ListMemories serves the memories of the fixed list that are not archived, as the adapter does.
 // Candidates serves the memories of the fixed list that are not archived, as the adapter does.
 func (f *fakeCards) Candidates(project string) ([]memory.Memory, error) {
 	f.listed = append(f.listed, project)

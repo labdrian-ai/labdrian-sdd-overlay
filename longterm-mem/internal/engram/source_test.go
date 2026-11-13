@@ -14,7 +14,7 @@ import (
 //	1  superseded by 2 (an accepted supersedes edge, 2 is newer by created_at)
 //	2  active
 //	3  soft-deleted, no edge
-//	4  soft-deleted and also the older side of an edge to 2: superseded wins, as resolveStatus decides
+//	4  soft-deleted and also the older side of an edge to 2: superseded wins, as statusOf decides
 //	5  live, a related edge only
 //	6  another project
 //	7  live, the older side of an edge to 6, which is not in p: the other side is unrecognized, so active
@@ -95,7 +95,7 @@ func ids(memories []memory.Memory) []string {
 	return got
 }
 
-// resolveStatus's rule, behind the adapter: the older side of an accepted supersedes edge is superseded and names
+// statusOf's rule, behind the adapter: the older side of an accepted supersedes edge is superseded and names
 // its successor (the other side, newer by created_at) whether or not it was soft-deleted; a soft-deleted
 // observation with no such edge is archived; a related edge, or a supersedes edge whose other side is not in the
 // project, leaves an observation active.

@@ -78,7 +78,7 @@ func (c commands) cmdSync(args []string) int {
 // syncFromMemorycard is `sync --source memorycard` (S1 c of the C22-FU follow-up): promote.SyncCardsProject over
 // memorycard's memories of the project, both stores opened read-only, or, with dryRun, promote.PlanCards, which
 // walks the same decision and writes nothing. Engram is read too, for the one thing only it can say of a memory
-// with no import_map row (withSameContent). A bridged memory is skipped and counted, and is no failure (exit 0).
+// with no import_map row (the twin rule of newMemorycardSource). A bridged memory is skipped and counted, and is no failure (exit 0).
 func (c commands) syncFromMemorycard(a app, project, vaultRoot string, dryRun bool) int {
 	cards, exit := a.memorycardToPromoteFrom()
 	if exit != exitOK {

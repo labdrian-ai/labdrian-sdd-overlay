@@ -277,7 +277,7 @@ func TestPropagate_OneBrokenPageDoesNotWedgeTheRun(t *testing.T) {
 
 // A supersession whose successor has no page yet is still a supersession.
 //
-// resolveStatus used to skip the edge entirely in that case, reasoning that
+// The status rule once skipped the edge entirely in that case, reasoning that
 // there was no page to link to. That confuses being unable to DECORATE the
 // fact with being unable to RECORD it: the link is a convenience, the
 // status is the warning. Dropped, the page keeps reading as current -- and
