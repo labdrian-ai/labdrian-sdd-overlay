@@ -93,13 +93,16 @@ legacy_pages() { # one line per legacy page of the vault at $1: `R` or `U`, a ta
   # is the lines up to the next line of --- (trailing spaces and tabs ignored on both), or the rest of the page when there is
   # none. Any other page has no frontmatter and is ignored, whatever its text quotes. A page is a legacy page when a line of
   # its frontmatter starts, at column 0, with a legacy identity key and a colon. Its project is read as
-  # parseFrontmatterFields reads it: a line not indented, trimmed of the Unicode white space strings.TrimSpace trims, whose
+  # parseFrontmatterFields reads it: a line not indented, trimmed (on bytes, nothing decoded) of the white space strings.TrimSpace trims, whose
   # key before the first colon, trimmed, is `project`; the value is trimmed, skipped when it is empty or `[]` (before any
   # quote is taken off), then stripped of double quotes only; the last such line wins, even when its value is `""`.
   perl -e '
     opendir(my $dh, "$ARGV[0]/wiki/memory") or do { print STDERR "ABORT: cannot read $ARGV[0]/wiki/memory: $!\n"; exit 2; };
     my @files = sort grep { /\.md$/ && -f "$ARGV[0]/wiki/memory/$_" } readdir($dh);
     closedir($dh);
+    # strings.TrimSpace, on bytes: ASCII white space and the Unicode spaces in their valid UTF-8 encodings. A stray byte is
+    # never white space and stops the trim, as it does for Go on text that is not valid UTF-8; nothing is decoded or encoded.
+    my $SP = qr/(?:[\t\n\x0b\f\r ]|\xc2[\x85\xa0]|\xe1\x9a\x80|\xe2\x80[\x80-\x8a\xa8\xa9\xaf]|\xe2\x81\x9f|\xe3\x80\x80)/;
     for my $name (@files) {
       open(my $h, "<:raw", "$ARGV[0]/wiki/memory/$name") or next;
       local $/; my $raw = <$h>; close($h);
@@ -116,21 +119,19 @@ legacy_pages() { # one line per legacy page of the vault at $1: `R` or `U`, a ta
         for (@l) { (my $c = $_) =~ s/[ \t]+\z//; last if $c eq "---"; push @inside, $_; }
         ($text, $kind) = (join("\n", @inside), "U");
       }
-      utf8::decode($text);
       my ($project, $legacy) = ("", 0);
       for my $line (split /\n/, $text) {
         $legacy = 1 if $line =~ /^(engram_id|engram_revision|engram_type|engram_sync_id|memorycard_id|memorycard_revision|memorycard_type):/;
         next if $line =~ /\A[ \t]/;
-        (my $t = $line) =~ s/\A\s+|\s+\z//gu;
-        if ($t =~ /\Aproject\s*:(.*)\z/su) {
-          (my $v = $1) =~ s/\A\s+|\s+\z//gu;
+        (my $t = $line) =~ s/\A$SP+//; $t =~ s/$SP+\z//;
+        if ($t =~ /\Aproject$SP*:(.*)\z/s) {
+          (my $v = $1) =~ s/\A$SP+//; $v =~ s/$SP+\z//;
           next if $v eq "" || $v eq "[]";
           $v =~ s/\A"+|"+\z//g;
           $project = $v;
         }
       }
       next unless $legacy;
-      utf8::encode($project);
       print "$kind\t$project\n";
     }
   ' "$1"
