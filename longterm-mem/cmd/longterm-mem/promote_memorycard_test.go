@@ -9,7 +9,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 )
 
@@ -138,9 +137,7 @@ func TestPromoteSourceMemorycard_TwiceLeavesOnePage(t *testing.T) {
 func TestPromoteSourceMemorycard_BridgedMemoryIsRefused(t *testing.T) {
 	w, _ := memorycardWorld(t)
 	// Observation 1 gets its page the way it always has.
-	if code, so, se := runPromoteGolden(t, []string{"promote", "--project", promoteGoldenProject, "--id", "1"}); code != exitOK {
-		t.Fatalf("promote observation 1: exit %d: %s %s", code, so, se)
-	}
+	seedLegacyPromotedPage(t, w)
 	pagePath := filepath.Join(w.vaultRoot, "wiki", "memory", "c-000901.md")
 	before := fileHash(t, pagePath)
 	treeBefore := renderPromoteGoldenTree(t, w.vaultRoot)
@@ -192,9 +189,7 @@ func addHandMirroredMemories(t *testing.T, dbPath string) {
 func TestPromoteSourceMemorycard_SameContentAsAnObservationWithAPageIsRefused(t *testing.T) {
 	w, db := memorycardWorld(t)
 	addHandMirroredMemories(t, db)
-	if code, so, se := runPromoteGolden(t, []string{"promote", "--project", promoteGoldenProject, "--id", "1"}); code != exitOK {
-		t.Fatalf("promote observation 1: exit %d: %s %s", code, so, se)
-	}
+	seedLegacyPromotedPage(t, w)
 	pagePath := filepath.Join(w.vaultRoot, "wiki", "memory", "c-000901.md")
 	before := fileHash(t, pagePath)
 	treeBefore := renderPromoteGoldenTree(t, w.vaultRoot)
@@ -213,34 +208,6 @@ func TestPromoteSourceMemorycard_SameContentAsAnObservationWithAPageIsRefused(t 
 	// The same text as an observation with no page is not a duplicate of a page.
 	if code, so, se := runPromoteGolden(t, []string{"promote", "--project", promoteGoldenProject, "--source", "memorycard", "--id", "6"}); code != exitOK {
 		t.Fatalf("memory 6: exit %d: %s %s", code, so, se)
-	}
-}
-
-// The MCP promote tool promotes from memorycard with source memorycard, and from Engram without a source.
-func TestTheMCPPromoteToolPromotesFromMemorycardWhenAskedTo(t *testing.T) {
-	w, _ := memorycardWorld(t)
-	store, err := engram.Open(w.dbPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer store.Close()
-	tool := commands{newEmbedClient: testEmbedClient, clock: promoteGoldenClock}.mcpPromote(store)
-
-	if _, err := tool(context.Background(), promoteGoldenProject, "memorycard", 1); err != nil {
-		t.Fatalf("memorycard: %v", err)
-	}
-	if page := readVaultFile(t, w, "wiki/memory/c-000901.md"); !strings.Contains(page, "memorycard_id: 1\n") || strings.Contains(page, "engram_id") {
-		t.Errorf("page promoted from memorycard = %s", page)
-	}
-	if _, err := tool(context.Background(), promoteGoldenProject, "engram", 1); err != nil {
-		t.Fatalf("engram: %v", err)
-	}
-	if page := readVaultFile(t, w, "wiki/memory/c-000902.md"); !strings.Contains(page, "engram_id: 1\n") {
-		t.Errorf("page promoted from Engram = %s", page)
-	}
-	// Memory 2 is bridged to observation 1, which now has a page: the tool refuses it, with the page named.
-	if _, err := tool(context.Background(), promoteGoldenProject, "memorycard", 2); err == nil || !strings.Contains(err.Error(), "c-000902") {
-		t.Errorf("bridged memory over MCP: err = %v, want a refusal naming c-000902", err)
 	}
 }
 
@@ -286,24 +253,63 @@ func TestPromoteSourceMemorycard_UnknownMemoryIsNotFound(t *testing.T) {
 	}
 }
 
-func TestPromoteSource_UnknownSourceIsUsage(t *testing.T) {
-	w := enterClockWorld(t)
-	code, _, stderr := runPromoteGolden(t, []string{"promote", "--project", promoteGoldenProject, "--source", "notes", "--id", "1"})
-	if code != exitUsage || !strings.Contains(stderr, "engram") || !strings.Contains(stderr, "memorycard") {
-		t.Fatalf("exit %d, stderr %q, want usage naming the two sources", code, stderr)
+// The MCP promote tool names its source, as the command does: memorycard promotes, and no source, or Engram, is
+// refused before any store is opened. Memory 2 was imported from observation 1, which has a page (written by a
+// release that promoted from Engram): the tool refuses it, with the page named.
+func TestTheMCPPromoteToolPromotesFromMemorycardAndNothingElse(t *testing.T) {
+	w, _ := memorycardWorld(t)
+	seedLegacyPromotedPage(t, w)
+	tool := commands{newEmbedClient: testEmbedClient, clock: promoteGoldenClock}.mcpPromote()
+
+	if _, err := tool(context.Background(), promoteGoldenProject, "memorycard", 1); err != nil {
+		t.Fatalf("memorycard: %v", err)
 	}
-	if names := pageNames(t, w); len(names) != 0 {
-		t.Errorf("pages = %v, want none", names)
+	if page := readVaultFile(t, w, "wiki/memory/c-000902.md"); !strings.Contains(page, "memorycard_id: 1\n") || strings.Contains(page, "engram_id") {
+		t.Errorf("page promoted from memorycard = %s", page)
+	}
+	if _, err := tool(context.Background(), promoteGoldenProject, "memorycard", 2); err == nil || !strings.Contains(err.Error(), "c-000901") {
+		t.Errorf("bridged memory over MCP: err = %v, want a refusal naming c-000901", err)
+	}
+	pagesBefore := pageNames(t, w)
+	for source, want := range map[string]string{
+		"":       "mcpserver: promote: source is required: use source memorycard",
+		"engram": `mcpserver: promote: source "engram" is not a store: use memorycard`,
+	} {
+		if _, err := tool(context.Background(), promoteGoldenProject, source, 3); err == nil || err.Error() != want {
+			t.Errorf("source %q: err = %v, want %q", source, err, want)
+		}
+	}
+	if after := pageNames(t, w); strings.Join(after, " ") != strings.Join(pagesBefore, " ") {
+		t.Errorf("a refused source wrote pages: %v, was %v", after, pagesBefore)
 	}
 }
 
-// Naming the default source changes nothing: the command is the one that has always promoted from Engram.
-func TestPromoteSource_EngramIsTheDefault(t *testing.T) {
+// `promote` without a source is refused (S10 b): the id means what the store says it means, so the command asks.
+func TestPromoteSource_IsRequired(t *testing.T) {
 	w := enterClockWorld(t)
-	if code, so, se := runPromoteGolden(t, []string{"promote", "--project", promoteGoldenProject, "--source", "engram", "--id", "1"}); code != exitOK || !strings.Contains(so, "promoted c-000901 (created)") {
-		t.Fatalf("exit %d: %s %s", code, so, se)
+	treeBefore := renderPromoteGoldenTree(t, w.vaultRoot)
+	code, stdout, stderr := runPromoteGolden(t, []string{"promote", "--project", promoteGoldenProject, "--id", "1"})
+	if code != exitUsage || stdout != "" || stderr != "longterm-mem: promote: --source is required: use --source memorycard\n" {
+		t.Fatalf("exit %d, stdout %q, stderr %q, want usage asking for --source memorycard", code, stdout, stderr)
 	}
-	if page := readVaultFile(t, w, "wiki/memory/c-000901.md"); !strings.Contains(page, "engram_id: 1\n") {
-		t.Errorf("page = %s", page)
+	if after := renderPromoteGoldenTree(t, w.vaultRoot); after != treeBefore {
+		t.Errorf("a refused promote changed the vault")
+	}
+}
+
+// Engram and any other name are not stores `promote` reads (S10 a): usage, naming the one there is.
+func TestPromoteSource_OnlyMemorycardIsAStore(t *testing.T) {
+	for _, name := range []string{"engram", "notes"} {
+		t.Run(name, func(t *testing.T) {
+			w := enterClockWorld(t)
+			code, stdout, stderr := runPromoteGolden(t, []string{"promote", "--project", promoteGoldenProject, "--source", name, "--id", "1"})
+			want := "longterm-mem: promote: --source \"" + name + "\" is not a store: use memorycard\n"
+			if code != exitUsage || stdout != "" || stderr != want {
+				t.Fatalf("exit %d, stdout %q, stderr %q, want usage and %q", code, stdout, stderr, want)
+			}
+			if names := pageNames(t, w); len(names) != 0 {
+				t.Errorf("pages = %v, want none", names)
+			}
+		})
 	}
 }

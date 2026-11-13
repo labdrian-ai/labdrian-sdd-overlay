@@ -9,32 +9,28 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memorycard"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
 )
 
-// cmdSync implements `longterm-mem sync --project P [--vault DIR]`:
-// promote every eligible, unpromoted-or-revised observation (R-009),
-// propagate soft-delete/supersession status from Engram (R-033), rebuild
-// the vault's index, and record the sync's completion timestamp (R-031) --
-// promote.SyncProject wired to a real Engram connection and a real vault,
-// the same seam shape cmd_index.go and cmd_query.go already use for
-// vault.Rebuild/vault.Retrieve. With --dry-run it reports what promote.Plan
-// says the run would do and writes nothing. With --source memorycard (the default is engram, which is all the hooks
-// run) it promotes memorycard's memories instead: syncFromMemorycard.
+// cmdSync implements `longterm-mem sync --project P [--vault DIR] [--source STORE]`: promote every eligible,
+// unpromoted-or-revised memory of the project (R-009) from the registered store --source names (memorycard, the
+// default, and the one store the hooks run), propagate its status and supersession to the vault's pages (R-033),
+// rebuild the vault's index, and record the sync's completion timestamp (R-031): promote.SyncCardsProject wired to
+// a real store and a real vault. With --dry-run it reports what promote.PlanCards says the run would do and writes
+// nothing.
 func (c commands) cmdSync(args []string) int {
 	fs := flag.NewFlagSet("sync", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
 	project := fs.String("project", "", projectFlagUsage)
 	vaultDir := fs.String("vault", "", "vault path override")
 	dryRun := fs.Bool("dry-run", false, "report what sync would promote and write nothing")
-	source := fs.String("source", sourceEngram, "store to sync from: engram (the default, what the hooks run) or memorycard (promotes the project's memorycard memories, see docs/sync-from-memorycard.md)")
+	source := fs.String("source", sourceMemorycard, "store to sync from: "+registeredSourceNames()+" (the default, what the hooks run; promotes the project's memories, see docs/sync-from-memorycard.md)")
 	if err := fs.Parse(args); err != nil {
 		return exitUsage
 	}
 	a := c.newApp("sync")
-	if *source != sourceEngram && *source != sourceMemorycard {
-		fmt.Fprintf(os.Stderr, "longterm-mem: sync: --source %q is not a store: use %s or %s\n", *source, sourceEngram, sourceMemorycard)
+	if refusal := sourceRefusal(*source, false); refusal != "" {
+		fmt.Fprintf(os.Stderr, "longterm-mem: sync: %s\n", refusal)
 		return exitUsage
 	}
 	// A dry run must not record this repository's derived names either: an
@@ -47,46 +43,19 @@ func (c commands) cmdSync(args []string) int {
 	if exit != exitOK {
 		return exit
 	}
-	if *source == sourceMemorycard {
-		return c.syncFromMemorycard(a, resolvedProject, vaultRoot, *dryRun)
-	}
-	store, exit := a.memoryToPromoteFrom()
-	if exit != exitOK {
-		return exit
-	}
-	defer store.Close()
-	// Memorycard is read too, for the lineage of the observations: one whose memory already has a page is bridged.
-	cards, exit := a.memorycardForLineage()
-	if exit != exitOK {
-		return exit
-	}
-	if cards != nil {
-		defer a.closeStore("memorycard", cards)
-	}
-	deps, err := a.syncDeps(newEngramSource(store, cards), vaultRoot)
-	if err != nil {
-		return a.refuse(err, exitInternal)
-	}
-
-	ctx := context.Background()
-	if *dryRun {
-		return reportPlan(ctx, deps, resolvedProject, vaultRoot)
-	}
-	report, err := promote.SyncProject(ctx, deps, resolvedProject)
-	return reportSync(report, err)
+	return c.syncFrom(a, *source, resolvedProject, vaultRoot, *dryRun)
 }
 
-// syncFromMemorycard is `sync --source memorycard` (S1 c of the C22-FU follow-up): promote.SyncCardsProject over
-// memorycard's memories of the project, the store opened read-only, or, with dryRun, promote.PlanCards, which
-// walks the same decision and writes nothing. Memorycard says the lineage and the mirrors of its memories itself,
-// so no other store is opened. A bridged memory is skipped and counted, and is no failure (exit 0).
-func (c commands) syncFromMemorycard(a app, project, vaultRoot string, dryRun bool) int {
-	cards, exit := a.memorycardToPromoteFrom()
+// syncFrom is `sync` over the registered store called name (S1 c of the C22-FU follow-up): promote.SyncCardsProject
+// over its memories, the store opened read-only, or, with dryRun, promote.PlanCards, which walks the same decision
+// and writes nothing. The store says the lineage and the mirrors of its memories itself, so no other store is
+// opened. A bridged memory is skipped and counted, and is no failure (exit 0).
+func (c commands) syncFrom(a app, name, project, vaultRoot string, dryRun bool) int {
+	source, closer, exit := a.openSource(name, true)
 	if exit != exitOK {
 		return exit
 	}
-	defer a.closeStore("memorycard", cards)
-	source := memorycard.NewSource(cards)
+	defer a.closeStore(name, closer)
 
 	ctx := context.Background()
 	if dryRun {

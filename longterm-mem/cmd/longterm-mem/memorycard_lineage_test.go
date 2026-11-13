@@ -52,9 +52,7 @@ func TestMemorycardMirrorsAreFoundInMemorycardAlone(t *testing.T) {
 	w, db := syncMemorycardWorld(t)
 	addHandMirroredMemories(t, db)
 	execOnMemorycard(t, db, `update memories set pinned = 1 where id = 5`)
-	if code, so, se := runPromoteGolden(t, []string{"promote", "--project", promoteGoldenProject, "--id", "1"}); code != exitOK {
-		t.Fatalf("promote observation 1: exit %d: %s %s", code, so, se)
-	}
+	seedLegacyPromotedPage(t, w)
 	withNoEngramDatabase(t)
 	treeBefore := renderPromoteGoldenTree(t, w.vaultRoot)
 

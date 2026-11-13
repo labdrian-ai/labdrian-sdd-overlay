@@ -103,7 +103,7 @@ func TestSyncDatesWhatItWritesWithTheClockItWasGiven(t *testing.T) {
 
 func TestTheMCPPromoteToolDatesWhatItWritesWithTheClockItWasGiven(t *testing.T) {
 	w := enterClockWorld(t)
-	outcome, err := commands{newEmbedClient: testEmbedClient, clock: fixedClock{at: clockE2EInstant}}.mcpPromote(nil)(context.Background(), promoteGoldenProject, "memorycard", 1)
+	outcome, err := commands{newEmbedClient: testEmbedClient, clock: fixedClock{at: clockE2EInstant}}.mcpPromote()(context.Background(), promoteGoldenProject, "memorycard", 1)
 	if err != nil {
 		t.Fatalf("the promote tool: %v", err)
 	}

@@ -8,19 +8,16 @@ import (
 	"os"
 	"strings"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memorycard"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
 )
 
-// cmdPromote implements `longterm-mem promote --project P --id <engram_id>
-// [--vault DIR]` (R-032): explicitly promote one Engram observation
-// through the same page-emission, addressing, and registration path any
-// other eligible observation uses (promote.ExplicitPromote ->
-// Writer.Promote's explicit=true override, R-007), regardless of its
-// automatic eligibility. An invalid or nonexistent id is rejected with
-// exit 7 (not_found), never a silent no-op, and a promotion the local-edit
-// precedence rule refuses (R-030) exits 6 (registration_conflict) rather
-// than reporting a page it deliberately did not write as promoted.
+// cmdPromote implements `longterm-mem promote --project P --source STORE --id <id> [--vault DIR]` (R-032):
+// explicitly promote one memory of the registered store --source names through the same page-emission, addressing,
+// and registration path any other eligible memory uses (promote.ExplicitPromoteCard), regardless of its automatic
+// eligibility. --source is required: an id means what the store says it means, so none is guessed. An invalid or
+// nonexistent id is rejected with exit 7 (not_found), never a silent no-op, and a promotion the local-edit
+// precedence rule refuses (R-030) exits 6 (registration_conflict) rather than reporting a page it deliberately did
+// not write as promoted.
 func (c commands) cmdPromote(args []string) int {
 	// `promote reconcile <address>` is its own verb, dispatched before the
 	// flag set below ever sees the arguments: it takes a page address, not
@@ -32,15 +29,15 @@ func (c commands) cmdPromote(args []string) int {
 	fs := flag.NewFlagSet("promote", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
 	project := fs.String("project", "", projectFlagUsage)
-	id := fs.Int64("id", 0, "Engram observation id (required)")
+	id := fs.Int64("id", 0, "id of the memory in the store --source names (required)")
 	vaultDir := fs.String("vault", "", "vault path override")
-	source := fs.String("source", sourceEngram, "store to promote from: engram (the default) or memorycard; with memorycard, --id is a memorycard memory id")
+	source := fs.String("source", "", "store to promote from, required: "+registeredSourceNames()+"; --id is a memory id of that store")
 	if err := fs.Parse(args); err != nil {
 		return exitUsage
 	}
 	a := c.newApp("promote")
-	if *source != sourceEngram && *source != sourceMemorycard {
-		fmt.Fprintf(os.Stderr, "longterm-mem: promote: --source %q is not a store: use %s or %s\n", *source, sourceEngram, sourceMemorycard)
+	if refusal := sourceRefusal(*source, true); refusal != "" {
+		fmt.Fprintf(os.Stderr, "longterm-mem: promote: %s\n", refusal)
 		return exitUsage
 	}
 	resolvedProject, exit := a.project(*project, false)
@@ -55,59 +52,24 @@ func (c commands) cmdPromote(args []string) int {
 	if exit != exitOK {
 		return exit
 	}
-	if *source == sourceMemorycard {
-		return c.promoteFromMemorycard(a, vaultRoot, *id)
-	}
-	store, exit := a.memoryToPromoteFrom()
-	if exit != exitOK {
-		return exit
-	}
-	defer store.Close()
-	// Memorycard is read too, for the lineage of the observation: one whose memory already has a page is refused.
-	cards, exit := a.memorycardForLineage()
-	if exit != exitOK {
-		return exit
-	}
-	if cards != nil {
-		defer a.closeStore("memorycard", cards)
-	}
-
-	result, err := runPromote(context.Background(), newEngramSource(store, cards), vaultRoot, c.clock, *id)
-	if err != nil {
-		var bridged *promote.BridgedError
-		switch {
-		case errors.Is(err, promote.ErrObservationNotFound):
-			return a.refuse(err, exitNotFound)
-		case errors.As(err, &bridged):
-			// The code of every refusal that leaves a page of the vault alone.
-			return a.refuse(err, exitRegistrationConflict)
-		}
-		return a.refuse(err, exitInternal)
-	}
-	return reportPromotion(result, *id)
+	return c.promoteFrom(a, *source, vaultRoot, *id)
 }
 
-// The stores `promote --source` names.
-const (
-	sourceEngram     = "engram"
-	sourceMemorycard = "memorycard"
-)
-
-// promoteFromMemorycard promotes the memorycard memory id into the vault at vaultRoot, and only as a new page:
-// a memory that already has a page is reported and leaves it as it is, and a memory bridged to an Engram
-// observation that has a page is refused (exit 6, registration_conflict, the code of every refusal that leaves
-// a page of the vault alone), naming that page.
-func (c commands) promoteFromMemorycard(a app, vaultRoot string, id int64) int {
-	store, exit := a.memorycard()
+// promoteFrom promotes the memory id of the registered store called name into the vault at vaultRoot, and only as a
+// new page: a memory that already has a page is reported and leaves it as it is, and a memory bridged to another
+// identity that has a page is refused (exit 6, registration_conflict, the code of every refusal that leaves a page
+// of the vault alone), naming that page.
+func (c commands) promoteFrom(a app, name, vaultRoot string, id int64) int {
+	source, closer, exit := a.openSource(name, false)
 	if exit != exitOK {
 		return exit
 	}
-	defer store.Close()
+	defer a.closeStore(name, closer)
 	writer, err := newPromoteWriter(vaultRoot, c.clock)
 	if err != nil {
 		return a.refuse(err, exitInternal)
 	}
-	result, err := promote.ExplicitPromoteCard(context.Background(), writer, memorycard.NewSource(store), id)
+	result, err := promote.ExplicitPromoteCard(context.Background(), writer, source, id)
 	var bridged *promote.BridgedError
 	switch {
 	case errors.As(err, &bridged):

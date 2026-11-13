@@ -227,7 +227,7 @@ func TestCommands_ProjectFlagIsOptional(t *testing.T) {
 		{"doctor", []string{"doctor"}},
 		{"index", []string{"index"}},
 		{"sync", []string{"sync"}},
-		{"promote", []string{"promote", "--id", "1"}},
+		{"promote", []string{"promote", "--source", "memorycard", "--id", "1"}},
 		{"promote reconcile", []string{"promote", "reconcile", "some-address"}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

@@ -3,7 +3,6 @@ package main
 import (
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"testing"
 )
@@ -20,14 +19,14 @@ func TestCmdPromote_PromotesAtTheAddressTheVaultsScriptPrints(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(scripts, "allocate-address.sh"), []byte("#!/bin/sh\necho c-000777\n"), 0o755); err != nil {
 		t.Fatalf("write the allocator fixture: %v", err)
 	}
-	dbPath, id := promoteFixtureDB(t, "Gets An Address", "cmd-promote-project")
+	dbPath := memorycardFixture(t)
 	t.Setenv("HOME", t.TempDir())
 	t.Setenv("LONGTERM_MEM_VAULT", vaultRoot)
-	t.Setenv("LONGTERM_MEM_ENGRAM_DB", dbPath)
+	t.Setenv("LONGTERM_MEM_MEMORYCARD_DB", dbPath)
 	t.Setenv("LONGTERM_MEM_VAULTS_FILE", "")
 	t.Chdir(t.TempDir())
 
-	code, stdout, stderr := runCaptured(t, []string{"promote", "--project", "cmd-promote-project", "--id", strconv.FormatInt(id, 10)})
+	code, stdout, stderr := runCaptured(t, []string{"promote", "--source", "memorycard", "--project", promoteGoldenProject, "--id", "1"})
 
 	if code != exitOK {
 		t.Fatalf("exit = %d, want %d; stderr = %q", code, exitOK, stderr)
@@ -78,14 +77,14 @@ func TestCmdPromote_WhenTheVaultCannotGiveAnAddress(t *testing.T) {
 					t.Fatalf("write the allocator fixture: %v", err)
 				}
 			}
-			dbPath, id := promoteFixtureDB(t, "Needs An Address", "cmd-promote-project")
+			dbPath := memorycardFixture(t)
 			t.Setenv("HOME", t.TempDir())
 			t.Setenv("LONGTERM_MEM_VAULT", vaultRoot)
-			t.Setenv("LONGTERM_MEM_ENGRAM_DB", dbPath)
+			t.Setenv("LONGTERM_MEM_MEMORYCARD_DB", dbPath)
 			t.Setenv("LONGTERM_MEM_VAULTS_FILE", "")
 			t.Chdir(t.TempDir())
 
-			code, stdout, stderr := runCaptured(t, []string{"promote", "--project", "cmd-promote-project", "--id", strconv.FormatInt(id, 10)})
+			code, stdout, stderr := runCaptured(t, []string{"promote", "--source", "memorycard", "--project", promoteGoldenProject, "--id", "1"})
 
 			if code != exitInternal {
 				t.Errorf("exit = %d, want %d (internal)", code, exitInternal)

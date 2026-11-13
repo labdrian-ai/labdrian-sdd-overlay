@@ -81,26 +81,29 @@
         }
       },
       {
-        "description": "Explicitly promote one Engram observation to a vault page, regardless of its automatic eligibility (R-032).",
+        "description": "Explicitly promote one memorycard memory to a vault page, regardless of its automatic eligibility (R-032). The source is required: memorycard.",
         "inputSchema": {
           "type": "object",
           "properties": {
             "project": {
               "type": "string",
-              "description": "the project owning the observation"
+              "description": "the project owning the memory"
+            },
+            "memory_id": {
+              "type": "integer",
+              "description": "the memorycard memory id to promote; give this or engram_id"
             },
             "engram_id": {
               "type": "integer",
-              "description": "the Engram observation id to promote; with source memorycard, the memorycard memory id"
+              "description": "the former name of memory_id, accepted during a transition: a memorycard memory id"
             },
             "source": {
               "type": "string",
-              "description": "the store to promote from: engram (the default) or memorycard"
+              "description": "the store to promote from, required: memorycard"
             }
           },
           "required": [
-            "project",
-            "engram_id"
+            "project"
           ],
           "additionalProperties": false
         },

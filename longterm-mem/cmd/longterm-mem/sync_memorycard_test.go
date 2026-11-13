@@ -81,9 +81,7 @@ func TestSyncSourceMemorycard_PromotesANeverPromotedEligibleMemory(t *testing.T)
 func TestSyncSourceMemorycard_ABridgedMemoryIsCountedAndExitsZero(t *testing.T) {
 	w, _ := syncMemorycardWorld(t)
 	// Observation 1 gets its page the way it always has; memory 2 is bridged to it.
-	if code, so, se := runPromoteGolden(t, []string{"promote", "--project", promoteGoldenProject, "--id", "1"}); code != exitOK {
-		t.Fatalf("promote observation 1: exit %d: %s %s", code, so, se)
-	}
+	seedLegacyPromotedPage(t, w)
 	pagePath := filepath.Join(w.vaultRoot, "wiki", "memory", "c-000901.md")
 	before := fileHash(t, pagePath)
 
@@ -127,9 +125,7 @@ func TestSyncSourceMemorycard_ASameContentMemoryIsCountedAsBridged(t *testing.T)
 	if _, err := conn.Exec(`update memories set pinned = 1 where id = 5`); err != nil {
 		t.Fatal(err)
 	}
-	if code, so, se := runPromoteGolden(t, []string{"promote", "--project", promoteGoldenProject, "--id", "1"}); code != exitOK {
-		t.Fatalf("promote observation 1: exit %d: %s %s", code, so, se)
-	}
+	seedLegacyPromotedPage(t, w)
 
 	code, stdout, stderr := runSync(t, "--source", "memorycard")
 	if code != exitOK || !strings.Contains(stdout, "2 bridged") {
@@ -214,21 +210,6 @@ func TestSyncSourceMemorycard_DryRunPredictsWhatTheRunDoes(t *testing.T) {
 	_, real, _ := runSync(t, "--source", "memorycard")
 	if !strings.Contains(dry, "would promote 3 memory(ies)") || !strings.Contains(real, "promoted 3 memory(ies)") {
 		t.Fatalf("dry run %q and run %q disagree on what is promoted", dry, real)
-	}
-}
-
-func TestSyncSource_UnknownSourceIsUsage(t *testing.T) {
-	w := enterClockWorld(t)
-	treeBefore := renderPromoteGoldenTree(t, w.vaultRoot)
-	code, stdout, stderr := runSync(t, "--source", "notes")
-	if code != exitUsage {
-		t.Fatalf("exit %d, want %d\nstdout: %s\nstderr: %s", code, exitUsage, stdout, stderr)
-	}
-	if !strings.Contains(stderr, `--source "notes"`) || !strings.Contains(stderr, "engram") || !strings.Contains(stderr, "memorycard") {
-		t.Errorf("stderr = %q, want it to name the bad value and the two sources", stderr)
-	}
-	if after := renderPromoteGoldenTree(t, w.vaultRoot); after != treeBefore {
-		t.Errorf("a refused source changed the vault")
 	}
 }
 
@@ -585,3 +566,65 @@ func TestCloseStoreNamesAFailedClose(t *testing.T) {
 type nopCloser struct{}
 
 func (nopCloser) Close() error { return nil }
+
+// Engram and any other name are not stores `sync` reads (S10 a): usage, naming the one there is, and nothing is
+// written. (Previously: the two sources were engram and memorycard.)
+func TestSyncSource_OnlyMemorycardIsAStore(t *testing.T) {
+	for _, name := range []string{"engram", "notes"} {
+		t.Run(name, func(t *testing.T) {
+			w := enterClockWorld(t)
+			treeBefore := renderPromoteGoldenTree(t, w.vaultRoot)
+			code, stdout, stderr := runSync(t, "--source", name)
+			want := "longterm-mem: sync: --source \"" + name + "\" is not a store: use memorycard\n"
+			if code != exitUsage || stdout != "" || stderr != want {
+				t.Fatalf("exit %d, stdout %q, stderr %q, want usage and %q", code, stdout, stderr, want)
+			}
+			if after := renderPromoteGoldenTree(t, w.vaultRoot); after != treeBefore {
+				t.Errorf("a refused source changed the vault")
+			}
+		})
+	}
+}
+
+// Plain `sync` is `sync --source memorycard` (S10 a): the same words, the same pages, over the same store.
+func TestSyncWithoutASourceIsSyncFromMemorycard(t *testing.T) {
+	w, _ := syncMemorycardWorld(t)
+	codeP, outP, errP := runSync(t, "--dry-run")
+	codeN, outN, errN := runSync(t, "--source", "memorycard", "--dry-run")
+	if codeP != exitOK || codeP != codeN || outP != outN || errP != errN {
+		t.Fatalf("plain sync: exit %d %q %q; --source memorycard: exit %d %q %q", codeP, outP, errP, codeN, outN, errN)
+	}
+	if !strings.Contains(outP, "sync --source memorycard --dry-run: would promote 3 memory(ies)") {
+		t.Errorf("stdout = %q, want the memorycard words", outP)
+	}
+	if names := pageNames(t, w); len(names) != 0 {
+		t.Fatalf("a dry run wrote pages: %v", names)
+	}
+	code, out, errOut := runSync(t)
+	if code != exitOK || !strings.Contains(out, "sync --source memorycard promoted 3 memory(ies)") || errOut != "" {
+		t.Errorf("plain sync: exit %d %q %q, want it to promote 3 memories from memorycard", code, out, errOut)
+	}
+}
+
+// A vault whose pages were written by a release that promoted from Engram (they carry engram_id and
+// engram_revision) is read by plain `sync` as it reads any page: the page of observation 1 is memory 2's, so
+// memory 2 is bridged, and no page is written for it (S10 d). (Previously: plain `sync` read Engram, and a page
+// without memorycard_id was one of an observation.)
+func TestSyncWithoutASourceReadsLegacyKeyedPagesFromMemorycard(t *testing.T) {
+	w, _ := syncMemorycardWorld(t)
+	seedLegacyPromotedPage(t, w)
+	pagePath := filepath.Join(w.vaultRoot, "wiki", "memory", "c-000901.md")
+	before := fileHash(t, pagePath)
+
+	code, so, se := runSync(t, "--dry-run")
+	if code != exitOK || !strings.Contains(so, "sync --source memorycard --dry-run: would promote 2 memory(ies)") || !strings.Contains(so, "1 bridged") {
+		t.Fatalf("dry run: exit %d\nstdout: %s\nstderr: %s", code, so, se)
+	}
+	code, so, se = runSync(t)
+	if code != exitOK || !strings.Contains(so, "promoted 2 memory(ies)") || !strings.Contains(so, "1 bridged") {
+		t.Fatalf("run: exit %d\nstdout: %s\nstderr: %s", code, so, se)
+	}
+	if fileHash(t, pagePath) != before {
+		t.Errorf("the legacy page was rewritten")
+	}
+}

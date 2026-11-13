@@ -35,14 +35,14 @@ type Deps struct {
 	// Query resolves req's project's vault and runs query.Run against it
 	// (R-012's "Query round-trips over stdio" scenario).
 	Query func(ctx context.Context, req query.Request) (query.Result, error)
-	// Promote resolves project's vault and promotes engramID by explicit
+	// Promote resolves project's vault and promotes the memory id by explicit
 	// call, the same path the CLI promote subcommand uses (R-012, R-032),
 	// and -- when that promotion actually wrote a page -- rebuilds the
 	// vault index so the page is queryable over this same session
 	// (cmd_mcp.go wires that; see PromoteOutcome).
 	//
-	// source is the store id is an id of: SourceEngram, or SourceMemorycard. The handler hands it over already
-	// checked, and never empty.
+	// source is the store id is an id of, exactly as the call gave it, and it may be empty or name no store: the
+	// stores are named only where the server is composed (cmd_mcp.go), which refuses it.
 	Promote func(ctx context.Context, project, source string, id int64) (PromoteOutcome, error)
 	// Get reads one observation whole, by id (cmd_mcp.go wires it to
 	// the Engram adapter's ObservationByID, which is read-only like every other
@@ -159,17 +159,29 @@ type GetOut struct {
 	Detail string `json:"detail,omitempty"`
 }
 
-// The stores the promote tool promotes from.
-const (
-	SourceEngram     = "engram"
-	SourceMemorycard = "memorycard"
-)
-
-// PromoteIn is the promote tool's input (D3 contract: promote{project,engram_id}, plus the optional source).
+// PromoteIn is the promote tool's input (D3 contract: promote{project,engram_id}, plus the source, which is
+// required: an id means what the store says it means, so the tool guesses none). The id is memory_id, or its former
+// name engram_id, accepted during a transition (R8, L35): both name a memorycard memory id.
 type PromoteIn struct {
-	Project  string `json:"project" jsonschema:"the project owning the observation"`
-	EngramID int64  `json:"engram_id" jsonschema:"the Engram observation id to promote; with source memorycard, the memorycard memory id"`
-	Source   string `json:"source,omitempty" jsonschema:"the store to promote from: engram (the default) or memorycard"`
+	Project  string `json:"project" jsonschema:"the project owning the memory"`
+	MemoryID int64  `json:"memory_id,omitempty" jsonschema:"the memorycard memory id to promote; give this or engram_id"`
+	EngramID int64  `json:"engram_id,omitempty" jsonschema:"the former name of memory_id, accepted during a transition: a memorycard memory id"`
+	Source   string `json:"source,omitempty" jsonschema:"the store to promote from, required: memorycard"`
+}
+
+// IDFromEitherName is the id a tool call names with memory_id, engram_id, or both: exactly one given is the id, both
+// given with the same value is that id, both given with different values is refused naming both fields and values,
+// and neither given is refused as a missing id. An id of 0 counts as not given (memorycard ids start at 1).
+func IDFromEitherName(tool string, memoryID, engramID int64) (int64, error) {
+	switch {
+	case memoryID != 0 && engramID != 0 && memoryID != engramID:
+		return 0, fmt.Errorf("mcpserver: %s: memory_id %d and engram_id %d name different memories: give one of them", tool, memoryID, engramID)
+	case memoryID != 0:
+		return memoryID, nil
+	case engramID != 0:
+		return engramID, nil
+	}
+	return 0, fmt.Errorf("mcpserver: %s: memory_id is required (engram_id, its former name, is accepted too)", tool)
 }
 
 // PromoteOut is the promote tool's output: the address and outcome of the
@@ -209,7 +221,7 @@ func New(deps Deps) *mcp.Server {
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "promote",
-		Description: "Explicitly promote one Engram observation to a vault page, regardless of its automatic eligibility (R-032).",
+		Description: "Explicitly promote one memorycard memory to a vault page, regardless of its automatic eligibility (R-032). The source is required: memorycard.",
 	}, promoteHandler(deps))
 
 	return server
@@ -343,14 +355,13 @@ func promoteHandler(deps Deps) mcp.ToolHandlerFor[PromoteIn, PromoteOut] {
 		if deps.Promote == nil {
 			return nil, PromoteOut{}, fmt.Errorf("mcpserver: promote dependency is not configured")
 		}
-		source := in.Source
-		if source == "" {
-			source = SourceEngram
+		id, err := IDFromEitherName("promote", in.MemoryID, in.EngramID)
+		if err != nil {
+			return nil, PromoteOut{}, err
 		}
-		if source != SourceEngram && source != SourceMemorycard {
-			return nil, PromoteOut{}, fmt.Errorf("mcpserver: promote: source %q is not a store: use %s or %s", in.Source, SourceEngram, SourceMemorycard)
-		}
-		outcome, err := deps.Promote(ctx, in.Project, source, in.EngramID)
+		// The source goes to the dependency as it was given: the stores are named only where the server is
+		// composed, which refuses a source it has no store for.
+		outcome, err := deps.Promote(ctx, in.Project, in.Source, id)
 		if err != nil {
 			return nil, PromoteOut{}, err
 		}
