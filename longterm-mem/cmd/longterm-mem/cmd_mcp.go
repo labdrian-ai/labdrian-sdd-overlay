@@ -152,11 +152,12 @@ func (c commands) mcpPromote() func(ctx context.Context, project, source string,
 		}
 		if opened.degraded {
 			mu.Lock()
-			if !declared[source] {
-				declared[source] = true
+			first := !declared[source]
+			declared[source] = true
+			mu.Unlock()
+			if first {
 				fmt.Fprintf(diagnostics, "longterm-mem: mcp: promote: %s is being read through the immutable=1 fallback, so this run works from the snapshot taken when the connection was opened, not the live database\n", source)
 			}
-			mu.Unlock()
 		}
 		defer opened.closer.Close()
 		outcome, err := promote.PromoteCardAndReindex(ctx, writer, opened.source, id, index)
