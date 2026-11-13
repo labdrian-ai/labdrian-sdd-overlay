@@ -1,0 +1,25 @@
+{
+  "kind": "sweeper",
+  "base": "a825da1ef4e765eb4cba2a54ff905d4764bf5c55",
+  "head": "750fc5a50f54d5de5873d9541af272892f6198ff",
+  "diff_sha256": "7237aadc0825b2340ac8462353c3d18b20cad6947c23205947f57a58076cd10a",
+  "sweep": "750fc5a50f54-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T2 errcheck longterm-mem: cmd/longterm-mem/cmd_doctor.go: unchecked error: defer store.Close()",
+      "disposition": "live",
+      "evidence": "a deferred Close of a read-only handle or test fixture, the package idiom (store_test.go:166, :206); a close failure after the read loses nothing"
+    },
+    {
+      "candidate": "T2 errcheck longterm-mem: cmd/longterm-mem/doctor_eligibility_test.go: unchecked error: defer db.Close()",
+      "disposition": "live",
+      "evidence": "a deferred Close of a read-only handle or test fixture, the package idiom (store_test.go:166, :206); a close failure after the read loses nothing"
+    },
+    {
+      "candidate": "T2 errcheck longterm-mem: cmd/longterm-mem/doctor_eligibility_test.go: unchecked error: defer rows.Close()",
+      "disposition": "live",
+      "evidence": "a deferred Close of a read-only handle or test fixture, the package idiom (store_test.go:166, :206); a close failure after the read loses nothing"
+    }
+  ]
+}

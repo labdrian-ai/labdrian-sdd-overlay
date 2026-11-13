@@ -1,0 +1,15 @@
+{
+  "kind": "sweeper",
+  "base": "0f28050f986e0f95ac2cb25cee8aac3b6cc24206",
+  "head": "5c3257c0a9223ccf94e72740d5093da989773339",
+  "diff_sha256": "a039bedf3d17f2bf18a78e6032f1df5318301441825eb396fe2a7bcb5a6504de",
+  "sweep": "5c3257c0a922-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 name: ErrObservationNotFound",
+      "disposition": "live",
+      "evidence": "only immutable history names it (odd/review-results/phase9-store-agnostic-promotion/c63f0bb5cae9-2.json, odd/review-results/phase9-store-agnostic-promotion/c63f0bb5cae9-3.json, openspec/changes/archive/2026-09-02-longterm-mem/apply-progress.md): review records, archived changes and the Log are kept as written"
+    }
+  ]
+}
