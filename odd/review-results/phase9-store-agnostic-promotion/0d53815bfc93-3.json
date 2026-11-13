@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "5813aa1c6acae6991e46d8d8bbdd9601d06ee34b",
+    "head": "0d53815bfc931910e0a77e15593166a588ae2357",
+    "diff_sha256": "af0b5942cb559119b8e77dde3e2ea8514840ddf59127e59cb597c56801c13e5d",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "5813aa1c6acae6991e46d8d8bbdd9601d06ee34b",
+      "head": "0d53815bfc931910e0a77e15593166a588ae2357",
+      "diff_sha256": "af0b5942cb559119b8e77dde3e2ea8514840ddf59127e59cb597c56801c13e5d"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff replaces the placeholder L69COMMIT with 5813aa1c in exactly three places: the T6 task line, the L69 hash-mapping bullet, and the L69 answer to d3e672ce-3 F2. Nothing else changes.",
+      "The base commit is 5813aa1c, which is the commit that appended L69, so the hash written is the one the entry could not hold itself. This matches the commit's claim.",
+      "The three replacements are consistent with each other, and no L69COMMIT placeholder remains in the changed lines. The only file touched is a Markdown document, so no code behavior is affected."
+    ]
+  }
+}

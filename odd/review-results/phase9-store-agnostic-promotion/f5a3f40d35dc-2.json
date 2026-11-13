@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "149cb0792bcdb9ece38b6e9b3ac725970e611396",
+    "head": "f5a3f40d35dcc45e4924729aa637ab0cc0a0a118",
+    "diff_sha256": "3413345fb76af1a229514dd6a2ac807faf45b2686ab46bd1d615ba5d1e6bce4d",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/migrate_card_pages_scan_test.go",
+      "longterm-mem/internal/promote/migrate_cards.go",
+      "longterm-mem/internal/promote/migrate_cards_unreadable_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "149cb0792bcdb9ece38b6e9b3ac725970e611396",
+      "head": "f5a3f40d35dcc45e4924729aa637ab0cc0a0a118",
+      "diff_sha256": "3413345fb76af1a229514dd6a2ac807faf45b2686ab46bd1d615ba5d1e6bce4d"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/migrate_card_pages_scan_test.go",
+        "longterm-mem/internal/promote/migrate_cards.go",
+        "longterm-mem/internal/promote/migrate_cards_unreadable_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "shapeOf now returns readable only when frontmatterBlock(raw) equals raw[:3+i+5]. Any disagreement falls through to the unreadable scan, which collects every line between the opening rule and the next rule line. A legacy key placed after a line ending in --- but before the closing rule is therefore still seen and counted.",
+      "Opening and closing rule lines in the unreadable scan are trimmed of trailing spaces and tabs. The readable rule stays exact, as the commit message says.",
+      "The refusal name and reason reuse the single unreadableCauses constant, and the tests assert the new text, so the wording cannot drift.",
+      "Pages that were readable before and now disagree with the shared reader are refused instead of rewritten. This is the stated intent and prevents MatchesPage from reading the rewrite as a hand edit, so it is not a regression.",
+      "I did not see how carriage returns are stripped in the unreadable scan, since those lines are outside the diff. The closing-line trim does not remove them. This is unchanged from the base, so I report nothing."
+    ]
+  }
+}

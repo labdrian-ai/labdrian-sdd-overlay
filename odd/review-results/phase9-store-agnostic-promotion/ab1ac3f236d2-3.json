@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f5a3f40d35dcc45e4924729aa637ab0cc0a0a118",
+    "head": "ab1ac3f236d25665c2839e2af2cc61dd3d23fe65",
+    "diff_sha256": "35dbf57969bbc512a034e8b7b4fb099cfd8044f257ad618d473c999a4e0ae4bb",
+    "paths": [
+      "scripts/rehearse-card-page-migration.sh"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f5a3f40d35dcc45e4924729aa637ab0cc0a0a118",
+      "head": "ab1ac3f236d25665c2839e2af2cc61dd3d23fe65",
+      "diff_sha256": "35dbf57969bbc512a034e8b7b4fb099cfd8044f257ad618d473c999a4e0ae4bb"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "scripts/rehearse-card-page-migration.sh"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "scripts/rehearse-card-page-migration.sh:123-134",
+        "claim": "utf8::decode($text) silently leaves the text as raw bytes when the frontmatter is not valid UTF-8. The following /u regexes then treat a stray 0x85 or 0xA0 byte as the Unicode characters U+0085 or U+00A0 and trim them, whereas Go's strings.TrimSpace does not trim those bytes in invalid UTF-8. utf8::encode($project) then double-encodes any high bytes in the project name. The rehearsal can therefore report a project value that differs from the one the command reads, or one whose bytes are corrupted. The failure needs a page with invalid UTF-8 in its frontmatter, which is rare but not excluded.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "scripts/rehearse-card-page-migration.sh:123",
+          "scripts/rehearse-card-page-migration.sh:127",
+          "scripts/rehearse-card-page-migration.sh:133",
+          "scripts/rehearse-card-page-migration.sh:134"
+        ]
+      }
+    ],
+    "evidence": [
+      "Checked the index arithmetic of the new readable test: the closing rule starts at offset $close+4 in $raw, which equals the first \"---\\n\" found from offset 4, so the empty-frontmatter case and the normal case classify as intended.",
+      "Checked the project parsing against the Go behavior the comments describe (trim, first colon, skip empty and [], strip double quotes only); it matches for valid UTF-8.",
+      "The one divergence found is the handling of invalid UTF-8 input, reported as F1."
+    ]
+  }
+}

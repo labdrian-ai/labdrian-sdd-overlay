@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "1856f5696e5c973f29e1dbe1d20d8ef8871daacd",
+    "head": "5813aa1c6acae6991e46d8d8bbdd9601d06ee34b",
+    "diff_sha256": "70853bcb31804572466355e6faa93bfb9f3a06438bf282ba012953ec70e58815",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "1856f5696e5c973f29e1dbe1d20d8ef8871daacd",
+      "head": "5813aa1c6acae6991e46d8d8bbdd9601d06ee34b",
+      "diff_sha256": "70853bcb31804572466355e6faa93bfb9f3a06438bf282ba012953ec70e58815"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:121",
+        "claim": "The T6 task line commits the literal placeholder `L69COMMIT` where a commit hash belongs. Until the promised follow-up commit rewrites it, this record names no real commit for the L69 docs(odd) entry, and a reader or script that resolves the listed hashes will hit an unresolvable token. The Log (L69) openly says a follow-up will fill it in, so this is a known, deliberate gap, not a hidden one.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:121 (`L69COMMIT` (docs(odd), L69, with the rewritten reading rules of S6 (c))"
+        ]
+      }
+    ],
+    "evidence": [
+      "The only changed path is a documentation file (odd/tasks/phase9-store-agnostic-promotion.md); no code changed.",
+      "The S6 (c) reading rules (i)-(iv) agree with the L69 description of D-d, the trailing-space rule, and the no-frontmatter and no-project cases.",
+      "The one defect in the diff is the unresolved `L69COMMIT` token in the T6 line, which the diff itself says a follow-up commit will fix."
+    ]
+  }
+}

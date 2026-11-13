@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "149cb0792bcdb9ece38b6e9b3ac725970e611396",
+    "head": "f5a3f40d35dcc45e4924729aa637ab0cc0a0a118",
+    "diff_sha256": "3413345fb76af1a229514dd6a2ac807faf45b2686ab46bd1d615ba5d1e6bce4d",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/migrate_card_pages_scan_test.go",
+      "longterm-mem/internal/promote/migrate_cards.go",
+      "longterm-mem/internal/promote/migrate_cards_unreadable_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "149cb0792bcdb9ece38b6e9b3ac725970e611396",
+      "head": "f5a3f40d35dcc45e4924729aa637ab0cc0a0a118",
+      "diff_sha256": "3413345fb76af1a229514dd6a2ac807faf45b2686ab46bd1d615ba5d1e6bce4d"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/migrate_card_pages_scan_test.go",
+        "longterm-mem/internal/promote/migrate_cards.go",
+        "longterm-mem/internal/promote/migrate_cards_unreadable_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "shapeOf now accepts a page as readable only when frontmatterBlock returns exactly raw[:3+i+5]. Any disagreement falls through to the unreadable scan, so such a page is never rewritten.",
+      "The unreadable scan trims spaces and tabs on both the opening and the closing line. A page that previously went unseen, such as '--- ' as the opening, is now counted. This is the requested behavior.",
+      "The diff does not include frontmatterBlock, so I could not check how it splits pages. The review rests on the comments and tests in the diff.",
+      "A page that already had no legacy keys and now becomes unreadable is not counted, because the unreadable path only counts pages with legacy keys. I found no regression on input that was valid before the change."
+    ]
+  }
+}

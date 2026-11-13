@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ab1ac3f236d25665c2839e2af2cc61dd3d23fe65",
+    "head": "1856f5696e5c973f29e1dbe1d20d8ef8871daacd",
+    "diff_sha256": "61667f9e563de54a9ce850ef82ebee8911f4ef4b85b6103ef1bb3dff459e4fe4",
+    "paths": [
+      "longterm-mem/README.md",
+      "longterm-mem/docs/promote-from-memorycard.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "ab1ac3f236d25665c2839e2af2cc61dd3d23fe65",
+      "head": "1856f5696e5c973f29e1dbe1d20d8ef8871daacd",
+      "diff_sha256": "61667f9e563de54a9ce850ef82ebee8911f4ef4b85b6103ef1bb3dff459e4fe4"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/README.md",
+        "longterm-mem/docs/promote-from-memorycard.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/docs/promote-from-memorycard.md:123",
+        "claim": "The trailing-space wording is ambiguous. The README, the table row and the readable-page bullet treat spaces after an opening or closing `---` as a cause of unreadable frontmatter. This bullet says trailing spaces are ignored, so that `--- ` opens and closes like `---`. A reader can take that to mean such a page is readable. The text should say that the spaces are ignored only when the unreadable scan identifies the lines, and that the page is still refused.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/docs/promote-from-memorycard.md:121",
+          "longterm-mem/docs/promote-from-memorycard.md:123",
+          "longterm-mem/README.md:92"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed only the two documentation hunks in the diff, for recall and readability. The code behind the claims is not visible, so the factual claims about it are unverified. The only defect found is the wording ambiguity in F1."
+    ]
+  }
+}

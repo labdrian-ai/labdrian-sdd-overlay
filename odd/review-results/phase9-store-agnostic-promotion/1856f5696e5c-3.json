@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ab1ac3f236d25665c2839e2af2cc61dd3d23fe65",
+    "head": "1856f5696e5c973f29e1dbe1d20d8ef8871daacd",
+    "diff_sha256": "61667f9e563de54a9ce850ef82ebee8911f4ef4b85b6103ef1bb3dff459e4fe4",
+    "paths": [
+      "longterm-mem/README.md",
+      "longterm-mem/docs/promote-from-memorycard.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "ab1ac3f236d25665c2839e2af2cc61dd3d23fe65",
+      "head": "1856f5696e5c973f29e1dbe1d20d8ef8871daacd",
+      "diff_sha256": "61667f9e563de54a9ce850ef82ebee8911f4ef4b85b6103ef1bb3dff459e4fe4"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/README.md",
+        "longterm-mem/docs/promote-from-memorycard.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/docs/promote-from-memorycard.md:128",
+        "claim": "The rule says a value that is empty or `[]` is skipped before any quote is taken off, yet it also says `project: \"\"` replaces an earlier value with an empty one. Read as written, these two statements contradict each other: if an empty value is skipped, `project: \"\"` (a non-empty raw value of two quote characters) is not skipped, so it becomes an empty project. The sentence is ambiguous about whether the raw value or the unquoted value is tested, and the later phrase 'last non-empty value' conflicts with a page ending up with an empty project. A reader may misjudge which pages are counted as having no project. This is a documentation clarity issue and I cannot verify it against the code from the diff.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/docs/promote-from-memorycard.md:128"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only two documentation files, so no executable behavior changes.",
+      "I could not compare the new reading rules with the implementation, because the code is not in the diff.",
+      "The README and the reference doc list the same two new causes for an unreadable page, so they agree with each other.",
+      "The note's code span now uses a double-backtick fence, which renders correctly around the inner `project:` span."
+    ]
+  }
+}
