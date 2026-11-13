@@ -1,0 +1,117 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "d7bcc07b0a0449171a046620e459d50ec2dfab2d",
+    "head": "5c1ca8697e5a12713e895d63f569202ab94178f3",
+    "diff_sha256": "5cef3d51ac15e2c04d057483eff55eb567d5396f297d4d00cf517d2c225b7418",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/promote_addressmap_golden_test.go",
+      "longterm-mem/cmd/longterm-mem/promote_catalog_golden_test.go",
+      "longterm-mem/cmd/longterm-mem/testdata/addressmap-golden/01-a-manifest-with-keys-of-other-tools.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/addressmap-golden/02-a-stale-entry-for-the-new-path-is-replaced.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/addressmap-golden/03-a-manifest-that-is-not-json.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/addressmap-golden/04-an-empty-manifest.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/addressmap-golden/05-a-manifest-that-is-a-json-array.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/addressmap-golden/06-an-address-map-that-is-a-string.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/addressmap-golden/07-an-address-map-with-a-value-that-is-not-a-string.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/addressmap-golden/08-a-manifest-that-is-a-directory.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/addressmap-golden/09-a-manifest-that-is-a-link-to-another-file-of-the-vault.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/addressmap-golden/10-a-manifest-that-is-a-link-to-nothing.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/addressmap-golden/11-no-manifest-and-no-raw-directory.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/addressmap-golden/12-a-manifest-that-is-json-null.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/addressmap-golden/13-an-address-map-that-is-json-null.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/catalog-golden/01-an-index-and-a-log-written-by-hand.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/catalog-golden/02-an-index-that-is-a-link-to-another-file.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/catalog-golden/03-an-index-that-is-a-link-to-nothing.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/catalog-golden/04-an-index-that-is-a-directory.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/catalog-golden/05-a-block-of-the-index-that-was-left-open.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/catalog-golden/06-a-log-that-is-a-link-to-another-file.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/catalog-golden/07-a-log-that-is-a-link-to-nothing.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/catalog-golden/08-a-log-that-is-a-directory.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/catalog-golden/09-a-wiki-directory-that-is-a-file.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/catalog-golden/10-a-log-that-is-not-in-order.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/catalog-golden/11-the-catalog-and-the-log-of-an-earlier-promotion.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/catalog-golden/12-an-empty-index-and-an-empty-log.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/catalog-golden/13-the-doctor-and-status-over-an-index-that-became-a-directory.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/catalog-golden/14-the-doctor-over-a-log-that-became-a-link-to-nothing.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/catalog-golden/15-the-doctor-over-an-index-and-a-log-that-became-links-to-the-same-files.golden"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "d7bcc07b0a0449171a046620e459d50ec2dfab2d",
+      "head": "5c1ca8697e5a12713e895d63f569202ab94178f3",
+      "diff_sha256": "5cef3d51ac15e2c04d057483eff55eb567d5396f297d4d00cf517d2c225b7418"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/promote_addressmap_golden_test.go",
+        "longterm-mem/cmd/longterm-mem/promote_catalog_golden_test.go",
+        "longterm-mem/cmd/longterm-mem/testdata/addressmap-golden/01-a-manifest-with-keys-of-other-tools.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/addressmap-golden/02-a-stale-entry-for-the-new-path-is-replaced.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/addressmap-golden/03-a-manifest-that-is-not-json.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/addressmap-golden/04-an-empty-manifest.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/addressmap-golden/05-a-manifest-that-is-a-json-array.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/addressmap-golden/06-an-address-map-that-is-a-string.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/addressmap-golden/07-an-address-map-with-a-value-that-is-not-a-string.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/addressmap-golden/08-a-manifest-that-is-a-directory.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/addressmap-golden/09-a-manifest-that-is-a-link-to-another-file-of-the-vault.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/addressmap-golden/10-a-manifest-that-is-a-link-to-nothing.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/addressmap-golden/11-no-manifest-and-no-raw-directory.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/addressmap-golden/12-a-manifest-that-is-json-null.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/addressmap-golden/13-an-address-map-that-is-json-null.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/catalog-golden/01-an-index-and-a-log-written-by-hand.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/catalog-golden/02-an-index-that-is-a-link-to-another-file.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/catalog-golden/03-an-index-that-is-a-link-to-nothing.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/catalog-golden/04-an-index-that-is-a-directory.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/catalog-golden/05-a-block-of-the-index-that-was-left-open.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/catalog-golden/06-a-log-that-is-a-link-to-another-file.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/catalog-golden/07-a-log-that-is-a-link-to-nothing.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/catalog-golden/08-a-log-that-is-a-directory.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/catalog-golden/09-a-wiki-directory-that-is-a-file.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/catalog-golden/10-a-log-that-is-not-in-order.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/catalog-golden/11-the-catalog-and-the-log-of-an-earlier-promotion.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/catalog-golden/12-an-empty-index-and-an-empty-log.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/catalog-golden/13-the-doctor-and-status-over-an-index-that-became-a-directory.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/catalog-golden/14-the-doctor-over-a-log-that-became-a-link-to-nothing.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/catalog-golden/15-the-doctor-over-an-index-and-a-log-that-became-links-to-the-same-files.golden"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/cmd/longterm-mem/testdata/catalog-golden/11-the-catalog-and-the-log-of-an-earlier-promotion.golden:4",
+        "claim": "Scenario 11 (catalog and log of an earlier promotion) no longer exercises its purpose. Under memorycard the second promote is a no-op ('already promoted ... left as it is') instead of an update. The duplicate log entry and the extra index blank line that the golden pinned are gone, so the catalog/log append-on-re-promotion path is no longer covered. The re-recording silently accepted this change in behavior.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/testdata/catalog-golden/11-the-catalog-and-the-log-of-an-earlier-promotion.golden:4",
+          "longterm-mem/cmd/longterm-mem/testdata/catalog-golden/11-the-catalog-and-the-log-of-an-earlier-promotion.golden:64-76"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/promote_catalog_golden_test.go:56-57",
+        "claim": "The catalog and address-map scenarios were switched from the Engram path to memorycard rather than extended. Engram-sourced promote/sync no longer runs against the catalog (index/log) and address-map failure modes, so those paths lose golden coverage. The re-recorded manifests also pin the absence of promoted_revision, and the Engram-only stale-state error line ('check promoted state', 'propagate') is dropped.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/promote_catalog_golden_test.go:56-57",
+          "longterm-mem/cmd/longterm-mem/promote_addressmap_golden_test.go:227-228"
+        ]
+      }
+    ],
+    "evidence": [
+      "Diff only; the production code was not visible.",
+      "Golden 11 changes stdout from 'promoted c-000901 (updated)' to an 'already promoted' message and drops a log entry and blank line, so the scenario's re-promotion behavior differs.",
+      "Golden 09 drops the 'propagate: 4 observations failed' stderr line."
+    ]
+  }
+}

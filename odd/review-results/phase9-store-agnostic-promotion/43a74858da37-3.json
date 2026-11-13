@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a5dd47c70dcfc6b90a8038103013c979ee3bac49",
+    "head": "43a74858da3760daba434da73773d1600d3a3af4",
+    "diff_sha256": "e0a6ec5b6d64f722dd3a255e0c97d14daa80b35d80b28872af13ce06cbf4047f",
+    "paths": [
+      "longterm-mem/README.md",
+      "longterm-mem/docs/promote-from-memorycard.md",
+      "longterm-mem/docs/sync-from-memorycard.md",
+      "openspec/specs/longterm-mem-promotion/spec.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "a5dd47c70dcfc6b90a8038103013c979ee3bac49",
+      "head": "43a74858da3760daba434da73773d1600d3a3af4",
+      "diff_sha256": "e0a6ec5b6d64f722dd3a255e0c97d14daa80b35d80b28872af13ce06cbf4047f"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/README.md",
+        "longterm-mem/docs/promote-from-memorycard.md",
+        "longterm-mem/docs/sync-from-memorycard.md",
+        "openspec/specs/longterm-mem-promotion/spec.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/README.md:87",
+        "claim": "The rewritten sync row still describes eligibility and frozen pages in Engram terms: 'an untopiced observation is not automatically eligible', and a page 'once its observation stops being eligible'. The row now says sync reads memorycard memories only, so these phrases contradict it. Beyond the Engram-only terms, the row keeps the earlier Engram-sync behaviour for frozen pages, which the new spec text (one walk over memorycard) no longer describes.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/README.md:87"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes documentation and spec text only, so no runtime behaviour regresses.",
+      "The docs describe behaviour (exit 2 for --source engram, sources.go registry, memory_id/engram_id handling) that I cannot confirm from this diff; the code is outside it.",
+      "The sync row still uses observation wording after the rewrite, which is a small inconsistency."
+    ]
+  }
+}

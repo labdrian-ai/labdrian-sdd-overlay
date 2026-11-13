@@ -1,0 +1,110 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "31567f0d48a88e092931d754b8f941b68964c952",
+    "head": "d32e4f5388feae3e9ca52cf5ae9e35ef88273f40",
+    "diff_sha256": "b9e41d341d6eb0227903abbdedaec3da84c05b22a53504a4cdd0a1bb5627bafc",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/app_builder_test.go",
+      "longterm-mem/cmd/longterm-mem/cmd_mcp.go",
+      "longterm-mem/cmd/longterm-mem/cmd_promote.go",
+      "longterm-mem/cmd/longterm-mem/cmd_sync.go",
+      "longterm-mem/cmd/longterm-mem/degraded_write_test.go",
+      "longterm-mem/cmd/longterm-mem/exit_codes_test.go",
+      "longterm-mem/cmd/longterm-mem/main_test.go",
+      "longterm-mem/cmd/longterm-mem/memorycard_lineage_test.go",
+      "longterm-mem/cmd/longterm-mem/project_resolve_test.go",
+      "longterm-mem/cmd/longterm-mem/promote_allocator_test.go",
+      "longterm-mem/cmd/longterm-mem/promote_clock_test.go",
+      "longterm-mem/cmd/longterm-mem/promote_memorycard_test.go",
+      "longterm-mem/cmd/longterm-mem/promote_relations_test.go",
+      "longterm-mem/cmd/longterm-mem/sources.go",
+      "longterm-mem/cmd/longterm-mem/sync_bridged_lineage_test.go",
+      "longterm-mem/cmd/longterm-mem/sync_dryrun_test.go",
+      "longterm-mem/cmd/longterm-mem/sync_memorycard_test.go",
+      "longterm-mem/cmd/longterm-mem/sync_source_golden_test.go",
+      "longterm-mem/cmd/longterm-mem/testdata/retrieval-golden/mcp-00-the-handshake-and-the-tools.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/sync-source-golden/01-plain-sync-dry-run.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/sync-source-golden/02-source-engram-dry-run.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/sync-source-golden/03-plain-sync.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/sync-source-golden/04-source-engram-with-nothing-new.golden",
+      "longterm-mem/cmd/longterm-mem/vault_registry_golden_test.go",
+      "longterm-mem/internal/mcpserver/server.go",
+      "longterm-mem/internal/mcpserver/server_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "31567f0d48a88e092931d754b8f941b68964c952",
+      "head": "d32e4f5388feae3e9ca52cf5ae9e35ef88273f40",
+      "diff_sha256": "b9e41d341d6eb0227903abbdedaec3da84c05b22a53504a4cdd0a1bb5627bafc"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/app_builder_test.go",
+        "longterm-mem/cmd/longterm-mem/cmd_mcp.go",
+        "longterm-mem/cmd/longterm-mem/cmd_promote.go",
+        "longterm-mem/cmd/longterm-mem/cmd_sync.go",
+        "longterm-mem/cmd/longterm-mem/degraded_write_test.go",
+        "longterm-mem/cmd/longterm-mem/exit_codes_test.go",
+        "longterm-mem/cmd/longterm-mem/main_test.go",
+        "longterm-mem/cmd/longterm-mem/memorycard_lineage_test.go",
+        "longterm-mem/cmd/longterm-mem/project_resolve_test.go",
+        "longterm-mem/cmd/longterm-mem/promote_allocator_test.go",
+        "longterm-mem/cmd/longterm-mem/promote_clock_test.go",
+        "longterm-mem/cmd/longterm-mem/promote_memorycard_test.go",
+        "longterm-mem/cmd/longterm-mem/promote_relations_test.go",
+        "longterm-mem/cmd/longterm-mem/sources.go",
+        "longterm-mem/cmd/longterm-mem/sync_bridged_lineage_test.go",
+        "longterm-mem/cmd/longterm-mem/sync_dryrun_test.go",
+        "longterm-mem/cmd/longterm-mem/sync_memorycard_test.go",
+        "longterm-mem/cmd/longterm-mem/sync_source_golden_test.go",
+        "longterm-mem/cmd/longterm-mem/testdata/retrieval-golden/mcp-00-the-handshake-and-the-tools.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/sync-source-golden/01-plain-sync-dry-run.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/sync-source-golden/02-source-engram-dry-run.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/sync-source-golden/03-plain-sync.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/sync-source-golden/04-source-engram-with-nothing-new.golden",
+        "longterm-mem/cmd/longterm-mem/vault_registry_golden_test.go",
+        "longterm-mem/internal/mcpserver/server.go",
+        "longterm-mem/internal/mcpserver/server_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/cmd/longterm-mem/cmd_promote.go:70",
+        "claim": "promoteFrom calls openSource(name, false), so `promote` never declares a degraded (immutable=1) snapshot. The base declared it for Engram-backed promote, and the removed test TestCmdPromote_DeclaresADegradedEngramSnapshot asserted that a writing command must say so. The openSource comment says declaration is for commands that write pages from what they read, which describes promote. The MCP promote path also opens the store without declaring. This is a lost diagnostic for a writing command, and the test that guarded it was deleted without a memorycard replacement visible in the diff.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "cmd_promote.go:70 openSource(name, false)",
+          "sources.go openSource doc comment",
+          "degraded_write_test.go deleted"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/exit_codes_test.go:163",
+        "claim": "Removed tests pinned sync exit-code mapping (5 for an index rebuild failure, 1 for a per-observation failure, and both passes running despite a failing item) and the dry-run no-write check on a hand-authored index. The diff shows no memorycard equivalents for these, so the exit-code distinctions on the now-only sync path are untested.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "exit_codes_test.go removed TestCmdSync_RebuildFailureExitsVaultSubprocessFailed and TestCmdSync_PerObservationFailureExitsInternal",
+          "main_test.go removed TestCmdSync_BothPassesRunDespiteAFailingObservation",
+          "sync_dryrun_test.go removed TestCmdSync_DryRunWritesNothingAndNamesWhatItWould"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff only; no repository access, so the existence of memorycard twins and dead code left behind (newEngramSource, memorycardForLineage) could not be checked."
+    ]
+  }
+}

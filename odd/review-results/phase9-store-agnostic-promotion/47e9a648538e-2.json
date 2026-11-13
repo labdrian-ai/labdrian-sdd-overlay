@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "d32e4f5388feae3e9ca52cf5ae9e35ef88273f40",
+    "head": "47e9a648538ead0fc4321aadf1db4c07f829f406",
+    "diff_sha256": "27d82bbe26baf089134a7a1f409315102d379e2f0871e332260f0bba85747aa6",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/app.go",
+      "longterm-mem/cmd/longterm-mem/cmd_sync.go",
+      "longterm-mem/cmd/longterm-mem/engram_degraded.go",
+      "longterm-mem/cmd/longterm-mem/lineage.go",
+      "longterm-mem/cmd/longterm-mem/lineage_test.go",
+      "longterm-mem/cmd/longterm-mem/rundeps.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "d32e4f5388feae3e9ca52cf5ae9e35ef88273f40",
+      "head": "47e9a648538ead0fc4321aadf1db4c07f829f406",
+      "diff_sha256": "27d82bbe26baf089134a7a1f409315102d379e2f0871e332260f0bba85747aa6"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/app.go",
+        "longterm-mem/cmd/longterm-mem/cmd_sync.go",
+        "longterm-mem/cmd/longterm-mem/engram_degraded.go",
+        "longterm-mem/cmd/longterm-mem/lineage.go",
+        "longterm-mem/cmd/longterm-mem/lineage_test.go",
+        "longterm-mem/cmd/longterm-mem/rundeps.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/lineage.go:1",
+        "claim": "The deleted lineage_test.go held more than the Engram-side lineage test. It also checked the memorycard source's own lineage and mirrors (memorycard.NewSource, Candidates, ByID) and the compile-time assertion that memorycard.Source satisfies promote.Source. memorycard.Source stays in use for sync of cards. Unless the memorycard package tests cover these cases, this commit removes the only test of them. The diff does not show whether such coverage exists.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/lineage_test.go:1-175"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only the diff was available. The remaining imports of cmd_sync.go and rundeps.go and the other callers of the deleted helpers could not be checked."
+    ]
+  }
+}

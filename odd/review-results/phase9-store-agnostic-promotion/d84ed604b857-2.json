@@ -1,0 +1,87 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "811541a1328fc33714464c07ced0de9b2164ba18",
+    "head": "d84ed604b8577a0518efd254df623b36e63eef1d",
+    "diff_sha256": "d888255bd3c747bd0b152e094735553a02a3251b66b6a5504143f7c7fbb4652e",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/promote_clock_test.go",
+      "longterm-mem/cmd/longterm-mem/promote_golden_test.go",
+      "longterm-mem/cmd/longterm-mem/testdata/promote-golden/01-promote-an-ineligible-observation-explicitly.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/promote-golden/02-promote-it-again.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/promote-golden/03-sync-dry-run.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/promote-golden/04-sync-promotes-the-eligible-ones.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/promote-golden/05-sync-with-nothing-new.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/promote-golden/06-sync-after-a-revision-and-a-soft-delete.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/promote-golden/07-promote-a-page-edited-by-hand-is-refused.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/promote-golden/08-promote-an-observation-that-does-not-exist.golden"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "811541a1328fc33714464c07ced0de9b2164ba18",
+      "head": "d84ed604b8577a0518efd254df623b36e63eef1d",
+      "diff_sha256": "d888255bd3c747bd0b152e094735553a02a3251b66b6a5504143f7c7fbb4652e"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/promote_clock_test.go",
+        "longterm-mem/cmd/longterm-mem/promote_golden_test.go",
+        "longterm-mem/cmd/longterm-mem/testdata/promote-golden/01-promote-an-ineligible-observation-explicitly.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/promote-golden/02-promote-it-again.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/promote-golden/03-sync-dry-run.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/promote-golden/04-sync-promotes-the-eligible-ones.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/promote-golden/05-sync-with-nothing-new.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/promote-golden/06-sync-after-a-revision-and-a-soft-delete.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/promote-golden/07-promote-a-page-edited-by-hand-is-refused.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/promote-golden/08-promote-an-observation-that-does-not-exist.golden"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/cmd/longterm-mem/testdata/promote-golden/07-promote-a-page-edited-by-hand-is-refused.golden:1-4",
+        "claim": "Step 07 is named 'promote a page edited by hand is refused', but its re-recorded golden now shows exit 0 and 'already promoted; the page is left as it is'. The base golden showed exit 6, 'refused c-000901 (skipped_local_edit)' and a stderr warning. The local-edit refusal path of `promote` is no longer exercised by any golden scenario, and the scenario name no longer matches what it pins. The commit message says only the sync summary words, identity keys and footer change, yet this golden changes exit code, stdout and stderr.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "07-promote-a-page-edited-by-hand-is-refused.golden:1-4 (exit 6 -> exit 0, refusal line removed, stderr removed)"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "longterm-mem/cmd/longterm-mem/testdata/promote-golden/02-promote-it-again.golden:1-4",
+        "claim": "Step 02 ('promote it again') used to pin the explicit re-promote update ('promoted c-000901 (updated)', with a second log entry). It now pins a no-op ('already promoted ... left as it is'), and the duplicate log entry and blank line disappear. The re-recorded golden hides a behavior change that the commit message does not list: the explicit re-promote update path is no longer covered. The manifest also drops promoted_revision. The golden diffs differ from the claimed 'summary words, keys, footer' only; the unlisted changes should be reviewed against the S1-S9 spec rather than silently re-recorded.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "02-promote-it-again.golden:1-4 (updated -> already promoted)",
+          "02-promote-it-again.golden: duplicate log entry removed and promoted_revision removed from the manifest"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/promote_golden_test.go:265-281",
+        "claim": "The world still builds and populates the Engram database, and tests still set LONGTERM_MEM_ENGRAM_DB, but no golden step or clock test reads Engram any more. Engram-source promote and sync now have no golden coverage, and the leftover fixture and the 'engram' normalisation are dead weight that suggests it is still exercised.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "promote_golden_test.go: all steps pass --source memorycard",
+          "promote_clock_test.go: the MCP test now passes 'memorycard' and a nil store"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff only. Goldens 02 and 07 change behavior (exit code, stdout, log content, manifest fields) beyond the claimed wording, key and footer changes."
+    ]
+  }
+}

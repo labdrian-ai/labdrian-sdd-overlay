@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a5dd47c70dcfc6b90a8038103013c979ee3bac49",
+    "head": "43a74858da3760daba434da73773d1600d3a3af4",
+    "diff_sha256": "e0a6ec5b6d64f722dd3a255e0c97d14daa80b35d80b28872af13ce06cbf4047f",
+    "paths": [
+      "longterm-mem/README.md",
+      "longterm-mem/docs/promote-from-memorycard.md",
+      "longterm-mem/docs/sync-from-memorycard.md",
+      "openspec/specs/longterm-mem-promotion/spec.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "a5dd47c70dcfc6b90a8038103013c979ee3bac49",
+      "head": "43a74858da3760daba434da73773d1600d3a3af4",
+      "diff_sha256": "e0a6ec5b6d64f722dd3a255e0c97d14daa80b35d80b28872af13ce06cbf4047f"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/README.md",
+        "longterm-mem/docs/promote-from-memorycard.md",
+        "longterm-mem/docs/sync-from-memorycard.md",
+        "openspec/specs/longterm-mem-promotion/spec.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/README.md:87",
+        "claim": "The sync row is rewritten for memorycard memories, but its tail still says 'an untopiced observation is not automatically eligible' and 'once its observation stops being eligible'. The term now switches between memory and observation within one sentence. The row also puts a '(Previously: ...)' note in the middle of a long table cell, before the eligibility and frozen-pages text, which makes it hard to read.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/README.md:87"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/docs/promote-from-memorycard.md:20-22",
+        "claim": "The text says nothing else is opened and that the bridge is read from memorycard's own `import_map`. The table below it also describes a content-hash bridge for memories with no `import_map` row. The summary names only `import_map`, so it is incomplete.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/docs/promote-from-memorycard.md:20-22"
+        ]
+      }
+    ],
+    "evidence": [
+      "Docs-only diff across four files. Wording is consistent across README, both guides and the spec, apart from the two minor points above.",
+      "The docs cite cmd/longterm-mem/sources.go as the registry of readable stores. The diff does not show that file, so the reference is unverified."
+    ]
+  }
+}

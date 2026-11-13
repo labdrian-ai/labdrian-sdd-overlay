@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "43a74858da3760daba434da73773d1600d3a3af4",
+    "head": "2ee0317e72e4c773c4d561ae790978d47199fa39",
+    "diff_sha256": "3eb5a39bfb7d1a6e11874df67de7c258b559b4196bd54845eb3855460badd413",
+    "paths": [
+      "longterm-mem/internal/promote/source.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "43a74858da3760daba434da73773d1600d3a3af4",
+      "head": "2ee0317e72e4c773c4d561ae790978d47199fa39",
+      "diff_sha256": "3eb5a39bfb7d1a6e11874df67de7c258b559b4196bd54845eb3855460badd413"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/promote/source.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/source.go:7-8",
+        "claim": "The reflowed comment leaves an orphan short line ('composition root. It is the one port of the') followed by a one-line tail, so the paragraph wrapping is ragged versus the surrounding ~120-column wrap. Purely cosmetic and harmless; the comment text itself is accurate and compiles.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/source.go:7-8"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only a doc comment in source.go; no code, signatures or behavior change, so there is no recall risk.",
+      "The new wording 'today the memorycard adapter in internal/memorycard' drops the Engram adapter mention, consistent with the commit message; I could not verify from the diff alone that internal/engram no longer implements Source, but the comment says 'today', a hedge that stays accurate."
+    ]
+  }
+}

@@ -1,0 +1,119 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "d84ed604b8577a0518efd254df623b36e63eef1d",
+    "head": "d7bcc07b0a0449171a046620e459d50ec2dfab2d",
+    "diff_sha256": "63c6c37d2967a0c36b7adc31e7178e499f46dfeae45bf170e7ee9cad42ef468c",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/promote_pages_golden_test.go",
+      "longterm-mem/cmd/longterm-mem/testdata/legacy-promoted-vault/.allocator-counter",
+      "longterm-mem/cmd/longterm-mem/testdata/legacy-promoted-vault/.raw/.longterm-mem-manifest.json",
+      "longterm-mem/cmd/longterm-mem/testdata/legacy-promoted-vault/.raw/.manifest.json",
+      "longterm-mem/cmd/longterm-mem/testdata/legacy-promoted-vault/wiki/index.md",
+      "longterm-mem/cmd/longterm-mem/testdata/legacy-promoted-vault/wiki/log.md",
+      "longterm-mem/cmd/longterm-mem/testdata/legacy-promoted-vault/wiki/memory/c-000901.md",
+      "longterm-mem/cmd/longterm-mem/testdata/pages-golden/01-the-page-is-gone-but-the-sidecar-remembers-it.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/pages-golden/02-the-page-is-a-directory.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/pages-golden/03-the-page-is-a-link-to-another-file-of-the-vault.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/pages-golden/04-the-page-is-a-link-to-nothing.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/pages-golden/05-the-page-is-a-link-to-a-directory.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/pages-golden/06-the-page-was-edited-by-hand-and-the-observation-revised.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/pages-golden/07-an-edited-page-whose-observation-was-then-deleted.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/pages-golden/08-text-without-frontmatter-where-the-new-page-belongs.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/pages-golden/09-a-page-for-the-observation-that-names-no-address.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/pages-golden/10-a-page-for-the-observation-with-a-revision-that-is-not-a-number.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/pages-golden/11-an-observation-moved-to-another-project-supersedes-its-old-page.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/pages-golden/12-the-pages-directory-is-a-file.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/pages-golden/13-the-pages-directory-is-a-link-to-a-directory.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/pages-golden/14-the-pages-directory-is-a-link-to-nothing.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/pages-golden/15-files-beside-the-pages-that-are-not-pages.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/pages-golden/18-reconcile-an-edited-page-nobody-recorded-adopts-it.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/pages-golden/19-reconcile-an-edited-page-with-a-recorded-revision-is-refused.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/pages-golden/20-reconcile-a-page-that-is-a-link.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/pages-golden/22-reconcile-a-page-of-another-project.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/pages-golden/23-an-observation-superseded-by-a-newer-one.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/pages-golden/24-a-page-that-cannot-be-read-beside-the-page-of-an-observation.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/pages-golden/25-a-page-that-cannot-be-read-beside-the-pages-of-every-promoted-observation.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/pages-golden/26-a-failure-beside-an-observation-left-alone.golden"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "d84ed604b8577a0518efd254df623b36e63eef1d",
+      "head": "d7bcc07b0a0449171a046620e459d50ec2dfab2d",
+      "diff_sha256": "63c6c37d2967a0c36b7adc31e7178e499f46dfeae45bf170e7ee9cad42ef468c"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/promote_pages_golden_test.go",
+        "longterm-mem/cmd/longterm-mem/testdata/legacy-promoted-vault/.allocator-counter",
+        "longterm-mem/cmd/longterm-mem/testdata/legacy-promoted-vault/.raw/.longterm-mem-manifest.json",
+        "longterm-mem/cmd/longterm-mem/testdata/legacy-promoted-vault/.raw/.manifest.json",
+        "longterm-mem/cmd/longterm-mem/testdata/legacy-promoted-vault/wiki/index.md",
+        "longterm-mem/cmd/longterm-mem/testdata/legacy-promoted-vault/wiki/log.md",
+        "longterm-mem/cmd/longterm-mem/testdata/legacy-promoted-vault/wiki/memory/c-000901.md",
+        "longterm-mem/cmd/longterm-mem/testdata/pages-golden/01-the-page-is-gone-but-the-sidecar-remembers-it.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/pages-golden/02-the-page-is-a-directory.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/pages-golden/03-the-page-is-a-link-to-another-file-of-the-vault.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/pages-golden/04-the-page-is-a-link-to-nothing.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/pages-golden/05-the-page-is-a-link-to-a-directory.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/pages-golden/06-the-page-was-edited-by-hand-and-the-observation-revised.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/pages-golden/07-an-edited-page-whose-observation-was-then-deleted.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/pages-golden/08-text-without-frontmatter-where-the-new-page-belongs.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/pages-golden/09-a-page-for-the-observation-that-names-no-address.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/pages-golden/10-a-page-for-the-observation-with-a-revision-that-is-not-a-number.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/pages-golden/11-an-observation-moved-to-another-project-supersedes-its-old-page.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/pages-golden/12-the-pages-directory-is-a-file.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/pages-golden/13-the-pages-directory-is-a-link-to-a-directory.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/pages-golden/14-the-pages-directory-is-a-link-to-nothing.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/pages-golden/15-files-beside-the-pages-that-are-not-pages.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/pages-golden/18-reconcile-an-edited-page-nobody-recorded-adopts-it.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/pages-golden/19-reconcile-an-edited-page-with-a-recorded-revision-is-refused.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/pages-golden/20-reconcile-a-page-that-is-a-link.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/pages-golden/22-reconcile-a-page-of-another-project.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/pages-golden/23-an-observation-superseded-by-a-newer-one.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/pages-golden/24-a-page-that-cannot-be-read-beside-the-page-of-an-observation.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/pages-golden/25-a-page-that-cannot-be-read-beside-the-pages-of-every-promoted-observation.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/pages-golden/26-a-failure-beside-an-observation-left-alone.golden"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/cmd/longterm-mem/testdata/legacy-promoted-vault/wiki/memory/c-000901.md:27",
+        "claim": "The legacy fixture page ends with an extra blank line that real `promote` did not write. The commit says the reconcile goldens are byte-identical, but goldens 18, 19, 20 and 22 gained a blank line, and the body_hash in 18 and 20 changed. The fixture manifest still records body_hash 43c0..., which probably does not match the fixture's own body. The reconcile scenarios therefore start from a page that is subtly not the one they claim to reproduce, and the 'byte-identical' claim is false.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "testdata/legacy-promoted-vault/wiki/memory/c-000901.md:26-27",
+          "testdata/pages-golden/18-reconcile-an-edited-page-nobody-recorded-adopts-it.golden:13",
+          "testdata/pages-golden/20-reconcile-a-page-that-is-a-link.golden:13",
+          "testdata/pages-golden/19-reconcile-an-edited-page-with-a-recorded-revision-is-refused.golden:82"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/testdata/pages-golden/09-a-page-for-the-observation-that-names-no-address.golden:61-110",
+        "claim": "Golden 09 pins what looks like a product defect as expected behavior. The memorycard walk derives the address `c-000500.md` from the filename including its extension and writes `c-000500.md.md`. The same memory is promoted twice, so log.md has duplicate entries and index.md gains stray blank lines. Pinning this makes a later fix of the memorycard walk show up as a golden regression. The commit message acknowledges it as 'pinned as found'.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "testdata/pages-golden/09-a-page-for-the-observation-that-names-no-address.golden:61-110"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff: the test harness changes, the legacy fixture files and the re-recorded goldens.",
+      "The fixture page's trailing blank line (hunk +1,27) matches the added blank lines in goldens 18, 19, 20 and 22, which contradicts the 'byte-identical' claim.",
+      "Scenario 09's new golden shows the address `c-000500.md` and the file `c-000500.md.md`."
+    ]
+  }
+}

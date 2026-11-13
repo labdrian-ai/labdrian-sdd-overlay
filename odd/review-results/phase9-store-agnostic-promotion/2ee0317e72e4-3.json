@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "43a74858da3760daba434da73773d1600d3a3af4",
+    "head": "2ee0317e72e4c773c4d561ae790978d47199fa39",
+    "diff_sha256": "3eb5a39bfb7d1a6e11874df67de7c258b559b4196bd54845eb3855460badd413",
+    "paths": [
+      "longterm-mem/internal/promote/source.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "43a74858da3760daba434da73773d1600d3a3af4",
+      "head": "2ee0317e72e4c773c4d561ae790978d47199fa39",
+      "diff_sha256": "3eb5a39bfb7d1a6e11874df67de7c258b559b4196bd54845eb3855460badd413"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/promote/source.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff changes only a doc comment on the Source interface in longterm-mem/internal/promote/source.go: it replaces the mention of the Engram adapter with 'today the memorycard adapter'. No executable code, signatures, or imports change, so no behavior can regress. The comment's claim cannot be verified from the diff alone, but it introduces no defect visible in the diff."
+    ]
+  }
+}

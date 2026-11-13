@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "2ee0317e72e4c773c4d561ae790978d47199fa39",
+    "head": "e7b5921e0b8edc48e9fe6f7d87f25dc0b61425a7",
+    "diff_sha256": "b54bab9e1ed5a145d5e2598453cc1dbf21949fa0e3d5481c2424dae4b76a583f",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "2ee0317e72e4c773c4d561ae790978d47199fa39",
+      "head": "e7b5921e0b8edc48e9fe6f7d87f25dc0b61425a7",
+      "diff_sha256": "b54bab9e1ed5a145d5e2598453cc1dbf21949fa0e3d5481c2424dae4b76a583f"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:119",
+        "claim": "T5 is ticked [x] although its own checks require the independent `verifier` to run once (Risk items 3 and 5). L54 says the verifier was not run and belongs to the coordinator. L54 also lists seven open decisions for the coordinator, including the `c-000500.md.md` double-write behavior pinned as found. The tick records the task as closed with a required acceptance step unmet and the Risk 3 and 5 sign-off missing. Later tasks (T10, T6) that depend on T5 being done would read it as fully accepted.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:119 (`- [ ] T5` changed to `- [x] T5`, with the text \"the independent verifier once\" kept and \"the independent verifier is the coordinator's\" added)",
+          "odd/tasks/phase9-store-agnostic-promotion.md:420 (L54: \"Not run: the independent verifier (the coordinator's)\"; \"Left open, for the coordinator to decide (none decided here)\")"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff touches only the odd/tasks document, so no code behavior changes. The only inconsistency found is the tick against the unmet verifier step."
+    ]
+  }
+}

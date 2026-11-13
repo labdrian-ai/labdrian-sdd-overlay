@@ -1,0 +1,100 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "5c1ca8697e5a12713e895d63f569202ab94178f3",
+    "head": "6126f2bc5f3d95bf29e0f2c2ef1d4a024cddbc4e",
+    "diff_sha256": "e296bdc9116bca35ae6cb8950cf38dc3245082118efc19de6fafb5df5f8c555e",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/promote_syncstate_golden_test.go",
+      "longterm-mem/cmd/longterm-mem/promote_vaultlinks_golden_test.go",
+      "longterm-mem/cmd/longterm-mem/testdata/syncstate-golden/01-no-sync-yet-a-dry-run-and-a-sync.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/syncstate-golden/02-the-record-of-an-earlier-sync.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/syncstate-golden/03-a-record-that-is-not-json.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/syncstate-golden/04-an-empty-record.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/syncstate-golden/05-a-record-that-is-null.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/syncstate-golden/06-a-record-whose-completion-is-not-a-string.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/syncstate-golden/07-a-record-that-is-a-directory.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/syncstate-golden/08-a-record-that-is-a-link-to-a-file.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/syncstate-golden/09-a-record-that-is-a-link-to-nothing.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/syncstate-golden/10-a-vault-meta-directory-that-is-a-file.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/syncstate-golden/11-a-vault-meta-directory-that-is-a-link-to-a-directory.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/syncstate-golden/12-a-vault-root-that-is-a-link-to-the-vault.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/syncstate-golden/13-a-vault-root-that-is-not-there.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/syncstate-golden/14-a-vault-root-that-is-a-file.golden"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "5c1ca8697e5a12713e895d63f569202ab94178f3",
+      "head": "6126f2bc5f3d95bf29e0f2c2ef1d4a024cddbc4e",
+      "diff_sha256": "e296bdc9116bca35ae6cb8950cf38dc3245082118efc19de6fafb5df5f8c555e"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/promote_syncstate_golden_test.go",
+        "longterm-mem/cmd/longterm-mem/promote_vaultlinks_golden_test.go",
+        "longterm-mem/cmd/longterm-mem/testdata/syncstate-golden/01-no-sync-yet-a-dry-run-and-a-sync.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/syncstate-golden/02-the-record-of-an-earlier-sync.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/syncstate-golden/03-a-record-that-is-not-json.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/syncstate-golden/04-an-empty-record.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/syncstate-golden/05-a-record-that-is-null.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/syncstate-golden/06-a-record-whose-completion-is-not-a-string.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/syncstate-golden/07-a-record-that-is-a-directory.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/syncstate-golden/08-a-record-that-is-a-link-to-a-file.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/syncstate-golden/09-a-record-that-is-a-link-to-nothing.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/syncstate-golden/10-a-vault-meta-directory-that-is-a-file.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/syncstate-golden/11-a-vault-meta-directory-that-is-a-link-to-a-directory.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/syncstate-golden/12-a-vault-root-that-is-a-link-to-the-vault.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/syncstate-golden/13-a-vault-root-that-is-not-there.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/syncstate-golden/14-a-vault-root-that-is-a-file.golden"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/cmd/longterm-mem/testdata/syncstate-golden/14-a-vault-root-that-is-a-file.golden:9",
+        "claim": "The re-recorded golden now enshrines a success-style summary ('promoted 0 memory(ies) ... skipped 0 bridged') on stdout for a sync that exits 1 because the manifest could not be read. The base golden had empty stdout for this failure. A sync that did nothing because it failed reports a clean zero summary, which is misleading. The golden locks this in without comment.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "behavior-activated",
+        "proof_refs": [
+          "14-a-vault-root-that-is-a-file.golden:+longterm-mem: sync --source memorycard promoted 0 memory(ies); patched 0 page(s); skipped 0 bridged; left 0 locally edited page(s) alone",
+          "exit: 1 on the same scenario"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "longterm-mem/cmd/longterm-mem/testdata/syncstate-golden/01-no-sync-yet-a-dry-run-and-a-sync.golden:48-55",
+        "claim": "The commit message says the only changing lines are sync summary words, page identity keys and the promoted-from footer. The golden manifest also drops the promoted_revision field for every entry and changes the body and frontmatter hashes. That is an undisclosed change in the persisted manifest schema. If anything downstream relies on promoted_revision (for example revision-based patch detection), the memorycard path no longer records it. The goldens were re-recorded to accept it without any stated justification.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "01-...golden: -\"promoted_revision\": 1 removed from c-000901 and c-000902 entries",
+          "the same removal appears in goldens 02-14"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/promote_syncstate_golden_test.go:33-34",
+        "claim": "Every sync-state and vault-link scenario now passes --source memorycard explicitly. No golden scenario exercises plain `sync` or `promote` without --source any more. The commit says plain commands read memorycard only, but nothing in these goldens verifies the default source, so a regression in default source resolution would go unnoticed here.",
+        "evidence_class": "inferential",
+        "causal_disposition": "worsened",
+        "proof_refs": [
+          "promote_syncstate_golden_test.go: sync and dryRun now include --source memorycard",
+          "promote_vaultlinks_golden_test.go: promote and sync now include --source memorycard"
+        ]
+      }
+    ],
+    "evidence": [
+      "Test-only change: two scenario argument lists and the re-recorded goldens. Production code is not in the diff.",
+      "Golden diffs are consistent across scenarios 01-14 apart from the cases noted in the findings."
+    ]
+  }
+}

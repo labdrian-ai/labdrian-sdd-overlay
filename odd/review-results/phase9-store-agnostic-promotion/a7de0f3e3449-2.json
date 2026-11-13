@@ -1,0 +1,164 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "47e9a648538ead0fc4321aadf1db4c07f829f406",
+    "head": "a7de0f3e344996a19b2be6c57b4d220c47a39f15",
+    "diff_sha256": "8388aeb5750130ec5d92078968e862bba4a98f5559adec678b1938d541b98157",
+    "paths": [
+      "longterm-mem/internal/promote/catalog_port_test.go",
+      "longterm-mem/internal/promote/clock_test.go",
+      "longterm-mem/internal/promote/eligible_test.go",
+      "longterm-mem/internal/promote/explicit.go",
+      "longterm-mem/internal/promote/memory_port_test.go",
+      "longterm-mem/internal/promote/page_scan.go",
+      "longterm-mem/internal/promote/page_scan_test.go",
+      "longterm-mem/internal/promote/pages_port_test.go",
+      "longterm-mem/internal/promote/pages_unreadable_test.go",
+      "longterm-mem/internal/promote/plan_test.go",
+      "longterm-mem/internal/promote/precedence_port_test.go",
+      "longterm-mem/internal/promote/project_sync.go",
+      "longterm-mem/internal/promote/project_sync_test.go",
+      "longterm-mem/internal/promote/promote_reindex.go",
+      "longterm-mem/internal/promote/promote_reindex_test.go",
+      "longterm-mem/internal/promote/propagate.go",
+      "longterm-mem/internal/promote/propagate_cards.go",
+      "longterm-mem/internal/promote/propagate_ids_pages_test.go",
+      "longterm-mem/internal/promote/propagate_ids_test.go",
+      "longterm-mem/internal/promote/propagate_test.go",
+      "longterm-mem/internal/promote/reindex.go",
+      "longterm-mem/internal/promote/reindex_port_test.go",
+      "longterm-mem/internal/promote/source.go",
+      "longterm-mem/internal/promote/support_test.go",
+      "longterm-mem/internal/promote/sync.go",
+      "longterm-mem/internal/promote/sync_cards.go",
+      "longterm-mem/internal/promote/sync_test.go",
+      "longterm-mem/internal/promote/walk_bridged_test.go",
+      "longterm-mem/internal/promote/walk_failures_test.go",
+      "longterm-mem/internal/promote/writer.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "47e9a648538ead0fc4321aadf1db4c07f829f406",
+      "head": "a7de0f3e344996a19b2be6c57b4d220c47a39f15",
+      "diff_sha256": "8388aeb5750130ec5d92078968e862bba4a98f5559adec678b1938d541b98157"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/promote/catalog_port_test.go",
+        "longterm-mem/internal/promote/clock_test.go",
+        "longterm-mem/internal/promote/eligible_test.go",
+        "longterm-mem/internal/promote/explicit.go",
+        "longterm-mem/internal/promote/memory_port_test.go",
+        "longterm-mem/internal/promote/page_scan.go",
+        "longterm-mem/internal/promote/page_scan_test.go",
+        "longterm-mem/internal/promote/pages_port_test.go",
+        "longterm-mem/internal/promote/pages_unreadable_test.go",
+        "longterm-mem/internal/promote/plan_test.go",
+        "longterm-mem/internal/promote/precedence_port_test.go",
+        "longterm-mem/internal/promote/project_sync.go",
+        "longterm-mem/internal/promote/project_sync_test.go",
+        "longterm-mem/internal/promote/promote_reindex.go",
+        "longterm-mem/internal/promote/promote_reindex_test.go",
+        "longterm-mem/internal/promote/propagate.go",
+        "longterm-mem/internal/promote/propagate_cards.go",
+        "longterm-mem/internal/promote/propagate_ids_pages_test.go",
+        "longterm-mem/internal/promote/propagate_ids_test.go",
+        "longterm-mem/internal/promote/propagate_test.go",
+        "longterm-mem/internal/promote/reindex.go",
+        "longterm-mem/internal/promote/reindex_port_test.go",
+        "longterm-mem/internal/promote/source.go",
+        "longterm-mem/internal/promote/support_test.go",
+        "longterm-mem/internal/promote/sync.go",
+        "longterm-mem/internal/promote/sync_cards.go",
+        "longterm-mem/internal/promote/sync_test.go",
+        "longterm-mem/internal/promote/walk_bridged_test.go",
+        "longterm-mem/internal/promote/walk_failures_test.go",
+        "longterm-mem/internal/promote/writer.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/project_sync_test.go:3",
+        "claim": "The file is reduced to `package promote` plus an empty `import ()`. It holds no tests and should be deleted.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/project_sync_test.go:1-3"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/pages_port_test.go:154",
+        "claim": "The failure message says `want errNoPageReader`, but the assertion checks errNoPageRepository. The message misleads whoever reads a failure.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/pages_port_test.go:153-154"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/propagate_ids_pages_test.go:25-27",
+        "claim": "The case labelled \"the Engram dialect's walk\" now calls PropagateCards, the same function as the memorycard case beside it. It runs the same walk twice under a name for a dialect that no longer exists, so the label is stale and the duplicate case is redundant. The same holds in propagate_ids_test.go.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/propagate_ids_pages_test.go:22-27",
+          "longterm-mem/internal/promote/propagate_ids_test.go:25-29"
+        ]
+      },
+      {
+        "id": "F4",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/promote_reindex_test.go:30",
+        "claim": "The tests were renamed to PromoteCardAndReindex, but their failure messages still say `PromoteAndReindex`, a function that no longer exists. The same stale name appears in several Fatalf and Errorf calls in this file.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/promote_reindex_test.go:28-31",
+          "longterm-mem/internal/promote/promote_reindex_test.go:48-49"
+        ]
+      },
+      {
+        "id": "F5",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/promote/propagate_test.go:1",
+        "claim": "The deletions remove tests that pinned propagation behaviour: the R-033 scenarios, the canon-wins patch on a locally edited page with body_hash left unblessed, the missing-successor link, the precedence save failure, one broken page not wedging the run, each page read once per run, and an unlistable pages directory failing every observation. The diff shows no memorycard twin for these, only the claim that twins stay. If PropagateCards or SyncCardsProject has no equivalent test, a regression in these behaviours would go undetected.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/propagate_test.go:1-372",
+          "longterm-mem/internal/promote/pages_unreadable_test.go:233",
+          "longterm-mem/internal/promote/precedence_port_test.go:113"
+        ]
+      },
+      {
+        "id": "F6",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/promote/sync.go:46-58",
+        "claim": "The test that pinned IndexRebuildError, found by errors.As with its legacy wording, was deleted along with SyncProject's Failure classification. The type's Error() still reads \"promote: sync: rebuild index\", while the surrounding SyncCardsProject errors now use the prefix \"promote: sync memorycard:\". Nothing in the diff shows a test that SyncCardsProject returns *IndexRebuildError or maps it to IndexRebuildFailed. A caller that picks an exit code from Failure could regress without any test failing.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/project_sync_test.go:1-3",
+          "longterm-mem/internal/promote/sync.go:49-59"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff deletes Sync, Plan, SyncProject, Propagate, eachPatchTarget, decidePatch, ExplicitPromote, PromoteAndReindex and Prober, and moves the tests onto SyncCardsProject, PlanCards and PropagateCards.",
+      "I could not see the memorycard-side sources or the tests that stay, so the coverage concerns (F5, F6) are inferential."
+    ]
+  }
+}

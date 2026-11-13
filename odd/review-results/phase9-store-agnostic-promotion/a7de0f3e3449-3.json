@@ -1,0 +1,138 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "47e9a648538ead0fc4321aadf1db4c07f829f406",
+    "head": "a7de0f3e344996a19b2be6c57b4d220c47a39f15",
+    "diff_sha256": "8388aeb5750130ec5d92078968e862bba4a98f5559adec678b1938d541b98157",
+    "paths": [
+      "longterm-mem/internal/promote/catalog_port_test.go",
+      "longterm-mem/internal/promote/clock_test.go",
+      "longterm-mem/internal/promote/eligible_test.go",
+      "longterm-mem/internal/promote/explicit.go",
+      "longterm-mem/internal/promote/memory_port_test.go",
+      "longterm-mem/internal/promote/page_scan.go",
+      "longterm-mem/internal/promote/page_scan_test.go",
+      "longterm-mem/internal/promote/pages_port_test.go",
+      "longterm-mem/internal/promote/pages_unreadable_test.go",
+      "longterm-mem/internal/promote/plan_test.go",
+      "longterm-mem/internal/promote/precedence_port_test.go",
+      "longterm-mem/internal/promote/project_sync.go",
+      "longterm-mem/internal/promote/project_sync_test.go",
+      "longterm-mem/internal/promote/promote_reindex.go",
+      "longterm-mem/internal/promote/promote_reindex_test.go",
+      "longterm-mem/internal/promote/propagate.go",
+      "longterm-mem/internal/promote/propagate_cards.go",
+      "longterm-mem/internal/promote/propagate_ids_pages_test.go",
+      "longterm-mem/internal/promote/propagate_ids_test.go",
+      "longterm-mem/internal/promote/propagate_test.go",
+      "longterm-mem/internal/promote/reindex.go",
+      "longterm-mem/internal/promote/reindex_port_test.go",
+      "longterm-mem/internal/promote/source.go",
+      "longterm-mem/internal/promote/support_test.go",
+      "longterm-mem/internal/promote/sync.go",
+      "longterm-mem/internal/promote/sync_cards.go",
+      "longterm-mem/internal/promote/sync_test.go",
+      "longterm-mem/internal/promote/walk_bridged_test.go",
+      "longterm-mem/internal/promote/walk_failures_test.go",
+      "longterm-mem/internal/promote/writer.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "47e9a648538ead0fc4321aadf1db4c07f829f406",
+      "head": "a7de0f3e344996a19b2be6c57b4d220c47a39f15",
+      "diff_sha256": "8388aeb5750130ec5d92078968e862bba4a98f5559adec678b1938d541b98157"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/promote/catalog_port_test.go",
+        "longterm-mem/internal/promote/clock_test.go",
+        "longterm-mem/internal/promote/eligible_test.go",
+        "longterm-mem/internal/promote/explicit.go",
+        "longterm-mem/internal/promote/memory_port_test.go",
+        "longterm-mem/internal/promote/page_scan.go",
+        "longterm-mem/internal/promote/page_scan_test.go",
+        "longterm-mem/internal/promote/pages_port_test.go",
+        "longterm-mem/internal/promote/pages_unreadable_test.go",
+        "longterm-mem/internal/promote/plan_test.go",
+        "longterm-mem/internal/promote/precedence_port_test.go",
+        "longterm-mem/internal/promote/project_sync.go",
+        "longterm-mem/internal/promote/project_sync_test.go",
+        "longterm-mem/internal/promote/promote_reindex.go",
+        "longterm-mem/internal/promote/promote_reindex_test.go",
+        "longterm-mem/internal/promote/propagate.go",
+        "longterm-mem/internal/promote/propagate_cards.go",
+        "longterm-mem/internal/promote/propagate_ids_pages_test.go",
+        "longterm-mem/internal/promote/propagate_ids_test.go",
+        "longterm-mem/internal/promote/propagate_test.go",
+        "longterm-mem/internal/promote/reindex.go",
+        "longterm-mem/internal/promote/reindex_port_test.go",
+        "longterm-mem/internal/promote/source.go",
+        "longterm-mem/internal/promote/support_test.go",
+        "longterm-mem/internal/promote/sync.go",
+        "longterm-mem/internal/promote/sync_cards.go",
+        "longterm-mem/internal/promote/sync_test.go",
+        "longterm-mem/internal/promote/walk_bridged_test.go",
+        "longterm-mem/internal/promote/walk_failures_test.go",
+        "longterm-mem/internal/promote/writer.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/promote/clock_test.go:106-108",
+        "claim": "TestPropagate_NeedsNoClock is deleted with no visible replacement. It guarded that the propagation pass, now PropagateCards, never reads the Writer's clock; the Writer doc comments still promise this. A later change that makes PropagateCards read the clock would no longer fail any test in this diff.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/clock_test.go:106-108"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/promote/propagate_ids_pages_test.go:25-27",
+        "claim": "The \"Engram dialect's walk\" entries in the propagation tests now call PropagateCards, the same function as the memorycard entry. The two table rows are duplicates, so they no longer cover a distinct walk, while their names still claim a separate Engram dialect.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/propagate_ids_pages_test.go:25-27",
+          "longterm-mem/internal/promote/propagate_ids_test.go:25-30"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/pages_port_test.go:151-152",
+        "claim": "The new PlanCards test checks errNoPageRepository, but its failure message says \"want errNoPageReader\". The assertion and its message disagree.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/pages_port_test.go:151-152"
+        ]
+      },
+      {
+        "id": "F4",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/project_sync_test.go:1-3",
+        "claim": "project_sync_test.go is reduced to a package clause and an empty `import ()`. Its tests for the SyncProject failure classification (IndexRebuildFailed, MemoryUnavailable, OtherFailure) and for both passes running after a failure are deleted. The Failure type stays in project_sync.go, and this diff shows no test for its remaining producer, SyncCardsProject. The empty file should be removed.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/project_sync_test.go:1-3",
+          "longterm-mem/internal/promote/project_sync.go:1-19"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff removes Sync, Plan, SyncProject, Propagate, ExplicitPromote, PromoteAndReindex and Prober, and rewrites their callers to the Cards variants.",
+      "Several tests that pinned behaviour shared by the two passes were deleted: the local-edit hash precedence of a patch (R-030), a supersession patched without a successor page, and the rebuild failure as a distinct type. The diff shows no twin for them, but twins may exist outside the diff."
+    ]
+  }
+}
