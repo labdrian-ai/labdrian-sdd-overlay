@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "6a5a55f21841b90b9f7afda4a3a794afb50982c5",
+    "head": "a2caff4dbc514b22b173ac708ba66c28249cd348",
+    "diff_sha256": "06848840f13ea5af90f6e44ec0591f56642e8f36b5b8c31fe01ca22f2eb90cb5",
+    "paths": [
+      "odd/review-results/phase9-store-agnostic-promotion/0bc8d01750e4-1.sweep.json",
+      "odd/review-results/phase9-store-agnostic-promotion/0bc8d01750e4-2.json",
+      "odd/review-results/phase9-store-agnostic-promotion/0bc8d01750e4-3.json",
+      "odd/review-results/phase9-store-agnostic-promotion/17fb3f8792f0-1.sweep.json",
+      "odd/review-results/phase9-store-agnostic-promotion/17fb3f8792f0-2.json",
+      "odd/review-results/phase9-store-agnostic-promotion/17fb3f8792f0-3.json",
+      "odd/review-results/phase9-store-agnostic-promotion/6a5a55f21841-1.sweep.json",
+      "odd/review-results/phase9-store-agnostic-promotion/6a5a55f21841-2.json",
+      "odd/review-results/phase9-store-agnostic-promotion/6a5a55f21841-3.json",
+      "odd/review-results/phase9-store-agnostic-promotion/a6c9081b4eb6-1.sweep.json",
+      "odd/review-results/phase9-store-agnostic-promotion/a6c9081b4eb6-2.json",
+      "odd/review-results/phase9-store-agnostic-promotion/a6c9081b4eb6-3.json",
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "6a5a55f21841b90b9f7afda4a3a794afb50982c5",
+      "head": "a2caff4dbc514b22b173ac708ba66c28249cd348",
+      "diff_sha256": "06848840f13ea5af90f6e44ec0591f56642e8f36b5b8c31fe01ca22f2eb90cb5"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/review-results/phase9-store-agnostic-promotion/0bc8d01750e4-1.sweep.json",
+        "odd/review-results/phase9-store-agnostic-promotion/0bc8d01750e4-2.json",
+        "odd/review-results/phase9-store-agnostic-promotion/0bc8d01750e4-3.json",
+        "odd/review-results/phase9-store-agnostic-promotion/17fb3f8792f0-1.sweep.json",
+        "odd/review-results/phase9-store-agnostic-promotion/17fb3f8792f0-2.json",
+        "odd/review-results/phase9-store-agnostic-promotion/17fb3f8792f0-3.json",
+        "odd/review-results/phase9-store-agnostic-promotion/6a5a55f21841-1.sweep.json",
+        "odd/review-results/phase9-store-agnostic-promotion/6a5a55f21841-2.json",
+        "odd/review-results/phase9-store-agnostic-promotion/6a5a55f21841-3.json",
+        "odd/review-results/phase9-store-agnostic-promotion/a6c9081b4eb6-1.sweep.json",
+        "odd/review-results/phase9-store-agnostic-promotion/a6c9081b4eb6-2.json",
+        "odd/review-results/phase9-store-agnostic-promotion/a6c9081b4eb6-3.json",
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The header scope line now says T4-T20 and S4-S16 move to the next phase, which resolves the earlier F2 finding about the header contradicting L42.",
+      "S9 (f) now cites L17 (a) as the answer to the L12 question and no longer says T9 is blocked. This agrees with the Specs preamble and the T9 line, which resolves the earlier F1 finding.",
+      "The L43 log entry accurately describes both fixes.",
+      "The review-result JSON files are archived records of earlier commits and change no behavior."
+    ]
+  }
+}
