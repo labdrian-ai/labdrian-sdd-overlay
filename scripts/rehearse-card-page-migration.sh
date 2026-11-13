@@ -86,13 +86,16 @@ copy_db() { # copy_db <live db> <copy>: a consistent copy of a sqlite database, 
 }
 legacy_pages() { # one line per legacy page of the vault at $1: `R` or `U`, a tab, and the page's project (empty when it names none)
   # The command reads the .md files directly in wiki/memory. A page is READABLE (`R`) when it starts at byte 0 with a
-  # line of --- ending in a line feed and has a closing such line: its frontmatter is those bytes. A page whose first
-  # line that is not blank, after a byte order mark, blank lines, spaces and carriage returns are taken off, is --- but
-  # is not readable is UNREADABLE (`U`): its frontmatter is the lines up to the next line of --- (or the rest of the page
-  # when there is none). Any other page has no frontmatter and is ignored, whatever its text quotes. A page is a legacy
-  # page when a line of its frontmatter starts, at column 0, with a legacy identity key and a colon. Its project is the
-  # last non-empty value of a `project:` line at column 0 (spaces before the colon allowed, only double quotes stripped,
-  # `[]` and an empty value skipped), as parseFrontmatterFields reads it.
+  # line of --- ending in a line feed, has a closing such line, and the first --- line feed anywhere after the opening is
+  # that closing one too (the shared reader splits a page there, and a frontmatter line that ends in --- would end the block
+  # earlier): its frontmatter is those bytes. A page whose first line that is not blank, after a byte order mark, blank
+  # lines, spaces, tabs and carriage returns are taken off, is --- but is not readable is UNREADABLE (`U`): its frontmatter
+  # is the lines up to the next line of --- (trailing spaces and tabs ignored on both), or the rest of the page when there is
+  # none. Any other page has no frontmatter and is ignored, whatever its text quotes. A page is a legacy page when a line of
+  # its frontmatter starts, at column 0, with a legacy identity key and a colon. Its project is read as
+  # parseFrontmatterFields reads it: a line not indented, trimmed of the Unicode white space strings.TrimSpace trims, whose
+  # key before the first colon, trimmed, is `project`; the value is trimmed, skipped when it is empty or `[]` (before any
+  # quote is taken off), then stripped of double quotes only; the last such line wins, even when its value is `""`.
   perl -e '
     opendir(my $dh, "$ARGV[0]/wiki/memory") or do { print STDERR "ABORT: cannot read $ARGV[0]/wiki/memory: $!\n"; exit 2; };
     my @files = sort grep { /\.md$/ && -f "$ARGV[0]/wiki/memory/$_" } readdir($dh);
@@ -102,28 +105,32 @@ legacy_pages() { # one line per legacy page of the vault at $1: `R` or `U`, a ta
       local $/; my $raw = <$h>; close($h);
       my ($text, $kind);
       my $close = substr($raw, 0, 4) eq "---\n" ? index(substr($raw, 3), "\n---\n") : -1;
-      if ($close >= 0) { ($text, $kind) = (substr($raw, 0, 3 + $close + 5), "R"); }
+      if ($close >= 0 && index($raw, "---\n", 4) == $close + 4) { ($text, $kind) = (substr($raw, 0, 3 + $close + 5), "R"); }
       else {
         my $t = $raw; $t =~ s/\A\xef\xbb\xbf//;
         my @l = split(/\n/, $t, -1); s/\r\z// for @l;
         shift @l while @l && $l[0] =~ /\A[ \t]*\z/;
-        next unless @l; (my $first = $l[0]) =~ s/\A[ \t]+//;
+        next unless @l; (my $first = $l[0]) =~ s/\A[ \t]+|[ \t]+\z//g;
         next unless $first eq "---";
         shift @l; my @inside;
-        for (@l) { last if $_ eq "---"; push @inside, $_; }
+        for (@l) { (my $c = $_) =~ s/[ \t]+\z//; last if $c eq "---"; push @inside, $_; }
         ($text, $kind) = (join("\n", @inside), "U");
       }
+      utf8::decode($text);
       my ($project, $legacy) = ("", 0);
       for my $line (split /\n/, $text) {
         $legacy = 1 if $line =~ /^(engram_id|engram_revision|engram_type|engram_sync_id|memorycard_id|memorycard_revision|memorycard_type):/;
-        if ($line =~ /^project[ \t]*:(.*)\z/) {
-          (my $v = $1) =~ s/\A\s+|\s+\z//g;
+        next if $line =~ /\A[ \t]/;
+        (my $t = $line) =~ s/\A\s+|\s+\z//gu;
+        if ($t =~ /\Aproject\s*:(.*)\z/su) {
+          (my $v = $1) =~ s/\A\s+|\s+\z//gu;
           next if $v eq "" || $v eq "[]";
           $v =~ s/\A"+|"+\z//g;
           $project = $v;
         }
       }
       next unless $legacy;
+      utf8::encode($project);
       print "$kind\t$project\n";
     }
   ' "$1"
@@ -140,7 +147,7 @@ legacy_counts() { # one line per project: the pages of the vault that still carr
     }
     printf("  %s: %d\n", $_, $n{$_}) for sort keys %n;
     printf("vault-wide: %d page(s) still carry a legacy identity key\n", $total || 0);
-    printf("(%d of them have frontmatter the command cannot read (CRLF line endings, no closing ---, or a BOM, blank line or spaces before the opening ---): it refuses them by name as unreadable frontmatter)\n", $bad) if $bad;
+    printf("(%d of them have frontmatter the command cannot read (CRLF line endings, no closing ---, a BOM, blank line or spaces before the opening ---, spaces after an opening or closing ---, or a line ending in --- inside the frontmatter): it refuses them by name as unreadable frontmatter)\n", $bad) if $bad;
   ' <<<"$pages"
 }
 projects_of() { # the distinct `project:` values of the legacy pages of the vault at $1, one per line: a project with no legacy page is not listed
