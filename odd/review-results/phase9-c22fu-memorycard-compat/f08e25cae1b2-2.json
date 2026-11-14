@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "37b0ec5c61bfde10031b49d1a22fc1352751ceb0",
+    "head": "f08e25cae1b2c9c8066b85f25e432a98ff676d20",
+    "diff_sha256": "85a8736632b2d7808afc6dd00a63d3228f13da6b98c9af22cdf8ff566d75ef78",
+    "paths": [
+      "odd/tasks/phase9-c22fu-memorycard-compat.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "37b0ec5c61bfde10031b49d1a22fc1352751ceb0",
+      "head": "f08e25cae1b2c9c8066b85f25e432a98ff676d20",
+      "diff_sha256": "85a8736632b2d7808afc6dd00a63d3228f13da6b98c9af22cdf8ff566d75ef78"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-c22fu-memorycard-compat.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The change only appends a Log entry (L27) to odd/tasks/phase9-c22fu-memorycard-compat.md; no code, contract or spec text is modified, so no behavior can regress.",
+      "The entry is self-consistent: it cites hashes already named elsewhere in the log, records answers to prior review findings, and explicitly states T6 stays unticked and the branch must not merge before the owner approval commit, which matches the L26 claim.",
+      "No earlier log entry is edited, as the entry itself claims; the diff is purely additive (9 added lines)."
+    ]
+  }
+}

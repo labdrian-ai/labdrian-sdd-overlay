@@ -106,7 +106,8 @@ func sanitizeField(s string) string {
 }
 
 // Render writes h as the contract's verbatim provenance-block markdown,
-// the last element of a record's content.
+// the last element of a chunk or standalone record's content (a manifest's
+// content starts with it).
 func (h Header) Render() string {
 	var b strings.Builder
 	b.WriteString("---\n")

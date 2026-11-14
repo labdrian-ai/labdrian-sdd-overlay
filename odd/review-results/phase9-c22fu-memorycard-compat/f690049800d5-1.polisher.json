@@ -1,0 +1,38 @@
+{
+  "kind": "polisher",
+  "base": "8f12af1e6d2e15c85bb73d294ea7165ee0cfb3b1",
+  "head": "f690049800d54100e1f4fb852867af3e9c349b0a",
+  "diff_sha256": "8d7d8aab42016ea3f8d96f9702c6ec200356f7c6bd184610590c52c7c5e96617",
+  "findings": {
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "skills/_shared/ingested-observation-contract.md:62",
+        "summary": "The line rewritten for advisory 6 is one unwrapped line of about 160 columns. The `-- ` rewrite is accurate, but the new text is long in the way advisory 5 complained about for line 106.",
+        "evidence": [
+          "Grep `^.{101,}$` on the contract matches line 62. Lines 33 and 62 are the only over-100-column prose lines. The rest are table rows.",
+          "Advisory 5 targeted old line 106, which is now wrapped. So advisory 5 itself is resolved.",
+          "Nothing asks for line 62 to be wrapped, so this is cosmetic."
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "skills/_shared/ingested-observation-contract.md:62",
+        "summary": "The claim 'when it has entries' is accurate, but the contract does not say what the last element is for a manifest with an empty inventory. The wording is correct and no consumer would act wrongly.",
+        "evidence": [
+          "longterm-mem/internal/ingest/header.go:135-140 emits `**Chunk-Status**:` only when `len(h.ChunkStatus) > 0`. Otherwise `**Chunks-Saved**` is the last line.",
+          "The rewritten header.go comment (lines 108-110) and contract line 62 both match this behaviour."
+        ]
+      }
+    ],
+    "evidence": [
+      "The MCP promote tool accepts `memory_id`: longterm-mem/internal/mcpserver/server.go:163-168 defines `PromoteIn` with `MemoryID int64 json:\"memory_id\"` and `EngramID` as its former name; lines 172-184 `IDFromEitherName` accepts either name and refuses two different values; line 358 uses it. The SKILL.md L39-41 instruction is correct.",
+      "Advisories 1-8 were checked against the target files and each reads as resolved.",
+      "The new pin test (engine/skills/ingested_contract_artifact_test.go:56-62) reads the real contract through readRepoFile, normalizes whitespace and looks for the sentence; removing it makes the subtest fail. Not run.",
+      "Not run: go test for engine/skills or longterm-mem/internal/ingest, and skills validate (APPROVAL_STALE).",
+      "Not verified: the memorycard save.go claims at contract lines 162-165."
+    ]
+  }
+}

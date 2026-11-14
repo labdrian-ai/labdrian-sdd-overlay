@@ -1,0 +1,73 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f690049800d54100e1f4fb852867af3e9c349b0a",
+    "head": "848d52b647f8fd6ad0d680393798584b416384c1",
+    "diff_sha256": "8fe0d65b19c73e24f1ff88760ba8bd9d3fd1bbe56f257144f47d0b33ec092c7e",
+    "paths": [
+      "odd/tasks/phase9-c22fu-memorycard-compat.md",
+      "skills/_shared/ingested-observation-contract.md",
+      "skills/knowledge-ingestion/SKILL.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f690049800d54100e1f4fb852867af3e9c349b0a",
+      "head": "848d52b647f8fd6ad0d680393798584b416384c1",
+      "diff_sha256": "8fe0d65b19c73e24f1ff88760ba8bd9d3fd1bbe56f257144f47d0b33ec092c7e"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-c22fu-memorycard-compat.md",
+        "skills/_shared/ingested-observation-contract.md",
+        "skills/knowledge-ingestion/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "skills/_shared/ingested-observation-contract.md:150-170",
+        "claim": "The origin-changed row was reduced to a pointer and the operator steps moved into a new subsection. Step 2 (tombstone old chunk keys) depends on the old Source-Id, which the table row no longer mentions. The procedure is also ordered with `supersedes` first and the sync last. Nothing says that step 4 (propagation to the old page) happens only after the tombstone promotes. A reader of the table alone now sees 'retiring it is the operator procedure below' with no mention that old chunks must be retired as well. This is a recall risk for agents that read only the table. The section also cites a repo-internal Go source path (`longterm-mem/internal/promote/propagate_cards.go`) in a contract mirrored to every runtime, which is the same kind of external reference the commit removed for memorycard.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/_shared/ingested-observation-contract.md:150-170"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "skills/_shared/ingested-observation-contract.md:62-64",
+        "claim": "The manifest last-element rule now says the last element is the `**Chunk-Status**` inventory when it has entries, otherwise `**Chunks-Saved**`. The commit's own log states `Render` writes `**Chunks-Saved**` for every manifest and the inventory only conditionally, but the rule gives no ordering guarantee between them in the text, so a reader cannot tell where `**Chunks-Saved**` sits relative to the other fields when the inventory is empty. The sentence 'nothing precedes it' is also unchanged and can be read as contradicting the 'last element' wording for a single-field block.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/_shared/ingested-observation-contract.md:62-64"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "skills/knowledge-ingestion/SKILL.md:106-108",
+        "claim": "The hard no-op bullet now defers to 'the contract's chunk `**Status**` rule' for single-chunk records at the manifest key, instead of stating the `complete` live value inline. The skill reader must now chase a cross-reference to learn what value to expect, which weakens the skill's self-containedness for a rule that gates a no-op decision.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/knowledge-ingestion/SKILL.md:106-108"
+        ]
+      }
+    ],
+    "evidence": [
+      "Diff shows the origin-changed table row reduced to one sentence, with the old-chunk tombstone, supersedes and propagation steps moved into a numbered subsection (contract lines 150-170).",
+      "Diff shows the manifest last-element sentence rewrapped and extended with the 'otherwise Chunks-Saved' alternative (contract lines 62-64).",
+      "Diff shows the SKILL.md hard no-op bullet replacing an inline explanation with a reference to the contract's chunk Status rule."
+    ]
+  }
+}

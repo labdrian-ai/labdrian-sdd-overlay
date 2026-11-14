@@ -1,0 +1,83 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f690049800d54100e1f4fb852867af3e9c349b0a",
+    "head": "848d52b647f8fd6ad0d680393798584b416384c1",
+    "diff_sha256": "8fe0d65b19c73e24f1ff88760ba8bd9d3fd1bbe56f257144f47d0b33ec092c7e",
+    "paths": [
+      "odd/tasks/phase9-c22fu-memorycard-compat.md",
+      "skills/_shared/ingested-observation-contract.md",
+      "skills/knowledge-ingestion/SKILL.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f690049800d54100e1f4fb852867af3e9c349b0a",
+      "head": "848d52b647f8fd6ad0d680393798584b416384c1",
+      "diff_sha256": "8fe0d65b19c73e24f1ff88760ba8bd9d3fd1bbe56f257144f47d0b33ec092c7e"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-c22fu-memorycard-compat.md",
+        "skills/_shared/ingested-observation-contract.md",
+        "skills/knowledge-ingestion/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "skills/_shared/ingested-observation-contract.md:150-170",
+        "claim": "The origin-changed row now defers to a separate subsection, and the existing text that follows the table (\"The N-change rows ... apply on top of the differ row\") remains. Moving the origin-changed behavior (tombstoning old chunk keys) out of the table row weakens the row's own content; if the contract test pins the row's old text beyond its prefix, or agents/readers consult only the table, the tombstone requirement is easy to miss. The task text states the row prefix pin is retained, but the diff cannot prove nothing else pinned the removed sentences (e.g. 'Every chunk key of the old Source-Id'). Unverified from the diff.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "skills/_shared/ingested-observation-contract.md:150-170"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "skills/_shared/ingested-observation-contract.md:62-64",
+        "claim": "The manifest last-element rule now says the last element is the Chunk-Status inventory when it has entries, otherwise `**Chunks-Saved**`. This is asserted from header.go Render behavior in the Log, but that file is not in this diff; if a manifest stored as parts or a later field is rendered after Chunks-Saved, the contract statement is wrong. Not verifiable from the diff.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "skills/_shared/ingested-observation-contract.md:62-64"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "WARNING",
+        "location": "skills/_shared/ingested-observation-contract.md:168-170",
+        "claim": "Step 4 of the operator procedure cites an implementation path (`longterm-mem/internal/promote/propagate_cards.go`) inside a contract mirrored to every runtime; the contract's own stated rule (and L25 item 1) removes external file references from it. The path is brittle: a rename leaves the normative text stale, and agents installed elsewhere cannot resolve it.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/_shared/ingested-observation-contract.md:168-170"
+        ]
+      },
+      {
+        "id": "F4",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-c22fu-memorycard-compat.md:75",
+        "claim": "T6 is unticked while T6 content (text commit) has landed; CI will be red with APPROVAL_STALE until the owner approves, per the Log. The commit deliberately leaves skills validate failing on this branch; merging before the approval commit would break the registry lock check.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-c22fu-memorycard-compat.md:75"
+        ]
+      }
+    ],
+    "evidence": [
+      "Diff reviewed in full: three changed paths, all documentation/contract text.",
+      "SKILL.md hard no-op bullet rewording changes the stated reason but preserves the rule semantics.",
+      "Origin-changed procedure keeps all four prior steps (supersedes, tombstones, no manifest tombstone, next sync patch)."
+    ]
+  }
+}

@@ -7,7 +7,7 @@ documentation page, a specification, a pasted report, a local file — enters
 `longterm-mem`'s long-term memory. This is the first work unit of
 `longterm-mem-knowledge-ingestion`: it introduces no new Go code and no new
 storage surface. It pins down the one sanctioned intake path (agent
-fetch/read, then Engram `mem_save`, then `longterm-mem promote`), the field
+fetch/read, then memorycard `mem_save`, then `longterm-mem promote`), the field
 contract an ingested observation MUST carry, the requirement that promotion
 happens as part of ingestion rather than depending on a later automatic
 sync, and how re-ingesting the same source is recognisable rather than
@@ -30,7 +30,7 @@ Traces to: longterm-mem-knowledge-ingestion R-001
 
 The system SHALL provide a durable, agent-discoverable repository artifact
 that documents external-knowledge intake as exactly one procedure: agent
-fetch or read of the source, followed by an Engram `mem_save` call on the
+fetch or read of the source, followed by a memorycard `mem_save` call on the
 extracted content, followed by an explicit `longterm-mem promote` call (CLI
 or MCP tool) on the resulting observation. The artifact SHALL state that no
 other intake path exists for external knowledge. The artifact SHALL be
@@ -39,6 +39,9 @@ durable procedural artifacts (e.g. the skill lifecycle and
 `skills.registry.yaml`), so it survives a session boundary and is
 discoverable by a future agent turn without depending on that turn's own
 memory of this change.
+
+(Previously: the `mem_save` call was an Engram call. Engram is frozen
+read-only history; memorycard is the store that new ingestions are saved to.)
 
 #### Scenario: The procedure is discoverable in a fresh session
 
@@ -64,7 +67,7 @@ memory of this change.
 - GIVEN a piece of external content that an agent has fetched or read but
   for which no `mem_save` call was made
 - WHEN the state of long-term memory is inspected for that content
-- THEN no Engram observation exists for it
+- THEN no memorycard record exists for it
 - AND no vault page exists for it
 - AND that content is therefore not considered ingested by this capability,
   regardless of whether the agent's own conversational context contains it
@@ -83,8 +86,8 @@ and SHALL make recoverable from the stored observation:
 2. Its ingestion timestamp — when the ingestion `mem_save` call was made.
 3. A marker that distinguishes the observation as ingested external
    knowledge, as opposed to an ordinary session observation an agent wrote
-   about its own work. The concrete mechanism for this marker (an Engram
-   `type` value, a `topic_key` convention, a content-body convention, or a
+   about its own work. The concrete mechanism for this marker (a stored
+   record's `type` value, a `topic_key` convention, a content-body convention, or a
    combination) is a design decision (OQ-2); this requirement constrains
    only that the marker MUST exist and MUST be recoverable, not how it is
    implemented.
@@ -92,13 +95,17 @@ and SHALL make recoverable from the stored observation:
 #### Scenario: Origin, timestamp, and ingested marker are all recoverable
 
 - GIVEN an observation produced by the documented ingestion procedure
-- WHEN the observation is read back (via `mem_get_observation` or
+- WHEN the observation is read back (via `mem_get` or
   equivalent)
 - THEN its origin (source URL, local path, or explicit pasted-by-operator
   marker) is present and recoverable
 - AND its ingestion timestamp is present and recoverable
 - AND a marker distinguishing it from an ordinary session observation is
   present and recoverable
+
+(Previously: the marker mechanism named an Engram `type` value, and the
+read-back tool was Engram's `mem_get_observation`; the stored record is now
+a memorycard memory, read back with `mem_get`.)
 
 #### Scenario: An observation missing the origin field does not satisfy the contract
 
@@ -162,15 +169,19 @@ Traces to: longterm-mem-knowledge-ingestion R-004
 
 Ingesting the same source a second time SHALL be detectable from the stored
 observations, using a stable identity derived from the source's origin
-(R-002's origin field). The system SHALL rely on Engram's existing
-`topic_key` upsert behavior and the existing `(project, engram_id)` page
-dedup already used by promotion; this capability SHALL NOT introduce a new
+(R-002's origin field). The system SHALL rely on memorycard's existing
+`topic_key` upsert behavior and the existing page-identity dedup by project
+and `source`/`source_id` already used by promotion; this capability SHALL NOT introduce a new
 dedup store, index, or identity scheme. The exact resolved behavior on
 re-ingestion of changed content — update-in-place versus write-new-and
 -supersede — is a design decision (OQ-5); this requirement constrains only
 that the second ingestion is recognisable and reconciled through existing
-Engram/vault mechanisms, never silently duplicated as an unrelated second
+memorycard/vault mechanisms, never silently duplicated as an unrelated second
 memory.
+
+(Previously: the mechanisms were Engram's `topic_key` upsert and the
+`(project, engram_id)` page dedup; a promoted page now names its memory by
+`source` and `source_id`.)
 
 #### Scenario: Re-ingesting an unchanged source does not create an unrelated second memory
 
@@ -196,7 +207,8 @@ memory.
 
 - GIVEN the re-ingestion identity mechanism as implemented
 - WHEN its storage is inspected
-- THEN the only identity/dedup mechanisms in use are Engram's `topic_key`
-  upsert and the existing `(project, engram_id)` vault-page dedup
+- THEN the only identity/dedup mechanisms in use are memorycard's `topic_key`
+  upsert and the existing page-identity dedup by project and
+  `source`/`source_id`
 - AND no new SQLite database, file-based index, or other store outside
   those two existing mechanisms has been introduced

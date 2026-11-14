@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f08e25cae1b2c9c8066b85f25e432a98ff676d20",
+    "head": "2696375a88342ed8635dcb5bf7f00cbb500f68cd",
+    "diff_sha256": "1d6ade8d9f04c79de0326ad7078a295a8054d5c320bc16c28eb7e4bf88e36b59",
+    "paths": [
+      "odd/review-results/phase9-c22fu-memorycard-compat/37b0ec5c61bf-1.sweep.json",
+      "odd/review-results/phase9-c22fu-memorycard-compat/37b0ec5c61bf-2.json",
+      "odd/review-results/phase9-c22fu-memorycard-compat/37b0ec5c61bf-3.json",
+      "odd/review-results/phase9-c22fu-memorycard-compat/37b0ec5c61bf-4.polisher.json",
+      "odd/review-results/phase9-c22fu-memorycard-compat/f08e25cae1b2-1.sweep.json",
+      "odd/review-results/phase9-c22fu-memorycard-compat/f08e25cae1b2-2.json",
+      "odd/review-results/phase9-c22fu-memorycard-compat/f08e25cae1b2-3.json",
+      "odd/tasks/phase9-c22fu-memorycard-compat.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f08e25cae1b2c9c8066b85f25e432a98ff676d20",
+      "head": "2696375a88342ed8635dcb5bf7f00cbb500f68cd",
+      "diff_sha256": "1d6ade8d9f04c79de0326ad7078a295a8054d5c320bc16c28eb7e4bf88e36b59"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/review-results/phase9-c22fu-memorycard-compat/37b0ec5c61bf-1.sweep.json",
+        "odd/review-results/phase9-c22fu-memorycard-compat/37b0ec5c61bf-2.json",
+        "odd/review-results/phase9-c22fu-memorycard-compat/37b0ec5c61bf-3.json",
+        "odd/review-results/phase9-c22fu-memorycard-compat/37b0ec5c61bf-4.polisher.json",
+        "odd/review-results/phase9-c22fu-memorycard-compat/f08e25cae1b2-1.sweep.json",
+        "odd/review-results/phase9-c22fu-memorycard-compat/f08e25cae1b2-2.json",
+        "odd/review-results/phase9-c22fu-memorycard-compat/f08e25cae1b2-3.json",
+        "odd/tasks/phase9-c22fu-memorycard-compat.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The change adds review result records (JSON) and appends a Log entry L28 to the feature document; no code, contract, or spec text is modified, so no behavior can regress.",
+      "The L28 answers are consistent with the recorded reviews: 37b0ec5c-3 F1 is answered by the polisher's reading that step 3 covers N == 1 with no chunk keys, and the f08e25ca-3 F1/F2 answers match the stored findings.",
+      "The added JSON records are bound to their own base/head/diff_sha256 values and are internally consistent (candidate echo matches binding). The review-results files are historical records for earlier commits, not for this head, which is expected for a record-keeping commit."
+    ]
+  }
+}

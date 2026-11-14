@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "848d52b647f8fd6ad0d680393798584b416384c1",
+    "head": "8518a6d9c43ea5f32ae62d91eba6e6e24bee573a",
+    "diff_sha256": "c8abadc2a0be5e03a2ad420f3a8673b3d88b323232f97f1f94bb3b0cb79e6ad5",
+    "paths": [
+      "skills/_shared/ingested-observation-contract.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "848d52b647f8fd6ad0d680393798584b416384c1",
+      "head": "8518a6d9c43ea5f32ae62d91eba6e6e24bee573a",
+      "diff_sha256": "c8abadc2a0be5e03a2ad420f3a8673b3d88b323232f97f1f94bb3b0cb79e6ad5"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "skills/_shared/ingested-observation-contract.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "skills/_shared/ingested-observation-contract.md:63-66",
+        "claim": "The new text says the provenance block 'ends with' Status, Chunks-Expected, Chunks-Saved, then Chunk-Status. This fixes a field order in prose that the diff cannot show matches the manifest template or the code that writes it. If the real template has other fields after Chunks-Saved, or a different order, the contract would now state a wrong invariant. The diff does not include the template, so the match is unverified.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "skills/_shared/ingested-observation-contract.md:63-66"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "skills/_shared/ingested-observation-contract.md:170-172",
+        "claim": "Step 4 no longer names the code that does the propagation (propagate_cards.go). An operator or reviewer can no longer trace the 'next sync patches the old page' claim to its implementation. The step does now state its precondition, that tombstones are promoted first, which is an improvement. The loss of the pointer is a small traceability regression.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/_shared/ingested-observation-contract.md:170-172"
+        ]
+      }
+    ],
+    "evidence": [
+      "The only changed path is a documentation file, so there is no executable behavior to regress.",
+      "The table row at line 155 now summarizes the procedure (supersede the old manifest, tombstone every chunk key, then sync). This is consistent with steps 1-4 as far as the diff shows, so the visible-from-table claim holds.",
+      "Nothing in the diff contradicts the new field-order statement. It also cannot be checked against the manifest template here."
+    ]
+  }
+}

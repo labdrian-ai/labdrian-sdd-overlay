@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "1d99ea35c923b5722271f3de4c88a3234ae85a58",
+    "head": "50b4fd1a07e5b548f58ce5c96940d3b83ac9496f",
+    "diff_sha256": "704eb4ef305e7b52bb9ed4f011cc04c5203d8e906c770c36767a7b7c74203faf",
+    "paths": [
+      "odd/tasks/phase9-c22fu-memorycard-compat.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "1d99ea35c923b5722271f3de4c88a3234ae85a58",
+      "head": "50b4fd1a07e5b548f58ce5c96940d3b83ac9496f",
+      "diff_sha256": "704eb4ef305e7b52bb9ed4f011cc04c5203d8e906c770c36767a7b7c74203faf"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-c22fu-memorycard-compat.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "odd/tasks/phase9-c22fu-memorycard-compat.md:75",
+        "claim": "T4 is changed to a checked box [x], but the task's own text says 'the box stays for the coordinator or delivery to close', and the L21 log says 'T4 marked closed as replaced (box left open: the shaper never checks a box)'. The change contradicts itself. The box state tells the coordinator and delivery that T4 is done, while the text says it was left open for them. A tracker that reads the checkboxes could treat T4 as complete and skip the closing step.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-c22fu-memorycard-compat.md:75 (- [x] T4 ... the box stays for the coordinator or delivery to close (L21))",
+          "odd/tasks/phase9-c22fu-memorycard-compat.md:239 (L21 What changed: box left open: the shaper never checks a box)"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only one path changed, a task markdown document. In the diff, the T4 line goes from '- [ ] T4' to '- [x] T4'.",
+      "The L21 log entry added in the same commit states that the T4 box was left open, which contradicts the [x] in the diff."
+    ]
+  }
+}

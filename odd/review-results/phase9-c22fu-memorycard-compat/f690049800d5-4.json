@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "8f12af1e6d2e15c85bb73d294ea7165ee0cfb3b1",
+    "head": "f690049800d54100e1f4fb852867af3e9c349b0a",
+    "diff_sha256": "8d7d8aab42016ea3f8d96f9702c6ec200356f7c6bd184610590c52c7c5e96617",
+    "paths": [
+      "engine/skills/ingested_contract_artifact_test.go",
+      "longterm-mem/internal/ingest/header.go",
+      "odd/tasks/phase9-c22fu-memorycard-compat.md",
+      "skills/_shared/ingested-observation-contract.md",
+      "skills/knowledge-ingestion/SKILL.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "8f12af1e6d2e15c85bb73d294ea7165ee0cfb3b1",
+      "head": "f690049800d54100e1f4fb852867af3e9c349b0a",
+      "diff_sha256": "8d7d8aab42016ea3f8d96f9702c6ec200356f7c6bd184610590c52c7c5e96617"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skills/ingested_contract_artifact_test.go",
+        "longterm-mem/internal/ingest/header.go",
+        "odd/tasks/phase9-c22fu-memorycard-compat.md",
+        "skills/_shared/ingested-observation-contract.md",
+        "skills/knowledge-ingestion/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "skills/knowledge-ingestion/SKILL.md:40",
+        "claim": "The commit edits SKILL.md without regenerating .approval.json. By the log's own account, skills validate then reports APPROVAL_STALE for knowledge-ingestion and TestRegistryLockE2E_ValidateLeavesTheRealTreeUntouched fails. The commit therefore leaves the engine/skills tests and the CI skills validate red until the owner's separate approval commit lands. It is documented and expected, but if this commit is merged or delivered on its own, CI is broken.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/knowledge-ingestion/SKILL.md:40",
+          "odd/tasks/phase9-c22fu-memorycard-compat.md:263"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "skills/knowledge-ingestion/SKILL.md:106-107",
+        "claim": "The hard no-op bullet now asserts that a single-chunk record at the manifest key carries a Status field whose live value is complete. The diff does not show that the contract or the renderer guarantees this. The wording change also replaces a previously explicit clause. If a single-chunk record has no Status field, an agent following this text would never match the no-op branch and would re-save the record.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "skills/knowledge-ingestion/SKILL.md:106-107"
+        ]
+      }
+    ],
+    "evidence": [
+      "Rule 6's sentence is pinned by the new test, which cites the contract text; the diff does not show that sentence, but the log says it already exists in the base contract.",
+      "Line wraps and the Render comment are doc-only changes with no behavioral effect.",
+      "The memory_id switch relies on the promote spec on main accepting memory_id; the diff cannot confirm this."
+    ]
+  }
+}

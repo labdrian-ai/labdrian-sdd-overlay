@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "e1b44b84398d15ce74c7bb68da57cf127f77ff8c",
+    "head": "37b0ec5c61bfde10031b49d1a22fc1352751ceb0",
+    "diff_sha256": "1c3043bd0eb4ba7316239bec7586124474ac7f468106a604a9ed6c253e115e2d",
+    "paths": [
+      "skills/_shared/ingested-observation-contract.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "e1b44b84398d15ce74c7bb68da57cf127f77ff8c",
+      "head": "37b0ec5c61bfde10031b49d1a22fc1352751ceb0",
+      "diff_sha256": "1c3043bd0eb4ba7316239bec7586124474ac7f468106a604a9ed6c253e115e2d"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "skills/_shared/ingested-observation-contract.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "skills/_shared/ingested-observation-contract.md:155",
+        "claim": "The table row now says to tombstone chunk keys 'if it has any', but the diff does not show whether the 'Origin-changed procedure (operator steps)' section below still lists chunk-key tombstoning as an unconditional step. If it does, the table and the procedure would disagree. This cannot be confirmed from the diff, which shows only one line changed.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "skills/_shared/ingested-observation-contract.md:155"
+        ]
+      }
+    ],
+    "evidence": [
+      "The change is a single-line docs edit that adds a condition to the origin-changed table row.",
+      "The wording is consistent with the rule 2 row above it: a single-chunk source has no separate chunk keys, so the conditional is accurate.",
+      "The procedure section under the table is outside the diff, so I could not check it for consistency."
+    ]
+  }
+}

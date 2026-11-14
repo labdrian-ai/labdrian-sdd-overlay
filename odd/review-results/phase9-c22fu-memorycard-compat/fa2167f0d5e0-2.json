@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "8be7fe2a887a723930eea0d32a78a9b5a643ef54",
+    "head": "fa2167f0d5e01cda477103cb785e3e061fc5ab81",
+    "diff_sha256": "5b66739f5d66bec5bf05b5f48e13529c7d65f45d1271c15aa38a9957d307fec9",
+    "paths": [
+      "skills/knowledge-ingestion/.approval.json"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "8be7fe2a887a723930eea0d32a78a9b5a643ef54",
+      "head": "fa2167f0d5e01cda477103cb785e3e061fc5ab81",
+      "diff_sha256": "5b66739f5d66bec5bf05b5f48e13529c7d65f45d1271c15aa38a9957d307fec9"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "skills/knowledge-ingestion/.approval.json"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff only updates the sha256 and approved_at fields in skills/knowledge-ingestion/.approval.json; the JSON structure (version, skill, approver) is unchanged and valid.",
+      "The approval hash cannot be verified against the skill content from the diff alone, since the skill file itself is not part of this change; no defect is demonstrable."
+    ]
+  }
+}

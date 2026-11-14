@@ -1,0 +1,51 @@
+{
+  "kind": "polisher",
+  "base": "08c63163e4d4410090178baab718bd49a898d760",
+  "head": "8f12af1e6d2e15c85bb73d294ea7165ee0cfb3b1",
+  "diff_sha256": "8a70bb271ad4ab0621f5e103fc1d590140b8c0a41f1a46aa1bfd0eac3346a53f",
+  "findings": {
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "openspec/specs/knowledge-ingestion/spec.md:43,106,182",
+        "summary": "The three '(Previously: ...)' notes keep the words 'Engram', 'mem_get_observation' and '(project, engram_id)' in the spec. An acceptance search for leftover Engram wording will match them.",
+        "evidence": [
+          "Grep for 'engram' in spec.md hits lines 43, 106-107 and 182-183, all inside the Previously notes.",
+          "The notes are accurate history and make no false claim. If the T5 acceptance grep is 'engram' with no exclusions, it fails on them. If it excludes 'Previously' lines, there is no issue."
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "skills/_shared/ingested-observation-contract.md:158-166",
+        "summary": "The paragraph cites memorycard source lines (save.go:287-291, :377-389, :281-286) that this repo does not contain, so a reader cannot check them here. The claims may also drift as memorycard changes.",
+        "evidence": [
+          "Glob '**/save.go' in the review worktree returns no files, and memorycard/internal/memory/save.go does not exist there.",
+          "The cited behavior (an unchanged re-save answers 'unchanged'; a save restores an archived memory) is therefore unverified against code, and I did not run memorycard.",
+          "The reasoning holds either way, because a hard no-op is the safer rule. The line citations are the fragile part."
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "skills/_shared/ingested-observation-contract.md:33,113-116",
+        "summary": "Two statements about memorycard's own behavior could not be checked in this tree: that mem_save takes only supersedes/cwd/directory beyond the table, and that bodies over 64 KB are split into parts with only part 1 keeping the topic key.",
+        "evidence": [
+          "The 64 KB split matches the global instructions ('bodies over 64 KB are split into parts automatically').",
+          "The part-1-only-topic-key detail and the exact mem_save argument list are not in this worktree and were not verified.",
+          "skills/knowledge-ingestion/SKILL.md:40 still names the promote MCP field 'engram_id'. That matches the global note that the MCP field keeps that name for memorycard ids, so it is correct and not stale."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read skills/_shared/ingested-observation-contract.md in full, openspec/specs/knowledge-ingestion/spec.md in full, and longterm-mem/internal/promote/page_identity.go in full.",
+      "Read longterm-mem/cmd/longterm-mem/sources.go lines 1-68 and a grep of cmd_sync.go. memorycard is the only registered source and the --source default is memorycard. Any other name, including engram, is refused by sourceRefusal. The contract and spec statements that plain sync reads memorycard are consistent with this.",
+      "page_identity.go reads the page keys source, source_id, source_revision and source_type, with legacy per-store fallbacks.",
+      "Grep of skills/knowledge-ingestion for 'engram' finds only SKILL.md:40, the promote MCP engram_id field.",
+      "Not read: page_scan.go, the git diff of the commit, and every runtime mirror of the contract.",
+      "Not run: no tests, no sync, no memorycard commands.",
+      "No BLOCKER found."
+    ]
+  }
+}

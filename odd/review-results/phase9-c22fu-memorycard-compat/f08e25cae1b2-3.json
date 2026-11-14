@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "37b0ec5c61bfde10031b49d1a22fc1352751ceb0",
+    "head": "f08e25cae1b2c9c8066b85f25e432a98ff676d20",
+    "diff_sha256": "85a8736632b2d7808afc6dd00a63d3228f13da6b98c9af22cdf8ff566d75ef78",
+    "paths": [
+      "odd/tasks/phase9-c22fu-memorycard-compat.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "37b0ec5c61bfde10031b49d1a22fc1352751ceb0",
+      "head": "f08e25cae1b2c9c8066b85f25e432a98ff676d20",
+      "diff_sha256": "85a8736632b2d7808afc6dd00a63d3228f13da6b98c9af22cdf8ff566d75ef78"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-c22fu-memorycard-compat.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-c22fu-memorycard-compat.md:297",
+        "claim": "The log entry cites line numbers (:83, :95, :86-88, :62-66) of the contract without naming the file or commit, so the references are unverifiable from this document and can drift after the next contract edit.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-c22fu-memorycard-compat.md:297"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-c22fu-memorycard-compat.md:298",
+        "claim": "The entry for 83eda766-2 F1 says only 'L26 is 83eda766' with no verdict keyword (fixed/answered), unlike the other answers, which makes the answer list inconsistent to scan.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-c22fu-memorycard-compat.md:298"
+        ]
+      }
+    ],
+    "evidence": [
+      "Single docs-only change appending log entry L27; no code behavior affected.",
+      "Entry claims about the polisher review and fixes cannot be verified from the diff alone."
+    ]
+  }
+}

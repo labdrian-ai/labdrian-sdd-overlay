@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "8518a6d9c43ea5f32ae62d91eba6e6e24bee573a",
+    "head": "83eda766fee63937e4695492156b6014462cb014",
+    "diff_sha256": "a7b07456bac66915cdfd17535fb81d94ad3aabf80beb799574ab1c0c8954ade2",
+    "paths": [
+      "odd/tasks/phase9-c22fu-memorycard-compat.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "8518a6d9c43ea5f32ae62d91eba6e6e24bee573a",
+      "head": "83eda766fee63937e4695492156b6014462cb014",
+      "diff_sha256": "a7b07456bac66915cdfd17535fb81d94ad3aabf80beb799574ab1c0c8954ade2"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-c22fu-memorycard-compat.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The change only appends a log entry (L26) to a task markdown document; no code, contract, or test is modified.",
+      "The entry's claims (fixes at 8518a6d9, answered findings, expected APPROVAL_STALE test failure) are internally consistent with earlier log entries and cannot cause a runtime regression."
+    ]
+  }
+}
