@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f08e25cae1b2c9c8066b85f25e432a98ff676d20",
+    "head": "2696375a88342ed8635dcb5bf7f00cbb500f68cd",
+    "diff_sha256": "1d6ade8d9f04c79de0326ad7078a295a8054d5c320bc16c28eb7e4bf88e36b59",
+    "paths": [
+      "odd/review-results/phase9-c22fu-memorycard-compat/37b0ec5c61bf-1.sweep.json",
+      "odd/review-results/phase9-c22fu-memorycard-compat/37b0ec5c61bf-2.json",
+      "odd/review-results/phase9-c22fu-memorycard-compat/37b0ec5c61bf-3.json",
+      "odd/review-results/phase9-c22fu-memorycard-compat/37b0ec5c61bf-4.polisher.json",
+      "odd/review-results/phase9-c22fu-memorycard-compat/f08e25cae1b2-1.sweep.json",
+      "odd/review-results/phase9-c22fu-memorycard-compat/f08e25cae1b2-2.json",
+      "odd/review-results/phase9-c22fu-memorycard-compat/f08e25cae1b2-3.json",
+      "odd/tasks/phase9-c22fu-memorycard-compat.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f08e25cae1b2c9c8066b85f25e432a98ff676d20",
+      "head": "2696375a88342ed8635dcb5bf7f00cbb500f68cd",
+      "diff_sha256": "1d6ade8d9f04c79de0326ad7078a295a8054d5c320bc16c28eb7e4bf88e36b59"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/review-results/phase9-c22fu-memorycard-compat/37b0ec5c61bf-1.sweep.json",
+        "odd/review-results/phase9-c22fu-memorycard-compat/37b0ec5c61bf-2.json",
+        "odd/review-results/phase9-c22fu-memorycard-compat/37b0ec5c61bf-3.json",
+        "odd/review-results/phase9-c22fu-memorycard-compat/37b0ec5c61bf-4.polisher.json",
+        "odd/review-results/phase9-c22fu-memorycard-compat/f08e25cae1b2-1.sweep.json",
+        "odd/review-results/phase9-c22fu-memorycard-compat/f08e25cae1b2-2.json",
+        "odd/review-results/phase9-c22fu-memorycard-compat/f08e25cae1b2-3.json",
+        "odd/tasks/phase9-c22fu-memorycard-compat.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-c22fu-memorycard-compat.md:304",
+        "claim": "L28 says the first recall/readability run was refused (unparseable reply) and a rerun was stored, but only the rerun file exists. The refused run leaves no record, so the claim cannot be checked from the repo. Also, the entry says 'the docs(odd) commit that follows f08e25ca' without naming its own hash, repeating the self-reference gap that L27 was criticised for in 83eda766-2 F1.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-c22fu-memorycard-compat.md:304",
+          "odd/tasks/phase9-c22fu-memorycard-compat.md:300"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff adds review-result JSON records and one Log entry (L28); no code or contract behavior changes.",
+      "The L28 answers match the stored review findings: 37b0ec5c61bf-3 F1 is answered by the polisher record, and f08e25cae1b2-3 F1 and F2 are answered as stated.",
+      "The stored review files are internally consistent: base, head and diff_sha256 are the same across each group."
+    ]
+  }
+}

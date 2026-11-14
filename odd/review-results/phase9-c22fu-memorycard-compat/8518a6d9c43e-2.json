@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "848d52b647f8fd6ad0d680393798584b416384c1",
+    "head": "8518a6d9c43ea5f32ae62d91eba6e6e24bee573a",
+    "diff_sha256": "c8abadc2a0be5e03a2ad420f3a8673b3d88b323232f97f1f94bb3b0cb79e6ad5",
+    "paths": [
+      "skills/_shared/ingested-observation-contract.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "848d52b647f8fd6ad0d680393798584b416384c1",
+      "head": "8518a6d9c43ea5f32ae62d91eba6e6e24bee573a",
+      "diff_sha256": "c8abadc2a0be5e03a2ad420f3a8673b3d88b323232f97f1f94bb3b0cb79e6ad5"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "skills/_shared/ingested-observation-contract.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "skills/_shared/ingested-observation-contract.md:155",
+        "claim": "The origin-changed table row now restates the operator procedure in a parenthetical (supersede old manifest, tombstone every chunk key, next sync patches the page). This duplicates the procedure steps below, so the two can drift apart if either is edited. It also says 'tombstone every chunk key of the old Source-Id', which does not mention the N==1 case where no chunk keys exist (step 3 covers it).",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/_shared/ingested-observation-contract.md:155"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "skills/_shared/ingested-observation-contract.md:170-172",
+        "claim": "The change drops the pointer to the propagation implementation (longterm-mem/internal/promote/propagate_cards.go) from step 4. A reader can no longer trace which code performs the vault-page patching. The dropped reference was a recall aid and nothing in the diff relocates it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/_shared/ingested-observation-contract.md:170-172"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "skills/_shared/ingested-observation-contract.md:63-66",
+        "claim": "The new field order lists Status, Chunks-Expected, Chunks-Saved, Chunk-Status as the end of the block, but the diff does not show where the earlier provenance fields sit, so 'ends with these fields, in this order' cannot be checked against the manifest template. If the template places any of them differently, the prose and example disagree.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "skills/_shared/ingested-observation-contract.md:63-66"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only one documentation file changed; no code behavior is affected.",
+      "The table-row and step-4 edits are the only places that restate or drop content; the field-order sentence adds a precise ordering that is consistent with the preserved last-element rule."
+    ]
+  }
+}

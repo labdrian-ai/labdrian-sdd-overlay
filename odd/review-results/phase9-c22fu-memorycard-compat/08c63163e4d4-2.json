@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "50b4fd1a07e5b548f58ce5c96940d3b83ac9496f",
+    "head": "08c63163e4d4410090178baab718bd49a898d760",
+    "diff_sha256": "1f646554434438d636896e394bdcc615358b86c1701e11ed19e7f20ab5d28912",
+    "paths": [
+      "odd/tasks/phase9-c22fu-memorycard-compat.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "50b4fd1a07e5b548f58ce5c96940d3b83ac9496f",
+      "head": "08c63163e4d4410090178baab718bd49a898d760",
+      "diff_sha256": "1f646554434438d636896e394bdcc615358b86c1701e11ed19e7f20ab5d28912"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-c22fu-memorycard-compat.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "odd/tasks/phase9-c22fu-memorycard-compat.md:77",
+        "claim": "T6 now includes the memory_id switch in SKILL.md:39-41, but its checks, RED and acceptance were not updated. The only checks are the rule 6 pin, `go test ./internal/ingest/...` and `rg 'sync --source'`. None of them would detect the engram_id to memory_id edit being skipped or done wrong (for example an `rg -n 'engram_id' skills/knowledge-ingestion/SKILL.md` check). The builder can finish T6 without the added requirement being verified. The task's own Risk item 6 says no test reads the skill's prose.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-c22fu-memorycard-compat.md:77"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-c22fu-memorycard-compat.md:256",
+        "claim": "L22 states that the MCP tool keeps accepting `engram_id` as an alias. It cites no source for this. The spec lines cited in the T6 text (`spec.md:1099-1110`) are only said to show that `memory_id` is accepted. The claim is therefore unverified, yet it is stated as fact and is the safety argument for changing the skill. L21's Unverified list was not extended to cover it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-c22fu-memorycard-compat.md:256"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-c22fu-memorycard-compat.md:253",
+        "claim": "L21's \"Open, for the owner\" bullet still says \"Not added\" and \"No C22-FU spec asks for it\". L22 now reverses this, but the earlier bullet is not annotated. A reader of L21 alone sees a contradiction with the T6 line. Also, T6's `shaped: L21 — commit: -` is followed by \"— added by L22\", which makes the `commit:` field ambiguous.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-c22fu-memorycard-compat.md:253",
+          "odd/tasks/phase9-c22fu-memorycard-compat.md:77"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only one file changed: the T6 task line gains an \"added by L22\" suffix, and log entry L22 is appended.",
+      "The T6 checks list (rule 6 pin, `go test ./internal/ingest/...`, `rg 'sync --source'`) is unchanged and contains nothing for memory_id.",
+      "L21 line 253 still says the memory_id switch is \"Not added\"."
+    ]
+  }
+}

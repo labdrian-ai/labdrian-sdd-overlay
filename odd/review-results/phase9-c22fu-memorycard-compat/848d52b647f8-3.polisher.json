@@ -1,0 +1,16 @@
+{
+  "kind": "polisher",
+  "base": "f690049800d54100e1f4fb852867af3e9c349b0a",
+  "head": "848d52b647f8fd6ad0d680393798584b416384c1",
+  "diff_sha256": "8fe0d65b19c73e24f1ff88760ba8bd9d3fd1bbe56f257144f47d0b33ec092c7e",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the whole contract and engine/skills/ingested_contract_artifact_test.go; every pinned sentence and prefix is present verbatim (rule 6 after whitespace flattening).",
+      "header.go Render (:111-143) agrees with contract :62-64: Chunk-Status last when non-empty, otherwise Chunks-Saved.",
+      "extract.go buildSource (:345-384): a single chunk is one standalone record at the manifest key with Status complete, matching SKILL.md :106-108.",
+      "propagate_cards.go PropagateCards patches status and related of a page whose memory is superseded or archived, supporting origin-changed step 4.",
+      "Not read: the feature document; the mem_save argument claim at contract :33 could not be checked against memorycard source. Nothing was executed."
+    ]
+  }
+}

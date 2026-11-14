@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "8518a6d9c43ea5f32ae62d91eba6e6e24bee573a",
+    "head": "83eda766fee63937e4695492156b6014462cb014",
+    "diff_sha256": "a7b07456bac66915cdfd17535fb81d94ad3aabf80beb799574ab1c0c8954ade2",
+    "paths": [
+      "odd/tasks/phase9-c22fu-memorycard-compat.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "8518a6d9c43ea5f32ae62d91eba6e6e24bee573a",
+      "head": "83eda766fee63937e4695492156b6014462cb014",
+      "diff_sha256": "a7b07456bac66915cdfd17535fb81d94ad3aabf80beb799574ab1c0c8954ade2"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-c22fu-memorycard-compat.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-c22fu-memorycard-compat.md:281",
+        "claim": "L26 header says the entry is 'the docs(odd) commit that follows' 8518a6d9 while the Polisher review and fixes are described with abbreviated hashes only. The relation between reviewed commit 848d52b6 and fix commit 8518a6d9 is clear, but the entry never names its own commit, so later readers cannot tie L26 to a hash as L24/L25 do for T6's commit field.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-c22fu-memorycard-compat.md:281"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-c22fu-memorycard-compat.md:290",
+        "claim": "The F4 answer says the approval commit lands on this branch before merge and T6 is ticked after, but no task or spec line in this diff records that CI stays red until then. The expectation exists only in the log, so a reader following tasks may merge on a red check.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-c22fu-memorycard-compat.md:290"
+        ]
+      }
+    ],
+    "evidence": [
+      "Diff is a single docs-only addition of the L26 log entry; no code or contract text changed.",
+      "Cross-references (finding IDs, hashes, line citations such as header.go:131-140 and SKILL.md:105-106) are internally consistent with L24/L25 as shown in context.",
+      "Findings are minor readability notes only; no behavior is affected."
+    ]
+  }
+}
