@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "fa2167f0d5e01cda477103cb785e3e061fc5ab81",
+    "head": "4e3c6cd3cdd36dac644b57b43bbe681c1ac43a42",
+    "diff_sha256": "c20c78f26d2f4ed09953f52898a4273f9b4b7553acb79789c5365c50e103e763",
+    "paths": [
+      "odd/tasks/phase9-c22fu-memorycard-compat.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "fa2167f0d5e01cda477103cb785e3e061fc5ab81",
+      "head": "4e3c6cd3cdd36dac644b57b43bbe681c1ac43a42",
+      "diff_sha256": "c20c78f26d2f4ed09953f52898a4273f9b4b7553acb79789c5365c50e103e763"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-c22fu-memorycard-compat.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff changes only the feature document: T6's box is ticked, its commit field now names the owner's approval commit fa2167f0 with a pointer to L29, and the new L29 entry is appended.",
+      "The tick satisfies T6's own condition ('ticked only after the owner's approval commit lands on this branch'): L29 records f2bf1506 amended to fa2167f0 with an empty git diff between them, and fa2167f0 is the base of this change.",
+      "T6's commit field cites fa2167f0 while L29 first mentions f2bf1506; L29 explains the amend, so the two are consistent and I found no recall or readability defect.",
+      "The claim that every task is closed matches the ticked boxes shown for T3, T4, T5 and T7 plus T6 here; T1 and T2 are outside the diff, so I could not check them."
+    ]
+  }
+}

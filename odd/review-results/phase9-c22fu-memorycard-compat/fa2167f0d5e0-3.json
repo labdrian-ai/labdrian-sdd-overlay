@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "8be7fe2a887a723930eea0d32a78a9b5a643ef54",
+    "head": "fa2167f0d5e01cda477103cb785e3e061fc5ab81",
+    "diff_sha256": "5b66739f5d66bec5bf05b5f48e13529c7d65f45d1271c15aa38a9957d307fec9",
+    "paths": [
+      "skills/knowledge-ingestion/.approval.json"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "8be7fe2a887a723930eea0d32a78a9b5a643ef54",
+      "head": "fa2167f0d5e01cda477103cb785e3e061fc5ab81",
+      "diff_sha256": "5b66739f5d66bec5bf05b5f48e13529c7d65f45d1271c15aa38a9957d307fec9"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "skills/knowledge-ingestion/.approval.json"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The only changed path is skills/knowledge-ingestion/.approval.json, which updates the sha256 and approved_at fields to record re-approval after the memory_id switch.",
+      "The diff does not include the skill content, so the new hash cannot be checked against it. Nothing in the diff shows a defect this commit introduced."
+    ]
+  }
+}
