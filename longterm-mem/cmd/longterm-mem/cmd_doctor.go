@@ -136,7 +136,7 @@ func liveObservationIDs(project string) ([]int64, error) {
 }
 
 // liveMemoryEligibility is, for each live memory of project in id order (memorycard.Store.ListMemories: the active
-// and the superseded ones), its id and the Engram observation it was imported from, with the two fields promotion's
+// and the superseded ones), its id, with the two fields promotion's
 // eligibility rule reads (R-007): whether it is pinned and its topic_key. It opens memorycard for the question and
 // closes it, and reads no Engram database.
 func liveMemoryEligibility(project string) ([]ops.MemoryEligibility, error) {
@@ -151,7 +151,7 @@ func liveMemoryEligibility(project string) ([]ops.MemoryEligibility, error) {
 	}
 	eligibility := make([]ops.MemoryEligibility, len(memories))
 	for i, m := range memories {
-		eligibility[i] = ops.MemoryEligibility{ID: m.ID, EngramID: m.EngramID, Superseded: m.Status == "superseded", Pinned: m.Pinned, TopicKey: m.TopicKey}
+		eligibility[i] = ops.MemoryEligibility{ID: m.ID, Superseded: m.Status == "superseded", Pinned: m.Pinned, TopicKey: m.TopicKey}
 	}
 	return eligibility, nil
 }

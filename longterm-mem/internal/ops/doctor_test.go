@@ -100,7 +100,7 @@ func TestDoctor(t *testing.T) {
 			},
 			// The healthy vault's page is promoted from observation 1, which Engram keeps pinned.
 			LiveMemoryEligibility: func(string) ([]MemoryEligibility, error) {
-				return []MemoryEligibility{{ID: 1, EngramID: 1, Pinned: true}}, nil
+				return []MemoryEligibility{{ID: 1, Pinned: true}}, nil
 			},
 		}, vaultRoot
 	}

@@ -49,7 +49,7 @@ func WriteSyncState(t *testing.T, vaultRoot, completedAt string) {
 // split the file it wrote.
 func RenderPage(t *testing.T, address, title string) promote.Page {
 	t.Helper()
-	m := memory.Memory{Identity: memory.Identity{Source: "engram", ID: "1"}, Type: "decision", Title: title, Body: "Body content.", Project: "labdrian-sdd-overlay", Revision: 1}
+	m := memory.Memory{Identity: memory.Identity{Source: "memorycard", ID: "1"}, Type: "decision", Title: title, Body: "Body content.", Project: "labdrian-sdd-overlay", Revision: 1}
 	page, err := promote.EmitPage(m, address, nil, Instant())
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
@@ -149,7 +149,7 @@ func Instant() time.Time { return time.Date(2026, 8, 31, 0, 0, 0, 0, time.UTC) }
 // observation (promote.EmitPage) or to ask its eligibility.
 func EngramMemory(o memory.Observation) memory.Memory {
 	return memory.Memory{
-		Identity: memory.Identity{Source: "engram", ID: strconv.FormatInt(o.ID, 10)},
+		Identity: memory.Identity{Source: "memorycard", ID: strconv.FormatInt(o.ID, 10)},
 		Project:  o.Project, Type: o.Type, Title: o.Title, Body: o.Content, TopicKey: o.TopicKey,
 		Pinned: o.Pinned, Status: memory.StatusActive, Revision: o.RevisionCount, SyncID: o.SyncID,
 	}

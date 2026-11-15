@@ -364,8 +364,7 @@ func TestTheEngramReadOfTheDoctorIsTheLiveRowsOfTheProject(t *testing.T) {
 	}
 }
 
-// The eligibility check reads memorycard (S11): the live memories of the project, each with the fields promotion's
-// rule reads and the Engram observation it was imported from, which is how a page of an earlier release is joined.
+// The eligibility check reads memorycard (S11): the live memories of the project, XX// rule reads.
 // A memory of another project, and a memory that was archived, are not among them. (Previously: the live rows of
 // the Engram database.)
 func TestTheMemorycardReadOfTheDoctorIsTheLiveMemoriesOfTheProject(t *testing.T) {
@@ -386,7 +385,7 @@ func TestTheMemorycardReadOfTheDoctorIsTheLiveMemoriesOfTheProject(t *testing.T)
 
 	want := []ops.MemoryEligibility{
 		{ID: 1, Pinned: true, TopicKey: "bugfix/register-order"},
-		{ID: 2, EngramID: 41},
+		{ID: 2},
 		{ID: 3, Superseded: true, TopicKey: "sdd/x/tasks"},
 	}
 	if fmt.Sprint(rows) != fmt.Sprint(want) {

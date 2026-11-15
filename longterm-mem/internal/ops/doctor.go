@@ -167,7 +167,7 @@ type DoctorDeps struct {
 	// --embeddings` writes to (cmd's defaultStateDir). Required: without it
 	// those two checks fail and say so.
 	EmbeddingIndex EmbeddingIndexReader
-	// LiveObservationIDs returns every live (non-soft-deleted) engram_id
+	// LiveObservationIDs returns every live (non-soft-deleted) row id
 	// for project, so embedding-index-fresh can name exactly how many of
 	// them the index is missing. Production wires
 	// engram.Store.ListObservations (already R-020-scoped), mapped to IDs.
@@ -374,7 +374,7 @@ func checkWikiRegistrationConsistency(promoted PageReader, index IndexReader, lo
 // and separately reported state: promotion refuses that page, says so with
 // its own local-edit-precedence diagnostic, and preserving that edit is the
 // point. Note what this deliberately does NOT claim: a later revision does
-// not reconcile it. Adoption needs the page's engram_revision to stand
+// not reconcile it. Adoption needs the page's source_revision to stand
 // strictly ABOVE the entry's, and a human's edit leaves it level, so every
 // later revision refuses the page too. That is R-030 working, not a defect
 // -- the page is held, not lost, and the operator is told on every run --
