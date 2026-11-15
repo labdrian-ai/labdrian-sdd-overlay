@@ -22,7 +22,7 @@ import (
 func promotedFrom(t *testing.T, obs memory.Observation, address string) [2]string {
 	t.Helper()
 	obs.Type, obs.Title, obs.Content, obs.Project, obs.RevisionCount = "decision", "Widget Decision", "Body content.", doctorTestProject, 1
-	page, err := promote.EmitPage(opstest.EngramMemory(obs), address, nil, opstest.Instant())
+	page, err := promote.EmitPage(opstest.CardMemory(obs), address, nil, opstest.Instant())
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
 	}
@@ -160,18 +160,18 @@ func TestDoctorAgreesWithPromoteEligible(t *testing.T) {
 		got := eligibilityCheckOf(t, pages, observations.read)
 
 		wantStatus := CheckWarned
-		if promote.Eligible(opstest.EngramMemory(obs), false) {
+		if promote.Eligible(opstest.CardMemory(obs), false) {
 			wantStatus = CheckPassed
 		}
 		if got.Status != wantStatus {
-			t.Errorf("pinned=%v topic_key=%q: promoted-pages-eligible = %+v, want %s (promote.Eligible says %v)", obs.Pinned, obs.TopicKey, got, wantStatus, promote.Eligible(opstest.EngramMemory(obs), false))
+			t.Errorf("pinned=%v topic_key=%q: promoted-pages-eligible = %+v, want %s (promote.Eligible says %v)", obs.Pinned, obs.TopicKey, got, wantStatus, promote.Eligible(opstest.CardMemory(obs), false))
 		}
 	}
 }
 
-// A page whose observation is not among the live ones, deleted or the row of another project, is not this
-// check's concern: it is skipped, and the pages after it are still judged.
-func TestDoctorSkipsAPageWhoseObservationIsNotLive(t *testing.T) {
+// A page whose memory is not among the live ones, deleted or the row of another project, is not this check's
+// concern: it is skipped, and the pages after it are still judged.
+func TestDoctorSkipsAPageWhoseMemoryIsNotLive(t *testing.T) {
 	pages := newFakePages(
 		promotedFrom(t, memory.Observation{ID: 90}, "c-000010"),
 		promotedFrom(t, memory.Observation{ID: 41}, "c-000011"),
@@ -184,24 +184,24 @@ func TestDoctorSkipsAPageWhoseObservationIsNotLive(t *testing.T) {
 		t.Fatalf("promoted-pages-eligible = %+v, want a warning about c-000011 alone", got)
 	}
 	if strings.Contains(got.Detail, "c-000010") || strings.Contains(got.Detail, "memory 90") {
-		t.Errorf("promoted-pages-eligible detail %q names the page whose observation is not live", got.Detail)
+		t.Errorf("promoted-pages-eligible detail %q names the page whose memory is not live", got.Detail)
 	}
 
 	only := newFakePages(promotedFrom(t, memory.Observation{ID: 90}, "c-000010"))
 	if got := eligibilityCheckOf(t, only, (&observationsOf{rows: []MemoryEligibility{{ID: 41}}}).read); got.Status != CheckPassed || got.Detail != "" {
-		t.Errorf("promoted-pages-eligible = %+v, want PASS: the one page's observation is not live", got)
+		t.Errorf("promoted-pages-eligible = %+v, want PASS: the one page's memory is not live", got)
 	}
 }
 
-// A page that names no observation has none to join with: it is skipped, never read as observation 0.
-func TestDoctorSkipsAPageThatNamesNoObservation(t *testing.T) {
+// A page that names no memory has none to join with: it is skipped, never read as memory 0.
+func TestDoctorSkipsAPageThatNamesNoMemory(t *testing.T) {
 	pages := newFakePages(
 		[2]string{"c-000050", "Just text, no frontmatter.\n"},
 		[2]string{"c-000051", "---\naddress: c-000051\n---\nbody\n"},
 		[2]string{"c-000052", "---\naddress: c-000052\nengram_id: not-a-number\n---\nbody\n"},
 		[2]string{"c-000053", ""},
 	)
-	// The one row Doctor could join those pages to, if it read an absent or unparseable engram_id as 0.
+	// The one row Doctor could join those pages to, if it read an absent or unparseable source_id, or the retired engram_id, as 0.
 	observations := &observationsOf{rows: []MemoryEligibility{{ID: 0}}}
 
 	got := eligibilityCheckOf(t, pages, observations.read)
@@ -210,15 +210,15 @@ func TestDoctorSkipsAPageThatNamesNoObservation(t *testing.T) {
 		t.Errorf("promoted-pages-eligible = %+v, want %+v", got, want)
 	}
 	if len(observations.asked) != 0 {
-		t.Errorf("the observations were asked for %v: no page names one, so there is nothing to ask", observations.asked)
+		t.Errorf("the live memories were asked for %v: no page names one, so there is nothing to ask", observations.asked)
 	}
 }
 
-// The observation a page was promoted from is the engram_id of its frontmatter and nothing its body says: a line
-// of prose that looks like the field does not move the page to another observation.
-func TestDoctorReadsTheObservationOfAPageFromItsFrontmatterAlone(t *testing.T) {
+// The memory a page was promoted from is the source_id of its frontmatter and nothing its body says: lines of prose that
+// look like the identity (source_id, or the retired engram_id) do not move the page to another memory.
+func TestDoctorReadsTheMemoryOfAPageFromItsFrontmatterAlone(t *testing.T) {
 	page := promotedFrom(t, memory.Observation{ID: 21}, "c-000001")
-	page[1] += "\nengram_id: 99\n"
+	page[1] += "\nsource_id: 99\nengram_id: 99\n"
 	observations := &observationsOf{rows: []MemoryEligibility{{ID: 21}, {ID: 99, Pinned: true}}}
 
 	got := eligibilityCheckOf(t, newFakePages(page), observations.read)

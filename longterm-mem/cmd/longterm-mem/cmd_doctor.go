@@ -136,8 +136,8 @@ func liveObservationIDs(project string) ([]int64, error) {
 }
 
 // liveMemoryEligibility is, for each live memory of project in id order (memorycard.Store.ListMemories: the active
-// and the superseded ones), its id, with the two fields promotion's
-// eligibility rule reads (R-007): whether it is pinned and its topic_key. It opens memorycard for the question and
+// and the superseded ones), its id and the two fields promotion's eligibility
+// rule reads (R-007): whether it is pinned and its topic_key. It opens memorycard for the question and
 // closes it, and reads no Engram database.
 func liveMemoryEligibility(project string) ([]ops.MemoryEligibility, error) {
 	store, err := memorycard.Open(os.Getenv(memorycardDBEnvVar))

@@ -147,7 +147,7 @@ func TestMigrateCardPagesIsNoSubcommandAnyMore(t *testing.T) {
 // cardPageMemory is a memorycard memory as promotion reads it, built from the observation-shaped rows the fixtures of
 // the commands' tests are written in: what a test needs to render the page of a memory (promote.EmitPage).
 func cardPageMemory(o memory.Observation) memory.Memory {
-	m := opstest.EngramMemory(o)
+	m := opstest.CardMemory(o)
 	m.Identity.Source = "memorycard"
 	return m
 }

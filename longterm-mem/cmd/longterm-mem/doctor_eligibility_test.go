@@ -364,8 +364,8 @@ func TestTheEngramReadOfTheDoctorIsTheLiveRowsOfTheProject(t *testing.T) {
 	}
 }
 
-// The eligibility check reads memorycard (S11): the live memories of the project, XX// rule reads.
-// A memory of another project, and a memory that was archived, are not among them. (Previously: the live rows of
+// The eligibility check reads memorycard (S11): the live memories of the project, each with the
+// fields promotion's rule reads (R-007). A memory of another project, and a memory that was archived, are not among them. (Previously: the live rows of
 // the Engram database.)
 func TestTheMemorycardReadOfTheDoctorIsTheLiveMemoriesOfTheProject(t *testing.T) {
 	path := memorycardDatabase(t,

@@ -48,8 +48,9 @@ var errNoMemoryEligibilityReader = errors.New("ops: no memory eligibility reader
 // is a warning that says so, in the words of what failed. A page that cannot be read is the page checks' finding,
 // which they word, and does not stop the pages after it from being judged.
 //
-// A superseded memory is never judged: only the live ones (not superseded, not archived) of a page's memory count. A page
-// that carries only the retired engram and memorycard keys names no memory and is not judged.
+// A superseded memory is never judged: only the live ones (not superseded, not archived) count. A page that carries
+// only the retired engram and memorycard keys names no memory (its source_id is not read from them), so it is not
+// judged.
 //
 // The live memories are asked for once, and only when a page names a memory to look up.
 func checkPromotedPagesEligible(promoted PageReader, eligibility func(project string) ([]MemoryEligibility, error), project string) Check {
