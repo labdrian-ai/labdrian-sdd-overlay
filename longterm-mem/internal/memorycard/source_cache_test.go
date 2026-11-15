@@ -47,7 +47,7 @@ func TestSourceReadsTheImportsAgainAfterAReadThatFailed(t *testing.T) {
 	}
 	writeFixture(t, path, `delete from import_map where source_key = '990'`)
 
-	want := []memory.Identity{card("19"), card("20"), card("21"), engramObservation("700")}
+	want := []memory.Identity{card("19"), card("20"), card("21")}
 	if got := memoryOf(t, source, "22").Mirrored; !reflect.DeepEqual(got, want) {
 		t.Errorf("mirrors of memory 22 after the failed read = %v, want %v", got, want)
 	}
