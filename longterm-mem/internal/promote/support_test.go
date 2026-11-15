@@ -77,7 +77,7 @@ func EmitCardPage(c memory.CardMemory, address string, related []Link, at time.T
 	return EmitPage(cardMem(c), address, related, at)
 }
 
-// legacyScan is what the scan of the pages for one Engram observation answered before the pages were read once
+// legacyScan is what the scan of the pages for one memory answered before the pages were read once
 // for every store: every page that names the observation, in the order the port lists them, and the pages that
 // could not be read.
 type legacyScan struct {
@@ -89,27 +89,27 @@ func memoryIdentity(id int) memory.Identity {
 	return memory.Identity{Source: memorycardSource, ID: strconv.Itoa(id)}
 }
 
-// scanPromotedPages reads the pages and answers the pages that name the Engram observation engramID.
-func scanPromotedPages(pages PageReader, engramID int) (legacyScan, error) {
+// scanPromotedPages reads the pages and answers the pages that name the memory memoryID.
+func scanPromotedPages(pages PageReader, memoryID int) (legacyScan, error) {
 	index, err := readPages(pages)
 	if err != nil {
 		return legacyScan{}, err
 	}
 	scan := legacyScan{unreadable: index.unreadable}
-	for _, match := range index.carriers[memoryIdentity(engramID)] {
+	for _, match := range index.carriers[memoryIdentity(memoryID)] {
 		scan.matches = append(scan.matches, *match)
 	}
 	return scan, nil
 }
 
-// findPromotedPage is the page of the Engram observation engramID that was promoted under project: found, or not
+// findPromotedPage is the page of the memory memoryID that was promoted under project: found, or not
 // promoted at all, or not decidable because a page that could not be read may be its own.
-func findPromotedPage(pages PageReader, project string, engramID int) (promotedPage, bool, error) {
+func findPromotedPage(pages PageReader, project string, memoryID int) (promotedPage, bool, error) {
 	index, err := readPages(pages)
 	if err != nil {
 		return promotedPage{}, false, err
 	}
-	scan := index.scanFor(memory.Memory{Identity: memoryIdentity(engramID), Project: project})
+	scan := index.scanFor(memory.Memory{Identity: memoryIdentity(memoryID), Project: project})
 	if scan.own != nil {
 		page, err := scan.own.resolve(true)
 		if err != nil {
@@ -123,19 +123,19 @@ func findPromotedPage(pages PageReader, project string, engramID int) (promotedP
 	return promotedPage{}, false, nil
 }
 
-// findMovedPages are the pages of the Engram observation engramID left behind in a project other than project.
-func findMovedPages(pages PageReader, project string, engramID int) ([]promotedPage, error) {
+// findMovedPages are the pages of the memory memoryID left behind in a project other than project.
+func findMovedPages(pages PageReader, project string, memoryID int) ([]promotedPage, error) {
 	index, err := readPages(pages)
 	if err != nil {
 		return nil, err
 	}
-	return index.scanFor(memory.Memory{Identity: memoryIdentity(engramID), Project: project}).moved, nil
+	return index.scanFor(memory.Memory{Identity: memoryIdentity(memoryID), Project: project}).moved, nil
 }
 
-// allocateAddress is the address of the page of the Engram observation engramID in project when it has one, and
+// allocateAddress is the address of the page of the memory memoryID in project when it has one, and
 // a new one otherwise.
-func allocateAddress(ctx context.Context, pages PageReader, project string, engramID int, addresses AddressAllocator, addressMap AddressMapRecorder, at time.Time) (string, error) {
-	if existing, ok, err := findPromotedPage(pages, project, engramID); err != nil {
+func allocateAddress(ctx context.Context, pages PageReader, project string, memoryID int, addresses AddressAllocator, addressMap AddressMapRecorder, at time.Time) (string, error) {
+	if existing, ok, err := findPromotedPage(pages, project, memoryID); err != nil {
 		return "", err
 	} else if ok {
 		return existing.Address, nil

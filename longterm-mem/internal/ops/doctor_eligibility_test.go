@@ -13,7 +13,7 @@ import (
 )
 
 // promoted-pages-eligible joins each promoted page with the memory it was promoted from (the page's
-// engram_id) and reports, as an advisory warning, every page whose memory promote.Eligible(obs, false)
+// source_id) and reports, as an advisory warning, every page whose memory promote.Eligible(obs, false)
 // refuses: sync no longer refreshes it (issue #293). These tests drive it through Doctor, with the pages a reader
 // answers and the memories a function answers, and name no check function of the package.
 
@@ -377,7 +377,7 @@ func TestPromotedPagesEligibleNeverAnswersFAIL(t *testing.T) {
 	for name, check := range map[string]Check{
 		"frozen":              eligibilityCheckOf(t, newFakePages(promotedFrom(t, memory.Observation{ID: 21}, "c-000001")), (&memoriesOf{rows: []MemoryEligibility{{ID: 21}}}).read),
 		"healthy":             eligibilityCheckOf(t, newFakePages(promotedFrom(t, memory.Observation{ID: 21}, "c-000001")), (&memoriesOf{rows: []MemoryEligibility{{ID: 21, Pinned: true}}}).read),
-		"engram unreadable":   eligibilityCheckOf(t, newFakePages(promotedFrom(t, memory.Observation{ID: 21}, "c-000001")), (&memoriesOf{err: errors.New("boom")}).read),
+		"memories unreadable": eligibilityCheckOf(t, newFakePages(promotedFrom(t, memory.Observation{ID: 21}, "c-000001")), (&memoriesOf{err: errors.New("boom")}).read),
 		"reader not wired":    eligibilityCheckOf(t, newFakePages(promotedFrom(t, memory.Observation{ID: 21}, "c-000001")), nil),
 		"pages not listable":  eligibilityCheckOf(t, failing, (&memoriesOf{}).read),
 		"pages reader absent": eligibilityCheckOf(t, nil, (&memoriesOf{}).read),

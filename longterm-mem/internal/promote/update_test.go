@@ -554,21 +554,11 @@ func TestUpdate_InterruptedUpdateRetriedOnALaterDayReconciles(t *testing.T) {
 	}
 }
 
-// TestUpdate_PageAheadOfTheSidecarWithAnEditedBodyIsStillSkipped pins the
-// refusal of a page whose body was edited: a page the sidecar never caught up
-// with is never automatically ours. A human who edits a page inside the crash
-// window -- after our write landed, before the sidecar caught up -- leaves the
-// page's content behind, and their edit must still be preserved.
-//
-// The corroborating evidence is the body's own tail: every body promotion
-// renders closes with the promotion footer naming the observation and the
-// revision that page carries. A body that does not end there is not the
-// render we would have left, so the page is refused. This does not make
-// adoption airtight -- an edit buried mid-body leaves the footer intact and
-// is indistinguishable from our own render, because the one fingerprint
-// that could have told them apart is precisely what the interruption lost
-// -- but it costs nothing and catches the common shapes: an appended note,
-// a truncation, a replaced body.
+// TestUpdate_PageAheadOfTheSidecarWithAnEditedBodyIsStillSkipped: a page is ahead of the sidecar when an
+// interrupted update wrote revision 2 and the sidecar entry still fingerprints revision 1. Such a page is never
+// automatically ours: a human who edits it inside that window -- after our write landed, before the sidecar caught
+// up -- leaves a page that no longer matches the entry, and the update to revision 3 must refuse it and preserve the
+// edit. Nothing recovers the page by itself: promote reconcile of its address adopts it.
 func TestUpdate_PageAheadOfTheSidecarWithAnEditedBodyIsStillSkipped(t *testing.T) {
 	vaultRoot := t.TempDir()
 	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
@@ -610,7 +600,7 @@ func TestUpdate_PageAheadOfTheSidecarWithAnEditedBodyIsStillSkipped(t *testing.T
 		t.Fatalf("UpdateInPlace: %v", err)
 	}
 	if action.Kind != ActionSkippedLocalEdit {
-		t.Fatalf("action.Kind = %v, want ActionSkippedLocalEdit: an advanced engram_revision makes a page adoptable, not automatically ours", action.Kind)
+		t.Fatalf("action.Kind = %v, want ActionSkippedLocalEdit: a page ahead of the sidecar is refused when a human edited it", action.Kind)
 	}
 	if action.Diagnostic == nil || !strings.Contains(action.Diagnostic.Detail, "c-000311") {
 		t.Fatalf("action.Diagnostic = %+v, want a diagnostic naming c-000311", action.Diagnostic)
@@ -651,7 +641,7 @@ func editFrontmatter(t *testing.T, page Page, edit func(string) string) string {
 
 // TestUpdate_FrontmatterEditInsideTheUpdateWindowIsStillSkipped is the twin
 // of TestUpdate_PageAheadOfTheSidecarWithAnEditedBodyIsStillSkipped: the
-// same crash window, the same advanced engram_revision, but the human's
+// same crash window, the same advanced source_revision, but the human's
 // edit lands in the FRONTMATTER and leaves the body -- footer included --
 // byte-identical. Corroborating only the body's tail adopts every one of
 // these and overwrites it while reporting action=updated, which is exactly
@@ -821,7 +811,7 @@ func TestUpdate_PageLevelWithTheSidecarRevisionIsSkipped(t *testing.T) {
 }
 
 // TestUpdate_PageClaimingARevisionEngramHasNotReachedIsSkipped pins the
-// other half of the revision guard. A page whose engram_revision stands
+// other half of the revision guard. A page whose source_revision stands
 // ABOVE the revision now being promoted is not a render this writer could
 // have produced -- we only ever render the revision Engram reports -- so
 // however well it corroborates otherwise, it is not our own unrecorded
@@ -879,11 +869,11 @@ func TestUpdate_PageClaimingARevisionEngramHasNotReachedIsSkipped(t *testing.T) 
 
 // TestUpdate_LegacyEntryWithABodyEditIsStillSkipped is the twin of the test
 // above, and the reason the legacy path is allowed to exist at all. Same
-// missing revision, same advanced engram_revision on disk, same intact
+// missing revision, same advanced source_revision on disk, same intact
 // footer -- but the entry's frontmatter hash still matches the page, so the
 // divergence is confined to the body, and our own writes cannot produce
 // that: every render of a new revision moves the frontmatter's
-// engram_revision too.
+// source_revision too.
 func TestUpdate_LegacyEntryWithABodyEditIsStillSkipped(t *testing.T) {
 	vaultRoot := t.TempDir()
 	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}

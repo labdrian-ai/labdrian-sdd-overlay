@@ -646,7 +646,8 @@ func TestWriter_Promote_ARetryOfAPageAtItsRevisionWritesNothingAndLeavesTheLostR
 	vaultRoot := t.TempDir()
 	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
-	w := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Clock: clock, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress)}
+	firstPrecedence := &memPrecedence{}
+	w := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: PrecedenceStore{}, Precedence: firstPrecedence, Clock: clock, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress)}
 	obs := memory.Observation{ID: 410, Type: "decision", Title: "Wedged In The Field", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/writer-fixture"}
 	first, err := w.Promote(t.Context(), obsMemory(obs), false)
 	if err != nil {
@@ -657,6 +658,22 @@ func TestWriter_Promote_ARetryOfAPageAtItsRevisionWritesNothingAndLeavesTheLostR
 	if err != nil {
 		t.Fatalf("read the page: %v", err)
 	}
+	// The state the test starts from: the first promotion registered the page everywhere the crash then loses.
+	if stored, err := firstPrecedence.LoadPrecedence(); err != nil {
+		t.Fatalf("LoadPrecedence (first): %v", err)
+	} else if _, ok := stored.Get(first.Page.Address); !ok {
+		t.Fatalf("the first promotion recorded no entry for %s", first.Page.Address)
+	}
+	for _, rel := range []string{vaultlayout.IndexFile, vaultlayout.LogFile} {
+		if _, err := os.Stat(filepath.Join(vaultRoot, rel)); err != nil {
+			t.Fatalf("the first promotion did not write %s: %v", rel, err)
+		}
+	}
+	// A rewrite with the same bytes would only move the modification time: set it to the past to see it move.
+	past := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
+	if err := os.Chtimes(pagePath, past, past); err != nil {
+		t.Fatalf("Chtimes: %v", err)
+	}
 	for _, rel := range []string{vaultlayout.IndexFile, vaultlayout.LogFile} {
 		if err := os.Remove(filepath.Join(vaultRoot, rel)); err != nil {
 			t.Fatalf("simulate the crash window (%s): %v", rel, err)
@@ -664,7 +681,8 @@ func TestWriter_Promote_ARetryOfAPageAtItsRevisionWritesNothingAndLeavesTheLostR
 	}
 
 	clock.Set(time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
-	wedged := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Clock: clock, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress)}
+	wedgedPrecedence := &memPrecedence{}
+	wedged := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: PrecedenceStore{}, Precedence: wedgedPrecedence, Clock: clock, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress)}
 	second, err := wedged.Promote(t.Context(), obsMemory(obs), false)
 	if err != nil {
 		t.Fatalf("Promote (retry): %v", err)
@@ -674,8 +692,17 @@ func TestWriter_Promote_ARetryOfAPageAtItsRevisionWritesNothingAndLeavesTheLostR
 		t.Errorf("Action.Kind = %v, want ActionAlreadyPromoted", second.Action.Kind)
 	}
 	after, err := os.ReadFile(pagePath)
-	if err != nil || string(after) != string(before) {
-		t.Errorf("the page was written by a retry at its own revision (err %v)", err)
+	if err != nil {
+		t.Fatalf("read the page after the retry: %v", err)
+	}
+	if string(after) != string(before) {
+		t.Errorf("the page content changed by a retry at its own revision")
+	}
+	if info, err := os.Stat(pagePath); err != nil || !info.ModTime().Equal(past) {
+		t.Errorf("the page was rewritten by a retry at its own revision (modification time moved, err %v)", err)
+	}
+	if wedgedPrecedence.saves != 0 {
+		t.Errorf("the retry saved the precedence store %d time(s): only promote reconcile repairs the lost provenance", wedgedPrecedence.saves)
 	}
 	reloaded, err := wedged.Precedence.LoadPrecedence()
 	if err != nil {
