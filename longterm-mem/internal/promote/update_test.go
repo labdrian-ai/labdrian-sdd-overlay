@@ -555,12 +555,10 @@ func TestUpdate_InterruptedUpdateRetriedOnALaterDayReconciles(t *testing.T) {
 }
 
 // TestUpdate_PageAheadOfTheSidecarWithAnEditedBodyIsStillSkipped pins the
-// scope of the reconciliation above. "engram_revision is ahead of the
-// sidecar" makes a page ADOPTABLE, never automatically ours: a human who
-// edits a page inside the crash window -- after our write landed, before
-// the sidecar caught up -- leaves that same advanced revision behind, and
-// their edit must still be preserved, which is the entire point of the
-// branch this sits in.
+// refusal of a page whose body was edited: a page the sidecar never caught up
+// with is never automatically ours. A human who edits a page inside the crash
+// window -- after our write landed, before the sidecar caught up -- leaves the
+// page's content behind, and their edit must still be preserved.
 //
 // The corroborating evidence is the body's own tail: every body promotion
 // renders closes with the promotion footer naming the observation and the
