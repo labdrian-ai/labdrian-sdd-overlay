@@ -42,8 +42,7 @@ func (w *Writer) patchPage(t patchTarget) error {
 }
 
 // savePatched persists the precedence store once for a run of pass that patched pages, and not at all for one that
-// patched none. pass names the run in the error: "propagate" for Engram pages, "propagate memorycard" for the
-// pages of memorycard.
+// patched none. pass names the run in the error: "propagate" or "propagate memorycard".
 func (w *Writer) savePatched(pass string, patched []string) error {
 	if len(patched) == 0 {
 		return nil

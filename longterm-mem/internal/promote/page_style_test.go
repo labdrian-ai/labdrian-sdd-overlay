@@ -25,7 +25,7 @@ func TestNumericID_ReadsAnIntegerIdAsItIs(t *testing.T) {
 }
 
 func TestNumericID_AnIdThatIsNoNumberSaysSoOnceAndKeepsItsCause(t *testing.T) {
-	_, err := numericID(memoryWithID(engramSource, "x1"))
+	_, err := numericID(memoryWithID(memorycardSource, "x1"))
 	if err == nil {
 		t.Fatal("numericID(x1) = nil error")
 	}

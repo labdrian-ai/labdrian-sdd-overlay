@@ -80,8 +80,8 @@ func TestUpdate_UnmodifiedPageUpdatesInPlace(t *testing.T) {
 	if !strings.Contains(string(got), "updated: 2026-08-15") {
 		t.Fatalf("updated timestamp not refreshed; got:\n%s", got)
 	}
-	if !strings.Contains(string(got), "engram_revision: 2") {
-		t.Fatalf("engram_revision not refreshed; got:\n%s", got)
+	if !strings.Contains(string(got), "source_revision: 2") {
+		t.Fatalf("source_revision not refreshed; got:\n%s", got)
 	}
 
 	entries, err := os.ReadDir(filepath.Join(vaultRoot, vaultlayout.PagesDir))
@@ -1023,7 +1023,7 @@ func TestUpdate_LegacyEntryOnAHandEditedPageIsRefused(t *testing.T) {
 	store := PrecedenceStore{}
 	store.Set(promoted.Address, legacyEntryFor(promoted))
 
-	editedFM := strings.Replace(promoted.Frontmatter, "status: "+statusFor(obsMemory(obs)), "status: evergreen", 1)
+	editedFM := strings.Replace(promoted.Frontmatter, "status: developing", "status: evergreen", 1)
 	edited := editedFM + strings.Replace(promoted.Body, "V2 body, first paragraph.", "V2 body, first paragraph.\n\nAnd the human's own second one.", 1)
 	if edited == promoted.Frontmatter+promoted.Body {
 		t.Fatalf("fixture edit changed nothing; page was:\n%s", promoted.Frontmatter+promoted.Body)

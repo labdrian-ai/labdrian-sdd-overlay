@@ -131,7 +131,7 @@ func UpdateInPlace(pages PageRepository, store PrecedenceStore, page Page) (Acti
 		if !isOwnUnrecordedWrite(fmBlock, body, page) {
 			return skippedAction(existingPath, page.Address, "was edited locally since longterm-mem last wrote it"), nil
 		}
-		// Reconciled: the page is an own write the store never caught up
+		// Adopted: the page is an own write the store never caught up
 		// with, so fall through to the normal update below, which
 		// republishes it and records the provenance the interrupted run
 		// never got to.
@@ -144,54 +144,24 @@ func UpdateInPlace(pages PageRepository, store PrecedenceStore, page Page) (Acti
 	return Action{Kind: ActionUpdated}, nil
 }
 
-// entryFor builds the precedence entry that records page as longterm-mem's
-// own last write: the two content hashes R-030 compares against, plus the
-// revision that render carried, read back out of the rendered frontmatter
-// rather than passed in separately so the recorded revision is by
-// construction the one the page on disk actually shows.
+// entryFor builds the precedence entry that records page as longterm-mem's own last write: the two content hashes
+// R-030 compares against. It records no revision: the promotion paths never did for a memorycard page, and `promote
+// reconcile` is the one writer of PromotedRevision.
 func entryFor(page Page) PrecedenceEntry {
-	entry := PrecedenceEntry{
+	return PrecedenceEntry{
 		BodyHash:        hashText(page.Body),
 		FrontmatterHash: hashText(page.Frontmatter),
 	}
-	if revision, ok := frontmatterRevision(page.Frontmatter); ok {
-		entry.PromotedRevision = revision
-	}
-	return entry
 }
 
-// frontmatterRevision reads the revision a frontmatter block records for
-// Engram (engram_revision, or source_revision beside source: engram, through
-// revisionOf; no id is needed) as an integer. A block missing the field, or
-// carrying something that is not an integer, reports false rather than a zero
-// revision: every caller treats "no readable revision" as no evidence and
-// fails closed, which a silent 0 would quietly turn into "revision 0", the
-// smallest possible revision and therefore the most permissive answer.
-func frontmatterRevision(fmBlock string) (int, bool) {
-	raw, _ := revisionOf(parseFrontmatterFields(fmBlock), engramSource)
-	if raw == "" {
-		return 0, false
-	}
-	revision, err := strconv.Atoi(raw)
-	if err != nil {
-		return 0, false
-	}
-	return revision, true
-}
-
-// pageRevision reads the revision a frontmatter block records for whatever identity it names: memorycard's
-// (memorycard_revision, or source_revision beside source: memorycard), else Engram's as frontmatterRevision reads it.
-// Only `promote reconcile` reads a page's revision this way; the promotion paths keep reading the Engram one, so
-// what they record does not change.
-//
-// Precedence and strictness: the memorycard identity is read first, then the Engram one, and the first identity
-// whose revision field is present decides. A present but non-numeric revision reports false and never falls back to
-// the other identity, so a conflicting page is refused rather than adopted at a guess. A block with no revision in
-// either identity reports false, as frontmatterRevision does.
+// pageRevision reads the revision a frontmatter block records for the memory it names (source_revision beside the
+// `source` it belongs to). Only `promote reconcile` reads a page's revision this way. A present but non-numeric
+// revision reports false, so a page with an unreadable revision is refused rather than adopted at a guess, and so
+// does a block with no revision at all.
 func pageRevision(fmBlock string) (int, bool) {
 	fields := parseFrontmatterFields(fmBlock)
-	for _, source := range []string{memorycardSource, engramSource} {
-		raw, _ := revisionOf(fields, source)
+	for _, source := range pageSources {
+		raw := revisionOf(fields, source)
 		if raw == "" {
 			continue
 		}
@@ -204,7 +174,7 @@ func pageRevision(fmBlock string) (int, bool) {
 // volatileFrontmatterFields are the only two frontmatter values EmitPage
 // takes from the time it is given (page.go's at) rather than from the
 // observation, so they are the only two that can differ between two renders
-// of identical Engram content. isOwnUnrecordedWrite normalizes exactly
+// of identical content. isOwnUnrecordedWrite normalizes exactly
 // these away and nothing else: every other field, and the whole body, still
 // has to match byte for byte.
 var volatileFrontmatterFields = [...]string{"created", "updated"}
@@ -231,22 +201,6 @@ var volatileFrontmatterFields = [...]string{"created", "updated"}
 func isOwnUnrecordedWrite(fmBlock, body string, page Page) bool {
 	return body == page.Body &&
 		withoutVolatileStamps(fmBlock) == withoutVolatileStamps(page.Frontmatter)
-}
-
-// frontmatterEngramID reads the id of the Engram identity a frontmatter block names (engram_id or source_id,
-// through identityOf), failing the
-// same closed way frontmatterRevision does: an absent or unparseable value
-// reports false rather than observation 0.
-func frontmatterEngramID(fmBlock string) (int64, bool) {
-	identity, named := identityOf(parseFrontmatterFields(fmBlock), engramSource)
-	if !named {
-		return 0, false
-	}
-	obsID, err := strconv.ParseInt(strings.TrimSpace(identity.ID), 10, 64)
-	if err != nil {
-		return 0, false
-	}
-	return obsID, true
 }
 
 // withoutVolatileStamps blanks the value of each volatileFrontmatterFields

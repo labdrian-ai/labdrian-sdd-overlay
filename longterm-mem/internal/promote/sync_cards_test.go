@@ -17,6 +17,10 @@ import (
 // fakeCards is a promote.Source that serves a fixed list and counts its calls.
 type fakeCards struct {
 	memories []memory.CardMemory
+	// lineage and mirrored are what the adapter would say of a memory by id: the other memories imported from the
+	// same observation, and the memories that hold its content.
+	lineage  map[int64][]memory.Identity
+	mirrored map[int64][]memory.Identity
 	err      error
 	listed   []string
 	// allErr is what Memories answers when set; allListed counts its calls.
@@ -36,7 +40,7 @@ func (f *fakeCards) Candidates(project string) ([]memory.Memory, error) {
 			live = append(live, m)
 		}
 	}
-	return cardMems(live), nil
+	return f.served(live), nil
 }
 
 // Memories serves every memory of the fixed list, whatever its status, as the adapter does.
@@ -45,14 +49,27 @@ func (f *fakeCards) Memories(project string) ([]memory.Memory, error) {
 	if f.allErr != nil {
 		return nil, f.allErr
 	}
-	return cardMems(f.memories), nil
+	return f.served(f.memories), nil
 }
+
+// served maps cards as the adapter does, with the lineage and the mirrors the test names for a memory.
+func (f *fakeCards) served(cards []memory.CardMemory) []memory.Memory {
+	memories := cardMems(cards)
+	for i := range memories {
+		memories[i].Lineage = f.lineage[cards[i].ID]
+		memories[i].Mirrored = f.mirrored[cards[i].ID]
+	}
+	return memories
+}
+
+// memoryID is the identity of memorycard memory id.
+func memoryID(id string) memory.Identity { return memory.Identity{Source: memorycardSource, ID: id} }
 
 // ByID serves the memory of the fixed list with the id.
 func (f *fakeCards) ByID(id string) (memory.Memory, bool, error) {
 	for _, m := range f.memories {
 		if strconv.FormatInt(m.ID, 10) == id {
-			return cardMem(m), true, nil
+			return f.served([]memory.CardMemory{m})[0], true, nil
 		}
 	}
 	return memory.Memory{}, false, nil
@@ -180,11 +197,11 @@ func TestSyncCards_AnIneligibleMemoryIsSkipped(t *testing.T) {
 	}
 }
 
-// engramPageIn writes the page of Engram observation id into the vault and records it in store, as a promoted
-// Engram page is, and returns its path.
-func engramPageIn(t *testing.T, vaultRoot string, store PrecedenceStore, id int64, address string) string {
+// peerPageIn writes the page of memorycard memory id into the vault and records it in store, as a promoted page is,
+// and returns its path.
+func peerPageIn(t *testing.T, vaultRoot string, store PrecedenceStore, id int64, address string) string {
 	t.Helper()
-	obs := memory.Observation{ID: id, Type: "pattern", Title: "Old Engram Page", Content: "Engram.", Project: "memorycard", RevisionCount: 2, TopicKey: "x/y"}
+	obs := memory.Observation{ID: id, Type: "pattern", Title: "Old Page", Content: "Peer.", Project: "memorycard", RevisionCount: 2, TopicKey: "x/y"}
 	page, err := EmitPage(obsMemory(obs), address, nil, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
 	if err != nil {
 		t.Fatal(err)
@@ -193,19 +210,19 @@ func engramPageIn(t *testing.T, vaultRoot string, store PrecedenceStore, id int6
 	return writePromotedPage(t, vaultRoot, page)
 }
 
-// A bridged memory, by import_map or by the same content, is skipped and counted. It is no failure, it writes
-// nothing, the run goes on to the memory after it, and the Engram page stays as it was.
+// A bridged memory, by lineage or by the same content, is skipped and counted. It is no failure, it writes nothing,
+// the run goes on to the memory after it, and the page of the memory it is bridged to stays as it was.
 func TestSyncCards_ABridgedMemoryIsSkippedAndCountedNeverFailed(t *testing.T) {
 	vaultRoot := t.TempDir()
 	w := syncCardsWriter(vaultRoot)
-	full := engramPageIn(t, vaultRoot, w.Store, 402, "c-000402")
+	full := peerPageIn(t, vaultRoot, w.Store, 402, "c-000402")
 	before, _ := os.ReadFile(full)
 
 	byBridge := eligibleCard(21, 1)
-	byBridge.EngramID = 402
 	byContent := eligibleCard(22, 1)
-	byContent.SameContentEngramIDs = []int64{401, 402}
-	cards := &fakeCards{memories: []memory.CardMemory{byBridge, byContent, eligibleCard(23, 1)}}
+	cards := &fakeCards{memories: []memory.CardMemory{byBridge, byContent, eligibleCard(23, 1)},
+		lineage:  map[int64][]memory.Identity{21: {memoryID("402")}},
+		mirrored: map[int64][]memory.Identity{22: {memoryID("401"), memoryID("402")}}}
 
 	report, err := SyncCards(t.Context(), cards, w, "memorycard")
 	if err != nil {
@@ -215,10 +232,10 @@ func TestSyncCards_ABridgedMemoryIsSkippedAndCountedNeverFailed(t *testing.T) {
 		t.Fatalf("report = %+v, want 2 bridged, no failure and memory 23 created", report)
 	}
 	if got := pageFiles(t, vaultRoot); len(got) != 2 {
-		t.Fatalf("pages = %v, want the Engram page and memory 23's page only", got)
+		t.Fatalf("pages = %v, want the page of memory 402 and memory 23's page only", got)
 	}
 	if after, _ := os.ReadFile(full); string(after) != string(before) {
-		t.Errorf("the Engram page changed")
+		t.Errorf("the page of memory 402 changed")
 	}
 }
 
@@ -260,10 +277,9 @@ func TestSyncCards_ReadsThePagesOncePerRun(t *testing.T) {
 	}
 	counting := &countingPages{PageRepository: pagesIn(vaultRoot)}
 	w.Pages = counting
-	// Imported from an observation that has no page: it is no bridge, so it is promoted.
+	// Imported in parts, with no page for the other part: it is no bridge, so it is promoted.
 	imported := eligibleCard(31, 1)
-	imported.EngramID = 999
-	cards := &fakeCards{memories: []memory.CardMemory{eligibleCard(11, 2), eligibleCard(12, 1), eligibleCard(13, 1), eligibleCard(14, 1), imported}}
+	cards := &fakeCards{memories: []memory.CardMemory{eligibleCard(11, 2), eligibleCard(12, 1), eligibleCard(13, 1), eligibleCard(14, 1), imported}, lineage: map[int64][]memory.Identity{31: {memoryID("999")}}}
 
 	report, err := SyncCards(t.Context(), cards, w, "memorycard")
 	if err != nil {

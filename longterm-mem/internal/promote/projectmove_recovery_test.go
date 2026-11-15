@@ -35,7 +35,7 @@ func writeRawPage(t *testing.T, vaultRoot, file, raw string) {
 func TestWriter_Promote_CorruptedPageInAnotherProjectDoesNotBlockThisOne(t *testing.T) {
 	vaultRoot := t.TempDir()
 	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
-	writeRawPage(t, vaultRoot, "c-000001.md", "---\nengram_id: 905\nproject: p-one\n---\n\nBody.\n")
+	writeRawPage(t, vaultRoot, "c-000001.md", "---\nsource: memorycard\nsource_id: 905\nproject: p-one\n---\n\nBody.\n")
 
 	obs := memory.Observation{ID: 905, Type: "decision", Title: "Live Decision", Content: "Body.", Project: "p-two", RevisionCount: 1, TopicKey: "longterm-mem/projectmove-recovery-fixture"}
 	w := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Clock: clock, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress)}
@@ -54,7 +54,7 @@ func TestWriter_Promote_CorruptedPageInAnotherProjectDoesNotBlockThisOne(t *test
 // corruption under this project still fails closed.
 func TestFindPromotedPage_CorruptionIsScopedToItsOwnProject(t *testing.T) {
 	vaultRoot := t.TempDir()
-	writeRawPage(t, vaultRoot, "c-000001.md", "---\nengram_id: 906\nproject: p-one\naddress: c-000001\nengram_revision: not-a-number\n---\n\nBody.\n")
+	writeRawPage(t, vaultRoot, "c-000001.md", "---\nsource: memorycard\nsource_id: 906\nproject: p-one\naddress: c-000001\nsource_revision: not-a-number\n---\n\nBody.\n")
 
 	if _, ok, err := findPromotedPage(pagesIn(vaultRoot), "p-two", 906); err != nil {
 		t.Fatalf("findPromotedPage(p-two) = %v, want no error: a corrupted page under p-one is not p-two's problem", err)
@@ -163,7 +163,7 @@ func TestWriter_Promote_ProjectMoveKeepsPatchedHashesWhenALaterPageFails(t *test
 	vaultRoot, store, firstOrphan := movedFixture(t, obs, "c-000001")
 	// The second orphan's address field disagrees with its filename, so the
 	// scan finds it but the supersession patch cannot open it.
-	writeRawPage(t, vaultRoot, "c-000002.md", "---\nengram_id: 330\nproject: p-three\naddress: c-999999\n---\n\nBody.\n")
+	writeRawPage(t, vaultRoot, "c-000002.md", "---\nsource: memorycard\nsource_id: 330\nproject: p-three\naddress: c-999999\n---\n\nBody.\n")
 
 	moved := obs
 	moved.Project = "p-two"
@@ -212,7 +212,7 @@ func TestWriter_Promote_ProjectMoveKeepsPatchedHashesWhenALaterPageIsUnparseable
 	// foreign project) and its address names a file that EXISTS -- but that
 	// file has no frontmatter block, so the patch reaches the parse branch
 	// rather than the read branch.
-	writeRawPage(t, vaultRoot, "c-000002.md", "---\nengram_id: 331\nproject: p-three\naddress: c-000003\n---\n\nBody.\n")
+	writeRawPage(t, vaultRoot, "c-000002.md", "---\nsource: memorycard\nsource_id: 331\nproject: p-three\naddress: c-000003\n---\n\nBody.\n")
 	writeRawPage(t, vaultRoot, "c-000003.md", "Just prose. No frontmatter delimiters at all.\n")
 
 	moved := obs

@@ -5,6 +5,9 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
 )
 
 // TestPatchStatusFields_ReplacesExistingFieldInPlace: task 7.10 Gap 2
@@ -15,19 +18,8 @@ import (
 func TestPatchStatusFields_ReplacesExistingFieldInPlace(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "c-000601.md")
-	fm := frontmatter{
-		Title: "Test Page", Address: "c-000601", Aliases: []string{"Test Page"},
-		Created: "2026-08-01", Updated: "2026-08-01",
-		Tags: []string{"memory", "decision"}, Status: "developing",
-		Related:        []string{"[[c-000001|Old]]"},
-		EngramID:       601,
-		EngramSyncID:   "sync-601",
-		EngramType:     "decision",
-		EngramRevision: 1,
-		Project:        "labdrian-sdd-overlay",
-	}
-	block := fm.Render()
-	body := "# Test Page\n\nOriginal content.\n\n---\nPromoted from Engram observation 601, revision 1.\n"
+	block := promotedBlock(t, 601, "c-000601", "Test Page", []Link{{Address: "c-000001", Title: "Old"}})
+	body := "# Test Page\n\nOriginal content.\n\n---\nPromoted from memorycard memory 601, revision 1.\n"
 	if err := os.WriteFile(path, []byte(block+body), 0o644); err != nil {
 		t.Fatalf("write fixture: %v", err)
 	}
@@ -64,7 +56,7 @@ func TestPatchStatusFields_ReplacesExistingFieldInPlace(t *testing.T) {
 func TestPatchStatusFields_AddsAbsentFieldIntoBlock(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "c-000602.md")
-	raw := "---\ntype: concept\ntitle: \"Legacy Page\"\naddress: c-000602\nstatus: developing\nengram_id: 602\nproject: labdrian-sdd-overlay\n---\n\nBody.\n"
+	raw := "---\ntype: concept\ntitle: \"Legacy Page\"\naddress: c-000602\nstatus: developing\nsource: memorycard\nsource_id: 602\nproject: labdrian-sdd-overlay\n---\n\nBody.\n"
 	if err := os.WriteFile(path, []byte(raw), 0o644); err != nil {
 		t.Fatalf("write fixture: %v", err)
 	}
@@ -103,7 +95,7 @@ func TestPatchStatusFields_AddsAbsentFieldIntoBlock(t *testing.T) {
 func TestPatchStatusFields_AddsAbsentScalarFieldIntoBlock(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "c-000605.md")
-	raw := "---\ntype: concept\ntitle: \"No Status Yet\"\naddress: c-000605\nengram_id: 605\nproject: labdrian-sdd-overlay\n---\n\nBody.\n"
+	raw := "---\ntype: concept\ntitle: \"No Status Yet\"\naddress: c-000605\nsource: memorycard\nsource_id: 605\nproject: labdrian-sdd-overlay\n---\n\nBody.\n"
 	if err := os.WriteFile(path, []byte(raw), 0o644); err != nil {
 		t.Fatalf("write fixture: %v", err)
 	}
@@ -137,19 +129,8 @@ func TestPatchStatusFields_AddsAbsentScalarFieldIntoBlock(t *testing.T) {
 func TestPatchStatusFields_BodyNeverTouched(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "c-000603.md")
-	fm := frontmatter{
-		Title: "Body Guard", Address: "c-000603", Aliases: []string{"Body Guard"},
-		Created: "2026-08-01", Updated: "2026-08-01",
-		Tags: []string{"memory", "decision"}, Status: "developing",
-		Related:        []string{},
-		EngramID:       603,
-		EngramSyncID:   "sync-603",
-		EngramType:     "decision",
-		EngramRevision: 1,
-		Project:        "labdrian-sdd-overlay",
-	}
-	block := fm.Render()
-	body := "# Body Guard\n\nA human edited this body by hand after promotion, adding\nan extra paragraph the patch must never rewrite.\n\n---\nPromoted from Engram observation 603, revision 1.\n"
+	block := promotedBlock(t, 603, "c-000603", "Body Guard", nil)
+	body := "# Body Guard\n\nA human edited this body by hand after promotion, adding\nan extra paragraph the patch must never rewrite.\n\n---\nPromoted from memorycard memory 603, revision 1.\n"
 	if err := os.WriteFile(path, []byte(block+body), 0o644); err != nil {
 		t.Fatalf("write fixture: %v", err)
 	}
@@ -184,19 +165,8 @@ func TestPatchStatusFields_BodyNeverTouched(t *testing.T) {
 func TestPatchStatusFields_PreservesContentOutsideBlockByteForByte(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "c-000604.md")
-	fm := frontmatter{
-		Title: "Byte Guard", Address: "c-000604", Aliases: []string{"Byte Guard"},
-		Created: "2026-08-01", Updated: "2026-08-01",
-		Tags: []string{"memory", "decision"}, Status: "developing",
-		Related:        []string{},
-		EngramID:       604,
-		EngramSyncID:   "sync-604",
-		EngramType:     "decision",
-		EngramRevision: 1,
-		Project:        "labdrian-sdd-overlay",
-	}
-	block := fm.Render()
-	body := "# Byte Guard\n\nLine with trailing spaces.   \n  \nUnicode: café ☃.\n\n---\nPromoted from Engram observation 604, revision 1.\n"
+	block := promotedBlock(t, 604, "c-000604", "Byte Guard", nil)
+	body := "# Byte Guard\n\nLine with trailing spaces.   \n  \nUnicode: café ☃.\n\n---\nPromoted from memorycard memory 604, revision 1.\n"
 	if err := os.WriteFile(path, []byte(block+body), 0o644); err != nil {
 		t.Fatalf("write fixture: %v", err)
 	}
@@ -217,4 +187,16 @@ func TestPatchStatusFields_PreservesContentOutsideBlockByteForByte(t *testing.T)
 	if gotTail != body {
 		t.Fatalf("content outside the frontmatter block was not preserved byte-for-byte;\ngot:  %q\nwant: %q", gotTail, body)
 	}
+}
+
+// promotedBlock is the frontmatter block a promoted page of memory id carries: the one the page renderer emits for a
+// developing memory at revision 1 of the project, with the related links given.
+func promotedBlock(t *testing.T, id int64, address, title string, related []Link) string {
+	t.Helper()
+	m := obsMemory(memory.Observation{ID: id, Type: "decision", Title: title, Content: "Original content.", Project: "labdrian-sdd-overlay", RevisionCount: 1})
+	page, err := EmitPage(m, address, related, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+	if err != nil {
+		t.Fatalf("EmitPage: %v", err)
+	}
+	return page.Frontmatter
 }
