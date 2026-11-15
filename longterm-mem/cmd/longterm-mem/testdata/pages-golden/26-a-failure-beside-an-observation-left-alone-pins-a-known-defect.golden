@@ -60,7 +60,8 @@ printf 'c-%06d\n' "$n"
 === wiki/memory/ (directory -rwxr-xr-x) ===
 === wiki/memory/c-000500.md (-rw-r--r--) ===
 ---
-memorycard_id: 1
+source: memorycard
+source_id: 1
 project: golden-project
 ---
 A page that names no address.
