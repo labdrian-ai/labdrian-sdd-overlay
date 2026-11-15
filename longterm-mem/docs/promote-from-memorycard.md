@@ -40,8 +40,8 @@ and `memorycard_revision`, one family of keys per store, were read as the identi
 A vault page that still carries only the retired keys (`engram_id`, `engram_revision`, `engram_type`, `memorycard_id`,
 `memorycard_revision`, `memorycard_type`) is no memory's page: no reader takes those keys for an identity. `sync` and
 `promote` therefore give the memory that page was written for a new page and leave the old page untouched, so the
-vault then holds two pages for that memory. The owner's vault had none after the migration of 2026-11-15 (575 of 575
-pages migrated, then 0 left); a vault that still has one needs the old page removed, or given the keys above by hand.
+vault then holds two pages for that memory. A vault that still has one needs the old page removed, or given the `source`, `source_id`, `source_type` and
+`source_revision` keys of its memory by hand.
 
 `related` holds the page of the memory in `superseded_by`, when that memory has a page in the same project; no
 other relation of memorycard is read. `status` is `superseded` or `archived` when the memory is, `mature` when it
