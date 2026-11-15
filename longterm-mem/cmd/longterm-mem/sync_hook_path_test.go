@@ -91,18 +91,23 @@ func TestHookPathSync_AnUnlistableStoreIsExit4(t *testing.T) {
 func TestHookPathSync_AMissingStoreIsExit4(t *testing.T) {
 	w, _ := syncMemorycardWorld(t)
 	enterHookPath(t)
-	missing := filepath.Join(realTempDir(t), "memory.db")
+	storeDir := realTempDir(t)
+	missing := filepath.Join(storeDir, "memory.db")
 	t.Setenv("LONGTERM_MEM_MEMORYCARD_DB", missing)
 	treeBefore := renderPromoteGoldenTree(t, w.vaultRoot)
 	code, stdout, stderr := runHookSync(t)
 	if code != exitStoreUnavailable {
 		t.Errorf("exit %d, want %d (the hook logs failure:store-unavailable)\nstdout: %s\nstderr: %s", code, exitStoreUnavailable, stdout, stderr)
 	}
+	// "memorycard: stat <path>" is the adapter's own refusal of a database that is not there (it stats the path
+	// before it opens it read-only); matching it, not the OS wording, tells a missing store from any other failure.
 	if !strings.Contains(stderr, "memorycard: stat "+missing) {
 		t.Errorf("stderr = %q, want the store to report it could not stat %s", stderr, missing)
 	}
-	if _, err := os.Stat(missing); !os.IsNotExist(err) {
-		t.Errorf("the missing store exists after the run (stat: %v): the sync created it", err)
+	if entries, err := os.ReadDir(storeDir); err != nil {
+		t.Fatalf("read the store directory: %v", err)
+	} else if len(entries) != 0 {
+		t.Errorf("the run created %d file(s) beside the missing store (%s first): it must create nothing", len(entries), entries[0].Name())
 	}
 	if after := renderPromoteGoldenTree(t, w.vaultRoot); after != treeBefore {
 		t.Errorf("a missing store changed the vault")
