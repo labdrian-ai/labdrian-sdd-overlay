@@ -161,7 +161,7 @@ func cardStatus(m memory.Memory) string {
 	return "developing"
 }
 
-// renderCardBody is renderBody for a memory of memorycard.
+// renderCardBody renders the body of the page of a memory of memorycard.
 func renderCardBody(m memory.Memory, id int64) string {
 	content := strings.TrimRight(m.Body, "\n")
 	var b strings.Builder

@@ -272,13 +272,13 @@ func TestDoctor(t *testing.T) {
 
 	t.Run("Locally edited page whose entry records a negative revision is named", func(t *testing.T) {
 		deps, vaultRoot := newHealthyDeps(t)
-		// The same wedge, spelled the other way round. Promotion's own
-		// guard (update.go's revisionsAllowAdoption) refuses on
-		// PromotedRevision <= 0, not just == 0, so a hand-edited or
-		// corrupted sidecar recording a negative revision is exactly as
-		// unadoptable as one recording none. This check has to spell the
-		// predicate the same way, or that page is wedged-but-unreported --
-		// the one state this check exists to make impossible.
+		// The same wedge, spelled the other way round. This check's wedge
+		// predicate (doctor.go) reads PromotedRevision <= 0, not just == 0,
+		// so a hand-edited or corrupted sidecar recording a negative
+		// revision is exactly as wedged as one recording none. The check
+		// has to spell the predicate that way, or that page is
+		// wedged-but-unreported -- the one state this check exists to make
+		// impossible.
 		recordPrecedenceRevision(t, vaultRoot, address, -1)
 		editPromotedPage(t, vaultRoot, address)
 
