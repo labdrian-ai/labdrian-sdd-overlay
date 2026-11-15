@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "98b28c38c109c0cddcd643a0918c2a7f1e15a8dc",
+    "head": "736cbfe3ae3dd5bc7ea6b96ca5fed4a91b9a5722",
+    "diff_sha256": "4d1ac0132ec1c621cb1070628f0aa0a9961794d23e36d13789dc305cecde6c1f",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "98b28c38c109c0cddcd643a0918c2a7f1e15a8dc",
+      "head": "736cbfe3ae3dd5bc7ea6b96ca5fed4a91b9a5722",
+      "diff_sha256": "4d1ac0132ec1c621cb1070628f0aa0a9961794d23e36d13789dc305cecde6c1f"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:121",
+        "claim": "The T6 line is now ticked [x], but its body still says \"the owner's rehearsal and live `--apply` are not run, and the task is not ticked (L62)\". That sentence is now false and sits beside the new \"done: ... recorded in L76\" clause. A reader scanning the line gets contradictory status. The verification summary also still lists only batches 1-8 as independently verified and does not mention the script fix `b6b2675e` that L76 introduces. This is a documentation inconsistency only, with no behavioral effect.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:121"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only one markdown file: the T6 checkbox goes from [ ] to [x], a trailing 'done:' clause is appended, and the Log entry L76 is added.",
+      "The stale 'not run / not ticked' sentence is retained in the same line as the tick and the new 'done' clause.",
+      "L76 is internally consistent with the commit message: the import runs before the migration, 575 of 575 pages are migrated with 0 refused, and the binary is upgraded first to avoid 524 duplicate promotions."
+    ]
+  }
+}

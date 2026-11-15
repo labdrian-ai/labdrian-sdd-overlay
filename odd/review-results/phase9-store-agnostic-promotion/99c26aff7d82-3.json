@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "73a41ee2ee57af1a834b48b912a5c134fb7dfd22",
+    "head": "99c26aff7d82eff4066423037e123db380b47019",
+    "diff_sha256": "d4c8e58d61b05d53bfc60e1ec86663bda48b6feac105b85a377603b3e861f054",
+    "paths": [
+      "scripts/rehearse-card-page-migration.sh"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "73a41ee2ee57af1a834b48b912a5c134fb7dfd22",
+      "head": "99c26aff7d82eff4066423037e123db380b47019",
+      "diff_sha256": "d4c8e58d61b05d53bfc60e1ec86663bda48b6feac105b85a377603b3e861f054"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "scripts/rehearse-card-page-migration.sh"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "scripts/rehearse-card-page-migration.sh:43-45",
+        "claim": "The new guard tests only for $live_engram_dir/engram.db. If the script's later import step uses a different condition or path (for example a copied database, an env override, or a directory check), the precheck and the import can disagree. A host could then pass the check without memorycard and fail later, or skip the check when the import still runs. The diff does not show the import condition, so the two cannot be confirmed to match.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "scripts/rehearse-card-page-migration.sh:43-45"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only one hunk changed: the unconditional memorycard check became conditional on -f \"$live_engram_dir/engram.db\".",
+      "The change relaxes a precondition and does not alter any later command. Its correctness depends on the import step using the same condition, which the diff does not show."
+    ]
+  }
+}

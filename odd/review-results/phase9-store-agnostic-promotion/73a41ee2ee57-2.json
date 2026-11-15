@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "23a9485bcd9da3b770918f242baa2f1bcbb510f3",
+    "head": "73a41ee2ee57af1a834b48b912a5c134fb7dfd22",
+    "diff_sha256": "a348a866c34efbd289a8d76bf45da259a4257e6564eef1f346ec369a3a218d79",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "23a9485bcd9da3b770918f242baa2f1bcbb510f3",
+      "head": "73a41ee2ee57af1a834b48b912a5c134fb7dfd22",
+      "diff_sha256": "a348a866c34efbd289a8d76bf45da259a4257e6564eef1f346ec369a3a218d79"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:823",
+        "claim": "L79 says the trailers of 'the two script commits' were reworded, but its old-to-new map lists five commits (b6b2675e, 6b906c7b, b055335c, 0deec13c, 6355fec6). The text does not say why three more hashes changed, for example that they are descendants rehashed by the rebase. A reader cannot tell which commits had their message reworded and which only changed hash.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:823"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only the T6 line (one hash reference in its closing clause) and appends L79 to the Log.",
+      "The T6 line's new text, 'script fix `98b28c38`, written `b6b2675e` before the reword of L79', matches the L79 map entry b6b2675e = 98b28c38.",
+      "L79 says 'two script commits' while the map covers five hashes."
+    ]
+  }
+}

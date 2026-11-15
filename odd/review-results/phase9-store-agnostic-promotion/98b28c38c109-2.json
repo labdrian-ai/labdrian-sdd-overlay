@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "c4800ba15373d35515ab2d7e5891e320fd13dd22",
+    "head": "98b28c38c109c0cddcd643a0918c2a7f1e15a8dc",
+    "diff_sha256": "8de3fa8b0529b265532a3ee8e2522e20764db3949de889d7f914e8f98545250f",
+    "paths": [
+      "scripts/rehearse-card-page-migration.sh"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "c4800ba15373d35515ab2d7e5891e320fd13dd22",
+      "head": "98b28c38c109c0cddcd643a0918c2a7f1e15a8dc",
+      "diff_sha256": "8de3fa8b0529b265532a3ee8e2522e20764db3949de889d7f914e8f98545250f"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "scripts/rehearse-card-page-migration.sh"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "scripts/rehearse-card-page-migration.sh:87-95",
+        "claim": "copy_db picks immutable mode from the file-mode test `-w`, not from whether the database is actually frozen. A database that is read-only for this user but still written by another process (different owner, or a read-only mount) is opened immutable, and sqlite then assumes it cannot change. The copy can be torn or inconsistent and nothing reports it. Running as root makes `-w` always true, so the frozen mode-444 store takes the `.backup` path again and spins forever. The `file:$1?immutable=1` URI is also built from the raw path, so a path containing `?`, `#` or `%` is misparsed.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "scripts/rehearse-card-page-migration.sh:87-95"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "scripts/rehearse-card-page-migration.sh:43",
+        "claim": "The new `command -v memorycard` check dies unconditionally. The import that needs it only runs when `$engram_db` exists (line 239). A rehearsal on a host with no Engram database, which previously worked, now aborts for a binary it would never call.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "scripts/rehearse-card-page-migration.sh:43",
+          "scripts/rehearse-card-page-migration.sh:239"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff shows no export of MEMORYCARD_DB near the import call. The comment says it points at the copy, so I could not confirm that the import writes only the copy.",
+      "Only the diff was available; the rest of the script, including pipefail and the `-w` semantics, was not inspected."
+    ]
+  }
+}

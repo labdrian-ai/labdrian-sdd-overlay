@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "9bcd7fd07d4a0c3d5a88a5a4744624d1959a0337",
+    "head": "f93f37580695ee00c722fdf368a78d804c0a862b",
+    "diff_sha256": "9e037e4fb69f511099da7198c689d8ce26767fb132dacaf0da889cc76e82d7a9",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "9bcd7fd07d4a0c3d5a88a5a4744624d1959a0337",
+      "head": "f93f37580695ee00c722fdf368a78d804c0a862b",
+      "diff_sha256": "9e037e4fb69f511099da7198c689d8ce26767fb132dacaf0da889cc76e82d7a9"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The change appends one documentation log entry (L81) to odd/tasks/phase9-store-agnostic-promotion.md; no executable code, config or behavior is modified.",
+      "The entry's script line references (43, 187-188, 246) are pinned to commit 99c26aff, which is outside the diff, so I cannot verify them, but nothing in the diff contradicts them and the commit claims Risk: none."
+    ]
+  }
+}

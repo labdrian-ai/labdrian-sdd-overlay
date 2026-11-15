@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "98b28c38c109c0cddcd643a0918c2a7f1e15a8dc",
+    "head": "736cbfe3ae3dd5bc7ea6b96ca5fed4a91b9a5722",
+    "diff_sha256": "4d1ac0132ec1c621cb1070628f0aa0a9961794d23e36d13789dc305cecde6c1f",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "98b28c38c109c0cddcd643a0918c2a7f1e15a8dc",
+      "head": "736cbfe3ae3dd5bc7ea6b96ca5fed4a91b9a5722",
+      "diff_sha256": "4d1ac0132ec1c621cb1070628f0aa0a9961794d23e36d13789dc305cecde6c1f"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The change is documentation only: it ticks T6 and appends Log entry L76. It touches no code.",
+      "The counts in L76 agree with each other: 532 migrated plus 43 refused is 575, the import_map rows rise from 3534 to 3729 (195 rows), and the 524 duplicate promotions, the 575 of 575 migrated and the 244 promotions match the commit's claims.",
+      "The old T6 sentence 'the task is not ticked (L62)' is kept but is followed directly by the added 'done: ... recorded in L76', so the line is not contradictory.",
+      "L76 is append-only, as the earlier rule in the Log requires."
+    ]
+  }
+}

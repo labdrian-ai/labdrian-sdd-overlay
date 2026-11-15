@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "38dd4c43952a946f0fc4096ead06041484ca8898",
+    "head": "23a9485bcd9da3b770918f242baa2f1bcbb510f3",
+    "diff_sha256": "1b9833faa8d6c18c31a704b399828ae0ad3ef0baca27b4b3a71052d04dc9b2c9",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "38dd4c43952a946f0fc4096ead06041484ca8898",
+      "head": "23a9485bcd9da3b770918f242baa2f1bcbb510f3",
+      "diff_sha256": "1b9833faa8d6c18c31a704b399828ae0ad3ef0baca27b4b3a71052d04dc9b2c9"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:820",
+        "claim": "The L78 entry cites the script by line numbers ('line 38', 'line 45', 'Lines 225-232') and a source line (import.go:135) with no commit pinned for them. These references drift as the script changes, so a reader cannot resolve them later. The 'Lines 225-232 are not in the diff' sentence is also unclear about which diff it means.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:820",
+          "odd/tasks/phase9-store-agnostic-promotion.md:822"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:822",
+        "claim": "The verification bullet is a single run-on paragraph of about a dozen results separated by semicolons and periods. Pass/fail per check is hard to scan. It also records a first run that aborted and was then rerun with an argument, and does not say plainly whether the no-argument abort is a defect in the script or only a mistaken expectation.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:822"
+        ]
+      }
+    ],
+    "evidence": [
+      "The change is a docs-only append to the Log (L78); no code is touched.",
+      "The verification claims cannot be checked from the diff, so only readability of the entry is assessed."
+    ]
+  }
+}

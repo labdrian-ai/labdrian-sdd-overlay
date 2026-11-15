@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "73a41ee2ee57af1a834b48b912a5c134fb7dfd22",
+    "head": "99c26aff7d82eff4066423037e123db380b47019",
+    "diff_sha256": "d4c8e58d61b05d53bfc60e1ec86663bda48b6feac105b85a377603b3e861f054",
+    "paths": [
+      "scripts/rehearse-card-page-migration.sh"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "73a41ee2ee57af1a834b48b912a5c134fb7dfd22",
+      "head": "99c26aff7d82eff4066423037e123db380b47019",
+      "diff_sha256": "d4c8e58d61b05d53bfc60e1ec86663bda48b6feac105b85a377603b3e861f054"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "scripts/rehearse-card-page-migration.sh"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff only wraps the memorycard presence check in a test on $live_engram_dir/engram.db. That is the same path the commit message says gates the import.",
+      "The diff does not show the rest of the script. I cannot prove that memorycard is invoked only inside the import branch, or that the import guard tests the same path, so I report no change-caused defect."
+    ]
+  }
+}

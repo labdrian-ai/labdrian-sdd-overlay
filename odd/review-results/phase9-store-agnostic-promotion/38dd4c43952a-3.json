@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "180c3c25c87a98c1a5be1c186ef68411f8951085",
+    "head": "38dd4c43952a946f0fc4096ead06041484ca8898",
+    "diff_sha256": "97c16eedcaa5011fbcbaa0fd0d53782859288c4bb7803d29cb6eefc4173ad470",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "180c3c25c87a98c1a5be1c186ef68411f8951085",
+      "head": "38dd4c43952a946f0fc4096ead06041484ca8898",
+      "diff_sha256": "97c16eedcaa5011fbcbaa0fd0d53782859288c4bb7803d29cb6eefc4173ad470"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The change touches one documentation file: the T6 tick line's trailing clause is reworded, and a new Log entry L77 is appended.",
+      "The reworded T6 clause matches the already-ticked [x] state and the existing L76 reference, so the old 'not ticked' text is no longer contradicted.",
+      "L77 cites script line numbers and review finding ids that the diff does not show. I could not check them, so I raise no defect for them.",
+      "No code, behavior or contract changes, so the stated Risk of none holds."
+    ]
+  }
+}

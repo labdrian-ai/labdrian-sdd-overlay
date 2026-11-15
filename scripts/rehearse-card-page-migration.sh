@@ -9,8 +9,10 @@
 # The command works on one project, so the rehearsal runs it for EVERY project that has pages in the vault: the list is
 # read from the `project:` line of the copy's pages (not hardcoded). Pass project names to rehearse only those.
 #
-# The Engram database is copied only because `doctor`'s embedding checks still read it (until T12 of the next phase);
-# migrate-card-pages reads no Engram database, and the run sets LONGTERM_MEM_ENGRAM_DB to the copy for `doctor` alone.
+# The Engram database is copied for two readers: `memorycard import engram`, which maps into the memorycard copy the
+# observations written after the first import, and `doctor`'s embedding checks (until T12 of the next phase).
+# migrate-card-pages reads no Engram database. A database nobody may write (the frozen Engram store) is copied through
+# sqlite's immutable mode, because `.backup` cannot take a read lock on it.
 #
 # The real `sync` of the copy runs the vault's own index rebuild (bin/setup-retrieve.sh --no-llm, then
 # scripts/contextual-prefix.py --all --no-llm and scripts/bm25-index.py build). Those scripts take the vault from their
@@ -38,6 +40,9 @@ live_engram_dir="$real_home/.engram"
 cache="$real_home/.cache"
 
 command -v sqlite3 >/dev/null || die "sqlite3 is needed to copy the databases consistently"
+if [[ -f "$live_engram_dir/engram.db" ]]; then # the import runs only when there is an Engram database to copy
+  command -v memorycard >/dev/null || die "memorycard is needed to import the late Engram observations into the copy"
+fi
 [[ -d "$live_vault/wiki/memory" ]] || die "the live vault has no wiki/memory directory: $live_vault"
 [[ -f "$live_card_dir/memory.db" ]] || die "no memorycard database at $live_card_dir/memory.db"
 mkdir -p "$cache"
@@ -82,7 +87,18 @@ live_digest() { # a digest of what the migration would rewrite in the live vault
   (cd "$live_vault" && find "${paths[@]}" -type f -print0 | sort -z | xargs -0 sha256sum | sha256sum)
 }
 copy_db() { # copy_db <live db> <copy>: a consistent copy of a sqlite database, which may be open by another process
-  sqlite3 -readonly "$1" ".backup '$2'"
+  if [[ -w "$1" ]]; then
+    sqlite3 -readonly "$1" ".backup '$2'"
+  else
+    # A database nobody may write (the frozen Engram store is mode 444, -shm included) cannot take a WAL read lock, and
+    # `.backup` then retries forever. Nothing can change it, so it is opened immutable: sqlite takes no lock and touches
+    # no -shm or -wal file. Immutable mode ignores a -wal file, so one with content would be left out of the copy: refuse
+    # it. Root sees every file as writable and never reaches this branch; a ?, # or % in the path would break the URI.
+    ((EUID != 0)) || die "run the rehearsal as the owner, not root"
+    [[ "$1" != *[?#%]* ]] || die "the database path holds a character the sqlite URI cannot carry: $1"
+    [[ ! -s "$1-wal" ]] || die "the read-only database has a -wal file with content, which immutable mode would leave out: $1-wal"
+    sqlite3 "file:$1?immutable=1" ".backup '$2'"
+  fi
 }
 legacy_pages() { # one line per legacy page of the vault at $1: `R` or `U`, a tab, and the page's project (empty when it names none)
   # The command reads the .md files directly in wiki/memory. A page is READABLE (`R`) when it starts at byte 0 with a
@@ -221,6 +237,23 @@ echo
 echo "=== pages that carry a legacy identity key BEFORE the migration ==="
 legacy_counts "$vault"
 
+# memorycard imported Engram before Engram froze, so the observations written in between have no import_map row and
+# their pages are refused. The import is resumable: it adds only the rows it has not mapped yet. It runs before any
+# sync, because a sync would promote those memories again as new pages and the legacy pages would then be refused as
+# "its memory already has a page". MEMORYCARD_DB is the copy (exported above), so the import writes the copy only; the
+# live import_map count is read before and after, and the run stops if it changed. A failed import stops the run too
+# (pipefail).
+if [[ -f "$engram_db" ]]; then
+  echo
+  echo "=== memorycard import engram (the copy): maps the Engram observations written after the first import ==="
+  import_rows() { sqlite3 -readonly "$1" "select count(*) from import_map;"; }
+  live_rows_before="$(import_rows "$live_card_dir/memory.db")"
+  echo "import_map rows before: $(import_rows "$card_db")"
+  memorycard import engram "$engram_db" | tail -8
+  echo "import_map rows after:  $(import_rows "$card_db")"
+  [[ "$(import_rows "$live_card_dir/memory.db")" == "$live_rows_before" ]] || die "the live memorycard import_map changed during the import"
+fi
+
 project=""
 lm() { "$bin" "$@" --project "$project" --vault "$vault"; }
 slug() { printf '%02d-%s' "$1" "$(printf '%s' "$2" | tr -c 'A-Za-z0-9._-' '_')"; } # slug <index> <project>: an index number first, so two projects never share a file name
@@ -317,6 +350,7 @@ echo
 echo "=== the live run, when the rehearsal is what you expect (one project at a time) ==="
 echo "The hook-driven sync has no switch and no lock guards a concurrent sync. Close every agent session that uses the vault, then"
 echo "run: pgrep -af '[l]ongterm-mem.* sync'   (any output is a sync that is running; the bracket keeps the check from matching itself)"
+echo "  memorycard import engram ~/.engram/engram.db    # first, and with no sync before the migration: maps the late Engram observations"
 for project in "${projects[@]}"; do
   echo "  longterm-mem migrate-card-pages --project '$project'            # dry run, read the counts"
   echo "  longterm-mem migrate-card-pages --project '$project' --apply    # the backup directory it prints is the way back"

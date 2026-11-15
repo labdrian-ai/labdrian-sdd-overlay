@@ -1,0 +1,40 @@
+{
+  "kind": "polisher",
+  "base": "c4800ba15373d35515ab2d7e5891e320fd13dd22",
+  "head": "98b28c38c109c0cddcd643a0918c2a7f1e15a8dc",
+  "diff_sha256": "8de3fa8b0529b265532a3ee8e2522e20764db3949de889d7f914e8f98545250f",
+  "findings": {
+    "findings": [
+      {
+        "location": "scripts/rehearse-card-page-migration.sh:87-96",
+        "claim": "The immutable copy of the frozen Engram database drops any data that is still in a `-wal` file. If the frozen store was not cleanly checkpointed, the copy omits the late observations, and the new `memorycard import engram` step then maps nothing for them. The rehearsal would still report those pages as refused, with no sign that the copy was incomplete.",
+        "severity": "WARNING",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "Line 94 opens `file:$1?immutable=1`. SQLite's immutable mode does not read a `-wal` file; this is SQLite's documented behavior, not something I ran here.",
+          "The comment on lines 91-93 says the store is mode 444 with `-shm` included, so it was opened in WAL mode. The change never checks for or warns about a non-empty `.db-wal` next to the source.",
+          "The script has no checkpointed-or-empty-WAL check on the source, such as comparing the `-wal` size with zero. I could not run the script or inspect the real `~/.engram` here."
+        ]
+      },
+      {
+        "location": "scripts/rehearse-card-page-migration.sh:88-95",
+        "claim": "`copy_db` chooses the immutable path whenever `[[ -w ]]` is false. That would also apply to the live memorycard database if it is ever unwritable, for example when run as a different user. Immutable mode on a database another process is still writing can give an inconsistent or corrupt copy. The URI is also built from the raw path without escaping, so a `?`, `#` or `%` in `$HOME` would break it.",
+        "severity": "SUGGESTION",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "Line 180 calls the same `copy_db` for the live memorycard database, which other processes may have open.",
+          "Line 94 interpolates `$1` unescaped into the URI.",
+          "The write-protection test is a heuristic, not a check of the frozen store specifically, for example by file name or mode 444. When run as root, `-w` is always true, so the old `.backup` path is used and can hang on the frozen store."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read /home/labdrian/.cache/t6-pol-98b28c38.diff in full.",
+      "Read lines 25-260 of scripts/rehearse-card-page-migration.sh in the head worktree.",
+      "Checked every live path the changed lines touch: the live databases are only read, and the live commands are only echoed. `MEMORYCARD_DB` and `HOME` point at the scratch copy before `memorycard import engram` runs, and the existing guard calls cover the paths.",
+      "I could not execute the script or `memorycard` here, so how `memorycard import engram` behaves is not verified."
+    ]
+  }
+}

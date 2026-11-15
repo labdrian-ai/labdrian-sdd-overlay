@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "99c26aff7d82eff4066423037e123db380b47019",
+    "head": "9bcd7fd07d4a0c3d5a88a5a4744624d1959a0337",
+    "diff_sha256": "28b81f7912d8784c435e05e6432789859089d41aa839b99d1ba42fb42619f1da",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "99c26aff7d82eff4066423037e123db380b47019",
+      "head": "9bcd7fd07d4a0c3d5a88a5a4744624d1959a0337",
+      "diff_sha256": "28b81f7912d8784c435e05e6432789859089d41aa839b99d1ba42fb42619f1da"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The change only appends log entry L80 to the feature document. No code or behavior changes.",
+      "The hash mappings in L80 (b6b2675e=98b28c38, b055335c=180c3c25, 0deec13c=38dd4c43, 6355fec6=23a9485b) agree with L79.",
+      "L80's explanation that only two commits had their messages reworded agrees with L79, which says only the two script commits' trailers were wrong.",
+      "L80's script and memorycard line references (28, 38, 44-47, 204, import.go:135) cannot be checked from this diff. They are pinned to named commits, so I raise no finding on them."
+    ]
+  }
+}

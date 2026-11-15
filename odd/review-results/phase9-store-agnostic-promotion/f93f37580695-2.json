@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "9bcd7fd07d4a0c3d5a88a5a4744624d1959a0337",
+    "head": "f93f37580695ee00c722fdf368a78d804c0a862b",
+    "diff_sha256": "9e037e4fb69f511099da7198c689d8ce26767fb132dacaf0da889cc76e82d7a9",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "9bcd7fd07d4a0c3d5a88a5a4744624d1959a0337",
+      "head": "f93f37580695ee00c722fdf368a78d804c0a862b",
+      "diff_sha256": "9e037e4fb69f511099da7198c689d8ce26767fb132dacaf0da889cc76e82d7a9"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:832",
+        "claim": "The L81 log entry asserts that three conditions agree and cites specific script line numbers (43, 187-188, 246) at 99c26aff, but the diff shows no script content, so the claim cannot be verified from this change. Its closing statement that the script reads no environment override is likewise unsupported here. Also, the entry says the two tests use the same file, yet the import tests a different variable (engram_db) whose equivalence depends on the copy having succeeded; the answer does not say what happens if the copy is skipped or fails, which is the scenario the review finding raised.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:832"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only one documentation file, appending a single log entry L81.",
+      "The entry's line references cannot be checked against script content because the script is not in the diff.",
+      "No code behavior is changed by this commit."
+    ]
+  }
+}

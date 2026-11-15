@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "5896feecdae9c145f76f09777d5bf9a450f12089",
+    "head": "dabc7ed298f60aa24e5a9c5b0fbeae60d5941f56",
+    "diff_sha256": "f706d5c01137d807629b484d9bfdae204110d1e18489bfd2cee6604370e993c3",
+    "paths": [
+      "odd/review-results/phase9-store-agnostic-promotion/180c3c25c87a-4.polisher.json",
+      "odd/review-results/phase9-store-agnostic-promotion/98b28c38c109-4.polisher.json",
+      "odd/review-results/phase9-store-agnostic-promotion/99c26aff7d82-4.polisher.json",
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "5896feecdae9c145f76f09777d5bf9a450f12089",
+      "head": "dabc7ed298f60aa24e5a9c5b0fbeae60d5941f56",
+      "diff_sha256": "f706d5c01137d807629b484d9bfdae204110d1e18489bfd2cee6604370e993c3"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/review-results/phase9-store-agnostic-promotion/180c3c25c87a-4.polisher.json",
+        "odd/review-results/phase9-store-agnostic-promotion/98b28c38c109-4.polisher.json",
+        "odd/review-results/phase9-store-agnostic-promotion/99c26aff7d82-4.polisher.json",
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The change adds three polisher result JSON files and one Log entry (L82) in the feature document. No code changes.",
+      "The L82 answers match the findings recorded in the three polisher JSON files: the 99c26aff polisher reported none, and the 98b28c38 F1/F2 and 180c3c25 F1 answers each address the finding as it was filed.",
+      "The claims about script lines, the verifier's 1-byte -wal trip, and import.go:135 refer to files not in the diff, so I could not check them. I found nothing in the diff that contradicts them."
+    ]
+  }
+}

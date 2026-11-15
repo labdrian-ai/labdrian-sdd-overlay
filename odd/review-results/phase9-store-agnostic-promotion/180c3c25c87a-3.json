@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "736cbfe3ae3dd5bc7ea6b96ca5fed4a91b9a5722",
+    "head": "180c3c25c87a98c1a5be1c186ef68411f8951085",
+    "diff_sha256": "3ac13c896cf65ddf1d4814b4f69e5c552eb312212702ccfe42da3c4cd72a3307",
+    "paths": [
+      "scripts/rehearse-card-page-migration.sh"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "736cbfe3ae3dd5bc7ea6b96ca5fed4a91b9a5722",
+      "head": "180c3c25c87a98c1a5be1c186ef68411f8951085",
+      "diff_sha256": "3ac13c896cf65ddf1d4814b4f69e5c552eb312212702ccfe42da3c4cd72a3307"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "scripts/rehearse-card-page-migration.sh"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "scripts/rehearse-card-page-migration.sh:248-252",
+        "claim": "The new live-memorycard guard reads `$live_card_dir/memory.db` with `sqlite3 -readonly`. `live_card_dir` is not defined or checked anywhere in this diff. If it is unset, or the live file is missing or locked, the assignment fails under `set -e` and the rehearsal aborts with a bare sqlite error, not a clear message. The after-import comparison also dies if the owner's live memorycard legitimately gains an import_map row during the run (for example a concurrent live sync). That is a false 'live changed' abort for a rehearsal meant to run against a live vault.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "scripts/rehearse-card-page-migration.sh:248",
+          "scripts/rehearse-card-page-migration.sh:252"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only the diff was inspected. The diff shows no definition of live_card_dir and no existence check for the live memory.db before the new reads.",
+      "The immutable-branch guards (root, URI characters, non-empty -wal) look correct for what they claim."
+    ]
+  }
+}
