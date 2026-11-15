@@ -40,7 +40,9 @@ live_engram_dir="$real_home/.engram"
 cache="$real_home/.cache"
 
 command -v sqlite3 >/dev/null || die "sqlite3 is needed to copy the databases consistently"
-command -v memorycard >/dev/null || die "memorycard is needed to import the late Engram observations into the copy"
+if [[ -f "$live_engram_dir/engram.db" ]]; then # the import runs only when there is an Engram database to copy
+  command -v memorycard >/dev/null || die "memorycard is needed to import the late Engram observations into the copy"
+fi
 [[ -d "$live_vault/wiki/memory" ]] || die "the live vault has no wiki/memory directory: $live_vault"
 [[ -f "$live_card_dir/memory.db" ]] || die "no memorycard database at $live_card_dir/memory.db"
 mkdir -p "$cache"
