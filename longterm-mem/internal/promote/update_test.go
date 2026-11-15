@@ -94,7 +94,7 @@ func TestUpdate_UnmodifiedPageUpdatesInPlace(t *testing.T) {
 }
 
 // TestUpdate_RetitleKeepsSameFile: R-008 scenario 2 (task 6.4). X's
-// Engram title changed since its last promotion but its id is unchanged;
+// memory title changed since its last promotion but its id is unchanged;
 // the same on-disk page is updated with the new title, no new file is
 // created, and no old file is orphaned.
 func TestUpdate_RetitleKeepsSameFile(t *testing.T) {
@@ -223,7 +223,7 @@ func TestUpdate_UnmodifiedPageUpdatesNormally(t *testing.T) {
 	seedPrecedence(store, page)
 
 	// Re-promotion re-renders byte-identical content (nothing changed
-	// upstream in Engram): still must not be misread as a local edit.
+	// upstream in the store): still must not be misread as a local edit.
 	action, err := UpdateInPlace(pagesIn(vaultRoot), store, page)
 	if err != nil {
 		t.Fatalf("UpdateInPlace: %v", err)
@@ -810,13 +810,13 @@ func TestUpdate_PageLevelWithTheSidecarRevisionIsSkipped(t *testing.T) {
 	}
 }
 
-// TestUpdate_PageClaimingARevisionEngramHasNotReachedIsSkipped pins the
+// TestUpdate_PageClaimingARevisionTheStoreHasNotReachedIsSkipped pins the
 // other half of the revision guard. A page whose source_revision stands
 // ABOVE the revision now being promoted is not a render this writer could
-// have produced -- we only ever render the revision Engram reports -- so
+// have produced -- we only ever render the revision the store reports -- so
 // however well it corroborates otherwise, it is not our own unrecorded
 // write and must not be adopted.
-func TestUpdate_PageClaimingARevisionEngramHasNotReachedIsSkipped(t *testing.T) {
+func TestUpdate_PageClaimingARevisionTheStoreHasNotReachedIsSkipped(t *testing.T) {
 	vaultRoot := t.TempDir()
 	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
@@ -842,7 +842,7 @@ func TestUpdate_PageClaimingARevisionEngramHasNotReachedIsSkipped(t *testing.T) 
 		t.Fatalf("write page claiming revision 5: %v", err)
 	}
 
-	// Engram itself is only at revision 3.
+	// The store itself is only at revision 3.
 	clock.Set(time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
 	obs.RevisionCount = 3
 	obs.Content = "V3 body."
@@ -856,7 +856,7 @@ func TestUpdate_PageClaimingARevisionEngramHasNotReachedIsSkipped(t *testing.T) 
 		t.Fatalf("UpdateInPlace: %v", err)
 	}
 	if action.Kind != ActionSkippedLocalEdit {
-		t.Fatalf("action.Kind = %v, want ActionSkippedLocalEdit: a page claiming a revision Engram has not reached is not a render this writer produced", action.Kind)
+		t.Fatalf("action.Kind = %v, want ActionSkippedLocalEdit: a page claiming a revision the store has not reached is not a render this writer produced", action.Kind)
 	}
 	got, err := os.ReadFile(existingPath)
 	if err != nil {
@@ -959,7 +959,7 @@ func TestUpdate_LegacyEntryLevelWithTheIncomingRevisionIsSkipped(t *testing.T) {
 		t.Fatalf("write local edit: %v", err)
 	}
 
-	// Engram is still at revision 2, so the promotion re-renders the same
+	// The store is still at revision 2, so the promotion re-renders the same
 	// revision the page already claims.
 	clock.Set(time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
 	incoming, err := EmitPage(obsMemory(obs), "c-000317", nil, clock.Now())
