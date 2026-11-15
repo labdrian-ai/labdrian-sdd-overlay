@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "1d8526cabdf575c4ec50535a940c8752854a9a5f",
+    "head": "75e3f01ec5711f341a2a04993fded94b6de28e32",
+    "diff_sha256": "286c2cf4b0b23e7ed47efa24794c9fd127bbb0d30a2c4ccaa8b791d8658e9255",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "1d8526cabdf575c4ec50535a940c8752854a9a5f",
+      "head": "75e3f01ec5711f341a2a04993fded94b6de28e32",
+      "diff_sha256": "286c2cf4b0b23e7ed47efa24794c9fd127bbb0d30a2c4ccaa8b791d8658e9255"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff appends one log entry (L89) to the append-only Log in the feature document; no code changed.",
+      "L89 follows the format of L87 and L88 (id, date, role, task, append-only marker) and numbers sequentially after L88.",
+      "Its claims reference commit hashes and a source path:line that cannot be verified from the diff alone; nothing in the entry contradicts the existing log."
+    ]
+  }
+}

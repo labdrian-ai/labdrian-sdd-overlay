@@ -1,0 +1,94 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a2c0d97ca90e53c370eb7fd38ccab35de1acdd55",
+    "head": "f9a54ab372c61de41721e14ff905e66883f9f603",
+    "diff_sha256": "460c7ece0ec7e0cbf6b5c2d986eb5e721b92c8a1790cf08db41b7dd1ad280bdd",
+    "paths": [
+      "engine/cmd/sync_trigger_test.go",
+      "engine/cmd/synctrigger_golden_test.go",
+      "engine/cmd/testdata/synctrigger-golden/the-child-reports-engram-unavailable.golden",
+      "engine/cmd/testdata/synctrigger-golden/the-child-reports-store-unavailable.golden",
+      "engine/synctrigger/synctrigger.go",
+      "engine/synctrigger/synctrigger_test.go",
+      "longterm-mem/cmd/longterm-mem/app.go",
+      "longterm-mem/cmd/longterm-mem/app_test.go",
+      "longterm-mem/cmd/longterm-mem/cmd_index_embeddings.go",
+      "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go",
+      "longterm-mem/cmd/longterm-mem/cmd_query.go",
+      "longterm-mem/cmd/longterm-mem/cmd_skills_stale_test.go",
+      "longterm-mem/cmd/longterm-mem/cmd_stale.go",
+      "longterm-mem/cmd/longterm-mem/cmd_sync.go",
+      "longterm-mem/cmd/longterm-mem/exit_codes.go",
+      "longterm-mem/cmd/longterm-mem/mcp_start_test.go",
+      "longterm-mem/cmd/longterm-mem/sources.go",
+      "longterm-mem/cmd/longterm-mem/sync_hook_path_test.go",
+      "longterm-mem/cmd/longterm-mem/sync_memorycard_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "a2c0d97ca90e53c370eb7fd38ccab35de1acdd55",
+      "head": "f9a54ab372c61de41721e14ff905e66883f9f603",
+      "diff_sha256": "460c7ece0ec7e0cbf6b5c2d986eb5e721b92c8a1790cf08db41b7dd1ad280bdd"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/sync_trigger_test.go",
+        "engine/cmd/synctrigger_golden_test.go",
+        "engine/cmd/testdata/synctrigger-golden/the-child-reports-engram-unavailable.golden",
+        "engine/cmd/testdata/synctrigger-golden/the-child-reports-store-unavailable.golden",
+        "engine/synctrigger/synctrigger.go",
+        "engine/synctrigger/synctrigger_test.go",
+        "longterm-mem/cmd/longterm-mem/app.go",
+        "longterm-mem/cmd/longterm-mem/app_test.go",
+        "longterm-mem/cmd/longterm-mem/cmd_index_embeddings.go",
+        "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go",
+        "longterm-mem/cmd/longterm-mem/cmd_query.go",
+        "longterm-mem/cmd/longterm-mem/cmd_skills_stale_test.go",
+        "longterm-mem/cmd/longterm-mem/cmd_stale.go",
+        "longterm-mem/cmd/longterm-mem/cmd_sync.go",
+        "longterm-mem/cmd/longterm-mem/exit_codes.go",
+        "longterm-mem/cmd/longterm-mem/mcp_start_test.go",
+        "longterm-mem/cmd/longterm-mem/sources.go",
+        "longterm-mem/cmd/longterm-mem/sync_hook_path_test.go",
+        "longterm-mem/cmd/longterm-mem/sync_memorycard_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/cmd_query.go:79-82",
+        "claim": "The comment above the renamed refuse call still says the failure is 'engram_unavailable', so it names the retired kind next to the new exitStoreUnavailable constant. A reader grepping for the old name finds a stale term. Likewise the test failure messages in cmd_skills_stale_test.go and mcp_start_test.go still say 'Engram', which is accurate for those engram-backed commands, so only the query comment is stale.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/cmd_query.go:79-82"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/app_test.go:96-111",
+        "claim": "The test name TestApp_MemoryRefusesWhenEngramCannotBeOpened is kept while its assertions use exitStoreUnavailable. This is acceptable because it opens Engram, but the readability gap between the old test name and the new constant may mislead readers into thinking the code is Engram-specific.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/app_test.go:106-111"
+        ]
+      }
+    ],
+    "evidence": [
+      "The rename of kindEngramUnavailable to kindStoreUnavailable and the string change are applied consistently in classify, its tests, and the golden file, which was renamed along with its case name.",
+      "exitEngramUnavailable was renamed across every call site in the diff, and the value 4 is unchanged, so the exit code mapping holds.",
+      "The new hook-path tests exercise exit 0, 3 and 4 through plain sync, matching the commit's claim."
+    ]
+  }
+}

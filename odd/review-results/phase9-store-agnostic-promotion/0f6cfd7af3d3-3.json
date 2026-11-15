@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "c40d9368f4b6c3a7869397d93ed66478be65f15a",
+    "head": "0f6cfd7af3d32c67198a221e3d8f1858c2425097",
+    "diff_sha256": "8176e19a534e27ae6c88672f67ad702a02e6a4f78c7200a5603d62e675e6ee51",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "c40d9368f4b6c3a7869397d93ed66478be65f15a",
+      "head": "0f6cfd7af3d32c67198a221e3d8f1858c2425097",
+      "diff_sha256": "8176e19a534e27ae6c88672f67ad702a02e6a4f78c7200a5603d62e675e6ee51"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The change appends one log entry (L84) to a documentation file; no code, config or behavior is touched.",
+      "The entry's claims (fix in c40d9368, accepted log-kind change per L30) cannot be checked against code from the diff, and nothing in it contradicts the preceding L83 text.",
+      "No defect introduced by this commit could be identified."
+    ]
+  }
+}

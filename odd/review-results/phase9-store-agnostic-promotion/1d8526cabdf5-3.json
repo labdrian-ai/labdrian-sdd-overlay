@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f33406742422e431763fed2149503b9bbdac04e3",
+    "head": "1d8526cabdf575c4ec50535a940c8752854a9a5f",
+    "diff_sha256": "cd87a320e5b21a7a93b321bc5b28656b67eb7030e40ccc5c44cfbbc3507f2775",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/sync_hook_path_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f33406742422e431763fed2149503b9bbdac04e3",
+      "head": "1d8526cabdf575c4ec50535a940c8752854a9a5f",
+      "diff_sha256": "cd87a320e5b21a7a93b321bc5b28656b67eb7030e40ccc5c44cfbbc3507f2775"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/sync_hook_path_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/sync_hook_path_test.go:93-111",
+        "claim": "The new emptiness check assumes realTempDir returns a fresh, empty directory. If the helper returns a shared or pre-populated directory, the test fails spuriously. The diff does not show the helper, so this is unverified. Also the comment cites the adapter's stat behavior without a pointer in the test to the source line, so it can drift.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/sync_hook_path_test.go:94",
+          "longterm-mem/cmd/longterm-mem/sync_hook_path_test.go:107-111"
+        ]
+      }
+    ],
+    "evidence": [
+      "Single test-only change; the diff replaces os.Stat of the missing path with an os.ReadDir emptiness check of its parent directory, which is strictly stronger for the stated goal.",
+      "The ReadDir error path uses t.Fatalf and the non-empty path reports the first entry name; both are well-formed.",
+      "The remaining behavior (exit code, stderr match, vault tree unchanged) is unchanged."
+    ]
+  }
+}

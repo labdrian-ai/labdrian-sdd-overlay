@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "53324ea81b1eb221d9ea9674dc1c9d562f6fd6ac",
+    "head": "c40d9368f4b6c3a7869397d93ed66478be65f15a",
+    "diff_sha256": "c0793366ec9827da4e824c562b0bdf57bab645c4022c6c25381f1ffdf0dbb61f",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/app.go",
+      "longterm-mem/cmd/longterm-mem/app_test.go",
+      "longterm-mem/cmd/longterm-mem/cmd_index_embeddings.go",
+      "longterm-mem/cmd/longterm-mem/cmd_query.go",
+      "longterm-mem/cmd/longterm-mem/exit_codes_test.go",
+      "longterm-mem/cmd/longterm-mem/mcp_start_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "53324ea81b1eb221d9ea9674dc1c9d562f6fd6ac",
+      "head": "c40d9368f4b6c3a7869397d93ed66478be65f15a",
+      "diff_sha256": "c0793366ec9827da4e824c562b0bdf57bab645c4022c6c25381f1ffdf0dbb61f"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/app.go",
+        "longterm-mem/cmd/longterm-mem/app_test.go",
+        "longterm-mem/cmd/longterm-mem/cmd_index_embeddings.go",
+        "longterm-mem/cmd/longterm-mem/cmd_query.go",
+        "longterm-mem/cmd/longterm-mem/exit_codes_test.go",
+        "longterm-mem/cmd/longterm-mem/mcp_start_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/exit_codes_test.go:122-126",
+        "claim": "The rename was applied only to the comment text, not to the test function names. TestCmdQuery_EngramReadFailureExitsEngramUnavailable and TestCmdSync_EngramListingFailureExitsEngramUnavailable still say EngramUnavailable, while the comments directly above them now say store_unavailable. The naming is therefore still inconsistent after a commit whose stated purpose is to remove that inconsistency. This affects readability only, not behavior.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/exit_codes_test.go:122-126",
+          "longterm-mem/cmd/longterm-mem/exit_codes_test.go:125"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only comments and t.Fatalf message strings. No executable logic, exit codes, or assertions are altered.",
+      "The replaced strings are in comments and in test failure messages that print only when a test fails, so no output or behavior changes.",
+      "The commit claims Risk: none, and the diff is consistent with that claim."
+    ]
+  }
+}

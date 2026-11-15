@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "75e3f01ec5711f341a2a04993fded94b6de28e32",
+    "head": "16f4dfde8ca3d78120eba0f403a4b2e3678564dd",
+    "diff_sha256": "89a8c04e9dfbba7c2940ae8763bbf1ffb8abbd984a67499b1adf2b6078ca112b",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "75e3f01ec5711f341a2a04993fded94b6de28e32",
+      "head": "16f4dfde8ca3d78120eba0f403a4b2e3678564dd",
+      "diff_sha256": "89a8c04e9dfbba7c2940ae8763bbf1ffb8abbd984a67499b1adf2b6078ca112b"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff only appends one append-only log entry (L90) to odd/tasks/phase9-store-agnostic-promotion.md; no code or behavior changes.",
+      "L90 follows the format of L87-L89 and makes no claim contradicting the visible log; the referenced code paths cannot be verified from the diff but are documentation claims only.",
+      "No defect introduced by this commit is visible."
+    ]
+  }
+}

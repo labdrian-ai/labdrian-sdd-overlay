@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "e090325f6b7c5cc3ce8860113c36640f36a16e15",
+    "head": "808b1ed54f1877c4c7253d840e75a6c526901b18",
+    "diff_sha256": "b4b7aab44982588ef245c3a0a16f79dafd9fd2ff8cf25c075473d61627a20435",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/sync_hook_path_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "e090325f6b7c5cc3ce8860113c36640f36a16e15",
+      "head": "808b1ed54f1877c4c7253d840e75a6c526901b18",
+      "diff_sha256": "b4b7aab44982588ef245c3a0a16f79dafd9fd2ff8cf25c075473d61627a20435"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/sync_hook_path_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/sync_hook_path_test.go:99-101",
+        "claim": "The test asserts stderr contains the literal 'no such file or directory', which is the Linux/Unix errno text. On Windows the message differs ('The system cannot find the path specified'), so the test would fail there. The exit-code assertion alone pins the behavior; the string match makes the test platform-dependent. Also, the path uses a non-existent parent directory, so it exercises a missing directory rather than a missing database file in an existing directory; the commit message claims a missing database.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/sync_hook_path_test.go:93-101"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff only adds one test function in a test file; no production code changed.",
+      "The test reuses helpers (syncMemorycardWorld, enterHookPath, runHookSync, realTempDir, renderPromoteGoldenTree) that are used by the neighboring existing test, so they are presumed to exist.",
+      "The only observed risk is the OS-specific error string assertion and the missing-parent-directory setup versus the claimed missing database."
+    ]
+  }
+}

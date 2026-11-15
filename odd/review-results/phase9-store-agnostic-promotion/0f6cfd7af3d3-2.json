@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "c40d9368f4b6c3a7869397d93ed66478be65f15a",
+    "head": "0f6cfd7af3d32c67198a221e3d8f1858c2425097",
+    "diff_sha256": "8176e19a534e27ae6c88672f67ad702a02e6a4f78c7200a5603d62e675e6ee51",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "c40d9368f4b6c3a7869397d93ed66478be65f15a",
+      "head": "0f6cfd7af3d32c67198a221e3d8f1858c2425097",
+      "diff_sha256": "8176e19a534e27ae6c88672f67ad702a02e6a4f78c7200a5603d62e675e6ee51"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:840",
+        "claim": "L84 says the Engram-named test is kept because it opens an Engram database, while the same entry says exit 4 covers memorycard too. The log does not say whether any other test covers the memorycard exit-4 path. L83 mentions an unlistable-store exit 4 test in sync_hook_path_test.go, so a reader can probably find it, but L84 does not cite it. This is a minor traceability gap in the log entry.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:840"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff adds one append-only log line, L84, to a markdown task document. No code changes.",
+      "L84 gives a commit (c40d9368), a rationale for each finding and an rg command for the claim about the old log string. Each is consistent with L83.",
+      "Only a minor traceability gap was found."
+    ]
+  }
+}

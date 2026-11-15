@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "05740da7ab2d827f218fdbfd3b63c93a6b4da07e",
+    "head": "e090325f6b7c5cc3ce8860113c36640f36a16e15",
+    "diff_sha256": "acca6aabe422f2acb40045c7abe95f9346c1f8bfe7103f55bef937818d6bbbda",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "05740da7ab2d827f218fdbfd3b63c93a6b4da07e",
+      "head": "e090325f6b7c5cc3ce8860113c36640f36a16e15",
+      "diff_sha256": "acca6aabe422f2acb40045c7abe95f9346c1f8bfe7103f55bef937818d6bbbda"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The change appends one log entry (L85) to the feature document; no code is touched.",
+      "L85 claims are consistent with L83/L84 in the same file: the test renames to ExitsStoreUnavailable and the memorycard exit-4 tests match the names cited in L83.",
+      "The entry is append-only and follows the preceding L84 format, so no defect is introduced by the diff."
+    ]
+  }
+}

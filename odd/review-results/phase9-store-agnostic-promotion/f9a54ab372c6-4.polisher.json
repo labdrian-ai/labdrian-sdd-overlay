@@ -1,0 +1,16 @@
+{
+  "kind": "polisher",
+  "base": "a2c0d97ca90e53c370eb7fd38ccab35de1acdd55",
+  "head": "f9a54ab372c61de41721e14ff905e66883f9f603",
+  "diff_sha256": "460c7ece0ec7e0cbf6b5c2d986eb5e721b92c8a1790cf08db41b7dd1ad280bdd",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff /home/labdrian/.cache/t8-f9a54ab3.diff: the exit-4 hook log kind is renamed from failure:engram-unavailable to failure:store-unavailable in engine/synctrigger/synctrigger.go with matching test and golden updates and a golden rename; the longterm-mem constant exitEngramUnavailable becomes exitStoreUnavailable, still 4; a new sync_hook_path_test.go.",
+      "No engram-unavailable remains in code outside an archived openspec design doc and two test function names in exit_codes_test.go; no engram text is left under engine/synctrigger.",
+      "The exit code stays 4 and only the log label changes, matching L30 (owner chose failure:store-unavailable) and the Risk item 3 note for T8.",
+      "S8/T8 (L31, L25): no configurable source field is built; plain sync reads memorycard; the hook-path tests run plain sync and check exits 0, 3 and 4.",
+      "Not run: go build or go test, the role is read-only and the review worktree is detached."
+    ]
+  }
+}

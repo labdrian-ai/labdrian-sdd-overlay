@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f9a54ab372c61de41721e14ff905e66883f9f603",
+    "head": "53324ea81b1eb221d9ea9674dc1c9d562f6fd6ac",
+    "diff_sha256": "6bce06316017028ce5c09ef08ba458c9533f9430d43f69d566d5fcac37bac987",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f9a54ab372c61de41721e14ff905e66883f9f603",
+      "head": "53324ea81b1eb221d9ea9674dc1c9d562f6fd6ac",
+      "diff_sha256": "6bce06316017028ce5c09ef08ba458c9533f9430d43f69d566d5fcac37bac987"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff changes one documentation file in two places: it ticks T8 with its landing commit f9a54ab3, and it appends Log entry L83.",
+      "The T8 line's body is unchanged apart from the checkbox, the 'done in Phase 10 (L83)' pointer and the commit field.",
+      "The L83 entry is consistent with the T8 task text: the kind `failure:store-unavailable`, the renamed golden, `exitStoreUnavailable` still 4, and no registry `source` field.",
+      "L83 openly records that 173 changed lines landed against a 40-100 forecast, so the size claim is not misleading.",
+      "No code is touched, so no behavioral or recall defect can come from this commit."
+    ]
+  }
+}
