@@ -1,0 +1,30 @@
+{
+  "kind": "polisher",
+  "base": "736cbfe3ae3dd5bc7ea6b96ca5fed4a91b9a5722",
+  "head": "180c3c25c87a98c1a5be1c186ef68411f8951085",
+  "diff_sha256": "3ac13c896cf65ddf1d4814b4f69e5c552eb312212702ccfe42da3c4cd72a3307",
+  "findings": {
+    "findings": [
+      {
+        "location": "scripts/rehearse-card-page-migration.sh:247-253",
+        "severity": "SUGGESTION",
+        "claim": "The new live-memorycard guard is a count check made after the import has run. It aborts on any live import_map change, including a legitimate write by a concurrently running memorycard process. It cannot detect a live write that leaves the row count unchanged. It does not harm the live store.",
+        "claim_basis": "The real safety barrier is MEMORYCARD_DB=$card_db, exported at line 202 and covered by guard() at line 204. The count check only adds detection.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "The live count is read before and after `memorycard import engram`, at lines 248 and 253. The live memorycard database is normally open by active agent sessions, and a new import_map row from a live import during that window would trigger the abort. Only the rehearsal run is interrupted.",
+          "`sqlite3 -readonly` on the live database only reads it, so the check itself writes nothing to a live path.",
+          "No path was found where the import can reach the live database: guard() rejects any resolved path under ~/.memorycard, and MEMORYCARD_DB and LONGTERM_MEM_MEMORYCARD_DB both point to the copy."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff at /home/labdrian/.cache/t6-pol-180c3c25.diff.",
+      "Read /home/labdrian/labdrian-sdd-overlay-worktrees/review-180c3c25c87a/scripts/rehearse-card-page-migration.sh lines 1-160 and 180-255. This covered the set -euo pipefail setting, copy_db, guard, the environment exports and the import block.",
+      "The immutable branch is reached only when the file is not writable by the current user. For root, `-w` is always true, so the new root check never fires there. The guard is harmless and its comment is accurate.",
+      "The URI character check (?, # and %) and the non-empty -wal refusal are correct for immutable mode. A frozen store with a non-empty -wal makes the run abort loudly instead of silently producing a stale copy.",
+      "Nothing was run: this review was read-only and the script has no test."
+    ]
+  }
+}

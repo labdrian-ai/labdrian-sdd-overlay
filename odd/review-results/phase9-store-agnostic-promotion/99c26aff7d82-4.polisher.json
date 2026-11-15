@@ -1,0 +1,16 @@
+{
+  "kind": "polisher",
+  "base": "73a41ee2ee57af1a834b48b912a5c134fb7dfd22",
+  "head": "99c26aff7d82eff4066423037e123db380b47019",
+  "diff_sha256": "d4c8e58d61b05d53bfc60e1ec86663bda48b6feac105b85a377603b3e861f054",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read /home/labdrian/.cache/t6-pol-99c26aff.diff: the commit changes one hunk in scripts/rehearse-card-page-migration.sh, which now requires `memorycard` only when `$live_engram_dir/engram.db` exists.",
+      "Read lines 184-191 of the script at head: the Engram database is copied (`copy_db`) only under the same live `engram.db` existence test as the new guard.",
+      "Read lines 238-255 of the script at head: the only `memorycard` binary call is `memorycard import engram`, guarded by `[[ -f \"$engram_db\" ]]`. That copy exists exactly when the live file existed, so the new precondition matches the use.",
+      "Grep for `memorycard` in the script: the other matches are paths, env vars, comments, and `lm promote --source memorycard`, which run through `$bin`, not the `memorycard` binary. No other call needs it.",
+      "The changed lines only add a `command -v` check and read-only existence tests. They write no path, and the live-path guards (`guard`, the import_map before/after check) are unchanged."
+    ]
+  }
+}
