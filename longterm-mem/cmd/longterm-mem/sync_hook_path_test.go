@@ -87,3 +87,20 @@ func TestHookPathSync_AnUnlistableStoreIsExit4(t *testing.T) {
 		t.Errorf("an unlistable store changed the vault")
 	}
 }
+
+func TestHookPathSync_AMissingStoreIsExit4(t *testing.T) {
+	w, _ := syncMemorycardWorld(t)
+	enterHookPath(t)
+	t.Setenv("LONGTERM_MEM_MEMORYCARD_DB", filepath.Join(realTempDir(t), "no-such-dir", "memory.db"))
+	treeBefore := renderPromoteGoldenTree(t, w.vaultRoot)
+	code, stdout, stderr := runHookSync(t)
+	if code != exitStoreUnavailable {
+		t.Errorf("exit %d, want %d (the hook logs failure:store-unavailable)\nstdout: %s\nstderr: %s", code, exitStoreUnavailable, stdout, stderr)
+	}
+	if !strings.Contains(stderr, "no such file or directory") {
+		t.Errorf("stderr = %q, want the missing database named", stderr)
+	}
+	if after := renderPromoteGoldenTree(t, w.vaultRoot); after != treeBefore {
+		t.Errorf("a missing store changed the vault")
+	}
+}
