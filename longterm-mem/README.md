@@ -179,13 +179,17 @@ and the two ways out:
 - `longterm-mem promote --source memorycard --id N` refreshes the page now, once;
 - pinning memory N in memorycard makes `sync` keep the page current from then on.
 
-That is the advice for a page that carries a memorycard identity. A page that carries only the retired keys (`engram_id`,
-`memorycard_id`) names no memory and is not judged.
-
-`doctor` joins a page to its memory by the identity the page names: its `source_id` beside `source: memorycard`. Only live memories (not superseded, not archived) are judged; when one observation was imported as several
-memories, the page is kept current if any live one is eligible, and a warning names the first. It reads no Engram
-database for this check. (Previously: it joined by `engram_id` over the live observations of Engram, and advised `promote --id N` and
+`doctor` joins a page to its memory by the identity the page names: its `source_id` beside `source: memorycard`.
+Only live memories (not superseded, not archived) are judged. It reads no Engram database for this check.
+(Previously: it joined by `engram_id` over the live observations of Engram, and advised `promote --id N` and
 pinning observation N in Engram; and until the retirement of the legacy keys it also joined a page by its legacy keys.)
+
+A page that carries only the retired keys (`engram_id`, `memorycard_id`) names no memory, so `doctor` does not judge it,
+and `sync` and `promote` do not take it for the page of any memory: they give that memory a new page and leave the old
+one untouched, so such a page would duplicate the memory it was written for. No page of the owner's vault was left
+carrying only the retired keys after the migration of 2026-11-15 (575 of 575 pages migrated, then 0 left); a vault
+that still has one needs that page removed, or given the `source`, `source_id`, `source_type` and `source_revision` keys
+of its memory by hand.
 
 The check is advisory. It answers `warn`, never `FAIL`: the text form prints
 `[warn] promoted-pages-eligible (...)`, `--json` carries `"status": "warn"`, and

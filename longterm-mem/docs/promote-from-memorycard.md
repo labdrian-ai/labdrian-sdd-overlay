@@ -17,8 +17,8 @@ longterm-mem promote [--project P] [--vault DIR] --source memorycard --id N
 ```
 
 `N` is a memorycard memory id. The memorycard database is opened read-only, at `LONGTERM_MEM_MEMORYCARD_DB` or, when
-that is unset, `~/.memorycard/memory.db`. Nothing else is opened: the bridge between the parts of one imported observation (below)
-is read from memorycard's own tables: its `import_map`, and, for a memory with no `import_map` row, the content hash it stores for each memory. A database that cannot be opened is exit 4. (Previously: Engram's database
+that is unset, `~/.memorycard/memory.db`. Nothing else is opened: the bridge between the parts of one imported observation (the bridged cases of "What it
+refuses or leaves alone") is read from memorycard's own tables: its `import_map`, and, for a memory with no `import_map` row, the content hash it stores for each memory. A database that cannot be opened is exit 4. (Previously: Engram's database
 was opened read-only too, to find the memories that duplicate one of its pages.)
 
 ## What it writes
@@ -35,9 +35,13 @@ The page carries these store-agnostic keys, in this order:
 
 A page the writer creates or fully re-renders (a new page, an update in place) carries these keys and no
 other identity key. A status patch changes `status` and `related` only. (Previously: `memorycard_id`, `memorycard_type`
-and `memorycard_revision`, one family of keys per store, were read as the identity of a page too; no reader takes them
-for one any more, and a page that carries only them is no promoted page, so the memory it names gets a page of its
-own.)
+and `memorycard_revision`, one family of keys per store, were read as the identity of a page too.)
+
+A vault page that still carries only the retired keys (`engram_id`, `engram_revision`, `engram_type`, `memorycard_id`,
+`memorycard_revision`, `memorycard_type`) is no memory's page: no reader takes those keys for an identity. `sync` and
+`promote` therefore give the memory that page was written for a new page and leave the old page untouched, so the
+vault then holds two pages for that memory. The owner's vault had none after the migration of 2026-11-15 (575 of 575
+pages migrated, then 0 left); a vault that still has one needs the old page removed, or given the keys above by hand.
 
 `related` holds the page of the memory in `superseded_by`, when that memory has a page in the same project; no
 other relation of memorycard is read. `status` is `superseded` or `archived` when the memory is, `mature` when it
