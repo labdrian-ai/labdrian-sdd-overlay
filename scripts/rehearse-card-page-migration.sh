@@ -90,7 +90,11 @@ copy_db() { # copy_db <live db> <copy>: a consistent copy of a sqlite database, 
   else
     # A database nobody may write (the frozen Engram store is mode 444, -shm included) cannot take a WAL read lock, and
     # `.backup` then retries forever. Nothing can change it, so it is opened immutable: sqlite takes no lock and touches
-    # no -shm or -wal file.
+    # no -shm or -wal file. Immutable mode ignores a -wal file, so one with content would be left out of the copy: refuse
+    # it. Root sees every file as writable and never reaches this branch; a ?, # or % in the path would break the URI.
+    ((EUID != 0)) || die "run the rehearsal as the owner, not root"
+    [[ "$1" != *[?#%]* ]] || die "the database path holds a character the sqlite URI cannot carry: $1"
+    [[ ! -s "$1-wal" ]] || die "the read-only database has a -wal file with content, which immutable mode would leave out: $1-wal"
     sqlite3 "file:$1?immutable=1" ".backup '$2'"
   fi
 }
@@ -234,14 +238,18 @@ legacy_counts "$vault"
 # memorycard imported Engram before Engram froze, so the observations written in between have no import_map row and
 # their pages are refused. The import is resumable: it adds only the rows it has not mapped yet. It runs before any
 # sync, because a sync would promote those memories again as new pages and the legacy pages would then be refused as
-# "its memory already has a page". MEMORYCARD_DB is the copy, so the import writes the copy only.
+# "its memory already has a page". MEMORYCARD_DB is the copy (exported above), so the import writes the copy only; the
+# live import_map count is read before and after, and the run stops if it changed. A failed import stops the run too
+# (pipefail).
 if [[ -f "$engram_db" ]]; then
   echo
   echo "=== memorycard import engram (the copy): maps the Engram observations written after the first import ==="
-  import_rows() { sqlite3 -readonly "$card_db" "select count(*) from import_map;"; }
-  echo "import_map rows before: $(import_rows)"
+  import_rows() { sqlite3 -readonly "$1" "select count(*) from import_map;"; }
+  live_rows_before="$(import_rows "$live_card_dir/memory.db")"
+  echo "import_map rows before: $(import_rows "$card_db")"
   memorycard import engram "$engram_db" | tail -8
-  echo "import_map rows after:  $(import_rows)"
+  echo "import_map rows after:  $(import_rows "$card_db")"
+  [[ "$(import_rows "$live_card_dir/memory.db")" == "$live_rows_before" ]] || die "the live memorycard import_map changed during the import"
 fi
 
 project=""
