@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "808b1ed54f1877c4c7253d840e75a6c526901b18",
+    "head": "e6de34b85fbe955d83b0db47e2a6efb4d6afe582",
+    "diff_sha256": "821980ca3855560f2fa946f7f31753f93b8851647ae31dd13947c4a8189b1146",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "808b1ed54f1877c4c7253d840e75a6c526901b18",
+      "head": "e6de34b85fbe955d83b0db47e2a6efb4d6afe582",
+      "diff_sha256": "821980ca3855560f2fa946f7f31753f93b8851647ae31dd13947c4a8189b1146"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff appends a single log entry (L86) to a documentation file, with no code, test or configuration changes.",
+      "The commit's 'Risk: none' claim is consistent with a docs-only append; the entry is append-only and does not alter earlier log entries.",
+      "I found no internal contradiction in L86 against L83-L85, whose commands, commit references and test names it repeats consistently."
+    ]
+  }
+}

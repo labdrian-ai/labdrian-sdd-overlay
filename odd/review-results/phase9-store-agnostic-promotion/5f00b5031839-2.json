@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "e6de34b85fbe955d83b0db47e2a6efb4d6afe582",
+    "head": "5f00b503183925b3911782f26d7234fd69bb83b3",
+    "diff_sha256": "b957216e3c4be1de98a15372738e35fd26775c09451850714bcbe1daa19b64d7",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/sync_hook_path_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "e6de34b85fbe955d83b0db47e2a6efb4d6afe582",
+      "head": "5f00b503183925b3911782f26d7234fd69bb83b3",
+      "diff_sha256": "b957216e3c4be1de98a15372738e35fd26775c09451850714bcbe1daa19b64d7"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/sync_hook_path_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/sync_hook_path_test.go:94-102",
+        "claim": "The test now asserts stderr contains the missing path, but no longer proves the store was reported as missing (versus e.g. a permission or other open error that also echoes the path). Assertion is weaker than the old text check. Also, if the sqlite driver creates the file on open (read-write mode), the 'missing' premise could silently change; the test does not check the file stays absent.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/sync_hook_path_test.go:94-102"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only the test file changed; the diff replaces the OS-error text assertion with a path-name assertion and moves the missing path from a missing directory to a missing file in an existing directory.",
+      "Exit-code assertion (exitStoreUnavailable) remains and still covers the failure classification; the vault-unchanged check remains."
+    ]
+  }
+}

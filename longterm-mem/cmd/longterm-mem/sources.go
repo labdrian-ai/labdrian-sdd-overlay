@@ -90,7 +90,7 @@ func (a app) openSource(name string, declareDegraded bool) (promote.Source, io.C
 	}
 	opened, err := entry.open()
 	if err != nil {
-		return nil, nil, a.refuse(err, exitEngramUnavailable)
+		return nil, nil, a.refuse(err, exitStoreUnavailable)
 	}
 	if declareDegraded && opened.degraded {
 		// The store keeps no cause for the fallback, so the line names none.

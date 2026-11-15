@@ -55,7 +55,7 @@ func (c commands) cmdStale(args []string) int {
 
 	observations, err := store.ListObservations(resolvedProject)
 	if err != nil {
-		return a.refuse(err, exitEngramUnavailable)
+		return a.refuse(err, exitStoreUnavailable)
 	}
 
 	// The rule reads nothing itself: the repository's tree and history are handed to it here, where the program

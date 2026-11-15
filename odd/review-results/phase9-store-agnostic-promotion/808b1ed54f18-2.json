@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "e090325f6b7c5cc3ce8860113c36640f36a16e15",
+    "head": "808b1ed54f1877c4c7253d840e75a6c526901b18",
+    "diff_sha256": "b4b7aab44982588ef245c3a0a16f79dafd9fd2ff8cf25c075473d61627a20435",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/sync_hook_path_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "e090325f6b7c5cc3ce8860113c36640f36a16e15",
+      "head": "808b1ed54f1877c4c7253d840e75a6c526901b18",
+      "diff_sha256": "b4b7aab44982588ef245c3a0a16f79dafd9fd2ff8cf25c075473d61627a20435"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/sync_hook_path_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/sync_hook_path_test.go:99-100",
+        "claim": "The assertion on stderr hard-codes the Linux/Unix errno text \"no such file or directory\". On Windows the message is \"The system cannot find the path specified\", so the test would fail there. It also couples the test to the OS error wording rather than to the tool's own message. Low risk if CI is Linux only.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/sync_hook_path_test.go:99-100"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff adds one test only, so there is no production-code change to regress.",
+      "The test reuses helpers (syncMemorycardWorld, enterHookPath, realTempDir, runHookSync, renderPromoteGoldenTree) that the neighbouring unlistable-store test already uses; their signatures cannot be checked from the diff.",
+      "The vault-unchanged check and the exit-code check mirror the existing unlistable-store test, so the missing-store case is covered the same way."
+    ]
+  }
+}

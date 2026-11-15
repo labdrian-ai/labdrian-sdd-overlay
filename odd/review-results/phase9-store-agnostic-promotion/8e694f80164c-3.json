@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "e1b21089ad00d31a71a006c6d52fd9b4e5c6c21e",
+    "head": "8e694f80164caaf83960122e779bb3237956c1f4",
+    "diff_sha256": "3608810af4045addee3ca91ed9f2aa678e5faa99c4d5a1b0b8b8b3ea9b922e7a",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/sync_hook_path_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "e1b21089ad00d31a71a006c6d52fd9b4e5c6c21e",
+      "head": "8e694f80164caaf83960122e779bb3237956c1f4",
+      "diff_sha256": "3608810af4045addee3ca91ed9f2aa678e5faa99c4d5a1b0b8b8b3ea9b922e7a"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/sync_hook_path_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/sync_hook_path_test.go:101-104",
+        "claim": "The assertion hard-codes the exact stderr prefix \"memorycard: stat \" plus the path. It couples the test to the store's error wording and to the exact path string form (no cleaning or symlink resolution). A wording change or path normalization would fail the test without any behavior regression. It cannot be confirmed from the diff that the store emits this exact text.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/sync_hook_path_test.go:101"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/sync_hook_path_test.go:104-106",
+        "claim": "The os.IsNotExist check on the database path only proves the file was not created. It does not cover sidecar files such as -wal or -shm, or a created parent directory. A sync that created those would still pass.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/sync_hook_path_test.go:104"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only one test file changed. The diff replaces a loose stderr-contains-path check with a stat-failure message match, and adds a post-run os.Stat check that the database is still absent.",
+      "No production code changed, so no runtime regression is possible from this commit. The remaining risk is test brittleness."
+    ]
+  }
+}

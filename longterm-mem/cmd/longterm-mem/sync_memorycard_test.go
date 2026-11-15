@@ -411,8 +411,8 @@ func TestSyncSourceMemorycard_AnUnlistableStoreIsExit4InTheDryRunAndTheRun(t *te
 		{"run", []string{"--source", "memorycard"}, "longterm-mem: sync --source memorycard promoted 0 memory(ies); patched 0 page(s); skipped 0 bridged; left 0 locally edited page(s) alone\n", "longterm-mem: sync: " + listFailure},
 	} {
 		code, stdout, stderr := runSync(t, tc.args...)
-		if code != exitEngramUnavailable {
-			t.Errorf("%s: exit %d, want %d\nstdout: %s\nstderr: %s", tc.name, code, exitEngramUnavailable, stdout, stderr)
+		if code != exitStoreUnavailable {
+			t.Errorf("%s: exit %d, want %d\nstdout: %s\nstderr: %s", tc.name, code, exitStoreUnavailable, stdout, stderr)
 		}
 		if stdout != tc.wantStdout {
 			t.Errorf("%s: stdout = %q, want %q", tc.name, stdout, tc.wantStdout)

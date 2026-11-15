@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "808b1ed54f1877c4c7253d840e75a6c526901b18",
+    "head": "e6de34b85fbe955d83b0db47e2a6efb4d6afe582",
+    "diff_sha256": "821980ca3855560f2fa946f7f31753f93b8851647ae31dd13947c4a8189b1146",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "808b1ed54f1877c4c7253d840e75a6c526901b18",
+      "head": "e6de34b85fbe955d83b0db47e2a6efb4d6afe582",
+      "diff_sha256": "821980ca3855560f2fa946f7f31753f93b8851647ae31dd13947c4a8189b1146"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff adds one append-only log entry (L86) to the feature document; no code is changed.",
+      "L86 follows the same format and numbering as L83-L85 and references commits already cited in the log (f9a54ab3, 808b1ed5).",
+      "No claim in L86 contradicts earlier entries; the 808b1ed5 test name TestHookPathSync_AMissingStoreIsExit4 is consistent with the sibling hook-path tests named in L83 and L85."
+    ]
+  }
+}

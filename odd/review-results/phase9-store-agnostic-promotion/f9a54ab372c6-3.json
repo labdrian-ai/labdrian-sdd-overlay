@@ -1,0 +1,93 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a2c0d97ca90e53c370eb7fd38ccab35de1acdd55",
+    "head": "f9a54ab372c61de41721e14ff905e66883f9f603",
+    "diff_sha256": "460c7ece0ec7e0cbf6b5c2d986eb5e721b92c8a1790cf08db41b7dd1ad280bdd",
+    "paths": [
+      "engine/cmd/sync_trigger_test.go",
+      "engine/cmd/synctrigger_golden_test.go",
+      "engine/cmd/testdata/synctrigger-golden/the-child-reports-engram-unavailable.golden",
+      "engine/cmd/testdata/synctrigger-golden/the-child-reports-store-unavailable.golden",
+      "engine/synctrigger/synctrigger.go",
+      "engine/synctrigger/synctrigger_test.go",
+      "longterm-mem/cmd/longterm-mem/app.go",
+      "longterm-mem/cmd/longterm-mem/app_test.go",
+      "longterm-mem/cmd/longterm-mem/cmd_index_embeddings.go",
+      "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go",
+      "longterm-mem/cmd/longterm-mem/cmd_query.go",
+      "longterm-mem/cmd/longterm-mem/cmd_skills_stale_test.go",
+      "longterm-mem/cmd/longterm-mem/cmd_stale.go",
+      "longterm-mem/cmd/longterm-mem/cmd_sync.go",
+      "longterm-mem/cmd/longterm-mem/exit_codes.go",
+      "longterm-mem/cmd/longterm-mem/mcp_start_test.go",
+      "longterm-mem/cmd/longterm-mem/sources.go",
+      "longterm-mem/cmd/longterm-mem/sync_hook_path_test.go",
+      "longterm-mem/cmd/longterm-mem/sync_memorycard_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "a2c0d97ca90e53c370eb7fd38ccab35de1acdd55",
+      "head": "f9a54ab372c61de41721e14ff905e66883f9f603",
+      "diff_sha256": "460c7ece0ec7e0cbf6b5c2d986eb5e721b92c8a1790cf08db41b7dd1ad280bdd"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/sync_trigger_test.go",
+        "engine/cmd/synctrigger_golden_test.go",
+        "engine/cmd/testdata/synctrigger-golden/the-child-reports-engram-unavailable.golden",
+        "engine/cmd/testdata/synctrigger-golden/the-child-reports-store-unavailable.golden",
+        "engine/synctrigger/synctrigger.go",
+        "engine/synctrigger/synctrigger_test.go",
+        "longterm-mem/cmd/longterm-mem/app.go",
+        "longterm-mem/cmd/longterm-mem/app_test.go",
+        "longterm-mem/cmd/longterm-mem/cmd_index_embeddings.go",
+        "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go",
+        "longterm-mem/cmd/longterm-mem/cmd_query.go",
+        "longterm-mem/cmd/longterm-mem/cmd_skills_stale_test.go",
+        "longterm-mem/cmd/longterm-mem/cmd_stale.go",
+        "longterm-mem/cmd/longterm-mem/cmd_sync.go",
+        "longterm-mem/cmd/longterm-mem/exit_codes.go",
+        "longterm-mem/cmd/longterm-mem/mcp_start_test.go",
+        "longterm-mem/cmd/longterm-mem/sources.go",
+        "longterm-mem/cmd/longterm-mem/sync_hook_path_test.go",
+        "longterm-mem/cmd/longterm-mem/sync_memorycard_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/cmd_query.go:79-82",
+        "claim": "The comment above the renamed exitStoreUnavailable still says the failure is 'engram_unavailable', so the code and its explanation use different names after the rename. Comment-only; behavior is unaffected.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/cmd_query.go:79-82"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/synctrigger/synctrigger.go:333-336",
+        "claim": "Historical sync-trigger logs hold the old kind failure:engram-unavailable, and new lines now use failure:store-unavailable. Any reader that greps or aggregates the log for the old string would silently miss new exit-4 events. The change was requested by the owner, and the diff shows no such consumer, so this is only a note on the contract rename.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/synctrigger/synctrigger.go:333-336"
+        ]
+      }
+    ],
+    "evidence": [
+      "The rename of exitEngramUnavailable to exitStoreUnavailable is applied consistently across all call sites in the diff, and the value stays 4.",
+      "The golden file is renamed together with its test case name, and its content differs only in the kind string.",
+      "The new hook-path tests reuse helpers (realTempDir, runPromoteGolden, syncMemorycardWorld, unlistableMemorycardDB, renderPromoteGoldenTree, pageNames, promoteGoldenProject) that are not visible in the diff; I assume they exist in the package."
+    ]
+  }
+}

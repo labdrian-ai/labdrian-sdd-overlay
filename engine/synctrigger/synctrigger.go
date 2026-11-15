@@ -88,19 +88,19 @@ type Outcome struct {
 // The kinds of outcome the trigger reports, in its log and in an Outcome. The exit codes of
 // longterm-mem map onto them in classify.
 const (
-	kindOK                = "ok"
-	kindTimeout           = "timeout"
-	kindUsage             = "error:usage"
-	kindSpawn             = "error:spawn"
-	kindSelf              = "error:self"
-	kindLog               = "error:log"
-	kindNotExecutable     = "error:binary-not-executable"
-	kindNoBinary          = "skip:no-binary"
-	kindNoProject         = "skip:no-project"
-	kindNoVault           = "skip:no-vault"
-	kindEngramUnavailable = "failure:engram-unavailable"
-	kindVaultSubprocess   = "failure:vault-subprocess"
-	kindExitPrefix        = "failure:exit-"
+	kindOK               = "ok"
+	kindTimeout          = "timeout"
+	kindUsage            = "error:usage"
+	kindSpawn            = "error:spawn"
+	kindSelf             = "error:self"
+	kindLog              = "error:log"
+	kindNotExecutable    = "error:binary-not-executable"
+	kindNoBinary         = "skip:no-binary"
+	kindNoProject        = "skip:no-project"
+	kindNoVault          = "skip:no-vault"
+	kindStoreUnavailable = "failure:store-unavailable"
+	kindVaultSubprocess  = "failure:vault-subprocess"
+	kindExitPrefix       = "failure:exit-"
 )
 
 const (
@@ -333,7 +333,7 @@ func classify(exitCode int, stderr string) string {
 	case 3:
 		return kindNoVault
 	case 4:
-		return kindEngramUnavailable
+		return kindStoreUnavailable
 	case 5:
 		return kindVaultSubprocess
 	default:

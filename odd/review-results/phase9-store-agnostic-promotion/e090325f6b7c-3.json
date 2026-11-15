@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "05740da7ab2d827f218fdbfd3b63c93a6b4da07e",
+    "head": "e090325f6b7c5cc3ce8860113c36640f36a16e15",
+    "diff_sha256": "acca6aabe422f2acb40045c7abe95f9346c1f8bfe7103f55bef937818d6bbbda",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "05740da7ab2d827f218fdbfd3b63c93a6b4da07e",
+      "head": "e090325f6b7c5cc3ce8860113c36640f36a16e15",
+      "diff_sha256": "acca6aabe422f2acb40045c7abe95f9346c1f8bfe7103f55bef937818d6bbbda"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The change appends a single log entry (L85) to a documentation file; no code, tests, or behavior are modified.",
+      "The entry is append-only and follows the prior L84 format; it makes claims about other commits (05740da7, test names) which cannot be verified from this diff and introduce no defect in this commit."
+    ]
+  }
+}

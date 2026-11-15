@@ -303,7 +303,7 @@ func syncTriggerCases() []syncTriggerCase {
 			w.run(w.home, "", "--child", "--event", "session-end", "--cwd", w.cwd, "--state-dir", w.state)
 			w.report("after the child", w.state)
 		}},
-		{"the-child-reports-engram-unavailable", func(w *syncTriggerWorld) {
+		{"the-child-reports-store-unavailable", func(w *syncTriggerWorld) {
 			w.memory(w.state, 4, "", 0o755)
 			w.run(w.home, "", "--child", "--event", "session-end", "--cwd", w.cwd, "--state-dir", w.state)
 			w.report("after the child", w.state)

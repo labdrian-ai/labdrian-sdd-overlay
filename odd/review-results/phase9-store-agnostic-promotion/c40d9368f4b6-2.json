@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "53324ea81b1eb221d9ea9674dc1c9d562f6fd6ac",
+    "head": "c40d9368f4b6c3a7869397d93ed66478be65f15a",
+    "diff_sha256": "c0793366ec9827da4e824c562b0bdf57bab645c4022c6c25381f1ffdf0dbb61f",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/app.go",
+      "longterm-mem/cmd/longterm-mem/app_test.go",
+      "longterm-mem/cmd/longterm-mem/cmd_index_embeddings.go",
+      "longterm-mem/cmd/longterm-mem/cmd_query.go",
+      "longterm-mem/cmd/longterm-mem/exit_codes_test.go",
+      "longterm-mem/cmd/longterm-mem/mcp_start_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "53324ea81b1eb221d9ea9674dc1c9d562f6fd6ac",
+      "head": "c40d9368f4b6c3a7869397d93ed66478be65f15a",
+      "diff_sha256": "c0793366ec9827da4e824c562b0bdf57bab645c4022c6c25381f1ffdf0dbb61f"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/app.go",
+        "longterm-mem/cmd/longterm-mem/app_test.go",
+        "longterm-mem/cmd/longterm-mem/cmd_index_embeddings.go",
+        "longterm-mem/cmd/longterm-mem/cmd_query.go",
+        "longterm-mem/cmd/longterm-mem/exit_codes_test.go",
+        "longterm-mem/cmd/longterm-mem/mcp_start_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/exit_codes_test.go:122-126",
+        "claim": "The comment now says a regression 'renamed store_unavailable into some other non-zero code', but the history it narrates ('Before this test nothing asserted exit 4') concerns when the code was named engram_unavailable. The test function names (TestCmdQuery_EngramReadFailureExitsEngramUnavailable, TestCmdSync_EngramListingFailureExitsEngramUnavailable) still use the old name, so the rename in comments is incomplete and the names now disagree with the comments and messages beside them.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/exit_codes_test.go:122-126",
+          "longterm-mem/cmd/longterm-mem/exit_codes_test.go:124",
+          "longterm-mem/cmd/longterm-mem/exit_codes_test.go:127"
+        ]
+      }
+    ],
+    "evidence": [
+      "Diff changes only comments and t.Fatalf message strings; no executable logic or output changes.",
+      "Test function identifiers still contain EngramUnavailable, leaving a naming mismatch with the updated comments."
+    ]
+  }
+}

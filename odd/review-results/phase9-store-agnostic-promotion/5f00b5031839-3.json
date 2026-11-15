@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "e6de34b85fbe955d83b0db47e2a6efb4d6afe582",
+    "head": "5f00b503183925b3911782f26d7234fd69bb83b3",
+    "diff_sha256": "b957216e3c4be1de98a15372738e35fd26775c09451850714bcbe1daa19b64d7",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/sync_hook_path_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "e6de34b85fbe955d83b0db47e2a6efb4d6afe582",
+      "head": "5f00b503183925b3911782f26d7234fd69bb83b3",
+      "diff_sha256": "b957216e3c4be1de98a15372738e35fd26775c09451850714bcbe1daa19b64d7"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/sync_hook_path_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/sync_hook_path_test.go:94-103",
+        "claim": "The test now asserts only that stderr contains the path string. It no longer checks that the failure is a missing database, so any stderr that echoes the path (for example a permission or open error, or a usage message) would pass. The assertion is weaker than the old errno text check at identifying the missing-store cause. It also relies on the realTempDir path appearing unmodified in stderr. A symlink-resolved or cleaned form of the path would break the match, though realTempDir suggests it is already resolved.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/sync_hook_path_test.go:94-103"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only one test: the missing path becomes a nonexistent file in an existing temp directory, and the stderr assertion changes from the errno text to the path.",
+      "The exit code check (exitStoreUnavailable) and the vault-unchanged check are untouched, so the core behavior assertions remain.",
+      "No production code changes, so no regression risk beyond test sensitivity."
+    ]
+  }
+}

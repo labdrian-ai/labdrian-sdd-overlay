@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "75e3f01ec5711f341a2a04993fded94b6de28e32",
+    "head": "16f4dfde8ca3d78120eba0f403a4b2e3678564dd",
+    "diff_sha256": "89a8c04e9dfbba7c2940ae8763bbf1ffb8abbd984a67499b1adf2b6078ca112b",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "75e3f01ec5711f341a2a04993fded94b6de28e32",
+      "head": "16f4dfde8ca3d78120eba0f403a4b2e3678564dd",
+      "diff_sha256": "89a8c04e9dfbba7c2940ae8763bbf1ffb8abbd984a67499b1adf2b6078ca112b"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The change appends one Log entry (L90) to a markdown feature document; no code or behavior changes.",
+      "L90 is append-only and follows the L87-L89 format; its claims cite specific files and lines that cannot be verified from the diff but introduce no defect.",
+      "Risk: none matches a docs-only change."
+    ]
+  }
+}

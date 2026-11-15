@@ -28,7 +28,7 @@ const (
 	// repairs by hand. What actually distinguishes exit 1 is that it is
 	// the residue: every failure that is not one of the individually
 	// named, individually actionable conditions below (usage, no vault
-	// configured, Engram unavailable, a vault script that failed, a
+	// configured, a memory store unavailable, a vault script that failed, a
 	// registration conflict, a missing observation, an unresolvable path)
 	// lands here, and the operator has to read stderr to learn which.
 	exitInternal = 1
@@ -37,9 +37,9 @@ const (
 	// exitVaultNotConfigured: the named project has no vault. Reserved
 	// for vaultreg.ErrVaultNotConfigured -- see vaultExitCode.
 	exitVaultNotConfigured = 3
-	// exitEngramUnavailable: Engram's database could not be opened or
-	// read.
-	exitEngramUnavailable = 4
+	// exitStoreUnavailable: the memory store (memorycard, or the frozen
+	// Engram database a command still reads) could not be opened or read.
+	exitStoreUnavailable = 4
 	// exitVaultSubprocessFailed: one of the vault's own scripts failed.
 	exitVaultSubprocessFailed = 5
 	// exitRegistrationConflict: an artifact already occupies the target

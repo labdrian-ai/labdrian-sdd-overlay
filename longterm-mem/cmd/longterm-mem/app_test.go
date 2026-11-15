@@ -92,7 +92,7 @@ func TestApp_MemoryOpensEngramsDatabase(t *testing.T) {
 	_ = closer.Close()
 }
 
-// An Engram database that cannot be opened is engram_unavailable (exit 4), said once with the name of the command
+// An Engram database that cannot be opened is store_unavailable (exit 4), said once with the name of the command
 // in front and the adapter's own words after it.
 func TestApp_MemoryRefusesWhenEngramCannotBeOpened(t *testing.T) {
 	t.Setenv("LONGTERM_MEM_ENGRAM_DB", filepath.Join(t.TempDir(), "no", "such", "directory", "engram.db"))
@@ -106,8 +106,8 @@ func TestApp_MemoryRefusesWhenEngramCannotBeOpened(t *testing.T) {
 		}
 	})
 
-	if code != exitEngramUnavailable {
-		t.Errorf("memory answered %d, want %d", code, exitEngramUnavailable)
+	if code != exitStoreUnavailable {
+		t.Errorf("memory answered %d, want %d", code, exitStoreUnavailable)
 	}
 	if !strings.HasPrefix(stderr, "longterm-mem: stale: engram: connect ") || strings.Count(stderr, "\n") != 1 {
 		t.Errorf("stderr = %q, want one line, the command's name and then the adapter's words", stderr)

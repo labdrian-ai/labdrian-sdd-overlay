@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "8e694f80164caaf83960122e779bb3237956c1f4",
+    "head": "f33406742422e431763fed2149503b9bbdac04e3",
+    "diff_sha256": "e0b81422cc17b073f5ec435e586498e62f2dbb0172b3fcfca8648dd58c84654e",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "8e694f80164caaf83960122e779bb3237956c1f4",
+      "head": "f33406742422e431763fed2149503b9bbdac04e3",
+      "diff_sha256": "e0b81422cc17b073f5ec435e586498e62f2dbb0172b3fcfca8648dd58c84654e"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff adds one append-only log entry (L88) to a documentation file; no code, tests or behavior change.",
+      "L88 follows the existing log format and numbering (after L87), and refers to commits already cited in the prior entries.",
+      "The entry's claims (fix in 8e694f80, base of this candidate) are consistent with the base hash; nothing in the diff contradicts them."
+    ]
+  }
+}

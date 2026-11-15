@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "1d8526cabdf575c4ec50535a940c8752854a9a5f",
+    "head": "75e3f01ec5711f341a2a04993fded94b6de28e32",
+    "diff_sha256": "286c2cf4b0b23e7ed47efa24794c9fd127bbb0d30a2c4ccaa8b791d8658e9255",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "1d8526cabdf575c4ec50535a940c8752854a9a5f",
+      "head": "75e3f01ec5711f341a2a04993fded94b6de28e32",
+      "diff_sha256": "286c2cf4b0b23e7ed47efa24794c9fd127bbb0d30a2c4ccaa8b791d8658e9255"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff only appends one append-only log entry (L89) to a documentation file; no code or behavior changes.",
+      "The entry follows the format of L86-L88 and references commits consistently with the preceding entries.",
+      "No requested behavior is violated and no previously valid input regresses."
+    ]
+  }
+}

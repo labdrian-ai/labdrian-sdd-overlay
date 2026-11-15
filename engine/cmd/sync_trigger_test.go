@@ -107,7 +107,7 @@ func TestRunSyncTriggerCore_GivesTheTriggerTheClockAndTheRunnerOfItsDeps(t *test
 		if err != nil {
 			t.Fatal(err)
 		}
-		wantLine := "2026-03-04T05:06:08Z event=archive cwd=" + project + " outcome=failure:engram-unavailable exit=4 duration=1s\n"
+		wantLine := "2026-03-04T05:06:08Z event=archive cwd=" + project + " outcome=failure:store-unavailable exit=4 duration=1s\n"
 		if !strings.HasSuffix(string(log), wantLine) {
 			t.Errorf("log = %q, want it to end with %q", log, wantLine)
 		}

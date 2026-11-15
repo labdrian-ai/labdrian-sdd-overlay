@@ -55,7 +55,7 @@ func (c commands) cmdMigrateCardPages(args []string) int {
 	}
 	cards, err := memorycard.Open(os.Getenv(memorycardDBEnvVar))
 	if err != nil {
-		return a.refuse(err, exitEngramUnavailable)
+		return a.refuse(err, exitStoreUnavailable)
 	}
 	defer a.closeStore("memorycard", cards)
 	writer, err := newPromoteWriter(vaultRoot, c.clock)

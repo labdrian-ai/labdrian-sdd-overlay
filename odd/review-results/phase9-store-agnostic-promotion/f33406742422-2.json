@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "8e694f80164caaf83960122e779bb3237956c1f4",
+    "head": "f33406742422e431763fed2149503b9bbdac04e3",
+    "diff_sha256": "e0b81422cc17b073f5ec435e586498e62f2dbb0172b3fcfca8648dd58c84654e",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "8e694f80164caaf83960122e779bb3237956c1f4",
+      "head": "f33406742422e431763fed2149503b9bbdac04e3",
+      "diff_sha256": "e0b81422cc17b073f5ec435e586498e62f2dbb0172b3fcfca8648dd58c84654e"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff adds one append-only log entry (L88) to odd/tasks/phase9-store-agnostic-promotion.md, following L87 in format and numbering.",
+      "The entry is documentation only; it changes no code or behavior, so the lens rows recall and readability turn up no change-caused defect.",
+      "I could not check the commit hashes it cites (8e694f80, e1b21089, 5f00b503) because I have no tool access to the repository."
+    ]
+  }
+}

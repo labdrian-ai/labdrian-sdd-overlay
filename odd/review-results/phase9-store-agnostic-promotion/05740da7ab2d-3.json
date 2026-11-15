@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "0f6cfd7af3d32c67198a221e3d8f1858c2425097",
+    "head": "05740da7ab2d827f218fdbfd3b63c93a6b4da07e",
+    "diff_sha256": "53b0d82cfbbc4d762f1390a3d3dae41fd2b586811bf0371159df4135edc7d4c1",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/exit_codes_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "0f6cfd7af3d32c67198a221e3d8f1858c2425097",
+      "head": "05740da7ab2d827f218fdbfd3b63c93a6b4da07e",
+      "diff_sha256": "53b0d82cfbbc4d762f1390a3d3dae41fd2b586811bf0371159df4135edc7d4c1"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/exit_codes_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff only renames two Go test functions and edits their doc comments in exit_codes_test.go; test bodies are unchanged.",
+      "Each doc comment was updated together with its function name, so the name and comment still agree.",
+      "No finding is raised: I did not see the rest of the package, so a duplicate of the new names there cannot be ruled out from the diff, but nothing in the diff suggests one."
+    ]
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "kind": "sweeper",
+  "base": "a2c0d97ca90e53c370eb7fd38ccab35de1acdd55",
+  "head": "f9a54ab372c61de41721e14ff905e66883f9f603",
+  "diff_sha256": "460c7ece0ec7e0cbf6b5c2d986eb5e721b92c8a1790cf08db41b7dd1ad280bdd",
+  "sweep": "f9a54ab372c6-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 path: engine/cmd/testdata/synctrigger-golden/the-child-reports-engram-unavailable.golden",
+      "disposition": "live",
+      "evidence": "The golden was renamed, not orphaned: the-child-reports-store-unavailable.golden exists at head and engine/cmd/sync_trigger_test.go and engine/cmd/synctrigger_golden_test.go reference it. rg for the-child-reports-engram-unavailable, failure:engram-unavailable and engram-unavailable outside odd/ and openspec/changes/archive/ finds 0 hits; fd engram-unavailable finds 0 files. Nothing swept, nothing committed."
+    }
+  ]
+}
