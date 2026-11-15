@@ -355,32 +355,28 @@ func checkWikiRegistrationConsistency(promoted PageReader, index IndexReader, lo
 // recording that it did.
 //
 // A STALE entry that records NO USABLE PROMOTED REVISION is the second, and
-// it is the wedged one. Promotion can only attribute a diverged page to one
-// of its own interrupted writes when the entry names the revision it
-// fingerprinted; an entry that names none carries no such evidence, so the
-// page is refused -- and the refusal is a skip, which suppresses the very
-// store write that would have given the entry a revision. Every later run
-// repeats it. A vault permanently refusing its own page must not report
-// entirely healthy: that is the exact failure mode this check exists to
-// end, and reporting it is what makes the residue the promotion path
-// deliberately leaves behind visible to an operator. "No usable revision"
-// is spelled here exactly as promotion's own guard spells it
-// (revisionsAllowAdoption: PromotedRevision <= 0), so a sidecar recording a
-// negative revision -- equally unadoptable -- is reported rather than left
+// it is the wedged one. Promotion's own writes record the two content hashes and
+// no revision (only `promote reconcile` records one, read off the page), so a
+// diverged page whose entry names none carries no evidence of who changed it,
+// and promotion refuses it -- and the refusal is a skip, which suppresses the
+// store write that would have repaired the entry. Every later run repeats it,
+// and nothing in the promotion path repairs it; `promote reconcile` of the
+// page's address does, by adopting it at the revision the page carries. A vault
+// permanently refusing its own page must not report entirely healthy: that is
+// the exact failure mode this check exists to end. "No usable revision" is a
+// recorded revision that is not positive, so a sidecar recording a negative
+// revision -- equally unadoptable by promotion -- is reported rather than left
 // wedged-but-silent.
 //
 // A stale entry that DOES record a positive revision is the third, and is
-// not reported. It is an ordinary local edit, which R-030 makes a supported
-// and separately reported state: promotion refuses that page, says so with
-// its own local-edit-precedence diagnostic, and preserving that edit is the
-// point. Note what this deliberately does NOT claim: a later revision does
-// not reconcile it. Adoption needs the page's source_revision to stand
-// strictly ABOVE the entry's, and a human's edit leaves it level, so every
-// later revision refuses the page too. That is R-030 working, not a defect
-// -- the page is held, not lost, and the operator is told on every run --
-// but it is a standing refusal, and this check stays quiet about it
-// precisely because flagging it would report every page a human has ever
-// touched as broken.
+// not reported. It is a page `promote reconcile` adopted and a human has edited
+// since, an ordinary local edit, which R-030 makes a supported and separately
+// reported state: promotion and reconcile both refuse that page, saying so
+// with their own local-edit-precedence diagnostic, and preserving that edit is
+// the point. That is R-030 working, not a defect -- the page is held, not
+// lost, and the operator is told on every run -- but it is a standing
+// refusal, and this check stays quiet about it precisely because flagging it
+// would report every page a human has ever touched as broken.
 func checkPrecedenceSidecarConsistency(promoted PageReader, precedence PrecedenceReader) Check {
 	pages, unreadable, err := loadPromotedPages(promoted)
 	if err != nil {

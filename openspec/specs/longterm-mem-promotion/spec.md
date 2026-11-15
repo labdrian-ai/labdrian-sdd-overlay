@@ -455,12 +455,14 @@ body or in any other frontmatter field, remains a refusal.
 
 An interrupted UPDATE leaves the mirror-image state: the page holds a render
 the precedence store never caught up with, so the entry still fingerprints
-the previous one. A page promoted from a memorycard memory carries no
-revision its entry could be compared with, so it is refused as a local edit,
-and `promote reconcile` of its address is the way to adopt it.
+the previous one. The entry a promotion writes records the two content
+fingerprints and no revision, so nothing on the entry says which revision the
+page was last promoted at, and a page whose content no longer matches its
+entry is refused as a local edit, whatever the cause. `promote reconcile` of
+its address is the way to adopt it, at the revision the page carries.
 
-(Previously: the precedence store recorded the Engram revision each
-fingerprinted render carried, and a page whose content no longer matched its
+(Previously: the precedence store recorded, with each fingerprint, the Engram
+revision that render carried, and a page whose content no longer matched its
 entry was adopted as the writer's own unrecorded update when its
 `engram_revision` stood above the entry's and no higher than the revision being
 promoted, its body still closed with the promotion footer for that revision,
@@ -470,39 +472,39 @@ line of the observation, and comparing `engram_id` and every key the writer
 alone emits. That adoption read the Engram revision and only ever applied to
 the pages of Engram observations; it was retired with them.)
 
-An entry that records no revision at all is a vault promoted before the store
-recorded one, and it carries NO evidence of the writer's own authorship. IF a
-promoted page's content no longer matches an entry that records no revision,
-THEN the promotion writer SHALL refuse that page. A moved frontmatter
-fingerprint SHALL NOT be read as proof that one of the writer's own
-unrecorded writes moved it: every render of the writer's own does move that
-fingerprint, but so does a human editing any frontmatter line, so the
-inference would unlock adoption on every legacy-tracked page a human has ever
-hand-edited — no interruption required — and the adoption would overwrite
+An entry that records no revision carries NO evidence of the writer's own
+authorship, and every entry a promotion writes is one: it records the two
+content fingerprints and no revision, and only `promote reconcile` records a
+revision, read off the page it adopts. IF a promoted page's content no longer
+matches an entry that records no revision, THEN the promotion writer SHALL
+refuse that page. A moved frontmatter fingerprint SHALL NOT be read as proof
+that one of the writer's own unrecorded writes moved it: every render of the
+writer's own does move that fingerprint, but so does a human editing any
+frontmatter line, so the inference would adopt every page a human has ever
+hand-edited -- no interruption required -- and the adoption would overwrite
 mid-body edits while reporting a successful update. Where the evidence is
 ambiguous, this requirement's guarantee of preserving human edits SHALL win.
 
-The fixed point such an entry would otherwise sit in SHALL be broken without
-inference instead: an entry that records no revision whose page still matches
-its fingerprints is not diverged at all, so the ordinary update path
-republishes it and records the revision the older store never wrote. The
-population of entries recording no revision therefore shrinks page by page,
-with nothing adopted.
+Such a page is refused on every run, and no promotion of it can repair the
+entry. It SHALL therefore be reported by the vault's own precedence-sidecar
+diagnostic rather than left silent, so an operator learns about a wedged page
+instead of the vault reporting healthy, and `promote reconcile` of its address
+is the repair. "No usable revision" SHALL mean the same thing in the diagnostic
+and in the refusal -- a recorded revision that is not positive, whether absent
+or negative -- so that no page the writer permanently refuses is left
+unreported.
 
-What remains is an entry recording no usable revision whose page has ALSO
-diverged. That page is refused on every run, and no promotion of it can repair
-the entry. It SHALL therefore be reported by the vault's own
-precedence-sidecar diagnostic rather than left silent, so an operator learns
-about a wedged page instead of the vault reporting healthy. "No usable
-revision" SHALL mean the same thing in the diagnostic as in the adoption rule
-— a recorded revision that is not positive, whether absent or negative —
-so that no page the writer permanently refuses is left unreported.
+A diverged page whose entry DOES record a positive revision (a page `promote
+reconcile` adopted and a human has edited since) is not reported by that
+diagnostic: it is an ordinary local edit, refused and named by the promotion
+writer and by `promote reconcile` themselves on every run. That refusal is
+standing rather than temporary, which is this requirement preserving the
+human's edit, not a wedge to repair.
 
-A diverged page whose entry DOES record a positive revision is not reported by
-that diagnostic: it is an ordinary local edit, refused and named by the
-promotion writer itself on every run. That refusal is standing rather than
-temporary — no later revision adopts the page — which is this requirement preserving the human's
-edit, not a wedge to repair.
+(Previously: the ordinary update path republished a page whose entry recorded no
+revision and still matched its fingerprints, and recorded the revision it
+published, so the population of entries recording no revision shrank page by
+page; promotion no longer records a revision.)
 
 #### Scenario: An interrupted create is finished by the next run
 
@@ -542,9 +544,10 @@ edit, not a wedge to repair.
 - GIVEN a precedence entry carrying content fingerprints but no revision, and
   a page whose content a human has since edited — in the body, in the
   frontmatter, or both
-- WHEN promotion runs for a later revision of that observation
+- WHEN promotion runs for a later revision of that memory
 - THEN the page is left byte-unchanged and the promotion is refused,
-  regardless of whether the entry's frontmatter fingerprint still matches
+  regardless of whether the entry's frontmatter fingerprint still matches, and
+  the precedence-sidecar diagnostic names the page
 
 ### Requirement: A Named Page Can Be Reconciled, One Address at a Time
 
