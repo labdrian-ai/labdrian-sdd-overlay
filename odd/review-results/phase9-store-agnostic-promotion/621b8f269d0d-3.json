@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a6333f65742c5a40532fdf15f23f3cc17f6b90b3",
+    "head": "621b8f269d0df9709b1e46539f178b58e1e98c40",
+    "diff_sha256": "0612aebaa1d6df61a001a45fe3601b7ac313c665f50d218b3190379287726419",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "a6333f65742c5a40532fdf15f23f3cc17f6b90b3",
+      "head": "621b8f269d0df9709b1e46539f178b58e1e98c40",
+      "diff_sha256": "0612aebaa1d6df61a001a45fe3601b7ac313c665f50d218b3190379287726419"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff changes only the T7 task line and appends Log entry L107 in odd/tasks/phase9-store-agnostic-promotion.md; no code is touched.",
+      "The T7 line now reads 'c6c7c518`, `b799f693`, `a6333f65`' with commas, which restores the separator that L107 says was dropped.",
+      "The T7 line adds 'the sixth in L107', and L107 itself answers the sixth review of b799f693..a6333f65, so the two agree.",
+      "The L107 wording ('the commit that holds this entry') follows the convention that L104 to L106 already use, and the entry is appended without editing earlier entries.",
+      "The T7 line states that the commit holding L107 is listed, which matches the diff, where L107 is added in this same commit."
+    ]
+  }
+}

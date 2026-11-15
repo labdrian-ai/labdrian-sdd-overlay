@@ -1,0 +1,45 @@
+{
+  "kind": "sweep",
+  "base": "fa8d5183ce34bce805a7b5cbc1330b739a6a0b0b",
+  "head": "72221c234307308423529a43fe60c3d3be842537",
+  "diff_sha256": "1f55c4458d05ab957443781a0520d65b0bb5465a7ae9769bdb801048f7b5efa1",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [
+      "longterm-mem/cmd/longterm-mem/testdata/legacy-promoted-vault/.allocator-counter",
+      "longterm-mem/cmd/longterm-mem/testdata/legacy-promoted-vault/.raw/.longterm-mem-manifest.json",
+      "longterm-mem/cmd/longterm-mem/testdata/legacy-promoted-vault/.raw/.manifest.json",
+      "longterm-mem/cmd/longterm-mem/testdata/legacy-promoted-vault/wiki/index.md",
+      "longterm-mem/cmd/longterm-mem/testdata/legacy-promoted-vault/wiki/log.md",
+      "longterm-mem/cmd/longterm-mem/testdata/legacy-promoted-vault/wiki/memory/c-000901.md"
+    ],
+    "removed_names": [
+      {
+        "name": "TestSyncWithoutASourceReadsLegacyKeyedPagesFromMemorycard",
+        "hits": [
+          "odd/tasks/phase9-store-agnostic-promotion.md"
+        ]
+      },
+      {
+        "name": "seedLegacyPromotedPage",
+        "hits": [
+          "odd/tasks/phase9-store-agnostic-promotion.md"
+        ]
+      }
+    ]
+  },
+  "t2": [
+    {
+      "tool": "errcheck",
+      "module": "longterm-mem",
+      "new": [
+        "cmd/longterm-mem/promote_memorycard_test.go: unchecked error: defer db.Close()"
+      ]
+    }
+  ],
+  "t3": [],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

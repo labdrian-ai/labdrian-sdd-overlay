@@ -1,0 +1,149 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "fc7617c46c24b83bf01920c934826c002614cf94",
+    "head": "fa8d5183ce34bce805a7b5cbc1330b739a6a0b0b",
+    "diff_sha256": "95568a6b0f67fb45fbe20549ade16b5a6574209d3e5060c8b328f6f85fa7e2f0",
+    "paths": [
+      "longterm-mem/internal/promote/address_test.go",
+      "longterm-mem/internal/promote/card_promote_test.go",
+      "longterm-mem/internal/promote/eligible.go",
+      "longterm-mem/internal/promote/eligible_test.go",
+      "longterm-mem/internal/promote/frontmatter.go",
+      "longterm-mem/internal/promote/frontmatter_test.go",
+      "longterm-mem/internal/promote/legacy_keys_retired_test.go",
+      "longterm-mem/internal/promote/page.go",
+      "longterm-mem/internal/promote/page_identity.go",
+      "longterm-mem/internal/promote/page_identity_fields_test.go",
+      "longterm-mem/internal/promote/page_identity_test.go",
+      "longterm-mem/internal/promote/page_scan.go",
+      "longterm-mem/internal/promote/page_scan_test.go",
+      "longterm-mem/internal/promote/page_style.go",
+      "longterm-mem/internal/promote/page_style_test.go",
+      "longterm-mem/internal/promote/page_test.go",
+      "longterm-mem/internal/promote/pages_port_test.go",
+      "longterm-mem/internal/promote/pages_unreadable_test.go",
+      "longterm-mem/internal/promote/projectmove_recovery_test.go",
+      "longterm-mem/internal/promote/propagate.go",
+      "longterm-mem/internal/promote/propagate_ids_test.go",
+      "longterm-mem/internal/promote/reconcile.go",
+      "longterm-mem/internal/promote/reconcile_guard_test.go",
+      "longterm-mem/internal/promote/reconcile_test.go",
+      "longterm-mem/internal/promote/store.go",
+      "longterm-mem/internal/promote/support_test.go",
+      "longterm-mem/internal/promote/sync_cards_project_test.go",
+      "longterm-mem/internal/promote/sync_cards_test.go",
+      "longterm-mem/internal/promote/testdata/pages/architecture.golden.md",
+      "longterm-mem/internal/promote/update.go",
+      "longterm-mem/internal/promote/update_test.go",
+      "longterm-mem/internal/promote/walk.go",
+      "longterm-mem/internal/promote/walk_bridged_test.go",
+      "longterm-mem/internal/promote/walk_failures_test.go",
+      "longterm-mem/internal/promote/writer.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "fc7617c46c24b83bf01920c934826c002614cf94",
+      "head": "fa8d5183ce34bce805a7b5cbc1330b739a6a0b0b",
+      "diff_sha256": "95568a6b0f67fb45fbe20549ade16b5a6574209d3e5060c8b328f6f85fa7e2f0"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/promote/address_test.go",
+        "longterm-mem/internal/promote/card_promote_test.go",
+        "longterm-mem/internal/promote/eligible.go",
+        "longterm-mem/internal/promote/eligible_test.go",
+        "longterm-mem/internal/promote/frontmatter.go",
+        "longterm-mem/internal/promote/frontmatter_test.go",
+        "longterm-mem/internal/promote/legacy_keys_retired_test.go",
+        "longterm-mem/internal/promote/page.go",
+        "longterm-mem/internal/promote/page_identity.go",
+        "longterm-mem/internal/promote/page_identity_fields_test.go",
+        "longterm-mem/internal/promote/page_identity_test.go",
+        "longterm-mem/internal/promote/page_scan.go",
+        "longterm-mem/internal/promote/page_scan_test.go",
+        "longterm-mem/internal/promote/page_style.go",
+        "longterm-mem/internal/promote/page_style_test.go",
+        "longterm-mem/internal/promote/page_test.go",
+        "longterm-mem/internal/promote/pages_port_test.go",
+        "longterm-mem/internal/promote/pages_unreadable_test.go",
+        "longterm-mem/internal/promote/projectmove_recovery_test.go",
+        "longterm-mem/internal/promote/propagate.go",
+        "longterm-mem/internal/promote/propagate_ids_test.go",
+        "longterm-mem/internal/promote/reconcile.go",
+        "longterm-mem/internal/promote/reconcile_guard_test.go",
+        "longterm-mem/internal/promote/reconcile_test.go",
+        "longterm-mem/internal/promote/store.go",
+        "longterm-mem/internal/promote/support_test.go",
+        "longterm-mem/internal/promote/sync_cards_project_test.go",
+        "longterm-mem/internal/promote/sync_cards_test.go",
+        "longterm-mem/internal/promote/testdata/pages/architecture.golden.md",
+        "longterm-mem/internal/promote/update.go",
+        "longterm-mem/internal/promote/update_test.go",
+        "longterm-mem/internal/promote/walk.go",
+        "longterm-mem/internal/promote/walk_bridged_test.go",
+        "longterm-mem/internal/promote/walk_failures_test.go",
+        "longterm-mem/internal/promote/writer.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/promote/update.go:147-154",
+        "claim": "entryFor no longer records PromotedRevision (previously read from the rendered frontmatter). Entries written by promotion/update now always have PromotedRevision 0, so a later hand edit on a page whose entry was written by this code is treated as 'no revision recorded' (wedged) rather than a local edit with a positive revision, changing which refusal path (ErrLocalEditPreserved vs wedge/adopt) applies. isOwnUnrecordedUpdate-style evidence is lost. The comment claims promotion paths 'never did' record it for memorycard pages, but the base recorded it for any page whose frontmatter carried a revision key.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/update.go:147-154"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/promote/reconcile_test.go:209-215",
+        "claim": "The test was modified to manually set entry.PromotedRevision = 2 to keep passing, which signals that seeding precedence no longer records revision. This masks the behavior change in entryFor rather than testing it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/reconcile_test.go:209-215",
+          "longterm-mem/internal/promote/update.go:147-154"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/support_test.go:88-90",
+        "claim": "Test helper engramIdentity now returns a memorycard-source identity, and obsMemory builds memorycard-source memories from Observations; names (engramIdentity, enginePage, scanPromotedPages comment 'Engram observation') now misdescribe what they do, hurting readability.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/support_test.go:88-90"
+        ]
+      },
+      {
+        "id": "F4",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/update.go:174-186",
+        "claim": "pageRevision loops over pageSources which now holds a single element; the loop and the pageSources indirection add generality that no longer exists, and the comment in page_style.go/page_scan.go still describes 'stores' plural semantics. Also frontmatter.go's vaultType comment is rewrapped awkwardly (long first line).",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/page_scan.go:17"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff for the promote package; legacy readers (engramSource, legacyKeys, frontmatterRevision, frontmatterEngramID, PageObservationID) removed and callers updated.",
+      "entryFor drops the PromotedRevision recording; reconcile test had to be patched to set it manually.",
+      "Test helpers keep engram-named identifiers while now producing memorycard identities."
+    ]
+  }
+}

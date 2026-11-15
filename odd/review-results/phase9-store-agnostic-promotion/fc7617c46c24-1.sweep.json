@@ -1,0 +1,40 @@
+{
+  "kind": "sweep",
+  "base": "811abcb44304ae0451d6bffd255bb126a4938227",
+  "head": "fc7617c46c24b83bf01920c934826c002614cf94",
+  "diff_sha256": "fcbe5d18e8a83669389d7a684ff06c985fa355b891dc8da8779dc2542dcb1627",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": [
+      {
+        "name": "corroboratingFrontmatter",
+        "hits": [
+          "odd/review-results/phase9-store-agnostic-promotion/c303b6f79b14-4.polisher.json",
+          "odd/tasks/phase9-store-agnostic-promotion.md"
+        ]
+      },
+      {
+        "name": "isOwnUnrecordedUpdate",
+        "hits": [
+          "longterm-mem/internal/promote/reconcile.go",
+          "longterm-mem/internal/promote/store.go",
+          "odd/review-results/phase9-store-agnostic-promotion/c303b6f79b14-4.polisher.json"
+        ]
+      },
+      {
+        "name": "revisionsAllowAdoption",
+        "hits": [
+          "longterm-mem/internal/ops/doctor.go",
+          "longterm-mem/internal/ops/doctor_test.go"
+        ]
+      }
+    ]
+  },
+  "t2": [],
+  "t3": [],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

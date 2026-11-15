@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "11641b08e28f73fc2a25db8feac9bd2ed46b4bba",
+    "head": "20b98d4ed928acfc972cf4e4c0fc3749bd55789a",
+    "diff_sha256": "39f92547666e7ea72376b1b2613976faf23993a7a78650e401f30e24f3911338",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/promote_memorycard_test.go",
+      "longterm-mem/cmd/longterm-mem/promote_pages_golden_test.go",
+      "longterm-mem/cmd/longterm-mem/sync_memorycard_test.go",
+      "longterm-mem/internal/ops/doctor_eligibility_memorycard_test.go",
+      "longterm-mem/internal/ops/doctor_eligibility_test.go",
+      "longterm-mem/internal/ops/doctor_identity_test.go",
+      "longterm-mem/internal/promote/support_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "11641b08e28f73fc2a25db8feac9bd2ed46b4bba",
+      "head": "20b98d4ed928acfc972cf4e4c0fc3749bd55789a",
+      "diff_sha256": "39f92547666e7ea72376b1b2613976faf23993a7a78650e401f30e24f3911338"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/promote_memorycard_test.go",
+        "longterm-mem/cmd/longterm-mem/promote_pages_golden_test.go",
+        "longterm-mem/cmd/longterm-mem/sync_memorycard_test.go",
+        "longterm-mem/internal/ops/doctor_eligibility_memorycard_test.go",
+        "longterm-mem/internal/ops/doctor_eligibility_test.go",
+        "longterm-mem/internal/ops/doctor_identity_test.go",
+        "longterm-mem/internal/promote/support_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/support_test.go:88-100",
+        "claim": "The helper was renamed to memoryIdentity, but its callers still take a parameter and a function named engramID/scanPromotedPages(engramID), and a nearby comment still says 'Engram observation engramID'. The rename is incomplete, so readability of the memory-vs-Engram vocabulary is only partly fixed.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "longterm-mem/internal/promote/support_test.go:99",
+          "longterm-mem/internal/promote/support_test.go:135"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/ops/doctor_eligibility_test.go:373-380",
+        "claim": "A subtest case is still named 'engram unreadable' and a comment keeps 'engram_id' wording, though the commit claims to rename the vocabulary to memories; the identifier and test names mix both.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "longterm-mem/internal/ops/doctor_eligibility_test.go:378"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff is test-only renames and test additions; I found no behavior regression.",
+      "The new c-000054 page with an unparseable source_id is covered by the existing assertion that no live memories are asked for.",
+      "Scenario 22 now updates memory 2, which the commit message says is the memory the page names; I could not verify this from the diff alone."
+    ]
+  }
+}

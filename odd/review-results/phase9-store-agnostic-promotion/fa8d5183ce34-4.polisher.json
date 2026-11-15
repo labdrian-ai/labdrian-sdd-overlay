@@ -1,0 +1,31 @@
+{
+  "kind": "polisher",
+  "base": "fc7617c46c24b83bf01920c934826c002614cf94",
+  "head": "fa8d5183ce34bce805a7b5cbc1330b739a6a0b0b",
+  "diff_sha256": "95568a6b0f67fb45fbe20549ade16b5a6574209d3e5060c8b328f6f85fa7e2f0",
+  "findings": {
+    "findings": [
+      {
+        "location": "longterm-mem/README.md:188",
+        "severity": "WARNING",
+        "claim": "User-facing docs still say the page reader accepts the legacy keys (engram_id, memorycard_id, memorycard_revision, and engram_id through import_map). After this change it reads only source and source_id, so the docs are wrong. Whoever follows them could keep or hand-write a legacy-keyed page and expect it to be adopted, bridged, or updated.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "Diff page_identity.go removes legacyKeys and the fallback in fieldOf. identityOf now returns false for any page without source: memorycard plus source_id.",
+          "Diff eligible.go PageMemoryRef iterates pageSources, which is now only memorycard.",
+          "These docs still describe the removed behaviour: longterm-mem/README.md:188-189 (doctor joins by legacy memorycard_id or engram_id through import_map), docs/promote-from-memorycard.md:47-48 and :74 (pages found by legacy memorycard_id; engram_id pages bridge), and docs/sync-from-memorycard.md:16, :33 and :57 (legacy memorycard_revision and memorycard_id still read, an engram_id page bridges its memory).",
+          "The diff does not touch README.md or docs/. The task brief says only command tests and the ops fixture follow in later commits, so the docs may be intentionally deferred. If no later commit covers them, the stale text ships."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff /home/labdrian/.cache/t7-fa8d5183.diff (2270 lines; every hunk is under longterm-mem/internal/promote).",
+      "Read the S7 and T7 lines of odd/tasks/phase9-store-agnostic-promotion.md in the review worktree.",
+      "Grepped the review worktree's non-test Go code for the removed symbols (PageObservationID, frontmatterEngramID, frontmatterRevision, legacyKeys, statusFor, emitEngramPage, promotionFooter, engramSource, memorycardIDField, engramTypeField). No matches, so no dangling references outside tests.",
+      "Grepped the review worktree for remaining legacy-key mentions. Stale docs found as in the finding. Non-promote hits (internal/query, internal/mcpserver) are separate engram_id JSON fields, not page keys.",
+      "Checked entryFor: it already recorded no revision for memorycard pages before this change (frontmatterRevision read only engram keys), so dropping it changes nothing.",
+      "Did not run go build, go vet or go test. Not run."
+    ]
+  }
+}

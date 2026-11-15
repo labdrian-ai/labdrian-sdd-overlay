@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "874c5b951b144078cf8587ac3db9a06634842540",
+    "head": "1edf8e79cc3bad06e5983ebdebb762c4c4ec4dff",
+    "diff_sha256": "f9a9850f4d16b1099ff05e4453805393e68bc3838227fe06db4b2cb6366c1ebd",
+    "paths": [
+      "longterm-mem/internal/memory/card.go",
+      "longterm-mem/internal/query/merge.go",
+      "openspec/specs/longterm-mem-promotion/spec.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "874c5b951b144078cf8587ac3db9a06634842540",
+      "head": "1edf8e79cc3bad06e5983ebdebb762c4c4ec4dff",
+      "diff_sha256": "f9a9850f4d16b1099ff05e4453805393e68bc3838227fe06db4b2cb6366c1ebd"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/memory/card.go",
+        "longterm-mem/internal/query/merge.go",
+        "openspec/specs/longterm-mem-promotion/spec.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "openspec/specs/longterm-mem-promotion/spec.md:456-460",
+        "claim": "The rewritten interrupted-update rule says a memorycard-promoted page 'carries no revision its entry could be compared with'. Elsewhere the spec says every page carries source_revision, and the following paragraph about entries recording no revision remains. The stated reason for refusal is unclear and may conflict with the surviving text. The comment in merge.go, 'deduplicated by the row id', is also vaguer than the original engram_id.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "openspec/specs/longterm-mem-promotion/spec.md:456-460"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only comments in two Go files and the spec text, so no runtime behavior is affected.",
+      "Checked the spec retirements for consistency with the surviving paragraphs. The removed scenarios match the removed rules, and each retirement has a (Previously: ...) note."
+    ]
+  }
+}

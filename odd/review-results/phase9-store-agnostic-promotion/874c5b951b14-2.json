@@ -1,0 +1,102 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "12e307fb23510131f78b7574b67bff935d6081f7",
+    "head": "874c5b951b144078cf8587ac3db9a06634842540",
+    "diff_sha256": "c93f3598fc917d9514c186f284e79b78690515607b622c4179783d76b9bf8de5",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/cmd_doctor.go",
+      "longterm-mem/cmd/longterm-mem/doctor_eligibility_test.go",
+      "longterm-mem/internal/ops/doctor.go",
+      "longterm-mem/internal/ops/doctor_eligibility.go",
+      "longterm-mem/internal/ops/doctor_eligibility_memorycard_test.go",
+      "longterm-mem/internal/ops/doctor_eligibility_test.go",
+      "longterm-mem/internal/ops/doctor_identity_test.go",
+      "longterm-mem/internal/ops/doctor_test.go",
+      "longterm-mem/internal/ops/golden_test.go",
+      "longterm-mem/internal/ops/testdata/golden/58-a-page-whose-observation-sync-no-longer-keeps-current.golden",
+      "longterm-mem/internal/opstest/fixture.go",
+      "scripts/rehearse-card-page-migration.sh"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "12e307fb23510131f78b7574b67bff935d6081f7",
+      "head": "874c5b951b144078cf8587ac3db9a06634842540",
+      "diff_sha256": "c93f3598fc917d9514c186f284e79b78690515607b622c4179783d76b9bf8de5"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/cmd_doctor.go",
+        "longterm-mem/cmd/longterm-mem/doctor_eligibility_test.go",
+        "longterm-mem/internal/ops/doctor.go",
+        "longterm-mem/internal/ops/doctor_eligibility.go",
+        "longterm-mem/internal/ops/doctor_eligibility_memorycard_test.go",
+        "longterm-mem/internal/ops/doctor_eligibility_test.go",
+        "longterm-mem/internal/ops/doctor_identity_test.go",
+        "longterm-mem/internal/ops/doctor_test.go",
+        "longterm-mem/internal/ops/golden_test.go",
+        "longterm-mem/internal/ops/testdata/golden/58-a-page-whose-observation-sync-no-longer-keeps-current.golden",
+        "longterm-mem/internal/opstest/fixture.go",
+        "scripts/rehearse-card-page-migration.sh"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/cmd/longterm-mem/doctor_eligibility_test.go:367",
+        "claim": "The rewritten test comment is garbled: 'the live memories of the project, XX// rule reads.' It lost its text and contains a stray 'XX//' marker, so the comment no longer explains what the test checks.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/doctor_eligibility_test.go:367"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "scripts/rehearse-card-page-migration.sh:1",
+        "claim": "The commit deletes the 360-line migration rehearsal script. Its description (a doctor, MemoryEligibility and fixture change) never mentions the deletion. Other docs, runbooks or tasks may still refer to the script. Removing an owner-run tool is a separate decision that should be stated.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "scripts/rehearse-card-page-migration.sh:1"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/opstest/fixture.go:152",
+        "claim": "EngramMemory now builds a memory with Source 'memorycard' and the Engram observation's ID. The name and the doc comment still say Engram observation, and the helper is a stand-in rather than a real memorycard memory, so the name misleads readers.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/opstest/fixture.go:152"
+        ]
+      },
+      {
+        "id": "F4",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/cmd_doctor.go:139",
+        "claim": "The reworded comment 'its id, with the two fields promotion's eligibility rule reads' is a clumsy fragment left after the engram clause was removed. Many tests and comments in the ops tests still say 'observation' for what is now a memory.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/cmd_doctor.go:139"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the diff only. Doctor join logic now uses liveByMemoryID alone, and retired-key pages are skipped, as the commit message claims.",
+      "The corrupted comment is visible on the added line in doctor_eligibility_test.go.",
+      "The script deletion appears in the diff but not in the commit claims."
+    ]
+  }
+}

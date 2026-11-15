@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "72221c234307308423529a43fe60c3d3be842537",
+    "head": "12e307fb23510131f78b7574b67bff935d6081f7",
+    "diff_sha256": "5dcff14a74d3bf734511ad5bc7bdaf822f4e2c669ad28e0b3ac87dd5a03b7f2b",
+    "paths": [
+      "longterm-mem/README.md",
+      "longterm-mem/docs/promote-from-memorycard.md",
+      "longterm-mem/docs/sync-from-memorycard.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "72221c234307308423529a43fe60c3d3be842537",
+      "head": "12e307fb23510131f78b7574b67bff935d6081f7",
+      "diff_sha256": "5dcff14a74d3bf734511ad5bc7bdaf822f4e2c669ad28e0b3ac87dd5a03b7f2b"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/README.md",
+        "longterm-mem/docs/promote-from-memorycard.md",
+        "longterm-mem/docs/sync-from-memorycard.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "All three changed files are documentation, and I read every hunk. The migrate-card-pages row and its anchor link were removed together in the README. The new text in promote-from-memorycard.md and sync-from-memorycard.md agrees with the README on the same points: pages are found by (project, source_id) beside source: memorycard, and a page carrying only the retired keys names no memory.",
+      "The diff cannot show whether other files still link to the removed anchor or mention the rehearsal script, so I report nothing on that."
+    ]
+  }
+}

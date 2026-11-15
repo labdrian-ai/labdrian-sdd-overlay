@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "893fd3cf34b1fdb13fa4b6c01055c5216a3c4412",
+    "head": "e4e59773c20a7243cf563e165b93a393e2cf2434",
+    "diff_sha256": "a347bacc887e624577feb1560d4164e51b6fb2e7542eaad5667a348617ee0e6c",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "893fd3cf34b1fdb13fa4b6c01055c5216a3c4412",
+      "head": "e4e59773c20a7243cf563e165b93a393e2cf2434",
+      "diff_sha256": "a347bacc887e624577feb1560d4164e51b6fb2e7542eaad5667a348617ee0e6c"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The change touches only the feature document: it rewrites the T7 task line (widened surfaces, three follow-up shas, evidence range L91 to L95) and appends log entry L95.",
+      "The T7 line's claims match L95's text: the widening is attributed to the coordinator (L93), f389ff91 stands for the record of the split, and a956237c, 558d53bb and effc8832 are the three follow-ups.",
+      "No code, spec or script file changes, so there is no behavior to regress. I found nothing in the diff that contradicts the stated Risk: none."
+    ]
+  }
+}

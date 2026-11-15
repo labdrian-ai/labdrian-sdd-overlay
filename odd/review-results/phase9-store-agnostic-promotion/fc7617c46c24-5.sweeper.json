@@ -1,0 +1,25 @@
+{
+  "kind": "sweeper",
+  "base": "811abcb44304ae0451d6bffd255bb126a4938227",
+  "head": "fc7617c46c24b83bf01920c934826c002614cf94",
+  "diff_sha256": "fcbe5d18e8a83669389d7a684ff06c985fa355b891dc8da8779dc2542dcb1627",
+  "sweep": "fc7617c46c24-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 name: corroboratingFrontmatter",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. rg -F: 0 occurrences outside odd/ and openspec/changes/archive/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: isOwnUnrecordedUpdate",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. rg -F: 0 occurrences outside odd/ and openspec/changes/archive/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: revisionsAllowAdoption",
+      "disposition": "finding",
+      "evidence": "Corrected later in the chain by chore(sweep) 11641b08 (the record cannot name it as its commit: it is not a direct child). doctor_test.go comment named the removed guard; rewritten to name the doctor.go wedge predicate; go test ./internal/ops ok"
+    }
+  ]
+}

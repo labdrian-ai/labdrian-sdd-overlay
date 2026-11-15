@@ -1,0 +1,91 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "12e307fb23510131f78b7574b67bff935d6081f7",
+    "head": "874c5b951b144078cf8587ac3db9a06634842540",
+    "diff_sha256": "c93f3598fc917d9514c186f284e79b78690515607b622c4179783d76b9bf8de5",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/cmd_doctor.go",
+      "longterm-mem/cmd/longterm-mem/doctor_eligibility_test.go",
+      "longterm-mem/internal/ops/doctor.go",
+      "longterm-mem/internal/ops/doctor_eligibility.go",
+      "longterm-mem/internal/ops/doctor_eligibility_memorycard_test.go",
+      "longterm-mem/internal/ops/doctor_eligibility_test.go",
+      "longterm-mem/internal/ops/doctor_identity_test.go",
+      "longterm-mem/internal/ops/doctor_test.go",
+      "longterm-mem/internal/ops/golden_test.go",
+      "longterm-mem/internal/ops/testdata/golden/58-a-page-whose-observation-sync-no-longer-keeps-current.golden",
+      "longterm-mem/internal/opstest/fixture.go",
+      "scripts/rehearse-card-page-migration.sh"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "12e307fb23510131f78b7574b67bff935d6081f7",
+      "head": "874c5b951b144078cf8587ac3db9a06634842540",
+      "diff_sha256": "c93f3598fc917d9514c186f284e79b78690515607b622c4179783d76b9bf8de5"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/cmd_doctor.go",
+        "longterm-mem/cmd/longterm-mem/doctor_eligibility_test.go",
+        "longterm-mem/internal/ops/doctor.go",
+        "longterm-mem/internal/ops/doctor_eligibility.go",
+        "longterm-mem/internal/ops/doctor_eligibility_memorycard_test.go",
+        "longterm-mem/internal/ops/doctor_eligibility_test.go",
+        "longterm-mem/internal/ops/doctor_identity_test.go",
+        "longterm-mem/internal/ops/doctor_test.go",
+        "longterm-mem/internal/ops/golden_test.go",
+        "longterm-mem/internal/ops/testdata/golden/58-a-page-whose-observation-sync-no-longer-keeps-current.golden",
+        "longterm-mem/internal/opstest/fixture.go",
+        "scripts/rehearse-card-page-migration.sh"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/cmd/longterm-mem/doctor_eligibility_test.go:367",
+        "claim": "The test comment was corrupted by the edit: it now reads \"the live memories of the project, XX// rule reads.\" with a stray XX// marker and lost sentence text, leaving a garbled doc comment.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/doctor_eligibility_test.go:367"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/ops/doctor_eligibility.go:90-103",
+        "claim": "Pages from an earlier release (engram_id/memorycard_id keys only) that were previously judged and warned are now silently passed by promoted-pages-eligible. Doctor loses visibility of not-yet-migrated pages whose memory is ineligible, and the check now reports PASS for them. The commit asserts this is intended (the migration is retired), but nothing in the diff verifies that no such pages remain in live vaults, and the migration rehearsal script that detected them is deleted in the same commit.",
+        "evidence_class": "inferential",
+        "causal_disposition": "behavior-activated",
+        "proof_refs": [
+          "longterm-mem/internal/ops/doctor_eligibility.go:90-103",
+          "longterm-mem/internal/ops/doctor_eligibility_memorycard_test.go:37-60"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/opstest/fixture.go:149-152",
+        "claim": "The helper EngramMemory now builds a memory with Source \"memorycard\", so its name no longer describes what it returns, and its doc comment likely still refers to an Engram observation. The name is misleading to callers.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/opstest/fixture.go:149-152"
+        ]
+      }
+    ],
+    "evidence": [
+      "Diff inspected in full; MemoryEligibility.EngramID removal is consistent across cmd_doctor.go and all test constructors shown.",
+      "The doctor join now uses only liveByMemoryID keyed by p.ref.ID; the p.ref.Source filter for legacy pages is removed, so a page with source other than memorycard but a numeric id would also join by id (promotions list built elsewhere, not shown in diff).",
+      "Golden 58 change matches the new adviceFor wording."
+    ]
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "e9ba1a78abca931d797ecd4b8c9bc8d096758e4f",
+    "head": "893fd3cf34b1fdb13fa4b6c01055c5216a3c4412",
+    "diff_sha256": "f6a558e47dd06438112f03c2383949cecec361d44d5d73f229c5e8c642cbf5b4",
+    "paths": [
+      "longterm-mem/README.md",
+      "longterm-mem/docs/promote-from-memorycard.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "e9ba1a78abca931d797ecd4b8c9bc8d096758e4f",
+      "head": "893fd3cf34b1fdb13fa4b6c01055c5216a3c4412",
+      "diff_sha256": "f6a558e47dd06438112f03c2383949cecec361d44d5d73f229c5e8c642cbf5b4"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/README.md",
+        "longterm-mem/docs/promote-from-memorycard.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/docs/promote-from-memorycard.md:20-21",
+        "claim": "The cross-reference now points to 'the bridged cases of \"What it refuses or leaves alone\"', a section name that cannot be confirmed from this diff. If that heading does not exist or is named differently, the replacement reintroduces an ambiguous or broken reference.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/docs/promote-from-memorycard.md:20-21"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/README.md:187-193",
+        "claim": "The README states the owner's vault migration figures (575 of 575 pages, 0 left) as fact in permanent documentation. These are a dated snapshot that will go stale and are duplicated in two files, so they may drift apart.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/README.md:187-193",
+          "longterm-mem/docs/promote-from-memorycard.md:40-44"
+        ]
+      }
+    ],
+    "evidence": [
+      "Diff changes only two documentation files; no code behavior is altered.",
+      "The new text states sync and promote create a new page and leave the old retired-key-only page untouched, consistent with the removed parenthetical in the promote doc.",
+      "The removed README sentence about the doctor keeping a page current when any of several imported memories is eligible is dropped, matching the commit claim."
+    ]
+  }
+}

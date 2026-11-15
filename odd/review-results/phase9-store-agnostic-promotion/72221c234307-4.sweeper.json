@@ -1,0 +1,55 @@
+{
+  "kind": "sweeper",
+  "base": "fa8d5183ce34bce805a7b5cbc1330b739a6a0b0b",
+  "head": "72221c234307308423529a43fe60c3d3be842537",
+  "diff_sha256": "1f55c4458d05ab957443781a0520d65b0bb5465a7ae9769bdb801048f7b5efa1",
+  "sweep": "72221c234307-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 path: longterm-mem/cmd/longterm-mem/testdata/legacy-promoted-vault/.allocator-counter",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. deleted by the commit; absent at HEAD, no non-odd/ reference to it remains"
+    },
+    {
+      "candidate": "T1 path: longterm-mem/cmd/longterm-mem/testdata/legacy-promoted-vault/.raw/.longterm-mem-manifest.json",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. deleted by the commit; absent at HEAD, no non-odd/ reference to it remains"
+    },
+    {
+      "candidate": "T1 path: longterm-mem/cmd/longterm-mem/testdata/legacy-promoted-vault/.raw/.manifest.json",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. deleted by the commit; absent at HEAD, no non-odd/ reference to it remains"
+    },
+    {
+      "candidate": "T1 path: longterm-mem/cmd/longterm-mem/testdata/legacy-promoted-vault/wiki/index.md",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. deleted by the commit; absent at HEAD, no non-odd/ reference to it remains"
+    },
+    {
+      "candidate": "T1 path: longterm-mem/cmd/longterm-mem/testdata/legacy-promoted-vault/wiki/log.md",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. deleted by the commit; absent at HEAD, no non-odd/ reference to it remains"
+    },
+    {
+      "candidate": "T1 path: longterm-mem/cmd/longterm-mem/testdata/legacy-promoted-vault/wiki/memory/c-000901.md",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. deleted by the commit; absent at HEAD, no non-odd/ reference to it remains"
+    },
+    {
+      "candidate": "T1 name: TestSyncWithoutASourceReadsLegacyKeyedPagesFromMemorycard",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. rg -F: 0 occurrences outside odd/ and openspec/changes/archive/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: seedLegacyPromotedPage",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. rg -F: 0 occurrences outside odd/ and openspec/changes/archive/ at HEAD"
+    },
+    {
+      "candidate": "T2 errcheck longterm-mem: cmd/longterm-mem/promote_memorycard_test.go: unchecked error: defer db.Close()",
+      "disposition": "live",
+      "evidence": "still used at HEAD (cardPageMemory, writeCardPage have callers in cmd/longterm-mem tests); errcheck item is a pre-existing test defer pattern, not dead code"
+    }
+  ]
+}

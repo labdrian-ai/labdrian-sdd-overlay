@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "1f02cd0aaa6b5ad62f347a68a477e8b18471184b",
+    "head": "70137c5beca5cb15c16a6c194a3603613de44419",
+    "diff_sha256": "9320945f097d45a374f3813f92ab25e578da9f81cc7254eff81f5cea90a559a6",
+    "paths": [
+      "longterm-mem/internal/ops/doctor_eligibility_test.go",
+      "longterm-mem/internal/promote/support_test.go",
+      "longterm-mem/internal/promote/update_test.go",
+      "longterm-mem/internal/promote/writer_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "1f02cd0aaa6b5ad62f347a68a477e8b18471184b",
+      "head": "70137c5beca5cb15c16a6c194a3603613de44419",
+      "diff_sha256": "9320945f097d45a374f3813f92ab25e578da9f81cc7254eff81f5cea90a559a6"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/ops/doctor_eligibility_test.go",
+        "longterm-mem/internal/promote/support_test.go",
+        "longterm-mem/internal/promote/update_test.go",
+        "longterm-mem/internal/promote/writer_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/promote/writer_test.go:693-702",
+        "claim": "The retry test's rewrite detection relies on Chtimes to 2020 and a ModTime equality check. If a retry rewrote the page with identical bytes, mtime would move and be caught, but the check uses time.Equal on a filesystem timestamp, which can be truncated on coarse-resolution filesystems. 2020-01-01 UTC is whole-second so it is unlikely to be affected. The `wedgedPrecedence.saves` field is assumed to exist on memPrecedence; the diff does not show it, so a compile failure cannot be ruled out from the diff alone.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "longterm-mem/internal/promote/writer_test.go:703-705"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/update_test.go:644-646",
+        "claim": "The renamed comments say source_revision, but the same file still refers to Engram (for example 'the revision Engram reports', 'Engram has not reached'), and the test name TestUpdate_PageClaimingARevisionEngramHasNotReachedIsSkipped still uses Engram. The vocabulary change is therefore only partial, leaving mixed terminology in adjacent comments.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/update_test.go:813-816"
+        ]
+      }
+    ],
+    "evidence": [
+      "Diff touches only test files and comments; no production code changed.",
+      "Rewrote TestUpdate_PageAheadOfTheSidecarWithAnEditedBodyIsStillSkipped doc comment drops the footer-corroboration explanation and the limits of adoption (an edit buried mid-body is indistinguishable), which is lost context for readers.",
+      "The new retry assertions (entry/catalog/log precondition, mtime past, saves count) are consistent with the claimed behavior; whether memPrecedence has a saves field is not visible in the diff."
+    ]
+  }
+}

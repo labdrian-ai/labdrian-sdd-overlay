@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "000c8a8d599f4a412b07b2c0c8a3dd4e85639aad",
+    "head": "0f34ace9ed602d8c47ac8196541c81f227ebfcd0",
+    "diff_sha256": "f5c8a29fe7870e5a17cfb338452dc88afbaaea212053b94440b1d5b9a6695134",
+    "paths": [
+      "longterm-mem/internal/promote/writer_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "000c8a8d599f4a412b07b2c0c8a3dd4e85639aad",
+      "head": "0f34ace9ed602d8c47ac8196541c81f227ebfcd0",
+      "diff_sha256": "f5c8a29fe7870e5a17cfb338452dc88afbaaea212053b94440b1d5b9a6695134"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/promote/writer_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/writer_test.go:680-683",
+        "claim": "The page-unchanged check combines the read error and content comparison into one message that always says 'the page was written by a retry', so a failed read is reported as a write. Separate the error from the content mismatch.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/writer_test.go:680-683"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/writer_test.go:684-691",
+        "claim": "The test asserts that the registration stays lost via a fresh in-memory precedence (wedged.Precedence is a new memPrecedence), so the 'no entry' check is trivially true regardless of the writer's behavior; it cannot detect a retry that wrote an entry only if the retry wrote to that same instance. It does reload from wedged.Precedence, which is the instance the retry would write to, so this is weak only against stores that persist elsewhere. Also, the test never checks that the sidecar/precedence for the first writer was lost, since the first writer's memPrecedence is simply discarded rather than simulating the loss.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/writer_test.go:662-665"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only one changed file, a test addition; reviewed whole diff.",
+      "The test logic is consistent with its stated claim: second writer with empty precedence, expects ActionAlreadyPromoted and no writes to page, index, or log."
+    ]
+  }
+}

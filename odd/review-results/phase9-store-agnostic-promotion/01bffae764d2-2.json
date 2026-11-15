@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "87f26495f03d65b7423a2d8d787eb56f36cf75d0",
+    "head": "01bffae764d2d6ab2b4179a320dcd067772b3b21",
+    "diff_sha256": "d8fb134857022d09036e47fc4c786acbf6472f616213aabbfe6d3c4a00388982",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go",
+      "longterm-mem/cmd/longterm-mem/main.go",
+      "longterm-mem/cmd/longterm-mem/migrate_card_pages_backup_durable_test.go",
+      "longterm-mem/cmd/longterm-mem/migrate_card_pages_backup_more_test.go",
+      "longterm-mem/cmd/longterm-mem/migrate_card_pages_backup_sync_test.go",
+      "longterm-mem/cmd/longterm-mem/migrate_card_pages_backup_test.go",
+      "longterm-mem/cmd/longterm-mem/migrate_card_pages_halfmigrated_test.go",
+      "longterm-mem/cmd/longterm-mem/migrate_card_pages_scan_test.go",
+      "longterm-mem/cmd/longterm-mem/migrate_card_pages_test.go",
+      "longterm-mem/cmd/longterm-mem/page_keys_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "87f26495f03d65b7423a2d8d787eb56f36cf75d0",
+      "head": "01bffae764d2d6ab2b4179a320dcd067772b3b21",
+      "diff_sha256": "d8fb134857022d09036e47fc4c786acbf6472f616213aabbfe6d3c4a00388982"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go",
+        "longterm-mem/cmd/longterm-mem/main.go",
+        "longterm-mem/cmd/longterm-mem/migrate_card_pages_backup_durable_test.go",
+        "longterm-mem/cmd/longterm-mem/migrate_card_pages_backup_more_test.go",
+        "longterm-mem/cmd/longterm-mem/migrate_card_pages_backup_sync_test.go",
+        "longterm-mem/cmd/longterm-mem/migrate_card_pages_backup_test.go",
+        "longterm-mem/cmd/longterm-mem/migrate_card_pages_halfmigrated_test.go",
+        "longterm-mem/cmd/longterm-mem/migrate_card_pages_scan_test.go",
+        "longterm-mem/cmd/longterm-mem/migrate_card_pages_test.go",
+        "longterm-mem/cmd/longterm-mem/page_keys_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/cmd/longterm-mem/page_keys_test.go:148-153",
+        "claim": "cardPageMemory is added in this change but nothing in the visible diff calls it. It adds an unused helper plus the memory and opstest imports that only it needs. Either use it or drop it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "page_keys_test.go: func cardPageMemory(o memory.Observation) memory.Memory"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "longterm-mem/cmd/longterm-mem/page_keys_test.go:87-93",
+        "claim": "The deleted test files held shared helpers: recordPage, sha, legacyEngramPage, currentCardPage, changedPaths, regularFiles, mustJSON, migrationWorld, runMigrate, migrationInstant, containsAll and the old six-argument legacyCardPage. Other test files in package main may still use them. legacyCardPage is redefined here with a different signature. The deleted non-test file also held vaultBackup, syncDirectory, readWithMode and backupDirectoryPrefix. Any remaining caller breaks the package build. The diff cannot confirm there is none, so the package should be compiled and tested.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "page_keys_test.go: legacyCardPage(address string) replaces the old legacyCardPage signature",
+          "deleted migrate_card_pages_test.go: helper definitions",
+          "deleted cmd_migrate_card_pages.go: vaultBackup, syncDirectory"
+        ]
+      }
+    ],
+    "evidence": [
+      "The dispatch case for migrate-card-pages is removed in main.go.",
+      "The new test TestMigrateCardPagesIsNoSubcommandAnyMore pins the unknown-subcommand behavior.",
+      "The diff shows no remaining references to the removed command, but the whole package was not visible."
+    ]
+  }
+}
