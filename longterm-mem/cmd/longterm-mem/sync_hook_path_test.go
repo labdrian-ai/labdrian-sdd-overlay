@@ -98,8 +98,11 @@ func TestHookPathSync_AMissingStoreIsExit4(t *testing.T) {
 	if code != exitStoreUnavailable {
 		t.Errorf("exit %d, want %d (the hook logs failure:store-unavailable)\nstdout: %s\nstderr: %s", code, exitStoreUnavailable, stdout, stderr)
 	}
-	if !strings.Contains(stderr, missing) {
-		t.Errorf("stderr = %q, want it to name the missing database %s", stderr, missing)
+	if !strings.Contains(stderr, "memorycard: stat "+missing) {
+		t.Errorf("stderr = %q, want the store to report it could not stat %s", stderr, missing)
+	}
+	if _, err := os.Stat(missing); !os.IsNotExist(err) {
+		t.Errorf("the missing store exists after the run (stat: %v): the sync created it", err)
 	}
 	if after := renderPromoteGoldenTree(t, w.vaultRoot); after != treeBefore {
 		t.Errorf("a missing store changed the vault")
