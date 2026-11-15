@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "99c26aff7d82eff4066423037e123db380b47019",
+    "head": "9bcd7fd07d4a0c3d5a88a5a4744624d1959a0337",
+    "diff_sha256": "28b81f7912d8784c435e05e6432789859089d41aa839b99d1ba42fb42619f1da",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "99c26aff7d82eff4066423037e123db380b47019",
+      "head": "9bcd7fd07d4a0c3d5a88a5a4744624d1959a0337",
+      "diff_sha256": "28b81f7912d8784c435e05e6432789859089d41aa839b99d1ba42fb42619f1da"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The change only appends the L80 entry to a documentation file. No code or behavior changes.",
+      "The hash mapping in L80 matches L79: only b6b2675e and b055335c had their messages reworded, and the other three commits changed hash only because their parents did.",
+      "The script line numbers and the memorycard source line cited in L80 refer to files outside this diff, so I could not check them. They are pinned to 99c26aff and 70aae32, so the references are well-defined."
+    ]
+  }
+}

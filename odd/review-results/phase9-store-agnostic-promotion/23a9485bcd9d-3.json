@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "38dd4c43952a946f0fc4096ead06041484ca8898",
+    "head": "23a9485bcd9da3b770918f242baa2f1bcbb510f3",
+    "diff_sha256": "1b9833faa8d6c18c31a704b399828ae0ad3ef0baca27b4b3a71052d04dc9b2c9",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "38dd4c43952a946f0fc4096ead06041484ca8898",
+      "head": "23a9485bcd9da3b770918f242baa2f1bcbb510f3",
+      "diff_sha256": "1b9833faa8d6c18c31a704b399828ae0ad3ef0baca27b4b3a71052d04dc9b2c9"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The change only appends a documentation log entry (L78) to odd/tasks/phase9-store-agnostic-promotion.md; no code, scripts or behavior are modified.",
+      "The entry's claims (line references, hashes, counts) cannot be checked from the diff alone, and nothing in it contradicts earlier log entries beyond an explained digest difference with L76.",
+      "No defect introduced, activated or worsened by this docs-only append was found."
+    ]
+  }
+}

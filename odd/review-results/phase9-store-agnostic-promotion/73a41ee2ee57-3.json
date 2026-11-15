@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "23a9485bcd9da3b770918f242baa2f1bcbb510f3",
+    "head": "73a41ee2ee57af1a834b48b912a5c134fb7dfd22",
+    "diff_sha256": "a348a866c34efbd289a8d76bf45da259a4257e6564eef1f346ec369a3a218d79",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "23a9485bcd9da3b770918f242baa2f1bcbb510f3",
+      "head": "73a41ee2ee57af1a834b48b912a5c134fb7dfd22",
+      "diff_sha256": "a348a866c34efbd289a8d76bf45da259a4257e6564eef1f346ec369a3a218d79"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The change touches only the T6 task line and appends Log entry L79 in odd/tasks/phase9-store-agnostic-promotion.md; there is no code or behavior change.",
+      "The T6 line now names `98b28c38` for the script fix, and L79 maps `b6b2675e` to `98b28c38`, so the two agree.",
+      "L79 is appended after L78 and leaves the older L76 to L78 hashes untouched, which matches the log's append-only convention.",
+      "L79 says 'the two script commits' were reworded but lists five old-to-new hash pairs. This is plausibly because the three descendants were rewritten with them, and it is not a defect the diff proves."
+    ]
+  }
+}

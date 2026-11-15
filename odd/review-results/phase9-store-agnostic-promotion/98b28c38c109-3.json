@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "c4800ba15373d35515ab2d7e5891e320fd13dd22",
+    "head": "98b28c38c109c0cddcd643a0918c2a7f1e15a8dc",
+    "diff_sha256": "8de3fa8b0529b265532a3ee8e2522e20764db3949de889d7f914e8f98545250f",
+    "paths": [
+      "scripts/rehearse-card-page-migration.sh"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "c4800ba15373d35515ab2d7e5891e320fd13dd22",
+      "head": "98b28c38c109c0cddcd643a0918c2a7f1e15a8dc",
+      "diff_sha256": "8de3fa8b0529b265532a3ee8e2522e20764db3949de889d7f914e8f98545250f"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "scripts/rehearse-card-page-migration.sh"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "scripts/rehearse-card-page-migration.sh:88-95",
+        "claim": "Opening a read-only database with immutable=1 makes sqlite ignore any -wal file next to it. If the frozen Engram store has frames not yet checkpointed into the main file, the copy silently omits those observations. The rehearsal then reports success, and the late-observation import and the migration miss exactly the late data they exist to cover. The diff does not check for a non-empty -wal file. It also uses the writability of the file as a proxy for frozen, so root, for whom -w is true on a mode-444 file, goes back to the .backup path that spins forever.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "scripts/rehearse-card-page-migration.sh:88-95"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "scripts/rehearse-card-page-migration.sh:241-244",
+        "claim": "The pipeline `memorycard import engram \"$engram_db\" | tail -8` returns the exit status of tail, not of memorycard, unless the script sets pipefail (not visible in the diff). A failed or partial import would be hidden, the rehearsal would carry on, and the migration would hit the very refusals the import is meant to prevent. Nothing in the diff shows that MEMORYCARD_DB is exported to the copy at this point. If it is not, the import writes the live memorycard database.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "scripts/rehearse-card-page-migration.sh:241-244"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "scripts/rehearse-card-page-migration.sh:43",
+        "claim": "The new hard requirement `command -v memorycard` stops the rehearsal even when no Engram copy exists, in which case the import block is skipped anyway. The URI built in copy_db also does not escape '?', '#' or '%' in the path.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "scripts/rehearse-card-page-migration.sh:43",
+          "scripts/rehearse-card-page-migration.sh:93"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the single changed script from the diff alone. No tests or execution were available. Findings are inferred from SQLite immutable semantics and shell pipeline semantics."
+    ]
+  }
+}

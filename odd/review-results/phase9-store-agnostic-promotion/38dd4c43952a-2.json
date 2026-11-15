@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "180c3c25c87a98c1a5be1c186ef68411f8951085",
+    "head": "38dd4c43952a946f0fc4096ead06041484ca8898",
+    "diff_sha256": "97c16eedcaa5011fbcbaa0fd0d53782859288c4bb7803d29cb6eefc4173ad470",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "180c3c25c87a98c1a5be1c186ef68411f8951085",
+      "head": "38dd4c43952a946f0fc4096ead06041484ca8898",
+      "diff_sha256": "97c16eedcaa5011fbcbaa0fd0d53782859288c4bb7803d29cb6eefc4173ad470"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The change is documentation only. It rewrites the closing clause of the T6 line and appends the Log entry L77.",
+      "The new T6 clause is consistent with the existing L76 references and with the [x] tick already on the line.",
+      "L77's figures (import_map 3534 to 3729, 575 pages migrated) match the L76 text visible in the diff context.",
+      "The script line numbers cited in L77 (28, 97, 202, 252) cannot be checked from the diff, since the script is not part of it. Nothing in the diff contradicts them."
+    ]
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "736cbfe3ae3dd5bc7ea6b96ca5fed4a91b9a5722",
+    "head": "180c3c25c87a98c1a5be1c186ef68411f8951085",
+    "diff_sha256": "3ac13c896cf65ddf1d4814b4f69e5c552eb312212702ccfe42da3c4cd72a3307",
+    "paths": [
+      "scripts/rehearse-card-page-migration.sh"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "736cbfe3ae3dd5bc7ea6b96ca5fed4a91b9a5722",
+      "head": "180c3c25c87a98c1a5be1c186ef68411f8951085",
+      "diff_sha256": "3ac13c896cf65ddf1d4814b4f69e5c552eb312212702ccfe42da3c4cd72a3307"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "scripts/rehearse-card-page-migration.sh"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The immutable-branch guards are sound: the EUID check, the ?#% glob in [[ ]], and the -s test on the -wal file each fail closed through die.",
+      "The import-step guard reads the live import_map count with a read-only sqlite3 handle before and after the import, and a read failure aborts the assignment under set -e. It cannot be shown that live_card_dir is defined or that pipefail is set, because both lie outside the diff, so no defect is claimed."
+    ]
+  }
+}
