@@ -261,7 +261,7 @@ func pagesScenarios() []pagesScenario {
 		{name: "22-reconcile-a-page-of-another-project", seed: func(t *testing.T, w *promoteGoldenWorld) {
 			seedPromotedPage(t, w)
 			removeSidecar(t, w)
-			w.execCardSQL(t, `UPDATE memories SET project = 'other-project' WHERE id = 1`)
+			w.execCardSQL(t, `UPDATE memories SET project = 'other-project' WHERE id = 2`)
 		}, commands: [][]string{{"promote", "reconcile", "--project", "other-project", "c-000901"}}},
 		{name: "23-an-observation-superseded-by-a-newer-one", prepare: [][]string{sync}, seed: func(t *testing.T, w *promoteGoldenWorld) {
 			w.execCardSQL(t, `UPDATE memories SET status = 'superseded', superseded_by = 2 WHERE id = 1`)

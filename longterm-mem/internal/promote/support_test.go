@@ -85,7 +85,7 @@ type legacyScan struct {
 	unreadable []UnreadablePage
 }
 
-func engramIdentity(id int) memory.Identity {
+func memoryIdentity(id int) memory.Identity {
 	return memory.Identity{Source: memorycardSource, ID: strconv.Itoa(id)}
 }
 
@@ -96,7 +96,7 @@ func scanPromotedPages(pages PageReader, engramID int) (legacyScan, error) {
 		return legacyScan{}, err
 	}
 	scan := legacyScan{unreadable: index.unreadable}
-	for _, match := range index.carriers[engramIdentity(engramID)] {
+	for _, match := range index.carriers[memoryIdentity(engramID)] {
 		scan.matches = append(scan.matches, *match)
 	}
 	return scan, nil
@@ -109,7 +109,7 @@ func findPromotedPage(pages PageReader, project string, engramID int) (promotedP
 	if err != nil {
 		return promotedPage{}, false, err
 	}
-	scan := index.scanFor(memory.Memory{Identity: engramIdentity(engramID), Project: project})
+	scan := index.scanFor(memory.Memory{Identity: memoryIdentity(engramID), Project: project})
 	if scan.own != nil {
 		page, err := scan.own.resolve(true)
 		if err != nil {
@@ -129,7 +129,7 @@ func findMovedPages(pages PageReader, project string, engramID int) ([]promotedP
 	if err != nil {
 		return nil, err
 	}
-	return index.scanFor(memory.Memory{Identity: engramIdentity(engramID), Project: project}).moved, nil
+	return index.scanFor(memory.Memory{Identity: memoryIdentity(engramID), Project: project}).moved, nil
 }
 
 // allocateAddress is the address of the page of the Engram observation engramID in project when it has one, and

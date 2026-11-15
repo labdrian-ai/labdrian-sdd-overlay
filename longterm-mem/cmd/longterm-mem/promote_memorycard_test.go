@@ -147,7 +147,7 @@ func TestPromoteSourceMemorycard_TwiceLeavesOnePage(t *testing.T) {
 func TestPromoteSourceMemorycard_BridgedMemoryIsRefused(t *testing.T) {
 	w, db := memorycardWorld(t)
 	bridgeMemory2To1(t, db)
-	promoteMemory1(t)
+	promoteMemory(t, 1)
 	pagePath := filepath.Join(w.vaultRoot, "wiki", "memory", "c-000901.md")
 	before := fileHash(t, pagePath)
 	treeBefore := renderPromoteGoldenTree(t, w.vaultRoot)
@@ -191,8 +191,6 @@ func promoteMemory(t *testing.T, id int) {
 		t.Fatalf("promote memory %d: exit %d: %s %s", id, code, so, se)
 	}
 }
-
-func promoteMemory1(t *testing.T) { promoteMemory(t, 1) }
 
 // A memory mirrored by hand (no import_map row) whose content hash is that of an imported memory, whose observation
 // has a page, is refused like a bridged one. Memory 5 holds the text of memory 2 (observation 1) in other case and
@@ -288,8 +286,8 @@ func TestPromoteSourceMemorycard_UnknownMemoryIsNotFound(t *testing.T) {
 }
 
 // The MCP promote tool names its source, as the command does: memorycard promotes, and no source, or Engram, is
-// refused before any store is opened. Memory 2 was imported from observation 1, which has a page (written by a
-// release that promoted from Engram): the tool refuses it, with the page named.
+// refused before any store is opened. Memory 2 was imported from observation 1, which has a page
+// (memory 1's, bridged to memory 2 through import_map): the tool refuses it, with the page named.
 func TestTheMCPPromoteToolPromotesFromMemorycardAndNothingElse(t *testing.T) {
 	w, db := memorycardWorld(t)
 	bridgeMemory2To1(t, db)

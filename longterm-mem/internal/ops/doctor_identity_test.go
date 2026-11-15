@@ -28,7 +28,7 @@ func TestDoctorJoinsAPageToItsMemoryByItsStoreAgnosticIdentityAlone(t *testing.T
 		"retired keys":        {retired, Check{Name: CheckPromotedPagesEligible, Status: CheckPassed}},
 	} {
 		t.Run(name, func(t *testing.T) {
-			memories := &observationsOf{rows: []MemoryEligibility{{ID: 41}}}
+			memories := &memoriesOf{rows: []MemoryEligibility{{ID: 41}}}
 			if got := eligibilityCheckOf(t, newFakePages(tc.page), memories.read); got != tc.want {
 				t.Errorf("promoted-pages-eligible = %+v, want %+v", got, tc.want)
 			}

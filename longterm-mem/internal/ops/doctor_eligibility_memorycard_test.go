@@ -24,7 +24,7 @@ func promotedFromMemory(t *testing.T, id int64, address string) [2]string {
 // works: the memory's id and memorycard, not an Engram pin.
 func TestDoctorJoinsAMemorycardPageToItsMemory(t *testing.T) {
 	pages := newFakePages(promotedFromMemory(t, 12, "c-000012"))
-	memories := &observationsOf{rows: []MemoryEligibility{{ID: 12}}}
+	memories := &memoriesOf{rows: []MemoryEligibility{{ID: 12}}}
 
 	got := eligibilityCheckOf(t, pages, memories.read)
 
@@ -43,7 +43,7 @@ func TestDoctorDoesNotJudgeAPageThatCarriesOnlyTheRetiredKeys(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			page := [2]string{"c-000012", "---\naddress: c-000012\n" + keys + "project: " + doctorTestProject + "\n---\nBody.\n"}
-			memories := &observationsOf{rows: []MemoryEligibility{{ID: 41}}}
+			memories := &memoriesOf{rows: []MemoryEligibility{{ID: 41}}}
 
 			got := eligibilityCheckOf(t, newFakePages(page), memories.read)
 
@@ -61,7 +61,7 @@ func TestDoctorDoesNotJudgeAPageThatCarriesOnlyTheRetiredKeys(t *testing.T) {
 // concern of the check.
 func TestDoctorDoesNotJudgeAPageWhoseMemoryIsSuperseded(t *testing.T) {
 	pages := newFakePages(promotedFromMemory(t, 12, "c-000012"))
-	memories := &observationsOf{rows: []MemoryEligibility{{ID: 12, Superseded: true}}}
+	memories := &memoriesOf{rows: []MemoryEligibility{{ID: 12, Superseded: true}}}
 
 	got := eligibilityCheckOf(t, pages, memories.read)
 
@@ -73,7 +73,7 @@ func TestDoctorDoesNotJudgeAPageWhoseMemoryIsSuperseded(t *testing.T) {
 // An eligible memory passes.
 func TestDoctorPassesAMemorycardPageWhoseMemoryIsPinned(t *testing.T) {
 	pages := newFakePages(promotedFromMemory(t, 12, "c-000012"), promotedFromMemory(t, 7, "c-000013"))
-	memories := &observationsOf{rows: []MemoryEligibility{{ID: 12, Pinned: true}, {ID: 7, TopicKey: "longterm-mem/policy"}}}
+	memories := &memoriesOf{rows: []MemoryEligibility{{ID: 12, Pinned: true}, {ID: 7, TopicKey: "longterm-mem/policy"}}}
 
 	got := eligibilityCheckOf(t, pages, memories.read)
 

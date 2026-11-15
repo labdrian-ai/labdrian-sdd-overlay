@@ -82,7 +82,7 @@ func TestSyncSourceMemorycard_ABridgedMemoryIsCountedAndExitsZero(t *testing.T) 
 	w, db := syncMemorycardWorld(t)
 	// Memory 1 gets its page; memory 2 is bridged to it, the other part of the same observation.
 	bridgeMemory2To1(t, db)
-	promoteMemory1(t)
+	promoteMemory(t, 1)
 	pagePath := filepath.Join(w.vaultRoot, "wiki", "memory", "c-000901.md")
 	before := fileHash(t, pagePath)
 
@@ -612,7 +612,7 @@ func TestSyncWithoutASourceIsSyncFromMemorycard(t *testing.T) {
 func TestSyncWithoutASourceReadsThePagesFromMemorycard(t *testing.T) {
 	w, db := syncMemorycardWorld(t)
 	bridgeMemory2To1(t, db)
-	promoteMemory1(t)
+	promoteMemory(t, 1)
 	pagePath := filepath.Join(w.vaultRoot, "wiki", "memory", "c-000901.md")
 	before := fileHash(t, pagePath)
 
