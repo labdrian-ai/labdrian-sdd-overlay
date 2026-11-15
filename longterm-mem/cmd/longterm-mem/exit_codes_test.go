@@ -121,7 +121,7 @@ func unreadableEngramDB(t *testing.T) string {
 
 // TestCmdQuery_EngramReadFailureExitsEngramUnavailable pins exit 4 for the
 // query surface. Before this test nothing in the CLI suite asserted exit 4
-// at all, so any regression that renamed engram_unavailable into some
+// at all, so any regression that renamed store_unavailable into some
 // other non-zero code passed unnoticed.
 func TestCmdQuery_EngramReadFailureExitsEngramUnavailable(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
@@ -129,7 +129,7 @@ func TestCmdQuery_EngramReadFailureExitsEngramUnavailable(t *testing.T) {
 	t.Setenv("LONGTERM_MEM_ENGRAM_DB", unreadableEngramDB(t))
 
 	if exit := runQuietly(t, []string{"query", "--project", "engram-broken-project", "anything"}); exit != 4 {
-		t.Fatalf("run([query ...]) = %d, want 4 (engram_unavailable)", exit)
+		t.Fatalf("run([query ...]) = %d, want 4 (store_unavailable)", exit)
 	}
 }
 
@@ -149,7 +149,7 @@ func TestCmdIndex_VaultRebuildFailureExitsVaultSubprocessFailed(t *testing.T) {
 // TestCmdSync_EngramListingFailureExitsEngramUnavailable: sync used to
 // answer 5 (vault_subprocess_failed) for every failure it could not
 // complete, including one where no vault subprocess ever ran. An Engram
-// database the command cannot list is engram_unavailable (exit 4), and an
+// database the command cannot list is store_unavailable (exit 4), and an
 // operator reading 5 would go looking at the vault's Python tooling for a
 // fault that is not there.
 func TestCmdSync_EngramListingFailureExitsEngramUnavailable(t *testing.T) {
@@ -158,6 +158,6 @@ func TestCmdSync_EngramListingFailureExitsEngramUnavailable(t *testing.T) {
 	t.Setenv("LONGTERM_MEM_ENGRAM_DB", unreadableEngramDB(t))
 
 	if exit := runQuietly(t, []string{"sync", "--project", "engram-broken-project"}); exit != 4 {
-		t.Fatalf("run([sync ...]) = %d, want 4 (engram_unavailable): the listing failed before any vault subprocess ran, so this is not a vault_subprocess_failed", exit)
+		t.Fatalf("run([sync ...]) = %d, want 4 (store_unavailable): the listing failed before any vault subprocess ran, so this is not a vault_subprocess_failed", exit)
 	}
 }

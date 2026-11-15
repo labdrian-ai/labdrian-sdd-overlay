@@ -108,7 +108,7 @@ func (a app) embeddingIndexing(store *engram.Store, stateDir string, cfg embedCo
 }
 
 // embedIndexExitCode is the exit code of a build that stopped: Engram that cannot list its observations is
-// engram_unavailable; the rest (an embedding client that is refused, an index that cannot be built) is
+// store_unavailable; the rest (an embedding client that is refused, an index that cannot be built) is
 // longterm-mem's own side.
 func embedIndexExitCode(err error) int {
 	var failure *embedindex.Error

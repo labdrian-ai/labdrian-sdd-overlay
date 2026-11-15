@@ -92,7 +92,7 @@ func TestApp_MemoryOpensEngramsDatabase(t *testing.T) {
 	_ = closer.Close()
 }
 
-// An Engram database that cannot be opened is engram_unavailable (exit 4), said once with the name of the command
+// An Engram database that cannot be opened is store_unavailable (exit 4), said once with the name of the command
 // in front and the adapter's own words after it.
 func TestApp_MemoryRefusesWhenEngramCannotBeOpened(t *testing.T) {
 	t.Setenv("LONGTERM_MEM_ENGRAM_DB", filepath.Join(t.TempDir(), "no", "such", "directory", "engram.db"))

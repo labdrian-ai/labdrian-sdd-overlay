@@ -9,7 +9,7 @@ import (
 )
 
 // A session that cannot be set up is refused before the server is started, with the name of the command and the
-// code of what failed: Engram that cannot be opened is engram_unavailable, an embedding client that cannot be made
+// code of what failed: Engram that cannot be opened is store_unavailable, an embedding client that cannot be made
 // is the program's own fault. Nothing is read from stdin in either case.
 
 func TestCmdMCP_AnEngramDatabaseThatCannotBeOpenedEndsTheSessionBeforeItStarts(t *testing.T) {

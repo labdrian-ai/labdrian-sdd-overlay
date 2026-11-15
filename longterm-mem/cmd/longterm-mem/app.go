@@ -72,7 +72,7 @@ func (a app) vaultRoot(project, override string, readOnly bool) (string, int) {
 
 // memory opens Engram's database, read-only, at the path of LONGTERM_MEM_ENGRAM_DB or its default. The caller
 // closes the store. exitOK, or the exit code to return after saying why: a database that cannot be opened is
-// engram_unavailable.
+// store_unavailable.
 func (a app) memory() (*engram.Store, int) {
 	store, err := engram.Open(os.Getenv(engramDBEnvVar))
 	if err != nil {
