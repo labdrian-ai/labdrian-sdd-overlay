@@ -85,36 +85,18 @@ func (k ActionKind) String() string {
 // before tracking existed, a human's own file) and fails closed, and an
 // entry disagreeing with the on-disk hashes is a local edit.
 //
-// Two divergences are neither, and both have the same cause: the page write
-// and the store's persistence are separate durable steps, so an
-// interruption between them leaves the page ahead of the store.
+// One divergence is neither: the page write and the store's persistence are separate durable steps, so an
+// interruption between them leaves the page ahead of the store. An interrupted CREATE leaves a page with no entry
+// at all, so the tracked branch's comparisons are not even reachable; an interrupted UPDATE leaves new content
+// fingerprinted by the PREVIOUS entry. When the retry renders the same revision, isOwnUnrecordedWrite settles both
+// from the bytes, normalizing away only the two stamps EmitPage takes from its time argument -- without which the
+// comparison would succeed on a same-day retry and fail every day after, which is worse than not reconciling at
+// all. A retry that renders a different revision than the one on disk is refused as a local edit: preserving it is
+// what R-030 is for, and `promote reconcile` is the way to adopt such a page.
 //
-//   - An interrupted CREATE leaves a page with no entry at all, so the
-//     tracked branch's comparisons are not even reachable.
-//     isOwnUnrecordedWrite settles it from the bytes, normalizing away only
-//     the two stamps EmitPage takes from its time argument -- without
-//     which the comparison would succeed on a same-day retry and fail every
-//     day after, which is worse than not reconciling at all.
-//   - An interrupted UPDATE leaves new content fingerprinted by the
-//     PREVIOUS entry. When the retry renders the same revision, the same
-//     stamp-normalized comparison settles it. When Engram has moved on, no
-//     comparison against the incoming bytes can: the retry renders a
-//     different revision than the one on disk, so the two are supposed to
-//     differ. isOwnUnrecordedUpdate settles that case from the page's own
-//     engram_revision standing ahead of the revision the entry records --
-//     a field only our own writes advance -- corroborated by the body's
-//     promotion footer and by the frontmatter around the handful of lines
-//     two of our own renders may legitimately disagree on.
-//
-// Neither reconciliation ever adopts a page level with its entry's recorded
-// revision and diverged in content: that is a human's edit, and preserving
-// it is what R-030 is for.
-//
-// Writer's create path no longer opens the second window (it persists the
-// fingerprint before publishing the page), but a vault already wedged by
-// the old order stays wedged forever without this: the refusal is a skip,
-// and a skip also suppresses the sidecar Save and the catalog/log repair
-// that would have healed it.
+// Writer's create path no longer opens the second window (it persists the fingerprint before publishing the
+// page), but a vault already wedged by the old order stays wedged forever without this: the refusal is a skip, and
+// a skip also suppresses the sidecar Save and the catalog/log repair that would have healed it.
 //
 // store is mutated in place; persisting it (PrecedenceStore.Save) is the
 // caller's job, keeping this a narrow primitive alongside allocateAddress/
@@ -146,7 +128,7 @@ func UpdateInPlace(pages PageRepository, store PrecedenceStore, page Page) (Acti
 		// to the normal update below, which republishes it and records the
 		// provenance the interrupted run never got to.
 	case entry.BodyHash != hashText(body) || entry.FrontmatterHash != hashText(fmBlock):
-		if !isOwnUnrecordedWrite(fmBlock, body, page) && !isOwnUnrecordedUpdate(entry, fmBlock, body, page) {
+		if !isOwnUnrecordedWrite(fmBlock, body, page) {
 			return skippedAction(existingPath, page.Address, "was edited locally since longterm-mem last wrote it"), nil
 		}
 		// Reconciled: the page is an own write the store never caught up
@@ -251,118 +233,6 @@ func isOwnUnrecordedWrite(fmBlock, body string, page Page) bool {
 		withoutVolatileStamps(fmBlock) == withoutVolatileStamps(page.Frontmatter)
 }
 
-// isOwnUnrecordedUpdate settles the case isOwnUnrecordedWrite cannot: a
-// TRACKED page whose on-disk bytes no longer match its entry because an
-// earlier update published a render the sidecar never caught up with, and
-// Engram has since moved on. The retry then renders a DIFFERENT revision
-// than the one on disk, so no comparison against the incoming bytes --
-// byte-for-byte, or with the wall-clock stamps normalized away -- can ever
-// settle it: the two renders are of different revisions and are supposed
-// to differ. Left unsettled, that page is a permanent skipped_local_edit,
-// because a skip suppresses the very Save that would repair the entry.
-//
-// The page's own engram_revision is the evidence the sidecar lost. Only
-// longterm-mem's own writes advance that field; a human editing a page
-// leaves it exactly where the last promotion put it. So a page standing
-// AHEAD of the revision its entry records is a page our own write moved,
-// and one standing level with it is a page someone else changed -- which
-// stays a refusal, since preserving that edit is the entire purpose of the
-// branch this sits in.
-//
-// Every one of these is required, and each fails closed:
-//
-//   - Both renders name a revision, and revisionsAllowAdoption accepts the
-//     pair against the entry (see there: only a RECORDED entry can answer
-//     this at all, so a legacy entry -- hashes with no revision -- is
-//     refused unconditionally).
-//   - The body ends in the promotion footer for the observation and the
-//     exact revision the page claims. That catches an appended note, a
-//     truncation or a replaced body.
-//   - The frontmatter, normalized by corroboratingFrontmatter, is the block
-//     this very promotion would render. That catches every key a human
-//     added, changed or deleted outside the handful of lines that
-//     legitimately differ between two of our own renders -- which is what
-//     the footer check alone does NOT catch, and the reason a
-//     frontmatter-only edit inside this window used to be adopted and
-//     overwritten while the run reported action=updated.
-//
-// What remains uncorroborated is an edit buried MID-BODY (the footer
-// survives it, and the body has no second witness) and an edit confined to
-// the lines corroboratingFrontmatter has to blank: created, updated,
-// engram_revision, status and related (the ones WE move), plus title,
-// aliases, tags, engram_type, engram_sync_id and project (the ones the
-// OBSERVATION moves). A human who hand-sets title: or inserts an alias
-// inside this window therefore loses that edit to action=updated. The
-// fingerprint that would have separated those from our own write is
-// precisely what the interruption destroyed, and every one of those lines is
-// a line one of our own renders legitimately rewrites -- so keeping any of
-// them compared does not preserve the edit, it only converts the loss into a
-// permanent refusal of a page nothing is wrong with. The residual is real,
-// and it is bounded: type, address, sources and engram_id still have to
-// match exactly, and so does every key a human added or deleted.
-func isOwnUnrecordedUpdate(entry PrecedenceEntry, fmBlock, body string, page Page) bool {
-	onDisk, ok := frontmatterRevision(fmBlock)
-	if !ok {
-		return false
-	}
-	incoming, ok := frontmatterRevision(page.Frontmatter)
-	if !ok {
-		return false
-	}
-	if !revisionsAllowAdoption(entry, onDisk, incoming) {
-		return false
-	}
-	obsID, ok := frontmatterEngramID(page.Frontmatter)
-	if !ok {
-		return false
-	}
-	if !strings.HasSuffix(body, promotionFooter(obsID, onDisk)) {
-		return false
-	}
-	return corroboratingFrontmatter(fmBlock) == corroboratingFrontmatter(page.Frontmatter)
-}
-
-// revisionsAllowAdoption reports whether the revision the page on disk
-// claims can be attributed to one of OUR interrupted writes rather than to
-// a human, given what the entry records.
-//
-// Only a RECORDED entry can answer that. It names the revision it
-// fingerprinted, so the page has to stand strictly above it (only our own
-// renders advance engram_revision, so a page level with the entry was
-// changed by someone else) and no higher than the render coming in (a page
-// claiming a revision Engram itself has not reached is not a render we
-// could have produced).
-//
-// A LEGACY entry -- hashes only, no revision -- can answer nothing, and
-// this function says so. The tempting inference is that a moved frontmatter
-// hash proves our own unrecorded write, because every render of ours puts
-// engram_revision in the frontmatter and therefore always moves that hash.
-// It does not: a human editing ANY frontmatter line moves that same hash
-// identically, so the predicate is satisfied by every legacy-tracked page a
-// human has ever hand-edited -- no interruption required. Combined with the
-// line kinds corroboratingFrontmatter has to blank (created, updated, status,
-// related and every observation-derived field, which between them are most of
-// the lines a human touches by hand), it
-// would unlock adoption across the whole legacy population and overwrite
-// mid-body edits while reporting action=updated. In the package whose
-// guarantee (R-030) is preserving human edits, ambiguous evidence must
-// refuse, so a diverged legacy entry is refused.
-//
-// The legacy fixed point that inference was meant to break is broken the
-// unambiguous way instead: a legacy entry whose page still matches its
-// recorded fingerprints is NOT diverged, so it never reaches this branch at
-// all -- it takes the ordinary update path, and entryFor records the
-// revision the older build never wrote. The legacy population therefore
-// shrinks page by page with nothing adopted. What stays wedged is only a
-// legacy entry whose page has ALSO diverged, and that residue is reported
-// by doctor's precedence-sidecar check rather than left silent.
-func revisionsAllowAdoption(entry PrecedenceEntry, onDisk, incoming int) bool {
-	if entry.PromotedRevision <= 0 {
-		return false
-	}
-	return onDisk > entry.PromotedRevision && onDisk <= incoming
-}
-
 // frontmatterEngramID reads the id of the Engram identity a frontmatter block names (engram_id or source_id,
 // through identityOf), failing the
 // same closed way frontmatterRevision does: an absent or unparseable value
@@ -388,70 +258,6 @@ func withoutVolatileStamps(fmBlock string) string {
 	return blankFrontmatterValues(fmBlock, volatileFrontmatterFields[:]...)
 }
 
-// corroboratingFrontmatter reduces a frontmatter block to the part two of
-// our OWN renders, of two DIFFERENT revisions of the same observation, must
-// still agree on -- so that comparing the page on disk against the incoming
-// render is a real test of "did this block come out of Render()" rather
-// than a comparison guaranteed to fail.
-//
-// Two kinds of line are blanked, and nothing else is:
-//
-//   - the lines two of our own renders may legitimately differ on because
-//     WE moved them: created and updated, the stamps EmitPage takes from
-//     the wall clock (withoutVolatileStamps); engram_revision, which
-//     differs by construction, since the whole premise of this
-//     reconciliation is that the page holds an older revision than the one
-//     now being rendered; and status and related, the two lines Propagate
-//     (R-033) rewrites in place on a page it never re-bodies, recording
-//     only the patched block's hash.
-//
-//   - the lines two of our own renders may legitimately differ on because
-//     the OBSERVATION moved them: title, aliases, tags, engram_type,
-//     engram_sync_id and project are the observation's DESCRIPTIVE fields,
-//     all rendered from it (page.go's EmitPage reads obs.Title, obs.Type,
-//     obs.SyncID and obs.Project), so a retitle, a retype, or a sync_id
-//     backfilled onto an observation that had none changes them between the
-//     interrupted write and the retry with no human touching the page.
-//     Comparing any of them refuses an ordinary Engram-side revision --
-//     and R-008 scenario 2 makes a retitle a first-class supported case --
-//     while that refusal is a skip, so it suppresses the Save, the entry
-//     never advances, and every later revision repeats it: a permanent
-//     wedge, the exact class this reconciliation exists to end. The set
-//     blanked here is therefore exactly the observation's descriptive
-//     fields, not a hand-picked subset of them: leaving one such field
-//     compared to keep it as a human-edit witness buys that witness at the
-//     price of a permanent wedge on an ordinary Engram operation, and this
-//     package's whole reason for reconciling is to end wedges.
-//
-//     project rides along for consistency, not because a project move can
-//     reach this comparison: allocateAddress reuses an existing page's address only
-//     when the on-disk project AND engram_id both match (address.go's
-//     findPromotedPage), so a moved observation gets a FRESH address and no
-//     in-place update ever sees the old page. Blanking it is correct and
-//     harmless; the reachable wedge is the fields outside that lookup,
-//     engram_sync_id among them.
-//
-// engram_id is the exception in the other direction: the observation
-// supplies it (page.go sets EngramID from obs.ID), and it is still COMPARED,
-// because it IDENTIFIES the observation rather than describing it. It is the
-// only frontmatter witness of which observation a page belongs to, so
-// blanking it would make two different observations' pages compare equal.
-//
-// Every other key keeps its value, and a key present in one block and
-// absent from the other still differs -- which is what makes a human's
-// added, changed or deleted frontmatter key visible here. So what stays
-// compared is engram_id plus what only Render() writes: type, address and
-// sources.
-func corroboratingFrontmatter(fmBlock string) string {
-	normalized := blankFrontmatterValues(withoutVolatileStamps(fmBlock),
-		engramRevisionField, sourceRevisionField, statusField, titleField, engramTypeField,
-		sourceTypeField, engramSyncIDField, projectField)
-	for _, key := range []string{relatedField, aliasesField, tagsField} {
-		normalized = blankFrontmatterListSection(normalized, key)
-	}
-	return normalized
-}
-
 // blankFrontmatterValues blanks the value of every `key: ...` line in a
 // frontmatter block whose key is one of keys, leaving the key itself (so a
 // page that dropped the field entirely still differs from one that carries
@@ -468,45 +274,6 @@ func blankFrontmatterValues(fmBlock string, keys ...string) string {
 		}
 	}
 	return strings.Join(lines, "\n")
-}
-
-// blankFrontmatterListSection replaces a frontmatter block's key: list
-// section -- either the inline `key: []` form or a `key:` header followed
-// by its `  - ` item lines, the two shapes writeListField emits -- with the
-// bare key, so both forms normalize to the same thing.
-//
-// A block with no such section is returned untouched rather than having one
-// inserted: a page whose key a human deleted must keep differing from one
-// that still carries it, exactly as blankFrontmatterValues leaves a dropped
-// scalar visible. (This is the one behavioral difference from
-// frontmatter.go's setListField, which inserts, because a patch that
-// reports success having written nothing is wrong for a WRITER and right
-// for a COMPARATOR.)
-func blankFrontmatterListSection(fmBlock, key string) string {
-	lines := strings.Split(fmBlock, "\n")
-	start := -1
-	for i, line := range lines {
-		if strings.HasPrefix(line, key+":") {
-			start = i
-			break
-		}
-	}
-	if start == -1 {
-		return fmBlock
-	}
-
-	end := start + 1
-	if lines[start] != key+": []" {
-		for end < len(lines) && strings.HasPrefix(lines[end], "  - ") {
-			end++
-		}
-	}
-
-	blanked := make([]string, 0, len(lines)-(end-start)+1)
-	blanked = append(blanked, lines[:start]...)
-	blanked = append(blanked, key+":")
-	blanked = append(blanked, lines[end:]...)
-	return strings.Join(blanked, "\n")
 }
 
 // skippedAction builds the R-030 refusal: reason states why the page's

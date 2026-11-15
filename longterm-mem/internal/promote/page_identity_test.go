@@ -194,45 +194,6 @@ func TestPageIdentity_CardScanFindsOwnAndBridgedPagesByIdentity(t *testing.T) {
 	})
 }
 
-// Update corroboration recognises an interrupted update of its own page by the revision and the identity the page
-// carries, in either spelling, and does not take the revision or type the observation moves for a local edit.
-func TestPageIdentity_UpdateCorroborationReadsRevisionAndIdentity(t *testing.T) {
-	spellings(t, func(t *testing.T, agnostic bool) {
-		vaultRoot := t.TempDir()
-		obs := memory.Observation{ID: 709, Type: "decision", Title: "Interrupted", Content: "V1 body.", Project: "p-one", RevisionCount: 1}
-		first := enginePage(t, obs, "c-000709", agnostic)
-		existingPath := writePromotedPage(t, vaultRoot, first)
-		store := PrecedenceStore{}
-		seedPrecedence(store, first)
-
-		obs.RevisionCount, obs.Content = 2, "V2 body."
-		interrupted := enginePage(t, obs, "c-000709", agnostic)
-		if err := os.WriteFile(existingPath, []byte(interrupted.Frontmatter+interrupted.Body), 0o644); err != nil {
-			t.Fatal(err)
-		}
-		obs.RevisionCount, obs.Content, obs.Type = 3, "V3 body.", "pattern"
-		retry := enginePage(t, obs, "c-000709", agnostic)
-
-		action, err := UpdateInPlace(pagesIn(vaultRoot), store, retry)
-		if err != nil {
-			t.Fatalf("UpdateInPlace: %v", err)
-		}
-		if action.Kind != ActionUpdated {
-			t.Fatalf("action.Kind = %v, want ActionUpdated: the page is our own interrupted write", action.Kind)
-		}
-		got, err := os.ReadFile(existingPath)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if string(got) != retry.Frontmatter+retry.Body {
-			t.Fatalf("page was not refreshed to the retry's render; got:\n%s", got)
-		}
-		if entry, _ := store.Get("c-000709"); entry.PromotedRevision != 3 {
-			t.Fatalf("recorded revision = %d, want 3", entry.PromotedRevision)
-		}
-	})
-}
-
 // Reconcile reads the revision to adopt off the page, in either spelling.
 func TestPageIdentity_ReconcileReadsTheRevisionOffThePage(t *testing.T) {
 	spellings(t, func(t *testing.T, agnostic bool) {
