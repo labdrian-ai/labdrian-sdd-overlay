@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "c3714bbedb7001aa7bcb931e43cd7135322da027",
+    "head": "39687588aacb6c11042a40dae986942c6aa9d9bd",
+    "diff_sha256": "ad0ef2256717b0c7b81f309e7035dcdbcec73a7060801b1ce10c558417cdefdc",
+    "paths": [
+      "odd/tasks/consolidation-phase9.md",
+      "openspec/decisions/standalone-platform-roadmap.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "c3714bbedb7001aa7bcb931e43cd7135322da027",
+      "head": "39687588aacb6c11042a40dae986942c6aa9d9bd",
+      "diff_sha256": "ad0ef2256717b0c7b81f309e7035dcdbcec73a7060801b1ce10c558417cdefdc"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/consolidation-phase9.md",
+        "openspec/decisions/standalone-platform-roadmap.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/consolidation-phase9.md:1410",
+        "claim": "The rewritten sentence accounts for T4, T5, T6, T10 (done in Phase 9) and T7-T9, T11-T20 (moved to Phase 10), but never mentions T1-T3. A reader cannot tell from this entry whether those three were done, dropped or are still open. The 'Every entry ... ticked' closure claim therefore has a gap in the task accounting. The diff cannot show whether T1-T3 are covered elsewhere.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "odd/tasks/consolidation-phase9.md:1410"
+        ]
+      }
+    ],
+    "evidence": [
+      "The roadmap edit only appends to the Phase 10 row's last column the sentence naming T7-T9 and T11-T20; the task ranges match the Phase 9 row, so no inconsistency there.",
+      "The log edit adds T10 to the done set; it is consistent with the claim in the commit message."
+    ]
+  }
+}

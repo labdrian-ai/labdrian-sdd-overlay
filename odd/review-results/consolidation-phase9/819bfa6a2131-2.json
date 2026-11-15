@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "39687588aacb6c11042a40dae986942c6aa9d9bd",
+    "head": "819bfa6a2131c94dcf24f161860eaa0ef1712d7e",
+    "diff_sha256": "5abe3ee872a8cfae92e1e709c8645756b2e129dbca4437432915c86fdbad2209",
+    "paths": [
+      "odd/tasks/consolidation-phase9.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "39687588aacb6c11042a40dae986942c6aa9d9bd",
+      "head": "819bfa6a2131c94dcf24f161860eaa0ef1712d7e",
+      "diff_sha256": "5abe3ee872a8cfae92e1e709c8645756b2e129dbca4437432915c86fdbad2209"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/consolidation-phase9.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/consolidation-phase9.md:1410",
+        "claim": "The edited sentence says T1-T6 and T10 were done in Phase 9 and 'all ticked in its document', but the diff does not show the referenced document (odd/tasks/phase9-store-agnostic-promotion.md), so the ticked-state claim cannot be verified from this change. The remaining wording also does not say which T-numbers T1-T3 were done under (earlier batches versus this close), leaving the ledger entry ambiguous about when they landed.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "odd/tasks/consolidation-phase9.md:1410"
+        ]
+      }
+    ],
+    "evidence": [
+      "The change is a single-line prose edit in a documentation file, replacing 'T4, T5, T6 and T10' with 'T1-T6 and T10 ... (all ticked in its document)'.",
+      "No code or behavior is touched; the only risk is a records-accuracy claim that depends on a file not included in the diff."
+    ]
+  }
+}

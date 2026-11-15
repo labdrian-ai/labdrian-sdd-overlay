@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "e83afe92187f5142f14014fde414e0933f67edd0",
+    "head": "c3714bbedb7001aa7bcb931e43cd7135322da027",
+    "diff_sha256": "ea1f971d71822870f036eaa468b46e6a58953c73d3dd8beeab5250ea33999123",
+    "paths": [
+      "odd/tasks/consolidation-phase9.md",
+      "openspec/decisions/standalone-platform-roadmap.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "e83afe92187f5142f14014fde414e0933f67edd0",
+      "head": "c3714bbedb7001aa7bcb931e43cd7135322da027",
+      "diff_sha256": "ea1f971d71822870f036eaa468b46e6a58953c73d3dd8beeab5250ea33999123"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/consolidation-phase9.md",
+        "openspec/decisions/standalone-platform-roadmap.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/consolidation-phase9.md:1410",
+        "claim": "The handoff names tasks T7-T9 and T11-T20 as moved to Phase 10 but never mentions T10. The diff does not show whether T10 was done, dropped or forgotten, so a reader cannot tell if the Phase 10 handoff is complete.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/consolidation-phase9.md:1410"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "openspec/decisions/standalone-platform-roadmap.md:39",
+        "claim": "The Phase 9 row says 'Phase 10 takes the store-agnostic tasks T7-T9 and T11-T20', but the Phase 10 row is still 'Observability and governance' and was not updated. The roadmap now gives Phase 10 two scopes, and the second is not listed in its own row.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "openspec/decisions/standalone-platform-roadmap.md:39"
+        ]
+      }
+    ],
+    "evidence": [
+      "Both changed paths were read in the diff. The C22-FU tick, the new log entry and the roadmap row cite consistent PR numbers and merge SHAs (#782 1d99ea35, #784 c4800ba1, #785 e83afe92).",
+      "The diff does not include the store-agnostic promotion ledger, so T10 and the L76-L82 citation could not be verified."
+    ]
+  }
+}

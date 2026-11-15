@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "c3714bbedb7001aa7bcb931e43cd7135322da027",
+    "head": "39687588aacb6c11042a40dae986942c6aa9d9bd",
+    "diff_sha256": "ad0ef2256717b0c7b81f309e7035dcdbcec73a7060801b1ce10c558417cdefdc",
+    "paths": [
+      "odd/tasks/consolidation-phase9.md",
+      "openspec/decisions/standalone-platform-roadmap.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "c3714bbedb7001aa7bcb931e43cd7135322da027",
+      "head": "39687588aacb6c11042a40dae986942c6aa9d9bd",
+      "diff_sha256": "ad0ef2256717b0c7b81f309e7035dcdbcec73a7060801b1ce10c558417cdefdc"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/consolidation-phase9.md",
+        "openspec/decisions/standalone-platform-roadmap.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Docs-only change: one ledger line in odd/tasks/consolidation-phase9.md and one roadmap table cell for Phase 10.",
+      "The new text (T4, T5, T6 and T10 done in Phase 9; T7-T9 and T11-T20 moved to Phase 10) matches the unchanged Phase 9 roadmap row, which already says T7-T9 and T11-T20 moved to Phase 10.",
+      "The T4/T5/T6/T10 completion claim cannot be checked from the diff, because the referenced task file is not shown. Nothing in the diff contradicts it."
+    ]
+  }
+}

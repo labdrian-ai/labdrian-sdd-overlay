@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "39687588aacb6c11042a40dae986942c6aa9d9bd",
+    "head": "819bfa6a2131c94dcf24f161860eaa0ef1712d7e",
+    "diff_sha256": "5abe3ee872a8cfae92e1e709c8645756b2e129dbca4437432915c86fdbad2209",
+    "paths": [
+      "odd/tasks/consolidation-phase9.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "39687588aacb6c11042a40dae986942c6aa9d9bd",
+      "head": "819bfa6a2131c94dcf24f161860eaa0ef1712d7e",
+      "diff_sha256": "5abe3ee872a8cfae92e1e709c8645756b2e129dbca4437432915c86fdbad2209"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/consolidation-phase9.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/consolidation-phase9.md:1410",
+        "claim": "The edited sentence asserts T1-T3 are 'all ticked in its document' in phase9-store-agnostic-promotion.md, but that file is not part of the diff, so the claim cannot be verified from this change. If the ticks are absent or live in a different state, this ledger entry would be inaccurate. It also now says the T1-T6 and T10 are done while the same entry quotes the owner scoping as 'hasta t6'; T10 being done is carried over unchanged from base.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "odd/tasks/consolidation-phase9.md:1410"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only one line changed, in a documentation ledger: 'T4, T5, T6 and T10' became 'T1-T6 and T10 ... (all ticked in its document)'.",
+      "No code or behavior is touched; the referenced task document is outside the diff, so the tick claim is unverifiable here.",
+      "The commit's Risk: none claim is consistent with a docs-only change."
+    ]
+  }
+}
