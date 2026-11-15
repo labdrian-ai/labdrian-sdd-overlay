@@ -635,3 +635,58 @@ func TestWriter_Promote_IneligibleDoesNotRegister(t *testing.T) {
 		t.Fatalf("wiki/log.md exists after an ineligible observation was promoted (stat err = %v)", err)
 	}
 }
+
+// TestWriter_Promote_ARetryOfAPageAtItsRevisionWritesNothingAndLeavesTheLostRegistration: a memorycard page promotes
+// at most once per revision (pageStyle.rewriteCurrent is false), so a vault whose page survived a kill that lost the
+// precedence sidecar, the catalog and the log is answered ActionAlreadyPromoted, on a later day too, and nothing is
+// written: not the page, not the entry, not the registration. The writer's adoption of an unrecorded own write
+// (isOwnUnrecordedWrite) is reached only by an update to a newer revision; repairing the registration of such a page
+// is `promote reconcile`'s work, and the doctor names the page until then.
+func TestWriter_Promote_ARetryOfAPageAtItsRevisionWritesNothingAndLeavesTheLostRegistration(t *testing.T) {
+	vaultRoot := t.TempDir()
+	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
+
+	w := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Clock: clock, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress)}
+	obs := memory.Observation{ID: 410, Type: "decision", Title: "Wedged In The Field", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/writer-fixture"}
+	first, err := w.Promote(t.Context(), obsMemory(obs), false)
+	if err != nil {
+		t.Fatalf("Promote (first): %v", err)
+	}
+	pagePath := filepath.Join(vaultRoot, first.Page.Path)
+	before, err := os.ReadFile(pagePath)
+	if err != nil {
+		t.Fatalf("read the page: %v", err)
+	}
+	for _, rel := range []string{vaultlayout.IndexFile, vaultlayout.LogFile} {
+		if err := os.Remove(filepath.Join(vaultRoot, rel)); err != nil {
+			t.Fatalf("simulate the crash window (%s): %v", rel, err)
+		}
+	}
+
+	clock.Set(time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
+	wedged := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Clock: clock, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress)}
+	second, err := wedged.Promote(t.Context(), obsMemory(obs), false)
+	if err != nil {
+		t.Fatalf("Promote (retry): %v", err)
+	}
+
+	if second.Action.Kind != ActionAlreadyPromoted {
+		t.Errorf("Action.Kind = %v, want ActionAlreadyPromoted", second.Action.Kind)
+	}
+	after, err := os.ReadFile(pagePath)
+	if err != nil || string(after) != string(before) {
+		t.Errorf("the page was written by a retry at its own revision (err %v)", err)
+	}
+	reloaded, err := wedged.Precedence.LoadPrecedence()
+	if err != nil {
+		t.Fatalf("LoadPrecedence: %v", err)
+	}
+	if _, ok := reloaded.Get(first.Page.Address); ok {
+		t.Errorf("the retry recorded an entry for %s: only promote reconcile repairs the lost provenance", first.Page.Address)
+	}
+	for _, rel := range []string{vaultlayout.IndexFile, vaultlayout.LogFile} {
+		if _, err := os.Stat(filepath.Join(vaultRoot, rel)); err == nil {
+			t.Errorf("%s was written again by a retry that wrote nothing", rel)
+		}
+	}
+}
