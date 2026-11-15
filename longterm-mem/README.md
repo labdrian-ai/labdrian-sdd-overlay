@@ -186,8 +186,8 @@ pinning observation N in Engram; and until the retirement of the legacy keys it 
 
 A page that carries only the retired keys (`engram_id`, `memorycard_id`) names no memory, so `doctor` does not judge it,
 and `sync` and `promote` do not take it for the page of any memory: they give that memory a new page and leave the old
-one untouched, so such a page would duplicate the memory it was written for. A vault that still has one needs that page removed, or given the `source`, `source_id`, `source_type` and `source_revision` keys
-of its memory by hand.
+one untouched, so such a page would duplicate the memory it was written for. A vault that still has one needs that
+page removed, or given the `source`, `source_id`, `source_type` and `source_revision` keys of its memory by hand.
 
 The check is advisory. It answers `warn`, never `FAIL`: the text form prints
 `[warn] promoted-pages-eligible (...)`, `--json` carries `"status": "warn"`, and
