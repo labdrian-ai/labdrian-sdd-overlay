@@ -8,7 +8,7 @@ import (
 
 // CardMemory is one memory of memorycard, the store that replaces Engram, as promotion reads it. It is the
 // counterpart of Observation for the second source: promotion keeps the two apart because a page of the vault
-// names its source (engram_id or memorycard_id), and the ids of the two stores are unrelated numbers.
+// names its source (the `source` key of its frontmatter), and the ids of the two stores are unrelated numbers.
 type CardMemory struct {
 	ID      int64
 	Project string
