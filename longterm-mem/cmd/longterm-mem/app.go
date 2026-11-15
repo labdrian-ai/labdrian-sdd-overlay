@@ -76,7 +76,7 @@ func (a app) vaultRoot(project, override string, readOnly bool) (string, int) {
 func (a app) memory() (*engram.Store, int) {
 	store, err := engram.Open(os.Getenv(engramDBEnvVar))
 	if err != nil {
-		return nil, a.refuse(err, exitEngramUnavailable)
+		return nil, a.refuse(err, exitStoreUnavailable)
 	}
 	return store, exitOK
 }

@@ -15,8 +15,8 @@ func TestRun_DispatchesSkillsStaleSubcommand(t *testing.T) {
 	stderr := captureStderr(t, func() {
 		exit = run([]string{"skills-stale", "--project-root", root, "--project", "fixture-project"})
 	})
-	if exit != exitEngramUnavailable {
-		t.Fatalf("run([skills-stale ...]) = %d, want %d, proving dispatch reaches the detector command", exit, exitEngramUnavailable)
+	if exit != exitStoreUnavailable {
+		t.Fatalf("run([skills-stale ...]) = %d, want %d, proving dispatch reaches the detector command", exit, exitStoreUnavailable)
 	}
 	if !strings.Contains(stderr, "skills-stale") {
 		t.Fatalf("skills-stale error does not name the command: %q", stderr)
@@ -36,8 +36,8 @@ func TestCmdSkillsStale_ARootInNoRepositoryIsNamedByItsDirectory(t *testing.T) {
 	stderr := captureStderr(t, func() {
 		exit = run([]string{"skills-stale", "--project-root", root})
 	})
-	if exit != exitEngramUnavailable {
-		t.Fatalf("skills-stale of a root in no repository = %d, want %d (it reaches Engram, not a refusal for want of a project)", exit, exitEngramUnavailable)
+	if exit != exitStoreUnavailable {
+		t.Fatalf("skills-stale of a root in no repository = %d, want %d (it reaches Engram, not a refusal for want of a project)", exit, exitStoreUnavailable)
 	}
 	if strings.Contains(stderr, "--project is required") || !strings.Contains(stderr, "engram:") {
 		t.Fatalf("stderr = %q, want Engram's failure and no demand for --project", stderr)

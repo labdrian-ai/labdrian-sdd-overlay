@@ -113,7 +113,7 @@ func (a app) embeddingIndexing(store *engram.Store, stateDir string, cfg embedCo
 func embedIndexExitCode(err error) int {
 	var failure *embedindex.Error
 	if errors.As(err, &failure) && failure.Stage == embedindex.StageObservations {
-		return exitEngramUnavailable
+		return exitStoreUnavailable
 	}
 	return exitInternal
 }

@@ -20,8 +20,8 @@ func TestCmdMCP_AnEngramDatabaseThatCannotBeOpenedEndsTheSessionBeforeItStarts(t
 		code = commands{newEmbedClient: testEmbedClient, clock: fixedClock{at: fixtureInstant}}.run([]string{"mcp"})
 	})
 
-	if code != exitEngramUnavailable {
-		t.Errorf("mcp = exit %d, want %d", code, exitEngramUnavailable)
+	if code != exitStoreUnavailable {
+		t.Errorf("mcp = exit %d, want %d", code, exitStoreUnavailable)
 	}
 	if want := "longterm-mem: mcp: engram: connect "; len(stderr) < len(want) || stderr[:len(want)] != want {
 		t.Errorf("stderr = %q, want it to begin %q", stderr, want)

@@ -187,7 +187,7 @@ func TestRunChild_WritesOneLineForEveryOutcomeWithTheClockItWasGiven(t *testing.
 		{"exit 2 with any other words", &fakeRunner{result: Result{Exit: 2}, prints: "longterm-mem: sync: unknown flag --bogus\n"}, Outcome{Kind: "error:usage", Exit: 2, Dur: step}},
 		{"exit 2 with nothing said", &fakeRunner{result: Result{Exit: 2}}, Outcome{Kind: "error:usage", Exit: 2, Dur: step}},
 		{"exit 3, no vault", &fakeRunner{result: Result{Exit: 3}}, Outcome{Kind: "skip:no-vault", Exit: 3, Dur: step}},
-		{"exit 4, engram unavailable", &fakeRunner{result: Result{Exit: 4}}, Outcome{Kind: "failure:engram-unavailable", Exit: 4, Dur: step}},
+		{"exit 4, store unavailable", &fakeRunner{result: Result{Exit: 4}}, Outcome{Kind: "failure:store-unavailable", Exit: 4, Dur: step}},
 		{"exit 5, the vault subprocess failed", &fakeRunner{result: Result{Exit: 5}}, Outcome{Kind: "failure:vault-subprocess", Exit: 5, Dur: step}},
 		{"exit 1, any other", &fakeRunner{result: Result{Exit: 1}}, Outcome{Kind: "failure:exit-1", Exit: 1, Dur: step}},
 		{"exit 137", &fakeRunner{result: Result{Exit: 137}}, Outcome{Kind: "failure:exit-137", Exit: 137, Dur: step}},
@@ -198,7 +198,7 @@ func TestRunChild_WritesOneLineForEveryOutcomeWithTheClockItWasGiven(t *testing.
 		// A Runner may say that the program ended and also hand back an error (an adapter that
 		// wraps what the machine said): the exit is what the program did, as an *exec.ExitError
 		// always was, and the error does not take it away. osproc never returns both.
-		{"exit 4 with an error alongside", &fakeRunner{result: Result{Exit: 4}, runErr: errors.New("exit status 4")}, Outcome{Kind: "failure:engram-unavailable", Exit: 4, Dur: step}},
+		{"exit 4 with an error alongside", &fakeRunner{result: Result{Exit: 4}, runErr: errors.New("exit status 4")}, Outcome{Kind: "failure:store-unavailable", Exit: 4, Dur: step}},
 		{"exit 2 with the words for no project and an error alongside", &fakeRunner{result: Result{Exit: 2}, runErr: errors.New("exit status 2"), prints: notProject}, Outcome{Kind: "skip:no-project", Exit: 2, Dur: step}},
 		{"exit 1 with an error alongside", &fakeRunner{result: Result{Exit: 1}, runErr: errors.New("exit status 1")}, Outcome{Kind: "failure:exit-1", Exit: 1, Dur: step}},
 		{"exit 0 with an error alongside is no exit at all", &fakeRunner{result: Result{Exit: 0}, runErr: errors.New("wait: no child")}, Outcome{Kind: "error:spawn", Exit: 0, Dur: step}},
@@ -310,7 +310,7 @@ func TestRunChild_WithoutALogStillRunsTheSyncAndReturnsItsOutcome(t *testing.T) 
 
 	got := RunChild(o)
 
-	if want := (Outcome{Kind: "failure:engram-unavailable", Exit: 4, Dur: step}); got != want || len(runner.ran) != 1 {
+	if want := (Outcome{Kind: "failure:store-unavailable", Exit: 4, Dur: step}); got != want || len(runner.ran) != 1 {
 		t.Errorf("RunChild = %+v, runner asked %d times, want %+v once", got, len(runner.ran), want)
 	}
 }

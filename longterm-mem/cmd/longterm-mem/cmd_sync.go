@@ -146,7 +146,7 @@ func warnSkippedPages(w io.Writer, prefix string, unreadable []promote.Unreadabl
 //
 //   - the index rebuild failed -> exitVaultSubprocessFailed, the one step
 //     that actually runs a vault script;
-//   - Engram can no longer be listed -> exitEngramUnavailable, and no vault
+//   - the memory store can no longer be listed -> exitStoreUnavailable, and no vault
 //     subprocess had to fail for that to happen;
 //   - anything else (a per-observation page write, the sync-state record,
 //     the precedence store) -> exitInternal.
@@ -159,7 +159,7 @@ func syncExitCode(failure promote.Failure) int {
 	case promote.IndexRebuildFailed:
 		return exitVaultSubprocessFailed
 	case promote.MemoryUnavailable:
-		return exitEngramUnavailable
+		return exitStoreUnavailable
 	default:
 		return exitInternal
 	}

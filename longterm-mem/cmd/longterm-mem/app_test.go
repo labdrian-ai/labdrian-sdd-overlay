@@ -106,8 +106,8 @@ func TestApp_MemoryRefusesWhenEngramCannotBeOpened(t *testing.T) {
 		}
 	})
 
-	if code != exitEngramUnavailable {
-		t.Errorf("memory answered %d, want %d", code, exitEngramUnavailable)
+	if code != exitStoreUnavailable {
+		t.Errorf("memory answered %d, want %d", code, exitStoreUnavailable)
 	}
 	if !strings.HasPrefix(stderr, "longterm-mem: stale: engram: connect ") || strings.Count(stderr, "\n") != 1 {
 		t.Errorf("stderr = %q, want one line, the command's name and then the adapter's words", stderr)

@@ -79,7 +79,7 @@ func (c commands) cmdQuery(args []string) int {
 		// query.Run degrades a failing vault to a diagnostic and only
 		// ever errors on the Engram side (a missing project is rejected
 		// before this call), so its failure is engram_unavailable.
-		return a.refuse(err, exitEngramUnavailable)
+		return a.refuse(err, exitStoreUnavailable)
 	}
 
 	if *asJSON {
