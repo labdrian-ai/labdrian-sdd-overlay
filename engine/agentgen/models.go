@@ -3,14 +3,16 @@ package agentgen
 // The tier x runtime table of skills/role-chain/references/models.md (S18): the one place that says
 // which model each tier runs on each runtime. The generator reads it, so no id is written twice.
 //
-// The table is a Markdown table under the header row `| tier | <runtime> | ... |`: one row per tier,
-// one column per runtime, each cell the id, in backticks or bare. It ends at the first line that does
-// not start with `|`.
+// The table is the Markdown table under the `## Tier table` heading: a header row `| tier | <runtime> | ... |`,
+// a separator row, then one row per tier, one column per runtime, each cell the id, in backticks or bare.
+// It ends at the first line that does not start with `|`; a second `##` heading ends the section.
 
 import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
+	"slices"
 	"strings"
 )
 
@@ -53,31 +55,70 @@ func ReadModelTable(repoRoot string) (ModelTable, error) {
 	if err != nil {
 		return ModelTable{}, err
 	}
-	return parseModelTable(string(data))
+	table, err := parseModelTable(string(data))
+	if err != nil {
+		return ModelTable{}, &tableError{err}
+	}
+	return table, nil
 }
+
+// tableError is a table that was read but cannot be used, as opposed to a file that could not be read.
+type tableError struct{ err error }
+
+func (e *tableError) Error() string { return e.err.Error() }
+func (e *tableError) Unwrap() error { return e.err }
+
+const tableHeading = "## Tier table"
+
+// idShape is what a model id may hold: it is written verbatim into the frontmatter of a file.
+var idShape = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._/:#-]*$`)
+
+var separatorCell = regexp.MustCompile(`^:?-+:?$`)
 
 func parseModelTable(text string) (ModelTable, error) {
 	lines := strings.Split(text, "\n")
-	start := -1
-	for i, line := range lines {
-		if cells := splitRow(line); len(cells) > 0 && cells[0] == "tier" {
-			start = i
+	start := slices.Index(lines, tableHeading)
+	if start < 0 {
+		return ModelTable{}, fmt.Errorf("%s has no %q section", modelsPath, tableHeading)
+	}
+	// The header is the first table row of the section; the section ends at the next heading.
+	header := -1
+	for i := start + 1; i < len(lines); i++ {
+		if strings.HasPrefix(lines[i], "#") {
+			break
+		}
+		if strings.HasPrefix(strings.TrimSpace(lines[i]), "|") {
+			header = i
 			break
 		}
 	}
-	if start < 0 {
-		return ModelTable{}, fmt.Errorf("the tier table of %s is missing: no header row `| tier | ... |`", modelsPath)
+	if header < 0 {
+		return ModelTable{}, fmt.Errorf("the tier table of %s is missing: no table under %q", modelsPath, tableHeading)
 	}
-	runtimes := splitRow(lines[start])[1:]
+	head := splitRow(lines[header])
+	if head[0] != "tier" {
+		return ModelTable{}, fmt.Errorf("the tier table of %s must start with the header row `| tier | ... |`, got %q", modelsPath, lines[header])
+	}
+	runtimes := head[1:]
+	for i, runtime := range runtimes {
+		if slices.Contains(runtimes[:i], runtime) {
+			return ModelTable{}, fmt.Errorf("the tier table of %s has a duplicate %s column", modelsPath, runtime)
+		}
+	}
+	if header+1 >= len(lines) || !isSeparator(splitRow(lines[header+1]), len(head)) {
+		return ModelTable{}, fmt.Errorf("the tier table of %s has no separator row of %d cells (`| --- | ...`) under its header", modelsPath, len(head))
+	}
 	ids := map[string]map[string]string{}
-	// The line after the header is the separator row; the rows are the lines after it that start with |.
-	for _, line := range lines[min(start+2, len(lines)):] {
+	for _, line := range lines[header+2:] {
 		if !strings.HasPrefix(strings.TrimSpace(line), "|") {
 			break
 		}
 		cells := splitRow(line)
-		if len(cells) != len(runtimes)+1 {
-			return ModelTable{}, fmt.Errorf("the tier table of %s has a row of %d cells where the header has %d: %q", modelsPath, len(cells), len(runtimes)+1, line)
+		if len(cells) != len(head) {
+			return ModelTable{}, fmt.Errorf("the tier table of %s has a row of %d cells where the header has %d: %q", modelsPath, len(cells), len(head), line)
+		}
+		if _, dup := ids[cells[0]]; dup {
+			return ModelTable{}, fmt.Errorf("the tier table of %s has a duplicate %s row", modelsPath, cells[0])
 		}
 		ids[cells[0]] = map[string]string{}
 		for i, runtime := range runtimes {
@@ -85,7 +126,7 @@ func parseModelTable(text string) (ModelTable, error) {
 		}
 	}
 	for _, runtime := range requiredRuntimes {
-		if !contains(runtimes, runtime) {
+		if !slices.Contains(runtimes, runtime) {
 			return ModelTable{}, fmt.Errorf("the tier table of %s has no %s column", modelsPath, runtime)
 		}
 	}
@@ -98,9 +139,24 @@ func parseModelTable(text string) (ModelTable, error) {
 			if row[runtime] == "" {
 				return ModelTable{}, fmt.Errorf("the tier table of %s has no id for the %s tier on %s", modelsPath, tier, runtime)
 			}
+			if !idShape.MatchString(row[runtime]) {
+				return ModelTable{}, fmt.Errorf("the tier table of %s has an id for the %s tier on %s that is not a model id: %q", modelsPath, tier, runtime, row[runtime])
+			}
 		}
 	}
 	return ModelTable{ids: ids}, nil
+}
+
+func isSeparator(cells []string, n int) bool {
+	if len(cells) != n {
+		return false
+	}
+	for _, c := range cells {
+		if !separatorCell.MatchString(c) {
+			return false
+		}
+	}
+	return true
 }
 
 // splitRow is the cells of a table row, trimmed and without backticks; nil for a line that is not a row.
@@ -115,13 +171,4 @@ func splitRow(line string) []string {
 		cells[i] = strings.Trim(strings.TrimSpace(cell), "`")
 	}
 	return cells
-}
-
-func contains(list []string, item string) bool {
-	for _, s := range list {
-		if s == item {
-			return true
-		}
-	}
-	return false
 }

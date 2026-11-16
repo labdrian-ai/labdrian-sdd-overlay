@@ -16,44 +16,43 @@ func agentgenRun(t *testing.T, env map[string]string, args ...string) *capturedP
 	return p
 }
 
-// seedRoleSources puts the role sources of this repository under root, which is all the generator
-// reads from the repository.
+// seedRoleSources puts what the generator reads from the repository under root: the role sources, and
+// the tier table of the role-chain skill that holds each role's model id.
 func seedRoleSources(t *testing.T, root string) {
 	t.Helper()
-	source := filepath.Join("..", "..", "roles")
+	const repo = "../.."
+	source := filepath.Join(repo, "roles")
 	err := filepath.Walk(source, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
-		rel, err := filepath.Rel(source, path)
+		rel, err := filepath.Rel(repo, path)
 		if err != nil {
 			return err
 		}
-		target := filepath.Join(root, "roles", rel)
 		if info.IsDir() {
-			return os.MkdirAll(target, 0o755)
+			return os.MkdirAll(filepath.Join(root, rel), 0o755)
 		}
-		data, err := os.ReadFile(path)
-		if err != nil {
-			return err
-		}
-		return os.WriteFile(target, data, 0o644)
+		return copyFileTo(path, filepath.Join(root, rel))
 	})
 	if err != nil {
 		t.Fatalf("copying the role sources: %v", err)
 	}
-	// The generator reads each role's model id from the tier table of the role-chain skill.
 	models := filepath.Join("skills", "role-chain", "references", "models.md")
-	data, err := os.ReadFile(filepath.Join("..", "..", models))
-	if err != nil {
-		t.Fatalf("reading the model table: %v", err)
-	}
 	if err := os.MkdirAll(filepath.Join(root, filepath.Dir(models)), 0o755); err != nil {
 		t.Fatalf("creating the model table directory: %v", err)
 	}
-	if err := os.WriteFile(filepath.Join(root, models), data, 0o644); err != nil {
+	if err := copyFileTo(filepath.Join(repo, models), filepath.Join(root, models)); err != nil {
 		t.Fatalf("copying the model table: %v", err)
 	}
+}
+
+func copyFileTo(from, to string) error {
+	data, err := os.ReadFile(from)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(to, data, 0o644)
 }
 
 func TestGaduGenerateNeedsTheOverlayDirectory(t *testing.T) {

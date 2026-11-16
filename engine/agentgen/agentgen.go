@@ -65,7 +65,12 @@ func build(repoRoot string) (table []Artifact, problems []*sourceError) {
 	// The table is reported after the sources: without it no role can be projected, so nothing is returned
 	// for the roles whose sources were read.
 	if modelsErr != nil {
-		problems = append(problems, &sourceError{path: modelsPath, verb: "reading", err: modelsErr})
+		verb := "reading"
+		var malformed *tableError
+		if errors.As(modelsErr, &malformed) {
+			verb = "parsing"
+		}
+		problems = append(problems, &sourceError{path: modelsPath, verb: verb, err: modelsErr})
 	}
 	return table, problems
 }

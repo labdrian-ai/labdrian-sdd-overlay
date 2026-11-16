@@ -78,6 +78,23 @@ func TestATableThatLacksATierOrARuntimeIsRefusedBeforeAnythingIsWritten(t *testi
 		"an empty id": {func(s string) string {
 			return strings.Replace(s, "`openai/gpt-6.1-terra#medium`", " ", 1)
 		}, "mid"},
+		"a duplicate tier row": {func(s string) string {
+			row := "| mid | `sonnet` | `pi-claude-cli/claude-sonnet-5` | `openai/gpt-6.1-terra#medium` |\n"
+			return strings.Replace(s, row, row+row, 1)
+		}, "duplicate"},
+		"no separator row": {func(s string) string {
+			return strings.Replace(s, "| --- | --- | --- | --- |\n", "", 1)
+		}, "separator"},
+		"a duplicate runtime column": {func(s string) string {
+			s = strings.Replace(s, "| tier | claude | pi | opencode |", "| tier | claude | pi | pi |", 1)
+			return s
+		}, "duplicate"},
+		"an id with a space": {func(s string) string {
+			return strings.Replace(s, "`openai/gpt-6.1-terra#medium`", "`openai/gpt 6#medium`", 1)
+		}, "mid"},
+		"the table outside its heading": {func(s string) string {
+			return strings.Replace(s, "## Tier table", "## Ids", 1)
+		}, "Tier table"},
 		"no table at all": {func(s string) string { return s[:strings.Index(s, "## Tier table")] }, "table"},
 	}
 	for name, c := range cases {
@@ -94,6 +111,33 @@ func TestATableThatLacksATierOrARuntimeIsRefusedBeforeAnythingIsWritten(t *testi
 				t.Error("Generate wrote files although the table was refused")
 			}
 		})
+	}
+}
+
+// A table of the same shape outside the `## Tier table` section is not the tier table.
+func TestOnlyTheTableUnderItsHeadingIsRead(t *testing.T) {
+	decoy := "Earlier prose.\n\n| tier | claude | pi | opencode |\n| --- | --- | --- | --- |\n| frontier | `bad` | `bad` | `bad` |\n| mid | `bad` | `bad` | `bad` |\n| light | `bad` | `bad` | `bad` |\n\n"
+	root := seededRoot(t)
+	editModels(t, root, func(s string) string { return strings.Replace(s, "## Tier table", decoy+"## Tier table", 1) })
+
+	table, err := agentgen.ReadModelTable(root)
+	if err != nil {
+		t.Fatalf("ReadModelTable: %v", err)
+	}
+	if got, _ := table.ID("frontier", "claude"); got != "opus" {
+		t.Errorf("ID(frontier, claude) = %q, want opus: the table before the heading was read", got)
+	}
+}
+
+// A table that cannot be used is a problem of parsing it, not of reading the file.
+func TestAMalformedTableIsReportedAsParsingNotReading(t *testing.T) {
+	root := seededRoot(t)
+	editModels(t, root, func(s string) string { return strings.Replace(s, "| --- | --- | --- | --- |\n", "", 1) })
+
+	err := agentgen.Generate(root)
+
+	if err == nil || !strings.HasPrefix(err.Error(), "parsing "+modelsRel+":") {
+		t.Errorf("Generate error = %v, want one that starts with \"parsing %s:\"", err, modelsRel)
 	}
 }
 
