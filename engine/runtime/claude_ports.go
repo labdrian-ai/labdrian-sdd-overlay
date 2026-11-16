@@ -23,8 +23,7 @@ type HookInstaller interface {
 	// the one the system or the JSON decoder reported.
 	Inspect(path, hookCommand string) (found, owned bool, err error)
 	// InspectMainAgent says what the settings file holds under the top-level "agent" key
-	// (settings.MainAgent). It is part of the port, so every installer answers it and the adapter never
-	// skips the key.
-	// InspectMainAgent returns the state of the key and, for a foreign value, that value as JSON.
+	// (settings.MainAgent): its state and, for a foreign value, that value as JSON. It is part of the
+	// port, so every installer answers it and the adapter never skips the key.
 	InspectMainAgent(path string) (state settings.MainAgentState, valueJSON string, err error)
 }

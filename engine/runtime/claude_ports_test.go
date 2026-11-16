@@ -2,13 +2,13 @@ package runtime_test
 
 import (
 	"errors"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	engineRuntime "github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime/core"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings"
 )
 
 // fakeHooks is the HookInstaller the tests of the Claude adapter's own logic hand it: it records
@@ -21,6 +21,7 @@ type fakeHooks struct {
 	inspectErr               error
 	agent                    *settings.MainAgentState
 	agentValue               string
+	agentErr                 error
 }
 
 func (f *fakeHooks) Install(path, hookCommand string) error {
@@ -43,9 +44,9 @@ func (f *fakeHooks) Inspect(path, hookCommand string) (bool, bool, error) {
 func (f *fakeHooks) InspectMainAgent(path string) (settings.MainAgentState, string, error) {
 	f.calls = append(f.calls, "inspect-agent "+path)
 	if f.agent != nil {
-		return *f.agent, f.agentValue, f.inspectErr
+		return *f.agent, f.agentValue, f.agentErr
 	}
-	return settings.MainAgentOwned, "", f.inspectErr
+	return settings.MainAgentOwned, "", f.agentErr
 }
 
 // The adapter names the settings file and the binary from its root, and nothing else: the port is
