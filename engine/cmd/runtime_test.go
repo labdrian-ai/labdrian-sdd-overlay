@@ -829,6 +829,13 @@ func writeMinimalismOverlayFixture(t *testing.T) string {
 	if err := os.WriteFile(filepath.Join(contractDir, "minimalism-contract.md"), []byte(testContractContent), 0o644); err != nil {
 		t.Fatal(err)
 	}
+	// The Claude adapter reads the owner rules of the same checkout.
+	if err := os.MkdirAll(filepath.Join(overlayRoot, "instructions"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(overlayRoot, "instructions", "owner-rules.md"), []byte("## Rules\n\n- a rule\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	return overlayRoot
 }
 

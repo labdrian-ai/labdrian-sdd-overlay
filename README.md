@@ -1097,6 +1097,18 @@ gentle-ai-overlay status [--only registry] [--cwd <dir>]
     degraded report. The callers in this repository are the overlay script's `status-hooks` (no argument) and its `doctor`
     (`--only registry --cwd <dir>`), and a test holds both.
 
+gentle-ai-overlay runtime install|update|uninstall|status --target claude
+    Besides the hooks of ~/.claude/settings.json, the Claude adapter keeps the owner's rules
+    (`instructions/owner-rules.md`) in `<claude root>/CLAUDE.md` (~/.claude/CLAUDE.md), between the lines
+    `<!-- labdrian:owner-rules -->` and `<!-- /labdrian:owner-rules -->`. The rules are read from the overlay checkout
+    in `LABDRIAN_OVERLAY_DIR`, else the nearest one above the working directory. `install` and `update` append the block
+    after one blank line when it is absent (a missing file is created with the block alone) and replace it in place when
+    it is there; every byte outside the two lines stays as it was, the `gentle-ai:` blocks and `user:memorycard-store`
+    included, and a file without a final newline gets one before the block. `uninstall` removes only the block (an
+    empty file stays). `status` is partial when the block is missing or stale, and says which verb fixes it. Rules that
+    cannot be read, or markers that are not one open line followed by one close line, make the action partial and leave
+    CLAUDE.md as it is. The same writer (`runtime.MarkedBlock`) is the one the AGENTS.md files will use.
+
 gentle-ai-overlay runtime capabilities [--target claude|codex|pi|opencode|all]
     Engine verb (Phase 7): there is no `overlay runtime` wrapper, so run it on the installed engine
     binary, ~/.claude/bin/gentle-ai-overlay. Read-only and declarative: it prints, as JSON, what

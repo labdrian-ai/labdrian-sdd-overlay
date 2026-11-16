@@ -2,14 +2,14 @@
 $ runtime install --target claude
 exit: 0
 --- stdout ---
-[claude] install: restart_required — Claude lifecycle hooks installed; restart Claude to load hook changes
+[claude] install: restart_required — Claude lifecycle hooks installed; restart Claude to load hook changes; owner rules written to <WORLD>/home/.claude/CLAUDE.md
 --- stderr ---
 
 # the complete install
 $ runtime status --target claude
 exit: 0
 --- stdout ---
-[claude] status: supported — Claude lifecycle hooks are installed and owned
+[claude] status: supported — Claude lifecycle hooks are installed and owned; owner rules block is current in <WORLD>/home/.claude/CLAUDE.md
 --- stderr ---
 
 # no SessionEnd entry
@@ -93,56 +93,56 @@ exit: 1
 $ runtime update --target claude
 exit: 0
 --- stdout ---
-[claude] update: restart_required — Claude lifecycle hooks updated; restart Claude to load hook changes
+[claude] update: restart_required — Claude lifecycle hooks updated; restart Claude to load hook changes; owner rules already current in <WORLD>/home/.claude/CLAUDE.md
 --- stderr ---
 
 # status after it
 $ runtime status --target claude
 exit: 0
 --- stdout ---
-[claude] status: supported — Claude lifecycle hooks are installed and owned
+[claude] status: supported — Claude lifecycle hooks are installed and owned; owner rules block is current in <WORLD>/home/.claude/CLAUDE.md
 --- stderr ---
 
 # update brings the review stop-hook back
 $ runtime update --target claude
 exit: 0
 --- stdout ---
-[claude] update: restart_required — Claude lifecycle hooks updated; restart Claude to load hook changes
+[claude] update: restart_required — Claude lifecycle hooks updated; restart Claude to load hook changes; owner rules already current in <WORLD>/home/.claude/CLAUDE.md
 --- stderr ---
 
 # status after it
 $ runtime status --target claude
 exit: 0
 --- stdout ---
-[claude] status: supported — Claude lifecycle hooks are installed and owned
+[claude] status: supported — Claude lifecycle hooks are installed and owned; owner rules block is current in <WORLD>/home/.claude/CLAUDE.md
 --- stderr ---
 
 # update brings the builder guard back
 $ runtime update --target claude
 exit: 0
 --- stdout ---
-[claude] update: restart_required — Claude lifecycle hooks updated; restart Claude to load hook changes
+[claude] update: restart_required — Claude lifecycle hooks updated; restart Claude to load hook changes; owner rules already current in <WORLD>/home/.claude/CLAUDE.md
 --- stderr ---
 
 # status after it
 $ runtime status --target claude
 exit: 0
 --- stdout ---
-[claude] status: supported — Claude lifecycle hooks are installed and owned
+[claude] status: supported — Claude lifecycle hooks are installed and owned; owner rules block is current in <WORLD>/home/.claude/CLAUDE.md
 --- stderr ---
 
 # install into settings that have entries of their own
 $ runtime install --target claude
 exit: 0
 --- stdout ---
-[claude] install: restart_required — Claude lifecycle hooks installed; restart Claude to load hook changes
+[claude] install: restart_required — Claude lifecycle hooks installed; restart Claude to load hook changes; owner rules already current in <WORLD>/home/.claude/CLAUDE.md
 --- stderr ---
 
 # uninstall leaves them
 $ runtime uninstall --target claude
 exit: 0
 --- stdout ---
-[claude] uninstall: restart_required — Claude lifecycle hooks removed; restart Claude to unload stale hook processes
+[claude] uninstall: restart_required — Claude lifecycle hooks removed; restart Claude to unload stale hook processes; owner rules removed from <WORLD>/home/.claude/CLAUDE.md
 --- stderr ---
 
 --- home/.claude/settings.json ---

@@ -136,10 +136,11 @@ settings.json
 $ runtime install --target claude
 exit: 0
 --- stdout ---
-[claude] install: restart_required — Claude lifecycle hooks installed; restart Claude to load hook changes
+[claude] install: restart_required — Claude lifecycle hooks installed; restart Claude to load hook changes; owner rules written to <WORLD>/home/.claude/CLAUDE.md
 --- stderr ---
 
 --- tree of home/.claude ---
+CLAUDE.md
 settings.json
 settings.json.bak
 
@@ -147,10 +148,11 @@ settings.json.bak
 $ runtime update --target claude
 exit: 0
 --- stdout ---
-[claude] update: restart_required — Claude lifecycle hooks updated; restart Claude to load hook changes
+[claude] update: restart_required — Claude lifecycle hooks updated; restart Claude to load hook changes; owner rules already current in <WORLD>/home/.claude/CLAUDE.md
 --- stderr ---
 
 --- tree of home/.claude ---
+CLAUDE.md
 settings.json
 settings.json.bak
 
@@ -158,10 +160,11 @@ settings.json.bak
 $ runtime uninstall --target claude
 exit: 0
 --- stdout ---
-[claude] uninstall: restart_required — Claude lifecycle hooks removed; restart Claude to unload stale hook processes
+[claude] uninstall: restart_required — Claude lifecycle hooks removed; restart Claude to unload stale hook processes; owner rules removed from <WORLD>/home/.claude/CLAUDE.md
 --- stderr ---
 
 --- tree of home/.claude ---
+CLAUDE.md
 settings.json
 settings.json.bak
 
@@ -180,10 +183,11 @@ settings.json
 $ runtime install --target claude
 exit: 0
 --- stdout ---
-[claude] install: restart_required — Claude lifecycle hooks installed; restart Claude to load hook changes
+[claude] install: restart_required — Claude lifecycle hooks installed; restart Claude to load hook changes; owner rules written to <WORLD>/home/.claude/CLAUDE.md
 --- stderr ---
 
 --- tree of home/.claude ---
+CLAUDE.md
 settings.json
 settings.json.bak
 
@@ -191,10 +195,11 @@ settings.json.bak
 $ runtime update --target claude
 exit: 0
 --- stdout ---
-[claude] update: restart_required — Claude lifecycle hooks updated; restart Claude to load hook changes
+[claude] update: restart_required — Claude lifecycle hooks updated; restart Claude to load hook changes; owner rules already current in <WORLD>/home/.claude/CLAUDE.md
 --- stderr ---
 
 --- tree of home/.claude ---
+CLAUDE.md
 settings.json
 settings.json.bak
 
@@ -202,10 +207,11 @@ settings.json.bak
 $ runtime uninstall --target claude
 exit: 0
 --- stdout ---
-[claude] uninstall: restart_required — Claude lifecycle hooks removed; restart Claude to unload stale hook processes
+[claude] uninstall: restart_required — Claude lifecycle hooks removed; restart Claude to unload stale hook processes; owner rules removed from <WORLD>/home/.claude/CLAUDE.md
 --- stderr ---
 
 --- tree of home/.claude ---
+CLAUDE.md
 settings.json
 settings.json.bak
 

@@ -1,8 +1,8 @@
 # install claude
 $ runtime install --target claude
-exit: 0
+exit: 1
 --- stdout ---
-[claude] install: restart_required — Claude lifecycle hooks installed; restart Claude to load hook changes
+[claude] install: partial — Claude lifecycle hooks installed; restart Claude to load hook changes; owner rules could not be read: could not locate skills/_shared/minimalism-contract.md; set LABDRIAN_OVERLAY_DIR
 --- stderr ---
 
 # install codex
@@ -30,7 +30,7 @@ exit: 1
 $ runtime install --target all
 exit: 1
 --- stdout ---
-[claude] install: restart_required — Claude lifecycle hooks installed; restart Claude to load hook changes
+[claude] install: partial — Claude lifecycle hooks installed; restart Claude to load hook changes; owner rules could not be read: could not locate skills/_shared/minimalism-contract.md; set LABDRIAN_OVERLAY_DIR
 [opencode] install: partial — OpenCode prompt config could not be derived from the contracts: could not locate skills/_shared/minimalism-contract.md; set LABDRIAN_OVERLAY_DIR
 [codex] install: restart_required — Codex lifecycle manifest installed; restart long-running Codex processes to pick up updates
 [pi] install: unsupported — pi package delivery (pipkg build/install) cannot run without OVERLAY_DIR set
@@ -103,7 +103,7 @@ exit: 1
 $ runtime status --target all
 exit: 1
 --- stdout ---
-[claude] status: supported — Claude lifecycle hooks are installed and owned
+[claude] status: partial — Claude owner rules could not be read: read the owner rules: open <WORLD>/overlay/instructions/owner-rules.md: no such file or directory
 [opencode] status: restart_required — OpenCode restart required to load plugin version 2026-11-16-runtime-parity-12
 [codex] status: partial — Codex lifecycle manifest is present and managed, but activation/reload state is unverified — reasons: activation/reload proof unavailable until Codex session lifecycle integration is implemented
 [pi] status: unsupported — labdrian-pi package is not built at <WORLD>/home/.labdrian-overlay/pi/labdrian-pi (run: labdrian-overlay apply --target pi). 'pi --no-extensions' disables the before_agent_start contract-gate extension for that session, and 'pi --no-skills' disables skill discovery, for that session only; neither flag's use is detected at runtime (short aliases: -ne and -ns)

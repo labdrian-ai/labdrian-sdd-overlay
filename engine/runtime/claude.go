@@ -16,6 +16,7 @@ type ClaudeAdapter struct {
 	target core.Target
 	root   string
 	hooks  HookInstaller
+	rules  OwnerRulesSource
 }
 
 // NewClaudeAdapter builds the Claude adapter over root, the directory its settings live in, and
@@ -24,6 +25,12 @@ type ClaudeAdapter struct {
 // adapter does not look for one.
 func NewClaudeAdapter(root string, hooks HookInstaller) ClaudeAdapter {
 	return ClaudeAdapter{target: core.TargetClaude, root: root, hooks: hooks}
+}
+
+// WithOwnerRules is the adapter that also keeps the owner rules block in CLAUDE.md.
+func (a ClaudeAdapter) WithOwnerRules(rules OwnerRulesSource) ClaudeAdapter {
+	a.rules = rules
+	return a
 }
 
 func (a ClaudeAdapter) Target() core.Target         { return a.target }
@@ -41,7 +48,8 @@ func (a ClaudeAdapter) Install() core.LifecycleResult {
 		return a.result(core.ActionInstall, core.CapabilityPartial, err.Error())
 	}
 
-	return a.result(core.ActionInstall, core.CapabilityRestartRequired, "Claude lifecycle hooks installed; restart Claude to load hook changes"+a.foreignAgentNotice(settingsPath))
+	message := "Claude lifecycle hooks installed; restart Claude to load hook changes" + a.foreignAgentNotice(settingsPath)
+	return a.withOwnerRules(core.ActionInstall, message)
 }
 func (a ClaudeAdapter) Status() core.LifecycleResult    { return a.status() }
 func (a ClaudeAdapter) SyncCheck() core.LifecycleResult { return a.Status() }
@@ -58,7 +66,8 @@ func (a ClaudeAdapter) Update() core.LifecycleResult {
 		return a.result(core.ActionUpdate, core.CapabilityPartial, err.Error())
 	}
 
-	return a.result(core.ActionUpdate, core.CapabilityRestartRequired, "Claude lifecycle hooks updated; restart Claude to load hook changes"+a.foreignAgentNotice(settingsPath))
+	message := "Claude lifecycle hooks updated; restart Claude to load hook changes" + a.foreignAgentNotice(settingsPath)
+	return a.withOwnerRules(core.ActionUpdate, message)
 }
 func (a ClaudeAdapter) Rollback() core.LifecycleResult { return a.Uninstall() }
 func (a ClaudeAdapter) Uninstall() core.LifecycleResult {
@@ -74,7 +83,18 @@ func (a ClaudeAdapter) Uninstall() core.LifecycleResult {
 		return a.result(core.ActionUninstall, core.CapabilityPartial, err.Error())
 	}
 
-	return a.result(core.ActionUninstall, core.CapabilityRestartRequired, "Claude lifecycle hooks removed; restart Claude to unload stale hook processes")
+	message := "Claude lifecycle hooks removed; restart Claude to unload stale hook processes"
+	if a.rules == nil {
+		return a.result(core.ActionUninstall, core.CapabilityRestartRequired, message)
+	}
+	removed, err := OwnerRulesBlock.RemoveFile(a.claudeMDPath())
+	if err != nil {
+		return a.result(core.ActionUninstall, core.CapabilityPartial, message+"; owner rules could not be removed: "+err.Error())
+	}
+	if removed {
+		message += "; owner rules removed from " + a.claudeMDPath()
+	}
+	return a.result(core.ActionUninstall, core.CapabilityRestartRequired, message)
 }
 
 func (a ClaudeAdapter) status() core.LifecycleResult {
@@ -101,7 +121,14 @@ func (a ClaudeAdapter) status() core.LifecycleResult {
 	if r, ok := a.mainAgentStatus(settingsPath); ok {
 		return r
 	}
-	return a.result(core.ActionStatus, core.CapabilitySupported, "Claude lifecycle hooks are installed and owned")
+	message := "Claude lifecycle hooks are installed and owned"
+	if a.rules != nil {
+		if r, ok := a.ownerRulesStatus(); ok {
+			return r
+		}
+		message += "; owner rules block is current in " + a.claudeMDPath()
+	}
+	return a.result(core.ActionStatus, core.CapabilitySupported, message)
 }
 
 // mainAgentStatus is the status result for the top-level "agent" key when it is not the foreman's: partial,
@@ -148,6 +175,58 @@ func (a ClaudeAdapter) configPaths() (settingsPath, hookCommand string, err erro
 		return "", "", fmt.Errorf("Claude config root must be absolute, got %q", a.root)
 	}
 	return filepath.Join(a.root, "settings.json"), filepath.Join(a.root, "bin", "gentle-ai-overlay"), nil
+}
+
+// claudeMDPath is <root>/CLAUDE.md, the file the owner rules block is written in.
+func (a ClaudeAdapter) claudeMDPath() string { return filepath.Join(a.root, "CLAUDE.md") }
+
+// withOwnerRules is the result of an install or update whose hooks are in place: it writes the owner
+// rules block and adds what it did to message, or reports partial when the rules could not be read
+// or the file could not be written (the hooks stay installed; CLAUDE.md stays as it was). An adapter
+// without a source writes nothing and reports the hooks alone.
+func (a ClaudeAdapter) withOwnerRules(action core.Action, message string) core.LifecycleResult {
+	if a.rules == nil {
+		return a.result(action, core.CapabilityRestartRequired, message)
+	}
+	path := a.claudeMDPath()
+	body, err := a.rules.OwnerRules()
+	if err != nil {
+		return a.result(action, core.CapabilityPartial, message+"; owner rules could not be read: "+err.Error())
+	}
+	change, err := OwnerRulesBlock.WriteFile(path, body)
+	if err != nil {
+		return a.result(action, core.CapabilityPartial, message+"; owner rules could not be written: "+err.Error())
+	}
+	switch change {
+	case BlockAdded:
+		message += "; owner rules written to " + path
+	case BlockReplaced:
+		message += "; owner rules updated in " + path
+	default:
+		message += "; owner rules already current in " + path
+	}
+	return a.result(action, core.CapabilityRestartRequired, message)
+}
+
+// ownerRulesStatus is the status result for the owner rules block when it is not current: partial,
+// naming the file and the verb that fixes it. ok is false when the block is current.
+func (a ClaudeAdapter) ownerRulesStatus() (core.LifecycleResult, bool) {
+	path := a.claudeMDPath()
+	body, err := a.rules.OwnerRules()
+	if err != nil {
+		return a.result(core.ActionStatus, core.CapabilityPartial, "Claude owner rules could not be read: "+err.Error()), true
+	}
+	state, err := OwnerRulesBlock.StateOfFile(path, body)
+	if err != nil {
+		return a.result(core.ActionStatus, core.CapabilityPartial, "Claude owner rules block could not be checked: "+err.Error()), true
+	}
+	switch state {
+	case BlockMissing:
+		return a.result(core.ActionStatus, core.CapabilityPartial, "Claude owner rules block is missing in "+path+"; run 'engine runtime install --target claude'"), true
+	case BlockStale:
+		return a.result(core.ActionStatus, core.CapabilityPartial, "Claude owner rules block is stale in "+path+"; run 'engine runtime update --target claude'"), true
+	}
+	return core.LifecycleResult{}, false
 }
 
 func (a ClaudeAdapter) result(action core.Action, status core.CapabilityStatus, message string) core.LifecycleResult {

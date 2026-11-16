@@ -60,6 +60,15 @@ func (w *registryWorld) contractOverlay() string {
 	return w.path("overlay")
 }
 
+// ownerRulesOverlay makes an overlay checkout of the world that holds the owner rules and names it
+// for the Claude adapter, which writes them into CLAUDE.md. A world that leaves it out has no
+// checkout the adapter can read the rules from, and its Claude lines say so.
+func (w *registryWorld) ownerRulesOverlay() {
+	w.t.Helper()
+	w.put("overlay/instructions/owner-rules.md", "## Rules\n\n- a rule\n- another rule\n")
+	w.setenv("LABDRIAN_OVERLAY_DIR", w.path("overlay"))
+}
+
 func runtimeGoldenCases() []registryGoldenCase {
 	return []registryGoldenCase{
 		{"runtime-status-in-an-empty-home", func(w *registryWorld) {
@@ -69,10 +78,27 @@ func runtimeGoldenCases() []registryGoldenCase {
 			w.runtime("a target in capitals is not one", "status", "--target", "Claude")
 		}},
 		{"runtime-lifecycle-of-claude", func(w *registryWorld) {
+			w.ownerRulesOverlay()
 			for _, step := range []string{"status", "install", "status", "install", "update", "status", "uninstall", "status", "uninstall"} {
 				w.runtime(step+" claude", step, "--target", "claude")
 			}
 			w.files("what is left")
+		}},
+		{"runtime-claude-owner-rules", func(w *registryWorld) {
+			w.ownerRulesOverlay()
+			w.put("home/.claude/CLAUDE.md", "<!-- gentle-ai:persona -->\n## Rules\n<!-- /gentle-ai:persona -->\n\nmy own text")
+			w.runtime("install writes the block after the owner's text", "install", "--target", "claude")
+			w.show("home/.claude/CLAUDE.md")
+			w.runtime("status", "status", "--target", "claude")
+			w.put("overlay/instructions/owner-rules.md", "## Rules\n\n- a changed rule\n")
+			w.runtime("status after the rules changed", "status", "--target", "claude")
+			w.runtime("update replaces the block in place", "update", "--target", "claude")
+			w.show("home/.claude/CLAUDE.md")
+			w.runtime("uninstall removes only the block", "uninstall", "--target", "claude")
+			w.show("home/.claude/CLAUDE.md")
+			w.put("home/.claude/CLAUDE.md", "mine\n<!-- labdrian:owner-rules -->\nno close\n")
+			w.runtime("a block without its close marker is not touched", "install", "--target", "claude")
+			w.show("home/.claude/CLAUDE.md")
 		}},
 		{"runtime-lifecycle-of-codex", func(w *registryWorld) {
 			for _, step := range []string{"status", "install", "status", "install", "update", "status", "uninstall", "status", "uninstall"} {
@@ -107,6 +133,7 @@ func runtimeGoldenCases() []registryGoldenCase {
 			w.files("what is left")
 		}},
 		{"runtime-claude-with-settings-that-cannot-be-used", func(w *registryWorld) {
+			w.ownerRulesOverlay()
 			for _, v := range []settingsText{
 				{"a file that is not JSON", "{not json"},
 				{"the JSON value null", "null"},
@@ -131,6 +158,7 @@ func runtimeGoldenCases() []registryGoldenCase {
 			}
 		}},
 		{"runtime-claude-families-present-and-absent", func(w *registryWorld) {
+			w.ownerRulesOverlay()
 			w.runtime("install claude", "install", "--target", "claude")
 			full := w.read(worldSettings)
 			variant := func(label string, edit func(root map[string]any)) {

@@ -23,7 +23,7 @@ import (
 func newRuntimeRegistry(registries skills.RegistryRepository, hooks runtimepkg.HookInstaller, commands runtimepkg.CommandRunner, source pipkg.SourceRepo, packages pipkg.Options) (*runtimecore.Registry, error) {
 	r := runtimecore.NewRegistry()
 	for _, register := range []func(*runtimecore.Registry) error{
-		func(r *runtimecore.Registry) error { return runtimepkg.RegisterClaude(r, hooks) },
+		func(r *runtimecore.Registry) error { return runtimepkg.RegisterClaudeWithOwnerRules(r, hooks) },
 		runtimepkg.RegisterOpenCode,
 		runtimepkg.RegisterCodex,
 		func(r *runtimecore.Registry) error {
