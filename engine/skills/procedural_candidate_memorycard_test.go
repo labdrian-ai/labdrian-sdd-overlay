@@ -127,16 +127,17 @@ func TestProceduralCandidateContractNamesTheResolveEnvelope(t *testing.T) {
 func TestProceduralCandidateContractCarriesTheExceptionAndTheMergeTies(t *testing.T) {
 	skill, contract := proceduralCandidateTexts(t)
 	requireText(t, "contract", contract,
-		"unless `resolve` failed (item 2), in which case nothing is rewritten",
-		"Ask `resolve` once with each distinct legacy number, sorted as strings and as written (a number with leading zeros is asked as written)",
+		"keeping its timestamp and summary; when `resolve` failed (item 2), nothing is rewritten and the lifecycle exception of item 2 applies",
+		"Ask `resolve` in one call, with each distinct legacy number once, sorted as strings and as written (a number with leading zeros is asked as written)",
 		"on equal timestamps keep the entry listed first",
 		"Merged entries that straddle a `Registered` or `Promoted` `at:` count once, before the baseline, because they are one observation",
 		"A record already `emitted` or `rejected` whose count is at or below N after a merge (section 3) keeps its `Status` and is never re-emitted",
 	)
 	requireText(t, "SKILL.md", skill,
 		"on a resolve failure a `History` line whose external action already happened is still saved with `Occurrences` exactly as stored",
-		"Ask `resolve` once with each distinct legacy number, sorted and as written",
+		"Ask `resolve` in one call, with each distinct legacy number once, sorted as strings and as written",
 	)
+	forbidText(t, "contract", contract, "once for all of them")
 }
 
 // The stop covers occurrence work only; a lifecycle History line whose action already happened is saved.
