@@ -207,3 +207,6 @@ Branch: `feat/labdrian-orchestrator-opencode` (base `origin/main` e25f0bfe). Del
 
 - **L14** (2026-11-10, owner, verbatim, answering L12 open decision 1): "dejalo todo en una sola feature"
   - Parent: no split. T21 writes S17's adoption units as tasks in this document; T22 no longer runs a re-add check (L13) and instead confirms no remaining hook invokes the gentle-ai binary. Accepted consequence: until T22 the live CLAUDE.md holds the foreman setting and the not-yet-removed gentle blocks together. Remaining open owner items from L12: persona/voice home (T21 proposes exact text for review) and the skill-registry refresh hook (answered by T20).
+
+- **L15** (2026-11-16, owner, verbatim, asked whether this feature goes into the plan before T9 of `phase9-store-agnostic-promotion` or after Phase 10 closes): "si metelo"
+  - Parent: this feature resumes now, ahead of T9 of `phase9-store-agnostic-promotion` and the rest of Phase 10. The branch was rebased onto `origin/main` `87f26495` (it held only the shaping commit, 293 commits behind). Order stays as L12 set it: T23 and T19 first, then T6 → T18 → T7 → T8; the S17 detach (T20 → T21 → T22) last. Next step: reconcile the Specs against what landed on main since 2026-11-10 (the Engram retirement and memorycard switch, gentle review off globally), then T23.
