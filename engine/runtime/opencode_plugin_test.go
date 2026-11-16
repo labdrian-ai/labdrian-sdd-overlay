@@ -156,8 +156,8 @@ func TestOpenCodePluginIsAV2DefinitionThatRegistersItsHooks(t *testing.T) {
 	if got.ID != "labdrian-runtime-parity" || !got.SetupIsFunction {
 		t.Fatalf("plugin should be Plugin.define({id, setup}) with id labdrian-runtime-parity, got %#v", got)
 	}
-	if strings.Join(got.Hooks, ",") != "execute.after,execute.before" {
-		t.Fatalf("setup should register exactly the tool hooks of the bridge, got %v", got.Hooks)
+	if strings.Join(got.Hooks, ",") != "context,execute.after,execute.before,experimental.idle,prompt" {
+		t.Fatalf("setup should register exactly the hooks of the bridge, got %v", got.Hooks)
 	}
 }
 

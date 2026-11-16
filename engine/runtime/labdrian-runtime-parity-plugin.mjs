@@ -264,8 +264,13 @@ async function askEngine(args, envelope) {
   return { answer: parseAnswer(reply.stdout) };
 }
 
-function unavailableNote(failure) {
-  return `labdrian hooks are not running: ${failure}. The calls of this session are not checked by the memory gate until the engine answers.`;
+// claimUnavailableNote is the note that says the engine does not answer, the first time it is asked for:
+// a session without its hooks must not be taken for one with them, and once is enough. Afterwards it
+// gives nothing.
+function claimUnavailableNote(state, failure) {
+  if (state.unavailableReported) return [];
+  state.unavailableReported = true;
+  return [`labdrian hooks are not running: ${failure}. The calls of this session are not checked by the memory gate until the engine answers.`];
 }
 
 function hookSpecific(answer) {
@@ -293,10 +298,8 @@ function toolEnvelope(event, call) {
 async function gateToolCall(call, state) {
   const reply = await askEngine(["projection", "hook", "--event", "PreToolUse", "--source", ENGINE_SOURCE], toolEnvelope("PreToolUse", call));
   if (reply.failure !== undefined) {
-    if (!state.unavailableReported) {
-      state.unavailableReported = true;
-      state.notes.set(call.id, [unavailableNote(reply.failure)]);
-    }
+    const note = claimUnavailableNote(state, reply.failure);
+    if (note.length > 0) state.notes.set(call.id, note);
     return;
   }
   const specific = hookSpecific(reply.answer);
@@ -316,10 +319,7 @@ async function reportToolResult(call, state) {
     const envelope = { ...toolEnvelope("PostToolUse", call), tool_response: call.result };
     const reply = await askEngine(["projection", "hook", "--event", "PostToolUse", "--source", ENGINE_SOURCE], envelope);
     if (reply.failure !== undefined) {
-      if (!state.unavailableReported) {
-        state.unavailableReported = true;
-        lines.push(unavailableNote(reply.failure));
-      }
+      lines.push(...claimUnavailableNote(state, reply.failure));
     } else {
       for (const line of [textOf(hookSpecific(reply.answer).additionalContext), textOf(reply.answer.systemMessage)]) {
         if (line !== undefined) lines.push(line);
@@ -339,6 +339,108 @@ function appendToResult(result, lines) {
   } else if (typeof result.output === "string") {
     result.output += `\n${text}`;
   }
+}
+
+// --- the session events ---------------------------------------------------------------------
+//
+// OpenCode has no hook that answers with text for the model, so what the engine says at the start of
+// a session and at a prompt reaches the model through the `context` hook, which runs before each model
+// call and lets the plugin push text parts onto the system prompt. It reaches main and child sessions
+// alike (L10 T3).
+
+const ENGINE_STOP_ARGS = ["review", "stop-hook"];
+const STOP_DESCRIPTION = "labdrian stop hook";
+const STOP_FALLBACK_REASON = "a stop hook blocked this stop.";
+
+// sessionState is what the bridge keeps of one session: the SessionStart block it asked for (one
+// question for the whole session), what the last prompt's answer said, and whether the last stop was
+// blocked (Claude Code's stop_hook_active, which a prompt of the user clears).
+function sessionState(state, sessionID) {
+  let session = state.sessions.get(sessionID);
+  if (session === undefined) {
+    session = { start: undefined, promptLines: [], continuing: false };
+    state.sessions.set(sessionID, session);
+  }
+  return session;
+}
+
+function sessionEnvelope(event, sessionID) {
+  return { hook_event_name: event, session_id: sessionID, cwd: process.cwd() };
+}
+
+// linesOf is what an answer says to the model: the warning, then the context; or, when the engine did
+// not answer, the note that says so (once).
+function linesOf(reply, state) {
+  if (reply.failure !== undefined) return claimUnavailableNote(state, reply.failure);
+  return [textOf(reply.answer.systemMessage), textOf(hookSpecific(reply.answer).additionalContext)].filter((line) => line !== undefined);
+}
+
+// promptSubmitted is the UserPromptSubmit: the answer is kept until the next prompt of the session,
+// which answers for itself.
+async function promptSubmitted(event, state) {
+  const session = sessionState(state, event.sessionID);
+  session.continuing = false;
+  const text = isRecord(event.prompt) && typeof event.prompt.text === "string" ? event.prompt.text : "";
+  const reply = await askEngine(
+    ["projection", "hook", "--event", "UserPromptSubmit", "--source", ENGINE_SOURCE],
+    { ...sessionEnvelope("UserPromptSubmit", event.sessionID), prompt: text },
+  );
+  session.promptLines = linesOf(reply, state);
+}
+
+// askSessionStart asks the SessionStart once for a session; the answer is the same promise for every
+// later model call of the session.
+async function askSessionStart(sessionID, state) {
+  const reply = await askEngine(
+    ["projection", "hook", "--event", "SessionStart", "--source", ENGINE_SOURCE],
+    sessionEnvelope("SessionStart", sessionID),
+  );
+  if (reply.failure !== undefined) return claimUnavailableNote(state, reply.failure);
+  return [textOf(hookSpecific(reply.answer).additionalContext)].filter((line) => line !== undefined);
+}
+
+// contextRequested runs before each model call of a session: the SessionStart block and the answer to
+// the last prompt join the system prompt, as parts of type text (the shape OpenCode's own plugins push).
+async function contextRequested(event, state) {
+  if (!Array.isArray(event.system)) return;
+  const session = sessionState(state, event.sessionID);
+  if (session.start === undefined) session.start = askSessionStart(event.sessionID, state);
+  for (const text of [...(await session.start), ...session.promptLines]) {
+    event.system.push({ type: "text", text });
+  }
+}
+
+// sessionIdle is the Stop: when the engine blocks the stop, its reason is sent to the session as a
+// synthetic message, which makes the agent take another turn (the experimental idle hook, L10 T3). An
+// engine that does not answer lets the session stop, as a failing Stop hook does in Claude Code.
+async function sessionIdle(event, ctx, state) {
+  const session = sessionState(state, event.sessionID);
+  const reply = await askEngine(ENGINE_STOP_ARGS, { ...sessionEnvelope("Stop", event.sessionID), stop_hook_active: session.continuing });
+  if (reply.failure !== undefined || reply.answer.decision !== "block") {
+    session.continuing = false;
+    return;
+  }
+  session.continuing = true;
+  await ctx.session.synthetic({
+    sessionID: event.sessionID,
+    text: textOf(reply.answer.reason) ?? STOP_FALLBACK_REASON,
+    description: STOP_DESCRIPTION,
+  });
+}
+
+// registerSessionHooks hooks the three session events. A hook that fails must not break the session.
+async function registerSessionHooks(ctx, state) {
+  const guarded = (handler) => async (event) => {
+    if (!isRecord(event) || typeof event.sessionID !== "string") return;
+    try {
+      await handler(event);
+    } catch {
+      // The bridge fails open: a session event that cannot be bridged is not worth the session.
+    }
+  };
+  await ctx.session.hook("prompt", guarded((event) => promptSubmitted(event, state)));
+  await ctx.session.hook("context", guarded((event) => contextRequested(event, state)));
+  await ctx.session.hook("experimental.idle", guarded((event) => sessionIdle(event, ctx, state)));
 }
 
 // registerToolHooks hooks the PreToolUse gate and the contract injection into tool calls, and the
@@ -369,8 +471,10 @@ export default Plugin.define({
     const config = JSON.parse(await readFile(join(configRoot, "labdrian-runtime-parity.json"), "utf8"));
 
     await recordActive(pluginPath, configRoot, config);
-    // notes are what the bridge owes the model about a call, by call id; unavailableReported is whether
-    // it has already said the engine does not answer.
-    await registerToolHooks(ctx, config, { notes: new Map(), unavailableReported: false });
+    // notes are what the bridge owes the model about a call, by call id; sessions is what it keeps of
+    // each session; unavailableReported is whether it has already said the engine does not answer.
+    const state = { notes: new Map(), sessions: new Map(), unavailableReported: false };
+    await registerToolHooks(ctx, config, state);
+    await registerSessionHooks(ctx, state);
   },
 });

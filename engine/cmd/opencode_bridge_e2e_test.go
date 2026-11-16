@@ -59,6 +59,12 @@ func bridgeConfigRoot(t *testing.T) string {
 // ctx.session.synthetic), and returns what body printed.
 func bridgeRun(t *testing.T, w phase7World, pluginPath, body string) []byte {
 	t.Helper()
+	return bridgeRunIn(t, w.binary, w.repo, w.env(), pluginPath, body)
+}
+
+// bridgeRunIn is bridgeRun for the engine binary run in dir with env.
+func bridgeRunIn(t *testing.T, binary, dir string, env []string, pluginPath, body string) []byte {
+	t.Helper()
 	script := `const plugin = (await import(` + jsonString(t, "file://"+pluginPath) + `)).default;
 const hooks = new Map();
 const synthetic = [];
@@ -70,8 +76,8 @@ await plugin.setup({ tool: { hook }, session: { hook, synthetic: async (input) =
 		t.Fatal(err)
 	}
 	command := exec.Command("node", scriptPath)
-	command.Dir = w.repo
-	command.Env = append(w.env(), "LABDRIAN_ENGINE_BINARY="+w.binary)
+	command.Dir = dir
+	command.Env = append(append([]string{}, env...), "LABDRIAN_ENGINE_BINARY="+binary)
 	out, err := command.Output()
 	if err != nil {
 		if ee, ok := err.(*exec.ExitError); ok {

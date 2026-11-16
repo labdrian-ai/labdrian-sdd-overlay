@@ -1160,6 +1160,10 @@ gentle-ai-overlay projection hook --event UserPromptSubmit|PreToolUse|SessionSta
     engine answers to the result the model reads. The plugin runs the engine named by `LABDRIAN_ENGINE_BINARY`, else
     ~/.claude/bin/gentle-ai-overlay; when it cannot run (missing, too old, no answer in 30 seconds) the call goes
     through, as a hook that fails does in Claude Code, and the result of the first call says the hooks are not running.
+    The session events go the same way: `prompt` asks UserPromptSubmit, `context` (which runs before each model call)
+    asks SessionStart once for each session and pushes its block, and the last prompt's answer, onto the system prompt
+    as text parts, and `experimental.idle` asks `review stop-hook` (projection hook has no Stop) and, when the engine
+    blocks the stop, sends its reason to the session as a synthetic message so that the agent takes another turn.
     Internal hook command (Phase 7): Claude Code is meant to run it before each prompt (UserPromptSubmit),
     before each tool call (PreToolUse), when a session starts (SessionStart) and after a memory read has run (PostToolUse); a person does
     not. There is no `overlay projection` wrapper, so it runs on the installed engine binary,
