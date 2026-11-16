@@ -36,7 +36,7 @@ func reorderedClaudeEntry(binary string) []byte {
 
 // reorderedOpencodeEntry is the opencode twin of reorderedClaudeEntry.
 func reorderedOpencodeEntry(binary string) []byte {
-	return []byte(`{"enabled":true,  "command": [` + mustJSONString(binary) + `, "mcp"],
+	return []byte(`{"codemode":true,  "command": [` + mustJSONString(binary) + `, "mcp"],
       "type": "local"}`)
 }
 
@@ -134,7 +134,7 @@ func TestOpencode_LostInstallStateAdoptsAKeyReorderedEntry(t *testing.T) {
 	if err := c.register(dir, stateDir, c.binary1); err != nil {
 		t.Fatalf("%s: first install returned error: %v", c.target, err)
 	}
-	written, err := json.Marshal(opencodeEntry{Type: "local", Command: []string{c.binary1, "mcp"}, Enabled: true})
+	written, err := json.Marshal(opencodeEntry{Type: "local", Command: []string{c.binary1, "mcp"}, Codemode: true})
 	if err != nil {
 		t.Fatalf("marshal the entry register writes: %v", err)
 	}

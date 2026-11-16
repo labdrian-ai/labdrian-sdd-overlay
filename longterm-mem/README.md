@@ -67,7 +67,8 @@ loop above, `install` calls `longterm-mem register --target <t>` per
 requested target, which writes the MCP entry into that runtime's own config
 file (`~/.claude.json`, `opencode.json`, `config.toml`), and `uninstall`
 calls `longterm-mem unregister`. Both are ownership-tagged, idempotent, and
-refuse an untagged same-named entry. The only planned module-owned
+refuse an untagged same-named entry.
+For `opencode` the entry is OpenCode v2's `mcp.servers.longterm-mem` (`{"type":"local","command":["<bin>","mcp"],"codemode":true}`); `register` also removes the 1.x `mcp.longterm-mem` entry an earlier version wrote, only when it is that entry (recorded in install-state, or equal to the 1.x entry of this binary), and `unregister` removes it only when install-state recorded it. Any other `mcp.longterm-mem` is left as it is. The only planned module-owned
 subcommand that does not exist yet is `vaults` (direct management of
 `vaults.json` seeding); registry seeding is lazy and belongs to the commands that write: the first `sync`
 (without `--dry-run`), `promote`, `promote reconcile` or `index`, or the MCP `promote` tool, that has to find a

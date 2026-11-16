@@ -2,6 +2,6 @@
   "$schema": "https://opencode.ai/config.json",
   "theme": "system",
   "mcp": {
-    "longterm-mem": {"type":"local","command":["/opt/labdrian-overlay/bin/longterm-mem","mcp"],"enabled":true}
+    "servers": {"longterm-mem":{"type":"local","command":["/opt/labdrian-overlay/bin/longterm-mem","mcp"],"codemode":true}}
   }
 }

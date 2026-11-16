@@ -7,4 +7,4 @@ longterm-mem: register: opencode: <home>/xdg/opencode/opencode.json: an entry wi
 longterm-mem: register: codex: could not resolve a config root; set HOME or pass --config-root
 --- machine ---
 === xdg/opencode/opencode.json ===
-{"mcp": {"longterm-mem": {"type": "local", "command": ["/someone/elses/binary", "mcp"]}}}
+{"mcp": {"servers": {"longterm-mem": {"type": "local", "command": ["/someone/elses/binary", "mcp"]}}}}

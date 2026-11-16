@@ -1,11 +1,13 @@
 {
   "mcp": {
-    "other-tool": {
-      "type": "local",
-      "command": ["/usr/local/bin/other-tool", "serve"],
-      "enabled": true
-    },
-    "longterm-mem": {"type":"local","command":["/opt/labdrian-overlay/bin/longterm-mem-v2","mcp"],"enabled":true}
+    "servers": {
+      "other-tool": {
+        "type": "local",
+        "command": ["/usr/local/bin/other-tool", "serve"],
+        "codemode": false
+      },
+      "longterm-mem": {"type":"local","command":["/opt/labdrian-overlay/bin/longterm-mem-v2","mcp"],"codemode":true}
+    }
   },
   "theme": "dark"
 }

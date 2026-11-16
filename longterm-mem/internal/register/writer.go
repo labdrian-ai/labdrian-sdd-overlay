@@ -368,6 +368,9 @@ func (w Writer) installWithRollback(target, configPath, label, stateDir string, 
 // config file that does not exist yet, or that has no containerKey or
 // memberKey, is not an error — it just means the entry is not present.
 func readMember(path, containerKey, memberKey string) (json.RawMessage, bool, error) {
+	if outer, inner, nested := splitContainer(containerKey); nested {
+		return readNestedMember(path, outer, inner, memberKey)
+	}
 	raw, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {

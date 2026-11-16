@@ -62,7 +62,7 @@ func (f longtermMemFixture) writeClaudeEntry(t *testing.T) {
 
 func (f longtermMemFixture) writeOpenCodeEntry(t *testing.T) {
 	t.Helper()
-	content := `{"mcp":{"longterm-mem":{"type":"local","command":["` + f.binaryPath + `","mcp"],"enabled":true}}}`
+	content := `{"mcp":{"servers":{"longterm-mem":{"type":"local","command":["` + f.binaryPath + `","mcp"],"codemode":true}}}}`
 	if err := os.WriteFile(f.openCodePath, []byte(content), 0o644); err != nil {
 		t.Fatalf("write opencode config: %v", err)
 	}
@@ -95,7 +95,7 @@ func (f longtermMemFixture) writeClaudeConfigWithoutEntry(t *testing.T) {
 
 func (f longtermMemFixture) writeOpenCodeConfigWithoutEntry(t *testing.T) {
 	t.Helper()
-	writeFile(t, f.openCodePath, `{"mcp":{"other-tool":{"type":"local","command":["/other"]}}}`)
+	writeFile(t, f.openCodePath, `{"mcp":{"servers":{"other-tool":{"type":"local","command":["/other"]}}}}`)
 }
 
 func (f longtermMemFixture) writeCodexConfigWithoutEntry(t *testing.T) {
@@ -116,7 +116,7 @@ func (f longtermMemFixture) writeForeignClaudeEntry(t *testing.T) {
 
 func (f longtermMemFixture) writeForeignOpenCodeEntry(t *testing.T) {
 	t.Helper()
-	writeFile(t, f.openCodePath, `{"mcp":{"longterm-mem":{"type":"local","command":["`+foreignBinary+`","mcp"],"enabled":true}}}`)
+	writeFile(t, f.openCodePath, `{"mcp":{"servers":{"longterm-mem":{"type":"local","command":["`+foreignBinary+`","mcp"],"codemode":true}}}}`)
 }
 
 func (f longtermMemFixture) writeForeignCodexEntry(t *testing.T) {
@@ -302,6 +302,18 @@ func TestLongtermMemAdapter_RecordWithoutEntryStillReportsDrift(t *testing.T) {
 // recorded, AND it must still be observed as PRESENT. If presence itself
 // required ownership, a foreign entry would collapse into "no record, no
 // entry" and be reported as a healthy "not registered" — which hides it.
+func TestLongtermMemAdapter_OpenCode1xEntryStillReadAsOurOwn(t *testing.T) {
+	f := newLongtermMemFixture(t)
+	f.writeExecutableBinary(t)
+	writeFile(t, f.openCodePath, `{"mcp":{"longterm-mem":{"type":"local","command":["`+f.binaryPath+`","mcp"],"enabled":true}}}`)
+
+	install := f.adapter().Install()
+
+	if got := registrationTargets(t, f.stateDir); !got["opencode"] {
+		t.Fatalf("an opencode 1.x entry this overlay wrote was not recognised as ours; targets=%v reasons=%v", got, install.Reasons)
+	}
+}
+
 func TestLongtermMemAdapter_ForeignEntryIsNeverAdoptedAsOurOwn(t *testing.T) {
 	f := newLongtermMemFixture(t)
 	f.writeExecutableBinary(t)

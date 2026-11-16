@@ -23,7 +23,7 @@ func WriteMember(path, containerKey, memberKey string, newValue json.RawMessage)
 		return fmt.Errorf("read %s: %w", path, err)
 	}
 
-	spliced, err := Splice(raw, containerKey, memberKey, newValue)
+	spliced, err := spliceAny(raw, containerKey, memberKey, newValue)
 	if err != nil {
 		return fmt.Errorf("splice %s: %w", path, err)
 	}
@@ -49,7 +49,7 @@ func RemoveMember(path, containerKey, memberKey string) error {
 		return fmt.Errorf("read %s: %w", path, err)
 	}
 
-	removed, err := Remove(raw, containerKey, memberKey)
+	removed, err := removeAny(raw, containerKey, memberKey)
 	if err != nil {
 		return fmt.Errorf("remove from %s: %w", path, err)
 	}
@@ -69,6 +69,16 @@ func RemoveMember(path, containerKey, memberKey string) error {
 // gated the caller before this runs, so raw is known-valid JSON by this
 // point.
 func jsonMemberPresent(raw []byte, containerKey, memberKey string) bool {
+	if outer, inner, nested := splitContainer(containerKey); nested {
+		var doc, container, members map[string]json.RawMessage
+		if json.Unmarshal(raw, &doc) != nil ||
+			json.Unmarshal(doc[outer], &container) != nil ||
+			json.Unmarshal(container[inner], &members) != nil {
+			return false
+		}
+		_, present := members[memberKey]
+		return present
+	}
 	var doc map[string]json.RawMessage
 	if err := json.Unmarshal(raw, &doc); err != nil {
 		return false

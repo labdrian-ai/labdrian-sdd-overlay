@@ -1,9 +1,11 @@
 {
   "mcp": {
-    "other-tool": {
-      "type": "local",
-      "command": ["/usr/local/bin/other-tool", "serve"],
-      "enabled": true
+    "servers": {
+      "other-tool": {
+        "type": "local",
+        "command": ["/usr/local/bin/other-tool", "serve"],
+        "codemode": false
+      }
     }
   },
   "theme": "dark"

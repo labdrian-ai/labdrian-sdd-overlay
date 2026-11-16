@@ -65,7 +65,7 @@ const (
 
 	// registerForeignClaude holds an entry of the name longterm-mem registers under that longterm-mem did not write.
 	registerForeignClaude   = `{"mcpServers": {"longterm-mem": {"type": "stdio", "command": "/someone/elses/binary", "args": ["mcp"]}}}` + "\n"
-	registerForeignOpencode = `{"mcp": {"longterm-mem": {"type": "local", "command": ["/someone/elses/binary", "mcp"]}}}` + "\n"
+	registerForeignOpencode = `{"mcp": {"servers": {"longterm-mem": {"type": "local", "command": ["/someone/elses/binary", "mcp"]}}}}` + "\n"
 )
 
 // registerFiles puts the configuration of the runtimes a machine has on it.

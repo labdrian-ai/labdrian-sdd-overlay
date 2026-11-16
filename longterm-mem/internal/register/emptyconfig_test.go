@@ -26,6 +26,22 @@ import (
 // spaces carries exactly as much configuration as one holding nothing,
 // and a fix that keys on len(raw)==0 leaves the identical failure standing
 // one keystroke away.
+// memberAt resolves a container key ("mcpServers", or "mcp/servers" for
+// opencode v2) to its object.
+func memberAt(t *testing.T, doc map[string]json.RawMessage, key string) map[string]json.RawMessage {
+	t.Helper()
+	parts := strings.Split(key, "/")
+	cur := doc
+	for _, p := range parts {
+		var next map[string]json.RawMessage
+		if err := json.Unmarshal(cur[p], &next); err != nil {
+			t.Fatalf("%q is not an object: %v", key, err)
+		}
+		cur = next
+	}
+	return cur
+}
+
 func TestRegister_EmptyJSONConfigIsInstalledInto(t *testing.T) {
 	cases := []struct {
 		name         string
@@ -57,11 +73,11 @@ func TestRegister_EmptyJSONConfigIsInstalledInto(t *testing.T) {
 			if err != nil {
 				t.Fatalf("read config back: %v", err)
 			}
-			var doc map[string]map[string]json.RawMessage
+			var doc map[string]json.RawMessage
 			if err := json.Unmarshal(raw, &doc); err != nil {
 				t.Fatalf("register produced a config that is not a JSON object: %v\n%s", err, raw)
 			}
-			if _, ok := doc[tc.containerKey]["longterm-mem"]; !ok {
+			if _, ok := memberAt(t, doc, tc.containerKey)["longterm-mem"]; !ok {
 				t.Fatalf("register reported success but wrote no %s.longterm-mem entry:\n%s", tc.containerKey, raw)
 			}
 			if !strings.Contains(string(raw), "/usr/local/bin/longterm-mem") {

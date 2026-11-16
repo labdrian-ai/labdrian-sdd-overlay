@@ -93,13 +93,23 @@ func (a LongtermMemAdapter) observeOpenCode(binaryPresent bool) longtermMemObser
 	}
 	obs.rootResolvable = true
 	obs.runtimePresent = runtimeConfigFileExists(a.OpenCodeConfigPath)
-	present, fingerprint, err := jsonMemberFingerprint(a.OpenCodeConfigPath, "mcp", "longterm-mem")
+	// opencode v2 keeps servers under mcp.servers; the 1.x shape (mcp.longterm-mem)
+	// is still read so an entry register has not migrated yet is not reported absent.
+	present, fingerprint, err := jsonNestedMemberFingerprint(a.OpenCodeConfigPath, "mcp", "servers", "longterm-mem")
 	if err != nil {
 		return obs
 	}
+	owned := a.ownedOpenCodeFingerprint()
+	if !present {
+		present, fingerprint, err = jsonMemberFingerprint(a.OpenCodeConfigPath, "mcp", "longterm-mem")
+		if err != nil {
+			return obs
+		}
+		owned = a.ownedOpenCodeLegacyFingerprint()
+	}
 	obs.entryPresent = present
 	obs.entryFingerprint = fingerprint
-	obs.entryOwned = present && fingerprint == a.ownedOpenCodeFingerprint()
+	obs.entryOwned = present && fingerprint == owned
 	return obs
 }
 
@@ -176,9 +186,17 @@ type ownedClaudeEntry struct {
 	Args    []string `json:"args"`
 }
 
-// ownedOpenCodeEntry mirrors register.opencodeEntry — opencode's own
+// ownedOpenCodeEntry mirrors register.opencodeEntry (opencode v2) — opencode's own
 // single-argument-list command shape, unlike claude's command/args split.
 type ownedOpenCodeEntry struct {
+	Type     string   `json:"type"`
+	Command  []string `json:"command"`
+	Codemode bool     `json:"codemode"`
+}
+
+// ownedOpenCodeLegacyEntry mirrors register.opencodeLegacyEntry, the opencode
+// 1.x shape register migrates away from.
+type ownedOpenCodeLegacyEntry struct {
 	Type    string   `json:"type"`
 	Command []string `json:"command"`
 	Enabled bool     `json:"enabled"`
@@ -192,7 +210,11 @@ func (a LongtermMemAdapter) ownedClaudeFingerprint() string {
 }
 
 func (a LongtermMemAdapter) ownedOpenCodeFingerprint() string {
-	return a.ownedJSONFingerprint(ownedOpenCodeEntry{Type: "local", Command: []string{a.BinaryPath, "mcp"}, Enabled: true})
+	return a.ownedJSONFingerprint(ownedOpenCodeEntry{Type: "local", Command: []string{a.BinaryPath, "mcp"}, Codemode: true})
+}
+
+func (a LongtermMemAdapter) ownedOpenCodeLegacyFingerprint() string {
+	return a.ownedJSONFingerprint(ownedOpenCodeLegacyEntry{Type: "local", Command: []string{a.BinaryPath, "mcp"}, Enabled: true})
 }
 
 // ownedCodexFingerprint mirrors tomlSectionFingerprint's own hashed value:
@@ -254,6 +276,32 @@ func jsonMemberFingerprint(path, section, key string) (present bool, fingerprint
 		return false, "", nil
 	}
 	entry, ok := sectionMap[key]
+	if !ok {
+		return false, "", nil
+	}
+	encoded, err := json.Marshal(entry)
+	if err != nil {
+		return false, "", err
+	}
+	return true, sha256hex.Sum(encoded), nil
+}
+
+// jsonNestedMemberFingerprint is jsonMemberFingerprint for
+// object[outer][inner][key] (opencode v2's mcp.servers.<name>).
+func jsonNestedMemberFingerprint(path, outer, inner, key string) (present bool, fingerprint string, err error) {
+	obj, err := readJSONObjectOrNil(path)
+	if err != nil || obj == nil {
+		return false, "", err
+	}
+	outerMap, ok := obj[outer].(map[string]interface{})
+	if !ok {
+		return false, "", nil
+	}
+	innerMap, ok := outerMap[inner].(map[string]interface{})
+	if !ok {
+		return false, "", nil
+	}
+	entry, ok := innerMap[key]
 	if !ok {
 		return false, "", nil
 	}
