@@ -460,6 +460,14 @@ func withoutEntriesAddedSinceTheRecording(t *testing.T, label, text string, merg
 	if merged && guards != 1 {
 		t.Errorf("%s: %d builder guard entries, want the one a merge writes", label, guards)
 	}
+	// The top-level "agent": "foreman" key (S6, T7) is not in the recording either: a file a merge just wrote holds it
+	// once, at the indent of the top level, and the recorded file never had it.
+	const agentLine = "\n  \"agent\": \"" + settings.MainAgentName + "\""
+	if at := strings.Index(text, agentLine); at >= 0 {
+		text = cutWithComma(t, label+": the agent key", text, at, at+len(agentLine))
+	} else if merged {
+		t.Errorf("%s: no \"agent\": \"foreman\" key, want the one a merge writes", label)
+	}
 	return text
 }
 

@@ -65,6 +65,9 @@ func mergeHooks(root map[string]interface{}, hookCommand string) bool {
 	if addClearanceDenyRule(root) {
 		changed = true
 	}
+	if addMainAgent(root) {
+		changed = true
+	}
 	root["hooks"] = hooks
 	return changed
 }
@@ -96,12 +99,12 @@ func addClearanceDenyRule(root map[string]interface{}) bool {
 // nothing else was ever installed there, and an entry of another family that an
 // older version left on Stop stays, as it always has.
 func removeHooks(root map[string]interface{}, hookCommand string) bool {
+	changed := removeMainAgent(root)
 	hooks, ok := root["hooks"].(map[string]interface{})
 	if !ok {
-		return false
+		return changed
 	}
 
-	changed := false
 	for _, key := range []string{"UserPromptSubmit", "PreToolUse", "SessionEnd", "SessionStart", "PostToolUse", "Stop"} {
 		entries, ok := hooks[key].([]interface{})
 		if !ok {
