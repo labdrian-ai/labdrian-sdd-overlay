@@ -5,6 +5,7 @@ package main
 import (
 	"fmt"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings/settingsfile"
 )
 
@@ -49,6 +50,20 @@ func runMergeSettings(p process, args []string) {
 		return
 	}
 	fmt.Fprintln(p.stdout, "merge-settings: hooks installed successfully")
+	noticeForeignMainAgent(p, settingsPath)
+}
+
+// noticeForeignMainAgent says on stderr when the settings hold an "agent" key with a value other than
+// the foreman's: the install leaves it as it is, so the foreman main session is not enabled, and a
+// silent success would hide that. The install still succeeds (exit 0). A file that cannot be read
+// again says nothing: the install has just read and written it.
+func noticeForeignMainAgent(p process, settingsPath string) {
+	doc, _, err := (settingsfile.File{Path: settingsPath}).Read()
+	if err != nil || settings.MainAgent(doc.Root()) != settings.MainAgentConflict {
+		return
+	}
+	fmt.Fprintf(p.stderr, "notice: settings.json holds \"agent\": %s; it was left as it is, so the foreman main session was not enabled (set it to %q or remove the key, then run install-hooks again)\n",
+		settings.MainAgentValueJSON(doc.Root()), settings.MainAgentName)
 }
 
 // runUninstallHooks implements the 'uninstall-hooks' subcommand.

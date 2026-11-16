@@ -1,9 +1,15 @@
 package settings
 
+import (
+	"encoding/json"
+	"fmt"
+)
+
 // MainAgentKey is the top-level settings key that makes a Claude Code main session run as a named
 // agent from ~/.claude/agents, and MainAgentName is the one value the overlay owns: the foreman.
 // Any other value of the key belongs to someone else: Merge leaves it alone, Remove keeps it, and
-// status reports the conflict (S6).
+// status reports the conflict (S6). Ownership is by value alone: "foreman" names the agent file this
+// overlay installs, so an uninstall that removes that agent must not leave the key pointing at it.
 const (
 	MainAgentKey  = "agent"
 	MainAgentName = "foreman"
@@ -20,6 +26,20 @@ const (
 	// MainAgentConflict: the key holds another value, which is not ours to change.
 	MainAgentConflict
 )
+
+// MainAgentValueJSON is the value of the key in root as JSON, for a message that names it: a string
+// in quotes, anything else as it would be written in the file. It is empty when the key is absent.
+func MainAgentValueJSON(root map[string]interface{}) string {
+	v, ok := root[MainAgentKey]
+	if !ok {
+		return ""
+	}
+	data, err := json.Marshal(v)
+	if err != nil {
+		return fmt.Sprintf("%v", v)
+	}
+	return string(data)
+}
 
 // MainAgent reports the state of the main-session agent key in root.
 func MainAgent(root map[string]interface{}) MainAgentState {

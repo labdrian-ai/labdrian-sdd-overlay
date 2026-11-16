@@ -12,7 +12,7 @@ exit: 1
 [WARN] guard: skills approve (PreToolUse Bash + file tools) — missing or drifted: PreToolUse matcher="Bash" skills guard-hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" skills guard-hook; the agent can run skills approve unguarded (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
 [WARN] hook: Stop (review stop-hook) — missing or drifted: Stop review stop-hook; the agent is not asked to review its commits when it stops; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
 [WARN] hook: PreToolUse matcher="Agent" (builder guard) — missing or drifted: PreToolUse matcher="Agent" roles builder-guard; a builder launch is not checked for a task the shaper designed (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
-[WARN] settings: "agent" (main session runs as the foreman) — "agent" key missing in <WORLD>/home/.claude/settings.json; the main session does not run as the foreman; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[WARN] settings: "agent" (main session runs as the foreman) — "agent" key missing in <WORLD>/home/.claude/settings.json; the main session does not run as the foreman; run 'labdrian install-hooks'; restart Claude Code to load hook changes
 [OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
 [OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
 --- stderr ---
@@ -31,7 +31,7 @@ exit: 1
 [WARN] guard: skills approve (PreToolUse Bash + file tools) — missing or drifted: PreToolUse matcher="Bash" skills guard-hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" skills guard-hook; the agent can run skills approve unguarded (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
 [WARN] hook: Stop (review stop-hook) — missing or drifted: Stop review stop-hook; the agent is not asked to review its commits when it stops; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
 [WARN] hook: PreToolUse matcher="Agent" (builder guard) — missing or drifted: PreToolUse matcher="Agent" roles builder-guard; a builder launch is not checked for a task the shaper designed (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
-[WARN] settings: "agent" (main session runs as the foreman) — "agent" key missing in <WORLD>/home/.claude/settings.json; the main session does not run as the foreman; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[WARN] settings: "agent" (main session runs as the foreman) — "agent" key missing in <WORLD>/home/.claude/settings.json; the main session does not run as the foreman; run 'labdrian install-hooks'; restart Claude Code to load hook changes
 [OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
 [OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
 --- stderr ---
@@ -50,7 +50,7 @@ exit: 1
 [WARN] guard: skills approve (PreToolUse Bash + file tools) — missing or drifted: PreToolUse matcher="Bash" skills guard-hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" skills guard-hook; the agent can run skills approve unguarded (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
 [WARN] hook: Stop (review stop-hook) — missing or drifted: Stop review stop-hook; the agent is not asked to review its commits when it stops; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
 [WARN] hook: PreToolUse matcher="Agent" (builder guard) — missing or drifted: PreToolUse matcher="Agent" roles builder-guard; a builder launch is not checked for a task the shaper designed (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
-[WARN] settings: "agent" (main session runs as the foreman) — "agent" key missing in <WORLD>/home/.claude/settings.json; the main session does not run as the foreman; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[WARN] settings: "agent" (main session runs as the foreman) — "agent" key missing in <WORLD>/home/.claude/settings.json; the main session does not run as the foreman; run 'labdrian install-hooks'; restart Claude Code to load hook changes
 [OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
 [OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
 --- stderr ---
@@ -69,7 +69,7 @@ exit: 1
 [WARN] guard: skills approve (PreToolUse Bash + file tools) — missing or drifted: PreToolUse matcher="Bash" skills guard-hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" skills guard-hook; the agent can run skills approve unguarded (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
 [WARN] hook: Stop (review stop-hook) — missing or drifted: Stop review stop-hook; the agent is not asked to review its commits when it stops; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
 [WARN] hook: PreToolUse matcher="Agent" (builder guard) — missing or drifted: PreToolUse matcher="Agent" roles builder-guard; a builder launch is not checked for a task the shaper designed (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
-[WARN] settings: "agent" (main session runs as the foreman) — "agent" key missing in <WORLD>/home/.claude/settings.json; the main session does not run as the foreman; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[WARN] settings: "agent" (main session runs as the foreman) — "agent" key missing in <WORLD>/home/.claude/settings.json; the main session does not run as the foreman; run 'labdrian install-hooks'; restart Claude Code to load hook changes
 [OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
 [OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
 --- stderr ---
@@ -88,7 +88,7 @@ exit: 1
 [WARN] guard: skills approve (PreToolUse Bash + file tools) — missing or drifted: PreToolUse matcher="Bash" skills guard-hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" skills guard-hook; the agent can run skills approve unguarded (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
 [WARN] hook: Stop (review stop-hook) — missing or drifted: Stop review stop-hook; the agent is not asked to review its commits when it stops; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
 [WARN] hook: PreToolUse matcher="Agent" (builder guard) — missing or drifted: PreToolUse matcher="Agent" roles builder-guard; a builder launch is not checked for a task the shaper designed (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
-[WARN] settings: "agent" (main session runs as the foreman) — "agent" key missing in <WORLD>/home/.claude/settings.json; the main session does not run as the foreman; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[WARN] settings: "agent" (main session runs as the foreman) — "agent" key missing in <WORLD>/home/.claude/settings.json; the main session does not run as the foreman; run 'labdrian install-hooks'; restart Claude Code to load hook changes
 [OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
 [OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
 --- stderr ---
@@ -107,7 +107,7 @@ exit: 1
 [WARN] guard: skills approve (PreToolUse Bash + file tools) — missing or drifted: PreToolUse matcher="Bash" skills guard-hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" skills guard-hook; the agent can run skills approve unguarded (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
 [WARN] hook: Stop (review stop-hook) — missing or drifted: Stop review stop-hook; the agent is not asked to review its commits when it stops; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
 [WARN] hook: PreToolUse matcher="Agent" (builder guard) — missing or drifted: PreToolUse matcher="Agent" roles builder-guard; a builder launch is not checked for a task the shaper designed (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
-[WARN] settings: "agent" (main session runs as the foreman) — "agent" key missing in <WORLD>/home/.claude/settings.json; the main session does not run as the foreman; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[WARN] settings: "agent" (main session runs as the foreman) — "agent" key missing in <WORLD>/home/.claude/settings.json; the main session does not run as the foreman; run 'labdrian install-hooks'; restart Claude Code to load hook changes
 [OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
 [OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
 --- stderr ---
@@ -126,7 +126,7 @@ exit: 1
 [WARN] guard: skills approve (PreToolUse Bash + file tools) — missing or drifted: PreToolUse matcher="Bash" skills guard-hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" skills guard-hook; the agent can run skills approve unguarded (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
 [WARN] hook: Stop (review stop-hook) — missing or drifted: Stop review stop-hook; the agent is not asked to review its commits when it stops; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
 [WARN] hook: PreToolUse matcher="Agent" (builder guard) — missing or drifted: PreToolUse matcher="Agent" roles builder-guard; a builder launch is not checked for a task the shaper designed (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
-[WARN] settings: "agent" (main session runs as the foreman) — "agent" key missing in <WORLD>/home/.claude/settings.json; the main session does not run as the foreman; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[WARN] settings: "agent" (main session runs as the foreman) — "agent" key missing in <WORLD>/home/.claude/settings.json; the main session does not run as the foreman; run 'labdrian install-hooks'; restart Claude Code to load hook changes
 [OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
 [OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
 --- stderr ---
@@ -145,7 +145,7 @@ exit: 1
 [WARN] guard: skills approve (PreToolUse Bash + file tools) — missing or drifted: PreToolUse matcher="Bash" skills guard-hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" skills guard-hook; the agent can run skills approve unguarded (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
 [WARN] hook: Stop (review stop-hook) — missing or drifted: Stop review stop-hook; the agent is not asked to review its commits when it stops; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
 [WARN] hook: PreToolUse matcher="Agent" (builder guard) — missing or drifted: PreToolUse matcher="Agent" roles builder-guard; a builder launch is not checked for a task the shaper designed (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
-[WARN] settings: "agent" (main session runs as the foreman) — "agent" key missing in <WORLD>/home/.claude/settings.json; the main session does not run as the foreman; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[WARN] settings: "agent" (main session runs as the foreman) — "agent" key missing in <WORLD>/home/.claude/settings.json; the main session does not run as the foreman; run 'labdrian install-hooks'; restart Claude Code to load hook changes
 [OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
 [OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
 --- stderr ---
@@ -164,7 +164,7 @@ exit: 1
 [WARN] guard: skills approve (PreToolUse Bash + file tools) — missing or drifted: PreToolUse matcher="Bash" skills guard-hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" skills guard-hook; the agent can run skills approve unguarded (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
 [WARN] hook: Stop (review stop-hook) — missing or drifted: Stop review stop-hook; the agent is not asked to review its commits when it stops; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
 [WARN] hook: PreToolUse matcher="Agent" (builder guard) — missing or drifted: PreToolUse matcher="Agent" roles builder-guard; a builder launch is not checked for a task the shaper designed (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
-[WARN] settings: "agent" (main session runs as the foreman) — "agent" key missing in <WORLD>/home/.claude/settings.json; the main session does not run as the foreman; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[WARN] settings: "agent" (main session runs as the foreman) — "agent" key missing in <WORLD>/home/.claude/settings.json; the main session does not run as the foreman; run 'labdrian install-hooks'; restart Claude Code to load hook changes
 [OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
 [OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
 --- stderr ---
@@ -183,7 +183,7 @@ exit: 1
 [WARN] guard: skills approve (PreToolUse Bash + file tools) — missing or drifted: PreToolUse matcher="Bash" skills guard-hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" skills guard-hook; the agent can run skills approve unguarded (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
 [WARN] hook: Stop (review stop-hook) — missing or drifted: Stop review stop-hook; the agent is not asked to review its commits when it stops; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
 [WARN] hook: PreToolUse matcher="Agent" (builder guard) — missing or drifted: PreToolUse matcher="Agent" roles builder-guard; a builder launch is not checked for a task the shaper designed (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
-[WARN] settings: "agent" (main session runs as the foreman) — "agent" key missing in <WORLD>/home/.claude/settings.json; the main session does not run as the foreman; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[WARN] settings: "agent" (main session runs as the foreman) — "agent" key missing in <WORLD>/home/.claude/settings.json; the main session does not run as the foreman; run 'labdrian install-hooks'; restart Claude Code to load hook changes
 [OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
 [OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
 --- stderr ---
@@ -202,7 +202,7 @@ exit: 1
 [WARN] guard: skills approve (PreToolUse Bash + file tools) — missing or drifted: PreToolUse matcher="Bash" skills guard-hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" skills guard-hook; the agent can run skills approve unguarded (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
 [WARN] hook: Stop (review stop-hook) — missing or drifted: Stop review stop-hook; the agent is not asked to review its commits when it stops; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
 [WARN] hook: PreToolUse matcher="Agent" (builder guard) — missing or drifted: PreToolUse matcher="Agent" roles builder-guard; a builder launch is not checked for a task the shaper designed (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
-[WARN] settings: "agent" (main session runs as the foreman) — "agent" key missing in <WORLD>/home/.claude/settings.json; the main session does not run as the foreman; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[WARN] settings: "agent" (main session runs as the foreman) — "agent" key missing in <WORLD>/home/.claude/settings.json; the main session does not run as the foreman; run 'labdrian install-hooks'; restart Claude Code to load hook changes
 [OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
 [OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
 --- stderr ---
@@ -221,7 +221,7 @@ exit: 2
 [WARN] guard: skills approve (PreToolUse Bash + file tools) — missing or drifted: PreToolUse matcher="Bash" skills guard-hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" skills guard-hook; the agent can run skills approve unguarded (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
 [WARN] hook: Stop (review stop-hook) — missing or drifted: Stop review stop-hook; the agent is not asked to review its commits when it stops; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
 [WARN] hook: PreToolUse matcher="Agent" (builder guard) — missing or drifted: PreToolUse matcher="Agent" roles builder-guard; a builder launch is not checked for a task the shaper designed (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
-[WARN] settings: "agent" (main session runs as the foreman) — "agent" key missing in <WORLD>/home/.claude/settings.json; the main session does not run as the foreman; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[WARN] settings: "agent" (main session runs as the foreman) — "agent" key missing in <WORLD>/home/.claude/settings.json; the main session does not run as the foreman; run 'labdrian install-hooks'; restart Claude Code to load hook changes
 [OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
 [OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
 --- stderr ---
@@ -240,7 +240,7 @@ exit: 1
 [WARN] guard: skills approve (PreToolUse Bash + file tools) — missing or drifted: PreToolUse matcher="Bash" skills guard-hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" skills guard-hook; the agent can run skills approve unguarded (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
 [WARN] hook: Stop (review stop-hook) — missing or drifted: Stop review stop-hook; the agent is not asked to review its commits when it stops; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
 [WARN] hook: PreToolUse matcher="Agent" (builder guard) — missing or drifted: PreToolUse matcher="Agent" roles builder-guard; a builder launch is not checked for a task the shaper designed (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
-[WARN] settings: "agent" (main session runs as the foreman) — "agent" key missing in <WORLD>/home/.claude/settings.json; the main session does not run as the foreman; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[WARN] settings: "agent" (main session runs as the foreman) — "agent" key missing in <WORLD>/home/.claude/settings.json; the main session does not run as the foreman; run 'labdrian install-hooks'; restart Claude Code to load hook changes
 [OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
 [OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
 --- stderr ---
@@ -259,7 +259,7 @@ exit: 1
 [WARN] guard: skills approve (PreToolUse Bash + file tools) — missing or drifted: PreToolUse matcher="Bash" skills guard-hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" skills guard-hook; the agent can run skills approve unguarded (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
 [WARN] hook: Stop (review stop-hook) — missing or drifted: Stop review stop-hook; the agent is not asked to review its commits when it stops; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
 [WARN] hook: PreToolUse matcher="Agent" (builder guard) — missing or drifted: PreToolUse matcher="Agent" roles builder-guard; a builder launch is not checked for a task the shaper designed (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
-[WARN] settings: "agent" (main session runs as the foreman) — "agent" key missing in <WORLD>/home/.claude/settings.json; the main session does not run as the foreman; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[WARN] settings: "agent" (main session runs as the foreman) — "agent" key missing in <WORLD>/home/.claude/settings.json; the main session does not run as the foreman; run 'labdrian install-hooks'; restart Claude Code to load hook changes
 [OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
 [OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
 --- stderr ---
@@ -278,7 +278,7 @@ exit: 1
 [WARN] guard: skills approve (PreToolUse Bash + file tools) — missing or drifted: PreToolUse matcher="Bash" skills guard-hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" skills guard-hook; the agent can run skills approve unguarded (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
 [WARN] hook: Stop (review stop-hook) — missing or drifted: Stop review stop-hook; the agent is not asked to review its commits when it stops; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
 [WARN] hook: PreToolUse matcher="Agent" (builder guard) — missing or drifted: PreToolUse matcher="Agent" roles builder-guard; a builder launch is not checked for a task the shaper designed (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
-[WARN] settings: "agent" (main session runs as the foreman) — "agent" key missing in <WORLD>/home/.claude/settings.json; the main session does not run as the foreman; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[WARN] settings: "agent" (main session runs as the foreman) — "agent" key missing in <WORLD>/home/.claude/settings.json; the main session does not run as the foreman; run 'labdrian install-hooks'; restart Claude Code to load hook changes
 [OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
 [OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
 --- stderr ---
@@ -297,7 +297,7 @@ exit: 1
 [WARN] guard: skills approve (PreToolUse Bash + file tools) — missing or drifted: PreToolUse matcher="Bash" skills guard-hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" skills guard-hook; the agent can run skills approve unguarded (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
 [WARN] hook: Stop (review stop-hook) — missing or drifted: Stop review stop-hook; the agent is not asked to review its commits when it stops; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
 [WARN] hook: PreToolUse matcher="Agent" (builder guard) — missing or drifted: PreToolUse matcher="Agent" roles builder-guard; a builder launch is not checked for a task the shaper designed (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
-[WARN] settings: "agent" (main session runs as the foreman) — "agent" key missing in <WORLD>/home/.claude/settings.json; the main session does not run as the foreman; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[WARN] settings: "agent" (main session runs as the foreman) — "agent" key missing in <WORLD>/home/.claude/settings.json; the main session does not run as the foreman; run 'labdrian install-hooks'; restart Claude Code to load hook changes
 [OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
 [OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
 --- stderr ---
