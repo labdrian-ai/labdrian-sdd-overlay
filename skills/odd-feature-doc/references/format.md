@@ -4,6 +4,10 @@
 
 The shaper writes it, the builder works from it, delivery closes it, the foreman tracks it.
 
+## The header
+
+Two or three lines: the objective, the branch, the delivery strategy, the test runner.
+
 ## A task line
 
 The box is the status, the route is `inline` or `delegated`, and the commit is `-` until the task is committed.

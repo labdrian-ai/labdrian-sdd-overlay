@@ -26,12 +26,13 @@ func TestOddFeatureDocSkillGivesTheForemanItsPart(t *testing.T) {
 	if row == nil {
 		t.Fatalf("the Decision Gates table has no foreman row; rows = %v", rows)
 	}
-	for _, fragment := range []string{"`odd/tasks/<feature>.md`", "memorycard mirror `odd/<feature>/tasks`", "the owner's words verbatim", "evidence it observed"} {
+	for _, fragment := range []string{"in the document", "memorycard mirror `odd/<feature>/tasks`", "the owner's words verbatim", "evidence it observed",
+		"header and `L1`", "the owner's request verbatim", "`[x]` and `commit:` of a task"} {
 		if !strings.Contains(row[1], fragment) {
 			t.Errorf("what the foreman writes must say %q; got %q", fragment, row[1])
 		}
 	}
-	for _, fragment := range []string{"write source or tests", "any path outside `odd/tasks/` and the mirror", "a `shaped:` segment"} {
+	for _, fragment := range []string{"write source or tests", "any path outside `odd/tasks/` and the mirror", "a `shaped:` segment", "`## Specs`", "a task line"} {
 		if !strings.Contains(row[2], fragment) {
 			t.Errorf("what the foreman never does must say %q; got %q", fragment, row[2])
 		}

@@ -137,7 +137,7 @@ func TestOddFeatureDocSkillGivesTheFormatOfTheDocument(t *testing.T) {
 	assertRules(t, "odd-feature-doc", "Hard Rules", under["Hard Rules"], []oddRule{
 		{"reads the document up to the Log before acting", []string{"Read the document up to `## Log` before acting", "report which `S#` you covered"}},
 		{"has four parts in order and no other", []string{"Four parts, in this order and no other: a header, `## Specs`, `## Tasks`, `## Log`."}},
-		{"has a header of the objective, the branch, the strategy and the runner", []string{"Header, two or three lines: the objective, the branch, the delivery strategy, the test runner."}},
+		{"has a header of the objective, the branch, the strategy and the runner", []string{"Header, two or three lines.", "header contents"}},
 		{"quotes the user in each spec", []string{"quoted verbatim, in the user's language", "Never summarize a quote", "never add a requirement the user did not ask for", "mark an assumption as an assumption"}},
 		{"has one line per task with its S#, route and commit", []string{"One line per task", "commit `-` until the task is committed", "`references/format.md`"}},
 		{"marks a task the shaper designed with one segment before the commit (own-rdd S14)", []string{"`shaped: L<n>`", "only while the Log has exactly one such entry", "only the shaper writes it", "a task nobody designed has none"}},
