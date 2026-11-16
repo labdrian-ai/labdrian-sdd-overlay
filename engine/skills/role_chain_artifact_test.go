@@ -203,7 +203,7 @@ func roleChainDuties() []roleChainDuty {
 			"`partial` or `blocked`", "`interrupted`", "`resume_reason`",
 		}},
 		{"Triggers", []string{
-			"does installed tool X behave as premise P says", "what is number N", "can X be done within the appetite",
+			"`references/prototyper.md`",
 			"back to the asker", "lookup/spike box",
 			"load the `sweeper` skill",
 			"readability row", "docs, public API, messages or help", "second blind launch", "another `model`", "Risk line",

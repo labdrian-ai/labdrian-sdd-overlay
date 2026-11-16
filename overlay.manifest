@@ -70,8 +70,10 @@ procedural-candidates/SKILL.md custom
 role-chain/SKILL.md custom
 role-chain/references/worktrees.md custom
 role-chain/references/models.md custom
+role-chain/references/prototyper.md custom
 sweeper/SKILL.md custom
 odd-feature-doc/SKILL.md custom
+odd-feature-doc/references/format.md custom
 test-first/SKILL.md custom
 sdd-verify/references/report-format.md managed
 sdd-verify/strict-tdd-verify.md managed
@@ -131,6 +133,7 @@ project-architect/references/architecture-template.md custom
 project-architect/references/blocked-response.md custom
 requirements-from-transcripts/references/output-template.md custom
 requirements-from-transcripts/references/patterns-catalog.md custom
+inception-pipeline/references/chain-entry.md custom
 inception-pipeline/references/closure-feedback.md custom
 inception-pipeline/references/tier-selection.md custom
 skills.registry.yaml custom

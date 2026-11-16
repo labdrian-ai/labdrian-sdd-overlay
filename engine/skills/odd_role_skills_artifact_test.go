@@ -139,8 +139,8 @@ func TestOddFeatureDocSkillGivesTheFormatOfTheDocument(t *testing.T) {
 		{"has four parts in order and no other", []string{"Four parts, in this order and no other: a header, `## Specs`, `## Tasks`, `## Log`."}},
 		{"has a header of the objective, the branch, the strategy and the runner", []string{"Header, two or three lines: the objective, the branch, the delivery strategy, the test runner."}},
 		{"quotes the user in each spec", []string{"quoted verbatim, in the user's language", "Never summarize a quote", "never add a requirement the user did not ask for", "mark an assumption as an assumption"}},
-		{"has one line per task with its S#, route and commit", []string{"`- [ ] T1 — S1-S2 — inline — what it delivers — commit: -`", "The box is the status", "`inline` or `delegated`", "`-` until the task is committed"}},
-		{"marks a task the shaper designed with one segment before the commit (own-rdd S14)", []string{"`shaped: L<n>`", "just before `commit:`", "`- **L<n>** (<date>, shaper)`", "only the shaper writes it", "a task nobody designed has none"}},
+		{"has one line per task with its S#, route and commit", []string{"One line per task", "`-` until the task is committed", "`references/format.md`"}},
+		{"marks a task the shaper designed with one segment before the commit (own-rdd S14)", []string{"`shaped: L<n>`", "just before `commit:`", "its shaper Log entry", "only the shaper writes it", "a task nobody designed has none"}},
 		{"removes the mark when a task is reopened (own-rdd S14, D4)", []string{"Reopening a task removes its `shaped: L<n>` segment", "only the shaper puts it back"}},
 		{"keeps the Log append-only with L1 the request", []string{"The Log is append-only", "`L1` is the user's request, verbatim", "`- **L<n>** (<date>, <who>): ...`", "Never edit, reorder or delete an entry"}},
 		{"treats a requirement change as a new entry, one spec and one task", []string{"A requirement change: append the user's words to the Log, rewrite only the affected `S#`, reopen only its task."}},
@@ -276,7 +276,12 @@ func TestOddRoleSkillsAreDeployedByTheSkillRoutesToClaudeCodexAndPi(t *testing.T
 				found = append(found, row)
 			}
 		}
-		if want := []ManifestRow{{Path: path, Tag: "custom"}}; !reflect.DeepEqual(found, want) {
+		want := []ManifestRow{{Path: path, Tag: "custom"}}
+		if name == "odd-feature-doc" {
+			// the worked examples moved out of the body live in references/format.md (T18, review of b2575e8d)
+			want = append(want, ManifestRow{Path: name + "/references/format.md", Tag: "custom"})
+		}
+		if !reflect.DeepEqual(found, want) {
 			t.Errorf("rows of %s/ = %+v, want exactly %+v", name, found, want)
 			continue
 		}

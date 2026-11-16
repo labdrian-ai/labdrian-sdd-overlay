@@ -35,7 +35,7 @@ func TestInceptionChainEntryRecordRunsThroughTheRolesVerbs(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading the inception-pipeline skill: %v", err)
 	}
-	skill := string(data)
+	skill := inceptionWithChainEntryReference(t, string(data))
 
 	t.Run("the documented first record is accepted and resume reports the estimator next", func(t *testing.T) {
 		for _, problem := range inceptionFirstRecordProblems(t, skill, "estimator") {
@@ -95,6 +95,33 @@ func TestInceptionChainEntryRecordRunsThroughTheRolesVerbs(t *testing.T) {
 			}
 		}
 	})
+}
+
+// inceptionChainEntryReferencePath is the reference that holds the example record the Chain entry
+// points to, and inceptionChainEntryPointer is the line of the Chain entry that points to it.
+const (
+	inceptionChainEntryReferencePath = "../../skills/inception-pipeline/references/chain-entry.md"
+	inceptionChainEntryPointer       = "The first record, as an example: `references/chain-entry.md`."
+)
+
+// inceptionWithChainEntryReference returns skill with the pointer line of its Chain entry replaced by
+// the json block of the reference it names, so that the Chain entry reads as it did when the example
+// stood in the skill and every check below, rot checks included, runs over the combined text.
+func inceptionWithChainEntryReference(t *testing.T, skill string) string {
+	t.Helper()
+	if n := strings.Count(skill, inceptionChainEntryPointer); n != 1 {
+		t.Fatalf("the Chain entry carries the pointer to references/chain-entry.md %d times, want once", n)
+	}
+	ref, err := os.ReadFile(inceptionChainEntryReferencePath)
+	if err != nil {
+		t.Fatalf("reading the chain-entry reference: %v", err)
+	}
+	start := strings.Index(string(ref), "```json\n")
+	end := strings.LastIndex(string(ref), "```")
+	if start < 0 || end <= start {
+		t.Fatal("references/chain-entry.md has no json block")
+	}
+	return strings.Replace(skill, inceptionChainEntryPointer, strings.TrimRight(string(ref)[start:end+3], "\n"), 1)
 }
 
 // inceptionFirstRecordProblems runs the first record the Chain entry of skill documents through
