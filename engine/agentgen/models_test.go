@@ -141,6 +141,25 @@ func TestAMalformedTableIsReportedAsParsingNotReading(t *testing.T) {
 	}
 }
 
+// A table that cannot be used does not hide a role source that cannot be read: Check names both. The roles
+// whose sources were read have nothing to report of their own, since the table is why they have no files.
+func TestAMalformedTableAndAMissingSourceAreReportedTogether(t *testing.T) {
+	root := seededRoot(t)
+	editModels(t, root, func(s string) string { return strings.Replace(s, "| --- | --- | --- | --- |\n", "", 1) })
+	if err := os.Remove(filepath.Join(root, "roles", "builder", "body.md")); err != nil {
+		t.Fatal(err)
+	}
+
+	for verb, err := range map[string]error{"Generate": agentgen.Generate(root), "Check": agentgen.Check(root)} {
+		if err == nil || !strings.Contains(err.Error(), "roles/builder/body.md") || !strings.Contains(err.Error(), modelsRel) || !strings.Contains(err.Error(), "separator") {
+			t.Errorf("%s error = %v, want one naming the missing builder source and the malformed table", verb, err)
+		}
+		if err != nil && strings.Contains(err.Error(), "roles/shaper") {
+			t.Errorf("%s error = %v, names a role whose source was read", verb, err)
+		}
+	}
+}
+
 // The model of a generated file is the table's, not a constant of the generator: another id in the
 // table reaches the Claude and Pi files of exactly the roles of that tier, and the Codex files, which
 // carry no model, do not change.
