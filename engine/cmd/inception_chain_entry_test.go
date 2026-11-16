@@ -116,12 +116,48 @@ func inceptionWithChainEntryReference(t *testing.T, skill string) string {
 	if err != nil {
 		t.Fatalf("reading the chain-entry reference: %v", err)
 	}
-	start := strings.Index(string(ref), "```json\n")
-	end := strings.LastIndex(string(ref), "```")
-	if start < 0 || end <= start {
-		t.Fatal("references/chain-entry.md has no json block")
+	block, err := inceptionReferenceJSONBlock(string(ref))
+	if err != nil {
+		t.Fatalf("references/chain-entry.md: %v", err)
 	}
-	return strings.Replace(skill, inceptionChainEntryPointer, strings.TrimRight(string(ref)[start:end+3], "\n"), 1)
+	return strings.Replace(skill, inceptionChainEntryPointer, block, 1)
+}
+
+// inceptionReferenceJSONBlock returns the one json code block of ref, fences included: from the first
+// json fence to the next closing fence after it. A reference with no json block, an unclosed one, or
+// more than one is an error, so the example the test runs is never picked by position.
+func inceptionReferenceJSONBlock(ref string) (string, error) {
+	const open = "```json\n"
+	if n := strings.Count(ref, open); n != 1 {
+		return "", fmt.Errorf("has %d json blocks, want exactly one", n)
+	}
+	start := strings.Index(ref, open)
+	closing := strings.Index(ref[start+len(open):], "```")
+	if closing < 0 {
+		return "", fmt.Errorf("the json block is not closed")
+	}
+	return strings.TrimRight(ref[start:start+len(open)+closing+3], "\n"), nil
+}
+
+func TestInceptionReferenceJSONBlock(t *testing.T) {
+	const block = "```json\n{\"a\":1}\n```"
+	t.Run("takes the block up to its own closing fence, not the last fence of the file", func(t *testing.T) {
+		got, err := inceptionReferenceJSONBlock("intro\n\n" + block + "\n\nafter\n\n```text\nnote\n```\n")
+		if err != nil || got != block {
+			t.Errorf("got %q, %v; want %q", got, err, block)
+		}
+	})
+	for name, ref := range map[string]string{
+		"no json block":         "no block here\n```text\nx\n```\n",
+		"two json blocks":       block + "\n\n" + block + "\n",
+		"a json block not shut": "```json\n{\"a\":1}\n",
+	} {
+		t.Run("fails on "+name, func(t *testing.T) {
+			if got, err := inceptionReferenceJSONBlock(ref); err == nil {
+				t.Errorf("got %q with no error, want an error", got)
+			}
+		})
+	}
 }
 
 // inceptionFirstRecordProblems runs the first record the Chain entry of skill documents through

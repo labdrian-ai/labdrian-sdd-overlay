@@ -214,7 +214,7 @@ func roleChainDuties() []roleChainDuty {
 			"150 KB", "one launch per commit", "never truncated", "S# criteria",
 			"copied verbatim from `roles/reviewer/rows.json`", "`recall` always",
 			"`labdrian review record --feature F --base B --head H`", "Exit 2",
-			"`candidate`", "`inspection.status`", "`completed`", "`paths`", "any other rule of the reviewer's contract",
+			"`paths`", "the reviewer's contract breaks", "`references/review-record.md`",
 			"`resume_reason: review not run: <reason>`", "retry once with another `model`",
 			"`odd/review-results/<feature>/<head12>-<n>.json`", "`review-diff`", "`review-result`", "`verifier-report`",
 			"recomputes `diff_sha256`", "only on equality",

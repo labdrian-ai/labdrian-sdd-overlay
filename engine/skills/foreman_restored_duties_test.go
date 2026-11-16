@@ -9,6 +9,38 @@ import (
 	"testing"
 )
 
+// The format of a task line is a rule, not an example: the body states its parts in one compact line,
+// and only the full example lines stay in the reference (review of 368afea2, F1).
+func TestOddFeatureDocBodyStatesTheTaskLineFormat(t *testing.T) {
+	_, _, body := oddRoleSkillFile(t, "odd-feature-doc")
+	_, under := roleChainSections(body)
+	for _, want := range []string{
+		"`- [ ] T<n> — S# — inline|delegated — title — [shaped: L<n> — ]commit: -`",
+		"box = status",
+	} {
+		if !strings.Contains(under["Hard Rules"], want) {
+			t.Errorf("the Hard Rules must carry %q", want)
+		}
+	}
+}
+
+// The criteria that admit a question to the prototyper are a rule; only the example questions live in
+// the reference (review of 368afea2, F3). The explanation of exit 2 lives in a reference of its own.
+func TestRoleChainBodyStatesThePrototyperCriteria(t *testing.T) {
+	_, _, body := roleChainSkill(t)
+	_, under := roleChainSections(body)
+	const want = "a premise about an installed tool, a number, or fit within the appetite"
+	if !strings.Contains(under["Triggers"], want) {
+		t.Errorf("the Triggers section must state the criteria of a prototyper question: %q", want)
+	}
+	ref := readRepoFile(t, skillsRepoRoot(t), "skills/role-chain/references/review-record.md")
+	for _, frag := range []string{"`candidate`", "`paths`", "`inspection.status`", "`completed`", "any other rule of the reviewer's contract"} {
+		if !strings.Contains(ref, frag) {
+			t.Errorf("references/review-record.md must carry %q", frag)
+		}
+	}
+}
+
 func TestOddFeatureDocRestoredDuties(t *testing.T) {
 	whole, _, body := oddRoleSkillFile(t, "odd-feature-doc")
 	_, under := roleChainSections(body)
@@ -38,7 +70,7 @@ func TestOddFeatureDocRestoredDuties(t *testing.T) {
 			return strings.Contains(byRole["foreman"][1], want), want
 		},
 		"the mark of a shaped task holds only while the Log has exactly one such entry": func() (bool, string) {
-			const want = "the mark holds only while the Log has exactly one such entry"
+			const want = "holds only while the Log has exactly one such entry"
 			return strings.Contains(under["Hard Rules"], want), want
 		},
 		"a spec holds its scope and its acceptance checks": func() (bool, string) {
