@@ -248,7 +248,10 @@ function runEngine(args, envelope, timeoutMs) {
       return;
     }
     // end stops the engine, politely and then for good, and answers with the failure.
+    let ending = false;
     const end = (answer) => {
+      if (ending) return;
+      ending = true;
       child.kill("SIGTERM");
       const killer = setTimeout(() => child.kill("SIGKILL"), Math.min(ENGINE_KILL_GRACE_MS, timeoutMs));
       killer.unref();
@@ -302,14 +305,15 @@ function parseAnswer(stdout) {
 // askEngine sends one event to the engine and resolves to {answer} or {failure}; it never rejects.
 // A failure is also the first one of the bridge: it makes the note that says so, which waits until a
 // result or a model call can carry it.
-async function askEngine(state, args, envelope) {
-  if (state.pausedUntil > Date.now()) return noteFailure(state, state.pausedReason);
+// The gate (PreToolUse) is never paused: a pause there would let through a call the engine denies.
+async function askEngine(state, args, envelope, gate = false) {
+  if (!gate && state.pausedUntil > Date.now()) return noteFailure(state, state.pausedReason);
   const timeoutMs = engineTimeoutMs();
   const reply = await runEngine(args, envelope, timeoutMs);
   if (reply.failure !== undefined) {
     if (reply.hung) {
       state.pausedUntil = Date.now() + ENGINE_PAUSE_FACTOR * timeoutMs;
-      state.pausedReason = `${reply.failure}; the bridge stops asking it for ${(ENGINE_PAUSE_FACTOR * timeoutMs) / 1000} seconds`;
+      state.pausedReason = `${reply.failure}; the bridge stops asking it for -e seconds except to check tool calls`;
       return noteFailure(state, state.pausedReason);
     }
     return noteFailure(state, reply.failure);
@@ -352,15 +356,15 @@ function textOf(value) {
 
 // toolInputFor is the input of a call as Claude Code names its arguments, where OpenCode v2 names
 // them otherwise: the read tool takes `path` (Claude's file_path) and the skill tool `id` (Claude's
-// skill). The call's own arguments are kept, and one it already has under the Claude name is not
-// overwritten.
+// skill). The call's own arguments are kept; the value OpenCode acts on is the one the engine judges,
+// so it replaces a Claude-named argument the call may also carry.
 function toolInputFor(call) {
   const input = call.input;
   if (!isRecord(input)) return input;
-  if (call.tool === "read" && typeof input.path === "string" && input.file_path === undefined) {
+  if (call.tool === "read" && typeof input.path === "string") {
     return { ...input, file_path: input.path };
   }
-  if (call.tool === "skill" && typeof input.id === "string" && input.skill === undefined) {
+  if (call.tool === "skill" && typeof input.id === "string") {
     return { ...input, skill: input.id };
   }
   return input;
@@ -380,7 +384,7 @@ function toolEnvelope(event, call) {
 // gateToolCall is the PreToolUse: the engine's denial becomes a Tool.Error, which stops the call
 // and gives the model the reason; a warning waits for the result of the same call.
 async function gateToolCall(call, state) {
-  const reply = await askEngine(state, ["projection", "hook", "--event", "PreToolUse", "--source", ENGINE_SOURCE], toolEnvelope("PreToolUse", call));
+  const reply = await askEngine(state, ["projection", "hook", "--event", "PreToolUse", "--source", ENGINE_SOURCE], toolEnvelope("PreToolUse", call), true);
   if (reply.failure !== undefined) return;
   const specific = hookSpecific(reply.answer);
   if (specific.permissionDecision === "deny") {
@@ -538,6 +542,9 @@ async function isChildSession(ctx, session, sessionID) {
 async function sessionIdle(event, ctx, state) {
   const session = sessionState(state, event.sessionID);
   if (await isChildSession(ctx, session, event.sessionID)) return;
+  // A synthetic message is answered by its own prompt before the next idle; one still held was never
+  // seen, and must not swallow a later prompt that happens to say the same.
+  session.ownText = undefined;
   const reply = await askEngine(state, ENGINE_STOP_ARGS, { ...sessionEnvelope("Stop", event.sessionID), stop_hook_active: session.continuing });
   if (reply.failure !== undefined || reply.answer.decision !== "block") {
     session.continuing = false;

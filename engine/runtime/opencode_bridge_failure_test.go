@@ -191,11 +191,11 @@ const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const elapsed = [];
 const timed = async (call) => { const start = Date.now(); await beforeHook(call); elapsed.push(Date.now() - start); };
 await timed({ tool: "shell", sessionID: "ses_1", id: "c1", input: {} });
-await timed({ tool: "shell", sessionID: "ses_1", id: "c2", input: {} });
 const result = { content: [{ type: "text", text: "ok" }] };
-await afterHook({ tool: "shell", sessionID: "ses_1", id: "c3", input: {}, status: "completed", result });
-await wait(700);
-await timed({ tool: "shell", sessionID: "ses_1", id: "c4", input: {} });
+const start = Date.now();
+await afterHook({ tool: "shell", sessionID: "ses_1", id: "c1", input: {}, status: "completed", result });
+elapsed.push(Date.now() - start);
+await timed({ tool: "shell", sessionID: "ses_1", id: "c2", input: {} });
 await wait(900);
 console.log(JSON.stringify({ elapsed, result: result.content.map((part) => part.text) }));`)
 	var got struct {
@@ -205,8 +205,10 @@ console.log(JSON.stringify({ elapsed, result: result.content.map((part) => part.
 	if err := json.Unmarshal(out, &got); err != nil {
 		t.Fatalf("decode result: %v\nraw=%q", err, out)
 	}
-	if len(got.Elapsed) != 3 || got.Elapsed[0] < 250 || got.Elapsed[0] > 2000 || got.Elapsed[1] > 100 {
-		t.Fatalf("the first call waits one timeout and the next is not asked at all, got %v ms", got.Elapsed)
+	// The gate (PreToolUse) is asked on every call, since a pause there would let a call through that
+	// the engine denies; the other events are not asked during the pause.
+	if len(got.Elapsed) != 3 || got.Elapsed[0] < 250 || got.Elapsed[0] > 2000 || got.Elapsed[1] > 100 || got.Elapsed[2] < 250 {
+		t.Fatalf("each gate call waits one timeout, the PostToolUse during the pause is not asked, got %v ms", got.Elapsed)
 	}
 	if len(got.Result) != 2 || !strings.Contains(got.Result[1], notRunning) || !strings.Contains(got.Result[1], "did not answer") || !strings.Contains(got.Result[1], "stops asking") {
 		t.Fatalf("the note should say the engine hung and that the bridge stops asking, got %#v", got.Result)
@@ -217,7 +219,7 @@ console.log(JSON.stringify({ elapsed, result: result.content.map((part) => part.
 	}
 	pids := strings.Fields(string(log))
 	if len(pids) != 2 {
-		t.Fatalf("the engine should be started for the first call and again after the pause, got pids %v", pids)
+		t.Fatalf("the engine should be started for each gate call and not for the PostToolUse in the pause, got pids %v", pids)
 	}
 	for _, text := range pids {
 		pid, _ := strconv.Atoi(text)
@@ -360,9 +362,10 @@ func TestOpenCodeBridgeNamesTheArgumentsOfTheReadAndSkillToolsAsClaudeCodeDoes(t
   { tool: "skill", sessionID: "ses_1", id: "c2", input: { id: "deploy" } },
   { tool: "read", sessionID: "ses_1", id: "c3", input: { path: "/a", file_path: "/b" } },
   { tool: "grep", sessionID: "ses_1", id: "c4", input: { path: "/a", id: "x" } },
+  { tool: "skill", sessionID: "ses_1", id: "c5", input: { id: "x", skill: "y" } },
 ]) await beforeHook(call);`)
 	calls := engine.calls(t)
-	if len(calls) != 4 {
+	if len(calls) != 5 {
 		t.Fatalf("each call is asked of the engine, got %#v", calls)
 	}
 	input := func(i int) map[string]any { return calls[i].Stdin["tool_input"].(map[string]any) }
@@ -372,8 +375,13 @@ func TestOpenCodeBridgeNamesTheArgumentsOfTheReadAndSkillToolsAsClaudeCodeDoes(t
 	if input(1)["skill"] != "deploy" || input(1)["id"] != "deploy" {
 		t.Errorf("a skill call names its skill as skill too, got %#v", input(1))
 	}
-	if input(2)["file_path"] != "/b" {
-		t.Errorf("a file_path the call already has is not overwritten, got %#v", input(2))
+	// OpenCode runs the read on path and the skill named by id, so those are what the policies judge,
+	// whatever a Claude-named argument the call also carries says.
+	if input(2)["file_path"] != "/a" {
+		t.Errorf("the path OpenCode reads is the file_path the engine judges, got %#v", input(2))
+	}
+	if input(4)["skill"] != "x" {
+		t.Errorf("the skill OpenCode loads is the skill the engine judges, got %#v", input(4))
 	}
 	if _, ok := input(3)["file_path"]; ok || input(3)["skill"] != nil {
 		t.Errorf("only the read and skill tools are renamed, got %#v", input(3))
