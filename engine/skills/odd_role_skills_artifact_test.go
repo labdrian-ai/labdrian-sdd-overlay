@@ -139,7 +139,7 @@ func TestOddFeatureDocSkillGivesTheFormatOfTheDocument(t *testing.T) {
 		{"has four parts in order and no other", []string{"Four parts, in this order and no other: a header, `## Specs`, `## Tasks`, `## Log`."}},
 		{"has a header of the objective, the branch, the strategy and the runner", []string{"Header, two or three lines: the objective, the branch, the delivery strategy, the test runner."}},
 		{"quotes the user in each spec", []string{"quoted verbatim, in the user's language", "Never summarize a quote", "never add a requirement the user did not ask for", "mark an assumption as an assumption"}},
-		{"has one line per task with its S#, route and commit", []string{"One line per task", "`-` until the task is committed", "`references/format.md`"}},
+		{"has one line per task with its S#, route and commit", []string{"One line per task", "commit `-` until the task is committed", "`references/format.md`"}},
 		{"marks a task the shaper designed with one segment before the commit (own-rdd S14)", []string{"`shaped: L<n>`", "only while the Log has exactly one such entry", "only the shaper writes it", "a task nobody designed has none"}},
 		{"removes the mark when a task is reopened (own-rdd S14, D4)", []string{"Reopening a task removes its `shaped: L<n>` segment", "only the shaper puts it back"}},
 		{"keeps the Log append-only with L1 the request", []string{"The Log is append-only", "`L1` is the user's request, verbatim", "`- **L<n>** (<date>, <who>): ...`", "Never edit, reorder or delete an entry"}},

@@ -127,15 +127,17 @@ func inceptionWithChainEntryReference(t *testing.T, skill string) string {
 // json fence to the next closing fence after it. A reference with no json block, an unclosed one, or
 // more than one is an error, so the example the test runs is never picked by position.
 //
-// Every line that starts with the json fence counts as an opener, whatever follows it on the line
-// (```jsonc, ```json title=x), and a carriage return before the newline is tolerated; the block is
-// returned with its line endings normalized to a newline.
+// Every line whose text, after its leading spaces, starts with the json fence counts as an opener,
+// whatever follows it (```jsonc, ```json title=x). The closer is the first later line that is exactly
+// ``` after its leading spaces; another fence opening before it (```text) means the block is not
+// closed. A carriage return before the newline is tolerated; the block is returned with its line
+// endings normalized to a newline.
 func inceptionReferenceJSONBlock(ref string) (string, error) {
 	lines := strings.Split(strings.ReplaceAll(ref, "\r\n", "\n"), "\n")
 	start := -1
 	openers := 0
 	for i, line := range lines {
-		if strings.HasPrefix(line, "```json") {
+		if strings.HasPrefix(strings.TrimLeft(line, " "), "```json") {
 			if openers++; openers == 1 {
 				start = i
 			}
@@ -145,8 +147,11 @@ func inceptionReferenceJSONBlock(ref string) (string, error) {
 		return "", fmt.Errorf("has %d json blocks, want exactly one", openers)
 	}
 	for i := start + 1; i < len(lines); i++ {
-		if strings.HasPrefix(lines[i], "```") {
+		switch trimmed := strings.TrimLeft(lines[i], " "); {
+		case trimmed == "```":
 			return strings.Join(lines[start:i+1], "\n"), nil
+		case strings.HasPrefix(trimmed, "```"):
+			return "", fmt.Errorf("the json block is not closed: another fence opens at line %d", i+1)
 		}
 	}
 	return "", fmt.Errorf("the json block is not closed")
@@ -160,6 +165,12 @@ func TestInceptionReferenceJSONBlock(t *testing.T) {
 			t.Errorf("got %q, %v; want %q", got, err, block)
 		}
 	})
+	t.Run("takes an indented block closed by an indented fence", func(t *testing.T) {
+		got, err := inceptionReferenceJSONBlock("x\n  ```json\n  {\"a\":1}\n  ```\ny\n")
+		if err != nil || !strings.Contains(got, "{\"a\":1}") || !strings.HasSuffix(strings.TrimSpace(got), "```") {
+			t.Errorf("got %q, %v; want the one block", got, err)
+		}
+	})
 	t.Run("takes a block whose opener and closer end in a carriage return", func(t *testing.T) {
 		got, err := inceptionReferenceJSONBlock("x\r\n```json\r\n{\"a\":1}\r\n```\r\ny\r\n")
 		if err != nil || !strings.HasPrefix(got, "```json") || !strings.Contains(got, "{\"a\":1}") || !strings.HasSuffix(got, "```") {
@@ -167,10 +178,12 @@ func TestInceptionReferenceJSONBlock(t *testing.T) {
 		}
 	})
 	for name, ref := range map[string]string{
-		"no json block":                     "no block here\n```text\nx\n```\n",
-		"two json blocks":                   block + "\n\n" + block + "\n",
-		"a json block not shut":             "```json\n{\"a\":1}\n",
-		"a second block opened by ```jsonc": block + "\n\n```jsonc\n{\"b\":2}\n```\n",
+		"no json block":                                             "no block here\n```text\nx\n```\n",
+		"two json blocks":                                           block + "\n\n" + block + "\n",
+		"a json block not shut":                                     "```json\n{\"a\":1}\n",
+		"an indented second block":                                  block + "\n\n   ```json\n   {\"b\":2}\n   ```\n",
+		"an unclosed block followed by a ```text fence":             "```json\n{\"a\":1}\n\n```text\nnote\n```\n",
+		"a second block opened by ```jsonc":                         block + "\n\n```jsonc\n{\"b\":2}\n```\n",
 		"a second block opened by ```json with trailing characters": block + "\n\n```json title=x\n{\"b\":2}\n```\n",
 		"a second block opened with a carriage return":              block + "\n\n```json\r\n{\"b\":2}\r\n```\r\n",
 	} {

@@ -11,7 +11,7 @@ metadata:
 
 ## Activation Contract
 
-Load when the prompt locates `odd/tasks/<feature>.md`. The shaper writes it, the builder works from it, delivery closes it, the foreman tracks it.
+Load when the prompt locates `odd/tasks/<feature>.md`.
 
 ## Hard Rules
 
@@ -19,8 +19,8 @@ Load when the prompt locates `odd/tasks/<feature>.md`. The shaper writes it, the
 - Four parts, in this order and no other: a header, `## Specs`, `## Tasks`, `## Log`.
 - Header, two or three lines: the objective, the branch, the delivery strategy, the test runner.
 - Each spec is `S<n>`: its scope, its acceptance checks, and the user's strings, messages and examples quoted verbatim, in the user's language. Never summarize a quote, never add a requirement the user did not ask for, and mark an assumption as an assumption.
-- One line per task: `- [ ] T<n> — S# — inline|delegated — title — [shaped: L<n> — ]commit: -`, `-` until the task is committed; box = status (`references/format.md`).
-- `shaped: L<n>` marks a designed task and holds only while the Log has exactly one such entry; only the shaper writes it, and a task nobody designed has none. Reopening a task removes its `shaped: L<n>` segment; only the shaper puts it back.
+- One line per task: `- [ ] T<n> — S# — inline|delegated — title — [shaped: L<n> — ]commit: -`; commit `-` until the task is committed; box = status (`references/format.md`).
+- `shaped: L<n>` marks a designed task; `L<n>` is its shaper Log entry, and it holds only while the Log has exactly one such entry; only the shaper writes it, and a task nobody designed has none. Reopening a task removes its `shaped: L<n>` segment; only the shaper puts it back.
 - The Log is append-only. `L1` is the user's request, verbatim; each later entry is `- **L<n>** (<date>, <who>): ...`. Never edit, reorder or delete an entry.
 - A requirement change: append the user's words to the Log, rewrite only the affected `S#`, reopen only its task.
 - Check a task off only after you observed its outcome and its checks.
@@ -34,7 +34,7 @@ Write only the part of your role.
 | shaper | the header, `## Specs`, `## Tasks` with every box open, and `L1`, the request exactly as the prompt quotes it; `shaped: L<n>` on each task it designed, with the Log entry `(<date>, shaper)` holding its design | check a box, write code, mark a task it did not design |
 | builder | `[x]` and the commit on each finished task, and one Log entry: the `S#` covered, the commands run with their exact results, the `test-first` table, anything found that the task did not ask for | edit a spec, a task it was not given, or an earlier entry; write or change a `shaped:` segment |
 | delivery | one final Log entry with the state at close: the tasks `[x]` and not, each with its commit; unfinished tasks and missing artifacts named as unfinished | copy, move or rewrite the document; write or change a `shaped:` segment |
-| foreman | Log entries `- **L<n>** (<date>, foreman)`, `L<n>` next after the last entry, in `odd/tasks/<feature>.md` and its mirror `odd/<feature>/tasks`: the owner's words verbatim, evidence it observed | write source or tests, any path outside `odd/tasks/` and the mirror, a `shaped:` segment |
+| foreman | Log entries `- **L<n>** (<date>, foreman)`, `L<n>` next after the last entry, in `odd/tasks/<feature>.md` and its memorycard mirror `odd/<feature>/tasks`: the owner's words verbatim, evidence it observed | write source or tests, any path outside `odd/tasks/` and the mirror, a `shaped:` segment |
 
 ## Output Contract
 

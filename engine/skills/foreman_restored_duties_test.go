@@ -50,9 +50,17 @@ func TestOddFeatureDocRestoredDuties(t *testing.T) {
 		byRole[r[0]] = r
 	}
 	for name, check := range map[string]func() (bool, string){
-		"the Activation Contract says who writes, works from and closes the document and adds the foreman": func() (bool, string) {
-			const want = "The shaper writes it, the builder works from it, delivery closes it, the foreman tracks it."
-			return strings.Contains(under["Activation Contract"], want), want
+		"the shaped bullet says what L<n> is, the antecedent of 'such entry'": func() (bool, string) {
+			const want = "`L<n>` is its shaper Log entry"
+			return strings.Contains(under["Hard Rules"], want), want
+		},
+		"the task line rule names the commit field": func() (bool, string) {
+			const want = "commit `-` until the task is committed"
+			return strings.Contains(under["Hard Rules"], want), want
+		},
+		"the foreman row names the memorycard mirror": func() (bool, string) {
+			const want = "memorycard mirror `odd/<feature>/tasks`"
+			return strings.Contains(byRole["foreman"][1], want), want
 		},
 		"a blank line separates the Activation Contract from Hard Rules": func() (bool, string) {
 			return strings.Contains(whole, ".\n\n## Hard Rules"), "a blank line before ## Hard Rules"
@@ -87,6 +95,21 @@ func TestOddFeatureDocRestoredDuties(t *testing.T) {
 				t.Errorf("odd-feature-doc must carry %q", want)
 			}
 		})
+	}
+}
+
+// The overview that moved out of the odd-feature-doc Activation Contract (who writes, works from and
+// closes the document) is in its reference, and the body keeps at least 10 tokens under the 700-token
+// lint budget (review of 4f7d93d9). The rest of the body is rules; moving more would move a duty.
+func TestOddFeatureDocBodyHasHeadroomAndTheOverviewMovedToItsReference(t *testing.T) {
+	_, _, body := oddRoleSkillFile(t, "odd-feature-doc")
+	if n := EstimateBodyTokens(body); n > 690 {
+		t.Errorf("the body is an estimated %d tokens, want at most 690", n)
+	}
+	ref := readRepoFile(t, skillsRepoRoot(t), "skills/odd-feature-doc/references/format.md")
+	const want = "The shaper writes it, the builder works from it, delivery closes it, the foreman tracks it."
+	if !strings.Contains(ref, want) {
+		t.Errorf("references/format.md must carry the overview %q", want)
 	}
 }
 
