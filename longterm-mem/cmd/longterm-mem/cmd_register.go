@@ -35,8 +35,12 @@ func cmdRegister(args []string) int {
 		return exitUsage
 	}
 
-	noting := &migrationNoting{Writer: register.Writer{State: register.FileInstallState{}}, migrated: map[string]bool{}}
-	report := runtimes.Runtimes{Registrar: noting, Machine: thisMachine{}}.Register(runtimes.Request{Target: *target, ConfigRoot: *configRoot, StateDir: *stateDir, Binary: *binary})
+	// The register path uses the same wiring as the other commands, with the writer wrapped so the
+	// report can say when a 1.x opencode entry was migrated.
+	rt := machineRuntimes()
+	noting := &migrationNoting{Writer: rt.Registrar.(register.Writer), migrated: map[string]bool{}}
+	rt.Registrar = noting
+	report := rt.Register(runtimes.Request{Target: *target, ConfigRoot: *configRoot, StateDir: *stateDir, Binary: *binary})
 	return reportRegisterNoting(report, noting.migrated)
 }
 
