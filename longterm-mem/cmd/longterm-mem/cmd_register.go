@@ -40,15 +40,12 @@ func cmdRegister(args []string) int {
 	return reportRegisterNoting(report, noting.migrated)
 }
 
-// reportRegister says what a run of register did, runtime by runtime, and answers the exit code of it.
+// reportRegisterNoting says what a run of register did, runtime by runtime, and answers the exit code of it. It also
+// says, for the targets in migrated, that the entry an earlier version wrote was migrated.
 //
 // Every error the writers return already names the package and the target it was working on ("register: claude:
 // ..."), so it is printed alone rather than re-stating both. Re-stating them is how the conflict message came to
 // read "longterm-mem: register: claude: register: claude: register: an entry ...".
-func reportRegister(report runtimes.Report) int { return reportRegisterNoting(report, nil) }
-
-// reportRegisterNoting is reportRegister that also says, for the targets in migrated, that the entry an earlier
-// version wrote was migrated.
 func reportRegisterNoting(report runtimes.Report, migrated map[string]bool) int {
 	if report.Refusal != nil {
 		return refuseRegistration("register", *report.Refusal)
