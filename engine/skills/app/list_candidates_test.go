@@ -33,7 +33,7 @@ func TestListCandidatesParsesSortsFiltersAndOptionallyIncludesDrafts(t *testing.
 		},
 		Drafts: []skills.CandidateObservation{{TopicKey: draftTopicA, Content: "**Candidate**: " + candidateTopicA + "\n**Status**: open\n**ForRevision**: 2\n"}},
 	}}
-	got, err := ListCandidates(source, CandidateListInput{
+	got, err := ListCandidates(source, nil, CandidateListInput{
 		Project: "example/project", Statuses: []skills.CandidateStatus{skills.StatusEmitted},
 		Kind: "repeated-success", IncludeDrafts: true,
 	})
@@ -65,7 +65,7 @@ func TestListCandidatesReturnsAllCandidatesSortedAndAnomaliesWithoutDraftOutput(
 		},
 		Drafts: []skills.CandidateObservation{{TopicKey: draftTopicA, Content: "**Candidate**: " + candidateTopicA + "\n**Status**: open\n**ForRevision**: 1\n"}},
 	}}
-	got, err := ListCandidates(source, CandidateListInput{Project: "p"})
+	got, err := ListCandidates(source, nil, CandidateListInput{Project: "p"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -86,7 +86,7 @@ func TestListCandidatesReconcilesTheUnfilteredRecords(t *testing.T) {
 		Candidates: []skills.CandidateObservation{{TopicKey: candidateTopicA, Content: "**Kind**: repeated-success\n**Status**: emitted\n**Draft**: " + missingDraft + "\n"}},
 		Drafts:     []skills.CandidateObservation{{TopicKey: draftTopicA, Content: "**Candidate**: procedural/candidates/failure-recovery/sqlite/missing\n**Status**: open\n**ForRevision**: 1\n"}},
 	}}
-	got, err := ListCandidates(source, CandidateListInput{Project: "p", Kind: "unmatched"})
+	got, err := ListCandidates(source, nil, CandidateListInput{Project: "p", Kind: "unmatched"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -100,10 +100,10 @@ func TestListCandidatesReconcilesTheUnfilteredRecords(t *testing.T) {
 
 func TestListCandidatesPropagatesSourceFailuresAndRejectsMissingSource(t *testing.T) {
 	cause := errors.New("memorycard unavailable")
-	if _, err := ListCandidates(&candidateObservationsSource{err: cause}, CandidateListInput{Project: "p"}); !errors.Is(err, cause) {
+	if _, err := ListCandidates(&candidateObservationsSource{err: cause}, nil, CandidateListInput{Project: "p"}); !errors.Is(err, cause) {
 		t.Errorf("source error = %v, want wrapped cause", err)
 	}
-	if _, err := ListCandidates(nil, CandidateListInput{Project: "p"}); err == nil {
+	if _, err := ListCandidates(nil, nil, CandidateListInput{Project: "p"}); err == nil {
 		t.Fatal("ListCandidates accepted a missing CandidateSource")
 	}
 }
@@ -114,7 +114,7 @@ func TestListCandidatesDoesNotMutateSourceObservations(t *testing.T) {
 		{TopicKey: candidateTopicA, Content: "**Kind**: repeated-success\n**Status**: emitted\n"},
 	}}
 	before := skills.CandidateObservations{Candidates: append([]skills.CandidateObservation(nil), observations.Candidates...)}
-	if _, err := ListCandidates(&candidateObservationsSource{observations: observations}, CandidateListInput{Project: "p"}); err != nil {
+	if _, err := ListCandidates(&candidateObservationsSource{observations: observations}, nil, CandidateListInput{Project: "p"}); err != nil {
 		t.Fatal(err)
 	}
 	if !reflect.DeepEqual(observations, before) {

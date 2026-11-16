@@ -33,6 +33,8 @@ func newSkillsDeps(d deps) skills.Deps {
 		Locker:       newSkillsLocker(d.skillsLockWait),
 		Now:          wallClockUTC,
 		Candidates:   memorycardcli.Source{Runner: execrunner.New()},
+		// Asked only when a candidate lists a legacy engram id.
+		LegacyOccurrences: memorycardcli.Resolver{Runner: execrunner.New()},
 	}
 }
 

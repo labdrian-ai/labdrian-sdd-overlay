@@ -18,6 +18,10 @@ type FileStatter func(name string) (fs.FileInfo, error)
 type Deps struct {
 	// Candidates reads candidate and draft observations from the project's memorycard.
 	Candidates CandidateSource
+	// LegacyOccurrences says which memorycard memory a legacy `engram:<n>` occurrence id was
+	// imported as, so one observation listed under both schemes counts once. It is asked only when
+	// a candidate lists a legacy id; a verb that finds one with this field nil refuses.
+	LegacyOccurrences LegacyOccurrenceResolver
 	// ReadFile reads a file by name: the registry's neighbours, the manifest, the files of a
 	// project.
 	ReadFile FileReader

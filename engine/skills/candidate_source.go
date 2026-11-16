@@ -17,3 +17,12 @@ type CandidateObservations struct {
 type CandidateSource interface {
 	ListCandidateObservations(project string) (CandidateObservations, error)
 }
+
+// LegacyOccurrenceResolver is the read-only port that says which memorycard memory a legacy
+// `engram:<n>` occurrence was imported as. It is given the numbers as written (digits only) and
+// returns a map from number to memory id holding only the numbers that were imported; a number
+// that is absent was never mapped and counts as itself. The domain translates ids (see
+// TranslateOccurrence); an adapter never edits a record.
+type LegacyOccurrenceResolver interface {
+	ResolveLegacyOccurrences(numbers []string) (map[string]int, error)
+}

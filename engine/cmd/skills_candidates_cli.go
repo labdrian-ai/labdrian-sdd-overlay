@@ -61,7 +61,7 @@ func skillsCandidates(deps skills.Deps, args []string, stdout, stderr io.Writer,
 		exit(2)
 		return
 	}
-	result, err := app.ListCandidates(deps.Candidates, app.CandidateListInput{
+	result, err := app.ListCandidates(deps.Candidates, deps.LegacyOccurrences, app.CandidateListInput{
 		Project: string(project), Statuses: statuses, Kind: parsed.value(flagCandidateKind, ""),
 		IncludeDrafts: parsed.switches[flagCandidateDrafts],
 	})
