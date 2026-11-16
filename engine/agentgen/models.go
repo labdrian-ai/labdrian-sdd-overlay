@@ -5,7 +5,8 @@ package agentgen
 //
 // The table is the Markdown table under the `## Tier table` heading: a header row `| tier | <runtime> | ... |`,
 // a separator row, then one row per tier, one column per runtime, each cell the id, in backticks or bare.
-// It ends at the first line that does not start with `|`; a second `##` heading ends the section.
+// It ends at the first line that does not start with `|`; the next heading ends the section,
+// and the heading and the rows are matched without surrounding space or carriage return.
 
 import (
 	"fmt"
@@ -77,7 +78,7 @@ var separatorCell = regexp.MustCompile(`^:?-+:?$`)
 
 func parseModelTable(text string) (ModelTable, error) {
 	lines := strings.Split(text, "\n")
-	start := slices.Index(lines, tableHeading)
+	start := slices.IndexFunc(lines, func(l string) bool { return strings.TrimSpace(l) == tableHeading })
 	if start < 0 {
 		return ModelTable{}, fmt.Errorf("%s has no %q section", modelsPath, tableHeading)
 	}
@@ -96,7 +97,7 @@ func parseModelTable(text string) (ModelTable, error) {
 		return ModelTable{}, fmt.Errorf("the tier table of %s is missing: no table under %q", modelsPath, tableHeading)
 	}
 	head := splitRow(lines[header])
-	if head[0] != "tier" {
+	if len(head) == 0 || head[0] != "tier" {
 		return ModelTable{}, fmt.Errorf("the tier table of %s must start with the header row `| tier | ... |`, got %q", modelsPath, lines[header])
 	}
 	runtimes := head[1:]

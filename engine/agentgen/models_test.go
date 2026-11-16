@@ -150,13 +150,75 @@ func TestAMalformedTableAndAMissingSourceAreReportedTogether(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	for verb, err := range map[string]error{"Generate": agentgen.Generate(root), "Check": agentgen.Check(root)} {
-		if err == nil || !strings.Contains(err.Error(), "roles/builder/body.md") || !strings.Contains(err.Error(), modelsRel) || !strings.Contains(err.Error(), "separator") {
-			t.Errorf("%s error = %v, want one naming the missing builder source and the malformed table", verb, err)
+	// In this order: Generate first, so that a Generate that wrote files would change what Check sees.
+	for _, run := range []struct {
+		verb string
+		fn   func(string) error
+	}{{"Generate", agentgen.Generate}, {"Check", agentgen.Check}} {
+		err := run.fn(root)
+		if err == nil {
+			t.Errorf("%s returned nil, want an error", run.verb)
+			continue
 		}
-		if err != nil && strings.Contains(err.Error(), "roles/shaper") {
-			t.Errorf("%s error = %v, names a role whose source was read", verb, err)
+		// Both problems are in the one error, and no role whose source was read is named.
+		for _, want := range []string{"roles/builder/body.md", modelsRel, "separator"} {
+			if !strings.Contains(err.Error(), want) {
+				t.Errorf("%s error = %v, want it to name %q", run.verb, err, want)
+			}
 		}
+		for _, r := range wantRoles {
+			if r.name != "builder" && strings.Contains(err.Error(), "roles/"+r.name+"/") {
+				t.Errorf("%s error = %v, names %s, whose source was read", run.verb, err, r.name)
+			}
+		}
+	}
+	if _, err := os.Stat(filepath.Join(root, "agents")); err == nil {
+		t.Error("Generate wrote files although the table was refused")
+	}
+}
+
+// The heading is found whatever its line ending or trailing space, as the rows are.
+func TestTheHeadingAndRowsAreReadWithWindowsLineEndingsAndTrailingSpace(t *testing.T) {
+	for name, edit := range map[string]func(string) string{
+		"CRLF":           func(s string) string { return strings.ReplaceAll(s, "\n", "\r\n") },
+		"trailing space": func(s string) string { return strings.Replace(s, "## Tier table\n", "## Tier table \t\n", 1) },
+	} {
+		t.Run(name, func(t *testing.T) {
+			root := seededRoot(t)
+			editModels(t, root, edit)
+
+			table, err := agentgen.ReadModelTable(root)
+			if err != nil {
+				t.Fatalf("ReadModelTable: %v", err)
+			}
+			if got, _ := table.ID("light", "opencode"); got != "openai/gpt-6-luna#low" {
+				t.Errorf("ID(light, opencode) = %q", got)
+			}
+		})
+	}
+}
+
+// A header row cut short is a table that is refused, not a panic.
+func TestAHeaderRowWithoutItsClosingPipeIsRefusedNotAPanic(t *testing.T) {
+	root := seededRoot(t)
+	editModels(t, root, func(s string) string {
+		return strings.Replace(s, "| tier | claude | pi | opencode |", "| tier | claude", 1)
+	})
+
+	if _, err := agentgen.ReadModelTable(root); err == nil || !strings.Contains(err.Error(), "separator") {
+		t.Errorf("ReadModelTable error = %v, want one that names the separator row", err)
+	}
+}
+
+// The section ends at the next heading: a table under a later heading is not the tier table.
+func TestATableUnderALaterHeadingIsNotTheTierTable(t *testing.T) {
+	root := seededRoot(t)
+	editModels(t, root, func(s string) string {
+		return strings.Replace(s, "## Tier table\n", "## Tier table\n\nNo table here.\n\n## Other\n", 1)
+	})
+
+	if _, err := agentgen.ReadModelTable(root); err == nil || !strings.Contains(err.Error(), "Tier table") {
+		t.Errorf("ReadModelTable error = %v, want one that says no table is under the Tier table heading", err)
 	}
 }
 
