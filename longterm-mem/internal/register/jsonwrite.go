@@ -54,10 +54,10 @@ func RemoveMember(path, containerKey, memberKey string) error {
 		return fmt.Errorf("remove from %s: %w", path, err)
 	}
 	if !json.Valid(removed) {
-		return fmt.Errorf("removing %s.%s from %s would produce invalid JSON, not written", containerKey, memberKey, path)
+		return fmt.Errorf("removing %s.%s from %s would produce invalid JSON, not written", displayContainer(containerKey), memberKey, path)
 	}
 	if stillPresent := jsonMemberPresent(removed, containerKey, memberKey); stillPresent {
-		return fmt.Errorf("removal of %s.%s from %s did not actually remove it, not written", containerKey, memberKey, path)
+		return fmt.Errorf("removal of %s.%s from %s did not actually remove it, not written", displayContainer(containerKey), memberKey, path)
 	}
 
 	return replaceConfig(path, raw, removed)

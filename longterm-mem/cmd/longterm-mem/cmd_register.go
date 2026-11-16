@@ -35,8 +35,9 @@ func cmdRegister(args []string) int {
 		return exitUsage
 	}
 
-	report := machineRuntimes().Register(runtimes.Request{Target: *target, ConfigRoot: *configRoot, StateDir: *stateDir, Binary: *binary})
-	return reportRegister(report)
+	noting := &migrationNoting{Writer: register.Writer{State: register.FileInstallState{}}, migrated: map[string]bool{}}
+	report := runtimes.Runtimes{Registrar: noting, Machine: thisMachine{}}.Register(runtimes.Request{Target: *target, ConfigRoot: *configRoot, StateDir: *stateDir, Binary: *binary})
+	return reportRegisterNoting(report, noting.migrated)
 }
 
 // reportRegister says what a run of register did, runtime by runtime, and answers the exit code of it.
@@ -44,14 +45,22 @@ func cmdRegister(args []string) int {
 // Every error the writers return already names the package and the target it was working on ("register: claude:
 // ..."), so it is printed alone rather than re-stating both. Re-stating them is how the conflict message came to
 // read "longterm-mem: register: claude: register: claude: register: an entry ...".
-func reportRegister(report runtimes.Report) int {
+func reportRegister(report runtimes.Report) int { return reportRegisterNoting(report, nil) }
+
+// reportRegisterNoting is reportRegister that also says, for the targets in migrated, that the entry an earlier
+// version wrote was migrated.
+func reportRegisterNoting(report runtimes.Report, migrated map[string]bool) int {
 	if report.Refusal != nil {
 		return refuseRegistration("register", *report.Refusal)
 	}
 	for _, result := range report.Results {
 		switch result.Outcome {
 		case runtimes.Done:
-			fmt.Printf("longterm-mem: register: %s: ok\n", result.Target)
+			if migrated[result.Target] {
+				fmt.Printf("longterm-mem: register: %s: ok (migrated the 1.x entry)\n", result.Target)
+			} else {
+				fmt.Printf("longterm-mem: register: %s: ok\n", result.Target)
+			}
 		case runtimes.Skipped:
 			fmt.Printf("longterm-mem: register: %s: skipped (no configuration found at %s)\n", result.Target, result.Root)
 		case runtimes.RootUnresolved:
@@ -118,6 +127,22 @@ func registrationExitCode(failure runtimes.Failure) int {
 	default:
 		return exitOK
 	}
+}
+
+// migrationNoting is the Registrar of register: the Writer, which also remembers the targets whose entry of an earlier
+// version it migrated, so that the report can say so (the use case answers only done or not).
+type migrationNoting struct {
+	register.Writer
+	migrated map[string]bool
+}
+
+func (n *migrationNoting) Register(target, configRoot, stateDir, binary string) error {
+	if target != "opencode" {
+		return n.Writer.Register(target, configRoot, stateDir, binary)
+	}
+	migrated, err := n.Writer.RegisterOpencodeMigrating(configRoot, stateDir, binary)
+	n.migrated[target] = migrated
+	return err
 }
 
 // machineRuntimes is the registration use cases over this machine: the writers of the runtimes' configuration, which

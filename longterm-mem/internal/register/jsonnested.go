@@ -14,6 +14,12 @@ import (
 // original single-level path through Splice/Remove untouched.
 const nestedSep = "/"
 
+// displayContainer spells a container key the way opencode's config does
+// ("mcp.servers"), for messages.
+func displayContainer(containerKey string) string {
+	return strings.ReplaceAll(containerKey, nestedSep, ".")
+}
+
 // splitContainer reports whether containerKey names a nested container and,
 // when it does, its outer and inner keys.
 func splitContainer(containerKey string) (outer, inner string, nested bool) {
@@ -44,7 +50,7 @@ func spliceNested(raw []byte, outer, inner, memberKey string, newValue json.RawM
 	if err != nil {
 		return nil, err
 	}
-	sub, prefix := wrapObject(raw[valueStart:loc.replaceEnd], inner)
+	sub, prefix := wrapObject(raw[valueStart:loc.replaceEnd], inner, indentAt(raw, loc.replaceStart))
 	out, err := Splice(sub, inner, memberKey, newValue)
 	if err != nil {
 		return nil, err
@@ -60,13 +66,16 @@ func removeNested(raw []byte, outer, inner, memberKey string) ([]byte, error) {
 		return nil, err
 	}
 	if !loc.found {
-		return nil, fmt.Errorf("member %q not found in %q, nothing to remove", memberKey, outer+nestedSep+inner)
+		return nil, fmt.Errorf("member %q not found in %q, nothing to remove", memberKey, displayContainer(outer+nestedSep+inner))
 	}
 	valueStart, err := nestedValueStart(raw, loc, inner)
 	if err != nil {
 		return nil, err
 	}
-	sub, prefix := wrapObject(raw[valueStart:loc.replaceEnd], inner)
+	sub, prefix := wrapObject(raw[valueStart:loc.replaceEnd], inner, indentAt(raw, loc.replaceStart))
+	if inLoc, locErr := locate(sub, inner, memberKey); locErr == nil && !inLoc.found {
+		return nil, fmt.Errorf("member %q not found in %q, nothing to remove", memberKey, displayContainer(outer+nestedSep+inner))
+	}
 	out, err := Remove(sub, inner, memberKey)
 	if err != nil {
 		return nil, err
@@ -93,9 +102,12 @@ func nestedValueStart(raw []byte, loc location, inner string) (int, error) {
 	return p, nil
 }
 
-func wrapObject(value []byte, key string) (wrapped []byte, prefix []byte) {
+// wrapObject puts value under key in a one-key object whose key sits at indent,
+// the depth it really has, so a member inserted into an empty value is indented
+// from its real depth.
+func wrapObject(value []byte, key, indent string) (wrapped []byte, prefix []byte) {
 	keyLiteral, _ := json.Marshal(key)
-	prefix = append(append([]byte("{"), keyLiteral...), ':')
+	prefix = append(append(append([]byte("{\n"), indent...), keyLiteral...), ':')
 	wrapped = append(append(append([]byte{}, prefix...), value...), '}')
 	return wrapped, prefix
 }
@@ -134,7 +146,7 @@ func readNestedMember(path, outer, inner, memberKey string) (json.RawMessage, bo
 	}
 	var container map[string]json.RawMessage
 	if err := json.Unmarshal(val, &container); err != nil {
-		return nil, false, fmt.Errorf("parse %s %q: %w", path, outer+nestedSep+inner, err)
+		return nil, false, fmt.Errorf("parse %s %q: %w", path, displayContainer(outer+nestedSep+inner), err)
 	}
 	member, ok := container[memberKey]
 	return member, ok, nil

@@ -34,6 +34,9 @@ type longtermMemObservation struct {
 	// reported as the unmanaged entry it is.
 	entryOwned       bool
 	entryFingerprint string
+	// legacyOwned is whether the entry is opencode 1.x's mcp.longterm-mem in the shape this overlay used to write:
+	// ours, but not registered the way opencode v2 reads it, so not healthy.
+	legacyOwned bool
 }
 
 func (a LongtermMemAdapter) observeAllTargets() map[string]longtermMemObservation {
@@ -105,11 +108,13 @@ func (a LongtermMemAdapter) observeOpenCode(binaryPresent bool) longtermMemObser
 		if err != nil {
 			return obs
 		}
-		owned = a.ownedOpenCodeLegacyFingerprint()
+		if present && fingerprint == a.ownedOpenCodeLegacyFingerprint() {
+			obs.legacyOwned = true
+		}
 	}
 	obs.entryPresent = present
 	obs.entryFingerprint = fingerprint
-	obs.entryOwned = present && fingerprint == owned
+	obs.entryOwned = present && fingerprint == owned && !obs.legacyOwned
 	return obs
 }
 

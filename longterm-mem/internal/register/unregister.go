@@ -57,11 +57,7 @@ func (w Writer) Unregister(target, configRoot, stateDir string) (UnregisterOutco
 		configPath := filepath.Join(configRoot, claudeConfigFileName)
 		return w.jsonUninstall(claudeTarget, configPath, stateDir, claudeContainerKey, "longterm-mem")
 	case opencodeTarget:
-		configPath := filepath.Join(configRoot, opencodeConfigFileName)
-		if err := w.unregisterLegacyOpencode(configPath, stateDir); err != nil {
-			return 0, err
-		}
-		return w.jsonUninstall(opencodeTarget, configPath, stateDir, opencodeContainerKey, "longterm-mem")
+		return w.unregisterOpencode(configRoot, stateDir)
 	case codexTarget:
 		configPath := filepath.Join(configRoot, codexConfigFileName)
 		return w.tomlUninstall(codexTarget, configPath, stateDir, codexTableKey, "longterm-mem")

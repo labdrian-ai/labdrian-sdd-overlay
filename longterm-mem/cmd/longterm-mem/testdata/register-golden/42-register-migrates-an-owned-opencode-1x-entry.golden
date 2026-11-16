@@ -1,0 +1,25 @@
+args: register --target opencode
+exit: 0
+--- stdout ---
+longterm-mem: register: opencode: ok (migrated the 1.x entry)
+--- stderr ---
+args: register --target opencode
+exit: 0
+--- stdout ---
+longterm-mem: register: opencode: ok
+--- stderr ---
+--- machine ---
+=== .config/opencode/opencode.json ===
+{"mcp": {"other": {"type": "local", "command": ["/o"]},
+ "servers": {"longterm-mem":{"type":"local","command":["<home>/.labdrian-overlay/bin/longterm-mem","mcp"],"codemode":true}}}}
+=== .config/opencode/opencode.json.bak ===
+{"mcp": {"other": {"type": "local", "command": ["/o"]}, "longterm-mem": {"type":"local","command":["<home>/.labdrian-overlay/bin/longterm-mem","mcp"],"enabled":true}}}
+=== .labdrian-overlay/longterm-mem/install-state.json ===
+{
+  "schema": 1,
+  "targets": {
+    "opencode": {
+      "fingerprint": "<sha256>"
+    }
+  }
+}

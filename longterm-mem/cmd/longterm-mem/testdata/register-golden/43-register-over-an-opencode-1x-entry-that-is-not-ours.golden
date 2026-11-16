@@ -1,0 +1,8 @@
+args: register --target opencode
+exit: 6
+--- stdout ---
+--- stderr ---
+longterm-mem: register: opencode: <home>/.config/opencode/opencode.json: an entry with this name already exists and is not owned by longterm-mem; to hand it to longterm-mem, remove that entry by hand and run register again
+--- machine ---
+=== .config/opencode/opencode.json ===
+{"mcp": {"longterm-mem": {"type": "local", "command": ["/someone/elses/binary", "mcp"]}}}

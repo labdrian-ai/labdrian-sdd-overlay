@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	registerpkg "github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/register"
 )
 
 // The golden files under testdata/register-golden pin what `register` and `unregister` print, exit with and
@@ -67,6 +69,17 @@ const (
 	registerForeignClaude   = `{"mcpServers": {"longterm-mem": {"type": "stdio", "command": "/someone/elses/binary", "args": ["mcp"]}}}` + "\n"
 	registerForeignOpencode = `{"mcp": {"servers": {"longterm-mem": {"type": "local", "command": ["/someone/elses/binary", "mcp"]}}}}` + "\n"
 )
+
+// registerLegacyEntry is the opencode 1.x entry an earlier version wrote for the binary a machine of its own has.
+func registerLegacyEntry(home string) string {
+	return `{"type":"local","command":["` + home + `/.labdrian-overlay/bin/longterm-mem","mcp"],"enabled":true}`
+}
+
+func registerLegacyOpencode(home string) string {
+	return `{"mcp": {"other": {"type": "local", "command": ["/o"]}, "longterm-mem": ` + registerLegacyEntry(home) + `}}` + "\n"
+}
+
+const registerForeignLegacyOpencode = `{"mcp": {"longterm-mem": {"type": "local", "command": ["/someone/elses/binary", "mcp"]}}}` + "\n"
 
 // registerFiles puts the configuration of the runtimes a machine has on it.
 type registerFiles struct{ claude, opencode, codex bool }
@@ -196,6 +209,21 @@ func registerScenarios() []registerScenario {
 			w.write(t, "package/mcp.json", registerEmptyPi)
 		}, commands: [][]string{register("--target", "pi", "--config-root", "{home}/package")}},
 		{name: "41-register-pi-when-the-package-directory-cannot-be-told", homeless: true, commands: [][]string{register(withFlags("--target", "pi")...)}},
+
+		// opencode 1.x: the entry an earlier version wrote under mcp.longterm-mem.
+		{name: "42-register-migrates-an-owned-opencode-1x-entry", setup: func(t *testing.T, w *registerWorld) {
+			w.write(t, ".config/opencode/opencode.json", registerLegacyOpencode(w.home))
+		}, commands: [][]string{register("--target", "opencode"), register("--target", "opencode")}},
+		{name: "43-register-over-an-opencode-1x-entry-that-is-not-ours", setup: func(t *testing.T, w *registerWorld) {
+			w.write(t, ".config/opencode/opencode.json", registerForeignLegacyOpencode)
+		}, commands: [][]string{register("--target", "opencode")}},
+		{name: "44-unregister-an-owned-opencode-1x-entry", setup: func(t *testing.T, w *registerWorld) {
+			w.write(t, ".config/opencode/opencode.json", registerLegacyOpencode(w.home))
+			w.write(t, ".labdrian-overlay/longterm-mem/install-state.json", `{"schema": 1, "targets": {"opencode": {"fingerprint": "`+registerpkg.Fingerprint([]byte(registerLegacyEntry(w.home)))+`"}}}`+"\n")
+		}, commands: [][]string{unregister("--target", "opencode")}},
+		{name: "45-unregister-an-opencode-1x-entry-that-is-not-ours", setup: func(t *testing.T, w *registerWorld) {
+			w.write(t, ".config/opencode/opencode.json", registerForeignLegacyOpencode)
+		}, commands: [][]string{unregister("--target", "opencode")}},
 	}
 }
 

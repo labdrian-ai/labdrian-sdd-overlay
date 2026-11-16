@@ -20,6 +20,9 @@ const (
 	LongtermMemReasonFingerprintDrift       = "fingerprint drift"
 	LongtermMemReasonRuntimeNotInstalled    = "runtime not installed"
 	LongtermMemReasonNotRegistered          = "not registered"
+	// LongtermMemReasonOpenCode1xEntry: opencode's config holds the 1.x entry this overlay wrote, which
+	// opencode v2 does not read; `longterm-mem register --target opencode` migrates it.
+	LongtermMemReasonOpenCode1xEntry = "opencode 1.x entry (run longterm-mem register --target opencode to migrate it)"
 )
 
 // LongtermMemComponentState is the pure input to the status matrix: every

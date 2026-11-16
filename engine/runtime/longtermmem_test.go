@@ -302,18 +302,6 @@ func TestLongtermMemAdapter_RecordWithoutEntryStillReportsDrift(t *testing.T) {
 // recorded, AND it must still be observed as PRESENT. If presence itself
 // required ownership, a foreign entry would collapse into "no record, no
 // entry" and be reported as a healthy "not registered" — which hides it.
-func TestLongtermMemAdapter_OpenCode1xEntryStillReadAsOurOwn(t *testing.T) {
-	f := newLongtermMemFixture(t)
-	f.writeExecutableBinary(t)
-	writeFile(t, f.openCodePath, `{"mcp":{"longterm-mem":{"type":"local","command":["`+f.binaryPath+`","mcp"],"enabled":true}}}`)
-
-	install := f.adapter().Install()
-
-	if got := registrationTargets(t, f.stateDir); !got["opencode"] {
-		t.Fatalf("an opencode 1.x entry this overlay wrote was not recognised as ours; targets=%v reasons=%v", got, install.Reasons)
-	}
-}
-
 func TestLongtermMemAdapter_ForeignEntryIsNeverAdoptedAsOurOwn(t *testing.T) {
 	f := newLongtermMemFixture(t)
 	f.writeExecutableBinary(t)
@@ -418,6 +406,50 @@ func TestLongtermMemAdapter_UninstallReportsItsOwnVerdict(t *testing.T) {
 			}
 		}
 	})
+}
+
+// What Install() then Status() say of opencode for each shape its config can hold: the v2 entry is healthy, the
+// 1.x entry this overlay wrote is partial and says to run register (it is not registered the way opencode v2 reads
+// it), a foreign 1.x entry is the unmanaged entry it always was, and no entry is not registered.
+func TestLongtermMemAdapter_OpenCodeStatusForEachEntryShape(t *testing.T) {
+	cases := []struct {
+		name       string
+		config     func(f longtermMemFixture) string
+		wantStatus core.CapabilityStatus
+		wantReason string
+		recorded   bool
+	}{
+		{"v2 entry", func(f longtermMemFixture) string {
+			return `{"mcp":{"servers":{"longterm-mem":{"type":"local","command":["` + f.binaryPath + `","mcp"],"codemode":true}}}}`
+		}, core.CapabilitySupported, "", true},
+		{"owned 1.x entry", func(f longtermMemFixture) string {
+			return `{"mcp":{"longterm-mem":{"type":"local","command":["` + f.binaryPath + `","mcp"],"enabled":true}}}`
+		}, core.CapabilityPartial, engineRuntime.LongtermMemReasonOpenCode1xEntry, false},
+		{"foreign 1.x entry", func(f longtermMemFixture) string {
+			return `{"mcp":{"longterm-mem":{"type":"local","command":["/someone/elses","mcp"],"enabled":true}}}`
+		}, core.CapabilityPartial, engineRuntime.LongtermMemReasonEntryWithoutRecord, false},
+		{"no entry", func(f longtermMemFixture) string {
+			return `{"mcp":{"servers":{"other":{"type":"local","command":["/other"]}}}}`
+		}, core.CapabilitySupported, engineRuntime.LongtermMemReasonNotRegistered, false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newLongtermMemFixture(t)
+			f.writeExecutableBinary(t)
+			writeFile(t, f.openCodePath, tc.config(f))
+			a := f.adapter()
+			a.Install()
+			for label, result := range map[string]core.LifecycleResult{"Install": a.Install(), "Status": a.Status()} {
+				line := reasonFor(t, result.Reasons, "opencode")
+				if !strings.Contains(line, string(tc.wantStatus)) || (tc.wantReason != "" && !strings.Contains(line, tc.wantReason)) {
+					t.Fatalf("%s() line for opencode = %q, want status %q reason %q", label, line, tc.wantStatus, tc.wantReason)
+				}
+			}
+			if got := registrationTargets(t, f.stateDir)["opencode"]; got != tc.recorded {
+				t.Fatalf("opencode recorded = %v, want %v", got, tc.recorded)
+			}
+		})
+	}
 }
 
 // TestLongtermMemAdapter_InstallRecordsRegistrationAndReportsStatus is

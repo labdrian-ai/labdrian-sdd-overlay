@@ -2,6 +2,7 @@ package register
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -84,6 +85,9 @@ func TestOpencodeV2_LegacyEntryMigratedOnRegister(t *testing.T) {
 	if want := c.readFixture(t, "after-migrate.json"); string(got) != string(want) {
 		t.Fatalf("config after migration =\n%s\nwant =\n%s", got, want)
 	}
+	if bak, _ := os.ReadFile(backupPath(path)); string(bak) != string(c.readFixture(t, "legacy-1x.json")) {
+		t.Fatalf(".bak = %s, want the original", bak)
+	}
 }
 
 func TestOpencodeV2_LegacyEntryOfAnOlderBinaryMigratedByRecord(t *testing.T) {
@@ -109,7 +113,9 @@ func TestOpencodeV2_LegacyEntryOfAnOlderBinaryMigratedByRecord(t *testing.T) {
 	}
 }
 
-func TestOpencodeV2_ForeignLegacyEntryIsNeverDropped(t *testing.T) {
+// A hand-written 1.x mcp.longterm-mem is a stranger's entry, exactly as it was
+// before the v2 shape: register refuses (ErrConflict) and writes nothing.
+func TestOpencodeV2_ForeignLegacyEntryIsAConflict(t *testing.T) {
 	c := opencodeGoldenCase()
 	dir, stateDir := t.TempDir(), t.TempDir()
 	path := filepath.Join(dir, c.configFileName)
@@ -118,15 +124,145 @@ func TestOpencodeV2_ForeignLegacyEntryIsNeverDropped(t *testing.T) {
 	if err := os.WriteFile(path, []byte(seed), 0o600); err != nil {
 		t.Fatal(err)
 	}
+	err := c.register(dir, stateDir, c.binary1)
+	if !errors.Is(err, ErrConflict) {
+		t.Fatalf("register over a foreign 1.x entry = %v, want ErrConflict", err)
+	}
+	if got, _ := os.ReadFile(path); string(got) != seed {
+		t.Fatalf("the refused register changed the config:\n%s", got)
+	}
+	if _, statErr := os.Stat(backupPath(path)); statErr == nil {
+		t.Fatal("the refused register wrote a .bak")
+	}
+}
+
+// A 1.x server that happens to be called "servers" is not the v2 container.
+func TestOpencodeV2_A1xServerNamedServersIsAConflict(t *testing.T) {
+	c := opencodeGoldenCase()
+	dir, stateDir := t.TempDir(), t.TempDir()
+	path := filepath.Join(dir, c.configFileName)
+	seed := `{"mcp":{"servers":{"type":"local","command":["/usr/local/bin/servers"],"enabled":true}}}` + "\n"
+	if err := os.WriteFile(path, []byte(seed), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.register(dir, stateDir, c.binary1); !errors.Is(err, ErrConflict) {
+		t.Fatalf("register = %v, want ErrConflict", err)
+	}
+	if got, _ := os.ReadFile(path); string(got) != seed {
+		t.Fatalf("the refused register changed the config:\n%s", got)
+	}
+	outcome, err := c.unregister(dir, stateDir)
+	if err != nil || outcome != UnregisterNoop {
+		t.Fatalf("unregister = %v, %v; want noop", outcome, err)
+	}
+	if got, _ := os.ReadFile(path); string(got) != seed {
+		t.Fatalf("unregister changed the config:\n%s", got)
+	}
+}
+
+// One operation is one write: the .bak holds the file as the operation found it.
+func TestOpencodeV2_BackupHoldsTheOriginalAfterAMigratingRegisterAndAfterUnregister(t *testing.T) {
+	c := opencodeGoldenCase()
+	dir, stateDir := t.TempDir(), t.TempDir()
+	path := c.seedConfig(t, dir, "legacy-1x.json")
+	original := c.readFixture(t, "legacy-1x.json")
 	if err := c.register(dir, stateDir, c.binary1); err != nil {
 		t.Fatalf("register: %v", err)
 	}
-	got, _ := os.ReadFile(path)
-	if !strings.Contains(string(got), foreign) {
-		t.Fatalf("a foreign mcp.longterm-mem entry was dropped:\n%s", got)
+	if bak, _ := os.ReadFile(backupPath(path)); string(bak) != string(original) {
+		t.Fatalf(".bak after a migrating register =\n%s\nwant the original", bak)
 	}
-	if readV2Entry(t, path)["codemode"] != true {
-		t.Fatalf("v2 entry not written:\n%s", got)
+	migrated, _ := os.ReadFile(path)
+	if _, err := c.unregister(dir, stateDir); err != nil {
+		t.Fatalf("unregister: %v", err)
+	}
+	if bak, _ := os.ReadFile(backupPath(path)); string(bak) != string(migrated) {
+		t.Fatalf(".bak after unregister =\n%s\nwant the file as unregister found it", bak)
+	}
+
+	// An owned 1.x entry and a v2 entry together go in one write too.
+	dir2, state2 := t.TempDir(), t.TempDir()
+	both := strings.Replace(string(c.readFixture(t, "after-install.json")), `"mcp": {`, `"mcp": {
+    "longterm-mem": `+legacyOwnedEntry+`,`, 1)
+	path2 := filepath.Join(dir2, c.configFileName)
+	if err := os.WriteFile(path2, []byte(both), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	st := &InstallState{}
+	st.Set(opencodeTarget, TargetRecord{Fingerprint: Fingerprint([]byte(legacyOwnedEntry))})
+	if err := fileWriter().State.Save(state2, st); err != nil {
+		t.Fatal(err)
+	}
+	outcome, err := c.unregister(dir2, state2)
+	if err != nil || outcome != UnregisterRemoved {
+		t.Fatalf("unregister = %v, %v; want removed", outcome, err)
+	}
+	if bak, _ := os.ReadFile(backupPath(path2)); string(bak) != both {
+		t.Fatalf(".bak after unregister =\n%s\nwant the original", bak)
+	}
+	if got, _ := os.ReadFile(path2); strings.Contains(string(got), "longterm-mem") {
+		t.Fatalf("an entry of ours is left:\n%s", got)
+	}
+}
+
+// The proof of ownership of an older-binary 1.x entry is the record; a failed
+// register must neither lose the record nor leave the config half migrated.
+func TestOpencodeV2_FailedRegisterKeepsTheProofAndTheConfig(t *testing.T) {
+	c := opencodeGoldenCase()
+	dir, stateDir := t.TempDir(), t.TempDir()
+	path := filepath.Join(dir, c.configFileName)
+	old := `{"type":"local","command":["/old/place/longterm-mem","mcp"],"enabled":true}`
+	seed := strings.Replace(string(c.readFixture(t, "legacy-1x.json")), legacyOwnedEntry, old, 1)
+	if err := os.WriteFile(path, []byte(seed), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	st := &InstallState{}
+	st.Set(opencodeTarget, TargetRecord{Fingerprint: Fingerprint([]byte(old))})
+	if err := fileWriter().State.Save(stateDir, st); err != nil {
+		t.Fatal(err)
+	}
+	if err := (Writer{State: unsavableState{}}).RegisterOpencode(dir, stateDir, c.binary1); err == nil {
+		t.Fatal("register with an unwritable install-state succeeded")
+	}
+	if got, _ := os.ReadFile(path); string(got) != seed {
+		t.Fatalf("the failed register left the config changed:\n%s", got)
+	}
+	if err := c.register(dir, stateDir, c.binary1); err != nil {
+		t.Fatalf("the retry: %v", err)
+	}
+	got, _ := os.ReadFile(path)
+	if want := c.readFixture(t, "after-migrate.json"); string(got) != string(want) {
+		t.Fatalf("config after the retry =\n%s\nwant =\n%s", got, want)
+	}
+}
+
+// A new member lands at its real depth, also in an empty servers object.
+func TestOpencodeV2_InsertsAtTheRealDepth(t *testing.T) {
+	c := opencodeGoldenCase()
+	dir, stateDir := t.TempDir(), t.TempDir()
+	path := filepath.Join(dir, c.configFileName)
+	seed := "{\n  \"mcp\": {\n    \"servers\": {}\n  }\n}\n"
+	if err := os.WriteFile(path, []byte(seed), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.register(dir, stateDir, c.binary1); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+	want := "{\n  \"mcp\": {\n    \"servers\": {\n      \"longterm-mem\": {\"type\":\"local\",\"command\":[\"/opt/labdrian-overlay/bin/longterm-mem\",\"mcp\"],\"codemode\":true}}\n  }\n}\n"
+	if got, _ := os.ReadFile(path); string(got) != want {
+		t.Fatalf("config =\n%s\nwant =\n%s", got, want)
+	}
+}
+
+// Errors name the container the way opencode's config does.
+func TestOpencodeV2_ErrorsNameTheContainerWithADot(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "opencode.json")
+	if err := os.WriteFile(path, []byte(`{"mcp":{"servers":{}}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	err := RemoveMember(path, opencodeContainerKey, "longterm-mem")
+	if err == nil || !strings.Contains(err.Error(), "mcp.servers") || strings.Contains(err.Error(), "mcp/servers") {
+		t.Fatalf("error = %v, want it to name mcp.servers", err)
 	}
 }
 
@@ -180,8 +316,9 @@ func TestOpencodeV2_UnregisterLeavesAForeignLegacyEntry(t *testing.T) {
 	dir, stateDir := t.TempDir(), t.TempDir()
 	path := c.seedConfig(t, dir, "legacy-1x.json")
 	before, _ := os.ReadFile(path)
-	if _, err := c.unregister(dir, stateDir); err != nil {
-		t.Fatalf("unregister: %v", err)
+	outcome, err := c.unregister(dir, stateDir)
+	if err != nil || outcome != UnregisterUnmanaged {
+		t.Fatalf("unregister = %v, %v; want unmanaged", outcome, err)
 	}
 	after, _ := os.ReadFile(path)
 	if string(before) != string(after) {
