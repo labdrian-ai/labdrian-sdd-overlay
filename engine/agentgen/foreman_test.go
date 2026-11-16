@@ -9,6 +9,8 @@ package agentgen_test
 import (
 	"os"
 	"path/filepath"
+	"regexp"
+	"slices"
 	"strings"
 	"testing"
 
@@ -77,16 +79,65 @@ func TestTheClaudeFileOfTheForemanIsItsFrontmatterAndItsSource(t *testing.T) {
 	}
 	// The Claude file has no effort field (Claude Code takes none from the file), and the foreman has no
 	// Pi or Codex file that would take one.
-	// Only the frontmatter is read: between the opening --- and the closing --- line, so body prose that
-	// says "thinking: x" is no field.
-	frontmatter, _, _ := strings.Cut(strings.TrimPrefix(got, "---\n"), "\n---\n")
-	for _, line := range strings.Split(frontmatter, "\n") {
-		for _, effort := range []string{"effort", "thinking"} {
-			if strings.HasPrefix(line, effort+":") {
-				t.Errorf("the frontmatter of agents/foreman.md holds an %s field: %q", effort, line)
-			}
+	// Only the frontmatter is read: between the opening --- line and the next --- line, so body prose that
+	// says "thinking: x" is no field. Both fences must be found, whatever the line ending, or the check fails.
+	// A key counts with any indentation, quoting or space before its colon.
+	if field, found := effortField(got); !found {
+		t.Errorf("agents/foreman.md has no frontmatter between two --- lines:\n%s", got)
+	} else if field != "" {
+		t.Errorf("the frontmatter of agents/foreman.md holds an effort field: %q", field)
+	}
+}
+
+// The effort check reads the frontmatter only, finds it whatever the line ending, refuses a file with no
+// closing fence, and knows an effort key however it is written.
+func TestTheEffortCheckReadsTheFrontmatterOnly(t *testing.T) {
+	cases := []struct {
+		name, file, field string
+		found             bool
+	}{
+		{"none", "---\nname: x\n---\n\nbody\n", "", true},
+		{"body prose", "---\nname: x\n---\n\nthinking: x\n", "", true},
+		{"closing fence last, no newline", "---\nname: x\n---", "", true},
+		{"crlf", "---\r\nname: x\r\n---\r\n\r\nthinking: x\r\n", "", true},
+		{"crlf field", "---\r\neffort: high\r\n---\r\n", "effort: high", true},
+		{"indented", "---\n  effort: high\n---\n", "  effort: high", true},
+		{"quoted", "---\n\"thinking\": x\n---\n", "\"thinking\": x", true},
+		{"space before colon", "---\nthinking : x\n---\n", "thinking : x", true},
+		{"no opening fence", "name: x\n---\neffort: high\n", "", false},
+		{"no closing fence", "---\nname: x\neffort: high\n", "", false},
+	}
+	for _, c := range cases {
+		field, found := effortField(c.file)
+		if field != c.field || found != c.found {
+			t.Errorf("%s: effortField = %q, %v; want %q, %v", c.name, field, found, c.field, c.found)
 		}
 	}
+}
+
+// effortKey is a frontmatter line whose key is effort or thinking.
+var effortKey = regexp.MustCompile(`^\s*["']?(effort|thinking)["']?\s*:`)
+
+// effortField is the first effort or thinking line of the frontmatter of file, and whether the file has a
+// frontmatter: a first line --- and a later line ---, either with or without a carriage return.
+func effortField(file string) (string, bool) {
+	lines := strings.Split(file, "\n")
+	for i := range lines {
+		lines[i] = strings.TrimRight(lines[i], "\r")
+	}
+	if lines[0] != "---" {
+		return "", false
+	}
+	end := slices.Index(lines[1:], "---")
+	if end < 0 {
+		return "", false
+	}
+	for _, line := range lines[1 : end+1] {
+		if effortKey.MatchString(line) {
+			return line, true
+		}
+	}
+	return "", true
 }
 
 // The model of the foreman is the frontier row of the tier table of role-chain (S18): the parent takes the
