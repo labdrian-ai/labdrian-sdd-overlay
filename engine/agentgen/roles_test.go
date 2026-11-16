@@ -99,6 +99,14 @@ func seededRoot(t *testing.T) string {
 	if err != nil {
 		t.Fatalf("copying the role sources: %v", err)
 	}
+	// The model ids of the files come from the tier table of the role-chain reference.
+	table := readText(t, filepath.Join(repoRoot(t), filepath.FromSlash(modelsRel)))
+	if err := os.MkdirAll(filepath.Dir(modelsPath(root)), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(modelsPath(root), []byte(table), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	return root
 }
 

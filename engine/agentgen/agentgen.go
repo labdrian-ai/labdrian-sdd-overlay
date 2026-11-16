@@ -45,18 +45,27 @@ func (e *sourceError) Unwrap() error { return e.err }
 // cannot be read or projected has no files in the table and is returned as a problem, so that the
 // caller can say all of them.
 func build(repoRoot string) (table []Artifact, problems []*sourceError) {
+	models, modelsErr := ReadModelTable(repoRoot)
 	for _, r := range roles {
 		data, err := os.ReadFile(filepath.Join(repoRoot, filepath.FromSlash(r.sourcePath())))
 		if err != nil {
 			problems = append(problems, &sourceError{path: r.sourcePath(), verb: "reading", err: err})
 			continue
 		}
-		files, err := r.project(string(data))
+		if modelsErr != nil {
+			continue
+		}
+		files, err := r.project(string(data), models)
 		if err != nil {
 			problems = append(problems, &sourceError{path: r.sourcePath(), verb: "projecting", err: err})
 			continue
 		}
 		table = append(table, files...)
+	}
+	// The table is reported after the sources: without it no role can be projected, so nothing is returned
+	// for the roles whose sources were read.
+	if modelsErr != nil {
+		problems = append(problems, &sourceError{path: modelsPath, verb: "reading", err: modelsErr})
 	}
 	return table, problems
 }
@@ -122,6 +131,10 @@ func Check(repoRoot string) error {
 	}
 	for _, p := range problems {
 		switch {
+		case p.path == modelsPath && errors.Is(p.err, fs.ErrNotExist):
+			errs = append(errs, fmt.Sprintf("%s: missing (the tier table of the models is not in the repository)", p.path))
+		case p.path == modelsPath:
+			errs = append(errs, fmt.Sprintf("%s: cannot use the tier table of the models: %v", p.path, p.err))
 		case errors.Is(p.err, fs.ErrNotExist):
 			errs = append(errs, fmt.Sprintf("%s: missing (the source of the role is not in the repository)", p.path))
 		case p.verb == "reading":

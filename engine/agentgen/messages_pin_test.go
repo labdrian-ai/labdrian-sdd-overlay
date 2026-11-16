@@ -26,7 +26,7 @@ func allPaths() []string {
 const regenerate = "run: gentle-ai-overlay gadu-generate"
 
 // A root with nothing in it has no artifact and no source of a role: Check names the source of each
-// role, in the order of the table, and nothing else. A role whose source is missing has no files
+// role, in the order of the table, then the tier table of the models, and nothing else. A role whose source is missing has no files
 // named: they cannot be compared with a body that is not there.
 func TestCheckNamesEveryArtifactThatIsMissingInTheOrderOfTheTable(t *testing.T) {
 	err := agentgen.Check(t.TempDir())
@@ -35,6 +35,7 @@ func TestCheckNamesEveryArtifactThatIsMissingInTheOrderOfTheTable(t *testing.T) 
 	for _, r := range wantRoles {
 		want += "\n  roles/" + r.name + "/body.md: missing (the source of the role is not in the repository)"
 	}
+	want += "\n  skills/role-chain/references/models.md: missing (the tier table of the models is not in the repository)"
 	if err == nil || err.Error() != want {
 		t.Errorf("Check error = %v\nwant\n%s", err, want)
 	}
