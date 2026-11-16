@@ -172,8 +172,11 @@ func TestAMalformedTableAndAMissingSourceAreReportedTogether(t *testing.T) {
 			}
 		}
 	}
-	if _, err := os.Stat(filepath.Join(root, "agents")); err == nil {
-		t.Error("Generate wrote files although the table was refused")
+	// Every directory the generator writes a role file into (Files: agents/, pi/agents/, codex/agents/).
+	for _, dir := range []string{"agents", "pi", "codex"} {
+		if _, err := os.Stat(filepath.Join(root, dir)); err == nil {
+			t.Errorf("Generate wrote %s/ although the table was refused", dir)
+		}
 	}
 }
 
