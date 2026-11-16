@@ -1,5 +1,7 @@
 package runtime
 
+import "github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings"
+
 // HookInstaller is how the Claude adapter reaches the hooks in Claude Code's settings.json. The
 // adapter owns the port; the settings file adapter (engine/settings/settingsfile) answers it, and
 // the composition root wires the two. A test of the adapter hands it a fake, or the real installer
@@ -20,4 +22,13 @@ type HookInstaller interface {
 	// for the binary at hookCommand. An error means the file could not be read or parsed, and is
 	// the one the system or the JSON decoder reported.
 	Inspect(path, hookCommand string) (found, owned bool, err error)
+}
+
+// MainAgentInspector is the optional second half of the port: an installer that also answers what the
+// settings file holds under the top-level "agent" key (settings.MainAgent). The adapter reports the key
+// when its installer answers this, and an installer that does not (a test fake of the hooks alone) is
+// judged by its hooks only.
+type MainAgentInspector interface {
+	// InspectMainAgent returns the state of the key and, for a foreign value, that value as JSON.
+	InspectMainAgent(path string) (state settings.MainAgentState, valueJSON string, err error)
 }

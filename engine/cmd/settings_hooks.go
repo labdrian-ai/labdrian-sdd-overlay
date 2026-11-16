@@ -62,8 +62,7 @@ func noticeForeignMainAgent(p process, settingsPath string) {
 	if err != nil || settings.MainAgent(doc.Root()) != settings.MainAgentConflict {
 		return
 	}
-	fmt.Fprintf(p.stderr, "notice: %s holds \"agent\": %s; it was left as it is, so the foreman main session was not enabled (set it to %q or remove the key, then run install-hooks again)\n",
-		settingsPath, settings.MainAgentValueJSON(doc.Root()), settings.MainAgentName)
+	fmt.Fprintln(p.stderr, "notice: "+settings.ForeignMainAgentNotice(settingsPath, settings.MainAgentValueJSON(doc.Root())))
 }
 
 // runUninstallHooks implements the 'uninstall-hooks' subcommand.

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime/core"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings"
 )
 
 // ClaudeAdapter is the runtime adapter foundation for Claude CLI.
@@ -40,7 +41,7 @@ func (a ClaudeAdapter) Install() core.LifecycleResult {
 		return a.result(core.ActionInstall, core.CapabilityPartial, err.Error())
 	}
 
-	return a.result(core.ActionInstall, core.CapabilityRestartRequired, "Claude lifecycle hooks installed; restart Claude to load hook changes")
+	return a.result(core.ActionInstall, core.CapabilityRestartRequired, "Claude lifecycle hooks installed; restart Claude to load hook changes"+a.foreignAgentNotice(settingsPath))
 }
 func (a ClaudeAdapter) Status() core.LifecycleResult    { return a.status() }
 func (a ClaudeAdapter) SyncCheck() core.LifecycleResult { return a.Status() }
@@ -57,7 +58,7 @@ func (a ClaudeAdapter) Update() core.LifecycleResult {
 		return a.result(core.ActionUpdate, core.CapabilityPartial, err.Error())
 	}
 
-	return a.result(core.ActionUpdate, core.CapabilityRestartRequired, "Claude lifecycle hooks updated; restart Claude to load hook changes")
+	return a.result(core.ActionUpdate, core.CapabilityRestartRequired, "Claude lifecycle hooks updated; restart Claude to load hook changes"+a.foreignAgentNotice(settingsPath))
 }
 func (a ClaudeAdapter) Rollback() core.LifecycleResult { return a.Uninstall() }
 func (a ClaudeAdapter) Uninstall() core.LifecycleResult {
@@ -97,7 +98,47 @@ func (a ClaudeAdapter) status() core.LifecycleResult {
 				"; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'")
 	}
 
+	if r, ok := a.mainAgentStatus(settingsPath); ok {
+		return r
+	}
 	return a.result(core.ActionStatus, core.CapabilitySupported, "Claude lifecycle hooks are installed and owned")
+}
+
+// mainAgentStatus is the status result for the top-level "agent" key when it is not the foreman's: partial,
+// naming the key (missing) or the foreign value and that the foreman main session is not enabled. ok is
+// false when the key is the foreman's, or the installer does not answer for the key.
+func (a ClaudeAdapter) mainAgentStatus(settingsPath string) (core.LifecycleResult, bool) {
+	inspector, ok := a.hooks.(MainAgentInspector)
+	if !ok {
+		return core.LifecycleResult{}, false
+	}
+	state, value, err := inspector.InspectMainAgent(settingsPath)
+	if err != nil {
+		return a.result(core.ActionStatus, core.CapabilityUnsupported, "read settings file "+settingsPath+": "+err.Error()), true
+	}
+	switch state {
+	case settings.MainAgentMissing:
+		return a.result(core.ActionStatus, core.CapabilityPartial,
+			"Claude settings \"agent\" key is missing in "+settingsPath+"; the foreman main session is not enabled; run 'labdrian install-hooks'"), true
+	case settings.MainAgentConflict:
+		return a.result(core.ActionStatus, core.CapabilityPartial,
+			"Claude settings \"agent\" is "+value+" in "+settingsPath+", not \""+settings.MainAgentName+"\"; the foreman main session is not enabled (set it to \""+settings.MainAgentName+"\" or remove the key, then run 'labdrian install-hooks')"), true
+	}
+	return core.LifecycleResult{}, false
+}
+
+// foreignAgentNotice is "; " and the notice of the install verb when the installer finds a foreign value under the
+// "agent" key, and nothing otherwise.
+func (a ClaudeAdapter) foreignAgentNotice(settingsPath string) string {
+	inspector, ok := a.hooks.(MainAgentInspector)
+	if !ok {
+		return ""
+	}
+	state, value, err := inspector.InspectMainAgent(settingsPath)
+	if err != nil || state != settings.MainAgentConflict {
+		return ""
+	}
+	return "; " + settings.ForeignMainAgentNotice(settingsPath, value)
 }
 
 // configPaths resolves the settings file and the hook command from the Claude root: the file is

@@ -45,6 +45,14 @@ func MainAgentValueJSON(root map[string]interface{}) string {
 	return strings.TrimSuffix(buf.String(), "\n")
 }
 
+// ForeignMainAgentNotice is the sentence an install says when the key at location (the settings file) holds
+// the foreign value valueJSON: it was left as it is, so the foreman main session was not enabled. The
+// install verb of the command line and the Claude runtime adapter both say it, from here.
+func ForeignMainAgentNotice(location, valueJSON string) string {
+	return fmt.Sprintf("%s holds \"%s\": %s; it was left as it is, so the foreman main session was not enabled (set it to %q or remove the key, then run install-hooks again)",
+		location, MainAgentKey, valueJSON, MainAgentName)
+}
+
 // MainAgent reports the state of the main-session agent key in root.
 func MainAgent(root map[string]interface{}) MainAgentState {
 	v, ok := root[MainAgentKey]
