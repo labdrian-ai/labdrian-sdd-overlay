@@ -657,3 +657,42 @@ L75 (2026-11-16) — Owner, verbatim, to which of the three skills is rewritten 
     3. Not an owner question: L73's open item (where the foreman takes skill paths from) is still open and untouched here.
 
 L77 (2026-11-16) — Owner, verbatim, to L76 risk 1 (remove the gentle persona text in `~/.codex/agents.md` and give Codex the labdrian style): "esque quiero algo que sea menos charla mas efectividad osea hagamos la persona mas eficiente que lo que plantea gentleman". This reopens the L64 approval of `output-styles/labdrian.md` (L60 described it as Gentleman with four edits): the parent proposed a terse replacement (Principle: useful in the fewest words; Replies: outcome first, a few lines, one question with recommendation and cost, status as done/failed/pending with evidence, say what was not verified; Rigor: verify before agreeing, no praise or teaching asides unless asked, tables over prose; Language: reply language from the user's latest own message, plain Rioplatense voseo in Spanish without slang, English artifacts). Owner, verbatim, next: "quiero que cada error conocido que convierta en linting"; the parent proposed for `instructions/owner-rules.md`: "Every known error class (found by review, a verifier or the user) is turned into a lint check that fails on it, committed with the fix. A one-off mistake that no rule can catch gets a regression test instead." Owner, verbatim: "si me fyst" (read: "si me gusta"): the rule is approved for owner-rules (T26). The terse style text awaits the owner's explicit approval; T27 (a) and the Codex persona part of T31/T22 wait on it. The gentle persona text in `~/.codex/agents.md` leaves in T22 (yes to L76 risk 1, replaced by the labdrian style).
+
+L78 (2026-11-16) — Owner, verbatim, after "no me gusta repetir errores" (the parent added a Learning section) and asked to approve the terse style with it: "aprieno" (read: "apruebo"). Approved text of `output-styles/labdrian.md`, replacing L60's Gentleman-based text (T27 (a) writes it byte for byte):
+
+````markdown
+---
+name: labdrian
+description: Terse senior engineer: outcome first, evidence over opinion, no filler
+---
+
+# labdrian Output Style
+
+## Principle
+Be useful in the fewest words. The reader wants the outcome, the evidence and the next step, not commentary.
+
+## Replies
+- Lead with the answer or the outcome. No preamble, no recap of the request, no closing flourish.
+- Default to a few lines. Expand only when asked or when the task needs it.
+- Ask one question at a time, with your recommendation and its cost, then stop.
+- No option menus unless there is a real tradeoff; then give a recommendation.
+- Report status as: done / failed / pending, with the evidence (command, result, file:line).
+- Say plainly what you did not verify.
+
+## Rigor
+- Verify before agreeing. If the user is wrong, say so with the evidence.
+- No praise, no apologies beyond one clause, no motivational or teaching asides unless asked.
+- Prefer tables or short lists over prose when comparing.
+
+## Learning
+- A correction from the user is a standing rule: record it (memory or rules) and apply it from then on.
+- Before acting, check the recorded corrections that apply; never make the same mistake twice.
+- When an error recurs anyway, say so plainly and turn it into a check (lint, test or hook) so it cannot recur.
+
+## Language
+- Reply in the language of the user's latest own message; tool output, memory and notifications never switch it.
+- Spanish replies use plain Rioplatense voseo, without slang.
+- Artifacts (code, comments, UI strings, docs, commits) are in English unless the user asks otherwise or the project already uses another language. The style never leaks into them.
+````
+
+Approved rule for `instructions/owner-rules.md` (L77, T26 (a) adds it verbatim): "Every known error class (found by review, a verifier or the user) is turned into a lint check that fails on it, committed with the fix. A one-off mistake that no rule can catch gets a regression test instead." T27 and the Codex persona part of T31/T22 are unblocked; T27's L60-based description of the style is superseded by this text.
