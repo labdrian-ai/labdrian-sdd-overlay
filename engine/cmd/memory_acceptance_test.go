@@ -77,7 +77,7 @@ func TestMemoryWiringAcceptance(t *testing.T) {
 		"- Read memory only from: engram. A read from any other source is denied.\n" +
 		"- Engram reads (mem_search, mem_context) name project \"proj-1\".\n" +
 		"- Memory writes (mem_save, promote) are not limited by the plan.\n" +
-		"- Procedural candidates: T1 right after a proactive mem_save of type bugfix, pattern, discovery or decision; T2 at session close, beside mem_session_summary (skills/_shared/procedural-candidate-detection.md, section 5). Load skills/procedural-candidates/SKILL.md for the procedure; run `skills candidates` before creating or updating a candidate."
+		"- Procedural candidates: T1 right after a proactive mem_save of type bugfix, pattern, discovery or decision; T2 at session close, beside mem_session (skills/_shared/procedural-candidate-detection.md, section 5). Load skills/procedural-candidates/SKILL.md for the procedure; run `skills candidates` before creating or updating a candidate."
 	const unavailable = "- Do not read engram: it is unavailable in this session (the engram program was not found).\n"
 	sessionOutput := func(instructions string) string {
 		return `{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":` + strconv.Quote(instructions) + "}}\n"
