@@ -120,6 +120,23 @@ func TestCodexSourceProcesses(t *testing.T) {
 			t.Error("evidence changed workflow log")
 		}
 	})
+	t.Run("OpencodeAdaptsBeforeGate", func(t *testing.T) {
+		w := newPhase7World(t, binary)
+		w.bindRunning("proj-1", "wf-1", "sdd")
+		before := w.stateSnapshot()
+		input := map[string]any{"project": "proj-1", "query": "q", "engram_id": 7}
+		claude := sourceHook(w, "PreToolUse", gateInput(t, w.repo, "session-1", "mcp__longterm-mem__query", input))
+		assertDenied(t, "Claude reference", claude.asHook(), `does not include source "longterm-mem"`)
+		got := sourceHook(w, "PreToolUse", codexSourceInput(t, w.repo, "PreToolUse", "longterm-mem_query", input), "--source", "opencode")
+		if got != claude {
+			t.Errorf("opencode %+v != Claude %+v", got, claude)
+		}
+		// The Code Mode wrapper is not mapped: the policies never see it.
+		assertSilent(t, "execute", sourceHook(w, "PreToolUse", codexSourceInput(t, w.repo, "PreToolUse", "execute", input), "--source", "opencode").asHook())
+		if !reflect.DeepEqual(before, w.stateSnapshot()) {
+			t.Error("gate changed state")
+		}
+	})
 	t.Run("ExistingEventsKeepDefaultAndExplicitClaude", func(t *testing.T) {
 		w := newPhase7World(t, binary)
 		w.bindRunning("proj-1", "wf-1", "sdd")
@@ -173,7 +190,7 @@ func TestCodexSourceProcesses(t *testing.T) {
 		for _, event := range []string{"PreToolUse", "PostToolUse", "SessionStart", "UserPromptSubmit"} {
 			for _, source := range []string{"other", "", "Codex"} {
 				r := sourceHook(w, event, codexSourceInput(t, w.repo, event, "mcp__engram__mem_search", queryArgs("proj-1")), "--source", source)
-				want := fmt.Sprintf("error: projection hook: unsupported --source %q (supported: claude, codex)\n", source)
+				want := fmt.Sprintf("error: projection hook: unsupported --source %q (supported: claude, codex, opencode)\n", source)
 				if r.code != 1 || r.stdout != "" || r.stderr != want {
 					t.Errorf("%s %q: %+v; want usage error %q", event, source, r, want)
 				}
@@ -191,9 +208,9 @@ func TestCodexSourceUsageDoesNotReadStdin(t *testing.T) {
 		var out, errBuf bytes.Buffer
 		var codes []int
 		runProjectionCore(testDeps(), append([]string{"hook", "--event", "PostToolUse"}, flags...), t.TempDir(), stdin, &out, &errBuf, func(code int) { codes = append(codes, code) })
-		want := "error: projection hook: unsupported --source \"other\" (supported: claude, codex)\n"
+		want := "error: projection hook: unsupported --source \"other\" (supported: claude, codex, opencode)\n"
 		if len(flags) == 1 {
-			want = "error: projection hook: --source requires a value (supported: claude, codex)\n"
+			want = "error: projection hook: --source requires a value (supported: claude, codex, opencode)\n"
 		}
 		if stdin.read != 0 || out.Len() != 0 || errBuf.String() != want || !reflect.DeepEqual(codes, []int{1}) {
 			t.Errorf("read=%d stdout=%q stderr=%q codes=%v", stdin.read, out.String(), errBuf.String(), codes)
@@ -204,7 +221,7 @@ func TestCodexSourceUsageDoesNotReadStdin(t *testing.T) {
 func TestCodexSourceHelp(t *testing.T) {
 	readme := sourceRead(t, filepath.Join("..", "..", "README.md"))
 	for name, text := range map[string]string{"usage": captureUsage(t), "README": string(readme)} {
-		if !strings.Contains(text, "[--source claude|codex]") || !strings.Contains(text, "default: claude") {
+		if !strings.Contains(text, "[--source claude|codex|opencode]") || !strings.Contains(text, "default: claude") {
 			t.Errorf("%s does not document source flag/default", name)
 		}
 	}

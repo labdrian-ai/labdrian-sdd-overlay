@@ -88,7 +88,7 @@ func runProjectionCore(d deps, args []string, processCwd string, stdin io.Reader
 	}
 }
 
-// runProjectionHook implements 'projection hook --event <event> [--source claude|codex]'. From the
+// runProjectionHook implements 'projection hook --event <event> [--source claude|codex|opencode]'. From the
 // moment the command line has been understood, nothing it does can change the
 // exit code from 0: a hook that fails must not fail the prompt or the tool call
 // it serves.
@@ -146,7 +146,7 @@ func parseHookArgs(args []string) (event, source string, err error) {
 			event = args[i]
 		case a == "--source":
 			if i+1 >= len(args) {
-				return "", "", fmt.Errorf("--source requires a value (supported: claude, codex)")
+				return "", "", fmt.Errorf("--source requires a value (supported: claude, codex, opencode)")
 			}
 			i++
 			source = args[i]
