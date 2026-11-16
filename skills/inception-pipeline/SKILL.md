@@ -37,7 +37,7 @@ Load `skills/role-chain/SKILL.md`; it owns subsequent hops. Inception writes rol
    {"version":1,"project_id":"acme-shop","goal_id":"add-wishlist","chain_id":"add-wishlist","seq":1,"from_role":"shaper","to_role":"estimator","prev_sha256":"0000000000000000000000000000000000000000000000000000000000000000","payload_kind":"feature-doc","payload_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","evidence":[],"context":{"summary":"Feature document odd/tasks/add-wishlist.md shaped: 4 tasks, 1 slice.","decisions":[],"open_questions":[]},"status":"completed"}
    ```
 
-The parent names `odd/tasks/<feature>.md`; shaper writes Specs and Tasks; estimator receives its sha256. Replace example IDs and digest; `prev_sha256` has 64 zeros. Builder records progress in its Log and delivery adds its final Log entry in place; `progress` and `close-report` are handoff kinds, not files. Bind closure to it and result/verifier files.
+The parent names `odd/tasks/<feature>.md`; shaper writes Specs and Tasks; estimator receives its sha256. Replace example IDs and digest. Builder logs progress; delivery adds its final Log entry in place and returns to the parent, the `foreman`, not the owner; `progress` and `close-report` are not files. Bind closure to it and result/verifier files.
 
 ## Closure-Feedback (plan → validate → execute; single writer)
 

@@ -171,7 +171,7 @@ func TestOddFeatureDocSkillGivesEachRoleItsPart(t *testing.T) {
 		roles = append(roles, row[0])
 		byRole[row[0]] = row
 	}
-	if want := []string{"shaper", "builder", "delivery"}; !reflect.DeepEqual(roles, want) {
+	if want := []string{"shaper", "builder", "delivery", "foreman"}; !reflect.DeepEqual(roles, want) {
 		t.Fatalf("the roles of the table = %v, want %v", roles, want)
 	}
 	for _, part := range []struct {

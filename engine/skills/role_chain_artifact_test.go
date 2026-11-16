@@ -143,7 +143,7 @@ func TestRoleChainAppendsNameWorkflowOpenBeforeTheBuilder(t *testing.T) {
 // because the body is at the recommended token budget (v3 D15).
 func TestRoleChainSkillNamesTheParentModelAndPointsAtTheTiers(t *testing.T) {
 	_, _, body := roleChainSkill(t)
-	const line = "Parent: frontier, medium effort. Tiers: `references/models.md`."
+	const line = "Parent: the `foreman`, frontier, medium effort. Tiers: `references/models.md`."
 	if _, under := roleChainSections(body); !strings.Contains(under[""], line+"\n") {
 		t.Errorf("the text before the first heading must name the parent model, exactly:\n%s", line)
 	}
