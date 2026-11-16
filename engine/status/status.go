@@ -210,6 +210,7 @@ func (s Service) Check(req Request) Report {
 		checkApproveGuard(loaded, binaryPath),
 		checkReviewStopHook(loaded, binaryPath),
 		checkBuilderGuard(loaded, binaryPath),
+		checkMainAgent(loaded, binaryPath),
 		CheckContract(contractPath, s.Files),
 	}
 	if check := s.codexHook(req, binaryPath); check != nil {
@@ -423,6 +424,36 @@ func checkBuilderGuard(s loadedSettings, binaryPath string) Check {
 			Note: "missing or drifted: " + strings.Join(missing, ", ") + "; " + cost + " (" + speedBump + "); " + remediation + "; " + restartNote}
 	}
 	return Check{Label: label, Level: OK, Note: "installed; " + speedBump + "; " + restartNote + " if this session started earlier"}
+}
+
+// checkMainAgent reports whether the settings key that makes the main Claude Code session run as the
+// foreman (S6) is set. It is judged as the families added later are: a missing key warns with the
+// remediation and the restart note, settings that cannot be read fail. A key that holds another value
+// is a conflict and warns too: the overlay never overwrites it, so the remediation of the other
+// checks would not help and the note says what to do instead.
+func checkMainAgent(s loadedSettings, binaryPath string) Check {
+	label := `settings: "agent" (main session runs as the foreman)`
+	const cost = "the main session does not run as the foreman"
+	if c, done := s.beforeEntries(label, Warn, "; "+cost+"; "+remediation+"; "+restartNote); done {
+		return c
+	}
+	switch settings.MainAgent(s.root) {
+	case settings.MainAgentOwned:
+		return Check{Label: label, Level: OK, Note: "installed; " + restartNote + " if this session started earlier"}
+	case settings.MainAgentConflict:
+		return Check{Label: label, Level: Warn,
+			Note: fmt.Sprintf(`"agent" is %s, not %q; the overlay never overwrites it, so %s; set it yourself or remove the key, then run 'labdrian install-hooks'`,
+				quotedValue(s.root[settings.MainAgentKey]), settings.MainAgentName, cost)}
+	}
+	return Check{Label: label, Level: Warn, Note: `"agent" key missing in ` + s.path + "; " + cost + "; " + remediation + "; " + restartNote}
+}
+
+// quotedValue is a settings value for a note: a string in quotes, anything else as Go prints it.
+func quotedValue(v interface{}) string {
+	if s, ok := v.(string); ok {
+		return fmt.Sprintf("%q", s)
+	}
+	return fmt.Sprintf("%v", v)
 }
 
 // CheckContract verifies the contract at path is readable and its frontmatter parses.
