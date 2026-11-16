@@ -96,6 +96,8 @@ func parseModelTable(text string) (ModelTable, error) {
 	if header < 0 {
 		return ModelTable{}, fmt.Errorf("the tier table of %s is missing: no table under %q", modelsPath, tableHeading)
 	}
+	// The header search takes only a line that starts with `|`, and splitRow returns at least one cell for
+	// such a line (strings.Split never returns an empty slice), so head[0] exists.
 	head := splitRow(lines[header])
 	if head[0] != "tier" {
 		return ModelTable{}, fmt.Errorf("the tier table of %s must start with the header row `| tier | ... |`, got %q", modelsPath, lines[header])
