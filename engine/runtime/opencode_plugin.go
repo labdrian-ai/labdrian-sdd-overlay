@@ -14,7 +14,7 @@ const openCodeConfigFile = "labdrian-runtime-parity.json"
 const openCodeActiveFile = "labdrian-runtime-parity.active.json"
 
 // openCodeLegacyPluginExport is the default export of the 1.x plugin file; a file at the legacy
-// path that holds it was written by this adapter.
+// path that holds it beside the active marker's name was written by this adapter.
 const openCodeLegacyPluginExport = "export default async function labdrianRuntimeParityPlugin("
 
 // OpenCodePluginVersion is the version of the plugin the adapter installs; it changes with the

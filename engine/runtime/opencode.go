@@ -98,10 +98,12 @@ func (a OpenCodeAdapter) install(action core.Action) core.LifecycleResult {
 	if err := os.WriteFile(a.pluginPath(), []byte(openCodePluginSource), 0o644); err != nil {
 		return a.result(action, core.CapabilityUnsupported, err.Error())
 	}
+	message := "OpenCode plugin changed; restart OpenCode to load version " + cfg.InstalledVersion
+	// The v2 plugin is written, so a restart is owed whatever the cleanup of the 1.x file says.
 	if err := a.removeLegacyPlugin(); err != nil {
-		return a.result(action, core.CapabilityPartial, err.Error())
+		message += "; " + err.Error()
 	}
-	return a.result(action, core.CapabilityRestartRequired, "OpenCode plugin changed; restart OpenCode to load version "+cfg.InstalledVersion)
+	return a.result(action, core.CapabilityRestartRequired, message)
 }
 
 func (a OpenCodeAdapter) status(action core.Action) core.LifecycleResult {
@@ -118,6 +120,10 @@ func (a OpenCodeAdapter) status(action core.Action) core.LifecycleResult {
 			}
 		}
 		return a.result(action, core.CapabilityUnsupported, "OpenCode plugin not installed")
+	}
+	// A file left at the 1.x path fails to load beside the v2 plugin, whoever wrote it.
+	if _, err := os.Lstat(a.legacyPluginPath()); err == nil {
+		return a.result(action, core.CapabilityPartial, "OpenCode 1.x plugin file remains at "+a.legacyPluginPath()+"; OpenCode v2 cannot load it: run update to remove the one labdrian wrote, or remove it by hand")
 	}
 	cfg, err := a.readConfig()
 	if err != nil {
@@ -165,7 +171,7 @@ func (a OpenCodeAdapter) legacyPluginPath() string {
 }
 
 // removeLegacyPlugin removes the 1.x plugin file this adapter wrote, which OpenCode v2 would fail to
-// load beside the v2 plugin. The file is ours only when it holds the 1.x plugin's default export;
+// load beside the v2 plugin. The file is ours only when it holds the 1.x plugin's default export and names its active marker;
 // any other file at that path is left as it is. A missing file is not an error.
 func (a OpenCodeAdapter) removeLegacyPlugin() error {
 	data, err := os.ReadFile(a.legacyPluginPath())
@@ -175,7 +181,7 @@ func (a OpenCodeAdapter) removeLegacyPlugin() error {
 	if err != nil {
 		return fmt.Errorf("read legacy OpenCode plugin %s: %w", a.legacyPluginPath(), err)
 	}
-	if !strings.Contains(string(data), openCodeLegacyPluginExport) {
+	if !strings.Contains(string(data), openCodeLegacyPluginExport) || !strings.Contains(string(data), openCodeActiveFile) {
 		return nil
 	}
 	if err := os.Remove(a.legacyPluginPath()); err != nil && !os.IsNotExist(err) {
