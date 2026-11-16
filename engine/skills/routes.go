@@ -2,6 +2,7 @@ package skills
 
 import (
 	"fmt"
+	pathpkg "path"
 	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/capability"
@@ -31,6 +32,9 @@ const (
 	RouteOpencodeAgent = "opencode-agent"
 	// RouteCodexAgent copies a row from codex/agents/ to the agents directory of Codex.
 	RouteCodexAgent = "codex-agent"
+	// RouteOutputStyle copies a row from output-styles/ to the output styles directory of Claude Code,
+	// the directory beside its agents directory. Like RouteAgent, the row is named by a bare file.
+	RouteOutputStyle = "output-style"
 	// RouteMCP names a row of the longterm-mem install, which is dispatched on its own: the row
 	// has a source in the overlay and is copied nowhere.
 	RouteMCP = "mcp"
@@ -102,6 +106,7 @@ type RouteDestinations struct {
 	SkillsRoot string
 	// AgentsRoot is the directory that holds the native agents of Target, for a target that has
 	// them (Claude Code, OpenCode and Codex). A row is refused when it needs one and there is none.
+	// The output styles of Claude Code are placed beside it, in <parent of AgentsRoot>/output-styles.
 	AgentsRoot string
 }
 
@@ -160,11 +165,13 @@ func (e *MissingRootError) Error() string {
 	return fmt.Sprintf("manifest row '%s' is copied to the %s directory of %s, and none was given", e.Path, e.Directory, e.Target)
 }
 
-// agentRouteTargets names the runtime that holds the native agents of a route.
+// agentRouteTargets names the runtime that holds the native agents of a route, and the one an output
+// style is for.
 var agentRouteTargets = map[string]string{
 	RouteAgent:         capability.TargetClaude,
 	RouteOpencodeAgent: capability.TargetOpenCode,
 	RouteCodexAgent:    capability.TargetCodex,
+	RouteOutputStyle:   capability.TargetClaude,
 }
 
 // ResolveRoutes decides, for each row of the manifest, the route it takes and where its file is
@@ -214,7 +221,7 @@ func resolveRoute(path, declared, overlayRoot string, dest RouteDestinations) (R
 
 	// A path with no directory, or under engine/, is not a skill: the overlay tracks it and never
 	// copies it. The native agents of Claude Code are the exception, they are named by a bare file.
-	if route != RouteAgent {
+	if route != RouteAgent && route != RouteOutputStyle {
 		first, _, hasDir := strings.Cut(path, "/")
 		if !hasDir || first == "engine" {
 			return never, nil
@@ -227,6 +234,10 @@ func resolveRoute(path, declared, overlayRoot string, dest RouteDestinations) (R
 		placed.RepoRel = "agents/" + path
 		placed.RepoSource = overlayRoot + "/agents/" + path
 		return withAgentDest(placed, path, dest)
+	case RouteOutputStyle:
+		placed.RepoRel = "output-styles/" + path
+		placed.RepoSource = overlayRoot + "/output-styles/" + path
+		return withOutputStyleDest(placed, path, dest)
 	case RouteOpencodeAgent:
 		name := strings.TrimPrefix(path, "opencode/agents/")
 		if name == path || name == "" {
@@ -259,6 +270,25 @@ func resolveRoute(path, declared, overlayRoot string, dest RouteDestinations) (R
 		return ResolvedRoute{}, &MissingRootError{Path: path, Directory: "skills", Target: dest.Target}
 	}
 	placed.Dest = dest.SkillsRoot + "/" + path
+	return placed, nil
+}
+
+// outputStylesDirectory is the directory of the output styles, beside the agents directory of
+// Claude Code (<claude root>/agents, <claude root>/output-styles). The overlay script hands over the
+// agents directory and the output styles are placed from it, so the two cannot name different roots.
+const outputStylesDirectory = "output-styles"
+
+// withOutputStyleDest says where an output style goes for the target: its name under the output
+// styles directory beside the agents directory when the target is Claude Code, and nowhere when it is
+// another runtime.
+func withOutputStyleDest(placed ResolvedRoute, name string, dest RouteDestinations) (ResolvedRoute, error) {
+	if agentRouteTargets[placed.Route] != dest.Target {
+		return placed, nil
+	}
+	if dest.AgentsRoot == "" {
+		return ResolvedRoute{}, &MissingRootError{Path: placed.Path, Directory: outputStylesDirectory, Target: dest.Target}
+	}
+	placed.Dest = pathpkg.Join(pathpkg.Dir(dest.AgentsRoot), outputStylesDirectory, name)
 	return placed, nil
 }
 

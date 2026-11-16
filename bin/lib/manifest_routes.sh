@@ -15,6 +15,10 @@
 # cannot know -- the directories its targets keep their skills and native
 # agents in (TARGET_PATHS, AGENT_TARGET_PATHS) -- and hands them over.
 #
+# An output-style row (a bare file, copied from output-styles/) goes to the output-styles
+# directory beside the agents directory of Claude Code, which the engine derives from the
+# --agents-root given below; no other target takes it.
+#
 # manifest_routes_load <target> [managed]
 #
 # Fills MANIFEST_ROUTES with one line per row of the manifest, in the order it
@@ -24,7 +28,8 @@
 #   <path> <route> <repo_rel> <repo_source> <dest>
 #
 #   path         the first column of the row
-#   route        skill, agent, opencode-agent, codex-agent, mcp or non-deployable;
+#   route        skill, agent, output-style, opencode-agent, codex-agent, mcp or
+#                non-deployable;
 #                a third column nobody knows keeps its own name and is the skill
 #                route
 #   repo_rel     the file's place in the overlay repository, which is how git
