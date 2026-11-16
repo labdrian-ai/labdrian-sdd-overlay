@@ -629,3 +629,5 @@ L71 (2026-11-16) — Owner, verbatim, to L60 risk 5 (do the gentle-ai blocks in 
 L72 (2026-11-16) — Owner, verbatim, to L60 risk 6 (retire labdrian's own `upstream`/`bootstrap`/`capture` mechanism and its gentle-ai checks, I39, once no `managed` row remains): "si lo retiramos". Yes, as a follow-up feature after T29 (the recommendation the owner answered), before the Phase 11 launch.
 
 L73 (2026-11-16) — Owner, verbatim, to L62 risk 1 (keep `.atl/skill-registry.md` current with a labdrian generator, T30, or retire it): "bueno vamos a dejarlo". Keep: T30 is unblocked. Open for a later shaper entry: where the foreman takes skill paths from (its body does not say today).
+
+L74 (2026-11-16) — Owner, verbatim, to L62 risk 2 (drop `branch-pr`, `issue-creation` and `systemic-issue-triage`, or keep them as labdrian skills): "podemos rescribirla y modernizarla parw nuestro flujo". Not dropped: rewritten for the labdrian flow (role chain, memorycard, owner-owned delivery) by a shaper entry; which of the three is asked next.
