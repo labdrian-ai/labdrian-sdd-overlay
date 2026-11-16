@@ -42,6 +42,18 @@ func seedRoleSources(t *testing.T, root string) {
 	if err != nil {
 		t.Fatalf("copying the role sources: %v", err)
 	}
+	// The generator reads each role's model id from the tier table of the role-chain skill.
+	models := filepath.Join("skills", "role-chain", "references", "models.md")
+	data, err := os.ReadFile(filepath.Join("..", "..", models))
+	if err != nil {
+		t.Fatalf("reading the model table: %v", err)
+	}
+	if err := os.MkdirAll(filepath.Join(root, filepath.Dir(models)), 0o755); err != nil {
+		t.Fatalf("creating the model table directory: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(root, models), data, 0o644); err != nil {
+		t.Fatalf("copying the model table: %v", err)
+	}
 }
 
 func TestGaduGenerateNeedsTheOverlayDirectory(t *testing.T) {
