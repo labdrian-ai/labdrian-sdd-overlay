@@ -75,6 +75,13 @@ func TestTheClaudeFileOfTheForemanIsItsFrontmatterAndItsSource(t *testing.T) {
 	if got != want {
 		t.Errorf("agents/foreman.md =\n%s\nwant\n%s", got, want)
 	}
+	// The Claude file has no effort field (Claude Code takes none from the file), and the foreman has no
+	// Pi or Codex file that would take one.
+	for _, effort := range []string{"effort", "thinking"} {
+		if strings.Contains(got, effort+":") {
+			t.Errorf("agents/foreman.md holds an %s field", effort)
+		}
+	}
 }
 
 // The model of the foreman is the frontier row of the tier table of role-chain (S18): the parent takes the
@@ -167,14 +174,19 @@ func TestTheForemanBodyCarriesTheDisciplineTheStagesAndTheTierCellOfL29(t *testi
 			t.Errorf("roles/foreman/body.md lacks %q", want)
 		}
 	}
-	for _, banned := range []string{"rule 4 fires", "Engram", "engram", "persona", "Persona", "consent", "provider-defect"} {
-		if strings.Contains(body, banned) {
-			t.Errorf("roles/foreman/body.md holds %q", banned)
+	// S2: the body carries no gentle-ai review lifecycle, provider-defect handoff, Engram instruction or persona.
+	for _, banned := range []string{"review lifecycle", "provider-defect", "engram", "persona"} {
+		if strings.Contains(strings.ToLower(body), banned) {
+			t.Errorf("roles/foreman/body.md holds %q, which S2 says it carries none of", banned)
 		}
 	}
-	// S2: about 45 lines, in place of the 13-line draft of L7.
+	// S2: the document format is sent to odd-feature-doc.
+	if !strings.Contains(body, "`odd-feature-doc` skill") {
+		t.Error("roles/foreman/body.md does not send the feature document to the `odd-feature-doc` skill")
+	}
+	// S2 says "about 45 lines": the test takes that as a band of 35 to 55 lines.
 	if n := strings.Count(body, "\n"); n < 35 || n > 55 {
-		t.Errorf("roles/foreman/body.md has %d lines, want about 45 (S2)", n)
+		t.Errorf("roles/foreman/body.md has %d lines, want 35 to 55 (S2: about 45 lines)", n)
 	}
 	// The stage order has the ten stages of L9, one row each.
 	for _, stage := range []string{"Authorize", "Tier", "Explore", "Shape", "Open", "Build", "Sweep, polish", "Review", "Deliver", "Close"} {

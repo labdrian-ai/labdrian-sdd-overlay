@@ -56,8 +56,8 @@ func copyFileTo(from, to string) error {
 	return os.WriteFile(to, data, 0o644)
 }
 
-// foremanBodyCommands are the `<group> <verb>` pairs the foreman body names inside backticks, with or
-// without the leading `labdrian`; a span whose second word is a flag, a placeholder or absent is no verb.
+// foremanBodyCommands are the `<group> <verb>` pairs the foreman body names inside backticks, which
+// must carry the leading `labdrian`; a span whose second word is a flag, a placeholder or absent is no verb.
 func foremanBodyCommands(t *testing.T) [][2]string {
 	t.Helper()
 	data, err := os.ReadFile(filepath.Join("..", "..", "roles", "foreman", "body.md"))
@@ -70,6 +70,9 @@ func foremanBodyCommands(t *testing.T) [][2]string {
 		fields := strings.Fields(strings.TrimPrefix(span[1], "labdrian "))
 		if len(fields) < 2 || !groups[fields[0]] || !regexp.MustCompile(`^[a-z][a-z-]*$`).MatchString(fields[1]) {
 			continue
+		}
+		if !strings.HasPrefix(span[1], "labdrian ") {
+			t.Errorf("the foreman body names `%s` without the `labdrian ` prefix", span[1])
 		}
 		commands = append(commands, [2]string{fields[0], fields[1]})
 	}
@@ -115,25 +118,35 @@ func TestEveryLabdrianVerbTheForemanBodyNamesExists(t *testing.T) {
 	}
 }
 
-// Every skill the foreman body names is a skill of the repository (S2): a one-word kebab-case name in
-// backticks is a skill, and its directory holds a SKILL.md.
+// Every skill the foreman body names is a skill of the repository (S2). A backticked name is a skill
+// when it is written next to the word "skill" ("the `x` skill", "skill `x`") or equals a directory of
+// skills/; each such name has its SKILL.md. The three skills S2 says the body sends work to must be
+// named, so a parse that finds none proves nothing.
 func TestEverySkillTheForemanBodyNamesExists(t *testing.T) {
 	data, err := os.ReadFile(filepath.Join("..", "..", "roles", "foreman", "body.md"))
 	if err != nil {
 		t.Fatalf("reading the foreman body: %v", err)
 	}
+	body := string(data)
+	hasSkill := func(name string) bool {
+		_, err := os.Stat(filepath.Join("..", "..", "skills", name, "SKILL.md"))
+		return err == nil
+	}
 	named := map[string]bool{}
-	for _, span := range regexp.MustCompile("`([a-z][a-z-]*)`").FindAllStringSubmatch(string(data), -1) {
-		// `success` is the status of the delivery envelope the Deliver row names, not a skill.
-		if span[1] == "success" {
-			continue
-		}
-		named[span[1]] = true
-		if _, err := os.Stat(filepath.Join("..", "..", "skills", span[1], "SKILL.md")); err != nil {
-			t.Errorf("the foreman body names the skill `%s`, and skills/%s/SKILL.md is not there: %v", span[1], span[1], err)
+	for _, pattern := range []string{"`([a-z][a-z-]*)` skill\\b", "\\bskill `([a-z][a-z-]*)`"} {
+		for _, m := range regexp.MustCompile(pattern).FindAllStringSubmatch(body, -1) {
+			named[m[1]] = true
+			if !hasSkill(m[1]) {
+				t.Errorf("the foreman body names the skill `%s`, and skills/%s/SKILL.md is not there", m[1], m[1])
+			}
 		}
 	}
-	for _, want := range []string{"inception-pipeline", "role-chain"} {
+	for _, m := range regexp.MustCompile("`([a-z][a-z-]*)`").FindAllStringSubmatch(body, -1) {
+		if hasSkill(m[1]) {
+			named[m[1]] = true
+		}
+	}
+	for _, want := range []string{"inception-pipeline", "role-chain", "odd-feature-doc"} {
 		if !named[want] {
 			t.Errorf("the foreman body no longer names the skill `%s`", want)
 		}

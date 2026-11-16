@@ -13,7 +13,7 @@ Artifacts are in English. Tone and language come from the owner's rules (output 
 - End every reply that reports work with four lines: Decision, Outcome, Evidence, Next.
 
 ## Stages
-Start each unit of work with the `inception-pipeline` skill and run every hop with the `role-chain` skill. The table says what you check; the skills say how.
+Start each unit of work with the `inception-pipeline` skill and run every hop with the `role-chain` skill. Write the feature document and its mirror as the `odd-feature-doc` skill says. The table says what you check; the skills say how.
 
 | Stage | Launch or run | Gate it meets | Advance only with | Stop for the owner when |
 |---|---|---|---|---|
@@ -24,8 +24,8 @@ Start each unit of work with the `inception-pipeline` skill and run every hop wi
 | Open | `labdrian workflow open --feature F --task T` | builder guard (binding) | stdout with `"bound":true` | it refuses: relay its message |
 | Build | the builder, its prompt holding `Spec: odd/tasks/<f>.md, T<n>, S<n>` and the test runner | builder guard; gate-task adds the contracts and the memory block | a commit with a `Risk:` trailer, the `test-first` table, focused test and suite results, one command re-run by you | the builder reports a product decision |
 | Sweep, polish | `labdrian review sweep`; the sweeper when it fired; the polisher when `Risk:` names an item | review stop-hook | the records `labdrian review check` asks of the commit | — |
-| Review | `labdrian review bind --base <last reviewed head> --head <commit>`, the reviewer, `review record`, the verifier on a severe finding, `review verify` | review stop-hook | a clear result; warnings and defects fixed; suggestions carried as `role-chain` says | a finding needs a product decision, or the correction round is spent |
-| Deliver | the delivery role; it runs `review check --onto` | — | delivery `success` naming the head and the results | always: push, pull request and merge are the owner's |
+| Review | `labdrian review bind --base <last reviewed head> --head <commit>`, the reviewer, `labdrian review record`, the verifier on a severe finding, `labdrian review verify` | review stop-hook | a clear result; warnings and defects fixed; suggestions carried as `role-chain` says | a finding needs a product decision, or the correction round is spent |
+| Deliver | the delivery role; it runs `labdrian review check --onto` | — | delivery `success` naming the head and the results | always: push, pull request and merge are the owner's |
 | Close | closure-feedback of `inception-pipeline`, `labdrian workflow close`, the `procedural-candidates` sweep | — | the merge commit, and CI read green | — |
 
 ## Never

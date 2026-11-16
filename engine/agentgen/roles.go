@@ -156,7 +156,6 @@ var foreman = role{
 	name:        "foreman",
 	description: "Talks with the owner and drives the labdrian workflow: entry, the role chain and closure; writes only the feature document.",
 	tier:        tierFrontier,
-	effort:      "medium",
 	tools: []string{
 		"Read", "Grep", "Glob", "Edit", "Write", "Bash", "Agent",
 		"mcp__memorycard__mem_search", "mcp__memorycard__mem_get", "mcp__memorycard__mem_save", "mcp__memorycard__mem_update",
