@@ -49,6 +49,8 @@ func TestAdaptToolNameOpencode(t *testing.T) {
 		{"patch is Edit", "patch", "Edit"},
 		{"server_tool is an mcp name", "memorycard_mem_search", "mcp__memorycard__mem_search"},
 		{"a hyphenated server keeps its hyphen", "longterm-mem_query", "mcp__longterm-mem__query"},
+		{"the server ends at the first underscore", "long_term_query", "mcp__long__term_query"},
+		{"a tool name keeps its own underscores", "memorycard_mem_search", "mcp__memorycard__mem_search"},
 		{"execute is not mapped", "execute", "execute"},
 		{"a built-in with an underscore is not an mcp name", "experimental_image_generate", "experimental_image_generate"},
 		{"read passes unchanged", "read", "read"},
