@@ -3,7 +3,7 @@
   "project_id": "labdrian-sdd-overlay",
   "goal_id": "labdrian-orchestrator-opencode",
   "objective": "Deliver the branch feat/labdrian-orchestrator-opencode: the labdrian foreman role shared by Claude Code and OpenCode v2, and the OpenCode v2 runtime, per odd/tasks/labdrian-orchestrator-opencode.md.",
-  "scope": "The specs S1-S18 of odd/tasks/labdrian-orchestrator-opencode.md; one workflow per task.",
+  "scope": "Every S# of odd/tasks/labdrian-orchestrator-opencode.md; one workflow per task.",
   "constraints": [
     "Every commit is reviewed or exempted, and labdrian review check clears it.",
     "Live files (~/.claude/CLAUDE.md, ~/.claude/settings.json, ~/.config/opencode) change only with the owner's approval, after a backup.",
@@ -27,6 +27,6 @@
     ],
     "write": "none"
   },
-  "runtime_scope": "Claude Code, as the parent that runs the labdrian workflow and the role agents.",
+  "runtime_scope": "Claude Code runs the labdrian workflow and the role agents as the parent; the deliverable adds OpenCode v2 as a second runtime of the same foreman role and role agents.",
   "delivery_boundary": "Work-unit commits on feat/labdrian-orchestrator-opencode; merges under the owner's standing merge ok, releases and live writes remain the owner's."
 }
