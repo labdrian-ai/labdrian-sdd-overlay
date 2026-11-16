@@ -19,7 +19,7 @@ const openCodeLegacyPluginExport = "export default async function labdrianRuntim
 
 // OpenCodePluginVersion is the version of the plugin the adapter installs; it changes with the
 // plugin source and is what the active marker is compared against.
-const OpenCodePluginVersion = "2026-11-16-runtime-parity-9"
+const OpenCodePluginVersion = "2026-11-16-runtime-parity-10"
 
 //go:embed labdrian-runtime-parity-plugin.mjs
 var openCodePluginSource string

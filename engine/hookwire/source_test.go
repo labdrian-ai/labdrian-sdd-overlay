@@ -52,8 +52,14 @@ func TestAdaptToolNameOpencode(t *testing.T) {
 		{"the server ends at the first underscore", "long_term_query", "mcp__long__term_query"},
 		{"execute is not mapped", "execute", "execute"},
 		{"a built-in with an underscore is not an mcp name", "experimental_image_generate", "experimental_image_generate"},
-		{"read passes unchanged", "read", "read"},
+		{"read is Read", "read", "Read"},
+		{"skill is Skill", "skill", "Skill"},
 		{"glob passes unchanged", "glob", "glob"},
+		{"grep passes unchanged", "grep", "grep"},
+		{"webfetch passes unchanged", "webfetch", "webfetch"},
+		{"websearch passes unchanged", "websearch", "websearch"},
+		{"edit passes unchanged", "edit", "edit"},
+		{"write passes unchanged", "write", "write"},
 		{"subagent passes unchanged", "subagent", "subagent"},
 		{"an already mapped name passes", "mcp__engram__mem_save", "mcp__engram__mem_save"},
 		{"Claude spellings pass", "Bash", "Bash"},
@@ -73,7 +79,7 @@ func TestAdaptToolNameOpencode(t *testing.T) {
 // claude and codex keep their old maps: an opencode name is opaque to them.
 func TestAdaptToolNameOpencodeNamesAreOpaqueToOtherSources(t *testing.T) {
 	for _, source := range []string{"claude", "codex"} {
-		for _, name := range []string{"shell", "patch", "memorycard_mem_search", "execute"} {
+		for _, name := range []string{"shell", "patch", "read", "skill", "memorycard_mem_search", "execute"} {
 			got, err := AdaptToolName(source, name)
 			if err != nil || got != name {
 				t.Errorf("AdaptToolName(%q, %q) = %q, %v; want unchanged", source, name, got, err)

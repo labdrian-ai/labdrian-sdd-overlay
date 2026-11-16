@@ -29,7 +29,8 @@ func AdaptToolName(source, name string) (string, error) {
 }
 
 // adaptOpencode maps OpenCode v2's tool names (measured in T2, L10): shell is
-// Bash, patch is Edit, and an MCP tool is "<server>_<tool>", which becomes
+// Bash, patch is Edit, read is Read and skill is Skill (the two names the procedural-skill gate
+// matches; no policy matches glob, grep, webfetch or websearch), and an MCP tool is "<server>_<tool>", which becomes
 // "mcp__<server>__<tool>". The Code Mode wrapper "execute" is not mapped, so no
 // policy ever matches it (its inner MCP calls fire their own hook). Every other
 // name passes unchanged.
@@ -44,6 +45,10 @@ func adaptOpencode(name string) string {
 		return "Bash"
 	case "patch":
 		return "Edit"
+	case "read":
+		return "Read"
+	case "skill":
+		return "Skill"
 	case "experimental_image_generate":
 		return name
 	}

@@ -20,8 +20,7 @@ const (
 	eventStop             = "Stop"
 )
 
-// systemTexts is what the `context` hook pushed onto event.system for one call, as the texts of the
-// text parts.
+// systemPart is one part the `context` hook pushed onto event.system: a part of type text, with its text.
 type systemPart struct {
 	Type string `json:"type"`
 	Text string `json:"text"`

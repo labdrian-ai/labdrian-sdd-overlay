@@ -89,16 +89,24 @@ func runPlugin(t *testing.T, pluginPath, body string) []byte {
 
 // runPluginWithEngine loads the plugin at pluginPath under node, with the hook bridge pointed at
 // the engine binary, runs its setup against a stub context and then body, which sees plugin, hooks
-// (name to handler, tool and session hooks alike), beforeHook (the execute.before one) and
-// synthetic (what the plugin sent through ctx.session.synthetic). It returns what body printed.
+// (name to handler, tool and session hooks alike), beforeHook (the execute.before one), synthetic
+// (what the plugin sent through ctx.session.synthetic) and sessionInfo (what ctx.session.get answers for
+// a session id: an object, or an Error to throw). It returns what body printed.
 func runPluginWithEngine(t *testing.T, pluginPath, engine, body string) []byte {
+	t.Helper()
+	return runPluginWithEnv(t, pluginPath, []string{engineEnvironment + "=" + engine}, body)
+}
+
+// runPluginWithEnv is runPluginWithEngine with the environment variables the bridge reads given whole.
+func runPluginWithEnv(t *testing.T, pluginPath string, environment []string, body string) []byte {
 	t.Helper()
 	requireNode(t)
 	script := fmt.Sprintf(`const plugin = (await import(%q)).default;
 const hooks = new Map();
 const synthetic = [];
 const hook = async (name, handler) => { hooks.set(name, handler); return { dispose: async () => {} }; };
-const ctx = { tool: { hook }, session: { hook, synthetic: async (input) => { synthetic.push(input); } } };
+const sessionInfo = new Map();
+const ctx = { tool: { hook }, session: { hook, synthetic: async (input) => { synthetic.push(input); }, get: async ({ sessionID }) => { const info = sessionInfo.get(sessionID) ?? { id: sessionID }; if (info instanceof Error) throw info; return info; } } };
 await plugin.setup(ctx);
 const beforeHook = hooks.get("execute.before");
 %s`, "file://"+pluginPath, body)
@@ -107,7 +115,7 @@ const beforeHook = hooks.get("execute.before");
 		t.Fatalf("write node script: %v", err)
 	}
 	command := exec.Command("node", scriptPath)
-	command.Env = append(os.Environ(), engineEnvironment+"="+engine)
+	command.Env = append(os.Environ(), environment...)
 	out, err := command.Output()
 	if err != nil {
 		if ee, ok := err.(*exec.ExitError); ok {

@@ -157,6 +157,35 @@ console.log(JSON.stringify(result));`)
 		}
 		data := sourceRead(t, sourceSidecar(w))
 		sourceRecord(t, data, "mcp__longterm-mem__query", "longterm-mem", "proj-1", "")
+		// Claude Code, for the same call, is told nothing either.
+		claude := w.engine(w.dir, codexSourceInput(t, w.repo, "PostToolUse", "mcp__longterm-mem__query", map[string]any{"project": "proj-1", "query": "q", "engram_id": 7}), "projection", "hook", "--event", "PostToolUse")
+		if claude.stdout != "" {
+			t.Errorf("the reference PostToolUse for Claude Code should be silent, got %q", claude.stdout)
+		}
+	})
+
+	t.Run("PostToolUseTellsTheModelWhatItTellsClaudeWhenTheEvidenceCannotBeWritten", func(t *testing.T) {
+		w := newPhase7World(t, binary)
+		w.bindRunning("proj-1", "wf-1", "odd")
+		// A directory where the evidence file goes: the write fails and the engine says so.
+		if err := os.MkdirAll(sourceSidecar(w), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		reference := w.engine(w.dir, codexSourceInput(t, w.repo, "PostToolUse", "mcp__engram__mem_search", map[string]any{"project": "proj-1"}), "projection", "hook", "--event", "PostToolUse")
+		want := decodeHookAnswer(t, reference.stdout).Specific.AdditionalContext
+		if !strings.Contains(want, "was not recorded for workflow wf-1 of project proj-1") {
+			t.Fatalf("the reference PostToolUse should warn that the evidence was not recorded, got %q", reference.stdout)
+		}
+		out := bridgeRun(t, w, pluginPath, `const result = { content: [{ type: "text", text: "found" }] };
+await hooks.get("execute.after")({ tool: "engram_mem_search", sessionID: "session-1", id: "toolu_1", input: { project: "proj-1" }, status: "completed", result });
+console.log(JSON.stringify(result.content.map((part) => part.text)));`)
+		var got []string
+		if err := json.Unmarshal(out, &got); err != nil {
+			t.Fatalf("decode result: %v\nraw=%q", err, out)
+		}
+		if len(got) != 2 || got[0] != "found" || got[1] != want {
+			t.Errorf("the model should read, after the result, the line the engine gives Claude Code,\n got %q\nwant %q", got, want)
+		}
 	})
 }
 

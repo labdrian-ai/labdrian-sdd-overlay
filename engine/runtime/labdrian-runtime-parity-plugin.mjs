@@ -184,14 +184,27 @@ async function recordActive(pluginPath, configRoot, config) {
 // Each OpenCode event goes to the engine command that answers the same event for Claude Code, with
 // --source opencode, and the answer is turned into what OpenCode understands. No policy is decided
 // here: the engine decides, this file only carries the question and the answer.
+//
+// The engine is an executable the bridge cannot trust to answer. It fails open, as a hook that cannot
+// run does in Claude Code, and it says so once (the pending note), on the next result or model call
+// that can carry it.
 
 // ENGINE_VARIABLE names the engine binary the bridge runs. Without it the bridge runs the binary
 // `labdrian install-hooks` deploys for Claude Code, bin/lib/locations.sh ENGINE_BINARY.
 const ENGINE_VARIABLE = "LABDRIAN_ENGINE_BINARY";
 const ENGINE_DEFAULT = join(".claude", "bin", "gentle-ai-overlay");
+// TIMEOUT_VARIABLE overrides how long the engine may take to answer, in milliseconds.
+const TIMEOUT_VARIABLE = "LABDRIAN_ENGINE_TIMEOUT_MS";
 const ENGINE_TIMEOUT_MS = 30000;
+// After a timeout the engine is not asked again for twice the timeout, so that a hung engine costs
+// one wait, not one for every call.
+const ENGINE_PAUSE_FACTOR = 2;
+const ENGINE_KILL_GRACE_MS = 2000;
+const ENGINE_OUTPUT_LIMIT = 2 * 1024 * 1024;
 const ENGINE_SOURCE = "opencode";
 const DENY_FALLBACK = "this tool call was denied by a hook.";
+// NOTES_LIMIT bounds what the bridge holds for calls that have not completed.
+const NOTES_LIMIT = 256;
 
 function engineBinary() {
   const configured = process.env[ENGINE_VARIABLE];
@@ -199,14 +212,26 @@ function engineBinary() {
   return join(homedir(), ENGINE_DEFAULT);
 }
 
+function engineTimeoutMs() {
+  const configured = Number(process.env[TIMEOUT_VARIABLE]);
+  return Number.isFinite(configured) && configured > 0 ? configured : ENGINE_TIMEOUT_MS;
+}
+
 function describeFailure(error) {
   return error instanceof Error ? error.message : String(error);
 }
 
 // runEngine runs the engine with the envelope on stdin. It resolves to {stdout} when the engine
-// exited 0, and to {failure} when it could not be started, timed out or exited otherwise (an engine
-// too old for a flag exits 1); it never rejects.
-function runEngine(args, envelope) {
+// exited 0, and to {failure} when it could not be started, could not be given its input, timed out
+// ({hung: true}), printed more than ENGINE_OUTPUT_LIMIT or exited otherwise (an engine too old for a
+// flag exits 1); it never rejects. An engine that outlives its timeout gets SIGTERM, then SIGKILL.
+function runEngine(args, envelope, timeoutMs) {
+  let input;
+  try {
+    input = JSON.stringify(envelope);
+  } catch (error) {
+    return Promise.resolve({ failure: `the hook input could not be serialized: ${describeFailure(error)}` });
+  }
   return new Promise((resolve) => {
     let child;
     let timer;
@@ -222,14 +247,30 @@ function runEngine(args, envelope) {
       settle({ failure: describeFailure(error) });
       return;
     }
+    // end stops the engine, politely and then for good, and answers with the failure.
+    const end = (answer) => {
+      child.kill("SIGTERM");
+      const killer = setTimeout(() => child.kill("SIGKILL"), Math.min(ENGINE_KILL_GRACE_MS, timeoutMs));
+      killer.unref();
+      child.once("close", () => clearTimeout(killer));
+      settle(answer);
+    };
     timer = setTimeout(() => {
-      child.kill();
-      settle({ failure: `the engine did not answer within ${ENGINE_TIMEOUT_MS / 1000} seconds` });
-    }, ENGINE_TIMEOUT_MS);
+      end({ failure: `the engine did not answer within ${timeoutMs / 1000} seconds`, hung: true });
+    }, timeoutMs);
     const stdout = [];
     const stderr = [];
-    child.stdout.on("data", (chunk) => stdout.push(chunk));
-    child.stderr.on("data", (chunk) => stderr.push(chunk));
+    let size = 0;
+    const collect = (chunks) => (chunk) => {
+      size += chunk.length;
+      if (size > ENGINE_OUTPUT_LIMIT) {
+        end({ failure: "the engine printed more than 2 MiB" });
+        return;
+      }
+      chunks.push(chunk);
+    };
+    child.stdout.on("data", collect(stdout));
+    child.stderr.on("data", collect(stderr));
     child.stdin.on("error", () => {});
     child.on("error", (error) => settle({ failure: describeFailure(error) }));
     child.on("close", (code, signal) => {
@@ -240,37 +281,64 @@ function runEngine(args, envelope) {
       const said = Buffer.concat(stderr).toString("utf8").trim();
       settle({ failure: said || `the engine ended with ${code === null ? `signal ${signal}` : `exit ${code}`}` });
     });
-    child.stdin.end(JSON.stringify(envelope));
+    child.stdin.end(input);
   });
 }
 
-// parseAnswer reads what a hook prints: nothing, or one JSON object.
+// parseAnswer reads what a hook prints: nothing (the engine's silence, an allow), or one JSON object.
+// Anything else is not an answer of the engine.
 function parseAnswer(stdout) {
   const text = typeof stdout === "string" ? stdout.trim() : "";
-  if (text === "") return {};
+  if (text === "") return { answer: {} };
   try {
     const answer = JSON.parse(text);
-    return isRecord(answer) ? answer : {};
+    if (isRecord(answer) && !Array.isArray(answer)) return { answer };
   } catch {
-    return {};
+    // reported below
   }
+  return { failure: "the engine printed an answer that is not a JSON object" };
 }
 
-// askEngine sends one event to the engine. The bridge fails open, as a hook that cannot run does in
-// Claude Code, and says so once, so that a session without its hooks is not taken for one with them.
-async function askEngine(args, envelope) {
-  const reply = await runEngine(args, envelope);
-  if (reply.failure !== undefined) return { failure: reply.failure };
-  return { answer: parseAnswer(reply.stdout) };
+// askEngine sends one event to the engine and resolves to {answer} or {failure}; it never rejects.
+// A failure is also the first one of the bridge: it makes the note that says so, which waits until a
+// result or a model call can carry it.
+async function askEngine(state, args, envelope) {
+  if (state.pausedUntil > Date.now()) return noteFailure(state, state.pausedReason);
+  const timeoutMs = engineTimeoutMs();
+  const reply = await runEngine(args, envelope, timeoutMs);
+  if (reply.failure !== undefined) {
+    if (reply.hung) {
+      state.pausedUntil = Date.now() + ENGINE_PAUSE_FACTOR * timeoutMs;
+      state.pausedReason = `${reply.failure}; the bridge stops asking it for ${(ENGINE_PAUSE_FACTOR * timeoutMs) / 1000} seconds`;
+      return noteFailure(state, state.pausedReason);
+    }
+    return noteFailure(state, reply.failure);
+  }
+  const parsed = parseAnswer(reply.stdout);
+  return parsed.failure === undefined ? parsed : noteFailure(state, parsed.failure);
 }
 
-// claimUnavailableNote is the note that says the engine does not answer, the first time it is asked for:
-// a session without its hooks must not be taken for one with them, and once is enough. Afterwards it
-// gives nothing.
-function claimUnavailableNote(state, failure) {
-  if (state.unavailableReported) return [];
-  state.unavailableReported = true;
-  return [`labdrian hooks are not running: ${failure}. The calls of this session are not checked by the memory gate until the engine answers.`];
+// noteFailure makes the pending note the first time the engine fails, and returns the failure.
+function noteFailure(state, failure) {
+  if (!state.noteIssued) {
+    state.noteIssued = true;
+    state.pendingNote = `labdrian hooks are not running: ${failure}. The calls of this session are not checked by the memory gate until the engine answers.`;
+  }
+  return { failure };
+}
+
+// takeNote hands over the pending note, if there is one, and forgets it: told once.
+function takeNote(state) {
+  const note = state.pendingNote;
+  state.pendingNote = undefined;
+  return note === undefined ? [] : [note];
+}
+
+// holdWarning keeps what the PreToolUse warned about a call until its result; the oldest are let go
+// past NOTES_LIMIT, since a call that never completes must not be held for ever.
+function holdWarning(state, id, warning) {
+  state.notes.set(id, [warning]);
+  while (state.notes.size > NOTES_LIMIT) state.notes.delete(state.notes.keys().next().value);
 }
 
 function hookSpecific(answer) {
@@ -282,13 +350,29 @@ function textOf(value) {
   return typeof value === "string" && value !== "" ? value : undefined;
 }
 
+// toolInputFor is the input of a call as Claude Code names its arguments, where OpenCode v2 names
+// them otherwise: the read tool takes `path` (Claude's file_path) and the skill tool `id` (Claude's
+// skill). The call's own arguments are kept, and one it already has under the Claude name is not
+// overwritten.
+function toolInputFor(call) {
+  const input = call.input;
+  if (!isRecord(input)) return input;
+  if (call.tool === "read" && typeof input.path === "string" && input.file_path === undefined) {
+    return { ...input, file_path: input.path };
+  }
+  if (call.tool === "skill" && typeof input.id === "string" && input.skill === undefined) {
+    return { ...input, skill: input.id };
+  }
+  return input;
+}
+
 function toolEnvelope(event, call) {
   return {
     hook_event_name: event,
     session_id: call.sessionID,
     cwd: process.cwd(),
     tool_name: call.tool,
-    tool_input: call.input,
+    tool_input: toolInputFor(call),
     tool_use_id: call.id,
   };
 }
@@ -296,47 +380,48 @@ function toolEnvelope(event, call) {
 // gateToolCall is the PreToolUse: the engine's denial becomes a Tool.Error, which stops the call
 // and gives the model the reason; a warning waits for the result of the same call.
 async function gateToolCall(call, state) {
-  const reply = await askEngine(["projection", "hook", "--event", "PreToolUse", "--source", ENGINE_SOURCE], toolEnvelope("PreToolUse", call));
-  if (reply.failure !== undefined) {
-    const note = claimUnavailableNote(state, reply.failure);
-    if (note.length > 0) state.notes.set(call.id, note);
-    return;
-  }
+  const reply = await askEngine(state, ["projection", "hook", "--event", "PreToolUse", "--source", ENGINE_SOURCE], toolEnvelope("PreToolUse", call));
+  if (reply.failure !== undefined) return;
   const specific = hookSpecific(reply.answer);
   if (specific.permissionDecision === "deny") {
     throw new Tool.Error({ message: textOf(specific.permissionDecisionReason) ?? DENY_FALLBACK });
   }
   const warning = textOf(reply.answer.systemMessage);
-  if (warning !== undefined) state.notes.set(call.id, [warning]);
+  if (warning !== undefined) holdWarning(state, call.id, warning);
 }
 
-// reportToolResult is the PostToolUse: what the engine says about a completed call, and what the
-// PreToolUse said about it, joins the result the model reads.
+// reportToolResult is the PostToolUse: what the engine says about a completed call, what the
+// PreToolUse said about it and, if the bridge has one to give, the note that the engine does not answer,
+// join the result the model reads.
 async function reportToolResult(call, state) {
   const lines = state.notes.get(call.id) ?? [];
   state.notes.delete(call.id);
   if (call.status === "completed") {
     const envelope = { ...toolEnvelope("PostToolUse", call), tool_response: call.result };
-    const reply = await askEngine(["projection", "hook", "--event", "PostToolUse", "--source", ENGINE_SOURCE], envelope);
-    if (reply.failure !== undefined) {
-      lines.push(...claimUnavailableNote(state, reply.failure));
-    } else {
+    const reply = await askEngine(state, ["projection", "hook", "--event", "PostToolUse", "--source", ENGINE_SOURCE], envelope);
+    if (reply.failure === undefined) {
       for (const line of [textOf(hookSpecific(reply.answer).additionalContext), textOf(reply.answer.systemMessage)]) {
         if (line !== undefined) lines.push(line);
       }
     }
+    if (canCarry(call.result)) lines.push(...takeNote(state));
   }
   appendToResult(call.result, lines);
+}
+
+// canCarry says whether a result has somewhere to put a line the model reads.
+function canCarry(result) {
+  return isRecord(result) && (Array.isArray(result.content) || typeof result.output === "string");
 }
 
 // appendToResult adds the lines to what the model reads of a result: one more text content, or, for
 // a result with no content list, the end of its text output.
 function appendToResult(result, lines) {
-  if (lines.length === 0 || !isRecord(result)) return;
+  if (lines.length === 0 || !canCarry(result)) return;
   const text = lines.join("\n");
   if (Array.isArray(result.content)) {
     result.content.push({ type: "text", text });
-  } else if (typeof result.output === "string") {
+  } else {
     result.output += `\n${text}`;
   }
 }
@@ -352,13 +437,14 @@ const ENGINE_STOP_ARGS = ["review", "stop-hook"];
 const STOP_DESCRIPTION = "labdrian stop hook";
 const STOP_FALLBACK_REASON = "a stop hook blocked this stop.";
 
-// sessionState is what the bridge keeps of one session: the SessionStart block it asked for (one
-// question for the whole session), what the last prompt's answer said, and whether the last stop was
-// blocked (Claude Code's stop_hook_active, which a prompt of the user clears).
+// sessionState is what the bridge keeps of one session: the SessionStart block once it was asked for
+// (start, or the question under way, starting), what the last prompt's answer said, whether the last
+// stop was blocked (Claude Code's stop_hook_active, which a prompt of the user clears), the text the
+// bridge itself sent to make the agent continue (ownText) and whether the session is a child one.
 function sessionState(state, sessionID) {
   let session = state.sessions.get(sessionID);
   if (session === undefined) {
-    session = { start: undefined, promptLines: [], continuing: false };
+    session = { start: undefined, starting: undefined, promptLines: [], continuing: false, ownText: undefined, child: undefined };
     state.sessions.set(sessionID, session);
   }
   return session;
@@ -368,45 +454,81 @@ function sessionEnvelope(event, sessionID) {
   return { hook_event_name: event, session_id: sessionID, cwd: process.cwd() };
 }
 
-// linesOf is what an answer says to the model: the warning, then the context; or, when the engine did
-// not answer, the note that says so (once).
-function linesOf(reply, state) {
-  if (reply.failure !== undefined) return claimUnavailableNote(state, reply.failure);
+// linesOf is what an answer says to the model: the warning, then the context.
+function linesOf(reply) {
+  if (reply.failure !== undefined) return [];
   return [textOf(reply.answer.systemMessage), textOf(hookSpecific(reply.answer).additionalContext)].filter((line) => line !== undefined);
 }
 
 // promptSubmitted is the UserPromptSubmit: the answer is kept until the next prompt of the session,
-// which answers for itself.
+// which answers for itself. The text the bridge itself sent to continue a stopped agent is not a
+// prompt of the user: it asks nothing and clears nothing.
 async function promptSubmitted(event, state) {
   const session = sessionState(state, event.sessionID);
-  session.continuing = false;
   const text = isRecord(event.prompt) && typeof event.prompt.text === "string" ? event.prompt.text : "";
+  if (session.ownText !== undefined && text === session.ownText) {
+    session.ownText = undefined;
+    return;
+  }
+  session.continuing = false;
   const reply = await askEngine(
+    state,
     ["projection", "hook", "--event", "UserPromptSubmit", "--source", ENGINE_SOURCE],
     { ...sessionEnvelope("UserPromptSubmit", event.sessionID), prompt: text },
   );
-  session.promptLines = linesOf(reply, state);
+  session.promptLines = linesOf(reply);
 }
 
-// askSessionStart asks the SessionStart once for a session; the answer is the same promise for every
-// later model call of the session.
+// askSessionStart asks the SessionStart once for a session. It resolves to the lines to push and
+// whether the engine answered: only an answer is remembered, so a failure is asked again.
 async function askSessionStart(sessionID, state) {
-  const reply = await askEngine(
-    ["projection", "hook", "--event", "SessionStart", "--source", ENGINE_SOURCE],
-    sessionEnvelope("SessionStart", sessionID),
-  );
-  if (reply.failure !== undefined) return claimUnavailableNote(state, reply.failure);
-  return [textOf(hookSpecific(reply.answer).additionalContext)].filter((line) => line !== undefined);
+  const reply = await askEngine(state, ["projection", "hook", "--event", "SessionStart", "--source", ENGINE_SOURCE], sessionEnvelope("SessionStart", sessionID));
+  if (reply.failure !== undefined) return { lines: [], answered: false };
+  return { lines: [textOf(hookSpecific(reply.answer).additionalContext)].filter((line) => line !== undefined), answered: true };
 }
 
-// contextRequested runs before each model call of a session: the SessionStart block and the answer to
-// the last prompt join the system prompt, as parts of type text (the shape OpenCode's own plugins push).
+// startLines are the SessionStart lines of a session. The question is asked once at a time: a model
+// call that comes while it is under way waits for it, and neither a failure nor a rejection is kept.
+async function startLines(sessionID, session, state) {
+  if (session.start !== undefined) return session.start;
+  session.starting ??= askSessionStart(sessionID, state).then(
+    (asked) => {
+      session.starting = undefined;
+      if (asked.answered) session.start = asked.lines;
+      return asked.lines;
+    },
+    () => {
+      session.starting = undefined;
+      return [];
+    },
+  );
+  return session.starting;
+}
+
+// contextRequested runs before each model call of a session: the SessionStart block, the answer to
+// the last prompt and the note that the engine does not answer (once) join the system prompt, as parts
+// of type text (the shape OpenCode's own plugins push).
 async function contextRequested(event, state) {
   if (!Array.isArray(event.system)) return;
   const session = sessionState(state, event.sessionID);
-  if (session.start === undefined) session.start = askSessionStart(event.sessionID, state);
-  for (const text of [...(await session.start), ...session.promptLines]) {
+  const start = await startLines(event.sessionID, session, state);
+  for (const text of [...start, ...session.promptLines, ...takeNote(state)]) {
     event.system.push({ type: "text", text });
+  }
+}
+
+// isChildSession says whether OpenCode reports a parent for the session. Claude Code runs the Stop
+// hook for the main session only. A session that cannot be told is taken as a main one, and the answer
+// is not kept when it could not be had.
+async function isChildSession(ctx, session, sessionID) {
+  if (session.child !== undefined) return session.child;
+  try {
+    const info = await ctx.session.get({ sessionID });
+    const parent = isRecord(info) ? (info.parentID ?? (isRecord(info.session) ? info.session.parentID : undefined)) : undefined;
+    session.child = typeof parent === "string" && parent !== "";
+    return session.child;
+  } catch {
+    return false;
   }
 }
 
@@ -415,17 +537,16 @@ async function contextRequested(event, state) {
 // engine that does not answer lets the session stop, as a failing Stop hook does in Claude Code.
 async function sessionIdle(event, ctx, state) {
   const session = sessionState(state, event.sessionID);
-  const reply = await askEngine(ENGINE_STOP_ARGS, { ...sessionEnvelope("Stop", event.sessionID), stop_hook_active: session.continuing });
+  if (await isChildSession(ctx, session, event.sessionID)) return;
+  const reply = await askEngine(state, ENGINE_STOP_ARGS, { ...sessionEnvelope("Stop", event.sessionID), stop_hook_active: session.continuing });
   if (reply.failure !== undefined || reply.answer.decision !== "block") {
     session.continuing = false;
     return;
   }
+  const text = textOf(reply.answer.reason) ?? STOP_FALLBACK_REASON;
   session.continuing = true;
-  await ctx.session.synthetic({
-    sessionID: event.sessionID,
-    text: textOf(reply.answer.reason) ?? STOP_FALLBACK_REASON,
-    description: STOP_DESCRIPTION,
-  });
+  session.ownText = text;
+  await ctx.session.synthetic({ sessionID: event.sessionID, text, description: STOP_DESCRIPTION });
 }
 
 // registerSessionHooks hooks the three session events. A hook that fails must not break the session.
@@ -471,9 +592,11 @@ export default Plugin.define({
     const config = JSON.parse(await readFile(join(configRoot, "labdrian-runtime-parity.json"), "utf8"));
 
     await recordActive(pluginPath, configRoot, config);
-    // notes are what the bridge owes the model about a call, by call id; sessions is what it keeps of
-    // each session; unavailableReported is whether it has already said the engine does not answer.
-    const state = { notes: new Map(), sessions: new Map(), unavailableReported: false };
+    // notes are the warnings of the gate by call id, until the result of the call; sessions is what the
+    // bridge keeps of each session; pendingNote is the note that the engine does not answer, until a
+    // result or a model call carries it (noteIssued: it was made, and is told once); pausedUntil is when
+    // a hung engine is asked again.
+    const state = { notes: new Map(), sessions: new Map(), pendingNote: undefined, noteIssued: false, pausedUntil: 0, pausedReason: "" };
     await registerToolHooks(ctx, config, state);
     await registerSessionHooks(ctx, state);
   },

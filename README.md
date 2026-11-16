@@ -1151,15 +1151,19 @@ gentle-ai-overlay runtime probe [--target claude|codex|pi|all]
 gentle-ai-overlay projection hook --event UserPromptSubmit|PreToolUse|SessionStart|PostToolUse [--source claude|codex|opencode]
     --source (default: claude) names the runtime that sent the hook; codex maps the tool names Codex sends
     for longterm-mem reads (mcp__longterm_mem__query, mcp__longterm_mem__get) to the ones the gate knows, before
-    the gate or the evidence sees the call; opencode maps OpenCode v2's names (shell to Bash, patch to Edit,
+    the gate or the evidence sees the call; opencode maps OpenCode v2's names (shell to Bash, patch to Edit, read to Read, skill to Skill,
     <server>_<tool> to mcp__<server>__<tool>; the Code Mode wrapper execute and every other name pass unchanged).
     Nothing else changes; another value is a usage error (exit 1).
     OpenCode runs it through the runtime-parity plugin (`engine runtime install --target opencode`): the plugin
     asks the engine for PreToolUse before each tool call and throws the engine's denial as a Tool.Error (the call
     does not run and the model reads the reason), and for PostToolUse after each completed call, adding the line the
     engine answers to the result the model reads. The plugin runs the engine named by `LABDRIAN_ENGINE_BINARY`, else
-    ~/.claude/bin/gentle-ai-overlay; when it cannot run (missing, too old, no answer in 30 seconds) the call goes
-    through, as a hook that fails does in Claude Code, and the result of the first call says the hooks are not running.
+    ~/.claude/bin/gentle-ai-overlay; when it cannot run (missing, too old, prints anything that is not a JSON object
+    or more than 2 MiB, no answer in 30 seconds, `LABDRIAN_ENGINE_TIMEOUT_MS` sets it) the call goes through, as a
+    hook that fails does in Claude Code, and the next result or model call says once that the hooks are not running.
+    After a timeout the plugin does not ask the engine again for twice the timeout, and ends it with SIGTERM, then
+    SIGKILL. The read and skill tools of OpenCode v2 name their argument path and id; the plugin also sends them as
+    file_path and skill, the names the policies read.
     The session events go the same way: `prompt` asks UserPromptSubmit, `context` (which runs before each model call)
     asks SessionStart once for each session and pushes its block, and the last prompt's answer, onto the system prompt
     as text parts, and `experimental.idle` asks `review stop-hook` (projection hook has no Stop) and, when the engine
