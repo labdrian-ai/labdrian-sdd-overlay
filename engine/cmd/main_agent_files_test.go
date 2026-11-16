@@ -84,10 +84,7 @@ func TestStatusReportsAMissingAndAConflictingAgentKeyOnTheCheckLine(t *testing.T
 			p := newCapturedProcess()
 			runStatus(p.process, d, nil)
 
-			want := tc.want
-			if strings.Contains(want, "%s") {
-				want = strings.Replace(want, "%s", path, 1)
-			}
+			want := strings.Replace(tc.want, "%s", path, 1)
 			if !strings.Contains(p.out.String(), want+"\n") {
 				t.Errorf("the report has no line %q:\n%s", want, p.out.String())
 			}
