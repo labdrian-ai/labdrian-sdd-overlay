@@ -53,19 +53,6 @@ func IneligibleReason(m memory.Memory) string {
 	return fmt.Sprintf("is not pinned and its topic_key %q is not a curated topic", key)
 }
 
-// PageObservationID is the id of the Engram observation page was promoted from: the engram_id of its
-// frontmatter, read from the page's content as the vault holds it (the whole file, or its frontmatter block
-// alone). It reports false for a page that names none -- no frontmatter block, no engram_id, one that is not a
-// number -- and never observation 0, so that no page is joined to an observation it does not name.
-func PageObservationID(page Page) (int64, bool) {
-	block, ok := frontmatterBlock(page.Frontmatter)
-	if !ok {
-		return 0, false
-	}
-	id, named := frontmatterEngramID(block)
-	return id, named && id > 0
-}
-
 // MemoryRef is the memory a page was promoted from, in the terms of the store it names: the store (Source) and
 // the id of the memory there.
 type MemoryRef struct {
@@ -73,18 +60,17 @@ type MemoryRef struct {
 	ID     int64
 }
 
-// PageMemoryRef is the memory a page was promoted from, whichever store wrote its identity: the memorycard
-// memory its memorycard_id (or source_id beside source: memorycard) names, or, failing that, the Engram
-// observation its engram_id (or source_id beside source: engram) names, which a page of an earlier release
-// carries until the migration of the vault. It reports false for a page that names none -- no frontmatter block, no
-// id, one that is not a positive number -- so that no page is joined to a memory it does not name.
+// PageMemoryRef is the memory a page was promoted from, in the store-agnostic keys it names it in (`source` and
+// `source_id`). It reports false for a page that names none -- no frontmatter block, no id, one that is not a
+// positive number, or one that carries only the legacy keys of the pages written before them (S7) -- so that no
+// page is joined to a memory it does not name.
 func PageMemoryRef(page Page) (MemoryRef, bool) {
 	block, ok := frontmatterBlock(page.Frontmatter)
 	if !ok {
 		return MemoryRef{}, false
 	}
 	fields := parseFrontmatterFields(block)
-	for _, source := range []string{memorycardSource, engramSource} {
+	for _, source := range pageSources {
 		identity, named := identityOf(fields, source)
 		if !named {
 			continue

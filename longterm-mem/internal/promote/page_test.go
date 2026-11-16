@@ -48,7 +48,7 @@ func TestEmitPage_TypeMappedOntoVaultEnum(t *testing.T) {
 	if !strings.Contains(page.Frontmatter, "\ntype: concept\n") {
 		t.Fatalf("frontmatter type is not mapped onto the vault enum; got:\n%s", page.Frontmatter)
 	}
-	for _, extra := range []string{"engram_type: decision\n", "engram_id: 101\n", "project: labdrian-sdd-overlay\n"} {
+	for _, extra := range []string{"source: memorycard\n", "source_type: decision\n", "source_id: 101\n", "project: labdrian-sdd-overlay\n"} {
 		if !strings.Contains(page.Frontmatter, extra) {
 			t.Fatalf("frontmatter missing extra %q; got:\n%s", extra, page.Frontmatter)
 		}

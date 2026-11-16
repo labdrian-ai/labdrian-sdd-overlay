@@ -11,10 +11,6 @@ import (
 // SourceName is the name memorycard's memories carry in an identity.
 const SourceName = "memorycard"
 
-// engramSource is the name of the Engram store in the import_map table, which records, per memory, what it was
-// imported from. It is the source of the identities a memory's lineage names.
-const engramSource = "engram"
-
 // Source serves memorycard's memories as memory.Memory, the port of promotion (promote.Source). It maps through
 // Store's one mapping (memorySelect and scanMemory), so a memory reads the same through either, and it is as
 // read-only as the Store.
@@ -180,9 +176,10 @@ func (s *Source) mapAll(cards []memory.CardMemory) ([]memory.Memory, error) {
 	return memories, nil
 }
 
-// toMemory is the one mapping of a card to a memory. The lineage is the Engram observation the import_map row
-// names and the other memories imported from it; a memory with no import_map row of any source has as mirrors the
-// imported memories that hold its content (mirrorsOf).
+// toMemory is the one mapping of a card to a memory. The lineage is the other memories imported from the observation
+// its import_map row names (its parts); a memory with no import_map row of any source has as mirrors the imported
+// memories that hold its content (mirrorsOf). The observation itself is no identity of the lineage: no page names
+// one (S7).
 func toMemory(card memory.CardMemory, k kin) memory.Memory {
 	m := memory.Memory{
 		Identity: memory.Identity{Source: SourceName, ID: strconv.FormatInt(card.ID, 10)},
@@ -201,11 +198,11 @@ func toMemory(card memory.CardMemory, k kin) memory.Memory {
 	return m
 }
 
-// lineageOf is the lineage of a memory imported from Engram observation card.EngramID, read from memorycard's
-// import_map alone: the observation, then the other memories imported from it (its parts, in part order), so
-// that a page keyed by one part's memory is still the page of the others.
+// lineageOf is the lineage of a memory imported from observation card.EngramID, read from memorycard's import_map
+// alone: the other memories imported from it (its parts, in part order), so that a page keyed by one part's memory
+// is still the page of the others.
 func lineageOf(card memory.CardMemory, k kin) []memory.Identity {
-	lineage := []memory.Identity{{Source: engramSource, ID: strconv.FormatInt(card.EngramID, 10)}}
+	var lineage []memory.Identity
 	for _, id := range k.parts[card.EngramID] {
 		if id != card.ID {
 			lineage = append(lineage, memory.Identity{Source: SourceName, ID: strconv.FormatInt(id, 10)})
@@ -216,15 +213,14 @@ func lineageOf(card memory.CardMemory, k kin) []memory.Identity {
 
 // mirrorsOf is what a memory with no import_map row holds the content of: the imported observations that kinOf found
 // to hold its text (an imported memory of the same stored hash, or the ContentKey of the whole observation or of a part),
-// in observation id order, each as every memory of its parts, in part order, and the observation. Memorycard says it
-// alone: it needs no other store to know which observations were imported.
+// in observation id order, each as every memory of its parts, in part order. Memorycard says it alone: it needs no
+// other store to know which observations were imported.
 func mirrorsOf(card memory.CardMemory, k kin) []memory.Identity {
 	var mirrors []memory.Identity
 	for _, observation := range k.holders[card.ID] {
 		for _, id := range k.parts[observation] {
 			mirrors = append(mirrors, memory.Identity{Source: SourceName, ID: strconv.FormatInt(id, 10)})
 		}
-		mirrors = append(mirrors, memory.Identity{Source: engramSource, ID: strconv.FormatInt(observation, 10)})
 	}
 	return mirrors
 }

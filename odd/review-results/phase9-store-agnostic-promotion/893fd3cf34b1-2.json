@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "e9ba1a78abca931d797ecd4b8c9bc8d096758e4f",
+    "head": "893fd3cf34b1fdb13fa4b6c01055c5216a3c4412",
+    "diff_sha256": "f6a558e47dd06438112f03c2383949cecec361d44d5d73f229c5e8c642cbf5b4",
+    "paths": [
+      "longterm-mem/README.md",
+      "longterm-mem/docs/promote-from-memorycard.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "e9ba1a78abca931d797ecd4b8c9bc8d096758e4f",
+      "head": "893fd3cf34b1fdb13fa4b6c01055c5216a3c4412",
+      "diff_sha256": "f6a558e47dd06438112f03c2383949cecec361d44d5d73f229c5e8c642cbf5b4"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/README.md",
+        "longterm-mem/docs/promote-from-memorycard.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/docs/promote-from-memorycard.md:20-21",
+        "claim": "The replacement for the ambiguous \"(below)\" cites \"the bridged cases of \\\"What it refuses or leaves alone\\\"\", but that section's heading is not in the diff, so it cannot be confirmed that it exists under that exact name or that it covers the bridged cases. If the heading differs, the new cross-reference is as dangling as the one it replaced.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "longterm-mem/docs/promote-from-memorycard.md:20-21"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/README.md:189-192",
+        "claim": "The hard-coded migration figures (\"575 of 575 pages migrated, then 0 left\" and the 2026-11-15 date) are a point-in-time record of the owner's vault, repeated in two documents. They will go stale and read as a current claim, and the two copies can drift apart. The remediation advice for a retired-keys page differs slightly between the two documents: the README names the four keys `source`, `source_id`, `source_type` and `source_revision`, while the promote doc says only \"the keys above\".",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/README.md:189-192",
+          "longterm-mem/docs/promote-from-memorycard.md:43-44"
+        ]
+      }
+    ],
+    "evidence": [
+      "Both changed files are docs-only; no code behaviour is altered by the diff.",
+      "The README paragraph about the retired keys was moved and expanded, and the claim that the doctor keeps a page current when any of several imported memories is eligible was removed, as the commit message states.",
+      "The promote doc's remark about retired keys was split into a standalone paragraph that names the six retired keys; the README names only two (`engram_id`, `memorycard_id`), which is consistent with its narrower doctor context."
+    ]
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "kind": "sweeper",
+  "base": "11641b08e28f73fc2a25db8feac9bd2ed46b4bba",
+  "head": "20b98d4ed928acfc972cf4e4c0fc3749bd55789a",
+  "diff_sha256": "39f92547666e7ea72376b1b2613976faf23993a7a78650e401f30e24f3911338",
+  "sweep": "20b98d4ed928-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 name: engramIdentity",
+      "disposition": "live",
+      "evidence": "Read-only at HEAD 1f02cd0a. The rename in 20b98d4e (engramIdentity -> memoryIdentity) was in the promote tests. The two hits are in engine/projection, which has its own const engramIdentity defined at gate_memory_test.go:26, used at gate_memory_test.go:47,136,148,152,157,217,241 and gate_memorycard_test.go:80,95. Nothing dangles; the name matches the gate engram-named fixtures (engramWorkflow, engramRead), so it is not a leftover of the promote rename. Tests and build not run."
+    }
+  ]
+}

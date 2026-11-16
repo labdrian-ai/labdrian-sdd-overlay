@@ -449,7 +449,7 @@ func TestGolden(t *testing.T) {
 				// The page every scenario starts from is promoted from observation 1, which Engram keeps pinned
 				// unless the scenario says it does not.
 				LiveMemoryEligibility: func(string) ([]MemoryEligibility, error) {
-					return []MemoryEligibility{{ID: 1, EngramID: 1, Pinned: !scenario.unpinned}}, nil
+					return []MemoryEligibility{{ID: 1, Pinned: !scenario.unpinned}}, nil
 				},
 			}, doctorTestProject)
 			if err != nil {

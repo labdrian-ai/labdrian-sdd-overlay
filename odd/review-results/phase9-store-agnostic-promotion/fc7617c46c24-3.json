@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "811abcb44304ae0451d6bffd255bb126a4938227",
+    "head": "fc7617c46c24b83bf01920c934826c002614cf94",
+    "diff_sha256": "fcbe5d18e8a83669389d7a684ff06c985fa355b891dc8da8779dc2542dcb1627",
+    "paths": [
+      "longterm-mem/internal/promote/page_identity_test.go",
+      "longterm-mem/internal/promote/update.go",
+      "longterm-mem/internal/promote/update_test.go",
+      "longterm-mem/internal/promote/writer_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "811abcb44304ae0451d6bffd255bb126a4938227",
+      "head": "fc7617c46c24b83bf01920c934826c002614cf94",
+      "diff_sha256": "fcbe5d18e8a83669389d7a684ff06c985fa355b891dc8da8779dc2542dcb1627"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/promote/page_identity_test.go",
+        "longterm-mem/internal/promote/update.go",
+        "longterm-mem/internal/promote/update_test.go",
+        "longterm-mem/internal/promote/writer_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/promote/update.go:131",
+        "claim": "The commit says adoption of an interrupted update never fired for card pages. The removed test TestPageIdentity_UpdateCorroborationReadsRevisionAndIdentity ran in both spellings through spellings(t, func(agnostic bool)), and its agnostic spelling asserted ActionUpdated. The removed code also handled sourceRevisionField and sourceTypeField, so the agnostic spelling does carry a revision. If so, this change regresses an interrupted update followed by a new Engram revision on agnostic pages. Such a page is now refused as skipped_local_edit. A skip suppresses the sidecar Save, so the entry never advances, and the page stays wedged until the user runs `promote reconcile`. This can also hit Engram pages in the same window, and R-008 retitles inside it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/update.go:131",
+          "longterm-mem/internal/promote/page_identity_test.go:197-234"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/writer_test.go:483",
+        "claim": "The deleted TestWriter_Promote_AdoptsAnUnrecordedOwnPageAndRepairsRegistration exercised the retained isOwnUnrecordedWrite path end to end. It covered a later-day retry, the volatile-stamp normalization, sidecar repair and catalog/log repair. The commit says this path stays, but no replacement test covers the writer-level repair. The deleted TestUpdate_LegacyEntryOnAnUndivergedPageIsBackfilled covered the ordinary update path, which also stays. Coverage of surviving behavior is lost.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/writer_test.go:483-549",
+          "longterm-mem/internal/promote/update_test.go:1058-1100"
+        ]
+      }
+    ],
+    "evidence": [
+      "Diff reviewed in full; only update.go changes production code, by removing one predicate from the diverged-hash branch.",
+      "The removed agnostic-spelling test is evidence that card-page adoption worked before this change.",
+      "I could not check whether frontmatterRevision and frontmatterEngramID are still used elsewhere, because the diff shows no other callers."
+    ]
+  }
+}

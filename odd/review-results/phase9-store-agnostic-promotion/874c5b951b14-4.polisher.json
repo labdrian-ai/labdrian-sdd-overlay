@@ -1,0 +1,28 @@
+{
+  "kind": "polisher",
+  "base": "12e307fb23510131f78b7574b67bff935d6081f7",
+  "head": "874c5b951b144078cf8587ac3db9a06634842540",
+  "diff_sha256": "c93f3598fc917d9514c186f284e79b78690515607b622c4179783d76b9bf8de5",
+  "findings": {
+    "findings": [
+      {
+        "location": "longterm-mem/cmd/longterm-mem/doctor_eligibility_test.go:367",
+        "severity": "WARNING",
+        "claim": "The T7 edit damaged the doc comment of TestTheMemorycardReadOfTheDoctorIsTheLiveMemoriesOfTheProject. It now reads 'the live memories of the project, XX// rule reads.' The stray 'XX//' and the cut sentence leave it garbled and misleading.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "The diff replaces the original two-line comment ('each with the fields promotion's rule reads and the Engram observation it was imported from...') with 'the live memories of the project, XX// rule reads.'",
+          "Grep for 'XX//' in the review worktree matches only longterm-mem/cmd/longterm-mem/doctor_eligibility_test.go:367.",
+          "It is a comment only, so there is no runtime effect, but the sentence is broken in the committed file."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read lines 1-734 of /home/labdrian/.cache/t7-874c5b95.diff. Grep of the 'diff --git' headers shows the rest of the diff is the deletion of scripts/rehearse-card-page-migration.sh.",
+      "Read promote.PageMemoryRef and pageSources in the head worktree. pageSources is only [memorycard], so a page with retired engram_id or memorycard_id keys, or with source: engram, names no memory. Doctor therefore skips it and cannot mis-join it to a memorycard id, which matches the new test.",
+      "Read doctor_eligibility.go at head. The join is now liveByMemoryID[p.ref.ID] alone, and superseded memories are skipped as before. I found no logic defect.",
+      "Did not run go vet or go test, so those checks are not run."
+    ]
+  }
+}

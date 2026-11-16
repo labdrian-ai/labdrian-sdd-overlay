@@ -1,0 +1,117 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "fa8d5183ce34bce805a7b5cbc1330b739a6a0b0b",
+    "head": "72221c234307308423529a43fe60c3d3be842537",
+    "diff_sha256": "1f55c4458d05ab957443781a0520d65b0bb5465a7ae9769bdb801048f7b5efa1",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/cmd_promote_reconcile_exitcode_test.go",
+      "longterm-mem/cmd/longterm-mem/cmd_promote_reconcile_test.go",
+      "longterm-mem/cmd/longterm-mem/doctor_addressmap_test.go",
+      "longterm-mem/cmd/longterm-mem/doctor_eligibility_test.go",
+      "longterm-mem/cmd/longterm-mem/doctor_sidecar_test.go",
+      "longterm-mem/cmd/longterm-mem/main_test.go",
+      "longterm-mem/cmd/longterm-mem/memorycard_lineage_test.go",
+      "longterm-mem/cmd/longterm-mem/promote_memorycard_test.go",
+      "longterm-mem/cmd/longterm-mem/promote_pages_golden_test.go",
+      "longterm-mem/cmd/longterm-mem/sync_memorycard_test.go",
+      "longterm-mem/cmd/longterm-mem/testdata/legacy-promoted-vault/.allocator-counter",
+      "longterm-mem/cmd/longterm-mem/testdata/legacy-promoted-vault/.raw/.longterm-mem-manifest.json",
+      "longterm-mem/cmd/longterm-mem/testdata/legacy-promoted-vault/.raw/.manifest.json",
+      "longterm-mem/cmd/longterm-mem/testdata/legacy-promoted-vault/wiki/index.md",
+      "longterm-mem/cmd/longterm-mem/testdata/legacy-promoted-vault/wiki/log.md",
+      "longterm-mem/cmd/longterm-mem/testdata/legacy-promoted-vault/wiki/memory/c-000901.md",
+      "longterm-mem/cmd/longterm-mem/testdata/pages-golden/09-a-page-that-names-no-address-pins-a-known-defect.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/pages-golden/10-a-page-for-the-observation-with-a-revision-that-is-not-a-number.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/pages-golden/15-files-beside-the-pages-that-are-not-pages.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/pages-golden/17-reconcile-a-page-without-frontmatter.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/pages-golden/18-reconcile-an-edited-page-nobody-recorded-adopts-it.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/pages-golden/19-reconcile-an-edited-page-with-a-recorded-revision-is-refused.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/pages-golden/20-reconcile-a-page-that-is-a-link.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/pages-golden/22-reconcile-a-page-of-another-project.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/pages-golden/26-a-failure-beside-an-observation-left-alone-pins-a-known-defect.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/promoted-vault/.allocator-counter",
+      "longterm-mem/cmd/longterm-mem/testdata/promoted-vault/.raw/.longterm-mem-manifest.json",
+      "longterm-mem/cmd/longterm-mem/testdata/promoted-vault/.raw/.manifest.json",
+      "longterm-mem/cmd/longterm-mem/testdata/promoted-vault/wiki/index.md",
+      "longterm-mem/cmd/longterm-mem/testdata/promoted-vault/wiki/log.md",
+      "longterm-mem/cmd/longterm-mem/testdata/promoted-vault/wiki/memory/c-000901.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "fa8d5183ce34bce805a7b5cbc1330b739a6a0b0b",
+      "head": "72221c234307308423529a43fe60c3d3be842537",
+      "diff_sha256": "1f55c4458d05ab957443781a0520d65b0bb5465a7ae9769bdb801048f7b5efa1"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/cmd_promote_reconcile_exitcode_test.go",
+        "longterm-mem/cmd/longterm-mem/cmd_promote_reconcile_test.go",
+        "longterm-mem/cmd/longterm-mem/doctor_addressmap_test.go",
+        "longterm-mem/cmd/longterm-mem/doctor_eligibility_test.go",
+        "longterm-mem/cmd/longterm-mem/doctor_sidecar_test.go",
+        "longterm-mem/cmd/longterm-mem/main_test.go",
+        "longterm-mem/cmd/longterm-mem/memorycard_lineage_test.go",
+        "longterm-mem/cmd/longterm-mem/promote_memorycard_test.go",
+        "longterm-mem/cmd/longterm-mem/promote_pages_golden_test.go",
+        "longterm-mem/cmd/longterm-mem/sync_memorycard_test.go",
+        "longterm-mem/cmd/longterm-mem/testdata/legacy-promoted-vault/.allocator-counter",
+        "longterm-mem/cmd/longterm-mem/testdata/legacy-promoted-vault/.raw/.longterm-mem-manifest.json",
+        "longterm-mem/cmd/longterm-mem/testdata/legacy-promoted-vault/.raw/.manifest.json",
+        "longterm-mem/cmd/longterm-mem/testdata/legacy-promoted-vault/wiki/index.md",
+        "longterm-mem/cmd/longterm-mem/testdata/legacy-promoted-vault/wiki/log.md",
+        "longterm-mem/cmd/longterm-mem/testdata/legacy-promoted-vault/wiki/memory/c-000901.md",
+        "longterm-mem/cmd/longterm-mem/testdata/pages-golden/09-a-page-that-names-no-address-pins-a-known-defect.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/pages-golden/10-a-page-for-the-observation-with-a-revision-that-is-not-a-number.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/pages-golden/15-files-beside-the-pages-that-are-not-pages.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/pages-golden/17-reconcile-a-page-without-frontmatter.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/pages-golden/18-reconcile-an-edited-page-nobody-recorded-adopts-it.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/pages-golden/19-reconcile-an-edited-page-with-a-recorded-revision-is-refused.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/pages-golden/20-reconcile-a-page-that-is-a-link.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/pages-golden/22-reconcile-a-page-of-another-project.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/pages-golden/26-a-failure-beside-an-observation-left-alone-pins-a-known-defect.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/promoted-vault/.allocator-counter",
+        "longterm-mem/cmd/longterm-mem/testdata/promoted-vault/.raw/.longterm-mem-manifest.json",
+        "longterm-mem/cmd/longterm-mem/testdata/promoted-vault/.raw/.manifest.json",
+        "longterm-mem/cmd/longterm-mem/testdata/promoted-vault/wiki/index.md",
+        "longterm-mem/cmd/longterm-mem/testdata/promoted-vault/wiki/log.md",
+        "longterm-mem/cmd/longterm-mem/testdata/promoted-vault/wiki/memory/c-000901.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/cmd/longterm-mem/promote_pages_golden_test.go:261-263",
+        "claim": "Scenario 22 (reconcile a page of another project) was not updated for the new fixture. The seeded page c-000901 now carries source_id: 2, but the scenario still changes the project of memory id = 1. The page's memory (2) keeps project golden-project, so the scenario no longer exercises the foreign-project page it is named for. The unchanged golden output can pass for a different reason, such as the --project mismatch alone. The scenario's coverage is weakened.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "promote_pages_golden_test.go:261-263",
+          "testdata/promoted-vault/wiki/memory/c-000901.md: source_id: 2"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/doctor_eligibility_test.go:129",
+        "claim": "frozenLine was changed to a different doctor message that now suggests running `promote --source memorycard --id 12`. The commit says it only changes tests and asserts the same behavior. The expectation therefore depends on production message changes that this commit does not contain. If those changes are not in the chain's earlier commits, the test fails.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "doctor_eligibility_test.go:129"
+        ]
+      }
+    ],
+    "evidence": [
+      "The helpers cardPageMemory, writeCardPage and the bridge/promote helpers are not defined in this diff. They are assumed to exist elsewhere in the package.",
+      "The reconcile golden hashes and the promoted-vault fixture were not recomputed here."
+    ]
+  }
+}

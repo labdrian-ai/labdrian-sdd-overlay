@@ -1,0 +1,17 @@
+{
+  "kind": "polisher",
+  "base": "a280d7b826e3b4350c58afa15df474ede78c3f46",
+  "head": "811abcb44304ae0451d6bffd255bb126a4938227",
+  "diff_sha256": "29ee7e3142eefe87ef224583b6416b6069277febb104e8836487a43d83ffe7a3",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Read the full diff /home/labdrian/.cache/t7-811abcb4.diff; it touches only longterm-mem/internal/memorycard: source.go, store.go and their tests.",
+      "No non-test code in internal/memorycard or any other package still calls the removed MemoryByEngramID; the remaining engramSource hits are promote's own constant, unaffected by this diff.",
+      "lineageOf and mirrorsOf keep their signatures; lineage now holds only sibling parts and mirrors drop the Engram observation; the updated test expectations match.",
+      "This diff is the adapter part of S7; the reader and migration-command parts are separate slices.",
+      "Did not run go build or go test.",
+      "The stated risk depends on the owner's live migration leaving 0 legacy-key pages (L91), a declared precondition that cannot be checked from the target."
+    ]
+  }
+}

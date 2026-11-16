@@ -1,0 +1,50 @@
+{
+  "kind": "polisher",
+  "base": "87f26495f03d65b7423a2d8d787eb56f36cf75d0",
+  "head": "01bffae764d2d6ab2b4179a320dcd067772b3b21",
+  "diff_sha256": "d8fb134857022d09036e47fc4c786acbf6472f616213aabbfe6d3c4a00388982",
+  "findings": {
+    "findings": [
+      {
+        "location": "longterm-mem/docs/promote-from-memorycard.md:81-85",
+        "severity": "WARNING",
+        "claim": "Shipped docs still tell users to run `longterm-mem migrate-card-pages [--project P] [--vault DIR] [--apply]`, but the commit removed that command. Running it now gives an unknown-command error. The diff updates none of the docs or specs that mention it.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "The diff deletes cmd_migrate_card_pages.go and removes the `case \"migrate-card-pages\"` branch from main.go.",
+          "The diff touches no docs or specs. These still name the command: longterm-mem/docs/promote-from-memorycard.md:81 and :85, longterm-mem/docs/sync-from-memorycard.md:43, longterm-mem/README.md:92, and openspec/specs/longterm-mem-promotion/spec.md:145, :400, :421 and :429.",
+          "The spec lines are normative. They say \"WHEN `migrate-card-pages --apply` runs\", so the main spec now requires a command that no longer exists."
+        ]
+      },
+      {
+        "location": "scripts/rehearse-card-page-migration.sh:280-337",
+        "severity": "SUGGESTION",
+        "claim": "The rehearsal script scripts/rehearse-card-page-migration.sh calls the removed `migrate-card-pages` command (lines 280, 281, 296, 337, 355 and 356). Any run now fails at that step. The script is now orphaned and was not removed or marked retired.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "The script is untouched by the diff. Its `lm migrate-card-pages` invocations at lines 280, 281, 296 and 337 hit the unknown-command path after the main.go dispatch case was removed.",
+          "docs/promote-from-memorycard.md still references the script, so a user can reach it."
+        ]
+      },
+      {
+        "location": "longterm-mem/internal/promote/migrate_cards.go",
+        "severity": "SUGGESTION",
+        "claim": "promote.MigrateCardPages and its refusal types and tests are left with no production caller after the command was removed. The remaining non-test references are in the promote package and its own tests. This is dead code the retirement was meant to delete.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "The only non-test caller, cmdMigrateCardPages, was deleted in this diff.",
+          "The diff touches only longterm-mem/cmd/longterm-mem. The promote package still holds migrate_cards.go and the tests migrate_cards_*_test.go.",
+          "This is inferred from grep over the review worktree and the diff file list. I did not build the code."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read /home/labdrian/.cache/t7-01bffae7.diff lines 1-600 and the list of files it touches. It deletes cmd_migrate_card_pages.go and its tests, and removes the dispatch case in main.go.",
+      "Grepped the review worktree at head for `migrate-card-pages` and `MigrateCardPages`, excluding odd/. Matches remain in docs, the main spec, the rehearsal script and the promote package.",
+      "Did not build or run tests, and did not read the T7 spec line in full (grep output truncated it)."
+    ]
+  }
+}

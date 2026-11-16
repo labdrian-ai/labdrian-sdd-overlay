@@ -1,0 +1,40 @@
+{
+  "kind": "polisher",
+  "base": "01bffae764d2d6ab2b4179a320dcd067772b3b21",
+  "head": "a280d7b826e3b4350c58afa15df474ede78c3f46",
+  "diff_sha256": "41b9fb81cd0fd26094d31cdecbb20a48f696d5062f4fbb5879f0d0f2ce95e3d3",
+  "findings": {
+    "findings": [
+      {
+        "location": "longterm-mem/docs/promote-from-memorycard.md:78-89",
+        "severity": "WARNING",
+        "claim": "The target deletes the whole migrate-card-pages implementation (command already gone, library code removed here), but user-facing docs still document and tell users to run `longterm-mem migrate-card-pages [--project P] [--vault DIR] [--apply]`. That command now fails with `unknown subcommand`. The same stale instructions are in longterm-mem/docs/sync-from-memorycard.md:43, longterm-mem/README.md:92, openspec/specs/longterm-mem-promotion/spec.md:145,400,421,429, and scripts/rehearse-card-page-migration.sh, which still invokes the command.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "Diff (/home/labdrian/.cache/t7-a280d7b8.diff) touches only five deleted files under longterm-mem/internal/promote/migrate_cards*.go; no doc, README or script is changed.",
+          "At head, grep for `migrate-card-pages` in the review worktree still matches the docs, the README, the spec and the script listed above.",
+          "longterm-mem/cmd/longterm-mem/page_keys_test.go:139-143 pins that `migrate-card-pages` is an unknown subcommand (exit usage), so the documented instruction cannot work.",
+          "The T7 line in odd/tasks/phase9-store-agnostic-promotion.md:122 lists `longterm-mem/README.md` and `longterm-mem/docs/` as surfaces of T7, so the doc update belongs to this task and has not been done."
+        ]
+      },
+      {
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:122",
+        "severity": "SUGGESTION",
+        "claim": "The target removes only the migration code. The S7 acceptance items are not met at head: page readers still parse legacy keys, and `engram` is still a page family. Examples are the `engram_id`/`engram_revision` readers in frontmatter.go:154 and `legacyKeys[source]` in page_scan.go:128. Tests such as walk_bridged_test.go:108-135 still expect legacy-keyed pages to bridge. If this commit is meant as a partial T7 slice, it should say so. If it is meant to close T7, the RED test (a page with only legacy keys is no longer a promoted page) is missing.",
+        "evidence_class": "inferential",
+        "causal_disposition": "pre-existing",
+        "evidence": [
+          "The diff has no change to page_identity.go, page_scan.go or the memorycard adapter, which T7 and S7 name as surfaces.",
+          "Grep at head finds `engram_id` and `memorycard_id` readers and fixtures in longterm-mem/internal/promote/*.go.",
+          "Behavior is consistent with the declared precondition of 0 legacy pages, so there is no data-loss risk from the deletion itself."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff headers and the first 1020 lines (migrate_cards.go and the recovery and safety tests, all pure deletions); grep confirmed the remaining diff is the deletion of 5 files only.",
+      "Grepped the review worktree for symbols defined in the deleted files (MigrateCardPages, CardBridges, MigrationBackup, newMigWorld, cardOf, refusalOf, shapeOf and others). No live Go reference remains outside the deleted files. The `pageText` and `RefusalKind` hits belong to other packages, and MemoryByEngramID is still used by the memorycard store. I did not run a build, vet or tests, so compile cleanliness is not run.",
+      "Read S7 and the T7 line of odd/tasks/phase9-store-agnostic-promotion.md in the worktree, and grepped for remaining mentions of the retired command in docs, README, spec and scripts."
+    ]
+  }
+}

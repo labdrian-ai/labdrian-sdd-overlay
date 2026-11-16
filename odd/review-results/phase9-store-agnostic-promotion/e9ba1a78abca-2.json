@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "b11f6db2a0cc9cd4bf618712b9f7d94027ef72a8",
+    "head": "e9ba1a78abca931d797ecd4b8c9bc8d096758e4f",
+    "diff_sha256": "4d919cb45383a08fe7beb4fc5c8a455d298bcfdcc44708de6f7847b1cf258044",
+    "paths": [
+      "longterm-mem/internal/ops/doctor.go",
+      "openspec/specs/longterm-mem-promotion/spec.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "b11f6db2a0cc9cd4bf618712b9f7d94027ef72a8",
+      "head": "e9ba1a78abca931d797ecd4b8c9bc8d096758e4f",
+      "diff_sha256": "4d919cb45383a08fe7beb4fc5c8a455d298bcfdcc44708de6f7847b1cf258044"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/ops/doctor.go",
+        "openspec/specs/longterm-mem-promotion/spec.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff changes only a comment in doctor.go and spec prose in spec.md, so no executable behavior changes.",
+      "The spec text and the doctor comment agree with each other and with the commit's claim: promotion writes two fingerprints and no revision, only reconcile records one, a diverged page with no usable revision is refused and reported by the precedence-sidecar diagnostic, and reconcile is the repair.",
+      "The scenario now also asserts that the diagnostic names the page. The doctor comment says the same, so I found no contradiction.",
+      "The code behind these claims is not in the diff, so I could not check them against it."
+    ]
+  }
+}

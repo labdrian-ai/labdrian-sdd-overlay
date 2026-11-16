@@ -9,22 +9,19 @@ import "errors"
 type PrecedenceEntry struct {
 	BodyHash        string `json:"body_hash"`
 	FrontmatterHash string `json:"frontmatter_hash"`
-	// PromotedRevision is the engram_revision the fingerprinted render
-	// carried. The two hashes above answer WHETHER the page still holds
-	// our last write; this answers WHICH of our writes that was, and that
-	// is the only evidence separating "the page is ahead of this sidecar
-	// because our own write landed and the sidecar's did not" from "a
-	// human edited the page" once the hashes have already diverged (see
-	// isOwnUnrecordedUpdate).
+	// PromotedRevision is the source_revision the fingerprinted render
+	// carried, as `promote reconcile` records it from a page. The two hashes
+	// above answer WHETHER the page still holds our last write; this answers
+	// WHICH revision that was, which is what separates a page `doctor` names
+	// as wedged (no revision recorded) from one holding a human's edit.
 	//
 	// Zero means no revision was recorded -- an entry written before this
 	// field existed, or one a status-only patch inherited from such an
 	// entry -- and every reader treats that as no evidence and fails
 	// closed. Conflating "absent" with revision 0 is safe here in the one
-	// direction that matters: Engram's revision_count is NOT NULL DEFAULT
-	// 1, so no promoted page legitimately carries revision 0, and reading
-	// a page that somehow does as unrecorded only ever refuses a write it
-	// might have adopted -- never the reverse. Kept a plain int rather
+	// direction that matters: reading a page that carries revision 0 as
+	// unrecorded only ever refuses a write it might have adopted -- never the
+	// reverse. Kept a plain int rather
 	// than a *int so a PrecedenceEntry stays comparable with ==, which is
 	// how callers ask "did this entry change?"; a pointer would make two
 	// decodes of the same sidecar compare unequal.

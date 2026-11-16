@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "6db6d5849c810d55bd58ae12a5bed2675d5ceaaf",
+    "head": "b11f6db2a0cc9cd4bf618712b9f7d94027ef72a8",
+    "diff_sha256": "1235fb37331afd05eccd78329960cde258990631bd1aaa079aa938df73076052",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/cmd_doctor.go",
+      "longterm-mem/cmd/longterm-mem/doctor_eligibility_test.go",
+      "longterm-mem/cmd/longterm-mem/page_keys_test.go",
+      "longterm-mem/internal/ops/doctor_eligibility.go",
+      "longterm-mem/internal/ops/doctor_eligibility_test.go",
+      "longterm-mem/internal/ops/doctor_reconcile_test.go",
+      "longterm-mem/internal/opstest/fixture.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "6db6d5849c810d55bd58ae12a5bed2675d5ceaaf",
+      "head": "b11f6db2a0cc9cd4bf618712b9f7d94027ef72a8",
+      "diff_sha256": "1235fb37331afd05eccd78329960cde258990631bd1aaa079aa938df73076052"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/cmd_doctor.go",
+        "longterm-mem/cmd/longterm-mem/doctor_eligibility_test.go",
+        "longterm-mem/cmd/longterm-mem/page_keys_test.go",
+        "longterm-mem/internal/ops/doctor_eligibility.go",
+        "longterm-mem/internal/ops/doctor_eligibility_test.go",
+        "longterm-mem/internal/ops/doctor_reconcile_test.go",
+        "longterm-mem/internal/opstest/fixture.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/ops/doctor_eligibility_test.go:218-231",
+        "claim": "The test now appends both 'source_id: 99' and 'engram_id: 99' to the body, but the diff does not show the assertion part. If the page body assertion only checks the eligibility result, a regression that read only one of the two lines could be masked by the other. Splitting the two cases into separate subtests would prove each line independently does not move the page.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/ops/doctor_eligibility_test.go:218-231"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/ops/doctor_eligibility_test.go:203",
+        "claim": "The skip-no-memory test still uses a page with 'engram_id: not-a-number' but no page with an unparseable 'source_id', although the comment now claims the test covers an absent or unparseable source_id. The comment overstates what the fixture exercises.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/ops/doctor_eligibility_test.go:203",
+          "longterm-mem/internal/ops/doctor_eligibility_test.go:205"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only comments, test names, one test input line and a test helper rename (EngramMemory to CardMemory) with all visible callers updated in the changed files.",
+      "No production code path is altered: cmd_doctor.go and doctor_eligibility.go change only comments.",
+      "The rename is applied to every caller in the diff (page_keys_test.go, doctor_eligibility_test.go, doctor_reconcile_test.go); callers outside the diff cannot be verified from the diff alone."
+    ]
+  }
+}

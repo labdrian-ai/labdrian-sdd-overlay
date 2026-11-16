@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "20b98d4ed928acfc972cf4e4c0fc3749bd55789a",
+    "head": "000c8a8d599f4a412b07b2c0c8a3dd4e85639aad",
+    "diff_sha256": "d9dba37c3de04594dbcd6add95777a03ba5afc8987ecfa835252a4b45f6febfc",
+    "paths": [
+      "longterm-mem/README.md",
+      "longterm-mem/docs/promote-from-memorycard.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "20b98d4ed928acfc972cf4e4c0fc3749bd55789a",
+      "head": "000c8a8d599f4a412b07b2c0c8a3dd4e85639aad",
+      "diff_sha256": "d9dba37c3de04594dbcd6add95777a03ba5afc8987ecfa835252a4b45f6febfc"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/README.md",
+        "longterm-mem/docs/promote-from-memorycard.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/README.md:189",
+        "claim": "The edit joined the remedy onto the end of the previous sentence line, leaving one very long line (the remedy sentence plus the remainder) while the surrounding prose is hard-wrapped near 120 columns. The promote doc was re-wrapped properly; the README was not, so the two documents are inconsistent and the README line is harder to read and diff.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/README.md:189"
+        ]
+      }
+    ],
+    "evidence": [
+      "Diff touches only two documentation files; no code behavior changes.",
+      "README line 189 now contains 'one untouched, ... duplicate the memory it was written for. A vault that still has one needs that page removed, or given the `source`, ... keys' on a single over-long line, followed by a short 'of its memory by hand.' line.",
+      "Both documents now state the same remedy (remove the page or give it the four store-agnostic keys), matching the commit claim; dated figures removed from both."
+    ]
+  }
+}

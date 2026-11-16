@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "72221c234307308423529a43fe60c3d3be842537",
+    "head": "12e307fb23510131f78b7574b67bff935d6081f7",
+    "diff_sha256": "5dcff14a74d3bf734511ad5bc7bdaf822f4e2c669ad28e0b3ac87dd5a03b7f2b",
+    "paths": [
+      "longterm-mem/README.md",
+      "longterm-mem/docs/promote-from-memorycard.md",
+      "longterm-mem/docs/sync-from-memorycard.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "72221c234307308423529a43fe60c3d3be842537",
+      "head": "12e307fb23510131f78b7574b67bff935d6081f7",
+      "diff_sha256": "5dcff14a74d3bf734511ad5bc7bdaf822f4e2c669ad28e0b3ac87dd5a03b7f2b"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/README.md",
+        "longterm-mem/docs/promote-from-memorycard.md",
+        "longterm-mem/docs/sync-from-memorycard.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/docs/promote-from-memorycard.md:68-70",
+        "claim": "The docs now say a page carrying only retired keys is ignored and its memory gets a new page. They no longer warn owners of vaults that still hold such pages, and the removed migration section was the only guidance for them. Those owners can silently get duplicate pages for the same memory, with no documented way to tell. The docs also no longer say whether the migration command still exists. The change cannot show that the code matches the new text, or that no other doc still links the deleted anchor `#the-one-time-migration-of-the-pages-of-older-releases`.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/docs/promote-from-memorycard.md:68-70",
+          "longterm-mem/README.md:92"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff is documentation only. It removes the migrate-card-pages row from the README and its section in the promote doc.",
+      "The new statements about retired keys cannot be checked against code in this diff. Only the docs changed, so the reviewer could not verify that the code matches them."
+    ]
+  }
+}

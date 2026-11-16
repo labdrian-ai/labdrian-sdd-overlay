@@ -8,7 +8,7 @@ import (
 )
 
 // The Source adapter serves memorycard's memories as memory.Memory over the fixtures of store_test.go: memory 1 is
-// superseded by 2 and imported from Engram observation 402, 2 is mapped by another source, 3 has no import_map
+// superseded by 2 and imported from observation 402 (its lineage names no observation, S7), 2 is mapped by another source, 3 has no import_map
 // row, 4 is archived and 5 belongs to another project.
 
 func openSource(t *testing.T, path string) *Source {
@@ -31,7 +31,6 @@ func wantMemory1() memory.Memory {
 	return memory.Memory{
 		Identity: card("1"), Project: "p", Type: "decision", Title: "Old", Body: "old body", TopicKey: "a/b", Pinned: true,
 		Status: memory.StatusSuperseded, Successor: card("2"), SuccessorTitle: "New", Revision: 3,
-		Lineage: []memory.Identity{{Source: "engram", ID: "402"}},
 	}
 }
 
@@ -46,7 +45,7 @@ func wantMemory4() memory.Memory {
 	}
 }
 
-func TestSourceMapsAMemoryWithItsStatusSuccessorRevisionAndEngramLineage(t *testing.T) {
+func TestSourceMapsAMemoryWithItsStatusSuccessorRevisionAndNoObservationInItsLineage(t *testing.T) {
 	source := openSource(t, listFixture(t))
 
 	got, ok, err := source.ByID("1")

@@ -47,7 +47,7 @@ func (w *retrievalWorld) promotedPages(t *testing.T, ids ...int64) {
 			t.Fatalf("observation %d of the fixture database: found=%v err=%v", id, found, err)
 		}
 		address := fmt.Sprintf("c-%06d", firstPromotedAddress+i)
-		page, err := promote.EmitPage(opstest.EngramMemory(obs), address, nil, fixtureInstant)
+		page, err := promote.EmitPage(cardPageMemory(obs), address, nil, fixtureInstant)
 		if err != nil {
 			t.Fatalf("EmitPage for observation %d: %v", id, err)
 		}
@@ -126,7 +126,7 @@ func doctorOf(t *testing.T, w *retrievalWorld, extra ...string) (code int, stdou
 }
 
 // frozenLine is the line the text form prints for the frozen page c-000901, promoted from observation 12.
-const frozenLine = "  [warn] promoted-pages-eligible (c-000901: memory 12 is not pinned and has no topic_key, so sync does not refresh this page; the page predates memorycard identity and is refreshed only after the one-time vault migration; pin memory 12 in memorycard so sync keeps it current after it)\n"
+const frozenLine = "  [warn] promoted-pages-eligible (c-000901: memory 12 is not pinned and has no topic_key, so sync does not refresh this page; run `longterm-mem promote --source memorycard --id 12` to refresh it now, or pin memory 12 in memorycard so sync keeps it current)\n"
 
 // A frozen page is a warning in the text form, naming the page, the observation, why it is not eligible and the
 // two ways out; the command exits as it does for the same vault whose observation is pinned, which is 0.
@@ -364,9 +364,8 @@ func TestTheEngramReadOfTheDoctorIsTheLiveRowsOfTheProject(t *testing.T) {
 	}
 }
 
-// The eligibility check reads memorycard (S11): the live memories of the project, each with the fields promotion's
-// rule reads and the Engram observation it was imported from, which is how a page of an earlier release is joined.
-// A memory of another project, and a memory that was archived, are not among them. (Previously: the live rows of
+// The eligibility check reads memorycard (S11): the live memories of the project, each with the
+// fields promotion's rule reads (R-007). A memory of another project, and a memory that was archived, are not among them. (Previously: the live rows of
 // the Engram database.)
 func TestTheMemorycardReadOfTheDoctorIsTheLiveMemoriesOfTheProject(t *testing.T) {
 	path := memorycardDatabase(t,
@@ -386,7 +385,7 @@ func TestTheMemorycardReadOfTheDoctorIsTheLiveMemoriesOfTheProject(t *testing.T)
 
 	want := []ops.MemoryEligibility{
 		{ID: 1, Pinned: true, TopicKey: "bugfix/register-order"},
-		{ID: 2, EngramID: 41},
+		{ID: 2},
 		{ID: 3, Superseded: true, TopicKey: "sdd/x/tasks"},
 	}
 	if fmt.Sprint(rows) != fmt.Sprint(want) {

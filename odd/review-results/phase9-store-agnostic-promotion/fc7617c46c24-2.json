@@ -1,0 +1,87 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "811abcb44304ae0451d6bffd255bb126a4938227",
+    "head": "fc7617c46c24b83bf01920c934826c002614cf94",
+    "diff_sha256": "fcbe5d18e8a83669389d7a684ff06c985fa355b891dc8da8779dc2542dcb1627",
+    "paths": [
+      "longterm-mem/internal/promote/page_identity_test.go",
+      "longterm-mem/internal/promote/update.go",
+      "longterm-mem/internal/promote/update_test.go",
+      "longterm-mem/internal/promote/writer_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "811abcb44304ae0451d6bffd255bb126a4938227",
+      "head": "fc7617c46c24b83bf01920c934826c002614cf94",
+      "diff_sha256": "fcbe5d18e8a83669389d7a684ff06c985fa355b891dc8da8779dc2542dcb1627"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/promote/page_identity_test.go",
+        "longterm-mem/internal/promote/update.go",
+        "longterm-mem/internal/promote/update_test.go",
+        "longterm-mem/internal/promote/writer_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/promote/update.go:131",
+        "claim": "The removal of the isOwnUnrecordedUpdate adoption makes a vault page that an interrupted update advanced, and that Engram has since revised, a permanent skipped_local_edit for any entry carrying a recorded revision. A skip suppresses the sidecar Save, so the entry never advances and every later run repeats the refusal until the owner runs `promote reconcile`. The commit states this as intended, and for card pages the adoption never fired, but the base did adopt this case for Engram pages and nothing in the diff shows an automatic recovery or a doctor diagnostic for the new wedge.",
+        "evidence_class": "inferential",
+        "causal_disposition": "worsened",
+        "proof_refs": [
+          "longterm-mem/internal/promote/update.go:131",
+          "longterm-mem/internal/promote/update.go:88-99"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/promote/writer_test.go:480",
+        "claim": "TestWriter_Promote_AdoptsAnUnrecordedOwnPageAndRepairsRegistration was deleted. It exercised the retained isOwnUnrecordedWrite path end to end through Writer.Promote: a later-day retry of an unrecorded own page, adoption into the precedence store, and repair of the catalog and log registration. The commit says that adoption stays, yet it loses its only Writer-level coverage, including the volatile-stamp normalization on a later day and the registration repair. Other tests may still cover the update-level behavior, but this diff does not show any covering the Writer-level repair.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/writer_test.go:480"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/promote/update_test.go:1058",
+        "claim": "TestUpdate_LegacyEntryOnAnUndivergedPageIsBackfilled was deleted. It tests the ordinary update path, in which an undiverged legacy entry is backfilled with PromotedRevision, and it does not depend on the removed adoption functions. The legacy-population-shrinks guarantee, which the removed revisionsAllowAdoption comment cited as the reason refusing diverged legacy pages is safe, loses its test coverage. The justification for this deletion is unclear.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/update_test.go:1058"
+        ]
+      },
+      {
+        "id": "F4",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/update_test.go:557",
+        "claim": "The comment on TestUpdate_PageAheadOfTheSidecarWithAnEditedBodyIsStillSkipped, which follows right after the deleted test, still says 'pins the scope of the reconciliation above', and this commit removed the reconciliation it refers to. The comment is now stale, and the test's premise, a page ahead of the sidecar being adoptable, no longer holds.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/update_test.go:557"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read only the diff; all four changed paths were covered.",
+      "Confirmed that update.go:131 now gates adoption on isOwnUnrecordedWrite alone, and that the three removed helper functions and the other removed helpers have no remaining callers visible in the diff.",
+      "The deleted tests F2 and F3 cover behavior the commit message says stays or that does not depend on the removed code."
+    ]
+  }
+}

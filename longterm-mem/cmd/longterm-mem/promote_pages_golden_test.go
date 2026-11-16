@@ -59,14 +59,12 @@ func pageOf(w *promoteGoldenWorld, address string) string {
 // fixtures under testdata are found from here.
 var testPackageDir, _ = os.Getwd()
 
-// seedLegacyPromotedPage leaves the vault as `promote --id 1` of the Engram observation left it: the page c-000901
-// carrying the legacy Engram keys (engram_id, engram_revision), its precedence entry, its place in the address map,
-// the catalog and the log. Reading a page of that shape is what `promote reconcile` does until it reads any page
-// identity (T10), and no command writes one any more, so the scenarios of reconcile start from files recorded when
-// one did (testdata/legacy-promoted-vault).
-func seedLegacyPromotedPage(t *testing.T, w *promoteGoldenWorld) {
+// seedPromotedPage leaves the vault as `promote --id 2` of memorycard memory 2 left it: the page c-000901 carrying the
+// store-agnostic keys (source, source_id, source_revision), its precedence entry, its place in the address map, the
+// catalog and the log (testdata/promoted-vault).
+func seedPromotedPage(t *testing.T, w *promoteGoldenWorld) {
 	t.Helper()
-	root := filepath.Join(testPackageDir, "testdata", "legacy-promoted-vault")
+	root := filepath.Join(testPackageDir, "testdata", "promoted-vault")
 	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil || d.IsDir() {
 			return err
@@ -90,7 +88,7 @@ func seedLegacyPromotedPage(t *testing.T, w *promoteGoldenWorld) {
 		return os.WriteFile(target, data, mode)
 	})
 	if err != nil {
-		t.Fatalf("seed the legacy promoted page: %v", err)
+		t.Fatalf("seed the promoted page: %v", err)
 	}
 }
 
@@ -159,8 +157,8 @@ func pagesScenarios() []pagesScenario {
 	revise := func(t *testing.T, w *promoteGoldenWorld) {
 		w.reviseMemory(t, 1, "Revised body.")
 	}
-	withoutAddress := "---\nmemorycard_id: 1\nproject: " + promoteGoldenProject + "\n---\nA page that names no address.\n"
-	withBadRevision := "---\naddress: c-000500\nmemorycard_id: 1\nmemorycard_revision: x\nproject: " + promoteGoldenProject + "\n---\nA page whose revision is not a number.\n"
+	withoutAddress := "---\nsource: memorycard\nsource_id: 1\nproject: " + promoteGoldenProject + "\n---\nA page that names no address.\n"
+	withBadRevision := "---\naddress: c-000500\nsource: memorycard\nsource_id: 1\nsource_revision: x\nproject: " + promoteGoldenProject + "\n---\nA page whose revision is not a number.\n"
 
 	return []pagesScenario{
 		{name: "01-the-page-is-gone-but-the-sidecar-remembers-it", prepare: [][]string{promote}, seed: func(t *testing.T, w *promoteGoldenWorld) {
@@ -197,7 +195,7 @@ func pagesScenarios() []pagesScenario {
 		{name: "08-text-without-frontmatter-where-the-new-page-belongs", seed: func(t *testing.T, w *promoteGoldenWorld) {
 			writeVaultFile(t, w, "wiki/memory/c-000901.md", "Just text, no frontmatter.\n")
 		}, commands: [][]string{promote, sync}},
-		// Pinned as found (known defect F-A1): a page with a memorycard_id and no address is written again beside
+		// Pinned as found (known defect F-A1): a page with source_id and no address is written again beside
 		// itself as c-000500.md.md; the same happens at the base, so the golden records it rather than endorses it.
 		{name: "09-a-page-that-names-no-address-pins-a-known-defect", seed: func(t *testing.T, w *promoteGoldenWorld) {
 			writeVaultFile(t, w, "wiki/memory/c-000500.md", withoutAddress)
@@ -230,28 +228,28 @@ func pagesScenarios() []pagesScenario {
 			symlinkOrSkip(t, "../notes/absent", filepath.Join(w.vaultRoot, "wiki", "memory"))
 		}, commands: [][]string{promote, sync}},
 		{name: "15-files-beside-the-pages-that-are-not-pages", seed: func(t *testing.T, w *promoteGoldenWorld) {
-			writeVaultFile(t, w, "wiki/memory/notes.txt", "---\nmemorycard_id: 1\n---\n")
-			writeVaultFile(t, w, "wiki/memory/C-000999.MD", "---\nmemorycard_id: 1\n---\n")
+			writeVaultFile(t, w, "wiki/memory/notes.txt", "---\nsource: memorycard\nsource_id: 1\n---\n")
+			writeVaultFile(t, w, "wiki/memory/C-000999.MD", "---\nsource: memorycard\nsource_id: 1\n---\n")
 			if err := os.MkdirAll(filepath.Join(w.vaultRoot, "wiki", "memory", "folder.md"), 0o755); err != nil {
 				t.Fatal(err)
 			}
 		}, commands: [][]string{promote, sync}},
 		{name: "16-reconcile-a-page-that-is-gone", commands: [][]string{reconcile}},
 		{name: "17-reconcile-a-page-without-frontmatter", seed: func(t *testing.T, w *promoteGoldenWorld) {
-			seedLegacyPromotedPage(t, w)
+			seedPromotedPage(t, w)
 			writeVaultFile(t, w, "wiki/memory/c-000901.md", "Just text, no frontmatter.\n")
 		}, commands: [][]string{reconcile}},
 		{name: "18-reconcile-an-edited-page-nobody-recorded-adopts-it", seed: func(t *testing.T, w *promoteGoldenWorld) {
-			seedLegacyPromotedPage(t, w)
+			seedPromotedPage(t, w)
 			removeSidecar(t, w)
 			appendToPage(t, w, "c-000901")
 		}, commands: [][]string{reconcile}},
 		{name: "19-reconcile-an-edited-page-with-a-recorded-revision-is-refused", seed: func(t *testing.T, w *promoteGoldenWorld) {
-			seedLegacyPromotedPage(t, w)
+			seedPromotedPage(t, w)
 			appendToPage(t, w, "c-000901")
 		}, commands: [][]string{reconcile}},
 		{name: "20-reconcile-a-page-that-is-a-link", seed: func(t *testing.T, w *promoteGoldenWorld) {
-			seedLegacyPromotedPage(t, w)
+			seedPromotedPage(t, w)
 			removeSidecar(t, w)
 			movePageToNotes(t, w, "c-000901")
 		}, commands: [][]string{reconcile}},
@@ -261,9 +259,9 @@ func pagesScenarios() []pagesScenario {
 			}
 		}, commands: [][]string{reconcile}},
 		{name: "22-reconcile-a-page-of-another-project", seed: func(t *testing.T, w *promoteGoldenWorld) {
-			seedLegacyPromotedPage(t, w)
+			seedPromotedPage(t, w)
 			removeSidecar(t, w)
-			w.execCardSQL(t, `UPDATE memories SET project = 'other-project' WHERE id = 1`)
+			w.execCardSQL(t, `UPDATE memories SET project = 'other-project' WHERE id = 2`)
 		}, commands: [][]string{{"promote", "reconcile", "--project", "other-project", "c-000901"}}},
 		{name: "23-an-observation-superseded-by-a-newer-one", prepare: [][]string{sync}, seed: func(t *testing.T, w *promoteGoldenWorld) {
 			w.execCardSQL(t, `UPDATE memories SET status = 'superseded', superseded_by = 2 WHERE id = 1`)

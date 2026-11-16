@@ -1,0 +1,145 @@
+{
+  "kind": "sweeper",
+  "base": "12e307fb23510131f78b7574b67bff935d6081f7",
+  "head": "874c5b951b144078cf8587ac3db9a06634842540",
+  "diff_sha256": "c93f3598fc917d9514c186f284e79b78690515607b622c4179783d76b9bf8de5",
+  "sweep": "874c5b951b14-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 path: scripts/rehearse-card-page-migration.sh",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. deleted by the commit; absent at HEAD, no non-odd/ reference to it remains"
+    },
+    {
+      "candidate": "T1 name: --all",
+      "disposition": "live",
+      "evidence": "different live symbol or generic word/flag: 52 occurrences outside odd/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: --allow-empty",
+      "disposition": "live",
+      "evidence": "different live symbol or generic word/flag: 14 occurrences outside odd/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: --apply",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. rg -F: 0 occurrences outside odd/ and openspec/changes/archive/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: --dry-run",
+      "disposition": "live",
+      "evidence": "different live symbol or generic word/flag: 209 occurrences outside odd/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: --json",
+      "disposition": "live",
+      "evidence": "different live symbol or generic word/flag: 134 occurrences outside odd/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: --no-llm",
+      "disposition": "live",
+      "evidence": "different live symbol or generic word/flag: 30 occurrences outside odd/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: --no-verify",
+      "disposition": "live",
+      "evidence": "different live symbol or generic word/flag: 2 occurrences outside odd/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: --project",
+      "disposition": "live",
+      "evidence": "different live symbol or generic word/flag: 1878 occurrences outside odd/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: --short",
+      "disposition": "live",
+      "evidence": "different live symbol or generic word/flag: 2 occurrences outside odd/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: --stat",
+      "disposition": "live",
+      "evidence": "different live symbol or generic word/flag: 250 occurrences outside odd/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: --vault",
+      "disposition": "live",
+      "evidence": "different live symbol or generic word/flag: 26 occurrences outside odd/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: TestDoctorJoinsAPageToItsObservationByItsStoreAgnosticIdentity",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. rg -F: 0 occurrences outside odd/ and openspec/changes/archive/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: TestDoctorJudgesAPageByTheLiveMemoriesOfItsObservation",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. rg -F: 0 occurrences outside odd/ and openspec/changes/archive/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: copy_db",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. rg -F: 0 occurrences outside odd/ and openspec/changes/archive/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: die",
+      "disposition": "live",
+      "evidence": "different live symbol or generic word/flag: 253 occurrences outside odd/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: findings",
+      "disposition": "live",
+      "evidence": "different live symbol or generic word/flag: 842 occurrences outside odd/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: guard",
+      "disposition": "live",
+      "evidence": "different live symbol or generic word/flag: 2559 occurrences outside odd/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: legacy_counts",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. rg -F: 0 occurrences outside odd/ and openspec/changes/archive/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: legacy_pages",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. rg -F: 0 occurrences outside odd/ and openspec/changes/archive/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: live_digest",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. rg -F: 0 occurrences outside odd/ and openspec/changes/archive/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: lm",
+      "disposition": "live",
+      "evidence": "different live symbol or generic word/flag: 87 occurrences outside odd/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: projects_of",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. rg -F: 0 occurrences outside odd/ and openspec/changes/archive/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: promotions",
+      "disposition": "live",
+      "evidence": "different live symbol or generic word/flag: 9 occurrences outside odd/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: show",
+      "disposition": "live",
+      "evidence": "different live symbol or generic word/flag: 779 occurrences outside odd/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: slug",
+      "disposition": "live",
+      "evidence": "different live symbol or generic word/flag: 184 occurrences outside odd/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: under",
+      "disposition": "live",
+      "evidence": "different live symbol or generic word/flag: 2308 occurrences outside odd/ at HEAD"
+    }
+  ]
+}

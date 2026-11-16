@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -144,9 +145,9 @@ func TestPromoteSourceMemorycard_TwiceLeavesOnePage(t *testing.T) {
 }
 
 func TestPromoteSourceMemorycard_BridgedMemoryIsRefused(t *testing.T) {
-	w, _ := memorycardWorld(t)
-	// Observation 1 gets its page the way it always has.
-	seedLegacyPromotedPage(t, w)
+	w, db := memorycardWorld(t)
+	bridgeMemory2To1(t, db)
+	promoteMemory(t, 1)
 	pagePath := filepath.Join(w.vaultRoot, "wiki", "memory", "c-000901.md")
 	before := fileHash(t, pagePath)
 	treeBefore := renderPromoteGoldenTree(t, w.vaultRoot)
@@ -166,6 +167,28 @@ func TestPromoteSourceMemorycard_BridgedMemoryIsRefused(t *testing.T) {
 	}
 	if after := renderPromoteGoldenTree(t, w.vaultRoot); after != treeBefore {
 		t.Errorf("the vault changed:\nbefore:\n%s\nafter:\n%s", treeBefore, after)
+	}
+}
+
+// bridgeMemory2To1 makes memory 2 and memory 1 two parts of Engram observation 1: memorycard names the parts of one
+// observation as one another's lineage, so a page of the one is the page of the other (S10 (c)).
+func bridgeMemory2To1(t *testing.T, dbPath string) {
+	t.Helper()
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	if _, err := db.Exec(`insert into import_map values ('engram', '1', 2, 1)`); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// promoteMemory promotes a memorycard memory by id through the command and fails the test when it does not succeed.
+func promoteMemory(t *testing.T, id int) {
+	t.Helper()
+	if code, so, se := runPromoteGolden(t, []string{"promote", "--project", promoteGoldenProject, "--source", "memorycard", "--id", strconv.Itoa(id)}); code != exitOK {
+		t.Fatalf("promote memory %d: exit %d: %s %s", id, code, so, se)
 	}
 }
 
@@ -198,7 +221,7 @@ func addHandMirroredMemories(t *testing.T, dbPath string) {
 func TestPromoteSourceMemorycard_SameContentAsAnObservationWithAPageIsRefused(t *testing.T) {
 	w, db := memorycardWorld(t)
 	addHandMirroredMemories(t, db)
-	seedLegacyPromotedPage(t, w)
+	promoteMemory(t, 2)
 	pagePath := filepath.Join(w.vaultRoot, "wiki", "memory", "c-000901.md")
 	before := fileHash(t, pagePath)
 	treeBefore := renderPromoteGoldenTree(t, w.vaultRoot)
@@ -263,17 +286,17 @@ func TestPromoteSourceMemorycard_UnknownMemoryIsNotFound(t *testing.T) {
 }
 
 // The MCP promote tool names its source, as the command does: memorycard promotes, and no source, or Engram, is
-// refused before any store is opened. Memory 2 was imported from observation 1, which has a page (written by a
-// release that promoted from Engram): the tool refuses it, with the page named.
+// refused before any store is opened. Memory 2 was imported from observation 1, which has a page
+// (memory 1's, bridged to memory 2 through import_map): the tool refuses it, with the page named.
 func TestTheMCPPromoteToolPromotesFromMemorycardAndNothingElse(t *testing.T) {
-	w, _ := memorycardWorld(t)
-	seedLegacyPromotedPage(t, w)
+	w, db := memorycardWorld(t)
+	bridgeMemory2To1(t, db)
 	tool := commands{newEmbedClient: testEmbedClient, clock: promoteGoldenClock}.mcpPromote()
 
 	if _, err := tool(context.Background(), promoteGoldenProject, "memorycard", 1); err != nil {
 		t.Fatalf("memorycard: %v", err)
 	}
-	if page := readVaultFile(t, w, "wiki/memory/c-000902.md"); !strings.Contains(page, "source_id: 1\n") || strings.Contains(page, "engram_id") {
+	if page := readVaultFile(t, w, "wiki/memory/c-000901.md"); !strings.Contains(page, "source_id: 1\n") || strings.Contains(page, "engram_id") {
 		t.Errorf("page promoted from memorycard = %s", page)
 	}
 	if _, err := tool(context.Background(), promoteGoldenProject, "memorycard", 2); err == nil || !strings.Contains(err.Error(), "c-000901") {

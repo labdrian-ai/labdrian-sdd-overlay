@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "1624a674a71492b1d58e2b4ac50cd52370ae5b0f",
+    "head": "2eec9d1130106f1ff10d8f50c33b31a20f1d7857",
+    "diff_sha256": "751521aff23693e8f24ff55c1f0293b3d47db0fefb35cf14eea562bcb03f9b5a",
+    "paths": [
+      "longterm-mem/internal/promote/update_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "1624a674a71492b1d58e2b4ac50cd52370ae5b0f",
+      "head": "2eec9d1130106f1ff10d8f50c33b31a20f1d7857",
+      "diff_sha256": "751521aff23693e8f24ff55c1f0293b3d47db0fefb35cf14eea562bcb03f9b5a"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/promote/update_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff only changes comments, one test function name, and one t.Fatalf message string in update_test.go; no logic or assertions are altered.",
+      "The renamed test function appears once in the diff, in both its doc comment and its declaration, and the two names match.",
+      "No other reference to the old test name is visible in the diff; Go test names are not referenced elsewhere unless via -run filters, which cannot be checked without tools."
+    ]
+  }
+}

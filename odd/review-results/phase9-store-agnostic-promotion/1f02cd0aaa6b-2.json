@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "3cef7e741e6d8697309edf4a9550c46a3f89b055",
+    "head": "1f02cd0aaa6b5ad62f347a68a477e8b18471184b",
+    "diff_sha256": "0be8596262e06fc5a5f6390749db40e05093974ce93b2bf932186c5fc4f978c5",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "3cef7e741e6d8697309edf4a9550c46a3f89b055",
+      "head": "1f02cd0aaa6b5ad62f347a68a477e8b18471184b",
+      "diff_sha256": "0be8596262e06fc5a5f6390749db40e05093974ce93b2bf932186c5fc4f978c5"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:883",
+        "claim": "L101 lists `3a787aa7` among the fixes made 'earlier' (10 findings). L100 (line 882) says the finding on `3a787aa7` (T7 list in old order) is fixed 'in the commit that holds this entry', so it is a fix made now. The 10/16/30 split therefore double-counts or misclassifies it. The commit `3a787aa7` also appears in neither the L96 sha map nor the T7 line's commit list, so the summary cites a sha that no reader can place in the chain.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:882",
+          "odd/tasks/phase9-store-agnostic-promotion.md:883"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:865",
+        "claim": "L97 cites `percommit3.out` as showing `vet=ok` at every commit of the chain. L96 only claims `go vet` passes at each of the first six commits after the reorder. The two entries disagree on how far the evidence reaches, and the file itself cannot settle it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:865",
+          "odd/tasks/phase9-store-agnostic-promotion.md:864"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:870",
+        "claim": "The F4 answer says the comment is 'still valid, fixed in `3cef7e74`'. That contradicts itself: a comment that is still valid needs no fix. The sentence is also ambiguous about what `3cef7e74` changed. Separately, `3cef7e74` is the base of this commit, so the claim cannot be checked from this change.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:870"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only odd/tasks/phase9-store-agnostic-promotion.md changed. The review covered the T7 line edit and the new entries L97-L101.",
+      "L101's arithmetic is internally consistent (10+16+30=56). The count's classification conflicts with L100's `3a787aa7` answer.",
+      "The T7 line order matches the L96 old-to-new sha map for the commits it lists."
+    ]
+  }
+}

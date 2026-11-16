@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "0f34ace9ed602d8c47ac8196541c81f227ebfcd0",
+    "head": "3cef7e741e6d8697309edf4a9550c46a3f89b055",
+    "diff_sha256": "dcf24fe59e7165a35b2b514197b452234342a386ba4f9d7e0c02cf05597bfb9c",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/cmd_doctor.go",
+      "longterm-mem/internal/promote/update_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "0f34ace9ed602d8c47ac8196541c81f227ebfcd0",
+      "head": "3cef7e741e6d8697309edf4a9550c46a3f89b055",
+      "diff_sha256": "dcf24fe59e7165a35b2b514197b452234342a386ba4f9d7e0c02cf05597bfb9c"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/cmd_doctor.go",
+        "longterm-mem/internal/promote/update_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/update_test.go:557-561",
+        "claim": "The rewritten test comment says the human's edit 'leaves the page's content behind' and that the sidecar 'never caught up', but the following unchanged paragraph and the test name still refer to the page being 'ahead of the sidecar'. The comment no longer states the revision-ahead condition that the test name encodes, so the comment and the test name describe the scenario with different vocabulary. Comment-only; no behavior change.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/update_test.go:557-561"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only comments in cmd_doctor.go (doctorDeps and liveMemoryEligibility doc comments, with a rewrapped paragraph) and in update_test.go (one test doc comment); no executable code changed.",
+      "The doctorDeps comment now says the reader answers 'their id', which matches the liveMemoryEligibility comment ('its id and the two fields'), so these two are consistent.",
+      "The test comment keeps the unchanged 'The corroborating evidence is the body's own tail' paragraph after it, which still reads coherently."
+    ]
+  }
+}
