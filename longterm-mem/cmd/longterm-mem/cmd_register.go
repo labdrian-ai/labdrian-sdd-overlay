@@ -38,7 +38,7 @@ func cmdRegister(args []string) int {
 	// The register path uses the same wiring as the other commands, with the writer wrapped so the
 	// report can say when a 1.x opencode entry was migrated.
 	rt := machineRuntimes()
-	noting := &migrationNoting{Writer: rt.Registrar.(register.Writer), migrated: map[string]bool{}}
+	noting := &migrationNoting{Writer: machineWriter(), migrated: map[string]bool{}}
 	rt.Registrar = noting
 	report := rt.Register(runtimes.Request{Target: *target, ConfigRoot: *configRoot, StateDir: *stateDir, Binary: *binary})
 	return reportRegisterNoting(report, noting.migrated)
@@ -146,11 +146,16 @@ func (n *migrationNoting) Register(target, configRoot, stateDir, binary string) 
 	return err
 }
 
+// machineWriter is the writer of the runtimes' configuration on this machine, shared by every command.
+func machineWriter() register.Writer {
+	return register.Writer{State: register.FileInstallState{}}
+}
+
 // machineRuntimes is the registration use cases over this machine: the writers of the runtimes' configuration, which
 // record what they installed in install-state.json, and the machine's own paths (register_paths.go).
 func machineRuntimes() runtimes.Runtimes {
 	return runtimes.Runtimes{
-		Registrar: register.Writer{State: register.FileInstallState{}},
+		Registrar: machineWriter(),
 		Machine:   thisMachine{},
 	}
 }
