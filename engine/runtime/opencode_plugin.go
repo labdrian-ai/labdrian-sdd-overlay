@@ -13,9 +13,13 @@ const openCodePluginFile = "index.js"
 const openCodeConfigFile = "labdrian-runtime-parity.json"
 const openCodeActiveFile = "labdrian-runtime-parity.active.json"
 
+// openCodeLegacyPluginExport is the default export of the 1.x plugin file; a file at the legacy
+// path that holds it was written by this adapter.
+const openCodeLegacyPluginExport = "export default async function labdrianRuntimeParityPlugin("
+
 // OpenCodePluginVersion is the version of the plugin the adapter installs; it changes with the
 // plugin source and is what the active marker is compared against.
-const OpenCodePluginVersion = "2026-11-16-runtime-parity-6"
+const OpenCodePluginVersion = "2026-11-16-runtime-parity-7"
 
 //go:embed labdrian-runtime-parity-plugin.mjs
 var openCodePluginSource string

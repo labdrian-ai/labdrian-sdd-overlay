@@ -31,7 +31,6 @@ func TestOpenCodeInstallWritesPluginConfigAndRestartRequiredStatus(t *testing.T)
 	}
 	for _, want := range []string{
 		`import { Plugin } from "@opencode/plugin"`,
-		`from "@opencode/plugin/promise/tool"`,
 		"export default Plugin.define(",
 		`id: "labdrian-runtime-parity"`,
 	} {

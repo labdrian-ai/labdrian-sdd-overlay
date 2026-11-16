@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime/core"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime/opencodeprompt"
@@ -48,17 +49,20 @@ func (a OpenCodeAdapter) uninstall(action core.Action) core.LifecycleResult {
 		return a.result(action, core.CapabilityUnsupported, err.Error())
 	}
 	pluginErr := os.Remove(a.pluginPath())
-	// An empty plugin directory is left behind by the removal of its only file; OpenCode would load it
-	// as a plugin with no index.js. A directory that is not empty is not ours to remove.
-	if pluginErr == nil {
-		_ = os.Remove(filepath.Dir(a.pluginPath()))
-	}
+	// An empty plugin directory, left by this removal or an earlier one, would be loaded by OpenCode
+	// as a plugin with no index.js. os.Remove refuses a directory that is not empty: that one is not
+	// ours to remove.
+	_ = os.Remove(filepath.Dir(a.pluginPath()))
+	legacyErr := a.removeLegacyPlugin()
 	configErr := os.Remove(a.configPath())
 	if pluginErr != nil && !os.IsNotExist(pluginErr) {
 		return a.result(action, core.CapabilityPartial, pluginErr.Error())
 	}
 	if configErr != nil && !os.IsNotExist(configErr) {
 		return a.result(action, core.CapabilityPartial, configErr.Error())
+	}
+	if legacyErr != nil {
+		return a.result(action, core.CapabilityPartial, legacyErr.Error())
 	}
 	return a.result(action, core.CapabilityRestartRequired, "OpenCode plugin bridge removed; restart OpenCode to unload any already loaded plugin. Active marker remains at "+a.activeMarkerPath()+"; remove it only after OpenCode is fully stopped/restarted")
 }
@@ -93,6 +97,9 @@ func (a OpenCodeAdapter) install(action core.Action) core.LifecycleResult {
 	}
 	if err := os.WriteFile(a.pluginPath(), []byte(openCodePluginSource), 0o644); err != nil {
 		return a.result(action, core.CapabilityUnsupported, err.Error())
+	}
+	if err := a.removeLegacyPlugin(); err != nil {
+		return a.result(action, core.CapabilityPartial, err.Error())
 	}
 	return a.result(action, core.CapabilityRestartRequired, "OpenCode plugin changed; restart OpenCode to load version "+cfg.InstalledVersion)
 }
@@ -150,6 +157,31 @@ func (a OpenCodeAdapter) status(action core.Action) core.LifecycleResult {
 
 func (a OpenCodeAdapter) pluginPath() string {
 	return filepath.Join(a.root, "plugins", openCodePluginID, openCodePluginFile)
+}
+
+// legacyPluginPath is where the 1.x layout installed the plugin, as a single file.
+func (a OpenCodeAdapter) legacyPluginPath() string {
+	return filepath.Join(a.root, "plugins", openCodePluginID+".js")
+}
+
+// removeLegacyPlugin removes the 1.x plugin file this adapter wrote, which OpenCode v2 would fail to
+// load beside the v2 plugin. The file is ours only when it holds the 1.x plugin's default export;
+// any other file at that path is left as it is. A missing file is not an error.
+func (a OpenCodeAdapter) removeLegacyPlugin() error {
+	data, err := os.ReadFile(a.legacyPluginPath())
+	if os.IsNotExist(err) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("read legacy OpenCode plugin %s: %w", a.legacyPluginPath(), err)
+	}
+	if !strings.Contains(string(data), openCodeLegacyPluginExport) {
+		return nil
+	}
+	if err := os.Remove(a.legacyPluginPath()); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("remove legacy OpenCode plugin %s: %w", a.legacyPluginPath(), err)
+	}
+	return nil
 }
 
 func (a OpenCodeAdapter) configPath() string {

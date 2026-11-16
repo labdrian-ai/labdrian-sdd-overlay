@@ -214,6 +214,8 @@ const calls = {
   legacyTask: { tool: "task", input: { prompt: base, subagent_type: "sdd-tasks" } },
   legacyFieldOnSubagent: { tool: "subagent", input: { prompt: base, subagent_type: "sdd-tasks" } },
   shell: { tool: "shell", input: { prompt: base, agent: "sdd-tasks" } },
+  noAgent: { tool: "subagent", input: { prompt: base } },
+  nonStringAgent: { tool: "subagent", input: { prompt: base, agent: { name: "sdd-tasks" } } },
   noPrompt: { tool: "subagent", input: { agent: "sdd-tasks" } },
   noInput: { tool: "subagent" },
 };
@@ -223,6 +225,8 @@ console.log(JSON.stringify({
   legacyTask: calls.legacyTask.input.prompt,
   legacyFieldOnSubagent: calls.legacyFieldOnSubagent.input.prompt,
   shell: calls.shell.input.prompt,
+  noAgent: calls.noAgent.input.prompt,
+  nonStringAgent: calls.nonStringAgent.input.prompt,
   noPrompt: calls.noPrompt.input.prompt ?? null,
   noInput: calls.noInput.input ?? null,
 }));`, basePromptFixture)
@@ -234,7 +238,7 @@ console.log(JSON.stringify({
 	if prompt, _ := got["subagent"].(string); !strings.Contains(prompt, contract) {
 		t.Fatalf("a subagent launch should get the contract in input.prompt: %q", prompt)
 	}
-	for _, name := range []string{"legacyTask", "legacyFieldOnSubagent", "shell"} {
+	for _, name := range []string{"legacyTask", "legacyFieldOnSubagent", "shell", "noAgent", "nonStringAgent"} {
 		if got[name] != basePromptFixture {
 			t.Fatalf("%s must be left untouched, got %q", name, got[name])
 		}
