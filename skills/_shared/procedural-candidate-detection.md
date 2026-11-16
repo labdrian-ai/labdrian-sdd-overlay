@@ -4,9 +4,12 @@ This contract specifies an in-session, agent-invoked procedure for detecting
 and durably storing procedural promotion candidates: repeated-success
 patterns and recurring failure-recovery patterns. It covers detection and
 storage only — it never drafts a skill, never requests approval, and never
-writes under `skills/`. Candidate records persist in Engram, the sole
-durability store for this capability; no second SQLite store and no Go-side
-write path into Engram's database exist anywhere in this contract.
+writes under `skills/`. Candidate records persist in memorycard, the sole
+durability store for this capability, with no new Engram write; no second
+SQLite store and no Go-side write path into memorycard's database exist
+anywhere in this contract. Records written before memorycard hold legacy
+`engram:<n>` occurrence ids; section 3 translates them on read and rewrites
+them on save.
 
 This document is delivered across several review slices. Sections 1-3
 shipped in slice 1 (`candidate-store`, R-001). Sections 4-5 shipped in slice
@@ -61,12 +64,11 @@ equivalent phrasings (for example `rebase-worktree-onto-main` vs.
 `rebase-branch-onto-main`) for the same underlying pattern, and the alias
 search is what keeps the first session's naming choice sticky and auditable.
 
-## 2. Candidate record — Engram observation
+## 2. Candidate record — memorycard memory
 
-Each candidate is one Engram observation. `title` and `topic_key` are both
-the exact topic key from section 1. `type: pattern`. `project`: the resolved
-project. `capture_prompt: false` (this is an automated pipeline artifact, not
-a human/proactive memory save).
+Each candidate is one memorycard memory, saved with `mem_save`. `title` and
+`topic_key` are both the exact topic key from section 1. `type: pattern`.
+`project`: the resolved project.
 
 ```markdown
 **Kind**: repeated-success | failure-recovery
@@ -80,8 +82,8 @@ a human/proactive memory save).
 **FirstObserved**: 2026-09-15T10:04:00Z
 **LastObserved**: 2026-09-16T08:12:00Z
 **Occurrences**:
-- engram:3401 @ 2026-09-15T10:04:00Z — <one-line summary of this occurrence>
-- engram:3407 @ 2026-09-16T08:12:00Z — <one-line summary of this occurrence>
+- memorycard:3401 @ 2026-09-15T10:04:00Z — <one-line summary of this occurrence>
+- memorycard:3407 @ 2026-09-16T08:12:00Z — <one-line summary of this occurrence>
 **Summary**: <what the approach is, and what it is good for, in one or two sentences>
 ```
 
@@ -99,22 +101,44 @@ later.
 
 ## 3. Occurrence identity and dedupe rules
 
-1. **Occurrence identity is the Engram observation id.** Every occurrence
-   reference in `Occurrences` is `engram:<id>`, the id of the ordinary
-   episodic observation that anchors that occurrence. A pattern with no
-   Engram observation is not an occurrence — the live conversation is only
-   the detector's signal; before an occurrence may be counted, the agent
-   must have saved (or must save) an episodic observation for it and
-   reference that id here.
-2. **Appending an already-listed occurrence id is a no-op.** Re-running the
-   detector against the same occurrence, including within the same session,
-   is therefore safe by construction and never inflates the count.
-3. **`OccurrenceCount` is always derived**, equal to the number of distinct
-   ids currently listed in `Occurrences`. It is never blindly incremented.
-4. Evidence references MUST remain retrievable after a cold session start:
-   `mem_get_observation(id)` for every id listed in `Occurrences` must
-   resolve, in any session, to the original occurrence content.
-5. The topic-key shape used to store and read back a candidate is identical
+1. **Occurrence identity is the memorycard memory id.** Every new occurrence
+   reference in `Occurrences` is `memorycard:<id>`, the id of the ordinary
+   episodic memory that anchors that occurrence; a new `engram:<n>` reference
+   is never written. A pattern with no saved memory is not an occurrence —
+   the live conversation is only the detector's signal; before an occurrence
+   may be counted, the agent must have saved (or must save) an episodic
+   memory for it with `mem_save` and reference that id here.
+2. **Legacy ids are translated on read.** A record written before memorycard
+   may list `engram:<n>`. For the legacy ids a record lists, run
+   `memorycard resolve --source engram --key <n> [--key <n2> ...] --json`
+   once. Each answer `{"key": "<n>", "memory_id": <m>}` says an `engram:<n>`
+   that `memorycard resolve` maps to `<m>` is the same occurrence as
+   `memorycard:<m>`. Two Engram ids the import merged into one memory resolve
+   to the same `<m>` and count once. An id `resolve` reports unknown
+   (`"memory_id": null`) stays as written and counts as itself.
+3. **Appending an already-listed occurrence id is a no-op**, and so is
+   appending `memorycard:<m>` while the `engram:<n>` that resolves to `<m>`
+   is listed, or the reverse: appending one while the other is listed is the
+   same no-op. Re-running the detector against the same occurrence, including
+   within the same session, is therefore safe by construction and never
+   inflates the count.
+4. **`OccurrenceCount` is always derived**, equal to the number of distinct
+   translated ids currently listed in `Occurrences`. It is never blindly
+   incremented. `OccurrencesSincePromotion` counts distinct translated ids
+   the same way (section 13).
+5. Evidence references MUST remain retrievable after a cold session start:
+   `mem_get` for every `memorycard:<m>` listed in `Occurrences` must resolve,
+   in any session, to the original occurrence content. A legacy occurrence is
+   read by resolving it, then `mem_get` with the `<m>` it maps to; an unknown
+   legacy id has no memory to get and is kept as written.
+6. **Legacy ids are rewritten on save.** On every save of a record, rewrite
+   each legacy `engram:<n>` in `Occurrences` that `memorycard resolve` maps
+   to `<m>` as `memorycard:<m>`, keeping its timestamp and summary; when two
+   entries become one id, keep the earlier entry. An id reported unknown
+   stays as written. `History` lines are never rewritten (section 9). There
+   is no bulk migration: a record never saved again keeps its legacy ids and
+   is translated on read.
+7. The topic-key shape used to store and read back a candidate is identical
    across every session that observes it — the key is derived deterministically
    from candidate identity (section 1), never from session or transcript
    state, so the same pattern observed in session B resolves to the same key
@@ -130,7 +154,7 @@ text) is still Go-testable and covered by
 `engine/skills/procedural_candidate_contract_test.go`. The equivalent gate
 for the emission and clustering behavior itself is the fixture-driven
 acceptance checklist at the end of this section, executed against real
-Engram records during `sdd-verify` — this is a deliberate, disclosed
+memorycard records during `sdd-verify` — this is a deliberate, disclosed
 deviation from the proposal's literal "unit tests over the threshold
 boundary" wording (see design.md, "R-002/R-003 boundary coverage is an
 executable acceptance checklist, not a Go unit test").
@@ -200,7 +224,7 @@ trigger points. No hook is added for either trigger (see design.md, OQ-2).
 | Trigger | When it fires | Role |
 |---|---|---|
 | **T1 — occurrence anchor** | Immediately after any proactive `mem_save` of type `bugfix`, `pattern`, `discovery`, or `decision` | That save **is** the occurrence evidence: the observation id it just created is the occurrence reference appended to `Occurrences` (section 3). No separate scan is needed — anchor and trigger are one event. |
-| **T2 — session sweep** | During the mandatory session-close protocol, beside `mem_session_summary` | Backstop for occurrences whose episodic save happened before this contract was loaded in the session, or that were otherwise not swept by T1. |
+| **T2 — session sweep** | During the mandatory session-close protocol, beside `mem_session` | Backstop for occurrences whose episodic save happened before this contract was loaded in the session, or that were otherwise not swept by T1. |
 
 An irregularly-firing detector is late, never wrong: the `Status` latch
 (section 4) means a missed T1/T2 firing costs a delayed candidate, not a
@@ -327,14 +351,14 @@ unrelated new SKILL.md. `Disposition` persists on the candidate record
 (section 9) so registration, revision, and retirement can read it without
 recomputing the extend-vs-create decision.
 
-### Draft records live only in Engram
+### Draft records live only in memorycard
 
-Every draft is stored as an Engram observation under the topic-key shape:
+Every draft is stored as a memorycard memory, saved with `mem_save`, under the topic-key shape:
 
     procedural/drafts/{kind}/{slug}
 
 where `{kind}` and `{slug...}` mirror the candidate's own kind and slug tail
-(section 1). `type: pattern`, `capture_prompt: false`. No draft file is ever written under `skills/` at any point in the drafting lifecycle — a draft
+(section 1). `type: pattern`. No draft file is ever written under `skills/` at any point in the drafting lifecycle — a draft
 that reached the `skills/` tree would fail the ondisk gate's
 `UNREGISTERED_ON_DISK` check, and registration (section 11) is the only path
 that ever writes there.
@@ -386,7 +410,7 @@ this document and by `procedural-skill-registration` /
 
 | From | To | Actor | Tier | Event | Required `History` evidence |
 |---|---|---|---|---|---|
-| none | `observing` | agent | none | first occurrence (item 30) | `engram:<id>` |
+| none | `observing` | agent | none | first occurrence (item 30) | `memorycard:<id>` |
 | `observing` | `emitted` | agent | none | count reaches `Threshold`, no `MatchCandidate` match (item 30) | count |
 | `observing` | `rejected` | agent | none | `MatchCandidate` match (item 30) | `MatchedSkillPath` |
 | `observing` or `emitted` | `rejected` | agent | none | do-not-capture class matched at emission or at draft time | `RejectionReason: do-not-capture:<class>` |
@@ -421,11 +445,11 @@ One line per entry, append-only, always the last field in the record block:
 - 2026-09-20T10:09:00Z | drafted -> registered | agent | skill probe-engram-with-home-override rev 1 sha256:3f2a...c1 commit a1b2c3d
 ```
 
-**Write rule**: read the current record with `mem_get_observation`, copy the
+**Write rule**: read the current record with `mem_get`, copy the
 existing `History` lines byte-for-byte, append one or more new lines, and
 upsert (`mem_save`/`mem_update`). After the write, the old lines MUST be a prefix of the new ones — a subsequent read MUST NOT remove, reorder, or
 overwrite any existing `History` entry. This is how a `History` field
-survives Engram's overwrite-on-upsert behavior. Records that item 30 created
+survives memorycard's overwrite-on-upsert behavior (a `mem_save` with an existing `topic_key` replaces the body in place). Records that item 30 created
 with no `History` get a backfilled first line on their first write under
 this document: `<FirstObserved> | none -> observing | agent | backfilled
 from FirstObserved`.
@@ -561,7 +585,7 @@ creates the consequence it discloses.
 ## Acceptance checklist (procedural-skill-registration, executed during `sdd-verify`)
 
 This section is agent-driven prose, not Go code; it is verified by a
-fixture-driven procedure run in a temporary git repository with real Engram
+fixture-driven procedure run in a temporary git repository with real memorycard
 records during `sdd-verify`, not by `go test`. Contract-artifact content
 (section 11 above) is still Go-testable and covered by
 `engine/skills/procedural_candidate_contract_test.go`.
@@ -695,7 +719,7 @@ draft is a human handoff through section 12.
 ### Derived trigger
 
 `OccurrencesSincePromotion` is **derived, never stored**. Count the
-`Occurrences` entries whose timestamp is strictly after the `at:` timestamp on
+`Occurrences` entries, as distinct translated ids (section 3), whose timestamp is strictly after the `at:` timestamp on
 the most recent `Registered` or `Promoted` transition line in `History`.
 `Registered` is the project-tier baseline and `Promoted` is the global-tier
 baseline; the same derivation applies at either tier. Do not increment a
@@ -756,7 +780,7 @@ Retirement is a report-then-decision workflow. The retirement detector in
 `longterm-mem` is report-only: it may identify stale references, quiet skills,
 unresolved commands, or a newer global match, but it MUST NOT invoke a
 removal command, delete a target, alter the project lock, alter the overlay
-registry or manifest, commit, or write an Engram record. A report is evidence
+registry or manifest, commit, or write a memorycard record. A report is evidence
 for a separate, explicit retirement decision; it is never consent.
 
 `project-status` is an additional report surface. It prints
@@ -854,7 +878,7 @@ existing `engine skills remove` / `RemoveCore` path at the global tier.
 ## Acceptance checklist (R-002, R-003, executed during `sdd-verify`)
 
 This section is agent-driven prose, not Go code; it is verified by a
-fixture-driven procedure run against real Engram records during
+fixture-driven procedure run against real memorycard records during
 `sdd-verify`, not by `go test`. Contract-artifact content (the emission
 decision table and `Threshold: 3` above) is still Go-testable and covered by
 `engine/skills/procedural_candidate_contract_test.go`.
@@ -866,7 +890,7 @@ decision table and `Threshold: 3` above) is still Go-testable and covered by
 2. **N (exactly one emission referencing all N occurrence ids)**: GIVEN the
    same approach now succeeds for the Nth time, WHEN detection runs, THEN
    the record transitions to `Status: emitted` exactly once, and
-   `Occurrences` lists all N distinct `engram:<id>` references.
+   `Occurrences` lists all N distinct `memorycard:<id>` references.
 3. **N+1 (no second emission)**: GIVEN a candidate already reached
    `Status: emitted` at N, WHEN that approach succeeds an (N+1)th time,
    THEN no second candidate is emitted, the existing record MAY be updated
@@ -900,7 +924,7 @@ This section is agent-driven prose paired with a Go-testable entrypoint: the
 `engine/skills/match_test.go` (exact ID/Path/`path.Base` hits, the substring
 near-miss guard, empty/all-punctuation candidates, and deterministic
 first-match-wins). The two scenarios below are the acceptance-level checks,
-run against real Engram records and a real `skills.registry.yaml` during
+run against real memorycard records and a real `skills.registry.yaml` during
 `sdd-verify`, not by `go test`.
 
 1. **Candidate slug equal to a registered skill id/path is rejected**: GIVEN
@@ -920,7 +944,7 @@ run against real Engram records and a real `skills.registry.yaml` during
 ## Acceptance checklist (R-001, executed during `sdd-verify`)
 
 This section is agent-driven prose, not Go code; it is verified by a
-fixture-driven procedure run against real Engram records during
+fixture-driven procedure run against real memorycard records during
 `sdd-verify`, not by `go test`. Contract-artifact content (this section's
 verbatim text) is still Go-testable and covered by
 `engine/skills/procedural_candidate_contract_test.go`.
@@ -928,26 +952,26 @@ verbatim text) is still Go-testable and covered by
 1. **Cross-session cold-start scenario**:
    - GIVEN a candidate is first observed in session A and persisted via
      `mem_save` with `OccurrenceCount: 1` and one occurrence reference
-     (`engram:<id-A>`)
+     (`memorycard:<id-A>`)
    - WHEN the same candidate is observed again in session B, after a full
      cold start (no residual session state)
    - THEN `mem_search` for the exact topic key from section 1 finds the
-     record, and `mem_get_observation` reads back `OccurrenceCount: 2`
-   - AND both `engram:<id-A>` (session A) and `engram:<id-B>` (session B)
-     resolve via `mem_get_observation`
+     record, and `mem_get` reads back `OccurrenceCount: 2`
+   - AND both `memorycard:<id-A>` (session A) and `memorycard:<id-B>` (session B)
+     resolve via `mem_get`
    - AND the topic-key shape used in session B is byte-identical to the one
      used in session A
 
 ## Acceptance checklist (procedural-skill-drafting, executed during `sdd-verify`)
 
 This section is agent-driven prose, not Go code; it is verified by a
-fixture-driven procedure run against real Engram records during
+fixture-driven procedure run against real memorycard records during
 `sdd-verify`, not by `go test`. Contract-artifact content (sections 7-10
 above) is still Go-testable and covered by
 `engine/skills/procedural_candidate_contract_test.go`.
 
 1. **Summary with an observation id is rejected**: GIVEN a candidate
-   summary draft that embeds a literal `engram:<id>` reference, WHEN the
+   summary draft that embeds a literal `memorycard:<id>` (or legacy `engram:<n>`) reference, WHEN the
    draft is validated against the lesson-shape rule (section 8), THEN the
    draft is rejected before any draft record is saved.
 2. **Summary with a literal date is rejected**: GIVEN a candidate summary

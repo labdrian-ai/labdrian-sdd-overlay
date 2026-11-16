@@ -14,7 +14,9 @@ Use this procedure when following the T1/T2 triggers in `skills/_shared/procedur
 ## Procedure
 
 1. **T1:** Immediately after a proactive `mem_save` of type `bugfix`, `pattern`, `discovery`, or `decision`, determine whether the saved occurrence qualifies under section 5.
-2. **T2:** At session close, beside `mem_session_summary`, sweep for qualifying candidates T1 missed.
+2. **T2:** At session close, beside `mem_session`, sweep for qualifying candidates T1 missed.
 3. Before creating or updating a candidate, run `skills candidates` to inspect the existing candidates, drafts, aliases, and reconciliation anomalies. Resolve source errors and anomalies; do not treat unavailable data as an empty list.
-4. Follow the shared contract's candidate record shape and topic-key rules. Record candidate changes using Engram `mem_save`; do not write a draft file under `skills/` or create, revise, or register a skill as part of detection.
-5. Exclude every category in the shared contract's do-not-capture list. Detection and candidate recording do not draft a skill or request approval.
+4. Follow the shared contract's candidate record shape and topic-key rules. Record candidate changes using memorycard `mem_save`, and never write to Engram; do not write a draft file under `skills/` or create, revise, or register a skill as part of detection.
+5. New occurrence ids are `memorycard:<id>`. A legacy `engram:<n>` that `memorycard resolve --source engram --key <n> --json` maps to `<m>` is the same occurrence as `memorycard:<m>` (shared contract section 3): appending one while the other is listed is a no-op, and `OccurrenceCount` and `OccurrencesSincePromotion` count distinct translated ids. An id reported unknown stays as written and counts as itself.
+6. On every save of a candidate record, rewrite each legacy `engram:<n>` in `Occurrences` that `memorycard resolve` maps to `<m>` as `memorycard:<m>`; an id reported unknown stays as written, and `History` lines are never rewritten. Never migrate records in bulk.
+7. Exclude every category in the shared contract's do-not-capture list. Detection and candidate recording do not draft a skill or request approval.
