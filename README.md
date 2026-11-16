@@ -1154,6 +1154,12 @@ gentle-ai-overlay projection hook --event UserPromptSubmit|PreToolUse|SessionSta
     the gate or the evidence sees the call; opencode maps OpenCode v2's names (shell to Bash, patch to Edit,
     <server>_<tool> to mcp__<server>__<tool>; the Code Mode wrapper execute and every other name pass unchanged).
     Nothing else changes; another value is a usage error (exit 1).
+    OpenCode runs it through the runtime-parity plugin (`engine runtime install --target opencode`): the plugin
+    asks the engine for PreToolUse before each tool call and throws the engine's denial as a Tool.Error (the call
+    does not run and the model reads the reason), and for PostToolUse after each completed call, adding the line the
+    engine answers to the result the model reads. The plugin runs the engine named by `LABDRIAN_ENGINE_BINARY`, else
+    ~/.claude/bin/gentle-ai-overlay; when it cannot run (missing, too old, no answer in 30 seconds) the call goes
+    through, as a hook that fails does in Claude Code, and the result of the first call says the hooks are not running.
     Internal hook command (Phase 7): Claude Code is meant to run it before each prompt (UserPromptSubmit),
     before each tool call (PreToolUse), when a session starts (SessionStart) and after a memory read has run (PostToolUse); a person does
     not. There is no `overlay projection` wrapper, so it runs on the installed engine binary,

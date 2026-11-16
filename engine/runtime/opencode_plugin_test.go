@@ -30,7 +30,7 @@ func openCodePluginPath(root string) string {
 var stubPluginPackage = map[string]string{
 	"package.json": `{"name":"@opencode/plugin","type":"module","exports":{".":"./index.js","./promise/tool":"./tool.js"}}`,
 	"index.js":     `export const Plugin = { define: (plugin) => plugin };`,
-	"tool.js":      `export class ToolError extends Error {} export const Tool = { Error: ToolError };`,
+	"tool.js":      `export class ToolError extends Error { constructor(fields) { super(fields.message); this.name = "Tool.Error"; this.fields = fields; } } export const Tool = { Error: ToolError };`,
 }
 
 func requireNode(t *testing.T) {
@@ -77,15 +77,28 @@ func writePluginFixture(t *testing.T) (string, string) {
 	return root, pluginPath
 }
 
-// runPlugin loads the plugin at pluginPath under node, runs its setup against a stub context and
-// then body, which sees plugin, hooks (name to handler) and beforeHook (the execute.before one).
-// It returns what body printed.
+// engineEnvironment is the variable that names the engine binary the plugin's hook bridge runs.
+const engineEnvironment = "LABDRIAN_ENGINE_BINARY"
+
+// runPlugin loads the plugin at pluginPath under node with no engine to run (the bridge then lets
+// every call through), runs its setup against a stub context and then body. See runPluginWithEngine.
 func runPlugin(t *testing.T, pluginPath, body string) []byte {
+	t.Helper()
+	return runPluginWithEngine(t, pluginPath, filepath.Join(t.TempDir(), "no-engine"), body)
+}
+
+// runPluginWithEngine loads the plugin at pluginPath under node, with the hook bridge pointed at
+// the engine binary, runs its setup against a stub context and then body, which sees plugin, hooks
+// (name to handler, tool and session hooks alike), beforeHook (the execute.before one) and
+// synthetic (what the plugin sent through ctx.session.synthetic). It returns what body printed.
+func runPluginWithEngine(t *testing.T, pluginPath, engine, body string) []byte {
 	t.Helper()
 	requireNode(t)
 	script := fmt.Sprintf(`const plugin = (await import(%q)).default;
 const hooks = new Map();
-const ctx = { tool: { hook: async (name, handler) => { hooks.set(name, handler); return { dispose: async () => {} }; } } };
+const synthetic = [];
+const hook = async (name, handler) => { hooks.set(name, handler); return { dispose: async () => {} }; };
+const ctx = { tool: { hook }, session: { hook, synthetic: async (input) => { synthetic.push(input); } } };
 await plugin.setup(ctx);
 const beforeHook = hooks.get("execute.before");
 %s`, "file://"+pluginPath, body)
@@ -93,7 +106,9 @@ const beforeHook = hooks.get("execute.before");
 	if err := os.WriteFile(scriptPath, []byte(script), 0o644); err != nil {
 		t.Fatalf("write node script: %v", err)
 	}
-	out, err := exec.Command("node", scriptPath).Output()
+	command := exec.Command("node", scriptPath)
+	command.Env = append(os.Environ(), engineEnvironment+"="+engine)
+	out, err := command.Output()
 	if err != nil {
 		if ee, ok := err.(*exec.ExitError); ok {
 			t.Fatalf("node exited with error: %v\n%s", err, ee.Stderr)
@@ -120,7 +135,7 @@ func minimalismConfig(pluginPath, root string) map[string]any {
 	}
 }
 
-func TestOpenCodePluginIsAV2DefinitionThatRegistersExecuteBefore(t *testing.T) {
+func TestOpenCodePluginIsAV2DefinitionThatRegistersItsHooks(t *testing.T) {
 	requireNode(t)
 	root, pluginPath := writePluginFixture(t)
 	writeJSONFile(t, filepath.Join(root, "labdrian-runtime-parity.json"), minimalismConfig(pluginPath, root))
@@ -128,7 +143,7 @@ func TestOpenCodePluginIsAV2DefinitionThatRegistersExecuteBefore(t *testing.T) {
 	out := runPlugin(t, pluginPath, `console.log(JSON.stringify({
   id: plugin.id,
   setupIsFunction: typeof plugin.setup === "function",
-  hooks: [...hooks.keys()],
+  hooks: [...hooks.keys()].sort(),
 }));`)
 	var got struct {
 		ID              string   `json:"id"`
@@ -141,8 +156,8 @@ func TestOpenCodePluginIsAV2DefinitionThatRegistersExecuteBefore(t *testing.T) {
 	if got.ID != "labdrian-runtime-parity" || !got.SetupIsFunction {
 		t.Fatalf("plugin should be Plugin.define({id, setup}) with id labdrian-runtime-parity, got %#v", got)
 	}
-	if strings.Join(got.Hooks, ",") != "execute.before" {
-		t.Fatalf("setup should register exactly execute.before, got %v", got.Hooks)
+	if strings.Join(got.Hooks, ",") != "execute.after,execute.before" {
+		t.Fatalf("setup should register exactly the tool hooks of the bridge, got %v", got.Hooks)
 	}
 }
 

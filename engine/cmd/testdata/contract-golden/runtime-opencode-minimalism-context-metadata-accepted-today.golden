@@ -1,7 +1,7 @@
 $ runtime install --target opencode --config-root <CONFIG>
 exit: 0
 --- stdout ---
-[opencode] install: restart_required — OpenCode plugin changed; restart OpenCode to load version 2026-11-16-runtime-parity-7
+[opencode] install: restart_required — OpenCode plugin changed; restart OpenCode to load version 2026-11-16-runtime-parity-8
 --- stderr ---
 --- prompt_config ---
 {
@@ -55,7 +55,7 @@ exit: 0
 $ runtime install --target opencode --config-root <CONFIG>
 exit: 0
 --- stdout ---
-[opencode] install: restart_required — OpenCode plugin changed; restart OpenCode to load version 2026-11-16-runtime-parity-7
+[opencode] install: restart_required — OpenCode plugin changed; restart OpenCode to load version 2026-11-16-runtime-parity-8
 --- stderr ---
 --- prompt_config ---
 {
