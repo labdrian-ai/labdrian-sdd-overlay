@@ -21,7 +21,8 @@ import (
 // repository.
 const modelsPath = "skills/role-chain/references/models.md"
 
-// The runtimes the generator needs an id for. OpenCode is read by the generator of its agent files.
+// The runtimes the generator needs an id for. The OpenCode column has no consumer yet: the OpenCode agent
+// files (T12) read it, and S18 keeps the one table complete from the start.
 const (
 	runtimeClaude   = "claude"
 	runtimePi       = "pi"
@@ -71,8 +72,11 @@ func (e *tableError) Unwrap() error { return e.err }
 
 const tableHeading = "## Tier table"
 
-// idShape is what a model id may hold: it is written verbatim into the frontmatter of a file.
-var idShape = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._/:#-]*$`)
+// idShape is what a model id may hold: it is written verbatim into the frontmatter of a file, after `model: `.
+// It starts with a letter or digit, so YAML never reads it as a flow sequence, an alias or a tag; brackets
+// and `@` (`opus[1m]`, `model@20250929`) are plain-scalar characters in a block value. No space, quote,
+// backtick, `|` or `,` is allowed: a space could start a ` #` comment or end the cell.
+var idShape = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._/:#@\[\]-]*$`)
 
 var separatorCell = regexp.MustCompile(`^:?-+:?$`)
 

@@ -258,6 +258,31 @@ func TestTheModelsOfTheFilesAreReadFromTheTable(t *testing.T) {
 	}
 }
 
+// An id with brackets or an at sign (`opus[1m]`, `model@20250929`) is a real model id and is written
+// verbatim after `model: `, where YAML reads it as one plain scalar, so the table accepts it.
+func TestAnIdWithBracketsOrAnAtSignIsReadAndWrittenVerbatim(t *testing.T) {
+	root := seededRoot(t)
+	editModels(t, root, func(s string) string {
+		s = strings.Replace(s, "| frontier | `opus` |", "| frontier | `opus[1m]` |", 1)
+		return strings.Replace(s, "| mid | `sonnet` | `pi-claude-cli/claude-sonnet-5` |", "| mid | `sonnet` | `pi-claude-cli/model@20250929` |", 1)
+	})
+
+	table, err := agentgen.ReadModelTable(root)
+	if err != nil {
+		t.Fatalf("ReadModelTable: %v", err)
+	}
+	if got, _ := table.ID("frontier", "claude"); got != "opus[1m]" {
+		t.Errorf("ID(frontier, claude) = %q", got)
+	}
+	files := artifactsByPath(t, root)
+	if !strings.Contains(files["agents/shaper.md"], "\nmodel: opus[1m]\n") {
+		t.Errorf("the Claude file of the shaper does not carry the id verbatim:\n%s", files["agents/shaper.md"])
+	}
+	if !strings.Contains(files["pi/agents/builder.md"], "\nmodel: pi-claude-cli/model@20250929\n") {
+		t.Errorf("the Pi file of the builder does not carry the id verbatim:\n%s", files["pi/agents/builder.md"])
+	}
+}
+
 func artifactsByPath(t *testing.T, root string) map[string]string {
 	t.Helper()
 	table, err := agentgen.Artifacts(root)
