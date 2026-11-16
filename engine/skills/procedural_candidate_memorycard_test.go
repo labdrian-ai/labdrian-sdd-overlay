@@ -136,6 +136,7 @@ func TestProceduralCandidateContractCarriesTheExceptionAndTheMergeTies(t *testin
 	requireText(t, "SKILL.md", skill,
 		"on a resolve failure a lifecycle transition whose external action already happened is still saved with `Occurrences` exactly as stored",
 		"Ask `resolve` in one call, with each distinct legacy number once, sorted as strings and as written",
+		"sorted as strings and as written: `memorycard resolve --source engram --key <n> [--key <n2> ...] --json`",
 	)
 	forbidText(t, "contract", contract, "once for all of them")
 }
