@@ -102,5 +102,13 @@ func locateOverlay(configured string) (string, error) {
 			break
 		}
 	}
-	return "", fmt.Errorf("could not locate %s; set %s", opencodeprompt.MinimalismContractPath, core.LabdrianOverlayDirVariable)
+	return "", overlayNotFoundError{}
+}
+
+// overlayNotFoundError is the answer of a search that ran and found no checkout above the working
+// directory, told apart from a search that could not run.
+type overlayNotFoundError struct{}
+
+func (overlayNotFoundError) Error() string {
+	return fmt.Sprintf("could not locate %s; set %s", opencodeprompt.MinimalismContractPath, core.LabdrianOverlayDirVariable)
 }

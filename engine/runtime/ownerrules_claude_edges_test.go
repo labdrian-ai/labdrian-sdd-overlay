@@ -1,6 +1,7 @@
 package runtime_test
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -130,5 +131,24 @@ func TestClaudeInstallRefusesADanglingClaudeMDLinkAndWritesNothing(t *testing.T)
 	}
 	if _, err := os.Stat(filepath.Join(root, "missing.md")); !os.IsNotExist(err) {
 		t.Error("the file behind the link was created")
+	}
+}
+
+// Only a search that finds no checkout is the benign "no overlay checkout" case; a search that cannot
+// run (here the working directory was removed) is a real failure.
+func TestOverlayOwnerRulesReportsAFailedSearchAsAFailure(t *testing.T) {
+	gone := filepath.Join(t.TempDir(), "gone")
+	if err := os.Mkdir(gone, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	chdirForTest(t, gone)
+	if err := os.Remove(gone); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := engineRuntime.OverlayOwnerRules{}.OwnerRules()
+
+	if err == nil || errors.Is(err, engineRuntime.ErrNoOverlayCheckout) {
+		t.Fatalf("OwnerRules() error = %v, want a failure other than ErrNoOverlayCheckout", err)
 	}
 }

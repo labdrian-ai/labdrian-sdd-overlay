@@ -123,14 +123,11 @@ func (a ClaudeAdapter) status() core.LifecycleResult {
 	}
 	message := "Claude lifecycle hooks are installed and owned"
 	if a.rules != nil {
-		if r, ok := a.ownerRulesStatus(); ok {
+		r, ok, note := a.ownerRulesStatus()
+		if ok {
 			return r
 		}
-		if _, err := a.rules.OwnerRules(); errors.Is(err, ErrNoOverlayCheckout) {
-			message += "; owner rules not checked: " + err.Error()
-		} else {
-			message += "; owner rules block is current in " + a.claudeMDPath()
-		}
+		message += "; " + note
 	}
 	return a.result(core.ActionStatus, core.CapabilitySupported, message)
 }
@@ -216,27 +213,28 @@ func (a ClaudeAdapter) withOwnerRules(action core.Action, message string) core.L
 }
 
 // ownerRulesStatus is the status result for the owner rules block when it is not current: partial,
-// naming the file and the verb that fixes it. ok is false when the block is current.
-func (a ClaudeAdapter) ownerRulesStatus() (core.LifecycleResult, bool) {
+// naming the file and the verb that fixes it. ok is false when the block is current or no checkout
+// was found; note then says which, for the supported message.
+func (a ClaudeAdapter) ownerRulesStatus() (core.LifecycleResult, bool, string) {
 	path := a.claudeMDPath()
 	body, err := a.rules.OwnerRules()
 	if errors.Is(err, ErrNoOverlayCheckout) {
-		return core.LifecycleResult{}, false
+		return core.LifecycleResult{}, false, "owner rules not checked: " + err.Error()
 	}
 	if err != nil {
-		return a.result(core.ActionStatus, core.CapabilityPartial, "Claude owner rules could not be read: "+err.Error()), true
+		return a.result(core.ActionStatus, core.CapabilityPartial, "Claude owner rules could not be read: "+err.Error()), true, ""
 	}
 	state, err := OwnerRulesBlock.StateOfFile(path, body)
 	if err != nil {
-		return a.result(core.ActionStatus, core.CapabilityPartial, "Claude owner rules block could not be checked: "+err.Error()), true
+		return a.result(core.ActionStatus, core.CapabilityPartial, "Claude owner rules block could not be checked: "+err.Error()), true, ""
 	}
 	switch state {
 	case BlockMissing:
-		return a.result(core.ActionStatus, core.CapabilityPartial, "Claude owner rules block is missing in "+path+"; run 'engine runtime install --target claude'"), true
+		return a.result(core.ActionStatus, core.CapabilityPartial, "Claude owner rules block is missing in "+path+"; run 'engine runtime install --target claude'"), true, ""
 	case BlockStale:
-		return a.result(core.ActionStatus, core.CapabilityPartial, "Claude owner rules block is stale in "+path+"; run 'engine runtime update --target claude'"), true
+		return a.result(core.ActionStatus, core.CapabilityPartial, "Claude owner rules block is stale in "+path+"; run 'engine runtime update --target claude'"), true, ""
 	}
-	return core.LifecycleResult{}, false
+	return core.LifecycleResult{}, false, "owner rules block is current in " + path
 }
 
 func (a ClaudeAdapter) result(action core.Action, status core.CapabilityStatus, message string) core.LifecycleResult {

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime/core"
 )
@@ -39,7 +38,7 @@ type OverlayOwnerRules struct {
 func (o OverlayOwnerRules) OwnerRules() (string, error) {
 	root, err := locateOverlay(o.OverlayDir)
 	if err != nil {
-		if strings.TrimSpace(o.OverlayDir) == "" {
+		if errors.As(err, new(overlayNotFoundError)) {
 			return "", ErrNoOverlayCheckout
 		}
 		return "", err
