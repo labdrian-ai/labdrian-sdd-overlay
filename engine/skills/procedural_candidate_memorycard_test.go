@@ -123,6 +123,22 @@ func TestProceduralCandidateContractNamesTheResolveEnvelope(t *testing.T) {
 	requireText(t, "SKILL.md", skill, "Never call `resolve` when the record lists no legacy id")
 }
 
+// Item 6 and the skill both carry the lifecycle exception, and the merge tie and baseline rules.
+func TestProceduralCandidateContractCarriesTheExceptionAndTheMergeTies(t *testing.T) {
+	skill, contract := proceduralCandidateTexts(t)
+	requireText(t, "contract", contract,
+		"unless `resolve` failed (item 2), in which case nothing is rewritten",
+		"Ask `resolve` once with each distinct legacy number, sorted as strings and as written (a number with leading zeros is asked as written)",
+		"on equal timestamps keep the entry listed first",
+		"Merged entries that straddle a `Registered` or `Promoted` `at:` count once, before the baseline, because they are one observation",
+		"A record already `emitted` or `rejected` whose count is at or below N after a merge (section 3) keeps its `Status` and is never re-emitted",
+	)
+	requireText(t, "SKILL.md", skill,
+		"on a resolve failure a `History` line whose external action already happened is still saved with `Occurrences` exactly as stored",
+		"Ask `resolve` once with each distinct legacy number, sorted and as written",
+	)
+}
+
 // The stop covers occurrence work only; a lifecycle History line whose action already happened is saved.
 func TestProceduralCandidateContractScopesTheResolveStop(t *testing.T) {
 	_, contract := proceduralCandidateTexts(t)

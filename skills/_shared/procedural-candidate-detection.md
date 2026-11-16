@@ -112,7 +112,9 @@ later.
    by digits; a record written before memorycard may list some. When a record
    lists no legacy id, never call `resolve`. Otherwise run
    `memorycard resolve --source engram --key <n> [--key <n2> ...] --json`
-   once for all of them. It answers
+   once for all of them. Ask `resolve` once with each distinct legacy number,
+   sorted as strings and as written (a number with leading zeros is asked as
+   written). It answers
    `{"source":"engram","ids":[{"key":"<n>","memory_id":<m>|null}]}`, one entry
    per key asked, in the order asked. So an `engram:<n>` that
    `memorycard resolve` maps to `<m>` is the same occurrence as
@@ -147,10 +149,13 @@ later.
    to `<m>` as `memorycard:<m>`, keeping its timestamp and summary. When a rewrite makes
    two `Occurrences` entries one id, they are one observation: keep the entry
    with the earliest timestamp (not its list position), drop the other, and
-   recompute `FirstObserved` and `LastObserved` from the remaining entries.
+   recompute `FirstObserved` and `LastObserved` from the remaining entries; on equal timestamps keep the entry listed first. Merged
+   entries that straddle a `Registered` or `Promoted` `at:` count once, before
+   the baseline, because they are one observation.
    `OccurrenceCount` and `OccurrencesSincePromotion` are computed after the
-   merge. An id reported unknown
-   stays as written. `History` lines are never rewritten (section 9). There
+   merge. An id reported unknown stays as written. This applies
+   unless `resolve` failed (item 2), in which case nothing
+   is rewritten and the lifecycle exception of item 2 applies. `History` lines are never rewritten (section 9). There
    is no bulk migration: a record never saved again keeps its legacy ids and
    is translated on read.
 7. The topic-key shape used to store and read back a candidate is identical
@@ -190,6 +195,9 @@ default changes later.
 | `observing` | no | = N | match | `rejected` | No |
 | `emitted` | no | > N | not called | `emitted` | No |
 | `rejected` | no | > N | not called | `rejected` | No |
+
+A record already `emitted` or `rejected` whose count is at or below N after a
+merge (section 3) keeps its `Status` and is never re-emitted.
 
 "Emitted" in this slice means exactly: the record reaches `Status: emitted`
 and the agent reports it once in that turn's reply. Nothing drafts,
