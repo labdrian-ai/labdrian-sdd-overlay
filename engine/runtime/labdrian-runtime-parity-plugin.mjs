@@ -313,7 +313,7 @@ async function askEngine(state, args, envelope, gate = false) {
   if (reply.failure !== undefined) {
     if (reply.hung) {
       state.pausedUntil = Date.now() + ENGINE_PAUSE_FACTOR * timeoutMs;
-      state.pausedReason = `${reply.failure}; the bridge stops asking it for -e seconds except to check tool calls`;
+      state.pausedReason = `${reply.failure}; the bridge stops asking it for ${(ENGINE_PAUSE_FACTOR * timeoutMs) / 1000} seconds except to check tool calls, which each wait for it`;
       return noteFailure(state, state.pausedReason);
     }
     return noteFailure(state, reply.failure);

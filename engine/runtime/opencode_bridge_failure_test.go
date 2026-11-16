@@ -210,7 +210,7 @@ console.log(JSON.stringify({ elapsed, result: result.content.map((part) => part.
 	if len(got.Elapsed) != 3 || got.Elapsed[0] < 250 || got.Elapsed[0] > 2000 || got.Elapsed[1] > 100 || got.Elapsed[2] < 250 {
 		t.Fatalf("each gate call waits one timeout, the PostToolUse during the pause is not asked, got %v ms", got.Elapsed)
 	}
-	if len(got.Result) != 2 || !strings.Contains(got.Result[1], notRunning) || !strings.Contains(got.Result[1], "did not answer") || !strings.Contains(got.Result[1], "stops asking") {
+	if len(got.Result) != 2 || !strings.Contains(got.Result[1], notRunning) || !strings.Contains(got.Result[1], "did not answer") || !strings.Contains(got.Result[1], "stops asking it for 0.6 seconds except to check tool calls") {
 		t.Fatalf("the note should say the engine hung and that the bridge stops asking, got %#v", got.Result)
 	}
 	log, err := os.ReadFile(filepath.Join(engine.dir, "calls.log"))
