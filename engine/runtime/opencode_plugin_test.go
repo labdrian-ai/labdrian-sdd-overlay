@@ -16,8 +16,8 @@ import (
 // injectedTool and agentField name the tool the plugin injects into and the input field that
 // names the agent the call launches.
 const (
-	injectedTool = "task"
-	agentField   = "subagent_type"
+	injectedTool = "subagent"
+	agentField   = "agent"
 )
 
 // openCodePluginPath is where the adapter installs the v2 plugin under an OpenCode config root.
@@ -200,6 +200,47 @@ console.log(JSON.stringify(Object.fromEntries(Object.entries(calls).map(([name, 
 	}
 	if got.Unchanged != basePromptFixture {
 		t.Fatalf("non-targeted phase should return original prompt: %q", got.Unchanged)
+	}
+}
+
+func TestOpenCodePluginInjectsOnlyOnTheSubagentTool(t *testing.T) {
+	requireNode(t)
+	root, pluginPath := writePluginFixture(t)
+	writeJSONFile(t, filepath.Join(root, "labdrian-runtime-parity.json"), minimalismConfig(pluginPath, root))
+
+	script := fmt.Sprintf(`const base = %q;
+const calls = {
+  subagent: { tool: "subagent", input: { prompt: base, agent: "sdd-tasks" } },
+  legacyTask: { tool: "task", input: { prompt: base, subagent_type: "sdd-tasks" } },
+  legacyFieldOnSubagent: { tool: "subagent", input: { prompt: base, subagent_type: "sdd-tasks" } },
+  shell: { tool: "shell", input: { prompt: base, agent: "sdd-tasks" } },
+  noPrompt: { tool: "subagent", input: { agent: "sdd-tasks" } },
+  noInput: { tool: "subagent" },
+};
+for (const call of Object.values(calls)) await beforeHook(call);
+console.log(JSON.stringify({
+  subagent: calls.subagent.input.prompt,
+  legacyTask: calls.legacyTask.input.prompt,
+  legacyFieldOnSubagent: calls.legacyFieldOnSubagent.input.prompt,
+  shell: calls.shell.input.prompt,
+  noPrompt: calls.noPrompt.input.prompt ?? null,
+  noInput: calls.noInput.input ?? null,
+}));`, basePromptFixture)
+	var got map[string]any
+	if err := json.Unmarshal(runPlugin(t, pluginPath, script), &got); err != nil {
+		t.Fatalf("decode result: %v", err)
+	}
+	const contract = "skills/_shared/minimalism-contract.md"
+	if prompt, _ := got["subagent"].(string); !strings.Contains(prompt, contract) {
+		t.Fatalf("a subagent launch should get the contract in input.prompt: %q", prompt)
+	}
+	for _, name := range []string{"legacyTask", "legacyFieldOnSubagent", "shell"} {
+		if got[name] != basePromptFixture {
+			t.Fatalf("%s must be left untouched, got %q", name, got[name])
+		}
+	}
+	if got["noPrompt"] != nil || got["noInput"] != nil {
+		t.Fatalf("a subagent call with no prompt or no input must stay as it was, got %#v", got)
 	}
 }
 

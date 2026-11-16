@@ -40,35 +40,35 @@ exit: 1
 $ runtime install --target opencode
 exit: 0
 --- stdout ---
-[opencode] install: restart_required — OpenCode plugin changed; restart OpenCode to load version 2026-11-16-runtime-parity-5
+[opencode] install: restart_required — OpenCode plugin changed; restart OpenCode to load version 2026-11-16-runtime-parity-6
 --- stderr ---
 
 # opencode again
 $ runtime install --target opencode
 exit: 0
 --- stdout ---
-[opencode] install: restart_required — OpenCode plugin changed; restart OpenCode to load version 2026-11-16-runtime-parity-5
+[opencode] install: restart_required — OpenCode plugin changed; restart OpenCode to load version 2026-11-16-runtime-parity-6
 --- stderr ---
 
 # status opencode
 $ runtime status --target opencode
 exit: 1
 --- stdout ---
-[opencode] status: restart_required — OpenCode restart required to load plugin version 2026-11-16-runtime-parity-5
+[opencode] status: restart_required — OpenCode restart required to load plugin version 2026-11-16-runtime-parity-6
 --- stderr ---
 
 # update opencode
 $ runtime update --target opencode
 exit: 0
 --- stdout ---
-[opencode] update: restart_required — OpenCode plugin changed; restart OpenCode to load version 2026-11-16-runtime-parity-5
+[opencode] update: restart_required — OpenCode plugin changed; restart OpenCode to load version 2026-11-16-runtime-parity-6
 --- stderr ---
 
 # status opencode
 $ runtime status --target opencode
 exit: 1
 --- stdout ---
-[opencode] status: restart_required — OpenCode restart required to load plugin version 2026-11-16-runtime-parity-5
+[opencode] status: restart_required — OpenCode restart required to load plugin version 2026-11-16-runtime-parity-6
 --- stderr ---
 
 # pi with an overlay that holds no registry
@@ -104,7 +104,7 @@ $ runtime status --target all
 exit: 1
 --- stdout ---
 [claude] status: supported — Claude lifecycle hooks are installed and owned
-[opencode] status: restart_required — OpenCode restart required to load plugin version 2026-11-16-runtime-parity-5
+[opencode] status: restart_required — OpenCode restart required to load plugin version 2026-11-16-runtime-parity-6
 [codex] status: partial — Codex lifecycle manifest is present and managed, but activation/reload state is unverified — reasons: activation/reload proof unavailable until Codex session lifecycle integration is implemented
 [pi] status: unsupported — labdrian-pi package is not built at <WORLD>/home/.labdrian-overlay/pi/labdrian-pi (run: labdrian-overlay apply --target pi). 'pi --no-extensions' disables the before_agent_start contract-gate extension for that session, and 'pi --no-skills' disables skill discovery, for that session only; neither flag's use is detected at runtime (short aliases: -ne and -ns)
 --- stderr ---

@@ -6,9 +6,10 @@ import { Plugin } from "@opencode/plugin";
 // Tool.Error is how a hook denies a call; the hook bridge (S10) uses it.
 import { Tool } from "@opencode/plugin/promise/tool";
 
-// The tool whose launches the contract injection rewrites, and the input field that names the agent.
-const INJECTED_TOOL = "task";
-const AGENT_FIELD = "subagent_type";
+// The v2 tool that launches a child session, and the input field that names the agent it launches.
+// The contract is injected by rewriting input.prompt in execute.before, which reaches the child.
+const INJECTED_TOOL = "subagent";
+const AGENT_FIELD = "agent";
 
 function isRecord(value) {
   return typeof value === "object" && value !== null;
