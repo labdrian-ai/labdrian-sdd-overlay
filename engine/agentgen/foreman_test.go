@@ -77,9 +77,14 @@ func TestTheClaudeFileOfTheForemanIsItsFrontmatterAndItsSource(t *testing.T) {
 	}
 	// The Claude file has no effort field (Claude Code takes none from the file), and the foreman has no
 	// Pi or Codex file that would take one.
-	for _, effort := range []string{"effort", "thinking"} {
-		if strings.Contains(got, effort+":") {
-			t.Errorf("agents/foreman.md holds an %s field", effort)
+	// Only the frontmatter is read: between the opening --- and the closing --- line, so body prose that
+	// says "thinking: x" is no field.
+	frontmatter, _, _ := strings.Cut(strings.TrimPrefix(got, "---\n"), "\n---\n")
+	for _, line := range strings.Split(frontmatter, "\n") {
+		for _, effort := range []string{"effort", "thinking"} {
+			if strings.HasPrefix(line, effort+":") {
+				t.Errorf("the frontmatter of agents/foreman.md holds an %s field: %q", effort, line)
+			}
 		}
 	}
 }
