@@ -71,7 +71,7 @@ my own text
 $ runtime install --target claude
 exit: 1
 --- stdout ---
-[claude] install: partial — Claude lifecycle hooks installed; restart Claude to load hook changes; owner rules could not be written: <WORLD>/home/.claude/CLAUDE.md: its markers are not one open line followed by one close line
+[claude] install: partial — Claude lifecycle hooks installed; restart Claude to load hook changes; owner rules could not be written: <WORLD>/home/.claude/CLAUDE.md: its markers are not one open line followed by one close line (open: line 2; close: none)
 --- stderr ---
 
 --- home/.claude/CLAUDE.md ---

@@ -27,7 +27,7 @@ func NewClaudeAdapter(root string, hooks HookInstaller) ClaudeAdapter {
 	return ClaudeAdapter{target: core.TargetClaude, root: root, hooks: hooks}
 }
 
-// WithOwnerRules is the adapter that also keeps the owner rules block in CLAUDE.md.
+// WithOwnerRules is the adapter that also keeps the owner rules block in CLAUDE.md, with the rules from rules.
 func (a ClaudeAdapter) WithOwnerRules(rules OwnerRulesSource) ClaudeAdapter {
 	a.rules = rules
 	return a
@@ -126,7 +126,11 @@ func (a ClaudeAdapter) status() core.LifecycleResult {
 		if r, ok := a.ownerRulesStatus(); ok {
 			return r
 		}
-		message += "; owner rules block is current in " + a.claudeMDPath()
+		if _, err := a.rules.OwnerRules(); errors.Is(err, ErrNoOverlayCheckout) {
+			message += "; owner rules not checked: " + err.Error()
+		} else {
+			message += "; owner rules block is current in " + a.claudeMDPath()
+		}
 	}
 	return a.result(core.ActionStatus, core.CapabilitySupported, message)
 }
@@ -190,6 +194,9 @@ func (a ClaudeAdapter) withOwnerRules(action core.Action, message string) core.L
 	}
 	path := a.claudeMDPath()
 	body, err := a.rules.OwnerRules()
+	if errors.Is(err, ErrNoOverlayCheckout) {
+		return a.result(action, core.CapabilityRestartRequired, message+"; owner rules not installed: "+err.Error())
+	}
 	if err != nil {
 		return a.result(action, core.CapabilityPartial, message+"; owner rules could not be read: "+err.Error())
 	}
@@ -213,6 +220,9 @@ func (a ClaudeAdapter) withOwnerRules(action core.Action, message string) core.L
 func (a ClaudeAdapter) ownerRulesStatus() (core.LifecycleResult, bool) {
 	path := a.claudeMDPath()
 	body, err := a.rules.OwnerRules()
+	if errors.Is(err, ErrNoOverlayCheckout) {
+		return core.LifecycleResult{}, false
+	}
 	if err != nil {
 		return a.result(core.ActionStatus, core.CapabilityPartial, "Claude owner rules could not be read: "+err.Error()), true
 	}

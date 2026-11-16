@@ -24,7 +24,8 @@ func ownerRulesSourceText(t *testing.T) string {
 
 func ownerRulesLines(text string) []string { return strings.Split(text, "\n") }
 
-// inOrder fails when a line of want is not a whole line of the file after the previous one.
+// inOrder stops the test at the first line of want that is not a whole line of the file after the previous one: the lines after a miss would only repeat it.
+// It fails when a line of want is not a whole line of the file after the previous one.
 func inOrder(t *testing.T, text string, want []string) {
 	t.Helper()
 	lines := ownerRulesLines(text)
@@ -39,7 +40,7 @@ func inOrder(t *testing.T, text string, want []string) {
 			}
 		}
 		if !found {
-			t.Errorf("the line %q is missing (or out of order) in instructions/owner-rules.md", w)
+			t.Fatalf("the line %q is missing (or out of order) in instructions/owner-rules.md", w)
 		}
 	}
 }
@@ -94,10 +95,30 @@ func TestOwnerRulesCarryTheShortenedCodeGraphGuidance(t *testing.T) {
 }
 
 func TestOwnerRulesTurnEveryKnownErrorClassIntoALintCheck(t *testing.T) {
-	text := ownerRulesSourceText(t)
+	lines := ownerRulesLines(ownerRulesSourceText(t))
 	rule := "Every known error class (found by review, a verifier or the user) is turned into a lint check that fails on it, committed with the fix. A one-off mistake that no rule can catch gets a regression test instead."
-	if !strings.Contains(text, "\n"+rule+"\n") && !strings.Contains(text, "\n- "+rule+"\n") {
-		t.Errorf("the lint rule of L78 is missing as a whole line:\n%s", rule)
+	for i, line := range lines {
+		if line != "## Known errors" {
+			continue
+		}
+		if i+2 >= len(lines) || lines[i+1] != "" || lines[i+2] != rule {
+			t.Fatalf("under \"## Known errors\" the lint rule of L78 must be the first line, whole:\n%s", rule)
+		}
+		return
+	}
+	t.Fatal("the section \"## Known errors\" is missing")
+}
+
+func TestOwnerRulesHaveTheseSectionsInThisOrder(t *testing.T) {
+	var got []string
+	for _, line := range ownerRulesLines(ownerRulesSourceText(t)) {
+		if strings.HasPrefix(line, "## ") {
+			got = append(got, line)
+		}
+	}
+	want := []string{"## Rules", "## Expertise", "## Skills", "## Known errors", "## Voice", "## CodeGraph", "## Remote operation authorization"}
+	if strings.Join(got, "|") != strings.Join(want, "|") {
+		t.Errorf("sections = %q, want %q", got, want)
 	}
 }
 

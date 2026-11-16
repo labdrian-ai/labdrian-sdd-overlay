@@ -1104,10 +1104,13 @@ gentle-ai-overlay runtime install|update|uninstall|status --target claude
     in `LABDRIAN_OVERLAY_DIR`, else the nearest one above the working directory. `install` and `update` append the block
     after one blank line when it is absent (a missing file is created with the block alone) and replace it in place when
     it is there; every byte outside the two lines stays as it was, the `gentle-ai:` blocks and `user:memorycard-store`
-    included, and a file without a final newline gets one before the block. `uninstall` removes only the block (an
-    empty file stays). `status` is partial when the block is missing or stale, and says which verb fixes it. Rules that
-    cannot be read, or markers that are not one open line followed by one close line, make the action partial and leave
-    CLAUDE.md as it is. The same writer (`runtime.MarkedBlock`) is the one the AGENTS.md files will use.
+    included; the file keeps its line ending (CRLF too) and a missing final newline. `uninstall` removes the block and
+    the blank line `install` put before it, so an untouched file is given back byte for byte (a file `install` created
+    is removed); a block that text follows is removed alone. A write is refused when the file changed after it was read,
+    and a symbolic link to a missing file is refused. `status` is partial when the block is missing or stale, and says
+    which verb fixes it. With no overlay checkout the result is the hooks-only one, with a note; with a checkout whose
+    rules cannot be read, or markers that are not one open line followed by one close line (the message names their
+    lines), the action is partial and CLAUDE.md is left as it is. The same writer (`runtime.MarkedBlock`) is the one the AGENTS.md files will use.
 
 gentle-ai-overlay runtime capabilities [--target claude|codex|pi|opencode|all]
     Engine verb (Phase 7): there is no `overlay runtime` wrapper, so run it on the installed engine

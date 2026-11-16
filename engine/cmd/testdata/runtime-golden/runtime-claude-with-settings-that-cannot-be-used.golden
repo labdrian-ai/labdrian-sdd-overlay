@@ -164,7 +164,6 @@ exit: 0
 --- stderr ---
 
 --- tree of home/.claude ---
-CLAUDE.md
 settings.json
 settings.json.bak
 
@@ -211,7 +210,6 @@ exit: 0
 --- stderr ---
 
 --- tree of home/.claude ---
-CLAUDE.md
 settings.json
 settings.json.bak
 

@@ -64,7 +64,6 @@ exit: 0
 # what is left
 --- tree of home ---
 .claude/
-.claude/CLAUDE.md
 .claude/settings.json
 .claude/settings.json.bak
 

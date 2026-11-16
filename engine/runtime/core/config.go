@@ -29,9 +29,10 @@ type Config struct {
 	// OverlayDir is $OVERLAY_DIR as set: the overlay checkout the Pi package is built from.
 	OverlayDir string
 	// LabdrianOverlayDir is $LABDRIAN_OVERLAY_DIR as set, not trimmed or judged: the overlay
-	// checkout whose skills/_shared contracts the OpenCode plugin carries. It is a different
-	// variable from OverlayDir. Only the OpenCode adapter reads it, and reports a value that is not
-	// an absolute path; empty means the checkout above the working directory.
+	// checkout whose skills/_shared contracts the OpenCode plugin carries and whose
+	// instructions/owner-rules.md the Claude adapter writes into CLAUDE.md. It is a different
+	// variable from OverlayDir. Those two adapters read it, and report a value that is not an
+	// absolute path; empty means the nearest checkout above the working directory.
 	LabdrianOverlayDir string
 	// StateDir is $STATE_DIR as set: where the overlay keeps what it deploys.
 	StateDir string

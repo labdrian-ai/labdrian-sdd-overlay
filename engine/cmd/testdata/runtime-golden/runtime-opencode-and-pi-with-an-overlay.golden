@@ -1,8 +1,8 @@
 # install claude
 $ runtime install --target claude
-exit: 1
+exit: 0
 --- stdout ---
-[claude] install: partial — Claude lifecycle hooks installed; restart Claude to load hook changes; owner rules could not be read: could not locate skills/_shared/minimalism-contract.md; set LABDRIAN_OVERLAY_DIR
+[claude] install: restart_required — Claude lifecycle hooks installed; restart Claude to load hook changes; owner rules not installed: no overlay checkout found; set LABDRIAN_OVERLAY_DIR
 --- stderr ---
 
 # install codex
@@ -30,7 +30,7 @@ exit: 1
 $ runtime install --target all
 exit: 1
 --- stdout ---
-[claude] install: partial — Claude lifecycle hooks installed; restart Claude to load hook changes; owner rules could not be read: could not locate skills/_shared/minimalism-contract.md; set LABDRIAN_OVERLAY_DIR
+[claude] install: restart_required — Claude lifecycle hooks installed; restart Claude to load hook changes; owner rules not installed: no overlay checkout found; set LABDRIAN_OVERLAY_DIR
 [opencode] install: partial — OpenCode prompt config could not be derived from the contracts: could not locate skills/_shared/minimalism-contract.md; set LABDRIAN_OVERLAY_DIR
 [codex] install: restart_required — Codex lifecycle manifest installed; restart long-running Codex processes to pick up updates
 [pi] install: unsupported — pi package delivery (pipkg build/install) cannot run without OVERLAY_DIR set

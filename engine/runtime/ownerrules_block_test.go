@@ -26,9 +26,9 @@ func TestMarkedBlockIsAppendedAfterOneBlankLineWhenAbsent(t *testing.T) {
 	}
 }
 
-func TestMarkedBlockIsAppendedAfterANewlineWhenTheFileHasNoFinalNewline(t *testing.T) {
+func TestMarkedBlockIsAppendedAfterABlankLineAndLeavesNoFinalNewlineWhenTheFileHadNone(t *testing.T) {
 	got, change, err := testBlock.Apply("A", "body line")
-	if err != nil || change != engineRuntime.BlockAdded || got != "A\n\n"+testBlockText+"\n" {
+	if err != nil || change != engineRuntime.BlockAdded || got != "A\n\n"+testBlockText {
 		t.Errorf("Apply = %q %v %v", got, change, err)
 	}
 }
@@ -60,11 +60,15 @@ func TestMarkedBlockAppliedTwiceIsUnchanged(t *testing.T) {
 
 func TestMarkedBlockRemoveUndoesApplyExactly(t *testing.T) {
 	for name, original := range map[string]string{
-		"empty file":           "",
-		"live shaped":          liveShapedFile,
-		"two lines":            "A\nB\n",
-		"only a blank line":    "\n",
-		"unmarked single line": "one line\n",
+		"empty file":             "",
+		"no final newline":       "A",
+		"blank lines at the end": "A\n\n",
+		"crlf":                   "A\r\nB\r\n",
+		"crlf no final newline":  "A\r\nB",
+		"live shaped":            liveShapedFile,
+		"two lines":              "A\nB\n",
+		"only a blank line":      "\n",
+		"unmarked single line":   "one line\n",
 	} {
 		applied, _, err := testBlock.Apply(original, "body line")
 		if err != nil {
@@ -77,22 +81,12 @@ func TestMarkedBlockRemoveUndoesApplyExactly(t *testing.T) {
 	}
 }
 
-// The one byte the installer adds outside the block: a file that ended without a newline gets one,
-// so that the block starts on its own line. Uninstall does not take it away again.
-func TestMarkedBlockRemoveKeepsTheNewlineAddedToAFileThatLackedOne(t *testing.T) {
-	applied, _, _ := testBlock.Apply("A", "body line")
-	got, removed, err := testBlock.Remove(applied)
-	if err != nil || !removed || got != "A\n" {
-		t.Errorf("Remove(Apply(%q)) = %q %v %v, want %q", "A", got, removed, err, "A\n")
-	}
-}
-
 func TestMarkedBlockRemoveKeepsTheTextOnBothSidesOfABlockInTheMiddle(t *testing.T) {
 	for name, tc := range map[string]struct{ in, want string }{
-		"blank lines on both sides": {"A\n\n" + testBlockText + "\n\nB\n", "A\n\nB\n"},
-		"no blank lines":            {"A\n" + testBlockText + "\nB\n", "A\nB\n"},
-		"at the start":              {testBlockText + "\n\nB\n", "B\n"},
-		"no newline at the end":     {"A\n" + testBlockText, "A\n"},
+		"blank lines on both sides are the owner's": {"A\n\n" + testBlockText + "\n\nB\n", "A\n\n\nB\n"},
+		"no blank lines": {"A\n" + testBlockText + "\nB\n", "A\nB\n"},
+		"at the start, the blank line after it is the owner's": {testBlockText + "\n\nB\n", "\nB\n"},
+		"no newline at the end":                                {"A\n" + testBlockText, "A\n"},
 	} {
 		got, removed, err := testBlock.Remove(tc.in)
 		if err != nil || !removed || got != tc.want {
@@ -130,7 +124,7 @@ func TestMarkedBlockWithMarkersThatAreNotOnePairIsNeverWritten(t *testing.T) {
 func TestMarkedBlockMarkersWithACarriageReturnAreFound(t *testing.T) {
 	crlf := "A\r\n<!-- t:x -->\r\nold\r\n<!-- /t:x -->\r\nB\r\n"
 	got, change, err := testBlock.Apply(crlf, "body line")
-	want := "A\r\n" + testBlockText + "\r\nB\r\n"
+	want := "A\r\n<!-- t:x -->\r\nbody line\r\n<!-- /t:x -->\r\nB\r\n"
 	if err != nil || change != engineRuntime.BlockReplaced || got != want {
 		t.Errorf("Apply = %q %v %v, want %q", got, change, err, want)
 	}
@@ -252,7 +246,7 @@ func TestMarkedBlockWriteFileNamesTheFileAndKeepsItWhenTheMarkersAreBroken(t *te
 	}
 }
 
-func TestMarkedBlockRemoveFileLeavesAnEmptyFileAndNothingForAMissingOne(t *testing.T) {
+func TestMarkedBlockRemoveFileDeletesAFileThatHeldOnlyTheBlockAndNothingForAMissingOne(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "CLAUDE.md")
 	if removed, err := testBlock.RemoveFile(path); err != nil || removed {
@@ -264,8 +258,11 @@ func TestMarkedBlockRemoveFileLeavesAnEmptyFileAndNothingForAMissingOne(t *testi
 	if _, err := testBlock.WriteFile(path, "body line"); err != nil {
 		t.Fatal(err)
 	}
-	if removed, err := testBlock.RemoveFile(path); err != nil || !removed || readFileText(t, path) != "" {
-		t.Errorf("RemoveFile = %v %v, file %q", removed, err, readFileText(t, path))
+	if removed, err := testBlock.RemoveFile(path); err != nil || !removed {
+		t.Errorf("RemoveFile = %v %v", removed, err)
+	}
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		t.Error("the file that held only the block is still there")
 	}
 }
 
