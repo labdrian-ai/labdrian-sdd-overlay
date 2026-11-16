@@ -82,7 +82,7 @@ func TestProceduralCandidateContractTranslatesLegacyOccurrenceIDsOnRead(t *testi
 		"`OccurrencesSincePromotion` counts distinct translated ids",
 	)
 	requireText(t, "SKILL.md", skill,
-		"that `memorycard resolve --source engram --key <n> --json` maps to `<m>` is the same occurrence as `memorycard:<m>`",
+		"that `memorycard resolve` (step 6) maps to `<m>` is the same occurrence as `memorycard:<m>`",
 		"count distinct translated ids",
 	)
 }
@@ -134,7 +134,7 @@ func TestProceduralCandidateContractCarriesTheExceptionAndTheMergeTies(t *testin
 		"A record already `emitted` or `rejected` whose count is at or below N after a merge (section 3) keeps its `Status` and is never re-emitted",
 	)
 	requireText(t, "SKILL.md", skill,
-		"on a resolve failure a `History` line whose external action already happened is still saved with `Occurrences` exactly as stored",
+		"on a resolve failure a lifecycle transition whose external action already happened is still saved with `Occurrences` exactly as stored",
 		"Ask `resolve` in one call, with each distinct legacy number once, sorted as strings and as written",
 	)
 	forbidText(t, "contract", contract, "once for all of them")
@@ -144,8 +144,8 @@ func TestProceduralCandidateContractCarriesTheExceptionAndTheMergeTies(t *testin
 func TestProceduralCandidateContractScopesTheResolveStop(t *testing.T) {
 	_, contract := proceduralCandidateTexts(t)
 	requireText(t, "contract", contract,
-		"The stop covers occurrence work (count, append, rewrite)",
-		"A lifecycle `History` line whose external action already happened (`Promoted`, retirement, revision draft opened) is still saved, with `Occurrences` left exactly as stored and no count change, and the failure reported",
+		"A lifecycle transition whose external action already happened (`Promoted`, registration, retirement, revision draft opened) is still saved with its `Status` and the `History` evidence and fields its section 9 row requires, with `Occurrences` left exactly as stored and no count change, and the failure reported",
+		"On read, entries that translate to one id count once by the merge rule of item 6, so a read and a later save derive the same counts",
 	)
 }
 
@@ -177,6 +177,6 @@ func TestProceduralCandidateContractStopsWhenResolveFails(t *testing.T) {
 	_, contract := proceduralCandidateTexts(t)
 	requireText(t, "contract", contract,
 		"When `resolve` fails or is unavailable",
-		"no legacy id is treated as unknown: stop, do not count, append to or save the record, and report the failure.",
+		"no legacy id is treated as unknown: stop occurrence work (do not count, append or rewrite) and report the failure.",
 	)
 }

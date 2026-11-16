@@ -123,12 +123,13 @@ later.
    (`"memory_id": null`) stays as written and counts as itself. When
    `resolve` fails or is unavailable (a non-zero exit, an `ids` array that
    does not answer every key asked, a different `source`, count or order of
-   keys), no legacy id is treated as unknown: stop, do not count, append to or
-   save the record, and report the failure. The stop covers occurrence work
-   (count, append, rewrite). A lifecycle `History` line whose external action
-   already happened (`Promoted`, retirement, revision draft opened) is still
-   saved, with `Occurrences` left exactly as stored and no count change, and
-   the failure reported.
+   keys), no legacy id is treated as unknown: stop occurrence work (do not
+   count, append or rewrite) and report the failure. A lifecycle transition
+   whose external action already happened (`Promoted`, registration,
+   retirement, revision draft opened) is still saved with its `Status` and the
+   `History` evidence and fields its section 9 row requires, with
+   `Occurrences` left exactly as stored and no count change, and the failure
+   reported.
 3. **Appending an already-listed occurrence id is a no-op**, and so is
    appending `memorycard:<m>` while the `engram:<n>` that resolves to `<m>`
    is listed, or the reverse: appending one while the other is listed is the
@@ -138,7 +139,9 @@ later.
 4. **`OccurrenceCount` is always derived**, equal to the number of distinct
    translated ids currently listed in `Occurrences`. It is never blindly
    incremented. `OccurrencesSincePromotion` counts distinct translated ids
-   the same way (section 13).
+   the same way (section 13). On read, entries that translate to one id
+   count once by the merge rule of item 6, so a read and a later save derive
+   the same counts.
 5. Evidence references MUST remain retrievable after a cold session start:
    `mem_get` for every `memorycard:<m>` listed in `Occurrences` must resolve,
    in any session, to the original occurrence content. A legacy occurrence is
