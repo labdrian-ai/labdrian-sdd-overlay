@@ -73,7 +73,6 @@ func TestProceduralCandidateContractTranslatesLegacyOccurrenceIDsOnRead(t *testi
 	requireText(t, "contract", contract,
 		"memorycard resolve --source engram --key <n>",
 		"[--key <n2> ...] --json",
-		`{"key": "<n>", "memory_id": <m>}`,
 		"an `engram:<n>` that `memorycard resolve` maps to `<m>` is the same occurrence as `memorycard:<m>`",
 		"appending one while the other is listed is the same no-op",
 		"is always derived**, equal to the number of distinct translated ids currently listed in `Occurrences`",
@@ -95,7 +94,8 @@ func TestProceduralCandidateContractRewritesLegacyOccurrenceIDsOnSave(t *testing
 	requireText(t, "contract", contract,
 		"On every save of a record, rewrite each legacy `engram:<n>` in `Occurrences` that `memorycard resolve` maps to `<m>` as `memorycard:<m>`",
 		"keeping its timestamp and summary",
-		"when two entries become one id, keep the earlier entry",
+		"When a rewrite makes two `Occurrences` entries one id, they are one observation: keep the entry with the earliest timestamp (not its list position), drop the other, and recompute `FirstObserved` and `LastObserved` from the remaining entries",
+		"`OccurrenceCount` and `OccurrencesSincePromotion` are computed after the merge",
 		"id reported unknown stays as written",
 		"`History` lines are never rewritten",
 		"There is no bulk migration",
@@ -105,6 +105,53 @@ func TestProceduralCandidateContractRewritesLegacyOccurrenceIDsOnSave(t *testing
 		"On every save of a candidate record, rewrite each legacy `engram:<n>` in `Occurrences` that `memorycard resolve` maps to `<m>` as `memorycard:<m>`",
 		"id reported unknown stays as written",
 		"migrate records in bulk",
+		"keep the earliest-timestamp entry (shared contract section 3)",
+		"If `resolve` fails or answers a different source, count or order, stop occurrence work and report it",
+	)
+}
+
+// The full envelope, what a legacy id is, and when resolve is never called.
+func TestProceduralCandidateContractNamesTheResolveEnvelope(t *testing.T) {
+	skill, contract := proceduralCandidateTexts(t)
+	requireText(t, "contract", contract,
+		`{"source":"engram","ids":[{"key":"<n>","memory_id":<m>|null}]}`,
+		"one entry per key asked, in the order asked",
+		"a different `source`, count or order of keys",
+		"A legacy id is `engram:` followed by digits",
+		"When a record lists no legacy id, never call `resolve`",
+	)
+	requireText(t, "SKILL.md", skill, "Never call `resolve` when the record lists no legacy id")
+}
+
+// The stop covers occurrence work only; a lifecycle History line whose action already happened is saved.
+func TestProceduralCandidateContractScopesTheResolveStop(t *testing.T) {
+	_, contract := proceduralCandidateTexts(t)
+	requireText(t, "contract", contract,
+		"The stop covers occurrence work (count, append, rewrite)",
+		"A lifecycle `History` line whose external action already happened (`Promoted`, retirement, revision draft opened) is still saved, with `Occurrences` left exactly as stored and no count change, and the failure reported",
+	)
+}
+
+// Acceptance item 3 no longer says the count is incremented; section 4 says a merge never unlatches Status.
+func TestProceduralCandidateContractCountIsRederivedAndMergeKeepsTheLatch(t *testing.T) {
+	_, contract := proceduralCandidateTexts(t)
+	requireText(t, "contract", contract,
+		"`Occurrences`, `OccurrenceCount` re-derived)",
+		"A count that falls below `Threshold` after a merge (section 3) leaves the latched `Status` unchanged and is not an anomaly of the record",
+	)
+	forbidText(t, "contract", contract, "`OccurrenceCount` incremented")
+}
+
+// The acceptance checklist covers translate on read, rewrite on save, merge, unknown and resolve failure.
+func TestProceduralCandidateContractHasALegacyIDAcceptanceChecklist(t *testing.T) {
+	_, contract := proceduralCandidateTexts(t)
+	requireText(t, "contract", contract,
+		"## Acceptance checklist (legacy occurrence ids, executed during `sdd-verify`)",
+		"**Translate on read**",
+		"**Rewrite on save**",
+		"**Merge keeps the earliest timestamp**",
+		"**Unknown stays**",
+		"**A failed resolve stops**",
 	)
 }
 

@@ -108,17 +108,25 @@ later.
    the live conversation is only the detector's signal; before an occurrence
    may be counted, the agent must have saved (or must save) an episodic
    memory for it with `mem_save` and reference that id here.
-2. **Legacy ids are translated on read.** A record written before memorycard
-   may list `engram:<n>`. For the legacy ids a record lists, run
+2. **Legacy ids are translated on read.** A legacy id is `engram:` followed
+   by digits; a record written before memorycard may list some. When a record
+   lists no legacy id, never call `resolve`. Otherwise run
    `memorycard resolve --source engram --key <n> [--key <n2> ...] --json`
-   once. Each answer `{"key": "<n>", "memory_id": <m>}` says an `engram:<n>`
-   that `memorycard resolve` maps to `<m>` is the same occurrence as
+   once for all of them. It answers
+   `{"source":"engram","ids":[{"key":"<n>","memory_id":<m>|null}]}`, one entry
+   per key asked, in the order asked. So an `engram:<n>` that
+   `memorycard resolve` maps to `<m>` is the same occurrence as
    `memorycard:<m>`. Two Engram ids the import merged into one memory resolve
    to the same `<m>` and count once. An id `resolve` reports unknown
    (`"memory_id": null`) stays as written and counts as itself. When
    `resolve` fails or is unavailable (a non-zero exit, an `ids` array that
-   does not answer every key asked), no legacy id is treated as unknown:
-   stop, do not count, append to or save the record, and report the failure.
+   does not answer every key asked, a different `source`, count or order of
+   keys), no legacy id is treated as unknown: stop, do not count, append to or
+   save the record, and report the failure. The stop covers occurrence work
+   (count, append, rewrite). A lifecycle `History` line whose external action
+   already happened (`Promoted`, retirement, revision draft opened) is still
+   saved, with `Occurrences` left exactly as stored and no count change, and
+   the failure reported.
 3. **Appending an already-listed occurrence id is a no-op**, and so is
    appending `memorycard:<m>` while the `engram:<n>` that resolves to `<m>`
    is listed, or the reverse: appending one while the other is listed is the
@@ -136,8 +144,12 @@ later.
    legacy id has no memory to get and is kept as written.
 6. **Legacy ids are rewritten on save.** On every save of a record, rewrite
    each legacy `engram:<n>` in `Occurrences` that `memorycard resolve` maps
-   to `<m>` as `memorycard:<m>`, keeping its timestamp and summary; when two
-   entries become one id, keep the earlier entry. An id reported unknown
+   to `<m>` as `memorycard:<m>`, keeping its timestamp and summary. When a rewrite makes
+   two `Occurrences` entries one id, they are one observation: keep the entry
+   with the earliest timestamp (not its list position), drop the other, and
+   recompute `FirstObserved` and `LastObserved` from the remaining entries.
+   `OccurrenceCount` and `OccurrencesSincePromotion` are computed after the
+   merge. An id reported unknown
    stays as written. `History` lines are never rewritten (section 9). There
    is no bulk migration: a record never saved again keeps its legacy ids and
    is translated on read.
@@ -191,7 +203,9 @@ update where `OccurrenceCount` first reaches `Threshold`. Once `emitted`,
 later occurrences still append to `Occurrences` (evidence stays complete)
 but the record never re-emits. Because the latch lives in the durable
 record rather than in agent memory, "no second candidate at N+1" survives a
-session boundary.
+session boundary. A count that falls below `Threshold` after a merge
+(section 3) leaves the latched `Status` unchanged and is not an anomaly of
+the record.
 
 `MatchCandidate` (section 6, slice 3) is called only at the row where
 `OccurrenceCount` first reaches `Threshold` — never on every occurrence, and
@@ -898,7 +912,7 @@ decision table and `Threshold: 3` above) is still Go-testable and covered by
    `Status: emitted` at N, WHEN that approach succeeds an (N+1)th time,
    THEN no second candidate is emitted, the existing record MAY be updated
    with the new occurrence (appended to `Occurrences`, `OccurrenceCount`
-   incremented), and no new candidate identity is created.
+   re-derived), and no new candidate identity is created.
 4. **A single non-repeated success (nothing emitted)**: GIVEN an approach
    has succeeded exactly once with no prior occurrences, WHEN detection
    runs, THEN no candidate record reaches `Status: emitted` and no emission
@@ -995,3 +1009,30 @@ above) is still Go-testable and covered by
    (`skill-lint`), WHEN drafting or registration is attempted, THEN the
    warning is reported as a separate, non-blocking signal and never refuses
    the draft or the registration.
+
+## Acceptance checklist (legacy occurrence ids, executed during `sdd-verify`)
+
+This section is agent-driven prose, not Go code; it is verified by a
+fixture-driven procedure run against real memorycard records and a real
+`memorycard resolve` during `sdd-verify`. The text it checks (section 3) is
+Go-testable and covered by
+`engine/skills/procedural_candidate_memorycard_test.go`.
+
+1. **Translate on read**: GIVEN a record lists `engram:<n>` and
+   `memorycard:<m>` and `resolve` maps `<n>` to `<m>`, WHEN the count is
+   derived, THEN `OccurrenceCount` is 1, and appending either id is a no-op.
+2. **Rewrite on save**: GIVEN a record lists a mapped `engram:<n>`, WHEN the
+   record is next saved, THEN `Occurrences` lists `memorycard:<m>` with the
+   same timestamp and summary, and no `History` line changed.
+3. **Merge keeps the earliest timestamp**: GIVEN a rewrite makes two entries
+   one id, WHEN the record is saved, THEN the entry with the earliest
+   timestamp (not the first in the list) remains, and `FirstObserved` and
+   `LastObserved` are recomputed from the remaining entries.
+4. **Unknown stays**: GIVEN `resolve` reports `"memory_id": null` for an id,
+   WHEN the record is read or saved, THEN the id stays as written and counts
+   as itself.
+5. **A failed resolve stops**: GIVEN `resolve` exits non-zero or answers a
+   different source, count or order, WHEN occurrence work runs, THEN nothing
+   is counted, appended or rewritten and the failure is reported; a lifecycle
+   `History` line whose external action already happened is still saved with
+   `Occurrences` unchanged.
