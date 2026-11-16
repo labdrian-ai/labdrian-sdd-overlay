@@ -48,6 +48,11 @@ func (a OpenCodeAdapter) uninstall(action core.Action) core.LifecycleResult {
 		return a.result(action, core.CapabilityUnsupported, err.Error())
 	}
 	pluginErr := os.Remove(a.pluginPath())
+	// An empty plugin directory is left behind by the removal of its only file; OpenCode would load it
+	// as a plugin with no index.js. A directory that is not empty is not ours to remove.
+	if pluginErr == nil {
+		_ = os.Remove(filepath.Dir(a.pluginPath()))
+	}
 	configErr := os.Remove(a.configPath())
 	if pluginErr != nil && !os.IsNotExist(pluginErr) {
 		return a.result(action, core.CapabilityPartial, pluginErr.Error())
@@ -144,7 +149,7 @@ func (a OpenCodeAdapter) status(action core.Action) core.LifecycleResult {
 }
 
 func (a OpenCodeAdapter) pluginPath() string {
-	return filepath.Join(a.root, "plugins", openCodePluginFile)
+	return filepath.Join(a.root, "plugins", openCodePluginID, openCodePluginFile)
 }
 
 func (a OpenCodeAdapter) configPath() string {

@@ -2,21 +2,16 @@ import { createHash } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { Plugin } from "@opencode/plugin";
+// Tool.Error is how a hook denies a call; the hook bridge (S10) uses it.
+import { Tool } from "@opencode/plugin/promise/tool";
+
+// The tool whose launches the contract injection rewrites, and the input field that names the agent.
+const INJECTED_TOOL = "task";
+const AGENT_FIELD = "subagent_type";
 
 function isRecord(value) {
   return typeof value === "object" && value !== null;
-}
-
-function isToolExecuteInput(value) {
-  return isRecord(value);
-}
-
-function isTaskArgs(value) {
-  return isRecord(value);
-}
-
-function isToolExecuteOutput(value) {
-  return isRecord(value) && (!("args" in value) || isTaskArgs(value.args));
 }
 
 function hasExactLine(prompt, line) {
@@ -102,7 +97,7 @@ function stripPrompt(prompt, config) {
     .join("\n");
 }
 
-export function mutatePrompt(prompt, subagentType, config, workContext) {
+function mutatePrompt(prompt, subagentType, config, workContext) {
 	  const promptConfig = normalizePromptConfig(config);
 	  if (!promptConfig) return prompt;
 	  const invocationWorkContext = resolveInvocationWorkContext(workContext);
@@ -145,43 +140,29 @@ function hasString(items, want) {
   return items.some((item) => item.toLowerCase() === want);
 }
 
-async function toolExecuteBefore(input, output, config) {
-	  if (!isToolExecuteInput(input) || input.tool !== "task") return;
-	  if (!isToolExecuteOutput(output) || !isTaskArgs(output.args)) return;
-	  if (typeof output.args.prompt !== "string") return;
-	  if (typeof output.args.subagent_type !== "string") return;
+// executeBefore is the execute.before handler: it rewrites the prompt of a launch of the injected
+// tool in place, which is what reaches the child session.
+function executeBefore(call, config) {
+  if (!isRecord(call) || call.tool !== INJECTED_TOOL) return;
+  const input = call.input;
+  if (!isRecord(input)) return;
+  if (typeof input.prompt !== "string") return;
+  if (typeof input[AGENT_FIELD] !== "string") return;
 
-	  output.args.prompt = mutatePrompt(
-	    output.args.prompt,
-	    output.args.subagent_type,
-	    config,
-	    extractInvocationWorkContext(input, output),
-	  );
+  input.prompt = mutatePrompt(input.prompt, input[AGENT_FIELD], config, extractInvocationWorkContext(input));
 }
 
-function extractInvocationWorkContext(input, output) {
-	  const outputContext = isTaskArgs(output?.args) ? output.args.work_context : undefined;
-	  if (isRecord(outputContext)) return outputContext;
-	  const inputArgs = isRecord(input) ? input.args : undefined;
-	  const inputContext = isRecord(inputArgs) ? inputArgs.work_context : undefined;
-	  if (isRecord(inputContext)) return inputContext;
-	  const directInputContext = isRecord(input) ? input.work_context : undefined;
-	  if (isRecord(directInputContext)) return directInputContext;
-	  return undefined;
+function extractInvocationWorkContext(input) {
+  return isRecord(input.work_context) ? input.work_context : undefined;
 }
 
-export default async function labdrianRuntimeParityPlugin() {
-  const pluginPath = fileURLToPath(import.meta.url);
-  const configRoot = dirname(dirname(pluginPath));
-  const configPath = join(configRoot, "labdrian-runtime-parity.json");
-  const activeMarkerPath = join(configRoot, "labdrian-runtime-parity.active.json");
-  const config = JSON.parse(await readFile(configPath, "utf8"));
+// recordActive writes the active marker: which version, hash and prompt config this load runs.
+async function recordActive(pluginPath, configRoot, config) {
   const pluginHash = createHash("sha256")
     .update(await readFile(pluginPath, "utf8"))
     .digest("hex");
-
   await writeFile(
-    activeMarkerPath,
+    join(configRoot, "labdrian-runtime-parity.active.json"),
     JSON.stringify(
       {
         active_version: config.installed_version,
@@ -194,8 +175,23 @@ export default async function labdrianRuntimeParityPlugin() {
       2,
     ),
   );
-
-  return {
-    "tool.execute.before": (input, output) => toolExecuteBefore(input, output, config),
-  };
 }
+
+// registerContractInjection hooks the contract injection into tool launches.
+async function registerContractInjection(ctx, config) {
+  await ctx.tool.hook("execute.before", (call) => executeBefore(call, config));
+}
+
+export default Plugin.define({
+  // The id is also the name of the directory the adapter installs the plugin into.
+  id: "labdrian-runtime-parity",
+  async setup(ctx) {
+    // <config>/plugins/labdrian-runtime-parity/index.js: the config root is three levels up.
+    const pluginPath = fileURLToPath(import.meta.url);
+    const configRoot = dirname(dirname(dirname(pluginPath)));
+    const config = JSON.parse(await readFile(join(configRoot, "labdrian-runtime-parity.json"), "utf8"));
+
+    await recordActive(pluginPath, configRoot, config);
+    await registerContractInjection(ctx, config);
+  },
+});

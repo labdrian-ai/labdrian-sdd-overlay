@@ -62,13 +62,13 @@ func TestRunRuntimeCore_OpenCodeInstallWritesPluginAndConfigWithoutHOME(t *testi
 		t.Fatalf("runtime install should succeed via restart_required path (exit 0), got %d\nstdout=%q\nstderr=%q", exitCode, outBuf.String(), errBuf.String())
 	}
 
-	pluginPath := filepath.Join(configRoot, "plugins", "labdrian-runtime-parity.js")
+	pluginPath := filepath.Join(configRoot, "plugins", "labdrian-runtime-parity", "index.js")
 	pluginSource, err := os.ReadFile(pluginPath)
 	if err != nil {
 		t.Fatalf("plugin should be written at %s: %v", pluginPath, err)
 	}
-	if !strings.Contains(string(pluginSource), "tool.execute.before") {
-		t.Fatalf("installed plugin should contain tool.execute.before hook; plugin=%q", string(pluginSource))
+	if !strings.Contains(string(pluginSource), "export default Plugin.define(") {
+		t.Fatalf("installed plugin should be a v2 Plugin.define definition; plugin=%q", string(pluginSource))
 	}
 
 	configPath := filepath.Join(configRoot, "labdrian-runtime-parity.json")
@@ -265,7 +265,7 @@ func TestRunRuntimeCore_OpenCodeUpdateAndUninstallPreserveLegacyBehavior(t *test
 	if uninstallExitCode != 0 {
 		t.Fatalf("runtime uninstall --target opencode should succeed, got %d\nstdout=%q\nstderr=%q", uninstallExitCode, uninstallOut.String(), uninstallErr.String())
 	}
-	if _, err := os.Stat(filepath.Join(configRoot, "plugins", "labdrian-runtime-parity.js")); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(configRoot, "plugins", "labdrian-runtime-parity", "index.js")); !os.IsNotExist(err) {
 		t.Fatalf("expected opencode plugin to be removed after uninstall, got stat %v", err)
 	}
 	if _, err := os.Stat(filepath.Join(configRoot, "labdrian-runtime-parity.json")); !os.IsNotExist(err) {
@@ -297,7 +297,7 @@ func TestRunRuntimeCore_RejectsUnknownRuntimeFlags(t *testing.T) {
 		t.Fatalf("runtime status typo should report unknown flag, got %q", errBuf.String())
 	}
 
-	if _, err := os.Stat(filepath.Join(userHome, ".config", "opencode", "plugins", "labdrian-runtime-parity.js")); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(userHome, ".config", "opencode", "plugins", "labdrian-runtime-parity", "index.js")); !os.IsNotExist(err) {
 		t.Fatalf("default config root should not be used after parse failure; unexpected file: %v", err)
 	}
 	if _, err := os.Stat(filepath.Join(userHome, ".config", "opencode", "labdrian-runtime-parity.json")); !os.IsNotExist(err) {
@@ -372,8 +372,8 @@ func TestRunRuntimeCore_AllTargetsRunsCodexLifecycleTogether(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(configRoot, "settings.json")); err != nil {
 		t.Fatalf("expected claude settings at config root %q: %v", filepath.Join(configRoot, "settings.json"), err)
 	}
-	if _, err := os.Stat(filepath.Join(configRoot, "plugins", "labdrian-runtime-parity.js")); err != nil {
-		t.Fatalf("expected opencode plugin at config root %q: %v", filepath.Join(configRoot, "plugins", "labdrian-runtime-parity.js"), err)
+	if _, err := os.Stat(filepath.Join(configRoot, "plugins", "labdrian-runtime-parity", "index.js")); err != nil {
+		t.Fatalf("expected opencode plugin at config root %q: %v", filepath.Join(configRoot, "plugins", "labdrian-runtime-parity", "index.js"), err)
 	}
 	if _, err := os.Stat(filepath.Join(configRoot, "labdrian-runtime-lifecycle.json")); err != nil {
 		t.Fatalf("expected codex manifest at config root %q: %v", filepath.Join(configRoot, "labdrian-runtime-lifecycle.json"), err)
@@ -852,7 +852,7 @@ func writeOpenCodeActiveMarkerFromConfig(t *testing.T, root, configPath string) 
 		"active_version":            runtimepkg.OpenCodePluginVersion,
 		"active_hash":               runtimepkg.OpenCodePluginHash(),
 		"active_prompt_config_hash": promptConfigHash,
-		"plugin_path":               filepath.Join(root, "plugins", "labdrian-runtime-parity.js"),
+		"plugin_path":               filepath.Join(root, "plugins", "labdrian-runtime-parity", "index.js"),
 		"config_root":               root,
 	}
 	markerPath := filepath.Join(root, "labdrian-runtime-parity.active.json")

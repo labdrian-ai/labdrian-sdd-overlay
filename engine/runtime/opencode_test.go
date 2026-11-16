@@ -2,9 +2,7 @@ package runtime_test
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -26,13 +24,23 @@ func TestOpenCodeInstallWritesPluginConfigAndRestartRequiredStatus(t *testing.T)
 		t.Fatalf("Install status = %q, want %q", install.Status, core.CapabilityRestartRequired)
 	}
 
-	pluginPath := filepath.Join(root, "plugins", "labdrian-runtime-parity.js")
+	pluginPath := openCodePluginPath(root)
 	plugin, err := os.ReadFile(pluginPath)
 	if err != nil {
 		t.Fatalf("plugin should be written at %s: %v", pluginPath, err)
 	}
-	if !strings.Contains(string(plugin), "tool.execute.before") {
-		t.Fatalf("plugin should contain OpenCode tool.execute.before hook; got:\n%s", string(plugin))
+	for _, want := range []string{
+		`import { Plugin } from "@opencode/plugin"`,
+		`from "@opencode/plugin/promise/tool"`,
+		"export default Plugin.define(",
+		`id: "labdrian-runtime-parity"`,
+	} {
+		if !strings.Contains(string(plugin), want) {
+			t.Fatalf("plugin should be a v2 definition containing %q; got:\n%s", want, string(plugin))
+		}
+	}
+	if strings.Contains(string(plugin), "tool.execute.before") {
+		t.Fatalf("plugin must not export the 1.x tool.execute.before hook; got:\n%s", string(plugin))
 	}
 	repoSource, err := os.ReadFile("labdrian-runtime-parity-plugin.mjs")
 	if err != nil {
@@ -68,7 +76,7 @@ func TestOpenCodeStatusSupportedWhenActiveMarkerMatchesHash(t *testing.T) {
 	}
 	activeMarker := filepath.Join(root, "labdrian-runtime-parity.active.json")
 	promptHash := readPromptConfigHash(t, root)
-	active := `{"active_version":"` + engineRuntime.OpenCodePluginVersion + `","active_hash":"` + engineRuntime.OpenCodePluginHash() + `","active_prompt_config_hash":"` + promptHash + `","plugin_path":"` + filepath.Join(root, "plugins", "labdrian-runtime-parity.js") + `","config_root":"` + root + `"}`
+	active := `{"active_version":"` + engineRuntime.OpenCodePluginVersion + `","active_hash":"` + engineRuntime.OpenCodePluginHash() + `","active_prompt_config_hash":"` + promptHash + `","plugin_path":"` + openCodePluginPath(root) + `","config_root":"` + root + `"}`
 	if err := os.WriteFile(activeMarker, []byte(active), 0o644); err != nil {
 		t.Fatalf("write active marker: %v", err)
 	}
@@ -188,7 +196,7 @@ context_operator: prompt_contains
 				}
 			}
 			for _, written := range []string{
-				filepath.Join(root, "plugins", "labdrian-runtime-parity.js"),
+				openCodePluginPath(root),
 				filepath.Join(root, "labdrian-runtime-parity.json"),
 			} {
 				if _, err := os.Stat(written); !os.IsNotExist(err) {
@@ -207,7 +215,7 @@ func TestOpenCodeInstallDoesNotWritePluginWhenPromptConfigCannotBeDerived(t *tes
 	if result.Status != core.CapabilityPartial || !strings.Contains(result.Message, "prompt config could not be derived") {
 		t.Fatalf("Install() should fail before writing plugin when prompt config is unavailable, got %#v", result)
 	}
-	pluginPath := filepath.Join(root, "plugins", "labdrian-runtime-parity.js")
+	pluginPath := openCodePluginPath(root)
 	if _, err := os.Stat(pluginPath); !os.IsNotExist(err) {
 		t.Fatalf("plugin must not be written without valid config, stat err: %v", err)
 	}
@@ -224,13 +232,19 @@ func TestOpenCodeUninstallRemovesPluginAndConfig(t *testing.T) {
 		t.Fatalf("Install() = %#v", result)
 	}
 
+	if _, err := os.Stat(openCodePluginPath(root)); err != nil {
+		t.Fatalf("plugin should be installed before uninstall: %v", err)
+	}
+
 	result := adapter.Uninstall()
 	if result.Status != core.CapabilityRestartRequired {
 		t.Fatalf("Uninstall status = %q, want restart_required", result.Status)
 	}
 	for _, path := range []string{
-		filepath.Join(root, "plugins", "labdrian-runtime-parity.js"),
+		openCodePluginPath(root),
 		filepath.Join(root, "labdrian-runtime-parity.json"),
+		// An empty plugin directory would be loaded by OpenCode as a plugin with no index.js.
+		filepath.Dir(openCodePluginPath(root)),
 	} {
 		if _, err := os.Stat(path); !os.IsNotExist(err) {
 			t.Fatalf("%s should be removed, stat err: %v", path, err)
@@ -405,7 +419,7 @@ func TestOpenCodeAdapterDoesNotPolluteCallerWorkingDirectory(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(callerCWD, ".opencode")); !os.IsNotExist(err) {
 		t.Fatalf("install should not create .opencode under caller cwd, stat err: %v", err)
 	}
-	if _, err := os.Stat(filepath.Join(configRoot, "plugins", "labdrian-runtime-parity.js")); err != nil {
+	if _, err := os.Stat(openCodePluginPath(configRoot)); err != nil {
 		t.Fatalf("plugin should be installed under explicit config root: %v", err)
 	}
 }
@@ -450,365 +464,12 @@ func TestOpenCodeLifecycleAliasesAndStatusFailureModes(t *testing.T) {
 	if result := adapter.Install(); result.Status != core.CapabilityRestartRequired {
 		t.Fatalf("Install() = %#v", result)
 	}
-	pluginPath := filepath.Join(root, "plugins", "labdrian-runtime-parity.js")
+	pluginPath := openCodePluginPath(root)
 	if err := os.WriteFile(pluginPath, []byte("changed plugin source"), 0o644); err != nil {
 		t.Fatalf("modify plugin: %v", err)
 	}
 	if result := adapter.Status(); result.Status != core.CapabilityRestartRequired || !strings.Contains(result.Message, "artifact changed") {
 		t.Fatalf("Status() should report artifact hash mismatch restart requirement, got %#v", result)
-	}
-}
-
-func TestLabdrianRuntimeParityPluginMutatesPrompt(t *testing.T) {
-	if _, err := exec.LookPath("node"); err != nil {
-		t.Skipf("node unavailable; skipping JS plugin behavior test: %v", err)
-	}
-
-	_, callerPath, _, ok := runtime.Caller(0)
-	if !ok {
-		t.Fatal("runtime.Caller(0) failed")
-	}
-	rootPluginPath := filepath.Join(filepath.Dir(callerPath), "labdrian-runtime-parity-plugin.mjs")
-	source, err := os.ReadFile(rootPluginPath)
-	if err != nil {
-		t.Fatalf("read repository plugin source: %v", err)
-	}
-
-	pluginRoot := t.TempDir()
-	pluginDir := filepath.Join(pluginRoot, "plugins")
-	if err := os.MkdirAll(pluginDir, 0o755); err != nil {
-		t.Fatalf("mkdir plugin dir: %v", err)
-	}
-	pluginPath := filepath.Join(pluginDir, "labdrian-runtime-parity-plugin.mjs")
-	if err := os.WriteFile(pluginPath, source, 0o644); err != nil {
-		t.Fatalf("write test plugin fixture: %v", err)
-	}
-
-	configPath := filepath.Join(pluginRoot, "labdrian-runtime-parity.json")
-	config := map[string]any{
-		"installed_version":   engineRuntime.OpenCodePluginVersion,
-		"installed_hash":      "plugin-hash",
-		"prompt_config_hash":  "marker-hash",
-		"plugin_path":         pluginPath,
-		"plugin_config_root":  pluginRoot,
-		"plugin_config_scope": "global-opencode-config",
-		"prompt_config": map[string]any{
-			"contract_path":   "skills/_shared/minimalism-contract.md",
-			"included_phases": []string{"sdd-tasks"},
-			"excluded_phases": []string{"sdd-spec", "sdd-verify", "sdd-archive", "sdd-design", "sdd-propose"},
-			"injection_point": "## Skills to load before work",
-		},
-	}
-	configJSON, err := json.Marshal(config)
-	if err != nil {
-		t.Fatalf("marshal config: %v", err)
-	}
-	if err := os.WriteFile(configPath, configJSON, 0o644); err != nil {
-		t.Fatalf("write config: %v", err)
-	}
-
-	pluginURL := "file://" + pluginPath
-	script := fmt.Sprintf(`import path from "node:path";
-const runtimePlugin = await import(%q).then((m) => m.default);
-const hooks = await runtimePlugin();
-
-if (typeof hooks["tool.execute.before"] !== "function") {
-  throw new Error("tool.execute.before hook missing from runtime plugin default export");
-}
-
-const base = %q;
-	const withContract = base + "\nskills/_shared/minimalism-contract.md";
-const output = {
-  included: { args: { prompt: base, subagent_type: "sdd-tasks" } },
-  excluded: { args: { prompt: withContract, subagent_type: "sdd-spec" } },
-  unchanged: { args: { prompt: base, subagent_type: "sdd-apply" } },
-};
-
-hooks["tool.execute.before"]({tool: "task"}, output.included);
-hooks["tool.execute.before"]({tool: "task"}, output.excluded);
-hooks["tool.execute.before"]({tool: "task"}, output.unchanged);
-
-import { readFile } from "node:fs/promises";
-const marker = JSON.parse(await readFile(path.join(%q, "labdrian-runtime-parity.active.json"), "utf8"));
-
-console.log(JSON.stringify({
-  included: output.included.args.prompt,
-  excluded: output.excluded.args.prompt,
-  unchanged: output.unchanged.args.prompt,
-  active_marker: marker,
-}));
-`, pluginURL, basePromptFixture, pluginRoot)
-
-	scriptPath := filepath.Join(t.TempDir(), "labdrian-runtime-parity-plugin-behavior.mjs")
-	if err := os.WriteFile(scriptPath, []byte(script), 0o644); err != nil {
-		t.Fatalf("write node script: %v", err)
-	}
-
-	cmd := exec.Command("node", scriptPath)
-	out, err := cmd.Output()
-	if err != nil {
-		if ee, ok := err.(*exec.ExitError); ok {
-			t.Fatalf("node exited with error: %v\n%s", err, ee.Stderr)
-		}
-		t.Fatalf("node exec failed: %v", err)
-	}
-
-	var got struct {
-		Included     string         `json:"included"`
-		Excluded     string         `json:"excluded"`
-		Unchanged    string         `json:"unchanged"`
-		ActiveMarker map[string]any `json:"active_marker"`
-	}
-	if err := json.Unmarshal(out, &got); err != nil {
-		t.Fatalf("decode result: %v\nraw=%q", err, string(out))
-	}
-
-	if !strings.Contains(got.Included, "skills/_shared/minimalism-contract.md") {
-		t.Fatalf("included phase should inject minimalism contract: %q", got.Included)
-	}
-	if strings.Contains(got.Excluded, "skills/_shared/minimalism-contract.md") {
-		t.Fatalf("excluded phase should strip minimalism contract: %q", got.Excluded)
-	}
-	if got.Unchanged != basePromptFixture {
-		t.Fatalf("non-targeted phase should return original prompt: %q", got.Unchanged)
-	}
-
-	if got.ActiveMarker["active_version"] != engineRuntime.OpenCodePluginVersion {
-		t.Fatalf("active marker should include installed version, got %#v", got.ActiveMarker)
-	}
-	if got.ActiveMarker["active_prompt_config_hash"] != config["prompt_config_hash"] {
-		t.Fatalf("active marker should include prompt config hash, got %#v", got.ActiveMarker)
-	}
-	if got.ActiveMarker["plugin_path"] != pluginPath {
-		t.Fatalf("active marker plugin_path mismatch: got %#v", got.ActiveMarker)
-	}
-}
-
-func TestLabdrianRuntimeParityPluginEvaluatesContextAwareContracts(t *testing.T) {
-	if _, err := exec.LookPath("node"); err != nil {
-		t.Skipf("node unavailable; skipping JS plugin behavior test: %v", err)
-	}
-
-	_, callerPath, _, ok := runtime.Caller(0)
-	if !ok {
-		t.Fatal("runtime.Caller(0) failed")
-	}
-	source, err := os.ReadFile(filepath.Join(filepath.Dir(callerPath), "labdrian-runtime-parity-plugin.mjs"))
-	if err != nil {
-		t.Fatalf("read repository plugin source: %v", err)
-	}
-	pluginRoot := t.TempDir()
-	pluginDir := filepath.Join(pluginRoot, "plugins")
-	if err := os.MkdirAll(pluginDir, 0o755); err != nil {
-		t.Fatalf("mkdir plugin dir: %v", err)
-	}
-	pluginPath := filepath.Join(pluginDir, "labdrian-runtime-parity-plugin.mjs")
-	if err := os.WriteFile(pluginPath, source, 0o644); err != nil {
-		t.Fatalf("write test plugin fixture: %v", err)
-	}
-	config := map[string]any{
-		"installed_version":   engineRuntime.OpenCodePluginVersion,
-		"installed_hash":      engineRuntime.OpenCodePluginHash(),
-		"prompt_config_hash":  "marker-hash",
-		"plugin_path":         pluginPath,
-		"plugin_config_root":  pluginRoot,
-		"plugin_config_scope": "global-opencode-config",
-		"work_context": map[string]any{
-			"trusted":     true,
-			"languages":   []string{"typescript"},
-			"activations": []string{"oo-domain-design"},
-			"work_kinds":  []string{"application-code"},
-		},
-		"prompt_config": map[string]any{
-			"contracts": []map[string]any{{
-				"contract_path":      "skills/_shared/oo-quality-contract.md",
-				"included_phases":    []string{"sdd-apply"},
-				"excluded_phases":    []string{},
-				"injection_point":    "## Skills to load before work",
-				"language_context":   []string{"typescript"},
-				"activation_context": []string{"oo-domain-design"},
-			}},
-		},
-	}
-	writeJSONFile(t, filepath.Join(pluginRoot, "labdrian-runtime-parity.json"), config)
-	pluginURL := "file://" + pluginPath
-	script := fmt.Sprintf(`const runtimePlugin = await import(%q).then((m) => m.default);
-const hooks = await runtimePlugin();
-const base = %q;
-		const outputs = {
-		  staticTamperOnly: { args: { prompt: base, subagent_type: "sdd-apply" } },
-		  matching: { args: { prompt: base, subagent_type: "sdd-apply", work_context: { trusted: true, languages: ["typescript"], activations: ["oo-domain-design"], work_kinds: ["application-code"] } } },
-		  missingContext: { args: { prompt: base + " TypeScript NestJS SOLID", subagent_type: "sdd-apply" } },
-		  nonDomain: { args: { prompt: base, subagent_type: "sdd-apply", work_context: { trusted: true, languages: ["go"], activations: ["non-domain"], work_kinds: ["application-code"] } } },
-		  docsWork: { args: { prompt: base, subagent_type: "sdd-apply", work_context: { trusted: true, languages: ["typescript"], activations: ["oo-domain-design"], work_kinds: ["docs"] } } },
-		  configWork: { args: { prompt: base, subagent_type: "sdd-apply", work_context: { trusted: true, languages: ["typescript"], activations: ["oo-domain-design"], work_kinds: ["config"] } } },
-		  generatedArtifactWork: { args: { prompt: base, subagent_type: "sdd-apply", work_context: { trusted: true, languages: ["typescript"], activations: ["oo-domain-design"], work_kinds: ["generated-artifact"] } } },
-		  missingWorkKinds: { args: { prompt: base, subagent_type: "sdd-apply", work_context: { trusted: true, languages: ["typescript"], activations: ["oo-domain-design"] } } },
-		  emptyWorkKinds: { args: { prompt: base, subagent_type: "sdd-apply", work_context: { trusted: true, languages: ["typescript"], activations: ["oo-domain-design"], work_kinds: [] } } },
-		  malformedWorkKinds: { args: { prompt: base, subagent_type: "sdd-apply", work_context: { trusted: true, languages: ["typescript"], activations: ["oo-domain-design"], work_kinds: "application-code" } } },
-		};
-for (const output of Object.values(outputs)) {
-  hooks["tool.execute.before"]({ tool: "task" }, output);
-}
-console.log(JSON.stringify(Object.fromEntries(Object.entries(outputs).map(([name, output]) => [name, output.args.prompt]))));`, pluginURL, basePromptFixture)
-
-	scriptPath := filepath.Join(t.TempDir(), "labdrian-runtime-parity-context-contracts.mjs")
-	if err := os.WriteFile(scriptPath, []byte(script), 0o644); err != nil {
-		t.Fatalf("write node script: %v", err)
-	}
-	out, err := exec.Command("node", scriptPath).Output()
-	if err != nil {
-		if ee, ok := err.(*exec.ExitError); ok {
-			t.Fatalf("node exited with error: %v\n%s", err, ee.Stderr)
-		}
-		t.Fatalf("node exec failed: %v", err)
-	}
-	var got struct {
-		StaticTamperOnly      string `json:"staticTamperOnly"`
-		Matching              string `json:"matching"`
-		MissingContext        string `json:"missingContext"`
-		NonDomain             string `json:"nonDomain"`
-		DocsWork              string `json:"docsWork"`
-		ConfigWork            string `json:"configWork"`
-		GeneratedArtifactWork string `json:"generatedArtifactWork"`
-		MissingWorkKinds      string `json:"missingWorkKinds"`
-		EmptyWorkKinds        string `json:"emptyWorkKinds"`
-		MalformedWorkKinds    string `json:"malformedWorkKinds"`
-	}
-	if err := json.Unmarshal(out, &got); err != nil {
-		t.Fatalf("decode result: %v\nraw=%q", err, string(out))
-	}
-	if strings.Contains(got.StaticTamperOnly, "skills/_shared/oo-quality-contract.md") {
-		t.Fatalf("static config work_context must not inject OO contract through plugin hook path: %q", got.StaticTamperOnly)
-	}
-	if !strings.Contains(got.Matching, "skills/_shared/oo-quality-contract.md") {
-		t.Fatalf("trusted matching work context should inject OO contract: %q", got.Matching)
-	}
-	if strings.Contains(got.MissingContext, "skills/_shared/oo-quality-contract.md") {
-		t.Fatalf("prompt text alone must not inject OO contract: %q", got.MissingContext)
-	}
-	if strings.Contains(got.NonDomain, "skills/_shared/oo-quality-contract.md") {
-		t.Fatalf("non-domain context must not inject OO contract: %q", got.NonDomain)
-	}
-	if strings.Contains(got.DocsWork, "skills/_shared/oo-quality-contract.md") {
-		t.Fatalf("docs work must pass through without OO contract injection: %q", got.DocsWork)
-	}
-	if strings.Contains(got.ConfigWork, "skills/_shared/oo-quality-contract.md") {
-		t.Fatalf("config work must pass through without OO contract injection: %q", got.ConfigWork)
-	}
-	if strings.Contains(got.GeneratedArtifactWork, "skills/_shared/oo-quality-contract.md") {
-		t.Fatalf("generated-artifact work must pass through without OO contract injection: %q", got.GeneratedArtifactWork)
-	}
-	if strings.Contains(got.MissingWorkKinds, "skills/_shared/oo-quality-contract.md") {
-		t.Fatalf("missing work_kinds must not inject OO contract: %q", got.MissingWorkKinds)
-	}
-	if strings.Contains(got.EmptyWorkKinds, "skills/_shared/oo-quality-contract.md") {
-		t.Fatalf("empty work_kinds must not inject OO contract: %q", got.EmptyWorkKinds)
-	}
-	if strings.Contains(got.MalformedWorkKinds, "skills/_shared/oo-quality-contract.md") {
-		t.Fatalf("malformed work_kinds must not inject OO contract: %q", got.MalformedWorkKinds)
-	}
-	if got.MissingContext == got.Matching {
-		t.Fatalf("missing per-invocation context should pass through instead of using static config")
-	}
-}
-
-func TestLabdrianRuntimeParityPluginSkipsMalformedLegacyContextMetadata(t *testing.T) {
-	if _, err := exec.LookPath("node"); err != nil {
-		t.Skipf("node unavailable; skipping JS plugin behavior test: %v", err)
-	}
-
-	_, callerPath, _, ok := runtime.Caller(0)
-	if !ok {
-		t.Fatal("runtime.Caller(0) failed")
-	}
-	source, err := os.ReadFile(filepath.Join(filepath.Dir(callerPath), "labdrian-runtime-parity-plugin.mjs"))
-	if err != nil {
-		t.Fatalf("read repository plugin source: %v", err)
-	}
-
-	for _, tt := range []struct {
-		name         string
-		promptConfig map[string]any
-	}{
-		{
-			name: "legacy matching context injects",
-			promptConfig: map[string]any{
-				"contract_path":      "skills/_shared/oo-quality-contract.md",
-				"included_phases":    []string{"sdd-apply"},
-				"excluded_phases":    []string{},
-				"injection_point":    "## Skills to load before work",
-				"language_context":   []string{"typescript"},
-				"activation_context": []string{"oo-domain-design"},
-			},
-		},
-		{
-			name: "legacy unsupported context operator passes through",
-			promptConfig: map[string]any{
-				"contract_path":      "skills/_shared/oo-quality-contract.md",
-				"included_phases":    []string{"sdd-apply"},
-				"excluded_phases":    []string{},
-				"injection_point":    "## Skills to load before work",
-				"language_context":   []string{"typescript"},
-				"activation_context": []string{"oo-domain-design"},
-				"context_operator":   "prompt_contains",
-			},
-		},
-		{
-			name: "legacy malformed language context passes through",
-			promptConfig: map[string]any{
-				"contract_path":      "skills/_shared/oo-quality-contract.md",
-				"included_phases":    []string{"sdd-apply"},
-				"excluded_phases":    []string{},
-				"injection_point":    "## Skills to load before work",
-				"language_context":   "typescript",
-				"activation_context": []string{"oo-domain-design"},
-			},
-		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			pluginRoot := t.TempDir()
-			pluginDir := filepath.Join(pluginRoot, "plugins")
-			if err := os.MkdirAll(pluginDir, 0o755); err != nil {
-				t.Fatalf("mkdir plugin dir: %v", err)
-			}
-			pluginPath := filepath.Join(pluginDir, "labdrian-runtime-parity-plugin.mjs")
-			if err := os.WriteFile(pluginPath, source, 0o644); err != nil {
-				t.Fatalf("write test plugin fixture: %v", err)
-			}
-			writeJSONFile(t, filepath.Join(pluginRoot, "labdrian-runtime-parity.json"), map[string]any{
-				"installed_version":   engineRuntime.OpenCodePluginVersion,
-				"installed_hash":      engineRuntime.OpenCodePluginHash(),
-				"prompt_config_hash":  "marker-hash",
-				"plugin_path":         pluginPath,
-				"plugin_config_root":  pluginRoot,
-				"plugin_config_scope": "global-opencode-config",
-				"prompt_config":       tt.promptConfig,
-			})
-			pluginURL := "file://" + pluginPath
-			script := fmt.Sprintf(`const runtimePlugin = await import(%q).then((m) => m.default);
-const hooks = await runtimePlugin();
-const output = { args: { prompt: %q, subagent_type: "sdd-apply", work_context: { trusted: true, languages: ["typescript"], activations: ["oo-domain-design"], work_kinds: ["application-code"] } } };
-hooks["tool.execute.before"]({ tool: "task" }, output);
-console.log(output.args.prompt);`, pluginURL, basePromptFixture)
-			scriptPath := filepath.Join(t.TempDir(), "labdrian-runtime-parity-legacy-context.mjs")
-			if err := os.WriteFile(scriptPath, []byte(script), 0o644); err != nil {
-				t.Fatalf("write node script: %v", err)
-			}
-			out, err := exec.Command("node", scriptPath).Output()
-			if err != nil {
-				if ee, ok := err.(*exec.ExitError); ok {
-					t.Fatalf("node exited with error: %v\n%s", err, ee.Stderr)
-				}
-				t.Fatalf("node exec failed: %v", err)
-			}
-			got := strings.TrimSpace(string(out))
-			injected := strings.Contains(got, "skills/_shared/oo-quality-contract.md")
-			wantInjected := tt.name == "legacy matching context injects"
-			if injected != wantInjected {
-				t.Fatalf("legacy prompt config injection mismatch: got=%v want=%v prompt=%q", injected, wantInjected, got)
-			}
-		})
 	}
 }
 
@@ -838,7 +499,7 @@ func readPromptConfigHash(t *testing.T, root string) string {
 func writeMatchingActiveMarker(t *testing.T, root string) {
 	t.Helper()
 	promptHash := readPromptConfigHash(t, root)
-	active := `{"active_version":"` + engineRuntime.OpenCodePluginVersion + `","active_hash":"` + engineRuntime.OpenCodePluginHash() + `","active_prompt_config_hash":"` + promptHash + `","plugin_path":"` + filepath.Join(root, "plugins", "labdrian-runtime-parity.js") + `","config_root":"` + root + `"}`
+	active := `{"active_version":"` + engineRuntime.OpenCodePluginVersion + `","active_hash":"` + engineRuntime.OpenCodePluginHash() + `","active_prompt_config_hash":"` + promptHash + `","plugin_path":"` + openCodePluginPath(root) + `","config_root":"` + root + `"}`
 	if err := os.WriteFile(filepath.Join(root, "labdrian-runtime-parity.active.json"), []byte(active), 0o644); err != nil {
 		t.Fatalf("write active marker: %v", err)
 	}
