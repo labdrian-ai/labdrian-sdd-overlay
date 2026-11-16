@@ -22,8 +22,8 @@ func mergeMainAgent(t *testing.T, before string) (*capturedProcess, string) {
 }
 
 func TestMergeSettingsSaysWhenAForeignAgentValueKeepsTheForemanOff(t *testing.T) {
-	p, _ := mergeMainAgent(t, `{"agent":"someone-else"}`)
-	const want = "notice: settings.json holds \"agent\": \"someone-else\"; it was left as it is, so the foreman main session was not enabled (set it to \"foreman\" or remove the key, then run install-hooks again)\n"
+	p, path := mergeMainAgent(t, `{"agent":"someone-else"}`)
+	want := "notice: " + path + " holds \"agent\": \"someone-else\"; it was left as it is, so the foreman main session was not enabled (set it to \"foreman\" or remove the key, then run install-hooks again)\n"
 	if p.err.String() != want {
 		t.Errorf("stderr = %q, want %q", p.err.String(), want)
 	}
@@ -33,8 +33,17 @@ func TestMergeSettingsSaysWhenAForeignAgentValueKeepsTheForemanOff(t *testing.T)
 }
 
 func TestMergeSettingsPrintsANonStringAgentValueAsJSONInTheNotice(t *testing.T) {
-	p, _ := mergeMainAgent(t, `{"agent":{"name":"x"}}`)
-	const want = "notice: settings.json holds \"agent\": {\"name\":\"x\"}; it was left as it is, so the foreman main session was not enabled (set it to \"foreman\" or remove the key, then run install-hooks again)\n"
+	p, path := mergeMainAgent(t, `{"agent":{"name":"x"}}`)
+	want := "notice: " + path + " holds \"agent\": {\"name\":\"x\"}; it was left as it is, so the foreman main session was not enabled (set it to \"foreman\" or remove the key, then run install-hooks again)\n"
+	if p.err.String() != want {
+		t.Errorf("stderr = %q, want %q", p.err.String(), want)
+	}
+}
+
+// A value with <, > or & is printed as the file holds it, not HTML-escaped.
+func TestMergeSettingsPrintsTheAgentValueUnescaped(t *testing.T) {
+	p, path := mergeMainAgent(t, `{"agent":"a<b>&c"}`)
+	want := "notice: " + path + " holds \"agent\": \"a<b>&c\"; it was left as it is, so the foreman main session was not enabled (set it to \"foreman\" or remove the key, then run install-hooks again)\n"
 	if p.err.String() != want {
 		t.Errorf("stderr = %q, want %q", p.err.String(), want)
 	}

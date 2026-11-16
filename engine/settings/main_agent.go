@@ -1,8 +1,10 @@
 package settings
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"strings"
 )
 
 // MainAgentKey is the top-level settings key that makes a Claude Code main session run as a named
@@ -34,11 +36,13 @@ func MainAgentValueJSON(root map[string]interface{}) string {
 	if !ok {
 		return ""
 	}
-	data, err := json.Marshal(v)
-	if err != nil {
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	enc.SetEscapeHTML(false)
+	if err := enc.Encode(v); err != nil {
 		return fmt.Sprintf("%v", v)
 	}
-	return string(data)
+	return strings.TrimSuffix(buf.String(), "\n")
 }
 
 // MainAgent reports the state of the main-session agent key in root.
