@@ -140,7 +140,7 @@ func TestOddFeatureDocSkillGivesTheFormatOfTheDocument(t *testing.T) {
 		{"has a header of the objective, the branch, the strategy and the runner", []string{"Header, two or three lines: the objective, the branch, the delivery strategy, the test runner."}},
 		{"quotes the user in each spec", []string{"quoted verbatim, in the user's language", "Never summarize a quote", "never add a requirement the user did not ask for", "mark an assumption as an assumption"}},
 		{"has one line per task with its S#, route and commit", []string{"One line per task", "`-` until the task is committed", "`references/format.md`"}},
-		{"marks a task the shaper designed with one segment before the commit (own-rdd S14)", []string{"`shaped: L<n>`", "its shaper Log entry", "only the shaper writes it", "a task nobody designed has none"}},
+		{"marks a task the shaper designed with one segment before the commit (own-rdd S14)", []string{"`shaped: L<n>`", "only while the Log has exactly one such entry", "only the shaper writes it", "a task nobody designed has none"}},
 		{"removes the mark when a task is reopened (own-rdd S14, D4)", []string{"Reopening a task removes its `shaped: L<n>` segment", "only the shaper puts it back"}},
 		{"keeps the Log append-only with L1 the request", []string{"The Log is append-only", "`L1` is the user's request, verbatim", "`- **L<n>** (<date>, <who>): ...`", "Never edit, reorder or delete an entry"}},
 		{"treats a requirement change as a new entry, one spec and one task", []string{"A requirement change: append the user's words to the Log, rewrite only the affected `S#`, reopen only its task."}},
@@ -179,7 +179,7 @@ func TestOddFeatureDocSkillGivesEachRoleItsPart(t *testing.T) {
 		writes, never []string
 	}{
 		{"shaper",
-			[]string{"the header", "`## Specs`", "`## Tasks` with every box open", "`L1`, the request exactly as the prompt quotes it", "`shaped: L<n>` on each task it designed"},
+			[]string{"the header", "`## Specs`", "`## Tasks` with every box open", "`L1`, the request exactly as the prompt quotes it", "`shaped: L<n>` on each task it designed", "the Log entry `(<date>, shaper)` holding its design"},
 			[]string{"check a box", "write code", "mark a task it did not design"}},
 		{"builder",
 			[]string{"`[x]` and the commit on each finished task", "one Log entry", "the `S#` covered", "the commands run with their exact results", "the `test-first` table"},
