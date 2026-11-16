@@ -27,13 +27,13 @@ func TestOddFeatureDocSkillGivesTheForemanItsPart(t *testing.T) {
 		t.Fatalf("the Decision Gates table has no foreman row; rows = %v", rows)
 	}
 	for _, fragment := range []string{"in the document", "memorycard mirror `odd/<feature>/tasks`", "the owner's words verbatim", "evidence it observed",
-		"`[x]` with `commit:` only for a task whose builder did not edit the document (the builder's report names the commit)"} {
+		"`[x]`, `commit:` and a Log entry from the builder's report when the brief kept the builder off the document"} {
 		if !strings.Contains(row[1], fragment) {
 			t.Errorf("what the foreman writes must say %q; got %q", fragment, row[1])
 		}
 	}
 	// the shaper owns the header and L1, the builder owns the box and commit of its own task
-	for _, fragment := range []string{"header", "`L1`"} {
+	for _, fragment := range []string{"header and `L1`", "`L1`,"} {
 		if strings.Contains(row[1], fragment) {
 			t.Errorf("what the foreman writes must not say %q: the shaper owns it; got %q", fragment, row[1])
 		}

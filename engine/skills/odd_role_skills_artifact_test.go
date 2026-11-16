@@ -8,6 +8,7 @@ package skills
 // role_agents_artifact_test.go.
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -105,6 +106,14 @@ func oddRoleSkillBodyBound(name string) int {
 	return BodyRecommendedTokens
 }
 
+// isRecommendedTokenWarning reports whether w is the `body-recommended` finding about the token count
+// of the body, and no other finding of that rule.
+func isRecommendedTokenWarning(w Warning) bool {
+	return w.Rule == "body-recommended" &&
+		strings.HasPrefix(w.Msg, "body is an estimated ") &&
+		strings.HasSuffix(w.Msg, fmt.Sprintf(" tokens, exceeds the recommended budget of %d", BodyRecommendedTokens))
+}
+
 // Each skill is within its lint budget: no hard error, no warning other than the body-recommended one
 // of the skill whose bound is raised, and a body within oddRoleSkillBodyBound, so that a role agent
 // loads a short file.
@@ -117,7 +126,7 @@ func TestOddRoleSkillsAreWithinTheLintBudget(t *testing.T) {
 				t.Errorf("hard lint error: %v", err)
 			}
 			for _, w := range warnings {
-				if w.Rule == "body-recommended" && oddRoleSkillBodyBound(name) > BodyRecommendedTokens {
+				if isRecommendedTokenWarning(w) && oddRoleSkillBodyBound(name) > BodyRecommendedTokens {
 					continue
 				}
 				t.Errorf("lint warning [%s]: %s", w.Rule, w.Msg)
@@ -203,7 +212,7 @@ func TestOddFeatureDocSkillGivesEachRoleItsPart(t *testing.T) {
 			[]string{"the header", "`## Specs`", "`## Tasks` with every box open", "`L1`, the request exactly as the prompt quotes it", "`shaped: L<n>` on each task it designed", "the Log entry `(<date>, shaper)` holding its design"},
 			[]string{"check a box", "write code", "mark a task it did not design"}},
 		{"builder",
-			[]string{"`[x]` and the commit on each finished task", "one Log entry", "the `S#` covered", "the commands run with their exact results", "the `test-first` table"},
+			[]string{"unless its brief keeps it off the document", "`[x]` and the commit on each finished task", "one Log entry", "the `S#` covered", "the commands run with their exact results", "the `test-first` table"},
 			[]string{"edit a spec", "an earlier entry", "write or change a `shaped:` segment"}},
 		{"delivery",
 			[]string{"one final Log entry with the state at close", "unfinished tasks and missing artifacts named as unfinished"},

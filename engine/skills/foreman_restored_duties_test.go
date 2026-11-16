@@ -104,8 +104,36 @@ func TestOddFeatureDocRestoredDuties(t *testing.T) {
 // addition that would pass that bound must move text to references/format.md, never reword a rule.
 func TestOddFeatureDocBodyStaysWithinItsLintBound(t *testing.T) {
 	_, _, body := oddRoleSkillFile(t, "odd-feature-doc")
-	if n := EstimateBodyTokens(body); n > oddFeatureDocBodyBound || oddFeatureDocBodyBound >= BodyHardTokens {
-		t.Errorf("the body is an estimated %d tokens, want at most %d (under the hard %d)", n, oddFeatureDocBodyBound, BodyHardTokens)
+	if n := EstimateBodyTokens(body); n > oddFeatureDocBodyBound {
+		t.Errorf("the body is an estimated %d tokens, want at most %d", n, oddFeatureDocBodyBound)
+	}
+}
+
+// Only the token-count finding of `body-recommended` is skipped for odd-feature-doc: another finding of
+// that rule, or the token finding of another rule, is not.
+func TestOnlyTheTokenCountRecommendedWarningIsSkipped(t *testing.T) {
+	for _, tc := range []struct {
+		w    Warning
+		want bool
+	}{
+		{Warning{"body-recommended", "body is an estimated 715 tokens, exceeds the recommended budget of 700"}, true},
+		{Warning{"body-recommended", "body has no examples"}, false},
+		{Warning{"other-rule", "body is an estimated 715 tokens, exceeds the recommended budget of 700"}, false},
+	} {
+		if got := isRecommendedTokenWarning(tc.w); got != tc.want {
+			t.Errorf("isRecommendedTokenWarning(%+v) = %v, want %v", tc.w, got, tc.want)
+		}
+	}
+}
+
+// The raised bound of odd-feature-doc stays above the linter's recommended warning and under its hard
+// error, so it neither falls back to the default nor hides a hard failure.
+func TestOddFeatureDocBodyBoundLiesBetweenTheLinterBounds(t *testing.T) {
+	if oddFeatureDocBodyBound <= BodyRecommendedTokens {
+		t.Errorf("the bound %d is not above the recommended %d: the raise is moot", oddFeatureDocBodyBound, BodyRecommendedTokens)
+	}
+	if oddFeatureDocBodyBound >= BodyHardTokens {
+		t.Errorf("the bound %d reaches the hard error at %d", oddFeatureDocBodyBound, BodyHardTokens)
 	}
 }
 

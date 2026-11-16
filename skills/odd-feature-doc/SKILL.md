@@ -32,9 +32,9 @@ Write only the part of your role.
 | Role | Writes | Never |
 |---|---|---|
 | shaper | the header, `## Specs`, `## Tasks` with every box open, and `L1`, the request exactly as the prompt quotes it; `shaped: L<n>` on each task it designed, with the Log entry `(<date>, shaper)` holding its design | check a box, write code, mark a task it did not design |
-| builder | `[x]` and the commit on each finished task, and one Log entry: the `S#` covered, the commands run with their exact results, the `test-first` table, anything found that the task did not ask for | edit a spec, a task it was not given, or an earlier entry; write or change a `shaped:` segment |
+| builder | unless its brief keeps it off the document, `[x]` and the commit on each finished task, and one Log entry: the `S#` covered, the commands run with their exact results, the `test-first` table, anything found that the task did not ask for | edit a spec, a task it was not given, or an earlier entry; write or change a `shaped:` segment |
 | delivery | one final Log entry with the state at close: the tasks `[x]` and not, each with its commit; unfinished tasks and missing artifacts named as unfinished | copy, move or rewrite the document; write or change a `shaped:` segment |
-| foreman | in the document and its memorycard mirror `odd/<feature>/tasks`: Log entries `(<date>, foreman)`, `L<n>` next after the last entry, the owner's words verbatim, evidence it observed; `[x]` with `commit:` only for a task whose builder did not edit the document (the builder's report names the commit) | write source or tests, any path outside `odd/tasks/` and the mirror, `## Specs`, a task line, a `shaped:` segment |
+| foreman | in the document and its memorycard mirror `odd/<feature>/tasks`: Log entries `(<date>, foreman)`, `L<n>` next after the last entry, the owner's words verbatim, evidence it observed; `[x]`, `commit:` and a Log entry from the builder's report when the brief kept the builder off the document | write source or tests, any path outside `odd/tasks/` and the mirror, `## Specs`, a task line, a `shaped:` segment |
 
 ## Output Contract
 
