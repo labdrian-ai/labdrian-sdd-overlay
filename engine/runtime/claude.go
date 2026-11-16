@@ -106,13 +106,9 @@ func (a ClaudeAdapter) status() core.LifecycleResult {
 
 // mainAgentStatus is the status result for the top-level "agent" key when it is not the foreman's: partial,
 // naming the key (missing) or the foreign value and that the foreman main session is not enabled. ok is
-// false when the key is the foreman's, or the installer does not answer for the key.
+// false when the key is the foreman's.
 func (a ClaudeAdapter) mainAgentStatus(settingsPath string) (core.LifecycleResult, bool) {
-	inspector, ok := a.hooks.(MainAgentInspector)
-	if !ok {
-		return core.LifecycleResult{}, false
-	}
-	state, value, err := inspector.InspectMainAgent(settingsPath)
+	state, value, err := a.hooks.InspectMainAgent(settingsPath)
 	if err != nil {
 		return a.result(core.ActionStatus, core.CapabilityUnsupported, "read settings file "+settingsPath+": "+err.Error()), true
 	}
@@ -130,11 +126,7 @@ func (a ClaudeAdapter) mainAgentStatus(settingsPath string) (core.LifecycleResul
 // foreignAgentNotice is "; " and the notice of the install verb when the installer finds a foreign value under the
 // "agent" key, and nothing otherwise.
 func (a ClaudeAdapter) foreignAgentNotice(settingsPath string) string {
-	inspector, ok := a.hooks.(MainAgentInspector)
-	if !ok {
-		return ""
-	}
-	state, value, err := inspector.InspectMainAgent(settingsPath)
+	state, value, err := a.hooks.InspectMainAgent(settingsPath)
 	if err != nil || state != settings.MainAgentConflict {
 		return ""
 	}

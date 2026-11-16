@@ -2,6 +2,7 @@ package runtime_test
 
 import (
 	"errors"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -18,6 +19,8 @@ type fakeHooks struct {
 	installErr, uninstallErr error
 	found, owned             bool
 	inspectErr               error
+	agent                    *settings.MainAgentState
+	agentValue               string
 }
 
 func (f *fakeHooks) Install(path, hookCommand string) error {
@@ -35,6 +38,16 @@ func (f *fakeHooks) Inspect(path, hookCommand string) (bool, bool, error) {
 	return f.found, f.owned, f.inspectErr
 }
 
+// InspectMainAgent answers the foreman's key unless the test set another state, so a fake of the hooks alone
+// is judged by its hooks.
+func (f *fakeHooks) InspectMainAgent(path string) (settings.MainAgentState, string, error) {
+	f.calls = append(f.calls, "inspect-agent "+path)
+	if f.agent != nil {
+		return *f.agent, f.agentValue, f.inspectErr
+	}
+	return settings.MainAgentOwned, "", f.inspectErr
+}
+
 // The adapter names the settings file and the binary from its root, and nothing else: the port is
 // handed <root>/settings.json and <root>/bin/gentle-ai-overlay for every step.
 func TestClaudeAdapterHandsThePortTheFileAndTheBinaryOfItsRoot(t *testing.T) {
@@ -49,7 +62,12 @@ func TestClaudeAdapterHandsThePortTheFileAndTheBinaryOfItsRoot(t *testing.T) {
 	adapter.Status()
 	adapter.Uninstall()
 
-	want := []string{"install " + file + " " + binary, "install " + file + " " + binary, "inspect " + file + " " + binary, "uninstall " + file + " " + binary}
+	want := []string{
+		"install " + file + " " + binary, "inspect-agent " + file,
+		"install " + file + " " + binary, "inspect-agent " + file,
+		"inspect " + file + " " + binary, "inspect-agent " + file,
+		"uninstall " + file + " " + binary,
+	}
 	if got := strings.Join(hooks.calls, "\n"); got != strings.Join(want, "\n") {
 		t.Errorf("the port was called\n%s\nwant\n%s", got, strings.Join(want, "\n"))
 	}
@@ -147,6 +165,10 @@ func (n *nilInstaller) Uninstall(string, string) error { n.calls++; return nil }
 func (n *nilInstaller) Inspect(string, string) (bool, bool, error) {
 	n.calls++
 	return false, false, nil
+}
+func (n *nilInstaller) InspectMainAgent(string) (settings.MainAgentState, string, error) {
+	n.calls++
+	return settings.MainAgentOwned, "", nil
 }
 
 // RegisterClaude takes the Claude runtime only with its port, so an adapter never fails at its

@@ -22,13 +22,9 @@ type HookInstaller interface {
 	// for the binary at hookCommand. An error means the file could not be read or parsed, and is
 	// the one the system or the JSON decoder reported.
 	Inspect(path, hookCommand string) (found, owned bool, err error)
-}
-
-// MainAgentInspector is the optional second half of the port: an installer that also answers what the
-// settings file holds under the top-level "agent" key (settings.MainAgent). The adapter reports the key
-// when its installer answers this, and an installer that does not (a test fake of the hooks alone) is
-// judged by its hooks only.
-type MainAgentInspector interface {
+	// InspectMainAgent says what the settings file holds under the top-level "agent" key
+	// (settings.MainAgent). It is part of the port, so every installer answers it and the adapter never
+	// skips the key.
 	// InspectMainAgent returns the state of the key and, for a foreign value, that value as JSON.
 	InspectMainAgent(path string) (state settings.MainAgentState, valueJSON string, err error)
 }

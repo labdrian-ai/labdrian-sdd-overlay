@@ -1,6 +1,10 @@
 package runtime
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings"
+)
 
 // A HookInstaller of each kind that can be nil. The methods do nothing: the test never calls them,
 // it asks only whether the port is there.
@@ -17,26 +21,44 @@ type (
 func (*ptrHooks) Install(string, string) error               { return nil }
 func (*ptrHooks) Uninstall(string, string) error             { return nil }
 func (*ptrHooks) Inspect(string, string) (bool, bool, error) { return false, false, nil }
+func (*ptrHooks) InspectMainAgent(string) (settings.MainAgentState, string, error) {
+	return settings.MainAgentOwned, "", nil
+}
 
 func (mapHooks) Install(string, string) error               { return nil }
 func (mapHooks) Uninstall(string, string) error             { return nil }
 func (mapHooks) Inspect(string, string) (bool, bool, error) { return false, false, nil }
+func (mapHooks) InspectMainAgent(string) (settings.MainAgentState, string, error) {
+	return settings.MainAgentOwned, "", nil
+}
 
 func (sliceHooks) Install(string, string) error               { return nil }
 func (sliceHooks) Uninstall(string, string) error             { return nil }
 func (sliceHooks) Inspect(string, string) (bool, bool, error) { return false, false, nil }
+func (sliceHooks) InspectMainAgent(string) (settings.MainAgentState, string, error) {
+	return settings.MainAgentOwned, "", nil
+}
 
 func (funcHooks) Install(string, string) error               { return nil }
 func (funcHooks) Uninstall(string, string) error             { return nil }
 func (funcHooks) Inspect(string, string) (bool, bool, error) { return false, false, nil }
+func (funcHooks) InspectMainAgent(string) (settings.MainAgentState, string, error) {
+	return settings.MainAgentOwned, "", nil
+}
 
 func (chanHooks) Install(string, string) error               { return nil }
 func (chanHooks) Uninstall(string, string) error             { return nil }
 func (chanHooks) Inspect(string, string) (bool, bool, error) { return false, false, nil }
+func (chanHooks) InspectMainAgent(string) (settings.MainAgentState, string, error) {
+	return settings.MainAgentOwned, "", nil
+}
 
 func (valueHooks) Install(string, string) error               { return nil }
 func (valueHooks) Uninstall(string, string) error             { return nil }
 func (valueHooks) Inspect(string, string) (bool, bool, error) { return false, false, nil }
+func (valueHooks) InspectMainAgent(string) (settings.MainAgentState, string, error) {
+	return settings.MainAgentOwned, "", nil
+}
 
 // A port is missing when it is an untyped nil or a nil of any kind a value can have, and present
 // otherwise, including an empty one: a map, slice or channel that is allocated, a func that is
