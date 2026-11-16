@@ -115,7 +115,10 @@ later.
    that `memorycard resolve` maps to `<m>` is the same occurrence as
    `memorycard:<m>`. Two Engram ids the import merged into one memory resolve
    to the same `<m>` and count once. An id `resolve` reports unknown
-   (`"memory_id": null`) stays as written and counts as itself.
+   (`"memory_id": null`) stays as written and counts as itself. When
+   `resolve` fails or is unavailable (a non-zero exit, an `ids` array that
+   does not answer every key asked), no legacy id is treated as unknown:
+   stop, do not count, append to or save the record, and report the failure.
 3. **Appending an already-listed occurrence id is a no-op**, and so is
    appending `memorycard:<m>` while the `engram:<n>` that resolves to `<m>`
    is listed, or the reverse: appending one while the other is listed is the

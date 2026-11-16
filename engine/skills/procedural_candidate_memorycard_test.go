@@ -107,3 +107,12 @@ func TestProceduralCandidateContractRewritesLegacyOccurrenceIDsOnSave(t *testing
 		"migrate records in bulk",
 	)
 }
+
+// A failed or unavailable resolve never turns legacy ids into unknown ones: the record is left alone.
+func TestProceduralCandidateContractStopsWhenResolveFails(t *testing.T) {
+	_, contract := proceduralCandidateTexts(t)
+	requireText(t, "contract", contract,
+		"When `resolve` fails or is unavailable",
+		"no legacy id is treated as unknown: stop, do not count, append to or save the record, and report the failure.",
+	)
+}
