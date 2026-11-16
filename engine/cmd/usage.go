@@ -126,7 +126,7 @@ func usage(w io.Writer) {
 	fmt.Fprintln(w, "    project-retire   --project-root <abs> [--dry-run] [--reason <reason>] [--absorbed-into <id>] [--registry <path>] <id>")
 	fmt.Fprintln(w, "                                                                                           retire an agent-owned project skill; --dry-run prints the removal plan")
 	fmt.Fprintln(w, "    candidates       [--project-root <abs>] [--status <status>]... [--kind <kind>] [--drafts] [--json]")
-	fmt.Fprintln(w, "                                                                                           read-only Engram candidate and draft listing with reconciliation anomalies; source failures exit 2")
+	fmt.Fprintln(w, "                                                                                           read-only memorycard candidate and draft listing with reconciliation anomalies; source failures exit 2")
 	fmt.Fprintln(w, "    locking: add, remove, sync-manifest and approve hold an exclusive lock, and validate and install a shared one, on .skills.registry.yaml.lock beside the registry")
 	fmt.Fprintln(w, "    (created by the first write, never removed, git-ignored; shared holders never create it). A lock taken for 2 seconds means another skills command is in progress:")
 	fmt.Fprintln(w, "    the verb changes nothing and reports it with exit 2 (retry); exit 1 is unchanged (the verb ran or was refused, or the lock could not be created)")
