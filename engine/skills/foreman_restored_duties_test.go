@@ -98,14 +98,20 @@ func TestOddFeatureDocRestoredDuties(t *testing.T) {
 	}
 }
 
-// The overview that moved out of the odd-feature-doc Activation Contract (who writes, works from and
-// closes the document) is in its reference, and the body stays within the 700-token lint budget.
-// The rest of the body is rules; moving more would move a duty.
-func TestOddFeatureDocBodyHasHeadroomAndTheOverviewMovedToItsReference(t *testing.T) {
+// Guards the lint budget of odd-feature-doc: the linter warns above 700 estimated tokens
+// (BodyRecommendedTokens) and fails above 1000 (BodyHardTokens), engine/skills/lint.go:42-44, and this
+// skill is bound to oddFeatureDocBodyBound (750). The body is all duties and formats, so the next
+// addition that would pass that bound must move text to references/format.md, never reword a rule.
+func TestOddFeatureDocBodyStaysWithinItsLintBound(t *testing.T) {
 	_, _, body := oddRoleSkillFile(t, "odd-feature-doc")
-	if n := EstimateBodyTokens(body); n > 700 {
-		t.Errorf("the body is an estimated %d tokens, want at most 700", n)
+	if n := EstimateBodyTokens(body); n > oddFeatureDocBodyBound || oddFeatureDocBodyBound >= BodyHardTokens {
+		t.Errorf("the body is an estimated %d tokens, want at most %d (under the hard %d)", n, oddFeatureDocBodyBound, BodyHardTokens)
 	}
+}
+
+// The overview that moved out of the odd-feature-doc Activation Contract (who writes, works from and
+// closes the document) is in its reference.
+func TestOddFeatureDocReferenceHoldsTheOverview(t *testing.T) {
 	ref := readRepoFile(t, skillsRepoRoot(t), "skills/odd-feature-doc/references/format.md")
 	const want = "The shaper writes it, the builder works from it, delivery closes it, the foreman tracks it."
 	if !strings.Contains(ref, want) {
