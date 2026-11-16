@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -53,6 +54,90 @@ func copyFileTo(from, to string) error {
 		return err
 	}
 	return os.WriteFile(to, data, 0o644)
+}
+
+// foremanBodyCommands are the `<group> <verb>` pairs the foreman body names inside backticks, with or
+// without the leading `labdrian`; a span whose second word is a flag, a placeholder or absent is no verb.
+func foremanBodyCommands(t *testing.T) [][2]string {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join("..", "..", "roles", "foreman", "body.md"))
+	if err != nil {
+		t.Fatalf("reading the foreman body: %v", err)
+	}
+	groups := map[string]bool{"workflow": true, "review": true, "skills": true, "roles": true, "shaper": true, "projection": true}
+	var commands [][2]string
+	for _, span := range regexp.MustCompile("`([^`]+)`").FindAllStringSubmatch(string(data), -1) {
+		fields := strings.Fields(strings.TrimPrefix(span[1], "labdrian "))
+		if len(fields) < 2 || !groups[fields[0]] || !regexp.MustCompile(`^[a-z][a-z-]*$`).MatchString(fields[1]) {
+			continue
+		}
+		commands = append(commands, [2]string{fields[0], fields[1]})
+	}
+	return commands
+}
+
+// verbsOf are the verbs the program says a group takes when it is run with none (the message of the
+// public interface, so the test does not read the dispatcher's tables).
+func verbsOf(t *testing.T, group string) []string {
+	t.Helper()
+	p := newCapturedProcess()
+	d := testDeps()
+	d.getenv = environmentOf(map[string]string{"HOME": t.TempDir()})
+	d.getwd = func() (string, error) { return t.TempDir(), nil }
+	run(p.process, d, []string{group})
+	_, list, ok := strings.Cut(strings.SplitN(p.err.String(), "\n", 2)[0], " requires a verb: ")
+	if !ok {
+		t.Fatalf("`%s` with no verb said %q, want it to list its verbs", group, p.err.String())
+	}
+	return strings.Split(list, ", ")
+}
+
+// Every `labdrian` verb the foreman body names is a verb the program takes: a verb renamed or removed
+// fails here instead of leaving the foreman to run a command that does not exist (S2).
+func TestEveryLabdrianVerbTheForemanBodyNamesExists(t *testing.T) {
+	commands := foremanBodyCommands(t)
+	named := map[string]bool{}
+	for _, c := range commands {
+		named[c[0]+" "+c[1]] = true
+		found := false
+		for _, verb := range verbsOf(t, c[0]) {
+			found = found || verb == c[1]
+		}
+		if !found {
+			t.Errorf("the foreman body names `%s %s`, and `%s` takes no verb %q", c[0], c[1], c[0], c[1])
+		}
+	}
+	// The body names the verbs of its stage table: a parse that finds none proves nothing.
+	for _, want := range []string{"workflow open", "workflow close", "review bind", "review record", "review verify", "review check", "review sweep", "skills approve"} {
+		if !named[want] {
+			t.Errorf("the foreman body no longer names `%s`; the test read %v", want, commands)
+		}
+	}
+}
+
+// Every skill the foreman body names is a skill of the repository (S2): a one-word kebab-case name in
+// backticks is a skill, and its directory holds a SKILL.md.
+func TestEverySkillTheForemanBodyNamesExists(t *testing.T) {
+	data, err := os.ReadFile(filepath.Join("..", "..", "roles", "foreman", "body.md"))
+	if err != nil {
+		t.Fatalf("reading the foreman body: %v", err)
+	}
+	named := map[string]bool{}
+	for _, span := range regexp.MustCompile("`([a-z][a-z-]*)`").FindAllStringSubmatch(string(data), -1) {
+		// `success` is the status of the delivery envelope the Deliver row names, not a skill.
+		if span[1] == "success" {
+			continue
+		}
+		named[span[1]] = true
+		if _, err := os.Stat(filepath.Join("..", "..", "skills", span[1], "SKILL.md")); err != nil {
+			t.Errorf("the foreman body names the skill `%s`, and skills/%s/SKILL.md is not there: %v", span[1], span[1], err)
+		}
+	}
+	for _, want := range []string{"inception-pipeline", "role-chain"} {
+		if !named[want] {
+			t.Errorf("the foreman body no longer names the skill `%s`", want)
+		}
+	}
 }
 
 func TestGaduGenerateNeedsTheOverlayDirectory(t *testing.T) {

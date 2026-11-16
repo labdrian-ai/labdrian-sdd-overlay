@@ -8,6 +8,9 @@
 //   - pi/agents/<role>.md     (Pi native subagent file, read by gentle-pi)
 //   - codex/agents/<role>.toml (Codex agent file)
 //
+// The foreman, the parent of the roles, has one source too, roles/foreman/body.md, and one file,
+// agents/foreman.md (S2, S5 of odd/tasks/labdrian-orchestrator-opencode.md).
+//
 // None of these files is ever hand-edited. Use Generate to write them; use Check to assert they are
 // not stale.
 package agentgen
@@ -46,21 +49,35 @@ func (e *sourceError) Unwrap() error { return e.err }
 // caller can say all of them.
 func build(repoRoot string) (table []Artifact, problems []*sourceError) {
 	models, modelsErr := ReadModelTable(repoRoot)
-	for _, r := range roles {
+	// source is the text of the source of a role; a role whose source cannot be read is a problem.
+	source := func(r role) (string, bool) {
 		data, err := os.ReadFile(filepath.Join(repoRoot, filepath.FromSlash(r.sourcePath())))
 		if err != nil {
 			problems = append(problems, &sourceError{path: r.sourcePath(), verb: "reading", err: err})
+			return "", false
+		}
+		return string(data), true
+	}
+	for _, r := range roles {
+		data, ok := source(r)
+		if !ok || modelsErr != nil {
 			continue
 		}
-		if modelsErr != nil {
-			continue
-		}
-		files, err := r.project(string(data), models)
+		files, err := r.project(data, models)
 		if err != nil {
 			problems = append(problems, &sourceError{path: r.sourcePath(), verb: "projecting", err: err})
 			continue
 		}
 		table = append(table, files...)
+	}
+	// The foreman comes after the eight roles, with its Claude file only (S5).
+	if data, ok := source(foreman); ok && modelsErr == nil {
+		file, err := foreman.projectClaude(data, models)
+		if err != nil {
+			problems = append(problems, &sourceError{path: foreman.sourcePath(), verb: "projecting", err: err})
+		} else {
+			table = append(table, file)
+		}
 	}
 	// The table is reported after the sources: without it no role can be projected, so nothing is returned
 	// for the roles whose sources were read.

@@ -142,6 +142,7 @@ sweeper.md               custom   agent
 delivery.md              custom   agent
 reviewer.md              custom   agent
 verifier.md              custom   agent
+foreman.md               custom   agent
 codex/agents/builder.toml    custom   codex-agent
 codex/agents/shaper.toml     custom   codex-agent
 codex/agents/polisher.toml   custom   codex-agent

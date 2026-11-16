@@ -145,6 +145,25 @@ var roles = []role{
 	},
 }
 
+// foreman is the parent of the role chain (S2 of odd/tasks/labdrian-orchestrator-opencode.md): the agent a
+// main session runs as, which talks with the owner and launches the eight roles. It is not one of them:
+// the closed role vocabulary of engine/roles has no foreman, and it has one file here, the Claude one (S5).
+// Its model is the frontier row of the tier table, as the parent's is (S18, models.md of role-chain). Its
+// tools are the Claude names; the subagent tool is Agent (T1 of the feature), which the eight roles never
+// hold. It writes only the feature document: the Edit and Write it holds are a limit of its instructions,
+// not of its tool list (S16 B8).
+var foreman = role{
+	name:        "foreman",
+	description: "Talks with the owner and drives the labdrian workflow: entry, the role chain and closure; writes only the feature document.",
+	tier:        tierFrontier,
+	effort:      "medium",
+	tools: []string{
+		"Read", "Grep", "Glob", "Edit", "Write", "Bash", "Agent",
+		"mcp__memorycard__mem_search", "mcp__memorycard__mem_get", "mcp__memorycard__mem_save", "mcp__memorycard__mem_update",
+		"mcp__codegraph__codegraph_explore",
+	},
+}
+
 // piToolNames translates a tool of Claude Code into the tool of Pi that does the same.
 //
 // Verified on 2026-10-22 by reading the installed sources (Pi 1.3.0, gentle-pi 4.3.0), not by running
@@ -266,8 +285,7 @@ func (r role) project(source string, models ModelTable) ([]Artifact, error) {
 	if err != nil {
 		return nil, err
 	}
-	claude := "---\nname: " + r.name + "\ndescription: " + r.description + "\nmodel: " + claudeModel +
-		"\ntools: " + strings.Join(r.tools, ", ") + "\n---\n\n" + body
+	claude := r.claudeFile(claudeModel, body)
 	pi := "---\nname: " + r.name + "\ndescription: " + r.description + "\nmodel: " + piModel +
 		"\nthinking: " + r.effort + "\ntools: " + piTools + "\n---\n\n" + body
 	return []Artifact{
@@ -275,6 +293,26 @@ func (r role) project(source string, models ModelTable) ([]Artifact, error) {
 		{Path: "pi/agents/" + r.name + ".md", Content: pi},
 		{Path: "codex/agents/" + r.name + ".toml", Content: codex},
 	}, nil
+}
+
+// claudeFile is the Claude agent file: the four keys of claudeKeys, a blank line and the body.
+func (r role) claudeFile(model, body string) string {
+	return "---\nname: " + r.name + "\ndescription: " + r.description + "\nmodel: " + model +
+		"\ntools: " + strings.Join(r.tools, ", ") + "\n---\n\n" + body
+}
+
+// projectClaude makes the one file of a role that has a Claude file only (the foreman): its source, the
+// model of its tier from the table, and no Pi or Codex file.
+func (r role) projectClaude(source string, models ModelTable) (Artifact, error) {
+	model, err := models.ID(r.tier, runtimeClaude)
+	if err != nil {
+		return Artifact{}, err
+	}
+	body, err := r.body(source)
+	if err != nil {
+		return Artifact{}, err
+	}
+	return Artifact{Path: "agents/" + r.name + ".md", Content: r.claudeFile(model, body)}, nil
 }
 
 // codexFile is the Codex agent file: the four fields of the design in the order it lists them, and no

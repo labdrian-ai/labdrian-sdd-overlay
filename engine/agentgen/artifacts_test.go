@@ -97,7 +97,15 @@ func TestEveryRoleSourceOfTheRepositoryIsProjected(t *testing.T) {
 		if !entry.IsDir() {
 			continue
 		}
-		for _, path := range []string{"agents/" + entry.Name() + ".md", "pi/agents/" + entry.Name() + ".md", "codex/agents/" + entry.Name() + ".toml"} {
+		paths := []string{"agents/" + entry.Name() + ".md", "pi/agents/" + entry.Name() + ".md", "codex/agents/" + entry.Name() + ".toml"}
+		if entry.Name() == "foreman" {
+			// The parent of the chain has a Claude file only (S5): the other two are asserted absent.
+			if projected[paths[1]] || projected[paths[2]] {
+				t.Errorf("roles/foreman/ is projected to Pi or Codex, want the Claude file only")
+			}
+			paths = paths[:1]
+		}
+		for _, path := range paths {
 			if !projected[path] {
 				t.Errorf("roles/%s/ has a source, and the generator emits no %s", entry.Name(), path)
 			}
@@ -179,7 +187,7 @@ func TestTheCommittedFilesOfTheRolesAreWhatTheGeneratorWrites(t *testing.T) {
 		t.Fatalf("Artifacts of the repository: %v", err)
 	}
 	if len(table) != len(allPaths()) {
-		t.Fatalf("the table of the repository holds %d files, want the %d of the eight roles", len(table), len(allPaths()))
+		t.Fatalf("the table of the repository holds %d files, want the %d of the eight roles and the foreman", len(table), len(allPaths()))
 	}
 
 	if err := agentgen.Check(root); err != nil {
