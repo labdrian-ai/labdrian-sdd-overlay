@@ -23,7 +23,7 @@ type CandidateListResult struct {
 	Anomalies  []skills.Anomaly
 }
 
-// ListCandidates reads Engram through the CandidateSource port, parses records without
+// ListCandidates reads memorycard through the CandidateSource port, parses records without
 // repair, reconciles all loaded records, and applies display filters to candidates.
 func ListCandidates(source skills.CandidateSource, in CandidateListInput) (CandidateListResult, error) {
 	if source == nil {

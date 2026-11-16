@@ -99,7 +99,7 @@ func TestListCandidatesReconcilesTheUnfilteredRecords(t *testing.T) {
 }
 
 func TestListCandidatesPropagatesSourceFailuresAndRejectsMissingSource(t *testing.T) {
-	cause := errors.New("Engram unavailable")
+	cause := errors.New("memorycard unavailable")
 	if _, err := ListCandidates(&candidateObservationsSource{err: cause}, CandidateListInput{Project: "p"}); !errors.Is(err, cause) {
 		t.Errorf("source error = %v, want wrapped cause", err)
 	}
