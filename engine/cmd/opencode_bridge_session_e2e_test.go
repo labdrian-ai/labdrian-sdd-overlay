@@ -5,10 +5,10 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"testing"
 )
@@ -91,9 +91,23 @@ console.log(JSON.stringify(system));`)
 await hooks.get("prompt")(prompt);
 const system = [];
 await hooks.get("context")({ sessionID: "session-1", system });
-console.log(JSON.stringify(system.slice(-`+strconv.Itoa(len(want))+`)));`)
-		if got := pushedTexts(t, out); strings.Join(got, "\n") != strings.Join(want, "\n") {
-			t.Errorf("the model should read what the engine tells Claude Code at a prompt,\n got %q\nwant %q", got, want)
+console.log(JSON.stringify({ text: prompt.prompt.text, system }));`)
+		var got struct {
+			Text   string `json:"text"`
+			System []any  `json:"system"`
+		}
+		if err := json.Unmarshal(out, &got); err != nil {
+			t.Fatalf("decode result: %v\nraw=%q", err, out)
+		}
+		if wantText := "please continue with the task\n\n" + strings.Join(want, "\n"); got.Text != wantText {
+			t.Errorf("the model should read what the engine tells Claude Code at a prompt, after the user's text,\n got %q\nwant %q", got.Text, wantText)
+		}
+		for _, part := range got.System {
+			for _, line := range want {
+				if strings.Contains(fmt.Sprint(part), line) {
+					t.Errorf("the answer to a prompt must not enter the system prompt, found %q in it", line)
+				}
+			}
 		}
 	})
 

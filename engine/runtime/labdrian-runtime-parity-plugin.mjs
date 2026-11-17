@@ -442,13 +442,13 @@ const STOP_DESCRIPTION = "labdrian stop hook";
 const STOP_FALLBACK_REASON = "a stop hook blocked this stop.";
 
 // sessionState is what the bridge keeps of one session: the SessionStart block once it was asked for
-// (start, or the question under way, starting), what the last prompt's answer said, whether the last
+// (start, or the question under way, starting), whether the last
 // stop was blocked (Claude Code's stop_hook_active, which a prompt of the user clears), the text the
 // bridge itself sent to make the agent continue (ownText) and whether the session is a child one.
 function sessionState(state, sessionID) {
   let session = state.sessions.get(sessionID);
   if (session === undefined) {
-    session = { start: undefined, starting: undefined, promptLines: [], continuing: false, ownText: undefined, child: undefined };
+    session = { start: undefined, starting: undefined, continuing: false, ownText: undefined, child: undefined };
     state.sessions.set(sessionID, session);
   }
   return session;
@@ -480,7 +480,12 @@ async function promptSubmitted(event, state) {
     ["projection", "hook", "--event", "UserPromptSubmit", "--source", ENGINE_SOURCE],
     { ...sessionEnvelope("UserPromptSubmit", event.sessionID), prompt: text },
   );
-  session.promptLines = linesOf(reply);
+  // The answer joins the prompt, not the system prompt: the system prompt comes before every message, so
+  // what changes with each prompt there would invalidate the cached prefix of the whole conversation.
+  const lines = linesOf(reply);
+  if (lines.length > 0 && isRecord(event.prompt) && typeof event.prompt.text === "string") {
+    event.prompt.text = `${event.prompt.text}\n\n${lines.join("\n")}`;
+  }
 }
 
 // askSessionStart asks the SessionStart once for a session. It resolves to the lines to push and
@@ -509,14 +514,14 @@ async function startLines(sessionID, session, state) {
   return session.starting;
 }
 
-// contextRequested runs before each model call of a session: the SessionStart block, the answer to
-// the last prompt and the note that the engine does not answer (once) join the system prompt, as parts
-// of type text (the shape OpenCode's own plugins push).
+// contextRequested runs before each model call of a session: the SessionStart block and the note that the
+// engine does not answer (once, when the engine is broken) join the system prompt, as parts of type text
+// (the shape OpenCode's own plugins push). Nothing that changes with each prompt goes here.
 async function contextRequested(event, state) {
   if (!Array.isArray(event.system)) return;
   const session = sessionState(state, event.sessionID);
   const start = await startLines(event.sessionID, session, state);
-  for (const text of [...start, ...session.promptLines, ...takeNote(state)]) {
+  for (const text of [...start, ...takeNote(state)]) {
     event.system.push({ type: "text", text });
   }
 }

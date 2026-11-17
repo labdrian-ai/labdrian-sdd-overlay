@@ -80,7 +80,7 @@ console.log(JSON.stringify(system));`)
 	}
 }
 
-func TestOpenCodeBridgeCarriesThePromptContextToTheModelCallsAfterThePrompt(t *testing.T) {
+func TestOpenCodeBridgeCarriesThePromptContextInTheUsersPromptAndNeverInTheSystemPrompt(t *testing.T) {
 	requireNode(t)
 	const context = "labdrian: workflow wf-1 is paused"
 	const warning = "labdrian: the binding could not be read"
@@ -102,18 +102,13 @@ console.log(JSON.stringify({ text: prompt.prompt.text, system, other }));`)
 	if err := json.Unmarshal(out, &got); err != nil {
 		t.Fatalf("decode result: %v\nraw=%q", err, out)
 	}
-	if got.Text != "please continue" {
-		t.Fatalf("the user's prompt must stay as they wrote it, got %q", got.Text)
+	// The system prompt comes before every message: what changes with each prompt would invalidate the
+	// cached prefix of the whole conversation, so it goes after the text the user wrote.
+	if want := "please continue\n\n" + warning + "\n" + context; got.Text != want {
+		t.Fatalf("the engine's warning and context should follow the user's text in the prompt, got %q want %q", got.Text, want)
 	}
-	var texts []string
-	for _, part := range got.System {
-		texts = append(texts, part.Type+":"+part.Text)
-	}
-	if strings.Join(texts, "|") != "text:"+warning+"|text:"+context {
-		t.Fatalf("the engine's warning and context should reach the model calls of the session that was prompted, got %#v", got.System)
-	}
-	if len(got.Other) != 0 {
-		t.Fatalf("a prompt's context belongs to its session, got %#v", got.Other)
+	if len(got.System) != 0 || len(got.Other) != 0 {
+		t.Fatalf("a prompt's context must not touch the system prompt, got %#v and %#v", got.System, got.Other)
 	}
 
 	calls := engine.calls(t)
@@ -126,30 +121,53 @@ console.log(JSON.stringify({ text: prompt.prompt.text, system, other }));`)
 	}
 }
 
-func TestOpenCodeBridgeForgetsThePromptContextWhenTheNextPromptHasNone(t *testing.T) {
+func TestOpenCodeBridgeLeavesAPromptAloneWhenTheEngineHasNothingToAdd(t *testing.T) {
 	requireNode(t)
 	engine := newFakeEngine(t, map[string][]byte{eventUserPromptSubmit: encoded(t, hookwire.PromptReply{Context: "labdrian: paused"})})
 	pluginPath := bridgeFixture(t)
 
 	// The second prompt is answered with nothing: the stand-in's answer is emptied between the two.
 	out := runPluginWithEngine(t, pluginPath, engine.path, fmt.Sprintf(`const { writeFileSync } = await import("node:fs");
-await hooks.get("prompt")({ sessionID: "ses_1", prompt: { text: "one" } });
-const first = [];
-await hooks.get("context")({ sessionID: "ses_1", system: first });
+const first = { sessionID: "ses_1", prompt: { text: "one" } };
+await hooks.get("prompt")(first);
 writeFileSync(%q, "");
-await hooks.get("prompt")({ sessionID: "ses_1", prompt: { text: "two" } });
-const second = [];
-await hooks.get("context")({ sessionID: "ses_1", system: second });
-console.log(JSON.stringify({ first, second }));`, filepath.Join(engine.dir, "answer."+eventUserPromptSubmit)))
-	var got struct {
-		First  []systemPart `json:"first"`
-		Second []systemPart `json:"second"`
-	}
+const second = { sessionID: "ses_1", prompt: { text: "two" } };
+await hooks.get("prompt")(second);
+console.log(JSON.stringify({ first: first.prompt.text, second: second.prompt.text }));`, filepath.Join(engine.dir, "answer."+eventUserPromptSubmit)))
+	var got struct{ First, Second string }
 	if err := json.Unmarshal(out, &got); err != nil {
 		t.Fatalf("decode result: %v\nraw=%q", err, out)
 	}
-	if len(got.First) != 1 || len(got.Second) != 0 {
-		t.Fatalf("the context of a prompt lasts until the next prompt, which answers for itself: first=%#v second=%#v", got.First, got.Second)
+	if got.First != "one\n\nlabdrian: paused" || got.Second != "two" {
+		t.Fatalf("a prompt carries the answer to itself alone: first=%q second=%q", got.First, got.Second)
+	}
+}
+
+// The system prompt comes before every message of the conversation, so a byte that changes in it
+// invalidates the cache of everything after. Two prompts answered differently leave it identical.
+func TestOpenCodeBridgeKeepsTheSystemPromptByteStableAcrossPrompts(t *testing.T) {
+	requireNode(t)
+	engine := newFakeEngine(t, map[string][]byte{
+		eventSessionStart:     encoded(t, hookwire.SessionStartReply{Context: "labdrian: start block"}),
+		eventUserPromptSubmit: encoded(t, hookwire.PromptReply{Context: "labdrian: answer to the prompt"}),
+	})
+	pluginPath := bridgeFixture(t)
+
+	out := runPluginWithEngine(t, pluginPath, engine.path, fmt.Sprintf(`const { writeFileSync } = await import("node:fs");
+const systems = [];
+await hooks.get("prompt")({ sessionID: "ses_1", prompt: { text: "first prompt" } });
+const a = []; await hooks.get("context")({ sessionID: "ses_1", system: a }); systems.push(JSON.stringify(a));
+writeFileSync(%q, "");
+await hooks.get("prompt")({ sessionID: "ses_1", prompt: { text: "a very different second prompt" } });
+const b = []; await hooks.get("context")({ sessionID: "ses_1", system: b }); systems.push(JSON.stringify(b));
+console.log(JSON.stringify(systems));`, filepath.Join(engine.dir, "answer."+eventUserPromptSubmit)))
+	var systems []string
+	if err := json.Unmarshal(out, &systems); err != nil {
+		t.Fatalf("decode result: %v\nraw=%q", err, out)
+	}
+	want := `[{"type":"text","text":"labdrian: start block"}]`
+	if len(systems) != 2 || systems[0] != want || systems[1] != want {
+		t.Fatalf("the system prompt must be the same bytes whatever the prompt: the start block alone, got %v", systems)
 	}
 }
 
