@@ -441,10 +441,10 @@ const ENGINE_STOP_ARGS = ["review", "stop-hook"];
 const STOP_DESCRIPTION = "labdrian stop hook";
 const STOP_FALLBACK_REASON = "a stop hook blocked this stop.";
 
-// sessionState is what the bridge keeps of one session: the SessionStart block once it was asked for
-// (start, or the question under way, starting), whether the last
-// stop was blocked (Claude Code's stop_hook_active, which a prompt of the user clears), the text the
-// bridge itself sent to make the agent continue (ownText) and whether the session is a child one.
+// sessionState is what the bridge keeps of one session: the SessionStart block once it was asked for (start,
+// or the question under way, starting), whether the last stop was blocked (Claude Code's stop_hook_active,
+// which a prompt of the user clears), the text the bridge itself sent to make the agent continue (ownText)
+// and whether the session is a child one.
 function sessionState(state, sessionID) {
   let session = state.sessions.get(sessionID);
   if (session === undefined) {
@@ -483,8 +483,29 @@ async function promptSubmitted(event, state) {
   // The answer joins the prompt, not the system prompt: the system prompt comes before every message, so
   // what changes with each prompt there would invalidate the cached prefix of the whole conversation.
   const lines = linesOf(reply);
-  if (lines.length > 0 && isRecord(event.prompt) && typeof event.prompt.text === "string") {
+  if (lines.length === 0) return;
+  if (isRecord(event.prompt) && typeof event.prompt.text === "string") {
     event.prompt.text = `${event.prompt.text}\n\n${lines.join("\n")}`;
+    return;
+  }
+  warnPromptShape(event.prompt);
+}
+
+let promptShapeWarned = false;
+
+// warnPromptShape says once per process that an answer was dropped because the prompt event is not the
+// shape read from the OpenCode 2.2.7 binary ({ text: string }). The answer is not moved to the system
+// prompt, which must stay the same bytes for the session.
+function warnPromptShape(prompt) {
+  if (promptShapeWarned) return;
+  promptShapeWarned = true;
+  let seen = typeof prompt;
+  if (Array.isArray(prompt)) seen = "an array";
+  else if (isRecord(prompt)) seen = `an object whose text is ${typeof prompt.text}`;
+  try {
+    console.error(`labdrian runtime-parity plugin: dropped the engine's answer to a prompt: unexpected prompt shape (the prompt is ${seen}; want { text: string })`);
+  } catch {
+    // Nothing is worth a failure here.
   }
 }
 

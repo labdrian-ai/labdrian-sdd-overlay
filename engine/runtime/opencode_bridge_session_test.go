@@ -145,6 +145,36 @@ console.log(JSON.stringify({ first: first.prompt.text, second: second.prompt.tex
 
 // The system prompt comes before every message of the conversation, so a byte that changes in it
 // invalidates the cache of everything after. Two prompts answered differently leave it identical.
+func TestOpenCodeBridgeLogsOncePerProcessAnAnswerItCannotPutInAPromptOfAnUnexpectedShape(t *testing.T) {
+	requireNode(t)
+	engine := newFakeEngine(t, map[string][]byte{eventUserPromptSubmit: encoded(t, hookwire.PromptReply{Context: "labdrian: paused"})})
+	pluginPath := bridgeFixture(t)
+
+	out := runPluginWithEngine(t, pluginPath, engine.path, `const logged = [];
+console.error = (line) => logged.push(String(line));
+const system = [];
+await hooks.get("prompt")({ sessionID: "ses_1", prompt: "a bare string" });
+await hooks.get("prompt")({ sessionID: "ses_1", prompt: { text: 7 } });
+await hooks.get("prompt")({ sessionID: "ses_2", prompt: {} });
+await hooks.get("context")({ sessionID: "ses_1", system });
+console.log(JSON.stringify({ logged, system }));`)
+	var got struct {
+		Logged []string     `json:"logged"`
+		System []systemPart `json:"system"`
+	}
+	if err := json.Unmarshal(out, &got); err != nil {
+		t.Fatalf("decode result: %v\nraw=%q", err, out)
+	}
+	if len(got.Logged) != 1 || !strings.Contains(got.Logged[0], "prompt") || !strings.Contains(got.Logged[0], "string") {
+		t.Errorf("want one line naming the shape seen (a prompt that is a string), got %#v", got.Logged)
+	}
+	for _, part := range got.System {
+		if strings.Contains(part.Text, "labdrian: paused") {
+			t.Errorf("the dropped answer must not move to the system prompt, got %#v", got.System)
+		}
+	}
+}
+
 func TestOpenCodeBridgeKeepsTheSystemPromptByteStableAcrossPrompts(t *testing.T) {
 	requireNode(t)
 	engine := newFakeEngine(t, map[string][]byte{
