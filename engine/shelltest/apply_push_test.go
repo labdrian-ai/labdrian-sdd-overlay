@@ -49,6 +49,8 @@ func TestApplyPushesMainOnlyToANetworkRemote(t *testing.T) {
 		{"an http git server on this machine", "http://localhost:3000/org/overlay.git", true},
 		{"an https git server on 127.0.0.1", "https://127.0.0.1/overlay.git", true},
 		{"an ssh URL of localhost in upper case", "SSH://LOCALHOST/srv/overlay.git", false},
+		{"a git+ssh URL of localhost", "git+ssh://localhost/srv/overlay.git", false},
+		{"an ssh+git URL of 127.0.0.1", "ssh+git://127.0.0.1/srv/overlay.git", false},
 		{"an absolute path", "/srv/overlay.git", false},
 		{"a relative path", "../origin.git", false},
 		{"a file URL", "file:///srv/overlay.git", false},

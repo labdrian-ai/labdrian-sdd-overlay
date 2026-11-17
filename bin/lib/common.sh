@@ -106,7 +106,7 @@ origin_is_network_remote() {
   lower="${url,,}"
   case "$lower" in
     "" | file://* | /* | ./* | ../* | "~"* | [a-z]:\\*) return 1 ;;
-    ssh://*)
+    ssh://* | git+ssh://* | ssh+git://*)
       host="${lower#*://}"
       host="${host%%/*}"
       host="${host#*@}"
