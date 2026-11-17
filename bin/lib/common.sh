@@ -97,19 +97,21 @@ ensure_parent() {
 
 # True (exit 0) when the URL of origin names another machine: a scheme other than file:// (https, ssh,
 # git), or the scp form host:path. A path (absolute, relative, ~), a file:// URL (in any case), an empty
-# URL, and a host that is this machine (localhost, 127.0.0.1, ::1, in the URL or the scp form, with or
-# without a user) are on this machine.
+# URL, and an ssh host that is this machine (localhost, 127.0.0.1, ::1, as an ssh:// URL or the scp form,
+# with or without a user) are on this machine. An http(s) or git URL naming this machine is a git server
+# (Gitea and the like), so it stays a network remote.
 origin_is_network_remote() {
   local url lower host
   url="$(git remote get-url origin 2>/dev/null)" || return 1
   lower="${url,,}"
   case "$lower" in
     "" | file://* | /* | ./* | ../* | "~"* | [a-z]:\\*) return 1 ;;
-    *://*)
+    ssh://*)
       host="${lower#*://}"
       host="${host%%/*}"
       host="${host#*@}"
       ;;
+    *://*) return 0 ;;
     *:*)
       [[ "${lower%%:*}" != */* ]] || return 1
       host="${lower%%/*}"
