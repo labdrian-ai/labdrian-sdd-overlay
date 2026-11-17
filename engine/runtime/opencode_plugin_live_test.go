@@ -36,14 +36,17 @@ func TestOpenCodeLoadsTheInstalledPluginAndItWritesItsActiveMarker(t *testing.T)
 	agents := runOpenCodeIn(t, binary, sandbox, configHome, "--print-logs", "--log-level", "debug", "debug", "agents")
 	output := agents.stdout + agents.stderr
 
-	for _, line := range strings.Split(output, "\n") {
-		if strings.Contains(line, "failed to load plugin") && strings.Contains(line, "labdrian-runtime-parity") {
-			t.Errorf("OpenCode could not load the installed plugin: %s", line)
+	// Both plugins of the adapter must load, each writing the active marker its status reads.
+	for id, markerFile := range map[string]string{"labdrian-runtime-parity": "labdrian-runtime-parity.active.json", "memorycard": "memorycard-opencode.active.json"} {
+		for _, line := range strings.Split(output, "\n") {
+			if strings.Contains(line, "failed to load plugin") && strings.Contains(line, id) {
+				t.Errorf("OpenCode could not load the installed %s plugin: %s", id, line)
+			}
 		}
-	}
-	marker := filepath.Join(root, "labdrian-runtime-parity.active.json")
-	if _, err := os.Stat(marker); err != nil {
-		t.Errorf("the plugin did not write its active marker %s: %v", marker, err)
+		marker := filepath.Join(root, markerFile)
+		if _, err := os.Stat(marker); err != nil {
+			t.Errorf("the %s plugin did not write its active marker %s: %v", id, marker, err)
+		}
 	}
 
 	config := runOpenCodeIn(t, binary, sandbox, configHome, "debug", "config")
@@ -67,6 +70,8 @@ func runOpenCodeIn(t *testing.T, binary, sandbox, configHome string, args ...str
 		"XDG_DATA_HOME="+filepath.Join(sandbox, "data"),
 		"XDG_STATE_HOME="+filepath.Join(sandbox, "state"),
 		"XDG_CACHE_HOME="+filepath.Join(sandbox, "cache"),
+		// A plugin that asked memorycard for anything would reach the owner's store; this one is scratch.
+		"MEMORYCARD_DB="+filepath.Join(sandbox, "memorycard.db"),
 	)
 	var stdout, stderr bytes.Buffer
 	command.Stdout, command.Stderr = &stdout, &stderr

@@ -1140,6 +1140,19 @@ gentle-ai-overlay runtime install|update|uninstall|status --target opencode
     owner's rules (`instructions/owner-rules.md`), the body of the labdrian output style (`output-styles/labdrian.md`,
     its frontmatter dropped) and the memorycard block, read from the overlay checkout as Claude's are; the block is
     written and removed as CLAUDE.md's is. With no checkout the result is the base one, with a note.
+    memorycard plugin: a second OpenCode v2 plugin, `<opencode root>/plugins/memorycard/index.js` (record
+    `memorycard-opencode.json`, active marker `memorycard-opencode.active.json`), separate from the runtime-parity
+    plugin. On the first model call of a session its `context` hook runs `memorycard context` in the project directory
+    OpenCode reports and pushes the output onto the system prompt, before every model call of that session; its
+    `execute.after` hook pipes the final text of each completed `subagent` call to `memorycard capture` on stdin. No
+    Engram call. A memorycard that is absent, exits non-zero or does not answer within 20 seconds
+    (`LABDRIAN_MEMORYCARD_TIMEOUT_MS`) is logged on stderr and the session goes on; after a failure the context is not
+    asked for again for that session for 60 seconds. The record names the program: the absolute path of `memorycard`
+    found on the PATH of the engine when `install` runs, else its bare name. A file at the plugin path that does not
+    carry the plugin's mark (`labdrian-memorycard-plugin`) was not written by this adapter: `install` leaves it and is
+    partial, `uninstall` leaves it too. `uninstall` removes the plugin it wrote, its record and an empty plugin
+    directory, and names the active marker that stays until OpenCode restarts. `status` is partial when the plugin is
+    missing, foreign, or its record is missing or stale, and a restart is owed until the plugin has written its marker.
     Skills: none is copied. `labdrian apply` copies no skill for OpenCode, which reads ~/.claude/skills, and a copy in
     its own directory would shadow it; the adapter writes or removes none either. `install`, `update` and `status`
     report, on every result, the labdrian skills found in `<opencode root>/skills` or ~/.agents/skills, where OpenCode
