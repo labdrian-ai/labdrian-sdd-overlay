@@ -411,10 +411,10 @@ func TestSkillsClaimsStateTheirScope(t *testing.T) {
 			"never write .pi/skills", "only after project trust", "No test observes Pi loading a skill",
 		},
 		capability.TargetOpenCode: {
-			"labdrian apply copies global skills into OpenCode's skills directory", fixtureOnly, "never the real skills",
+			"labdrian apply copies no skill for OpenCode", "a copy in its own directory would shadow that one", "never write or remove one",
+			fixtureOnly, "never the real skills",
 			"A live OpenCode 1.18.31 session on 2026-09-30 discovered project skills under .agents/skills and .claude/skills",
-			"recorded, not tested", "the global tier was not observed live", "its names also existing in several global directories",
-			"No test observes OpenCode loading a skill", "no test connects the project tier to OpenCode",
+			"recorded, not tested", "No test observes OpenCode loading a skill",
 		},
 	} {
 		detail := skillsClaim(t, target).Detail

@@ -1114,12 +1114,39 @@ gentle-ai-overlay runtime install|update|uninstall|status --target claude
     and a symbolic link to a missing file is refused. `status` is partial when the block is missing or stale, and says
     which verb fixes it. With no overlay checkout the result is the hooks-only one, with a note; with a checkout whose
     rules cannot be read, or markers that are not one open line followed by one close line (the message names their
-    lines), the action is partial and CLAUDE.md is left as it is. The same writer (`runtime.MarkedBlock`) is the one the AGENTS.md files will use.
+    lines), the action is partial and CLAUDE.md is left as it is. The OpenCode adapter keeps its AGENTS.md block with the same writer (`runtime.MarkedBlock`), described next.
     It also keeps the top-level `"outputStyle": "labdrian"` key of `settings.json`, the style `output-styles/labdrian.md`
     deploys to `~/.claude/output-styles` (route `output-style`): `install` and `update` write it when it is absent; any other
     value (`"Gentleman"`, `null`, a number) belongs to the owner, is kept, and the message carries a notice saying the labdrian
     style was not enabled; `uninstall` removes the key only while it holds exactly `"labdrian"`; `status` is partial when the
     key is missing or foreign, after the `"agent"` key and before the rules block.
+
+gentle-ai-overlay runtime install|update|uninstall|status --target opencode
+    Besides the runtime-parity plugin (`projection hook`, below), the OpenCode adapter keeps three entries of
+    `<opencode root>/opencode.json` (~/.config/opencode, or --config-root) and one block of AGENTS.md beside it.
+    opencode.json: `"default_agent": "foreman"`, and `mcp.servers.memorycard` and `mcp.servers.codegraph`
+    (`"type": "local"`, `"codemode": true`). Only these members are spliced into the owner's bytes: key order,
+    indentation and every other byte stay, and `uninstall` after `install` gives the file back byte for byte (a
+    container `install` had to create stays, empty; a file `install` created is removed). The command of each server
+    is the absolute path of `memorycard` and `codegraph` found on the PATH of the engine when `install` runs, since
+    OpenCode may start from a launcher whose PATH is not the shell's; a program not found is written by its bare
+    name and the message says which. Our server entry is ours in either form. A key or entry that holds another
+    value (another default agent, a server of another program under that name) is the owner's: it is kept, the
+    message names it, and `status` is partial. The first change leaves `opencode.json.labdrian.bak`, which is kept
+    after `uninstall`. A file that is not one JSON object, has content after it, or writes a key twice in the root,
+    `mcp` or `mcp.servers` is refused and left as it is. The provider is not written: the ChatGPT subscription is the
+    built-in openai provider, logged in with `opencode auth login`.
+    AGENTS.md: between `<!-- labdrian:opencode-instructions -->` and `<!-- /labdrian:opencode-instructions -->`, the
+    owner's rules (`instructions/owner-rules.md`), the body of the labdrian output style (`output-styles/labdrian.md`,
+    its frontmatter dropped) and the memorycard block, read from the overlay checkout as Claude's are; the block is
+    written and removed as CLAUDE.md's is. With no checkout the result is the base one, with a note.
+    Skills: none is copied. `labdrian apply` copies no skill for OpenCode, which reads ~/.claude/skills, and a copy in
+    its own directory would shadow it; the adapter writes or removes none either. `install`, `update` and `status`
+    report, on every result, the labdrian skills found in `<opencode root>/skills` or ~/.agents/skills, where OpenCode
+    reads first, so that the owner removes them by hand.
+    The parts do not stop each other: a refused opencode.json still writes AGENTS.md and the report, and the result is
+    partial naming the reason; when both cleanups of `uninstall` fail, its message names both.
+
 
 gentle-ai-overlay runtime capabilities [--target claude|codex|pi|opencode|all]
     Engine verb (Phase 7): there is no `overlay runtime` wrapper, so run it on the installed engine
@@ -1150,8 +1177,7 @@ gentle-ai-overlay runtime capabilities [--target claude|codex|pi|opencode|all]
     No test observes a runtime loading a skill. Codex reading a project skill at .agents/skills was observed
     once live (2026-09-28, Codex 0.148.0) and is recorded in odd/tasks/phase5-closeout.md, not tested. A live
     OpenCode 1.18.31 session discovered project skills placed under .agents/skills and .claude/skills (2026-09-30;
-    recorded in the Phase 8 ledger, odd/tasks/skill-lifecycle.md, not tested); its global tier was not observed live,
-    because the skill names also exist in several global directories OpenCode reads. A bound Claude Code
+    recorded in the Phase 8 ledger, odd/tasks/skill-lifecycle.md, not tested). OpenCode gets no copy of the global skills: it reads ~/.claude/skills (see `--target opencode` above). A bound Claude Code
     session's projected context lists every capability that is not supported, so it now lists skills=partial
     with the others.
 

@@ -502,7 +502,7 @@ Commands:
 
 Targets:
   claude   → ~/.claude/skills
-  opencode → ~/.config/opencode/skills
+  opencode → no skill copy (it reads ~/.claude/skills); its agents go to ~/.config/opencode/agents
   codex    → ~/.codex/skills
 
 Hook activation notes:
