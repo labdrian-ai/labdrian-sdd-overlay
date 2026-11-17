@@ -1145,9 +1145,14 @@ gentle-ai-overlay runtime install|update|uninstall|status --target opencode
     plugin. On the first model call of a session its `context` hook runs `memorycard context` in the project directory
     OpenCode reports and pushes the output onto the system prompt, before every model call of that session; its
     `execute.after` hook pipes the final text of each completed `subagent` call to `memorycard capture` on stdin. No
-    Engram call. A memorycard that is absent, exits non-zero or does not answer within 20 seconds
-    (`LABDRIAN_MEMORYCARD_TIMEOUT_MS`) is logged on stderr and the session goes on; after a failure the context is not
-    asked for again for that session for 60 seconds. The record names the program: the absolute path of `memorycard`
+    Engram call. The context is asked for once per main session (child sessions are not asked: roles query memorycard
+    themselves) and is the same bytes on every model call, so the cached prefix of the conversation holds; a failed
+    ask is not repeated, so the block is never inserted mid-session. `capture` is started without waiting for it
+    (detached, input capped at 256 KiB, truncation logged) and a failed one pauses the next ones for 60 seconds. A
+    memorycard that is absent, exits non-zero or does not answer within 20 seconds (`LABDRIAN_MEMORYCARD_TIMEOUT_MS`)
+    is logged on stderr and the session goes on. The event shapes (`context`: `{sessionID, system}`; `execute.after`:
+    `{tool, status, result: {output, content}}`) were read from the OpenCode 2.2.7 binary and are not verified with a
+    model until T17; a shape that is not these is logged once per process. The record names the program: the absolute path of `memorycard`
     found on the PATH of the engine when `install` runs, else its bare name. A file at the plugin path that does not
     carry the plugin's mark (`labdrian-memorycard-plugin`) was not written by this adapter: `install` leaves it and is
     partial, `uninstall` leaves it too. `uninstall` removes the plugin it wrote, its record and an empty plugin

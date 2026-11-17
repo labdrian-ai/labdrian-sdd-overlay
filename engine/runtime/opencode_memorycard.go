@@ -27,7 +27,7 @@ const (
 
 // OpenCodeMemorycardPluginVersion is the version of the memorycard plugin the adapter installs; it
 // changes with the plugin source.
-const OpenCodeMemorycardPluginVersion = "2026-11-17-memorycard-1"
+const OpenCodeMemorycardPluginVersion = "2026-11-17-memorycard-2"
 
 //go:embed memorycard-opencode-plugin.mjs
 var openCodeMemorycardPluginSource string
