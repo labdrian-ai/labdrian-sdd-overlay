@@ -88,7 +88,7 @@ cmd_sync_check() {
     echo ""
     echo "=== sync-check: $t ($tpath) ==="
 
-    if [[ ! -d "$tpath" ]]; then
+    if copies_skills "$t" && [[ ! -d "$tpath" ]]; then
       echo "SYNC_CHECK:$t: target dir not found at $tpath -- skipping"
       continue
     fi

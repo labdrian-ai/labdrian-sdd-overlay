@@ -16,6 +16,42 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/overlaytest"
 )
 
+// TestSyncCheck_OpenCodeChecksItsAgentsWithNoSkillsDirectory pins that sync-check of opencode, which
+// has no skills directory any more (S13: it reads ~/.claude/skills), still looks at its agents: an
+// agent that is deployed is in sync, and one that is gone is reported as not deployed.
+func TestSyncCheck_OpenCodeChecksItsAgentsWithNoSkillsDirectory(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in -short mode")
+	}
+
+	overlay := overlaytest.Script(t)
+	home := t.TempDir()
+	_, env := setupSandboxOverlay(t, home)
+	runApplyAllTolerantOfPi(t, overlay, env)
+	if _, err := os.Stat(filepath.Join(home, ".config", "opencode", "skills")); !os.IsNotExist(err) {
+		t.Fatalf("the premise of the test is no OpenCode skills directory; stat err: %v", err)
+	}
+
+	synced, err := overlaytest.Combined(t, overlay, env, "", "sync-check", "--target", "opencode")
+	if err != nil {
+		t.Fatalf("sync-check: %v\noutput:\n%s", err, synced)
+	}
+	if strings.Contains(synced, "target dir not found") || !strings.Contains(synced, "IN_SYNC: opencode/agents/GADU.md") {
+		t.Errorf("sync-check skipped the agents of opencode or did not find GADU.md in sync\noutput:\n%s", synced)
+	}
+
+	if err := os.Remove(filepath.Join(home, ".config", "opencode", "agents", "GADU.md")); err != nil {
+		t.Fatal(err)
+	}
+	gone, err := overlaytest.Combined(t, overlay, env, "", "sync-check", "--target", "opencode")
+	if err != nil {
+		t.Fatalf("sync-check: %v\noutput:\n%s", err, gone)
+	}
+	if !strings.Contains(gone, "OVERLAY_NOT_DEPLOYED: opencode/agents/GADU.md") {
+		t.Errorf("sync-check did not report the removed agent as not deployed\noutput:\n%s", gone)
+	}
+}
+
 // TestApply_AgentsLandInNativeAgentDirs asserts that after overlay apply:
 // - agents/GADU.md lands at $HOME/.claude/agents/GADU.md (not .claude/skills)
 // - opencode/agents/GADU.md lands at $HOME/.config/opencode/agents/GADU.md

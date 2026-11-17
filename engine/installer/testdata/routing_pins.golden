@@ -199,7 +199,10 @@ exit 0
 --- stdout
 
 === sync-check: opencode ($HOME/.config/opencode/skills) ===
-SYNC_CHECK:opencode: target dir not found at $HOME/.config/opencode/skills -- skipping
+  IN_SYNC: opencode/agents/GADU.md
+
+VERDICT:opencode:UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=0 REPO_BEHIND_ORIGIN=NA REPO_BEHIND_RELEASE=NA RECORDED_VERSION=untagged DIGEST_MATCH=yes
+ACTION:opencode: in sync with gentle-ai (healthy) at untagged
 --- stderr
 SYNC_CHECK:(repo): no 'origin' remote configured -- REPO_BEHIND_ORIGIN unavailable
 SYNC_CHECK:(repo): no 'origin' remote configured -- REPO_BEHIND_RELEASE unavailable
@@ -319,7 +322,10 @@ exit 0
 --- stdout
 
 === sync-check: opencode ($HOME/.config/opencode/skills) ===
-SYNC_CHECK:opencode: target dir not found at $HOME/.config/opencode/skills -- skipping
+  UPSTREAM_CHANGED: opencode/agents/GADU.md
+
+VERDICT:opencode:UPSTREAM_CHANGED=1 OVERLAY_NOT_DEPLOYED=0 REPO_BEHIND_ORIGIN=NA REPO_BEHIND_RELEASE=NA RECORDED_VERSION=untagged DIGEST_MATCH=no
+ACTION:opencode: gentle-ai sync detected: run 'labdrian capture --target opencode' then 'labdrian apply' to re-merge your customizations
 --- stderr
 SYNC_CHECK:(repo): no 'origin' remote configured -- REPO_BEHIND_ORIGIN unavailable
 SYNC_CHECK:(repo): no 'origin' remote configured -- REPO_BEHIND_RELEASE unavailable
