@@ -43,10 +43,21 @@ func TestApplyPushesMainOnlyToANetworkRemote(t *testing.T) {
 		{"an https remote", "https://github.com/example/overlay.git", true},
 		{"an scp-style remote", "git@github.com:example/overlay.git", true},
 		{"an ssh remote", "ssh://git@example.com/example/overlay.git", true},
+		{"a host that only starts like localhost", "ssh://localhost.example.com/overlay.git", true},
+		{"an scp form of a host that only starts like localhost", "git@localhost.example.com:overlay.git", true},
+		{"a local name hidden in the path of a network scp form", "example.com:a@localhost:overlay.git", true},
 		{"an absolute path", "/srv/overlay.git", false},
 		{"a relative path", "../origin.git", false},
 		{"a file URL", "file:///srv/overlay.git", false},
 		{"a path under the home", "~/overlay.git", false},
+		{"a file URL in capitals", "FILE:///srv/overlay.git", false},
+		{"an scp form of localhost", "localhost:/srv/overlay.git", false},
+		{"an scp form of localhost with a user", "git@localhost:overlay.git", false},
+		{"an scp form of 127.0.0.1", "127.0.0.1:/srv/overlay.git", false},
+		{"an scp form of ::1", "[::1]:/srv/overlay.git", false},
+		{"an ssh URL of localhost", "ssh://localhost/srv/overlay.git", false},
+		{"an ssh URL of 127.0.0.1 with a user and a port", "ssh://git@127.0.0.1:2222/overlay.git", false},
+		{"an ssh URL of ::1", "ssh://[::1]/srv/overlay.git", false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			dir := t.TempDir()
