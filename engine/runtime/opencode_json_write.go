@@ -41,7 +41,7 @@ func (a OpenCodeAdapter) writeOpenCodeJSON() (message string, err error) {
 	}
 	notices := foreignNotices(inspectOpenCodeJSON(root))
 	raw := []byte(file.content)
-	if strings.TrimSpace(file.content) == "" {
+	if isBlankJSON(file.content) {
 		raw = []byte("{}\n")
 	}
 	changed := false
@@ -53,7 +53,15 @@ func (a OpenCodeAdapter) writeOpenCodeJSON() (message string, err error) {
 	}
 	servers, notes := a.serversToWrite()
 	for _, server := range servers {
-		if _, present := serversOf(root)[server.name]; present {
+		if current, present := serversOf(root)[server.name]; present {
+			if !bareEntryToUpgrade(current, server) {
+				continue
+			}
+			if raw, err = replaceOpenCodeMember(raw, []string{"mcp", "servers"}, server.name, server.entry); err != nil {
+				return "", fmt.Errorf("%s cannot be edited: %w", path, err)
+			}
+			changed = true
+			notices += "; " + server.name + " upgraded to " + server.command[0]
 			continue
 		}
 		if raw, err = spliceOpenCodeMember(raw, []string{"mcp", "servers"}, server.name, server.entry); err != nil {
@@ -134,4 +142,21 @@ func (a OpenCodeAdapter) removeFromOpenCodeJSON() (removed bool, err error) {
 		}
 	}
 	return true, writeBlockFile(path, string(raw), file)
+}
+
+// bareEntryToUpgrade says whether current is our entry written with the bare program name while the
+// server to write has found the program: it is then replaced by the absolute path. An absolute entry of
+// ours, even for another path, stays: it is the owner's choice of where the program is.
+func bareEntryToUpgrade(current any, server openCodeMCPServer) bool {
+	if server.command[0] == server.name {
+		return false
+	}
+	for _, bare := range openCodeMCPServers {
+		if bare.name == server.name && !bare.owns(current) {
+			return false
+		}
+	}
+	entry, _ := current.(map[string]any)
+	command, _ := entry["command"].([]any)
+	return len(command) > 0 && command[0] == server.name
 }

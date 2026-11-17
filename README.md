@@ -1147,7 +1147,6 @@ gentle-ai-overlay runtime install|update|uninstall|status --target opencode
     The parts do not stop each other: a refused opencode.json still writes AGENTS.md and the report, and the result is
     partial naming the reason; when both cleanups of `uninstall` fail, its message names both.
 
-
 gentle-ai-overlay runtime capabilities [--target claude|codex|pi|opencode|all]
     Engine verb (Phase 7): there is no `overlay runtime` wrapper, so run it on the installed engine
     binary, ~/.claude/bin/gentle-ai-overlay. Read-only and declarative: it prints, as JSON, what

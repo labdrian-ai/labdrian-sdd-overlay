@@ -63,8 +63,11 @@ func TestOpenCodeOwnsOurEntryInEitherFormAndNothingElse(t *testing.T) {
 
 	adapter.Install()
 	servers := openCodeServers(t, readOpenCodeJSON(t, root))
-	if got := jsonText(t, servers["memorycard"]); !strings.Contains(got, `"memorycard","mcp"`) {
-		t.Errorf("the bare entry of ours was replaced: %s", got)
+	if got := jsonText(t, servers["memorycard"]); !strings.Contains(got, `"/opt/bin/memorycard","mcp"`) {
+		t.Errorf("the bare entry of ours was not upgraded to the path found: %s", got)
+	}
+	if got := jsonText(t, servers["codegraph"]); !strings.Contains(got, `"/x/y/codegraph"`) {
+		t.Errorf("an absolute entry of ours was changed: %s", got)
 	}
 	writeMatchingActiveMarker(t, root)
 	if status := adapter.Status(); status.Status != core.CapabilitySupported {

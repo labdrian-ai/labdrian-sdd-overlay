@@ -33,7 +33,8 @@ func TestOpenCodeLoadsTheInstalledPluginAndItWritesItsActiveMarker(t *testing.T)
 		t.Fatalf("Install() = %#v", result)
 	}
 
-	output := runOpenCodeIn(t, binary, sandbox, "--print-logs", "--log-level", "debug", "debug", "agents")
+	agents := runOpenCodeIn(t, binary, sandbox, configHome, "--print-logs", "--log-level", "debug", "debug", "agents")
+	output := agents.stdout + agents.stderr
 
 	for _, line := range strings.Split(output, "\n") {
 		if strings.Contains(line, "failed to load plugin") && strings.Contains(line, "labdrian-runtime-parity") {
@@ -45,12 +46,16 @@ func TestOpenCodeLoadsTheInstalledPluginAndItWritesItsActiveMarker(t *testing.T)
 		t.Errorf("the plugin did not write its active marker %s: %v", marker, err)
 	}
 
-	assertOpenCodeParsesTheInstalledConfig(t, runOpenCodeIn(t, binary, sandbox, "debug", "config"), filepath.Join(root, "opencode.json"))
+	config := runOpenCodeIn(t, binary, sandbox, configHome, "debug", "config")
+	assertOpenCodeParsesTheInstalledConfig(t, config.stdout, config.stderr, filepath.Join(root, "opencode.json"))
 }
+
+// openCodeRun is what a run of the real opencode wrote on each stream.
+type openCodeRun struct{ stdout, stderr string }
 
 // runOpenCodeIn runs the real opencode in the sandbox (its HOME and every XDG directory inside it) with
 // --standalone and the arguments, and returns what it wrote on both streams.
-func runOpenCodeIn(t *testing.T, binary, sandbox string, args ...string) string {
+func runOpenCodeIn(t *testing.T, binary, sandbox, configHome string, args ...string) openCodeRun {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
@@ -58,24 +63,24 @@ func runOpenCodeIn(t *testing.T, binary, sandbox string, args ...string) string 
 	command.Dir = sandbox
 	command.Env = append(os.Environ(),
 		"HOME="+sandbox,
-		"XDG_CONFIG_HOME="+filepath.Join(sandbox, "config"),
+		"XDG_CONFIG_HOME="+configHome,
 		"XDG_DATA_HOME="+filepath.Join(sandbox, "data"),
 		"XDG_STATE_HOME="+filepath.Join(sandbox, "state"),
 		"XDG_CACHE_HOME="+filepath.Join(sandbox, "cache"),
 	)
-	var output bytes.Buffer
-	command.Stdout, command.Stderr = &output, &output
+	var stdout, stderr bytes.Buffer
+	command.Stdout, command.Stderr = &stdout, &stderr
 	if err := command.Run(); err != nil {
-		t.Fatalf("opencode %s: %v\n%s", strings.Join(args, " "), err, output.String())
+		t.Fatalf("opencode %s: %v\nstdout:\n%s\nstderr:\n%s", strings.Join(args, " "), err, stdout.String(), stderr.String())
 	}
-	return output.String()
+	return openCodeRun{stdout: stdout.String(), stderr: stderr.String()}
 }
 
 // assertOpenCodeParsesTheInstalledConfig reads `opencode debug config`, the sources OpenCode parsed with
 // what it kept of each, and requires that it kept our keys of the installed opencode.json: the default
 // agent, and both MCP servers as local servers with Code Mode on. OpenCode drops what it does not
 // understand without saying so, so the file on disk proves nothing about what it reads.
-func assertOpenCodeParsesTheInstalledConfig(t *testing.T, output, configPath string) {
+func assertOpenCodeParsesTheInstalledConfig(t *testing.T, output, stderr, configPath string) {
 	t.Helper()
 	var sources []struct {
 		Type string `json:"type"`
@@ -92,10 +97,10 @@ func assertOpenCodeParsesTheInstalledConfig(t *testing.T, output, configPath str
 		} `json:"info"`
 	}
 	if err := json.Unmarshal([]byte(output), &sources); err != nil {
-		t.Fatalf("opencode debug config is not a JSON list of sources: %v\n%s", err, output)
+		t.Fatalf("opencode debug config is not a JSON list of sources on stdout: %v\nstdout:\n%s\nstderr:\n%s", err, output, stderr)
 	}
 	for _, source := range sources {
-		if source.Type != "document" || source.Path != configPath {
+		if source.Type != "document" || !samePath(source.Path, configPath) {
 			continue
 		}
 		if source.Info.DefaultAgent != "foreman" {
@@ -109,5 +114,17 @@ func assertOpenCodeParsesTheInstalledConfig(t *testing.T, output, configPath str
 		}
 		return
 	}
-	t.Errorf("opencode debug config does not list %s among its sources:\n%s", configPath, output)
+	t.Errorf("opencode debug config does not list %s among its sources:\nstdout:\n%s\nstderr:\n%s", configPath, output, stderr)
+}
+
+// samePath says whether two paths name the same file once symlinks are resolved: OpenCode reports the
+// real path of a sandbox that sits under a symlinked temporary directory.
+func samePath(a, b string) bool {
+	resolve := func(path string) string {
+		if real, err := filepath.EvalSymlinks(path); err == nil {
+			return real
+		}
+		return path
+	}
+	return resolve(a) == resolve(b)
 }

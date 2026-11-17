@@ -102,7 +102,7 @@ var errOpenCodeJSONShape = errors.New("it is not an object, or its mcp.servers i
 // parseOpenCodeJSON decodes the file. An empty file is an empty config; anything that is not one
 // JSON object is refused, and the file left as it is.
 func parseOpenCodeJSON(content string) (map[string]any, error) {
-	if strings.TrimSpace(content) == "" {
+	if isBlankJSON(content) {
 		return map[string]any{}, nil
 	}
 	decoder := json.NewDecoder(strings.NewReader(content))
@@ -111,7 +111,7 @@ func parseOpenCodeJSON(content string) (map[string]any, error) {
 	if err := decoder.Decode(&root); err != nil {
 		return nil, err
 	}
-	if strings.TrimSpace(content[decoder.InputOffset():]) != "" {
+	if !isBlankJSON(content[decoder.InputOffset():]) {
 		return nil, errors.New("it has content after the JSON object")
 	}
 	if root == nil {

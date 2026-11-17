@@ -97,11 +97,17 @@ func skipJSONValue(dec *json.Decoder) error {
 	return nil
 }
 
-func isJSONSpace(b byte) bool { return b == ' ' || b == '\t' || b == '\n' || b == '\r' }
+// jsonSpace are the four bytes JSON allows between tokens: space, tab, line feed and carriage return.
+const jsonSpace = " \t\n\r"
+
+func isJSONSpace(b byte) bool { return strings.IndexByte(jsonSpace, b) >= 0 }
+
+// isBlankJSON says whether text holds no byte but JSON whitespace.
+func isBlankJSON(text string) bool { return strings.Trim(text, jsonSpace) == "" }
 
 // rootObject scans the document's root object, and refuses bytes after it.
 func rootObject(raw []byte) (jsonObject, error) {
-	open := bytes.IndexFunc(raw, func(r rune) bool { return r != ' ' && r != '\t' && r != '\n' && r != '\r' })
+	open := bytes.IndexFunc(raw, func(r rune) bool { return !isJSONSpace(byte(r)) || r > 0x7f })
 	if open < 0 {
 		return jsonObject{}, fmt.Errorf("it is empty")
 	}
@@ -109,7 +115,7 @@ func rootObject(raw []byte) (jsonObject, error) {
 	if err != nil {
 		return jsonObject{}, err
 	}
-	if len(bytes.TrimSpace(raw[root.close+1:])) > 0 {
+	if len(bytes.Trim(raw[root.close+1:], jsonSpace)) > 0 {
 		return jsonObject{}, fmt.Errorf("it has content after the JSON object")
 	}
 	return root, nil
@@ -167,45 +173,93 @@ func nestedValue(path []string, name string, value any) any {
 }
 
 // insertMember writes the member after the last one of object, in the style of that one: on its own
-// line at its indentation, or on the same line when the object is written inline.
+// line at its indentation, or on the same line when the object is written inline, and with the line
+// ending of the file.
 func insertMember(raw []byte, object jsonObject, name string, value any) ([]byte, error) {
+	eol := jsonLineEnding(raw)
 	if len(object.members) == 0 {
 		closeIndent := lineIndent(raw, object.open)
-		child := closeIndent + "  "
-		text, err := memberText(name, value, child, true)
+		child := closeIndent + indentUnit(closeIndent)
+		text, err := memberText(name, value, child, indentUnit(child), eol, true)
 		if err != nil {
 			return nil, err
 		}
-		return replaceBytes(raw, object.open+1, object.close, "\n"+child+text+"\n"+closeIndent), nil
+		return replaceBytes(raw, object.open+1, object.close, eol+child+text+eol+closeIndent), nil
 	}
 	last := object.members[len(object.members)-1]
 	indent, ownLine := leadOf(raw, last.keyStart)
-	text, err := memberText(name, value, indent, ownLine)
+	text, err := memberText(name, value, indent, indentUnit(indent), eol, ownLine)
 	if err != nil {
 		return nil, err
 	}
 	if ownLine {
-		return replaceBytes(raw, last.valueEnd, last.valueEnd, ",\n"+indent+text), nil
+		return replaceBytes(raw, last.valueEnd, last.valueEnd, ","+eol+indent+text), nil
 	}
 	return replaceBytes(raw, last.valueEnd, last.valueEnd, ", "+text), nil
 }
 
-// memberText is `"name": value`, the value indented from indent when it spans lines.
-func memberText(name string, value any, indent string, multiline bool) (string, error) {
-	var buf bytes.Buffer
-	encoder := json.NewEncoder(&buf)
-	encoder.SetEscapeHTML(false)
-	if multiline {
-		encoder.SetIndent(indent, "  ")
+// replaceOpenCodeMember puts value in place of the value of the member name of the object at path,
+// in the style of the member.
+func replaceOpenCodeMember(raw []byte, path []string, name string, value any) ([]byte, error) {
+	object, ok, err := objectAt(raw, path)
+	if err != nil {
+		return nil, err
 	}
-	if err := encoder.Encode(value); err != nil {
+	member, present := object.member(name)
+	if !ok || !present {
+		return nil, fmt.Errorf("member %q not found, nothing to replace", name)
+	}
+	indent, ownLine := leadOf(raw, member.keyStart)
+	text, err := valueText(value, indent, indentUnit(indent), jsonLineEnding(raw), ownLine)
+	if err != nil {
+		return nil, err
+	}
+	return replaceBytes(raw, member.valueStart, member.valueEnd, text), nil
+}
+
+// jsonLineEnding is the line ending of the document: CRLF when its first line ends so, else LF.
+func jsonLineEnding(raw []byte) string {
+	if i := bytes.IndexByte(raw, '\n'); i > 0 && raw[i-1] == '\r' {
+		return "\r\n"
+	}
+	return "\n"
+}
+
+// indentUnit is one level of indentation for a member written at indent: a tab where the file indents
+// with tabs, else two spaces.
+func indentUnit(indent string) string {
+	if strings.Contains(indent, "\t") {
+		return "\t"
+	}
+	return "  "
+}
+
+// memberText is `"name": value`, the value indented from indent when it spans lines.
+func memberText(name string, value any, indent, unit, eol string, multiline bool) (string, error) {
+	text, err := valueText(value, indent, unit, eol, multiline)
+	if err != nil {
 		return "", err
 	}
 	key, err := json.Marshal(name)
 	if err != nil {
 		return "", err
 	}
-	return string(key) + ": " + strings.TrimRight(buf.String(), "\n"), nil
+	return string(key) + ": " + text, nil
+}
+
+// valueText is the value as JSON, its lines after the first indented from indent by unit and ended by eol.
+func valueText(value any, indent, unit, eol string, multiline bool) (string, error) {
+	var buf bytes.Buffer
+	encoder := json.NewEncoder(&buf)
+	encoder.SetEscapeHTML(false)
+	if multiline {
+		encoder.SetIndent(indent, unit)
+	}
+	if err := encoder.Encode(value); err != nil {
+		return "", err
+	}
+	text := strings.TrimRight(buf.String(), "\n")
+	return strings.ReplaceAll(text, "\n", eol), nil
 }
 
 func replaceBytes(raw []byte, start, end int, with string) []byte {
