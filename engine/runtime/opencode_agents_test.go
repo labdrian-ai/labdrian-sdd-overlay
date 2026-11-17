@@ -127,10 +127,14 @@ func TestOpenCodeMemorycardBlockNamesTheToolsAndNeverTheOldStore(t *testing.T) {
 		t.Fatalf("AGENTS.md has no memorycard block:\n%s", text)
 	}
 	block := text[start:]
-	for _, want := range []string{"memorycard", "`mem_save`", "`mem_search`", "`mem_get`", "`mem_update`", "`topic_key`", "`supersedes`", "frozen"} {
+	for _, want := range []string{"memorycard", "`mem_save`", "`mem_search`", "`mem_get`", "`mem_update`", "`topic_key`", "`supersedes`", "is the only memory store"} {
 		if !strings.Contains(block, want) {
 			t.Errorf("the memorycard block does not say %s:\n%s", want, block)
 		}
+	}
+	// The owner approved the block without any mention of the retired store (L83).
+	if strings.Contains(strings.ToLower(block), "engram") {
+		t.Errorf("the memorycard block names Engram:\n%s", block)
 	}
 	for _, banned := range []string{"gentle-ai", "mem_capture_passive", "mem_get_observation", "mem_session_summary"} {
 		if strings.Contains(block, banned) {

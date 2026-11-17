@@ -25,17 +25,16 @@ var OpenCodeInstructionsBlock = MarkedBlock{
 // block holds its body, without the frontmatter Claude Code reads.
 const openCodeStyleSourcePath = "output-styles/labdrian.md"
 
-// openCodeMemorycardBlock is the memory store block of the owner's rules for OpenCode: memorycard
-// is the only store for new memories and its tools replace the Engram ones. It leaves out what only
-// Claude Code does (the capture hook that reads a worker's Key Learnings).
+// openCodeMemorycardBlock is the memory store block of the owner's rules for OpenCode, as the owner
+// approved it (L83): memorycard is the only memory store, and no other store is named. It leaves out
+// what only Claude Code does (the capture hook that reads a worker's Key Learnings).
 const openCodeMemorycardBlock = `## memorycard is the memory store
 
-Engram is frozen read-only history; memorycard (the MCP server ` + "`memorycard`" + `) is the only store for new memories. Never write to Engram.
+memorycard (the MCP server ` + "`memorycard`" + `) is the only memory store.
 
 - Save with ` + "`mem_save`" + ` (` + "`title`" + `, ` + "`body`" + `, ` + "`type`" + `, ` + "`topic_key`" + `, ` + "`scope`" + `, ` + "`project`" + `): the same ` + "`topic_key`" + ` updates the memory in place, and ` + "`supersedes`" + ` marks an older id as replaced.
 - Find with ` + "`mem_search`" + `, read one memory in full with ` + "`mem_get`" + `, and list the pinned, stale and recent ones with ` + "`mem_context`" + `.
 - Edit, pin, archive (never delete) or mark a stale memory reviewed with ` + "`mem_update`" + `, only after the user confirms a review; record a session summary with ` + "`mem_session`" + `.
-- memorycard ids and Engram ids are different number spaces: never pass an Engram id to memorycard.
 - A memory proven wrong is superseded, never left beside its correction. Record a supersession without asking when the evidence is in this session, and say which memory, by which, and why; ask first when it would rest on titles alone or overturn a position the user stated.`
 
 // errNoInstructionSource says the overlay checkout holds no source of the instructions: there is
