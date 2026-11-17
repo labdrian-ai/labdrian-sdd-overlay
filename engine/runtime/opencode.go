@@ -48,6 +48,7 @@ func (a OpenCodeAdapter) uninstall(action core.Action) core.LifecycleResult {
 	if err := a.validateRoot(); err != nil {
 		return a.result(action, core.CapabilityUnsupported, err.Error())
 	}
+	_, jsonErr := a.removeFromOpenCodeJSON()
 	pluginErr := os.Remove(a.pluginPath())
 	// An empty plugin directory, left by this removal or an earlier one, would be loaded by OpenCode
 	// as a plugin with no index.js. os.Remove refuses a directory that is not empty: that one is not
@@ -63,6 +64,9 @@ func (a OpenCodeAdapter) uninstall(action core.Action) core.LifecycleResult {
 	}
 	if legacyErr != nil {
 		return a.result(action, core.CapabilityPartial, legacyErr.Error())
+	}
+	if jsonErr != nil {
+		return a.result(action, core.CapabilityPartial, "OpenCode config not cleaned: "+jsonErr.Error())
 	}
 	return a.result(action, core.CapabilityRestartRequired, "OpenCode plugin bridge removed; restart OpenCode to unload any already loaded plugin. Active marker remains at "+a.activeMarkerPath()+"; remove it only after OpenCode is fully stopped/restarted")
 }
@@ -103,6 +107,11 @@ func (a OpenCodeAdapter) install(action core.Action) core.LifecycleResult {
 	if err := a.removeLegacyPlugin(); err != nil {
 		message += "; " + err.Error()
 	}
+	jsonMessage, err := a.writeOpenCodeJSON()
+	if err != nil {
+		return a.result(action, core.CapabilityPartial, message+"; OpenCode config not written: "+err.Error())
+	}
+	message += "; " + jsonMessage
 	return a.result(action, core.CapabilityRestartRequired, message)
 }
 
@@ -135,6 +144,9 @@ func (a OpenCodeAdapter) status(action core.Action) core.LifecycleResult {
 	currentHash := sha256hex.Sum(plugin)
 	if cfg.InstalledHash != currentHash {
 		return a.result(action, core.CapabilityRestartRequired, "OpenCode plugin artifact changed; restart OpenCode after reinstall")
+	}
+	if message, bad := a.openCodeJSONStatus(); bad {
+		return a.result(action, core.CapabilityPartial, message)
 	}
 	active, err := a.readActiveMarker()
 	if err != nil {
