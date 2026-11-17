@@ -171,7 +171,7 @@ func TestMemorycardPluginIsAV2PluginCalledMemorycard(t *testing.T) {
 	f := newMemorycardFixture(t)
 	f.writeRecord(t, f.fake)
 	out := f.run(t, nil, `console.log(JSON.stringify({ id: plugin.id, hooks: [...hooks.keys()].sort() }));`)
-	if want := `{"id":"memorycard","hooks":["context"]}`; strings.TrimSpace(out) != want {
+	if want := `{"id":"memorycard","hooks":["context","execute.after"]}`; strings.TrimSpace(out) != want {
 		t.Errorf("plugin = %s, want %s", strings.TrimSpace(out), want)
 	}
 }
@@ -221,6 +221,50 @@ console.log(JSON.stringify(event.system));`)
 	}
 }
 
+func TestMemorycardPluginCapturesTheFinalTextOfASubagentOnStdin(t *testing.T) {
+	f := newMemorycardFixture(t)
+	f.writeRecord(t, f.fake)
+	f.run(t, nil, `await hooks.get("execute.after")({ id: "call_1", tool: "subagent", sessionID: "ses_1", status: "completed", input: { agent: "builder", prompt: "go" }, result: { output: "done\n\n## Key Learnings\n1. A learning that is long enough to be kept by memorycard.\n", content: [] } });`)
+	got, err := os.ReadFile(f.stdin)
+	if err != nil {
+		t.Fatalf("capture read nothing: %v", err)
+	}
+	if want := "done\n\n## Key Learnings\n1. A learning that is long enough to be kept by memorycard.\n"; string(got) != want {
+		t.Errorf("capture read %q, want the subagent output exactly %q", got, want)
+	}
+	if calls := f.callsMade(t); len(calls) != 1 || calls[0] != "capture|"+f.resolvedProject(t) {
+		t.Errorf("calls = %v, want one capture call run in the session's directory", calls)
+	}
+}
+
+func TestMemorycardPluginCapturesTheTextPartsOfASubagentResultWithNoOutput(t *testing.T) {
+	f := newMemorycardFixture(t)
+	f.writeRecord(t, f.fake)
+	f.run(t, nil, `await hooks.get("execute.after")({ id: "call_1", tool: "subagent", sessionID: "ses_1", status: "completed", input: {}, result: { content: [{ type: "text", text: "first" }, { type: "image", data: "x" }, { type: "text", text: "second" }] } });`)
+	got, err := os.ReadFile(f.stdin)
+	if err != nil {
+		t.Fatalf("capture read nothing: %v", err)
+	}
+	if string(got) != "first\nsecond" {
+		t.Errorf("capture read %q, want the text parts joined by a newline", got)
+	}
+}
+
+func TestMemorycardPluginIgnoresEveryCallThatIsNotACompletedSubagentWithText(t *testing.T) {
+	f := newMemorycardFixture(t)
+	f.writeRecord(t, f.fake)
+	f.run(t, nil, `const after = hooks.get("execute.after");
+await after({ id: "a", tool: "shell", sessionID: "s", status: "completed", input: {}, result: { output: "## Key Learnings\n1. not from a subagent at all, so never captured." } });
+await after({ id: "b", tool: "subagent", sessionID: "s", status: "error", input: {}, error: new Error("boom"), result: undefined });
+await after({ id: "c", tool: "subagent", sessionID: "s", status: "completed", input: {}, result: { output: "", content: [] } });
+await after({ id: "d", tool: "subagent", sessionID: "s", status: "completed", input: {}, result: { output: "   \n" } });
+await after(undefined);
+await after({ tool: "subagent", status: "completed", result: { output: 7 } });`)
+	if calls := f.callsMade(t); len(calls) != 0 {
+		t.Errorf("calls = %v, want none", calls)
+	}
+}
+
 func TestMemorycardPluginSwallowsEveryFailureOfMemorycard(t *testing.T) {
 	cases := map[string]struct {
 		mode    string
@@ -239,6 +283,7 @@ func TestMemorycardPluginSwallowsEveryFailureOfMemorycard(t *testing.T) {
 			env := append([]string{"FAKE_MODE=" + c.mode}, c.env...)
 			out := f.run(t, env, `const event = { sessionID: "ses_1", system: [] };
 await hooks.get("context")(event);
+await hooks.get("execute.after")({ id: "call_1", tool: "subagent", sessionID: "ses_1", status: "completed", input: {}, result: { output: "text" } });
 console.log(JSON.stringify(event.system));`)
 			if strings.TrimSpace(out) != "[]" {
 				t.Errorf("system = %s, want nothing pushed and no failure thrown", strings.TrimSpace(out))

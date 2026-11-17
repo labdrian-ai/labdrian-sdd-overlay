@@ -1,6 +1,7 @@
 // labdrian-memorycard-plugin: the memorycard plugin of the labdrian OpenCode adapter (S11).
 //
-// A new session starts with the output of `memorycard context`. memorycard is the only memory store here. A
+// A new session starts with the output of `memorycard context`, and each subagent's final text goes to
+// `memorycard capture` on stdin, as in Claude Code. memorycard is the only memory store here. A
 // memorycard that is absent, exits non-zero or does not answer in time never breaks the session: the
 // failure is logged and the session goes on.
 import { spawn } from "node:child_process";
@@ -21,6 +22,7 @@ const DEFAULT_TIMEOUT_MS = 20000;
 const RETRY_AFTER_MS = 60000;
 const KILL_GRACE_MS = 2000;
 const OUTPUT_LIMIT = 1024 * 1024;
+const SUBAGENT_TOOL = "subagent";
 
 function isRecord(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -89,6 +91,17 @@ function runMemorycard(program, args, cwd, stdin) {
   });
 }
 
+// textOf is the text of a finished tool result: its output when it has one, else its text parts.
+function textOf(result) {
+  if (!isRecord(result)) return "";
+  if (typeof result.output === "string" && result.output.trim() !== "") return result.output;
+  if (!Array.isArray(result.content)) return "";
+  return result.content
+    .filter((part) => isRecord(part) && part.type === "text" && typeof part.text === "string")
+    .map((part) => part.text)
+    .join("\n");
+}
+
 // sessionContext asks memorycard for the context of a session once and keeps the answer, which is
 // pushed before each model call. A failure is kept for RETRY_AFTER_MS, an answer for good.
 async function sessionContext(sessionID, state) {
@@ -115,6 +128,14 @@ async function contextRequested(event, state) {
   if (!isRecord(event) || typeof event.sessionID !== "string" || !Array.isArray(event.system)) return;
   const text = await sessionContext(event.sessionID, state);
   if (text !== "") event.system.push({ type: "text", text });
+}
+
+async function toolFinished(call, state) {
+  if (!isRecord(call) || call.tool !== SUBAGENT_TOOL || call.status !== "completed") return;
+  const text = textOf(call.result);
+  if (text.trim() === "") return;
+  const reply = await runMemorycard(state.program, ["capture"], state.directory, text);
+  if (!reply.ok) log(reply.failure);
 }
 
 // guarded makes a hook that cannot fail its caller.
@@ -164,5 +185,6 @@ export default Plugin.define({
     const program = typeof record.memorycard_command === "string" && record.memorycard_command !== "" ? record.memorycard_command : DEFAULT_PROGRAM;
     const state = { program, directory, sessions: new Map() };
     await ctx.session.hook("context", guarded((event) => contextRequested(event, state)));
+    await ctx.tool.hook("execute.after", guarded((call) => toolFinished(call, state)));
   },
 });
