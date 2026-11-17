@@ -182,12 +182,6 @@ func waitFor(t *testing.T, what string, condition func() bool) {
 	}
 }
 
-func (f memorycardFixture) waitCalls(t *testing.T, n int) []string {
-	t.Helper()
-	waitFor(t, fmt.Sprintf("%d calls of the fake", n), func() bool { return len(f.callsMade(t)) >= n })
-	return f.callsMade(t)
-}
-
 func (f memorycardFixture) waitStdin(t *testing.T) string {
 	t.Helper()
 	waitFor(t, "the fake to have read its input", func() bool {
