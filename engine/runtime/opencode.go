@@ -26,6 +26,10 @@ type OpenCodeOptions struct {
 	// environment gave it ($LABDRIAN_OVERLAY_DIR; see core.Config.LabdrianOverlayDir). Empty means
 	// the nearest checkout above the working directory.
 	OverlayDir string
+
+	// AgentsSkillsDir is ~/.agents/skills, the second place OpenCode reads skills from. Empty means
+	// none is checked.
+	AgentsSkillsDir string
 }
 
 // NewOpenCodeAdapter builds the OpenCode adapter over root, the directory its plugin is installed
@@ -49,6 +53,7 @@ func (a OpenCodeAdapter) uninstall(action core.Action) core.LifecycleResult {
 		return a.result(action, core.CapabilityUnsupported, err.Error())
 	}
 	_, jsonErr := a.removeFromOpenCodeJSON()
+	agentsErr := a.removeAgents()
 	pluginErr := os.Remove(a.pluginPath())
 	// An empty plugin directory, left by this removal or an earlier one, would be loaded by OpenCode
 	// as a plugin with no index.js. os.Remove refuses a directory that is not empty: that one is not
@@ -67,6 +72,9 @@ func (a OpenCodeAdapter) uninstall(action core.Action) core.LifecycleResult {
 	}
 	if jsonErr != nil {
 		return a.result(action, core.CapabilityPartial, "OpenCode config not cleaned: "+jsonErr.Error())
+	}
+	if agentsErr != nil {
+		return a.result(action, core.CapabilityPartial, "OpenCode AGENTS.md not cleaned: "+agentsErr.Error())
 	}
 	return a.result(action, core.CapabilityRestartRequired, "OpenCode plugin bridge removed; restart OpenCode to unload any already loaded plugin. Active marker remains at "+a.activeMarkerPath()+"; remove it only after OpenCode is fully stopped/restarted")
 }
@@ -112,6 +120,11 @@ func (a OpenCodeAdapter) install(action core.Action) core.LifecycleResult {
 		return a.result(action, core.CapabilityPartial, message+"; OpenCode config not written: "+err.Error())
 	}
 	message += "; " + jsonMessage
+	agentsMessage, agentsPartial := a.writeAgents()
+	message += "; " + agentsMessage + a.shadowingSkillsNote()
+	if agentsPartial {
+		return a.result(action, core.CapabilityPartial, message)
+	}
 	return a.result(action, core.CapabilityRestartRequired, message)
 }
 
@@ -148,6 +161,9 @@ func (a OpenCodeAdapter) status(action core.Action) core.LifecycleResult {
 	if message, bad := a.openCodeJSONStatus(); bad {
 		return a.result(action, core.CapabilityPartial, message)
 	}
+	if message, bad := a.agentsStatus(); bad {
+		return a.result(action, core.CapabilityPartial, message)
+	}
 	active, err := a.readActiveMarker()
 	if err != nil {
 		return a.result(action, core.CapabilityRestartRequired, "OpenCode restart required to load plugin version "+cfg.InstalledVersion)
@@ -170,7 +186,7 @@ func (a OpenCodeAdapter) status(action core.Action) core.LifecycleResult {
 	if active.ConfigRoot != "" && active.ConfigRoot != cfg.PluginConfigRoot {
 		return a.result(action, core.CapabilityRestartRequired, "OpenCode active config root mismatch; restart OpenCode to load "+cfg.PluginConfigRoot)
 	}
-	return a.result(action, core.CapabilitySupported, "OpenCode plugin active with version "+cfg.InstalledVersion+" and hash "+currentHash)
+	return a.result(action, core.CapabilitySupported, "OpenCode plugin active with version "+cfg.InstalledVersion+" and hash "+currentHash+a.shadowingSkillsNote())
 }
 
 func (a OpenCodeAdapter) pluginPath() string {
