@@ -24,9 +24,13 @@ repair_sdd_registry_file() {
   local registry="$1"
   local target="$2"
 
+  # A target that reads the skills of ~/.claude/skills has no skills directory of its own to read.
+  local skills_root="${TARGET_PATHS[$target]}"
+  copies_skills "$target" || skills_root="${TARGET_PATHS[claude]}"
+
   ensure_engine_binary >&2
   "$ENGINE_BINARY" registry repair-sdd --registry "$registry" \
-    --target "$target" --skills-root "${TARGET_PATHS[$target]}"
+    --target "$target" --skills-root "$skills_root"
 }
 
 # Gentle's default skill-registry intentionally skips sdd-* phase skills because

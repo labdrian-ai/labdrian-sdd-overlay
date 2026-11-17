@@ -200,6 +200,32 @@ func TestRegistryPins_RepairReadsTheSkillsOfTheTargetItIsToldOf(t *testing.T) {
 	})
 }
 
+// OpenCode reads the skills of ~/.claude/skills and gets no copy of its own, so the rows of its
+// registry name the Claude files: a repair that looked in the OpenCode directory found no executor
+// and took the rows out.
+func TestRegistryPins_RepairForOpenCodeReadsTheSkillsOpenCodeReads(t *testing.T) {
+	w := registryWorld(t)
+	w.installSkill("claude", "sdd-apply", "---\ndescription: Apply for claude\n---\n")
+	w.installSkill("opencode", "sdd-verify", "---\ndescription: a stray copy in the OpenCode directory\n---\n")
+	w.writeRegistry(staleRegistry)
+
+	run := w.runIn(w.project(), "repair-sdd-registry", "--no-refresh", "--target", "opencode")
+
+	registry := w.showRegistry(w.registryPath())
+	if run.Exit != 0 {
+		t.Fatalf("exit %d, stderr %q", run.Exit, run.Stderr)
+	}
+	if !strings.Contains(registry, "$HOME/.claude/skills/sdd-apply/SKILL.md") || !strings.Contains(registry, "Apply for claude") {
+		t.Errorf("the row of sdd-apply does not name the Claude skill:\n%s", registry)
+	}
+	if strings.Contains(registry, "sdd-verify") || strings.Contains(registry, ".config/opencode/skills") {
+		t.Errorf("a skill of the OpenCode directory, which OpenCode does not copy to, is in the registry:\n%s", registry)
+	}
+	if strings.Contains(run.Stderr, "sdd-apply") {
+		t.Errorf("stderr says sdd-apply is not installed: %q", run.Stderr)
+	}
+}
+
 func TestRegistryPins_RepairNamesTheProjectAfterItsDirectory(t *testing.T) {
 	w := registryWorld(t)
 	run := w.runIn(w.project(), "repair-sdd-registry", "--no-refresh", "--cwd", ".")

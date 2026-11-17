@@ -1143,16 +1143,16 @@ exit 0
 --- stdout
 repair-sdd-registry: registry=$HOME/proj/.atl/skill-registry.md target=opencode sdd_executors=1 missing=10
 --- stderr
-WARN: missing opencode SDD executor skill: $HOME/.config/opencode/skills/sdd-archive/SKILL.md
-WARN: missing opencode SDD executor skill: $HOME/.config/opencode/skills/sdd-design/SKILL.md
-WARN: missing opencode SDD executor skill: $HOME/.config/opencode/skills/sdd-explore/SKILL.md
-WARN: missing opencode SDD executor skill: $HOME/.config/opencode/skills/sdd-init/SKILL.md
-WARN: missing opencode SDD executor skill: $HOME/.config/opencode/skills/sdd-onboard/SKILL.md
-WARN: missing opencode SDD executor skill: $HOME/.config/opencode/skills/sdd-propose/SKILL.md
-WARN: missing opencode SDD executor skill: $HOME/.config/opencode/skills/sdd-spec/SKILL.md
-WARN: missing opencode SDD executor skill: $HOME/.config/opencode/skills/sdd-tasks/SKILL.md
-WARN: missing opencode SDD executor skill: $HOME/.config/opencode/skills/sdd-time-estimation/SKILL.md
-WARN: missing opencode SDD executor skill: $HOME/.config/opencode/skills/sdd-verify/SKILL.md
+WARN: missing opencode SDD executor skill: $HOME/.claude/skills/sdd-archive/SKILL.md
+WARN: missing opencode SDD executor skill: $HOME/.claude/skills/sdd-design/SKILL.md
+WARN: missing opencode SDD executor skill: $HOME/.claude/skills/sdd-explore/SKILL.md
+WARN: missing opencode SDD executor skill: $HOME/.claude/skills/sdd-init/SKILL.md
+WARN: missing opencode SDD executor skill: $HOME/.claude/skills/sdd-onboard/SKILL.md
+WARN: missing opencode SDD executor skill: $HOME/.claude/skills/sdd-propose/SKILL.md
+WARN: missing opencode SDD executor skill: $HOME/.claude/skills/sdd-spec/SKILL.md
+WARN: missing opencode SDD executor skill: $HOME/.claude/skills/sdd-tasks/SKILL.md
+WARN: missing opencode SDD executor skill: $HOME/.claude/skills/sdd-time-estimation/SKILL.md
+WARN: missing opencode SDD executor skill: $HOME/.claude/skills/sdd-verify/SKILL.md
 --- registry (file, mode 0644)
 # Skill Registry — proj
 
@@ -1163,7 +1163,7 @@ WARN: missing opencode SDD executor skill: $HOME/.config/opencode/skills/sdd-ver
 | Skill | Trigger / description | Scope | Path |
 | --- | --- | --- | --- |
 
-| `sdd-apply` | Apply for opencode | executor | `$HOME/.config/opencode/skills/sdd-apply/SKILL.md` |
+| `sdd-apply` | Apply for claude | executor | `$HOME/.claude/skills/sdd-apply/SKILL.md` |
 
 ## Loading protocol
 
