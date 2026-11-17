@@ -78,8 +78,18 @@ func styleBody(text string) string {
 	if !strings.HasPrefix(text, "---\n") {
 		return text
 	}
-	if end := strings.Index(text[len("---\n"):], "\n---\n"); end >= 0 {
-		return text[len("---\n")+end+len("\n---\n"):]
+	rest := text[len("---\n"):]
+	switch {
+	case strings.HasPrefix(rest, "---\n"):
+		return rest[len("---\n"):]
+	case rest == "---":
+		return ""
+	}
+	if end := strings.Index(rest, "\n---\n"); end >= 0 {
+		return rest[end+len("\n---\n"):]
+	}
+	if strings.HasSuffix(rest, "\n---") {
+		return ""
 	}
 	return text
 }

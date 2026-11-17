@@ -140,7 +140,14 @@ func (a OpenCodeAdapter) install(action core.Action) core.LifecycleResult {
 	return a.result(action, core.CapabilityRestartRequired, message)
 }
 
+// status is the lifecycle status with the note about the labdrian skills that shadow the role agents,
+// which is a fact about the machine and so on every outcome.
 func (a OpenCodeAdapter) status(action core.Action) core.LifecycleResult {
+	result := a.statusOf(action)
+	return a.result(action, result.Status, result.Message+a.shadowingSkillsNote())
+}
+
+func (a OpenCodeAdapter) statusOf(action core.Action) core.LifecycleResult {
 	if err := a.validateRoot(); err != nil {
 		return a.result(action, core.CapabilityUnsupported, err.Error())
 	}
@@ -198,7 +205,7 @@ func (a OpenCodeAdapter) status(action core.Action) core.LifecycleResult {
 	if active.ConfigRoot != "" && active.ConfigRoot != cfg.PluginConfigRoot {
 		return a.result(action, core.CapabilityRestartRequired, "OpenCode active config root mismatch; restart OpenCode to load "+cfg.PluginConfigRoot)
 	}
-	return a.result(action, core.CapabilitySupported, "OpenCode plugin active with version "+cfg.InstalledVersion+" and hash "+currentHash+a.shadowingSkillsNote())
+	return a.result(action, core.CapabilitySupported, "OpenCode plugin active with version "+cfg.InstalledVersion+" and hash "+currentHash)
 }
 
 func (a OpenCodeAdapter) pluginPath() string {
