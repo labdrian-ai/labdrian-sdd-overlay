@@ -13,8 +13,10 @@ import (
 // The tests stub the modules OpenCode hands a plugin, and a stub that exports something the real
 // module does not hides a plugin that cannot load (the 2.2.7 `import { Tool }`, which the real
 // module never exported). OpenCode 2.2.7's @opencode/plugin/promise/tool exports exactly CallID and
-// Error (probed in /home/labdrian/.cache/t15-oc-T9SG/probe-exports.json); every stub of it in the
-// engine's tests must export those names and no others.
+// Error, as observed by importing the module from a plugin loaded by the real binary. To probe it again,
+// run TestOpenCodeLoadsTheInstalledPluginAndItWritesItsActiveMarker, which loads the installed plugin
+// into the opencode on the PATH and fails on an import the module does not export. Every stub of it in
+// the engine's tests must export those names and no others.
 var (
 	toolStubLine   = regexp.MustCompile(`"tool\.js":\s*` + "`([^`]*)`")
 	exportedName   = regexp.MustCompile(`\bexport\s+(?:class|const|let|var|function)\s+([A-Za-z_$][\w$]*)`)
