@@ -65,6 +65,7 @@ func (a OpenCodeAdapter) uninstall(action core.Action) core.LifecycleResult {
 	// ours to remove.
 	_ = os.Remove(filepath.Dir(a.pluginPath()))
 	legacyErr := a.removeLegacyPlugin()
+	memorycardErr := a.removeMemorycardPlugin()
 	configErr := os.Remove(a.configPath())
 	if pluginErr != nil && !os.IsNotExist(pluginErr) {
 		return a.result(action, core.CapabilityPartial, pluginErr.Error())
@@ -74,6 +75,9 @@ func (a OpenCodeAdapter) uninstall(action core.Action) core.LifecycleResult {
 	}
 	if legacyErr != nil {
 		return a.result(action, core.CapabilityPartial, legacyErr.Error())
+	}
+	if memorycardErr != nil {
+		return a.result(action, core.CapabilityPartial, memorycardErr.Error())
 	}
 	if jsonErr != nil || agentsErr != nil {
 		var failed []string
@@ -85,7 +89,7 @@ func (a OpenCodeAdapter) uninstall(action core.Action) core.LifecycleResult {
 		}
 		return a.result(action, core.CapabilityPartial, strings.Join(failed, "; "))
 	}
-	return a.result(action, core.CapabilityRestartRequired, "OpenCode plugin bridge removed; restart OpenCode to unload any already loaded plugin. Active marker remains at "+a.activeMarkerPath()+"; remove it only after OpenCode is fully stopped/restarted")
+	return a.result(action, core.CapabilityRestartRequired, "OpenCode plugin bridge removed; restart OpenCode to unload any already loaded plugin. Active marker remains at "+a.activeMarkerPath()+"; remove it only after OpenCode is fully stopped/restarted; the memorycard plugin's active marker remains at "+a.memorycardActiveMarkerPath())
 }
 
 func (a OpenCodeAdapter) install(action core.Action) core.LifecycleResult {
@@ -124,6 +128,8 @@ func (a OpenCodeAdapter) install(action core.Action) core.LifecycleResult {
 	if err := a.removeLegacyPlugin(); err != nil {
 		message += "; " + err.Error()
 	}
+	memorycardMessage, memorycardPartial := a.writeMemorycardPlugin()
+	message += "; " + memorycardMessage
 	// A refused opencode.json does not stop AGENTS.md or the skills report: each says its own result.
 	partial := false
 	jsonMessage, err := a.writeOpenCodeJSON()
@@ -134,7 +140,7 @@ func (a OpenCodeAdapter) install(action core.Action) core.LifecycleResult {
 	message += "; " + jsonMessage
 	agentsMessage, agentsPartial := a.writeAgents()
 	message += "; " + agentsMessage + a.shadowingSkillsNote()
-	if partial || agentsPartial {
+	if partial || agentsPartial || memorycardPartial {
 		return a.result(action, core.CapabilityPartial, message)
 	}
 	return a.result(action, core.CapabilityRestartRequired, message)

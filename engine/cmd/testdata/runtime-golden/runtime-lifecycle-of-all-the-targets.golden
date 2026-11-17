@@ -102,7 +102,7 @@ exit: 0
 $ runtime uninstall --target opencode
 exit: 0
 --- stdout ---
-[opencode] uninstall: restart_required — OpenCode plugin bridge removed; restart OpenCode to unload any already loaded plugin. Active marker remains at <WORLD>/home/.config/opencode/labdrian-runtime-parity.active.json; remove it only after OpenCode is fully stopped/restarted
+[opencode] uninstall: restart_required — OpenCode plugin bridge removed; restart OpenCode to unload any already loaded plugin. Active marker remains at <WORLD>/home/.config/opencode/labdrian-runtime-parity.active.json; remove it only after OpenCode is fully stopped/restarted; the memorycard plugin's active marker remains at <WORLD>/home/.config/opencode/memorycard-opencode.active.json
 --- stderr ---
 
 # uninstall pi
@@ -117,7 +117,7 @@ $ runtime uninstall --target all
 exit: 1
 --- stdout ---
 [claude] uninstall: restart_required — Claude lifecycle hooks removed; restart Claude to unload stale hook processes
-[opencode] uninstall: restart_required — OpenCode plugin bridge removed; restart OpenCode to unload any already loaded plugin. Active marker remains at <WORLD>/home/.config/opencode/labdrian-runtime-parity.active.json; remove it only after OpenCode is fully stopped/restarted
+[opencode] uninstall: restart_required — OpenCode plugin bridge removed; restart OpenCode to unload any already loaded plugin. Active marker remains at <WORLD>/home/.config/opencode/labdrian-runtime-parity.active.json; remove it only after OpenCode is fully stopped/restarted; the memorycard plugin's active marker remains at <WORLD>/home/.config/opencode/memorycard-opencode.active.json
 [codex] uninstall: restart_required — Codex lifecycle manifest removed; restart long-running Codex processes
 [pi] uninstall: unsupported — labdrian-pi package is not built at <WORLD>/home/.labdrian-overlay/pi/labdrian-pi; nothing to uninstall
 --- stderr ---

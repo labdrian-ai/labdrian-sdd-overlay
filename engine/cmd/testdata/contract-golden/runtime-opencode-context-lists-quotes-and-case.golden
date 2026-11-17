@@ -1,7 +1,7 @@
 $ runtime install --target opencode --config-root <CONFIG>
 exit: 0
 --- stdout ---
-[opencode] install: restart_required — OpenCode plugin changed; restart OpenCode to load version 2026-11-17-runtime-parity-13; opencode.json written to <CONFIG>/opencode.json; AGENTS.md not written: no overlay checkout holds the instruction sources: read the owner rules: open <OVERLAY>/instructions/owner-rules.md: no such file or directory
+[opencode] install: restart_required — OpenCode plugin changed; restart OpenCode to load version 2026-11-17-runtime-parity-13; memorycard plugin written to <CONFIG>/plugins/memorycard/index.js (version 2026-11-17-memorycard-1); opencode.json written to <CONFIG>/opencode.json; AGENTS.md not written: no overlay checkout holds the instruction sources: read the owner rules: open <OVERLAY>/instructions/owner-rules.md: no such file or directory
 --- stderr ---
 --- prompt_config ---
 {

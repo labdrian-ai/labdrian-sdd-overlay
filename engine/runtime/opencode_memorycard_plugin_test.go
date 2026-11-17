@@ -10,6 +10,8 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+
+	engineRuntime "github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime"
 )
 
 // The memorycard plugin (S11) is run under node against a fake `memorycard` program: the fake records
@@ -339,5 +341,11 @@ func TestMemorycardPluginSourceImportsOnlyWhatTheRealPluginModuleExportsAndNames
 	}
 	if strings.Contains(strings.ToLower(source), "engram") {
 		t.Error("the memorycard plugin names Engram; S11 wants no Engram call")
+	}
+}
+
+func TestOpenCodeMemorycardPluginVersionAndHashAreTheOnesOfTheEmbeddedSource(t *testing.T) {
+	if engineRuntime.OpenCodeMemorycardPluginVersion == "" || len(engineRuntime.OpenCodeMemorycardPluginHash()) != 64 {
+		t.Errorf("version %q, hash %q", engineRuntime.OpenCodeMemorycardPluginVersion, engineRuntime.OpenCodeMemorycardPluginHash())
 	}
 }
