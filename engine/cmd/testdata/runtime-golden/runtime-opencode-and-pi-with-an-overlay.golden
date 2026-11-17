@@ -47,7 +47,7 @@ exit: 0
 $ runtime install --target opencode
 exit: 0
 --- stdout ---
-[opencode] install: restart_required — OpenCode plugin changed; restart OpenCode to load version 2026-11-17-runtime-parity-14; memorycard plugin written to <WORLD>/home/.config/opencode/plugins/memorycard/index.js (version 2026-11-17-memorycard-2); opencode.json already current in <WORLD>/home/.config/opencode/opencode.json; AGENTS.md not written: no overlay checkout holds the instruction sources: read the owner rules: open <WORLD>/overlay/instructions/owner-rules.md: no such file or directory
+[opencode] install: restart_required — OpenCode plugin changed; restart OpenCode to load version 2026-11-17-runtime-parity-14; memorycard plugin already current in <WORLD>/home/.config/opencode/plugins/memorycard/index.js (version 2026-11-17-memorycard-2); opencode.json already current in <WORLD>/home/.config/opencode/opencode.json; AGENTS.md not written: no overlay checkout holds the instruction sources: read the owner rules: open <WORLD>/overlay/instructions/owner-rules.md: no such file or directory
 --- stderr ---
 
 # status opencode
@@ -61,7 +61,7 @@ exit: 1
 $ runtime update --target opencode
 exit: 0
 --- stdout ---
-[opencode] update: restart_required — OpenCode plugin changed; restart OpenCode to load version 2026-11-17-runtime-parity-14; memorycard plugin written to <WORLD>/home/.config/opencode/plugins/memorycard/index.js (version 2026-11-17-memorycard-2); opencode.json already current in <WORLD>/home/.config/opencode/opencode.json; AGENTS.md not written: no overlay checkout holds the instruction sources: read the owner rules: open <WORLD>/overlay/instructions/owner-rules.md: no such file or directory
+[opencode] update: restart_required — OpenCode plugin changed; restart OpenCode to load version 2026-11-17-runtime-parity-14; memorycard plugin already current in <WORLD>/home/.config/opencode/plugins/memorycard/index.js (version 2026-11-17-memorycard-2); opencode.json already current in <WORLD>/home/.config/opencode/opencode.json; AGENTS.md not written: no overlay checkout holds the instruction sources: read the owner rules: open <WORLD>/overlay/instructions/owner-rules.md: no such file or directory
 --- stderr ---
 
 # status opencode

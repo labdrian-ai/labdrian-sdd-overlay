@@ -43,9 +43,7 @@ type openCodeMemorycardRecord struct {
 	PluginPath        string `json:"plugin_path"`
 	InstalledHash     string `json:"installed_hash"`
 	InstalledVersion  string `json:"installed_version"`
-	ActivationMarker  string `json:"activation_marker"`
 	PluginConfigRoot  string `json:"plugin_config_root"`
-	PluginConfigScope string `json:"plugin_config_scope"`
 	MemorycardCommand string `json:"memorycard_command"`
 }
 
@@ -81,39 +79,46 @@ func (a OpenCodeAdapter) memorycardProgram() string {
 	return openCodeMemorycardProgramName
 }
 
-// memorycardPluginState says whether a file is at the plugin path and whether this adapter wrote it.
-func (a OpenCodeAdapter) memorycardPluginState() (content []byte, exists, ours bool, err error) {
+// readMemorycardPlugin reads the file at the plugin path; exists is false when there is none.
+func (a OpenCodeAdapter) readMemorycardPlugin() (content []byte, exists bool, err error) {
 	content, err = os.ReadFile(a.memorycardPluginPath())
 	if os.IsNotExist(err) {
-		return nil, false, false, nil
+		return nil, false, nil
 	}
-	if err != nil {
-		return nil, false, false, err
-	}
-	return content, true, strings.Contains(string(content), openCodeMemorycardPluginMark), nil
+	return content, err == nil, err
+}
+
+// isMemorycardPluginOurs says whether this adapter wrote the file: the mark is in its first line, as the
+// plugin header has it, so a file that quotes the mark further down is not ours.
+func isMemorycardPluginOurs(content []byte) bool {
+	first, _, _ := strings.Cut(string(content), "\n")
+	return strings.Contains(first, openCodeMemorycardPluginMark)
 }
 
 // writeMemorycardPlugin installs the plugin and its record, and says what it did. A file at the plugin
 // path that this adapter did not write is left as it is, and the result is partial.
 func (a OpenCodeAdapter) writeMemorycardPlugin() (message string, partial bool) {
 	path := a.memorycardPluginPath()
-	_, exists, ours, err := a.memorycardPluginState()
+	current, exists, err := a.readMemorycardPlugin()
 	if err != nil {
 		return "memorycard plugin not written: " + err.Error(), true
 	}
-	if exists && !ours {
+	if exists && !isMemorycardPluginOurs(current) {
 		return "memorycard plugin not written: " + path + " exists and was not written by this adapter; move it away and run update", true
 	}
 	record := openCodeMemorycardRecord{
 		PluginPath:        path,
 		InstalledHash:     OpenCodeMemorycardPluginHash(),
 		InstalledVersion:  OpenCodeMemorycardPluginVersion,
-		ActivationMarker:  a.memorycardActiveMarkerPath(),
 		PluginConfigRoot:  a.root,
-		PluginConfigScope: "global-opencode-config",
 		MemorycardCommand: a.memorycardProgram(),
 	}
 	data, err := json.MarshalIndent(record, "", "  ")
+	if err == nil && exists && string(current) == openCodeMemorycardPluginSource {
+		if have, readErr := os.ReadFile(a.memorycardConfigPath()); readErr == nil && string(have) == string(data) {
+			return fmt.Sprintf("memorycard plugin already current in %s (version %s)", path, OpenCodeMemorycardPluginVersion), false
+		}
+	}
 	if err == nil {
 		err = os.MkdirAll(filepath.Dir(path), 0o755)
 	}
@@ -131,37 +136,52 @@ func (a OpenCodeAdapter) writeMemorycardPlugin() (message string, partial bool) 
 
 // removeMemorycardPlugin removes what writeMemorycardPlugin wrote: the plugin when it is ours, its
 // record and an empty plugin directory. A file at the plugin path that is not ours stays, and so does
-// anything else in the directory.
-func (a OpenCodeAdapter) removeMemorycardPlugin() error {
-	_, exists, ours, err := a.memorycardPluginState()
+// anything else in the directory. It says whether it removed the plugin, and whether it left a file that
+// is not ours.
+func (a OpenCodeAdapter) removeMemorycardPlugin() (removed, foreignLeft bool, err error) {
+	content, exists, err := a.readMemorycardPlugin()
 	if err != nil {
-		return err
+		return false, false, err
 	}
-	if exists && ours {
+	if exists && isMemorycardPluginOurs(content) {
 		if err := os.Remove(a.memorycardPluginPath()); err != nil && !os.IsNotExist(err) {
-			return err
+			return false, false, err
 		}
+		removed = true
 	}
 	// os.Remove refuses a directory that is not empty: that one is not ours to remove.
 	_ = os.Remove(filepath.Dir(a.memorycardPluginPath()))
 	if err := os.Remove(a.memorycardConfigPath()); err != nil && !os.IsNotExist(err) {
-		return err
+		return removed, false, err
 	}
-	return nil
+	return removed, exists && !removed, nil
+}
+
+// memorycardUninstallNote is the sentence the uninstall message gains: the active marker that stays when
+// the plugin was removed, and the file left in place when it was not ours.
+func (a OpenCodeAdapter) memorycardUninstallNote(removed, foreignLeft bool) string {
+	var note string
+	if removed {
+		note += "; the memorycard plugin's active marker remains at " + a.memorycardActiveMarkerPath()
+	}
+	if foreignLeft {
+		note += "; " + a.memorycardPluginPath() + " was not written by this adapter and was left in place"
+	}
+	return note
 }
 
 // memorycardPluginProblem checks the installed plugin against its record. It says what is wrong, and
 // whether the result is partial (the install is missing, foreign or stale) or a restart owed (the file
 // is not the one the record names).
 func (a OpenCodeAdapter) memorycardPluginProblem() (restartOnly bool, message string, bad bool) {
-	content, exists, ours, err := a.memorycardPluginState()
+	content, exists, err := a.readMemorycardPlugin()
 	path := a.memorycardPluginPath()
 	switch {
 	case err != nil:
 		return false, "OpenCode memorycard plugin unreadable: " + err.Error(), true
 	case !exists:
 		return false, "OpenCode memorycard plugin not installed at " + path + "; run update", true
-	case !ours:
+	case !isMemorycardPluginOurs(content):
 		return false, "OpenCode memorycard plugin at " + path + " was not written by this adapter", true
 	}
 	record, err := a.readMemorycardRecord()

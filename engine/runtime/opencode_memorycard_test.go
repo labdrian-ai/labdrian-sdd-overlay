@@ -78,7 +78,6 @@ func TestOpenCodeInstallWritesTheMemorycardPluginAndItsRecord(t *testing.T) {
 		"plugin_path":        memorycardPluginFile(root),
 		"plugin_config_root": root,
 		"memorycard_command": "/opt/bin/memorycard",
-		"activation_marker":  memorycardMarkerFile(root),
 	}
 	for key, value := range want {
 		if record[key] != value {
@@ -171,7 +170,7 @@ func remove(t *testing.T, path string) {
 }
 
 func TestOpenCodeUpdateRewritesAChangedMemorycardPluginAndTheProgramItRuns(t *testing.T) {
-	root, adapter, _ := installedMemorycard(t)
+	root, _, _ := installedMemorycard(t)
 	if err := os.WriteFile(memorycardPluginFile(root), []byte("// labdrian-memorycard-plugin: edited\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -186,7 +185,6 @@ func TestOpenCodeUpdateRewritesAChangedMemorycardPluginAndTheProgramItRuns(t *te
 	if got := readRecord(t, root)["memorycard_command"]; got != "/usr/local/bin/memorycard" {
 		t.Errorf("memorycard_command = %v, want the path found by the update", got)
 	}
-	_ = adapter
 }
 
 func TestOpenCodeUninstallRemovesTheMemorycardPluginAndRecordAndNothingElseInItsDirectory(t *testing.T) {
@@ -248,8 +246,52 @@ func TestOpenCodeLeavesAMemorycardPluginItDidNotWriteAndSaysSo(t *testing.T) {
 	if status := adapter.Status(); status.Status != core.CapabilityPartial || !strings.Contains(status.Message, "not written by this adapter") {
 		t.Errorf("Status() = %#v, want partial", status)
 	}
-	adapter.Uninstall()
+	uninstall := adapter.Uninstall()
 	if got, err := os.ReadFile(memorycardPluginFile(root)); err != nil || string(got) != foreign {
 		t.Errorf("uninstall removed or changed the foreign plugin: %q, %v", got, err)
+	}
+	if !strings.Contains(uninstall.Message, memorycardPluginFile(root)+" was not written by this adapter and was left in place") || strings.Contains(uninstall.Message, "memorycard plugin's active marker") {
+		t.Errorf("Uninstall() = %q, want it to say the foreign file was left in place and name no memorycard marker, since none of ours was removed", uninstall.Message)
+	}
+}
+
+// The mark is in the first line, as the plugin header says: a foreign file that quotes it further down is not ours.
+func TestOpenCodeDoesNotTakeAForeignFileThatQuotesTheMarkInItsBodyForItsOwn(t *testing.T) {
+	root := t.TempDir()
+	if err := os.MkdirAll(filepath.Dir(memorycardPluginFile(root)), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	foreign := "export default { id: 'memorycard' };\n// not " + "labdrian-memorycard-plugin" + ", but it quotes it\n"
+	if err := os.WriteFile(memorycardPluginFile(root), []byte(foreign), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	adapter := engineRuntime.NewOpenCodeAdapter(root, engineRuntime.OpenCodeOptions{OverlayDir: shippedOverlay(t)})
+	if install := adapter.Install(); install.Status != core.CapabilityPartial || !strings.Contains(install.Message, "not written by this adapter") {
+		t.Errorf("Install() = %#v, want partial: the file is foreign", install)
+	}
+	adapter.Uninstall()
+	if got, _ := os.ReadFile(memorycardPluginFile(root)); string(got) != foreign {
+		t.Errorf("the foreign file was changed or removed: %q", got)
+	}
+}
+
+func TestOpenCodeSaysTheMemorycardPluginIsAlreadyCurrentWhenItsBytesMatch(t *testing.T) {
+	_, adapter, first := installedMemorycard(t)
+	if !strings.Contains(first.Message, "memorycard plugin written to") {
+		t.Fatalf("first install = %q, want the plugin written", first.Message)
+	}
+	second := adapter.Install()
+	if !strings.Contains(second.Message, "memorycard plugin already current in") || strings.Contains(second.Message, "memorycard plugin written to") {
+		t.Errorf("second install = %q, want the plugin already current", second.Message)
+	}
+}
+
+// The memorycard checks come after the runtime-parity marker checks: a parity restart owed is said first.
+func TestOpenCodeStatusSaysTheParityRestartBeforeAnythingAboutTheMemorycardPlugin(t *testing.T) {
+	root, adapter, _ := installedMemorycard(t)
+	remove(t, memorycardPluginFile(root))
+	status := adapter.Status()
+	if status.Status != core.CapabilityRestartRequired || !strings.Contains(status.Message, "restart required to load plugin version") || strings.Contains(status.Message, "memorycard") {
+		t.Errorf("Status() = %#v, want the parity restart first", status)
 	}
 }

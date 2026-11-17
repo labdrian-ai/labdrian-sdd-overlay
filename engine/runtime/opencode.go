@@ -65,7 +65,7 @@ func (a OpenCodeAdapter) uninstall(action core.Action) core.LifecycleResult {
 	// ours to remove.
 	_ = os.Remove(filepath.Dir(a.pluginPath()))
 	legacyErr := a.removeLegacyPlugin()
-	memorycardErr := a.removeMemorycardPlugin()
+	memorycardRemoved, memorycardForeign, memorycardErr := a.removeMemorycardPlugin()
 	configErr := os.Remove(a.configPath())
 	if pluginErr != nil && !os.IsNotExist(pluginErr) {
 		return a.result(action, core.CapabilityPartial, pluginErr.Error())
@@ -89,7 +89,7 @@ func (a OpenCodeAdapter) uninstall(action core.Action) core.LifecycleResult {
 		}
 		return a.result(action, core.CapabilityPartial, strings.Join(failed, "; "))
 	}
-	return a.result(action, core.CapabilityRestartRequired, "OpenCode plugin bridge removed; restart OpenCode to unload any already loaded plugin. Active marker remains at "+a.activeMarkerPath()+"; remove it only after OpenCode is fully stopped/restarted; the memorycard plugin's active marker remains at "+a.memorycardActiveMarkerPath())
+	return a.result(action, core.CapabilityRestartRequired, "OpenCode plugin bridge removed; restart OpenCode to unload any already loaded plugin. Active marker remains at "+a.activeMarkerPath()+"; remove it only after OpenCode is fully stopped/restarted"+a.memorycardUninstallNote(memorycardRemoved, memorycardForeign))
 }
 
 func (a OpenCodeAdapter) install(action core.Action) core.LifecycleResult {
@@ -189,12 +189,6 @@ func (a OpenCodeAdapter) statusOf(action core.Action) core.LifecycleResult {
 	if message, bad := a.agentsStatus(); bad {
 		return a.result(action, core.CapabilityPartial, message)
 	}
-	if restartOnly, message, bad := a.memorycardPluginProblem(); bad {
-		if restartOnly {
-			return a.result(action, core.CapabilityRestartRequired, message)
-		}
-		return a.result(action, core.CapabilityPartial, message)
-	}
 	active, err := a.readActiveMarker()
 	if err != nil {
 		return a.result(action, core.CapabilityRestartRequired, "OpenCode restart required to load plugin version "+cfg.InstalledVersion)
@@ -216,6 +210,12 @@ func (a OpenCodeAdapter) statusOf(action core.Action) core.LifecycleResult {
 	}
 	if active.ConfigRoot != "" && active.ConfigRoot != cfg.PluginConfigRoot {
 		return a.result(action, core.CapabilityRestartRequired, "OpenCode active config root mismatch; restart OpenCode to load "+cfg.PluginConfigRoot)
+	}
+	if restartOnly, message, bad := a.memorycardPluginProblem(); bad {
+		if restartOnly {
+			return a.result(action, core.CapabilityRestartRequired, message)
+		}
+		return a.result(action, core.CapabilityPartial, message)
 	}
 	if message, bad := a.memorycardActiveProblem(); bad {
 		return a.result(action, core.CapabilityRestartRequired, message)
