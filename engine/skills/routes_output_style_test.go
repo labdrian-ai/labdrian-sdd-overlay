@@ -73,3 +73,31 @@ func TestResolveRoutesStillNeverDeploysABareFileWithoutARoute(t *testing.T) {
 		t.Errorf("ResolveRoutes = %+v, %v, want %+v", got, err, want)
 	}
 }
+
+// A trailing slash on the agents root names the same directory: the style goes beside it all the same.
+func TestResolveRoutesCleansTheAgentsRootBeforePlacingAnOutputStyle(t *testing.T) {
+	for _, root := range []string{"/h/.claude/agents/", "/h/.claude//agents//", "/h/./.claude/agents"} {
+		dest := RouteDestinations{Target: "claude", SkillsRoot: "/s", AgentsRoot: root}
+		got, err := ResolveRoutes([]ManifestRow{{"labdrian.md", "custom", "output-style"}}, false, testOverlay, dest)
+		if err != nil || len(got) != 1 || got[0].Dest != "/h/.claude/output-styles/labdrian.md" {
+			t.Errorf("agents root %q: ResolveRoutes = %+v, %v, want /h/.claude/output-styles/labdrian.md", root, got, err)
+		}
+	}
+}
+
+// An agents root with no parent directory (a bare name, the root of the file system) has nothing to
+// place output-styles beside: the row is refused, saying so, instead of landing in the working directory.
+func TestResolveRoutesRefusesAnOutputStyleWhenTheAgentsRootHasNoParent(t *testing.T) {
+	for _, root := range []string{"agents", "agents/", ".", "/"} {
+		dest := RouteDestinations{Target: "claude", SkillsRoot: "/s", AgentsRoot: root}
+		got, err := ResolveRoutes([]ManifestRow{{"labdrian.md", "custom", "output-style"}}, false, testOverlay, dest)
+		var refused *OutputStylesRootError
+		if !errors.As(err, &refused) || got != nil {
+			t.Fatalf("agents root %q: ResolveRoutes = %+v, %v, want an OutputStylesRootError and no row", root, got, err)
+		}
+		want := "manifest row 'labdrian.md' is an output style of claude, and the agents directory " + `"` + root + `"` + " has no parent directory to place output-styles beside"
+		if err.Error() != want {
+			t.Errorf("error = %q, want %q", err.Error(), want)
+		}
+	}
+}

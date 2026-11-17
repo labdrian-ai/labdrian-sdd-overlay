@@ -89,6 +89,7 @@ func TestStatusCoreWritesTheWholeReportOfTheServiceAndAnswersItsOutcome(t *testi
 		"hook: Stop (review stop-hook)",
 		`hook: PreToolUse matcher="Agent" (builder guard)`,
 		`settings: "agent" (main session runs as the foreman)`,
+		`settings: "outputStyle" (labdrian output style)`,
 	} {
 		want += "[FAIL] " + label + unreadable
 	}

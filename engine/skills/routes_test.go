@@ -44,12 +44,16 @@ func TestValidLongtermMemRoutesAreExactlyTheFiveRoutes(t *testing.T) {
 			t.Errorf("%q is not a valid route, but the refusal says it is: %s", spelled, (&UnroutedRowError{Path: "longterm-mem/x"}).Error())
 		}
 	}
+	// output-style (T27) leaves skills/ and is not a route of longterm-mem/ rows: the one route outside the domain.
 	for route := range nonSkillRoutes {
+		if route == RouteOutputStyle {
+			continue
+		}
 		if !validLongtermMemRoutes[route] || route == RouteSkill {
 			t.Errorf("nonSkillRoutes holds %q, which is not one of the routes that leave skills/", route)
 		}
 	}
-	if len(nonSkillRoutes) != len(validLongtermMemRoutes)-1 {
+	if len(nonSkillRoutes)-1 != len(validLongtermMemRoutes)-1 || !nonSkillRoutes[RouteOutputStyle] {
 		t.Errorf("nonSkillRoutes = %v, want the valid routes but the skill route", nonSkillRoutes)
 	}
 }

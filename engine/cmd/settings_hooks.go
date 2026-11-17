@@ -51,6 +51,7 @@ func runMergeSettings(p process, args []string) {
 	}
 	fmt.Fprintln(p.stdout, "merge-settings: hooks installed successfully")
 	noticeForeignMainAgent(p, settingsPath)
+	noticeForeignOutputStyle(p, settingsPath)
 }
 
 // noticeForeignMainAgent says on stderr when the settings hold an "agent" key with a value other than
@@ -63,6 +64,16 @@ func noticeForeignMainAgent(p process, settingsPath string) {
 		return
 	}
 	fmt.Fprintln(p.stderr, "notice: "+settings.ForeignMainAgentNotice(settingsPath, settings.MainAgentValueJSON(doc.Root())))
+}
+
+// noticeForeignOutputStyle says the same on stderr for the "outputStyle" key: a value other than "labdrian"
+// is left as it is, so the labdrian output style is not enabled. Owned and absent say nothing.
+func noticeForeignOutputStyle(p process, settingsPath string) {
+	doc, _, err := (settingsfile.File{Path: settingsPath}).Read()
+	if err != nil || settings.OutputStyle(doc.Root()) != settings.OutputStyleConflict {
+		return
+	}
+	fmt.Fprintln(p.stderr, "notice: "+settings.ForeignOutputStyleNotice(settingsPath, settings.OutputStyleValueJSON(doc.Root())))
 }
 
 // runUninstallHooks implements the 'uninstall-hooks' subcommand.

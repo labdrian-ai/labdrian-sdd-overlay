@@ -310,6 +310,9 @@ func routingAcceptsLongtermMemRoute(route string) bool {
 func TestRouteDomain_OnDiskCheckAndRoutingAgree(t *testing.T) {
 	onDiskDomain := map[string]bool{"skill": true}
 	for route := range nonSkillRoutes {
+		if route == RouteOutputStyle {
+			continue // not a route of longterm-mem/ rows (T27)
+		}
 		onDiskDomain[route] = true
 	}
 	if len(onDiskDomain) != 5 {
@@ -451,5 +454,17 @@ func TestOnDiskDiagnosticsNameManifestRowEdit(t *testing.T) {
 				t.Errorf("DiffOnDisk: Detail %q must not cite sync-manifest, which cannot clear this divergence", d.Detail)
 			}
 		})
+	}
+}
+
+// The route is a non-skill route for DeployableManifestPaths too, whatever the shape of its row path.
+func TestDeployableManifestPathsSkipsAnOutputStyleRowWhateverItsPath(t *testing.T) {
+	manifest := "labdrian.md custom output-style\noutput-styles/labdrian.md custom output-style\nx/SKILL.md managed\n"
+	got, err := DeployableManifestPaths(strings.NewReader(manifest))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := got["output-styles/labdrian.md"]; ok || len(got) != 1 {
+		t.Errorf("DeployableManifestPaths = %v, want only x/SKILL.md", got)
 	}
 }

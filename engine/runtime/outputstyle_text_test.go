@@ -8,12 +8,14 @@ import (
 )
 
 // The owner's voice has one source in this repository, output-styles/labdrian.md, which the
-// output-style route copies to ~/.claude/output-styles and the OpenCode AGENTS.md carries. L78 holds
-// the text the owner approved ("apruebo"); L78 replaced the Gentleman-based text of L60, so there are
-// no "four edits" to check, only the approved text. These tests pin the whole file to it.
+// output-style route copies to ~/.claude/output-styles and the OpenCode AGENTS.md carries. The approved
+// text is L78 (the owner's "apruebo") plus L80 (the one frontmatter line keep-coding-instructions: true,
+// which keeps the software-engineering instructions of Claude Code in the main session). These tests pin
+// the whole file to it, byte for byte.
 const approvedOutputStyle = `---
 name: labdrian
 description: Terse senior engineer: outcome first, evidence over opinion, no filler
+keep-coding-instructions: true
 ---
 
 # labdrian Output Style
@@ -54,9 +56,9 @@ func outputStyleSource(t *testing.T) string {
 	return string(data)
 }
 
-func TestOutputStyleIsTheTextTheOwnerApprovedInL78ByteForByte(t *testing.T) {
+func TestOutputStyleIsTheTextTheOwnerApprovedInL78AndL80ByteForByte(t *testing.T) {
 	if got := outputStyleSource(t); got != approvedOutputStyle {
-		t.Errorf("output-styles/labdrian.md differs from the L78 text\n got %d bytes: %q\nwant %d bytes: %q", len(got), got, len(approvedOutputStyle), approvedOutputStyle)
+		t.Errorf("output-styles/labdrian.md differs from the L78 plus L80 text\n got %d bytes: %q\nwant %d bytes: %q", len(got), got, len(approvedOutputStyle), approvedOutputStyle)
 	}
 }
 

@@ -1,6 +1,7 @@
 ---
 name: labdrian
 description: Terse senior engineer: outcome first, evidence over opinion, no filler
+keep-coding-instructions: true
 ---
 
 # labdrian Output Style

@@ -211,6 +211,7 @@ func (s Service) Check(req Request) Report {
 		checkReviewStopHook(loaded, binaryPath),
 		checkBuilderGuard(loaded, binaryPath),
 		checkMainAgent(loaded, binaryPath),
+		checkOutputStyle(loaded, binaryPath),
 		CheckContract(contractPath, s.Files),
 	}
 	if check := s.codexHook(req, binaryPath); check != nil {
@@ -447,6 +448,28 @@ func checkMainAgent(s loadedSettings, binaryPath string) Check {
 				settings.MainAgentValueJSON(s.root), settings.MainAgentName, cost, settings.MainAgentName)}
 	}
 	return Check{Label: label, Level: Warn, Note: `"agent" key missing in ` + s.path + "; " + cost + "; " + installRemedy + "; " + restartNote}
+}
+
+// checkOutputStyle reports whether the settings key that names the output style of a session is the
+// labdrian one (T27), as checkMainAgent does for the main-session agent: missing warns with the install
+// remedy, another value is a conflict the overlay never overwrites, and a value that is not a string
+// is printed as JSON.
+func checkOutputStyle(s loadedSettings, binaryPath string) Check {
+	label := `settings: "outputStyle" (labdrian output style)`
+	const cost = "the labdrian output style is not enabled"
+	const installRemedy = "run 'labdrian install-hooks'"
+	if c, done := s.beforeEntries(label, Warn, "; "+cost+"; "+installRemedy+"; "+restartNote); done {
+		return c
+	}
+	switch settings.OutputStyle(s.root) {
+	case settings.OutputStyleOwned:
+		return Check{Label: label, Level: OK, Note: "installed; " + restartNote + " if this session started earlier"}
+	case settings.OutputStyleConflict:
+		return Check{Label: label, Level: Warn,
+			Note: fmt.Sprintf(`"outputStyle" is %s, not %q; the overlay never overwrites it, so %s; set it to %q or remove the key, then run 'labdrian install-hooks'`,
+				settings.OutputStyleValueJSON(s.root), settings.OutputStyleName, cost, settings.OutputStyleName)}
+	}
+	return Check{Label: label, Level: Warn, Note: `"outputStyle" key missing in ` + s.path + "; " + cost + "; " + installRemedy + "; " + restartNote}
 }
 
 // CheckContract verifies the contract at path is readable and its frontmatter parses.

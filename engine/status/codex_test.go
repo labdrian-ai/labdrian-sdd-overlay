@@ -18,7 +18,7 @@ func TestCodexHookStatusUsesDefaultOrExplicitHomeAndNeverClaimsTrust(t *testing.
 		if codex == "" {
 			codex = "/h/.codex"
 		}
-		if got := service.Check(req); got.Outcome() != Healthy || len(got.Checks) != 13 {
+		if got := service.Check(req); got.Outcome() != Healthy || len(got.Checks) != 14 {
 			t.Fatalf("absent Codex changed the old outcome: %+v", got)
 		}
 		w.files.modes[codex] = fs.ModeDir | 0o700

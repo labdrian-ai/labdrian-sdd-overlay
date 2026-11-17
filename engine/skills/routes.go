@@ -165,6 +165,19 @@ func (e *MissingRootError) Error() string {
 	return fmt.Sprintf("manifest row '%s' is copied to the %s directory of %s, and none was given", e.Path, e.Directory, e.Target)
 }
 
+// OutputStylesRootError is an output style whose agents directory has no parent to place the output
+// styles beside: a bare relative name, or the root of the file system. The row is refused rather than
+// let to land in the working directory.
+type OutputStylesRootError struct {
+	Path       string
+	Target     string
+	AgentsRoot string
+}
+
+func (e *OutputStylesRootError) Error() string {
+	return fmt.Sprintf("manifest row '%s' is an output style of %s, and the agents directory %q has no parent directory to place output-styles beside", e.Path, e.Target, e.AgentsRoot)
+}
+
 // agentRouteTargets names the runtime that holds the native agents of a route, and the one an output
 // style is for.
 var agentRouteTargets = map[string]string{
@@ -288,7 +301,12 @@ func withOutputStyleDest(placed ResolvedRoute, name string, dest RouteDestinatio
 	if dest.AgentsRoot == "" {
 		return ResolvedRoute{}, &MissingRootError{Path: placed.Path, Directory: outputStylesDirectory, Target: dest.Target}
 	}
-	placed.Dest = pathpkg.Join(pathpkg.Dir(dest.AgentsRoot), outputStylesDirectory, name)
+	agents := pathpkg.Clean(dest.AgentsRoot)
+	parent := pathpkg.Dir(agents)
+	if parent == agents || parent == "." {
+		return ResolvedRoute{}, &OutputStylesRootError{Path: placed.Path, Target: dest.Target, AgentsRoot: dest.AgentsRoot}
+	}
+	placed.Dest = pathpkg.Join(parent, outputStylesDirectory, name)
 	return placed, nil
 }
 
