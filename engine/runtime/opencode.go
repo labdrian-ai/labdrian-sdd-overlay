@@ -70,11 +70,15 @@ func (a OpenCodeAdapter) uninstall(action core.Action) core.LifecycleResult {
 	if legacyErr != nil {
 		return a.result(action, core.CapabilityPartial, legacyErr.Error())
 	}
-	if jsonErr != nil {
-		return a.result(action, core.CapabilityPartial, "OpenCode config not cleaned: "+jsonErr.Error())
-	}
-	if agentsErr != nil {
-		return a.result(action, core.CapabilityPartial, "OpenCode AGENTS.md not cleaned: "+agentsErr.Error())
+	if jsonErr != nil || agentsErr != nil {
+		var failed []string
+		if jsonErr != nil {
+			failed = append(failed, "OpenCode config not cleaned: "+jsonErr.Error())
+		}
+		if agentsErr != nil {
+			failed = append(failed, "OpenCode AGENTS.md not cleaned: "+agentsErr.Error())
+		}
+		return a.result(action, core.CapabilityPartial, strings.Join(failed, "; "))
 	}
 	return a.result(action, core.CapabilityRestartRequired, "OpenCode plugin bridge removed; restart OpenCode to unload any already loaded plugin. Active marker remains at "+a.activeMarkerPath()+"; remove it only after OpenCode is fully stopped/restarted")
 }
@@ -115,14 +119,17 @@ func (a OpenCodeAdapter) install(action core.Action) core.LifecycleResult {
 	if err := a.removeLegacyPlugin(); err != nil {
 		message += "; " + err.Error()
 	}
+	// A refused opencode.json does not stop AGENTS.md or the skills report: each says its own result.
+	partial := false
 	jsonMessage, err := a.writeOpenCodeJSON()
 	if err != nil {
-		return a.result(action, core.CapabilityPartial, message+"; OpenCode config not written: "+err.Error())
+		partial = true
+		jsonMessage = "OpenCode config not written: " + err.Error()
 	}
 	message += "; " + jsonMessage
 	agentsMessage, agentsPartial := a.writeAgents()
 	message += "; " + agentsMessage + a.shadowingSkillsNote()
-	if agentsPartial {
+	if partial || agentsPartial {
 		return a.result(action, core.CapabilityPartial, message)
 	}
 	return a.result(action, core.CapabilityRestartRequired, message)
