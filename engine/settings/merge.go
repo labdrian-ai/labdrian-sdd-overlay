@@ -68,6 +68,9 @@ func mergeHooks(root map[string]interface{}, hookCommand string) bool {
 	if addMainAgent(root) {
 		changed = true
 	}
+	if addOutputStyle(root) {
+		changed = true
+	}
 	root["hooks"] = hooks
 	return changed
 }
@@ -100,6 +103,9 @@ func addClearanceDenyRule(root map[string]interface{}) bool {
 // older version left on Stop stays, as it always has.
 func removeHooks(root map[string]interface{}, hookCommand string) bool {
 	changed := removeMainAgent(root)
+	if removeOutputStyle(root) {
+		changed = true
+	}
 	hooks, ok := root["hooks"].(map[string]interface{})
 	if !ok {
 		return changed

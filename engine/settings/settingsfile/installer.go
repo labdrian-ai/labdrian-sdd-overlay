@@ -60,15 +60,35 @@ func (Installer) Uninstall(path, hookCommand string) error {
 // (MainAgentMissing); one that cannot be read or parsed is returned as the system or encoding/json
 // reported it.
 func (Installer) InspectMainAgent(path string) (state settings.MainAgentState, valueJSON string, err error) {
+	root, err := topLevel(path)
+	if err != nil || root == nil {
+		return settings.MainAgentMissing, "", err
+	}
+	return settings.MainAgent(root), settings.MainAgentValueJSON(root), nil
+}
+
+// InspectOutputStyle says what the settings file at path holds under the output style key, as
+// InspectMainAgent does for the main-session agent key.
+func (Installer) InspectOutputStyle(path string) (state settings.OutputStyleState, valueJSON string, err error) {
+	root, err := topLevel(path)
+	if err != nil || root == nil {
+		return settings.OutputStyleMissing, "", err
+	}
+	return settings.OutputStyle(root), settings.OutputStyleValueJSON(root), nil
+}
+
+// topLevel is the top-level object of the settings file at path, nil when the file is absent. A file
+// that cannot be read or parsed is returned as the system or encoding/json reported it.
+func topLevel(path string) (map[string]interface{}, error) {
 	data, present, err := File{Path: path}.Bytes()
 	if err != nil || !present {
-		return settings.MainAgentMissing, "", err
+		return nil, err
 	}
 	doc, err := settings.Parse(data)
 	if err != nil {
-		return settings.MainAgentMissing, "", err
+		return nil, err
 	}
-	return settings.MainAgent(doc.Root()), settings.MainAgentValueJSON(doc.Root()), nil
+	return doc.Root(), nil
 }
 
 // Inspect says what the settings file at path holds for the binary at hookCommand. found is false

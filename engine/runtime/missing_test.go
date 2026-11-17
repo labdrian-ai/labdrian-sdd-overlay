@@ -24,12 +24,18 @@ func (*ptrHooks) Inspect(string, string) (bool, bool, error) { return false, fal
 func (*ptrHooks) InspectMainAgent(string) (settings.MainAgentState, string, error) {
 	return settings.MainAgentOwned, "", nil
 }
+func (*ptrHooks) InspectOutputStyle(string) (settings.OutputStyleState, string, error) {
+	return settings.OutputStyleOwned, "", nil
+}
 
 func (mapHooks) Install(string, string) error               { return nil }
 func (mapHooks) Uninstall(string, string) error             { return nil }
 func (mapHooks) Inspect(string, string) (bool, bool, error) { return false, false, nil }
 func (mapHooks) InspectMainAgent(string) (settings.MainAgentState, string, error) {
 	return settings.MainAgentOwned, "", nil
+}
+func (mapHooks) InspectOutputStyle(string) (settings.OutputStyleState, string, error) {
+	return settings.OutputStyleOwned, "", nil
 }
 
 func (sliceHooks) Install(string, string) error               { return nil }
@@ -38,12 +44,18 @@ func (sliceHooks) Inspect(string, string) (bool, bool, error) { return false, fa
 func (sliceHooks) InspectMainAgent(string) (settings.MainAgentState, string, error) {
 	return settings.MainAgentOwned, "", nil
 }
+func (sliceHooks) InspectOutputStyle(string) (settings.OutputStyleState, string, error) {
+	return settings.OutputStyleOwned, "", nil
+}
 
 func (funcHooks) Install(string, string) error               { return nil }
 func (funcHooks) Uninstall(string, string) error             { return nil }
 func (funcHooks) Inspect(string, string) (bool, bool, error) { return false, false, nil }
 func (funcHooks) InspectMainAgent(string) (settings.MainAgentState, string, error) {
 	return settings.MainAgentOwned, "", nil
+}
+func (funcHooks) InspectOutputStyle(string) (settings.OutputStyleState, string, error) {
+	return settings.OutputStyleOwned, "", nil
 }
 
 func (chanHooks) Install(string, string) error               { return nil }
@@ -52,12 +64,18 @@ func (chanHooks) Inspect(string, string) (bool, bool, error) { return false, fal
 func (chanHooks) InspectMainAgent(string) (settings.MainAgentState, string, error) {
 	return settings.MainAgentOwned, "", nil
 }
+func (chanHooks) InspectOutputStyle(string) (settings.OutputStyleState, string, error) {
+	return settings.OutputStyleOwned, "", nil
+}
 
 func (valueHooks) Install(string, string) error               { return nil }
 func (valueHooks) Uninstall(string, string) error             { return nil }
 func (valueHooks) Inspect(string, string) (bool, bool, error) { return false, false, nil }
 func (valueHooks) InspectMainAgent(string) (settings.MainAgentState, string, error) {
 	return settings.MainAgentOwned, "", nil
+}
+func (valueHooks) InspectOutputStyle(string) (settings.OutputStyleState, string, error) {
+	return settings.OutputStyleOwned, "", nil
 }
 
 // A port is missing when it is an untyped nil or a nil of any kind a value can have, and present

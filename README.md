@@ -149,8 +149,8 @@ backups the backend cannot confirm is not offered a restore.
 | `restore --target claude\|opencode\|codex [--list] [--backup TIMESTAMP]` | **modifies** | Roll a single target back to one of its retained backups (up to 3, auto-pruned; default: most recent). Refuses `--target all`. `--list` shows retained backups without changing anything. |
 | `targets` | read-only | Print the target catalog, one target per line as `<name><TAB><kind>` (`copy` or `package`), in the order `--target all` expands to. The TUI reads it instead of keeping its own list. |
 | `version` (also: `--version`) | read-only | Print this clone's current release version and each target's recorded deployed version. |
-| `install-hooks` | **modifies** | Build the Go engine binary + wire `UserPromptSubmit`/`PreToolUse`/`Agent` hooks, including the workflow projection family, the skills approve guard, the review stop-hook on `Stop`, the builder guard on the `Agent` tool, and the top-level `"agent": "foreman"` key that runs the main session as the foreman, into `~/.claude/settings.json` (backs up to `.bak` first; an `agent` key with another value is left as it is, and the install prints a notice saying the foreman main session was not enabled). Run once to activate scoping; re-run it after an upgrade that adds a hook family, then restart Claude Code to load the hooks. If `$CODEX_HOME` (default `~/.codex`) already exists, also merge three Codex memory hooks (`SessionStart`, `PreToolUse`, `PostToolUse`) into `hooks.json`, with a `.bak` backup. Trust each new handler once in the Codex TUI (`/hooks`, key `t`); upgrading from SessionStart alone needs two more trusts, without changing the existing SessionStart trust. Never edits trust state or `config.toml`. |
-| `uninstall-hooks` | **modifies** | Remove the overlay hook entries (the minimalism and design pairs, the SessionEnd sync-trigger, the review-receipt and shaper guard entries, the workflow projection hooks, the approve guard entries, the review stop-hook, and the builder guard, and the `"agent": "foreman"` key only when it holds exactly `foreman`, which names the agent file the overlay installs, so removing that agent never leaves the key pointing at it) from `~/.claude/settings.json`, including entries left by contracts retired in earlier versions, and remove our three Codex memory entries from `$CODEX_HOME/hooks.json` (default `~/.codex`). Foreign entries and keys are preserved. |
+| `install-hooks` | **modifies** | Build the Go engine binary + wire `UserPromptSubmit`/`PreToolUse`/`Agent` hooks, including the workflow projection family, the skills approve guard, the review stop-hook on `Stop`, the builder guard on the `Agent` tool, and the top-level `"agent": "foreman"` key that runs the main session as the foreman, and the top-level `"outputStyle": "labdrian"` key (the owner's output style; a value of another style is left as it is), into `~/.claude/settings.json` (backs up to `.bak` first; an `agent` key with another value is left as it is, and the install prints a notice saying the foreman main session was not enabled). Run once to activate scoping; re-run it after an upgrade that adds a hook family, then restart Claude Code to load the hooks. If `$CODEX_HOME` (default `~/.codex`) already exists, also merge three Codex memory hooks (`SessionStart`, `PreToolUse`, `PostToolUse`) into `hooks.json`, with a `.bak` backup. Trust each new handler once in the Codex TUI (`/hooks`, key `t`); upgrading from SessionStart alone needs two more trusts, without changing the existing SessionStart trust. Never edits trust state or `config.toml`. |
+| `uninstall-hooks` | **modifies** | Remove the overlay hook entries (the minimalism and design pairs, the SessionEnd sync-trigger, the review-receipt and shaper guard entries, the workflow projection hooks, the approve guard entries, the review stop-hook, and the builder guard, and the `"agent": "foreman"` key only when it holds exactly `foreman`, which names the agent file the overlay installs, so removing that agent never leaves the key pointing at it and the `"outputStyle"` key only when it holds exactly `labdrian`) from `~/.claude/settings.json`, including entries left by contracts retired in earlier versions, and remove our three Codex memory entries from `$CODEX_HOME/hooks.json` (default `~/.codex`). Foreign entries and keys are preserved. |
 | `status-hooks` | read-only | Check engine binary, hooks wired, contracts readable; when Codex's home exists, check all three memory entries and name missing or drifted events with the `install-hooks` remedy. Present never means trusted (`/hooks`, key `t`). No Codex home means no extra line. A missing or drifted review stop-hook or builder guard, a missing `"agent"` key, or an `"agent"` key that holds another value (a conflict the overlay never overwrites) is a warning until `install-hooks` is re-run or the key is fixed. Exit 0 healthy, 1 failed, 2 warnings alone. |
 | `doctor [--fix]` | read-only | Host-toolchain preflight: go, gentle-ai, discovery tools (bat/rg/fd/sd/eza), engine binary, the skill registry of the project (judged by the engine, with the check `status` makes: absent is fine, empty or unreadable fails, one without a scoped block warns) — plus a per-target version/digest consistency row (WARN only, never fails the exit code). `--fix` best-effort installs missing discovery tools via Homebrew. |
 | `validate-entry-contract --schema PATH --instance PATH` | read-only | Validate a pre-SDD entry candidate against the version-matched schema and deterministic cross-field rules. |
@@ -381,7 +381,8 @@ overlay install-hooks
     projection hooks, the skills approve guard, the review stop-hook on Stop, and the
     builder guard on the Agent tool (each described below), and the top-level "agent": "foreman"
     key that runs the main session as the foreman; an "agent" key with another value is left
-    as it is. Backs up settings.json to
+    as it is. It also writes the top-level "outputStyle": "labdrian" key (a value of another style is left
+    as it is, and `engine runtime install --target claude` says so; this verb does not). Backs up settings.json to
     settings.json.bak before modifying. Run once to activate; inert until then.
     Re-run it after an upgrade that adds a hook family, then restart Claude Code, which
     loads hooks only when it starts.
@@ -396,7 +397,8 @@ overlay install-hooks
 overlay uninstall-hooks
     Remove every overlay hook entry (each family install-hooks wires, projection, approve
     guard, review stop-hook and builder guard included, and the "agent" key only when it holds
-    exactly "foreman") from ~/.claude/settings.json, including entries left
+    exactly "foreman", and the "outputStyle" key only when it holds exactly "labdrian") from
+    ~/.claude/settings.json, including entries left
     by contracts retired in earlier versions, leaving all other keys and hooks intact (on Stop,
     only the review stop-hook entry is removed). Also removes only our Codex
     SessionStart, PreToolUse and PostToolUse entries from CODEX_HOME/hooks.json (default
@@ -1111,6 +1113,11 @@ gentle-ai-overlay runtime install|update|uninstall|status --target claude
     which verb fixes it. With no overlay checkout the result is the hooks-only one, with a note; with a checkout whose
     rules cannot be read, or markers that are not one open line followed by one close line (the message names their
     lines), the action is partial and CLAUDE.md is left as it is. The same writer (`runtime.MarkedBlock`) is the one the AGENTS.md files will use.
+    It also keeps the top-level `"outputStyle": "labdrian"` key of `settings.json`, the style `output-styles/labdrian.md`
+    deploys to `~/.claude/output-styles` (route `output-style`): `install` and `update` write it when it is absent; any other
+    value (`"Gentleman"`, `null`, a number) belongs to the owner, is kept, and the message carries a notice saying the labdrian
+    style was not enabled; `uninstall` removes the key only while it holds exactly `"labdrian"`; `status` is partial when the
+    key is missing or foreign, after the `"agent"` key and before the rules block.
 
 gentle-ai-overlay runtime capabilities [--target claude|codex|pi|opencode|all]
     Engine verb (Phase 7): there is no `overlay runtime` wrapper, so run it on the installed engine

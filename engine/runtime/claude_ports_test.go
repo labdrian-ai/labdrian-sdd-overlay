@@ -22,6 +22,9 @@ type fakeHooks struct {
 	agent                    *settings.MainAgentState
 	agentValue               string
 	agentErr                 error
+	style                    *settings.OutputStyleState
+	styleValue               string
+	styleErr                 error
 }
 
 func (f *fakeHooks) Install(path, hookCommand string) error {
@@ -49,6 +52,15 @@ func (f *fakeHooks) InspectMainAgent(path string) (settings.MainAgentState, stri
 	return settings.MainAgentOwned, "", f.agentErr
 }
 
+// InspectOutputStyle answers the labdrian style unless the test set another state, for the same reason.
+func (f *fakeHooks) InspectOutputStyle(path string) (settings.OutputStyleState, string, error) {
+	f.calls = append(f.calls, "inspect-style "+path)
+	if f.style != nil {
+		return *f.style, f.styleValue, f.styleErr
+	}
+	return settings.OutputStyleOwned, "", f.styleErr
+}
+
 // The adapter names the settings file and the binary from its root, and nothing else: the port is
 // handed <root>/settings.json and <root>/bin/gentle-ai-overlay for every step.
 func TestClaudeAdapterHandsThePortTheFileAndTheBinaryOfItsRoot(t *testing.T) {
@@ -64,9 +76,9 @@ func TestClaudeAdapterHandsThePortTheFileAndTheBinaryOfItsRoot(t *testing.T) {
 	adapter.Uninstall()
 
 	want := []string{
-		"install " + file + " " + binary, "inspect-agent " + file,
-		"install " + file + " " + binary, "inspect-agent " + file,
-		"inspect " + file + " " + binary, "inspect-agent " + file,
+		"install " + file + " " + binary, "inspect-agent " + file, "inspect-style " + file,
+		"install " + file + " " + binary, "inspect-agent " + file, "inspect-style " + file,
+		"inspect " + file + " " + binary, "inspect-agent " + file, "inspect-style " + file,
 		"uninstall " + file + " " + binary,
 	}
 	if got := strings.Join(hooks.calls, "\n"); got != strings.Join(want, "\n") {
@@ -170,6 +182,10 @@ func (n *nilInstaller) Inspect(string, string) (bool, bool, error) {
 func (n *nilInstaller) InspectMainAgent(string) (settings.MainAgentState, string, error) {
 	n.calls++
 	return settings.MainAgentOwned, "", nil
+}
+func (n *nilInstaller) InspectOutputStyle(string) (settings.OutputStyleState, string, error) {
+	n.calls++
+	return settings.OutputStyleOwned, "", nil
 }
 
 // RegisterClaude takes the Claude runtime only with its port, so an adapter never fails at its

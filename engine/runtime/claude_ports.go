@@ -26,4 +26,7 @@ type HookInstaller interface {
 	// (settings.MainAgent): its state and, for a foreign value, that value as JSON. It is part of the
 	// port, so every installer answers it and the adapter never skips the key.
 	InspectMainAgent(path string) (state settings.MainAgentState, valueJSON string, err error)
+	// InspectOutputStyle says the same of the top-level "outputStyle" key (settings.OutputStyle), which
+	// the overlay owns only while it holds "labdrian".
+	InspectOutputStyle(path string) (state settings.OutputStyleState, valueJSON string, err error)
 }

@@ -468,6 +468,13 @@ func withoutEntriesAddedSinceTheRecording(t *testing.T, label, text string, merg
 	} else if merged {
 		t.Errorf("%s: no \"agent\": \"foreman\" key, want the one a merge writes", label)
 	}
+	// The top-level "outputStyle": "labdrian" key (T27) is not in the recording either, for the same reason.
+	const outputStyleLine = "\n  \"outputStyle\": \"" + settings.OutputStyleName + "\""
+	if at := strings.Index(text, outputStyleLine); at >= 0 {
+		text = cutWithComma(t, label+": the outputStyle key", text, at, at+len(outputStyleLine))
+	} else if merged {
+		t.Errorf("%s: no \"outputStyle\": \"labdrian\" key, want the one a merge writes", label)
+	}
 	return text
 }
 

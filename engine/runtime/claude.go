@@ -48,7 +48,7 @@ func (a ClaudeAdapter) Install() core.LifecycleResult {
 		return a.result(core.ActionInstall, core.CapabilityPartial, err.Error())
 	}
 
-	message := "Claude lifecycle hooks installed; restart Claude to load hook changes" + a.foreignAgentNotice(settingsPath)
+	message := "Claude lifecycle hooks installed; restart Claude to load hook changes" + a.foreignKeyNotices(settingsPath)
 	return a.withOwnerRules(core.ActionInstall, message)
 }
 func (a ClaudeAdapter) Status() core.LifecycleResult    { return a.status() }
@@ -66,7 +66,7 @@ func (a ClaudeAdapter) Update() core.LifecycleResult {
 		return a.result(core.ActionUpdate, core.CapabilityPartial, err.Error())
 	}
 
-	message := "Claude lifecycle hooks updated; restart Claude to load hook changes" + a.foreignAgentNotice(settingsPath)
+	message := "Claude lifecycle hooks updated; restart Claude to load hook changes" + a.foreignKeyNotices(settingsPath)
 	return a.withOwnerRules(core.ActionUpdate, message)
 }
 func (a ClaudeAdapter) Rollback() core.LifecycleResult { return a.Uninstall() }
@@ -121,6 +121,9 @@ func (a ClaudeAdapter) status() core.LifecycleResult {
 	if r, ok := a.mainAgentStatus(settingsPath); ok {
 		return r
 	}
+	if r, ok := a.outputStyleStatus(settingsPath); ok {
+		return r
+	}
 	message := "Claude lifecycle hooks are installed and owned"
 	if a.rules != nil {
 		r, ok, note := a.ownerRulesStatus()
@@ -151,14 +154,37 @@ func (a ClaudeAdapter) mainAgentStatus(settingsPath string) (core.LifecycleResul
 	return core.LifecycleResult{}, false
 }
 
-// foreignAgentNotice is "; " and the notice of the install verb when the installer finds a foreign value under the
-// "agent" key, and nothing otherwise.
-func (a ClaudeAdapter) foreignAgentNotice(settingsPath string) string {
-	state, value, err := a.hooks.InspectMainAgent(settingsPath)
-	if err != nil || state != settings.MainAgentConflict {
-		return ""
+// outputStyleStatus is the status result for the top-level "outputStyle" key when it is not ours: partial,
+// naming the key (missing) or the foreign value and that the labdrian output style is not enabled. ok is
+// false when the key is "labdrian".
+func (a ClaudeAdapter) outputStyleStatus(settingsPath string) (core.LifecycleResult, bool) {
+	state, value, err := a.hooks.InspectOutputStyle(settingsPath)
+	if err != nil {
+		return a.result(core.ActionStatus, core.CapabilityUnsupported, "read settings file "+settingsPath+": "+err.Error()), true
 	}
-	return "; " + settings.ForeignMainAgentNotice(settingsPath, value)
+	switch state {
+	case settings.OutputStyleMissing:
+		return a.result(core.ActionStatus, core.CapabilityPartial,
+			"Claude settings \""+settings.OutputStyleKey+"\" key is missing in "+settingsPath+"; the labdrian output style is not enabled; run 'labdrian install-hooks'"), true
+	case settings.OutputStyleConflict:
+		return a.result(core.ActionStatus, core.CapabilityPartial,
+			"Claude settings \""+settings.OutputStyleKey+"\" is "+value+" in "+settingsPath+", not \""+settings.OutputStyleName+"\"; the labdrian output style is not enabled (set it to \""+settings.OutputStyleName+"\" or remove the key, then run 'labdrian install-hooks')"), true
+	}
+	return core.LifecycleResult{}, false
+}
+
+// foreignKeyNotices is "; " and the notice of the install verb for each of the keys the overlay owns by
+// value (the main-session agent, then the output style) that the installer finds holding a foreign value,
+// and nothing when none does.
+func (a ClaudeAdapter) foreignKeyNotices(settingsPath string) string {
+	var notices string
+	if state, value, err := a.hooks.InspectMainAgent(settingsPath); err == nil && state == settings.MainAgentConflict {
+		notices += "; " + settings.ForeignMainAgentNotice(settingsPath, value)
+	}
+	if state, value, err := a.hooks.InspectOutputStyle(settingsPath); err == nil && state == settings.OutputStyleConflict {
+		notices += "; " + settings.ForeignOutputStyleNotice(settingsPath, value)
+	}
+	return notices
 }
 
 // configPaths resolves the settings file and the hook command from the Claude root: the file is
