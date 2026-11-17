@@ -184,14 +184,30 @@ cmd_apply() {
   trap - EXIT
   info "Returned to branch: $current_branch"
 
-  # main is pushed immediately after the merge — same reasoning as capture's
-  # push of 'upstream': an apply that only lands locally is exactly what lets
-  # main silently diverge from origin the moment anything else lands there
-  # (a PR merge, another machine's apply) before this one gets pushed.
-  # A repo with no 'origin' remote (tests, detached mirrors) has nowhere to
-  # push: skip loudly instead of failing the apply that already merged.
+  push_main_to_origin
+
+  # Deploy itself succeeded, but a failed mcp install must not exit 0
+  # (R4-silent-package-skip): neither may a run that included pi and only
+  # printed its stub, with nothing actually deployed for it.
+  [[ -n "$mcp_install_failed" || -n "$pi_stub_included" ]] && return 1
+  return 0
+}
+
+# main is pushed immediately after the merge — same reasoning as capture's
+# push of 'upstream': an apply that only lands locally is exactly what lets
+# main silently diverge from origin the moment anything else lands there
+# (a PR merge, another machine's apply) before this one gets pushed.
+# A repo with no 'origin' remote (tests, detached mirrors) has nowhere to
+# push: skip loudly instead of failing the apply that already merged.
+#
+# Only a network remote is pushed to. An origin that is a path on this machine (a scratch clone made
+# from the real checkout, a mirror) is not where main is published: pushing there landed unmerged
+# commits in the real repository's local main. It is skipped loudly too.
+push_main_to_origin() {
   if ! git remote get-url origin >/dev/null 2>&1; then
     info "No 'origin' remote — skipping main push"
+  elif ! origin_is_network_remote; then
+    info "The 'origin' remote is on this machine (origin is not a network remote) — skipping main push"
   else
     local ahead
     ahead="$(git rev-list --count origin/main..main 2>/dev/null || echo 0)"
@@ -200,10 +216,18 @@ cmd_apply() {
       info "Pushed main to origin"
     fi
   fi
+}
 
-  # Deploy itself succeeded, but a failed mcp install must not exit 0
-  # (R4-silent-package-skip): neither may a run that included pi and only
-  # printed its stub, with nothing actually deployed for it.
-  [[ -n "$mcp_install_failed" || -n "$pi_stub_included" ]] && return 1
-  return 0
+# True (exit 0) when the URL of origin names another machine: a scheme other than file:// (https, ssh,
+# git), or the scp form host:path. A path (absolute, relative, ~), a file:// URL and an empty URL are
+# on this machine.
+origin_is_network_remote() {
+  local url
+  url="$(git remote get-url origin 2>/dev/null)" || return 1
+  case "$url" in
+    "" | file://* | /* | ./* | ../* | "~"* | [A-Za-z]:\\*) return 1 ;;
+    *://*) return 0 ;;
+    *:*) [[ "${url%%:*}" != */* ]] ;;
+    *) return 1 ;;
+  esac
 }
