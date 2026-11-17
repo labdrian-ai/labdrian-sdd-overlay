@@ -152,8 +152,20 @@ cmd_capture() {
   # sync never strands local-only commits (also flushes earlier unpushed runs).
   # A repo with no 'origin' remote (tests, detached mirrors) has nowhere to
   # push: skip loudly instead of failing the capture that already committed.
+  push_upstream_to_origin
+
+  git checkout "$current_branch"
+  trap - EXIT
+  info "Returned to branch: $current_branch"
+}
+
+# Only a network remote is pushed to (origin_is_network_remote, common.sh; apply.sh does the same for main): an origin that is a path on
+# this machine is skipped loudly.
+push_upstream_to_origin() {
   if ! git remote get-url origin >/dev/null 2>&1; then
     info "No 'origin' remote — skipping upstream push"
+  elif ! origin_is_network_remote; then
+    info "The 'origin' remote is on this machine (origin is not a network remote) — skipping upstream push"
   elif git rev-parse --verify -q origin/upstream >/dev/null; then
     if [[ -n "$(git rev-list origin/upstream..upstream)" ]]; then
       git push origin upstream
@@ -163,8 +175,4 @@ cmd_capture() {
     git push -u origin upstream
     info "Pushed upstream to origin (new remote branch)"
   fi
-
-  git checkout "$current_branch"
-  trap - EXIT
-  info "Returned to branch: $current_branch"
 }

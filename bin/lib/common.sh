@@ -94,3 +94,17 @@ ensure_parent() {
   parent="$(dirname "$path")"
   mkdir -p "$parent"
 }
+
+# True (exit 0) when the URL of origin names another machine: a scheme other than file:// (https, ssh,
+# git), or the scp form host:path. A path (absolute, relative, ~), a file:// URL and an empty URL are
+# on this machine.
+origin_is_network_remote() {
+  local url
+  url="$(git remote get-url origin 2>/dev/null)" || return 1
+  case "$url" in
+    "" | file://* | /* | ./* | ../* | "~"* | [A-Za-z]:\\*) return 1 ;;
+    *://*) return 0 ;;
+    *:*) [[ "${url%%:*}" != */* ]] ;;
+    *) return 1 ;;
+  esac
+}
