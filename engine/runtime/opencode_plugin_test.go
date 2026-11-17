@@ -30,7 +30,7 @@ func openCodePluginPath(root string) string {
 var stubPluginPackage = map[string]string{
 	"package.json": `{"name":"@opencode/plugin","type":"module","exports":{".":"./index.js","./promise/tool":"./tool.js"}}`,
 	"index.js":     `export const Plugin = { define: (plugin) => plugin };`,
-	"tool.js":      `export class ToolError extends Error { constructor(fields) { super(fields.message); this.name = "Tool.Error"; this.fields = fields; } } export const Tool = { Error: ToolError };`,
+	"tool.js":      `export class Error extends globalThis.Error { constructor(fields) { super(fields.message); this.name = "Tool.Error"; this.fields = fields; } } export const CallID = {};`,
 }
 
 func requireNode(t *testing.T) {

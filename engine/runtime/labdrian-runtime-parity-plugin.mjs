@@ -5,7 +5,7 @@ import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Plugin } from "@opencode/plugin";
-import { Tool } from "@opencode/plugin/promise/tool";
+import * as Tool from "@opencode/plugin/promise/tool";
 
 // The v2 tool that launches a child session, and the input field that names the agent it launches.
 // The contract is injected by rewriting input.prompt in execute.before, which reaches the child.

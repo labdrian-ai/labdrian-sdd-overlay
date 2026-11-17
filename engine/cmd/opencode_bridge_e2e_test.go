@@ -20,7 +20,7 @@ import (
 var bridgePluginStub = map[string]string{
 	"package.json": `{"name":"@opencode/plugin","type":"module","exports":{".":"./index.js","./promise/tool":"./tool.js"}}`,
 	"index.js":     `export const Plugin = { define: (plugin) => plugin };`,
-	"tool.js":      `export class ToolError extends Error { constructor(fields) { super(fields.message); this.name = "Tool.Error"; } } export const Tool = { Error: ToolError };`,
+	"tool.js":      `export class Error extends globalThis.Error { constructor(fields) { super(fields.message); this.name = "Tool.Error"; } } export const CallID = {};`,
 }
 
 // bridgeConfigRoot lays out an OpenCode config root with the repository plugin and the stub above it,
