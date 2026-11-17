@@ -79,5 +79,6 @@ func runtimeConfigFromEnv(getenv func(string) string, userHomeDir func() (string
 		LabdrianOverlayDir: getenv(runtimecore.LabdrianOverlayDirVariable),
 		// Only the exact value 1 turns the probe off, as it always has.
 		PiSkipSubagents: getenv(piSkipSubagentsVariable) == "1",
+		Path:            getenv("PATH"),
 	}
 }

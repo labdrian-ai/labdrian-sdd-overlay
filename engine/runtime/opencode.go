@@ -30,6 +30,11 @@ type OpenCodeOptions struct {
 	// AgentsSkillsDir is ~/.agents/skills, the second place OpenCode reads skills from. Empty means
 	// none is checked.
 	AgentsSkillsDir string
+
+	// PathLookup finds an executable by name, as exec.LookPath does on the PATH the caller chose. The
+	// adapter writes the path it finds as the command of an MCP server, because OpenCode may be started
+	// from a launcher whose PATH is not the shell's. Nil means no lookup: the bare name is written.
+	PathLookup func(name string) (string, error)
 }
 
 // NewOpenCodeAdapter builds the OpenCode adapter over root, the directory its plugin is installed

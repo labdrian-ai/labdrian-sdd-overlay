@@ -40,6 +40,9 @@ type Config struct {
 	// Subagents extension ($LABDRIAN_PI_SKIP_SUBAGENTS=1), for environments that manage it
 	// separately. Only the Pi adapter reads it.
 	PiSkipSubagents bool
+	// Path is $PATH as set. Only the OpenCode adapter reads it, to write the absolute path of the MCP
+	// servers it names; empty means the bare names are written.
+	Path string
 	// ConfigRoot is the --config-root the caller gave, empty when it gave none. It names the
 	// directory an adapter keeps its files in: the config directory of Claude, Codex and
 	// OpenCode, and, for Pi, the directory that holds the package, pi/labdrian-pi, the way

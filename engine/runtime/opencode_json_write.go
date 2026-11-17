@@ -9,6 +9,22 @@ import (
 
 func (a OpenCodeAdapter) openCodeJSONPath() string { return filepath.Join(a.root, openCodeJSONFile) }
 
+// serversToWrite are the MCP servers with the absolute path of their program when the adapter's
+// lookup finds one, and a sentence for each program it did not find (the bare name is written then).
+func (a OpenCodeAdapter) serversToWrite() (servers []openCodeMCPServer, notes []string) {
+	for _, server := range openCodeMCPServers {
+		if a.options.PathLookup != nil {
+			if program, err := a.options.PathLookup(server.command[0]); err == nil && filepath.IsAbs(program) {
+				servers = append(servers, server.resolved(program))
+				continue
+			}
+			notes = append(notes, server.command[0]+" not found on PATH, so its bare name is written and OpenCode must find it on its own PATH")
+		}
+		servers = append(servers, server)
+	}
+	return servers, notes
+}
+
 // writeOpenCodeJSON makes opencode.json hold the owned keys and entries and says what it did. Only
 // the missing members are spliced into the owner's bytes; every other byte stays. The file is created
 // when absent. A file that is not an object the adapter can edit is refused and left as it is. A file
@@ -35,7 +51,8 @@ func (a OpenCodeAdapter) writeOpenCodeJSON() (message string, err error) {
 		}
 		changed = true
 	}
-	for _, server := range openCodeMCPServers {
+	servers, notes := a.serversToWrite()
+	for _, server := range servers {
 		if _, present := serversOf(root)[server.name]; present {
 			continue
 		}
@@ -43,6 +60,9 @@ func (a OpenCodeAdapter) writeOpenCodeJSON() (message string, err error) {
 			return "", fmt.Errorf("%s cannot be edited: %w", path, err)
 		}
 		changed = true
+		if note := noteFor(notes, server.name); note != "" {
+			notices += "; " + note
+		}
 	}
 	if !changed {
 		return "opencode.json already current in " + path + notices, nil
@@ -56,6 +76,15 @@ func (a OpenCodeAdapter) writeOpenCodeJSON() (message string, err error) {
 		return "", err
 	}
 	return "opencode.json written to " + path + notices, nil
+}
+
+func noteFor(notes []string, name string) string {
+	for _, note := range notes {
+		if strings.HasPrefix(note, name+" ") {
+			return note
+		}
+	}
+	return ""
 }
 
 // removeFromOpenCodeJSON cuts the owned keys and entries out of the owner's bytes. The containers it
@@ -81,7 +110,7 @@ func (a OpenCodeAdapter) removeFromOpenCodeJSON() (removed bool, err error) {
 	}
 	removedServer := false
 	for _, server := range openCodeMCPServers {
-		if value, present := serversOf(root)[server.name]; !present || canonical(value) != canonical(server.entry) {
+		if value, present := serversOf(root)[server.name]; !present || !server.owns(value) {
 			continue
 		}
 		if raw, _, err = removeOpenCodeMember(raw, []string{"mcp", "servers"}, server.name); err != nil {

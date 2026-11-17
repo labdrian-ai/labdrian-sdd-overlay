@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -28,8 +29,9 @@ const (
 
 // openCodeMCPServer is one server entry the adapter owns, owned only while it holds exactly these bytes.
 type openCodeMCPServer struct {
-	name  string
-	entry map[string]any
+	name    string
+	command []string
+	entry   map[string]any
 }
 
 func openCodeLocalServer(name string, command ...string) openCodeMCPServer {
@@ -37,17 +39,45 @@ func openCodeLocalServer(name string, command ...string) openCodeMCPServer {
 	for i, word := range command {
 		argv[i] = word
 	}
-	return openCodeMCPServer{name: name, entry: map[string]any{"type": "local", "command": argv, "codemode": true}}
+	return openCodeMCPServer{name: name, command: command, entry: map[string]any{"type": "local", "command": argv, "codemode": true}}
 }
 
-// openCodeMCPServers are the servers of the labdrian flow. The commands are bare names, resolved on
-// the PATH OpenCode runs with.
+// openCodeMCPServers are the servers of the labdrian flow, with the program as a bare name. Install
+// writes the absolute path of the program when the PATH it runs with has one (resolved), because
+// OpenCode may be started from a launcher whose PATH is not the shell's.
 var openCodeMCPServers = []openCodeMCPServer{
 	openCodeLocalServer("memorycard", "memorycard", "mcp"),
 	openCodeLocalServer("codegraph", "codegraph", "serve", "--mcp"),
 }
 
 func (s openCodeMCPServer) path() string { return "mcp.servers." + s.name }
+
+// resolved is the server with its program at program.
+func (s openCodeMCPServer) resolved(program string) openCodeMCPServer {
+	command := append([]string{program}, s.command[1:]...)
+	return openCodeLocalServer(s.name, command...)
+}
+
+// owns says whether value is our entry in either form: the bare program name, or an absolute path
+// whose base is that name. A command of another program is not ours.
+func (s openCodeMCPServer) owns(value any) bool {
+	entry, ok := value.(map[string]any)
+	if !ok {
+		return false
+	}
+	if command, _ := entry["command"].([]any); len(command) > 0 {
+		if first, ok := command[0].(string); ok && filepath.IsAbs(first) && filepath.Base(first) == s.command[0] {
+			normalized := make(map[string]any, len(entry))
+			for key, member := range entry {
+				normalized[key] = member
+			}
+			bare := append([]any{s.command[0]}, command[1:]...)
+			normalized["command"] = bare
+			entry = normalized
+		}
+	}
+	return canonical(entry) == canonical(s.entry)
+}
 
 // canonical is the value as JSON with sorted keys, to compare entries by content.
 func canonical(value any) string {
@@ -152,7 +182,7 @@ func inspectOpenCodeJSON(root map[string]any) openCodeJSONState {
 		switch value, present := servers[server.name]; {
 		case !present:
 			state.missing = append(state.missing, server.path())
-		case canonical(value) != canonical(server.entry):
+		case !server.owns(value):
 			state.foreign = append(state.foreign, fmt.Sprintf("%s holds %s, which is not the entry labdrian writes", server.path(), canonical(value)))
 		}
 	}

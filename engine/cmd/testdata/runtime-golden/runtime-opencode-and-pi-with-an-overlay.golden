@@ -40,7 +40,7 @@ exit: 1
 $ runtime install --target opencode
 exit: 0
 --- stdout ---
-[opencode] install: restart_required — OpenCode plugin changed; restart OpenCode to load version 2026-11-17-runtime-parity-13; opencode.json written to <WORLD>/home/.config/opencode/opencode.json; AGENTS.md not written: no overlay checkout holds the instruction sources: read the owner rules: open <WORLD>/overlay/instructions/owner-rules.md: no such file or directory
+[opencode] install: restart_required — OpenCode plugin changed; restart OpenCode to load version 2026-11-17-runtime-parity-13; opencode.json written to <WORLD>/home/.config/opencode/opencode.json; memorycard not found on PATH, so its bare name is written and OpenCode must find it on its own PATH; codegraph not found on PATH, so its bare name is written and OpenCode must find it on its own PATH; AGENTS.md not written: no overlay checkout holds the instruction sources: read the owner rules: open <WORLD>/overlay/instructions/owner-rules.md: no such file or directory
 --- stderr ---
 
 # opencode again

@@ -29,7 +29,7 @@ func RegisterCodex(r *core.Registry) error {
 // RegisterOpenCode registers the OpenCode runtime.
 func RegisterOpenCode(r *core.Registry) error {
 	return r.Register(core.TargetOpenCode, func(cfg core.Config) core.Adapter {
-		options := OpenCodeOptions{OverlayDir: cfg.LabdrianOverlayDir}
+		options := OpenCodeOptions{OverlayDir: cfg.LabdrianOverlayDir, PathLookup: pathLookup(cfg.Path)}
 		if cfg.Home != "" {
 			options.AgentsSkillsDir = filepath.Join(cfg.Home, ".agents", "skills")
 		}
