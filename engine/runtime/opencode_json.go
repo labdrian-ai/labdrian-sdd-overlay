@@ -1,12 +1,10 @@
 package runtime
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 )
 
@@ -83,11 +81,14 @@ func parseOpenCodeJSON(content string) (map[string]any, error) {
 	if err := decoder.Decode(&root); err != nil {
 		return nil, err
 	}
-	if _, err := decoder.Token(); err == nil {
-		return nil, errors.New("it holds more than one JSON value")
+	if strings.TrimSpace(content[decoder.InputOffset():]) != "" {
+		return nil, errors.New("it has content after the JSON object")
 	}
 	if root == nil {
 		return nil, errOpenCodeJSONShape
+	}
+	if err := checkOpenCodeKeys(content); err != nil {
+		return nil, err
 	}
 	if mcp, present := root["mcp"]; present {
 		container, ok := mcp.(map[string]any)
@@ -99,6 +100,18 @@ func parseOpenCodeJSON(content string) (map[string]any, error) {
 		}
 	}
 	return root, nil
+}
+
+// checkOpenCodeKeys refuses a key that is written twice in the root, in mcp or in mcp.servers: the
+// objects the adapter splices into.
+func checkOpenCodeKeys(content string) error {
+	raw := []byte(content)
+	for _, path := range [][]string{nil, {"mcp"}, {"mcp", "servers"}} {
+		if _, _, err := objectAt(raw, path); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // isServersContainer says whether value is the v2 container of servers, which holds only servers
@@ -146,105 +159,6 @@ func inspectOpenCodeJSON(root map[string]any) openCodeJSONState {
 	return state
 }
 
-// mergeOpenCodeJSON adds every owned key and entry that is absent and reports whether it changed
-// root. A foreign value is never overwritten.
-func mergeOpenCodeJSON(root map[string]any) bool {
-	changed := false
-	if _, present := root[openCodeDefaultAgentKey]; !present {
-		root[openCodeDefaultAgentKey] = openCodeDefaultAgent
-		changed = true
-	}
-	for _, server := range openCodeMCPServers {
-		if _, present := serversOf(root)[server.name]; present {
-			continue
-		}
-		mcp, _ := root["mcp"].(map[string]any)
-		if mcp == nil {
-			mcp = map[string]any{}
-			root["mcp"] = mcp
-		}
-		servers, _ := mcp["servers"].(map[string]any)
-		if servers == nil {
-			servers = map[string]any{}
-			mcp["servers"] = servers
-		}
-		servers[server.name] = server.entry
-		changed = true
-	}
-	return changed
-}
-
-// removeOpenCodeJSON deletes the owned keys and entries that hold exactly what the adapter writes, and
-// the containers that are left empty by it, and reports whether root changed.
-func removeOpenCodeJSON(root map[string]any) bool {
-	changed := false
-	if root[openCodeDefaultAgentKey] == openCodeDefaultAgent {
-		delete(root, openCodeDefaultAgentKey)
-		changed = true
-	}
-	servers := serversOf(root)
-	for _, server := range openCodeMCPServers {
-		if value, present := servers[server.name]; present && canonical(value) == canonical(server.entry) {
-			delete(servers, server.name)
-			changed = true
-		}
-	}
-	if changed && servers != nil && len(servers) == 0 {
-		mcp := root["mcp"].(map[string]any)
-		delete(mcp, "servers")
-		if len(mcp) == 0 {
-			delete(root, "mcp")
-		}
-	}
-	return changed
-}
-
-// renderOpenCodeJSON is the file as written: keys sorted, two spaces, a final newline, no HTML escaping.
-func renderOpenCodeJSON(root map[string]any) (string, error) {
-	var buf bytes.Buffer
-	encoder := json.NewEncoder(&buf)
-	encoder.SetEscapeHTML(false)
-	encoder.SetIndent("", "  ")
-	if err := encoder.Encode(root); err != nil {
-		return "", err
-	}
-	return buf.String(), nil
-}
-
-func (a OpenCodeAdapter) openCodeJSONPath() string { return filepath.Join(a.root, openCodeJSONFile) }
-
-// writeOpenCodeJSON makes opencode.json hold the owned keys and entries and says what it did. The
-// file is created when absent. A file that is not an object the adapter can edit is refused and left
-// as it is. A file that changes first gets a copy of what it held, once.
-func (a OpenCodeAdapter) writeOpenCodeJSON() (message string, err error) {
-	path := a.openCodeJSONPath()
-	file, err := readBlockFile(path)
-	if err != nil {
-		return "", err
-	}
-	root, err := parseOpenCodeJSON(file.content)
-	if err != nil {
-		return "", fmt.Errorf("%s cannot be edited: %w", path, err)
-	}
-	notices := foreignNotices(inspectOpenCodeJSON(root))
-	if !mergeOpenCodeJSON(root) {
-		return "opencode.json already current in " + path + notices, nil
-	}
-	text, err := renderOpenCodeJSON(root)
-	if err != nil {
-		return "", err
-	}
-	if file.existed {
-		if err := keepOnce(path+openCodeJSONBackupSuffix, file); err != nil {
-			return "", err
-		}
-	}
-	if err := writeBlockFile(path, text, file); err != nil {
-		return "", err
-	}
-	return "opencode.json written to " + path + notices, nil
-}
-
 // foreignNotices are the sentences about the owned keys that hold another value, ready to append.
 func foreignNotices(state openCodeJSONState) string {
 	var out strings.Builder
@@ -261,33 +175,6 @@ func keepOnce(path string, read blockFile) error {
 		return nil
 	}
 	return os.WriteFile(path, []byte(read.content), read.mode)
-}
-
-// removeFromOpenCodeJSON takes the owned keys and entries out of opencode.json. A file left with
-// nothing in it is removed: it was created for them. An absent file is left alone.
-func (a OpenCodeAdapter) removeFromOpenCodeJSON() (removed bool, err error) {
-	path := a.openCodeJSONPath()
-	file, err := readBlockFile(path)
-	if err != nil || !file.existed {
-		return false, err
-	}
-	root, err := parseOpenCodeJSON(file.content)
-	if err != nil {
-		return false, fmt.Errorf("%s cannot be edited: %w", path, err)
-	}
-	if !removeOpenCodeJSON(root) {
-		return false, nil
-	}
-	if len(root) == 0 {
-		if info, err := os.Lstat(path); err == nil && info.Mode().IsRegular() {
-			return true, removeBlockFile(path, file)
-		}
-	}
-	text, err := renderOpenCodeJSON(root)
-	if err != nil {
-		return false, err
-	}
-	return true, writeBlockFile(path, text, file)
 }
 
 // openCodeJSONStatus is the status result for opencode.json when it is not as the adapter keeps it:
