@@ -8,7 +8,7 @@ An end-to-end harness for solo software engineering and product development with
 - **ODD feature documents.** Every substantial goal lives in `odd/tasks/<feature>.md`: Specs that quote the owner's words, Tasks with their commits, and an append-only Log of decisions and evidence (skill `odd-feature-doc`).
 - **Its own review lifecycle.** `labdrian review bind`, `record`, `exempt` and `check` review each commit on its own, store every result under `odd/review-results/`, and a Stop hook asks for the next commit no review covers. A commit's `Risk:` line decides whether a second, blind reviewer and an independent verifier run.
 - **Mechanical guards in hooks.** The builder guard denies a builder launch that cites no shaped task; gate-task injects the minimalism, OO-quality and anti-generic-design contracts into the agents that write code; the approve guard keeps skill approvals a human act.
-- **One deploy to four runtimes.** `labdrian apply` deploys skills, agents and contracts to Claude Code, Codex, opencode (skills and contracts, no agents) and Pi (as a package), with per-target backups, named releases and rollback.
+- **One deploy to four runtimes.** `labdrian apply` deploys skills, agents and contracts to Claude Code, Codex, opencode (native agents; it reads the skills deployed to Claude Code) and Pi (as a package), with per-target backups, named releases and rollback.
 - **gentle-ai is a vendor source, on its way to optional.** Its skills are consumed through the `upstream`/`main` overlay, so a `gentle-ai sync` never clobbers local changes. The own review lifecycle (`odd/tasks/own-rdd.md`) is replacing its native review, the last part this project still leans on.
 
 ## Quick start — clone, then `labdrian tui` from anywhere
@@ -72,13 +72,13 @@ Every finding is resolved: a warning is fixed before delivery, a suggestion is c
 | Target | Path |
 |--------|------|
 | `claude` | `~/.claude/skills` |
-| `opencode` | `~/.config/opencode/skills` |
+| `opencode` | no skill copy: OpenCode reads `~/.claude/skills`, and a copy in its own directory would shadow it; its native agents go to `~/.config/opencode/agents` |
 | `codex` | `~/.codex/skills` |
 | `pi` | a built package, see [Pi](#pi-via-gentle-pi) |
 
 Use `--target <name>` on `apply`, `status`, `capture`, and `sync-check`. Default for `apply`/`status`/`sync-check` is `all` (the three copy targets, plus `pi` when it is genuinely installed). Default for `capture` is `claude`.
 
-The `agent` route (see [Tracked files](#tracked-files-overlaymanifest)) additionally deploys to `~/.claude/agents` (claude target only), and the `codex-agent` route deploys `codex/agents/<role>.toml` to `~/.codex/agents` (codex target only). `--target opencode` or `--target codex` on an `agent` row, and any other target on a `codex-agent` row, is a no-op — zero applicable targets.
+The `agent` route (see [Tracked files](#tracked-files-overlaymanifest)) additionally deploys to `~/.claude/agents` (claude target only), and the `codex-agent` route deploys `codex/agents/<role>.toml` to `~/.codex/agents` (codex target only). `--target opencode` or `--target codex` on an `agent` row, and any other target on a `codex-agent` row, is a no-op — zero applicable targets. A `skill` row has no destination for `--target opencode`.
 
 ### Pi (via gentle-pi)
 

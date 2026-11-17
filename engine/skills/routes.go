@@ -279,6 +279,11 @@ func resolveRoute(path, declared, overlayRoot string, dest RouteDestinations) (R
 		placed.RepoRel = "skills/" + path
 	}
 	placed.RepoSource = overlayRoot + "/skills/" + path
+	// OpenCode v2 reads the skills of ~/.claude/skills; a copy in its own directories would shadow them
+	// (S13, measured in L10 T5), so no skill row is copied for it. Its native agents are placed above.
+	if dest.Target == capability.TargetOpenCode {
+		return placed, nil
+	}
 	if dest.SkillsRoot == "" {
 		return ResolvedRoute{}, &MissingRootError{Path: path, Directory: "skills", Target: dest.Target}
 	}

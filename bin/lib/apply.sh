@@ -93,7 +93,7 @@ cmd_apply() {
 
     local tpath="${TARGET_PATHS[$t]}"
 
-    if [[ ! -d "$tpath" ]]; then
+    if copies_skills "$t" && [[ ! -d "$tpath" ]]; then
       mkdir -p "$tpath"
       echo "  (created target directory: $tpath)"
     fi

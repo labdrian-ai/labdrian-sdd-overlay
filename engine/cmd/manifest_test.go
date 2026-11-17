@@ -81,11 +81,28 @@ func TestManifestRoutesKeepsTheManagedRowsWhenAsked(t *testing.T) {
 func TestManifestRoutesAsksForTheDestinationsOfTheTarget(t *testing.T) {
 	args := []string{"routes", "--overlay-root", "/o", "--target", "opencode", "--skills-root", "/h/oc/skills", "--agents-root", "/h/oc/agents"}
 	run := runManifestWith(manifestPorts("a/SKILL.md managed\nGADU.md custom agent\nopencode/agents/G.md custom opencode-agent\n"), args...)
-	want := "a/SKILL.md\tskill\tskills/a/SKILL.md\t/o/skills/a/SKILL.md\t/h/oc/skills/a/SKILL.md\n" +
+	want := "a/SKILL.md\tskill\tskills/a/SKILL.md\t/o/skills/a/SKILL.md\t\n" +
 		"GADU.md\tagent\tagents/GADU.md\t/o/agents/GADU.md\t\n" +
 		"opencode/agents/G.md\topencode-agent\topencode/agents/G.md\t/o/opencode/agents/G.md\t/h/oc/agents/G.md\n"
 	if run.stdout != want || run.exit != 0 {
 		t.Errorf("run = %+v, want %q", run, want)
+	}
+}
+
+// OpenCode reads ~/.claude/skills, so a skill row has no destination for it (S13); Claude and Codex
+// keep placing the same row under their skills roots.
+func TestManifestRoutesPlacesASkillRowForClaudeAndCodexAndNowhereForOpenCode(t *testing.T) {
+	manifest := "a/SKILL.md managed\n"
+	for target, want := range map[string]string{
+		"claude":   "a/SKILL.md\tskill\tskills/a/SKILL.md\t/o/skills/a/SKILL.md\t/h/cl/skills/a/SKILL.md\n",
+		"codex":    "a/SKILL.md\tskill\tskills/a/SKILL.md\t/o/skills/a/SKILL.md\t/h/cx/skills/a/SKILL.md\n",
+		"opencode": "a/SKILL.md\tskill\tskills/a/SKILL.md\t/o/skills/a/SKILL.md\t\n",
+	} {
+		root := map[string]string{"claude": "/h/cl", "codex": "/h/cx", "opencode": "/h/oc"}[target]
+		run := runManifestWith(manifestPorts(manifest), "routes", "--overlay-root", "/o", "--target", target, "--skills-root", root+"/skills", "--agents-root", root+"/agents")
+		if run.stdout != want || run.exit != 0 {
+			t.Errorf("%s: run = %+v, want %q", target, run, want)
+		}
 	}
 }
 

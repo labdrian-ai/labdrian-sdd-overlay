@@ -103,8 +103,8 @@ func TestResolveRoutesPlacesEachKindOfRow(t *testing.T) {
 	}{
 		{"a bare skill row goes to the skills of Claude", ManifestRow{"sdd-spec/SKILL.md", "managed", ""}, "claude",
 			ResolvedRoute{"sdd-spec/SKILL.md", "skill", "skills/sdd-spec/SKILL.md", "/o/skills/sdd-spec/SKILL.md", "/h/.claude/skills/sdd-spec/SKILL.md"}},
-		{"a bare skill row goes to the skills of OpenCode", ManifestRow{"sdd-spec/SKILL.md", "managed", ""}, "opencode",
-			ResolvedRoute{"sdd-spec/SKILL.md", "skill", "skills/sdd-spec/SKILL.md", "/o/skills/sdd-spec/SKILL.md", "/h/.config/opencode/skills/sdd-spec/SKILL.md"}},
+		{"a bare skill row goes nowhere for OpenCode (S13: it reads the skills of ~/.claude)", ManifestRow{"sdd-spec/SKILL.md", "managed", ""}, "opencode",
+			ResolvedRoute{"sdd-spec/SKILL.md", "skill", "skills/sdd-spec/SKILL.md", "/o/skills/sdd-spec/SKILL.md", ""}},
 		{"a bare skill row goes to the skills of Codex", ManifestRow{"sdd-spec/SKILL.md", "managed", ""}, "codex",
 			ResolvedRoute{"sdd-spec/SKILL.md", "skill", "skills/sdd-spec/SKILL.md", "/o/skills/sdd-spec/SKILL.md", "/h/.codex/skills/sdd-spec/SKILL.md"}},
 		{"a row that says skill is the same", ManifestRow{"shared/helper.md", "managed", "skill"}, "claude",
