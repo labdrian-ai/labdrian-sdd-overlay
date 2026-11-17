@@ -106,6 +106,70 @@ func TestOpenCodeRecordsTheBareMemorycardNameWhenItIsNotOnThePath(t *testing.T) 
 	}
 }
 
+func TestOpenCodeStatusIsSupportedOnlyWhenBothPluginsAreActive(t *testing.T) {
+	root, adapter, _ := installedMemorycard(t)
+	writeParityActiveMarker(t, root)
+	if status := adapter.Status(); status.Status != core.CapabilityRestartRequired || !strings.Contains(status.Message, "memorycard plugin") {
+		t.Errorf("Status() = %#v, want a restart owed for the memorycard plugin, which has not loaded", status)
+	}
+	writeMemorycardActiveMarker(t, root)
+	if status := adapter.Status(); status.Status != core.CapabilitySupported {
+		t.Errorf("Status() = %#v, want supported with both markers", status)
+	}
+}
+
+func TestOpenCodeStatusSaysARestartIsOwedWhenTheMemorycardPluginRunningIsNotTheInstalledOne(t *testing.T) {
+	root, adapter, _ := installedMemorycard(t)
+	writeParityActiveMarker(t, root)
+	writeJSONFile(t, memorycardMarkerFile(root), map[string]string{
+		"active_version": "an-older-version",
+		"active_hash":    engineRuntime.OpenCodeMemorycardPluginHash(),
+		"plugin_path":    memorycardPluginFile(root),
+		"config_root":    root,
+	})
+	if status := adapter.Status(); status.Status != core.CapabilityRestartRequired || !strings.Contains(status.Message, "memorycard plugin") {
+		t.Errorf("Status() = %#v, want a restart owed for the memorycard plugin", status)
+	}
+}
+
+func TestOpenCodeStatusReportsAMemorycardPluginThatIsMissingStaleOrChanged(t *testing.T) {
+	cases := map[string]struct {
+		damage func(t *testing.T, root string)
+		status core.CapabilityStatus
+		want   string
+	}{
+		"plugin missing": {func(t *testing.T, root string) { remove(t, memorycardPluginFile(root)) }, core.CapabilityPartial, "memorycard plugin not installed"},
+		"record missing": {func(t *testing.T, root string) { remove(t, memorycardRecordFile(root)) }, core.CapabilityPartial, "memorycard plugin record"},
+		"record stale": {func(t *testing.T, root string) {
+			writeJSONFile(t, memorycardRecordFile(root), map[string]string{"installed_version": "an-older-version", "installed_hash": "x"})
+		}, core.CapabilityPartial, "memorycard plugin record"},
+		"plugin changed": {func(t *testing.T, root string) {
+			if err := os.WriteFile(memorycardPluginFile(root), []byte("// labdrian-memorycard-plugin: edited\n"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+		}, core.CapabilityRestartRequired, "memorycard plugin artifact changed"},
+	}
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			root, adapter, _ := installedMemorycard(t)
+			writeParityActiveMarker(t, root)
+			writeMemorycardActiveMarker(t, root)
+			c.damage(t, root)
+			status := adapter.Status()
+			if status.Status != c.status || !strings.Contains(status.Message, c.want) {
+				t.Errorf("Status() = %#v, want %s naming %q", status, c.status, c.want)
+			}
+		})
+	}
+}
+
+func remove(t *testing.T, path string) {
+	t.Helper()
+	if err := os.Remove(path); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestOpenCodeUpdateRewritesAChangedMemorycardPluginAndTheProgramItRuns(t *testing.T) {
 	root, adapter, _ := installedMemorycard(t)
 	if err := os.WriteFile(memorycardPluginFile(root), []byte("// labdrian-memorycard-plugin: edited\n"), 0o644); err != nil {
@@ -179,6 +243,10 @@ func TestOpenCodeLeavesAMemorycardPluginItDidNotWriteAndSaysSo(t *testing.T) {
 	}
 	if _, err := os.Stat(openCodePluginPath(root)); err != nil {
 		t.Errorf("the runtime-parity plugin was not installed beside it: %v", err)
+	}
+	writeParityActiveMarker(t, root)
+	if status := adapter.Status(); status.Status != core.CapabilityPartial || !strings.Contains(status.Message, "not written by this adapter") {
+		t.Errorf("Status() = %#v, want partial", status)
 	}
 	adapter.Uninstall()
 	if got, err := os.ReadFile(memorycardPluginFile(root)); err != nil || string(got) != foreign {

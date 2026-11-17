@@ -49,6 +49,14 @@ type openCodeMemorycardRecord struct {
 	MemorycardCommand string `json:"memorycard_command"`
 }
 
+// openCodeMemorycardMarker is what the plugin writes when it loads.
+type openCodeMemorycardMarker struct {
+	ActiveVersion string `json:"active_version"`
+	ActiveHash    string `json:"active_hash"`
+	PluginPath    string `json:"plugin_path"`
+	ConfigRoot    string `json:"config_root"`
+}
+
 func (a OpenCodeAdapter) memorycardPluginPath() string {
 	return filepath.Join(a.root, "plugins", openCodeMemorycardPluginID, openCodePluginFile)
 }
@@ -140,4 +148,80 @@ func (a OpenCodeAdapter) removeMemorycardPlugin() error {
 		return err
 	}
 	return nil
+}
+
+// memorycardPluginProblem checks the installed plugin against its record. It says what is wrong, and
+// whether the result is partial (the install is missing, foreign or stale) or a restart owed (the file
+// is not the one the record names).
+func (a OpenCodeAdapter) memorycardPluginProblem() (restartOnly bool, message string, bad bool) {
+	content, exists, ours, err := a.memorycardPluginState()
+	path := a.memorycardPluginPath()
+	switch {
+	case err != nil:
+		return false, "OpenCode memorycard plugin unreadable: " + err.Error(), true
+	case !exists:
+		return false, "OpenCode memorycard plugin not installed at " + path + "; run update", true
+	case !ours:
+		return false, "OpenCode memorycard plugin at " + path + " was not written by this adapter", true
+	}
+	record, err := a.readMemorycardRecord()
+	if err != nil {
+		return false, "OpenCode memorycard plugin record " + a.memorycardConfigPath() + " is missing or stale: " + err.Error() + "; run update", true
+	}
+	if record.InstalledHash != sha256hex.Sum(content) {
+		return true, "OpenCode memorycard plugin artifact changed; restart OpenCode after reinstall", true
+	}
+	return false, "", false
+}
+
+// readMemorycardRecord reads the record and proves it current: the version and hash of the source the
+// program carries, and the paths.
+func (a OpenCodeAdapter) readMemorycardRecord() (openCodeMemorycardRecord, error) {
+	var record openCodeMemorycardRecord
+	data, err := os.ReadFile(a.memorycardConfigPath())
+	if err != nil {
+		return record, err
+	}
+	if err := json.Unmarshal(data, &record); err != nil {
+		return record, err
+	}
+	switch {
+	case record.InstalledVersion != OpenCodeMemorycardPluginVersion:
+		return record, fmt.Errorf("installed_version %q is not current %q", record.InstalledVersion, OpenCodeMemorycardPluginVersion)
+	case record.InstalledHash == "":
+		return record, fmt.Errorf("installed_hash is empty")
+	case record.PluginPath != a.memorycardPluginPath():
+		return record, fmt.Errorf("plugin_path does not match configured OpenCode root")
+	case record.PluginConfigRoot != a.root:
+		return record, fmt.Errorf("plugin_config_root does not match configured OpenCode root")
+	}
+	return record, nil
+}
+
+// memorycardActiveProblem says whether OpenCode has loaded the installed memorycard plugin: its active
+// marker must exist, be newer than the plugin and its record, and name the installed version, file and root.
+func (a OpenCodeAdapter) memorycardActiveProblem() (message string, bad bool) {
+	restart := "OpenCode restart required to load the memorycard plugin version " + OpenCodeMemorycardPluginVersion
+	data, err := os.ReadFile(a.memorycardActiveMarkerPath())
+	if err != nil {
+		return restart, true
+	}
+	var marker openCodeMemorycardMarker
+	if err := json.Unmarshal(data, &marker); err != nil {
+		return restart, true
+	}
+	if marker.ActiveVersion != OpenCodeMemorycardPluginVersion {
+		return "OpenCode active memorycard plugin version mismatch; restart OpenCode to load " + OpenCodeMemorycardPluginVersion, true
+	}
+	if info, err := os.Stat(a.memorycardActiveMarkerPath()); err == nil {
+		for _, path := range []string{a.memorycardPluginPath(), a.memorycardConfigPath()} {
+			if changed, err := os.Stat(path); err == nil && info.ModTime().Before(changed.ModTime()) {
+				return "OpenCode active memorycard plugin marker predates the installed plugin; restart OpenCode to load it", true
+			}
+		}
+	}
+	if marker.ActiveHash != OpenCodeMemorycardPluginHash() || marker.PluginPath != a.memorycardPluginPath() || marker.ConfigRoot != a.root {
+		return "OpenCode active memorycard plugin does not match the installed one; restart OpenCode to load it", true
+	}
+	return "", false
 }

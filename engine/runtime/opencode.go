@@ -189,6 +189,12 @@ func (a OpenCodeAdapter) statusOf(action core.Action) core.LifecycleResult {
 	if message, bad := a.agentsStatus(); bad {
 		return a.result(action, core.CapabilityPartial, message)
 	}
+	if restartOnly, message, bad := a.memorycardPluginProblem(); bad {
+		if restartOnly {
+			return a.result(action, core.CapabilityRestartRequired, message)
+		}
+		return a.result(action, core.CapabilityPartial, message)
+	}
 	active, err := a.readActiveMarker()
 	if err != nil {
 		return a.result(action, core.CapabilityRestartRequired, "OpenCode restart required to load plugin version "+cfg.InstalledVersion)
@@ -210,6 +216,9 @@ func (a OpenCodeAdapter) statusOf(action core.Action) core.LifecycleResult {
 	}
 	if active.ConfigRoot != "" && active.ConfigRoot != cfg.PluginConfigRoot {
 		return a.result(action, core.CapabilityRestartRequired, "OpenCode active config root mismatch; restart OpenCode to load "+cfg.PluginConfigRoot)
+	}
+	if message, bad := a.memorycardActiveProblem(); bad {
+		return a.result(action, core.CapabilityRestartRequired, message)
 	}
 	return a.result(action, core.CapabilitySupported, "OpenCode plugin active with version "+cfg.InstalledVersion+" and hash "+currentHash)
 }

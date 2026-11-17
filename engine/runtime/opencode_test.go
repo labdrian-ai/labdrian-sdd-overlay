@@ -79,6 +79,7 @@ func TestOpenCodeStatusSupportedWhenActiveMarkerMatchesHash(t *testing.T) {
 	if err := os.WriteFile(activeMarker, []byte(active), 0o644); err != nil {
 		t.Fatalf("write active marker: %v", err)
 	}
+	writeMemorycardActiveMarker(t, root)
 
 	status := adapter.Status()
 	if status.Status != core.CapabilitySupported {
@@ -496,6 +497,12 @@ func readPromptConfigHash(t *testing.T, root string) string {
 }
 
 func writeMatchingActiveMarker(t *testing.T, root string) {
+	t.Helper()
+	writeParityActiveMarker(t, root)
+	writeMemorycardActiveMarker(t, root)
+}
+
+func writeParityActiveMarker(t *testing.T, root string) {
 	t.Helper()
 	promptHash := readPromptConfigHash(t, root)
 	active := `{"active_version":"` + engineRuntime.OpenCodePluginVersion + `","active_hash":"` + engineRuntime.OpenCodePluginHash() + `","active_prompt_config_hash":"` + promptHash + `","plugin_path":"` + openCodePluginPath(root) + `","config_root":"` + root + `"}`

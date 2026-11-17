@@ -873,6 +873,18 @@ func writeOpenCodeActiveMarkerFromConfig(t *testing.T, root, configPath string) 
 	if err := os.WriteFile(markerPath, encoded, 0o644); err != nil {
 		return fmt.Errorf("write marker: %w", err)
 	}
+	memorycardMarker, err := json.Marshal(map[string]string{
+		"active_version": runtimepkg.OpenCodeMemorycardPluginVersion,
+		"active_hash":    runtimepkg.OpenCodeMemorycardPluginHash(),
+		"plugin_path":    filepath.Join(root, "plugins", "memorycard", "index.js"),
+		"config_root":    root,
+	})
+	if err != nil {
+		return fmt.Errorf("marshal memorycard marker: %w", err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "memorycard-opencode.active.json"), memorycardMarker, 0o644); err != nil {
+		return fmt.Errorf("write memorycard marker: %w", err)
+	}
 	return nil
 }
 
