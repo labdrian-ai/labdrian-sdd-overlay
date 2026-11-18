@@ -21,6 +21,8 @@ func usage(w io.Writer) {
 	fmt.Fprintln(w, "    also writes the \"agent\": \"foreman\" and \"outputStyle\": \"labdrian\" keys when absent; a key that holds another value is kept, and a notice on stderr says so (exit 0)")
 	fmt.Fprintln(w, "  engine uninstall-hooks --settings <path> --hook-command <binary-path>")
 	fmt.Fprintln(w, "    removes those two keys only while they hold exactly \"foreman\" and \"labdrian\"")
+	fmt.Fprintln(w, "  engine codegraph-prompt-hook")
+	fmt.Fprintln(w, "    internal Claude Code UserPromptSubmit hook command: reads the hook JSON on stdin; for a task notification (a prompt that starts with <task-notification> or carries [SYSTEM NOTIFICATION - NOT USER INPUT]) it prints nothing and exits 0 without starting codegraph; for every other input, invalid JSON included, it runs `codegraph prompt-hook` from PATH with the same stdin and relays its stdout, stderr and exit code (127 with one stderr line when codegraph cannot be started)")
 	fmt.Fprintln(w, "  engine merge-codex-hooks --hooks <path> --hook-command <binary-path>")
 	fmt.Fprintln(w, "  engine uninstall-codex-hooks --hooks <path> --hook-command <binary-path>")
 	fmt.Fprintln(w, "    merge/remove the three owned Codex memory entries: SessionStart (matcher startup|resume|clear|compact), PreToolUse and PostToolUse (only Engram reads, memorycard reads and longterm-mem query/get; tool commands pass --source codex). Foreign values stay byte-identical; edited array layout may change.")
