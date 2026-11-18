@@ -231,16 +231,16 @@ func userPromptSubmit(d deps, stdin io.Reader, processCwd, source string) (out [
 	case app.PromptWarning:
 		return warningOutput(hookwire.EventUserPromptSubmit, outcome.Warning), nil
 	case app.PromptProjection:
-		out, err := promptReply(outcome.Result).Encode()
+		reply, err := promptReply(outcome.Result).Encode()
 		if err != nil {
 			return nil, nil
 		}
 		if outcome.Result.Warning != "" || outcome.Result.Unbind {
 			// A warning is always said, and so is the note of a closed workflow, which says it repeats on every
 			// prompt until the binding is removed. Neither is recorded as the last block.
-			return out, nil
+			return reply, nil
 		}
-		return addOncePerChange(sessionKey(source, in.SessionID), out)
+		return addOncePerChange(sessionKey(source, in.SessionID), reply)
 	}
 	return nil, nil
 }
