@@ -3,8 +3,8 @@ package main
 // roles subcommand: 'roles validate --file <path>', 'roles next --project
 // --goal --chain', 'roles resume --project --goal --chain', 'roles append
 // --project --goal --chain --stdin', and 'roles match-shaper --root
-// --handoff'. The internal hook verb 'roles builder-guard' (roles_builder_guard.go) is not one a person
-// runs. Every other verb is read-only except append, which appends one
+// --handoff'. The internal hook verbs 'roles builder-guard' (roles_builder_guard.go) and 'roles skill-paths'
+// (roles_skill_paths.go) are not ones a person runs. Every other verb is read-only except append, which appends one
 // caller-supplied record to the role chain store. No verb launches an agent,
 // dispatches work, or grants execution authority; runtime-specific agent
 // adapters belong outside this package.
@@ -35,7 +35,7 @@ func runRoles(p process, d deps, args []string) {
 // is followed by a return, because tests inject a non-terminating exit.
 func runRolesCore(args []string, stdin io.Reader, stdout, stderr io.Writer, exit func(int), evidence evidenceCheck) {
 	if len(args) == 0 {
-		fmt.Fprintln(stderr, "error: roles requires a verb: validate, next, resume, append, match-shaper")
+		fmt.Fprintln(stderr, "error: roles requires a verb: validate, next, resume, append, match-shaper, skill-paths")
 		exit(1)
 		return
 	}
@@ -50,10 +50,12 @@ func runRolesCore(args []string, stdin io.Reader, stdout, stderr io.Writer, exit
 		runRolesAppend(args[1:], stdin, stdout, stderr, exit, evidence)
 	case "match-shaper":
 		runRolesMatchShaper(args[1:], stdout, stderr, exit)
+	case "skill-paths":
+		runRolesSkillPaths(args[1:], stdin, stdout, stderr, exit)
 	case rolesBuilderGuardVerb:
 		runRolesBuilderGuard(args[1:], stdin, stdout, stderr, exit, fsdoc.Reader{Root: worktreeRoot})
 	default:
-		fmt.Fprintf(stderr, "error: roles: unknown verb %q (expected validate, next, resume, append, or match-shaper)\n", args[0])
+		fmt.Fprintf(stderr, "error: roles: unknown verb %q (expected validate, next, resume, append, match-shaper, or skill-paths)\n", args[0])
 		exit(1)
 	}
 }

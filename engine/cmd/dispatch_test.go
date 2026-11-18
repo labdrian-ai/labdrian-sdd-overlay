@@ -45,7 +45,7 @@ func TestRunHandsEachSubcommandItsOwnArguments(t *testing.T) {
 
 	run(p.process, testDeps(), []string{"roles"})
 
-	if want := "error: roles requires a verb: validate, next, resume, append, match-shaper\n"; p.err.String() != want {
+	if want := "error: roles requires a verb: validate, next, resume, append, match-shaper, skill-paths\n"; p.err.String() != want {
 		t.Errorf("stderr = %q, want %q", p.err.String(), want)
 	}
 	if len(p.exits) != 1 || p.exits[0] != 1 {

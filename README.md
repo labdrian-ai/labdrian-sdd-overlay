@@ -622,6 +622,17 @@ overlay roles <verb>
                                                                                   whose exemption no longer holds)
     match-shaper --root <worktree> --handoff <path>                              report which of a Shaper handoff v3's free-form roles equal a
                                                                                   member of the reusable-role vocabulary, without changing v3 semantics
+    skill-paths --skills-root <dir>                                              not run by a person: the OpenCode runtime-parity plugin calls it on the prompt
+                                                                                  of a `subagent` launch. Reads the prompt on stdin and prints it with each bare
+                                                                                  skill id under the first exact `## Skills to load before work` line (up to the
+                                                                                  next line that starts with `#`) made the absolute path of `<dir>/<id>/SKILL.md`;
+                                                                                  an absolute path to an existing file and a blank line stay. A prompt with no such
+                                                                                  header is printed as it came. Exit 2 with one stderr line
+                                                                                  (`error: roles skill-paths: <what to write>`) and nothing on stdout for a line
+                                                                                  that starts with the header text but is not the header alone, an id with no
+                                                                                  SKILL.md under `<dir>`, an absolute path to no file or any other text. Exit 0
+                                                                                  printed, 2 prompt refused, 1 usage error (`--skills-root` missing, relative or
+                                                                                  not a directory) or any other failure
     builder-guard                                                                not run by a person: the Claude Code PreToolUse hook on the Agent tool that
                                                                                   `install-hooks` wires (the builder guard, described below as
                                                                                   `gentle-ai-overlay roles builder-guard`). It denies launching the builder
