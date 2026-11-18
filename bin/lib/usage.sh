@@ -20,6 +20,10 @@ Commands:
                                    Merge upstream and deploy to target(s) (default: all).
                                    Pushes 'main' to origin immediately after the merge, so a
                                    local apply never strands main ahead of origin.
+                                   For codex it then runs 'engine runtime install --target codex',
+                                   which keeps the owner rules block in ~/AGENTS.md,
+                                   <codex root>/AGENTS.md and <codex root>/agents.md; a failed
+                                   install makes apply exit non-zero.
                                    After a merge, run 'skills validate': each global skill the
                                    merge changed needs a human approval (see skills approve
                                    below), which an agent cannot give.

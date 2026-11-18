@@ -9,7 +9,7 @@ exit: 0
 $ runtime install --target codex
 exit: 0
 --- stdout ---
-[codex] install: restart_required — Codex lifecycle manifest installed; restart long-running Codex processes to pick up updates
+[codex] install: restart_required — Codex lifecycle manifest installed; restart long-running Codex processes to pick up updates; owner rules not installed: no overlay checkout found; set LABDRIAN_OVERLAY_DIR
 --- stderr ---
 
 # install opencode
@@ -32,7 +32,7 @@ exit: 1
 --- stdout ---
 [claude] install: restart_required — Claude lifecycle hooks installed; restart Claude to load hook changes; owner rules not installed: no overlay checkout found; set LABDRIAN_OVERLAY_DIR
 [opencode] install: partial — OpenCode prompt config could not be derived from the contracts: could not locate skills/_shared/minimalism-contract.md; set LABDRIAN_OVERLAY_DIR
-[codex] install: restart_required — Codex lifecycle manifest installed; restart long-running Codex processes to pick up updates
+[codex] install: restart_required — Codex lifecycle manifest installed; restart long-running Codex processes to pick up updates; owner rules not installed: no overlay checkout found; set LABDRIAN_OVERLAY_DIR
 [pi] install: unsupported — pi package delivery (pipkg build/install) cannot run without OVERLAY_DIR set
 --- stderr ---
 
@@ -105,7 +105,7 @@ exit: 1
 --- stdout ---
 [claude] status: partial — Claude owner rules could not be read: read the owner rules: open <WORLD>/overlay/instructions/owner-rules.md: no such file or directory
 [opencode] status: restart_required — OpenCode restart required to load plugin version 2026-11-17-runtime-parity-15
-[codex] status: partial — Codex lifecycle manifest is present and managed, but activation/reload state is unverified — reasons: activation/reload proof unavailable until Codex session lifecycle integration is implemented
+[codex] status: partial — Codex lifecycle manifest is present and managed, but activation/reload state is unverified — reasons: activation/reload proof unavailable until Codex session lifecycle integration is implemented; Codex owner rules could not be read: read the owner rules: open <WORLD>/overlay/instructions/owner-rules.md: no such file or directory
 [pi] status: unsupported — labdrian-pi package is not built at <WORLD>/home/.labdrian-overlay/pi/labdrian-pi (run: labdrian-overlay apply --target pi). 'pi --no-extensions' disables the before_agent_start contract-gate extension for that session, and 'pi --no-skills' disables skill discovery, for that session only; neither flag's use is detected at runtime (short aliases: -ne and -ns)
 --- stderr ---
 

@@ -25,7 +25,7 @@ func newRuntimeRegistry(registries skills.RegistryRepository, hooks runtimepkg.H
 	for _, register := range []func(*runtimecore.Registry) error{
 		func(r *runtimecore.Registry) error { return runtimepkg.RegisterClaudeWithOwnerRules(r, hooks) },
 		runtimepkg.RegisterOpenCode,
-		runtimepkg.RegisterCodex,
+		runtimepkg.RegisterCodexWithOwnerRules,
 		func(r *runtimecore.Registry) error {
 			return runtimepkg.RegisterPi(r, runtimepkg.PiPorts{
 				Commands: commands,

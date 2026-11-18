@@ -1140,6 +1140,31 @@ gentle-ai-overlay runtime install|update|uninstall|status --target claude
     style was not enabled; `uninstall` removes the key only while it holds exactly `"labdrian"`; `status` is partial when the
     key is missing or foreign, after the `"agent"` key and before the rules block.
 
+gentle-ai-overlay runtime install|update|uninstall|status --target codex
+    Besides its manifest (`labdrian-runtime-lifecycle.json` in the Codex root: `$CODEX_HOME`, else ~/.codex, or
+    `--config-root`), the Codex adapter keeps the owner's rules (`instructions/owner-rules.md`, the same text and the same
+    block as Claude's) in three files: `~/AGENTS.md`, `<codex root>/AGENTS.md` and `<codex root>/agents.md`. The
+    writer is `runtime.MarkedBlock`, so each file is handled as CLAUDE.md is: `install` and `update` append the
+    `<!-- labdrian:owner-rules -->` block after one blank line when it is absent (a missing file is created with the
+    block alone) and replace it in place when it is there; every byte outside the two lines stays as it was, the
+    `gentle-ai:` blocks, `user:memorycard-store` and unmarked text included; a second `install` writes nothing;
+    `uninstall` removes only the block (and a file `install` created) and the manifest. The rules are read from the
+    overlay checkout in `LABDRIAN_OVERLAY_DIR`, else the nearest one above the working directory; with no checkout the
+    manifest is written alone and the message says so. A file whose markers are not one open line followed by one close
+    line is left as it is and makes the action partial, naming its lines; the other files are still written. `status`
+    is partial, as it always was for Codex (activation cannot be proven), and its reasons say for each of the three
+    files whether the block is current, stale or missing and which verb fixes it. Which of the three files Codex reads
+    (read from the installed codex 0.167.0 binary and the owner's config.toml, not from a run): `<codex root>/AGENTS.md`
+    is the global instruction file (`AGENTS.override.md` first, else `AGENTS.md`); `~/AGENTS.md` is read as a project
+    document, only in a session whose walk from its working directory up to its project root reaches the home
+    directory; nothing reads `agents.md` in lower case (no fallback filename is configured), so that file is written
+    and the message and status say that no Codex path reads it. `labdrian apply --target codex` (and `--target all`)
+    runs `engine runtime install --target codex` after the copy, with the checkout of the apply as the source of the
+    rules; it does nothing for a checkout that has no `instructions/owner-rules.md`, prints a note and does not fail
+    when the engine binary is not installed yet (`labdrian install-hooks` installs it), and exits non-zero when the
+    install ran and was not successful. The `gentle-ai:` blocks leave the live files only through the owner-approved
+    removal of the gentle-ai detach (S17), never through this adapter.
+
 gentle-ai-overlay runtime install|update|uninstall|status --target opencode
     Besides the runtime-parity plugin (`projection hook`, below), the OpenCode adapter keeps three entries of
     `<opencode root>/opencode.json` (~/.config/opencode, or --config-root) and one block of AGENTS.md beside it.

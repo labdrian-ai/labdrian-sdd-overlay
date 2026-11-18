@@ -24,10 +24,13 @@ type codexManifest struct {
 }
 
 // CodexAdapter is the runtime adapter for the Codex CLI.
-// It owns only one manifest file so unrelated user state is preserved.
+// It owns one manifest file and, when it has a rules source (WithOwnerRules), one marked block in each
+// of three AGENTS files (codex_ownerrules.go), so unrelated user state is preserved.
 type CodexAdapter struct {
 	target core.Target
 	root   string
+	rules  OwnerRulesSource
+	home   string
 }
 
 // NewCodexAdapter builds the Codex adapter over root, the directory its manifest lives in. An
@@ -35,6 +38,12 @@ type CodexAdapter struct {
 // Config.CodexRoot), the adapter does not look for one.
 func NewCodexAdapter(root string) CodexAdapter {
 	return CodexAdapter{target: core.TargetCodex, root: root}
+}
+
+// WithOwnerRules is the adapter that also keeps the owner rules block in three files, with the rules from rules.
+func (a CodexAdapter) WithOwnerRules(rules OwnerRulesSource, home string) CodexAdapter {
+	a.rules, a.home = rules, home
+	return a
 }
 
 func (a CodexAdapter) Target() core.Target         { return a.target }
@@ -63,10 +72,17 @@ func (a CodexAdapter) Install() core.LifecycleResult {
 		return a.result(core.ActionInstall, core.CapabilityPartial, err.Error())
 	}
 
-	return a.result(core.ActionInstall, core.CapabilityRestartRequired, "Codex lifecycle manifest installed; restart long-running Codex processes to pick up updates")
+	return a.withOwnerRules(core.ActionInstall, "Codex lifecycle manifest installed; restart long-running Codex processes to pick up updates")
 }
 
-func (a CodexAdapter) Status() core.LifecycleResult { return a.status() }
+// Status is the manifest status, with the state of the owner rules block in each file after its reasons.
+func (a CodexAdapter) Status() core.LifecycleResult {
+	result := a.status()
+	if a.validateRoot() != nil {
+		return result
+	}
+	return codexWithReasons(result, a.ownerRulesReasons())
+}
 
 func (a CodexAdapter) SyncCheck() core.LifecycleResult {
 	result := a.Status()
@@ -103,7 +119,7 @@ func (a CodexAdapter) Update() core.LifecycleResult {
 		return a.result(core.ActionUpdate, core.CapabilityPartial, err.Error())
 	}
 
-	return a.result(core.ActionUpdate, core.CapabilityRestartRequired, "Codex lifecycle manifest updated; restart long-running Codex processes to pick up updates")
+	return a.withOwnerRules(core.ActionUpdate, "Codex lifecycle manifest updated; restart long-running Codex processes to pick up updates")
 }
 
 func (a CodexAdapter) Rollback() core.LifecycleResult { return a.Uninstall() }
@@ -124,7 +140,8 @@ func (a CodexAdapter) Uninstall() core.LifecycleResult {
 		return a.result(core.ActionUninstall, core.CapabilityPartial, "could not remove Codex lifecycle manifest: "+err.Error())
 	}
 
-	return a.result(core.ActionUninstall, core.CapabilityRestartRequired, "Codex lifecycle manifest removed; restart long-running Codex processes")
+	message, status := a.removeOwnerRules("Codex lifecycle manifest removed; restart long-running Codex processes")
+	return a.result(core.ActionUninstall, status, message)
 }
 
 func (a CodexAdapter) status() core.LifecycleResult {

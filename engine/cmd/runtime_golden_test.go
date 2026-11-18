@@ -100,6 +100,28 @@ func runtimeGoldenCases() []registryGoldenCase {
 			w.runtime("a block without its close marker is not touched", "install", "--target", "claude")
 			w.show("home/.claude/CLAUDE.md")
 		}},
+		{"runtime-codex-owner-rules", func(w *registryWorld) {
+			w.ownerRulesOverlay()
+			w.put("home/AGENTS.md", "<!-- gentle-ai:orchestrator -->\nplaceholder\n<!-- /gentle-ai:orchestrator -->\n\nmy own text")
+			w.put("home/.codex/AGENTS.md", "<!-- gentle-ai:persona -->\nplaceholder\n<!-- /gentle-ai:persona -->\n\n<!-- user:memorycard-store -->\nstore\n<!-- /user:memorycard-store -->\n")
+			w.runtime("status before the block is there", "status", "--target", "codex")
+			w.runtime("install writes the block in the three files", "install", "--target", "codex")
+			w.show("home/AGENTS.md")
+			w.show("home/.codex/AGENTS.md")
+			w.show("home/.codex/agents.md")
+			w.runtime("status", "status", "--target", "codex")
+			w.put("overlay/instructions/owner-rules.md", "## Rules\n\n- a changed rule\n")
+			w.runtime("status after the rules changed", "status", "--target", "codex")
+			w.runtime("update replaces the block in place", "update", "--target", "codex")
+			w.show("home/AGENTS.md")
+			w.runtime("uninstall removes only the block", "uninstall", "--target", "codex")
+			w.show("home/AGENTS.md")
+			w.show("home/.codex/AGENTS.md")
+			w.put("home/.codex/AGENTS.md", "mine\n<!-- labdrian:owner-rules -->\nno close\n")
+			w.runtime("a block without its close marker is not touched, the other files are written", "install", "--target", "codex")
+			w.show("home/.codex/AGENTS.md")
+			w.show("home/AGENTS.md")
+		}},
 		{"runtime-lifecycle-of-codex", func(w *registryWorld) {
 			for _, step := range []string{"status", "install", "status", "install", "update", "status", "uninstall", "status", "uninstall"} {
 				w.runtime(step+" codex", step, "--target", "codex")

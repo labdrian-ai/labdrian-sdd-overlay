@@ -8,6 +8,28 @@
 # Sourced by bin/labdrian-overlay in the order it lists, never run: it defines functions and
 # variables and does nothing else.
 
+# codex_runtime_install_and_report runs `engine runtime install --target codex` over this checkout,
+# the step `apply --target pi` has in pipkg_apply_and_report: the Codex adapter keeps the owner rules
+# (instructions/owner-rules.md) in one marked block of ~/AGENTS.md, $CODEX_HOME/AGENTS.md and
+# $CODEX_HOME/agents.md (CODEX_HOME defaults to ~/.codex), and a copy of the manifest rows does not
+# reach them. Two cases have nothing to run and do not fail the deploy: a checkout without the rules
+# (an older main; silent, so its output is what it was) and an engine binary that is not installed
+# yet (the note names the recovery).
+# Non-zero when the engine ran and did not report an install that took effect.
+codex_runtime_install_and_report() {
+  [[ -f "$OVERLAY_DIR/instructions/owner-rules.md" ]] || return 0
+  if [[ ! -x "$ENGINE_BINARY" ]]; then
+    echo "  codex: engine binary not found at $ENGINE_BINARY; owner rules not installed (run 'labdrian install-hooks', then 'labdrian apply --target codex')"
+    return 0
+  fi
+  local result
+  if ! result="$(LABDRIAN_OVERLAY_DIR="$OVERLAY_DIR" "$ENGINE_BINARY" runtime install --target codex 2>&1)"; then
+    echo "  $result" >&2
+    return 1
+  fi
+  echo "  $result"
+}
+
 cmd_apply() {
   # shellcheck disable=SC2164  # errexit is on (set -e in bin/labdrian-overlay): a failed cd ends the run
   cd "$OVERLAY_DIR"
@@ -76,6 +98,10 @@ cmd_apply() {
   # a future package-target stub) as a clean success. Reachable both for an
   # explicit --target pi and for pi riding along inside --target all.
   local pi_stub_included=""
+
+  # Set when `engine runtime install --target codex` ran and failed: apply still deploys every
+  # target, then exits non-zero, so a block that was not written never reads as a clean apply.
+  local codex_runtime_failed=""
 
   for t in $(resolve_targets "$target_arg"); do
     echo ""
@@ -150,6 +176,12 @@ cmd_apply() {
     local target_digest
     target_digest="$(compute_target_digest "$t" live)"
     state_write_target "$t" "$release_version" "$target_digest"
+
+    # The owner rules block of the three Codex AGENTS files is not a manifest row: the Codex runtime
+    # adapter writes it. A failure is reported like pi's and fails apply's own exit below.
+    if [[ "$t" == "codex" ]]; then
+      codex_runtime_install_and_report || codex_runtime_failed=1
+    fi
   done
 
   # D13: run the longterm-mem install path exactly once for this whole
@@ -189,7 +221,7 @@ cmd_apply() {
   # Deploy itself succeeded, but a failed mcp install must not exit 0
   # (R4-silent-package-skip): neither may a run that included pi and only
   # printed its stub, with nothing actually deployed for it.
-  [[ -n "$mcp_install_failed" || -n "$pi_stub_included" ]] && return 1
+  [[ -n "$mcp_install_failed" || -n "$pi_stub_included" || -n "$codex_runtime_failed" ]] && return 1
   return 0
 }
 
