@@ -106,19 +106,24 @@ func (a CodexAdapter) removeOwnerRules(message string) (string, core.CapabilityS
 	}
 	files, _ := a.rulesFiles()
 	status := core.CapabilityRestartRequired
+	// Which paths are the same file is settled before any is removed: a removal can leave a symbolic
+	// link dangling or take away a case-insensitive twin, and then os.Stat no longer sees the match.
 	var handled sameFiles
+	var unique []string
 	for _, file := range files {
-		if handled.has(file.path) {
-			continue
+		if !handled.has(file.path) {
+			handled = append(handled, file.path)
+			unique = append(unique, file.path)
 		}
-		handled = append(handled, file.path)
-		removed, err := OwnerRulesBlock.RemoveFile(file.path)
+	}
+	for _, path := range unique {
+		removed, err := OwnerRulesBlock.RemoveFile(path)
 		switch {
 		case err != nil:
 			status = core.CapabilityPartial
 			message += "; owner rules could not be removed: " + err.Error()
 		case removed:
-			message += "; owner rules removed from " + file.path
+			message += "; owner rules removed from " + path
 		}
 	}
 	return message, status
@@ -180,8 +185,9 @@ func codexWithReasons(result core.LifecycleResult, more []string) core.Lifecycle
 }
 
 // sameFiles is the paths an action has handled so far. A path is one of them when it is the same
-// cleaned path or, when both exist, the same file (CODEX_HOME that is the home, a symbolic link, a
-// case-insensitive file system; not a hard link, which a write by rename breaks): such a file is written, checked and removed once and reported once.
+// cleaned path or, when both exist, the same file: CODEX_HOME that is the home, a symbolic link, a
+// case-insensitive file system. A hard link is not covered, since a write by rename breaks it.
+// Such a file is written, checked and removed once, and reported once.
 type sameFiles []string
 
 func (h sameFiles) has(path string) bool {

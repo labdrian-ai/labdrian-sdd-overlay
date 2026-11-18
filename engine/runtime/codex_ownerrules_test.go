@@ -411,6 +411,27 @@ func TestCodexFileThatIsALinkToAnotherOfTheThreeIsHandledOnce(t *testing.T) {
 	}
 }
 
+// A link to a file the install created: the uninstall removes that file once, and the link, left
+// dangling by the removal, is still known as the same file and not handled again.
+func TestCodexLinkToAFileTheInstallCreatedIsRemovedOnce(t *testing.T) {
+	s := newCodexSandbox(t)
+	if err := os.MkdirAll(s.root, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(s.files[0], s.files[1]); err != nil {
+		t.Skipf("no symbolic links here: %v", err)
+	}
+	adapter := s.adapter(&rulesSource{text: rulesV1})
+	adapter.Install()
+	uninstall := adapter.Uninstall()
+	if uninstall.Status == core.CapabilityPartial || strings.Contains(uninstall.Message, s.files[1]) {
+		t.Errorf("Uninstall = %v %q, want %s handled once through %s", uninstall.Status, uninstall.Message, s.files[1], s.files[0])
+	}
+	if strings.Count(uninstall.Message, "owner rules removed from") != 2 {
+		t.Errorf("Uninstall = %q, want two removals (the home file and agents.md)", uninstall.Message)
+	}
+}
+
 // The registered Codex adapter reads the owner rules of the overlay the config names, and writes the
 // home file under the config's home and the other two under CODEX_HOME.
 func TestRegisteredCodexAdapterWritesTheOwnerRulesOfTheConfiguredOverlay(t *testing.T) {
