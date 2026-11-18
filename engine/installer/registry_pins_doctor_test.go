@@ -132,8 +132,8 @@ func TestRegistryPins_DoctorFailsOnARegistryItCannotRead(t *testing.T) {
 }
 
 // refreshWorld is a project whose registry gentle-ai once wrote (so it is a project, and has a table
-// to regenerate), a skill of the machine that the regenerated table lists, and two executors for the
-// repair. The registry is refreshed by the engine; the fake gentle-ai the world has records every call
+// to regenerate), a skill of the machine that the regenerated table lists, and two SDD skills the
+// regenerated table lists. The registry is refreshed by the engine; the fake gentle-ai the world has records every call
 // it gets, and the pins hold that it gets none.
 func refreshWorld(t *testing.T) (*pinWorld, fakeGentle) {
 	t.Helper()
@@ -145,7 +145,7 @@ func refreshWorld(t *testing.T) (*pinWorld, fakeGentle) {
 	return w, w.installGentle("", 0)
 }
 
-func TestRegistryPins_RefreshRepairsTheRegistryItRegenerates(t *testing.T) {
+func TestRegistryPins_RefreshRegeneratesTheRegistry(t *testing.T) {
 	for _, tc := range []struct {
 		name string
 		args []string
@@ -179,24 +179,13 @@ func TestRegistryPins_RefreshRepairsTheRegistryItRegenerates(t *testing.T) {
 	}
 }
 
-func TestRegistryPins_RepairRefreshesFirstUnlessItIsToldNotTo(t *testing.T) {
-	w, g := refreshWorld(t)
-	run := w.runIn(w.project(), "repair-sdd-registry")
-	pin(t, "refresh/repair-refreshes-first", pinRunText(run)+"--- gentle-ai\n"+w.gentleCalls(g)+w.showRegistry(w.registryPath()))
-
-	w, g = refreshWorld(t)
-	run = w.runIn(w.project(), "repair-sdd-registry", "--target", "codex", "--cwd", w.project())
-	pin(t, "refresh/repair-refreshes-first-with-cwd", pinRunText(run)+"--- gentle-ai\n"+w.gentleCalls(g)+w.showRegistry(w.registryPath()))
-}
-
 // A refresh that fails, here because the registry it finds is not one (it has no skills table), ends
-// the command with the engine's exit code and leaves the registry as it was: no repair follows.
+// the command with the engine's exit code and leaves the registry as it was: nothing else follows.
 func TestRegistryPins_ARefreshThatFailsLeavesTheRegistryAlone(t *testing.T) {
 	for _, tc := range []struct {
 		name string
 		args []string
 	}{
-		{"repair-sdd-registry", []string{"repair-sdd-registry"}},
 		{"skill-registry-refresh", []string{"skill-registry", "refresh"}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -213,16 +202,13 @@ func TestRegistryPins_ARefreshThatFailsLeavesTheRegistryAlone(t *testing.T) {
 
 // The refresh is the engine's, so it no longer needs the gentle-ai binary: without one on the PATH
 // the commands run (the pins hold what they do, and `refresh/without-gentle-ai-...` used to hold the
-// words "gentle-ai not found on PATH"), and --no-refresh, which only ever skipped the call, is as it
-// was.
+// words "gentle-ai not found on PATH").
 func TestRegistryPins_WithoutGentleAiTheRefreshStillRuns(t *testing.T) {
 	for _, tc := range []struct {
 		name string
 		args []string
 	}{
-		{"repair-sdd-registry", []string{"repair-sdd-registry"}},
 		{"skill-registry-refresh", []string{"skill-registry", "refresh"}},
-		{"repair-sdd-registry-no-refresh", []string{"repair-sdd-registry", "--no-refresh"}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			w := registryWorld(t)
@@ -230,7 +216,7 @@ func TestRegistryPins_WithoutGentleAiTheRefreshStillRuns(t *testing.T) {
 			path := pathWithout(t, "gentle-ai")
 			w.changePath(func(string) string { return path })
 			run := w.runIn(w.project(), tc.args...)
-			pinRepair(t, w, "refresh/without-gentle-ai-"+tc.name, run)
+			pinRegistryRun(t, w, "refresh/without-gentle-ai-"+tc.name, run)
 		})
 	}
 }

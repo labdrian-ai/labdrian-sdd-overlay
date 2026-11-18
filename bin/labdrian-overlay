@@ -88,7 +88,6 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     uninstall-hooks) cmd_uninstall_hooks "$@" ;;
     status-hooks)    cmd_status_hooks "$@" ;;
     doctor)          cmd_doctor "$@" ;;
-    repair-sdd-registry) cmd_repair_sdd_registry "$@" ;;
     skill-registry)  cmd_skill_registry "$@" ;;
     tui)             cmd_tui "$@" ;;
     install-alias)   cmd_install_alias "$@" ;;

@@ -108,19 +108,11 @@ Commands:
                                    --fix: after the checks, attempt to install any missing
                                    discovery tools (bat rg fd sd eza) via Homebrew (best-effort,
                                    non-fatal), then re-check and report the result.
-  repair-sdd-registry [--cwd DIR] [--target claude|opencode|codex] [--no-refresh]
-                                   Refresh and repair .atl/skill-registry.md so existing
-                                   sdd-* phase executor skills stay resolvable after a
-                                   refresh. The refresh is the engine's (registry refresh) and
-                                   needs no gentle-ai; the repair is the
-                                   engine's (registry repair-sdd): it takes the lock the
-                                   propagate hook takes and writes the registry atomically,
-                                   so it needs the engine binary (built on first use).
   skill-registry refresh [--cwd DIR] [--target claude|opencode|codex] [--no-repair]
                                    Write the table of skills of .atl/skill-registry.md with
-                                   the engine (registry refresh; no gentle-ai), then immediately
-                                   repair sdd-* executor rows for the selected target
-                                   (default target: codex), as repair-sdd-registry does.
+                                   the engine (registry refresh; no gentle-ai). --no-repair and
+                                   --target are accepted and do nothing (the SDD executor
+                                   repair is gone).
   tui                              Launch the Bubbletea TUI front-end
   install-alias [name]             Symlink a command (default: labdrian) into ~/.local/bin
   skills <verb>                    Forward to the engine's skills registry core
