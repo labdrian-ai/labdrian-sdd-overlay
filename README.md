@@ -862,6 +862,20 @@ overlay review <verb>
         deleted: the parent relays each proposal to the owner and runs a proposed command only after the owner confirms it.
         Remote branches are not proposed, and a branch merged by squash or rebase is not. Exit 0 listed, 1 usage error,
         refusal or any other failure.
+    ci --landing <rev> --head <rev> [--cwd <repo>]
+        Says whether the repository has no CI for the commit a delivery landed (the closure of a repository with no CI). It
+        exits 0 and prints one line on stdout that starts `CI: none configured` and names the full landing and head ids
+        (`CI: none configured: landing <id> holds head <id>, no remote, no CI marker in its tree`) only when all three
+        hold: the landing holds the head (it is the head or a descendant of it); `git remote` lists no remote; and the tree
+        of the landing commit, never the working tree, holds no CI marker. The markers are the paths from the root of the
+        tree: any file under `.github/workflows/`, `.gitea/workflows/`, `.forgejo/workflows/`, `.buildkite/` or
+        `.woodpecker/`, and the files `.gitlab-ci.yml`, `.circleci/config.yml`, `.travis.yml`, `azure-pipelines.yml`,
+        `Jenkinsfile`, `bitbucket-pipelines.yml`, `.drone.yml`, `.woodpecker.yml`, `appveyor.yml` and `.appveyor.yml`; a
+        file of those names below the root (`sub/.github/workflows/x.yml`) is not one. Every other case is exit 1 with one
+        line on stderr and nothing on stdout, `error: review ci: <what was found>`: the head the landing does not hold, the
+        markers found (comma-separated, in tree order) or the remotes, each ending `the no-CI closure does not apply`. A
+        missing flag, a revision git cannot resolve and a failing git are non-zero too and never print `CI: none
+        configured`. Nothing is stored. Exit 0 no CI configured, 1 refusal, usage error or any other failure.
     stop-hook
         Not run by a person: the Claude Code Stop hook that `install-hooks` wires (the review stop-hook, described
         below as `gentle-ai-overlay review stop-hook`). It asks the agent for what the first commit with unfinished

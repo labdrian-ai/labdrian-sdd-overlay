@@ -89,6 +89,8 @@ func runReview(p process, d deps, args []string) {
 		runReviewFrozenContext(p, d, args[1:])
 	case "proposals":
 		runReviewProposals(p, d, args[1:])
+	case "ci":
+		runReviewCI(p, d, args[1:])
 	case reviewStopVerb:
 		runReviewStopHook(p, d, args[1:])
 	default:
@@ -124,7 +126,7 @@ func reviewServiceOver(git reviewapp.Git, results reviewapp.Results) reviewapp.S
 
 // reviewFlags are the parsed flags of the review verbs. A verb takes some of them.
 type reviewFlags struct {
-	base, onto, head, feature, result, stored, verdicts, risk, rows, role, cwd, merge, runtime, model string
+	base, onto, head, landing, feature, result, stored, verdicts, risk, rows, role, cwd, merge, runtime, model string
 	// given says which flags the command line gave, with whatever value, an empty one included. A flag that is
 	// optional and has a default tells an empty value that was given from one that was not.
 	given map[string]bool
@@ -160,6 +162,8 @@ func parseReviewFlags(args []string, takes ...string) (reviewFlags, error) {
 			f.onto = args[i]
 		case "--head":
 			f.head = args[i]
+		case "--landing":
+			f.landing = args[i]
 		case "--feature":
 			f.feature = args[i]
 		case "--result":
@@ -193,7 +197,7 @@ func (f reviewFlags) has(name string) bool { return f.given[name] }
 // require fails with the first of the named flags that has no value. A name it does not know is a mistake of
 // the caller, and says so rather than reading as a flag that was left out.
 func (f reviewFlags) require(names ...string) error {
-	values := map[string]string{"--base": f.base, "--onto": f.onto, "--head": f.head, "--feature": f.feature, "--stored": f.stored, "--risk": f.risk, "--rows": f.rows, "--merge": f.merge, "--runtime": f.runtime, "--model": f.model}
+	values := map[string]string{"--base": f.base, "--onto": f.onto, "--head": f.head, "--feature": f.feature, "--landing": f.landing, "--stored": f.stored, "--risk": f.risk, "--rows": f.rows, "--merge": f.merge, "--runtime": f.runtime, "--model": f.model}
 	for _, name := range names {
 		value, known := values[name]
 		if !known {

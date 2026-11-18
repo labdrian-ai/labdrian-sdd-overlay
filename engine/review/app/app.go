@@ -144,6 +144,9 @@ type Git interface {
 	// IsAncestor says whether a is an ancestor of b, or b itself, both full object names. An object git does not have is
 	// an error.
 	IsAncestor(repo Repository, a, b string) (bool, error)
+	// Remotes returns the names of the remotes of the repository, as `git remote` lists them, one each; none for a
+	// repository with no remote. A worktree has those of its main repository, which share one configuration.
+	Remotes(repo Repository) ([]string, error)
 	// Status returns the lines of `git status --porcelain` of the working tree of repo, with every untracked file listed on
 	// its own line. A clean tree gives none.
 	Status(repo Repository) ([]string, error)

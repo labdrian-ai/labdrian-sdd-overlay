@@ -797,6 +797,22 @@ func (g Git) IsAncestor(repo app.Repository, a, b string) (bool, error) {
 	return true, nil
 }
 
+// Remotes returns the names of the remotes `git remote` lists, one for each line it prints, and none when it prints
+// nothing.
+func (g Git) Remotes(repo app.Repository) ([]string, error) {
+	out, err := g.output(repo.Root, "remote", []string{"remote"})
+	if err != nil {
+		return nil, err
+	}
+	var names []string
+	for _, line := range strings.Split(strings.TrimSuffix(string(out), "\n"), "\n") {
+		if line != "" {
+			names = append(names, line)
+		}
+	}
+	return names, nil
+}
+
 // Status returns the lines of `git status --porcelain` with every untracked file on its own line, as the working tree is.
 // It takes no optional lock, so asking changes nothing in the repository.
 func (g Git) Status(repo app.Repository) ([]string, error) {
