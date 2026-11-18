@@ -56,8 +56,6 @@ func TestIssueCreationSkillKeepsTargetFormAndDuplicateSearch(t *testing.T) {
 		"`[HOST/]OWNER/REPO`",
 		"YAML Issue Form",
 		"One duplicate search over open and closed issues runs before a write.",
-		"`gh issue list --repo \"$TARGET\" --state all",
-		"`gh issue create --repo \"$TARGET\"",
 		"private temporary directory",
 	} {
 		if !strings.Contains(body, want) {
@@ -102,47 +100,6 @@ func TestIssueCreationSkillDefinesTheThreeOutcomes(t *testing.T) {
 	}
 }
 
-func TestIssueCreationSkillReadsACommentBackByItsIdentity(t *testing.T) {
-	_, _, body := issueCreationSkill(t)
-	for _, want := range []string{
-		"`gh api --hostname \"$HOST\" \"repos/$REPO/issues/comments/$COMMENT_ID\"`",
-		"compare its body",
-	} {
-		if !strings.Contains(body, want) {
-			t.Errorf("the comment read-back rule does not contain %q", want)
-		}
-	}
-}
-
-func TestIssueCreationSkillReadsAndComparesEachDuplicateCandidate(t *testing.T) {
-	_, _, body := issueCreationSkill(t)
-	for _, want := range []string{
-		"Read each candidate from the target host with `gh issue view",
-		"compare it with the selected form",
-		"A candidate that cannot be read is `unknown`: stop.",
-		"| A duplicate does not conform to the form | Report it and ask the owner; never edit it unasked. |",
-	} {
-		if !strings.Contains(body, want) {
-			t.Errorf("the duplicate procedure does not contain %q", want)
-		}
-	}
-}
-
-func TestIssueCreationSkillTakesTheFormFromTheTargetRepository(t *testing.T) {
-	_, _, body := issueCreationSkill(t)
-	for _, want := range []string{
-		"the target repository's own `.github/ISSUE_TEMPLATE/*.yml` that fits the request",
-		"If none fits, stop and ask.",
-	} {
-		if !strings.Contains(body, want) {
-			t.Errorf("the form rule does not contain %q", want)
-		}
-	}
-	if strings.Contains(body, "this repository:") || strings.Contains(body, "feature.yml)") {
-		t.Error("the body hardcodes this repository's form")
-	}
-}
-
 func TestIssueCreationSkillWritesOnlyOnTheOwnersCurrentInstruction(t *testing.T) {
 	_, _, body := issueCreationSkill(t)
 	line := "\n- A write runs only on the owner's current direct instruction that names the target and the action.\n"
@@ -171,5 +128,90 @@ func TestIssueCreationSkillMeetsTheWholeLintAndIsOffTheBaseline(t *testing.T) {
 	}
 	if inLintBaseline("issue-creation") {
 		t.Error("issue-creation is still on lintBaselineSkills")
+	}
+}
+
+// The step-by-step command detail lives in references/procedure.md; a pin may read either file.
+func issueCreationProcedure(t *testing.T) string {
+	t.Helper()
+	return readRepoFile(t, skillsRepoRoot(t), "skills/issue-creation/references/procedure.md")
+}
+
+func issueCreationEither(t *testing.T) string {
+	t.Helper()
+	_, _, body := issueCreationSkill(t)
+	return body + "\n" + issueCreationProcedure(t)
+}
+
+func requireAll(t *testing.T, text, what string, wants ...string) {
+	t.Helper()
+	for _, want := range wants {
+		if !strings.Contains(text, want) {
+			t.Errorf("%s does not contain %q", what, want)
+		}
+	}
+}
+
+func TestIssueCreationSkillPointsToItsProcedureFile(t *testing.T) {
+	_, _, body := issueCreationSkill(t)
+	requireAll(t, body, "the body", "`references/procedure.md`")
+}
+
+func TestIssueCreationProcedureDefinesTheVariablesAndTheCommands(t *testing.T) {
+	requireAll(t, issueCreationEither(t), "the skill files",
+		"`HOST` (default `github.com`)",
+		"`REPO` (`OWNER/REPO`)",
+		"`gh issue list --repo \"$TARGET\" --state all",
+		"`gh issue create --repo \"$TARGET\"",
+		"`gh issue comment \"$NUMBER\" --repo \"$TARGET\"",
+		"`NUMBER` from the issue URL that `gh issue create` prints",
+		"`COMMENT_ID` from the comment URL that `gh issue comment` prints, the number after `#issuecomment-`",
+	)
+}
+
+func TestIssueCreationProcedureSaysWhatTheReadBackCompares(t *testing.T) {
+	requireAll(t, issueCreationEither(t), "the skill files",
+		"`gh api --hostname \"$HOST\" \"repos/$REPO/issues/comments/$COMMENT_ID\"`",
+		"The issue's title and body must equal the submitted title and body file.",
+		"The comment's body must equal the submitted comment body file.",
+		"A mismatch, or a read-back that fails, is `unknown`.",
+	)
+}
+
+func TestIssueCreationSkillReadsAndComparesEachBoundedDuplicateCandidate(t *testing.T) {
+	_, _, body := issueCreationSkill(t)
+	requireAll(t, body, "the body",
+		"Read only the candidates whose title matches the request, at most 10.",
+		"If more match, stop: report the candidates and ask the owner.",
+		"A candidate that cannot be read is `unknown`: stop.",
+		"| A duplicate does not conform to the form | Report it and ask the owner; never edit it unasked. |",
+	)
+	requireAll(t, issueCreationEither(t), "the skill files",
+		"Read each candidate from the target host with `gh issue view",
+		"compare it with the selected form",
+	)
+}
+
+func TestIssueCreationSkillKeepsItsGuardrails(t *testing.T) {
+	_, _, body := issueCreationSkill(t)
+	requireAll(t, body, "the body",
+		"never print them",
+		"A stopped run names the missing fact and says no write occurred.",
+		"no Markdown fallback, no browser route",
+		"A stale or ambiguous target or form is a stop at the gate.",
+		"| Target or form missing, stale or ambiguous | Stop at the gate; resolve it first. |",
+	)
+}
+
+func TestIssueCreationSkillTakesTheFormFromTheTargetRepository(t *testing.T) {
+	_, _, body := issueCreationSkill(t)
+	requireAll(t, body, "the body",
+		"the target repository's own `.github/ISSUE_TEMPLATE/*.yml` that fits the request",
+		"If none fits, stop and ask.",
+	)
+	for _, file := range []string{"skills/issue-creation/SKILL.md", "skills/issue-creation/references/procedure.md"} {
+		if strings.Contains(readRepoFile(t, skillsRepoRoot(t), file), "feature.yml") {
+			t.Errorf("%s names feature.yml", file)
+		}
 	}
 }

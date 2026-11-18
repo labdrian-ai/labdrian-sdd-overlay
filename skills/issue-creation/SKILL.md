@@ -14,11 +14,11 @@ Load this skill when the owner asks for a GitHub issue or comment.
 ## Hard Rules
 
 - A write runs only on the owner's current direct instruction that names the target and the action.
-- Resolve the exact target as `[HOST/]OWNER/REPO`; never assume the current repository.
-- The body follows a YAML Issue Form: the target repository's own `.github/ISSUE_TEMPLATE/*.yml` that fits the request. If none fits, stop and ask. No Markdown or blank body.
-- One duplicate search over open and closed issues runs before a write.
+- Resolve the exact target as `[HOST/]OWNER/REPO`; never assume the current repository. A stale or ambiguous target or form is a stop at the gate.
+- The body follows a YAML Issue Form: the target repository's own `.github/ISSUE_TEMPLATE/*.yml` that fits the request. If none fits, stop and ask. The YAML form is the only body format: no Markdown fallback, no browser route.
+- One duplicate search over open and closed issues runs before a write. Read only the candidates whose title matches the request, at most 10. If more match, stop: report the candidates and ask the owner. A candidate that cannot be read is `unknown`: stop.
 - Never invent a fact, label or policy; ask for the smallest missing fact.
-- Body files live in a private temporary directory, removed on every exit.
+- Body files live in a private temporary directory, removed on every exit; never print them.
 - Run the privacy scan on title and body immediately before the write: paths, usernames, hostnames, secrets, private names. Replace each with `<project-name>`, `<user>`, `<hostname>` or `<token>`.
 - Make one attempt, no retry, then read it back from the target host.
 - `unknown` stops every later write and retry.
@@ -28,18 +28,15 @@ Load this skill when the owner asks for a GitHub issue or comment.
 
 | Condition | Action |
 |---|---|
-| Target or form missing or ambiguous | Resolve it or stop. |
+| Target or form missing, stale or ambiguous | Stop at the gate; resolve it first. |
 | A conforming duplicate exists | Comment there; create nothing. |
 | The search is saturated or incomplete | Narrow it or stop. |
 | A duplicate does not conform to the form | Report it and ask the owner; never edit it unasked. |
 | The owner gave no direct instruction | Draft only; no write. |
 
-## Execution Steps
+## Procedure
 
-1. Search: `gh issue list --repo "$TARGET" --state all --search "$QUERY" --limit 1000`. Read each candidate from the target host with `gh issue view "$N" --repo "$TARGET" --json number,url,title,body` and compare it with the selected form. A candidate that cannot be read is `unknown`: stop.
-2. Fill the body from the form and reviewed answers.
-3. Privacy scan, then one attempt: `gh issue create --repo "$TARGET" --title "$TITLE" --body-file "$BODY_FILE"`, or `gh issue comment "$NUMBER" --repo "$TARGET" --body-file "$BODY_FILE"`.
-4. Read an issue back with `gh issue view "$NUMBER" --repo "$TARGET" --json number,url,title,body`. Read a comment back with `gh api --hostname "$HOST" "repos/$REPO/issues/comments/$COMMENT_ID"` and compare its body.
+Commands, variables and the read-back comparison: `references/procedure.md`.
 
 ## Outcomes
 
@@ -49,4 +46,4 @@ Load this skill when the owner asks for a GitHub issue or comment.
 
 ## Output Contract
 
-Return the target, form, duplicate decision, identity read back, and exactly one of `confirmed | no_write | unknown`. Before a write, a stop names the missing fact.
+Return the target, form, duplicate decision, identity read back, and exactly one of `confirmed | no_write | unknown`. A stopped run names the missing fact and says no write occurred.
