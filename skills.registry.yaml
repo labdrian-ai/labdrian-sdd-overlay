@@ -325,9 +325,7 @@ skills:
   - id: skill-registry
     path: skill-registry
     source:
-      type: core
-      upstream:
-        owner: gentleman-programming
+      type: custom
     install:
       defaultScope: global
       targets:
@@ -335,7 +333,7 @@ skills:
         - opencode
         - codex
     lifecycle:
-      updateStrategy: vendor-merge
+      updateStrategy: overlay-only
   - id: requirements-from-transcripts
     path: requirements-from-transcripts
     source:

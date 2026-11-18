@@ -1027,7 +1027,7 @@ gentle-ai-overlay manifest routes --overlay-root <dir> --target <name> --skills-
 gentle-ai-overlay registry repair-sdd --registry <path> --target <name> --skills-root <dir>
     Engine verb (Phase 9, B2): there is no `overlay registry` wrapper, so run it on the installed engine binary,
     ~/.claude/bin/gentle-ai-overlay. It is what `overlay repair-sdd-registry` and `overlay skill-registry refresh` ask, after
-    gentle-ai has regenerated the registry. gentle-ai leaves the sdd-* phase skills out of the skill registry it writes, because
+    `registry refresh` (below) has regenerated the table. The table leaves the sdd-* phase skills out, as gentle-ai's did, because
     they are executor contracts and not skills a person invokes; SDD delegation still needs their paths, so this puts a row back
     for each one installed in --skills-root (`<dir>/<name>/SKILL.md`; --target only names the target in what it says), with the
     scope `executor`, above the `## Loading protocol` heading of the registry at --registry, and a note that says why above

@@ -10,8 +10,9 @@
 
 # repair_sdd_registry_file <registry> <target>
 #
-# gentle-ai leaves the sdd-* phase skills out of the skill registry it writes;
-# SDD delegation needs their paths, so a row for each installed one is put back.
+# The skill registry's table leaves the sdd-* phase skills out (they are executor
+# contracts, not skills a person invokes); SDD delegation needs their paths, so a
+# row for each installed one is put back.
 # That repair is the engine's (`registry repair-sdd`): which skills are
 # executors, what a row says, how the registry is edited, the lock it takes (the
 # one `propagate` takes, so a repair and the hook that writes the same file take
@@ -33,11 +34,31 @@ repair_sdd_registry_file() {
     --target "$target" --skills-root "$skills_root"
 }
 
-# Gentle's default skill-registry intentionally skips sdd-* phase skills because
-# they are executor contracts, not normal user-invocable skills. Codex/Gentle SDD
-# delegation still needs their exact paths. This command makes the registry
-# durable after `gentle-ai sync` / `gentle-ai skill-registry refresh` by
-# refreshing first, then re-inserting installed sdd-* rows with Scope=executor.
+# refresh_skill_registry <cwd> <force> <quiet>
+#
+# Writes the table of skills of <cwd>/.atl/skill-registry.md. That is the engine's
+# (`registry refresh`, engine/skillregistry): which directories are scanned, how a
+# SKILL.md names itself, which skills are left out, the lock it takes (the one
+# `propagate` takes) and the atomic write live there, and every line of the
+# registry that is not the generated head or a row is left as it was, the rows
+# `registry repair-sdd` writes included. It replaced `gentle-ai skill-registry
+# refresh`, so no gentle-ai binary is needed. <force> and <quiet> are 1 or 0. The
+# engine speaks for itself, and ends this command with its exit code when it fails.
+refresh_skill_registry() {
+  local cwd="$1"
+  local force="$2"
+  local quiet="$3"
+  local -a args=(registry refresh --cwd "$cwd")
+  [[ "$force" -eq 1 ]] && args+=(--force)
+  [[ "$quiet" -eq 1 ]] && args+=(--quiet)
+
+  ensure_engine_binary >&2
+  "$ENGINE_BINARY" "${args[@]}"
+}
+
+# The table of skills leaves the sdd-* phase skills out, so the executor rows have to be put back
+# after every refresh. This command refreshes the registry (forced, quiet) and then
+# re-inserts the installed sdd-* rows with Scope=executor.
 
 cmd_repair_sdd_registry() {
   local cwd="$CALLER_CWD"
@@ -69,17 +90,15 @@ cmd_repair_sdd_registry() {
   [[ -d "$cwd" ]] || die "--cwd is not a directory: $cwd"
 
   if [[ "$refresh" -eq 1 ]]; then
-    command -v gentle-ai >/dev/null 2>&1 || die "gentle-ai not found on PATH; use --no-refresh to repair an existing registry only"
-    gentle-ai skill-registry refresh --cwd "$cwd" --force --quiet --no-gitignore
+    refresh_skill_registry "$cwd" 1 1
   fi
 
   repair_sdd_registry_file "$cwd/.atl/skill-registry.md" "$target"
 }
 
-# Wrapper around `gentle-ai skill-registry refresh` that applies the overlay's
-# SDD executor repair immediately after the generated registry is refreshed.
-# This prevents the known Gentle default skip of sdd-* phase skills from
-# reappearing every time users refresh the registry through the overlay.
+# Wrapper around `registry refresh` that applies the overlay's SDD executor repair
+# immediately after the table is refreshed. This keeps the executor rows from
+# disappearing every time users refresh the registry through the overlay.
 
 cmd_skill_registry() {
   local verb="${1:-}"
@@ -89,8 +108,8 @@ cmd_skill_registry() {
   local cwd="$CALLER_CWD"
   local target="codex"
   local repair=1
-  local saw_no_gitignore=0
-  local -a gentle_args=("skill-registry" "refresh")
+  local force=0
+  local quiet=0
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -98,7 +117,6 @@ cmd_skill_registry() {
         shift
         cwd="${1:-}"
         [[ -n "$cwd" ]] || die "--cwd requires an argument"
-        gentle_args+=("--cwd" "$cwd")
         ;;
       --target)
         shift
@@ -111,11 +129,14 @@ cmd_skill_registry() {
         repair=0
         ;;
       --no-gitignore)
-        saw_no_gitignore=1
-        gentle_args+=("$1")
+        # Accepted as it always was; the engine's refresh never edits .gitignore, so there is
+        # nothing to turn off.
         ;;
-      --force|--quiet)
-        gentle_args+=("$1")
+      --force)
+        force=1
+        ;;
+      --quiet)
+        quiet=1
         ;;
       *) die "Unknown option: $1. Usage: labdrian skill-registry refresh [--cwd DIR] [--target claude|opencode|codex] [--no-repair] [--force] [--quiet] [--no-gitignore]" ;;
     esac
@@ -123,10 +144,8 @@ cmd_skill_registry() {
   done
 
   [[ -d "$cwd" ]] || die "--cwd is not a directory: $cwd"
-  [[ "$saw_no_gitignore" -eq 1 ]] || gentle_args+=("--no-gitignore")
 
-  command -v gentle-ai >/dev/null 2>&1 || die "gentle-ai not found on PATH"
-  gentle-ai "${gentle_args[@]}"
+  refresh_skill_registry "$cwd" "$force" "$quiet"
 
   if [[ "$repair" -eq 1 ]]; then
     repair_sdd_registry_file "$cwd/.atl/skill-registry.md" "$target"

@@ -131,6 +131,20 @@ func TestRegistryPins_DoctorFailsOnARegistryItCannotRead(t *testing.T) {
 	}
 }
 
+// refreshWorld is a project whose registry gentle-ai once wrote (so it is a project, and has a table
+// to regenerate), a skill of the machine that the regenerated table lists, and two executors for the
+// repair. The registry is refreshed by the engine; the fake gentle-ai the world has records every call
+// it gets, and the pins hold that it gets none.
+func refreshWorld(t *testing.T) (*pinWorld, fakeGentle) {
+	t.Helper()
+	w := registryWorld(t)
+	w.installFew("codex")
+	w.installFew("claude")
+	w.installSkill("claude", "plain-skill", "---\nname: plain-skill\ndescription: A plain skill. Trigger: always.\n---\n")
+	w.writeRegistry(gentleRegistry)
+	return w, w.installGentle("", 0)
+}
+
 func TestRegistryPins_RefreshRepairsTheRegistryItRegenerates(t *testing.T) {
 	for _, tc := range []struct {
 		name string
@@ -144,10 +158,7 @@ func TestRegistryPins_RefreshRepairsTheRegistryItRegenerates(t *testing.T) {
 		{"with-cwd-twice", []string{"--cwd", "$HOME/other", "--cwd", "$PROJECT"}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			w := registryWorld(t)
-			w.installFew("codex")
-			w.installFew("claude")
-			g := w.installGentle(gentleRegistry, 0)
+			w, g := refreshWorld(t)
 			args := []string{"skill-registry", "refresh"}
 			if tc.args == nil || tc.args[0] != "--cwd" {
 				args = append(args, "--cwd", w.project())
@@ -160,24 +171,26 @@ func TestRegistryPins_RefreshRepairsTheRegistryItRegenerates(t *testing.T) {
 			}
 			run := w.runIn(w.home, args...)
 			pin(t, "refresh/"+tc.name, pinRunText(run)+"--- gentle-ai\n"+w.gentleCalls(g)+w.showRegistry(w.registryPath()))
+			// The engine's refresh never edits .gitignore, whatever --no-gitignore says.
+			if _, err := os.Stat(filepath.Join(w.project(), ".gitignore")); !os.IsNotExist(err) {
+				t.Errorf("the refresh touched .gitignore: %v", err)
+			}
 		})
 	}
 }
 
 func TestRegistryPins_RepairRefreshesFirstUnlessItIsToldNotTo(t *testing.T) {
-	w := registryWorld(t)
-	w.installFew("codex")
-	g := w.installGentle(gentleRegistry, 0)
+	w, g := refreshWorld(t)
 	run := w.runIn(w.project(), "repair-sdd-registry")
 	pin(t, "refresh/repair-refreshes-first", pinRunText(run)+"--- gentle-ai\n"+w.gentleCalls(g)+w.showRegistry(w.registryPath()))
 
-	w = registryWorld(t)
-	w.installFew("codex")
-	g = w.installGentle(gentleRegistry, 0)
+	w, g = refreshWorld(t)
 	run = w.runIn(w.project(), "repair-sdd-registry", "--target", "codex", "--cwd", w.project())
 	pin(t, "refresh/repair-refreshes-first-with-cwd", pinRunText(run)+"--- gentle-ai\n"+w.gentleCalls(g)+w.showRegistry(w.registryPath()))
 }
 
+// A refresh that fails, here because the registry it finds is not one (it has no skills table), ends
+// the command with the engine's exit code and leaves the registry as it was: no repair follows.
 func TestRegistryPins_ARefreshThatFailsLeavesTheRegistryAlone(t *testing.T) {
 	for _, tc := range []struct {
 		name string
@@ -189,8 +202,8 @@ func TestRegistryPins_ARefreshThatFailsLeavesTheRegistryAlone(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			w := registryWorld(t)
 			w.installFew("codex")
-			w.writeRegistry(gentleRegistry)
-			g := w.installGentle("# regenerated, and then it failed\n", 3)
+			w.writeRegistry("# an owner's file, not a registry\n")
+			g := w.installGentle("", 0)
 			args := append(append([]string(nil), tc.args...), "--cwd", w.project())
 			run := w.runIn(w.project(), args...)
 			pin(t, "refresh/fails-"+tc.name, pinRunText(run)+"--- gentle-ai\n"+w.gentleCalls(g)+w.showRegistry(w.registryPath()))
@@ -198,7 +211,11 @@ func TestRegistryPins_ARefreshThatFailsLeavesTheRegistryAlone(t *testing.T) {
 	}
 }
 
-func TestRegistryPins_WithoutGentleAiTheRefreshStopsAndNoRefreshIsNotAsked(t *testing.T) {
+// The refresh is the engine's, so it no longer needs the gentle-ai binary: without one on the PATH
+// the commands run (the pins hold what they do, and `refresh/without-gentle-ai-...` used to hold the
+// words "gentle-ai not found on PATH"), and --no-refresh, which only ever skipped the call, is as it
+// was.
+func TestRegistryPins_WithoutGentleAiTheRefreshStillRuns(t *testing.T) {
 	for _, tc := range []struct {
 		name string
 		args []string
