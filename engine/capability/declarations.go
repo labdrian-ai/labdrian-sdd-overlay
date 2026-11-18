@@ -281,7 +281,7 @@ var declarations = []Declaration{
 			unsupported(Authentication,
 				"Not implemented: the engine does not check whether OpenCode has credentials, and the presence prober has no credentials check for it. A provider login is observed only with a model session (T17)."),
 			partial(MemoryEnforcement,
-				"--source opencode adapts OpenCode names, then the engine's gate runs: the OpencodeAdaptsBeforeGate and OpencodeMemorycardReads subtests of cmd:TestCodexSourceProcesses send longterm-mem and memorycard reads, answered as in Claude Code; execute (not mapped) stays silent; a bridge test pins an execute and its inner memorycard call. The plugin sends each subagent's final text to memorycard capture (fake memorycard). No memory write is blocked; a saved Key Learnings item and a real session are untested (T17).",
+				"Gate via --source opencode: the OpencodeAdaptsBeforeGate and OpencodeMemorycardReads subtests of cmd:TestCodexSourceProcesses answer longterm-mem and memorycard reads as Claude Code; execute (not mapped) stays silent; a bridge test pins an execute and its inner memorycard call. The plugin puts context on new main sessions and sends each subagent's final text to memorycard capture (fake memorycard). No memory write is blocked; a saved Key Learnings item and a real session are untested (T17).",
 				"cmd:TestCodexSourceProcesses",
 				"hookwire:TestAdaptToolNameOpencode",
 				"runtime:TestMemorycardPluginAsksNothingInAChildSession",
