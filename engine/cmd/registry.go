@@ -15,9 +15,9 @@ import (
 	"path/filepath"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/filelock"
-	sddfs "github.com/labdrian-ai/labdrian-sdd-overlay/engine/sddregistry/fsstore"
 	skillapp "github.com/labdrian-ai/labdrian-sdd-overlay/engine/skillregistry/app"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skillregistry/fsscan"
+	registryfs "github.com/labdrian-ai/labdrian-sdd-overlay/engine/skillregistry/fsstore"
 )
 
 // runRegistry implements the 'registry' subcommand over the files of the machine.
@@ -112,7 +112,7 @@ func runRegistryRefresh(p process, d deps, args []string) {
 		// No home: the project's skills only.
 		home = ""
 	}
-	store := sddfs.Registry{}
+	store := registryfs.Registry{}
 	parsed, _ := parseRefreshArgs(args) // a command line that is refused is said by the core below
 	service := skillapp.New(store, fsscan.Scanner{}, registryLocker{store: store, noWait: parsed.skipIfBusy}, d.clock())
 	runRegistryRefreshCore(service, d.workingDir, home, args, p.stdout, p.stderr, p.exit)

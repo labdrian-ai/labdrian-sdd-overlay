@@ -110,9 +110,9 @@ Commands:
                                    non-fatal), then re-check and report the result.
   skill-registry refresh [--cwd DIR] [--target claude|opencode|codex] [--no-repair]
                                    Write the table of skills of .atl/skill-registry.md with
-                                   the engine (registry refresh; no gentle-ai). --no-repair and
-                                   --target are accepted and do nothing (the SDD executor
-                                   repair is gone).
+                                   the engine (registry refresh; no gentle-ai). --no-repair
+                                   does nothing; --target is validated and has no other
+                                   effect.
   tui                              Launch the Bubbletea TUI front-end
   install-alias [name]             Symlink a command (default: labdrian) into ~/.local/bin
   skills <verb>                    Forward to the engine's skills registry core

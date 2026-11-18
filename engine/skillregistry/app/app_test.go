@@ -216,7 +216,7 @@ func TestRefreshWritesWhenASkillChangedAndKeepsWhatTheTableDoesNotOwn(t *testing
 	if _, err := w.service().Refresh(Request{Cwd: "/p", Home: "/h"}); err != nil {
 		t.Fatal(err)
 	}
-	const executor = "| `sdd-apply` | Apply | executor | `/e` |\n"
+	const executor = "| `mine` | my own row | custom | `/m` |\n"
 	w.files[registryPath] = strings.Replace(w.files[registryPath], "\n## Loading protocol", "\n"+executor+"\n## Loading protocol", 1)
 	w.sources["/p/skills"] = []skillregistry.Candidate{skill(skillregistry.ScopeProject, "alpha", "alpha", "changed", "/p/skills/alpha/SKILL.md")}
 	w.now = w.now.Add(24 * time.Hour)
@@ -228,7 +228,7 @@ func TestRefreshWritesWhenASkillChangedAndKeepsWhatTheTableDoesNotOwn(t *testing
 	}
 	text := w.files[registryPath]
 	if !strings.Contains(text, "| `alpha` | changed | project |") || !strings.Contains(text, "\n"+executor+"\n## Loading protocol") {
-		t.Fatalf("the changed row or the executor row is wrong:\n%s", text)
+		t.Fatalf("the changed row or the foreign row is wrong:\n%s", text)
 	}
 }
 

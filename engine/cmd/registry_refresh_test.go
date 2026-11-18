@@ -197,7 +197,7 @@ func TestRegistryRefreshKeepsEveryLineTheTableDoesNotOwn(t *testing.T) {
 	w.run("--cwd", w.project)
 	const extra = "<!-- BEGIN: minimalism-contract-scope (auto-generated) -->\n| minimalism-contract | skills/_shared/minimalism-contract.md | Inject ONLY into shaper |\n<!-- END: minimalism-contract-scope -->\n"
 	const hermes = "<!-- labdrian-hermes sha256=01 root=02 -->\n| `hermes-skill` | Hermes | user | `/h/x/SKILL.md` |\n<!-- /labdrian-hermes -->\n"
-	text := strings.Replace(w.read(t), "\n## Loading protocol", "\n| `sdd-apply` | Apply | executor | `/e` |\n\n"+hermes+"## Loading protocol", 1) + "\n" + extra
+	text := strings.Replace(w.read(t), "\n## Loading protocol", "\n| `mine` | my own row | custom | `/m` |\n\n"+hermes+"## Loading protocol", 1) + "\n" + extra
 	if err := os.WriteFile(w.registry(), []byte(text), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -210,7 +210,7 @@ func TestRegistryRefreshKeepsEveryLineTheTableDoesNotOwn(t *testing.T) {
 		t.Fatalf("stdout = %q", p.out.String())
 	}
 	got := w.read(t)
-	for _, kept := range []string{"| `sdd-apply` | Apply | executor | `/e` |\n\n" + hermes + "## Loading protocol", "\n" + extra} {
+	for _, kept := range []string{"| `mine` | my own row | custom | `/m` |\n\n" + hermes + "## Loading protocol", "\n" + extra} {
 		if !strings.Contains(got, kept) {
 			t.Errorf("registry lost %q:\n%s", kept, got)
 		}
@@ -340,16 +340,19 @@ func TestRegistryRefreshWithSkipIfBusyRefreshesAFreeRegistry(t *testing.T) {
 	}
 }
 
-// The executor rows lost their writer. A registry that holds the old executor row of sdd-time-estimation,
-// a skill the table now lists, ends with one row for it, and a second refresh changes nothing.
-func TestRegistryRefreshReplacesTheOldExecutorRowOfASkillItNowLists(t *testing.T) {
+// The executor rows and their note lost their writer. A registry that holds the old executor rows (of a skill the
+// table now lists and of one that is gone) and the note ends with none of them, one row for the listed skill,
+// and a second refresh changes nothing.
+func TestRegistryRefreshDropsTheOldExecutorRowsAndTheNote(t *testing.T) {
 	w := newRefreshWorld(t)
 	w.markProject(t)
 	w.skill(t, filepath.Join(w.project, "skills"), "sdd-time-estimation", "Estimate")
 	w.run("--cwd", w.project, "--quiet")
 	old := "| `sdd-time-estimation` | Estimate | executor | `/h/.codex/skills/sdd-time-estimation/SKILL.md` |\n"
 	other := "| `sdd-apply` | Apply | executor | `/h/.codex/skills/sdd-apply/SKILL.md` |\n"
-	text := strings.Replace(w.read(t), "\n## Loading protocol", "\n"+other+old+"\n## Loading protocol", 1)
+	note := "`sdd-*` phase skills are executor contracts. Gentle may skip them.\n\n"
+	text := strings.Replace(w.read(t), "## Skills\n", note+"## Skills\n", 1)
+	text = strings.Replace(text, "\n## Loading protocol", "\n"+other+old+"\n## Loading protocol", 1)
 	if err := os.WriteFile(w.registry(), []byte(text), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -357,8 +360,8 @@ func TestRegistryRefreshReplacesTheOldExecutorRowOfASkillItNowLists(t *testing.T
 	p := w.run("--cwd", w.project, "--force")
 	got := w.read(t)
 
-	if len(p.exits) != 0 || strings.Count(got, "`sdd-time-estimation`") != 1 || !strings.Contains(got, "| `sdd-time-estimation` | Estimate | project | ") || !strings.Contains(got, other) {
-		t.Fatalf("run = stderr %q exits %v registry:\n%s\nwant one project row for sdd-time-estimation and the other executor row kept", p.err.String(), p.exits, got)
+	if len(p.exits) != 0 || strings.Count(got, "`sdd-time-estimation`") != 1 || !strings.Contains(got, "| `sdd-time-estimation` | Estimate | project | ") || strings.Contains(got, "executor") {
+		t.Fatalf("run = stderr %q exits %v registry:\n%s\nwant one project row for sdd-time-estimation and no executor row or note", p.err.String(), p.exits, got)
 	}
 	if p2 := w.run("--cwd", w.project); !strings.HasPrefix(p2.out.String(), "Skill registry up to date (cache-hit): ") || w.read(t) != got {
 		t.Fatalf("a second refresh = stdout %q, registry changed: %v", p2.out.String(), w.read(t) != got)

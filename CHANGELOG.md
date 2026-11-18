@@ -4,7 +4,7 @@
 
 ### Removed
 
-- The SDD executor repair is gone (labdrian-orchestrator-opencode T29 commit a, S17): the engine verb `registry repair-sdd`, the command `labdrian repair-sdd-registry` and the repair step of `labdrian skill-registry refresh` (`--no-repair` and `--target` are still accepted and do nothing). The ten `sdd-*` skills the owner dropped have no executor rows to keep. `registry` with no verb or an unknown one now says `expected refresh`. `registry refresh` lists a skill named `sdd-*` like any other (`sdd-time-estimation` is listed as an ordinary row) and drops the old executor row of such a skill once (in the table block only, never inside a Hermes section or below a heading), so it is not listed twice; every other executor row and the note stay.
+- The SDD executor repair is gone (labdrian-orchestrator-opencode T29 commit a, S17): the engine verb `registry repair-sdd`, the command `labdrian repair-sdd-registry` and the repair step of `labdrian skill-registry refresh` (`--no-repair` does nothing; `--target` is validated and has no other effect). `registry` with no verb or an unknown one now says `expected refresh`. `registry refresh` lists a skill named `sdd-*` like any other (`sdd-time-estimation` is listed as an ordinary row) and drops every executor-scope row of the table block and the executor note with the blank line after it (never inside a Hermes section or below a heading), so nothing is listed twice and no dead path stays; a second refresh changes nothing.
 
 ### Changed
 

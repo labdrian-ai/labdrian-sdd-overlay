@@ -1039,9 +1039,10 @@ gentle-ai-overlay registry refresh --cwd <dir> [--force] [--quiet] [--skip-if-bu
     difference from gentle-ai, which kept the first line of a value of several lines: a quoted description written over several
     lines is read whole. The rows were checked against what gentle-ai 4.2.0 wrote in a sandbox. Every line of the registry that
     is not the generated head (title, the comment that names this command, `Last updated:`, `## Sources scanned`, `## Contract`)
-    or a row stays as it was, byte for byte: the note and rows of the executor repair that is gone (only the executor row of a skill the table now lists is
-    dropped, once, in the table block only and never inside a Hermes section, so it is not listed twice), a Hermes section, the loading
-    protocol and the blocks `propagate` writes. A project with no registry gets one, loading protocol included. It takes the lock
+    or a row stays as it was, byte for byte: a Hermes section, the loading
+    protocol and the blocks `propagate` writes. The executor repair is gone, so a refresh drops what it wrote: every row with the
+    scope executor in the table block (never inside a Hermes section or below a heading) and the note "`sdd-*` phase skills are
+    executor contracts." with the one blank line after it; a second refresh changes nothing. A project with no registry gets one, loading protocol included. It takes the lock
     `propagate` takes (`<registry>.lock`, waiting up to 2 seconds) and writes the registry whole through a temporary file and a
     rename (mode 0644). It writes nothing when only the `Last updated:` day (UTC) would change, unless --force, and it never edits
     `.gitignore`. A directory that holds neither `.git` nor `.atl` is skipped: stdout says `Skill registry refresh skipped

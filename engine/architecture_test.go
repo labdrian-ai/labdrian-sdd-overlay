@@ -105,10 +105,6 @@ import (
 //   - synctrigger/osproc is the adapter of the Runner port of synctrigger (H34): it starts the
 //     programs of the machine in sessions and process groups of their own and kills a group at a
 //     deadline. synctrigger itself reads neither the clock nor the process table: it is handed both.
-//   - sddregistry/fsstore is the adapter of the RegistryStore port of skillregistry/app (B2, T30): the
-//     registry as a file, written as `engine propagate` writes it (propagator/fsstore). It has no
-//     domain or use case of its own since the repair of the SDD executor rows went (T29). The lock
-//     and the words a person reads are the command's, in cmd.
 //   - skillregistry is a domain package (T30): the table of skills in a project's .atl/skill-registry.md,
 //     the rules `gentle-ai skill-registry refresh` 4.2.0 follows (which directories hold skills, how a
 //     SKILL.md names itself, which skills are listed, how the file is written around the rows) over
@@ -118,6 +114,9 @@ import (
 //     SkillSource, Locker and clock it is given. It prints nothing and exits nowhere.
 //   - skillregistry/fsscan is the adapter of its SkillSource (T30): the directories and SKILL.md files
 //     of the machine, and the stat of .git and .atl that makes a directory a project.
+//   - skillregistry/fsstore is the adapter of the RegistryStore port of skillregistry/app (B2, T30): the
+//     registry as a file, written as `engine propagate` writes it (propagator/fsstore). The lock and
+//     the words a person reads are the command's, in cmd.
 //   - sha256hex is a domain package (H34): what a SHA-256 digest looks like on the wire (64
 //     lowercase hex characters) and how one is made, which every record that carries a digest
 //     (the goal, the workflow event, the role handoff, the clearance, the approval, the project
@@ -240,7 +239,6 @@ var rings = map[string]archguard.Ring{
 	"runtime/ownership":         archguard.Domain,
 	"runtime/ownership/app":     archguard.Application,
 	"runtime/ownership/fsstore": archguard.Adapter,
-	"sddregistry/fsstore":       archguard.Adapter,
 	"settings":                  archguard.Domain,
 	"settings/settingsfile":     archguard.Adapter,
 	"settings/codexhooks":       archguard.Domain,
@@ -253,6 +251,7 @@ var rings = map[string]archguard.Ring{
 	"skillregistry":             archguard.Domain,
 	"skillregistry/app":         archguard.Application,
 	"skillregistry/fsscan":      archguard.Adapter,
+	"skillregistry/fsstore":     archguard.Adapter,
 	"skills/app":                archguard.Application,
 	"skills/memorycardcli":      archguard.Adapter,
 	"skills/projectidentity":    archguard.Adapter,

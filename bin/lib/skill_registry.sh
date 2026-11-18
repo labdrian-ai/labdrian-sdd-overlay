@@ -29,8 +29,8 @@ refresh_skill_registry() {
   "$ENGINE_BINARY" "${args[@]}"
 }
 
-# Wrapper around `registry refresh`. It used to repair the SDD executor rows after the refresh;
-# --no-repair and --target are still accepted and do nothing.
+# Wrapper around `registry refresh`. --no-repair does nothing. --target is validated (a copy target
+# only) and has no other effect.
 
 cmd_skill_registry() {
   local verb="${1:-}"
@@ -38,7 +38,6 @@ cmd_skill_registry() {
   shift || true
 
   local cwd="$CALLER_CWD"
-  local target="codex"
   local force=0
   local quiet=0
 
@@ -51,13 +50,12 @@ cmd_skill_registry() {
         ;;
       --target)
         shift
-        target="${1:-}"
-        [[ -n "$target" ]] || die "--target requires an argument"
-        is_valid_target "$target" || die "Unknown target: $target. Valid: claude, opencode, codex, pi"
-        is_copy_target "$target" || die "--target $target is a package target with no gentle-ai skill-registry.md; only claude, opencode, codex are supported here"
+        [[ -n "${1:-}" ]] || die "--target requires an argument"
+        is_valid_target "$1" || die "Unknown target: $1. Valid: claude, opencode, codex, pi"
+        is_copy_target "$1" || die "--target $1 is a package target with no gentle-ai skill-registry.md; only claude, opencode, codex are supported here"
         ;;
       --no-repair)
-        # Accepted as it always was; there is no repair step left to turn off.
+        # Does nothing: there is no repair step to turn off.
         ;;
       --no-gitignore)
         # Accepted as it always was; the engine's refresh never edits .gitignore, so there is
