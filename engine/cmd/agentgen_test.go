@@ -6,6 +6,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/roles"
 )
 
 func agentgenRun(t *testing.T, env map[string]string, args ...string) *capturedProcess {
@@ -18,7 +20,8 @@ func agentgenRun(t *testing.T, env map[string]string, args ...string) *capturedP
 }
 
 // seedRoleSources puts what the generator reads from the repository under root: the role sources, and
-// the tier table of the role-chain skill that holds each role's model id.
+// the tier table of the role-chain skill that holds each role's model id, and the SKILL.md of each skill
+// a role body names, which the generator requires to exist.
 func seedRoleSources(t *testing.T, root string) {
 	t.Helper()
 	const repo = "../.."
@@ -45,6 +48,25 @@ func seedRoleSources(t *testing.T, root string) {
 	}
 	if err := copyFileTo(filepath.Join(repo, models), filepath.Join(root, models)); err != nil {
 		t.Fatalf("copying the model table: %v", err)
+	}
+	bodies, err := filepath.Glob(filepath.Join(root, "roles", "*", "body.md"))
+	if err != nil {
+		t.Fatalf("listing the role bodies: %v", err)
+	}
+	for _, body := range bodies {
+		text, err := os.ReadFile(body)
+		if err != nil {
+			t.Fatalf("reading %s: %v", body, err)
+		}
+		for _, id := range roles.SkillsNamed(string(text)) {
+			skill := filepath.Join("skills", id, "SKILL.md")
+			if err := os.MkdirAll(filepath.Join(root, filepath.Dir(skill)), 0o755); err != nil {
+				t.Fatalf("creating %s: %v", filepath.Dir(skill), err)
+			}
+			if err := copyFileTo(filepath.Join(repo, skill), filepath.Join(root, skill)); err != nil {
+				t.Fatalf("copying the skill a role body names: %v", err)
+			}
+		}
 	}
 }
 
