@@ -1297,6 +1297,9 @@ gentle-ai-overlay projection hook --event UserPromptSubmit|PreToolUse|SessionSta
     ~/.claude/bin/gentle-ai-overlay; when it cannot run (missing, too old, prints anything that is not a JSON object
     or more than 2 MiB, no answer in 30 seconds, `LABDRIAN_ENGINE_TIMEOUT_MS` sets it) the call goes through, as a
     hook that fails does in Claude Code, and the next result or model call says once that the hooks are not running.
+    The one exception is a `subagent` launch of the agent `reviewer`: after the gate, the plugin replaces its prompt with the
+    output of `review frozen-context` (the brief, then the frozen context of its candidate) and denies the launch, with the
+    verb's stderr line or a sentence naming the frozen context, when the verb refuses, fails, times out or prints nothing.
     After a timeout the plugin does not ask the engine again for twice the timeout, and ends it with SIGTERM, then
     SIGKILL. The read and skill tools of OpenCode v2 name their argument path and id; the plugin also sends them as
     file_path and skill, the names the policies read.

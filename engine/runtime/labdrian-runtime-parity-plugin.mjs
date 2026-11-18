@@ -221,14 +221,15 @@ function describeFailure(error) {
   return error instanceof Error ? error.message : String(error);
 }
 
-// runEngine runs the engine with the envelope on stdin. It resolves to {stdout} when the engine
+// runEngine runs the engine with the envelope on stdin. A string envelope is sent as it is. It resolves to {stdout} when the engine
 // exited 0, and to {failure} when it could not be started, could not be given its input, timed out
 // ({hung: true}), printed more than ENGINE_OUTPUT_LIMIT or exited otherwise (an engine too old for a
 // flag exits 1); it never rejects. An engine that outlives its timeout gets SIGTERM, then SIGKILL.
 function runEngine(args, envelope, timeoutMs) {
   let input;
   try {
-    input = JSON.stringify(envelope);
+    // A string is the input as it is (the frozen-context verb reads a plain-text brief); anything else is a hook envelope.
+    input = typeof envelope === "string" ? envelope : JSON.stringify(envelope);
   } catch (error) {
     return Promise.resolve({ failure: `the hook input could not be serialized: ${describeFailure(error)}` });
   }
@@ -392,6 +393,35 @@ async function gateToolCall(call, state) {
   }
   const warning = textOf(reply.answer.systemMessage);
   if (warning !== undefined) holdWarning(state, call.id, warning);
+}
+
+// The agent whose launch is given the frozen context of its candidate. OpenCode's reviewer has no shell,
+// so it cannot run git for its diff; Claude Code's parent pastes it and Codex's `review launch` appends it.
+const FROZEN_CONTEXT_AGENT = "reviewer";
+const FROZEN_CONTEXT_VERB = "review frozen-context";
+
+function frozenContextRefusal(failure) {
+  // The verb's own refusal is one line that names the verb and says why; anything else (the engine
+  // missing, hung, or too old for the verb) gets a sentence that says what was not made.
+  if (failure.startsWith(`error: ${FROZEN_CONTEXT_VERB}:`)) return failure;
+  return `this reviewer launch was denied: its frozen context (the diff of its candidate) could not be made: ${failure}`;
+}
+
+// attachFrozenContext replaces the prompt of a reviewer launch with the verb's stdout: the brief the agent
+// wrote, then the frozen context of the candidate it names. It denies the launch when the verb refuses,
+// fails, times out or prints nothing, since a review without its diff must not run. Every other call is
+// left as it is.
+async function attachFrozenContext(call) {
+  if (!isRecord(call) || call.tool !== INJECTED_TOOL) return;
+  const input = call.input;
+  if (!isRecord(input) || input[AGENT_FIELD] !== FROZEN_CONTEXT_AGENT) return;
+  if (typeof input.prompt !== "string") {
+    throw new Tool.Error({ message: frozenContextRefusal("the launch carries no prompt") });
+  }
+  const reply = await runEngine([...FROZEN_CONTEXT_VERB.split(" "), "--cwd", process.cwd()], input.prompt, engineTimeoutMs());
+  if (reply.failure !== undefined) throw new Tool.Error({ message: frozenContextRefusal(reply.failure) });
+  if (reply.stdout.trim() === "") throw new Tool.Error({ message: frozenContextRefusal("the engine printed nothing") });
+  input.prompt = reply.stdout;
 }
 
 // reportToolResult is the PostToolUse: what the engine says about a completed call, what the
@@ -598,11 +628,13 @@ async function registerSessionHooks(ctx, state) {
 }
 
 // registerToolHooks hooks the PreToolUse gate and the contract injection into tool calls, and the
-// PostToolUse report after them. The gate runs first: a launch it denies is not rewritten.
+// PostToolUse report after them. The gate runs first: a launch it denies is not rewritten. A reviewer launch
+// is given its frozen context next, then the contract is injected into the prompt that results.
 async function registerToolHooks(ctx, config, state) {
   await ctx.tool.hook("execute.before", async (call) => {
     if (!isRecord(call)) return;
     await gateToolCall(call, state);
+    await attachFrozenContext(call);
     injectContract(call, config);
   });
   await ctx.tool.hook("execute.after", async (call) => {

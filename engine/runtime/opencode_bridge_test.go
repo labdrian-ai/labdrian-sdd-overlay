@@ -33,6 +33,8 @@ count=$(wc -l < "$dir/calls.log" 2>/dev/null || echo 0)
 count=$((count + 1))
 printf '%s\t%s\n' "$event" "$*" >> "$dir/calls.log"
 cat > "$dir/stdin.$count"
+if [ -f "$dir/sleep.$event" ]; then sleep "$(cat "$dir/sleep.$event")"; fi
+if [ -f "$dir/exit.$event" ]; then cat "$dir/stderr.$event" >&2; exit "$(cat "$dir/exit.$event")"; fi
 if [ -f "$dir/exit" ]; then cat "$dir/stderr" >&2; exit "$(cat "$dir/exit")"; fi
 if [ -f "$dir/answer.$event.$count" ]; then cat "$dir/answer.$event.$count"
 elif [ -f "$dir/answer.$event" ]; then cat "$dir/answer.$event"; fi
@@ -49,6 +51,7 @@ type engineCall struct {
 	Event string
 	Args  string
 	Stdin map[string]any
+	Raw   string
 }
 
 // newFakeEngine writes the stand-in with the answers it gives, by event name.
@@ -78,6 +81,24 @@ func (e fakeEngine) failWith(t *testing.T, code int, message string) {
 	}
 }
 
+// failEventWith makes the stand-in fail only the calls of one event, with code and message on stderr.
+func (e fakeEngine) failEventWith(t *testing.T, event string, code int, message string) {
+	t.Helper()
+	for name, content := range map[string]string{"exit." + event: fmt.Sprint(code), "stderr." + event: message} {
+		if err := os.WriteFile(filepath.Join(e.dir, name), []byte(content), 0o644); err != nil {
+			t.Fatalf("write fake engine %s: %v", name, err)
+		}
+	}
+}
+
+// hangEventFor makes the stand-in sleep for seconds before it answers a call of one event.
+func (e fakeEngine) hangEventFor(t *testing.T, event string, seconds int) {
+	t.Helper()
+	if err := os.WriteFile(filepath.Join(e.dir, "sleep."+event), []byte(fmt.Sprint(seconds)), 0o644); err != nil {
+		t.Fatalf("write fake engine sleep: %v", err)
+	}
+}
+
 // calls is what the stand-in was asked, in order.
 func (e fakeEngine) calls(t *testing.T) []engineCall {
 	t.Helper()
@@ -95,9 +116,13 @@ func (e fakeEngine) calls(t *testing.T) []engineCall {
 		if err != nil {
 			t.Fatalf("read fake engine stdin: %v", err)
 		}
-		call := engineCall{Event: event, Args: args}
-		if err := json.Unmarshal(stdin, &call.Stdin); err != nil {
-			t.Fatalf("fake engine stdin %q is not a JSON object: %v", stdin, err)
+		call := engineCall{Event: event, Args: args, Raw: string(stdin)}
+		// A hook is handed a JSON object; `review frozen-context` (event Stop: it takes no --event) is
+		// handed the brief as plain text.
+		if !strings.HasPrefix(args, "review frozen-context") {
+			if err := json.Unmarshal(stdin, &call.Stdin); err != nil {
+				t.Fatalf("fake engine stdin %q is not a JSON object: %v", stdin, err)
+			}
 		}
 		calls = append(calls, call)
 	}
@@ -385,5 +410,170 @@ console.log(JSON.stringify(thrown));`)
 	}
 	if inputs, _ := calls[1].Stdin["tool_input"].(map[string]any); inputs["query"] != "q" {
 		t.Errorf("the inner call keeps its query, got %#v", inputs)
+	}
+}
+
+// B4 (L99, L100, L107): on OpenCode the reviewer cannot run git, so on a `subagent` launch of the agent
+// `reviewer` the bridge hands the brief to `review frozen-context` and launches the reviewer with what it
+// prints, the brief and the frozen context of its candidate. The verb's own refusals and any failure of
+// it deny the launch: a review without its diff must not run.
+
+const (
+	reviewerBrief = "Review base aaaa head bbbb.\n\"base\": \"aaaa\"\n\"head\": \"bbbb\"\n"
+	frozenReply   = reviewerBrief + "\n## Frozen context (base aaaa, head bbbb)\nchanged paths: a.go\n```diff\n+x\n```\n"
+	// frozenEvent is the event the stand-in files `review frozen-context` under: the verb takes no --event.
+	frozenEvent = "Stop"
+)
+
+// launchOf is a node snippet that runs a launch of agent through the hook and prints what came of it.
+func launchOf(tool, agent, prompt string) string {
+	return fmt.Sprintf(`const call = { tool: %q, sessionID: "ses_1", id: "call_1", input: { prompt: %q, agent: %q } };
+let thrown = null;
+try { await beforeHook(call); } catch (error) { thrown = { name: error.name, message: error.message, fields: error.fields }; }
+console.log(JSON.stringify({ thrown, input: call.input }));`, tool, prompt, agent)
+}
+
+type launchOutcome struct {
+	Thrown *struct {
+		Name    string         `json:"name"`
+		Message string         `json:"message"`
+		Fields  map[string]any `json:"fields"`
+	} `json:"thrown"`
+	Input map[string]any `json:"input"`
+}
+
+func decodeLaunch(t *testing.T, out []byte) launchOutcome {
+	t.Helper()
+	var got launchOutcome
+	if err := json.Unmarshal(out, &got); err != nil {
+		t.Fatalf("decode result: %v\nraw=%q", err, out)
+	}
+	return got
+}
+
+func TestOpenCodeBridgeLaunchesTheReviewerWithTheFrozenContextOfItsBrief(t *testing.T) {
+	requireNode(t)
+	engine := newFakeEngine(t, map[string][]byte{frozenEvent: []byte(frozenReply)})
+	pluginPath := bridgeFixture(t)
+
+	got := decodeLaunch(t, runPluginWithEngine(t, pluginPath, engine.path, launchOf("subagent", "reviewer", reviewerBrief)))
+	if got.Thrown != nil {
+		t.Fatalf("a reviewer launch whose brief the verb answers should go through, got %#v", got.Thrown)
+	}
+	if got.Input["prompt"] != frozenReply || got.Input["agent"] != "reviewer" {
+		t.Fatalf("the reviewer should be launched with the verb's stdout as its prompt, got %#v", got.Input)
+	}
+
+	calls := engine.calls(t)
+	if len(calls) != 2 || calls[0].Event != eventPreToolUse {
+		t.Fatalf("the gate should be asked first, then the verb, got %#v", calls)
+	}
+	cwd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("getwd: %v", err)
+	}
+	if want := "review frozen-context --cwd " + cwd; calls[1].Args != want {
+		t.Errorf("the verb should run as %q, got %q", want, calls[1].Args)
+	}
+	if calls[1].Raw != reviewerBrief {
+		t.Errorf("the verb should be handed the brief as the agent wrote it, as plain text, got %q", calls[1].Raw)
+	}
+}
+
+func TestOpenCodeBridgeRunsTheReviewerRewriteAfterTheGateAndBeforeTheContract(t *testing.T) {
+	requireNode(t)
+	const contract = "skills/_shared/minimalism-contract.md"
+	reply := reviewerBrief + "## Skills to load before work\n## Frozen context (base aaaa, head bbbb)\n"
+	pluginPath := bridgeFixture(t)
+	root := filepath.Dir(filepath.Dir(filepath.Dir(pluginPath)))
+	config := minimalismConfig(pluginPath, root)
+	config["prompt_config"].(map[string]any)["included_phases"] = []string{"reviewer"}
+	writeJSONFile(t, filepath.Join(root, "labdrian-runtime-parity.json"), config)
+
+	allowing := newFakeEngine(t, map[string][]byte{frozenEvent: []byte(reply)})
+	got := decodeLaunch(t, runPluginWithEngine(t, pluginPath, allowing.path, launchOf("subagent", "reviewer", reviewerBrief)))
+	prompt, _ := got.Input["prompt"].(string)
+	if got.Thrown != nil || !strings.Contains(prompt, contract) || !strings.Contains(prompt, "## Frozen context (base aaaa, head bbbb)") {
+		t.Fatalf("the contract should be added to the prompt the verb printed, got %#v", got)
+	}
+	if calls := allowing.calls(t); len(calls) != 2 || calls[1].Raw != reviewerBrief {
+		t.Fatalf("the verb should be handed the brief before the contract is added, got %#v", calls)
+	}
+
+	denying := newFakeEngine(t, map[string][]byte{eventPreToolUse: encoded(t, hookwire.PreToolUseReply{Deny: true, Reason: "paused"}), frozenEvent: []byte(reply)})
+	got = decodeLaunch(t, runPluginWithEngine(t, pluginPath, denying.path, launchOf("subagent", "reviewer", reviewerBrief)))
+	if got.Thrown == nil || got.Thrown.Message != "paused" || got.Input["prompt"] != reviewerBrief {
+		t.Fatalf("a launch the gate denies is neither rewritten nor given its context, got %#v", got)
+	}
+	if calls := denying.calls(t); len(calls) != 1 {
+		t.Fatalf("a denied launch should not run the verb, got %#v", calls)
+	}
+}
+
+func TestOpenCodeBridgeDeniesAReviewerLaunchTheVerbRefusesWithItsReason(t *testing.T) {
+	requireNode(t)
+	const reason = "error: review frozen-context: the brief names no base and head, in the form review bind prints"
+	engine := newFakeEngine(t, map[string][]byte{frozenEvent: []byte(frozenReply)})
+	engine.failEventWith(t, frozenEvent, 2, reason+"\n")
+	pluginPath := bridgeFixture(t)
+
+	got := decodeLaunch(t, runPluginWithEngine(t, pluginPath, engine.path, launchOf("subagent", "reviewer", reviewerBrief)))
+	if got.Thrown == nil || got.Thrown.Name != "Tool.Error" || got.Thrown.Message != reason || got.Thrown.Fields["message"] != reason {
+		t.Fatalf("the verb's refusal should throw a Tool.Error({message: %q}), got %#v", reason, got.Thrown)
+	}
+	if got.Input["prompt"] != reviewerBrief {
+		t.Fatalf("a refused launch keeps the prompt the agent wrote, got %#v", got.Input)
+	}
+}
+
+func TestOpenCodeBridgeDeniesAReviewerLaunchWhenTheEngineCannotAnswer(t *testing.T) {
+	requireNode(t)
+	pluginPath := bridgeFixture(t)
+	hung := newFakeEngine(t, map[string][]byte{frozenEvent: []byte(frozenReply)})
+	hung.hangEventFor(t, frozenEvent, 2)
+	silent := newFakeEngine(t, nil)
+
+	for name, run := range map[string]func() []byte{
+		"missing": func() []byte {
+			return runPluginWithEngine(t, pluginPath, filepath.Join(t.TempDir(), "no-engine"), launchOf("subagent", "reviewer", reviewerBrief))
+		},
+		"timeout": func() []byte {
+			return runPluginWithEnv(t, pluginPath, []string{engineEnvironment + "=" + hung.path, "LABDRIAN_ENGINE_TIMEOUT_MS=400"}, launchOf("subagent", "reviewer", reviewerBrief))
+		},
+		"empty answer": func() []byte {
+			return runPluginWithEngine(t, pluginPath, silent.path, launchOf("subagent", "reviewer", reviewerBrief))
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			got := decodeLaunch(t, run())
+			if got.Thrown == nil || got.Thrown.Name != "Tool.Error" || !strings.Contains(got.Thrown.Message, "frozen context") {
+				t.Fatalf("a reviewer launch the engine cannot give its context must be denied with a sentence naming it, got %#v", got.Thrown)
+			}
+			if got.Input["prompt"] != reviewerBrief {
+				t.Fatalf("a denied launch keeps its prompt, got %#v", got.Input)
+			}
+		})
+	}
+}
+
+func TestOpenCodeBridgeLeavesEveryOtherLaunchAsItWas(t *testing.T) {
+	requireNode(t)
+	pluginPath := bridgeFixture(t)
+	for name, c := range map[string]struct{ tool, agent string }{
+		"builder":              {"subagent", "builder"},
+		"agent named like it":  {"subagent", "reviewer-two"},
+		"other tool, reviewer": {"shell", "reviewer"},
+		"other tool, builder":  {"task", "builder"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			engine := newFakeEngine(t, map[string][]byte{frozenEvent: []byte(frozenReply)})
+			got := decodeLaunch(t, runPluginWithEngine(t, pluginPath, engine.path, launchOf(c.tool, c.agent, basePromptFixture)))
+			if got.Thrown != nil || got.Input["prompt"] != basePromptFixture || got.Input["agent"] != c.agent || len(got.Input) != 2 {
+				t.Fatalf("a %s %s launch must be left byte-identical, got %#v", c.tool, c.agent, got)
+			}
+			if calls := engine.calls(t); len(calls) != 1 || calls[0].Event != eventPreToolUse {
+				t.Fatalf("only the gate should be asked, got %#v", calls)
+			}
+		})
 	}
 }
