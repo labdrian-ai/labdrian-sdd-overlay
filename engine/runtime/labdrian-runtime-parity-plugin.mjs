@@ -407,6 +407,34 @@ function frozenContextRefusal(failure) {
   return `this reviewer launch was denied: its frozen context (the diff of its candidate) could not be made: ${failure}`;
 }
 
+// The verb that makes the skills a launch prompt lists absolute SKILL.md paths. A role on OpenCode cannot use the
+// skill tool, so a skill reaches it as the path of its SKILL.md under the header the contracts use.
+const SKILL_PATHS_VERB = "roles skill-paths";
+
+function skillPathsRefusal(failure) {
+  // The verb's own refusal is one line that names the verb and says what to write; anything else (the engine
+  // missing, hung, or too old for the verb) gets a sentence that says what was not checked.
+  if (failure.startsWith(`error: ${SKILL_PATHS_VERB}:`)) return failure;
+  return `this launch was denied: its skill list could not be checked: ${failure}`;
+}
+
+// resolveSkillPaths replaces the prompt of a `subagent` launch with the verb's stdout: the same prompt, each bare
+// skill id under the skills header made the path of its SKILL.md. It runs after the gate and before the frozen
+// context, so that the diff appended to a reviewer brief is never read as a skill list. It denies the launch when
+// the verb refuses, fails, times out or prints nothing. A config with no skills_root (an install older than this
+// plugin) leaves every prompt as it is, and so does a call that is not a launch with a prompt.
+async function resolveSkillPaths(call, config) {
+  if (!isRecord(call) || call.tool !== INJECTED_TOOL) return;
+  const root = isRecord(config) ? config.skills_root : undefined;
+  if (typeof root !== "string" || root === "") return;
+  const input = call.input;
+  if (!isRecord(input) || typeof input.prompt !== "string" || input.prompt === "") return;
+  const reply = await runEngine([...SKILL_PATHS_VERB.split(" "), "--skills-root", root], input.prompt, engineTimeoutMs());
+  if (reply.failure !== undefined) throw new Tool.Error({ message: skillPathsRefusal(reply.failure) });
+  if (reply.stdout.trim() === "") throw new Tool.Error({ message: skillPathsRefusal("the engine printed nothing") });
+  input.prompt = reply.stdout;
+}
+
 // attachFrozenContext replaces the prompt of a reviewer launch with the verb's stdout: the brief the agent
 // wrote, then the frozen context of the candidate it names. It denies the launch when the verb refuses,
 // fails, times out or prints nothing, since a review without its diff must not run. Every other call is
@@ -628,12 +656,14 @@ async function registerSessionHooks(ctx, state) {
 }
 
 // registerToolHooks hooks the PreToolUse gate and the contract injection into tool calls, and the
-// PostToolUse report after them. The gate runs first: a launch it denies is not rewritten. A reviewer launch
-// is given its frozen context next, then the contract is injected into the prompt that results.
+// PostToolUse report after them. The gate runs first: a launch it denies is not rewritten. The skill list of a
+// launch is made paths next, a reviewer launch is then given its frozen context, and last the contract is
+// injected into the prompt that results.
 async function registerToolHooks(ctx, config, state) {
   await ctx.tool.hook("execute.before", async (call) => {
     if (!isRecord(call)) return;
     await gateToolCall(call, state);
+    await resolveSkillPaths(call, config);
     await attachFrozenContext(call);
     injectContract(call, config);
   });

@@ -23,6 +23,10 @@ type openCodeConfig struct {
 	PluginConfigScope string                      `json:"plugin_config_scope"`
 	PromptConfig      opencodeprompt.PromptConfig `json:"prompt_config"`
 	PromptConfigHash  string                      `json:"prompt_config_hash"`
+	// SkillsRoot is the overlay's absolute skills directory, which the plugin hands to `roles skill-paths`
+	// to make the skill ids of a launch prompt paths. A config without it (an older install) leaves every
+	// prompt as it is.
+	SkillsRoot string `json:"skills_root,omitempty"`
 }
 
 // openCodeActiveMarker is the record the plugin writes when it loads: which version, hash and

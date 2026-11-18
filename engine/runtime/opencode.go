@@ -104,6 +104,10 @@ func (a OpenCodeAdapter) install(action core.Action) core.LifecycleResult {
 	if err != nil {
 		return a.result(action, core.CapabilityPartial, "OpenCode prompt config could not be hashed: "+err.Error())
 	}
+	skillsRoot, err := a.skillsRoot()
+	if err != nil {
+		return a.result(action, core.CapabilityPartial, "OpenCode skills root could not be found: "+err.Error())
+	}
 	cfg := openCodeConfig{
 		PluginPath:        a.pluginPath(),
 		InstalledHash:     OpenCodePluginHash(),
@@ -113,6 +117,7 @@ func (a OpenCodeAdapter) install(action core.Action) core.LifecycleResult {
 		PluginConfigScope: "global-opencode-config",
 		PromptConfig:      promptConfig,
 		PromptConfigHash:  promptHash,
+		SkillsRoot:        skillsRoot,
 	}
 	if err := a.writeConfig(cfg); err != nil {
 		return a.result(action, core.CapabilityPartial, err.Error())

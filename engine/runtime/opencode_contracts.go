@@ -27,6 +27,16 @@ func (a OpenCodeAdapter) promptConfig() (opencodeprompt.PromptConfig, error) {
 	return withAbsoluteContractPaths(config, source.root), nil
 }
 
+// skillsRoot is the skills directory of the overlay this adapter reads its contracts from, absolute as
+// the contract paths are: the root a launch prompt's skill ids are looked up under.
+func (a OpenCodeAdapter) skillsRoot() (string, error) {
+	root, err := locateOverlay(a.options.OverlayDir)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(root, "skills"), nil
+}
+
 // withAbsoluteContractPaths is config with every contract path joined under root. It copies the
 // contract list, so the config it was given is left as it was.
 func withAbsoluteContractPaths(config opencodeprompt.PromptConfig, root string) opencodeprompt.PromptConfig {

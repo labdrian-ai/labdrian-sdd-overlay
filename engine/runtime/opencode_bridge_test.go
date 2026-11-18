@@ -26,7 +26,7 @@ import (
 
 // fakeEngineScript is the stand-in for the engine binary. It appends "<event><TAB><arguments>" to
 // calls.log, keeps its stdin in stdin.<n> for the n-th call, and prints answer.<event> when there is
-// one. answer.<event>.<n> answers the n-th call alone and wins over it. The event is the --event value, or Stop for `review stop-hook`, which takes none.
+// one. answer.<event>.<n> answers the n-th call alone and wins over it. The event is the --event value, SkillPaths for `roles skill-paths`, or Stop for `review stop-hook`, which takes none.
 const fakeEngineScript = `#!/bin/sh
 dir=$(dirname "$0")
 event=Stop
@@ -35,6 +35,7 @@ for argument in "$@"; do
   if [ "$previous" = "--event" ]; then event="$argument"; fi
   previous="$argument"
 done
+if [ "$1 $2" = "roles skill-paths" ]; then event=SkillPaths; fi
 count=$(wc -l < "$dir/calls.log" 2>/dev/null || echo 0)
 count=$((count + 1))
 printf '%s\t%s\n' "$event" "$*" >> "$dir/calls.log"
@@ -124,8 +125,8 @@ func (e fakeEngine) calls(t *testing.T) []engineCall {
 		}
 		call := engineCall{Event: event, Args: args, Raw: string(stdin)}
 		// A hook is handed a JSON object; `review frozen-context` (event Stop: it takes no --event) is
-		// handed the brief as plain text.
-		if !strings.HasPrefix(args, "review frozen-context") {
+		// handed the brief as plain text, and so is `roles skill-paths` the prompt.
+		if !strings.HasPrefix(args, "review frozen-context") && !strings.HasPrefix(args, "roles skill-paths") {
 			if err := json.Unmarshal(stdin, &call.Stdin); err != nil {
 				t.Fatalf("fake engine stdin %q is not a JSON object: %v", stdin, err)
 			}

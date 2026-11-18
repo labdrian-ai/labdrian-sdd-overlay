@@ -103,8 +103,11 @@ await beforeHook(builder);
 let reviewerError = "";
 try { await beforeHook(reviewer); } catch (error) { reviewerError = error.message; }
 console.log(JSON.stringify({ builder: builder.input.prompt, reviewer: reviewer.input.prompt, reviewerError }));`
+	// The installed config names a skills root, so each launch goes through `roles skill-paths`: the stand-in
+	// prints the prompt back, which a prompt with no ids under the header is printed as.
+	engine := newFakeEngine(t, map[string][]byte{skillsEvent: []byte("work\n## Skills to load before work\n")})
 	var got struct{ Builder, Reviewer, ReviewerError string }
-	if err := json.Unmarshal(runPlugin(t, openCodePluginPath(root), script), &got); err != nil {
+	if err := json.Unmarshal(runPluginWithEngine(t, openCodePluginPath(root), engine.path, script), &got); err != nil {
 		t.Fatal(err)
 	}
 	for _, id := range []string{"test-first", "odd-feature-doc"} {
