@@ -3,9 +3,7 @@ skills:
   - id: branch-pr
     path: branch-pr
     source:
-      type: core
-      upstream:
-        owner: gentleman-programming
+      type: custom
     install:
       defaultScope: global
       targets:
@@ -13,7 +11,7 @@ skills:
         - opencode
         - codex
     lifecycle:
-      updateStrategy: vendor-merge
+      updateStrategy: overlay-only
   - id: chained-pr
     path: chained-pr
     source:

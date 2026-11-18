@@ -7,8 +7,8 @@ package skills_test
 // SyncManifest: a manifest whose tags differ from what the registry implies is regenerated, and
 // that is the difference the test reports.
 //
-// branch-pr and issue-creation (rewritten in T32 and T33) and systemic-issue-triage (deferred to a
-// later feature) are not in the set.
+// branch-pr joined the set with its rewrite in T32. issue-creation (rewritten in T33) and
+// systemic-issue-triage (deferred to a later feature) are not in it.
 
 import (
 	"io/fs"
@@ -27,6 +27,7 @@ var adoptedSkillDirs = []string{
 	"chained-pr", "work-unit-commits", "comment-writer", "cognitive-doc-design", "go-testing",
 	"judgment-day", "skill-creator", "skill-improver", "_shared", "requirements-from-transcripts",
 	"project-inception", "inception-pipeline", "project-manifest", "project-architect", "roadmap-maker",
+	"branch-pr",
 }
 
 // _shared is a directory of contracts, not an entry of the registry.

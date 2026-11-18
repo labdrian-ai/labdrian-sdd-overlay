@@ -14,7 +14,6 @@ import (
 // would be a decision to let a new skill break the budget.
 var lintBaselineSkills = []string{
 	"anti-generic-design",
-	"branch-pr",
 	"chained-pr",
 	"chat-thread-analyzer",
 	"cognitive-doc-design",
