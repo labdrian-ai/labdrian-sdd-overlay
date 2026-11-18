@@ -1,0 +1,1 @@
+Skill registry refresh skipped (no-project-marker): {{DIR}} is not a project root; run it from a project directory (one containing .git or .atl), or create the project first.

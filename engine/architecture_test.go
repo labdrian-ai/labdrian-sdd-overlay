@@ -119,6 +119,11 @@ import (
 //     the rules `gentle-ai skill-registry refresh` 4.2.0 follows (which directories hold skills, how a
 //     SKILL.md names itself, which skills are listed, how the file is written around the rows) over
 //     text. It reads and writes no file and reads no clock.
+//   - skillregistry/app holds the use case of `engine registry refresh` (T30): it finds the skills of a
+//     project and its machine and writes the table into the registry, over the RegistryStore,
+//     SkillSource, Locker and clock it is given. It prints nothing and exits nowhere.
+//   - skillregistry/fsscan is the adapter of its SkillSource (T30): the directories and SKILL.md files
+//     of the machine, and the stat of .git and .atl that makes a directory a project.
 //   - sha256hex is a domain package (H34): what a SHA-256 digest looks like on the wire (64
 //     lowercase hex characters) and how one is made, which every record that carries a digest
 //     (the goal, the workflow event, the role handoff, the clearance, the approval, the project
@@ -254,6 +259,8 @@ var rings = map[string]archguard.Ring{
 	"shelltest":                 archguard.Support,
 	"skills":                    archguard.Domain,
 	"skillregistry":             archguard.Domain,
+	"skillregistry/app":         archguard.Application,
+	"skillregistry/fsscan":      archguard.Adapter,
 	"skills/app":                archguard.Application,
 	"skills/memorycardcli":      archguard.Adapter,
 	"skills/projectidentity":    archguard.Adapter,

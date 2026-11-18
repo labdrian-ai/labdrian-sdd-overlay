@@ -1043,6 +1043,32 @@ gentle-ai-overlay registry repair-sdd --registry <path> --target <name> --skills
     unknown flag), a registry without the headings `## Skills` and `## Loading protocol` (`ERROR: registry has no '<heading>'
     section: <path>`), a lock that stays taken, or a file that cannot be read or written, with the registry as it was.
 
+gentle-ai-overlay registry refresh --cwd <dir> [--force] [--quiet]
+    Engine verb (labdrian-orchestrator-opencode T30, S17): there is no `overlay registry` wrapper, so run it on the installed
+    engine binary, ~/.claude/bin/gentle-ai-overlay. It writes the table of skills that `gentle-ai skill-registry refresh` used
+    to write into `<dir>/.atl/skill-registry.md`, so that labdrian does not need the gentle-ai binary to keep it current. The
+    skills are listed in this order of sources: the directories of the project (`skills`, `.opencode/skills`, `.claude/skills`,
+    `.gemini/skills`, `.cursor/skills`, `.github/skills`, `.codex/skills`, `.qwen/skills`, `.kiro/skills`, `.openclaw/skills`,
+    `.pi/skills`, `.agent/skills`, `.agents/skills`, `.atl/skills`, `.hermes/skills`), then those of the home that exist (the
+    18 directories gentle-ai 4.2.0 scans, from `~/.pi/agent/skills` to `~/.trae/skills`), and the registry names each source it
+    found under `## Sources scanned`. A skill is keyed by the `name:` of the frontmatter of its `SKILL.md` (its directory when
+    there is none); the first one found wins, the skills named `_shared`, `skill-registry` or `sdd-*` are left out, and the rows
+    are sorted by name in byte order. A description is the value of `description:` with the white space and the quotes at its ends
+    dropped, a `>`, `|`, `>-` or `|-` block folded with single spaces, every `|` escaped, and a dash when there is none. The one
+    difference from gentle-ai, which kept the first line of a value of several lines: a quoted description written over several
+    lines is read whole. The rows were checked against what gentle-ai 4.2.0 wrote in a sandbox. Every line of the registry that
+    is not the generated head (title, the comment that names this command, `Last updated:`, `## Sources scanned`, `## Contract`)
+    or a row stays as it was, byte for byte: the note and rows `registry repair-sdd` writes, a Hermes section, the loading
+    protocol and the blocks `propagate` writes. A project with no registry gets one, loading protocol included. It takes the lock
+    `propagate` takes (`<registry>.lock`, waiting up to 2 seconds) and writes the registry whole through a temporary file and a
+    rename (mode 0644). It writes nothing when only the `Last updated:` day (UTC) would change, unless --force, and it never edits
+    `.gitignore`. A directory that holds neither `.git` nor `.atl` is skipped: stdout says `Skill registry refresh skipped
+    (no-project-marker): <dir> is not a project root; run it from a project directory (one containing .git or .atl), or create the
+    project first.` and nothing is written. Otherwise stdout says `Skill registry refreshed (<n> skills): <path>` or `Skill registry
+    up to date (cache-hit): <path>`; --quiet says nothing. Exit 0 on success or when skipped; 1 on a usage error (--cwd is
+    required, an unknown flag), a lock that stays taken, a registry it does not recognise (one with no `## Skills` table) or a file
+    that cannot be read or written (`error: ...` on stderr), with the registry as it was.
+
 gentle-ai-overlay installed-targets record|release --state-dir <dir> --target <name>
 gentle-ai-overlay installed-targets list --state-dir <dir>
 gentle-ai-overlay installed-targets assess --state-dir <dir> [--purge] [--unregister-failed]

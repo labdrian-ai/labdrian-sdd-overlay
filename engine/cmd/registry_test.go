@@ -175,8 +175,8 @@ func TestRegistryRepairSDDRefusesWhatItIsNotAskedRight(t *testing.T) {
 		args []string
 		want string
 	}{
-		{"no verb", nil, "error: registry requires a verb: repair-sdd\n"},
-		{"another verb", []string{"fix"}, "error: unknown registry verb \"fix\"; expected repair-sdd\n"},
+		{"no verb", nil, "error: registry requires a verb: repair-sdd or refresh\n"},
+		{"another verb", []string{"fix"}, "error: unknown registry verb \"fix\"; expected repair-sdd or refresh\n"},
 		{"an unknown flag", append([]string{"repair-sdd"}, append(good, "--frobnicate")...), "error: registry repair-sdd: unknown argument \"--frobnicate\"\n"},
 		{"a flag with no value", []string{"repair-sdd", "--registry"}, "error: registry repair-sdd: flag \"--registry\" requires a value\n"},
 		{"no registry", []string{"repair-sdd", "--target", "codex", "--skills-root", "/s"}, "error: registry repair-sdd requires --registry, --target, and --skills-root\n"},

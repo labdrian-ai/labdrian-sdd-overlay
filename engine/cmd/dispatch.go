@@ -43,7 +43,7 @@ func run(p process, d deps, args []string) {
 	case "manifest":
 		runManifest(p, rest)
 	case "registry":
-		runRegistry(p, rest)
+		runRegistry(p, d, rest)
 	case "installed-targets":
 		runInstalledTargets(p, rest)
 	case "sync-trigger":
