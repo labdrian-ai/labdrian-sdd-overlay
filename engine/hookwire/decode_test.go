@@ -90,7 +90,7 @@ func TestTheSizeBoundIsInclusive(t *testing.T) {
 
 // --- UserPromptSubmit --------------------------------------------------------
 
-func TestUserPromptSubmitKeepsOnlyTheEventAndTheAbsoluteWorkingDirectory(t *testing.T) {
+func TestUserPromptSubmitKeepsTheEventTheAbsoluteWorkingDirectoryAndTheSession(t *testing.T) {
 	// The shape Claude Code sends, plus fields it might add: the input is not ours, so
 	// unknown fields are ignored rather than refused.
 	data := `{
@@ -106,28 +106,29 @@ func TestUserPromptSubmitKeepsOnlyTheEventAndTheAbsoluteWorkingDirectory(t *test
 	if err != nil {
 		t.Fatalf("DecodeUserPromptSubmit() = %v, want nil", err)
 	}
-	if want := (hookwire.UserPromptSubmit{Event: "UserPromptSubmit", Cwd: "/home/u/repo/sub"}); got != want {
+	if want := (hookwire.UserPromptSubmit{Event: "UserPromptSubmit", Cwd: "/home/u/repo/sub", SessionID: "abc123"}); got != want {
 		t.Fatalf("DecodeUserPromptSubmit() = %+v, want %+v", got, want)
 	}
 }
 
-// TestUserPromptSubmitIgnoresTheSessionAndThePromptEntirely: the projection must not depend
-// on either, so neither is read, not even to be validated. A prompt or session id of the
-// wrong type is not an error.
-func TestUserPromptSubmitIgnoresTheSessionAndThePromptEntirely(t *testing.T) {
+// TestUserPromptSubmitIgnoresThePromptEntirely: the prompt is not read, not even to be validated. A
+// prompt of the wrong type is not an error, and neither is a session id of another type: it is read
+// as missing (S19), so an input decoded before the session was read still decodes.
+func TestUserPromptSubmitIgnoresThePromptEntirely(t *testing.T) {
 	base := `"hook_event_name":"UserPromptSubmit","cwd":"/r"`
-	for name, extra := range map[string]string{
-		"no session, no prompt":     ``,
-		"a session and a prompt":    `,"session_id":"s1","prompt":"hello"`,
-		"another session":           `,"session_id":"s2","prompt":"a different prompt"`,
-		"a prompt of another type":  `,"prompt":{"unexpected":["structure"]}`,
-		"a session of another type": `,"session_id":12345`,
-		"a huge prompt":             `,"prompt":"` + strings.Repeat("x", 500_000) + `"`,
+	for name, c := range map[string]struct{ extra, session string }{
+		"no session, no prompt":     {``, ""},
+		"a session and a prompt":    {`,"session_id":"s1","prompt":"hello"`, "s1"},
+		"another session":           {`,"session_id":"s2","prompt":"a different prompt"`, "s2"},
+		"a prompt of another type":  {`,"prompt":{"unexpected":["structure"]}`, ""},
+		"a session of another type": {`,"session_id":12345`, ""},
+		"a session that is null":    {`,"session_id":null`, ""},
+		"a huge prompt":             {`,"prompt":"` + strings.Repeat("x", 500_000) + `"`, ""},
 	} {
 		t.Run(name, func(t *testing.T) {
-			got, err := hookwire.DecodeUserPromptSubmit([]byte("{" + base + extra + "}"))
-			if err != nil || got != (hookwire.UserPromptSubmit{Event: "UserPromptSubmit", Cwd: "/r"}) {
-				t.Fatalf("DecodeUserPromptSubmit() = %+v, %v, want the same event and cwd whatever the session and prompt are", got, err)
+			got, err := hookwire.DecodeUserPromptSubmit([]byte("{" + base + c.extra + "}"))
+			if err != nil || got != (hookwire.UserPromptSubmit{Event: "UserPromptSubmit", Cwd: "/r", SessionID: c.session}) {
+				t.Fatalf("DecodeUserPromptSubmit() = %+v, %v, want the same event and cwd, the session only when it is text, whatever the prompt is", got, err)
 			}
 		})
 	}

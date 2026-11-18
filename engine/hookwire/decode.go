@@ -11,15 +11,18 @@ import (
 // --- the two events the projection answers -------------------------------------------------
 
 // UserPromptSubmit is what is kept of the JSON a UserPromptSubmit hook receives: the event's
-// name and the working directory of the session. Nothing else is read, in particular not the
-// session and not the prompt: what a session is told does not depend on either, so every
-// session, and every prompt, gets the same view.
+// name, the working directory of the session and its id. Nothing else is read, in particular not the
+// prompt: what a session is told does not depend on it. The id is read only to remember, per session,
+// the last block the hook added (S19); the block itself does not depend on it.
 type UserPromptSubmit struct {
 	// Event is hook_event_name, or empty when the input has none.
 	Event string
 	// Cwd is the session's working directory as a cleaned absolute path, or empty when the
 	// input has none or it is not an absolute path.
 	Cwd string
+	// SessionID is session_id when it is text, and empty when the input has none or it is of another
+	// type (read as missing, as Cwd is by AgentCall, so an input decoded before this field still decodes).
+	SessionID string
 }
 
 // DecodeUserPromptSubmit reads a UserPromptSubmit hook's stdin. The input is Claude Code's, not
@@ -29,13 +32,14 @@ type UserPromptSubmit struct {
 // document that is not exactly one object.
 func DecodeUserPromptSubmit(data []byte) (UserPromptSubmit, error) {
 	var wire struct {
-		HookEventName string `json:"hook_event_name"`
-		Cwd           string `json:"cwd"`
+		HookEventName string          `json:"hook_event_name"`
+		Cwd           string          `json:"cwd"`
+		SessionID     json.RawMessage `json:"session_id"`
 	}
 	if err := decodeEnvelope(data, &wire); err != nil {
 		return UserPromptSubmit{}, err
 	}
-	return UserPromptSubmit{Event: wire.HookEventName, Cwd: cleanCwd(wire.Cwd)}, nil
+	return UserPromptSubmit{Event: wire.HookEventName, Cwd: cleanCwd(wire.Cwd), SessionID: textOf(wire.SessionID)}, nil
 }
 
 // SessionStart is what is kept of the JSON a SessionStart hook receives: the event's name and the
@@ -47,6 +51,8 @@ type SessionStart struct {
 	// Cwd is the session's working directory as a cleaned absolute path, or empty when the
 	// input has none or it is not an absolute path.
 	Cwd string
+	// SessionID is session_id when it is text, and empty otherwise, as for UserPromptSubmit.
+	SessionID string
 }
 
 // DecodeSessionStart reads a SessionStart hook's stdin by the rules DecodeUserPromptSubmit reads
@@ -54,13 +60,14 @@ type SessionStart struct {
 // a relative cwd read as missing, and a field it reads of the wrong type an error.
 func DecodeSessionStart(data []byte) (SessionStart, error) {
 	var wire struct {
-		HookEventName string `json:"hook_event_name"`
-		Cwd           string `json:"cwd"`
+		HookEventName string          `json:"hook_event_name"`
+		Cwd           string          `json:"cwd"`
+		SessionID     json.RawMessage `json:"session_id"`
 	}
 	if err := decodeEnvelope(data, &wire); err != nil {
 		return SessionStart{}, err
 	}
-	return SessionStart{Event: wire.HookEventName, Cwd: cleanCwd(wire.Cwd)}, nil
+	return SessionStart{Event: wire.HookEventName, Cwd: cleanCwd(wire.Cwd), SessionID: textOf(wire.SessionID)}, nil
 }
 
 // PreToolUse is what is kept of the JSON a PreToolUse hook receives: the event's name, the
@@ -174,6 +181,16 @@ func decodeEnvelope(data []byte, wire any) error {
 		return fmt.Errorf("parse hook input: %w", err)
 	}
 	return nil
+}
+
+// textOf is the text a JSON value holds, or "" when it holds anything else or is missing: a field read
+// this way never makes the input undecodable.
+func textOf(raw json.RawMessage) string {
+	var s string
+	if len(raw) == 0 || json.Unmarshal(raw, &s) != nil {
+		return ""
+	}
+	return s
 }
 
 // cleanCwd returns cwd cleaned when it is absolute and "" otherwise, so dot segments, repeated

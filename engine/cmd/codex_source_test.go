@@ -144,7 +144,7 @@ func TestCodexSourceProcesses(t *testing.T) {
 			"PreToolUse":       gateInput(t, w.repo, "session-1", "mcp__longterm-mem__query", queryArgs("proj-1")),
 			"PostToolUse":      postToolUseInput(t, w.repo, "mcp__engram__mem_search", queryArgs("proj-1"), map[string]any{"text": "response-content-canary"}),
 			"SessionStart":     sessionStartInput(t, w.repo, "startup"),
-			"UserPromptSubmit": hookInput(t, w.repo, "session-1", "p"),
+			"UserPromptSubmit": hookInput(t, w.repo, "", "p"), // no session id: a second run of one session is silent (S19)
 		} {
 			t.Run(event, func(t *testing.T) {
 				before := w.stateSnapshot()

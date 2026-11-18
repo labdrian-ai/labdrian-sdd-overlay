@@ -1282,14 +1282,22 @@ gentle-ai-overlay projection hook --event UserPromptSubmit|PreToolUse|SessionSta
     and for the project's procedural skills lock, each with a three-second deadline, all at once. The line
     only informs; the gate is unchanged. Silent when no workflow is bound, and for a binding or
     workflow it cannot follow, a closed one, a store it cannot read, or input it cannot use (the next
-    prompt warns about those); read-only, it never removes a binding. Each UserPromptSubmit keeps its
+    prompt warns about those); it never removes a binding. When the input names a session it also
+    records that the session's context was cut, so the next UserPromptSubmit of the session adds its block
+    again (below); its output does not depend on that. Each UserPromptSubmit that adds a block keeps its
     one-line memory plan, so a workflow bound or narrowed in the middle of a session is still seen.
     UserPromptSubmit: put the workflow the repository is bound to (see `workflow bind`) into the session's
     context, so a new or restarted session is told the same thing as the last one. PreToolUse: gate a tool
     call against that workflow (below).
-    Input: the hook JSON on stdin, at most 1 MiB. Only hook_event_name and cwd are read (cwd only when
-    absolute, else the process's working directory is used). The session id and the prompt are
-    ignored, so the output depends on neither.
+    Input: the hook JSON on stdin, at most 1 MiB. Only hook_event_name, cwd and session_id are read (cwd only when
+    absolute, else the process's working directory is used; session_id only when it is text). The prompt is
+    ignored, so the block depends on it no more than it did. The session id decides only whether the block is
+    added again: UserPromptSubmit adds the block to a session only when its bytes differ from the last block it
+    added to that session (S19), always on the session's first prompt and on the first one after SessionStart
+    (start, resume, clear or compact). The last block is kept as a SHA-256, one line for each change, in
+    `<state home>/labdrian/projection-prompt/<sha256 of the session>/last` (0700 directories, 0600 file, no
+    cleanup). A prompt with no session id, a store that cannot be read or written, a warning, and the note of a
+    closed workflow (which repeats until the binding is removed) are printed as they always were.
     Output: nothing, or exactly one JSON object,
     {"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","additionalContext":"..."},"systemMessage":"..."},
     with either part left out when it is empty. additionalContext (at most 16 KiB, the same bytes for

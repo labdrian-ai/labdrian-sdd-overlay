@@ -167,7 +167,8 @@ func (w phase7World) bindRunning(project, wf, profile string, stages ...string) 
 // promptHook is what Claude Code runs when the user submits a prompt from cwd.
 func (w phase7World) promptHook(cwd string) phase7Run {
 	w.t.Helper()
-	return w.engine(w.dir, hookInput(w.t, cwd, "session-1", "please continue with the task"), "projection", "hook", "--event", "UserPromptSubmit")
+	// No session id, so the hook keeps nothing of its own (S19) and every call is a first prompt.
+	return w.engine(w.dir, hookInput(w.t, cwd, "", "please continue with the task"), "projection", "hook", "--event", "UserPromptSubmit")
 }
 
 // toolHook is what Claude Code runs before the session uses a tool from cwd.
@@ -638,6 +639,8 @@ func phase7Restart(t *testing.T, binary string) {
 	}
 	for name, cwd := range map[string]string{"the main checkout": w.repo, "a linked worktree": worktree, "a subdirectory of it": deeper} {
 		for _, session := range []string{"session-b", "session-c"} {
+			// A session of its own for each directory: one session repeating a block is silent (S19).
+			session += "-" + strings.ReplaceAll(name, " ", "-")
 			r := w.engine(w.dir, hookInput(t, cwd, session, "a later prompt in "+session), "projection", "hook", "--event", "UserPromptSubmit")
 			if r.stdout != first.stdout || r.code != 0 || r.stderr != "" {
 				t.Errorf("a new process in %s (%s): exit %d, stderr %q, stdout\n%s\nwant the bytes of the first process\n%s", name, session, r.code, r.stderr, r.stdout, first.stdout)

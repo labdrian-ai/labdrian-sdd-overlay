@@ -46,14 +46,18 @@ package main
 //     (a real error, not an absent binding), and so is a recovered panic (the
 //     warning is sanitized and short; the full text goes to stderr).
 //
-// The PreToolUse gate is strictly read-only. UserPromptSubmit only reads, with one
-// exception: when the bound workflow is closed it removes the binding, best effort, only if it is still the binding it read. The
+// The PreToolUse gate is strictly read-only. UserPromptSubmit only reads, with two
+// exceptions: when the bound workflow is closed it removes the binding, best effort, only if it is still the binding it read;
+// and for a prompt that names a session it keeps the hash of the last block it added to it (S19, state_stores.go),
+// so the same block is not added again, and SessionStart records that the session was cut, so it is added again after one. The
 // note it prints says what the removal did: removed, failed (and that
 // 'labdrian workflow unbind' finishes it), or left alone. It runs no subprocess and makes no network call:
 // the repository is found by walking the filesystem, as the binding verbs do
 // (engine/gitfs).
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"strings"
@@ -226,9 +230,51 @@ func userPromptSubmit(d deps, stdin io.Reader, processCwd string) []byte {
 		if err != nil {
 			return nil
 		}
-		return out
+		if outcome.Result.Warning != "" || outcome.Result.Unbind {
+			// A warning is always said, and so is the note of a closed workflow, which says it repeats on every
+			// prompt until the binding is removed. Neither is recorded as the last block.
+			return out
+		}
+		return addOncePerChange(in.SessionID, out)
 	}
 	return nil
+}
+
+// addOncePerChange is the block of a session's prompt as it is printed: the block when it differs from the last
+// one added to the session (and then it is recorded as the last), nothing when it is the same one (S19). A
+// prompt with no session, and a store that cannot be read or written, print the block, as they always did:
+// the hook never says less than it would without the store, and never fails the prompt for it.
+func addOncePerChange(session string, block []byte) []byte {
+	if session == "" || len(block) == 0 {
+		return block
+	}
+	store, err := newPromptStore()
+	if err != nil {
+		return block
+	}
+	sum := sha256.Sum256(block)
+	hash := hex.EncodeToString(sum[:])
+	last, err := store.last(session)
+	if err != nil {
+		return block
+	}
+	if last == hash {
+		return nil
+	}
+	_ = store.record(session, hash) // best effort: a block that was not recorded is printed again, never lost.
+	return block
+}
+
+// forgetLastBlock records that the session's context was cut (SessionStart fires on start, resume, clear and
+// compact), so its next prompt adds the block again. Best effort and silent: SessionStart's output does not
+// depend on it.
+func forgetLastBlock(session string) {
+	if session == "" {
+		return
+	}
+	if store, err := newPromptStore(); err == nil {
+		_ = store.reset(session)
+	}
 }
 
 // sessionStart does the SessionStart hook's work (C23 M6) and returns what it prints on stdout:
@@ -236,7 +282,8 @@ func userPromptSubmit(d deps, stdin io.Reader, processCwd string) []byte {
 // additionalContext, or nothing. Every case with no block to give is silent: unusable input,
 // another event's input, a directory outside every repository, nothing bound, and a binding,
 // workflow or store that cannot be followed or read, which the prompt hook warns about on the
-// session's first prompt. It reads and never writes: the binding of a closed workflow is left for
+// session's first prompt. Its one write, for an input that names a session, is the reset of that
+// session's last block (S19), which its output does not depend on: the binding of a closed workflow is left for
 // the prompt hook to remove.
 func sessionStart(d deps, stdin io.Reader, processCwd string) []byte {
 	data, err := io.ReadAll(io.LimitReader(stdin, hookwire.MaxEnvelopeBytes+1))
@@ -250,6 +297,7 @@ func sessionStart(d deps, stdin io.Reader, processCwd string) []byte {
 	if in.Event != "" && in.Event != hookwire.EventSessionStart {
 		return nil
 	}
+	forgetLastBlock(in.SessionID)
 	block := sessionInstructions(d, processCwd)(in.Cwd)
 	out, err := hookwire.SessionStartReply{Context: block}.Encode()
 	if err != nil {

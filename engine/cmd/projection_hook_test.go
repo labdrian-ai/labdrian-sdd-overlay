@@ -16,7 +16,9 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"strconv"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -166,6 +168,9 @@ func (e hookEnv) running(t *testing.T, project, wf, profile string, stages ...st
 	mustBindOK(t, e.repo, project, wf)
 }
 
+// hookSessions numbers the sessions of hookWith.
+var hookSessions atomic.Int64
+
 // hook runs the hook for the repository at cwd, as Claude Code would.
 func (e hookEnv) hook(t *testing.T, cwd string) hookRun {
 	t.Helper()
@@ -175,7 +180,9 @@ func (e hookEnv) hook(t *testing.T, cwd string) hookRun {
 // hookWith is hook over the deps the test gives.
 func (e hookEnv) hookWith(d deps, t *testing.T, cwd string) hookRun {
 	t.Helper()
-	return runProjectionArgsWith(d, hookArgs, hookInput(t, cwd, "session-1", "a prompt"), e.dir)
+	// Each call is the first prompt of a session of its own, as the calls of these tests were before the hook
+	// kept the last block of a session (S19); projection_prompt_once_test.go says what a session repeats.
+	return runProjectionArgsWith(d, hookArgs, hookInput(t, cwd, "session-"+strconv.Itoa(int(hookSessions.Add(1))), "a prompt"), e.dir)
 }
 
 // snapshotContents lists every path under root with the SHA-256 of its content
@@ -734,8 +741,9 @@ func TestProjectionHookChangesNothingForAnOpenWorkflow(t *testing.T) {
 			mustBindOK(t, e.repo, "proj-1", "wf-1")
 
 			contents, tree := snapshotContents(t, e.state), snapshotTree(t, e.state)
+			// A prompt with no session id: the hook then keeps nothing of its own (S19), so it still reads only.
 			for i := 0; i < 3; i++ {
-				if msg := decodeHookOutput(t, e.hook(t, e.repo)); msg.Context == "" {
+				if msg := decodeHookOutput(t, runProjectionArgsWith(e.deps, hookArgs, `{"hook_event_name":"UserPromptSubmit","cwd":`+quote(e.repo)+`}`, e.dir)); msg.Context == "" {
 					t.Fatalf("call %d: no context for a %s workflow", i, status)
 				}
 			}
