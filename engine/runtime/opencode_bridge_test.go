@@ -1,14 +1,20 @@
 package runtime_test
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/enginetest"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/hookwire"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/repotest"
 )
 
 // The hook bridge (S10) hands each OpenCode event to the engine command that answers the same event
@@ -411,6 +417,128 @@ console.log(JSON.stringify(thrown));`)
 	if inputs, _ := calls[1].Stdin["tool_input"].(map[string]any); inputs["query"] != "q" {
 		t.Errorf("the inner call keeps its query, got %#v", inputs)
 	}
+}
+
+// L115 left the plugin's deny path for an inner read unobserved: the model refused the unscoped call.
+// This runs the plugin over the real engine, with a workflow of project proj-1 bound to the repository
+// the node process runs in, and sends the inner memorycard read of a Code Mode execute without a model:
+// the reads that name no project or another project throw the reason the same engine binary prints for
+// that envelope, the read of the workflow's own project and the outer execute go ahead (S9, L117).
+func TestOpenCodeBridgeThrowsTheEnginesReasonForADeniedInnerMemorycardRead(t *testing.T) {
+	requireNode(t)
+	binary := enginetest.Binary(t)
+	home, state := t.TempDir(), t.TempDir()
+	// The workflow is created from a directory outside any repository: the project it names is that
+	// directory's basename.
+	workDir := filepath.Join(t.TempDir(), "proj-1")
+	if err := os.MkdirAll(workDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	repo := repotest.Repo(t, "proj-1")
+	env := []string{"HOME=" + home, "XDG_STATE_HOME=" + state, "PATH=" + t.TempDir()}
+	enginetest.BindRunning(t, binary, env, workDir, repo, "proj-1", "wf-1", "sdd")
+	before := stateContents(t, state)
+	pluginPath := bridgeFixture(t)
+
+	// reasonFor is what the engine prints for the envelope the plugin builds from call.
+	reasonFor := func(call map[string]any) string {
+		t.Helper()
+		stdin, err := json.Marshal(map[string]any{
+			"hook_event_name": eventPreToolUse, "session_id": call["sessionID"], "cwd": repo,
+			"tool_name": call["tool"], "tool_input": call["input"], "tool_use_id": call["id"],
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		command := exec.Command(binary, "projection", "hook", "--event", eventPreToolUse, "--source", "opencode")
+		command.Dir, command.Env, command.Stdin = repo, env, bytes.NewReader(stdin)
+		out, err := command.Output()
+		if err != nil {
+			t.Fatalf("engine hook: %v", err)
+		}
+		var answer struct {
+			Specific struct {
+				Decision string `json:"permissionDecision"`
+				Reason   string `json:"permissionDecisionReason"`
+			} `json:"hookSpecificOutput"`
+		}
+		if err := json.Unmarshal(out, &answer); err != nil && len(bytes.TrimSpace(out)) > 0 {
+			t.Fatalf("decode the engine's answer %q: %v", out, err)
+		}
+		if answer.Specific.Decision != "deny" {
+			return ""
+		}
+		if answer.Specific.Reason == "" {
+			t.Fatalf("the engine denied without a reason: %q", out)
+		}
+		return answer.Specific.Reason
+	}
+	cases := []struct {
+		name string
+		call map[string]any
+		deny bool
+	}{
+		{"the outer execute", map[string]any{"tool": "execute", "sessionID": "ses_1", "id": "call_1", "input": map[string]any{"code": "await memorycard_mem_search({ query: 'q' })"}}, false},
+		{"a read with no project", map[string]any{"tool": "memorycard_mem_search", "sessionID": "ses_1", "id": "call_2", "input": map[string]any{"query": "q"}}, true},
+		{"a read of another project", map[string]any{"tool": "memorycard_mem_search", "sessionID": "ses_1", "id": "call_3", "input": map[string]any{"query": "q", "project": "other"}}, true},
+		{"a read of the workflow's project", map[string]any{"tool": "memorycard_mem_search", "sessionID": "ses_1", "id": "call_4", "input": map[string]any{"query": "q", "project": "proj-1"}}, false},
+	}
+	calls := make([]map[string]any, len(cases))
+	want := make([]string, len(cases))
+	for i, c := range cases {
+		calls[i], want[i] = c.call, reasonFor(c.call)
+		if c.deny == (want[i] == "") {
+			t.Fatalf("%s: the engine's own answer should deny=%v, its reason is %q", c.name, c.deny, want[i])
+		}
+	}
+	callsJSON, err := json.Marshal(calls)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	out := runPluginWithEnv(t, pluginPath, []string{engineEnvironment + "=" + binary, "HOME=" + home, "XDG_STATE_HOME=" + state}, fmt.Sprintf(`process.chdir(%q);
+const thrown = [];
+for (const call of %s) {
+  try { await beforeHook(call); thrown.push(null); } catch (error) { thrown.push({ name: error.name, message: error.message, fields: error.fields }); }
+}
+console.log(JSON.stringify(thrown));`, repo, callsJSON))
+	var got []*struct {
+		Name    string         `json:"name"`
+		Message string         `json:"message"`
+		Fields  map[string]any `json:"fields"`
+	}
+	if err := json.Unmarshal(out, &got); err != nil || len(got) != len(cases) {
+		t.Fatalf("decode result: %v\nraw=%q", err, out)
+	}
+	for i, c := range cases {
+		switch {
+		case !c.deny && got[i] != nil:
+			t.Errorf("%s should go ahead, got %#v", c.name, got[i])
+		case c.deny && (got[i] == nil || got[i].Name != "Tool.Error" || got[i].Message != want[i] || got[i].Fields["message"] != want[i]):
+			t.Errorf("%s should throw a Tool.Error with the engine's reason %q, got %#v", c.name, want[i], got[i])
+		}
+	}
+	if !reflect.DeepEqual(before, stateContents(t, state)) {
+		t.Error("the gate changed the state home")
+	}
+}
+
+// stateContents is the content of every file under root, by path.
+func stateContents(t *testing.T, root string) map[string]string {
+	t.Helper()
+	files := map[string]string{}
+	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
+		if err != nil || entry.IsDir() {
+			return err
+		}
+		data, err := os.ReadFile(path)
+		files[path] = string(data)
+		return err
+	})
+	if err != nil {
+		t.Fatalf("read the state home: %v", err)
+	}
+	return files
 }
 
 // B4 (L99, L100, L107): on OpenCode the reviewer cannot run git, so on a `subagent` launch of the agent

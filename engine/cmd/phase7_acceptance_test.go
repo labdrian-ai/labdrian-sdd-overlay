@@ -48,6 +48,7 @@ import (
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/capability"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/capabilitytest"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/enginetest"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflowprofile"
 )
@@ -156,12 +157,7 @@ func (w phase7World) goalPath(project, wf string) string {
 // repository to it, every step in its own process.
 func (w phase7World) bindRunning(project, wf, profile string, stages ...string) {
 	w.t.Helper()
-	w.createWorkflow(project, wf, profile)
-	w.verb(project, wf, "start")
-	for _, stage := range stages {
-		w.verb(project, wf, "stage", "--stage", stage)
-	}
-	w.engine(w.repo, "", "workflow", "bind", "--project", project, "--workflow", wf).must(w.t, "workflow bind")
+	enginetest.BindRunning(w.t, w.binary, w.env(), w.dir, w.repo, project, wf, profile, stages...)
 }
 
 // promptHook is what Claude Code runs when the user submits a prompt from cwd.

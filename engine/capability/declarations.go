@@ -289,6 +289,7 @@ var declarations = []Declaration{
 				"runtime:TestMemorycardPluginPutsTheMemorycardContextOnTheSystemPromptOfANewSession",
 				"runtime:TestOpenCodeBridgeDeniesACallTheEngineDeniesWithToolError",
 				"runtime:TestOpenCodeBridgeJudgesTheInnerMemorycardCallOfACodeModeExecute",
+				"runtime:TestOpenCodeBridgeThrowsTheEnginesReasonForADeniedInnerMemorycardRead",
 			),
 			partial(Skills,
 				"labdrian apply copies no skill for OpenCode, which reads the global .claude/skills: a copy in its own directory would shadow that one. Install, update and status only report labdrian skills found where OpenCode reads first, and never write or remove one (tested on a fixture overlay and a sandbox home, never the real skills). A live OpenCode 1.18.31 session on 2026-09-30 discovered project skills under .agents/skills and .claude/skills (recorded, not tested). No test observes OpenCode loading a skill.",
