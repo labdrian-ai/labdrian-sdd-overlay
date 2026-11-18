@@ -2,6 +2,7 @@ package opencodeprompt
 
 import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/contract"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/roles"
 )
 
 // MalformedContractError says that the text of the contract at Path does not parse. It names the
@@ -31,6 +32,10 @@ func (e *MalformedContractError) Unwrap() error { return e.Err }
 // the plugin), then the anti-generic-design guard, then the oo-quality contract when the overlay
 // has one. The unconditional contracts keep that order whatever the optional file holds.
 //
+// After the contracts it adds, for each role of the vocabulary and each skill its body names (roles.SkillsNamed),
+// an entry for that skill's SKILL.md that applies to the launches of that role only: the roles
+// of OpenCode have no skill tool, so the path reaches them under the launch header.
+//
 // The source is asked in that order and no further after a failure. A source that cannot read a
 // contract fails Derive with its own error; a contract that cannot be parsed fails it with a
 // *MalformedContractError, whichever contract it is.
@@ -58,6 +63,23 @@ func Derive(source ContractSource) (PromptConfig, error) {
 		contracts, err = withContract(contracts, OOQualityContractPath, ooText)
 		if err != nil {
 			return PromptConfig{}, err
+		}
+	}
+	for _, role := range roles.Vocabulary {
+		body, present, err := source.RoleBody(role)
+		if err != nil {
+			return PromptConfig{}, err
+		}
+		if !present {
+			continue
+		}
+		for _, id := range roles.SkillsNamed(body) {
+			contracts = append(contracts, ContractConfig{
+				ContractPath:   SkillPath(id),
+				IncludedPhases: []string{string(role)},
+				ExcludedPhases: []string{},
+				InjectionPoint: contract.DefaultInjectionPoint,
+			})
 		}
 	}
 	return PromptConfig{

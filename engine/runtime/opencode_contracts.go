@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/assets"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/roles"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime/core"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime/opencodeprompt"
 )
@@ -91,6 +92,23 @@ func (c *overlayContracts) OOQuality() (string, bool, error) {
 		return "", false, err
 	}
 	content, err := os.ReadFile(contractFile(root, opencodeprompt.OOQualityContractPath))
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", false, nil
+		}
+		return "", false, err
+	}
+	return string(content), true, nil
+}
+
+// RoleBody is the source of a role in the checkout, roles/<role>/body.md. A role with no file there
+// has no body, which is not an error; any other failure to read it is one.
+func (c *overlayContracts) RoleBody(role roles.Role) (string, bool, error) {
+	root, err := c.resolve()
+	if err != nil {
+		return "", false, err
+	}
+	content, err := os.ReadFile(contractFile(root, roles.BodyPath(role)))
 	if err != nil {
 		if os.IsNotExist(err) {
 			return "", false, nil

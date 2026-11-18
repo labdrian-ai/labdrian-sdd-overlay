@@ -23,6 +23,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	vocabulary "github.com/labdrian-ai/labdrian-sdd-overlay/engine/roles"
 )
 
 // Artifact is one file the generator emits: where it goes under the root of the repository, as a
@@ -66,6 +68,10 @@ func build(repoRoot string) (table []Artifact, problems []*sourceError) {
 		if !ok || modelsErr != nil {
 			continue
 		}
+		if err := checkSkillsNamed(repoRoot, r, data); err != nil {
+			problems = append(problems, &sourceError{path: r.sourcePath(), verb: "projecting", err: err})
+			continue
+		}
 		files, err := r.project(data, models)
 		if err != nil {
 			problems = append(problems, &sourceError{path: r.sourcePath(), verb: "projecting", err: err})
@@ -82,6 +88,9 @@ func build(repoRoot string) (table []Artifact, problems []*sourceError) {
 	// The foreman comes after the eight roles, with its Claude file and its OpenCode file only (S5).
 	if data, ok := source(foreman); ok && modelsErr == nil {
 		file, err := foreman.projectClaude(data, models)
+		if err == nil {
+			err = checkSkillsNamed(repoRoot, foreman, data)
+		}
 		if err != nil {
 			problems = append(problems, &sourceError{path: foreman.sourcePath(), verb: "projecting", err: err})
 		} else {
@@ -105,6 +114,19 @@ func build(repoRoot string) (table []Artifact, problems []*sourceError) {
 		problems = append(problems, &sourceError{path: modelsPath, verb: verb, err: modelsErr})
 	}
 	return table, problems
+}
+
+// checkSkillsNamed fails when the body of the role names a skill, in the form "`<id>` skill", whose
+// SKILL.md is not in the repository. A role on OpenCode has no skill tool, so the adapter hands it
+// that file by path (roles.SkillsNamed); the body and the file have to agree before any file is written.
+func checkSkillsNamed(repoRoot string, r role, body string) error {
+	for _, id := range vocabulary.SkillsNamed(body) {
+		path := "skills/" + id + "/SKILL.md"
+		if info, err := os.Stat(filepath.Join(repoRoot, filepath.FromSlash(path))); err != nil || !info.Mode().IsRegular() {
+			return fmt.Errorf("%s names the skill `%s` but %s is not in the repository: name a skill that has a directory under skills/, or remove the mention", r.sourcePath(), id, path)
+		}
+	}
+	return nil
 }
 
 // Artifacts is the table of what the generator emits for the repository at repoRoot, in the order

@@ -1,5 +1,7 @@
 package opencodeprompt
 
+import "github.com/labdrian-ai/labdrian-sdd-overlay/engine/roles"
+
 // The paths the contracts are known by in a PromptConfig, relative to the overlay and always
 // written with forward slashes: they are names the plugin matches, not locations on a disk.
 const (
@@ -22,4 +24,13 @@ type ContractSource interface {
 	// OOQuality is the text of the oo-quality contract. present is false when the overlay has
 	// none, which is not an error; an error means it has one and could not read it.
 	OOQuality() (text string, present bool, err error)
+	// RoleBody is the text of the source of a role, roles/<role>/body.md. present is false when the
+	// overlay has none for that role, which is not an error (the vocabulary has a role with no
+	// body); an error means it has one and could not read it. Derive asks for every role of the
+	// vocabulary, after the contracts.
+	RoleBody(role roles.Role) (text string, present bool, err error)
 }
+
+// SkillPath is the SKILL.md of a skill, relative to the overlay and written with forward slashes,
+// as the contract paths are.
+func SkillPath(id string) string { return "skills/" + id + "/SKILL.md" }

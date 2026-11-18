@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/agentgen"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/roles"
 )
 
 // memoryLine is the second line of the core prefix: the one that sends a role to memorycard for its
@@ -98,6 +99,23 @@ func seededRoot(t *testing.T) string {
 	})
 	if err != nil {
 		t.Fatalf("copying the role sources: %v", err)
+	}
+	// Each skill a body names must be in the repository, so the root has a SKILL.md for each (empty: the
+	// generator checks that the file is there and reads nothing from it).
+	sources := []string{"foreman"}
+	for _, r := range wantRoles {
+		sources = append(sources, r.name)
+	}
+	for _, name := range sources {
+		for _, id := range roles.SkillsNamed(readText(t, filepath.Join(root, "roles", name, "body.md"))) {
+			stub := filepath.Join(root, "skills", id, "SKILL.md")
+			if err := os.MkdirAll(filepath.Dir(stub), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(stub, nil, 0o644); err != nil {
+				t.Fatal(err)
+			}
+		}
 	}
 	// The model ids of the files come from the tier table of the role-chain reference.
 	table := readText(t, filepath.Join(repoRoot(t), filepath.FromSlash(modelsRel)))
