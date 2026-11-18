@@ -369,14 +369,15 @@ func TestStaticcheckSkipsADirectoryThatHoldsNoGoFile(t *testing.T) {
 	log := bin(t, map[string]stub{"staticcheck": {}})
 	// A package whose files a commit deleted, leaving only a subpackage: staticcheck refuses such a
 	// directory, so it is no package of the copy.
-	root := copyOf(t, "mod/emptied/sub/z.go", "mod/emptied/README.md")
+	// The package a[1] has a glob metacharacter in its name: it is still read as a directory.
+	root := copyOf(t, "mod/emptied/sub/z.go", "mod/emptied/README.md", "mod/a[1]/w.go")
 
-	_, err := tools(t).Staticcheck(root, "mod", []string{"./a", "./emptied", "./emptied/sub"})
+	_, err := tools(t).Staticcheck(root, "mod", []string{"./a", "./emptied", "./emptied/sub", "./a[1]"})
 
 	if err != nil {
 		t.Fatalf("Staticcheck error = %v, want none", err)
 	}
-	want := []string{filepath.Join(root, "mod") + "|./a ./emptied/sub"}
+	want := []string{filepath.Join(root, "mod") + "|./a ./emptied/sub ./a[1]"}
 	if ran := calls(t, log); !reflect.DeepEqual(ran, want) {
 		t.Errorf("staticcheck ran as %q, want %q: a directory with no .go file is not asked for", ran, want)
 	}

@@ -285,8 +285,16 @@ func isFile(p string) bool {
 
 // holdsGoFile says whether the directory p holds a .go file of its own.
 func holdsGoFile(p string) bool {
-	matches, err := filepath.Glob(filepath.Join(p, "*.go"))
-	return err == nil && len(matches) > 0
+	entries, err := os.ReadDir(p)
+	if err != nil {
+		return false
+	}
+	for _, entry := range entries {
+		if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".go") {
+			return true
+		}
+	}
+	return false
 }
 
 // ExecRunner is the process adapter of Runner: it starts the program of the PATH of the process in dir under env, nothing
