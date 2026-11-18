@@ -91,14 +91,6 @@ skill-improver/SKILL.md custom
 skill-improver/references/skill-style-guide.md custom
 skill-registry/SKILL.md custom
 _shared/SKILL.md custom
-_shared/engram-convention.md managed
-_shared/openspec-convention.md managed
-_shared/persistence-contract.md managed
-_shared/review-ledger-contract.md managed
-_shared/sdd-orchestrator-workflow.md managed
-_shared/sdd-phase-common.md managed
-_shared/sdd-status-contract.md managed
-_shared/skill-resolver.md managed
 roadmap-maker/assets/roadmap-template.md custom
 anti-generic-design/references/critique-template.md custom
 anti-generic-design/references/example-output.md custom
