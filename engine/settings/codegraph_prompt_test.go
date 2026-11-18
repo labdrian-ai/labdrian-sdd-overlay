@@ -21,7 +21,7 @@ const (
 func codegraphSettings(command string) string {
 	return `{"hooks":{"UserPromptSubmit":[` +
 		`{"hooks":[{"type":"command","command":"first-tool"}]},` +
-		`{"matcher":"*","hooks":[{"type":"command","command":"` + command + `","timeout":30,"statusMessage":"cg"}]},` +
+		`{"matcher":"*","hooks":[{"type":"command","command":"` + strings.ReplaceAll(command, `\`, `\\`) + `","timeout":30,"statusMessage":"cg"}]},` +
 		`{"hooks":[{"type":"command","command":"last-tool"}]}]}}`
 }
 
@@ -190,7 +190,7 @@ func TestCodegraphPromptStateNamesBareWrappedAndAbsent(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			if got := settings.CodegraphPrompt(mustParse(t, c.text).Root(), documentBinary); got != c.want {
+			if got := settings.CodegraphPrompt(mustParse(t, c.text).Root()); got != c.want {
 				t.Errorf("CodegraphPrompt = %v, want %v", got, c.want)
 			}
 		})

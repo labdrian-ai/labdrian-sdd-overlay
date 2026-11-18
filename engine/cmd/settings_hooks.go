@@ -82,7 +82,7 @@ func noticeForeignOutputStyle(p process, settingsPath string) {
 // install is about to replace. A file that cannot be read says no: the install reads it again and reports it.
 func codegraphPromptIsBare(settingsPath, hookCommand string) bool {
 	doc, _, err := (settingsfile.File{Path: settingsPath}).Read()
-	return err == nil && settings.CodegraphPrompt(doc.Root(), hookCommand) == settings.CodegraphPromptBare
+	return err == nil && settings.CodegraphPrompt(doc.Root()) == settings.CodegraphPromptBare
 }
 
 // noticeCodegraphPromptReplaced says on stderr that the install replaced the bare codegraph command, which
@@ -93,7 +93,7 @@ func noticeCodegraphPromptReplaced(p process, settingsPath, hookCommand string, 
 		return
 	}
 	doc, _, err := (settingsfile.File{Path: settingsPath}).Read()
-	if err != nil || settings.CodegraphPrompt(doc.Root(), hookCommand) != settings.CodegraphPromptWrapped {
+	if err != nil || settings.CodegraphPrompt(doc.Root()) != settings.CodegraphPromptWrapped {
 		return
 	}
 	fmt.Fprintln(p.stderr, "notice: "+settings.CodegraphPromptReplacedNotice(settingsPath))

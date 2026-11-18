@@ -22,6 +22,12 @@ func TestTheCodegraphPromptHookIsReportedWrapped(t *testing.T) {
 	wantCheck(t, w.check().named(t, labelCodegraphPrompt), OK, "wrapped by labdrian: task notifications do not reach codegraph")
 }
 
+func TestAWrapperOfAnotherEnginePathIsReportedWrapped(t *testing.T) {
+	w := complete(t)
+	w.editSettings(t, codegraphEntry("command -v /old/engine >/dev/null 2>&1 || exec codegraph prompt-hook; exec /old/engine codegraph-prompt-hook"))
+	wantCheck(t, w.check().named(t, labelCodegraphPrompt), OK, "wrapped by labdrian: task notifications do not reach codegraph")
+}
+
 func TestTheCodegraphPromptHookIsReportedOKWhenThereIsNoCodegraphEntry(t *testing.T) {
 	wantCheck(t, complete(t).check().named(t, labelCodegraphPrompt), OK, "no codegraph entry, nothing to wrap")
 }

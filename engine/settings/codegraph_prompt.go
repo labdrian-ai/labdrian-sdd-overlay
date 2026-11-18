@@ -1,6 +1,9 @@
 package settings
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 // The codegraph 1.2.0 installer (/codegraph) writes a UserPromptSubmit hook whose command is exactly
 // `codegraph prompt-hook`. That command has no option to skip task notifications, which are most of the
@@ -9,7 +12,9 @@ import "fmt"
 // the bare command back. The entry belongs to codegraph, not to the overlay: it is not a hookFamily (a
 // family owns whole entries by the overlay's binary and an identity token and appends the ones that are
 // missing); this step changes one exact command string and changes it back, and touches nothing else.
-// A command that merely contains the text, such as the wrapper itself, is never matched.
+// A command that merely contains the text, such as the wrapper itself, is never matched. The wrapper is
+// recognised by its shape whatever engine path it names: an old wrapper is rewritten in place to the current
+// one, restored by uninstall, and read as wrapped by status.
 
 const (
 	// codegraphPromptEvent is the event the entry sits under.
@@ -25,6 +30,52 @@ func codegraphPromptWrapper(hookCommand string) string {
 	return "command -v " + bin + " >/dev/null 2>&1 || exec " + codegraphPromptBare + "; exec " + bin + " codegraph-prompt-hook"
 }
 
+// isCodegraphPromptWrapper reports whether cmd has the shape of the wrapper for some engine path:
+// `command -v P >/dev/null 2>&1 || exec codegraph prompt-hook; exec P codegraph-prompt-hook`, with the same
+// shell word P in both places. It parses the word, so it does not depend on the path of the current engine:
+// the path can change between installs, and an old wrapper must still be found.
+func isCodegraphPromptWrapper(cmd string) bool {
+	rest, ok := strings.CutPrefix(cmd, "command -v ")
+	if !ok {
+		return false
+	}
+	word, rest := shellWord(rest)
+	return word != "" && rest == " >/dev/null 2>&1 || exec "+codegraphPromptBare+"; exec "+word+" codegraph-prompt-hook"
+}
+
+// shellWord splits from the front of s the one shell word shellQuote writes: a run of safe characters, or a
+// single-quoted string in which an embedded quote is written quote, backslash, quote, quote. It returns the
+// word as written and the rest, and an empty word when s does not begin with one.
+func shellWord(s string) (word, rest string) {
+	if s == "" {
+		return "", s
+	}
+	if s[0] != '\'' {
+		i := 0
+		for i < len(s) && isShellSafe(rune(s[i])) {
+			i++
+		}
+		return s[:i], s[i:]
+	}
+	for i := 1; i < len(s); i++ {
+		if s[i] != '\'' {
+			continue
+		}
+		if strings.HasPrefix(s[i:], `'\''`) {
+			i += 3
+			continue
+		}
+		return s[:i+1], s[i+1:]
+	}
+	return "", s
+}
+
+// commandOf is the command of a hook object, empty when it has none.
+func commandOf(h map[string]interface{}) string {
+	cmd, _ := h["command"].(string)
+	return cmd
+}
+
 // CodegraphPromptState is what the settings say about the codegraph prompt hook.
 type CodegraphPromptState int
 
@@ -37,16 +88,17 @@ const (
 	CodegraphPromptBare
 )
 
-// CodegraphPrompt reports the state of the codegraph prompt hook in root for the engine at hookCommand.
-// A bare command anywhere wins: it is what a codegraph reinstall leaves, and it is what is to be fixed.
-func CodegraphPrompt(root map[string]interface{}, hookCommand string) CodegraphPromptState {
-	wrapper := codegraphPromptWrapper(hookCommand)
+// CodegraphPrompt reports the state of the codegraph prompt hook in root. A wrapper of any engine path
+// counts as wrapped. A bare command anywhere wins: it is what a codegraph reinstall leaves, and it is what
+// is to be fixed.
+func CodegraphPrompt(root map[string]interface{}) CodegraphPromptState {
 	state := CodegraphPromptAbsent
 	for _, h := range promptHookObjects(root) {
-		switch h["command"] {
-		case codegraphPromptBare:
+		cmd := commandOf(h)
+		switch {
+		case cmd == codegraphPromptBare:
 			return CodegraphPromptBare
-		case wrapper:
+		case isCodegraphPromptWrapper(cmd):
 			state = CodegraphPromptWrapped
 		}
 	}
@@ -83,19 +135,22 @@ func promptHookObjects(root map[string]interface{}) []map[string]interface{} {
 // It reports whether it changed anything.
 func wrapCodegraphPrompt(hooks map[string]interface{}, hookCommand string) bool {
 	wrapper := codegraphPromptWrapper(hookCommand)
-	return rewriteCodegraphPrompt(hooks, codegraphPromptBare, wrapper)
+	return rewriteCodegraphPrompt(hooks, func(cmd string) bool {
+		return cmd == codegraphPromptBare || (cmd != wrapper && isCodegraphPromptWrapper(cmd))
+	}, wrapper)
 }
 
-// restoreCodegraphPrompt writes the bare command back in place of the wrapper of the engine at hookCommand,
-// and reports whether it changed anything.
-func restoreCodegraphPrompt(hooks map[string]interface{}, hookCommand string) bool {
-	return rewriteCodegraphPrompt(hooks, codegraphPromptWrapper(hookCommand), codegraphPromptBare)
+// restoreCodegraphPrompt writes the bare command back in place of a wrapper of any engine path, and reports
+// whether it changed anything.
+func restoreCodegraphPrompt(hooks map[string]interface{}) bool {
+	return rewriteCodegraphPrompt(hooks, isCodegraphPromptWrapper, codegraphPromptBare)
 }
 
-// rewriteCodegraphPrompt replaces the command from with to in the first hook object that holds it, in
-// place, and removes every other hook object that holds from while one that holds to stands, so the list
-// ends with one command to and none from. An entry left with no hook object is removed.
-func rewriteCodegraphPrompt(hooks map[string]interface{}, from, to string) bool {
+// rewriteCodegraphPrompt replaces a command that isFrom accepts with to in the first hook object that holds
+// one, in place, and removes every other hook object that holds one while a hook object that holds to stands,
+// so the list ends with one command to and none that isFrom accepts. An entry left with no hook object is
+// removed.
+func rewriteCodegraphPrompt(hooks map[string]interface{}, isFrom func(string) bool, to string) bool {
 	entries, ok := hooks[codegraphPromptEvent].([]interface{})
 	if !ok {
 		return false
@@ -119,7 +174,7 @@ func rewriteCodegraphPrompt(hooks map[string]interface{}, from, to string) bool 
 		dropped := false
 		for _, h := range inner {
 			hm, isHook := h.(map[string]interface{})
-			if !isHook || hm["command"] != from {
+			if !isHook || !isFrom(commandOf(hm)) {
 				outInner = append(outInner, h)
 				continue
 			}

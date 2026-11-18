@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 )
 
@@ -153,6 +154,40 @@ func TestCodegraphPromptHookSaysWhenCodegraphPrintsTooMuch(t *testing.T) {
 	p := runCodegraphHook(promptFixture(t, "ordinary_prompt.json"), f)
 	if p.out.String() != "cut" || !strings.HasPrefix(p.err.String(), "codegraph: ") || len(p.exits) != 1 || p.exits[0] != 1 {
 		t.Errorf("stdout = %q, stderr = %q, exits = %v; want the held output, one codegraph line, exit 1", p.out.String(), p.err.String(), p.exits)
+	}
+}
+
+// signalError is what execrunner returns for a program a signal ended: no exit code of its own, and the
+// wait status that names the signal.
+type signalError struct{ sig syscall.Signal }
+
+func (signalError) Error() string { return "signal: terminated" }
+func (signalError) ExitCode() int { return -1 }
+func (e signalError) Sys() any    { return syscall.WaitStatus(e.sig) }
+
+func TestCodegraphPromptHookExitsLikeAShellForASignal(t *testing.T) {
+	for sig, want := range map[syscall.Signal]int{syscall.SIGTERM: 143, syscall.SIGKILL: 137} {
+		p := runCodegraphHook(promptFixture(t, "ordinary_prompt.json"), &fakeCodegraph{err: signalError{sig}})
+		if len(p.exits) != 1 || p.exits[0] != want {
+			t.Errorf("signal %d: exits = %v, want [%d]", sig, p.exits, want)
+		}
+	}
+}
+
+func TestCodegraphPromptHookReportsTooMuchOutputBeforeAnExitCode(t *testing.T) {
+	f := &fakeCodegraph{stdout: "cut", err: errors.Join(exitCodeError(2), errCodegraphTooMuch)}
+	p := runCodegraphHook(promptFixture(t, "ordinary_prompt.json"), f)
+	if !strings.HasPrefix(p.err.String(), "codegraph: ") || len(p.exits) != 1 || p.exits[0] != 1 {
+		t.Errorf("stderr = %q, exits = %v; want one codegraph line naming the output bound and exit 1", p.err.String(), p.exits)
+	}
+}
+
+func TestCodegraphPromptHookPassesAPromptThatQuotesTheNotificationMarkThrough(t *testing.T) {
+	in := `{"hook_event_name":"UserPromptSubmit","prompt":"why does [SYSTEM NOTIFICATION - NOT USER INPUT] show up in my logs?"}`
+	f := &fakeCodegraph{stdout: "out"}
+	p := runCodegraphHook(in, f)
+	if len(f.calls) != 1 || p.out.String() != "out" {
+		t.Errorf("calls = %d, stdout = %q; a user prompt that quotes the mark must reach codegraph", len(f.calls), p.out.String())
 	}
 }
 

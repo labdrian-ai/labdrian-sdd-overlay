@@ -113,7 +113,7 @@ func removeHooks(root map[string]interface{}, hookCommand string) bool {
 	if !ok {
 		return changed
 	}
-	if restoreCodegraphPrompt(hooks, hookCommand) {
+	if restoreCodegraphPrompt(hooks) {
 		changed = true
 	}
 

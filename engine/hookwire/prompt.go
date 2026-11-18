@@ -38,14 +38,28 @@ func PromptText(data []byte) (string, bool) {
 const (
 	// taskNotificationTag opens the prompt Claude Code hands a session when a background task ends.
 	taskNotificationTag = "<task-notification>"
-	// systemNotificationMark is the line Claude Code puts at the head of an automated event it wraps
-	// in a system reminder; the text says it is not user input.
+	// systemReminderTag opens the wrapper Claude Code puts around an automated event.
+	systemReminderTag = "<system-reminder>"
+	// systemNotificationMark is the line that heads such a wrapper; the text says it is not user input.
 	systemNotificationMark = "[SYSTEM NOTIFICATION - NOT USER INPUT]"
 )
 
 // IsTaskNotification reports whether a prompt is an automated notification and not something the user
-// wrote: it starts with the task-notification tag, or it carries the system notification mark. The tag
-// is read at the start only, so a prompt that merely mentions it is not skipped.
+// wrote: it starts with the task-notification tag, or it starts with the system-reminder tag and the mark
+// is the first non-empty line after it. Both are read at the head only, so a prompt that merely quotes
+// either one is not skipped.
 func IsTaskNotification(prompt string) bool {
-	return strings.HasPrefix(prompt, taskNotificationTag) || strings.Contains(prompt, systemNotificationMark)
+	if strings.HasPrefix(prompt, taskNotificationTag) {
+		return true
+	}
+	body, wrapped := strings.CutPrefix(prompt, systemReminderTag)
+	if !wrapped {
+		return false
+	}
+	for _, line := range strings.Split(body, "\n") {
+		if line = strings.TrimSpace(line); line != "" {
+			return line == systemNotificationMark
+		}
+	}
+	return false
 }

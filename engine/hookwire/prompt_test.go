@@ -44,8 +44,11 @@ func TestIsTaskNotification(t *testing.T) {
 		want   bool
 	}{
 		{"starts with the tag", "<task-notification>\n<task-id>a</task-id>", true},
-		{"the system notice anywhere", "<system-reminder>\n[SYSTEM NOTIFICATION - NOT USER INPUT]\nx", true},
-		{"the notice after other text", "intro [SYSTEM NOTIFICATION - NOT USER INPUT] tail", true},
+		{"the system notice wrapped in a reminder", "<system-reminder>\n[SYSTEM NOTIFICATION - NOT USER INPUT]\nx", true},
+		{"blank lines before the notice line", "<system-reminder>\n\n  [SYSTEM NOTIFICATION - NOT USER INPUT]\nx", true},
+		{"a prompt that quotes the notice mid-text", "intro [SYSTEM NOTIFICATION - NOT USER INPUT] tail", false},
+		{"a quoted notice on a line of its own", "why does\n[SYSTEM NOTIFICATION - NOT USER INPUT]\nappear?", false},
+		{"a reminder whose first line is something else", "<system-reminder>\nnote\n[SYSTEM NOTIFICATION - NOT USER INPUT]\n", false},
 		{"the tag in the middle of a prompt", "please explain <task-notification> to me", false},
 		{"the tag after white space is not the start", "\n<task-notification>", false},
 		{"an ordinary prompt", "how does the merge work?", false},

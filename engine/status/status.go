@@ -482,7 +482,7 @@ func checkCodegraphPromptHook(s loadedSettings, binaryPath string) Check {
 	if c, done := s.beforeEntries(label, OK, "; nothing to wrap"); done {
 		return c
 	}
-	switch settings.CodegraphPrompt(s.root, binaryPath) {
+	switch settings.CodegraphPrompt(s.root) {
 	case settings.CodegraphPromptWrapped:
 		return Check{Label: label, Level: OK, Note: "wrapped by labdrian: task notifications do not reach codegraph"}
 	case settings.CodegraphPromptBare:
