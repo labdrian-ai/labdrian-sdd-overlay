@@ -226,6 +226,46 @@ console.log(JSON.stringify(Object.fromEntries(Object.entries(calls).map(([name, 
 	}
 }
 
+// An absolute contract path, which is what the adapter writes, is injected as the line it is, once,
+// and stripped by that exact line.
+func TestOpenCodePluginInjectsAnAbsoluteContractPathOnceAndStripsIt(t *testing.T) {
+	requireNode(t)
+	root, pluginPath := writePluginFixture(t)
+	absolute := "/overlay/skills/_shared/minimalism-contract.md"
+	config := minimalismConfig(pluginPath, root)
+	config["prompt_config"].(map[string]any)["contract_path"] = absolute
+	writeJSONFile(t, filepath.Join(root, "labdrian-runtime-parity.json"), config)
+
+	script := fmt.Sprintf(`const base = %q;
+const calls = {
+  once: { tool: %q, input: { prompt: base, %s: "sdd-tasks" } },
+  twice: { tool: %q, input: { prompt: base, %s: "sdd-tasks" } },
+};
+for (const call of Object.values(calls)) await beforeHook(call);
+await beforeHook(calls.twice);
+const stripped = { tool: %q, input: { prompt: calls.once.input.prompt, %s: "sdd-spec" } };
+await beforeHook(stripped);
+console.log(JSON.stringify({ once: calls.once.input.prompt, twice: calls.twice.input.prompt, stripped: stripped.input.prompt }));`,
+		basePromptFixture, injectedTool, agentField, injectedTool, agentField, injectedTool, agentField)
+	var got struct {
+		Once     string `json:"once"`
+		Twice    string `json:"twice"`
+		Stripped string `json:"stripped"`
+	}
+	if err := json.Unmarshal(runPlugin(t, pluginPath, script), &got); err != nil {
+		t.Fatalf("decode result: %v", err)
+	}
+	if strings.Count(got.Once, absolute) != 1 {
+		t.Fatalf("included phase should inject the absolute path once: %q", got.Once)
+	}
+	if got.Twice != got.Once {
+		t.Fatalf("a second injection should change nothing:\n%q\n%q", got.Twice, got.Once)
+	}
+	if strings.Contains(got.Stripped, absolute) {
+		t.Fatalf("excluded phase should strip the absolute path: %q", got.Stripped)
+	}
+}
+
 func TestOpenCodePluginInjectsOnlyOnTheSubagentTool(t *testing.T) {
 	requireNode(t)
 	root, pluginPath := writePluginFixture(t)

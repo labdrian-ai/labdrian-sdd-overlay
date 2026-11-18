@@ -99,7 +99,7 @@ func TestOpenCodeInstallWritesPromptConfigFromMinimalismContract(t *testing.T) {
 
 	config := readOpenCodeConfig(t, root)
 	promptConfig := config["prompt_config"].(map[string]any)
-	if promptConfig["contract_path"] != "skills/_shared/minimalism-contract.md" {
+	if !isOverlayContract(promptConfig["contract_path"], "skills/_shared/minimalism-contract.md") {
 		t.Fatalf("contract path = %#v", promptConfig["contract_path"])
 	}
 	if promptConfig["injection_point"] != "## Skills to load before work" {
@@ -563,10 +563,16 @@ func assertStringSlice(t *testing.T, got any, want []string) {
 	}
 }
 
+// isOverlayContract says whether got is the absolute file of the overlay contract known as name.
+func isOverlayContract(got any, name string) bool {
+	path, ok := got.(string)
+	return ok && filepath.IsAbs(path) && strings.HasSuffix(path, "/"+name)
+}
+
 func hasPromptContract(contracts []any, path string) bool {
 	for _, raw := range contracts {
 		contract, ok := raw.(map[string]any)
-		if ok && contract["contract_path"] == path {
+		if ok && isOverlayContract(contract["contract_path"], path) {
 			return true
 		}
 	}
@@ -577,7 +583,7 @@ func mustFindPromptContract(t *testing.T, contracts []any, path string) map[stri
 	t.Helper()
 	for _, raw := range contracts {
 		contract, ok := raw.(map[string]any)
-		if ok && contract["contract_path"] == path {
+		if ok && isOverlayContract(contract["contract_path"], path) {
 			return contract
 		}
 	}

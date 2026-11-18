@@ -12,9 +12,31 @@ import (
 )
 
 // promptConfig derives the prompt config from the contracts of the overlay this adapter is
-// pointed at. The parsing is opencodeprompt's; what this does is read the files.
+// pointed at. The parsing is opencodeprompt's; what this does is read the files. The contract
+// paths it returns are absolute files of that overlay: the plugin injects them into a subagent
+// prompt, and the subagent runs in the target project, where a path relative to the overlay does
+// not exist. The overlay is the configured one, or the one found above the working directory
+// when none was configured; both are absolute.
 func (a OpenCodeAdapter) promptConfig() (opencodeprompt.PromptConfig, error) {
-	return opencodeprompt.Derive(&overlayContracts{overlayDir: a.options.OverlayDir})
+	source := &overlayContracts{overlayDir: a.options.OverlayDir}
+	config, err := opencodeprompt.Derive(source)
+	if err != nil {
+		return opencodeprompt.PromptConfig{}, err
+	}
+	return withAbsoluteContractPaths(config, source.root), nil
+}
+
+// withAbsoluteContractPaths is config with every contract path joined under root. It copies the
+// contract list, so the config it was given is left as it was.
+func withAbsoluteContractPaths(config opencodeprompt.PromptConfig, root string) opencodeprompt.PromptConfig {
+	config.ContractPath = contractFile(root, config.ContractPath)
+	contracts := make([]opencodeprompt.ContractConfig, len(config.Contracts))
+	for i, entry := range config.Contracts {
+		entry.ContractPath = contractFile(root, entry.ContractPath)
+		contracts[i] = entry
+	}
+	config.Contracts = contracts
+	return config
 }
 
 // overlayContracts is the ContractSource over an overlay checkout on disk, plus the guard the

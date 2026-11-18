@@ -5,7 +5,7 @@ exit: 0
 --- stderr ---
 --- prompt_config ---
 {
-  "contract_path": "skills/_shared/minimalism-contract.md",
+  "contract_path": "<OVERLAY>/skills/_shared/minimalism-contract.md",
   "included_phases": [
     "sdd-tasks",
     "sdd-apply"
@@ -20,7 +20,7 @@ exit: 0
   "injection_point": "## Skills to load before work",
   "contracts": [
     {
-      "contract_path": "skills/_shared/minimalism-contract.md",
+      "contract_path": "<OVERLAY>/skills/_shared/minimalism-contract.md",
       "included_phases": [
         "sdd-tasks",
         "sdd-apply"
@@ -35,7 +35,7 @@ exit: 0
       "injection_point": "## Skills to load before work"
     },
     {
-      "contract_path": "skills/_shared/anti-generic-design.md",
+      "contract_path": "<OVERLAY>/skills/_shared/anti-generic-design.md",
       "included_phases": [
         "builder"
       ],
@@ -51,7 +51,7 @@ exit: 0
       "injection_point": "## Skills to load before work"
     },
     {
-      "contract_path": "skills/_shared/oo-quality-contract.md",
+      "contract_path": "<OVERLAY>/skills/_shared/oo-quality-contract.md",
       "included_phases": [
         "sdd-tasks",
         "sdd-apply"

@@ -98,7 +98,7 @@ func TestRunRuntimeCore_OpenCodeInstallWritesPluginAndConfigWithoutHOME(t *testi
 	if !ok {
 		t.Fatalf("config should include prompt_config object: %#v", cfg)
 	}
-	if promptConfig["contract_path"] != "skills/_shared/minimalism-contract.md" {
+	if path, _ := promptConfig["contract_path"].(string); !filepath.IsAbs(path) || !strings.HasSuffix(path, "/skills/_shared/minimalism-contract.md") {
 		t.Fatalf("prompt_config.contract_path = %#v", promptConfig["contract_path"])
 	}
 	if promptConfig["injection_point"] == "" {
