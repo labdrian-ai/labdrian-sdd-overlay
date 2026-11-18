@@ -86,6 +86,7 @@ func TestParseSkillReadsAQuotedValueOverSeveralLinesWhole(t *testing.T) {
 		{"the other keys after it are read", "---\nname: multi\ndescription: \"a\n  b\"\nname: later\n---\n", "a b"},
 		{"a quote that does not close before a nested mapping keeps its first line", "---\nname: multi\ndescription: \"Starts quoted\n  metadata:\n    note: \"x\"\nlicense: x\n---\n", "Starts quoted"},
 		{"a continuation line may say Trigger:", "---\nname: multi\ndescription: \"first\n  Trigger: second\"\n---\n", "first Trigger: second"},
+		{"a continuation line may say note: in prose", "---\nname: multi\ndescription: \"first\n  note: see the docs\"\n---\n", "first note: see the docs"},
 		{"a quote that never closes keeps its first line", "---\nname: multi\ndescription: \"a\n  b\nlicense: x\n---\n", "a"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

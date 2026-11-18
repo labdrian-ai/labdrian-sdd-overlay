@@ -5,10 +5,10 @@ import (
 	"strings"
 )
 
-// mappingKey is a line that opens a nested mapping or sets a key, such as `metadata:` or `note: x`: a
-// quoted value never goes on into one. A capital letter or a space before the colon is prose, such as
-// `Trigger: a`, and goes on.
-var mappingKey = regexp.MustCompile(`^[a-z_][a-z0-9_-]*:(\s|$)`)
+// mappingKey is a line that opens a nested mapping, a lower-case key with nothing after its colon, such
+// as `metadata:`: a quoted value never goes on into one. A key followed by text, such as `note: see the
+// docs` or `Trigger: a`, reads as prose of the description and goes on.
+var mappingKey = regexp.MustCompile(`^[a-z_][a-z0-9_-]*:\s*$`)
 
 // Skill is what a SKILL.md says of itself.
 type Skill struct {
