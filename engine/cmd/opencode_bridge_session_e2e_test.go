@@ -77,7 +77,10 @@ console.log(JSON.stringify(system));`)
 		w := newPhase7World(t, binary)
 		w.bindRunning("proj-1", "wf-1", "sdd")
 		w.verb("proj-1", "wf-1", "pause")
-		reference := decodeHookAnswer(t, w.promptHook(w.repo).stdout)
+		// The reference is the prompt hook as the plugin runs it, with --source opencode, whose block names
+		// OpenCode's capability limits (S10, L117).
+		reference := decodeHookAnswer(t, w.engine(w.dir, hookInput(t, w.repo, "", "please continue with the task"),
+			"projection", "hook", "--event", "UserPromptSubmit", "--source", "opencode").stdout)
 		var want []string
 		for _, line := range []string{reference.SystemMessage, reference.Specific.AdditionalContext} {
 			if line != "" {

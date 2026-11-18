@@ -51,9 +51,11 @@ type HookService struct {
 }
 
 // PromptRequest is a prompt that was submitted: the working directory the hook input names, or ""
-// when it names none, and the working directory of the hook process, used in its place.
+// when it names none, and the working directory of the hook process, used in its place. Runtime is
+// the capability target whose limits the projection names ("" for Claude Code).
 type PromptRequest struct {
 	InputDir, ProcessDir string
+	Runtime              string
 }
 
 // PromptKind is what the hook says in answer to a prompt.
@@ -91,6 +93,7 @@ func (s HookService) OnPrompt(req PromptRequest) PromptOutcome {
 		return *stop
 	}
 	binding := input.Binding
+	input.Runtime = req.Runtime
 	result := s.project(input)
 	if result.Unbind && binding.Classification == projection.ClassificationOwned {
 		// Only a binding of ours that was read is removed: the domain asks for a removal only for

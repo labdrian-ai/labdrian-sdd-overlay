@@ -197,7 +197,7 @@ func detailIn(detail string) string {
 // workflow. The lines whose length the workflow log alone decides (the
 // unavailable dependencies, the recorded stages) come last, so that if the
 // whole has to be cut to MaxContextBytes it is only ever those that go.
-func buildContext(b Binding, w workflow.Loaded) string {
+func buildContext(b Binding, w workflow.Loaded, runtime string) string {
 	state := w.State
 	wf, project := sanitizeLine(b.WorkflowID), sanitizeLine(b.ProjectID)
 	flags := "--project " + project + " --workflow " + wf
@@ -229,7 +229,7 @@ func buildContext(b Binding, w workflow.Loaded) string {
 	lines = append(lines, "current stage: "+current, "next stage: "+nextStage(state, recorded))
 
 	lines = append(lines, memoryPlanLines(state, b.ProjectID)...)
-	lines = append(lines, claudeCapabilityLine())
+	lines = append(lines, capabilityLine(runtime))
 	lines = append(lines, "progress commands: labdrian workflow stage "+flags+" --stage <name>; "+
 		"labdrian workflow verify "+flags+" --goal <goal file>; "+
 		"labdrian workflow close "+flags+" --outcome completed|abandoned")
@@ -359,12 +359,15 @@ func instructionsProjectLine(plan memoryscope.Plan, identity string, engramName 
 	return "- " + strings.Join(parts, "; ") + "."
 }
 
-// claudeCapabilityLine renders what the engine declares Claude Code does not
-// fully support, from the declaration itself.
-func claudeCapabilityLine() string {
-	d, err := capability.Declare(capability.TargetClaude)
+// capabilityLine renders what the engine declares the runtime target does not
+// fully support, from the declaration itself; "" is Claude Code.
+func capabilityLine(target string) string {
+	if target == "" {
+		target = capability.TargetClaude
+	}
+	d, err := capability.Declare(target)
 	if err != nil {
-		return "capability limits (" + capability.TargetClaude + "): not available: " + clip(sanitizeLine(err.Error()), maxDetailRunes)
+		return "capability limits (" + target + "): not available: " + clip(sanitizeLine(err.Error()), maxDetailRunes)
 	}
 	return capabilityLimitsLine(d)
 }

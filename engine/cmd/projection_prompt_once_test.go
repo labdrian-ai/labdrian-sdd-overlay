@@ -258,16 +258,15 @@ func TestTheSameSessionIdUnderTwoSourcesIsTwoSessions(t *testing.T) {
 	start := strings.Replace(sessionStartInput(t, e.repo, "startup"), `"session-1"`, `"shared-id"`, 1)
 	first := run("UserPromptSubmit", "claude", prompt)
 	requireBlock(t, "claude", first)
+	// OpenCode's block names OpenCode's capability limits (S10, L117), so it is its own block, not Claude's.
 	other := run("UserPromptSubmit", "opencode", prompt)
-	if !reflect.DeepEqual(other, first) {
-		t.Errorf("first prompt of opencode = %+v, want its own first block %+v", other, first)
-	}
+	requireBlock(t, "opencode", other)
 	assertSilent(t, "claude again", run("UserPromptSubmit", "claude", prompt))
 	assertSilent(t, "opencode again", run("UserPromptSubmit", "opencode", prompt))
 	if r := run("SessionStart", "opencode", start); r.stdout == "" {
 		t.Fatalf("SessionStart = %+v, want its block", r)
 	}
-	if got := run("UserPromptSubmit", "opencode", prompt); !reflect.DeepEqual(got, first) {
+	if got := run("UserPromptSubmit", "opencode", prompt); !reflect.DeepEqual(got, other) {
 		t.Errorf("opencode after its SessionStart = %+v, want the block again", got)
 	}
 	assertSilent(t, "a SessionStart of opencode does not reset claude", run("UserPromptSubmit", "claude", prompt))

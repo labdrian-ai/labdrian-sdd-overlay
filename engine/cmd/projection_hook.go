@@ -62,6 +62,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/capability"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/hookwire"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection/app"
@@ -226,7 +227,7 @@ func userPromptSubmit(d deps, stdin io.Reader, processCwd, source string) (out [
 	if in.Event != "" && in.Event != hookwire.EventUserPromptSubmit {
 		return nil, nil
 	}
-	outcome := d.promptHook().OnPrompt(app.PromptRequest{InputDir: in.Cwd, ProcessDir: processCwd})
+	outcome := d.promptHook().OnPrompt(app.PromptRequest{InputDir: in.Cwd, ProcessDir: processCwd, Runtime: projectionRuntime(source)})
 	switch outcome.Kind {
 	case app.PromptWarning:
 		return warningOutput(hookwire.EventUserPromptSubmit, outcome.Warning), nil
@@ -243,6 +244,15 @@ func userPromptSubmit(d deps, stdin io.Reader, processCwd, source string) (out [
 		return addOncePerChange(sessionKey(source, in.SessionID), reply)
 	}
 	return nil, nil
+}
+
+// projectionRuntime is the capability target whose limits a prompt's projection names for the hook source:
+// OpenCode's own for opencode, and Claude Code's ("") for claude and codex, as before (S10, L117).
+func projectionRuntime(source string) string {
+	if source == "opencode" {
+		return capability.TargetOpenCode
+	}
+	return ""
 }
 
 // sessionKey names a session for the store: the source that sent it and its id together, because two runtimes
