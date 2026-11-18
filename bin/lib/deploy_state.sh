@@ -100,6 +100,23 @@ state_read_target() {
 # clean one containing only what this call knows, rather than propagating
 # the corruption forever.
 state_write_target() {
+  state_rewrite_target "$1" "$2" "$3"
+}
+
+# state_forget_target <target>
+#
+# Drops the entry of <target> and keeps every other one, so the target reads as never deployed: what
+# a deploy whose last step failed must say even when an earlier apply recorded it.
+state_forget_target() {
+  [[ -f "$STATE_FILE" ]] || return 0
+  state_rewrite_target "$1" "" ""
+}
+
+# state_rewrite_target <target> <version> <digest>
+#
+# The one writer of the state file: every other target's entry is kept, and <target> gets the given
+# version and digest, or no entry at all when the version is empty.
+state_rewrite_target() {
   local target="$1"
   local version="$2"
   local digest="$3"
@@ -117,7 +134,9 @@ state_write_target() {
     IFS=$'\t' read -r v d a <<< "$existing"
     entries+=("    \"${t}\": {\"version\": \"${v}\", \"digest\": \"${d}\", \"applied_at\": \"${a}\"}")
   done
-  entries+=("    \"${target}\": {\"version\": \"${version}\", \"digest\": \"${digest}\", \"applied_at\": \"${applied_at}\"}")
+  if [[ -n "$version" ]]; then
+    entries+=("    \"${target}\": {\"version\": \"${version}\", \"digest\": \"${digest}\", \"applied_at\": \"${applied_at}\"}")
+  fi
 
   local tmp
   tmp="$(mktemp "${STATE_FILE}.XXXXXX")"

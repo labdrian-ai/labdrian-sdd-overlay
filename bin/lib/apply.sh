@@ -207,6 +207,8 @@ cmd_apply() {
       runtime_install_failed=1
       LONGTERM_MEM_SKIP_TARGETS+=" opencode"
       echo "  opencode: runtime install failed; target state not recorded (re-run apply once the cause is fixed)" >&2
+      # An entry an earlier apply recorded would still claim the old deploy.
+      state_forget_target opencode
       continue
     fi
 

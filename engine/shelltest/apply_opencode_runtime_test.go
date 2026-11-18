@@ -328,6 +328,38 @@ func TestApplyTargetOpencodeWithAFailingRuntimeInstallRecordsNoStateAndSkipsTheR
 	}
 }
 
+// A failed runtime install after an earlier successful apply drops the row that apply recorded, so the
+// target reads as never deployed instead of deployed at the old version.
+func TestApplyTargetOpencodeWithAFailingRuntimeInstallForgetsAnEarlierStateRow(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in -short mode")
+	}
+	script := overlaytest.Script(t)
+	home := t.TempDir()
+	overlay, env := opencodeOverlay(t, home, true)
+	config := filepath.Join(home, ".config", "opencode")
+	env = append(env, "XDG_CONFIG_HOME="+filepath.Join(home, ".config"))
+
+	first := overlaytest.Run(t, script, env, overlay, "apply", "--target", "opencode")
+	if first.Exit != 0 {
+		t.Fatalf("the first apply failed:\n%s\n%s", first.Stdout, first.Stderr)
+	}
+	if state := readState(t, home); !strings.Contains(state, `"opencode"`) {
+		t.Fatalf("the first apply did not record the target:\n%s", state)
+	}
+
+	if err := os.WriteFile(filepath.Join(config, "opencode.json"), []byte("{ not json\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	res := overlaytest.Run(t, script, env, overlay, "apply", "--target", "opencode")
+	if res.Exit == 0 {
+		t.Errorf("a failed runtime install must make apply exit non-zero:\n%s\n%s", res.Stdout, res.Stderr)
+	}
+	if state := readState(t, home); strings.Contains(state, `"opencode"`) {
+		t.Errorf("the row of the earlier apply still claims the target is deployed:\n%s", state)
+	}
+}
+
 // Codex is as it was: a failed runtime install still leaves its state row (the install runs after it)
 // and apply exits non-zero.
 func TestApplyTargetCodexWithAFailingRuntimeInstallStillRecordsItsState(t *testing.T) {
