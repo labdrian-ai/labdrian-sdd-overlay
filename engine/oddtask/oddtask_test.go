@@ -210,6 +210,19 @@ func TestParseDocumentKeepsTheLogOpenAcrossAHeadingQuotedInAFence(t *testing.T) 
 	}
 }
 
+// A fence left open to the end of the document, or a line that only starts like one (inline code such as
+// "```x``` text"), does not hide the headings after it: the document parses as it did before fences counted.
+func TestParseDocumentIgnoresAFenceThatNeverCloses(t *testing.T) {
+	const p = "/r/odd/tasks/f.md"
+	for _, stray := range []string{"```go", "```x``` text", "~~~"} {
+		text := doc([]string{"- [ ] T1 — S1 — delegated — x — shaped: L5 — commit: -", stray},
+			[]string{"- **L5** (2026-10-28, shaper): design"})
+		if got := oddtask.Decide(p, oddtask.ParseDocument(text), []string{"T1"}); got != "" {
+			t.Errorf("stray %q in Tasks: Decide(T1) = %q, want allowed", stray, got)
+		}
+	}
+}
+
 // After a fence closes, a "## " line is a heading again and ends the Log.
 func TestParseDocumentEndsTheLogAtAHeadingAfterAClosedFence(t *testing.T) {
 	const p = "/r/odd/tasks/f.md"
