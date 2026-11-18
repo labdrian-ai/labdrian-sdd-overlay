@@ -380,6 +380,15 @@ Commands:
                                              not asked again, and a re-ask the reviewer does not answer leaves
                                              the first refusal, with the re-ask's failure said after it
                                              (exit 0 stored, 2 reply refused, 1 usage error or any other failure)
+                                   frozen-context [--cwd REPO]
+                                             read a brief from stdin that names one full base and head pair as
+                                             review bind prints them, bind that candidate and print the brief
+                                             followed by its ## Frozen context, as launch --runtime claude hands its
+                                             reviewer; store nothing; refused (exit 2, one stderr line): an empty
+                                             brief, no pair or two different pairs, a candidate over the 150000-byte
+                                             limit of one launch, a brief that is not the candidate's, brief and
+                                             context over the reply limit
+                                             (exit 0 printed, 2 refused, 1 usage error or any other failure)
                                    proposals [--cwd REPO]
                                              print, and never run, what the owner may remove: the worktrees other
                                              than the main one and the one of --cwd, not locked, that git marks
