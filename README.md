@@ -78,7 +78,7 @@ Every finding is resolved: a warning is fixed before delivery, a suggestion is c
 
 Use `--target <name>` on `apply`, `status`, `capture`, and `sync-check`. Default for `apply`/`status`/`sync-check` is `all` (the three copy targets, plus `pi` when it is genuinely installed). Default for `capture` is `claude`.
 
-The `agent` route (see [Tracked files](#tracked-files-overlaymanifest)) additionally deploys to `~/.claude/agents` (claude target only), and the `codex-agent` route deploys `codex/agents/<role>.toml` to `~/.codex/agents` (codex target only). `--target opencode` or `--target codex` on an `agent` row, and any other target on a `codex-agent` row, is a no-op — zero applicable targets. A `skill` row has no destination for `--target opencode`.
+The `agent` route (see [Tracked files](#tracked-files-overlaymanifest)) additionally deploys to `~/.claude/agents` (claude target only), the `codex-agent` route deploys `codex/agents/<role>.toml` to `~/.codex/agents` (codex target only), and the `opencode-agent` route deploys `opencode/agents/<name>.md` (the eight roles and the foreman, written by `gadu-generate` with the model and `#variant` of the `opencode` column of `skills/role-chain/references/models.md`) to `~/.config/opencode/agents` (opencode target only). `--target opencode` or `--target codex` on an `agent` row, and any other target on a `codex-agent` or `opencode-agent` row, is a no-op — zero applicable targets. A `skill` row has no destination for `--target opencode`.
 
 ### Pi (via gentle-pi)
 

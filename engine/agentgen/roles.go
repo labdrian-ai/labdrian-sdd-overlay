@@ -147,7 +147,7 @@ var roles = []role{
 
 // foreman is the parent of the role chain (S2 of odd/tasks/labdrian-orchestrator-opencode.md): the agent a
 // main session runs as, which talks with the owner and launches the eight roles. It is not one of them:
-// the closed role vocabulary of engine/roles has no foreman, and it has one file here, the Claude one (S5).
+// the closed role vocabulary of engine/roles has no foreman, and it has two files here, the Claude one and the OpenCode one (S5).
 // Its model is the frontier row of the tier table, as the parent's is (S18, models.md of role-chain). Its
 // tools are the Claude names; the subagent tool is Agent (T1 of the feature), which the eight roles never
 // hold. It writes only the feature document: the Edit and Write it holds are a limit of its instructions,

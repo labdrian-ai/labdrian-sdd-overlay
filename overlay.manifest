@@ -132,6 +132,15 @@ codex/agents/sweeper.toml    custom   codex-agent
 codex/agents/delivery.toml   custom   codex-agent
 codex/agents/reviewer.toml   custom   codex-agent
 codex/agents/verifier.toml   custom   codex-agent
+opencode/agents/builder.md    custom   opencode-agent
+opencode/agents/shaper.md     custom   opencode-agent
+opencode/agents/polisher.md   custom   opencode-agent
+opencode/agents/prototyper.md custom   opencode-agent
+opencode/agents/sweeper.md    custom   opencode-agent
+opencode/agents/delivery.md   custom   opencode-agent
+opencode/agents/reviewer.md   custom   opencode-agent
+opencode/agents/verifier.md   custom   opencode-agent
+opencode/agents/foreman.md    custom   opencode-agent
 longterm-mem/go.mod custom mcp
 security-audit/SKILL.md custom
 security-audit/AI-AND-LLM.md custom

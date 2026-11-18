@@ -2,14 +2,15 @@
 // to the runtimes that host it.
 //
 // The role agents of per-role design v3 (roles.go) have one source each, roles/<role>/body.md under
-// the root of the repository, and one table of the frontmatter of each runtime. Each becomes three
+// the root of the repository, and one table of the frontmatter of each runtime. Each becomes four
 // files:
 //   - agents/<role>.md        (Claude Code agent file)
 //   - pi/agents/<role>.md     (Pi native subagent file, read by gentle-pi)
 //   - codex/agents/<role>.toml (Codex agent file)
+//   - opencode/agents/<role>.md (OpenCode agent file, opencode.go)
 //
-// The foreman, the parent of the roles, has one source too, roles/foreman/body.md, and one file,
-// agents/foreman.md (S2, S5 of odd/tasks/labdrian-orchestrator-opencode.md).
+// The foreman, the parent of the roles, has one source too, roles/foreman/body.md, and two files,
+// agents/foreman.md and opencode/agents/foreman.md (S2, S5 of odd/tasks/labdrian-orchestrator-opencode.md).
 //
 // None of these files is ever hand-edited. Use Generate to write them; use Check to assert they are
 // not stale.
@@ -58,6 +59,8 @@ func build(repoRoot string) (table []Artifact, problems []*sourceError) {
 		}
 		return string(data), true
 	}
+	// The OpenCode files come last, after the Claude file of the foreman: the eight roles, then the foreman.
+	var openCode []Artifact
 	for _, r := range roles {
 		data, ok := source(r)
 		if !ok || modelsErr != nil {
@@ -69,16 +72,28 @@ func build(repoRoot string) (table []Artifact, problems []*sourceError) {
 			continue
 		}
 		table = append(table, files...)
+		file, err := r.projectOpenCode(data, models)
+		if err != nil {
+			problems = append(problems, &sourceError{path: r.sourcePath(), verb: "projecting", err: err})
+			continue
+		}
+		openCode = append(openCode, file)
 	}
-	// The foreman comes after the eight roles, with its Claude file only (S5).
+	// The foreman comes after the eight roles, with its Claude file and its OpenCode file only (S5).
 	if data, ok := source(foreman); ok && modelsErr == nil {
 		file, err := foreman.projectClaude(data, models)
 		if err != nil {
 			problems = append(problems, &sourceError{path: foreman.sourcePath(), verb: "projecting", err: err})
 		} else {
 			table = append(table, file)
+			if file, err := foreman.projectOpenCode(data, models); err != nil {
+				problems = append(problems, &sourceError{path: foreman.sourcePath(), verb: "projecting", err: err})
+			} else {
+				openCode = append(openCode, file)
+			}
 		}
 	}
+	table = append(table, openCode...)
 	// The table is reported after the sources: without it no role can be projected, so nothing is returned
 	// for the roles whose sources were read.
 	if modelsErr != nil {

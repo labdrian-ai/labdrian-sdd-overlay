@@ -49,16 +49,18 @@ func TestTheForemanHasOnlyAClaudeFileAfterTheFilesOfTheEightRoles(t *testing.T) 
 	for _, a := range table {
 		paths = append(paths, a.Path)
 	}
-	if last := paths[len(paths)-1]; last != "agents/foreman.md" {
-		t.Errorf("the last artifact is %q, want agents/foreman.md after the 24 files of the eight roles", last)
+	// The OpenCode files of the nine agents come after it (opencode_test.go), so the Claude file of the foreman
+	// is the tenth from the end.
+	if at := paths[len(paths)-10]; at != "agents/foreman.md" {
+		t.Errorf("the tenth artifact from the end is %q, want agents/foreman.md after the 24 files of the eight roles", at)
 	}
 	for _, p := range paths {
 		if p == "pi/agents/foreman.md" || p == "codex/agents/foreman.toml" {
 			t.Errorf("the table holds %s: the foreman has a Claude file only", p)
 		}
 	}
-	if len(paths) != 25 {
-		t.Errorf("%d artifacts, want 25: the three files of each of the eight roles and the Claude file of the foreman", len(paths))
+	if len(paths) != 34 {
+		t.Errorf("%d artifacts, want 34: the three files of each of the eight roles, the Claude file of the foreman and the nine OpenCode files", len(paths))
 	}
 }
 
