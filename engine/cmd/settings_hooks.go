@@ -44,7 +44,7 @@ func runMergeSettings(p process, args []string) {
 		return
 	}
 
-	wasBare := codegraphPromptIsBare(settingsPath, hookCommand)
+	wasBare := codegraphPromptIsBare(settingsPath)
 	if err := (settingsfile.Installer{}).Install(settingsPath, hookCommand); err != nil {
 		fmt.Fprintf(p.stderr, "error: merge-settings: %v\n", err)
 		p.exit(1)
@@ -53,7 +53,7 @@ func runMergeSettings(p process, args []string) {
 	fmt.Fprintln(p.stdout, "merge-settings: hooks installed successfully")
 	noticeForeignMainAgent(p, settingsPath)
 	noticeForeignOutputStyle(p, settingsPath)
-	noticeCodegraphPromptReplaced(p, settingsPath, hookCommand, wasBare)
+	noticeCodegraphPromptReplaced(p, settingsPath, wasBare)
 }
 
 // noticeForeignMainAgent says on stderr when the settings hold an "agent" key with a value other than
@@ -80,7 +80,7 @@ func noticeForeignOutputStyle(p process, settingsPath string) {
 
 // codegraphPromptIsBare reports whether the settings at settingsPath hold the bare codegraph prompt hook the
 // install is about to replace. A file that cannot be read says no: the install reads it again and reports it.
-func codegraphPromptIsBare(settingsPath, hookCommand string) bool {
+func codegraphPromptIsBare(settingsPath string) bool {
 	doc, _, err := (settingsfile.File{Path: settingsPath}).Read()
 	return err == nil && settings.CodegraphPrompt(doc.Root()) == settings.CodegraphPromptBare
 }
@@ -88,7 +88,7 @@ func codegraphPromptIsBare(settingsPath, hookCommand string) bool {
 // noticeCodegraphPromptReplaced says on stderr that the install replaced the bare codegraph command, which
 // is an entry another tool owns. It says nothing when there was nothing to replace or the command is not
 // wrapped now.
-func noticeCodegraphPromptReplaced(p process, settingsPath, hookCommand string, wasBare bool) {
+func noticeCodegraphPromptReplaced(p process, settingsPath string, wasBare bool) {
 	if !wasBare {
 		return
 	}
