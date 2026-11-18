@@ -33,7 +33,7 @@ Parent: the `foreman`, frontier, medium effort. Tiers: `references/models.md`.
 
 - `labdrian review bind --base B --head H` prints `base`, `head` (full SHAs), `diff_sha256`, `paths`, `worktree`. Send `reviewer` the diff (up to 150 KB, else one launch per commit; never truncated), those, the S# criteria and the row sentences copied verbatim from `roles/reviewer/rows.json` (`recall` always).
 - `labdrian review record --feature F --base B --head H` (stdin; `--rows R`) stores `odd/review-results/<feature>/<head12>-<n>.json`; evidence: `review-diff`, `review-result`, `verifier-report`. Exit 2 (the reviewer's contract breaks; which checks: `references/review-record.md`): record `interrupted`, `resume_reason: review not run: <reason>`; retry once with another `model`. Delivery recomputes `diff_sha256` and trusts the record only on equality.
-- On Codex or OpenCode: read `references/launch.md` before launching the reviewer.
+- On Codex (`review launch`, never a native reviewer sub-agent) or OpenCode (the brief without the diff), read `references/launch.md` before launching the reviewer.
 - A severe finding blocks only if introduced, activated or worsened and reproduced (`unknown`: on `base` first) by `verifier` or you within 3 calls: `reviewer → builder` (rework), the file as ledger. WARNING: fix before delivery; SUGGESTION: carry. Else `reviewer → delivery`.
 - Clear review and a next subtask of the workflow's task: `reviewer → builder`, `payload_kind` `review-report` with that review's evidence, the subtask in the summary; never a second `workflow open`.
 

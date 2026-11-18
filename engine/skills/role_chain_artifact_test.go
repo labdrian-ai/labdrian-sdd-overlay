@@ -506,12 +506,11 @@ func TestVerifierDeltaObjectIsTheOneTheEngineParses(t *testing.T) {
 	}
 }
 
-// own-rdd S9 (d): on Codex the parent pipes the brief to review launch, never to a native reviewer sub-agent. The line follows
-// the review record line of Binding, exactly.
 // The per-runtime launch lines left the body for skills/role-chain/references/launch.md
 // (labdrian-orchestrator-opencode T41: the OpenCode line did not fit the body budget, as in L123); the
-// Binding section keeps one pointer line right after the review record line.
-const roleChainLaunchPointer = "- On Codex or OpenCode: read `references/launch.md` before launching the reviewer."
+// Binding section keeps one pointer line right after the review record line, and that line still names how
+// each runtime differs, so a parent that skips the reference keeps the rule.
+const roleChainLaunchPointer = "- On Codex (`review launch`, never a native reviewer sub-agent) or OpenCode (the brief without the diff), read `references/launch.md` before launching the reviewer."
 
 // roleChainLaunch reads that reference file.
 func roleChainLaunch(t *testing.T) string {
@@ -519,6 +518,7 @@ func roleChainLaunch(t *testing.T) string {
 	return readRepoFile(t, skillsRepoRoot(t), "skills/role-chain/references/launch.md")
 }
 
+// own-rdd S9 (d): on Codex the parent pipes the brief to review launch, never to a native reviewer sub-agent.
 func TestRoleChainSkillTellsCodexToLaunchTheReviewerThroughTheEngine(t *testing.T) {
 	const codex = "- On Codex: pipe that brief to `labdrian review launch --runtime codex --feature F --base B --head H --rows R --model M`; it binds, runs the reviewer read-only and records it as `review record` does; never a native reviewer sub-agent."
 	reference := roleChainLaunch(t)
