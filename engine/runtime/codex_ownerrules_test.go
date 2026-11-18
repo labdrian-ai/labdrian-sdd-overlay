@@ -354,6 +354,63 @@ func TestCodexAdapterWithNoHomeWritesTheRootFilesAndSaysSo(t *testing.T) {
 	}
 }
 
+// CODEX_HOME is the home directory: ~/AGENTS.md and <root>/AGENTS.md are one file, handled once.
+func TestCodexRootThatIsTheHomeHandlesTheSharedFileOnce(t *testing.T) {
+	home := t.TempDir()
+	shared := filepath.Join(home, "AGENTS.md")
+	if err := os.WriteFile(shared, []byte(codexHomeFixture), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	adapter := engineRuntime.NewCodexAdapter(home).WithOwnerRules(&rulesSource{text: rulesV1}, home)
+	install := adapter.Install()
+	if install.Status != core.CapabilityRestartRequired || strings.Count(install.Message, "owner rules written to "+shared) != 1 {
+		t.Errorf("Install = %v %q, want the shared file reported once", install.Status, install.Message)
+	}
+	if got, want := readFileText(t, shared), codexHomeFixture+"\n"+rulesBlock(rulesV1)+"\n"; got != want {
+		t.Errorf("%s = %q, want one block: %q", shared, got, want)
+	}
+	if n := strings.Count(strings.Join(adapter.Status().Reasons, "\n"), "owner rules block is current in "+shared); n != 1 {
+		t.Errorf("status names the shared file %d times, want 1", n)
+	}
+	update := adapter.Update()
+	if strings.Count(update.Message, shared) != 1 {
+		t.Errorf("Update names the shared file more than once: %q", update.Message)
+	}
+	uninstall := adapter.Uninstall()
+	if uninstall.Status != core.CapabilityRestartRequired || strings.Count(uninstall.Message, "owner rules removed from "+shared) != 1 {
+		t.Errorf("Uninstall = %v %q, want the shared file reported once", uninstall.Status, uninstall.Message)
+	}
+	if got := readFileText(t, shared); got != codexHomeFixture {
+		t.Errorf("%s = %q after uninstall, want it as it was", shared, got)
+	}
+}
+
+// A file that is another name for a file already handled (a symbolic link) is handled once too, whatever its path.
+func TestCodexFileThatIsALinkToAnotherOfTheThreeIsHandledOnce(t *testing.T) {
+	s := newCodexSandbox(t)
+	if err := os.MkdirAll(s.root, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(s.files[0], []byte(codexHomeFixture), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(s.files[0], s.files[1]); err != nil {
+		t.Skipf("no symbolic links here: %v", err)
+	}
+	adapter := s.adapter(&rulesSource{text: rulesV1})
+	install := adapter.Install()
+	if strings.Contains(install.Message, s.files[1]) || strings.Count(install.Message, "owner rules written to") != 2 {
+		t.Errorf("Install = %q, want the linked file once (not %s) and agents.md", install.Message, s.files[1])
+	}
+	if got, want := readFileText(t, s.files[0]), codexHomeFixture+"\n"+rulesBlock(rulesV1)+"\n"; got != want {
+		t.Errorf("%s = %q, want one block", s.files[0], got)
+	}
+	adapter.Uninstall()
+	if got := readFileText(t, s.files[0]); got != codexHomeFixture {
+		t.Errorf("%s = %q after uninstall, want it as it was", s.files[0], got)
+	}
+}
+
 // The registered Codex adapter reads the owner rules of the overlay the config names, and writes the
 // home file under the config's home and the other two under CODEX_HOME.
 func TestRegisteredCodexAdapterWritesTheOwnerRulesOfTheConfiguredOverlay(t *testing.T) {

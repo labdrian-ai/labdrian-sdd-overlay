@@ -8,13 +8,23 @@
 # Sourced by bin/labdrian-overlay in the order it lists, never run: it defines functions and
 # variables and does nothing else.
 
+# indent_lines copies stdin with two spaces before every line, the way apply shows a step.
+indent_lines() {
+  local line
+  while IFS= read -r line; do
+    printf '  %s\n' "$line"
+  done
+}
+
 # codex_runtime_install_and_report runs `engine runtime install --target codex` over this checkout,
 # the step `apply --target pi` has in pipkg_apply_and_report: the Codex adapter keeps the owner rules
 # (instructions/owner-rules.md) in one marked block of ~/AGENTS.md, $CODEX_HOME/AGENTS.md and
 # $CODEX_HOME/agents.md (CODEX_HOME defaults to ~/.codex), and a copy of the manifest rows does not
 # reach them. Two cases have nothing to run and do not fail the deploy: a checkout without the rules
 # (an older main; silent, so its output is what it was) and an engine binary that is not installed
-# yet (the note names the recovery).
+# yet (the note names the recovery). `apply` never reaches that note: manifest_routes_load calls
+# ensure_engine_binary, which builds or rebuilds the binary before this step; the note guards a
+# direct call of this function.
 # Non-zero when the engine ran and did not report an install that took effect.
 codex_runtime_install_and_report() {
   [[ -f "$OVERLAY_DIR/instructions/owner-rules.md" ]] || return 0
@@ -24,10 +34,10 @@ codex_runtime_install_and_report() {
   fi
   local result
   if ! result="$(LABDRIAN_OVERLAY_DIR="$OVERLAY_DIR" "$ENGINE_BINARY" runtime install --target codex 2>&1)"; then
-    echo "  $result" >&2
+    indent_lines <<<"$result" >&2
     return 1
   fi
-  echo "  $result"
+  indent_lines <<<"$result"
 }
 
 cmd_apply() {

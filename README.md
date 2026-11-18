@@ -1148,7 +1148,9 @@ gentle-ai-overlay runtime install|update|uninstall|status --target codex
     `<!-- labdrian:owner-rules -->` block after one blank line when it is absent (a missing file is created with the
     block alone) and replace it in place when it is there; every byte outside the two lines stays as it was, the
     `gentle-ai:` blocks, `user:memorycard-store` and unmarked text included; a second `install` writes nothing;
-    `uninstall` removes only the block (and a file `install` created) and the manifest. The rules are read from the
+    `uninstall` removes only the block (and a file `install` created) and the manifest. Two of the paths that are the
+    same file (`CODEX_HOME` that is the home, a symbolic link, a case-insensitive file system) are one file: written,
+    checked, removed and reported once. The rules are read from the
     overlay checkout in `LABDRIAN_OVERLAY_DIR`, else the nearest one above the working directory; with no checkout the
     manifest is written alone and the message says so. A file whose markers are not one open line followed by one close
     line is left as it is and makes the action partial, naming its lines; the other files are still written. `status`

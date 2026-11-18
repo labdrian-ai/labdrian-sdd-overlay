@@ -82,6 +82,15 @@ func TestApplyCodexReportsAFailedCodexRuntimeInstall(t *testing.T) {
 	}
 }
 
+func TestApplyCodexIndentsEveryLineOfAMultiLineFailure(t *testing.T) {
+	out, _ := runCodexStep(t, "engine", "line one\nline two\nline three", "1", true)
+	for _, line := range []string{"  line one", "  line two", "  line three"} {
+		if !strings.Contains("\n"+out, "\n"+line+"\n") {
+			t.Errorf("want the line %q indented by two spaces, got:\n%q", line, out)
+		}
+	}
+}
+
 func TestApplyCodexWithoutAnEngineBinaryNamesTheRecoveryAndDoesNotFail(t *testing.T) {
 	out, record := runCodexStep(t, "", "", "0", true)
 	if record != "" {

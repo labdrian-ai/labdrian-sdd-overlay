@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"errors"
+	"os"
 	"path/filepath"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime/core"
@@ -66,7 +67,12 @@ func (a CodexAdapter) withOwnerRules(action core.Action, message string) core.Li
 	}
 	files, skipped := a.rulesFiles()
 	status := core.CapabilityRestartRequired
+	var handled sameFiles
 	for _, file := range files {
+		if handled.has(file.path) {
+			continue
+		}
+		handled = append(handled, file.path)
 		change, err := OwnerRulesBlock.WriteFile(file.path, body)
 		if err != nil {
 			status = core.CapabilityPartial
@@ -100,7 +106,12 @@ func (a CodexAdapter) removeOwnerRules(message string) (string, core.CapabilityS
 	}
 	files, _ := a.rulesFiles()
 	status := core.CapabilityRestartRequired
+	var handled sameFiles
 	for _, file := range files {
+		if handled.has(file.path) {
+			continue
+		}
+		handled = append(handled, file.path)
 		removed, err := OwnerRulesBlock.RemoveFile(file.path)
 		switch {
 		case err != nil:
@@ -130,7 +141,12 @@ func (a CodexAdapter) ownerRulesReasons() []string {
 	}
 	files, skipped := a.rulesFiles()
 	var reasons []string
+	var handled sameFiles
 	for _, file := range files {
+		if handled.has(file.path) {
+			continue
+		}
+		handled = append(handled, file.path)
 		reason := ""
 		state, err := OwnerRulesBlock.StateOfFile(file.path, body)
 		switch {
@@ -161,4 +177,25 @@ func codexWithReasons(result core.LifecycleResult, more []string) core.Lifecycle
 	}
 	reasons := append(append([]string(nil), result.Reasons...), more...)
 	return core.NewLifecycleResult(result.Target, result.Action, result.Status, result.Message, reasons)
+}
+
+// sameFiles is the paths an action has handled so far. A path is one of them when it is the same
+// cleaned path or, when both exist, the same file (CODEX_HOME that is the home, a symbolic link, a
+// case-insensitive file system; not a hard link, which a write by rename breaks): such a file is written, checked and removed once and reported once.
+type sameFiles []string
+
+func (h sameFiles) has(path string) bool {
+	info, err := os.Stat(path)
+	for _, other := range h {
+		if filepath.Clean(other) == filepath.Clean(path) {
+			return true
+		}
+		if err != nil {
+			continue
+		}
+		if otherInfo, oerr := os.Stat(other); oerr == nil && os.SameFile(info, otherInfo) {
+			return true
+		}
+	}
+	return false
 }
