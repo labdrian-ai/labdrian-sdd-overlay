@@ -17,7 +17,7 @@ func TestRegistryRefreshFamilyWritesOneQuietUserPromptSubmitEntryThatNeverBlocks
 	want := map[string][]interface{}{"UserPromptSubmit": {map[string]interface{}{
 		"hooks": []interface{}{map[string]interface{}{
 			"type":    "command",
-			"command": "command -v " + toyBinary + " >/dev/null 2>&1 && " + toyBinary + ` registry refresh --cwd "${CLAUDE_PROJECT_DIR:-$PWD}" --quiet || true`,
+			"command": "command -v " + toyBinary + " >/dev/null 2>&1 && " + toyBinary + ` registry refresh --cwd "${CLAUDE_PROJECT_DIR:-$PWD}" --quiet --skip-if-busy || true`,
 		}},
 	}}}
 

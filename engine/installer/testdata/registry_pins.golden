@@ -596,66 +596,19 @@ error: registry not recognized: it has no '## Skills' section
 @@@ refresh/without-gentle-ai-repair-sdd-registry
 exit 0
 --- stdout
-repair-sdd-registry: registry=$HOME/proj/.atl/skill-registry.md target=codex sdd_executors=2 missing=9
+(nothing)
 --- stderr
-WARN: missing codex SDD executor skill: $HOME/.codex/skills/sdd-archive/SKILL.md
-WARN: missing codex SDD executor skill: $HOME/.codex/skills/sdd-design/SKILL.md
-WARN: missing codex SDD executor skill: $HOME/.codex/skills/sdd-explore/SKILL.md
-WARN: missing codex SDD executor skill: $HOME/.codex/skills/sdd-init/SKILL.md
-WARN: missing codex SDD executor skill: $HOME/.codex/skills/sdd-onboard/SKILL.md
-WARN: missing codex SDD executor skill: $HOME/.codex/skills/sdd-propose/SKILL.md
-WARN: missing codex SDD executor skill: $HOME/.codex/skills/sdd-spec/SKILL.md
-WARN: missing codex SDD executor skill: $HOME/.codex/skills/sdd-tasks/SKILL.md
-WARN: missing codex SDD executor skill: $HOME/.codex/skills/sdd-time-estimation/SKILL.md
---- registry (file, mode 0644)
-# Skill Registry — proj
-
-`sdd-*` phase skills are executor contracts. Gentle may skip them as user-invocable skills, but this registry keeps their paths visible so SDD delegation can resolve the existing installed files.
-
-## Skills
-
-| Skill | Trigger / description | Scope | Path |
-| --- | --- | --- | --- |
-
-| `sdd-apply` | Runs sdd-apply for the team. | executor | `$HOME/.codex/skills/sdd-apply/SKILL.md` |
-| `sdd-verify` | Runs sdd-verify for the team. | executor | `$HOME/.codex/skills/sdd-verify/SKILL.md` |
-
-## Loading protocol
-
-1. Match task context and target files against the `Trigger / description` column.
-2. Pass only the matching `Path` values to the subagent under `## Skills to load before work`.
+repair-sdd-registry: $HOME/proj is not a project root (no .git or .atl): there is no registry to repair
+--- registry
+(absent)
 @@@ refresh/without-gentle-ai-skill-registry-refresh
 exit 0
 --- stdout
 Skill registry refresh skipped (no-project-marker): $HOME/proj is not a project root; run it from a project directory (one containing .git or .atl), or create the project first.
-repair-sdd-registry: registry=$HOME/proj/.atl/skill-registry.md target=codex sdd_executors=2 missing=9
 --- stderr
-WARN: missing codex SDD executor skill: $HOME/.codex/skills/sdd-archive/SKILL.md
-WARN: missing codex SDD executor skill: $HOME/.codex/skills/sdd-design/SKILL.md
-WARN: missing codex SDD executor skill: $HOME/.codex/skills/sdd-explore/SKILL.md
-WARN: missing codex SDD executor skill: $HOME/.codex/skills/sdd-init/SKILL.md
-WARN: missing codex SDD executor skill: $HOME/.codex/skills/sdd-onboard/SKILL.md
-WARN: missing codex SDD executor skill: $HOME/.codex/skills/sdd-propose/SKILL.md
-WARN: missing codex SDD executor skill: $HOME/.codex/skills/sdd-spec/SKILL.md
-WARN: missing codex SDD executor skill: $HOME/.codex/skills/sdd-tasks/SKILL.md
-WARN: missing codex SDD executor skill: $HOME/.codex/skills/sdd-time-estimation/SKILL.md
---- registry (file, mode 0644)
-# Skill Registry — proj
-
-`sdd-*` phase skills are executor contracts. Gentle may skip them as user-invocable skills, but this registry keeps their paths visible so SDD delegation can resolve the existing installed files.
-
-## Skills
-
-| Skill | Trigger / description | Scope | Path |
-| --- | --- | --- | --- |
-
-| `sdd-apply` | Runs sdd-apply for the team. | executor | `$HOME/.codex/skills/sdd-apply/SKILL.md` |
-| `sdd-verify` | Runs sdd-verify for the team. | executor | `$HOME/.codex/skills/sdd-verify/SKILL.md` |
-
-## Loading protocol
-
-1. Match task context and target files against the `Trigger / description` column.
-2. Pass only the matching `Path` values to the subagent under `## Skills to load before work`.
+(nothing)
+--- registry
+(absent)
 @@@ refresh/without-gentle-ai-repair-sdd-registry-no-refresh
 exit 0
 --- stdout

@@ -312,6 +312,68 @@ func TestRegistryRefreshTakesTheLockPropagateTakesAndRefusesWhenItStaysTaken(t *
 	}
 }
 
+// The prompt hook runs with --skip-if-busy: a registry whose lock is taken is left for the holder, at
+// once and without a word, so a prompt never waits the 2 s bound for a refresh that is only a
+// convenience. The registry is not written, and the exit is 0.
+func TestRegistryRefreshWithSkipIfBusyLeavesATakenRegistryAloneAtOnce(t *testing.T) {
+	w := newRefreshWorld(t)
+	w.markProject(t)
+	release := holdLock(t, w.registry())
+	defer release()
+
+	start := time.Now()
+	p := w.run("--cwd", w.project, "--quiet", "--skip-if-busy")
+
+	if elapsed := time.Since(start); elapsed > time.Second {
+		t.Errorf("a refresh with --skip-if-busy waited %v for a taken lock", elapsed)
+	}
+	if p.out.String() != "" || p.err.String() != "" || len(p.exits) != 0 {
+		t.Fatalf("run = stdout %q stderr %q exits %v, want silence and exit 0", p.out.String(), p.err.String(), p.exits)
+	}
+	if _, err := os.Stat(w.registry()); !os.IsNotExist(err) {
+		t.Fatalf("a refresh that found the lock taken wrote the registry: %v", err)
+	}
+}
+
+// --skip-if-busy changes nothing else: a registry that is free is refreshed as always.
+func TestRegistryRefreshWithSkipIfBusyRefreshesAFreeRegistry(t *testing.T) {
+	w := newRefreshWorld(t)
+	w.markProject(t)
+	w.skill(t, filepath.Join(w.home, ".claude", "skills"), "alpha", "Alpha. Trigger: a.")
+
+	p := w.run("--cwd", w.project, "--quiet", "--skip-if-busy")
+
+	if p.out.String() != "" || len(p.exits) != 0 || !strings.Contains(w.read(t), "`alpha`") {
+		t.Fatalf("run = stdout %q exits %v registry %q, want a silent refresh that lists alpha", p.out.String(), p.exits, w.read(t))
+	}
+}
+
+// A refresh after the repair of the executor rows is a no-op when nothing else changed, however many
+// times the registry was repaired: the repair leaves blank lines in the head that the refresh keeps.
+func TestRegistryRefreshAfterARepairWritesNothing(t *testing.T) {
+	w := newRefreshWorld(t)
+	w.markProject(t)
+	w.skill(t, filepath.Join(w.home, ".claude", "skills"), "alpha", "Alpha. Trigger: a.")
+	w.skill(t, filepath.Join(w.home, ".codex", "skills"), "sdd-apply", "Apply")
+	w.run("--cwd", w.project, "--quiet")
+	repair := func() {
+		p := newCapturedProcess()
+		runRegistry(p.process, deps{}, []string{"repair-sdd", "--registry", w.registry(), "--target", "codex", "--skills-root", filepath.Join(w.home, ".codex", "skills")})
+		if len(p.exits) != 0 {
+			t.Fatalf("repair-sdd: stdout %q stderr %q exits %v", p.out.String(), p.err.String(), p.exits)
+		}
+	}
+	repair()
+	repair()
+	before := w.read(t)
+
+	p := w.run("--cwd", w.project)
+
+	if !strings.HasPrefix(p.out.String(), "Skill registry up to date (cache-hit): ") || w.read(t) != before {
+		t.Fatalf("refresh after a repair = stdout %q, registry changed: %v", p.out.String(), w.read(t) != before)
+	}
+}
+
 func TestRegistryRefreshLetsGoOfTheLockWhenItEnds(t *testing.T) {
 	w := newRefreshWorld(t)
 	w.markProject(t)

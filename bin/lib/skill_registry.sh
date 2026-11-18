@@ -91,6 +91,12 @@ cmd_repair_sdd_registry() {
 
   if [[ "$refresh" -eq 1 ]]; then
     refresh_skill_registry "$cwd" 1 1
+    # The refresh writes the registry of every project (a directory with .git or .atl) and nothing
+    # elsewhere, so none after it means it skipped: there is no registry to repair.
+    if [[ ! -f "$cwd/.atl/skill-registry.md" ]]; then
+      echo "repair-sdd-registry: $cwd is not a project root (no .git or .atl): there is no registry to repair" >&2
+      return 0
+    fi
   fi
 
   repair_sdd_registry_file "$cwd/.atl/skill-registry.md" "$target"
@@ -147,7 +153,8 @@ cmd_skill_registry() {
 
   refresh_skill_registry "$cwd" "$force" "$quiet"
 
-  if [[ "$repair" -eq 1 ]]; then
+  # The refresh skipped (not a project: no .git or .atl) when it left no registry; nothing to repair.
+  if [[ "$repair" -eq 1 && -f "$cwd/.atl/skill-registry.md" ]]; then
     repair_sdd_registry_file "$cwd/.atl/skill-registry.md" "$target"
   fi
 }

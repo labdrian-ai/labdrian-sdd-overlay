@@ -25,6 +25,7 @@ import (
 	"io"
 	"path/filepath"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/filelock"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/sddregistry"
 	sddapp "github.com/labdrian-ai/labdrian-sdd-overlay/engine/sddregistry/app"
 	sddfs "github.com/labdrian-ai/labdrian-sdd-overlay/engine/sddregistry/fsstore"
@@ -148,6 +149,9 @@ func refuseRepairSDD(err error, registry string, stderr io.Writer) {
 type refreshArgs struct {
 	cwd          string
 	force, quiet bool
+	// skipIfBusy leaves a registry whose lock is taken for the holder, at once and silently, instead
+	// of waiting for it and failing: the prompt hook runs with it.
+	skipIfBusy bool
 }
 
 // parseRefreshArgs reads the arguments after the verb. A flag nobody named, a --cwd that has no
@@ -160,6 +164,8 @@ func parseRefreshArgs(args []string) (refreshArgs, error) {
 			out.force = true
 		case "--quiet":
 			out.quiet = true
+		case "--skip-if-busy":
+			out.skipIfBusy = true
 		case flagCwd:
 			if i+1 >= len(args) {
 				return refreshArgs{}, fmt.Errorf("registry refresh: flag %q requires a value", args[i])
@@ -181,11 +187,17 @@ func parseRefreshArgs(args []string) (refreshArgs, error) {
 // made first, because the lock is a file in it and a project that has only a .git has no .atl yet.
 type registryLocker struct {
 	store registryStore
+	// noWait tries the lock once and reports a taken one at once (filelock.ErrBusy), where the
+	// default waits for it up to the bound the registry lock has.
+	noWait bool
 }
 
 func (l registryLocker) Lock(registry string) (func(), error) {
 	if err := l.store.Home(registry); err != nil {
 		return nil, err
+	}
+	if l.noWait {
+		return filelock.Acquire(registryLockPath(registry), filelock.Options{NoWait: true})
 	}
 	return acquireRegistryLock(registryLockPath(registry))
 }
@@ -199,7 +211,8 @@ func runRegistryRefresh(p process, d deps, args []string) {
 		home = ""
 	}
 	store := sddfs.Registry{}
-	service := skillapp.New(store, fsscan.Scanner{}, registryLocker{store: store}, d.clock())
+	parsed, _ := parseRefreshArgs(args) // a command line that is refused is said by the core below
+	service := skillapp.New(store, fsscan.Scanner{}, registryLocker{store: store, noWait: parsed.skipIfBusy}, d.clock())
 	runRegistryRefreshCore(service, d.workingDir, home, args, p.stdout, p.stderr, p.exit)
 }
 
@@ -226,6 +239,9 @@ func runRegistryRefreshCore(service *skillapp.Service, workingDir func() (string
 	cwd = filepath.Clean(cwd)
 
 	result, err := service.Refresh(skillapp.Request{Cwd: cwd, Home: home, Force: parsed.force})
+	if err != nil && parsed.skipIfBusy && errors.Is(err, filelock.ErrBusy) {
+		return
+	}
 	if err != nil {
 		fmt.Fprintf(stderr, "error: %v\n", err)
 		exit(1)

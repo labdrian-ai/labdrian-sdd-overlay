@@ -28,15 +28,18 @@ var registryRefreshFamily = hookFamily{
 
 // buildRegistryRefreshEntry returns the settings entry for the spec of the family.
 //
-// NEVER-BLOCKING COMMAND, AND A MISSING BINARY IS A NO-OP. The refresh is a convenience: its exit is forced to 0
-// ("|| true"), so an error in it can never block a prompt, and a missing binary is reported by status-hooks, not enforced
-// here. --quiet keeps it silent, because a UserPromptSubmit hook's stdout is added to the prompt's context. Claude Code
-// runs hooks with "sh -c", so the command uses POSIX redirection, not "&>"; CLAUDE_PROJECT_DIR is the project and the
-// working directory is the fallback.
+// AN ERROR NEVER BLOCKS A PROMPT, AND A WAIT IS BOUNDED. The refresh is a convenience: its exit is forced to 0
+// ("|| true"), so a failure in it cannot refuse a prompt, and a missing binary is reported by status-hooks, not enforced
+// here. A refresh that is a cache hit takes a few milliseconds (a median of 6 ms on a clone of this repository), and
+// --skip-if-busy leaves a registry whose lock another process holds to that holder at once, so a prompt never waits the
+// 2 s bound of the lock; without it a hung holder would cost every prompt those 2 s. The refresh itself is not bounded
+// in time: with skills of the machine to read it grows with their number. --quiet keeps it silent, because a
+// UserPromptSubmit hook's stdout is added to the prompt's context. Claude Code runs hooks with "sh -c", so the command
+// uses POSIX redirection, not "&>"; CLAUDE_PROJECT_DIR is the project and the working directory is the fallback.
 func buildRegistryRefreshEntry(hookCommand string, _ hookSpec) map[string]interface{} {
 	bin := shellQuote(hookCommand)
 	cmd := fmt.Sprintf(
-		`command -v %s >/dev/null 2>&1 && %s %s --cwd "${CLAUDE_PROJECT_DIR:-$PWD}" --quiet || true`,
+		`command -v %s >/dev/null 2>&1 && %s %s --cwd "${CLAUDE_PROJECT_DIR:-$PWD}" --quiet --skip-if-busy || true`,
 		bin, bin, LabdrianRegistryRefreshIdentity,
 	)
 	return map[string]interface{}{

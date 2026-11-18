@@ -2,7 +2,7 @@
 // directories hold skills, how a SKILL.md says what it is called and what it is for, which skills
 // the table lists, and how the file is written around the rows without touching any line that the
 // table does not own. The rules are the ones `gentle-ai skill-registry refresh` 4.2.0 follows,
-// recorded from its output in a sandbox (engine/skillregistry/app's parity test), with one stated
+// recorded from its output in a sandbox (engine/cmd's TestRegistryRefreshWritesWhatGentleWroteForTheSameSkills), with one stated
 // difference: a description written as a quoted value over several lines is read whole, where
 // gentle-ai keeps only its first line.
 //

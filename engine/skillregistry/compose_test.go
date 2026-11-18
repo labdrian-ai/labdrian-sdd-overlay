@@ -124,6 +124,28 @@ func TestComposeKeepsExecutorRowsThatTouchTheTable(t *testing.T) {
 	}
 }
 
+// A table that is not the generator's, written right under its rows with no blank line between, is
+// not eaten: only the rows of the skills the generator writes are replaced.
+func TestComposeKeepsAForeignRowRightUnderTheTable(t *testing.T) {
+	const foreign = "| Contract | Path |\n| --- | --- |\n| minimalism | skills/_shared/minimalism-contract.md |\n"
+	existing := wantHead + tableHead + "| `stale` | row | user | `/x` |\n" + foreign + "\n" + wantProtocol
+	got := compose(t, existing, testHeader, testRows)
+	want := wantHead + tableHead + testRowLines + foreign + "\n" + wantProtocol
+	if got != want {
+		t.Fatalf("registry =\n%s\nwant\n%s", got, want)
+	}
+}
+
+// A refresh after a repair is a no-op when nothing else changed: the blank lines the repair leaves
+// in the head, above the executor note, are the registry's own and stay as they are.
+func TestComposeKeepsTheBlankLinesOfTheHeadByteForByte(t *testing.T) {
+	const note = "`sdd-*` phase skills are executor contracts. Gentle may skip them as user-invocable skills, but this registry keeps their paths visible so SDD delegation can resolve the existing installed files.\n"
+	existing := wantHead + "\n" + note + "\n" + tableHead + testRowLines + "\n" + wantProtocol
+	if got := compose(t, existing, testHeader, testRows); got != existing {
+		t.Fatalf("registry changed:\n%s\nwant\n%s", got, existing)
+	}
+}
+
 func TestComposeKeepsTheHermesSectionByteForByte(t *testing.T) {
 	const hermes = "<!-- labdrian-hermes sha256=0123abcd root=ffee -->\n" +
 		"| `hermes-skill` | Hermes | user | `/h/.hermes/skills/x/SKILL.md` |\n" +

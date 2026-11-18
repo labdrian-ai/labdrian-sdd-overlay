@@ -1,6 +1,14 @@
 package skillregistry
 
-import "strings"
+import (
+	"regexp"
+	"strings"
+)
+
+// mappingKey is a line that opens a nested mapping or sets a key, such as `metadata:` or `note: x`: a
+// quoted value never goes on into one. A capital letter or a space before the colon is prose, such as
+// `Trigger: a`, and goes on.
+var mappingKey = regexp.MustCompile(`^[a-z_][a-z0-9_-]*:(\s|$)`)
 
 // Skill is what a SKILL.md says of itself.
 type Skill struct {
@@ -21,7 +29,8 @@ type Skill struct {
 // indicator is the text itself. A plain value is its first line only. A quoted value that goes on
 // over several indented lines up to the line that ends with the same quote is read whole, joined by
 // single spaces; this is where the registry differs from gentle-ai, which keeps the first line. A
-// quote that never closes leaves the first line.
+// quote that never closes, or that would go on into a line that sets a key (`metadata:`), leaves the
+// first line.
 func ParseSkill(dir, text string) Skill {
 	name, description := readFrontmatter(text)
 	if name == "" {
@@ -88,6 +97,9 @@ func readDescription(body []string, at int, rest string) (string, int) {
 				break
 			}
 			piece := strings.TrimSpace(line)
+			if mappingKey.MatchString(piece) {
+				break
+			}
 			pieces = append(pieces, piece)
 			if strings.HasSuffix(piece, quote) {
 				return unquote(strings.Join(append([]string{value}, pieces...), " ")), i

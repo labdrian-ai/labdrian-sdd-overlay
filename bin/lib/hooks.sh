@@ -63,6 +63,8 @@ cmd_install_hooks() {
   echo "            (on Stop, asks the agent for each thing the first commit with unfinished review steps misses, once for each session and commit),"
   echo "            the builder guard"
   echo "            (on the Agent tool, denies launching the builder on a task the shaper did not design; a speed bump, not a security boundary),"
+  echo "            the registry refresh"
+  echo "            (on UserPromptSubmit, refreshes the skills table of the project's registry through the engine, never blocking a prompt),"
   echo "            and the codegraph prompt hook: a bare 'codegraph prompt-hook' UserPromptSubmit command (written by the codegraph installer) is replaced,"
   echo "            in place, by a wrapper that skips task notifications and runs codegraph unchanged for every other prompt"
   echo "            (a codegraph reinstall puts the bare command back: run install-hooks again; uninstall-hooks restores it)."

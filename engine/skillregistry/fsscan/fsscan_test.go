@@ -19,22 +19,29 @@ func write(t *testing.T, path, text string) {
 	}
 }
 
+func mkdir(t *testing.T, path string) {
+	t.Helper()
+	if err := os.MkdirAll(path, 0o755); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestIsProjectIsADirectoryThatHoldsGitOrAtl(t *testing.T) {
 	root := t.TempDir()
 	for name, make := range map[string]func(dir string){
-		"a .git directory":  func(dir string) { os.MkdirAll(filepath.Join(dir, ".git"), 0o755) },
+		"a .git directory":  func(dir string) { mkdir(t, filepath.Join(dir, ".git")) },
 		"a .git file":       func(dir string) { write(t, filepath.Join(dir, ".git"), "gitdir: /elsewhere\n") },
-		"an .atl directory": func(dir string) { os.MkdirAll(filepath.Join(dir, ".atl"), 0o755) },
+		"an .atl directory": func(dir string) { mkdir(t, filepath.Join(dir, ".atl")) },
 	} {
 		dir := filepath.Join(root, name)
-		os.MkdirAll(dir, 0o755)
+		mkdir(t, dir)
 		make(dir)
 		if !(Scanner{}).IsProject(dir) {
 			t.Errorf("%s: IsProject = false, want true", name)
 		}
 	}
 	plain := filepath.Join(root, "plain")
-	os.MkdirAll(filepath.Join(plain, "skills"), 0o755)
+	mkdir(t, filepath.Join(plain, "skills"))
 	if (Scanner{}).IsProject(plain) {
 		t.Error("a directory with only a skills directory is not a project")
 	}
@@ -72,8 +79,8 @@ func TestScanSkipsWhatHoldsNoSkillFile(t *testing.T) {
 	write(t, filepath.Join(dir, "afile.md"), "not a directory")
 	write(t, filepath.Join(dir, "lower", "skill.md"), "wrong case")
 	write(t, filepath.Join(dir, "nested", "inner", "SKILL.md"), "one level only")
-	os.MkdirAll(filepath.Join(dir, "emptydir"), 0o755)
-	os.MkdirAll(filepath.Join(dir, "asdir", "SKILL.md"), 0o755)
+	mkdir(t, filepath.Join(dir, "emptydir"))
+	mkdir(t, filepath.Join(dir, "asdir", "SKILL.md"))
 
 	got, exists := (Scanner{}).Scan(skillregistry.Source{Scope: skillregistry.ScopeProject, Dir: dir})
 
@@ -86,7 +93,7 @@ func TestScanFollowsALinkToADirectory(t *testing.T) {
 	root := t.TempDir()
 	write(t, filepath.Join(root, "target", "linked", "SKILL.md"), "via link")
 	dir := filepath.Join(root, "skills")
-	os.MkdirAll(dir, 0o755)
+	mkdir(t, dir)
 	if err := os.Symlink(filepath.Join(root, "target", "linked"), filepath.Join(dir, "linked")); err != nil {
 		t.Skip("no symlinks here:", err)
 	}

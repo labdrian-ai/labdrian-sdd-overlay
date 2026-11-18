@@ -84,6 +84,8 @@ func TestParseSkillReadsAQuotedValueOverSeveralLinesWhole(t *testing.T) {
 		{"a blank line inside adds no space", "---\nname: dqmulti\ndescription: \"a\n\n  b\"\n---\n", "a b"},
 		{"carriage returns", "---\r\nname: crlfmulti\r\ndescription: \"a\r\n  b\"\r\n---\r\n", "a b"},
 		{"the other keys after it are read", "---\nname: multi\ndescription: \"a\n  b\"\nname: later\n---\n", "a b"},
+		{"a quote that does not close before a nested mapping keeps its first line", "---\nname: multi\ndescription: \"Starts quoted\n  metadata:\n    note: \"x\"\nlicense: x\n---\n", "Starts quoted"},
+		{"a continuation line may say Trigger:", "---\nname: multi\ndescription: \"first\n  Trigger: second\"\n---\n", "first Trigger: second"},
 		{"a quote that never closes keeps its first line", "---\nname: multi\ndescription: \"a\n  b\nlicense: x\n---\n", "a"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
