@@ -71,7 +71,10 @@ Commands:
                                    misses, once for each session and commit), and the builder guard (on the Agent
                                    tool: denies launching the builder on a task the
                                    shaper did not design) into
-                                   ~/.claude/settings.json. Re-run it after an
+                                   ~/.claude/settings.json, and replaces a bare
+                                   "codegraph prompt-hook" UserPromptSubmit command with a
+                                   wrapper that skips task notifications (a codegraph
+                                   reinstall writes the bare one back; re-run to wrap it). Re-run it after an
                                    upgrade that adds a hook family, then restart Claude Code
                                    to load the hooks.
                                    If CODEX_HOME (default ~/.codex) already exists, merge
@@ -86,12 +89,14 @@ Commands:
   uninstall-hooks                  Remove our hook entries from ~/.claude/settings.json
                                    (the review stop-hook on Stop and the builder guard
                                    on Agent among them),
+                                   the bare "codegraph prompt-hook" command written back in place of its wrapper,
                                    and our Codex SessionStart hook from CODEX_HOME/hooks.json
                                    (default ~/.codex), leaving foreign bytes intact.
   status-hooks                     Read-only check of overlay installation health: binary
                                    present, hooks wired, contract readable. Exits 0 if all
                                    OK, 1 if any check fails, 2 for warnings alone (a missing
                                    or drifted review stop-hook or builder guard is one,
+                                   as is a codegraph prompt hook back to the bare command,
                                    until install-hooks is re-run).
                                    Codex is reported only if its home exists; presence
                                    does not prove trust (/hooks, key t). Read-only.

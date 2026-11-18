@@ -71,6 +71,9 @@ func mergeHooks(root map[string]interface{}, hookCommand string) bool {
 	if addOutputStyle(root) {
 		changed = true
 	}
+	if wrapCodegraphPrompt(hooks, hookCommand) {
+		changed = true
+	}
 	root["hooks"] = hooks
 	return changed
 }
@@ -109,6 +112,9 @@ func removeHooks(root map[string]interface{}, hookCommand string) bool {
 	hooks, ok := root["hooks"].(map[string]interface{})
 	if !ok {
 		return changed
+	}
+	if restoreCodegraphPrompt(hooks, hookCommand) {
+		changed = true
 	}
 
 	for _, key := range []string{"UserPromptSubmit", "PreToolUse", "SessionEnd", "SessionStart", "PostToolUse", "Stop"} {

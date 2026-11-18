@@ -14,6 +14,7 @@ exit: 2
 [OK  ] hook: PreToolUse matcher="Agent" (builder guard) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "agent" (main session runs as the foreman) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "outputStyle" (labdrian output style) — installed; restart Claude Code to load hook changes if this session started earlier
+[OK  ] settings: UserPromptSubmit "codegraph prompt-hook" (task notifications skipped) — no codegraph entry, nothing to wrap
 [OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
 [OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
 --- stderr ---
@@ -34,6 +35,7 @@ exit: 2
 [OK  ] hook: PreToolUse matcher="Agent" (builder guard) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "agent" (main session runs as the foreman) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "outputStyle" (labdrian output style) — installed; restart Claude Code to load hook changes if this session started earlier
+[OK  ] settings: UserPromptSubmit "codegraph prompt-hook" (task notifications skipped) — no codegraph entry, nothing to wrap
 [OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
 [OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
 --- stderr ---
@@ -54,6 +56,7 @@ exit: 2
 [OK  ] hook: PreToolUse matcher="Agent" (builder guard) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "agent" (main session runs as the foreman) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "outputStyle" (labdrian output style) — installed; restart Claude Code to load hook changes if this session started earlier
+[OK  ] settings: UserPromptSubmit "codegraph prompt-hook" (task notifications skipped) — no codegraph entry, nothing to wrap
 [OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
 [OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
 --- stderr ---
@@ -74,6 +77,7 @@ exit: 2
 [OK  ] hook: PreToolUse matcher="Agent" (builder guard) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "agent" (main session runs as the foreman) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "outputStyle" (labdrian output style) — installed; restart Claude Code to load hook changes if this session started earlier
+[OK  ] settings: UserPromptSubmit "codegraph prompt-hook" (task notifications skipped) — no codegraph entry, nothing to wrap
 [OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
 [OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
 --- stderr ---
@@ -94,6 +98,7 @@ exit: 0
 [OK  ] hook: PreToolUse matcher="Agent" (builder guard) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "agent" (main session runs as the foreman) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "outputStyle" (labdrian output style) — installed; restart Claude Code to load hook changes if this session started earlier
+[OK  ] settings: UserPromptSubmit "codegraph prompt-hook" (task notifications skipped) — no codegraph entry, nothing to wrap
 [OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
 [OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
 --- stderr ---
@@ -114,6 +119,7 @@ exit: 2
 [OK  ] hook: PreToolUse matcher="Agent" (builder guard) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "agent" (main session runs as the foreman) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "outputStyle" (labdrian output style) — installed; restart Claude Code to load hook changes if this session started earlier
+[OK  ] settings: UserPromptSubmit "codegraph prompt-hook" (task notifications skipped) — no codegraph entry, nothing to wrap
 [OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
 [OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
 --- stderr ---
@@ -134,6 +140,7 @@ exit: 2
 [OK  ] hook: PreToolUse matcher="Agent" (builder guard) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "agent" (main session runs as the foreman) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "outputStyle" (labdrian output style) — installed; restart Claude Code to load hook changes if this session started earlier
+[OK  ] settings: UserPromptSubmit "codegraph prompt-hook" (task notifications skipped) — no codegraph entry, nothing to wrap
 [OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
 [OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
 --- stderr ---
@@ -154,6 +161,7 @@ exit: 2
 [OK  ] hook: PreToolUse matcher="Agent" (builder guard) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "agent" (main session runs as the foreman) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "outputStyle" (labdrian output style) — installed; restart Claude Code to load hook changes if this session started earlier
+[OK  ] settings: UserPromptSubmit "codegraph prompt-hook" (task notifications skipped) — no codegraph entry, nothing to wrap
 [OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
 [OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
 --- stderr ---
@@ -174,6 +182,7 @@ exit: 2
 [OK  ] hook: PreToolUse matcher="Agent" (builder guard) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "agent" (main session runs as the foreman) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "outputStyle" (labdrian output style) — installed; restart Claude Code to load hook changes if this session started earlier
+[OK  ] settings: UserPromptSubmit "codegraph prompt-hook" (task notifications skipped) — no codegraph entry, nothing to wrap
 [OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
 [OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
 --- stderr ---
@@ -194,6 +203,7 @@ exit: 2
 [OK  ] hook: PreToolUse matcher="Agent" (builder guard) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "agent" (main session runs as the foreman) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "outputStyle" (labdrian output style) — installed; restart Claude Code to load hook changes if this session started earlier
+[OK  ] settings: UserPromptSubmit "codegraph prompt-hook" (task notifications skipped) — no codegraph entry, nothing to wrap
 [OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
 [OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
 --- stderr ---
@@ -214,6 +224,7 @@ exit: 2
 [OK  ] hook: PreToolUse matcher="Agent" (builder guard) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "agent" (main session runs as the foreman) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "outputStyle" (labdrian output style) — installed; restart Claude Code to load hook changes if this session started earlier
+[OK  ] settings: UserPromptSubmit "codegraph prompt-hook" (task notifications skipped) — no codegraph entry, nothing to wrap
 [OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
 [OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
 --- stderr ---
@@ -234,6 +245,7 @@ exit: 2
 [OK  ] hook: PreToolUse matcher="Agent" (builder guard) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "agent" (main session runs as the foreman) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "outputStyle" (labdrian output style) — installed; restart Claude Code to load hook changes if this session started earlier
+[OK  ] settings: UserPromptSubmit "codegraph prompt-hook" (task notifications skipped) — no codegraph entry, nothing to wrap
 [OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
 [OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
 --- stderr ---
@@ -254,6 +266,7 @@ exit: 2
 [OK  ] hook: PreToolUse matcher="Agent" (builder guard) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "agent" (main session runs as the foreman) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "outputStyle" (labdrian output style) — installed; restart Claude Code to load hook changes if this session started earlier
+[OK  ] settings: UserPromptSubmit "codegraph prompt-hook" (task notifications skipped) — no codegraph entry, nothing to wrap
 [OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
 [OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
 --- stderr ---
@@ -274,6 +287,7 @@ exit: 2
 [WARN] hook: PreToolUse matcher="Agent" (builder guard) — missing or drifted: PreToolUse matcher="Agent" roles builder-guard; a builder launch is not checked for a task the shaper designed (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
 [OK  ] settings: "agent" (main session runs as the foreman) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "outputStyle" (labdrian output style) — installed; restart Claude Code to load hook changes if this session started earlier
+[OK  ] settings: UserPromptSubmit "codegraph prompt-hook" (task notifications skipped) — no codegraph entry, nothing to wrap
 [OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
 [OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
 --- stderr ---
@@ -294,6 +308,7 @@ exit: 2
 [WARN] hook: PreToolUse matcher="Agent" (builder guard) — missing or drifted: PreToolUse matcher="Agent" roles builder-guard, 1 drifted or duplicate PreToolUse roles builder-guard entries; a builder launch is not checked for a task the shaper designed (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
 [OK  ] settings: "agent" (main session runs as the foreman) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "outputStyle" (labdrian output style) — installed; restart Claude Code to load hook changes if this session started earlier
+[OK  ] settings: UserPromptSubmit "codegraph prompt-hook" (task notifications skipped) — no codegraph entry, nothing to wrap
 [OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
 [OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
 --- stderr ---
@@ -314,6 +329,7 @@ exit: 1
 [OK  ] hook: PreToolUse matcher="Agent" (builder guard) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "agent" (main session runs as the foreman) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "outputStyle" (labdrian output style) — installed; restart Claude Code to load hook changes if this session started earlier
+[OK  ] settings: UserPromptSubmit "codegraph prompt-hook" (task notifications skipped) — no codegraph entry, nothing to wrap
 [OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
 [OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
 --- stderr ---
@@ -334,6 +350,7 @@ exit: 1
 [OK  ] hook: PreToolUse matcher="Agent" (builder guard) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "agent" (main session runs as the foreman) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "outputStyle" (labdrian output style) — installed; restart Claude Code to load hook changes if this session started earlier
+[OK  ] settings: UserPromptSubmit "codegraph prompt-hook" (task notifications skipped) — no codegraph entry, nothing to wrap
 [OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
 [OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
 --- stderr ---

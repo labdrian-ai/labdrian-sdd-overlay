@@ -212,6 +212,7 @@ func (s Service) Check(req Request) Report {
 		checkBuilderGuard(loaded, binaryPath),
 		checkMainAgent(loaded, binaryPath),
 		checkOutputStyle(loaded, binaryPath),
+		checkCodegraphPromptHook(loaded, binaryPath),
 		CheckContract(contractPath, s.Files),
 	}
 	if check := s.codexHook(req, binaryPath); check != nil {
@@ -470,6 +471,25 @@ func checkOutputStyle(s loadedSettings, binaryPath string) Check {
 				settings.OutputStyleValueJSON(s.root), settings.OutputStyleName, cost, settings.OutputStyleName)}
 	}
 	return Check{Label: label, Level: Warn, Note: `"outputStyle" key missing in ` + s.path + "; " + cost + "; " + installRemedy + "; " + restartNote}
+}
+
+// checkCodegraphPromptHook reports whether the codegraph prompt hook runs through the labdrian wrapper that
+// skips task notifications (S19, L87). The entry is written by the codegraph installer, not by the overlay: a
+// settings file with no such entry is fine, and so is the wrapper. The bare `codegraph prompt-hook` command is
+// a warning, because it is what a codegraph reinstall or upgrade writes back; install-hooks wraps it again.
+func checkCodegraphPromptHook(s loadedSettings, binaryPath string) Check {
+	label := `settings: UserPromptSubmit "codegraph prompt-hook" (task notifications skipped)`
+	if c, done := s.beforeEntries(label, OK, "; nothing to wrap"); done {
+		return c
+	}
+	switch settings.CodegraphPrompt(s.root, binaryPath) {
+	case settings.CodegraphPromptWrapped:
+		return Check{Label: label, Level: OK, Note: "wrapped by labdrian: task notifications do not reach codegraph"}
+	case settings.CodegraphPromptBare:
+		return Check{Label: label, Level: Warn,
+			Note: `the bare "codegraph prompt-hook" entry is back (a codegraph reinstall rewrites it), so codegraph explores every task notification; run 'labdrian install-hooks'; ` + restartNote}
+	}
+	return Check{Label: label, Level: OK, Note: "no codegraph entry, nothing to wrap"}
 }
 
 // CheckContract verifies the contract at path is readable and its frontmatter parses.

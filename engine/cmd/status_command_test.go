@@ -90,6 +90,7 @@ func TestStatusCoreWritesTheWholeReportOfTheServiceAndAnswersItsOutcome(t *testi
 		`hook: PreToolUse matcher="Agent" (builder guard)`,
 		`settings: "agent" (main session runs as the foreman)`,
 		`settings: "outputStyle" (labdrian output style)`,
+		`settings: UserPromptSubmit "codegraph prompt-hook" (task notifications skipped)`,
 	} {
 		want += "[FAIL] " + label + unreadable
 	}

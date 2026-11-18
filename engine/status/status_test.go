@@ -239,7 +239,7 @@ func commandsOf(entry interface{}) string {
 
 func TestACompleteInstallIsHealthyAndReportsEveryCheckInOrder(t *testing.T) {
 	report := complete(t).check()
-	want := []string{labelBinary, labelPrompt, labelAgent, labelSession, labelReceipt, labelShaper, labelProj, labelApprove, labelStop, labelBuilder, labelMainAgent, labelOutputStyle, labelContract, labelRegistry}
+	want := []string{labelBinary, labelPrompt, labelAgent, labelSession, labelReceipt, labelShaper, labelProj, labelApprove, labelStop, labelBuilder, labelMainAgent, labelOutputStyle, labelCodegraphPrompt, labelContract, labelRegistry}
 	if got := report.labels(); strings.Join(got, "\n") != strings.Join(want, "\n") {
 		t.Fatalf("checks\n got: %q\nwant: %q", got, want)
 	}
