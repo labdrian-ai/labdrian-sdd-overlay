@@ -16,7 +16,7 @@ import (
 
 // baselineSkillID is a real member of the approval baseline: which ids are exempt from the lint
 // refusal is the point of the exemption, and the list is fixed data.
-const baselineSkillID = "sdd-apply"
+const baselineSkillID = "go-testing"
 
 // overBudgetSkillMD is lint-clean front matter and sections followed by enough body to fail the
 // hard token budget, which is the finding the baseline skills have.

@@ -377,7 +377,7 @@ func snapshotFiles(t *testing.T, paths ...string) map[string]string {
 func TestLintBaseline_IsWellFormedAndFixed(t *testing.T) {
 	// The count is pinned: adding to or removing from the list is a deliberate, reviewed change that
 	// must update this number with it.
-	const lintBaselineSize = 28
+	const lintBaselineSize = 16
 	if len(lintBaselineSkills) != lintBaselineSize {
 		t.Fatalf("the lint baseline has %d ids, want the fixed %d", len(lintBaselineSkills), lintBaselineSize)
 	}
@@ -412,7 +412,7 @@ func TestLintBaseline_IsWellFormedAndFixed(t *testing.T) {
 }
 
 func TestBaselineLintDecision(t *testing.T) {
-	const baselineID, otherID = "sdd-apply", "my-new-skill"
+	const baselineID, otherID = "go-testing", "my-new-skill"
 	budget := &LintError{Rule: "body-hard-budget", Msg: "body is 1200 estimated tokens"}
 	description := &LintError{Rule: "description-max", Msg: "description is 300 characters"}
 	structural := &LintError{Rule: "frontmatter-fence", Msg: "no front matter"}

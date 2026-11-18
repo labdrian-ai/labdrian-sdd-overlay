@@ -43,7 +43,3 @@ Return:
 - Number of indexed skills.
 - Whether the registry was already up to date or was regenerated.
 - Any skipped or duplicate skills when relevant.
-
-## References
-
-- `skills/_shared/skill-resolver.md` — how delegators use the index.

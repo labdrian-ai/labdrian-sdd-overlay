@@ -54,9 +54,6 @@ cmd_bootstrap() {
 
   # 2. Ensure all required directories exist
   mkdir -p bin \
-    skills/sdd-spec \
-    skills/sdd-tasks \
-    skills/sdd-verify/references \
     skills/requirements-from-transcripts
 
   # 3. Write scaffold files if not present

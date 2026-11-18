@@ -111,7 +111,7 @@ That is why the schema's `delivery_strategy` domain is `single-pr | auto-chain |
 
 `chain_strategy` stores the topology — `none | feature-branch-chain | stacked-to-main` — with `none` required whenever `chaining_required` is `false`.
 
-The full map across every delivery and chaining vocabulary, including the `sdd-tasks` forecast literal (which admits `size-exception` and `pending`, neither of which is a topology and neither of which may reach a contract), lives in `skills/_shared/sdd-orchestrator-workflow.md`, section **Delivery and Chain Vocabulary Map**. Keep the two in sync. If they disagree, the schema and the deterministic validator win for stored values, and the workflow map wins for routing.
+A forecast literal such as `size-exception` or `pending` is not a topology and never reaches a contract. If a stored value disagrees with this section, the schema and the deterministic validator win.
 
 ---
 

@@ -101,12 +101,12 @@ func TestResolveRoutesPlacesEachKindOfRow(t *testing.T) {
 		target string
 		want   ResolvedRoute
 	}{
-		{"a bare skill row goes to the skills of Claude", ManifestRow{"sdd-spec/SKILL.md", "managed", ""}, "claude",
-			ResolvedRoute{"sdd-spec/SKILL.md", "skill", "skills/sdd-spec/SKILL.md", "/o/skills/sdd-spec/SKILL.md", "/h/.claude/skills/sdd-spec/SKILL.md"}},
-		{"a bare skill row goes nowhere for OpenCode (S13: it reads the skills of ~/.claude)", ManifestRow{"sdd-spec/SKILL.md", "managed", ""}, "opencode",
-			ResolvedRoute{"sdd-spec/SKILL.md", "skill", "skills/sdd-spec/SKILL.md", "/o/skills/sdd-spec/SKILL.md", ""}},
-		{"a bare skill row goes to the skills of Codex", ManifestRow{"sdd-spec/SKILL.md", "managed", ""}, "codex",
-			ResolvedRoute{"sdd-spec/SKILL.md", "skill", "skills/sdd-spec/SKILL.md", "/o/skills/sdd-spec/SKILL.md", "/h/.codex/skills/sdd-spec/SKILL.md"}},
+		{"a bare skill row goes to the skills of Claude", ManifestRow{"go-testing/SKILL.md", "managed", ""}, "claude",
+			ResolvedRoute{"go-testing/SKILL.md", "skill", "skills/go-testing/SKILL.md", "/o/skills/go-testing/SKILL.md", "/h/.claude/skills/go-testing/SKILL.md"}},
+		{"a bare skill row goes nowhere for OpenCode (S13: it reads the skills of ~/.claude)", ManifestRow{"go-testing/SKILL.md", "managed", ""}, "opencode",
+			ResolvedRoute{"go-testing/SKILL.md", "skill", "skills/go-testing/SKILL.md", "/o/skills/go-testing/SKILL.md", ""}},
+		{"a bare skill row goes to the skills of Codex", ManifestRow{"go-testing/SKILL.md", "managed", ""}, "codex",
+			ResolvedRoute{"go-testing/SKILL.md", "skill", "skills/go-testing/SKILL.md", "/o/skills/go-testing/SKILL.md", "/h/.codex/skills/go-testing/SKILL.md"}},
 		{"a row that says skill is the same", ManifestRow{"shared/helper.md", "managed", "skill"}, "claude",
 			ResolvedRoute{"shared/helper.md", "skill", "skills/shared/helper.md", "/o/skills/shared/helper.md", "/h/.claude/skills/shared/helper.md"}},
 		{"an agent goes to the agents of Claude", ManifestRow{"GADU.md", "custom", "agent"}, "claude",
