@@ -176,7 +176,9 @@ func (t Tools) Nilerr(root, module string, packages []string) ([]string, error) 
 }
 
 // presentPackages is the directory of the module of the copy and the packages, patterns "." or "./dir", whose directory
-// the copy has. A module the copy has no go.mod for has none: the module is new at the other side of the sweep.
+// the copy has with a .go file of its own in it: a directory whose files a commit deleted, leaving only subpackages,
+// is no package, and staticcheck refuses it. A module the copy has no go.mod for has none: the module is new at the
+// other side of the sweep.
 func presentPackages(root, module string, packages []string) (string, []string) {
 	dir := filepath.Join(root, filepath.FromSlash(module))
 	if !isFile(filepath.Join(dir, "go.mod")) {
@@ -184,7 +186,7 @@ func presentPackages(root, module string, packages []string) (string, []string) 
 	}
 	var present []string
 	for _, pkg := range packages {
-		if isDir(filepath.Join(dir, filepath.FromSlash(pkg))) {
+		if holdsGoFile(filepath.Join(dir, filepath.FromSlash(pkg))) {
 			present = append(present, pkg)
 		}
 	}
@@ -281,9 +283,10 @@ func isFile(p string) bool {
 	return err == nil && info.Mode().IsRegular()
 }
 
-func isDir(p string) bool {
-	info, err := os.Stat(p)
-	return err == nil && info.IsDir()
+// holdsGoFile says whether the directory p holds a .go file of its own.
+func holdsGoFile(p string) bool {
+	matches, err := filepath.Glob(filepath.Join(p, "*.go"))
+	return err == nil && len(matches) > 0
 }
 
 // ExecRunner is the process adapter of Runner: it starts the program of the PATH of the process in dir under env, nothing
