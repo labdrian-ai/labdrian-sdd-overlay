@@ -9,17 +9,16 @@ import (
 	"slices"
 	"strings"
 	"testing"
-)
 
-// openCodeServerNames are the servers of the labdrian flow, in the order the rules list them.
-var openCodeServerNames = []string{"memorycard", "longterm-mem", "codegraph"}
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/agentgen"
+)
 
 // serverRuleLines are the rules of the file on a tool of a server, in the order of the file, each as
 // "effect action" so a table row reads as the file does.
 func (f openCodeFile) serverRuleLines() []string {
 	var out []string
 	for _, r := range f.rules {
-		for _, server := range openCodeServerNames {
+		for _, server := range agentgen.OpenCodeMCPServers {
 			if strings.HasPrefix(r.action, server+"_") {
 				out = append(out, r.effect+" "+r.action)
 			}
@@ -106,7 +105,7 @@ func TestNoAllowOfAServerPrecedesTheDenyOfThatServer(t *testing.T) {
 				if r.resource != `"*"` {
 					t.Errorf("the rule %+v does not cover every resource", r)
 				}
-				for _, server := range openCodeServerNames {
+				for _, server := range agentgen.OpenCodeMCPServers {
 					switch {
 					case r.effect == "deny" && r.action == server+"_*":
 						denyAt[server] = i + 1
@@ -117,7 +116,7 @@ func TestNoAllowOfAServerPrecedesTheDenyOfThatServer(t *testing.T) {
 					}
 				}
 			}
-			for _, server := range openCodeServerNames {
+			for _, server := range agentgen.OpenCodeMCPServers {
 				if denyAt[server] == 0 {
 					t.Errorf("no deny of %s_*", server)
 				}
