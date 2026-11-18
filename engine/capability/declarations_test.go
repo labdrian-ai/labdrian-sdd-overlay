@@ -101,13 +101,16 @@ func TestDeclarationsNeverCarryNilTests(t *testing.T) {
 	}
 }
 
+// TestOnlyOpenCodeIsDeclaredUntested pins that the untested reason stays on OpenCode
+// alone: its model sessions are the one thing no test drives (T17 observes them),
+// while the other runtimes are declared by tests of their own.
 func TestOnlyOpenCodeIsDeclaredUntested(t *testing.T) {
 	for _, d := range capability.All() {
 		switch {
 		case d.Target == capability.TargetOpenCode && strings.TrimSpace(d.Untested) == "":
-			t.Errorf("opencode cannot be exercised on this machine, but its declaration has no untested reason")
+			t.Errorf("no test drives an opencode model session, but its declaration has no untested reason")
 		case d.Target != capability.TargetOpenCode && d.Untested != "":
-			t.Errorf("%s can be exercised on this machine, but its declaration says untested: %q", d.Target, d.Untested)
+			t.Errorf("%s is declared by tests that run it here, but its declaration says untested: %q", d.Target, d.Untested)
 		}
 	}
 }
@@ -124,12 +127,14 @@ func TestEveryTargetDeclaresInstallationWithEvidence(t *testing.T) {
 	}
 }
 
-// Phase 7's declared-only limits remain except for installation, Phase 8 skills,
-// and C23 M12b's bounded Codex memory enforcement. Each exception has its own
-// status and scope pins; Pi and OpenCode memory enforcement stay unsupported.
+// Phase 7's declared-only limits remain for Codex and Pi except for installation,
+// Phase 8 skills, and C23 M12b's bounded Codex memory enforcement. Each exception
+// has its own status and scope pins; Pi memory enforcement stays unsupported.
+// OpenCode left the declared-only runtimes in T16 and has its own pins in
+// opencode_declaration_test.go.
 func TestRuntimesOtherThanClaudeAreDeclaredOnly(t *testing.T) {
 	for _, d := range capability.All() {
-		if d.Target == capability.TargetClaude {
+		if d.Target == capability.TargetClaude || d.Target == capability.TargetOpenCode {
 			continue
 		}
 		for _, c := range d.Claims {
@@ -347,8 +352,9 @@ func skillsClaim(t *testing.T, target string) capability.Claim {
 // and Codex by the project-tier tests (engine/skills) and the global-tier tests
 // (engine/installer), Pi by the package tests (engine/pipkg), its adapter
 // (engine/runtime), and the register tests that print its trust note, OpenCode by
-// the global-tier tests only. OpenCode's claim says no test connects the project tier
-// to it, so it may cite none that does.
+// the global-tier tests and the adapter tests (engine/runtime: no copy written, shadowing
+// skills reported). OpenCode's claim says no test connects the project tier to it, so it
+// may cite none from engine/skills.
 func TestSkillsClaimsAreBoundedByTheirEvidence(t *testing.T) {
 	for _, tc := range []struct {
 		target    string
@@ -358,7 +364,7 @@ func TestSkillsClaimsAreBoundedByTheirEvidence(t *testing.T) {
 		{capability.TargetClaude, []string{"installer", "skills"}, nil},
 		{capability.TargetCodex, []string{"installer", "skills"}, nil},
 		{capability.TargetPi, []string{"pipkg", "runtime", "skills"}, []string{"installer"}},
-		{capability.TargetOpenCode, []string{"installer"}, []string{"skills", "pipkg", "runtime"}},
+		{capability.TargetOpenCode, []string{"installer", "runtime"}, []string{"skills", "pipkg"}},
 	} {
 		t.Run(tc.target, func(t *testing.T) {
 			c := skillsClaim(t, tc.target)

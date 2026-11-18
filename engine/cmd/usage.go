@@ -65,7 +65,7 @@ func usage(w io.Writer) {
 	fmt.Fprintln(w, "  engine runtime capabilities [--target claude|codex|pi|opencode|all]")
 	fmt.Fprintln(w, "    read-only: prints, as JSON, what each runtime adapter declares it supports (default --target all);")
 	fmt.Fprintln(w, "    every supported or partial claim names the tests that prove it, every partial or unsupported claim")
-	fmt.Fprintln(w, "    states its limit, and untested appears only for a runtime that cannot be exercised on this machine")
+	fmt.Fprintln(w, "    states its limit, and untested appears only for a runtime whose model sessions no test drives (opencode; its tests run it at file level, under node and in the real binary)")
 	fmt.Fprintln(w, "    reads no configuration, HOME, or file; exit 0 success, 2 unknown --target value, 1 usage error including an unknown flag")
 	fmt.Fprintln(w, "  engine runtime probe [--target claude|codex|pi|all]")
 	fmt.Fprintln(w, "    read-only: prints, as JSON, whether each selected runtime's credentials file is present (default --target all),")

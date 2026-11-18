@@ -351,10 +351,20 @@ func phase7Capabilities(t *testing.T, binary string) {
 					}
 					continue
 				}
+				if d.Target == capability.TargetOpenCode {
+					// T16: OpenCode states claims of its own. A partial one names its tests
+					// and a limit; an unsupported one names none and says why.
+					if c.Detail == "" || c.Status == capability.Supported || (c.Status == capability.Partial) != (len(c.Tests) != 0) {
+						t.Errorf("opencode %s = %s with %d tests and detail %q, want partial with tests or unsupported without, and a written limit", name, c.Status, len(c.Tests), c.Detail)
+					}
+					continue
+				}
 				if c.Status != capability.Unsupported || c.Detail == "" || len(c.Tests) != 0 {
 					t.Errorf("%s %s = %s with %d tests and detail %q, want unsupported, no tests, and a written limit", d.Target, name, c.Status, len(c.Tests), c.Detail)
 				}
 			}
+			// Only OpenCode carries an untested reason: its model sessions are the one
+			// thing no test drives (T17).
 			if untested := d.Untested != ""; untested != (d.Target == capability.TargetOpenCode) {
 				t.Errorf("%s untested = %q: only opencode is marked untested", d.Target, d.Untested)
 			}

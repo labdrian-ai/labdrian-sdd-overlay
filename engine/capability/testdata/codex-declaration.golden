@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "declarations": [
+    {
+      "target": "codex",
+      "claims": [
+        {
+          "capability": "installation",
+          "status": "partial",
+          "tests": [
+            "runtime:TestCodexInstallRejectsUnownedOrMalformedExistingManifest",
+            "runtime:TestCodexInstallWritesManifestAndPreservesUnrelatedFiles",
+            "runtime:TestCodexStatusReportsPartialWithActivationUncertainty",
+            "runtime:TestCodexUninstallRemovesManifestWithoutTouchingUnrelatedFiles",
+            "runtime:TestCodexUpdateRefreshesManagedManifest"
+          ],
+          "detail": "Install, update, and uninstall manage one lifecycle manifest (labdrian-runtime-lifecycle.json) and leave unrelated files alone. Status never exceeds partial: whether a running Codex process activates or reloads the manifest cannot be verified."
+        },
+        {
+          "capability": "projection",
+          "status": "unsupported",
+          "tests": [],
+          "detail": "No code projects the active workflow (Goal, Profile, stage) into a Codex session. This runtime is declared only: Phase 7 writes no code for it."
+        },
+        {
+          "capability": "dispatch",
+          "status": "unsupported",
+          "tests": [],
+          "detail": "Not implemented. The engine never starts sessions by design, and dispatch means projecting the active workflow into an existing session, which does not exist for Codex. This runtime is declared only: Phase 7 writes no code for it."
+        },
+        {
+          "capability": "cancellation",
+          "status": "unsupported",
+          "tests": [],
+          "detail": "Not implemented: no workflow transition reaches a Codex session. Hard cancel of an in-flight tool call is out of scope. This runtime is declared only: Phase 7 writes no code for it."
+        },
+        {
+          "capability": "persistence",
+          "status": "unsupported",
+          "tests": [],
+          "detail": "Not implemented: no binding between a Codex session and a workflow is stored. This runtime is declared only: Phase 7 writes no code for it."
+        },
+        {
+          "capability": "restart",
+          "status": "unsupported",
+          "tests": [],
+          "detail": "Not implemented: a new Codex session does not re-bind to an on-disk workflow. This runtime is declared only: Phase 7 writes no code for it."
+        },
+        {
+          "capability": "authentication",
+          "status": "unsupported",
+          "tests": [],
+          "detail": "The presence prober reports whether Codex's credentials file exists, by stat only (runtime probe), but that check is not part of an implementation for Codex: nothing reads the file, and a present file does not prove Codex is authenticated. This runtime is declared only: Phase 7 writes no code for it."
+        },
+        {
+          "capability": "memory-enforcement",
+          "status": "partial",
+          "tests": [
+            "cmd:TestCodexSourceProcesses",
+            "cmd:TestMemoryWiringAcceptance"
+          ],
+          "detail": "PreToolUse checks plan sources for MCP Engram reads, memorycard reads and longterm-mem query/get; searches/queries check project, goal-scoped queries check goal. install-hooks installs --source codex; trust each new or changed handler in the Codex TUI. Limits: Codex fails open on hook failure; no procedural skills, Bash or apply_patch enforcement; no project check for reads by id; agent_id ignored. PostToolUse records successful MCP reads only. Proven by engine hook processes, not live validation."
+        },
+        {
+          "capability": "skills",
+          "status": "partial",
+          "tests": [
+            "cmd:TestProjectRegisterTellsEachPathThenTheDigestTheRevisionAndTheTrustNote",
+            "installer:TestApply_AgentsLandInNativeAgentDirs",
+            "installer:TestCodexAgentsLandInTheAgentsDirectoryOfCodexAndNowhereElse",
+            "installer:TestUnrelatedSkillUnchanged",
+            "skills/app:TestInstallCopiesTheSkillIntoBothRuntimesAndRecordsIt",
+            "skills:TestInstall_AbsentTargetsAreCreatedInBothRuntimesAndRecorded"
+          ],
+          "detail": "skills install, adopt, and project-register write project skills to .agents/skills. A live check on 2026-09-28 recorded Codex reading a project skill's body there; that is recorded evidence, not a test. Global skills are deployed to ~/.codex/skills by labdrian apply, not the engine, tested only on a fixture overlay and a sandbox home, never the real skills. Role agents go to ~/.codex/agents the same way. No test observes Codex loading a skill or an agent, and the global tier has no unused-skill detector."
+        }
+      ]
+    }
+  ]
+}

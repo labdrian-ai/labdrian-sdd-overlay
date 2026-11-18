@@ -125,7 +125,7 @@ func TestRuntimeCapabilitiesMarksOnlyOpenCodeUntested(t *testing.T) {
 		untested, present := d["untested"]
 		switch {
 		case target == "opencode" && (!present || untested == ""):
-			t.Errorf("opencode must carry a non-empty untested reason, got %v", untested)
+			t.Errorf("opencode must carry a non-empty untested reason (no test drives a model session, T17), got %v", untested)
 		case target != "opencode" && present:
 			t.Errorf("%s must not carry an untested key, got %v", target, untested)
 		}

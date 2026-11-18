@@ -1182,7 +1182,11 @@ gentle-ai-overlay runtime capabilities [--target claude|codex|pi|opencode|all]
     partial, or unsupported. A supported or partial claim names the tests that prove it as
     <directory under engine/>:<TestName>, and a guard test verifies every named test exists; a
     partial or unsupported claim states its limit in "detail". "untested" appears only on a runtime
-    that cannot be exercised on this machine (opencode). The output states what the engine's own
+    whose model sessions no test drives (opencode: its adapter, plugins and engine source are tested
+    at file level, under node and, when the binary exists, in the real opencode; what needs a model
+    session, such as context reaching a session or a captured Key Learnings item, is declared
+    untested until the T17 live run). OpenCode has claims of its own, not the declared-only list
+    Codex and Pi share; each partial one names the tests that back it. The output states what the engine's own
     tests prove, never what a runtime happened to do: a capability no test proves is declared
     unsupported, with the limit written. It reads no configuration, HOME, or file and starts no
     session. Exit 0 on success, 2 on an unknown --target value, 1 on a usage error (including an unknown flag).

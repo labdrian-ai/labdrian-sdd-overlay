@@ -17,12 +17,13 @@ import (
 //
 // Phase 7 builds the Claude Code implementation task by task, and a Claude
 // Code claim is upgraded in the commit that adds the tests proving it, so the
-// table states only what the tests at that commit prove. Codex, Pi, and
-// OpenCode are declared only: they state what is proven today (installation)
-// and an honest unsupported, with the limit written, for the rest, except for
-// Codex's partial MCP memory gate (C23 M12b). OpenCode is also declared untested:
-// it is installed here but outside the regular runtime set, and no test exercises
-// it (one recorded live probe aside).
+// table states only what the tests at that commit prove. Codex and Pi are
+// declared only: they state what is proven today (installation) and an honest
+// unsupported, with the limit written, for the rest, except for Codex's partial
+// MCP memory gate (C23 M12b). OpenCode has claims of its own (T16): its adapter,
+// both plugins and the engine source are tested at file level, under node and
+// against a real opencode binary when there is one, and it is declared untested
+// only for what needs a model session, which T17 observes.
 //
 // Skills, added in Phase 8, is the exception to "declared only": every runtime
 // states what its own tests prove about carrying skills into it, and all four are
@@ -137,10 +138,6 @@ var declarations = []Declaration{
 				"cmd:TestAdoptTakesOwnershipOfAnExistingInstallAndThenInstallLeavesItBe",
 				"cmd:TestProjectRegisterTellsEachPathThenTheDigestTheRevisionAndTheTrustNote",
 				"installer:TestApply_AgentsLandInNativeAgentDirs",
-				"installer:TestSyncCheck_OpenCodeChecksItsAgentsWithNoSkillsDirectory",
-				"runtime:TestOpenCodeInstallWritesNoSkillAndSaysNothingWhenThereAreNoCopies",
-				"runtime:TestOpenCodeReportsLabdrianSkillsFoundWhereOpenCodeReadsThemFirst",
-				"runtime:TestOpenCodeStatusReportsShadowingSkillsWhateverItsOutcome",
 				"skills/app:TestAddRegistersTheSkillInTheRegistryAndTheManifest",
 				"skills/app:TestAddWritesNothingWhenItRefuses",
 				"skills/app:TestAnInstallOverAHandEditedFileIsRefusedWithEveryReasonAndNothingIsWritten",
@@ -200,10 +197,10 @@ var declarations = []Declaration{
 	},
 	{
 		Target:   TargetOpenCode,
-		Untested: "OpenCode is outside the regular runtime set here: its adapter is tested at file level, and the tests that load it into a real opencode skip when there is no opencode binary",
-		Claims: append([]Claim{
+		Untested: "No test drives a model session. The adapter, both plugins and the engine source run at file level and under node against a recording engine (skipped without node), and one test loads the installed parity plugin into the real opencode binary (skipped without it). What needs a model session stays untested: context reaching a session, a captured Key Learnings item, the prompt and execute.after shapes, compaction (T17).",
+		Claims: []Claim{
 			partial(Installation,
-				"Install, update, uninstall, and status are tested at file level against a temporary config root. Status reaches supported only after the plugin writes its active marker; a test with the real opencode binary loads the installed plugin and reads what OpenCode keeps of opencode.json (it skips without the binary). Three owned entries are spliced into opencode.json bytes; AGENTS.md holds one labdrian block.",
+				"Install, update, uninstall and status are tested at file level against a temporary config root: three owned opencode.json entries, one AGENTS.md block, the parity plugin and the memorycard plugin. Status reaches supported only when both plugins wrote their active marker; a test with the real opencode binary loads the installed parity plugin (it skips without the binary). A restart is owed after install and update.",
 				"cmd:TestRuntimeCLIOpenCodeInstallStatusUninstallInASandboxHome",
 				"runtime:TestOpenCodeAGENTSIsNotRewrittenWhenCurrent",
 				"runtime:TestOpenCodeAGENTSKeepsEveryByteOutsideTheBlockAndReplacesItInPlace",
@@ -223,7 +220,9 @@ var declarations = []Declaration{
 				"runtime:TestOpenCodeInstallWritesAGENTSFromTheRulesTheStyleBodyAndTheMemorycardBlock",
 				"runtime:TestOpenCodeInstallWritesNoSkillAndSaysNothingWhenThereAreNoCopies",
 				"runtime:TestOpenCodeInstallWritesPluginConfigAndRestartRequiredStatus",
+				"runtime:TestOpenCodeInstallWritesTheMemorycardPluginAndItsRecord",
 				"runtime:TestOpenCodeInstallWritesTheV2ConfigWithForemanAndTheMCPServers",
+				"runtime:TestOpenCodeLeavesAMemorycardPluginItDidNotWriteAndSaysSo",
 				"runtime:TestOpenCodeLoadsTheInstalledPluginAndItWritesItsActiveMarker",
 				"runtime:TestOpenCodeMemorycardBlockNamesTheToolsAndNeverTheOldStore",
 				"runtime:TestOpenCodeRefusedAGENTSDoesNotStopTheConfigAndNamesItsReason",
@@ -231,6 +230,7 @@ var declarations = []Declaration{
 				"runtime:TestOpenCodeReportsLabdrianSkillsFoundWhereOpenCodeReadsThemFirst",
 				"runtime:TestOpenCodeStatusIsPartialWhileAGENTSIsMissingOrStale",
 				"runtime:TestOpenCodeStatusIsPartialWhileTheOwnedEntriesAreMissing",
+				"runtime:TestOpenCodeStatusIsSupportedOnlyWhenBothPluginsAreActive",
 				"runtime:TestOpenCodeStatusRejectsTamperedPromptConfig",
 				"runtime:TestOpenCodeStatusSupportedWhenActiveMarkerMatchesHash",
 				"runtime:TestOpenCodeUninstallGivesBackAnAbsentFileAbsentAndKeepsAForeignAgent",
@@ -239,14 +239,65 @@ var declarations = []Declaration{
 				"runtime:TestOpenCodeUninstallRemovesOnlyTheBlockAndGivesBackTheFile",
 				"runtime:TestOpenCodeUninstallRemovesOnlyTheOwnedEntries",
 				"runtime:TestOpenCodeUninstallRemovesPluginAndConfig",
+				"runtime:TestOpenCodeUninstallRemovesTheMemorycardPluginAndRecordAndNothingElseInItsDirectory",
+				"runtime:TestOpenCodeUpdateRewritesAChangedMemorycardPluginAndTheProgramItRuns",
 				"runtime:TestOpenCodeWritesTheAbsolutePathOfTheServersItFinds",
 			),
-		}, declaredOnlyClaims("OpenCode", "Not implemented: the engine does not check whether OpenCode has credentials, and the presence prober has no credentials check for it.",
+			// OpenCode has its own claims since T16 (S14), so it no longer takes the
+			// declared-only list that Codex and Pi still share. A claim is partial
+			// only when a test named here backs it; what needs a model session is
+			// unsupported or says so, and points at T17.
+			partial(Projection,
+				"The parity plugin runs projection hook --source opencode: SessionStart context goes on the system prompt of every model call of the session, byte-stable, and UserPromptSubmit context joins the user's prompt text. Tests run the plugin under node against a recording engine (skipped without node). The prompt and execute.after shapes come from the binary only; no test observes a model session receiving the context (T17).",
+				"cmd:TestTheSameSessionIdUnderTwoSourcesIsTwoSessions",
+				"runtime:TestOpenCodeBridgeAddsNothingToTheModelCallWhenTheEngineHasNoBlock",
+				"runtime:TestOpenCodeBridgeCarriesThePromptContextInTheUsersPromptAndNeverInTheSystemPrompt",
+				"runtime:TestOpenCodeBridgeKeepsTheSystemPromptByteStableAcrossPrompts",
+				"runtime:TestOpenCodeBridgeLeavesAPromptAloneWhenTheEngineHasNothingToAdd",
+				"runtime:TestOpenCodeBridgeLogsOncePerProcessAnAnswerItCannotPutInAPromptOfAnUnexpectedShape",
+				"runtime:TestOpenCodeBridgePutsTheSessionStartContextIntoEveryModelCallOfTheSession",
+				"runtime:TestOpenCodeBridgeSessionEventsSurviveAnEngineThatFails",
+			),
+			partial(Dispatch,
+				"The engine never starts sessions. For a repository bound to a workflow, the same bridge projects it at session start and at each prompt, and the Stop hook (experimental.idle, an experimental OpenCode API) forces another turn when the engine blocks the stop. Tested under node against a recording engine; no test observes a model session being steered (T17).",
+				"runtime:TestOpenCodeBridgeAsksTheStopOfMainSessionsOnly",
+				"runtime:TestOpenCodeBridgeForcesAnotherTurnWhenTheEngineBlocksTheStop",
+				"runtime:TestOpenCodeBridgeKeepsTheStopGuardAcrossThePromptItCaused",
+				"runtime:TestOpenCodeBridgeLetsTheSessionStopWhenTheEngineDoesNotBlock",
+				"runtime:TestOpenCodeBridgePutsTheSessionStartContextIntoEveryModelCallOfTheSession",
+			),
+			partial(Cancellation,
+				"A PreToolUse denial of the engine is thrown as Tool.Error and the call does not run (node, recording engine). The engine maps patch to Edit and shell to Bash, so the paused-workflow edit gate applies to patch, but no single test drives a paused workflow through patch. Limits: an in-flight tool call cannot be interrupted, shell is never gated, and no model session is observed (T17).",
+				"cmd:TestPreToolUseDeniesTheEditToolsOfAPausedWorkflow",
+				"hookwire:TestAdaptToolNameOpencode",
+				"runtime:TestOpenCodeBridgeDeniesACallTheEngineDeniesWithToolError",
+				"runtime:TestOpenCodeBridgeLetsACallThroughWhenTheEngineFailsAndSaysSoOnce",
+			),
+			unsupported(Persistence,
+				"Not implemented: the plugin stores no binding between an OpenCode session and a workflow. The engine's binding belongs to the repository, and no test ties it to a model session (T17)."),
+			unsupported(Restart,
+				"Not implemented: no test shows a new OpenCode session re-binding to an on-disk workflow. The bridge asks the engine at each session start, which only a model session can show (T17)."),
+			unsupported(Authentication,
+				"Not implemented: the engine does not check whether OpenCode has credentials, and the presence prober has no credentials check for it. A provider login is observed only with a model session (T17)."),
+			partial(MemoryEnforcement,
+				"The engine gate with --source opencode adapts OpenCode tool names (an MCP name becomes mcp__server__tool) and then applies the engine's gate; execute is not mapped, so no policy matches it. The memorycard plugin adds memorycard context to new main sessions and captures subagent Key Learnings; no memory write is blocked. Tested under node and in engine processes; no model session is observed (T17).",
+				"cmd:TestCodexSourceProcesses",
+				"hookwire:TestAdaptToolNameOpencode",
+				"runtime:TestMemorycardPluginAsksNothingInAChildSession",
+				"runtime:TestMemorycardPluginCapturesTheFinalTextOfASubagentOnStdin",
+				"runtime:TestMemorycardPluginPutsTheMemorycardContextOnTheSystemPromptOfANewSession",
+				"runtime:TestOpenCodeBridgeDeniesACallTheEngineDeniesWithToolError",
+			),
 			partial(Skills,
 				"labdrian apply copies no skill for OpenCode, which reads the global .claude/skills: a copy in its own directory would shadow that one. Install, update and status only report labdrian skills found where OpenCode reads first, and never write or remove one (tested on a fixture overlay and a sandbox home, never the real skills). A live OpenCode 1.18.31 session on 2026-09-30 discovered project skills under .agents/skills and .claude/skills (recorded, not tested). No test observes OpenCode loading a skill.",
 				"installer:TestApply_AgentsLandInNativeAgentDirs",
+				"installer:TestSyncCheck_OpenCodeChecksItsAgentsWithNoSkillsDirectory",
 				"installer:TestUnrelatedSkillUnchanged",
-			))...),
+				"runtime:TestOpenCodeInstallWritesNoSkillAndSaysNothingWhenThereAreNoCopies",
+				"runtime:TestOpenCodeReportsLabdrianSkillsFoundWhereOpenCodeReadsThemFirst",
+				"runtime:TestOpenCodeStatusReportsShadowingSkillsWhateverItsOutcome",
+			),
+		},
 	},
 }
 
