@@ -101,8 +101,15 @@ func TestBranchPRSkillWaitsForTheReviewCheckBeforeAPullRequest(t *testing.T) {
 
 func TestBranchPRSkillMergesOnlyWhenNoCheckFails(t *testing.T) {
 	_, _, body := branchPRSkill(t)
-	if !strings.Contains(body, "`gh pr checks`") || !strings.Contains(body, "no failing or pending line") {
-		t.Error("the body does not tie a merge to `gh pr checks` showing no failing or pending line")
+	if !strings.Contains(body, "\n- A merge needs `gh pr checks` showing no failing or pending line.\n") {
+		t.Error("no Hard Rule ties a merge to `gh pr checks` showing no failing or pending line")
+	}
+}
+
+func TestBranchPRSkillSaysWhereTheClosingEntryIs(t *testing.T) {
+	_, _, body := branchPRSkill(t)
+	if !strings.Contains(body, "the last `## Log` entry of `odd/tasks/<f>.md`, written by the delivery role") {
+		t.Error("the PR rule does not say the closing entry is delivery's last Log entry of the feature document")
 	}
 }
 
