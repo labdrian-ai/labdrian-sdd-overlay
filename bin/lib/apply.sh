@@ -124,6 +124,8 @@ cmd_apply() {
   # Set when `engine runtime install --target codex|opencode` ran and failed: apply still deploys every
   # target, then exits non-zero, so a block that was not written never reads as a clean apply.
   local runtime_install_failed=""
+  # Targets the longterm-mem step leaves alone because their runtime install failed (see the deploy loop).
+  LONGTERM_MEM_SKIP_TARGETS=""
 
   for t in $(resolve_targets "$target_arg"); do
     echo ""
@@ -195,16 +197,28 @@ cmd_apply() {
     # overlay-release-state R-001: persist this target's deployed version
     # and content digest so a target with no entry can be reported honestly
     # as "never deployed" rather than staying silently unversioned forever.
+    # What the OpenCode runtime adapter writes (the plugins, opencode.json and the AGENTS.md block) is not
+    # a manifest row either, and without it the target is not deployed: it runs before the state row and
+    # before the once-per-apply longterm-mem step below, which reads opencode.json. A failure is shown
+    # once, leaves no state row (status keeps saying the target was never deployed; the step runs again
+    # on every apply), keeps longterm-mem from registering into the file the install could not write, and
+    # fails apply's own exit below.
+    if [[ "$t" == "opencode" ]] && ! runtime_install_and_report opencode; then
+      runtime_install_failed=1
+      LONGTERM_MEM_SKIP_TARGETS+=" opencode"
+      echo "  opencode: runtime install failed; target state not recorded (re-run apply once the cause is fixed)" >&2
+      continue
+    fi
+
     local target_digest
     target_digest="$(compute_target_digest "$t" live)"
     state_write_target "$t" "$release_version" "$target_digest"
 
-    # What the Codex and OpenCode runtime adapters write (the owner rules block of the three Codex AGENTS
-    # files; the OpenCode plugins, opencode.json and AGENTS.md block) is not a manifest row: the adapter
-    # writes it. It runs before the once-per-apply longterm-mem step below, which reads opencode.json. A
-    # failure is reported like pi's and fails apply's own exit below.
-    if [[ "$t" == "codex" || "$t" == "opencode" ]]; then
-      runtime_install_and_report "$t" || runtime_install_failed=1
+    # The owner rules block of the three Codex AGENTS files is not a manifest row: the Codex runtime
+    # adapter writes it, after the state row. A failure is reported like pi's and fails apply's own exit
+    # below.
+    if [[ "$t" == "codex" ]]; then
+      runtime_install_and_report codex || runtime_install_failed=1
     fi
   done
 

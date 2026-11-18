@@ -227,9 +227,7 @@ func TestApplyTargetOpencodeWithAFailingRuntimeInstallDeploysThenExitsNonZero(t 
 	if _, err := os.Stat(filepath.Join(config, "agents", "foreman.md")); err != nil {
 		t.Errorf("the target was not deployed before the exit: %v", err)
 	}
-	if !strings.Contains(res.Stderr, "  ") || !strings.Contains(strings.ToLower(res.Stderr), "opencode") {
-		t.Errorf("the failed install's output must reach stderr, indented:\n%s", res.Stderr)
-	}
+	assertIndentedInstallFailure(t, res.Stderr)
 	if got, _ := os.ReadFile(filepath.Join(config, "opencode.json")); string(got) != broken {
 		t.Errorf("a broken opencode.json was rewritten: %q", got)
 	}
@@ -245,5 +243,115 @@ func TestApplyOpencodeWithACheckoutThatHasNoContractIsSilentAndDoesNotStartTheEn
 	}
 	if out != "exit: 0\n" {
 		t.Errorf("want no output and a step that does not fail, got:\n%q", out)
+	}
+}
+
+// assertIndentedInstallFailure checks the failure output of `engine runtime install --target opencode`
+// in stderr: it opens with the exact line the adapter answers, two spaces in front, and no line of it
+// is shown without those two spaces.
+func assertIndentedInstallFailure(t *testing.T, stderr string) {
+	t.Helper()
+	const opening = "  [opencode] install: partial — "
+	lines := strings.Split(strings.TrimRight(stderr, "\n"), "\n")
+	found := false
+	for i, line := range lines {
+		if strings.HasPrefix(line, opening) {
+			found = true
+		} else if strings.Contains(line, "[opencode] install:") {
+			t.Errorf("line %d of the install's output is not indented: %q", i+1, line)
+		}
+	}
+	if !found {
+		t.Fatalf("stderr has no line that opens the failed install's output with %q:\n%s", opening, stderr)
+	}
+}
+
+func readState(t *testing.T, home string) string {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join(home, ".labdrian-overlay", "state.json"))
+	if err != nil && !os.IsNotExist(err) {
+		t.Fatal(err)
+	}
+	return string(data)
+}
+
+// A runtime install that failed means the target is not deployed: no state row is recorded for it
+// (status keeps saying it was never deployed), longterm-mem is not registered into the opencode.json the
+// install could not write (the failure is shown once), apply exits non-zero, and a re-run after the
+// cause is fixed deploys, records the target and registers longterm-mem.
+func TestApplyTargetOpencodeWithAFailingRuntimeInstallRecordsNoStateAndSkipsTheRegister(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in -short mode")
+	}
+	script := overlaytest.Script(t)
+	home := t.TempDir()
+	overlay, env := opencodeOverlay(t, home, true)
+	config := filepath.Join(home, ".config", "opencode")
+	env = append(env, "XDG_CONFIG_HOME="+filepath.Join(home, ".config"))
+	if err := os.MkdirAll(config, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	const broken = "{ not json\n"
+	if err := os.WriteFile(filepath.Join(config, "opencode.json"), []byte(broken), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	res := overlaytest.Run(t, script, env, overlay, "apply", "--target", "opencode")
+	all := res.Stdout + res.Stderr
+	if res.Exit == 0 {
+		t.Errorf("a failed runtime install must make apply exit non-zero:\n%s", all)
+	}
+	if state := readState(t, home); strings.Contains(state, `"opencode"`) {
+		t.Errorf("a target whose runtime install failed was recorded as deployed:\n%s", state)
+	}
+	for _, unwanted := range []string{"longterm-mem: register: opencode", "register --target opencode failed", "per-target state was already written"} {
+		if strings.Contains(all, unwanted) {
+			t.Errorf("the failure was reported a second time (%q):\n%s", unwanted, all)
+		}
+	}
+	if got, _ := os.ReadFile(filepath.Join(config, "opencode.json")); string(got) != broken {
+		t.Errorf("a broken opencode.json was rewritten: %q", got)
+	}
+
+	if err := os.Remove(filepath.Join(config, "opencode.json")); err != nil {
+		t.Fatal(err)
+	}
+	again := overlaytest.Run(t, script, env, overlay, "apply", "--target", "opencode")
+	if again.Exit != 0 {
+		t.Fatalf("the re-run after the cause was fixed failed:\n%s\n%s", again.Stdout, again.Stderr)
+	}
+	if state := readState(t, home); !strings.Contains(state, `"opencode"`) {
+		t.Errorf("the re-run did not record the target:\n%s", state)
+	}
+	if data, _ := os.ReadFile(filepath.Join(config, "opencode.json")); !strings.Contains(string(data), `"longterm-mem"`) {
+		t.Errorf("the re-run did not register longterm-mem:\n%s", data)
+	}
+}
+
+// Codex is as it was: a failed runtime install still leaves its state row (the install runs after it)
+// and apply exits non-zero.
+func TestApplyTargetCodexWithAFailingRuntimeInstallStillRecordsItsState(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in -short mode")
+	}
+	script := overlaytest.Script(t)
+	home := t.TempDir()
+	overlay, env := opencodeOverlay(t, home, false)
+	codexHome := filepath.Join(home, ".codex")
+	env = append(env, "CODEX_HOME="+codexHome)
+	if err := os.MkdirAll(codexHome, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	// An opening marker with no closing one is a broken block: the adapter leaves the file and reports partial.
+	if err := os.WriteFile(filepath.Join(codexHome, "AGENTS.md"), []byte("<!-- labdrian:owner-rules -->\nbroken\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	res := overlaytest.Run(t, script, env, overlay, "apply", "--target", "codex")
+	if res.Exit == 0 {
+		t.Errorf("a failed runtime install must make apply exit non-zero:\n%s\n%s", res.Stdout, res.Stderr)
+	}
+	if state := readState(t, home); !strings.Contains(state, `"codex"`) {
+		t.Errorf("codex's state row was not recorded:\n%s", state)
 	}
 }

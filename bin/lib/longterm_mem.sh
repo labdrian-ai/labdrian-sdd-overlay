@@ -239,6 +239,14 @@ cmd_longterm_mem() {
 
     local t
     for t in $targets; do
+      # A target whose runtime install failed in this apply has no config for register to read. That
+      # failure is already shown (cmd_apply sets LONGTERM_MEM_SKIP_TARGETS), so it is not shown again.
+      case " ${LONGTERM_MEM_SKIP_TARGETS:-} " in
+        *" $t "*)
+          info "longterm-mem: $t skipped (its runtime install failed, shown above)"
+          continue
+          ;;
+      esac
       # No --state-dir here: this must resolve to the exact same
       # install-state.json the uninstall path below reads (see that call's
       # comment) — the module's own default (defaultRegisterStateDir(),

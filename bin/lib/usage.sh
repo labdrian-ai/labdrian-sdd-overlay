@@ -27,6 +27,8 @@ Commands:
                                    For opencode it runs 'engine runtime install --target opencode' the same
                                    way, before the longterm-mem step: the plugins, opencode.json
                                    and the AGENTS.md block that longterm-mem register reads.
+                                   A failed opencode install records no state for it, skips its
+                                   longterm-mem register, and makes apply exit non-zero.
                                    After a merge, run 'skills validate': each global skill the
                                    merge changed needs a human approval (see skills approve
                                    below), which an agent cannot give.
