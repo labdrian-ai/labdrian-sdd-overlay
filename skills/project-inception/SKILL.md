@@ -3,7 +3,7 @@ name: project-inception
 description: "Project inception trilogy: project inception, bootstrap completo, manifest architect roadmap, quiero hacer un proyecto inception completo. Use inception-pipeline first for tier routing."
 license: Apache-2.0
 metadata:
-  author: gentleman-programming
+  author: labdrian
   version: "1.0"
 ---
 

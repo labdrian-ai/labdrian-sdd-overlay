@@ -3,7 +3,7 @@ name: comment-writer
 description: "Write warm, direct collaboration comments. Trigger: PR feedback, issue replies, reviews, Slack messages, or GitHub comments."
 license: Apache-2.0
 metadata:
-  author: gentleman-programming
+  author: labdrian
   version: "1.0"
 ---
 

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Changed
+
+- The fifteen skills adopted from gentle-ai are labdrian's own (labdrian-orchestrator-opencode T28, S17): `chained-pr`, `work-unit-commits`, `comment-writer`, `cognitive-doc-design`, `go-testing`, `judgment-day`, `skill-creator`, `skill-improver`, `_shared/SKILL.md`, `requirements-from-transcripts`, `project-inception`, `inception-pipeline`, `project-manifest`, `project-architect` and `roadmap-maker` carry `author: labdrian`; the eight whose rows were still upstream's (and `_shared/SKILL.md`) move from `managed` to `custom` in `overlay.manifest` and from `type: core` with an upstream to `type: custom` in `skills.registry.yaml`, so `labdrian capture` no longer copies them from upstream. `judgment-day` loses its link to `_shared/review-ledger-contract.md`, its paragraph on gentle's negotiated review and its lens-capture note; `skill-creator` and `skill-improver` tell agents to run `labdrian skill-registry refresh`. `branch-pr`, `issue-creation` and `systemic-issue-triage` are unchanged. Each changed skill needs the owner's re-approval (`APPROVAL_STALE` until then).
+
 ### Added
 
 - `engine registry refresh --cwd <dir> [--force] [--quiet]` (labdrian-orchestrator-opencode T30 commit b, S17) writes the table of skills of `<dir>/.atl/skill-registry.md` that only `gentle-ai skill-registry refresh` wrote, so labdrian no longer needs the gentle-ai binary for it. The rules (the 15 project and 18 home directories scanned in order, the frontmatter read, `_shared`, `skill-registry` and `sdd-*` skipped, byte-order sort, the skip outside a directory with `.git` or `.atl`) were recorded from gentle-ai 4.2.0 in a sandbox and a parity test pins them; the one difference is that a quoted description over several lines is read whole instead of cut at its first line. Every other line of the registry (executor note and rows, Hermes section, loading protocol, `propagate` blocks) stays as it was; it takes the lock `propagate` takes and writes nothing when only `Last updated:` would change, unless `--force`. The error of `registry` with no verb or an unknown verb now names both `repair-sdd` and `refresh`.

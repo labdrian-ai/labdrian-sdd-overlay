@@ -3,7 +3,7 @@ name: inception-pipeline
 description: "First skill for start project, bootstrap, feature, chore, fix, hotfix, change request; arrancá el proyecto, empezar proyecto, nueva feature, arreglo chico. Selects tier and enters the role chain. Invoke project-inception directly only for trilogy."
 license: Apache-2.0
 metadata:
-  author: gentleman-programming
+  author: labdrian
   version: "3.0.0"
 ---
 

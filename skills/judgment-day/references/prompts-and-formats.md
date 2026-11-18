@@ -14,8 +14,6 @@ Run one exhaustive read-only sweep. Do not edit, delegate, refute, or inspect un
 Return one JSON object and no prose: the object your agent file (polisher) spells out, which labdrian review record --role polisher stores. Return {"findings":[],"evidence":["what was inspected"]} when clean, then terminate.
 ```
 
-> The polisher's object governs judgment-day judges only. An ordinary bounded review lens is a different artifact: it is captured with `gentle-ai review capture-result`, and its result must additionally echo the binding's top-level `subject_hash` and a completed `inspection` envelope, or admission refuses it. `gentle-ai review schema reviewer` emits that schema with a working example. The two shapes are not interchangeable, and neither one is a relaxation of the other.
-
 ## Fix Actor Prompt
 
 ```markdown

@@ -3,7 +3,7 @@ name: project-architect
 description: "Design architecture after project-manifest: arquitectura técnica, project architect, /project-architect, diseñar arquitectura, architecture proposal, qué stack uso. Explain trade-offs."
 license: MIT
 metadata:
-  author: gentleman-programming
+  author: labdrian
   version: "1.0"
 ---
 

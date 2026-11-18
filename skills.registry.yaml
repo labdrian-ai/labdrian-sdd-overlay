@@ -59,9 +59,7 @@ skills:
   - id: chained-pr
     path: chained-pr
     source:
-      type: core
-      upstream:
-        owner: gentleman-programming
+      type: custom
     install:
       defaultScope: global
       targets:
@@ -73,9 +71,7 @@ skills:
   - id: comment-writer
     path: comment-writer
     source:
-      type: core
-      upstream:
-        owner: gentleman-programming
+      type: custom
     install:
       defaultScope: global
       targets:
@@ -115,9 +111,7 @@ skills:
   - id: work-unit-commits
     path: work-unit-commits
     source:
-      type: core
-      upstream:
-        owner: gentleman-programming
+      type: custom
     install:
       defaultScope: global
       targets:
@@ -129,9 +123,7 @@ skills:
   - id: cognitive-doc-design
     path: cognitive-doc-design
     source:
-      type: core
-      upstream:
-        owner: gentleman-programming
+      type: custom
     install:
       defaultScope: global
       targets:
@@ -157,9 +149,7 @@ skills:
   - id: go-testing
     path: go-testing
     source:
-      type: core
-      upstream:
-        owner: gentleman-programming
+      type: custom
     install:
       defaultScope: global
       targets:
@@ -171,9 +161,7 @@ skills:
   - id: judgment-day
     path: judgment-day
     source:
-      type: core
-      upstream:
-        owner: gentleman-programming
+      type: custom
     install:
       defaultScope: global
       targets:
@@ -297,9 +285,7 @@ skills:
   - id: skill-creator
     path: skill-creator
     source:
-      type: core
-      upstream:
-        owner: gentleman-programming
+      type: custom
     install:
       defaultScope: global
       targets:
@@ -311,9 +297,7 @@ skills:
   - id: skill-improver
     path: skill-improver
     source:
-      type: core
-      upstream:
-        owner: gentleman-programming
+      type: custom
     install:
       defaultScope: global
       targets:

@@ -3,7 +3,7 @@ name: skill-improver
 description: "Trigger: improve skills, audit skills, refactor skills, skill quality. Audit and upgrade existing LLM-first skills."
 license: Apache-2.0
 metadata:
-  author: gentleman-programming
+  author: labdrian
   version: "1.0"
 ---
 
@@ -37,7 +37,7 @@ Use this skill when asked to audit, refactor, normalize, or improve existing `SK
 2. Read `.atl/skill-registry.md`; use listed paths to select skills. If missing, scan known skill directories for `*/SKILL.md`.
 3. For each selected skill, audit metadata, trigger clarity, section order, body budget, actionability, decision gates, output contract, and local references.
 4. Return an audit report grouped by skill with severity and exact proposed changes.
-5. In apply mode, edit only safe issues, preserve content, create supporting files when needed, then rerun or request `gentle-ai skill-registry refresh`.
+5. In apply mode, edit only safe issues, preserve content, create supporting files when needed, then rerun or request `labdrian skill-registry refresh`.
 
 ## Output Contract
 
