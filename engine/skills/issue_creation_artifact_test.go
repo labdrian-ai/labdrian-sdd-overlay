@@ -89,6 +89,60 @@ func TestIssueCreationSkillReportsExactlyOneOfThreeOutcomes(t *testing.T) {
 	}
 }
 
+func TestIssueCreationSkillDefinesTheThreeOutcomes(t *testing.T) {
+	_, _, body := issueCreationSkill(t)
+	for _, want := range []string{
+		"- `confirmed`: the write returned a stable identity and the read-back matches.\n",
+		"- `no_write`: an authoritative rejection, or a refusal before the write.\n",
+		"- `unknown`: a timeout, a lost response, a missing identity, a read-back that is unavailable, or a mismatch.\n",
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("the body does not contain the outcome line %q", want)
+		}
+	}
+}
+
+func TestIssueCreationSkillReadsACommentBackByItsIdentity(t *testing.T) {
+	_, _, body := issueCreationSkill(t)
+	for _, want := range []string{
+		"`gh api --hostname \"$HOST\" \"repos/$REPO/issues/comments/$COMMENT_ID\"`",
+		"compare its body",
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("the comment read-back rule does not contain %q", want)
+		}
+	}
+}
+
+func TestIssueCreationSkillReadsAndComparesEachDuplicateCandidate(t *testing.T) {
+	_, _, body := issueCreationSkill(t)
+	for _, want := range []string{
+		"Read each candidate from the target host with `gh issue view",
+		"compare it with the selected form",
+		"A candidate that cannot be read is `unknown`: stop.",
+		"| A duplicate does not conform to the form | Report it and ask the owner; never edit it unasked. |",
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("the duplicate procedure does not contain %q", want)
+		}
+	}
+}
+
+func TestIssueCreationSkillTakesTheFormFromTheTargetRepository(t *testing.T) {
+	_, _, body := issueCreationSkill(t)
+	for _, want := range []string{
+		"the target repository's own `.github/ISSUE_TEMPLATE/*.yml` that fits the request",
+		"If none fits, stop and ask.",
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("the form rule does not contain %q", want)
+		}
+	}
+	if strings.Contains(body, "this repository:") || strings.Contains(body, "feature.yml)") {
+		t.Error("the body hardcodes this repository's form")
+	}
+}
+
 func TestIssueCreationSkillWritesOnlyOnTheOwnersCurrentInstruction(t *testing.T) {
 	_, _, body := issueCreationSkill(t)
 	line := "\n- A write runs only on the owner's current direct instruction that names the target and the action.\n"
