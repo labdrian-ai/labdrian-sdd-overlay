@@ -99,9 +99,9 @@ func TestEveryRoleSourceOfTheRepositoryIsProjected(t *testing.T) {
 		}
 		paths := []string{"agents/" + entry.Name() + ".md", "pi/agents/" + entry.Name() + ".md", "codex/agents/" + entry.Name() + ".toml"}
 		if entry.Name() == "foreman" {
-			// The parent of the chain has a Claude file only (S5): the other two are asserted absent.
+			// The parent of the chain has no Pi or Codex file (S5): the other two are asserted absent.
 			if projected[paths[1]] || projected[paths[2]] {
-				t.Errorf("roles/foreman/ is projected to Pi or Codex, want the Claude file only")
+				t.Errorf("roles/foreman/ is projected to Pi or Codex, want no Pi or Codex file")
 			}
 			paths = paths[:1]
 		}

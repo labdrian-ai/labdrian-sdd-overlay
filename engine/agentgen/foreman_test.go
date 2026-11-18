@@ -38,7 +38,7 @@ func artifactContents(t *testing.T, root string) map[string]string {
 
 // The table holds the Claude file of the foreman after the files of the eight roles, and no Pi or Codex
 // file for it.
-func TestTheForemanHasOnlyAClaudeFileAfterTheFilesOfTheEightRoles(t *testing.T) {
+func TestTheForemanHasNoPiOrCodexFileAndItsClaudeFileFollowsTheRoles(t *testing.T) {
 	root := seededRoot(t)
 	table, err := agentgen.Artifacts(root)
 	if err != nil {
@@ -56,7 +56,7 @@ func TestTheForemanHasOnlyAClaudeFileAfterTheFilesOfTheEightRoles(t *testing.T) 
 	}
 	for _, p := range paths {
 		if p == "pi/agents/foreman.md" || p == "codex/agents/foreman.toml" {
-			t.Errorf("the table holds %s: the foreman has a Claude file only", p)
+			t.Errorf("the table holds %s: the foreman has no Pi or Codex file", p)
 		}
 	}
 	if len(paths) != 34 {

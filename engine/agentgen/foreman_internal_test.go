@@ -2,7 +2,7 @@ package agentgen
 
 import "testing"
 
-// The foreman has a Claude file only, and that file has no effort field, so the row holds none: an
+// The foreman has no Pi or Codex file, and its Claude file has no effort field, so the row holds none: an
 // effort written there would be read by nothing.
 func TestTheForemanRowHoldsNoEffort(t *testing.T) {
 	if foreman.effort != "" {

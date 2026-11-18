@@ -305,7 +305,7 @@ func (r role) claudeFile(model, body string) string {
 		"\ntools: " + strings.Join(r.tools, ", ") + "\n---\n\n" + body
 }
 
-// projectClaude makes the one file of a role that has a Claude file only (the foreman): its source, the
+// projectClaude makes the Claude file of a role that has no Pi or Codex file (the foreman): its source, the
 // model of its tier from the table, and no Pi or Codex file.
 func (r role) projectClaude(source string, models ModelTable) (Artifact, error) {
 	model, err := models.ID(r.tier, runtimeClaude)

@@ -20,7 +20,7 @@ func allPaths() []string {
 	for _, r := range wantRoles {
 		paths = append(paths, "agents/"+r.name+".md", "pi/agents/"+r.name+".md", "codex/agents/"+r.name+".toml")
 	}
-	// The foreman is the parent, not a role of the chain: it has a Claude file only, after the roles (S5), and the
+	// The foreman is the parent, not a role of the chain: it has a Claude file after the roles and no Pi or Codex file (S5), and the
 	// nine OpenCode files come last: the eight roles, then the foreman.
 	paths = append(paths, "agents/foreman.md")
 	for _, r := range wantRoles {
