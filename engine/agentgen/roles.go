@@ -60,6 +60,9 @@ type role struct {
 	// them. The Claude files that existed before the generator are the oracle for these lists, byte
 	// for byte; the tools of Pi are made from them (piTools).
 	tools []string
+	// openCodeSkill keeps the skill tool of OpenCode for a role whose Claude list names no Skill tool: only the
+	// foreman, whose recorded OpenCode run loads a skill body in its session (S7, S13).
+	openCodeSkill bool
 }
 
 // roles are the eight roles in the order of the table of per-role design v3, section 2.
@@ -156,6 +159,8 @@ var foreman = role{
 	name:        "foreman",
 	description: "Talks with the owner and drives the labdrian workflow: entry, the role chain and closure; writes only the feature document.",
 	tier:        tierFrontier,
+	// Its OpenCode file keeps the skill tool (S7): the recorded run of S13 loads a skill body in its session.
+	openCodeSkill: true,
 	tools: []string{
 		"Read", "Grep", "Glob", "Edit", "Write", "Bash", "Agent",
 		"mcp__memorycard__mem_search", "mcp__memorycard__mem_get", "mcp__memorycard__mem_save", "mcp__memorycard__mem_update",

@@ -33,6 +33,9 @@ type wantOpenCode struct {
 	// editShell are the tools of the first group of denies, in the order the file lists them: edit when the
 	// Claude list of the agent holds neither Edit nor Write, shell when it holds no Bash.
 	editShell []string
+	// others are the denies after those: the v2 tools the Claude list of the agent has no tool for, in the order
+	// the file lists them.
+	others []string
 }
 
 // wantOpenCodeAgents are the eight roles in the order of the table of per-role design v3, then the
@@ -43,22 +46,29 @@ func wantOpenCodeAgents() []wantOpenCode {
 	for _, r := range wantRoles {
 		byName[r.name] = r
 	}
+	// The v2 tools no role's Claude list has a tool for (S7, L16): the subagent tool, a question tool, a skill
+	// tool, the two web tools and image generation. The eight roles hold none of them.
+	roleOthers := []string{"subagent", "question", "skill", "webfetch", "websearch", "experimental_image_generate"}
 	for _, c := range []struct {
 		name, model string
 		editShell   []string
+		others      []string
 	}{
-		{"builder", ocMid, nil},
-		{"shaper", ocFrontier, []string{"shell"}},
-		{"polisher", ocMid, []string{"edit", "shell"}},
-		{"prototyper", ocMid, nil},
-		{"sweeper", ocMid, nil},
-		{"reviewer", ocFrontier, []string{"edit", "shell"}},
-		{"verifier", ocFrontier, []string{"edit"}},
-		{"delivery", ocLight, nil},
+		{"builder", ocMid, nil, roleOthers},
+		{"shaper", ocFrontier, []string{"shell"}, roleOthers},
+		{"polisher", ocMid, []string{"edit", "shell"}, roleOthers},
+		{"prototyper", ocMid, nil, roleOthers},
+		{"sweeper", ocMid, nil, roleOthers},
+		// The reviewer is the one role whose Claude list names no MCP tool, so it also has execute denied.
+		{"reviewer", ocFrontier, []string{"edit", "shell"}, append(slices.Clone(roleOthers), "execute")},
+		{"verifier", ocFrontier, []string{"edit"}, roleOthers},
+		{"delivery", ocLight, nil, roleOthers},
 	} {
-		out = append(out, wantOpenCode{c.name, byName[c.name].description, "subagent", c.model, c.editShell})
+		out = append(out, wantOpenCode{c.name, byName[c.name].description, "subagent", c.model, c.editShell, c.others})
 	}
-	return append(out, wantOpenCode{"foreman", foremanDescription, "primary", ocFrontier, nil})
+	// The foreman keeps edit, shell, the subagent tool, execute and skill (S7, L19, L21): it has its own set.
+	return append(out, wantOpenCode{"foreman", foremanDescription, "primary", ocFrontier, nil,
+		[]string{"question", "webfetch", "websearch", "experimental_image_generate"}})
 }
 
 // permRule is one entry of the permissions list of an OpenCode agent file.

@@ -2,6 +2,25 @@
 description: "Implements the tasks a labdrian workflow names, or fixes confirmed ledger ids, and reports the evidence of each work unit."
 mode: subagent
 model: openai/gpt-6.1-terra#medium
+permissions:
+  - action: subagent
+    resource: "*"
+    effect: deny
+  - action: question
+    resource: "*"
+    effect: deny
+  - action: skill
+    resource: "*"
+    effect: deny
+  - action: webfetch
+    resource: "*"
+    effect: deny
+  - action: websearch
+    resource: "*"
+    effect: deny
+  - action: experimental_image_generate
+    resource: "*"
+    effect: deny
 ---
 
 You are the builder sub-agent of a labdrian workflow. Do the work yourself; never launch sub-agents.

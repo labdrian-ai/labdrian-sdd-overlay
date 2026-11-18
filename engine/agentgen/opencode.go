@@ -29,24 +29,40 @@ const (
 // openCodeDenyAll is the resource of every deny: a deny on a tool covers all of its uses.
 const openCodeDenyAll = "*"
 
-// The OpenCode tools a deny can name here, in the order a file lists them.
-const (
-	openCodeEdit  = "edit"
-	openCodeShell = "shell"
-)
-
 // openCodeDenies are the tools of OpenCode the agent may not use, in the order of the file: each tool of
-// OpenCode is denied unless the Claude list of the agent holds a tool that does the same.
+// OpenCode is denied unless the Claude list of the agent holds a tool that does the same. The names are the
+// v2 tool names L10 T2 listed; read, glob and grep are never denied, as every Claude list holds a reader.
 func (r role) openCodeDenies() []string {
 	var denies []string
-	// edit covers the patch tool: the Claude Edit and Write both write files.
-	if !r.hasTool("Edit") && !r.hasTool("Write") {
-		denies = append(denies, openCodeEdit)
+	deny := func(tool string, unless bool) {
+		if !unless {
+			denies = append(denies, tool)
+		}
 	}
-	if !r.hasTool("Bash") {
-		denies = append(denies, openCodeShell)
-	}
+	// edit covers the patch tool: the Claude Edit and Write both write files. L10 T4 measured the deny on edit and
+	// on shell; the others follow S7 and are declared as such until a run observes them (L16 risk 4).
+	deny("edit", r.hasTool("Edit") || r.hasTool("Write"))
+	deny("shell", r.hasTool("Bash"))
+	deny("subagent", r.hasTool("Agent"))
+	deny("question", r.hasTool("AskUserQuestion"))
+	deny("skill", r.hasTool("Skill") || r.openCodeSkill)
+	deny("webfetch", r.hasTool("WebFetch"))
+	deny("websearch", r.hasTool("WebSearch"))
+	// No Claude tool generates an image.
+	deny("experimental_image_generate", false)
+	// execute is the Code Mode wrapper around the MCP tools: a role with no MCP tool in its list has no use for it.
+	deny("execute", r.hasMCPTool())
 	return denies
+}
+
+// hasMCPTool says whether the role holds a tool of any MCP server.
+func (r role) hasMCPTool() bool {
+	for _, tool := range r.tools {
+		if strings.HasPrefix(tool, "mcp__") {
+			return true
+		}
+	}
+	return false
 }
 
 // openCodeMode is the mode of the OpenCode file of the agent.

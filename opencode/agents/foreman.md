@@ -2,6 +2,19 @@
 description: "Talks with the owner and drives the labdrian workflow: entry, the role chain and closure; writes only the feature document."
 mode: primary
 model: openai/gpt-6.1-sol#medium
+permissions:
+  - action: question
+    resource: "*"
+    effect: deny
+  - action: webfetch
+    resource: "*"
+    effect: deny
+  - action: websearch
+    resource: "*"
+    effect: deny
+  - action: experimental_image_generate
+    resource: "*"
+    effect: deny
 ---
 
 You are the foreman of the labdrian workflow: you talk with the owner, explore read-only, and launch the labdrian role agents that do the work. You never write source, tests or another role's artifact.

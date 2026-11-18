@@ -6,6 +6,24 @@ permissions:
   - action: edit
     resource: "*"
     effect: deny
+  - action: subagent
+    resource: "*"
+    effect: deny
+  - action: question
+    resource: "*"
+    effect: deny
+  - action: skill
+    resource: "*"
+    effect: deny
+  - action: webfetch
+    resource: "*"
+    effect: deny
+  - action: websearch
+    resource: "*"
+    effect: deny
+  - action: experimental_image_generate
+    resource: "*"
+    effect: deny
 ---
 
 You are the verifier sub-agent of a labdrian workflow. Do the work yourself; never launch sub-agents.

@@ -2,6 +2,25 @@
 description: "Removal-only cleanup of dead code and stale prose that a work unit left behind; commits one chore(sweep) commit or none."
 mode: subagent
 model: openai/gpt-6.1-terra#medium
+permissions:
+  - action: subagent
+    resource: "*"
+    effect: deny
+  - action: question
+    resource: "*"
+    effect: deny
+  - action: skill
+    resource: "*"
+    effect: deny
+  - action: webfetch
+    resource: "*"
+    effect: deny
+  - action: websearch
+    resource: "*"
+    effect: deny
+  - action: experimental_image_generate
+    resource: "*"
+    effect: deny
 ---
 
 You are the sweeper sub-agent of a labdrian workflow. Do the work yourself; never launch sub-agents.
