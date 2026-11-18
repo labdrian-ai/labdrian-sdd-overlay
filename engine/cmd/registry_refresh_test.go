@@ -267,29 +267,21 @@ func TestRegistryRefreshRefusesWhatItIsNotAskedRight(t *testing.T) {
 	}
 }
 
-func TestRegistryVerbErrorsNameBothVerbs(t *testing.T) {
-	p := newCapturedProcess()
-	runRegistry(p.process, deps{}, nil)
-	if want := "error: registry requires a verb: repair-sdd or refresh\n"; p.err.String() != want || !equalInts(p.exits, []int{1}) {
-		t.Errorf("no verb: stderr %q exits %v, want %q", p.err.String(), p.exits, want)
-	}
-	p = newCapturedProcess()
-	runRegistry(p.process, deps{}, []string{"fix"})
-	if want := "error: unknown registry verb \"fix\"; expected repair-sdd or refresh\n"; p.err.String() != want || !equalInts(p.exits, []int{1}) {
-		t.Errorf("another verb: stderr %q exits %v, want %q", p.err.String(), p.exits, want)
-	}
-}
-
-func TestRegistryStillRepairsThroughTheDispatcher(t *testing.T) {
-	w := newRepairWorld(t)
-	w.install(t, "sdd-apply", "---\ndescription: Apply\n---\n")
-	w.writeRegistry(t, "## Skills\n## Loading protocol\n")
-	p := newCapturedProcess()
-
-	runRegistry(p.process, deps{}, w.args())
-
-	if !strings.Contains(p.out.String(), "repair-sdd-registry: registry="+w.registry) || len(p.exits) != 0 {
-		t.Fatalf("run = stdout %q stderr %q exits %v", p.out.String(), p.err.String(), p.exits)
+func TestRegistryVerbErrorsNameTheOneVerb(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		args []string
+		want string
+	}{
+		{"no verb", nil, "error: registry requires a verb: refresh\n"},
+		{"another verb", []string{"fix"}, "error: unknown registry verb \"fix\"; expected refresh\n"},
+		{"the verb that is gone", []string{"repair-sdd", "--registry", "r", "--target", "codex", "--skills-root", "s"}, "error: unknown registry verb \"repair-sdd\"; expected refresh\n"},
+	} {
+		p := newCapturedProcess()
+		runRegistry(p.process, deps{}, tc.args)
+		if p.err.String() != tc.want || p.out.String() != "" || !equalInts(p.exits, []int{1}) {
+			t.Errorf("%s: stdout %q stderr %q exits %v, want %q", tc.name, p.out.String(), p.err.String(), p.exits, tc.want)
+		}
 	}
 }
 
@@ -348,29 +340,28 @@ func TestRegistryRefreshWithSkipIfBusyRefreshesAFreeRegistry(t *testing.T) {
 	}
 }
 
-// A refresh after the repair of the executor rows is a no-op when nothing else changed, however many
-// times the registry was repaired: the repair leaves blank lines in the head that the refresh keeps.
-func TestRegistryRefreshAfterARepairWritesNothing(t *testing.T) {
+// The executor rows lost their writer. A registry that holds the old executor row of sdd-time-estimation,
+// a skill the table now lists, ends with one row for it, and a second refresh changes nothing.
+func TestRegistryRefreshReplacesTheOldExecutorRowOfASkillItNowLists(t *testing.T) {
 	w := newRefreshWorld(t)
 	w.markProject(t)
-	w.skill(t, filepath.Join(w.home, ".claude", "skills"), "alpha", "Alpha. Trigger: a.")
-	w.skill(t, filepath.Join(w.home, ".codex", "skills"), "sdd-apply", "Apply")
+	w.skill(t, filepath.Join(w.project, "skills"), "sdd-time-estimation", "Estimate")
 	w.run("--cwd", w.project, "--quiet")
-	repair := func() {
-		p := newCapturedProcess()
-		runRegistry(p.process, deps{}, []string{"repair-sdd", "--registry", w.registry(), "--target", "codex", "--skills-root", filepath.Join(w.home, ".codex", "skills")})
-		if len(p.exits) != 0 {
-			t.Fatalf("repair-sdd: stdout %q stderr %q exits %v", p.out.String(), p.err.String(), p.exits)
-		}
+	old := "| `sdd-time-estimation` | Estimate | executor | `/h/.codex/skills/sdd-time-estimation/SKILL.md` |\n"
+	other := "| `sdd-apply` | Apply | executor | `/h/.codex/skills/sdd-apply/SKILL.md` |\n"
+	text := strings.Replace(w.read(t), "\n## Loading protocol", "\n"+other+old+"\n## Loading protocol", 1)
+	if err := os.WriteFile(w.registry(), []byte(text), 0o644); err != nil {
+		t.Fatal(err)
 	}
-	repair()
-	repair()
-	before := w.read(t)
 
-	p := w.run("--cwd", w.project)
+	p := w.run("--cwd", w.project, "--force")
+	got := w.read(t)
 
-	if !strings.HasPrefix(p.out.String(), "Skill registry up to date (cache-hit): ") || w.read(t) != before {
-		t.Fatalf("refresh after a repair = stdout %q, registry changed: %v", p.out.String(), w.read(t) != before)
+	if len(p.exits) != 0 || strings.Count(got, "`sdd-time-estimation`") != 1 || !strings.Contains(got, "| `sdd-time-estimation` | Estimate | project | ") || !strings.Contains(got, other) {
+		t.Fatalf("run = stderr %q exits %v registry:\n%s\nwant one project row for sdd-time-estimation and the other executor row kept", p.err.String(), p.exits, got)
+	}
+	if p2 := w.run("--cwd", w.project); !strings.HasPrefix(p2.out.String(), "Skill registry up to date (cache-hit): ") || w.read(t) != got {
+		t.Fatalf("a second refresh = stdout %q, registry changed: %v", p2.out.String(), w.read(t) != got)
 	}
 }
 

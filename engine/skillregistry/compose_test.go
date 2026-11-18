@@ -124,6 +124,57 @@ func TestComposeKeepsExecutorRowsThatTouchTheTable(t *testing.T) {
 	}
 }
 
+// The executor rows lost their writer: a registry that still holds the old executor row of a skill the
+// table now lists as an ordinary row ends with one row for it. Every other executor row and the note
+// stay as they are.
+func TestComposeDropsAnExecutorRowOfASkillTheTableNowLists(t *testing.T) {
+	rows := append([]Row{{"sdd-time-estimation", "Estimate", ScopeProject, "/p/skills/sdd-time-estimation/SKILL.md"}}, testRows...)
+	const generated = "| `sdd-time-estimation` | Estimate | project | `/p/skills/sdd-time-estimation/SKILL.md` |\n"
+	const executorOld = "| `sdd-time-estimation` | Estimate | executor | `/h/.codex/skills/sdd-time-estimation/SKILL.md` |\n"
+	const executorOther = "| `sdd-apply` | Apply | executor | `/h/.codex/skills/sdd-apply/SKILL.md` |\n"
+	const note = "`sdd-*` phase skills are executor contracts.\n"
+	for name, existing := range map[string]string{
+		"after the blank line": wantHead + note + "\n" + tableHead + "\n" + executorOther + executorOld + "\n" + wantProtocol,
+		"touching the table":   wantHead + note + "\n" + tableHead + executorOther + executorOld + "\n" + wantProtocol,
+	} {
+		got := compose(t, existing, testHeader, rows)
+		if n := strings.Count(got, "`sdd-time-estimation`"); n != 1 || !strings.Contains(got, generated) || strings.Contains(got, "executor | `/h/.codex/skills/sdd-time-estimation") {
+			t.Errorf("%s: %d rows for sdd-time-estimation, want only the generated one:\n%s", name, n, got)
+		}
+		if !strings.Contains(got, executorOther) || !strings.Contains(got, note) {
+			t.Errorf("%s: another executor row or the note was lost:\n%s", name, got)
+		}
+		if again := compose(t, got, testHeader, rows); again != got {
+			t.Errorf("%s: a second compose changed the registry", name)
+		}
+	}
+}
+
+// The migration reaches the table block only. An executor-scope row inside a section someone else owns
+// (the Hermes section is checked by a hash of its bytes) or below a heading is not the old repair's and
+// survives byte for byte, while the table's old executor row of the same skill is still dropped.
+func TestComposeDropsTheOldExecutorRowOnlyInTheTableBlock(t *testing.T) {
+	rows := append([]Row{{"sdd-apply", "Apply", ScopeProject, "/p/skills/sdd-apply/SKILL.md"}}, testRows...)
+	const executorOld = "| `sdd-apply` | Apply | executor | `/h/.codex/skills/sdd-apply/SKILL.md` |\n"
+	const hermes = "<!-- labdrian-hermes sha256=0123abcd root=ffee -->\n" +
+		"| `sdd-apply` | hermes copy | executor | `/h/.hermes/skills/sdd-apply/SKILL.md` |\n" +
+		"<!-- /labdrian-hermes -->\n"
+	const below = "### Other\n\n| `sdd-apply` | below a heading | executor | `/x` |\n\n"
+	existing := wantHead + tableHead + "\n" + executorOld + "\n" + hermes + below + wantProtocol
+
+	got := compose(t, existing, testHeader, rows)
+
+	if !strings.Contains(got, hermes) || !strings.Contains(got, below) {
+		t.Errorf("a row outside the table block was changed:\n%s", got)
+	}
+	if strings.Contains(got, executorOld) || strings.Count(got, "`sdd-apply`") != 3 {
+		t.Errorf("the table's old executor row was not dropped, or another row was:\n%s", got)
+	}
+	if again := compose(t, got, testHeader, rows); again != got {
+		t.Errorf("a second compose changed the registry")
+	}
+}
+
 // A table that is not the generator's, written right under its rows with no blank line between, is
 // not eaten: only the rows of the skills the generator writes are replaced.
 func TestComposeKeepsAForeignRowRightUnderTheTable(t *testing.T) {

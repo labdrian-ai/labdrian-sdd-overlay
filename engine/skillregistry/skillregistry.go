@@ -103,8 +103,8 @@ func (r Row) Line() string {
 func escapeBars(s string) string { return strings.ReplaceAll(s, "|", `\|`) }
 
 // Rows is the table of the candidates: each skill keyed by the name its frontmatter gives it (the
-// directory's name when it gives none), the first one found winning, `_shared`, `skill-registry` and
-// the `sdd-*` skills left out by their name, sorted by name in byte order.
+// directory's name when it gives none), the first one found winning, `_shared` and `skill-registry`
+// left out by their name, sorted by name in byte order.
 func Rows(candidates []Candidate) []Row {
 	seen := make(map[string]bool)
 	var rows []Row
@@ -121,8 +121,8 @@ func Rows(candidates []Candidate) []Row {
 }
 
 // skipped says whether a skill of this name is left out of the table: the shared files are not
-// skills, the registry's own skill is not listed, and the sdd-* skills are executor contracts, not
-// skills a person invokes (a repair puts their rows back).
+// skills and the registry's own skill is not listed. A skill named sdd-something is listed like any
+// other: the executor rows a repair used to put back are gone with the repair.
 func skipped(name string) bool {
-	return name == "_shared" || name == "skill-registry" || strings.HasPrefix(name, "sdd-")
+	return name == "_shared" || name == "skill-registry"
 }

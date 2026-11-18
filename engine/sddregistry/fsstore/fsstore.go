@@ -1,5 +1,5 @@
-// Package fsstore is the adapter of the ports of the SDD registry repair (engine/sddregistry/app):
-// the registry of a project as a file, and the skills a target keeps as files.
+// Package fsstore is the adapter of the registry port of the skill registry refresh
+// (engine/skillregistry/app): the registry of a project as a file.
 package fsstore
 
 import (
@@ -26,7 +26,7 @@ type Registry struct {
 func (Registry) Read(path string) ([]byte, error) { return os.ReadFile(path) }
 
 // Write puts content at path whole, as `engine propagate` does, after making the directory the
-// registry lives in when there is none (the first repair of a project makes its .atl directory).
+// registry lives in when there is none (the first refresh of a project makes its .atl directory).
 func (r Registry) Write(path string, content []byte) error {
 	if err := r.Home(path); err != nil {
 		return err
@@ -41,15 +41,3 @@ func (r Registry) Write(path string, content []byte) error {
 // because it takes no lock and its port says that Write makes the directory itself, which Write
 // does by calling this.
 func (Registry) Home(path string) error { return os.MkdirAll(filepath.Dir(path), directoryMode) }
-
-// Skills is the skills a target keeps, as files. It holds no state; the zero value is the adapter.
-type Skills struct{}
-
-// IsFile reports whether path is a regular file, following a link.
-func (Skills) IsFile(path string) bool {
-	info, err := os.Stat(path)
-	return err == nil && info.Mode().IsRegular()
-}
-
-// ReadFile returns the file at path.
-func (Skills) ReadFile(path string) ([]byte, error) { return os.ReadFile(path) }

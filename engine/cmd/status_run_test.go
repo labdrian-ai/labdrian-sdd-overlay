@@ -210,7 +210,7 @@ func TestRunStatusTakesTheValueOfAFlagAfterAnEqualsSign(t *testing.T) {
 }
 
 // A usage error of status exits 1, as the usage errors of the other commands of the engine do (the
-// README says so of manifest routes, registry repair-sdd, runtime and workflow). It is not 2: that is
+// README says so of manifest routes, registry refresh, runtime and workflow). It is not 2: that is
 // the code of a report that is degraded (a warning and no failure), and the callers of status read it so
 // (the TUI shows exit 2 of 'engine status' as degraded, and the overlay's doctor as a warning).
 func TestRunStatusUsageErrorsDoNotExitWithTheCodeOfADegradedReport(t *testing.T) {

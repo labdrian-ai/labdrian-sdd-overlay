@@ -54,11 +54,11 @@ func TestRowsKeyOnTheFrontmatterNameAndTakeTheDirectoryWhenThereIsNone(t *testin
 	}
 }
 
-func TestRowsSkipSharedTheRegistrySkillAndTheSDDSkillsByTheirName(t *testing.T) {
+func TestRowsSkipSharedAndTheRegistrySkillByTheirNameAndListTheSDDSkillsLikeAnyOther(t *testing.T) {
 	got := Rows([]Candidate{
 		{ScopeProject, "_shared", "/p/skills/_shared/SKILL.md", fm("_shared", "no")},
 		{ScopeProject, "skill-registry", "/p/skills/skill-registry/SKILL.md", fm("skill-registry", "no")},
-		{ScopeProject, "dirsdd", "/p/skills/dirsdd/SKILL.md", fm("sdd-bar", "no")},
+		{ScopeProject, "dirsdd", "/p/skills/dirsdd/SKILL.md", fm("sdd-bar", "an sdd name is a name")},
 		{ScopeProject, "sdd-foo", "/p/skills/sdd-foo/SKILL.md", "# no frontmatter, the directory is the name\n"},
 		// The directory's name decides nothing when the skill names itself.
 		{ScopeProject, "sdd-baz", "/p/skills/sdd-baz/SKILL.md", fm("baz", "dir sdd")},
@@ -67,6 +67,8 @@ func TestRowsSkipSharedTheRegistrySkillAndTheSDDSkillsByTheirName(t *testing.T) 
 	})
 	want := []Row{
 		{"baz", "dir sdd", ScopeProject, "/p/skills/sdd-baz/SKILL.md"},
+		{"sdd-bar", "an sdd name is a name", ScopeProject, "/p/skills/dirsdd/SKILL.md"},
+		{"sdd-foo", "", ScopeProject, "/p/skills/sdd-foo/SKILL.md"},
 		{"sddx", "no hyphen", ScopeProject, "/p/skills/sddx/SKILL.md"},
 		{"shared", "dir _shared is kept by its name", ScopeProject, "/p/skills/u1/SKILL.md"},
 	}

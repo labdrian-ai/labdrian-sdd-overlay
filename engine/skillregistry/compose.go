@@ -102,9 +102,13 @@ func Compose(existing string, h Header, rows []Row) (string, error) {
 	// What stays of the lines that touch the table: every one that is not a row of a skill the
 	// generator writes, in order. The executor rows are among them, and so is a table of someone
 	// else written right under the rows.
+	listed := make(map[string]bool, len(rows))
+	for _, row := range rows {
+		listed[row.Name] = true
+	}
 	var kept []string
 	for ; end < len(lines) && strings.HasPrefix(lines[end], "| "); end++ {
-		if !generatedRow.MatchString(lines[end]) {
+		if !generatedRow.MatchString(lines[end]) && !supersededExecutorRow(lines[end], listed) {
 			kept = append(kept, lines[end])
 		}
 	}
@@ -114,8 +118,33 @@ func Compose(existing string, h Header, rows []Row) (string, error) {
 	out = append(out, lines[skills:first]...)
 	out = append(out, rowLines...)
 	out = append(out, kept...)
-	out = append(out, lines[end:]...)
+	// The migration reaches the block of the table: the lines after it up to the first heading or
+	// comment line. A section someone else owns (Hermes checks its own bytes by a hash) starts with
+	// one of those, and is kept byte for byte.
+	block := true
+	for _, line := range lines[end:] {
+		if strings.HasPrefix(line, "#") || strings.HasPrefix(line, "<!--") {
+			block = false
+		}
+		if block && supersededExecutorRow(line, listed) {
+			continue
+		}
+		out = append(out, line)
+	}
 	return strings.Join(out, "\n"), nil
+}
+
+// supersededExecutorRow says whether line is an executor row (a row of an sdd-* skill with the scope
+// executor, as the repair that is gone wrote them) of a skill that the table now lists as an ordinary
+// row. The executor rows lost their writer, so such a row is dropped once, where it would otherwise
+// list the skill twice; every other executor row is kept.
+func supersededExecutorRow(line string, listed map[string]bool) bool {
+	rest, ok := strings.CutPrefix(line, executorRow)
+	if !ok || !strings.Contains(line, " | executor | ") {
+		return false
+	}
+	name, _, found := strings.Cut(rest, "`")
+	return found && listed["sdd-"+name]
 }
 
 // LastUpdated is the date the registry says it was written, or "" when it says none.

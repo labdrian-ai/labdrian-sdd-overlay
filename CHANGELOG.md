@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Removed
+
+- The SDD executor repair is gone (labdrian-orchestrator-opencode T29 commit a, S17): the engine verb `registry repair-sdd`, the command `labdrian repair-sdd-registry` and the repair step of `labdrian skill-registry refresh` (`--no-repair` and `--target` are still accepted and do nothing). The ten `sdd-*` skills the owner dropped have no executor rows to keep. `registry` with no verb or an unknown one now says `expected refresh`. `registry refresh` lists a skill named `sdd-*` like any other (`sdd-time-estimation` is listed as an ordinary row) and drops the old executor row of such a skill once (in the table block only, never inside a Hermes section or below a heading), so it is not listed twice; every other executor row and the note stay.
+
 ### Changed
 
 - The fifteen skills adopted from gentle-ai are labdrian's own (labdrian-orchestrator-opencode T28, S17): `chained-pr`, `work-unit-commits`, `comment-writer`, `cognitive-doc-design`, `go-testing`, `judgment-day`, `skill-creator`, `skill-improver`, `_shared/SKILL.md`, `requirements-from-transcripts`, `project-inception`, `inception-pipeline`, `project-manifest`, `project-architect` and `roadmap-maker` carry `author: labdrian`; the eight whose rows were still upstream's (and `_shared/SKILL.md`) move from `managed` to `custom` in `overlay.manifest` and from `type: core` with an upstream to `type: custom` in `skills.registry.yaml`, so `labdrian capture` no longer copies them from upstream. `judgment-day` loses its link to `_shared/review-ledger-contract.md`, its paragraph on gentle's negotiated review and its lens-capture note; `skill-creator` and `skill-improver` tell agents to run `labdrian skill-registry refresh`. `branch-pr`, `issue-creation` and `systemic-issue-triage` are unchanged. Each changed skill needs the owner's re-approval (`APPROVAL_STALE` until then).

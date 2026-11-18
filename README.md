@@ -1024,25 +1024,6 @@ gentle-ai-overlay manifest routes --overlay-root <dir> --target <name> --skills-
     read it). Exit 0 on success; 1 on a usage error (including an unknown flag) or a refusal, with nothing on stdout,
     so a caller never acts on part of a manifest.
 
-gentle-ai-overlay registry repair-sdd --registry <path> --target <name> --skills-root <dir>
-    Engine verb (Phase 9, B2): there is no `overlay registry` wrapper, so run it on the installed engine binary,
-    ~/.claude/bin/gentle-ai-overlay. It is what `overlay repair-sdd-registry` and `overlay skill-registry refresh` ask, after
-    `registry refresh` (documented below, after this verb) has regenerated the table. The table leaves the sdd-* phase skills out, as gentle-ai's did, because
-    they are executor contracts and not skills a person invokes; SDD delegation still needs their paths, so this puts a row back
-    for each one installed in --skills-root (`<dir>/<name>/SKILL.md`; --target only names the target in what it says), with the
-    scope `executor`, above the `## Loading protocol` heading of the registry at --registry, and a note that says why above
-    the `## Skills` heading. The note and the rows of an earlier repair are replaced; every other line stays as it was. A project
-    that has no registry gets one. The description of a row is the text after the first `description:` line of the skill (one
-    double quote off each end, every `|` escaped), or `SDD phase executor: <name>.` when it has none. It takes the lock
-    `propagate` takes (`<registry>.lock`, waiting up to 2 seconds), so a repair and the `propagate` hook that runs on every prompt
-    take turns, and it writes the registry whole through a temporary file and a rename (mode 0644), so a reader never sees half of it.
-    Each executor that is not installed is said on stderr (`WARN: missing <target> SDD executor skill: <path>`), and the run is
-    summed up on stdout: `repair-sdd-registry: registry=<path> target=<name> sdd_executors=<n> missing=<m>`. Two things the script
-    always did and the engine keeps: the rows land after the blank line that precedes the loading protocol heading, and a second
-    repair adds a blank line above the note and one above that heading. Exit 0 on success; 1 on a usage error (including an
-    unknown flag), a registry without the headings `## Skills` and `## Loading protocol` (`ERROR: registry has no '<heading>'
-    section: <path>`), a lock that stays taken, or a file that cannot be read or written, with the registry as it was.
-
 gentle-ai-overlay registry refresh --cwd <dir> [--force] [--quiet] [--skip-if-busy]
     Engine verb (labdrian-orchestrator-opencode T30, S17): there is no `overlay registry` wrapper, so run it on the installed
     engine binary, ~/.claude/bin/gentle-ai-overlay. It writes the table of skills that `gentle-ai skill-registry refresh` used
@@ -1052,13 +1033,14 @@ gentle-ai-overlay registry refresh --cwd <dir> [--force] [--quiet] [--skip-if-bu
     `.pi/skills`, `.agent/skills`, `.agents/skills`, `.atl/skills`, `.hermes/skills`), then those of the home that exist (the
     18 directories gentle-ai 4.2.0 scans, from `~/.pi/agent/skills` to `~/.trae/skills`), and the registry names each source it
     found under `## Sources scanned`. A skill is keyed by the `name:` of the frontmatter of its `SKILL.md` (its directory when
-    there is none); the first one found wins, the skills named `_shared`, `skill-registry` or `sdd-*` are left out, and the rows
+    there is none); the first one found wins, the skills named `_shared` or `skill-registry` are left out (an `sdd-*` skill is listed like any other), and the rows
     are sorted by name in byte order. A description is the value of `description:` with the white space and the quotes at its ends
     dropped, a `>`, `|`, `>-` or `|-` block folded with single spaces, every `|` escaped, and a dash when there is none. The one
     difference from gentle-ai, which kept the first line of a value of several lines: a quoted description written over several
     lines is read whole. The rows were checked against what gentle-ai 4.2.0 wrote in a sandbox. Every line of the registry that
     is not the generated head (title, the comment that names this command, `Last updated:`, `## Sources scanned`, `## Contract`)
-    or a row stays as it was, byte for byte: the note and rows `registry repair-sdd` writes, a Hermes section, the loading
+    or a row stays as it was, byte for byte: the note and rows of the executor repair that is gone (only the executor row of a skill the table now lists is
+    dropped, once, in the table block only and never inside a Hermes section, so it is not listed twice), a Hermes section, the loading
     protocol and the blocks `propagate` writes. A project with no registry gets one, loading protocol included. It takes the lock
     `propagate` takes (`<registry>.lock`, waiting up to 2 seconds) and writes the registry whole through a temporary file and a
     rename (mode 0644). It writes nothing when only the `Last updated:` day (UTC) would change, unless --force, and it never edits

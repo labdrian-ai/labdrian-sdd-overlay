@@ -7,14 +7,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/sddregistry/app"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skillregistry/app"
 )
 
-// The adapter answers the ports the use case owns.
-var (
-	_ app.RegistryStore = Registry{}
-	_ app.SkillSource   = Skills{}
-)
+// The adapter answers the port the use case owns.
+var _ app.RegistryStore = Registry{}
 
 func TestRegistryReadReturnsTheFileAndTellsAMissingOneApart(t *testing.T) {
 	dir := t.TempDir()
@@ -120,35 +117,5 @@ func TestRegistryHomeMakesTheDirectoryAndNothingElse(t *testing.T) {
 	}
 	if err := (Registry{}).Home(path); err != nil {
 		t.Errorf("Home of a directory that is there = %v, want nothing to do", err)
-	}
-}
-
-func TestSkillsIsFileOnlyForARegularFile(t *testing.T) {
-	dir := t.TempDir()
-	file := filepath.Join(dir, "SKILL.md")
-	if err := os.WriteFile(file, []byte("description: x\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	link := filepath.Join(dir, "link.md")
-	if err := os.Symlink(file, link); err != nil {
-		t.Fatal(err)
-	}
-	dangling := filepath.Join(dir, "dangling.md")
-	if err := os.Symlink(filepath.Join(dir, "nowhere"), dangling); err != nil {
-		t.Fatal(err)
-	}
-	for path, want := range map[string]bool{
-		file:                            true,
-		link:                            true, // a link to a file is a file, as `test -f` says
-		dangling:                        false,
-		dir:                             false,
-		filepath.Join(dir, "absent.md"): false,
-	} {
-		if got := (Skills{}).IsFile(path); got != want {
-			t.Errorf("IsFile(%s) = %v, want %v", path, got, want)
-		}
-	}
-	if got, err := (Skills{}).ReadFile(file); err != nil || string(got) != "description: x\n" {
-		t.Errorf("ReadFile = %q, %v, want the file", got, err)
 	}
 }

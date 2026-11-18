@@ -105,16 +105,10 @@ import (
 //   - synctrigger/osproc is the adapter of the Runner port of synctrigger (H34): it starts the
 //     programs of the machine in sessions and process groups of their own and kills a group at a
 //     deadline. synctrigger itself reads neither the clock nor the process table: it is handed both.
-//   - sddregistry is a domain package (B2): the rule over text for the SDD executor rows of a
-//     project's skill registry (which skills are executors, how a row reads, how a registry that
-//     has none starts, how the rows of an earlier repair are replaced). It reads and writes no file.
-//   - sddregistry/app holds the use case of `engine registry repair-sdd` (B2): it reads the
-//     registry, or starts one, reads the executor skills a target has installed and writes the
-//     registry back, over the RegistryStore and SkillSource ports it owns. It takes no lock, prints
-//     nothing and exits nowhere.
-//   - sddregistry/fsstore is the adapter of those two ports (B2): the registry as a file, written
-//     as `engine propagate` writes it (propagator/fsstore), and the skills of a target as files.
-//     The lock and the words a person reads are the command's, in cmd.
+//   - sddregistry/fsstore is the adapter of the RegistryStore port of skillregistry/app (B2, T30): the
+//     registry as a file, written as `engine propagate` writes it (propagator/fsstore). It has no
+//     domain or use case of its own since the repair of the SDD executor rows went (T29). The lock
+//     and the words a person reads are the command's, in cmd.
 //   - skillregistry is a domain package (T30): the table of skills in a project's .atl/skill-registry.md,
 //     the rules `gentle-ai skill-registry refresh` 4.2.0 follows (which directories hold skills, how a
 //     SKILL.md names itself, which skills are listed, how the file is written around the rows) over
@@ -246,8 +240,6 @@ var rings = map[string]archguard.Ring{
 	"runtime/ownership":         archguard.Domain,
 	"runtime/ownership/app":     archguard.Application,
 	"runtime/ownership/fsstore": archguard.Adapter,
-	"sddregistry":               archguard.Domain,
-	"sddregistry/app":           archguard.Application,
 	"sddregistry/fsstore":       archguard.Adapter,
 	"settings":                  archguard.Domain,
 	"settings/settingsfile":     archguard.Adapter,
