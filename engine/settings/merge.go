@@ -13,6 +13,7 @@ var installedFamilies = []hookFamily{
 	approveGuardFamily,
 	reviewStopFamily,
 	builderGuardFamily,
+	registryRefreshFamily,
 }
 
 // retiredFamilies are the hook pairs this overlay used to install and no longer does

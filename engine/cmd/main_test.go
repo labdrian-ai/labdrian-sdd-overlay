@@ -697,10 +697,11 @@ func TestRunMergeSettings_Idempotent(t *testing.T) {
 	// entry and the two shaper clearance guard entries → 5. The projection
 	// family adds one UserPromptSubmit entry and five PreToolUse entries →
 	// 3 and 10, the approve guard adds two more PreToolUse entries → 12, and the
-	// builder guard one more (matcher Agent) → 13.
+	// builder guard one more (matcher Agent) → 13. The registry refresh adds one more
+	// UserPromptSubmit entry → 4.
 	// merge-settings run twice stays at these counts (idempotent).
-	if n := countEntries("UserPromptSubmit"); n != 3 {
-		t.Errorf("UserPromptSubmit: expected 3 entries, got %d", n)
+	if n := countEntries("UserPromptSubmit"); n != 4 {
+		t.Errorf("UserPromptSubmit: expected 4 entries, got %d", n)
 	}
 	if n := countEntries("PreToolUse"); n != 14 {
 		t.Errorf("PreToolUse: expected 14 entries, got %d", n)

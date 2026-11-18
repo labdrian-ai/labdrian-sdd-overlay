@@ -12,6 +12,7 @@ exit: 2
 [OK  ] guard: skills approve (PreToolUse Bash + file tools) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
 [OK  ] hook: Stop (review stop-hook) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] hook: PreToolUse matcher="Agent" (builder guard) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
+[OK  ] hook: UserPromptSubmit (registry refresh) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "agent" (main session runs as the foreman) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "outputStyle" (labdrian output style) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: UserPromptSubmit "codegraph prompt-hook" (task notifications skipped) — no codegraph entry, nothing to wrap
@@ -33,6 +34,7 @@ exit: 2
 [OK  ] guard: skills approve (PreToolUse Bash + file tools) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
 [OK  ] hook: Stop (review stop-hook) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] hook: PreToolUse matcher="Agent" (builder guard) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
+[OK  ] hook: UserPromptSubmit (registry refresh) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "agent" (main session runs as the foreman) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "outputStyle" (labdrian output style) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: UserPromptSubmit "codegraph prompt-hook" (task notifications skipped) — no codegraph entry, nothing to wrap
@@ -54,6 +56,7 @@ exit: 2
 [OK  ] guard: skills approve (PreToolUse Bash + file tools) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
 [OK  ] hook: Stop (review stop-hook) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] hook: PreToolUse matcher="Agent" (builder guard) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
+[OK  ] hook: UserPromptSubmit (registry refresh) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "agent" (main session runs as the foreman) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "outputStyle" (labdrian output style) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: UserPromptSubmit "codegraph prompt-hook" (task notifications skipped) — no codegraph entry, nothing to wrap
@@ -75,6 +78,7 @@ exit: 2
 [WARN] guard: skills approve (PreToolUse Bash + file tools) — missing or drifted: hooks enabled (disableAllHooks is true); the agent can run skills approve unguarded (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
 [OK  ] hook: Stop (review stop-hook) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] hook: PreToolUse matcher="Agent" (builder guard) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
+[OK  ] hook: UserPromptSubmit (registry refresh) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "agent" (main session runs as the foreman) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "outputStyle" (labdrian output style) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: UserPromptSubmit "codegraph prompt-hook" (task notifications skipped) — no codegraph entry, nothing to wrap
@@ -96,6 +100,7 @@ exit: 0
 [OK  ] guard: skills approve (PreToolUse Bash + file tools) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
 [OK  ] hook: Stop (review stop-hook) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] hook: PreToolUse matcher="Agent" (builder guard) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
+[OK  ] hook: UserPromptSubmit (registry refresh) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "agent" (main session runs as the foreman) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "outputStyle" (labdrian output style) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: UserPromptSubmit "codegraph prompt-hook" (task notifications skipped) — no codegraph entry, nothing to wrap
@@ -117,6 +122,7 @@ exit: 2
 [OK  ] guard: skills approve (PreToolUse Bash + file tools) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
 [OK  ] hook: Stop (review stop-hook) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] hook: PreToolUse matcher="Agent" (builder guard) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
+[OK  ] hook: UserPromptSubmit (registry refresh) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "agent" (main session runs as the foreman) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "outputStyle" (labdrian output style) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: UserPromptSubmit "codegraph prompt-hook" (task notifications skipped) — no codegraph entry, nothing to wrap
@@ -138,6 +144,7 @@ exit: 2
 [OK  ] guard: skills approve (PreToolUse Bash + file tools) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
 [OK  ] hook: Stop (review stop-hook) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] hook: PreToolUse matcher="Agent" (builder guard) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
+[OK  ] hook: UserPromptSubmit (registry refresh) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "agent" (main session runs as the foreman) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "outputStyle" (labdrian output style) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: UserPromptSubmit "codegraph prompt-hook" (task notifications skipped) — no codegraph entry, nothing to wrap
@@ -159,6 +166,7 @@ exit: 2
 [OK  ] guard: skills approve (PreToolUse Bash + file tools) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
 [OK  ] hook: Stop (review stop-hook) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] hook: PreToolUse matcher="Agent" (builder guard) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
+[OK  ] hook: UserPromptSubmit (registry refresh) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "agent" (main session runs as the foreman) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "outputStyle" (labdrian output style) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: UserPromptSubmit "codegraph prompt-hook" (task notifications skipped) — no codegraph entry, nothing to wrap
@@ -180,6 +188,7 @@ exit: 2
 [OK  ] guard: skills approve (PreToolUse Bash + file tools) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
 [OK  ] hook: Stop (review stop-hook) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] hook: PreToolUse matcher="Agent" (builder guard) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
+[OK  ] hook: UserPromptSubmit (registry refresh) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "agent" (main session runs as the foreman) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "outputStyle" (labdrian output style) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: UserPromptSubmit "codegraph prompt-hook" (task notifications skipped) — no codegraph entry, nothing to wrap
@@ -201,6 +210,7 @@ exit: 2
 [WARN] guard: skills approve (PreToolUse Bash + file tools) — missing or drifted: PreToolUse matcher="Bash" skills guard-hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" skills guard-hook; the agent can run skills approve unguarded (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
 [OK  ] hook: Stop (review stop-hook) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] hook: PreToolUse matcher="Agent" (builder guard) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
+[OK  ] hook: UserPromptSubmit (registry refresh) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "agent" (main session runs as the foreman) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "outputStyle" (labdrian output style) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: UserPromptSubmit "codegraph prompt-hook" (task notifications skipped) — no codegraph entry, nothing to wrap
@@ -222,6 +232,7 @@ exit: 2
 [WARN] guard: skills approve (PreToolUse Bash + file tools) — missing or drifted: PreToolUse matcher="Bash" skills guard-hook, PreToolUse matcher="Write|Edit|MultiEdit|NotebookEdit" skills guard-hook, 2 drifted or duplicate PreToolUse skills guard-hook entries; the agent can run skills approve unguarded (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
 [OK  ] hook: Stop (review stop-hook) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] hook: PreToolUse matcher="Agent" (builder guard) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
+[OK  ] hook: UserPromptSubmit (registry refresh) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "agent" (main session runs as the foreman) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "outputStyle" (labdrian output style) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: UserPromptSubmit "codegraph prompt-hook" (task notifications skipped) — no codegraph entry, nothing to wrap
@@ -243,6 +254,7 @@ exit: 2
 [OK  ] guard: skills approve (PreToolUse Bash + file tools) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
 [WARN] hook: Stop (review stop-hook) — missing or drifted: Stop review stop-hook; the agent is not asked to review its commits when it stops; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
 [OK  ] hook: PreToolUse matcher="Agent" (builder guard) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
+[OK  ] hook: UserPromptSubmit (registry refresh) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "agent" (main session runs as the foreman) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "outputStyle" (labdrian output style) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: UserPromptSubmit "codegraph prompt-hook" (task notifications skipped) — no codegraph entry, nothing to wrap
@@ -264,6 +276,7 @@ exit: 2
 [OK  ] guard: skills approve (PreToolUse Bash + file tools) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
 [WARN] hook: Stop (review stop-hook) — missing or drifted: Stop review stop-hook, 1 drifted or duplicate Stop review stop-hook entries; the agent is not asked to review its commits when it stops; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
 [OK  ] hook: PreToolUse matcher="Agent" (builder guard) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
+[OK  ] hook: UserPromptSubmit (registry refresh) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "agent" (main session runs as the foreman) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "outputStyle" (labdrian output style) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: UserPromptSubmit "codegraph prompt-hook" (task notifications skipped) — no codegraph entry, nothing to wrap
@@ -285,6 +298,7 @@ exit: 2
 [OK  ] guard: skills approve (PreToolUse Bash + file tools) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
 [OK  ] hook: Stop (review stop-hook) — installed; restart Claude Code to load hook changes if this session started earlier
 [WARN] hook: PreToolUse matcher="Agent" (builder guard) — missing or drifted: PreToolUse matcher="Agent" roles builder-guard; a builder launch is not checked for a task the shaper designed (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[OK  ] hook: UserPromptSubmit (registry refresh) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "agent" (main session runs as the foreman) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "outputStyle" (labdrian output style) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: UserPromptSubmit "codegraph prompt-hook" (task notifications skipped) — no codegraph entry, nothing to wrap
@@ -306,6 +320,51 @@ exit: 2
 [OK  ] guard: skills approve (PreToolUse Bash + file tools) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
 [OK  ] hook: Stop (review stop-hook) — installed; restart Claude Code to load hook changes if this session started earlier
 [WARN] hook: PreToolUse matcher="Agent" (builder guard) — missing or drifted: PreToolUse matcher="Agent" roles builder-guard, 1 drifted or duplicate PreToolUse roles builder-guard entries; a builder launch is not checked for a task the shaper designed (the guard is a speed bump, not a security boundary); run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[OK  ] hook: UserPromptSubmit (registry refresh) — installed; restart Claude Code to load hook changes if this session started earlier
+[OK  ] settings: "agent" (main session runs as the foreman) — installed; restart Claude Code to load hook changes if this session started earlier
+[OK  ] settings: "outputStyle" (labdrian output style) — installed; restart Claude Code to load hook changes if this session started earlier
+[OK  ] settings: UserPromptSubmit "codegraph prompt-hook" (task notifications skipped) — no codegraph entry, nothing to wrap
+[OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
+[OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
+--- stderr ---
+
+# no registry refresh entry: WARN
+$ status
+exit: 2
+--- stdout ---
+[OK  ] binary: <WORLD>/home/.claude/bin/gentle-ai-overlay
+[OK  ] hook: UserPromptSubmit (propagate)
+[OK  ] hook: PreToolUse matcher="Agent" (gate-task)
+[OK  ] hook: SessionEnd (sync-trigger)
+[OK  ] hook: PreToolUse matcher="Bash" (review-receipt)
+[OK  ] guard: shaper clearance record (PreToolUse + permissions.deny) — installed; the guard is a speed bump, not a security boundary
+[OK  ] hooks: projection (SessionStart + UserPromptSubmit + PreToolUse gates + PostToolUse read evidence) — installed; restart Claude Code to load hook changes if this session started earlier
+[OK  ] guard: skills approve (PreToolUse Bash + file tools) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
+[OK  ] hook: Stop (review stop-hook) — installed; restart Claude Code to load hook changes if this session started earlier
+[OK  ] hook: PreToolUse matcher="Agent" (builder guard) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
+[WARN] hook: UserPromptSubmit (registry refresh) — missing or drifted: UserPromptSubmit registry refresh; the table of skills of the project's registry is not refreshed when a prompt is sent; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
+[OK  ] settings: "agent" (main session runs as the foreman) — installed; restart Claude Code to load hook changes if this session started earlier
+[OK  ] settings: "outputStyle" (labdrian output style) — installed; restart Claude Code to load hook changes if this session started earlier
+[OK  ] settings: UserPromptSubmit "codegraph prompt-hook" (task notifications skipped) — no codegraph entry, nothing to wrap
+[OK  ] contract: <WORLD>/home/.claude/skills/_shared/minimalism-contract.md
+[OK  ] registry: <WORLD>/.atl/skill-registry.md — scoped block present
+--- stderr ---
+
+# a registry refresh entry that was edited
+$ status
+exit: 2
+--- stdout ---
+[OK  ] binary: <WORLD>/home/.claude/bin/gentle-ai-overlay
+[OK  ] hook: UserPromptSubmit (propagate)
+[OK  ] hook: PreToolUse matcher="Agent" (gate-task)
+[OK  ] hook: SessionEnd (sync-trigger)
+[OK  ] hook: PreToolUse matcher="Bash" (review-receipt)
+[OK  ] guard: shaper clearance record (PreToolUse + permissions.deny) — installed; the guard is a speed bump, not a security boundary
+[OK  ] hooks: projection (SessionStart + UserPromptSubmit + PreToolUse gates + PostToolUse read evidence) — installed; restart Claude Code to load hook changes if this session started earlier
+[OK  ] guard: skills approve (PreToolUse Bash + file tools) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
+[OK  ] hook: Stop (review stop-hook) — installed; restart Claude Code to load hook changes if this session started earlier
+[OK  ] hook: PreToolUse matcher="Agent" (builder guard) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
+[WARN] hook: UserPromptSubmit (registry refresh) — missing or drifted: UserPromptSubmit registry refresh, 1 drifted or duplicate UserPromptSubmit registry refresh entries; the table of skills of the project's registry is not refreshed when a prompt is sent; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
 [OK  ] settings: "agent" (main session runs as the foreman) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "outputStyle" (labdrian output style) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: UserPromptSubmit "codegraph prompt-hook" (task notifications skipped) — no codegraph entry, nothing to wrap
@@ -327,6 +386,7 @@ exit: 1
 [OK  ] guard: skills approve (PreToolUse Bash + file tools) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
 [OK  ] hook: Stop (review stop-hook) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] hook: PreToolUse matcher="Agent" (builder guard) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
+[OK  ] hook: UserPromptSubmit (registry refresh) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "agent" (main session runs as the foreman) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "outputStyle" (labdrian output style) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: UserPromptSubmit "codegraph prompt-hook" (task notifications skipped) — no codegraph entry, nothing to wrap
@@ -348,6 +408,7 @@ exit: 1
 [OK  ] guard: skills approve (PreToolUse Bash + file tools) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
 [OK  ] hook: Stop (review stop-hook) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] hook: PreToolUse matcher="Agent" (builder guard) — installed; the guard is a speed bump, not a security boundary; restart Claude Code to load hook changes if this session started earlier
+[WARN] hook: UserPromptSubmit (registry refresh) — missing or drifted: UserPromptSubmit registry refresh; the table of skills of the project's registry is not refreshed when a prompt is sent; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'; restart Claude Code to load hook changes
 [OK  ] settings: "agent" (main session runs as the foreman) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: "outputStyle" (labdrian output style) — installed; restart Claude Code to load hook changes if this session started earlier
 [OK  ] settings: UserPromptSubmit "codegraph prompt-hook" (task notifications skipped) — no codegraph entry, nothing to wrap

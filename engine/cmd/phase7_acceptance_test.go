@@ -979,17 +979,18 @@ func phase7Settings(t *testing.T, binary string) {
 	merge := func() {
 		w.engine(w.dir, "", "merge-settings", "--settings", settingsPath, "--hook-command", hookCommand).must(t, "merge-settings")
 	}
-	statusLine := func() string {
+	statusLineOf := func(label string) string {
 		t.Helper()
 		out := w.engine(w.dir, "", "status").stdout
 		for _, line := range strings.Split(out, "\n") {
-			if strings.Contains(line, "hooks: projection (") {
+			if strings.Contains(line, label) {
 				return line
 			}
 		}
-		t.Fatalf("status prints no projection line:\n%s", out)
+		t.Fatalf("status prints no line for %q:\n%s", label, out)
 		return ""
 	}
+	statusLine := func() string { return statusLineOf("hooks: projection (") }
 	assertForeignKept := func(stage string) {
 		t.Helper()
 		doc := phase7ReadSettings(t, settingsPath)
@@ -1093,11 +1094,13 @@ func phase7Settings(t *testing.T, binary string) {
 	}
 
 	// Drift: an edited entry is reported, and the next merge repairs it to the
-	// same bytes, without touching a foreign entry.
+	// same bytes, without touching a foreign entry. The entry edited is the one of the
+	// family installed last on UserPromptSubmit: a repair removes a drifted entry and appends its
+	// replacement, so only the last family keeps its place.
 	doc := phase7ReadSettings(t, settingsPath)
 	for _, e := range doc["hooks"].(map[string]any)["UserPromptSubmit"].([]any) {
 		inner := e.(map[string]any)["hooks"].([]any)[0].(map[string]any)
-		if strings.Contains(inner["command"].(string), " projection hook --event ") && strings.Contains(inner["command"].(string), hookCommand) {
+		if strings.Contains(inner["command"].(string), " registry refresh ") && strings.Contains(inner["command"].(string), hookCommand) {
 			inner["command"] = inner["command"].(string) + " --extra"
 		}
 	}
@@ -1108,7 +1111,7 @@ func phase7Settings(t *testing.T, binary string) {
 	if err := os.WriteFile(settingsPath, drifted, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if line := statusLine(); !strings.HasPrefix(line, "[WARN]") || !strings.Contains(line, "drifted") {
+	if line := statusLineOf("(registry refresh)"); !strings.HasPrefix(line, "[WARN]") || !strings.Contains(line, "drifted") {
 		t.Errorf("status with a drifted entry: %q", line)
 	}
 	merge()

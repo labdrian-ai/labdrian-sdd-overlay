@@ -285,8 +285,8 @@ func TestMerge_Idempotent(t *testing.T) {
 	}
 
 	root := parseJSON(t, path)
-	if n := countOurHooks(root, "UserPromptSubmit", testHookCommand); n != 3 {
-		t.Errorf("UserPromptSubmit: expected exactly 3 entries (minimalism + design + projection), got %d", n)
+	if n := countOurHooks(root, "UserPromptSubmit", testHookCommand); n != 4 {
+		t.Errorf("UserPromptSubmit: expected exactly 4 entries (minimalism + design + projection + registry refresh), got %d", n)
 	}
 	if n := countOurHooks(root, "PreToolUse", testHookCommand); n != 14 {
 		t.Errorf("PreToolUse: expected exactly 14 entries (minimalism + design + review-receipt + 2 shaper guard + 6 projection + 2 approve guard + builder guard), got %d", n)
@@ -778,8 +778,8 @@ func TestUninstall_CountIsZeroAfterInstall(t *testing.T) {
 	if n := countOurHooks(before, "SessionEnd", testHookCommand); n != 1 {
 		t.Fatalf("precondition: expected 1 SessionEnd entry after Install, got %d", n)
 	}
-	if n := countOurHooks(before, "UserPromptSubmit", testHookCommand); n != 3 {
-		t.Fatalf("precondition: expected 3 UserPromptSubmit entries after Install, got %d", n)
+	if n := countOurHooks(before, "UserPromptSubmit", testHookCommand); n != 4 {
+		t.Fatalf("precondition: expected 4 UserPromptSubmit entries after Install, got %d", n)
 	}
 	if n := countOurHooks(before, "PreToolUse", testHookCommand); n != 14 {
 		t.Fatalf("precondition: expected 14 PreToolUse entries after Install, got %d", n)
@@ -1026,8 +1026,8 @@ func TestSchema_InstallTwice_Idempotent(t *testing.T) {
 	root := parseJSON(t, path)
 	// Two pairs install (minimalism + design) → 2 entries per key; a second
 	// Install adds no more.
-	if n := countOurHooks(root, "UserPromptSubmit", testHookCommand); n != 3 {
-		t.Errorf("Install×2: UserPromptSubmit should have exactly 3 entries; got %d", n)
+	if n := countOurHooks(root, "UserPromptSubmit", testHookCommand); n != 4 {
+		t.Errorf("Install×2: UserPromptSubmit should have exactly 4 entries; got %d", n)
 	}
 	if n := countOurHooks(root, "PreToolUse", testHookCommand); n != 14 {
 		t.Errorf("Install×2: PreToolUse should have exactly 14 entries (3 families + 2 shaper guard + 6 projection + 2 approve guard + builder guard); got %d", n)
@@ -1210,10 +1210,10 @@ func withShaperGuardFamily(root map[string]interface{}, hookCommand string) map[
 }
 
 // TestHasSupportedClaudeLifecycleState_RequiresEveryOwnedFamily asserts the
-// lifecycle-state check returns true only once all nine owned families
+// lifecycle-state check returns true only once all ten owned families
 // (minimalism pair, design pair, SessionEnd sync-trigger, PreToolUse/Bash
 // review-receipt, shaper clearance guard, projection, approve guard, Stop
-// review stop-hook, PreToolUse/Agent builder guard) are present: it adds them
+// review stop-hook, PreToolUse/Agent builder guard, UserPromptSubmit registry refresh) are present: it adds them
 // one at a time and requires false until the last.
 func TestHasSupportedClaudeLifecycleState_RequiresEveryOwnedFamily(t *testing.T) {
 	twoFamilies := buildRootWithPairs(testHookCommand, true, true)
@@ -1252,9 +1252,22 @@ func TestHasSupportedClaudeLifecycleState_RequiresEveryOwnedFamily(t *testing.T)
 	}
 
 	allNine := withBuilderGuardFamily(allEight, testHookCommand)
-	if !settings.HasSupportedClaudeLifecycleState(allNine, testHookCommand) {
-		t.Error("HasSupportedClaudeLifecycleState: expected true once all nine families exist")
+	if settings.HasSupportedClaudeLifecycleState(allNine, testHookCommand) {
+		t.Error("HasSupportedClaudeLifecycleState: expected false with nine families (registry refresh missing)")
 	}
+
+	allTen := withRegistryRefreshFamily(allNine, testHookCommand)
+	if !settings.HasSupportedClaudeLifecycleState(allTen, testHookCommand) {
+		t.Error("HasSupportedClaudeLifecycleState: expected true once all ten families exist")
+	}
+}
+
+// withRegistryRefreshFamily adds the UserPromptSubmit registry refresh entry to root and returns root.
+func withRegistryRefreshFamily(root map[string]interface{}, hookCommand string) map[string]interface{} {
+	hooks := root["hooks"].(map[string]interface{})
+	existing, _ := hooks["UserPromptSubmit"].([]interface{})
+	hooks["UserPromptSubmit"] = append(existing, settings.RegistryRefreshHookEntries(hookCommand)["UserPromptSubmit"]...)
+	return root
 }
 
 // extractCommand returns the inner hooks[0].command string of a hook entry

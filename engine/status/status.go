@@ -210,6 +210,7 @@ func (s Service) Check(req Request) Report {
 		checkApproveGuard(loaded, binaryPath),
 		checkReviewStopHook(loaded, binaryPath),
 		checkBuilderGuard(loaded, binaryPath),
+		checkRegistryRefreshHook(loaded, binaryPath),
 		checkMainAgent(loaded, binaryPath),
 		checkOutputStyle(loaded, binaryPath),
 		checkCodegraphPromptHook(loaded, binaryPath),
@@ -402,6 +403,23 @@ func checkReviewStopHook(s loadedSettings, binaryPath string) Check {
 		return c
 	}
 	if missing := settings.MissingReviewStopHookParts(s.root, binaryPath); len(missing) > 0 {
+		return Check{Label: label, Level: Warn,
+			Note: "missing or drifted: " + strings.Join(missing, ", ") + "; " + cost + "; " + remediation + "; " + restartNote}
+	}
+	return Check{Label: label, Level: OK, Note: "installed; " + restartNote + " if this session started earlier"}
+}
+
+// checkRegistryRefreshHook reports whether the registry refresh hook (the one UserPromptSubmit entry that runs
+// 'registry refresh') is exactly in place. It is judged as checkReviewStopHook is: an entry that is missing or
+// drifted warns with the remediation, settings that cannot be read fail, and the note asks for a restart. What a
+// missing hook costs is said in the note; the skills table can still be refreshed by hand.
+func checkRegistryRefreshHook(s loadedSettings, binaryPath string) Check {
+	label := "hook: UserPromptSubmit (registry refresh)"
+	const cost = "the table of skills of the project's registry is not refreshed when a prompt is sent"
+	if c, done := s.beforeEntries(label, Warn, "; "+cost+"; "+remediation+"; "+restartNote); done {
+		return c
+	}
+	if missing := settings.MissingRegistryRefreshHookParts(s.root, binaryPath); len(missing) > 0 {
 		return Check{Label: label, Level: Warn,
 			Note: "missing or drifted: " + strings.Join(missing, ", ") + "; " + cost + "; " + remediation + "; " + restartNote}
 	}
