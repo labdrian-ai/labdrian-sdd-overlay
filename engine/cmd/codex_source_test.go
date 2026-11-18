@@ -137,6 +137,37 @@ func TestCodexSourceProcesses(t *testing.T) {
 			t.Error("gate changed state")
 		}
 	})
+	// Under Code Mode the inner call of a memorycard read reaches the gate as OpenCode names it
+	// (memorycard_<tool>); each gets the answer Claude Code's mcp__memorycard__<tool> gets (T38).
+	t.Run("OpencodeMemorycardReads", func(t *testing.T) {
+		w := newPhase7World(t, binary)
+		w.bindRunning("proj-1", "wf-1", "sdd")
+		before, tree := w.stateSnapshot(), snapshotTree(t, w.state)
+		for _, tt := range []struct {
+			name, claude, opencode string
+			input                  map[string]any
+			denied                 string // a part of the reason, empty when the read goes ahead
+		}{
+			{"search without a project", "mcp__memorycard__mem_search", "memorycard_mem_search", queryArgs(nil), "names no project"},
+			{"search of another project", "mcp__memorycard__mem_search", "memorycard_mem_search", queryArgs("other"), `project "other"`},
+			{"search of the workflow's project", "mcp__memorycard__mem_search", "memorycard_mem_search", queryArgs("proj-1"), ""},
+			{"get by id", "mcp__memorycard__mem_get", "memorycard_mem_get", map[string]any{"id": 7}, ""},
+		} {
+			claude := sourceHook(w, "PreToolUse", gateInput(t, w.repo, "session-1", tt.claude, tt.input))
+			if tt.denied == "" {
+				assertSilent(t, tt.name+": Claude reference", claude.asHook())
+			} else {
+				assertDenied(t, tt.name+": Claude reference", claude.asHook(), tt.denied)
+			}
+			got := sourceHook(w, "PreToolUse", codexSourceInput(t, w.repo, "PreToolUse", tt.opencode, tt.input), "--source", "opencode")
+			if got != claude {
+				t.Errorf("%s: opencode %+v != Claude %+v", tt.name, got, claude)
+			}
+		}
+		if !reflect.DeepEqual(before, w.stateSnapshot()) || !reflect.DeepEqual(tree, snapshotTree(t, w.state)) {
+			t.Error("gate changed state")
+		}
+	})
 	t.Run("ExistingEventsKeepDefaultAndExplicitClaude", func(t *testing.T) {
 		w := newPhase7World(t, binary)
 		w.bindRunning("proj-1", "wf-1", "sdd")

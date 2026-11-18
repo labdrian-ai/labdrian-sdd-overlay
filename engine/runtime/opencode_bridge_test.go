@@ -20,7 +20,7 @@ import (
 
 // fakeEngineScript is the stand-in for the engine binary. It appends "<event><TAB><arguments>" to
 // calls.log, keeps its stdin in stdin.<n> for the n-th call, and prints answer.<event> when there is
-// one. The event is the --event value, or Stop for `review stop-hook`, which takes none.
+// one. answer.<event>.<n> answers the n-th call alone and wins over it. The event is the --event value, or Stop for `review stop-hook`, which takes none.
 const fakeEngineScript = `#!/bin/sh
 dir=$(dirname "$0")
 event=Stop
@@ -34,7 +34,8 @@ count=$((count + 1))
 printf '%s\t%s\n' "$event" "$*" >> "$dir/calls.log"
 cat > "$dir/stdin.$count"
 if [ -f "$dir/exit" ]; then cat "$dir/stderr" >&2; exit "$(cat "$dir/exit")"; fi
-if [ -f "$dir/answer.$event" ]; then cat "$dir/answer.$event"; fi
+if [ -f "$dir/answer.$event.$count" ]; then cat "$dir/answer.$event.$count"
+elif [ -f "$dir/answer.$event" ]; then cat "$dir/answer.$event"; fi
 exit 0
 `
 
@@ -323,5 +324,66 @@ console.log(JSON.stringify({ denied, prompt: call.input.prompt }));`
 	}
 	if !got.Denied || got.Prompt != basePromptFixture {
 		t.Fatalf("a denied launch must not be rewritten, got %#v", got)
+	}
+}
+
+// Under Code Mode one memorycard read fires two execute.before events: the outer execute carrying
+// the model's code, then the inner memorycard_mem_search carrying {query, project} (L102 (1)). The
+// bridge hands every one of them to the engine as OpenCode sent it, and a denial of the inner call
+// throws the engine's reason.
+func TestOpenCodeBridgeJudgesTheInnerMemorycardCallOfACodeModeExecute(t *testing.T) {
+	requireNode(t)
+	const reason = "this memorycard read names no project"
+	engine := newFakeEngine(t, nil)
+	// The stand-in answers the second call alone: the outer execute is let through.
+	if err := os.WriteFile(filepath.Join(engine.dir, "answer."+eventPreToolUse+".2"), encoded(t, hookwire.PreToolUseReply{Deny: true, Reason: reason}), 0o644); err != nil {
+		t.Fatalf("write fake engine answer: %v", err)
+	}
+	pluginPath := bridgeFixture(t)
+
+	out := runPluginWithEngine(t, pluginPath, engine.path, `const outer = { tool: "execute", sessionID: "ses_1", id: "call_1", input: { code: "await memorycard_mem_search({ query: 'q', project: 'proj-1' })" } };
+const inner = { tool: "memorycard_mem_search", sessionID: "ses_1", id: "call_2", input: { query: "q", project: "proj-1" } };
+const thrown = {};
+for (const [name, call] of [["outer", outer], ["inner", inner]]) {
+  thrown[name] = null;
+  try { await beforeHook(call); } catch (error) { thrown[name] = { name: error.name, message: error.message, fields: error.fields }; }
+}
+console.log(JSON.stringify(thrown));`)
+	var got map[string]*struct {
+		Name    string         `json:"name"`
+		Message string         `json:"message"`
+		Fields  map[string]any `json:"fields"`
+	}
+	if err := json.Unmarshal(out, &got); err != nil {
+		t.Fatalf("decode result: %v\nraw=%q", err, out)
+	}
+	if got["outer"] != nil {
+		t.Fatalf("the outer execute should be let through, got %#v", got["outer"])
+	}
+	if inner := got["inner"]; inner == nil || inner.Name != "Tool.Error" || inner.Message != reason || inner.Fields["message"] != reason {
+		t.Fatalf("the engine's denial of the inner call should throw a Tool.Error({message: %q}), got %#v", reason, got["inner"])
+	}
+
+	calls := engine.calls(t)
+	if len(calls) != 2 {
+		t.Fatalf("the engine should be asked twice, once per execute.before event, got %#v", calls)
+	}
+	for i, want := range []struct {
+		tool  string
+		field string
+		value any
+	}{
+		{"execute", "code", "await memorycard_mem_search({ query: 'q', project: 'proj-1' })"},
+		{"memorycard_mem_search", "project", "proj-1"},
+	} {
+		call := calls[i]
+		toolInput, _ := call.Stdin["tool_input"].(map[string]any)
+		if call.Event != eventPreToolUse || call.Args != "projection hook --event PreToolUse "+bridgeSource ||
+			call.Stdin["tool_name"] != want.tool || toolInput[want.field] != want.value {
+			t.Errorf("call %d: want a PreToolUse of %s with %s %v as OpenCode sent it, got %#v", i+1, want.tool, want.field, want.value, call)
+		}
+	}
+	if inputs, _ := calls[1].Stdin["tool_input"].(map[string]any); inputs["query"] != "q" {
+		t.Errorf("the inner call keeps its query, got %#v", inputs)
 	}
 }

@@ -142,7 +142,8 @@ func TestOpenCodeClaimsCiteTheTestsThatBackThem(t *testing.T) {
 				"runtime:TestMemorycardPluginCapturesTheFinalTextOfASubagentOnStdin",
 			},
 			[]string{
-				"OpencodeAdaptsBeforeGate subtest of cmd:TestCodexSourceProcesses", "execute (not mapped) stays silent",
+				"OpencodeAdaptsBeforeGate and OpencodeMemorycardReads subtests of cmd:TestCodexSourceProcesses", "execute (not mapped) stays silent",
+				"a bridge test pins an execute and its inner memorycard call",
 				"sends each subagent's final text to memorycard capture (fake memorycard)",
 				"No memory write is blocked", "a saved Key Learnings item and a real session are untested (T17)",
 			}},
