@@ -391,7 +391,7 @@ func usage(w io.Writer) {
 	fmt.Fprintln(w, "    workflow the repository is bound to (see workflow bind) into the session: id, profile, status, stages, and the memory plan;")
 	fmt.Fprintln(w, "    the binding to a closed workflow is removed, and the note says whether it was removed, left alone, or the removal failed.")
 	fmt.Fprintln(w, "    A prompt of a session adds the block only when it differs from the last one added to that session (kept as a SHA-256 under")
-	fmt.Fprintln(w, "    <state home>/labdrian/projection-prompt), always on the first prompt and after a SessionStart (start, resume, clear, compact)")
+	fmt.Fprintln(w, "    <state home>/labdrian/projection-prompt, by source and session), always on the first prompt and after a SessionStart (start, resume, clear, compact)")
 	fmt.Fprintln(w, "    of the session; with no session_id, a store that cannot be used, a warning or a closed workflow's note it prints as always.")
 	fmt.Fprintln(w, "    PreToolUse gates a tool call against the bound workflow and never writes: it denies Write, Edit, MultiEdit, and NotebookEdit while the")
 	fmt.Fprintln(w, "    workflow is paused (never Bash, never a read). For a memory read (a longterm-mem query or get; an Engram mem_search, mem_context,")

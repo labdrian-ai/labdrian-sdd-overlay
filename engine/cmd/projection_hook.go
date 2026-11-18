@@ -118,18 +118,23 @@ func runProjectionHook(d deps, args []string, processCwd string, stdin io.Reader
 		}
 	}()
 	var out []byte
+	var written func() // what to do once out was written, or nil
 	switch event {
 	case hookwire.EventPreToolUse:
 		out = preToolUse(d, stdin, processCwd, source)
 	case hookwire.EventSessionStart:
-		out = sessionStart(d, stdin, processCwd)
+		out = sessionStart(d, stdin, processCwd, source)
 	case hookwire.EventPostToolUse:
 		out = postToolUse(d, stdin, processCwd, source)
 	default:
-		out = userPromptSubmit(d, stdin, processCwd)
+		out, written = userPromptSubmit(d, stdin, processCwd, source)
 	}
 	if len(out) > 0 {
-		_, _ = stdout.Write(out) // nothing to do if the write fails: the prompt or the call goes through.
+		// Nothing to do if the write fails: the prompt or the call goes through, and a block that was not
+		// written is not recorded, so the next prompt adds it.
+		if _, err := stdout.Write(out); err == nil && written != nil {
+			written()
+		}
 	}
 	exit(0)
 }
@@ -205,75 +210,85 @@ func warningOutput(event, warning string) []byte {
 // in silence: there is nothing to be loyal to. A store that cannot be opened or
 // read is different, because the repository may well be bound, so it gets one
 // warning.
-func userPromptSubmit(d deps, stdin io.Reader, processCwd string) []byte {
+func userPromptSubmit(d deps, stdin io.Reader, processCwd, source string) (out []byte, written func()) {
 	// One byte past the cap is enough for the decoder to see the input is over
 	// it, and no more of an endless input is ever read.
 	data, err := io.ReadAll(io.LimitReader(stdin, hookwire.MaxEnvelopeBytes+1))
 	if err != nil {
-		return nil
+		return nil, nil
 	}
 	in, err := hookwire.DecodeUserPromptSubmit(data)
 	if err != nil {
-		return nil
+		return nil, nil
 	}
 	// The event flag decides the shape of the answer; input that names another
 	// event was not meant for this command.
 	if in.Event != "" && in.Event != hookwire.EventUserPromptSubmit {
-		return nil
+		return nil, nil
 	}
 	outcome := d.promptHook().OnPrompt(app.PromptRequest{InputDir: in.Cwd, ProcessDir: processCwd})
 	switch outcome.Kind {
 	case app.PromptWarning:
-		return warningOutput(hookwire.EventUserPromptSubmit, outcome.Warning)
+		return warningOutput(hookwire.EventUserPromptSubmit, outcome.Warning), nil
 	case app.PromptProjection:
 		out, err := promptReply(outcome.Result).Encode()
 		if err != nil {
-			return nil
+			return nil, nil
 		}
 		if outcome.Result.Warning != "" || outcome.Result.Unbind {
 			// A warning is always said, and so is the note of a closed workflow, which says it repeats on every
 			// prompt until the binding is removed. Neither is recorded as the last block.
-			return out
+			return out, nil
 		}
-		return addOncePerChange(in.SessionID, out)
+		return addOncePerChange(sessionKey(source, in.SessionID), out)
 	}
-	return nil
+	return nil, nil
 }
 
-// addOncePerChange is the block of a session's prompt as it is printed: the block when it differs from the last
-// one added to the session (and then it is recorded as the last), nothing when it is the same one (S19). A
-// prompt with no session, and a store that cannot be read or written, print the block, as they always did:
-// the hook never says less than it would without the store, and never fails the prompt for it.
-func addOncePerChange(session string, block []byte) []byte {
-	if session == "" || len(block) == 0 {
-		return block
+// sessionKey names a session for the store: the source that sent it and its id together, because two runtimes
+// may send the same id and are two sessions. "" when the input names no session.
+func sessionKey(source, session string) string {
+	if session == "" {
+		return ""
+	}
+	return source + "\x00" + session
+}
+
+// addOncePerChange decides what a session's prompt prints of its block, and what to do once it was written (S19).
+// A block equal to the last one added to the session is omitted on purpose: it is already in the session's
+// context. Any other block is printed, and recorded as the last only after it was written, so a block that
+// never reached stdout is added by the next prompt. When there is no session key, or the store cannot be read,
+// the hook prints the block as it did before the store existed, and never fails the prompt for it.
+func addOncePerChange(key string, block []byte) (out []byte, written func()) {
+	if key == "" || len(block) == 0 {
+		return block, nil
 	}
 	store, err := newPromptStore()
 	if err != nil {
-		return block
+		return block, nil
 	}
 	sum := sha256.Sum256(block)
 	hash := hex.EncodeToString(sum[:])
-	last, err := store.last(session)
+	last, err := store.last(key)
 	if err != nil {
-		return block
+		return block, nil
 	}
 	if last == hash {
-		return nil
+		return nil, nil
 	}
-	_ = store.record(session, hash) // best effort: a block that was not recorded is printed again, never lost.
-	return block
+	// Best effort: a block that was not recorded is printed again, never lost.
+	return block, func() { _ = store.record(key, hash) }
 }
 
 // forgetLastBlock records that the session's context was cut (SessionStart fires on start, resume, clear and
 // compact), so its next prompt adds the block again. Best effort and silent: SessionStart's output does not
 // depend on it.
-func forgetLastBlock(session string) {
-	if session == "" {
+func forgetLastBlock(key string) {
+	if key == "" {
 		return
 	}
 	if store, err := newPromptStore(); err == nil {
-		_ = store.reset(session)
+		_ = store.reset(key)
 	}
 }
 
@@ -285,7 +300,7 @@ func forgetLastBlock(session string) {
 // session's first prompt. Its one write, for an input that names a session, is the reset of that
 // session's last block (S19), which its output does not depend on: the binding of a closed workflow is left for
 // the prompt hook to remove.
-func sessionStart(d deps, stdin io.Reader, processCwd string) []byte {
+func sessionStart(d deps, stdin io.Reader, processCwd, source string) []byte {
 	data, err := io.ReadAll(io.LimitReader(stdin, hookwire.MaxEnvelopeBytes+1))
 	if err != nil {
 		return nil
@@ -297,7 +312,7 @@ func sessionStart(d deps, stdin io.Reader, processCwd string) []byte {
 	if in.Event != "" && in.Event != hookwire.EventSessionStart {
 		return nil
 	}
-	forgetLastBlock(in.SessionID)
+	forgetLastBlock(sessionKey(source, in.SessionID))
 	block := sessionInstructions(d, processCwd)(in.Cwd)
 	out, err := hookwire.SessionStartReply{Context: block}.Encode()
 	if err != nil {

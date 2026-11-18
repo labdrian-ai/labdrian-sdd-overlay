@@ -44,7 +44,8 @@ func LastLine(path string, window int64) (string, error) {
 		}
 		return "", err
 	}
-	defer f.Close()
+	// A read-only descriptor: a failed Close loses nothing, so it is ignored on purpose.
+	defer func() { _ = f.Close() }()
 	info, err := f.Stat()
 	if err != nil {
 		return "", err

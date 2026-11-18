@@ -1295,9 +1295,11 @@ gentle-ai-overlay projection hook --event UserPromptSubmit|PreToolUse|SessionSta
     added again: UserPromptSubmit adds the block to a session only when its bytes differ from the last block it
     added to that session (S19), always on the session's first prompt and on the first one after SessionStart
     (start, resume, clear or compact). The last block is kept as a SHA-256, one line for each change, in
-    `<state home>/labdrian/projection-prompt/<sha256 of the session>/last` (0700 directories, 0600 file, no
-    cleanup). A prompt with no session id, a store that cannot be read or written, a warning, and the note of a
+    `<state home>/labdrian/projection-prompt/<sha256 of the source and the session>/last` (0700 directories, 0600 file, no
+    cleanup), after the block was written to stdout; the same id sent under two `--source` values is two sessions. A prompt with no session id, a store that cannot be read or written, a warning, and the note of a
     closed workflow (which repeats until the binding is removed) are printed as they always were.
+    OpenCode has no SessionStart on compaction, so after it compacts the block returns only when it changes (to be
+    checked in T17).
     Output: nothing, or exactly one JSON object,
     {"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","additionalContext":"..."},"systemMessage":"..."},
     with either part left out when it is empty. additionalContext (at most 16 KiB, the same bytes for

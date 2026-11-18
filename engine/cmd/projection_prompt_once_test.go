@@ -6,6 +6,7 @@ package main
 // state home of the test's own (bindEnv sets XDG_STATE_HOME).
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -228,6 +229,48 @@ func requireSessionBlock(t *testing.T, r hookRun) {
 	if r.stdout == "" || r.stderr != "" || !reflect.DeepEqual(r.codes, []int{0}) {
 		t.Fatalf("SessionStart = %+v, want a block and exit 0", r)
 	}
+}
+
+// A block is recorded as the session's last only once it was written: when stdout fails the prompt goes
+// through without it, and the next prompt must add it.
+func TestABlockThatWasNotWrittenIsAddedByTheNextPrompt(t *testing.T) {
+	e := newHookEnv(t)
+	e.running(t, "proj-1", "wf-1", "standalone-minimal")
+	input := hookInput(t, e.repo, "session-1", "a prompt")
+	var codes []int
+	var errBuf strings.Builder
+	runProjectionCore(e.deps, hookArgs, e.dir, strings.NewReader(input), brokenStdout{errors.New("broken pipe")}, &errBuf, func(c int) { codes = append(codes, c) })
+	if !reflect.DeepEqual(codes, []int{0}) {
+		t.Fatalf("exits %v, want [0] whatever stdout does", codes)
+	}
+	requireBlock(t, "the prompt after a failed write", e.promptIn(t, "session-1"))
+	assertSilent(t, "and then the same block is not added again", e.promptIn(t, "session-1"))
+}
+
+// The record is of a source and a session together: the same session id sent by two runtimes is two sessions.
+func TestTheSameSessionIdUnderTwoSourcesIsTwoSessions(t *testing.T) {
+	e := newHookEnv(t)
+	e.running(t, "proj-1", "wf-1", "odd")
+	run := func(event, source string, input string) hookRun {
+		return runProjectionArgsWith(e.deps, []string{"hook", "--event", event, "--source", source}, input, e.dir)
+	}
+	prompt := hookInput(t, e.repo, "shared-id", "a prompt")
+	start := strings.Replace(sessionStartInput(t, e.repo, "startup"), `"session-1"`, `"shared-id"`, 1)
+	first := run("UserPromptSubmit", "claude", prompt)
+	requireBlock(t, "claude", first)
+	other := run("UserPromptSubmit", "opencode", prompt)
+	if !reflect.DeepEqual(other, first) {
+		t.Errorf("first prompt of opencode = %+v, want its own first block %+v", other, first)
+	}
+	assertSilent(t, "claude again", run("UserPromptSubmit", "claude", prompt))
+	assertSilent(t, "opencode again", run("UserPromptSubmit", "opencode", prompt))
+	if r := run("SessionStart", "opencode", start); r.stdout == "" {
+		t.Fatalf("SessionStart = %+v, want its block", r)
+	}
+	if got := run("UserPromptSubmit", "opencode", prompt); !reflect.DeepEqual(got, first) {
+		t.Errorf("opencode after its SessionStart = %+v, want the block again", got)
+	}
+	assertSilent(t, "a SessionStart of opencode does not reset claude", run("UserPromptSubmit", "claude", prompt))
 }
 
 // quote is s as a JSON string.
