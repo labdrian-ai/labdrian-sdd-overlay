@@ -12,7 +12,8 @@ package agentgen
 // The permissions are written from the Claude tool list of the agent, the one list the roles are checked
 // against: a tool the list does not hold becomes a deny on every resource of the OpenCode tool that does
 // the same. OpenCode reads a rule as {action, resource, effect}; a deny on edit covers the patch tool and
-// a deny on shell removes the shell tool, both measured in L10 T4.
+// a deny on shell removes the shell tool, both measured in L10 T4. For each MCP server the rules are a deny on
+// every tool of the server and an allow of each tool the list names (T39, L102 (2): the last match wins).
 
 import (
 	"encoding/json"
@@ -26,13 +27,34 @@ const (
 	openCodeModeSubagent = "subagent"
 )
 
-// openCodeDenyAll is the resource of every deny: a deny on a tool covers all of its uses.
+// openCodeDenyAll is the resource of every rule: a rule on a tool covers all of its uses.
 const openCodeDenyAll = "*"
 
-// openCodeDenies are the tools of OpenCode the agent may not use, in the order of the file: each tool of
-// OpenCode is denied unless the Claude list of the agent holds a tool that does the same. The names are the
-// v2 tool names L10 T2 listed; read, glob and grep are never denied, as every Claude list holds a reader.
-func (r role) openCodeDenies() []string {
+// The effects of a rule.
+const (
+	openCodeDeny  = "deny"
+	openCodeAllow = "allow"
+)
+
+// openCodeRule is one entry of the permissions of an OpenCode agent file: an effect on every resource of
+// the tool or the pattern its action names.
+type openCodeRule struct {
+	action string
+	effect string
+}
+
+// openCodeMCPServers are the MCP servers of the labdrian flow, in the order of their rules: the servers the
+// OpenCode adapter writes into opencode.json (engine/runtime/opencode_json.go), memorycard and codegraph, and
+// longterm-mem, which `longterm-mem register` writes there. OpenCode names a tool of a server <server>_<tool>.
+// A test of engine/runtime fails when opencode.json names a server this list lacks.
+var openCodeMCPServers = []string{"memorycard", "longterm-mem", "codegraph"}
+
+// openCodeRules are the rules of the agent, in the order of the file; the last rule that matches a tool wins
+// (L102 (2)). First a deny on each tool of OpenCode the agent may not use: each is denied unless the Claude list
+// of the agent holds a tool that does the same. The names are the v2 tool names L10 T2 listed; read, glob and
+// grep are never denied, as every Claude list holds a reader. Then, for each MCP server, a deny on every tool of
+// the server and an allow of each tool the Claude list names as mcp__<server>__<tool>, in that order.
+func (r role) openCodeRules() []openCodeRule {
 	var denies []string
 	deny := func(tool string, unless bool) {
 		if !unless {
@@ -52,7 +74,20 @@ func (r role) openCodeDenies() []string {
 	deny("experimental_image_generate", false)
 	// execute is the Code Mode wrapper around the MCP tools: a role with no MCP tool in its list has no use for it.
 	deny("execute", r.hasMCPTool())
-	return denies
+	rules := make([]openCodeRule, 0, len(denies))
+	for _, tool := range denies {
+		rules = append(rules, openCodeRule{tool, openCodeDeny})
+	}
+	for _, server := range openCodeMCPServers {
+		rules = append(rules, openCodeRule{server + "_*", openCodeDeny})
+		prefix := "mcp__" + server + "__"
+		for _, tool := range r.tools {
+			if name, ok := strings.CutPrefix(tool, prefix); ok {
+				rules = append(rules, openCodeRule{server + "_" + name, openCodeAllow})
+			}
+		}
+	}
+	return rules
 }
 
 // hasMCPTool says whether the role holds a tool of any MCP server.
@@ -90,10 +125,10 @@ func (r role) projectOpenCode(source string, models ModelTable) (Artifact, error
 	}
 	var b strings.Builder
 	b.WriteString("---\ndescription: " + description + "\nmode: " + r.openCodeMode() + "\nmodel: " + model + "\n")
-	if denies := r.openCodeDenies(); len(denies) > 0 {
+	if rules := r.openCodeRules(); len(rules) > 0 {
 		b.WriteString("permissions:\n")
-		for _, tool := range denies {
-			b.WriteString("  - action: " + tool + "\n    resource: " + yamlStarString() + "\n    effect: deny\n")
+		for _, rule := range rules {
+			b.WriteString("  - action: " + rule.action + "\n    resource: " + yamlStarString() + "\n    effect: " + rule.effect + "\n")
 		}
 	}
 	b.WriteString("---\n\n" + body)

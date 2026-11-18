@@ -21,6 +21,24 @@ permissions:
   - action: experimental_image_generate
     resource: "*"
     effect: deny
+  - action: memorycard_*
+    resource: "*"
+    effect: deny
+  - action: memorycard_mem_search
+    resource: "*"
+    effect: allow
+  - action: memorycard_mem_get
+    resource: "*"
+    effect: allow
+  - action: longterm-mem_*
+    resource: "*"
+    effect: deny
+  - action: codegraph_*
+    resource: "*"
+    effect: deny
+  - action: codegraph_codegraph_explore
+    resource: "*"
+    effect: allow
 ---
 
 You are the sweeper sub-agent of a labdrian workflow. Do the work yourself; never launch sub-agents.

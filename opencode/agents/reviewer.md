@@ -30,6 +30,15 @@ permissions:
   - action: execute
     resource: "*"
     effect: deny
+  - action: memorycard_*
+    resource: "*"
+    effect: deny
+  - action: longterm-mem_*
+    resource: "*"
+    effect: deny
+  - action: codegraph_*
+    resource: "*"
+    effect: deny
 ---
 
 You are the reviewer sub-agent of a labdrian workflow. Do the work yourself; never launch sub-agents.

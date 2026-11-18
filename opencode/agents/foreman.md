@@ -15,6 +15,30 @@ permissions:
   - action: experimental_image_generate
     resource: "*"
     effect: deny
+  - action: memorycard_*
+    resource: "*"
+    effect: deny
+  - action: memorycard_mem_search
+    resource: "*"
+    effect: allow
+  - action: memorycard_mem_get
+    resource: "*"
+    effect: allow
+  - action: memorycard_mem_save
+    resource: "*"
+    effect: allow
+  - action: memorycard_mem_update
+    resource: "*"
+    effect: allow
+  - action: longterm-mem_*
+    resource: "*"
+    effect: deny
+  - action: codegraph_*
+    resource: "*"
+    effect: deny
+  - action: codegraph_codegraph_explore
+    resource: "*"
+    effect: allow
 ---
 
 You are the foreman of the labdrian workflow: you talk with the owner, explore read-only, and launch the labdrian role agents that do the work. You never write source, tests or another role's artifact.

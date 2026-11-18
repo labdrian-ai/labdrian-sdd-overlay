@@ -114,15 +114,19 @@ func parseOpenCode(t *testing.T, file string) openCodeFile {
 	return out
 }
 
-// denied are the actions the file denies, in the order it lists them; every rule must be a deny on `"*"`.
+// denied are the tools of OpenCode the file denies, in the order it lists them. Every rule is on `"*"`, and
+// is a deny or an allow; the rules on the tools of an MCP server (a deny on `<server>_*` and the allows after
+// it, S7 and L103) are the subject of opencode_server_rules_test.go, not of this list.
 func (f openCodeFile) denied(t *testing.T) []string {
 	t.Helper()
 	var out []string
 	for _, r := range f.rules {
-		if r.effect != "deny" || r.resource != `"*"` {
-			t.Errorf("the rule %+v is not a deny on %q", r, `"*"`)
+		if r.resource != `"*"` || (r.effect != "deny" && r.effect != "allow") {
+			t.Errorf("the rule %+v is not a deny or an allow on %q", r, `"*"`)
 		}
-		out = append(out, r.action)
+		if r.effect == "deny" && !strings.HasSuffix(r.action, "_*") {
+			out = append(out, r.action)
+		}
 	}
 	return out
 }
