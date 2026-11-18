@@ -108,7 +108,7 @@ func TestOpenCodeClaimsCiteTheTestsThatBackThem(t *testing.T) {
 				"runtime:TestOpenCodeStatusIsSupportedOnlyWhenBothPluginsAreActive",
 				"runtime:TestOpenCodeLoadsTheInstalledPluginAndItWritesItsActiveMarker",
 			},
-			[]string{"parity", "memorycard", "plugin"}},
+			[]string{"parity", "memorycard", "plugin", "loads both installed plugins"}},
 		{capability.Projection,
 			[]string{
 				"runtime:TestOpenCodeBridgePutsTheSessionStartContextIntoEveryModelCallOfTheSession",
@@ -122,13 +122,18 @@ func TestOpenCodeClaimsCiteTheTestsThatBackThem(t *testing.T) {
 				"runtime:TestOpenCodeBridgeForcesAnotherTurnWhenTheEngineBlocksTheStop",
 				"runtime:TestOpenCodeBridgeLetsTheSessionStopWhenTheEngineDoesNotBlock",
 			},
-			[]string{"Stop", "experimental", "no test observes a model session", "T17"}},
+			[]string{"Stop", "experimental", "at each prompt whose block changed (T35)", "recording engine", "no workflow binding is exercised", "no test observes a model session", "T17"}},
 		{capability.Cancellation,
 			[]string{
 				"hookwire:TestAdaptToolNameOpencode",
 				"runtime:TestOpenCodeBridgeDeniesACallTheEngineDeniesWithToolError",
 			},
-			[]string{"Tool.Error", "patch", "Edit", "no single test", "in-flight tool call cannot be interrupted", "T17"}},
+			[]string{
+				"Tool.Error", "reason of the engine's PreToolUse denial", "recording engine",
+				"the denied call then does not run is an L10 recording, unproven with a model until T17",
+				"patch to Edit (hookwire test)", "proven for Claude Code tool names, not through --source opencode or patch",
+				"in-flight tool call cannot be interrupted",
+			}},
 		{capability.MemoryEnforcement,
 			[]string{
 				"cmd:TestCodexSourceProcesses",
@@ -136,7 +141,11 @@ func TestOpenCodeClaimsCiteTheTestsThatBackThem(t *testing.T) {
 				"runtime:TestMemorycardPluginPutsTheMemorycardContextOnTheSystemPromptOfANewSession",
 				"runtime:TestMemorycardPluginCapturesTheFinalTextOfASubagentOnStdin",
 			},
-			[]string{"execute", "not mapped", "memorycard plugin", "no memory write is blocked", "T17"}},
+			[]string{
+				"OpencodeAdaptsBeforeGate subtest of cmd:TestCodexSourceProcesses", "execute (not mapped) stays silent",
+				"sends each subagent's final text to memorycard capture (fake memorycard)",
+				"No memory write is blocked", "a saved Key Learnings item and a real session are untested (T17)",
+			}},
 	} {
 		c := claims[tc.capability]
 		for _, ref := range tc.tests {
@@ -164,6 +173,49 @@ func TestOpenCodeSkillsClaimIsTheOneT14Wrote(t *testing.T) {
 		if !slices.Contains(c.Tests, ref) {
 			t.Errorf("opencode skills does not cite %s: %v", ref, c.Tests)
 		}
+	}
+}
+
+// TestOpenCodeClaimsDropTheWordingTheTestsDoNotProve pins the correction of T16:
+// no claim says the denied call does not run (a recording, not a test), that the
+// bridge projects at every prompt (T35 omits a repeated block), or that Key
+// Learnings are captured (the test shows only the final text reaching a fake
+// memorycard), and the live test is said to load both plugins.
+func TestOpenCodeClaimsDropTheWordingTheTestsDoNotProve(t *testing.T) {
+	d, err := capability.Declare(capability.TargetOpenCode)
+	if err != nil {
+		t.Fatal(err)
+	}
+	texts := []string{d.Untested}
+	for _, c := range d.Claims {
+		texts = append(texts, c.Detail)
+	}
+	for _, stale := range []string{
+		"and the call does not run",
+		"projects it at session start and at each prompt",
+		"captures subagent Key Learnings",
+		"loads the installed parity plugin",
+		"loads the installed plugin",
+		"repository bound to a workflow",
+	} {
+		for _, text := range texts {
+			if strings.Contains(text, stale) {
+				t.Errorf("opencode text %q still says %q", text, stale)
+			}
+		}
+	}
+	if !strings.Contains(d.Untested, "loads both installed plugins") {
+		t.Errorf("untested reason %q does not say the live test loads both plugins", d.Untested)
+	}
+}
+
+// TestClaudeSkillsClaimKeepsTheUnrelatedSkillTest pins that the claim keeps the
+// test that asserts the byte-equal deploy of a skill nobody asked to touch,
+// which c1a92bb6 replaced by the OpenCode references.
+func TestClaudeSkillsClaimKeepsTheUnrelatedSkillTest(t *testing.T) {
+	c := skillsClaim(t, capability.TargetClaude)
+	if !slices.Contains(c.Tests, "installer:TestUnrelatedSkillUnchanged") {
+		t.Errorf("claude skills does not cite installer:TestUnrelatedSkillUnchanged: %v", c.Tests)
 	}
 }
 

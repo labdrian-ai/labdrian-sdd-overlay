@@ -138,6 +138,7 @@ var declarations = []Declaration{
 				"cmd:TestAdoptTakesOwnershipOfAnExistingInstallAndThenInstallLeavesItBe",
 				"cmd:TestProjectRegisterTellsEachPathThenTheDigestTheRevisionAndTheTrustNote",
 				"installer:TestApply_AgentsLandInNativeAgentDirs",
+				"installer:TestUnrelatedSkillUnchanged",
 				"skills/app:TestAddRegistersTheSkillInTheRegistryAndTheManifest",
 				"skills/app:TestAddWritesNothingWhenItRefuses",
 				"skills/app:TestAnInstallOverAHandEditedFileIsRefusedWithEveryReasonAndNothingIsWritten",
@@ -197,10 +198,10 @@ var declarations = []Declaration{
 	},
 	{
 		Target:   TargetOpenCode,
-		Untested: "No test drives a model session. The adapter, both plugins and the engine source run at file level and under node against a recording engine (skipped without node), and one test loads the installed parity plugin into the real opencode binary (skipped without it). What needs a model session stays untested: context reaching a session, a captured Key Learnings item, the prompt and execute.after shapes, compaction (T17).",
+		Untested: "No test drives a model session. The adapter, both plugins and the engine source run at file level and under node against a recording engine (skipped without node), and one test loads both installed plugins into the real opencode binary (skipped without it). What needs a model session stays untested: context reaching a session, a captured Key Learnings item, the prompt and execute.after shapes, compaction (T17).",
 		Claims: []Claim{
 			partial(Installation,
-				"Install, update, uninstall and status are tested at file level against a temporary config root: three owned opencode.json entries, one AGENTS.md block, the parity plugin and the memorycard plugin. Status reaches supported only when both plugins wrote their active marker; a test with the real opencode binary loads the installed parity plugin (it skips without the binary). A restart is owed after install and update.",
+				"Install, update, uninstall and status are tested at file level against a temporary config root: three owned opencode.json entries, one AGENTS.md block, the parity plugin and the memorycard plugin. Status reaches supported only when both plugins wrote their active marker; a test with the real opencode binary loads both installed plugins (it skips without the binary). A restart is owed after install and update.",
 				"cmd:TestRuntimeCLIOpenCodeInstallStatusUninstallInASandboxHome",
 				"runtime:TestOpenCodeAGENTSIsNotRewrittenWhenCurrent",
 				"runtime:TestOpenCodeAGENTSKeepsEveryByteOutsideTheBlockAndReplacesItInPlace",
@@ -259,7 +260,7 @@ var declarations = []Declaration{
 				"runtime:TestOpenCodeBridgeSessionEventsSurviveAnEngineThatFails",
 			),
 			partial(Dispatch,
-				"The engine never starts sessions. For a repository bound to a workflow, the same bridge projects it at session start and at each prompt, and the Stop hook (experimental.idle, an experimental OpenCode API) forces another turn when the engine blocks the stop. Tested under node against a recording engine; no test observes a model session being steered (T17).",
+				"The engine never starts sessions. The same bridge asks the engine at session start and at each prompt whose block changed (T35), and the Stop hook (experimental.idle, an experimental OpenCode API) forces another turn when the engine blocks the stop. Tests run it under node against a recording engine that answers as told, so no workflow binding is exercised; no test observes a model session being steered (T17).",
 				"runtime:TestOpenCodeBridgeAsksTheStopOfMainSessionsOnly",
 				"runtime:TestOpenCodeBridgeForcesAnotherTurnWhenTheEngineBlocksTheStop",
 				"runtime:TestOpenCodeBridgeKeepsTheStopGuardAcrossThePromptItCaused",
@@ -267,7 +268,7 @@ var declarations = []Declaration{
 				"runtime:TestOpenCodeBridgePutsTheSessionStartContextIntoEveryModelCallOfTheSession",
 			),
 			partial(Cancellation,
-				"A PreToolUse denial of the engine is thrown as Tool.Error and the call does not run (node, recording engine). The engine maps patch to Edit and shell to Bash, so the paused-workflow edit gate applies to patch, but no single test drives a paused workflow through patch. Limits: an in-flight tool call cannot be interrupted, shell is never gated, and no model session is observed (T17).",
+				"The bridge throws Tool.Error with the reason of the engine's PreToolUse denial (node, recording engine); that the denied call then does not run is an L10 recording, unproven with a model until T17. The engine maps patch to Edit (hookwire test); the paused-workflow edit gate is proven for Claude Code tool names, not through --source opencode or patch. An in-flight tool call cannot be interrupted, and shell is never gated.",
 				"cmd:TestPreToolUseDeniesTheEditToolsOfAPausedWorkflow",
 				"hookwire:TestAdaptToolNameOpencode",
 				"runtime:TestOpenCodeBridgeDeniesACallTheEngineDeniesWithToolError",
@@ -280,7 +281,7 @@ var declarations = []Declaration{
 			unsupported(Authentication,
 				"Not implemented: the engine does not check whether OpenCode has credentials, and the presence prober has no credentials check for it. A provider login is observed only with a model session (T17)."),
 			partial(MemoryEnforcement,
-				"The engine gate with --source opencode adapts OpenCode tool names (an MCP name becomes mcp__server__tool) and then applies the engine's gate; execute is not mapped, so no policy matches it. The memorycard plugin adds memorycard context to new main sessions and captures subagent Key Learnings; no memory write is blocked. Tested under node and in engine processes; no model session is observed (T17).",
+				"--source opencode adapts OpenCode tool names, then the engine's gate runs: the OpencodeAdaptsBeforeGate subtest of cmd:TestCodexSourceProcesses sends a longterm-mem read through it, denied as for Claude Code, and execute (not mapped) stays silent. The memorycard plugin adds memorycard context to new main sessions and sends each subagent's final text to memorycard capture (fake memorycard). No memory write is blocked; a saved Key Learnings item and a real session are untested (T17).",
 				"cmd:TestCodexSourceProcesses",
 				"hookwire:TestAdaptToolNameOpencode",
 				"runtime:TestMemorycardPluginAsksNothingInAChildSession",
@@ -386,8 +387,8 @@ func (d Declaration) clone() Declaration {
 	return out
 }
 
-// memoryEnforcementDetail bounds the Codex MCP gate and the remaining
-// declared-only runtimes without changing any other runtime's claim.
+// memoryEnforcementDetail bounds the Codex MCP gate and the text of Pi, the one
+// other declared-only runtime (OpenCode states its own claim since T16).
 func memoryEnforcementDetail(runtime, scope string) string {
 	if runtime == "Codex" {
 		return "PreToolUse checks plan sources for MCP Engram reads, memorycard reads and longterm-mem query/get; searches/queries check project, goal-scoped queries check goal. install-hooks installs --source codex; trust each new or changed handler in the Codex TUI. Limits: Codex fails open on hook failure; no procedural skills, Bash or apply_patch enforcement; no project check for reads by id; agent_id ignored. PostToolUse records successful MCP reads only. Proven by engine hook processes, not live validation."
