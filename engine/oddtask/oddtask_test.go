@@ -185,6 +185,43 @@ func TestDecideLooksOnlyInTheTasksSectionForTasksAndInTheLogSectionForEntries(t 
 	}
 }
 
+// A "## " line inside a fenced code block of the Log is quoted text, not a heading, so it does not end the
+// section: the shaper entries after the fence are still read, whatever the fence's character, length or indent.
+func TestParseDocumentKeepsTheLogOpenAcrossAHeadingQuotedInAFence(t *testing.T) {
+	const p = "/r/odd/tasks/f.md"
+	for _, fence := range []struct{ open, close string }{
+		{"```", "```"},
+		{"````markdown", "````"},
+		{"~~~", "~~~~"},
+		{"    ```", "    ```"},
+	} {
+		text := doc([]string{"- [ ] T1 — S1 — delegated — x — shaped: L5 — commit: -"}, []string{
+			"- **L4** (2026-10-28, owner): quotes a file",
+			fence.open,
+			"## Principle",
+			"```js", // a fence line with an info string never closes a fence
+			"## Language",
+			fence.close,
+			"- **L5** (2026-10-28, shaper): after the fence",
+		})
+		if got := oddtask.Decide(p, oddtask.ParseDocument(text), []string{"T1"}); got != "" {
+			t.Errorf("fence %q: Decide(T1) = %q, want allowed", fence.open, got)
+		}
+	}
+}
+
+// After a fence closes, a "## " line is a heading again and ends the Log.
+func TestParseDocumentEndsTheLogAtAHeadingAfterAClosedFence(t *testing.T) {
+	const p = "/r/odd/tasks/f.md"
+	text := doc([]string{"- [ ] T1 — S1 — delegated — x — shaped: L5 — commit: -"}, []string{
+		"- **L4** (2026-10-28, owner): x", "```", "## Quoted", "```", "## Later", "- **L5** (2026-10-28, shaper): after",
+	})
+	want := oddtask.Reason("task T1 of " + p + ` is marked "shaped: L5", but the ## Log of the document has no entry L5 written by the shaper`)
+	if got := oddtask.Decide(p, oddtask.ParseDocument(text), []string{"T1"}); got != want {
+		t.Errorf("Decide(T1) = %q, want %q", got, want)
+	}
+}
+
 func TestDecideDoesNotTakeATaskForItsPrefix(t *testing.T) {
 	const p = "/r/odd/tasks/f.md"
 	d := oddtask.ParseDocument(doc([]string{"- [ ] T11a — S1 — x — shaped: L38 — commit: -"}, []string{shaperL38}))

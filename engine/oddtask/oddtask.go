@@ -108,13 +108,22 @@ var (
 )
 
 // ParseDocument reads the text of a feature document. The ## Tasks section runs from the line
-// "## Tasks" to the next line that starts "## "; the ## Log section likewise.
+// "## Tasks" to the next line that starts "## "; the ## Log section likewise. A "## " line inside a
+// fenced code block (a Log entry that quotes a Markdown file) is quoted text, not a heading.
 func ParseDocument(text string) Document {
 	d := Document{tasks: map[string][]string{}, shapers: map[int]int{}}
 	section := ""
+	var fence string // the run of ` or ~ that opened the fenced block the line is in, "" outside one
 	for _, line := range strings.Split(text, "\n") {
 		line = strings.TrimSuffix(line, "\r")
-		if strings.HasPrefix(line, "## ") {
+		if run, info := fenceRun(line); run != "" {
+			switch {
+			case fence == "":
+				fence = run
+			case run[0] == fence[0] && len(run) >= len(fence) && strings.TrimSpace(info) == "":
+				fence = ""
+			}
+		} else if fence == "" && strings.HasPrefix(line, "## ") {
 			section = line
 			continue
 		}
@@ -131,6 +140,17 @@ func ParseDocument(text string) Document {
 		}
 	}
 	return d
+}
+
+// fenceRun reports a fence line: its run of three or more ` or ~ after any indentation, and the text after
+// the run (the info string of an opening fence). run is "" when the line is not a fence line.
+func fenceRun(line string) (run, info string) {
+	trimmed := strings.TrimLeft(line, " \t")
+	if !strings.HasPrefix(trimmed, "```") && !strings.HasPrefix(trimmed, "~~~") {
+		return "", ""
+	}
+	n := len(trimmed) - len(strings.TrimLeft(trimmed, trimmed[:1]))
+	return trimmed[:n], trimmed[n:]
 }
 
 // mark is the number n of the one segment "shaped: L<n>" of a task line, or 0 when the line has none or
