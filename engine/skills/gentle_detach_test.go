@@ -169,6 +169,16 @@ func TestAdoptedSkillsAreCustomWithNoUpstreamAndTheirManifestRowsAgree(t *testin
 			t.Errorf("manifest row %s/SKILL.md tag = %q, want custom", dir, tag)
 		}
 	}
+	// Every other file of an adopted skill is ours too: a managed reference would be copied back
+	// from upstream by capture over the edits this change makes. Of _shared only SKILL.md is adopted:
+	// T29 removes its other files.
+	for path, tag := range tags {
+		for _, dir := range adoptedSkillDirs {
+			if dir != "_shared" && strings.HasPrefix(path, dir+"/") && tag != "custom" {
+				t.Errorf("manifest row %s tag = %q, want custom", path, tag)
+			}
+		}
+	}
 	// The registry and the manifest stay in step: SyncManifest, which applies manifestTagFor,
 	// retags nothing.
 	_, report, err := skills.SyncManifest(reg, manifest)
