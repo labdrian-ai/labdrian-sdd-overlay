@@ -33,7 +33,7 @@ Start each unit of work with the `inception-pipeline` skill and run every hop wi
 | Sweep, polish | `labdrian review sweep`; the sweeper when it fired; the polisher when `Risk:` names an item | review stop-hook | the records `labdrian review check` asks of the commit | — |
 | Review | `labdrian review bind --base <last reviewed head> --head <commit>`, the reviewer, `labdrian review record`, the verifier on a severe finding, `labdrian review verify` | review stop-hook | a clear result; warnings and defects fixed; suggestions carried as `role-chain` says | a finding needs a product decision, or the correction round is spent |
 | Deliver | the delivery role; it runs `labdrian review check --onto` | — | delivery `success` naming the head and the results | always: push, pull request and merge are the owner's |
-| Close | closure-feedback of `inception-pipeline`, `labdrian workflow close`, the `procedural-candidates` sweep | — | the merge commit, and CI read green | — |
+| Close | closure-feedback of `inception-pipeline`, `labdrian workflow close`, the `procedural-candidates` sweep | — | the merge commit, and CI read green; or, when `labdrian review ci --landing <commit> --head <delivered head>` exits 0, the landing commit, its `CI: none configured` line and the local test results in delivery's entry | — |
 
 ## Never
 - Never launch a general-purpose agent to write or verify; only builder, shaper, prototyper, sweeper, polisher, reviewer, verifier and delivery.

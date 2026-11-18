@@ -253,3 +253,22 @@ func TestTheForemanBodyCarriesTheDisciplineTheStagesAndTheTierCellOfL29(t *testi
 		}
 	}
 }
+
+// The Close row lets the foreman close a repository with no CI on the engine's `review ci` finding, and keeps the
+// green-CI path it had (S3 L123, the owner's choice in L122).
+func TestTheCloseRowAcceptsTheNoCIFindingBesideGreenCI(t *testing.T) {
+	body := readText(t, filepath.Join(repoRoot(t), "roles", "foreman", "body.md"))
+	var row string
+	for _, line := range strings.Split(body, "\n") {
+		if strings.HasPrefix(line, "| Close |") {
+			row = line
+		}
+	}
+	if row == "" {
+		t.Fatal("roles/foreman/body.md has no Close row")
+	}
+	want := "the merge commit, and CI read green; or, when `labdrian review ci --landing <commit> --head <delivered head>` exits 0, the landing commit, its `CI: none configured` line and the local test results in delivery's entry"
+	if !strings.Contains(row, "| "+want+" |") {
+		t.Errorf("the Close row is %q, want its advance cell to be %q", row, want)
+	}
+}

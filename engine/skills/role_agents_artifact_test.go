@@ -1115,3 +1115,15 @@ func TestBuilderAndSweeperDeltasCarryTheTrailerAndTheSweepReport(t *testing.T) {
 		}
 	}
 }
+
+// Delivery records the local test result at the delivered head, which the no-CI closure reads (S3 L123); the role
+// body and the four files made from it hold the sentence.
+func TestDeliveryRecordsTheLocalTestResultAtTheDeliveredHead(t *testing.T) {
+	root := skillsRepoRoot(t)
+	want := "Run the test runner the feature document's header names at the delivered head and put the command and its exact result in the entry; when the worktree is not at that head, write it not run."
+	for _, path := range []string{"roles/delivery/body.md", "agents/delivery.md", "opencode/agents/delivery.md", "codex/agents/delivery.toml", "pi/agents/delivery.md"} {
+		if text := readRepoFile(t, root, path); !strings.Contains(text, want) {
+			t.Errorf("%s does not hold %q", path, want)
+		}
+	}
+}
