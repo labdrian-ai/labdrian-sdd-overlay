@@ -51,7 +51,6 @@ engine/assets/assets_test.go managed
 engine/assets/anti-generic-design.md managed
 sdd-spec/SKILL.md managed
 sdd-tasks/SKILL.md managed
-sdd-verify/SKILL.md managed
 requirements-from-transcripts/SKILL.md custom
 clarify-request/SKILL.md custom
 adhd-output/SKILL.md custom
@@ -76,8 +75,6 @@ sweeper/SKILL.md custom
 odd-feature-doc/SKILL.md custom
 odd-feature-doc/references/format.md custom
 test-first/SKILL.md custom
-sdd-verify/references/report-format.md managed
-sdd-verify/strict-tdd-verify.md managed
 branch-pr/SKILL.md managed
 chained-pr/SKILL.md custom
 chained-pr/references/chaining-details.md custom
@@ -86,15 +83,10 @@ issue-creation/SKILL.md managed
 systemic-issue-triage/SKILL.md managed
 work-unit-commits/SKILL.md custom
 cognitive-doc-design/SKILL.md custom
-gentle-ai-bench/SKILL.md managed
 go-testing/SKILL.md custom
 go-testing/references/examples.md custom
 judgment-day/SKILL.md custom
 judgment-day/references/prompts-and-formats.md custom
-rdd-defect-workflow/SKILL.md managed
-sdd-apply/SKILL.md managed
-sdd-apply/strict-tdd.md managed
-sdd-archive/SKILL.md managed
 sdd-design/SKILL.md managed
 sdd-design/references/threat-matrix.md managed
 sdd-explore/SKILL.md managed
