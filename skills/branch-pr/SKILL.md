@@ -14,8 +14,8 @@ Load this skill when you name a branch, write a commit message, or the owner ask
 ## Hard Rules
 
 - `git push`, `gh pr create` and `gh pr merge` run only on an owner message that asks for that step; one message asks for one step.
-- A pull request needs delivery's closing entry, whose `labdrian review check --feature <f> --onto <base>` exited 0.
-- A merge needs `gh pr checks` showing no failing line.
+- A pull request needs delivery's closing entry: the last `## Log` entry of `odd/tasks/<f>.md`, written by the delivery role, whose `labdrian review check --feature <f> --onto <base>` exited 0 (`<f>` is the feature, `<base>` the branch the PR targets).
+- A merge needs `gh pr checks` showing no failing or pending line.
 - Branch name: `^(feat|fix|chore|docs|style|refactor|perf|test|build|ci|revert)\/[a-z0-9._-]+$`.
 - Commit subject: `^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\([a-z0-9\._-]+\))?!?: .+`.
 - Every commit ends with its `Risk:` trailer (`Risk: none` or the item numbers). No Co-Authored-By line, no AI attribution.

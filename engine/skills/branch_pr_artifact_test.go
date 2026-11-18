@@ -101,8 +101,8 @@ func TestBranchPRSkillWaitsForTheReviewCheckBeforeAPullRequest(t *testing.T) {
 
 func TestBranchPRSkillMergesOnlyWhenNoCheckFails(t *testing.T) {
 	_, _, body := branchPRSkill(t)
-	if !strings.Contains(body, "`gh pr checks`") || !strings.Contains(body, "no failing line") {
-		t.Error("the body does not tie a merge to `gh pr checks` showing no failing line")
+	if !strings.Contains(body, "`gh pr checks`") || !strings.Contains(body, "no failing or pending line") {
+		t.Error("the body does not tie a merge to `gh pr checks` showing no failing or pending line")
 	}
 }
 
