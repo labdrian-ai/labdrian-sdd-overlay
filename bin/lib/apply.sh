@@ -16,24 +16,36 @@ indent_lines() {
   done
 }
 
-# codex_runtime_install_and_report runs `engine runtime install --target codex` over this checkout,
-# the step `apply --target pi` has in pipkg_apply_and_report: the Codex adapter keeps the owner rules
+# runtime_install_and_report TARGET runs `engine runtime install --target TARGET` over this checkout, the
+# step `apply --target pi` has in pipkg_apply_and_report, for the two copy targets whose runtime adapter
+# writes more than a copy of the manifest rows reaches. codex: the adapter keeps the owner rules
 # (instructions/owner-rules.md) in one marked block of ~/AGENTS.md, $CODEX_HOME/AGENTS.md and
-# $CODEX_HOME/agents.md (CODEX_HOME defaults to ~/.codex), and a copy of the manifest rows does not
-# reach them. Two cases have nothing to run and do not fail the deploy: a checkout without the rules
-# (an older main; silent, so its output is what it was) and an engine binary that is not installed
-# yet (the note names the recovery). `apply` never reaches that note: manifest_routes_load calls
-# ensure_engine_binary, which builds or rebuilds the binary before this step; the note guards a
-# direct call of this function.
+# $CODEX_HOME/agents.md (CODEX_HOME defaults to ~/.codex). opencode: it writes the plugins, opencode.json
+# (the default agent and the MCP servers) and the AGENTS.md block, which longterm-mem register then
+# reads (opencode.json must exist). Two cases have nothing to run and do not fail the deploy: a
+# checkout without the source its adapter reads (instructions/owner-rules.md for codex,
+# skills/_shared/minimalism-contract.md for opencode: an older main; silent, so its output is what it
+# was), and an engine binary that is not installed yet (the note names the recovery). `apply` never
+# reaches that note: manifest_routes_load calls ensure_engine_binary, which builds or rebuilds the binary
+# before this step; the note guards a direct call of this function.
 # Non-zero when the engine ran and did not report an install that took effect.
-codex_runtime_install_and_report() {
-  [[ -f "$OVERLAY_DIR/instructions/owner-rules.md" ]] || return 0
+runtime_install_and_report() {
+  local target="$1" what="runtime" source_file
+  case "$target" in
+    codex)
+      source_file="instructions/owner-rules.md"
+      what="owner rules"
+      ;;
+    opencode) source_file="skills/_shared/minimalism-contract.md" ;;
+    *) return 1 ;;
+  esac
+  [[ -f "$OVERLAY_DIR/$source_file" ]] || return 0
   if [[ ! -x "$ENGINE_BINARY" ]]; then
-    echo "  codex: engine binary not found at $ENGINE_BINARY; owner rules not installed (run 'labdrian install-hooks', then 'labdrian apply --target codex')"
+    echo "  $target: engine binary not found at $ENGINE_BINARY; $what not installed (run 'labdrian install-hooks', then 'labdrian apply --target $target')"
     return 0
   fi
   local result
-  if ! result="$(LABDRIAN_OVERLAY_DIR="$OVERLAY_DIR" "$ENGINE_BINARY" runtime install --target codex 2>&1)"; then
+  if ! result="$(LABDRIAN_OVERLAY_DIR="$OVERLAY_DIR" "$ENGINE_BINARY" runtime install --target "$target" 2>&1)"; then
     indent_lines <<<"$result" >&2
     return 1
   fi
@@ -109,9 +121,9 @@ cmd_apply() {
   # explicit --target pi and for pi riding along inside --target all.
   local pi_stub_included=""
 
-  # Set when `engine runtime install --target codex` ran and failed: apply still deploys every
+  # Set when `engine runtime install --target codex|opencode` ran and failed: apply still deploys every
   # target, then exits non-zero, so a block that was not written never reads as a clean apply.
-  local codex_runtime_failed=""
+  local runtime_install_failed=""
 
   for t in $(resolve_targets "$target_arg"); do
     echo ""
@@ -187,10 +199,12 @@ cmd_apply() {
     target_digest="$(compute_target_digest "$t" live)"
     state_write_target "$t" "$release_version" "$target_digest"
 
-    # The owner rules block of the three Codex AGENTS files is not a manifest row: the Codex runtime
-    # adapter writes it. A failure is reported like pi's and fails apply's own exit below.
-    if [[ "$t" == "codex" ]]; then
-      codex_runtime_install_and_report || codex_runtime_failed=1
+    # What the Codex and OpenCode runtime adapters write (the owner rules block of the three Codex AGENTS
+    # files; the OpenCode plugins, opencode.json and AGENTS.md block) is not a manifest row: the adapter
+    # writes it. It runs before the once-per-apply longterm-mem step below, which reads opencode.json. A
+    # failure is reported like pi's and fails apply's own exit below.
+    if [[ "$t" == "codex" || "$t" == "opencode" ]]; then
+      runtime_install_and_report "$t" || runtime_install_failed=1
     fi
   done
 
@@ -231,7 +245,7 @@ cmd_apply() {
   # Deploy itself succeeded, but a failed mcp install must not exit 0
   # (R4-silent-package-skip): neither may a run that included pi and only
   # printed its stub, with nothing actually deployed for it.
-  [[ -n "$mcp_install_failed" || -n "$pi_stub_included" || -n "$codex_runtime_failed" ]] && return 1
+  [[ -n "$mcp_install_failed" || -n "$pi_stub_included" || -n "$runtime_install_failed" ]] && return 1
   return 0
 }
 

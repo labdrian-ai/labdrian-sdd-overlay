@@ -24,6 +24,9 @@ Commands:
                                    which keeps the owner rules block in ~/AGENTS.md,
                                    <codex root>/AGENTS.md and <codex root>/agents.md; a failed
                                    install makes apply exit non-zero.
+                                   For opencode it runs 'engine runtime install --target opencode' the same
+                                   way, before the longterm-mem step: the plugins, opencode.json
+                                   and the AGENTS.md block that longterm-mem register reads.
                                    After a merge, run 'skills validate': each global skill the
                                    merge changed needs a human approval (see skills approve
                                    below), which an agent cannot give.

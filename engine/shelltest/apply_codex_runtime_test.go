@@ -23,7 +23,7 @@ exit "$EXIT"
 
 // stepSnippet runs the step the way cmd_apply does, for an overlay checkout in "$1" and the engine in "$2".
 const stepSnippet = `OVERLAY_DIR="$1"; ENGINE_BINARY="$2"; cd "$OVERLAY_DIR"
-rc=0; codex_runtime_install_and_report || rc=$?; echo "exit: $rc"
+rc=0; runtime_install_and_report codex || rc=$?; echo "exit: $rc"
 `
 
 func runCodexStep(t *testing.T, engine, answer, exit string, withRules bool) (out, record string) {

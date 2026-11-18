@@ -1164,7 +1164,12 @@ gentle-ai-overlay runtime install|update|uninstall|status --target codex
     runs `engine runtime install --target codex` after the copy, with the checkout of the apply as the source of the
     rules; it does nothing for a checkout that has no `instructions/owner-rules.md`, prints a note and does not fail
     when the engine binary is not installed yet (`labdrian install-hooks` installs it), and exits non-zero when the
-    install ran and was not successful. The `gentle-ai:` blocks leave the live files only through the owner-approved
+    install ran and was not successful. `labdrian apply --target opencode` (and `--target all`) runs
+    `engine runtime install --target opencode` the same way, through the same step: right after the copy of the agents
+    and before the longterm-mem step, so the plugins, `opencode.json` (the `foreman` default agent and the MCP servers)
+    and the AGENTS.md block exist when `longterm-mem register --target opencode` reads `opencode.json`; a failed install
+    is shown on stderr and apply exits non-zero after every target is deployed. The target state row, the longterm-mem
+    step and `claude`, `codex` and `pi` are unchanged. The `gentle-ai:` blocks leave the live files only through the owner-approved
     removal of the gentle-ai detach (S17), never through this adapter.
 
 gentle-ai-overlay runtime install|update|uninstall|status --target opencode
