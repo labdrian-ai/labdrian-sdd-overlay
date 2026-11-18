@@ -96,6 +96,31 @@ func (s Service) Launch(dir, feature, base, head, rows, model string, brief []by
 	return s.Record(dir, feature, c.Base, c.Head, rows, reply)
 }
 
+// FrozenContext is the brief followed by the frozen context of the candidate it names, the bytes Launch hands a
+// reviewer with WithFrozenContext, and stores nothing. The candidate is the one base and head the brief names
+// (review.BriefPair), bound as Launch binds it (Bind, which makes or reuses the detached worktree). Refused as Launch
+// refuses, in this order: a brief that names no pair or more than one (review.ErrInvalidBrief), a diff over
+// review.DiffLimitBytes (review.OverLimitError), a brief that is not the brief of the candidate (review.CheckBrief),
+// and a brief and context over review.MaxReplyBytes (review.ErrInvalidBrief).
+func (s Service) FrozenContext(dir string, brief []byte) ([]byte, error) {
+	base, head, err := review.BriefPair(brief)
+	if err != nil {
+		return nil, err
+	}
+	bound, err := s.Bind(dir, base, head)
+	if err != nil {
+		return nil, err
+	}
+	c := bound.Candidate
+	if c.OverLimit() {
+		return nil, review.OverLimitError(c)
+	}
+	if err := review.CheckBrief(c, bound.Worktree, brief); err != nil {
+		return nil, err
+	}
+	return s.withContext(dir, c, brief)
+}
+
 // maxQuotedRefusal bounds the refusal a re-ask quotes: its text can echo a member name of the reply, of any length.
 const maxQuotedRefusal = 1024
 

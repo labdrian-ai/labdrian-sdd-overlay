@@ -826,6 +826,18 @@ overlay review <verb>
         re-ask the reviewer does not answer leaves the first refusal, with the re-ask's failure said after it. Whether
         the installed Codex enforces `--sandbox read-only` is shown only by a live run. Exit 0 stored,
         2 reply refused, 1 usage error or any other failure.
+    frozen-context [--cwd <repo>]
+        Reads the brief of the parent on stdin and prints the brief followed by the frozen context of its candidate: the
+        bytes `review launch --runtime claude` hands the reviewer after its preamble (a heading `## Frozen context (base
+        <base>, head <head>)`, a line `changed paths: <path>, <path>` and `git diff --no-renames -U3` in one fenced
+        block). The candidate is the one base and head the brief names in the form `review bind` prints them, one `"base"`
+        and one `"head"` member with a full object name; it is bound as `launch` binds it (making or reusing the detached
+        worktree). It starts no reviewer and stores no result. It exists for a runtime whose reviewer cannot run git. Refused as
+        exit 2, with one line on stderr (`error: review frozen-context: <reason>`) and nothing on stdout: an empty brief, a
+        brief that names no pair or more than one, a candidate over the 150000-byte limit of one launch (split it into one
+        launch per commit), a brief that does not name the full base, the full head, the diff_sha256 and the worktree path
+        of the binding, and a brief and context over the reply limit. Exit 0 printed, 2 brief refused, 1 usage error or any
+        other failure.
     proposals [--cwd <repo>]
         Prints, and never runs, what the owner may remove: the worktrees of the repository other than the main one and the
         one of `--cwd`, not locked, that git marks prunable (`git worktree prune`) or whose HEAD is an ancestor of the tip of
