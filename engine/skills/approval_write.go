@@ -19,7 +19,6 @@ var lintBaselineSkills = []string{
 	"cognitive-doc-design",
 	"comment-writer",
 	"go-testing",
-	"issue-creation",
 	"judgment-day",
 	"knowledge-ingestion",
 	"sdd-time-estimation",

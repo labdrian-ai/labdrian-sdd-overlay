@@ -39,9 +39,7 @@ skills:
   - id: issue-creation
     path: issue-creation
     source:
-      type: core
-      upstream:
-        owner: gentleman-programming
+      type: custom
     install:
       defaultScope: global
       targets:
@@ -49,7 +47,7 @@ skills:
         - opencode
         - codex
     lifecycle:
-      updateStrategy: vendor-merge
+      updateStrategy: overlay-only
   - id: systemic-issue-triage
     path: systemic-issue-triage
     source:
