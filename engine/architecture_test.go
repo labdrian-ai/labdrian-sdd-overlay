@@ -115,6 +115,10 @@ import (
 //   - sddregistry/fsstore is the adapter of those two ports (B2): the registry as a file, written
 //     as `engine propagate` writes it (propagator/fsstore), and the skills of a target as files.
 //     The lock and the words a person reads are the command's, in cmd.
+//   - skillregistry is a domain package (T30): the table of skills in a project's .atl/skill-registry.md,
+//     the rules `gentle-ai skill-registry refresh` 4.2.0 follows (which directories hold skills, how a
+//     SKILL.md names itself, which skills are listed, how the file is written around the rows) over
+//     text. It reads and writes no file and reads no clock.
 //   - sha256hex is a domain package (H34): what a SHA-256 digest looks like on the wire (64
 //     lowercase hex characters) and how one is made, which every record that carries a digest
 //     (the goal, the workflow event, the role handoff, the clearance, the approval, the project
@@ -249,6 +253,7 @@ var rings = map[string]archguard.Ring{
 	"shaper/shapertest":         archguard.Support,
 	"shelltest":                 archguard.Support,
 	"skills":                    archguard.Domain,
+	"skillregistry":             archguard.Domain,
 	"skills/app":                archguard.Application,
 	"skills/memorycardcli":      archguard.Adapter,
 	"skills/projectidentity":    archguard.Adapter,
