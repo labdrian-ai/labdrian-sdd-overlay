@@ -49,8 +49,6 @@ engine/runtime/labdrian-runtime-parity-plugin.mjs managed
 engine/assets/assets.go managed
 engine/assets/assets_test.go managed
 engine/assets/anti-generic-design.md managed
-sdd-spec/SKILL.md managed
-sdd-tasks/SKILL.md managed
 requirements-from-transcripts/SKILL.md custom
 clarify-request/SKILL.md custom
 adhd-output/SKILL.md custom
@@ -87,13 +85,6 @@ go-testing/SKILL.md custom
 go-testing/references/examples.md custom
 judgment-day/SKILL.md custom
 judgment-day/references/prompts-and-formats.md custom
-sdd-design/SKILL.md managed
-sdd-design/references/threat-matrix.md managed
-sdd-explore/SKILL.md managed
-sdd-init/SKILL.md managed
-sdd-init/references/init-details.md managed
-sdd-onboard/SKILL.md managed
-sdd-propose/SKILL.md managed
 skill-creator/SKILL.md custom
 skill-creator/references/skill-style-guide.md custom
 skill-improver/SKILL.md custom
