@@ -206,6 +206,7 @@ func TestTheShaperRoleFilesTellItToWriteTheGoalTheForemanNames(t *testing.T) {
 			"Copy `version`, `project_id`, `goal_id` and `memory_directive` verbatim from the `labdrian workflow goal-base` output the prompt holds",
 			"without that output, write no goal and report it as a blocker",
 			"never add a source or a key",
+			"`constraints`, `non_goals` and `acceptance_criteria` are JSON arrays of strings and `objective`, `scope`, `runtime_scope` and `delivery_boundary` are strings",
 			"never rewrite a goal file that exists: report it",
 		} {
 			if !strings.Contains(text, want) {
