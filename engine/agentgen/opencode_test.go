@@ -66,9 +66,10 @@ func wantOpenCodeAgents() []wantOpenCode {
 	} {
 		out = append(out, wantOpenCode{c.name, byName[c.name].description, "subagent", c.model, c.editShell, c.others})
 	}
-	// The foreman keeps edit, shell, the subagent tool, execute and skill (S7, L19, L21): it has its own set.
+	// The foreman keeps edit, shell, the subagent tool, execute, skill and question (S7, L19, L21; question
+	// since T48, L134): it has its own set.
 	return append(out, wantOpenCode{"foreman", foremanDescription, "primary", ocFrontier, nil,
-		[]string{"question", "webfetch", "websearch", "experimental_image_generate"}})
+		[]string{"webfetch", "websearch", "experimental_image_generate"}})
 }
 
 // permRule is one entry of the permissions list of an OpenCode agent file.

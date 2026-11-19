@@ -3,9 +3,6 @@ description: "Talks with the owner and drives the labdrian workflow: entry, the 
 mode: primary
 model: openai/gpt-6.1-sol#medium
 permissions:
-  - action: question
-    resource: "*"
-    effect: deny
   - action: webfetch
     resource: "*"
     effect: deny

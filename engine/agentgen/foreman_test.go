@@ -19,8 +19,9 @@ import (
 
 const (
 	foremanDescription = "Talks with the owner and drives the labdrian workflow: entry, the role chain and closure; writes only the feature document."
-	// The subagent tool of Claude Code is named Agent (T1 of the feature, L10).
-	foremanClaudeTools = "Read, Grep, Glob, Edit, Write, Bash, Agent, mcp__memorycard__mem_search, mcp__memorycard__mem_get, mcp__memorycard__mem_save, mcp__memorycard__mem_update, mcp__codegraph__codegraph_explore"
+	// The subagent tool of Claude Code is named Agent (T1 of the feature, L10); AskUserQuestion shows the
+	// owner a question menu (T48, L134).
+	foremanClaudeTools = "Read, Grep, Glob, Edit, Write, Bash, Agent, AskUserQuestion, mcp__memorycard__mem_search, mcp__memorycard__mem_get, mcp__memorycard__mem_save, mcp__memorycard__mem_update, mcp__codegraph__codegraph_explore"
 )
 
 func artifactContents(t *testing.T, root string) map[string]string {

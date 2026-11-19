@@ -153,7 +153,8 @@ var roles = []role{
 // the closed role vocabulary of engine/roles has no foreman, and it has two files here, the Claude one and the OpenCode one (S5).
 // Its model is the frontier row of the tier table, as the parent's is (S18, models.md of role-chain). Its
 // tools are the Claude names; the subagent tool is Agent (T1 of the feature), which the eight roles never
-// hold. It writes only the feature document: the Edit and Write it holds are a limit of its instructions,
+// hold. AskUserQuestion shows the owner a question menu; in OpenCode it keeps the question tool (T48, L134).
+// It writes only the feature document: the Edit and Write it holds are a limit of its instructions,
 // not of its tool list (S16 B8).
 var foreman = role{
 	name:        "foreman",
@@ -162,7 +163,7 @@ var foreman = role{
 	// Its OpenCode file keeps the skill tool (S7): the recorded run of S13 loads a skill body in its session.
 	openCodeSkill: true,
 	tools: []string{
-		"Read", "Grep", "Glob", "Edit", "Write", "Bash", "Agent",
+		"Read", "Grep", "Glob", "Edit", "Write", "Bash", "Agent", "AskUserQuestion",
 		"mcp__memorycard__mem_search", "mcp__memorycard__mem_get", "mcp__memorycard__mem_save", "mcp__memorycard__mem_update",
 		"mcp__codegraph__codegraph_explore",
 	},

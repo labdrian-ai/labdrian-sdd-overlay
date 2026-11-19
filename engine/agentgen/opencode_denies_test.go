@@ -60,9 +60,9 @@ func TestOnlyTheRoleWithNoMcpToolHasExecuteDenied(t *testing.T) {
 }
 
 // The foreman row (S7, acceptance of L21): mode primary, the frontier model and variant, no deny on edit,
-// shell, subagent, execute or skill, and a deny on exactly question, webfetch, websearch and
-// experimental_image_generate.
-func TestTheForemanFileKeepsItsToolsAndDeniesExactlyTheFourOthers(t *testing.T) {
+// shell, subagent, execute, skill or question (T48, L134: the foreman asks the owner through it), and a
+// deny on exactly webfetch, websearch and experimental_image_generate.
+func TestTheForemanFileKeepsItsToolsAndDeniesExactlyTheThreeOthers(t *testing.T) {
 	files := artifactContents(t, seededRoot(t))
 	f := parseOpenCode(t, files["opencode/agents/foreman.md"])
 	if f.values["mode"] != "primary" {
@@ -72,12 +72,12 @@ func TestTheForemanFileKeepsItsToolsAndDeniesExactlyTheFourOthers(t *testing.T) 
 		t.Errorf("model = %q, want %q", f.values["model"], ocFrontier)
 	}
 	denied := f.denied(t)
-	for _, kept := range []string{"edit", "shell", "subagent", "execute", "skill"} {
+	for _, kept := range []string{"edit", "shell", "subagent", "execute", "skill", "question"} {
 		if slices.Contains(denied, kept) {
 			t.Errorf("the foreman file denies %s, which the foreman keeps", kept)
 		}
 	}
-	want := []string{"question", "webfetch", "websearch", "experimental_image_generate"}
+	want := []string{"webfetch", "websearch", "experimental_image_generate"}
 	slices.Sort(want)
 	got := slices.Clone(denied)
 	slices.Sort(got)
