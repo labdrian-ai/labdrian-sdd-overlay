@@ -6,7 +6,7 @@ import "github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory
 // rows only when the vault is a requested source (matchLinkedObservation
 // is the matcher; it consults both Engram-backed arms, see JD-4 there),
 // and Engram's own requested sources are round-robin-interleaved by
-// interleaveEngramSources, deduplicated by engram_id. When both engram-fts
+// interleaveEngramSources, deduplicated by the row id. When both engram-fts
 // and engram-embed are requested, routeRank1 (R-058/R-059, Branch A: gate
 // wired live, published routing accuracy 89%/86%) decides which of the two
 // sources' own rows are offered first each round -- the only thing that

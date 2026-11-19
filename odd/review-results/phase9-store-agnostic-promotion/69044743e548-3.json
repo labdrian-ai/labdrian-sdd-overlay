@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "25d9a4c75f287b64b3a6ce7e64b07e221ce9d071",
+    "head": "69044743e54813f58f56b0d64b18df8a4981e764",
+    "diff_sha256": "2faac0840361f6f205203921a801acbcb924ca2c361b58ab96c31bb6d53fdc69",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "25d9a4c75f287b64b3a6ce7e64b07e221ce9d071",
+      "head": "69044743e54813f58f56b0d64b18df8a4981e764",
+      "diff_sha256": "2faac0840361f6f205203921a801acbcb924ca2c361b58ab96c31bb6d53fdc69"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:122",
+        "claim": "T7 is ticked, but the diff shows no record of its stated precondition: the owner's live migration dry run reporting zero legacy pages (D2). The T7 line cites evidence L91 to L93, and L93 does not mention that dry run. T7 also retires the reader of legacy keys, so a vault page that still carries only legacy keys would no longer be found and could be promoted again (Risk item 1). Another log entry outside this diff may record the dry run, so this is unproven either way.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:122 (after T6 and only after the owner's live migration dry run reports zero legacy pages (D2, L5))",
+          "odd/tasks/phase9-store-agnostic-promotion.md:853-861 (L93 text; no mention of the owner's dry run)"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:122",
+        "claim": "The T7 commit list ends with the unresolved placeholder \"the commit that holds L93\" instead of a sha. L93 repeats it. The L74 and L62 entries of T6 show that such placeholders are normally filled in a follow-up commit. Until then the tick cannot be traced to a commit. L93 also leaves the sidecar-revision and `engram_id` wording rules of the promotion spec open while T7 is marked done.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:122 (4adb523b, 033db0ee and the commit that holds L93)",
+          "odd/tasks/phase9-store-agnostic-promotion.md:858 (Open: the rules about the sidecar's recorded revision ... left as they were)"
+        ]
+      }
+    ],
+    "evidence": [
+      "The change touches only a Markdown task document: one T7 line flipped from [ ] to [x], and the L93 log entry appended.",
+      "The diff holds no code, so behaviour, regression and Risk checks have nothing to apply to; only the documentation consistency findings above were found."
+    ]
+  }
+}

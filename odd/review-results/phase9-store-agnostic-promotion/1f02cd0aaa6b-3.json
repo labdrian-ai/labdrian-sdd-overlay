@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "3cef7e741e6d8697309edf4a9550c46a3f89b055",
+    "head": "1f02cd0aaa6b5ad62f347a68a477e8b18471184b",
+    "diff_sha256": "0be8596262e06fc5a5f6390749db40e05093974ce93b2bf932186c5fc4f978c5",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "3cef7e741e6d8697309edf4a9550c46a3f89b055",
+      "head": "1f02cd0aaa6b5ad62f347a68a477e8b18471184b",
+      "diff_sha256": "0be8596262e06fc5a5f6390749db40e05093974ce93b2bf932186c5fc4f978c5"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:862",
+        "claim": "L97 lists fix commits as 20b98d4e, 000c8a8d, 0f34ace9, 3cef7e74 and says 11641b08 is the sweeper's comment fix, but L101 counts 'fixed now 16' with 'this entry's commit' and 'fixed earlier 10' by naming only five shas. The tallies (10/16/30 = 56) are not derivable from the per-commit answers: L97-L100 answer many findings as 'not a defect' or by evidence and the 'fixed' ones are not enumerated, so the claimed counts cannot be audited from the record.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:L101",
+          "odd/tasks/phase9-store-agnostic-promotion.md:L97"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:865",
+        "claim": "L98 admits a new unfixed observation (isOwnUnrecordedWrite may be dead code for card pages) and a deliberate permanent skipped_local_edit wedge, yet L101 summarizes everything as answered; the open item is not carried onto the T7 task line, which says only that the review is answered in L97 to L101. This repeats the L99/L100 complaint (open items not on the task line) that the entry itself answered for L93.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:L98",
+          "odd/tasks/phase9-store-agnostic-promotion.md:L119"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:119",
+        "claim": "The T7 line cites the chain order starting with 01bffae7 and says 'the review of the chain is answered in L97 to L101', but L100 answers findings for 3a787aa7 and e4e59773 which are not in the T7 commit list; the L97 header says part 1 covers 3 commits while the task line lists 15, so the reader cannot map each reviewed commit to its answer.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:L100"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only a documentation file changed; no code behavior can regress.",
+      "Claims such as the counts 10/16/30 and the evidence file percommit3.out could not be verified from the diff alone."
+    ]
+  }
+}

@@ -13,10 +13,9 @@ func TestPlanCards_PredictsTheRunAndWritesNothing(t *testing.T) {
 	vaultRoot := t.TempDir()
 	w := syncCardsWriter(vaultRoot)
 	bridged := eligibleCard(13, 1)
-	bridged.SameContentEngramIDs = []int64{99}
-	engramPageIn(t, vaultRoot, PrecedenceStore{}, 99, "c-000050")
+	peerPageIn(t, vaultRoot, PrecedenceStore{}, 99, "c-000050")
 	ineligible := memory.CardMemory{ID: 14, Project: "memorycard", Title: "Plain", Body: "Not curated."}
-	cards := &fakeCards{memories: []memory.CardMemory{eligibleCard(11, 1), eligibleCard(12, 1), bridged, ineligible}}
+	cards := &fakeCards{memories: []memory.CardMemory{eligibleCard(11, 1), eligibleCard(12, 1), bridged, ineligible}, mirrored: map[int64][]memory.Identity{13: {memoryID("99")}}}
 
 	plan, err := PlanCards(t.Context(), cards, w, "memorycard")
 	if err != nil {

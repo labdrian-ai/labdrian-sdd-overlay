@@ -17,13 +17,7 @@ func TestPropagation_AMemoryWhoseIdIsNotANumberIsFailedInItsOwnWordsAndItsPageIs
 		walk   func(*Writer, Source) (PropagateReport, error)
 	}{
 		"memorycard's walk": {
-			source: memorycardSource, idKey: "memorycard_id",
-			walk: func(w *Writer, src Source) (PropagateReport, error) {
-				return PropagateCards(t.Context(), src, w, "memorycard")
-			},
-		},
-		"memorycard's walk over a page keyed by the legacy engram_id": {
-			source: engramSource, idKey: "engram_id",
+			source: memorycardSource, idKey: "source_id",
 			walk: func(w *Writer, src Source) (PropagateReport, error) {
 				return PropagateCards(t.Context(), src, w, "memorycard")
 			},
@@ -31,7 +25,7 @@ func TestPropagation_AMemoryWhoseIdIsNotANumberIsFailedInItsOwnWordsAndItsPageIs
 	} {
 		t.Run(name, func(t *testing.T) {
 			vaultRoot := t.TempDir()
-			writeIdentityPage(t, vaultRoot, "c-000001.md", "---\n"+tc.idKey+": x1\nproject: memorycard\naddress: c-000001\nstatus: active\n---\n\nBody.\n")
+			writeIdentityPage(t, vaultRoot, "c-000001.md", "---\nsource: memorycard\n"+tc.idKey+": x1\nproject: memorycard\naddress: c-000001\nstatus: active\n---\n\nBody.\n")
 			before := readPage(t, vaultRoot, "c-000001")
 			w := syncCardsWriter(vaultRoot)
 			w.Precedence = &memPrecedence{}

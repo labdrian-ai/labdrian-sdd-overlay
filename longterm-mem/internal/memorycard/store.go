@@ -148,21 +148,6 @@ func (s *Store) MemoryByID(id int64) (memory.CardMemory, bool, error) {
 	return m, true, nil
 }
 
-// MemoryByEngramID returns the memory memorycard imported from Engram observation engramID: the one its import_map
-// row of source engram names, the first part whose memory exists (a dangling row hides no later part), mapped as MemoryByID maps it. ok is
-// false, with a nil error, when no row names the observation or every memory its rows name is gone.
-func (s *Store) MemoryByEngramID(engramID int64) (memory.CardMemory, bool, error) {
-	var memoryID int64
-	err := s.db.QueryRow(`select i.memory_id from import_map i join memories m on m.id = i.memory_id where i.source = 'engram' and i.source_key = ? order by i.part limit 1`, strconv.FormatInt(engramID, 10)).Scan(&memoryID)
-	switch {
-	case errors.Is(err, sql.ErrNoRows):
-		return memory.CardMemory{}, false, nil
-	case err != nil:
-		return memory.CardMemory{}, false, fmt.Errorf("memorycard: look up the memory imported from Engram observation %d: %w", engramID, err)
-	}
-	return s.MemoryByID(memoryID)
-}
-
 // MemoryIDsByEngramIDs returns, for each of the Engram observations engramIDs, the ids of the memories its
 // import_map rows of source engram name: one per part, in part order, without repeats. A row whose memory is
 // gone names nothing and hides no other part. An observation with no such row has no entry.

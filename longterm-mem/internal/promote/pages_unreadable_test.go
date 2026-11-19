@@ -23,7 +23,7 @@ const unreadableAddress = "c-000900"
 
 // pageCarrying is the page promoted under address for observation id of project at revision.
 func pageCarrying(id int64, project, address string, revision int) string {
-	return fmt.Sprintf("---\naddress: %s\nengram_id: %d\nengram_revision: %d\nproject: %s\n---\nbody\n", address, id, revision, project)
+	return fmt.Sprintf("---\naddress: %s\nsource: memorycard\nsource_id: %d\nsource_revision: %d\nproject: %s\n---\nbody\n", address, id, revision, project)
 }
 
 // contentOf is the page as it is on disk.
@@ -205,7 +205,7 @@ func TestPromoteLeavesAnObservationAloneWhenOnlyAnUnreadablePageMightBeItsPage(t
 	if diagnostic == nil || diagnostic.Rule != "unreadable-pages" {
 		t.Fatalf("diagnostic = %+v, want rule unreadable-pages", diagnostic)
 	}
-	for _, want := range []string{"observation 1 was not promoted", "promoted page c-000900.md could not be read", errDangling.Error(), "nothing was written for it"} {
+	for _, want := range []string{"memorycard memory 1 was not promoted", "promoted page c-000900.md could not be read", errDangling.Error(), "nothing was written for it"} {
 		if !strings.Contains(diagnostic.Detail, want) {
 			t.Errorf("detail = %q, want it to say %q", diagnostic.Detail, want)
 		}

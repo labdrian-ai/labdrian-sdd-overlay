@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "874c5b951b144078cf8587ac3db9a06634842540",
+    "head": "1edf8e79cc3bad06e5983ebdebb762c4c4ec4dff",
+    "diff_sha256": "f9a9850f4d16b1099ff05e4453805393e68bc3838227fe06db4b2cb6366c1ebd",
+    "paths": [
+      "longterm-mem/internal/memory/card.go",
+      "longterm-mem/internal/query/merge.go",
+      "openspec/specs/longterm-mem-promotion/spec.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "874c5b951b144078cf8587ac3db9a06634842540",
+      "head": "1edf8e79cc3bad06e5983ebdebb762c4c4ec4dff",
+      "diff_sha256": "f9a9850f4d16b1099ff05e4453805393e68bc3838227fe06db4b2cb6366c1ebd"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/memory/card.go",
+        "longterm-mem/internal/query/merge.go",
+        "openspec/specs/longterm-mem-promotion/spec.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "openspec/specs/longterm-mem-promotion/spec.md:472",
+        "claim": "The change removes the scenario 'An entry recording no revision stops wedging its undiverged page', but the requirement paragraph 'An entry that records no revision at all is a vault promoted before the store recorded one...' stays in the spec, shown as context. It still describes the republish behaviour that scenario covered, so that behaviour now has no scenario. The paragraph also depends on the entry revision recording that the diff retires: the 'precedence store SHALL record ... the Engram revision' requirement is removed. The spec is therefore left partly inconsistent and partly untested. The commit message says nothing about retiring this scenario.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "openspec/specs/longterm-mem-promotion/spec.md hunk @@ -479,66 +455,20 @@: the scenario 'An entry recording no revision stops wedging its undiverged page' is deleted while the 'An entry that records no revision at all' paragraph remains as context"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "openspec/specs/longterm-mem-promotion/spec.md:455-462",
+        "claim": "The commit says scripts/rehearse-card-page-migration.sh is removed, but the diff and the changed-path list contain no deletion of it. Either it was removed in an earlier commit or it is still present. I cannot tell which from the diff.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "changed paths list: only card.go, merge.go and spec.md"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed all three changed files in the diff. The Go changes are comment-only and cannot affect behaviour.",
+      "The spec edits retire the migration, the legacy-key reads and the Engram-revision adoption, each with a '(Previously: ...)' note.",
+      "The one gap found is the orphaned no-revision-entry requirement described in F1."
+    ]
+  }
+}

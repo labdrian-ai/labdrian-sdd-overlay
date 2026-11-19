@@ -141,15 +141,15 @@ and `source_revision`, in that order, and with no other identity key: neither
 `memorycard_id`, `memorycard_type` and `memorycard_revision`. Every page
 the writer creates or fully re-renders (a new page, an update in place) carries
 them; a status patch changes `status` and `related` only.
-Pages written before keep their legacy keys, which every reader still reads as
-the identity they name, until `longterm-mem migrate-card-pages --apply` gives
-them the store-agnostic keys of their memorycard memory once (see "Local-Edit
-Precedence").
+No reader reads the legacy keys: a page that carries only them names no memory
+and is no promoted page of any memory.
 
 (Previously: a page carried `memorycard_id`, `memorycard_type` and
 `memorycard_revision` for a memorycard memory, and `engram_id`,
 `engram_sync_id`, `engram_type` and `engram_revision` for an Engram
-observation, one family of keys per store.)
+observation, one family of keys per store, and the pages of the older releases
+kept those keys and every reader still read them until the one-time
+`migrate-card-pages` command gave them the store-agnostic keys.)
 
 #### Scenario: A page names its memory with the store-agnostic keys only
 
@@ -236,12 +236,13 @@ WHEN a previously promoted Engram observation is revised or re-promoted, the
 longterm-mem promotion writer SHALL update the existing vault page in place,
 subject to the local-edit precedence rule, rather than creating a duplicate
 page. The page is found by the identity its keys name (`source` and
-`source_id`, or the legacy `engram_id` and `memorycard_id`), and the update
+`source_id`), and the update
 rewrites it with the store-agnostic keys of "Contract-Conformant Page
 Emission", so a page's `source_revision` is the revision it was updated to.
 
-(Previously: the page was found by its `engram_id` or `memorycard_id` and
-rewritten with the keys of its own store.)
+(Previously: the page was found by its `engram_id` or `memorycard_id`, and by
+them alone until the one-time migration, and rewritten with the keys of its own
+store.)
 
 #### Scenario: An update rewrites the page with the store-agnostic keys
 
@@ -396,40 +397,15 @@ itself last wrote for that page, THEN the promotion writer SHALL skip that
 page's content update and emit a diagnostic instead, tracked through a
 sidecar precedence store keyed by the page's address.
 
-The one-time migration of a page's identity keys, `longterm-mem
-migrate-card-pages` (a dry run unless given `--apply`), SHALL follow the same
-rule. It gives every page of the project that carries legacy identity keys the
-store-agnostic keys of its memorycard memory (a page naming Engram observation
-N takes the memory memorycard imported from N, read from its `import_map` row
-alone; a page naming a memorycard memory keeps it), keeping the page's
-address, created date, body and every other key, and rewrites only that page's
-precedence entry's frontmatter hash. Before its first write it copies every
-page it will rewrite and the precedence sidecar to a directory of its own. It
-SHALL leave byte-identical, name, count by reason and go on from, with exit
-code 6, a page that differs from its precedence entry, a page with no entry, a
-page whose observation no `import_map` row names, and a page whose memory
-already has a page of its own; it never matches a page to a memory by content.
-A second run changes nothing.
-
-(Previously: the precedence entry changed only when a promotion wrote the
-page or a status patch rewrote its frontmatter, and the pages of the older
-releases kept their legacy keys.)
-
-#### Scenario: The migration refuses a page that was edited by hand
-
-- GIVEN a page carrying `engram_id: 6` that differs from its precedence entry
-- WHEN `migrate-card-pages --apply` runs
-- THEN the page is left byte-identical, it is named with its reason, the run
-  goes on to the other pages, and the exit code is 6
-
-#### Scenario: The migration rewrites the entry of a migrated page
-
-- GIVEN a tracked page carrying `engram_id: 1`, whose observation memorycard
-  imported as memory 2
-- WHEN `migrate-card-pages --apply` runs
-- THEN the page carries `source: memorycard` and `source_id: 2`, its address,
-  created date and body are unchanged, and its entry's frontmatter hash is
-  the hash of its new frontmatter
+(Previously: the one-time migration of a page's identity keys, `longterm-mem
+migrate-card-pages`, followed the same rule: it gave every page of the project that
+carried legacy identity keys the store-agnostic keys of its memorycard memory,
+rewrote only that page's precedence entry's frontmatter hash, and left a
+diverging page, a page with no entry, a page whose observation no `import_map`
+row named and a page whose memory already had a page of its own byte-identical, with
+exit code 6. It was retired once the owner's vault held no page carrying a legacy
+key (575 of 575 migrated on 2026-11-15, then 0 left), and the command is no
+subcommand any more.)
 
 #### Scenario: Locally edited page is skipped with a diagnostic
 
@@ -479,118 +455,56 @@ body or in any other frontmatter field, remains a refusal.
 
 An interrupted UPDATE leaves the mirror-image state: the page holds a render
 the precedence store never caught up with, so the entry still fingerprints
-the previous one. Whenever the retry renders the same revision, the rule
-above settles it. Whenever Engram has been revised in between, no comparison
-against the incoming bytes can settle it at all — the two renders are of
-different revisions and are supposed to differ — and the page is otherwise a
-permanent refusal, because a refusal also suppresses the store write that
-would have repaired it.
+the previous one. The entry a promotion writes records the two content
+fingerprints and no revision, so nothing on the entry says which revision the
+page was last promoted at, and a page whose content no longer matches its
+entry is refused as a local edit, whatever the cause. `promote reconcile` of
+its address is the way to adopt it, at the revision the page carries.
 
-The precedence store SHALL therefore record, alongside each page's content
-fingerprint, the Engram revision that fingerprinted render carried. IF a
-promoted page's content no longer matches its entry, but the page's own
-engram_revision stands above the revision that entry records and no higher
-than the revision now being promoted, and the page's body still closes with
-the promotion footer naming that observation at exactly the revision the page
-claims, and the page's frontmatter is what promotion would render now, THEN
-the promotion writer SHALL treat it as its own unrecorded update: republish
-the page at the current revision and record the entry the interrupted run
-never wrote.
+(Previously: the precedence store recorded, with each fingerprint, the Engram
+revision that render carried, and a page whose content no longer matched its
+entry was adopted as the writer's own unrecorded update when its
+`engram_revision` stood above the entry's and no higher than the revision being
+promoted, its body still closed with the promotion footer for that revision,
+and its frontmatter was what promotion would render now, disregarding the
+created and updated stamps, the status and related lines and every descriptive
+line of the observation, and comparing `engram_id` and every key the writer
+alone emits. That adoption read the Engram revision and only ever applied to
+the pages of Engram observations; it was retired with them.)
 
-The frontmatter comparison SHALL disregard exactly the lines two renders of
-the writer's own may legitimately disagree on, and no others. Those are the
-created and updated stamps; the engram_revision the two renders differ in by
-construction; the status and related lines a status propagation rewrites in
-place; and every line rendered from the observation that DESCRIBES it rather
-than IDENTIFIES it — title, aliases, tags, engram_type, engram_sync_id and
-project — which the observation itself moves when it is retitled, retyped,
-merged into another project, or has a sync id backfilled between the
-interrupted write and the retry. The observation-derived part of the disregarded
-set SHALL be exactly the observation's descriptive fields, not a subset of
-them.
-
-The observation's IDENTIFYING field, engram_id, SHALL NOT be disregarded,
-even though the observation supplies it too. It is the only frontmatter
-witness of WHICH observation a page belongs to, so blanking it would make two
-different observations' pages compare equal and let one observation's page
-corroborate a render of another's. The comparison SHALL therefore compare
-engram_id together with every key the writer alone emits — type, address and
-sources — so that a key a human added, changed or deleted is a refusal.
-
-Corroborating only the body's closing footer is not sufficient: a
-frontmatter-only edit leaves that footer intact, and adopting such a page
-overwrites the human's edit while reporting a successful update. Comparing
-any DESCRIPTIVE observation-derived line is equally wrong in the other
-direction: it refuses an ordinary retitle, retype, or a sync id backfilled
-onto an observation that had none — each of which Engram can do between the
-interrupted write and the retry, and the first of which this requirement's
-own update scenario makes a first-class supported case — and that refusal is
-a skip, so it suppresses the store write, the entry never advances, and every
-later revision repeats it.
-
-project is disregarded for consistency with the rest of the descriptive set,
-not because a project move reaches this comparison: address allocation
-matches an already-promoted page on project as well as engram_id, so an
-observation moved to another project is allocated a FRESH address and never
-reaches an in-place update at all. Blanking it is therefore correct and
-harmless, but the wedge this rule exists to prevent is reached through the
-fields that are not part of that lookup, engram_sync_id among them.
-
-A page whose engram_revision is level with the revision its entry records has
-been changed by someone other than the promotion writer — only the writer's
-own renders advance that field — and remains a refusal.
-
-An entry that records no revision at all is a vault promoted before the store
-recorded one, and it carries NO evidence of the writer's own authorship. IF a
-promoted page's content no longer matches an entry that records no revision,
-THEN the promotion writer SHALL refuse that page. A moved frontmatter
-fingerprint SHALL NOT be read as proof that one of the writer's own
-unrecorded writes moved it: every render of the writer's own does move that
-fingerprint, but so does a human editing any frontmatter line, so the
-inference would unlock adoption on every legacy-tracked page a human has ever
-hand-edited — no interruption required — and the adoption would overwrite
+An entry that records no revision carries NO evidence of the writer's own
+authorship, and every entry a promotion writes is one: it records the two
+content fingerprints and no revision, and only `promote reconcile` records a
+revision, read off the page it adopts. IF a promoted page's content no longer
+matches an entry that records no revision, THEN the promotion writer SHALL
+refuse that page. A moved frontmatter fingerprint SHALL NOT be read as proof
+that one of the writer's own unrecorded writes moved it: every render of the
+writer's own does move that fingerprint, but so does a human editing any
+frontmatter line, so the inference would adopt every page a human has ever
+hand-edited -- no interruption required -- and the adoption would overwrite
 mid-body edits while reporting a successful update. Where the evidence is
 ambiguous, this requirement's guarantee of preserving human edits SHALL win.
 
-The fixed point such an entry would otherwise sit in SHALL be broken without
-inference instead: an entry that records no revision whose page still matches
-its fingerprints is not diverged at all, so the ordinary update path
-republishes it and records the revision the older store never wrote. The
-population of entries recording no revision therefore shrinks page by page,
-with nothing adopted.
+Such a page is refused on every run, and no promotion of it can repair the
+entry. It SHALL therefore be reported by the vault's own precedence-sidecar
+diagnostic rather than left silent, so an operator learns about a wedged page
+instead of the vault reporting healthy, and `promote reconcile` of its address
+is the repair. "No usable revision" SHALL mean the same thing in the diagnostic
+and in the refusal -- a recorded revision that is not positive, whether absent
+or negative -- so that no page the writer permanently refuses is left
+unreported.
 
-What remains is an entry recording no usable revision whose page has ALSO
-diverged. That page is refused on every run, and no promotion of it can repair
-the entry. It SHALL therefore be reported by the vault's own
-precedence-sidecar diagnostic rather than left silent, so an operator learns
-about a wedged page instead of the vault reporting healthy. "No usable
-revision" SHALL mean the same thing in the diagnostic as in the adoption rule
-— a recorded revision that is not positive, whether absent or negative —
-so that no page the writer permanently refuses is left unreported.
+A diverged page whose entry DOES record a positive revision (a page `promote
+reconcile` adopted and a human has edited since) is not reported by that
+diagnostic: it is an ordinary local edit, refused and named by the promotion
+writer and by `promote reconcile` themselves on every run. That refusal is
+standing rather than temporary, which is this requirement preserving the
+human's edit, not a wedge to repair.
 
-A diverged page whose entry DOES record a positive revision is not reported by
-that diagnostic: it is an ordinary local edit, refused and named by the
-promotion writer itself on every run. That refusal is standing rather than
-temporary — the page's engram_revision stays level with the entry's, so no
-later revision adopts it — which is this requirement preserving the human's
-edit, not a wedge to repair.
-
-Two limits of this reconciliation are known and accepted, and both are stated
-here rather than left to be rediscovered. An edit buried mid-body, or one
-confined to any line the comparison has to disregard — created, updated,
-engram_revision, status and related, plus the observation-derived title,
-aliases, tags, engram_type, engram_sync_id and project — is indistinguishable
-from the writer's own render, because the fingerprint that would have
-separated them is exactly what the interruption destroyed. A human who
-hand-sets a title or inserts an alias inside this window therefore loses that
-edit to a reported update; keeping any of those lines compared would not
-preserve the edit, it would only turn an ordinary Engram-side move into a
-permanent refusal. In the other direction, a diverged page whose entry records no
-revision is refused however well it otherwise corroborates, because nothing
-distinguishes the writer's own unrecorded write from a human's edit there;
-that refusal is reported, names the page, and is reported again by the
-precedence-sidecar diagnostic, which is the side of the trade this
-requirement takes.
+(Previously: the ordinary update path republished a page whose entry recorded no
+revision and still matched its fingerprints, and recorded the revision it
+published, so the population of entries recording no revision shrank page by
+page; promotion no longer records a revision.)
 
 #### Scenario: An interrupted create is finished by the next run
 
@@ -616,80 +530,24 @@ requirement takes.
 - WHEN promotion runs again for that observation
 - THEN the page is left byte-unchanged and the promotion is refused
 
-#### Scenario: An interrupted update retried on a later day is reconciled
+#### Scenario: A page left behind by an interrupted update is refused as a local edit
 
 - GIVEN an update that published its page and was killed before its
   precedence entry was persisted, so the entry still fingerprints the
   previous render
-- WHEN promotion runs again for that unchanged observation on a later day,
-  so its retry differs from the page on disk in the created and updated
-  stamps
-- THEN the page is refreshed, its entry is recorded, and the promotion is not
-  refused
-
-#### Scenario: An interrupted update is reconciled after a further revision
-
-- GIVEN that same interrupted update, and an observation Engram has since
-  revised again, so the retry renders content the page never held
-- WHEN promotion runs again for that observation
-- THEN the page is republished at the current revision, its entry records
-  that revision, and the promotion is not refused
-
-#### Scenario: A page edited inside the update crash window is still refused
-
-- GIVEN that same interrupted update, and a page a human has since edited so
-  that its body no longer closes with the promotion footer for the revision
-  it claims
-- WHEN promotion runs again for that observation
-- THEN the page is left byte-unchanged and the promotion is refused
-
-#### Scenario: A frontmatter-only edit inside the update crash window is refused
-
-- GIVEN that same interrupted update, and a page whose frontmatter a human has
-  since edited — a key added, a value changed or a key deleted — leaving the
-  body, promotion footer included, byte-identical
-- WHEN promotion runs again for that observation
-- THEN the page is left byte-unchanged and the promotion is refused
-
-#### Scenario: A page level with the revision its entry records is refused
-
-- GIVEN a page promoted completely at its current revision, whose body a human
-  has since edited without disturbing the promotion footer or the frontmatter
-- WHEN promotion runs again for a later revision of that observation
-- THEN the page is left byte-unchanged and the promotion is refused
-
-#### Scenario: A page claiming a revision Engram has not reached is refused
-
-- GIVEN a page whose engram_revision, and whose promotion footer, name a
-  revision above the one now being promoted
-- WHEN promotion runs for that observation
-- THEN the page is left byte-unchanged and the promotion is refused
-
-#### Scenario: An interrupted update whose observation was retitled is reconciled
-
-- GIVEN that same interrupted update, and an observation Engram has since
-  revised AND retitled (or retyped), so the incoming render's
-  observation-derived frontmatter differs from the page's
-- WHEN promotion runs for that observation
-- THEN the page is republished at the current revision, its entry records that
-  revision, and the promotion is not refused
-
-#### Scenario: An entry recording no revision stops wedging its undiverged page
-
-- GIVEN a precedence entry carrying content fingerprints but no revision, and
-  a page that still matches those fingerprints
-- WHEN promotion runs for a further revision of that observation
-- THEN the page is republished, its entry records the revision just published,
-  and every later revision takes the ordinary update path
+- WHEN promotion runs again for that memory
+- THEN the page is left byte-unchanged and the promotion is refused, and
+  `promote reconcile` of its address adopts it
 
 #### Scenario: An entry recording no revision refuses a diverged page
 
 - GIVEN a precedence entry carrying content fingerprints but no revision, and
   a page whose content a human has since edited — in the body, in the
   frontmatter, or both
-- WHEN promotion runs for a later revision of that observation
+- WHEN promotion runs for a later revision of that memory
 - THEN the page is left byte-unchanged and the promotion is refused,
-  regardless of whether the entry's frontmatter fingerprint still matches
+  regardless of whether the entry's frontmatter fingerprint still matches, and
+  the precedence-sidecar diagnostic names the page
 
 ### Requirement: A Named Page Can Be Reconciled, One Address at a Time
 
@@ -742,15 +600,12 @@ be the address named, and its project, when the page carries one, must be the
 project named. A page that predates the project field SHALL NOT be refused for
 lacking it.
 
-The revision recorded SHALL be read from the page itself, under whichever page
-identity the page carries: `memorycard_revision`, the store-agnostic
-`source_revision` beside the page's `source`, or a legacy `engram_revision`. (Previously: only
-`engram_revision` was read, and a page of any other identity was refused.)
-When a page carries the revision of more than one identity, the memorycard one is read first and decides: a
-page carrying both `memorycard_revision` and `engram_revision` is adopted at the memorycard one, and a
-revision that is present but not an integer makes the page unreadable without falling back to the other
-identity, so that a conflicting page is refused rather than adopted at a guess. A page carrying none of the
-three is refused.
+The revision recorded SHALL be read from the page itself: the store-agnostic
+`source_revision` beside the page's `source`. (Previously: `engram_revision`, `memorycard_revision` or `source_revision`, whichever
+identity the page carried; the legacy keys are no longer read.)
+A revision that is present but not an integer makes the page unreadable without falling
+back to another key, so that a conflicting page is refused rather than adopted at a guess. A page
+carrying no `source_revision` is refused.
 A revision of ZERO
 SHALL be adopted. Eligibility promotes a pinned or eligible-typed observation
 whose revision count is zero, so zero is an ordinary promoted state reached by
@@ -826,21 +681,21 @@ as a generic internal failure and never as a silent success.
 
 #### Scenario: A page whose own revision cannot be read is refused
 
-- GIVEN a file at the named address whose `memorycard_revision`, `source_revision` or
-  `engram_revision` is missing, non-numeric or negative, or that carries none of the three
+- GIVEN a file at the named address whose `source_revision` is missing, non-numeric or negative, or
+  that carries a legacy revision (`memorycard_revision` or `engram_revision`) and no `source_revision`
 - WHEN an operator reconciles that address by name
 - THEN the adoption is refused with the registration-conflict code, not the
   internal-failure code, and the precedence store is left unchanged
 
-#### Scenario: A page carrying two revisions is adopted at the memorycard one
+#### Scenario: A legacy revision is not read beside the store-agnostic one
 
-- GIVEN a file at the named address carrying `memorycard_revision: 5` and `engram_revision: 2`
+- GIVEN a file at the named address carrying `source: memorycard`, `source_revision: 5` and `engram_revision: 2`
 - WHEN an operator reconciles that address by name
 - THEN the precedence entry records revision 5
 
-#### Scenario: A malformed memorycard revision is not rescued by an Engram one
+#### Scenario: A malformed revision is not rescued by a legacy one
 
-- GIVEN a file at the named address carrying `memorycard_revision: x` and `engram_revision: 2`
+- GIVEN a file at the named address carrying `source: memorycard`, `source_revision: x` and `engram_revision: 2`
 - WHEN an operator reconciles that address by name
 - THEN the adoption is refused and the precedence store is left unchanged
 
@@ -934,8 +789,8 @@ already has a page (its lineage names it, as the memorycard `import_map` and
 the content hash say) SHALL NOT be promoted a second time: `sync`,
 `sync --dry-run` and an explicit promote decide it through one walk over the
 memories of the source, and the sync skips it, counts it as bridged and does
-not fail on it. A page written by a release that promoted from Engram, which
-carries `engram_id`, is one of those pages.
+not fail on it. A page that carries only the retired keys (`engram_id`,
+`memorycard_id`) names no memory, so it bridges none.
 
 (Previously: the walk served Engram observations and memorycard memories with
 a decision of its own for each, and an Engram observation whose memorycard
@@ -973,10 +828,10 @@ untouched.)
 - WHEN sync runs for P
 - THEN it is promoted
 
-#### Scenario: A memory bridged to an Engram page is skipped as bridged
+#### Scenario: A memory bridged to the page of another part of its observation is skipped as bridged
 
-- GIVEN an eligible memory for project P imported from an Engram observation
-  that already has a page, including a page that carries `engram_id`
+- GIVEN an eligible memory for project P imported as one part of an observation
+  whose other part already has a page
 - WHEN sync runs for P, with or without `--dry-run`
 - THEN no page is written or planned for the memory, it is counted as
   bridged, and the run exits 0

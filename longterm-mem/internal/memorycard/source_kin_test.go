@@ -96,8 +96,6 @@ gamma delta', 'active', ''),
 	return path
 }
 
-func engramObservation(id string) memory.Identity { return memory.Identity{Source: "engram", ID: id} }
-
 func memoryOf(t *testing.T, source *Source, id string) memory.Memory {
 	t.Helper()
 	m, ok, err := source.ByID(id)
@@ -109,12 +107,12 @@ func memoryOf(t *testing.T, source *Source, id string) memory.Memory {
 
 // The other parts of an observation are lineage of each other, so a page re-keyed to one part's memory still
 // bridges the others; a part whose row names a memory that is gone names nothing.
-func TestSourceLineageNamesTheObservationAndTheOtherMemoriesImportedFromIt(t *testing.T) {
+func TestSourceLineageNamesTheOtherMemoriesImportedFromTheSameObservationAndNoObservation(t *testing.T) {
 	source := openSource(t, kinFixture(t))
 
 	for id, want := range map[string][]memory.Identity{
-		"1": {engramObservation("402"), card("6")},
-		"6": {engramObservation("402"), card("1")},
+		"1": {card("6")},
+		"6": {card("1")},
 		"2": nil,
 	} {
 		if got := memoryOf(t, source, id).Lineage; !reflect.DeepEqual(got, want) {
@@ -124,42 +122,42 @@ func TestSourceLineageNamesTheObservationAndTheOtherMemoriesImportedFromIt(t *te
 }
 
 // A memory with no import_map row holds the content of the observations whose text, rebuilt from their imported
-// parts, is its own, and has as mirrors every memory of those observations, all their parts, and the observations.
+// parts, is its own, and has as mirrors every memory of those observations, all their parts, and no observation.
 // The stored content hashes of the imported memories say nothing: here they are empty or wrong.
 func TestSourceMirrorsAreEveryMemoryOfTheObservationsWhoseRebuiltTextTheyHold(t *testing.T) {
 	source := openSource(t, kinFixture(t))
 
 	for id, want := range map[string][]memory.Identity{
 		// An observation imported as several parts, whose whole text no part's hash equals (b), with every part (c).
-		"8": {card("1"), card("6"), engramObservation("402")},
+		"8": {card("1"), card("6")},
 		// An imported memory with a wrong hash (a), whatever the status of the imported memory, and not another
 		// project's, nor a memory mapped by another source.
-		"12": {card("9"), engramObservation("500"), card("15"), engramObservation("502")},
+		"12": {card("9"), card("15")},
 		// A part cut inside a word is joined with nothing.
-		"18": {card("16"), card("17"), engramObservation("600")},
+		"18": {card("16"), card("17")},
 		// A memory that holds the content of no imported observation has no mirror.
 		"13": nil,
 		// Parts split at a blank line and in the middle of a word in one observation.
-		"22": {card("19"), card("20"), card("21"), engramObservation("700")},
+		"22": {card("19"), card("20"), card("21")},
 		// A memory copied from one part, title as stored, is a mirror of its observation, whole.
-		"23": {card("1"), card("6"), engramObservation("402")},
+		"23": {card("1"), card("6")},
 		// The part suffix is stripped when the observation has more than one part row, though only one memory
 		// survives; a single part keeps its own title, "part 1/1" included, so "Solo" is not its text, and the text
 		// of its title is.
-		"25": {card("24"), engramObservation("800")},
+		"25": {card("24")},
 		"27": nil,
-		"31": {card("26"), engramObservation("801")},
+		"31": {card("26")},
 		// A part is found by its text, and so is the part whose stored hash is right.
-		"30": {card("28"), card("29"), engramObservation("510")},
+		"30": {card("28"), card("29")},
 		// A title and a text that only trade characters are not the same text.
 		"51": nil,
 		// Letter case is not a difference: memorycard's content hash folds it, and an import reuses the memory of an
 		// equal hash, so an observation can be stored in the case of another memory's text.
-		"53": {card("52"), engramObservation("901")},
+		"53": {card("52")},
 		// The union: an observation found by an equal text and another found by the same text cut in a word.
-		"43": {card("40"), engramObservation("530"), card("41"), card("42"), engramObservation("531")},
+		"43": {card("40"), card("41"), card("42")},
 		// Two parts that name one memory are both in the rebuilt text.
-		"46": {card("45"), engramObservation("540")},
+		"46": {card("45")},
 		"3":  nil,
 	} {
 		m := memoryOf(t, source, id)

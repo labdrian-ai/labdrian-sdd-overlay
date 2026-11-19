@@ -1,0 +1,474 @@
+{
+  "kind": "sweep",
+  "base": "87f26495f03d65b7423a2d8d787eb56f36cf75d0",
+  "head": "01bffae764d2d6ab2b4179a320dcd067772b3b21",
+  "diff_sha256": "d8fb134857022d09036e47fc4c786acbf6472f616213aabbfe6d3c4a00388982",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [
+      "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go",
+      "longterm-mem/cmd/longterm-mem/migrate_card_pages_backup_durable_test.go",
+      "longterm-mem/cmd/longterm-mem/migrate_card_pages_backup_more_test.go",
+      "longterm-mem/cmd/longterm-mem/migrate_card_pages_backup_sync_test.go",
+      "longterm-mem/cmd/longterm-mem/migrate_card_pages_backup_test.go",
+      "longterm-mem/cmd/longterm-mem/migrate_card_pages_halfmigrated_test.go",
+      "longterm-mem/cmd/longterm-mem/migrate_card_pages_scan_test.go",
+      "longterm-mem/cmd/longterm-mem/migrate_card_pages_test.go"
+    ],
+    "removed_names": [
+      {
+        "name": "--apply",
+        "hits": [
+          "longterm-mem/README.md",
+          "longterm-mem/docs/promote-from-memorycard.md",
+          "longterm-mem/docs/sync-from-memorycard.md",
+          "odd/review-results/phase9-store-agnostic-promotion/1ed8ff9505ef-3.json",
+          "odd/review-results/phase9-store-agnostic-promotion/1ed8ff9505ef-5.polisher.json",
+          "odd/review-results/phase9-store-agnostic-promotion/736cbfe3ae3d-3.json",
+          "odd/review-results/phase9-store-agnostic-promotion/82835583f327-3.json",
+          "odd/review-results/phase9-store-agnostic-promotion/9901b9666169-3.json",
+          "odd/review-results/phase9-store-agnostic-promotion/9f40b3944465-5.polisher.json",
+          "odd/review-results/phase9-store-agnostic-promotion/a050d4a0aa93-3.json",
+          "odd/review-results/phase9-store-agnostic-promotion/a6027b3880ae-4.polisher.json",
+          "odd/review-results/phase9-store-agnostic-promotion/abc01e1d19cc-3.json",
+          "odd/review-results/phase9-store-agnostic-promotion/e5681a22c092-2.json",
+          "odd/tasks/phase9-c22fu-memorycard-compat.md",
+          "odd/tasks/phase9-store-agnostic-promotion.md",
+          "openspec/specs/longterm-mem-promotion/spec.md",
+          "scripts/rehearse-card-page-migration.sh"
+        ]
+      },
+      {
+        "name": "--json",
+        "hits": [
+          "CHANGELOG.md",
+          "README.md",
+          "docs/architecture/adr-c13-inception-role-chain.md",
+          "docs/architecture/adr-c23-m10-skill-candidates.md",
+          "docs/architecture/adr-c23-m13-memory-metrics-handoff.md",
+          "docs/architecture/role-design/per-role-prototyper.md",
+          "engine/cmd/bind_golden_cases_test.go",
+          "engine/cmd/projection_hook_test.go",
+          "engine/cmd/review_receipt_golden_test.go",
+          "engine/cmd/skills_candidates_test.go",
+          "engine/cmd/skills_flags.go",
+          "engine/cmd/testdata/bind-golden/verbs-reject-bad-command-lines.golden",
+          "engine/cmd/testdata/review-receipt-golden/hook-captures-a-legacy-receipt.golden",
+          "engine/cmd/usage.go",
+          "engine/cmd/workflow_bind_test.go",
+          "longterm-mem/README.md",
+          "longterm-mem/cmd/longterm-mem/capture_streams_test.go",
+          "longterm-mem/cmd/longterm-mem/cmd_doctor.go",
+          "longterm-mem/cmd/longterm-mem/cmd_query.go",
+          "longterm-mem/cmd/longterm-mem/cmd_status.go",
+          "longterm-mem/cmd/longterm-mem/doctor_addressmap_test.go",
+          "longterm-mem/cmd/longterm-mem/doctor_eligibility_test.go",
+          "longterm-mem/cmd/longterm-mem/doctor_sidecar_test.go",
+          "longterm-mem/cmd/longterm-mem/embedding_index_golden_test.go",
+          "longterm-mem/cmd/longterm-mem/embedding_ops_golden_test.go",
+          "longterm-mem/cmd/longterm-mem/exit_codes.go",
+          "longterm-mem/cmd/longterm-mem/query_goal_test.go",
+          "longterm-mem/cmd/longterm-mem/query_golden_test.go",
+          "longterm-mem/cmd/longterm-mem/state_dir_unresolved_test.go",
+          "longterm-mem/cmd/longterm-mem/testdata/query-golden/json-a-natural-question-is-widened.golden",
+          "longterm-mem/cmd/longterm-mem/testdata/query-golden/json-a-needle-in-a-long-multibyte-body.golden",
+          "longterm-mem/cmd/longterm-mem/testdata/query-golden/json-a-row-without-a-sync-id.golden",
+          "longterm-mem/cmd/longterm-mem/testdata/query-golden/json-a-superseded-decision-says-so.golden",
+          "longterm-mem/cmd/longterm-mem/testdata/query-golden/json-an-undecided-conflict-is-not-silence.golden",
+          "longterm-mem/cmd/longterm-mem/testdata/query-golden/json-another-project-sees-only-its-own.golden",
+          "longterm-mem/cmd/longterm-mem/testdata/query-golden/json-any-token-when-all-find-nothing.golden",
+          "longterm-mem/cmd/longterm-mem/testdata/query-golden/json-nothing-matches.golden",
+          "longterm-mem/cmd/longterm-mem/testdata/query-golden/json-one-row-of-a-multibyte-body.golden",
+          "longterm-mem/cmd/longterm-mem/testdata/query-golden/json-only-stopwords-still-search.golden",
+          "longterm-mem/cmd/longterm-mem/testdata/query-golden/json-types-left-out.golden",
+          "longterm-mem/cmd/longterm-mem/testdata/retrieval-golden/embedding-03-query-reads-both-engram-sources-once-an-index-exists.golden",
+          "longterm-mem/cmd/longterm-mem/testdata/retrieval-golden/embedding-05-an-edited-row-and-a-deleted-one-are-not-served-from-the-index.golden",
+          "longterm-mem/cmd/longterm-mem/testdata/retrieval-golden/embedding-06-one-new-row-is-folded-into-the-index-before-the-query-answers.golden",
+          "longterm-mem/cmd/longterm-mem/testdata/retrieval-golden/embedding-07-a-top-up-the-backend-cannot-serve-is-named-beside-the-answer.golden",
+          "longterm-mem/cmd/longterm-mem/testdata/retrieval-golden/embedding-08-a-backend-without-the-model-is-named-apart-from-an-unreachable-one.golden",
+          "longterm-mem/cmd/longterm-mem/testdata/retrieval-golden/embedding-09-more-rows-than-a-top-up-takes-leave-the-index-incomplete.golden",
+          "longterm-mem/cmd/longterm-mem/testdata/retrieval-golden/embedding-11-a-corrupted-manifest-is-reported-and-the-query-falls-back.golden",
+          "longterm-mem/cmd/longterm-mem/testdata/retrieval-golden/embedding-16-and-the-golden-project-is-untouched-by-it.golden",
+          "longterm-mem/cmd/longterm-mem/testdata/retrieval-golden/embedding-ops-01-no-index-was-built.golden",
+          "longterm-mem/cmd/longterm-mem/testdata/retrieval-golden/embedding-ops-02-a-complete-index.golden",
+          "longterm-mem/cmd/longterm-mem/testdata/retrieval-golden/embedding-ops-03-an-index-behind-the-corpus-by-two-rows.golden",
+          "longterm-mem/cmd/longterm-mem/testdata/retrieval-golden/embedding-ops-04-an-index-as-long-as-the-corpus-but-not-the-same-rows.golden",
+          "longterm-mem/cmd/longterm-mem/testdata/retrieval-golden/embedding-ops-05-a-manifest-that-is-not-json.golden",
+          "longterm-mem/cmd/longterm-mem/testdata/retrieval-golden/embedding-ops-06-a-manifest-without-its-vectors.golden",
+          "longterm-mem/cmd/longterm-mem/testdata/retrieval-golden/embedding-ops-07-a-manifest-edited-after-it-was-written.golden",
+          "longterm-mem/cmd/longterm-mem/testdata/retrieval-golden/embedding-ops-08-an-index-directory-that-is-a-file.golden",
+          "longterm-mem/cmd/longterm-mem/testdata/retrieval-golden/embedding-ops-09-an-index-of-another-project-only.golden",
+          "longterm-mem/cmd/longterm-mem/testdata/retrieval-golden/embedding-ops-10-a-complete-index-and-a-backend-without-the-model.golden",
+          "longterm-mem/cmd/longterm-mem/testdata/retrieval-golden/embedding-ops-11-a-complete-index-and-a-backend-that-fails.golden",
+          "longterm-mem/cmd/longterm-mem/testdata/retrieval-golden/embedding-ops-12-no-index-and-a-backend-without-the-model.golden",
+          "longterm-mem/cmd/longterm-mem/testdata/retrieval-golden/embedding-ops-13-a-complete-index-and-an-engram-database-that-is-not-there.golden",
+          "longterm-mem/cmd/longterm-mem/testdata/retrieval-golden/embedding-ops-14-a-state-directory-nobody-can-name.golden",
+          "longterm-mem/cmd/longterm-mem/testdata/vault-registry-golden/02-status-json.golden",
+          "longterm-mem/cmd/longterm-mem/vault_registry_golden_test.go",
+          "longterm-mem/docs/feasibility.md",
+          "odd/review-receipts/consolidation-phase9/review-96d21a71fb9671a8.review-state.json",
+          "odd/tasks/consolidation-phase9.md",
+          "odd/tasks/own-rdd.md",
+          "odd/tasks/phase9-store-agnostic-promotion.md",
+          "odd/tasks/standalone-platform-roadmap.md",
+          "odd/tasks/telemetry-cost-baseline.md",
+          "openspec/changes/archive/2026-09-02-longterm-mem/apply-progress.md",
+          "openspec/changes/archive/2026-09-02-longterm-mem/tasks.md",
+          "openspec/changes/archive/2026-09-02-longterm-mem/verify-report.md",
+          "openspec/changes/archive/2026-09-09-longterm-mem-promotion-scoping/archive-report.md",
+          "openspec/changes/archive/2026-09-10-longterm-mem-sync-triggers/archive-report.md",
+          "openspec/changes/archive/2026-09-11-pi-runtime-target/archive-report.md",
+          "openspec/changes/archive/2026-09-21-procedural-memory-lifecycle/verify-report.md",
+          "openspec/decisions/retrieval-cost.md",
+          "openspec/project/roadmap.md",
+          "scripts/rehearse-card-page-migration.sh",
+          "skills/_shared/review-ledger-contract.md",
+          "skills/_shared/sdd-orchestrator-workflow.md",
+          "skills/_shared/sdd-phase-common.md",
+          "skills/_shared/sdd-status-contract.md",
+          "skills/chained-pr/references/chaining-details.md",
+          "skills/cognitive-doc-design/SKILL.md",
+          "skills/comment-writer/SKILL.md",
+          "skills/issue-creation/SKILL.md",
+          "telemetry/README.md",
+          "telemetry/cmd/telemetry/README.md",
+          "telemetry/cmd/telemetry/main.go",
+          "telemetry/cmd/telemetry/main_test.go",
+          "tools/entry-contract-validator/main.go"
+        ]
+      },
+      {
+        "name": "--vault",
+        "hits": [
+          "longterm-mem/README.md",
+          "longterm-mem/cmd/longterm-mem/cmd_doctor.go",
+          "longterm-mem/cmd/longterm-mem/cmd_index.go",
+          "longterm-mem/cmd/longterm-mem/cmd_promote.go",
+          "longterm-mem/cmd/longterm-mem/cmd_query.go",
+          "longterm-mem/cmd/longterm-mem/cmd_status.go",
+          "longterm-mem/cmd/longterm-mem/cmd_sync.go",
+          "longterm-mem/cmd/longterm-mem/testdata/retrieval-golden/index-09-a-project-no-vault-is-named-for.golden",
+          "longterm-mem/cmd/longterm-mem/testdata/vault-registry-golden/17-status-with-the-vault-flag.golden",
+          "longterm-mem/cmd/longterm-mem/testdata/vault-registry-golden/18-sync-with-the-vault-flag.golden",
+          "longterm-mem/cmd/longterm-mem/vault_index_golden_test.go",
+          "longterm-mem/cmd/longterm-mem/vault_registry.go",
+          "longterm-mem/cmd/longterm-mem/vault_registry_golden_test.go",
+          "longterm-mem/docs/bridge-probe.md",
+          "longterm-mem/docs/feasibility.md",
+          "longterm-mem/docs/promote-from-memorycard.md",
+          "longterm-mem/docs/sync-from-memorycard.md",
+          "longterm-mem/internal/vaultreg/registry.go",
+          "odd/review-receipts/consolidation-phase9/review-63ebfacf07d9e333.review-state.json",
+          "odd/review-receipts/phase9-c25-review-hunt/review-63ebfacf07d9e333.review-state.json",
+          "odd/review-receipts/phase9-c26-review-contract/review-63ebfacf07d9e333.review-state.json",
+          "odd/review-receipts/phase9-c27-review-recall/review-63ebfacf07d9e333.review-state.json",
+          "odd/tasks/consolidation-phase9.md",
+          "odd/tasks/phase9-c22-knowledge-ingestion.md",
+          "odd/tasks/phase9-c22fu-memorycard-compat.md",
+          "odd/tasks/phase9-store-agnostic-promotion.md",
+          "openspec/changes/archive/2026-09-02-longterm-mem/apply-progress.md",
+          "openspec/changes/archive/2026-09-02-longterm-mem/design.md",
+          "openspec/changes/archive/2026-09-02-longterm-mem/tasks.md",
+          "scripts/rehearse-card-page-migration.sh"
+        ]
+      },
+      {
+        "name": "BackUp",
+        "hits": [
+          "longterm-mem/internal/promote/migrate_cards.go",
+          "longterm-mem/internal/promote/migrate_cards_safety_test.go",
+          "odd/review-results/phase9-store-agnostic-promotion/2d0a2a2336cd-2.json",
+          "odd/review-results/phase9-store-agnostic-promotion/2d0a2a2336cd-3.json",
+          "odd/review-results/phase9-store-agnostic-promotion/3a7a9fc6fb93-1.polisher.json",
+          "odd/review-results/phase9-store-agnostic-promotion/4887cfb42391-5.polisher.json",
+          "odd/review-results/phase9-store-agnostic-promotion/5764ab28b242-3.json",
+          "odd/review-results/phase9-store-agnostic-promotion/5764ab28b242-4.polisher.json",
+          "odd/review-results/phase9-store-agnostic-promotion/67b95a4edffe-4.polisher.json",
+          "odd/review-results/phase9-store-agnostic-promotion/886c54489ba4-1.polisher.json",
+          "odd/review-results/phase9-store-agnostic-promotion/886c54489ba4-2.json",
+          "odd/review-results/phase9-store-agnostic-promotion/886c54489ba4-3.json",
+          "odd/review-results/phase9-store-agnostic-promotion/9f40b3944465-5.polisher.json",
+          "odd/tasks/phase9-store-agnostic-promotion.md"
+        ]
+      },
+      {
+        "name": "TestALegacyCardPageUpdatedInPlaceBecomesAStoreAgnosticPage",
+        "hits": [
+          "odd/tasks/phase9-store-agnostic-promotion.md"
+        ]
+      },
+      {
+        "name": "TestALegacyCardPageWhoseStatusAlreadyMatchesIsNotAPatchTarget",
+        "hits": [
+          "odd/review-results/phase9-store-agnostic-promotion/f99a4c81e656-5.polisher.json",
+          "odd/tasks/phase9-store-agnostic-promotion.md"
+        ]
+      },
+      {
+        "name": "TestALegacyCardPageWhoseStatusIsPatchedKeepsItsIdentityLines",
+        "hits": [
+          "odd/review-results/phase9-store-agnostic-promotion/f99a4c81e656-4.sweeper.json",
+          "odd/review-results/phase9-store-agnostic-promotion/f99a4c81e656-5.polisher.json",
+          "odd/tasks/phase9-store-agnostic-promotion.md"
+        ]
+      },
+      {
+        "name": "TestMigrateCardPages_ApplyGivesEveryLegacyPageTheStoreAgnosticKeysAndNothingElse",
+        "hits": [
+          "odd/tasks/phase9-store-agnostic-promotion.md"
+        ]
+      },
+      {
+        "name": "TestToleratedDirectorySyncError",
+        "hits": [
+          "odd/tasks/phase9-store-agnostic-promotion.md"
+        ]
+      },
+      {
+        "name": "TestVaultBackup_AFailedCopyLeavesNoPartialDirectory",
+        "hits": [
+          "odd/review-results/phase9-store-agnostic-promotion/886c54489ba4-1.polisher.json"
+        ]
+      },
+      {
+        "name": "TestVaultBackup_TwoBackupsAtOneInstantDoNotCollide",
+        "hits": [
+          "odd/review-results/phase9-store-agnostic-promotion/886c54489ba4-1.polisher.json"
+        ]
+      },
+      {
+        "name": "changedPaths",
+        "hits": [
+          "engine/review/app/bind_test.go",
+          "engine/review/app/check_exempt_test.go",
+          "engine/review/app/check_test.go",
+          "engine/review/app/fakes_test.go",
+          "engine/review/app/launch.go",
+          "engine/review/app/lenses_test.go",
+          "engine/review/app/needs_test.go",
+          "engine/review/app/verify_test.go",
+          "engine/review/candidate_test.go",
+          "engine/review/exempt_stored_test.go",
+          "engine/review/fixtures_test.go",
+          "engine/review/stored_test.go",
+          "odd/review-receipts/phase9-c26-review-contract/review-443a922d0b6aa6fa.review-state.json",
+          "odd/review-results/phase9-c26-review-contract/d26e9c62194d-4.json",
+          "odd/review-results/phase9-c26-review-contract/d26e9c62194d-5.polisher.json",
+          "odd/review-results/phase9-c26-review-contract/d26e9c62194d-6.json",
+          "odd/review-results/phase9-c26-review-contract/d4548feccfab-3.polisher.json",
+          "odd/review-results/phase9-c26-review-contract/d4548feccfab-5.polisher.json",
+          "odd/tasks/phase9-c26-review-contract.md"
+        ]
+      },
+      {
+        "name": "copyInto",
+        "hits": [
+          "odd/review-results/phase9-store-agnostic-promotion/4887cfb42391-5.polisher.json",
+          "odd/review-results/phase9-store-agnostic-promotion/5764ab28b242-2.json",
+          "odd/review-results/phase9-store-agnostic-promotion/5764ab28b242-3.json",
+          "odd/review-results/phase9-store-agnostic-promotion/5764ab28b242-4.polisher.json",
+          "odd/review-results/phase9-store-agnostic-promotion/886c54489ba4-1.polisher.json",
+          "odd/review-results/phase9-store-agnostic-promotion/886c54489ba4-2.json",
+          "odd/review-results/phase9-store-agnostic-promotion/886c54489ba4-3.json"
+        ]
+      },
+      {
+        "name": "mustJSON",
+        "hits": [
+          "engine/settings/settingsfile/approve_guard_test.go",
+          "engine/settings/settingsfile/builder_guard_test.go",
+          "engine/settings/settingsfile/projection_edge_test.go",
+          "engine/settings/settingsfile/projection_test.go",
+          "engine/settings/settingsfile/review_stop_test.go"
+        ]
+      },
+      {
+        "name": "newDirectory",
+        "hits": [
+          "odd/review-results/phase9-store-agnostic-promotion/4887cfb42391-5.polisher.json",
+          "odd/review-results/phase9-store-agnostic-promotion/5764ab28b242-4.polisher.json",
+          "odd/review-results/phase9-store-agnostic-promotion/886c54489ba4-1.polisher.json",
+          "odd/review-results/phase9-store-agnostic-promotion/886c54489ba4-2.json",
+          "odd/review-results/phase9-store-agnostic-promotion/886c54489ba4-3.json"
+        ]
+      },
+      {
+        "name": "printNoProjectNote",
+        "hits": [
+          "odd/review-results/phase9-store-agnostic-promotion/b4b63a2ec966-3.json",
+          "odd/review-results/phase9-store-agnostic-promotion/d58264aee52f-2.json",
+          "odd/review-results/phase9-store-agnostic-promotion/d58264aee52f-4.polisher.json",
+          "odd/tasks/phase9-store-agnostic-promotion.md"
+        ]
+      },
+      {
+        "name": "readWithMode",
+        "hits": [
+          "odd/review-results/phase9-store-agnostic-promotion/4887cfb42391-3.json",
+          "odd/review-results/phase9-store-agnostic-promotion/4887cfb42391-4.sweeper.json",
+          "odd/review-results/phase9-store-agnostic-promotion/4887cfb42391-5.polisher.json",
+          "odd/tasks/phase9-store-agnostic-promotion.md"
+        ]
+      },
+      {
+        "name": "refusalReason",
+        "hits": [
+          "odd/review-results/phase9-store-agnostic-promotion/9f40b3944465-5.polisher.json"
+        ]
+      },
+      {
+        "name": "reportMigration",
+        "hits": [
+          "odd/review-results/phase9-store-agnostic-promotion/1ed8ff9505ef-2.json",
+          "odd/review-results/phase9-store-agnostic-promotion/2d0a2a2336cd-3.json",
+          "odd/review-results/phase9-store-agnostic-promotion/2d0a2a2336cd-4.polisher.json",
+          "odd/review-results/phase9-store-agnostic-promotion/67b95a4edffe-5.sweeper.json",
+          "odd/review-results/phase9-store-agnostic-promotion/9f40b3944465-5.polisher.json",
+          "odd/review-results/phase9-store-agnostic-promotion/b4b63a2ec966-2.json",
+          "odd/review-results/phase9-store-agnostic-promotion/d58264aee52f-4.polisher.json"
+        ]
+      },
+      {
+        "name": "runMigrate",
+        "hits": [
+          "odd/review-results/phase9-store-agnostic-promotion/a6027b3880ae-4.polisher.json"
+        ]
+      },
+      {
+        "name": "sha",
+        "hits": [
+          ".github/workflows/ci.yml",
+          "CHANGELOG.md",
+          "README.md",
+          "agents/reviewer.md",
+          "agents/sweeper.md",
+          "baseline.md",
+          "bin/lib/sync_check.sh",
+          "bin/lib/usage.sh",
+          "codex/agents/reviewer.toml",
+          "codex/agents/sweeper.toml",
+          "docs/architecture/role-design/per-role-reviewer.md",
+          "engine/cmd/state_stores_test.go",
+          "engine/cmd/usage.go",
+          "engine/pipkg/comparison.go",
+          "engine/review/app/exempt.go",
+          "engine/review/app/recordrole_test.go",
+          "engine/review/app/sweep_test.go",
+          "engine/review/rolerecords.go",
+          "engine/shaper/fsadapter/clearance_store_test.go",
+          "engine/skills/actuals_instrumentation_d2_anchor_test.go",
+          "engine/skills/procedural_candidate_contract_test.go",
+          "engine/skills/project_lock_test.go",
+          "engine/skills/role_agents_artifact_test.go",
+          "longterm-mem/cmd/longterm-mem/cmd_stale.go",
+          "longterm-mem/internal/ingest/chunk_test.go",
+          "longterm-mem/internal/ingest/extract_test.go",
+          "odd/review-receipts/consolidation-phase9/review-be19c0105794e1a9.review-state.json",
+          "odd/review-results/README.md",
+          "odd/review-results/own-rdd/64e595bd045a-1.json",
+          "odd/review-results/own-rdd/9ec55664043a-1.json",
+          "odd/review-results/own-rdd/c07b6b284095-1.json",
+          "odd/review-results/own-rdd/c07b6b284095-2.json",
+          "odd/review-results/phase9-c26-review-contract/939f236e3638-2.exempt.json",
+          "odd/review-results/phase9-c27-review-recall/1498a9b0e6ca-2.exempt.json",
+          "odd/review-results/phase9-c28-review-precision/7ef8c516c613-2.json",
+          "odd/review-results/phase9-store-agnostic-promotion/49242be4889c-2.json",
+          "odd/review-results/phase9-store-agnostic-promotion/49242be4889c-3.json",
+          "odd/tasks/consolidation-phase9.md",
+          "odd/tasks/own-rdd.md",
+          "odd/tasks/phase9-c13-inception-family.md",
+          "odd/tasks/phase9-c28-review-precision.md",
+          "odd/tasks/role-agents-memorycard.md",
+          "openspec/changes/archive/2026-07-10-skill-external-provenance/design.md",
+          "openspec/changes/archive/2026-07-10-skill-external-provenance/proposal.md",
+          "openspec/changes/archive/2026-07-10-skill-external-provenance/specs/spec.md",
+          "openspec/changes/archive/2026-07-10-skill-external-provenance/tasks.md",
+          "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/apply-progress.md",
+          "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/design.md",
+          "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/verify-report.md",
+          "openspec/changes/archive/2026-09-07-union-retrieval/design.md",
+          "openspec/changes/archive/2026-09-07-union-retrieval/tasks.md",
+          "openspec/changes/archive/2026-09-11-pi-runtime-target/apply-progress.md",
+          "openspec/changes/archive/2026-09-13-pi-package-hardening/apply-progress.md",
+          "openspec/changes/archive/2026-09-13-pi-package-hardening/design.md",
+          "openspec/changes/archive/2026-09-13-pi-package-hardening/review-receipts/review-96dcb185b95c4cbd.review-state.json",
+          "openspec/changes/archive/2026-09-13-pi-package-hardening/tasks.md",
+          "openspec/changes/archive/2026-09-21-procedural-memory-lifecycle/design.md",
+          "openspec/specs/skill-lifecycle/spec.md",
+          "pi/agents/reviewer.md",
+          "pi/agents/sweeper.md",
+          "roles/reviewer/body.md",
+          "roles/sweeper/body.md",
+          "skills/_shared/procedural-candidate-detection.md",
+          "tools/archive-anchor-gate/gate_test.go",
+          "tools/deterministic-check-runner/main_test.go"
+        ]
+      },
+      {
+        "name": "syncDirectories",
+        "hits": [
+          "odd/review-results/phase9-store-agnostic-promotion/4887cfb42391-5.polisher.json",
+          "odd/review-results/phase9-store-agnostic-promotion/5764ab28b242-2.json",
+          "odd/review-results/phase9-store-agnostic-promotion/5764ab28b242-3.json",
+          "odd/review-results/phase9-store-agnostic-promotion/5764ab28b242-4.polisher.json"
+        ]
+      },
+      {
+        "name": "syncDirectory",
+        "hits": [
+          "engine/runtime/ownership/fsstore/fsstore.go",
+          "engine/runtime/ownership/fsstore/sync_internal_test.go",
+          "odd/review-results/phase9-store-agnostic-promotion/4887cfb42391-2.json",
+          "odd/review-results/phase9-store-agnostic-promotion/4887cfb42391-3.json",
+          "odd/review-results/phase9-store-agnostic-promotion/4887cfb42391-5.polisher.json",
+          "odd/review-results/phase9-store-agnostic-promotion/9f40b3944465-2.json",
+          "odd/review-results/phase9-store-agnostic-promotion/9f40b3944465-5.polisher.json",
+          "odd/tasks/phase9-store-agnostic-promotion.md"
+        ]
+      },
+      {
+        "name": "toleratedDirectorySyncError",
+        "hits": [
+          "odd/review-results/phase9-store-agnostic-promotion/9f40b3944465-2.json",
+          "odd/review-results/phase9-store-agnostic-promotion/9f40b3944465-3.json",
+          "odd/review-results/phase9-store-agnostic-promotion/9f40b3944465-5.polisher.json",
+          "odd/tasks/phase9-store-agnostic-promotion.md"
+        ]
+      },
+      {
+        "name": "vaultBackup",
+        "hits": [
+          "odd/review-results/phase9-store-agnostic-promotion/2d0a2a2336cd-2.json",
+          "odd/review-results/phase9-store-agnostic-promotion/2d0a2a2336cd-3.json",
+          "odd/review-results/phase9-store-agnostic-promotion/3a7a9fc6fb93-1.polisher.json",
+          "odd/review-results/phase9-store-agnostic-promotion/5764ab28b242-4.polisher.json",
+          "odd/review-results/phase9-store-agnostic-promotion/886c54489ba4-1.polisher.json",
+          "odd/tasks/phase9-store-agnostic-promotion.md"
+        ]
+      }
+    ]
+  },
+  "t2": [
+    {
+      "tool": "deadcode",
+      "module": "longterm-mem",
+      "new": [
+        "cmd/longterm-mem/page_keys_test.go: unreachable func: cardPageMemory",
+        "cmd/longterm-mem/page_keys_test.go: unreachable func: writeCardPage"
+      ]
+    },
+    {
+      "tool": "staticcheck",
+      "module": "longterm-mem",
+      "new": [
+        "cmd/longterm-mem/page_keys_test.go: func cardPageMemory is unused (U1000)",
+        "cmd/longterm-mem/page_keys_test.go: func writeCardPage is unused (U1000)"
+      ]
+    }
+  ],
+  "t3": [],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

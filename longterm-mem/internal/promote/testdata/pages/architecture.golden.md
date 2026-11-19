@@ -13,10 +13,10 @@ status: developing
 related:
   - "[[c-000099|Other Page]]"
 sources: []
-engram_id: 200
-engram_sync_id: sync-200
-engram_type: architecture
-engram_revision: 2
+source: memorycard
+source_id: 200
+source_type: architecture
+source_revision: 2
 project: labdrian-sdd-overlay
 ---
 # Read-Only Store
@@ -24,4 +24,4 @@ project: labdrian-sdd-overlay
 The store opens Engram read-only.
 
 ---
-Promoted from Engram observation 200, revision 2.
+Promoted from memorycard memory 200, revision 2.

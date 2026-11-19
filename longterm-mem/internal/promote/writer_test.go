@@ -480,74 +480,6 @@ func TestWriter_Promote_CreateResumesAfterAnUnpairedFingerprint(t *testing.T) {
 	}
 }
 
-// TestWriter_Promote_AdoptsAnUnrecordedOwnPageAndRepairsRegistration: the
-// field state the reversed create order prevents but cannot retroactively
-// fix -- a vault already wedged by the old order, where the page and its
-// address map survived a kill but the precedence sidecar, the catalog and
-// the log did not. Before this, every subsequent run reported
-// skipped_local_edit and repaired nothing, forever. The page's own content
-// proves it is ours, so it is adopted back into the precedence store and
-// its registration repaired.
-func TestWriter_Promote_AdoptsAnUnrecordedOwnPageAndRepairsRegistration(t *testing.T) {
-	vaultRoot := t.TempDir()
-	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
-
-	w := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Clock: clock, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress)}
-	obs := memory.Observation{ID: 410, Type: "decision", Title: "Wedged In The Field", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/writer-fixture"}
-	first, err := w.Promote(t.Context(), obsMemory(obs), false)
-	if err != nil {
-		t.Fatalf("Promote (first): %v", err)
-	}
-
-	// The old order's crash window: the page and .raw/.manifest.json
-	// survived; the sidecar, the catalog and the log never landed. The
-	// wedged Writer below is that later process: its repository holds no
-	// sidecar.
-	for _, rel := range []string{vaultlayout.IndexFile, vaultlayout.LogFile} {
-		if err := os.Remove(filepath.Join(vaultRoot, rel)); err != nil {
-			t.Fatalf("simulate the pre-fix crash window (%s): %v", rel, err)
-		}
-	}
-
-	// A later day, so the freshly rendered page differs from the one on
-	// disk in exactly the two volatile stamps EmitPage takes from the time
-	// it is given -- the second-order hazard that makes a byte-equality
-	// reconciliation succeed only on a same-day retry.
-	clock.Set(time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
-	wedged := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: PrecedenceStore{}, Precedence: &memPrecedence{}, Clock: clock, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress)}
-	second, err := wedged.Promote(t.Context(), obsMemory(obs), false)
-	if err != nil {
-		t.Fatalf("Promote (wedged retry): %v", err)
-	}
-	if second.Action.Kind == ActionSkippedLocalEdit {
-		t.Fatalf("Action.Kind = ActionSkippedLocalEdit: a page whose content is byte-identical to our own render (ignoring created:/updated:) is our interrupted write, not a human's edit, and refusing it is a permanent fixed point")
-	}
-	if second.Action.Kind != ActionUpdated {
-		t.Fatalf("Action.Kind = %v, want ActionUpdated", second.Action.Kind)
-	}
-
-	reloaded, err := wedged.Precedence.LoadPrecedence()
-	if err != nil {
-		t.Fatalf("LoadPrecedence: %v", err)
-	}
-	entry, ok := reloaded.Get(first.Page.Address)
-	if !ok {
-		t.Fatalf("sidecar still has no entry for %s: adoption must repair the provenance the crash lost", first.Page.Address)
-	}
-	if entry.BodyHash != hashText(second.Page.Body) || entry.FrontmatterHash != hashText(second.Page.Frontmatter) {
-		t.Fatalf("adopted entry %+v does not fingerprint the page now on disk", entry)
-	}
-	for _, rel := range []string{vaultlayout.IndexFile, vaultlayout.LogFile} {
-		data, err := os.ReadFile(filepath.Join(vaultRoot, rel))
-		if err != nil {
-			t.Fatalf("read %s after adoption: %v", rel, err)
-		}
-		if !strings.Contains(string(data), first.Page.Address) {
-			t.Fatalf("%s does not record %s after adoption; the registration the crash lost must be repaired too, got:\n%s", rel, first.Page.Address, data)
-		}
-	}
-}
-
 // TestWriter_Promote_CreateRegistersIndexAndLog: R-029, task 7.10. A
 // promotion that actually writes a brand-new page must also register it
 // in the vault's master catalog (wiki/index.md) and record the promotion
@@ -701,5 +633,87 @@ func TestWriter_Promote_IneligibleDoesNotRegister(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(vaultRoot, "wiki", "log.md")); !os.IsNotExist(err) {
 		t.Fatalf("wiki/log.md exists after an ineligible observation was promoted (stat err = %v)", err)
+	}
+}
+
+// TestWriter_Promote_ARetryOfAPageAtItsRevisionWritesNothingAndLeavesTheLostRegistration: a memorycard page promotes
+// at most once per revision (pageStyle.rewriteCurrent is false), so a vault whose page survived a kill that lost the
+// precedence sidecar, the catalog and the log is answered ActionAlreadyPromoted, on a later day too, and nothing is
+// written: not the page, not the entry, not the registration. The writer's adoption of an unrecorded own write
+// (isOwnUnrecordedWrite) is reached only by an update to a newer revision; repairing the registration of such a page
+// is `promote reconcile`'s work, and the doctor names the page until then.
+func TestWriter_Promote_ARetryOfAPageAtItsRevisionWritesNothingAndLeavesTheLostRegistration(t *testing.T) {
+	vaultRoot := t.TempDir()
+	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
+
+	firstPrecedence := &memPrecedence{}
+	w := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: PrecedenceStore{}, Precedence: firstPrecedence, Clock: clock, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress)}
+	obs := memory.Observation{ID: 410, Type: "decision", Title: "Wedged In The Field", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/writer-fixture"}
+	first, err := w.Promote(t.Context(), obsMemory(obs), false)
+	if err != nil {
+		t.Fatalf("Promote (first): %v", err)
+	}
+	pagePath := filepath.Join(vaultRoot, first.Page.Path)
+	before, err := os.ReadFile(pagePath)
+	if err != nil {
+		t.Fatalf("read the page: %v", err)
+	}
+	// The state the test starts from: the first promotion registered the page everywhere the crash then loses.
+	if stored, err := firstPrecedence.LoadPrecedence(); err != nil {
+		t.Fatalf("LoadPrecedence (first): %v", err)
+	} else if _, ok := stored.Get(first.Page.Address); !ok {
+		t.Fatalf("the first promotion recorded no entry for %s", first.Page.Address)
+	}
+	for _, rel := range []string{vaultlayout.IndexFile, vaultlayout.LogFile} {
+		if _, err := os.Stat(filepath.Join(vaultRoot, rel)); err != nil {
+			t.Fatalf("the first promotion did not write %s: %v", rel, err)
+		}
+	}
+	// A rewrite with the same bytes would only move the modification time: set it to the past to see it move.
+	past := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
+	if err := os.Chtimes(pagePath, past, past); err != nil {
+		t.Fatalf("Chtimes: %v", err)
+	}
+	for _, rel := range []string{vaultlayout.IndexFile, vaultlayout.LogFile} {
+		if err := os.Remove(filepath.Join(vaultRoot, rel)); err != nil {
+			t.Fatalf("simulate the crash window (%s): %v", rel, err)
+		}
+	}
+
+	clock.Set(time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
+	wedgedPrecedence := &memPrecedence{}
+	wedged := &Writer{Index: indexIn(vaultRoot), Log: logIn(vaultRoot), SyncState: syncStateIn(vaultRoot), Pages: pagesIn(vaultRoot), Store: PrecedenceStore{}, Precedence: wedgedPrecedence, Clock: clock, AddressMap: &memAddressMap{}, Addresses: staticAddress(testAddress)}
+	second, err := wedged.Promote(t.Context(), obsMemory(obs), false)
+	if err != nil {
+		t.Fatalf("Promote (retry): %v", err)
+	}
+
+	if second.Action.Kind != ActionAlreadyPromoted {
+		t.Errorf("Action.Kind = %v, want ActionAlreadyPromoted", second.Action.Kind)
+	}
+	after, err := os.ReadFile(pagePath)
+	if err != nil {
+		t.Fatalf("read the page after the retry: %v", err)
+	}
+	if string(after) != string(before) {
+		t.Errorf("the page content changed by a retry at its own revision")
+	}
+	if info, err := os.Stat(pagePath); err != nil || !info.ModTime().Equal(past) {
+		t.Errorf("the page was rewritten by a retry at its own revision (modification time moved, err %v)", err)
+	}
+	if wedgedPrecedence.saves != 0 {
+		t.Errorf("the retry saved the precedence store %d time(s): only promote reconcile repairs the lost provenance", wedgedPrecedence.saves)
+	}
+	reloaded, err := wedged.Precedence.LoadPrecedence()
+	if err != nil {
+		t.Fatalf("LoadPrecedence: %v", err)
+	}
+	if _, ok := reloaded.Get(first.Page.Address); ok {
+		t.Errorf("the retry recorded an entry for %s: only promote reconcile repairs the lost provenance", first.Page.Address)
+	}
+	for _, rel := range []string{vaultlayout.IndexFile, vaultlayout.LogFile} {
+		if _, err := os.Stat(filepath.Join(vaultRoot, rel)); err == nil {
+			t.Errorf("%s was written again by a retry that wrote nothing", rel)
+		}
 	}
 }

@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "01bffae764d2d6ab2b4179a320dcd067772b3b21",
+    "head": "a280d7b826e3b4350c58afa15df474ede78c3f46",
+    "diff_sha256": "41b9fb81cd0fd26094d31cdecbb20a48f696d5062f4fbb5879f0d0f2ce95e3d3",
+    "paths": [
+      "longterm-mem/internal/promote/migrate_cards.go",
+      "longterm-mem/internal/promote/migrate_cards_recovery_test.go",
+      "longterm-mem/internal/promote/migrate_cards_safety_test.go",
+      "longterm-mem/internal/promote/migrate_cards_test.go",
+      "longterm-mem/internal/promote/migrate_cards_unreadable_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "01bffae764d2d6ab2b4179a320dcd067772b3b21",
+      "head": "a280d7b826e3b4350c58afa15df474ede78c3f46",
+      "diff_sha256": "41b9fb81cd0fd26094d31cdecbb20a48f696d5062f4fbb5879f0d0f2ce95e3d3"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/promote/migrate_cards.go",
+        "longterm-mem/internal/promote/migrate_cards_recovery_test.go",
+        "longterm-mem/internal/promote/migrate_cards_safety_test.go",
+        "longterm-mem/internal/promote/migrate_cards_test.go",
+        "longterm-mem/internal/promote/migrate_cards_unreadable_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/migrate_cards_safety_test.go:1-373",
+        "claim": "The deleted test file also held shared test helpers (fakeBridges, fakeBackup, migWorld, cardOf, pageText, refusalOf, migProject) and the deleted migrate_cards.go held helpers (carriesLegacyKeys, topLevelFields, shapeOf, simpleIdentityLines, rewrittenIdentity, isIdentityKey, identityKeys, legacyIdentityKeys, unreadableCauses). The diff alone cannot show that no remaining non-deleted code or tests in package promote (or callers such as the CLI wiring of CardBridges/MigrationBackup/MigrateCardPages) still reference them; if any does, the package fails to compile. The commit message says nothing calls the migration, but removal of exported symbols like CardBridges, MigrationBackup and RefusalKind is not verified from the diff.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "longterm-mem/internal/promote/migrate_cards.go:1-644",
+          "longterm-mem/internal/promote/migrate_cards_safety_test.go:1-373"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff only deletes five files; no remaining code is visible, so dangling references cannot be confirmed or excluded.",
+      "The deleted code is self-contained in comments and structure, and the claim that migrate-card-pages was retired in the prior commit is plausible; no concrete defect shown."
+    ]
+  }
+}

@@ -59,7 +59,7 @@ func TestCmdDoctor_ReportsAnUnparseableSidecarAsTheOpsGoldenDoes(t *testing.T) {
 	if err != nil {
 		t.Fatalf("resolve the temporary directory: %v", err)
 	}
-	opstest.WritePromotedPage(t, vaultRoot, address, title)
+	writeCardPage(t, vaultRoot, address, title)
 	opstest.WriteAddressMap(t, vaultRoot, map[string]string{"wiki/memory/" + address + ".md": address})
 	opstest.RegisterPage(t, vaultRoot, address, title)
 	sidecar := filepath.Join(vaultRoot, ".raw", ".longterm-mem-manifest.json")

@@ -2,13 +2,13 @@ args: promote --project golden-project --source memorycard --id 1
 exit: 1
 --- stdout ---
 --- stderr ---
-longterm-mem: promote: promote: promoted page c-000500.md carries an unparseable memorycard_revision "x": strconv.Atoi: parsing "x": invalid syntax
+longterm-mem: promote: promote: promoted page c-000500.md carries an unparseable source_revision "x": strconv.Atoi: parsing "x": invalid syntax
 args: sync --project golden-project --source memorycard
 exit: 1
 --- stdout ---
 longterm-mem: sync --source memorycard promoted 1 memory(ies); patched 0 page(s); skipped 0 bridged; left 0 locally edited page(s) alone
 --- stderr ---
-longterm-mem: sync: promote: sync memorycard: memory 1: promote: promoted page c-000500.md carries an unparseable memorycard_revision "x": strconv.Atoi: parsing "x": invalid syntax
+longterm-mem: sync: promote: sync memorycard: memory 1: promote: promoted page c-000500.md carries an unparseable source_revision "x": strconv.Atoi: parsing "x": invalid syntax
 --- vault ---
 === .allocator-counter (-rw-r--r--) ===
 901
@@ -67,8 +67,9 @@ printf 'c-%06d\n' "$n"
 === wiki/memory/c-000500.md (-rw-r--r--) ===
 ---
 address: c-000500
-memorycard_id: 1
-memorycard_revision: x
+source: memorycard
+source_id: 1
+source_revision: x
 project: golden-project
 ---
 A page whose revision is not a number.

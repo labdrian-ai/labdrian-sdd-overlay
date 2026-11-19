@@ -209,6 +209,10 @@ func TestReconcile_RefusesAPageThatIsNotWedged(t *testing.T) {
 		existingPath := writePromotedPage(t, vaultRoot, page)
 		store := PrecedenceStore{}
 		seedPrecedence(store, page)
+		// The entry records the revision the page was promoted at, as `promote reconcile` records it.
+		entry, _ := store.Get(address)
+		entry.PromotedRevision = 2
+		store.Set(address, entry)
 		repo := &memPrecedence{}
 		if err := repo.SavePrecedence(store); err != nil {
 			t.Fatalf("seed sidecar: %v", err)
@@ -238,7 +242,7 @@ func TestReconcile_UnknownAddressFailsCleanly(t *testing.T) {
 }
 
 // TestReconcile_RefusesAPageWithNoUsableRevision: adopting a page whose own
-// engram_revision cannot be read would record another entry with no usable
+// source_revision cannot be read would record another entry with no usable
 // revision -- recreating the exact wedge this command exists to end, while
 // reporting success.
 func TestReconcile_RefusesAPageWithNoUsableRevision(t *testing.T) {
@@ -252,18 +256,18 @@ func TestReconcile_RefusesAPageWithNoUsableRevision(t *testing.T) {
 		t.Fatalf("EmitPage: %v", err)
 	}
 	existingPath := writePromotedPage(t, vaultRoot, page)
-	stripped := blankFrontmatterValues(page.Frontmatter, engramRevisionField)
+	stripped := blankFrontmatterValues(page.Frontmatter, sourceRevisionField)
 	if err := os.WriteFile(existingPath, []byte(stripped+page.Body), 0o644); err != nil {
-		t.Fatalf("strip engram_revision: %v", err)
+		t.Fatalf("strip source_revision: %v", err)
 	}
 
 	if _, err := Reconcile(pagesIn(vaultRoot), "labdrian-sdd-overlay", address, &memPrecedence{}); err == nil {
-		t.Fatalf("Reconcile adopted a page whose engram_revision cannot be read, recreating the wedge it exists to end")
+		t.Fatalf("Reconcile adopted a page whose source_revision cannot be read, recreating the wedge it exists to end")
 	}
 }
 
-// reconcile reads the revision of the identity a page names, whichever store that is (S11): a page that carries
-// memorycard_revision is adopted at that revision, as a page that carries engram_revision is.
+// reconcile reads the revision of the identity a page names (S11): a page that carries source_revision beside the
+// source it names is adopted at that revision.
 func TestReconcile_AdoptsAMemorycardPageAtItsOwnRevision(t *testing.T) {
 	const address = "c-000606"
 	vaultRoot := t.TempDir()
@@ -325,10 +329,9 @@ func TestReconcile_RefusesAMemorycardPageWithNoUsableRevision(t *testing.T) {
 	}
 }
 
-// A page that carries the revision of more than one identity is adopted at the memorycard one; a memorycard revision
-// that is present but malformed is not rescued by an Engram one (the page is refused, not adopted at a guess); a page
-// that carries none of the three is refused.
-func TestReconcile_ReadsTheMemorycardRevisionFirstAndNeverFallsBackFromAMalformedOne(t *testing.T) {
+// A page is adopted at its source_revision alone: a malformed one is refused, not rescued by a legacy key, and a
+// page that carries only legacy keys, or none, is refused (S7).
+func TestReconcile_ReadsTheStoreAgnosticRevisionAloneAndNeverFallsBackToALegacyKey(t *testing.T) {
 	const address = "c-000609"
 	page := func(extra string) string {
 		return "---\ntitle: T\naddress: c-000609\nproject: labdrian-sdd-overlay\nstatus: mature\n" + extra + "---\n"
@@ -338,11 +341,13 @@ func TestReconcile_ReadsTheMemorycardRevisionFirstAndNeverFallsBackFromAMalforme
 		want    int
 		refused bool
 	}{
-		"both present: memorycard wins":                  {"memorycard_id: 9\nmemorycard_revision: 5\nengram_id: 9\nengram_revision: 2\n", 5, false},
-		"memorycard malformed beside a valid engram one": {"memorycard_id: 9\nmemorycard_revision: x\nengram_id: 9\nengram_revision: 2\n", 0, true},
-		"engram alone":                         {"engram_id: 9\nengram_revision: 2\n", 2, false},
-		"source_revision before an engram one": {"source: memorycard\nsource_id: 9\nsource_revision: 4\nengram_id: 9\nengram_revision: 2\n", 4, false},
-		"no revision at all":                   {"memorycard_id: 9\n", 0, true},
+		"the store-agnostic revision":                       {"source: memorycard\nsource_id: 9\nsource_revision: 4\n", 4, false},
+		"a malformed one is refused":                        {"source: memorycard\nsource_id: 9\nsource_revision: x\n", 0, true},
+		"a malformed one is not rescued by a legacy one":    {"source: memorycard\nsource_id: 9\nsource_revision: x\nmemorycard_revision: 5\nengram_revision: 2\n", 0, true},
+		"a legacy revision beside it is not read":           {"source: memorycard\nsource_id: 9\nsource_revision: 4\nmemorycard_revision: 7\nengram_revision: 2\n", 4, false},
+		"the legacy memorycard keys alone give no revision": {"memorycard_id: 9\nmemorycard_revision: 5\n", 0, true},
+		"the legacy engram keys alone give no revision":     {"engram_id: 9\nengram_revision: 2\n", 0, true},
+		"no revision at all":                                {"source: memorycard\nsource_id: 9\n", 0, true},
 	} {
 		t.Run(name, func(t *testing.T) {
 			vaultRoot := t.TempDir()

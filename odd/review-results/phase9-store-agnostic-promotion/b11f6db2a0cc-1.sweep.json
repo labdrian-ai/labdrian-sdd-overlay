@@ -1,0 +1,27 @@
+{
+  "kind": "sweep",
+  "base": "6db6d5849c810d55bd58ae12a5bed2675d5ceaaf",
+  "head": "b11f6db2a0cc9cd4bf618712b9f7d94027ef72a8",
+  "diff_sha256": "1235fb37331afd05eccd78329960cde258990631bd1aaa079aa938df73076052",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": [
+      {
+        "name": "EngramMemory",
+        "hits": [
+          "odd/review-results/phase9-store-agnostic-promotion/979525fc554d-2.json",
+          "odd/review-results/phase9-store-agnostic-promotion/979525fc554d-3.json",
+          "odd/review-results/phase9-store-agnostic-promotion/f2196397e168-2.json",
+          "odd/tasks/phase9-store-agnostic-promotion.md"
+        ]
+      }
+    ]
+  },
+  "t2": [],
+  "t3": [],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

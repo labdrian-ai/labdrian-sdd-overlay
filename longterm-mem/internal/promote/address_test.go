@@ -173,7 +173,7 @@ func TestAllocateAddress_AMissingAllocatorIsRefusedOnlyWhenOneIsNeeded(t *testin
 	})
 	t.Run("a promoted page does not", func(t *testing.T) {
 		vaultRoot := t.TempDir()
-		page := "---\nengram_id: 101\nproject: labdrian-sdd-overlay\naddress: c-000099\n---\n\nBody.\n"
+		page := "---\nsource: memorycard\nsource_id: 101\nproject: labdrian-sdd-overlay\naddress: c-000099\n---\n\nBody.\n"
 		memoryDir := filepath.Join(vaultRoot, "wiki", "memory")
 		if err := os.MkdirAll(memoryDir, 0o755); err != nil {
 			t.Fatalf("mkdir %s: %v", memoryDir, err)
@@ -200,7 +200,7 @@ func TestAllocateAddress_ReuseWithoutAddressFails(t *testing.T) {
 	if err := os.MkdirAll(memoryDir, 0o755); err != nil {
 		t.Fatalf("mkdir %s: %v", memoryDir, err)
 	}
-	page := "---\nengram_id: 101\nproject: labdrian-sdd-overlay\n---\n\nBody.\n"
+	page := "---\nsource: memorycard\nsource_id: 101\nproject: labdrian-sdd-overlay\n---\n\nBody.\n"
 	if err := os.WriteFile(filepath.Join(memoryDir, "c-000099.md"), []byte(page), 0o644); err != nil {
 		t.Fatalf("write pre-promoted page: %v", err)
 	}
@@ -260,7 +260,7 @@ func TestFindPromotedPage_MissingRevisionDefaultsToZero(t *testing.T) {
 	if err := os.MkdirAll(memoryDir, 0o755); err != nil {
 		t.Fatalf("mkdir %s: %v", memoryDir, err)
 	}
-	page := "---\nengram_id: 202\nproject: labdrian-sdd-overlay\naddress: c-000202\n---\n\nBody.\n"
+	page := "---\nsource: memorycard\nsource_id: 202\nproject: labdrian-sdd-overlay\naddress: c-000202\n---\n\nBody.\n"
 	if err := os.WriteFile(filepath.Join(memoryDir, "c-000202.md"), []byte(page), 0o644); err != nil {
 		t.Fatalf("write pre-promoted page: %v", err)
 	}
@@ -288,7 +288,7 @@ func TestFindPromotedPage_UnparseableRevisionErrors(t *testing.T) {
 	if err := os.MkdirAll(memoryDir, 0o755); err != nil {
 		t.Fatalf("mkdir %s: %v", memoryDir, err)
 	}
-	page := "---\nengram_id: 203\nproject: labdrian-sdd-overlay\naddress: c-000203\nengram_revision: not-a-number\n---\n\nBody.\n"
+	page := "---\nsource: memorycard\nsource_id: 203\nproject: labdrian-sdd-overlay\naddress: c-000203\nsource_revision: not-a-number\n---\n\nBody.\n"
 	if err := os.WriteFile(filepath.Join(memoryDir, "c-000203.md"), []byte(page), 0o644); err != nil {
 		t.Fatalf("write pre-promoted page: %v", err)
 	}

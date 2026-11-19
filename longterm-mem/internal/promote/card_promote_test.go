@@ -37,7 +37,7 @@ func pageFiles(t *testing.T, vaultRoot string) []string {
 	return names
 }
 
-// A memorycard promote creates one page that names the memory, and no engram_id.
+// A memorycard promote creates one page that names the memory, and no legacy key.
 func TestPromoteCard_CreatesOnePage(t *testing.T) {
 	vaultRoot := t.TempDir()
 	w := cardWriter(vaultRoot, PrecedenceStore{})
@@ -63,8 +63,10 @@ func TestPromoteCard_CreatesOnePage(t *testing.T) {
 			t.Errorf("frontmatter %s = %q, want %q", key, fields[key], want)
 		}
 	}
-	if _, has := fields[engramIDField]; has {
-		t.Errorf("a memorycard page must not carry engram_id; frontmatter:\n%s", fm)
+	for _, legacy := range []string{"engram_id", "engram_revision", "memorycard_id", "memorycard_revision", "memorycard_type"} {
+		if _, has := fields[legacy]; has {
+			t.Errorf("a memorycard page must not carry %s; frontmatter:\n%s", legacy, fm)
+		}
 	}
 	if !strings.Contains(string(raw), "A memory that lives in memorycard.") {
 		t.Errorf("page lacks the memory body:\n%s", raw)
@@ -188,9 +190,9 @@ func TestPromoteCard_BridgedMemoryIsRefused(t *testing.T) {
 	seedPrecedence(store, seeded)
 
 	w := cardWriter(vaultRoot, store)
-	bridged := cardMemory()
-	bridged.EngramID = 402
-	result, err := w.PromoteCard(t.Context(), bridged)
+	bridged := cardMem(cardMemory())
+	bridged.Lineage = []memory.Identity{{Source: memorycardSource, ID: "402"}}
+	result, err := w.Promote(t.Context(), bridged, true)
 
 	var refusal *BridgedError
 	if !errors.As(err, &refusal) {
@@ -214,7 +216,7 @@ func TestPromoteCard_BridgedMemoryIsRefused(t *testing.T) {
 	}
 }
 
-// A memory with no bridge that holds the content of an Engram observation which has a page is refused as a
+// A memory with no bridge that holds the content of a memory which has a page is refused as a
 // bridged one is: the message names that page, nothing is created, and the page is byte-identical.
 func TestPromoteCard_SameContentAsAnObservationWithAPageIsRefused(t *testing.T) {
 	vaultRoot := t.TempDir()
@@ -228,12 +230,12 @@ func TestPromoteCard_SameContentAsAnObservationWithAPageIsRefused(t *testing.T) 
 	store := PrecedenceStore{}
 	seedPrecedence(store, seeded)
 
-	twin := cardMemory()
-	twin.SameContentEngramIDs = []int64{401, 402}
-	_, err = cardWriter(vaultRoot, store).PromoteCard(t.Context(), twin)
+	twin := cardMem(cardMemory())
+	twin.Mirrored = []memory.Identity{{Source: memorycardSource, ID: "401"}, {Source: memorycardSource, ID: "402"}}
+	_, err = cardWriter(vaultRoot, store).Promote(t.Context(), twin, true)
 	var refusal *BridgedError
-	if !errors.As(err, &refusal) || !refusal.SameContent || refusal.Address != "c-000402" || refusal.Peer != (memory.Identity{Source: engramSource, ID: "402"}) {
-		t.Fatalf("err = %v, want a same-content *BridgedError naming c-000402 and observation 402", err)
+	if !errors.As(err, &refusal) || !refusal.SameContent || refusal.Address != "c-000402" || refusal.Peer != (memory.Identity{Source: memorycardSource, ID: "402"}) {
+		t.Fatalf("err = %v, want a same-content *BridgedError naming c-000402 and memory 402", err)
 	}
 	if !strings.Contains(err.Error(), "same content") || !strings.Contains(err.Error(), "c-000402") {
 		t.Errorf("message %q does not say so", err)
@@ -246,9 +248,9 @@ func TestPromoteCard_SameContentAsAnObservationWithAPageIsRefused(t *testing.T) 
 	}
 
 	// The same candidates with no page among them are no bridge: the memory is promoted.
-	free := cardMemory()
-	free.SameContentEngramIDs = []int64{401}
-	if r, err := cardWriter(t.TempDir(), PrecedenceStore{}).PromoteCard(t.Context(), free); err != nil || r.Action.Kind != ActionCreated {
+	free := cardMem(cardMemory())
+	free.Mirrored = []memory.Identity{{Source: memorycardSource, ID: "401"}}
+	if r, err := cardWriter(t.TempDir(), PrecedenceStore{}).Promote(t.Context(), free, true); err != nil || r.Action.Kind != ActionCreated {
 		t.Fatalf("result = %v, err = %v, want created", r.Action.Kind, err)
 	}
 }
@@ -265,13 +267,13 @@ func TestCardContentHash_IsMemorycardsHash(t *testing.T) {
 	}
 }
 
-// A memory whose engram_id has no page is not bridged to anything: it is promoted.
+// A memory whose lineage names a memory with no page is not bridged to anything: it is promoted.
 func TestPromoteCard_ImportedButWithoutAPageIsPromoted(t *testing.T) {
 	vaultRoot := t.TempDir()
 	w := cardWriter(vaultRoot, PrecedenceStore{})
-	imported := cardMemory()
-	imported.EngramID = 999
-	result, err := w.PromoteCard(t.Context(), imported)
+	imported := cardMem(cardMemory())
+	imported.Lineage = []memory.Identity{{Source: memorycardSource, ID: "999"}}
+	result, err := w.Promote(t.Context(), imported, true)
 	if err != nil || result.Action.Kind != ActionCreated {
 		t.Fatalf("result = %v, err = %v, want created", result.Action.Kind, err)
 	}

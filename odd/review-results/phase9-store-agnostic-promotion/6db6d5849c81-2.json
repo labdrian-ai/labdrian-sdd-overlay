@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "69044743e54813f58f56b0d64b18df8a4981e764",
+    "head": "6db6d5849c810d55bd58ae12a5bed2675d5ceaaf",
+    "diff_sha256": "2529035e35f0a931980711891ae7da63ffff7966b7c9e8c962811f91be844668",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "69044743e54813f58f56b0d64b18df8a4981e764",
+      "head": "6db6d5849c810d55bd58ae12a5bed2675d5ceaaf",
+      "diff_sha256": "2529035e35f0a931980711891ae7da63ffff7966b7c9e8c962811f91be844668"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff changes only the T7 commit list and appends Log entry L94 in the feature document.",
+      "The T7 commit list (11 shas plus the commit holding L94) matches the 11 shas and 11 sizes in L94.",
+      "The 'was' mappings in L94 are consistent with the shas cited in the old T7 line (3fcad9de, 97a03777, 4adb523b, 033db0ee, af6d833f).",
+      "The 'in order' wording and the 538d91ab split description are loose but not contradictory, so I did not report them.",
+      "I found no defect this commit introduces."
+    ]
+  }
+}

@@ -91,7 +91,7 @@ func (c commands) cmdDoctor(args []string) int {
 // embedding-backend-reachable probes the same defaults `index --embeddings` uses when none are given.
 //
 // LiveMemoryEligibility backs promoted-pages-eligible: it reads the live memories of memorycard, and answers only
-// what promotion's eligibility rule reads of them and the observation each was imported from.
+// what promotion's eligibility rule reads of them, and their id.
 func (a app) doctorDeps(vaultRoot string) ops.DoctorDeps {
 	vaultFiles := openVault(vaultRoot)
 	return ops.DoctorDeps{
@@ -136,9 +136,8 @@ func liveObservationIDs(project string) ([]int64, error) {
 }
 
 // liveMemoryEligibility is, for each live memory of project in id order (memorycard.Store.ListMemories: the active
-// and the superseded ones), its id and the Engram observation it was imported from, with the two fields promotion's
-// eligibility rule reads (R-007): whether it is pinned and its topic_key. It opens memorycard for the question and
-// closes it, and reads no Engram database.
+// and the superseded ones), its id and the two fields promotion's eligibility rule reads (R-007): whether it is
+// pinned and its topic_key. It opens memorycard for the question and closes it, and reads no Engram database.
 func liveMemoryEligibility(project string) ([]ops.MemoryEligibility, error) {
 	store, err := memorycard.Open(os.Getenv(memorycardDBEnvVar))
 	if err != nil {
@@ -151,7 +150,7 @@ func liveMemoryEligibility(project string) ([]ops.MemoryEligibility, error) {
 	}
 	eligibility := make([]ops.MemoryEligibility, len(memories))
 	for i, m := range memories {
-		eligibility[i] = ops.MemoryEligibility{ID: m.ID, EngramID: m.EngramID, Superseded: m.Status == "superseded", Pinned: m.Pinned, TopicKey: m.TopicKey}
+		eligibility[i] = ops.MemoryEligibility{ID: m.ID, Superseded: m.Status == "superseded", Pinned: m.Pinned, TopicKey: m.TopicKey}
 	}
 	return eligibility, nil
 }

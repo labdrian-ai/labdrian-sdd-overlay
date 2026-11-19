@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "1f02cd0aaa6b5ad62f347a68a477e8b18471184b",
+    "head": "70137c5beca5cb15c16a6c194a3603613de44419",
+    "diff_sha256": "9320945f097d45a374f3813f92ab25e578da9f81cc7254eff81f5cea90a559a6",
+    "paths": [
+      "longterm-mem/internal/ops/doctor_eligibility_test.go",
+      "longterm-mem/internal/promote/support_test.go",
+      "longterm-mem/internal/promote/update_test.go",
+      "longterm-mem/internal/promote/writer_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "1f02cd0aaa6b5ad62f347a68a477e8b18471184b",
+      "head": "70137c5beca5cb15c16a6c194a3603613de44419",
+      "diff_sha256": "9320945f097d45a374f3813f92ab25e578da9f81cc7254eff81f5cea90a559a6"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/ops/doctor_eligibility_test.go",
+        "longterm-mem/internal/promote/support_test.go",
+        "longterm-mem/internal/promote/update_test.go",
+        "longterm-mem/internal/promote/writer_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/writer_test.go:701",
+        "claim": "The modification-time check compares the page's mtime with a time set to 2020 via Chtimes; on filesystems with coarse timestamp granularity, or if Equal compares against a truncated value, the check can fail spuriously. The check also relies on the retry not touching the page via any path other than a rewrite, which is intended, but a rewrite that preserves mtime (e.g. an atomic rename that copies times) would go undetected.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/writer_test.go:701-703"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/update_test.go:557-561",
+        "claim": "The rewritten test doc comment drops the explanation of the footer-tail corroboration that the old comment described (and the sibling test comments still refer to 'footer'), leaving the rationale for the body-edit refusal less documented; it also asserts that 'promote reconcile of its address adopts it', a claim not verifiable from this diff.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/update_test.go:557-561"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only test files and comments; no production code is touched.",
+      "The new retry-test preconditions (precedence entry, index and log files exist) and the saves counter use the fields memPrecedence.saves and Get, which are not shown in the diff, so their existence is assumed.",
+      "Renames in support_test.go and the ops test are consistent within the diff."
+    ]
+  }
+}

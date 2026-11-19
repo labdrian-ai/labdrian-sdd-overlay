@@ -2,7 +2,6 @@ package ops
 
 import (
 	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
@@ -25,7 +24,7 @@ func promotedFromMemory(t *testing.T, id int64, address string) [2]string {
 // works: the memory's id and memorycard, not an Engram pin.
 func TestDoctorJoinsAMemorycardPageToItsMemory(t *testing.T) {
 	pages := newFakePages(promotedFromMemory(t, 12, "c-000012"))
-	memories := &observationsOf{rows: []MemoryEligibility{{ID: 12}}}
+	memories := &memoriesOf{rows: []MemoryEligibility{{ID: 12}}}
 
 	got := eligibilityCheckOf(t, pages, memories.read)
 
@@ -35,91 +34,46 @@ func TestDoctorJoinsAMemorycardPageToItsMemory(t *testing.T) {
 	}
 }
 
-// S11: a page of an earlier release names an Engram observation, and is joined to the memory memorycard imported from
-// it: the memory's own id is the one the advice names, not the observation's.
-func TestDoctorJoinsALegacyEngramPageToTheMemoryImportedFromItsObservation(t *testing.T) {
-	pages := newFakePages(promotedFrom(t, memory.Observation{ID: 41}, "c-000012"))
-	memories := &observationsOf{rows: []MemoryEligibility{{ID: 7, EngramID: 41}}}
-
-	got := eligibilityCheckOf(t, pages, memories.read)
-
-	want := Check{Name: CheckPromotedPagesEligible, Status: CheckWarned, Detail: "c-000012: memory 7 is not pinned and has no topic_key, so sync does not refresh this page; the page predates memorycard identity and is refreshed only after the one-time vault migration; pin memory 7 in memorycard so sync keeps it current after it"}
-	if got != want {
-		t.Errorf("promoted-pages-eligible = %+v, want %+v", got, want)
-	}
-}
-
-// S11, the coordinator's decision for L56: for a page of an earlier release the advice names no promote command, which the
-// memory's bridge to that page would refuse; it says the page is refreshed after the one-time migration, and the pin
-// in memorycard is the way out that works.
-func TestDoctorAdvisesALegacyPageNoPromoteCommand(t *testing.T) {
-	pages := newFakePages(promotedFrom(t, memory.Observation{ID: 41}, "c-000012"))
-	memories := &observationsOf{rows: []MemoryEligibility{{ID: 7, EngramID: 41}}}
-
-	got := eligibilityCheckOf(t, pages, memories.read)
-
-	want := Check{Name: CheckPromotedPagesEligible, Status: CheckWarned, Detail: "c-000012: memory 7 is not pinned and has no topic_key, so sync does not refresh this page; the page predates memorycard identity and is refreshed only after the one-time vault migration; pin memory 7 in memorycard so sync keeps it current after it"}
-	if got != want {
-		t.Errorf("promoted-pages-eligible = %+v, want %+v", got, want)
-	}
-	if strings.Contains(got.Detail, "promote") {
-		t.Errorf("the advice names a promote command: %q", got.Detail)
-	}
-}
-
-// F3: a page is judged by the live memories of its observation, never a superseded one. One observation imported as
-// several parts is eligible when any live part is, and a warning names the first live part; a memorycard page whose
-// memory is superseded is no concern of the check.
-func TestDoctorJudgesAPageByTheLiveMemoriesOfItsObservation(t *testing.T) {
-	for name, tc := range map[string]struct {
-		page string
-		rows []MemoryEligibility
-		want string
-	}{
-		"a superseded part is never flagged":  {"legacy", []MemoryEligibility{{ID: 7, EngramID: 41, Superseded: true}}, ""},
-		"the live part is the one named":      {"legacy", []MemoryEligibility{{ID: 7, EngramID: 41, Superseded: true}, {ID: 8, EngramID: 41}}, "c-000012: memory 8 is not pinned"},
-		"any live part eligible passes":       {"legacy", []MemoryEligibility{{ID: 7, EngramID: 41}, {ID: 8, EngramID: 41, Pinned: true}}, ""},
-		"no live part eligible warns":         {"legacy", []MemoryEligibility{{ID: 7, EngramID: 41}, {ID: 8, EngramID: 41}}, "c-000012: memory 7 is not pinned"},
-		"a superseded memorycard memory":      {"memorycard", []MemoryEligibility{{ID: 12, Superseded: true}}, ""},
-		"the named part gives its own reason": {"legacy", []MemoryEligibility{{ID: 7, EngramID: 41}, {ID: 8, EngramID: 41, TopicKey: "sdd/x"}}, "c-000012: memory 7 is not pinned and has no topic_key"},
+// S7: a page that carries only the retired keys (engram_id, memorycard_id) names no memory, so the check does not judge
+// it, whatever memory has that id and whatever its eligibility: the page is no promoted page of any memory.
+func TestDoctorDoesNotJudgeAPageThatCarriesOnlyTheRetiredKeys(t *testing.T) {
+	for name, keys := range map[string]string{
+		"engram keys":     "engram_id: 41\nengram_revision: 1\nengram_type: decision\n",
+		"memorycard keys": "memorycard_id: 41\nmemorycard_revision: 1\nmemorycard_type: decision\n",
 	} {
 		t.Run(name, func(t *testing.T) {
-			page := promotedFrom(t, memory.Observation{ID: 41}, "c-000012")
-			if tc.page == "memorycard" {
-				page = promotedFromMemory(t, 12, "c-000012")
-			}
-			got := eligibilityCheckOf(t, newFakePages(page), (&observationsOf{rows: tc.rows}).read)
+			page := [2]string{"c-000012", "---\naddress: c-000012\n" + keys + "project: " + doctorTestProject + "\n---\nBody.\n"}
+			memories := &memoriesOf{rows: []MemoryEligibility{{ID: 41}}}
 
-			if tc.want == "" {
-				if got.Status != CheckPassed {
-					t.Errorf("promoted-pages-eligible = %+v, want a pass", got)
-				}
-				return
+			got := eligibilityCheckOf(t, newFakePages(page), memories.read)
+
+			if want := (Check{Name: CheckPromotedPagesEligible, Status: CheckPassed}); got != want {
+				t.Errorf("promoted-pages-eligible = %+v, want %+v: the page names no memory", got, want)
 			}
-			if got.Status != CheckWarned || !strings.HasPrefix(got.Detail, tc.want) {
-				t.Errorf("promoted-pages-eligible = %+v, want a warning starting %q", got, tc.want)
+			if memories.asked != nil {
+				t.Errorf("the live memories were asked for (%v) though no page names a memory", memories.asked)
 			}
 		})
 	}
 }
 
-// A memorycard page is not joined through the Engram id of another memory: memory 41 (not imported from anywhere)
-// does not answer for a page that names memory 12, and a memory whose EngramID is 12 is not memory 12.
-func TestDoctorDoesNotJoinAMemorycardPageThroughAnEngramId(t *testing.T) {
+// F3: a page is judged by its live memory, never a superseded one: a memorycard page whose memory is superseded is no
+// concern of the check.
+func TestDoctorDoesNotJudgeAPageWhoseMemoryIsSuperseded(t *testing.T) {
 	pages := newFakePages(promotedFromMemory(t, 12, "c-000012"))
-	memories := &observationsOf{rows: []MemoryEligibility{{ID: 99, EngramID: 12}}}
+	memories := &memoriesOf{rows: []MemoryEligibility{{ID: 12, Superseded: true}}}
 
 	got := eligibilityCheckOf(t, pages, memories.read)
 
 	if want := (Check{Name: CheckPromotedPagesEligible, Status: CheckPassed}); got != want {
-		t.Errorf("promoted-pages-eligible = %+v, want %+v: the page names memorycard memory 12, which is not among the live ones", got, want)
+		t.Errorf("promoted-pages-eligible = %+v, want %+v", got, want)
 	}
 }
 
-// An eligible memory passes whichever identity the page carries.
+// An eligible memory passes.
 func TestDoctorPassesAMemorycardPageWhoseMemoryIsPinned(t *testing.T) {
-	pages := newFakePages(promotedFromMemory(t, 12, "c-000012"), promotedFrom(t, memory.Observation{ID: 41}, "c-000013"))
-	memories := &observationsOf{rows: []MemoryEligibility{{ID: 12, Pinned: true}, {ID: 7, EngramID: 41, TopicKey: "longterm-mem/policy"}}}
+	pages := newFakePages(promotedFromMemory(t, 12, "c-000012"), promotedFromMemory(t, 7, "c-000013"))
+	memories := &memoriesOf{rows: []MemoryEligibility{{ID: 12, Pinned: true}, {ID: 7, TopicKey: "longterm-mem/policy"}}}
 
 	got := eligibilityCheckOf(t, pages, memories.read)
 

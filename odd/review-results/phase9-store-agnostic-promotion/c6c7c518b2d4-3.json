@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "2eec9d1130106f1ff10d8f50c33b31a20f1d7857",
+    "head": "c6c7c518b2d43c860837844f98479b5b358d2c98",
+    "diff_sha256": "be5dbb7b528084ef80fd5f91db4cdd94c579dea9f9c06d522fd9d5f8dcee62fa",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "2eec9d1130106f1ff10d8f50c33b31a20f1d7857",
+      "head": "c6c7c518b2d43c860837844f98479b5b358d2c98",
+      "diff_sha256": "be5dbb7b528084ef80fd5f91db4cdd94c579dea9f9c06d522fd9d5f8dcee62fa"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:123",
+        "claim": "The new open follow-up line is nested under T7, which is ticked [x], and says to settle it 'before T9'. T9 is unticked and its own line does not list this dependency, so a reader or tool that treats a ticked task as complete may miss the open item. The deadline lives only in this note. The line also gives no sha reference to the L104 answer that created it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:123"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:887",
+        "claim": "L104 states that F2 (Engram vocabulary in update_test.go) was fixed in 2eec9d11 and that the test was renamed. 2eec9d11 is the base of this commit, not part of this diff, so the diff cannot show the claim. It also describes the new note as 'the commit that holds this entry' and as 'the commit after 2eec9d11', which holds only if nothing lands in between. The T7 line's list of review follow-up commits was not updated with 2eec9d11 or the new commit, so the commit map in the T7 line is incomplete relative to L104.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:887"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only one file changed (a documentation Log and Tasks file): one added open-task line under T7 and one added Log entry L104.",
+      "The L102 tally arithmetic in L104 (1+1+4+2+2=10; 2+1+1+3+1+4+2+2=16; 3+3+5+3+4+1+2+1+3+2+1+2=30) sums correctly to 56.",
+      "The T7 line still lists commits only up to 308c8c71 and does not include 2eec9d11, though L104 references it."
+    ]
+  }
+}

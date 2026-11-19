@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "e4e59773c20a7243cf563e165b93a393e2cf2434",
+    "head": "3a787aa73a66be7697a783bf12fc503713e75c45",
+    "diff_sha256": "b8f24644430619c2c8a8321a5b59cdebd7dd2f576afa99d7489f47e36022d127",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "e4e59773c20a7243cf563e165b93a393e2cf2434",
+      "head": "3a787aa73a66be7697a783bf12fc503713e75c45",
+      "diff_sha256": "b8f24644430619c2c8a8321a5b59cdebd7dd2f576afa99d7489f47e36022d127"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:122",
+        "claim": "The rewritten T7 commit list starts with the adapter commit 811abcb4, then the two migration-removal commits 01bffae7 and a280d7b8. L96 says the chain was rebuilt with the two removals first and the adapter after them. The line keeps the old position of the adapter, so the order no longer matches the real chain. The parenthetical still says the L92/L93 shas predate the split (L94) and does not mention the L96 reorder. A reader following the line could take the wrong order or the wrong sha set.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:122",
+          "odd/tasks/phase9-store-agnostic-promotion.md:864"
+        ]
+      }
+    ],
+    "evidence": [
+      "The old-to-new sha mapping in L96 matches the shas substituted in the T7 line: 811abcb4, 01bffae7, a280d7b8, fc7617c4, fa8d5183, 72221c23, 12e307fb, 874c5b95, 1edf8e79, 25d9a4c7, 69044743, 6db6d584, then b11f6db2, e9ba1a78, 893fd3cf.",
+      "The only change outside the T7 line is the appended L96 entry, so the diff is limited to documentation."
+    ]
+  }
+}

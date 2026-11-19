@@ -13,8 +13,8 @@ longterm-mem sync [--project P] [--vault DIR] [--dry-run] [--source memorycard]
 
 The memorycard database is opened read-only, at `LONGTERM_MEM_MEMORYCARD_DB` or, when that is unset,
 `~/.memorycard/memory.db` (`MEMORYCARD_DB` is memorycard's own variable and does not reach `longterm-mem`). Nothing
-else is opened: a memory bridged to a page that carries `engram_id` is found from memorycard's own `import_map` and
-content hashes (below). A database that cannot be opened is exit 4. (Previously: Engram's database was opened
+else is opened: a memory bridged to the page of another part of its observation is found from memorycard's own
+`import_map` and content hashes (below). A database that cannot be opened is exit 4. (Previously: Engram's database was opened
 read-only too, to find the memories that duplicate one of its pages.)
 
 When the database could only be opened through its `immutable=1` fallback, the run works from the snapshot taken when
@@ -30,19 +30,17 @@ fallback, ...`). It is a declaration, not a failure. A store that fails to close
 3. Reads the vault's pages once, and for each eligible memory decides, with the same decision
    `promote --source memorycard --id N` makes:
    - no page: a page is created;
-   - a page at an older `source_revision` (or the legacy `memorycard_revision`): the page is updated in place;
+   - a page at an older `source_revision`: the page is updated in place;
    - a page at the memory's revision: nothing is written, not even to the precedence store;
    - bridged (below): skipped and counted.
 4. Propagates status (below): the page of a memory that memorycard has since superseded or archived is patched.
 5. Rebuilds the vault's index and records the sync's completion (R-031).
 
-A page the vault holds for a memory is found by `(project, source_id)` beside `source: memorycard`, or by the legacy
-`memorycard_id` of a page written before the store-agnostic keys (see [Promoting from
-memorycard](promote-from-memorycard.md)); the pages `sync` writes carry the store-agnostic keys only. A newer revision
-of a page that was edited by hand since it was written is not written, and the run counts it as left alone. A page of
-an older release that still carries `engram_id` bridges its memory until `longterm-mem migrate-card-pages --apply`
-makes it the memory's own page: the migration changes the count of bridged memories, never which memories `sync`
-promotes.
+A page the vault holds for a memory is found by `(project, source_id)` beside `source: memorycard` (see
+[Promoting from memorycard](promote-from-memorycard.md)); the pages `sync` writes carry the store-agnostic keys only.
+A newer revision of a page that was edited by hand since it was written is not written, and the run counts it as left
+alone. A page that carries only the retired keys (`engram_id`, `memorycard_id`) names no memory: its memory gets a page
+of its own.
 
 ## Status propagation
 
@@ -54,9 +52,9 @@ the Engram source. (Previously: `sync` patched pages from Engram's soft deletes 
 every page it visited.)
 
 - Lists every memory of the project whatever its status (the only listing that shows an archived one) and finds each
-  one's own page by `(project, source_id)`, or the legacy `memorycard_id`. A memory with no page is left alone. When a page of the vault could
+  one's own page by `(project, source_id)`. A memory with no page is left alone. When a page of the vault could
   not be read and none belongs to a superseded or archived memory, it is left alone and named (exit 6), as for
-  promotion. A page that still carries only the legacy `engram_*` keys is not a memorycard memory's own page, so it
+  promotion. A page that carries only the retired keys is not a memorycard memory's own page, so it
   is not patched.
 - A page is patched only when it is behind its memory: its `status` or `related` differs from what the memory says.
   A page that already says it is not touched, not counted, and not predicted by the dry run.
@@ -76,8 +74,8 @@ every page it visited.)
 
 ## Bridged memories
 
-A memory that `promote --source memorycard` would refuse (it is bridged by `import_map`, or has the content of an
-Engram observation that already has a page, as the pages of a release that promoted from Engram do) is never a
+A memory that `promote --source memorycard` would refuse (it is another part of an imported observation one of whose parts
+has a page, or has the content of such a part) is never a
 failure of `sync`. It is skipped, nothing is written for it, its page stays byte-identical, and the run counts it.
 
 ## Output and exit codes

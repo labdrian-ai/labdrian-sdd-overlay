@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "6db6d5849c810d55bd58ae12a5bed2675d5ceaaf",
+    "head": "b11f6db2a0cc9cd4bf618712b9f7d94027ef72a8",
+    "diff_sha256": "1235fb37331afd05eccd78329960cde258990631bd1aaa079aa938df73076052",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/cmd_doctor.go",
+      "longterm-mem/cmd/longterm-mem/doctor_eligibility_test.go",
+      "longterm-mem/cmd/longterm-mem/page_keys_test.go",
+      "longterm-mem/internal/ops/doctor_eligibility.go",
+      "longterm-mem/internal/ops/doctor_eligibility_test.go",
+      "longterm-mem/internal/ops/doctor_reconcile_test.go",
+      "longterm-mem/internal/opstest/fixture.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "6db6d5849c810d55bd58ae12a5bed2675d5ceaaf",
+      "head": "b11f6db2a0cc9cd4bf618712b9f7d94027ef72a8",
+      "diff_sha256": "1235fb37331afd05eccd78329960cde258990631bd1aaa079aa938df73076052"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/cmd_doctor.go",
+        "longterm-mem/cmd/longterm-mem/doctor_eligibility_test.go",
+        "longterm-mem/cmd/longterm-mem/page_keys_test.go",
+        "longterm-mem/internal/ops/doctor_eligibility.go",
+        "longterm-mem/internal/ops/doctor_eligibility_test.go",
+        "longterm-mem/internal/ops/doctor_reconcile_test.go",
+        "longterm-mem/internal/opstest/fixture.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/ops/doctor_eligibility_test.go:218-223",
+        "claim": "The test now appends both 'source_id: 99' and 'engram_id: 99' to the body in a single page, so it cannot tell which of the two identity lines would have moved the page. If only one were read from the body, the assertion would still fail, but a regression in one key could be masked or misattributed. Separate cases per key would be more precise.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/ops/doctor_eligibility_test.go:218-223"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/doctor_eligibility_test.go:367-370",
+        "claim": "The restored doc comment has one very long line (the second line carries the rest of the sentence plus the parenthetical) and awkward wrapping, which hurts readability compared with the surrounding wrapped comments.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/doctor_eligibility_test.go:367-370"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/ops/doctor_eligibility_test.go:200-203",
+        "claim": "The page fixture with 'engram_id: not-a-number' still exercises only the retired key; the comment now says it covers an absent or unparseable source_id, but no fixture page has an unparseable source_id, so the comment overstates what the test covers.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/ops/doctor_eligibility_test.go:200-203"
+        ]
+      }
+    ],
+    "evidence": [
+      "Diff is comments, test names, one test body line, and a helper rename; all CardMemory callers in the diff are updated consistently (page_keys_test.go, doctor_eligibility_test.go, doctor_reconcile_test.go).",
+      "No production code logic changed."
+    ]
+  }
+}

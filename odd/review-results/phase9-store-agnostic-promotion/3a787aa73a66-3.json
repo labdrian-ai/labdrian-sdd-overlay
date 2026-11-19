@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "e4e59773c20a7243cf563e165b93a393e2cf2434",
+    "head": "3a787aa73a66be7697a783bf12fc503713e75c45",
+    "diff_sha256": "b8f24644430619c2c8a8321a5b59cdebd7dd2f576afa99d7489f47e36022d127",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "e4e59773c20a7243cf563e165b93a393e2cf2434",
+      "head": "3a787aa73a66be7697a783bf12fc503713e75c45",
+      "diff_sha256": "b8f24644430619c2c8a8321a5b59cdebd7dd2f576afa99d7489f47e36022d127"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:122",
+        "claim": "The T7 commit list keeps the old chain order (811abcb4, the adapter, first). The new chain puts the two migration-removal commits (01bffae7, a280d7b8) before the adapter, as L96 states. A reader taking the list as chain order, or following the record of the reorder, gets the wrong order. The ordering is not annotated. The sha mapping itself matches L96 one to one.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:122",
+          "odd/tasks/phase9-store-agnostic-promotion.md:864"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only a documentation file: the T7 commit list and one appended Log entry, L96.",
+      "Each of the 12 replaced shas in the T7 line matches the old-to-new mapping in L96.",
+      "L96's claim that the trees after the third commit are unchanged cannot be verified from the diff."
+    ]
+  }
+}

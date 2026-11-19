@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "1edf8e79cc3bad06e5983ebdebb762c4c4ec4dff",
+    "head": "25d9a4c75f287b64b3a6ce7e64b07e221ce9d071",
+    "diff_sha256": "94dd3eec73da015ed6f37a8d7ca694d174f9fd770678850e41151acf1a14ccf4",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "1edf8e79cc3bad06e5983ebdebb762c4c4ec4dff",
+      "head": "25d9a4c75f287b64b3a6ce7e64b07e221ce9d071",
+      "diff_sha256": "94dd3eec73da015ed6f37a8d7ca694d174f9fd770678850e41151acf1a14ccf4"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:852",
+        "claim": "The differential-check entry lists eight scenarios and says the eighth differs only in the `last sync` line of `status`. In the list, `status` belongs to the seventh scenario (doctor/status/query/get), and the eighth is reconcile and stale. A reader cannot tell which scenario actually differed, which weakens the evidence.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:852"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only the T7 task line and appends L91 and L92 to the Log.",
+      "L91 records the 575 of 575 migration and the 0 legacy pages dry run, which satisfies the stated T7 precondition (D2, L5).",
+      "The T7 line's `NOT TICKED` note points to L92, and L92 holds the blocker; both are consistent with the `[ ]` checkbox being left unticked.",
+      "I could not check the claimed commit hashes or file paths, because only the diff was available."
+    ]
+  }
+}

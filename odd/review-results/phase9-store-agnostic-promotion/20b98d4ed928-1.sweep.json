@@ -1,0 +1,25 @@
+{
+  "kind": "sweep",
+  "base": "11641b08e28f73fc2a25db8feac9bd2ed46b4bba",
+  "head": "20b98d4ed928acfc972cf4e4c0fc3749bd55789a",
+  "diff_sha256": "39f92547666e7ea72376b1b2613976faf23993a7a78650e401f30e24f3911338",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": [
+      {
+        "name": "engramIdentity",
+        "hits": [
+          "engine/projection/gate_memory_test.go",
+          "engine/projection/gate_memorycard_test.go"
+        ]
+      }
+    ]
+  },
+  "t2": [],
+  "t3": [],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

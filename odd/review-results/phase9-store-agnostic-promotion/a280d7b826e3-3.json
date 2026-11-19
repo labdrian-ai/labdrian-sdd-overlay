@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "01bffae764d2d6ab2b4179a320dcd067772b3b21",
+    "head": "a280d7b826e3b4350c58afa15df474ede78c3f46",
+    "diff_sha256": "41b9fb81cd0fd26094d31cdecbb20a48f696d5062f4fbb5879f0d0f2ce95e3d3",
+    "paths": [
+      "longterm-mem/internal/promote/migrate_cards.go",
+      "longterm-mem/internal/promote/migrate_cards_recovery_test.go",
+      "longterm-mem/internal/promote/migrate_cards_safety_test.go",
+      "longterm-mem/internal/promote/migrate_cards_test.go",
+      "longterm-mem/internal/promote/migrate_cards_unreadable_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "01bffae764d2d6ab2b4179a320dcd067772b3b21",
+      "head": "a280d7b826e3b4350c58afa15df474ede78c3f46",
+      "diff_sha256": "41b9fb81cd0fd26094d31cdecbb20a48f696d5062f4fbb5879f0d0f2ce95e3d3"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/promote/migrate_cards.go",
+        "longterm-mem/internal/promote/migrate_cards_recovery_test.go",
+        "longterm-mem/internal/promote/migrate_cards_safety_test.go",
+        "longterm-mem/internal/promote/migrate_cards_test.go",
+        "longterm-mem/internal/promote/migrate_cards_unreadable_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/migrate_cards_safety_test.go:1-373",
+        "claim": "The deleted safety test file also defined shared test helpers (fakeBridges, fakeBackup, migWorld, cardOf, pageText, put, refusalOf, migProject). If any remaining test file in package promote uses them, the package's tests will no longer compile. The diff cannot show whether other files use them; the commit claims no caller remains, so a build/vet of the test package should confirm it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "longterm-mem/internal/promote/migrate_cards_safety_test.go:1-373"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/migrate_cards.go:1-644",
+        "claim": "The deletion also removes exported identifiers (CardBridges, MigrationBackup, MigrateCardPages, RefusalKind and its constants, CardMigrationReport). Any consumer outside this package, such as a CLI command or an adapter in another package, that still references them will fail to build. The commit asserts the retiring commit removed all callers, but the diff does not show it. Unexported helpers (shapeOf, carriesLegacyKeys, topLevelFields, rewrittenIdentity, isIdentityKey, identityKeys) were also removed, and other promote code might use them.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "longterm-mem/internal/promote/migrate_cards.go:1-644"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff only deletes five files in longterm-mem/internal/promote and shows no remaining references.",
+      "Whether the build stays green depends on files not in the diff; this review cannot show a concrete dangling reference.",
+      "The migration logic itself is removed and not modified, so no behavior regression is visible for the retired command."
+    ]
+  }
+}

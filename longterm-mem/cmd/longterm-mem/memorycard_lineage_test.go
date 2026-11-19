@@ -46,32 +46,30 @@ func pageOfMemory(t *testing.T, w *promoteGoldenWorld, id string) string {
 }
 
 // Memory 5 holds the content of memory 2, which was imported from observation 1, and has no import_map row. The
-// page of observation 1 is the page of that content, so memory 5 is bridged to it, in a dry run, a sync and an
-// explicit promote, without Engram's database: memorycard says which memory was imported from which observation.
+// page of memory 2 is the page of that content, so memory 5 is bridged to it, in a dry run, a sync and an explicit
+// promote, without Engram's database: memorycard says which memory was imported from which observation.
 func TestMemorycardMirrorsAreFoundInMemorycardAlone(t *testing.T) {
 	w, db := syncMemorycardWorld(t)
 	addHandMirroredMemories(t, db)
 	execOnMemorycard(t, db, `update memories set pinned = 1 where id = 5`)
-	seedLegacyPromotedPage(t, w)
+	promoteMemory(t, 2)
 	withNoEngramDatabase(t)
 	treeBefore := renderPromoteGoldenTree(t, w.vaultRoot)
 
 	code, stdout, stderr := runSync(t, "--source", "memorycard", "--dry-run")
-	if code != exitOK || !strings.Contains(stdout, "2 bridged") || !strings.Contains(stdout, "would promote 2 memory(ies)") || stderr != "" {
-		t.Fatalf("dry run: exit %d, stdout %q, stderr %q, want exit 0, memories 2 and 5 counted as bridged and nothing on stderr", code, stdout, stderr)
+	if code != exitOK || !strings.Contains(stdout, "1 bridged") || !strings.Contains(stdout, "would promote 2 memory(ies)") || stderr != "" {
+		t.Fatalf("dry run: exit %d, stdout %q, stderr %q, want exit 0, memory 5 counted as bridged and nothing on stderr", code, stdout, stderr)
 	}
 	if after := renderPromoteGoldenTree(t, w.vaultRoot); after != treeBefore {
 		t.Errorf("the dry run changed the vault")
 	}
 
 	code, stdout, stderr = runSync(t, "--source", "memorycard")
-	if code != exitOK || !strings.Contains(stdout, "promoted 2 memory(ies)") || !strings.Contains(stdout, "2 bridged") || stderr != "" {
-		t.Fatalf("sync: exit %d, stdout %q, stderr %q, want exit 0, 2 promoted and memories 2 and 5 counted as bridged", code, stdout, stderr)
+	if code != exitOK || !strings.Contains(stdout, "promoted 2 memory(ies)") || !strings.Contains(stdout, "1 bridged") || stderr != "" {
+		t.Fatalf("sync: exit %d, stdout %q, stderr %q, want exit 0, 2 promoted and memory 5 counted as bridged", code, stdout, stderr)
 	}
-	for _, id := range []string{"2", "5"} {
-		if page := pageOfMemory(t, w, id); page != "" {
-			t.Errorf("memory %s got the page %s, it is bridged to the page of observation 1", id, page)
-		}
+	if page := pageOfMemory(t, w, "5"); page != "" {
+		t.Errorf("memory 5 got the page %s, it is bridged to the page of memory 2", page)
 	}
 
 	code, stdout, stderr = runPromoteGolden(t, []string{"promote", "--project", promoteGoldenProject, "--source", "memorycard", "--id", "5"})

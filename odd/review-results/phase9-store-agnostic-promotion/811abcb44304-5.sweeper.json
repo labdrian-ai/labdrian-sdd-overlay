@@ -1,0 +1,35 @@
+{
+  "kind": "sweeper",
+  "base": "a280d7b826e3b4350c58afa15df474ede78c3f46",
+  "head": "811abcb44304ae0451d6bffd255bb126a4938227",
+  "diff_sha256": "29ee7e3142eefe87ef224583b6416b6069277febb104e8836487a43d83ffe7a3",
+  "sweep": "811abcb44304-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 name: MemoryByEngramID",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. rg -F: 0 occurrences outside odd/ and openspec/changes/archive/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: TestMemoryByEngramID_ADanglingFirstPartDoesNotHideLaterParts",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. rg -F: 0 occurrences outside odd/ and openspec/changes/archive/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: TestSourceLineageNamesTheObservationAndTheOtherMemoriesImportedFromIt",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. rg -F: 0 occurrences outside odd/ and openspec/changes/archive/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: engramObservation",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. rg -F: 0 occurrences outside odd/ and openspec/changes/archive/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: engramSource",
+      "disposition": "live",
+      "evidence": "different live symbol or generic word/flag: 15 occurrences outside odd/ at HEAD"
+    }
+  ]
+}

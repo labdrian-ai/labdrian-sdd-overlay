@@ -10,11 +10,11 @@ import (
 
 // This file is the one reading of the vault's pages that a promotion decides from, whichever store a memory comes
 // from: the pages are read once into a pageIndex, and a memory is looked up in it by its identity. What a page
-// says of its memory is read through identityOf, so a page carrying either spelling of its identity is found.
+// says of its memory is read through identityOf, which reads the store-agnostic keys alone.
 
 // pageSources are the stores a page can name its memory in, in the order a page is read for them. Each is a name
 // identityOf reads the page's keys for, so a store is data here and never a type.
-var pageSources = []string{engramSource, memorycardSource}
+var pageSources = []string{memorycardSource}
 
 // promotedPage is one already-promoted page's address and the revision it was last promoted at: what the
 // decision about a memory reads of the page that is its own.
@@ -125,13 +125,12 @@ func readPages(pages PageReader) (*pageIndex, error) {
 			if !named {
 				continue
 			}
-			_, idKey := fieldOf(fields, source, sourceIDField, legacyKeys[source].id)
 			match := &promotedPageMatch{
-				File: file, Source: source, ID: identity.ID, IDKey: idKey,
+				File: file, Source: source, ID: identity.ID, IDKey: sourceIDField,
 				Project: fields[projectField], Address: strings.TrimSpace(fields["address"]),
 				Block: block, order: order,
 			}
-			match.RawRevision, match.RevisionKey = revisionOf(fields, source)
+			match.RawRevision, match.RevisionKey = revisionOf(fields, source), sourceRevisionField
 			who := memory.Identity{Source: source, ID: identity.ID}
 			index.carriers[who] = append(index.carriers[who], match)
 			index.noteAddress(match.Project, who, match.address())
@@ -238,7 +237,7 @@ const (
 // decide is the one decision a promotion makes about m over a scan, shared by SyncCards, PlanCards and the explicit promote,
 // so that they cannot drift apart. It reads nothing and writes nothing. The memory's own page decides first: at
 // its revision or newer, nothing is written (rewriteCurrent says a promote that rewrites a page at its revision
-// anyway, as the explicit promote of an Engram observation always has), at an older one, it is updated. A memory
+// anyway), at an older one, it is updated. A memory
 // with no page of its own but a page of the same piece of memory in another store is bridged. It fails only on a
 // page of the memory that cannot be read as one.
 func decide(m memory.Memory, scan pageScan, style pageStyle, rewriteCurrent bool) (decision, error) {

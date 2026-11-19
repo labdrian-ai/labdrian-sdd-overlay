@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "b11f6db2a0cc9cd4bf618712b9f7d94027ef72a8",
+    "head": "e9ba1a78abca931d797ecd4b8c9bc8d096758e4f",
+    "diff_sha256": "4d919cb45383a08fe7beb4fc5c8a455d298bcfdcc44708de6f7847b1cf258044",
+    "paths": [
+      "longterm-mem/internal/ops/doctor.go",
+      "openspec/specs/longterm-mem-promotion/spec.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "b11f6db2a0cc9cd4bf618712b9f7d94027ef72a8",
+      "head": "e9ba1a78abca931d797ecd4b8c9bc8d096758e4f",
+      "diff_sha256": "4d919cb45383a08fe7beb4fc5c8a455d298bcfdcc44708de6f7847b1cf258044"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/ops/doctor.go",
+        "openspec/specs/longterm-mem-promotion/spec.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Diff changes only a Go comment in doctor.go and spec prose in spec.md; no executable code is altered.",
+      "The comment and spec text are internally consistent: promotion writes fingerprints and no revision, reconcile records one, a diverged page with a non-positive revision is refused and reported by the sidecar diagnostic, and a positive revision means an ordinary local edit.",
+      "The scenario edit adds that the precedence-sidecar diagnostic names the page, matching the new requirement text.",
+      "I could not check the claims about code behavior (such as revisionsAllowAdoption and reconcile) against the code, since only the diff is visible."
+    ]
+  }
+}

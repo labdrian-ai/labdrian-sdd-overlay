@@ -56,10 +56,10 @@ func TestSourceMirrorsAreTheObservationsWhoseImportedPartHasTheSameStoredHash(t 
 
 	for id, want := range map[string][]memory.Identity{
 		// The words moved from the title to the text.
-		"61": {card("60"), engramObservation("950")},
+		"61": {card("60")},
 		// The imported memory kept its own title when the importer merged the observation into it; the hand mirror
 		// holds the observation's.
-		"63": {card("62"), engramObservation("951")},
+		"63": {card("62")},
 		// "ab" / "c" and "a" / "bc" are different words to memorycard's hash.
 		"65": nil,
 		// Another project's import and a memory mapped by another source hold the hash and are no observation of the
@@ -90,7 +90,7 @@ func TestSourceListingFindsTheMirrorsByStoredHashAsByIDDoes(t *testing.T) {
 			found += len(listed.Mirrored)
 		}
 	}
-	if found != 4 {
-		t.Errorf("the listing found %d mirror identities for memories 61 and 63, want 4", found)
+	if found != 2 {
+		t.Errorf("the listing found %d mirror identities for memories 61 and 63, want 2 (their imported parts, no observation)", found)
 	}
 }

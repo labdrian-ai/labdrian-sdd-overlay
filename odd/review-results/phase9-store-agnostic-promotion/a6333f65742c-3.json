@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "b799f6934ca53e8dd12a4a061341e07dd181f800",
+    "head": "a6333f65742c5a40532fdf15f23f3cc17f6b90b3",
+    "diff_sha256": "4931c22d7d23934466d9d20d82b1b8db60bb241fd58a161da23eb11c34830100",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "b799f6934ca53e8dd12a4a061341e07dd181f800",
+      "head": "a6333f65742c5a40532fdf15f23f3cc17f6b90b3",
+      "diff_sha256": "4931c22d7d23934466d9d20d82b1b8db60bb241fd58a161da23eb11c34830100"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:122",
+        "claim": "The T7 line's list of follow-up commits drops the separator between two shas: \"`c6c7c518` `b799f693`\". Every other entry in the list is comma-separated. Both shas are listed as reviewed commits, but the missing comma makes the pair read as one item, and the line is meant to map the review chain. The change added the new sha, so the defect comes from this change.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:122 (\"`2eec9d11`, `c6c7c518` `b799f693` and the commit that holds L106\")"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only documentation in the T7 task line, the T7 follow-up line and the new Log entry L106.",
+      "L106's correction matches the new T7 text. The third review is in L104, the fourth in L105 and the fifth in L106, and `b799f693` is listed.",
+      "The follow-up line's new attribution is consistent with L104 and L105: observed in L98, added by the commit that holds L104, and T9 tied to it by L105.",
+      "L106 claims 3 findings: F1, F1 (2nd) and F2. That matches its own count.",
+      "No code or behavior is touched."
+    ]
+  }
+}

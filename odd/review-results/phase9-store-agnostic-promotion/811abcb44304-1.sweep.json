@@ -1,0 +1,67 @@
+{
+  "kind": "sweep",
+  "base": "a280d7b826e3b4350c58afa15df474ede78c3f46",
+  "head": "811abcb44304ae0451d6bffd255bb126a4938227",
+  "diff_sha256": "29ee7e3142eefe87ef224583b6416b6069277febb104e8836487a43d83ffe7a3",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": [
+      {
+        "name": "MemoryByEngramID",
+        "hits": [
+          "odd/review-results/phase9-store-agnostic-promotion/2d0a2a2336cd-4.polisher.json",
+          "odd/review-results/phase9-store-agnostic-promotion/4b11be06bf0c-2.json",
+          "odd/review-results/phase9-store-agnostic-promotion/67b95a4edffe-2.json",
+          "odd/review-results/phase9-store-agnostic-promotion/750fc5a50f54-5.polisher.json",
+          "odd/tasks/phase9-store-agnostic-promotion.md"
+        ]
+      },
+      {
+        "name": "TestMemoryByEngramID_ADanglingFirstPartDoesNotHideLaterParts",
+        "hits": [
+          "odd/tasks/phase9-store-agnostic-promotion.md"
+        ]
+      },
+      {
+        "name": "TestSourceLineageNamesTheObservationAndTheOtherMemoriesImportedFromIt",
+        "hits": [
+          "odd/tasks/phase9-store-agnostic-promotion.md"
+        ]
+      },
+      {
+        "name": "engramObservation",
+        "hits": [
+          "odd/review-results/phase9-store-agnostic-promotion/71cb65f88939-2.json",
+          "odd/review-results/phase9-store-agnostic-promotion/71cb65f88939-3.json"
+        ]
+      },
+      {
+        "name": "engramSource",
+        "hits": [
+          "longterm-mem/internal/promote/card_promote_test.go",
+          "longterm-mem/internal/promote/eligible.go",
+          "longterm-mem/internal/promote/eligible_test.go",
+          "longterm-mem/internal/promote/page_identity.go",
+          "longterm-mem/internal/promote/page_identity_fields_test.go",
+          "longterm-mem/internal/promote/page_scan.go",
+          "longterm-mem/internal/promote/page_style.go",
+          "longterm-mem/internal/promote/page_style_test.go",
+          "longterm-mem/internal/promote/propagate_ids_test.go",
+          "longterm-mem/internal/promote/support_test.go",
+          "longterm-mem/internal/promote/update.go",
+          "longterm-mem/internal/promote/walk_failures_test.go",
+          "odd/review-results/phase9-store-agnostic-promotion/04e835c1025e-4.polisher.json",
+          "odd/review-results/phase9-store-agnostic-promotion/e382cd00856f-3.json",
+          "odd/tasks/phase9-store-agnostic-promotion.md"
+        ]
+      }
+    ]
+  },
+  "t2": [],
+  "t3": [],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

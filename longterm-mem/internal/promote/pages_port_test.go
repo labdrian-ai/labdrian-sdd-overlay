@@ -159,7 +159,7 @@ func TestPlanCardsRefusesAWriterWithoutPages(t *testing.T) {
 // The scan reads every page the port lists, once and in its order, and keeps those that carry the engram_id.
 func TestScanPromotedPagesReadsEveryListedPageOnceAndKeepsTheMatches(t *testing.T) {
 	carries := func(id int, project, address string) string {
-		return fmt.Sprintf("---\naddress: %s\nengram_id: %d\nproject: %s\n---\nbody\n", address, id, project)
+		return fmt.Sprintf("---\naddress: %s\nsource: memorycard\nsource_id: %d\nproject: %s\n---\nbody\n", address, id, project)
 	}
 	pages := newMemPages(map[string]string{
 		"c-000001": carries(7, "p", "c-000001"),

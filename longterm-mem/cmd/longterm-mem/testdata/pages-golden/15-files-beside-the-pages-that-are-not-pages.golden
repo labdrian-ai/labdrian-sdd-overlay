@@ -76,7 +76,8 @@ printf 'c-%06d\n' "$n"
 === wiki/memory/ (directory -rwxr-xr-x) ===
 === wiki/memory/C-000999.MD (-rw-r--r--) ===
 ---
-memorycard_id: 1
+source: memorycard
+source_id: 1
 ---
 === wiki/memory/c-000901.md (-rw-------) ===
 ---
@@ -135,5 +136,6 @@ Promoted from memorycard memory 2, revision 1.
 === wiki/memory/folder.md/ (directory -rwxr-xr-x) ===
 === wiki/memory/notes.txt (-rw-r--r--) ===
 ---
-memorycard_id: 1
+source: memorycard
+source_id: 1
 ---
