@@ -9,9 +9,12 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/goal"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/overlaytest"
 )
 
@@ -188,6 +191,68 @@ func TestTheShaperRoleFilesTellItToMarkTheTasksItDesigned(t *testing.T) {
 			if !strings.Contains(text, want) {
 				t.Errorf("%s does not say %q", name, want)
 			}
+		}
+	}
+}
+
+// The shaper writes the goal file the foreman's prompt names (T49, L147), and never rewrites one that exists; the role
+// body and the four generated shaper files carry both fragments.
+func TestTheShaperRoleFilesTellItToWriteTheGoalTheForemanNames(t *testing.T) {
+	for _, name := range []string{"roles/shaper/body.md", "agents/shaper.md", "pi/agents/shaper.md", "codex/agents/shaper.toml", "opencode/agents/shaper.md"} {
+		text := readRepositoryFile(t, name)
+		for _, want := range []string{
+			"When the prompt names `odd/goals/<feature>.json`, write it as a Goal of version 3",
+			"`memory_directive` copied verbatim from `odd/goals/labdrian-orchestrator-opencode.json`",
+			"never rewrite a goal file that exists: report it",
+		} {
+			if !strings.Contains(text, want) {
+				t.Errorf("%s does not say %q", name, want)
+			}
+		}
+	}
+}
+
+// A Goal written as the shaper's sentence says (its keys in order, the memory_directive copied verbatim from the committed
+// goal file the sentence names, L151) is accepted by goal.Parse, and refused when any one key is missing.
+func TestTheGoalTheShaperIsToldToWriteParses(t *testing.T) {
+	var committed map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(readRepositoryFile(t, "odd/goals/labdrian-orchestrator-opencode.json")), &committed); err != nil {
+		t.Fatalf("the committed goal file is not JSON: %v", err)
+	}
+	directive := string(committed["memory_directive"])
+	if directive == "" {
+		t.Fatal("the committed goal file has no memory_directive")
+	}
+
+	keys := []string{"version", "project_id", "goal_id", "objective", "scope", "constraints", "non_goals", "acceptance_criteria", "memory_directive", "runtime_scope", "delivery_boundary"}
+	values := map[string]string{
+		"version":             "3",
+		"project_id":          `"sample-project"`,
+		"goal_id":             `"sample-feature"`,
+		"objective":           `"sample objective"`,
+		"scope":               `"sample scope"`,
+		"constraints":         `["sample constraint"]`,
+		"non_goals":           `["sample non-goal"]`,
+		"acceptance_criteria": `["sample criterion"]`,
+		"memory_directive":    directive,
+		"runtime_scope":       `"sample runtime scope"`,
+		"delivery_boundary":   `"sample delivery boundary"`,
+	}
+	document := func(skip string) []byte {
+		var parts []string
+		for _, key := range keys {
+			if key != skip {
+				parts = append(parts, fmt.Sprintf("%q: %s", key, values[key]))
+			}
+		}
+		return []byte("{" + strings.Join(parts, ", ") + "}")
+	}
+	if _, err := goal.Parse(document("")); err != nil {
+		t.Fatalf("the goal of the shaper's sentence is refused: %v", err)
+	}
+	for _, key := range keys {
+		if _, err := goal.Parse(document(key)); err == nil {
+			t.Errorf("a goal without %s is accepted", key)
 		}
 	}
 }

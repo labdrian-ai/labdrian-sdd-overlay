@@ -91,7 +91,7 @@ func roleAgentSpecs() []roleAgentSpec {
 			"Implement only the tasks the prompt names", "[x]", "`odd-feature-doc`", "append its evidence to the Log", "`test-first`",
 			"RED -> GREEN -> REFACTOR evidence table", "confirmed ledger ids", "one focused test per fix",
 		}},
-		{"shaper", "opus", shaperTools, 4, []string{
+		{"shaper", "opus", shaperTools, 5, []string{
 			"Specs and Tasks", "`odd-feature-doc`", "Never write code or tests", "risks", "exactly one question",
 			"strongest counter-argument", "recommend one option", "tradeoff", "source",
 		}},

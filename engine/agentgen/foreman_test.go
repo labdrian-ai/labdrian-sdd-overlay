@@ -255,6 +255,21 @@ func TestTheForemanBodyCarriesTheDisciplineTheStagesAndTheTierCellOfL29(t *testi
 	}
 }
 
+// The Shape row names the goal file the shaper writes and lets the foreman open only once it exists (T49, L147).
+func TestTheShapeRowNamesTheGoalFileAndOpensOnlyWithIt(t *testing.T) {
+	body := readText(t, filepath.Join(repoRoot(t), "roles", "foreman", "body.md"))
+	var row string
+	for _, line := range strings.Split(body, "\n") {
+		if strings.HasPrefix(line, "| Shape |") {
+			row = line
+		}
+	}
+	want := "| Shape | the shaper; its prompt also names `odd/goals/<f>.json` when that file does not exist | — | every task line carries `shaped: L<n>` with its shaper Log entry, and `odd/goals/<f>.json` exists | the shaper returns a fork only the owner settles |"
+	if row != want {
+		t.Errorf("the Shape row is %q, want %q", row, want)
+	}
+}
+
 // The Close row lets the foreman close a repository with no CI on the engine's `review ci` finding, and keeps the
 // green-CI path it had (S3 L123, the owner's choice in L122).
 func TestTheCloseRowAcceptsTheNoCIFindingBesideGreenCI(t *testing.T) {
