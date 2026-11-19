@@ -1028,6 +1028,16 @@ overlay workflow <verb>
         stdout is one JSON object {"workflow":"<f>-<t>","chain":"<f>-<t>","goal":"<f>",
         "project":"<P>","status":"running","bound":true}; exit 0 opened, 2 refused, 1 a usage
         error or a failure after a write.
+    goal-base --feature <f> [--project <id>]
+        Read-only: print the fields of the feature's Goal v3 that the engine knows, as one JSON line
+        {"version":3,"project_id":"<P>","goal_id":"<f>","memory_directive":{...}}. The directive is
+        the odd profile's memory default, the ceiling a goal may only narrow. <P> is --project, else the
+        last /-separated part of the project's shared identity, the one workflow create records for the
+        memory gate (the .longterm-mem-project file, the origin remote, the main checkout's directory
+        name). The shaper copies these four fields into odd/goals/<f>.json and writes objective, scope,
+        constraints, non_goals, acceptance_criteria, runtime_scope and delivery_boundary; the foreman
+        runs the verb at its Shape stage. exit 0 printed, 2 refused (not a feature name, a project id
+        outside [A-Za-z0-9._-], an identity that cannot be read), 1 usage error.
     The lifecycle verbs print the resulting classification and state (or, for status, the
     current one) as JSON on stdout and report errors on stderr. Exit 0 on success, 2 on a
     refused or invalid operation (an illegal transition, a failed verify, non-owned on-disk

@@ -48,7 +48,7 @@ func runWorkflow(p process, d deps, args []string) {
 // directory.
 func runWorkflowCore(d deps, args []string, cwd string, stdout, stderr io.Writer, exit func(int)) {
 	if len(args) == 0 {
-		fmt.Fprintln(stderr, "error: workflow requires a verb: create, start, pause, resume, stage, verify, close, narrow, status, bind, unbind, binding, open")
+		fmt.Fprintln(stderr, "error: workflow requires a verb: create, start, pause, resume, stage, verify, close, narrow, status, bind, unbind, binding, open, goal-base")
 		exit(1)
 		return
 	}
@@ -80,8 +80,10 @@ func runWorkflowCore(d deps, args []string, cwd string, stdout, stderr io.Writer
 		runWorkflowBinding(d, rest, cwd, stdout, stderr, exit)
 	case "open":
 		runWorkflowOpen(d, rest, cwd, stdout, stderr, exit)
+	case "goal-base":
+		runWorkflowGoalBase(d, rest, cwd, stdout, stderr, exit)
 	default:
-		fmt.Fprintf(stderr, "error: workflow: unknown verb %q (expected create, start, pause, resume, stage, verify, close, narrow, status, bind, unbind, binding, or open)\n", verb)
+		fmt.Fprintf(stderr, "error: workflow: unknown verb %q (expected create, start, pause, resume, stage, verify, close, narrow, status, bind, unbind, binding, open, or goal-base)\n", verb)
 		exit(1)
 	}
 }

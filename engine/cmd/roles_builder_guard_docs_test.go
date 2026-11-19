@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/goal"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/memoryscope"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/overlaytest"
 )
 
@@ -202,57 +203,86 @@ func TestTheShaperRoleFilesTellItToWriteTheGoalTheForemanNames(t *testing.T) {
 		text := readRepositoryFile(t, name)
 		for _, want := range []string{
 			"When the prompt names `odd/goals/<feature>.json`, write it as a Goal of version 3",
-			"`memory_directive` copied verbatim from `odd/goals/labdrian-orchestrator-opencode.json`",
+			"Copy `version`, `project_id`, `goal_id` and `memory_directive` verbatim from the `labdrian workflow goal-base` output the prompt holds",
+			"without that output, write no goal and report it as a blocker",
+			"never add a source or a key",
 			"never rewrite a goal file that exists: report it",
 		} {
 			if !strings.Contains(text, want) {
 				t.Errorf("%s does not say %q", name, want)
 			}
 		}
+		if strings.Contains(text, "odd/goals/labdrian-orchestrator-opencode.json") {
+			t.Errorf("%s names a goal file of this repository", name)
+		}
 	}
 }
 
-// A Goal written as the shaper's sentence says (its keys in order, the memory_directive copied verbatim from the committed
-// goal file the sentence names, L151) is accepted by goal.Parse, and refused when any one key is missing.
+// A Goal written as the shaper's sentence says (its keys in order, version, project_id, goal_id and memory_directive
+// copied verbatim from the output of 'workflow goal-base', L152) is accepted by goal.Parse, so are the two narrowed
+// forms the sentence allows, and a document with any one key missing is refused.
 func TestTheGoalTheShaperIsToldToWriteParses(t *testing.T) {
-	var committed map[string]json.RawMessage
-	if err := json.Unmarshal([]byte(readRepositoryFile(t, "odd/goals/labdrian-orchestrator-opencode.json")), &committed); err != nil {
-		t.Fatalf("the committed goal file is not JSON: %v", err)
+	workflowTestStateHome(t)
+	base := runWorkflowTest([]string{"goal-base", "--feature", "sample-feature", "--project", "sample-project"}, t.TempDir())
+	if base.code != 0 {
+		t.Fatalf("goal-base: code=%d stderr=%q", base.code, base.stderr)
 	}
-	directive := string(committed["memory_directive"])
-	if directive == "" {
-		t.Fatal("the committed goal file has no memory_directive")
+	var printed map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(base.stdout), &printed); err != nil {
+		t.Fatalf("goal-base printed %q, which is not JSON: %v", base.stdout, err)
 	}
+	var directive memoryscope.Directive
+	if err := json.Unmarshal(printed["memory_directive"], &directive); err != nil || len(directive.Sources) == 0 {
+		t.Fatalf("the printed memory_directive %s is not a directive with sources: %v", printed["memory_directive"], err)
+	}
+	marshal := func(d memoryscope.Directive) string {
+		raw, err := json.Marshal(d)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(raw)
+	}
+	firstSourceOnly := directive
+	firstSourceOnly.Scope = "goal"
+	firstSourceOnly.Sources = directive.Sources[:1]
+	none := directive
+	none.Scope = "none"
+	none.Sources = []memoryscope.Source{}
 
 	keys := []string{"version", "project_id", "goal_id", "objective", "scope", "constraints", "non_goals", "acceptance_criteria", "memory_directive", "runtime_scope", "delivery_boundary"}
 	values := map[string]string{
-		"version":             "3",
-		"project_id":          `"sample-project"`,
-		"goal_id":             `"sample-feature"`,
 		"objective":           `"sample objective"`,
 		"scope":               `"sample scope"`,
 		"constraints":         `["sample constraint"]`,
 		"non_goals":           `["sample non-goal"]`,
 		"acceptance_criteria": `["sample criterion"]`,
-		"memory_directive":    directive,
 		"runtime_scope":       `"sample runtime scope"`,
 		"delivery_boundary":   `"sample delivery boundary"`,
 	}
-	document := func(skip string) []byte {
+	for _, key := range []string{"version", "project_id", "goal_id", "memory_directive"} {
+		values[key] = string(printed[key])
+	}
+	document := func(skip, memoryDirective string) []byte {
 		var parts []string
 		for _, key := range keys {
+			value := values[key]
+			if key == "memory_directive" && memoryDirective != "" {
+				value = memoryDirective
+			}
 			if key != skip {
-				parts = append(parts, fmt.Sprintf("%q: %s", key, values[key]))
+				parts = append(parts, fmt.Sprintf("%q: %s", key, value))
 			}
 		}
 		return []byte("{" + strings.Join(parts, ", ") + "}")
 	}
-	if _, err := goal.Parse(document("")); err != nil {
-		t.Fatalf("the goal of the shaper's sentence is refused: %v", err)
-	}
-	for _, key := range keys {
-		if _, err := goal.Parse(document(key)); err == nil {
-			t.Errorf("a goal without %s is accepted", key)
+	for name, memoryDirective := range map[string]string{"printed": "", "first source only, scope goal": marshal(firstSourceOnly), "scope none, no sources": marshal(none)} {
+		if _, err := goal.Parse(document("", memoryDirective)); err != nil {
+			t.Errorf("the goal with the %s directive is refused: %v", name, err)
+		}
+		for _, key := range keys {
+			if _, err := goal.Parse(document(key, memoryDirective)); err == nil {
+				t.Errorf("a goal with the %s directive and without %s is accepted", name, key)
+			}
 		}
 	}
 }

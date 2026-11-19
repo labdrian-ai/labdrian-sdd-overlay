@@ -264,7 +264,7 @@ func TestTheShapeRowNamesTheGoalFileAndOpensOnlyWithIt(t *testing.T) {
 			row = line
 		}
 	}
-	want := "| Shape | the shaper; its prompt also names `odd/goals/<f>.json` when that file does not exist | — | every task line carries `shaped: L<n>` with its shaper Log entry, and `odd/goals/<f>.json` exists | the shaper returns a fork only the owner settles |"
+	want := "| Shape | the shaper; when `odd/goals/<f>.json` does not exist, its prompt also names that path and holds the stdout of `labdrian workflow goal-base --feature <f>` | — | every task line carries `shaped: L<n>` with its shaper Log entry, and `odd/goals/<f>.json` exists | the shaper returns a fork only the owner settles; `labdrian workflow goal-base` refuses: relay its message |"
 	if row != want {
 		t.Errorf("the Shape row is %q, want %q", row, want)
 	}
