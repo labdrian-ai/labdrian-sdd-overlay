@@ -410,6 +410,10 @@ const originRefs = "refs/remotes/origin/"
 // lists, with a tip for each of the two places the default branch is, so that a local branch behind its remote, and
 // one ahead of it, both leave their commits out; a branch that merged the default branch lists its own line of
 // commits and not the ones merged in.
+//
+// When the branch tracks a branch of another name, a stacked branch, the commits that branch holds are not the
+// branch's own either (T50, L148): the tip of that upstream is one more ^<tip>. No upstream, one of the branch's own
+// name, one that does not exist and any read that fails add nothing, so the range is then what it was.
 func (g Git) Standing(repo app.Repository) (app.Standing, error) {
 	out, err := g.output(repo.Root, "rev-parse", []string{"rev-parse", "--abbrev-ref", "HEAD"})
 	if err != nil {
@@ -432,6 +436,9 @@ func (g Git) Standing(repo app.Repository) (app.Standing, error) {
 	}
 	args := []string{"rev-list", "--first-parent", "--reverse", "--end-of-options", head}
 	for _, tip := range tips {
+		args = append(args, "^"+tip)
+	}
+	if tip := g.upstreamTip(repo.Root, branch); tip != "" {
 		args = append(args, "^"+tip)
 	}
 	out, err = g.output(repo.Root, "rev-list", args)
@@ -1032,6 +1039,40 @@ func (g Git) defaultBranch(dir string) (string, []string, error) {
 		}
 	}
 	return "", nil, nil
+}
+
+// upstreamTip is the commit of the branch that branch tracks when that is a branch of another name, else "". It reads
+// what git keeps for the branch (the ref it tracks and the branch it merges with) and never returns an error: what it
+// cannot read, or finds odd, leaves the range of Standing as it was, so that no commit is left out by accident.
+func (g Git) upstreamTip(dir, branch string) string {
+	if strings.ContainsAny(branch, "*?[\\\n") {
+		return ""
+	}
+	out, err := g.output(dir, "config", []string{"config", "--get", "branch." + branch + ".merge"})
+	if err != nil {
+		return ""
+	}
+	merged, ok := strings.CutPrefix(strings.TrimSuffix(string(out), "\n"), "refs/heads/")
+	if !ok || merged == "" || merged == branch {
+		return ""
+	}
+	out, err = g.output(dir, "for-each-ref", []string{"for-each-ref", "--format=%(upstream)", "refs/heads/" + branch})
+	if err != nil {
+		return ""
+	}
+	upstream := strings.TrimSuffix(string(out), "\n")
+	if upstream == "" || strings.ContainsAny(upstream, "*?[\\\n") {
+		return ""
+	}
+	out, err = g.output(dir, "for-each-ref", []string{"for-each-ref", "--format=%(objectname)", upstream})
+	if err != nil {
+		return ""
+	}
+	tips, err := commitNames("for-each-ref", out)
+	if err != nil || len(tips) != 1 {
+		return ""
+	}
+	return tips[0]
 }
 
 // commitNames reads out, what git printed for command, as a list of full object names, one on each line, and none

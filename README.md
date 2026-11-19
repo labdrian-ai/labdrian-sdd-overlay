@@ -1513,7 +1513,10 @@ gentle-ai-overlay review stop-hook
     It asks for what the first commit with unfinished review steps misses, one commit and not the whole branch. In a
     working tree that keeps features (odd/tasks or odd/review-results) with HEAD on a branch other than the default one
     (origin/HEAD, else main, else master), it walks the first-parent line of the branch, from the commit the branch was
-    made on, and blocks the stop for the first commit that misses anything `review check` asks of it. The reason lists
+    made on, and blocks the stop for the first commit that misses anything `review check` asks of it. The commits are
+    those of the branch that the default branch lacks and, when the branch tracks a branch of another name (its
+    upstream), that branch lacks too, so a branch made with `git switch -c <child> --track <parent>` is asked only for its
+    own commits; with no upstream, or one of the branch's own name, it is asked as before. The reason lists
     each thing the commit misses with the command that answers it: the `Risk:` trailer (`git commit --amend --trailer`
     when the commit is HEAD), `labdrian review sweep --feature <feature> --base <base> --head <head>`, `labdrian review
     record --role sweeper` for a sweep that fired, `labdrian review record --role polisher` for a trailer that names an

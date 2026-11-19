@@ -59,6 +59,7 @@ func TestDocsDescribeTheReviewStopHook(t *testing.T) {
 	for _, want := range []string{
 		"the first commit with unfinished review steps",
 		"(`git commit --amend --trailer` when the commit is HEAD)",
+		"when the branch tracks a branch of another name (its upstream), that branch lacks too",
 	} {
 		if !strings.Contains(text, normalizeDocText(want)) {
 			t.Errorf("the README section of the review stop-hook does not say %q", want)

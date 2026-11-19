@@ -357,6 +357,43 @@ func TestReviewStopHookNeverAsksAPassiveCommitBelowAnUnreviewedOne(t *testing.T)
 	}
 }
 
+// A branch made from another branch that is not the default one owns, for the hook, only its own commits when it tracks
+// that branch (L148): the parent's commit, which has no Risk trailer, is the parent's session to be asked about. A branch
+// that tracks nothing keeps being asked for the commits it inherited.
+func TestStopHookDoesNotAskAStackedBranchForItsParentsCommits(t *testing.T) {
+	stacked := func(t *testing.T, switchArgs ...string) (*stopWorld, string) {
+		t.Helper()
+		w := newReviewWorld(t)
+		w.git("switch", "-q", "-c", "feature/parent")
+		overlaytest.WriteFile(t, w.root, "p1.txt", "p1\n")
+		w.git("add", "-A")
+		w.git("commit", "-q", "-m", "p1")
+		parent := w.name("HEAD")
+		w.git(append([]string{"switch", "-q", "-c", "feature/stop"}, switchArgs...)...)
+		overlaytest.WriteFile(t, w.root, "odd/tasks/own-rdd.md", "# own-rdd\n")
+		w.git("add", "-A")
+		w.git("commit", "-q", "-m", "docs", "-m", "Risk: none")
+		return &stopWorld{reviewWorld: w, home: t.TempDir()}, parent
+	}
+
+	t.Run("the child tracks the parent", func(t *testing.T) {
+		s, _ := stacked(t, "--track", "feature/parent")
+
+		s.allowed("s1")
+
+		s.requireNothingRemembered(t)
+	})
+	t.Run("the child tracks nothing", func(t *testing.T) {
+		s, parent := stacked(t, "--no-track", "feature/parent")
+
+		reason := s.blocked("s1")
+
+		if want := "Commit " + parent + " of branch feature/stop has unfinished review steps."; !strings.HasPrefix(reason, want) {
+			t.Errorf("reason = %q, want it to start %q", reason, want)
+		}
+	})
+}
+
 // The question of a repository that does not tell its default branch is worded as it always was.
 func TestReviewStopHookWordsTheNoDefaultBranchReasonAsItAlwaysDid(t *testing.T) {
 	s := newStopWorld(t)
