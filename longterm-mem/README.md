@@ -90,7 +90,6 @@ The binary (`longterm-mem <subcommand> [flags]`) currently dispatches:
 | `stale` | `[--project P]` | Report the memories this repository's history disagrees with (removed or moved paths). Reports only; never deletes. A path that climbs out of the project (`a/../../x.go`) is unknown: it is not asked of git and the rest of the report prints. |
 | `doctor` | `[--project P]` `[--vault DIR]` `[--json]` | Deeper diagnostics: prerequisites, wiki-lint, registration consistency, embedding index presence/freshness and backend reachability, and an advisory check that names promoted pages `sync` no longer refreshes (see [Frozen pages](#frozen-pages)). Each check answers `PASS`, `FAIL` or `warn`; only a `FAIL` makes the exit code 9, so a `warn` never changes it. |
 | `promote` | `[--project P]` `--source memorycard` `--id N` `[--vault DIR]` | Explicitly promote one memorycard memory by id (refused, exit 6, when it is bridged to a page that already exists). `--source memorycard` is required: without it, or with another name, the command is exit 2; see [Promoting from memorycard](docs/promote-from-memorycard.md). (Previously: `--source engram\|memorycard`, default `engram`, and `--id` was an Engram observation id.) `promote reconcile <address>` adopts one already-promoted page whose precedence entry cannot tell longterm-mem's own write from a human edit, so promotion stops refusing it; deliberately one address at a time. |
-| `migrate-card-pages` | `[--project P]` `[--vault DIR]` `[--apply]` | One-time migration of the pages of older releases: every page of the project carrying legacy identity keys (`engram_id`, `memorycard_id` and their companions) takes the store-agnostic keys `source`, `source_id`, `source_type` and `source_revision` of its memorycard memory (in that order), reading memorycard's `import_map` alone (no Engram database). A dry run unless given `--apply`; it prints how many pages carry legacy keys and counts each refusal; with `--apply` it first copies the pages it rewrites and the precedence sidecar to `.vault-meta/card-page-migration-<UTC instant>/`. A refused page is left byte-identical and named, and any refusal is exit 6. It runs per `--project`: run it for every project that has pages in the vault. A page naming an Engram observation takes its memory's current revision as `source_revision` and keeps its Engram-era body. Before `--apply`, close every agent session that uses the vault and check that `pgrep -af '[l]ongterm-mem.* sync'` prints nothing (any output is a sync that is running; the bracket keeps the check from matching itself): no lock guards a concurrent sync and the hook-driven `sync` has no switch. A legacy page with no `project` field belongs to no project's run: each run prints one note about it on stdout and it makes no exit code; add a `project:` line by hand, then run again. A page whose first non-blank line is `---` but whose frontmatter cannot be read (CRLF line endings, no closing `---`, a BOM, blank line or spaces before the opening `---`, spaces after an opening or closing `---`, or a line ending in `---` inside the frontmatter) is counted and refused by name when it carries a legacy key; a page that does not open with `---` has no frontmatter and is ignored. See [Promoting from memorycard](docs/promote-from-memorycard.md#the-one-time-migration-of-the-pages-of-older-releases). |
 | `mcp` | — | Run the MCP stdio server (`query`, `get`, `promote` tools). |
 | `register` | `--target claude\|opencode\|codex\|all` `[--binary PATH]` `[--config-root DIR]` `[--state-dir DIR]` | Write this binary's MCP entry into the runtime's config file (ownership-tagged, idempotent). |
 | `unregister` | `--target claude\|opencode\|codex\|all` `[--config-root DIR]` `[--state-dir DIR]` | Remove the entry `register` wrote; an entry it does not own is left untouched and reported as `unmanaged`. |
@@ -181,16 +180,15 @@ and the two ways out:
 - `longterm-mem promote --source memorycard --id N` refreshes the page now, once;
 - pinning memory N in memorycard makes `sync` keep the page current from then on.
 
-That is the advice for a page that carries a memorycard identity. A page of an earlier release (it carries only an
-`engram_id`) is refused by `promote` as bridged, so for it `doctor` names no `promote` command: it says the page
-predates memorycard identity and is refreshed only after the one-time vault migration, and that pinning memory N in
-memorycard keeps it current after it.
+`doctor` joins a page to its memory by the identity the page names: its `source_id` beside `source: memorycard`.
+Only live memories (not superseded, not archived) are judged. It reads no Engram database for this check.
+(Previously: it joined by `engram_id` over the live observations of Engram, and advised `promote --id N` and
+pinning observation N in Engram; and until the retirement of the legacy keys it also joined a page by its legacy keys.)
 
-`doctor` joins a page to its memory by the identity the page names: its `source_id` beside `source: memorycard` (or the legacy `memorycard_id`), or, for a page an earlier
-release promoted from Engram, its `engram_id` through memorycard's `import_map`. Only live memories (not superseded, not archived) are judged; when one observation was imported as several
-memories, the page is kept current if any live one is eligible, and a warning names the first. It reads no Engram
-database for this check. (Previously: it joined by `engram_id` over the live observations of Engram, and advised `promote --id N` and
-pinning observation N in Engram.)
+A page that carries only the retired keys (`engram_id`, `memorycard_id`) names no memory, so `doctor` does not judge it,
+and `sync` and `promote` do not take it for the page of any memory: they give that memory a new page and leave the old
+one untouched, so such a page would duplicate the memory it was written for. A vault that still has one needs that
+page removed, or given the `source`, `source_id`, `source_type` and `source_revision` keys of its memory by hand.
 
 The check is advisory. It answers `warn`, never `FAIL`: the text form prints
 `[warn] promoted-pages-eligible (...)`, `--json` carries `"status": "warn"`, and

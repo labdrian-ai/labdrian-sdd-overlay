@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "1edf8e79cc3bad06e5983ebdebb762c4c4ec4dff",
+    "head": "25d9a4c75f287b64b3a6ce7e64b07e221ce9d071",
+    "diff_sha256": "94dd3eec73da015ed6f37a8d7ca694d174f9fd770678850e41151acf1a14ccf4",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "1edf8e79cc3bad06e5983ebdebb762c4c4ec4dff",
+      "head": "25d9a4c75f287b64b3a6ce7e64b07e221ce9d071",
+      "diff_sha256": "94dd3eec73da015ed6f37a8d7ca694d174f9fd770678850e41151acf1a14ccf4"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:122",
+        "claim": "The T7 task line now lists the commits but the NOT TICKED note is placed in the commit field and cites L92 while the acceptance wording 'the owner's live migration dry run reports zero legacy pages' is evidenced only by a log line the author quotes (L91); the dry-run output quoted is from the same run.log as the migration itself, not an independent owner dry run, so the precondition evidence is weaker than D2 requires. Doc-only, no behavior effect.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:L91 (added log entry)"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:853",
+        "claim": "L92 states the differential check ran 'eight scenarios' with identical output in seven and the eighth differing only in a wall-clock line, yet the commit under review removed the local-edit refusal wording and the migrate-card-pages subcommand (exit 2 unknown subcommand), which are visible output changes; claiming identical stdout/stderr across scenarios including 'hand edit' conflicts with the 'one deliberate message change' stated two bullets earlier. The record is internally inconsistent.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:L92 bullets 'One deliberate message change' and 'Differential check'"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only odd/tasks/phase9-store-agnostic-promotion.md changed; documentation-only diff, no code behavior altered.",
+      "The T7 line remains unticked, consistent with the logged open blocker.",
+      "Log entries L91/L92 appended after L90, append-only convention respected."
+    ]
+  }
+}

@@ -369,10 +369,10 @@ func (w *Writer) publishNew(address string, page Page, existingPath string) erro
 //
 // AN ALREADY-SUPERSEDED PAGE IS NEVER TOUCHED. The rule's load-bearing
 // payoff is that it refuses to clobber a successor pointer somebody else
-// set -- R-033's Engram-side propagation may already have superseded this
+// set -- R-033's propagation may already have superseded this
 // page toward a different successor, which is real history; silently
 // overwriting another successor chain would be its own defect, and the
-// moved observation stays reachable by engram_id regardless. It is NOT
+// moved memory stays reachable by its id regardless. It is NOT
 // what makes a repeat promotion a no-op: PatchStatusFields already writes
 // nothing when the patched block is byte-identical (frontmatter.go's
 // `if newBlock != fmBlock`), so a second run would leave the page,
@@ -392,7 +392,7 @@ func (w *Writer) publishNew(address string, page Page, existingPath string) erro
 // lines and never re-bodies the page, so it destroys no human edit -- a
 // human's prose, their added frontmatter keys, everything else survives
 // byte for byte. Skipping a locally edited orphan would instead leave a
-// second live page for one engram_id with nothing marking it stale, which
+// second live page for one memory with nothing marking it stale, which
 // is the very duplicate R-008 forbids. Only the frontmatter hash is
 // re-recorded, never the body hash: stamping the on-disk body as our own
 // last write would erase the divergence R-030 depends on and let the next

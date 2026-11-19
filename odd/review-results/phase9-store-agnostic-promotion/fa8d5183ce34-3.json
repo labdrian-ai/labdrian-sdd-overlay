@@ -1,0 +1,128 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "fc7617c46c24b83bf01920c934826c002614cf94",
+    "head": "fa8d5183ce34bce805a7b5cbc1330b739a6a0b0b",
+    "diff_sha256": "95568a6b0f67fb45fbe20549ade16b5a6574209d3e5060c8b328f6f85fa7e2f0",
+    "paths": [
+      "longterm-mem/internal/promote/address_test.go",
+      "longterm-mem/internal/promote/card_promote_test.go",
+      "longterm-mem/internal/promote/eligible.go",
+      "longterm-mem/internal/promote/eligible_test.go",
+      "longterm-mem/internal/promote/frontmatter.go",
+      "longterm-mem/internal/promote/frontmatter_test.go",
+      "longterm-mem/internal/promote/legacy_keys_retired_test.go",
+      "longterm-mem/internal/promote/page.go",
+      "longterm-mem/internal/promote/page_identity.go",
+      "longterm-mem/internal/promote/page_identity_fields_test.go",
+      "longterm-mem/internal/promote/page_identity_test.go",
+      "longterm-mem/internal/promote/page_scan.go",
+      "longterm-mem/internal/promote/page_scan_test.go",
+      "longterm-mem/internal/promote/page_style.go",
+      "longterm-mem/internal/promote/page_style_test.go",
+      "longterm-mem/internal/promote/page_test.go",
+      "longterm-mem/internal/promote/pages_port_test.go",
+      "longterm-mem/internal/promote/pages_unreadable_test.go",
+      "longterm-mem/internal/promote/projectmove_recovery_test.go",
+      "longterm-mem/internal/promote/propagate.go",
+      "longterm-mem/internal/promote/propagate_ids_test.go",
+      "longterm-mem/internal/promote/reconcile.go",
+      "longterm-mem/internal/promote/reconcile_guard_test.go",
+      "longterm-mem/internal/promote/reconcile_test.go",
+      "longterm-mem/internal/promote/store.go",
+      "longterm-mem/internal/promote/support_test.go",
+      "longterm-mem/internal/promote/sync_cards_project_test.go",
+      "longterm-mem/internal/promote/sync_cards_test.go",
+      "longterm-mem/internal/promote/testdata/pages/architecture.golden.md",
+      "longterm-mem/internal/promote/update.go",
+      "longterm-mem/internal/promote/update_test.go",
+      "longterm-mem/internal/promote/walk.go",
+      "longterm-mem/internal/promote/walk_bridged_test.go",
+      "longterm-mem/internal/promote/walk_failures_test.go",
+      "longterm-mem/internal/promote/writer.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "fc7617c46c24b83bf01920c934826c002614cf94",
+      "head": "fa8d5183ce34bce805a7b5cbc1330b739a6a0b0b",
+      "diff_sha256": "95568a6b0f67fb45fbe20549ade16b5a6574209d3e5060c8b328f6f85fa7e2f0"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/promote/address_test.go",
+        "longterm-mem/internal/promote/card_promote_test.go",
+        "longterm-mem/internal/promote/eligible.go",
+        "longterm-mem/internal/promote/eligible_test.go",
+        "longterm-mem/internal/promote/frontmatter.go",
+        "longterm-mem/internal/promote/frontmatter_test.go",
+        "longterm-mem/internal/promote/legacy_keys_retired_test.go",
+        "longterm-mem/internal/promote/page.go",
+        "longterm-mem/internal/promote/page_identity.go",
+        "longterm-mem/internal/promote/page_identity_fields_test.go",
+        "longterm-mem/internal/promote/page_identity_test.go",
+        "longterm-mem/internal/promote/page_scan.go",
+        "longterm-mem/internal/promote/page_scan_test.go",
+        "longterm-mem/internal/promote/page_style.go",
+        "longterm-mem/internal/promote/page_style_test.go",
+        "longterm-mem/internal/promote/page_test.go",
+        "longterm-mem/internal/promote/pages_port_test.go",
+        "longterm-mem/internal/promote/pages_unreadable_test.go",
+        "longterm-mem/internal/promote/projectmove_recovery_test.go",
+        "longterm-mem/internal/promote/propagate.go",
+        "longterm-mem/internal/promote/propagate_ids_test.go",
+        "longterm-mem/internal/promote/reconcile.go",
+        "longterm-mem/internal/promote/reconcile_guard_test.go",
+        "longterm-mem/internal/promote/reconcile_test.go",
+        "longterm-mem/internal/promote/store.go",
+        "longterm-mem/internal/promote/support_test.go",
+        "longterm-mem/internal/promote/sync_cards_project_test.go",
+        "longterm-mem/internal/promote/sync_cards_test.go",
+        "longterm-mem/internal/promote/testdata/pages/architecture.golden.md",
+        "longterm-mem/internal/promote/update.go",
+        "longterm-mem/internal/promote/update_test.go",
+        "longterm-mem/internal/promote/walk.go",
+        "longterm-mem/internal/promote/walk_bridged_test.go",
+        "longterm-mem/internal/promote/walk_failures_test.go",
+        "longterm-mem/internal/promote/writer.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/promote/page_scan.go:17",
+        "claim": "pageSources is now only memorycard, so pages carrying `source: engram` (the store-agnostic key the reader accepted before this change) are no longer read at all. A memorycard memory whose lineage or mirror names an Engram observation with such a page is no longer detected as bridged, and a second page may be created for one piece of memory. Doctor's promoted-pages-eligible join (PageMemoryRef) also stops seeing those pages. The commit only argues that no page carries the legacy engram_*/memorycard_* keys. It does not show that no migrated page carries `source: engram`, which the old reader supported and the new tests now assert names no memory.",
+        "evidence_class": "inferential",
+        "causal_disposition": "behavior-activated",
+        "proof_refs": [
+          "longterm-mem/internal/promote/page_scan.go:17",
+          "longterm-mem/internal/promote/eligible.go:73",
+          "longterm-mem/internal/promote/eligible_test.go:206"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/update.go:147-153",
+        "claim": "entryFor no longer records PromotedRevision on any promotion path, but the field's comment in store.go still describes the revision as the evidence that separates an own unrecorded write from a human edit. After this change only `promote reconcile` sets it. Entries written by promotion therefore stay at revision 0, and Reconcile treats those pages as wedged and adopts them rather than refusing. This matches how card pages already behaved, but the reconcile_test fixture now has to set the revision by hand to keep the refusal path covered.",
+        "evidence_class": "inferential",
+        "causal_disposition": "behavior-activated",
+        "proof_refs": [
+          "longterm-mem/internal/promote/update.go:147-153",
+          "longterm-mem/internal/promote/reconcile_test.go:209-215"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff. The promote-package tests were rewritten to the store-agnostic keys.",
+      "The stated compile break in cmd/longterm-mem and internal/ops is acknowledged in the commit message, so I did not report it.",
+      "identityOf and fieldOf now require `source` to equal the requested store, and pageSources contains only memorycard, so a `source: engram` page matches no source (page_identity.go, page_scan.go)."
+    ]
+  }
+}

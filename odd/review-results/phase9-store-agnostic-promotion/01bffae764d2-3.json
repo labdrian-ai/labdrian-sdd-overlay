@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "87f26495f03d65b7423a2d8d787eb56f36cf75d0",
+    "head": "01bffae764d2d6ab2b4179a320dcd067772b3b21",
+    "diff_sha256": "d8fb134857022d09036e47fc4c786acbf6472f616213aabbfe6d3c4a00388982",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go",
+      "longterm-mem/cmd/longterm-mem/main.go",
+      "longterm-mem/cmd/longterm-mem/migrate_card_pages_backup_durable_test.go",
+      "longterm-mem/cmd/longterm-mem/migrate_card_pages_backup_more_test.go",
+      "longterm-mem/cmd/longterm-mem/migrate_card_pages_backup_sync_test.go",
+      "longterm-mem/cmd/longterm-mem/migrate_card_pages_backup_test.go",
+      "longterm-mem/cmd/longterm-mem/migrate_card_pages_halfmigrated_test.go",
+      "longterm-mem/cmd/longterm-mem/migrate_card_pages_scan_test.go",
+      "longterm-mem/cmd/longterm-mem/migrate_card_pages_test.go",
+      "longterm-mem/cmd/longterm-mem/page_keys_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "87f26495f03d65b7423a2d8d787eb56f36cf75d0",
+      "head": "01bffae764d2d6ab2b4179a320dcd067772b3b21",
+      "diff_sha256": "d8fb134857022d09036e47fc4c786acbf6472f616213aabbfe6d3c4a00388982"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go",
+        "longterm-mem/cmd/longterm-mem/main.go",
+        "longterm-mem/cmd/longterm-mem/migrate_card_pages_backup_durable_test.go",
+        "longterm-mem/cmd/longterm-mem/migrate_card_pages_backup_more_test.go",
+        "longterm-mem/cmd/longterm-mem/migrate_card_pages_backup_sync_test.go",
+        "longterm-mem/cmd/longterm-mem/migrate_card_pages_backup_test.go",
+        "longterm-mem/cmd/longterm-mem/migrate_card_pages_halfmigrated_test.go",
+        "longterm-mem/cmd/longterm-mem/migrate_card_pages_scan_test.go",
+        "longterm-mem/cmd/longterm-mem/migrate_card_pages_test.go",
+        "longterm-mem/cmd/longterm-mem/page_keys_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/cmd/longterm-mem/migrate_card_pages_test.go:1",
+        "claim": "The deleted test files defined package-wide helpers (sha, recordPage, legacyEngramPage, currentCardPage, runMigrate, changedPaths, regularFiles, mustJSON, migrationWorld, containsAll, migrationInstant) and the deleted command file defined syncDirectory, readWithMode and backupDirectoryPrefix. Other files in package main may still use them, and the diff does not show those files. If any do, the package or its tests no longer compile. The new helpers cardPageMemory and writeCardPage and the new legacyCardPage(address) could also collide with existing definitions in other test files. I cannot confirm either case from the diff.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/migrate_card_pages_test.go:1-462 (deleted)",
+          "longterm-mem/cmd/longterm-mem/page_keys_test.go:88-172"
+        ]
+      }
+    ],
+    "evidence": [
+      "The dispatch case for migrate-card-pages is removed from main.go, so the command is unreachable.",
+      "TestMigrateCardPagesIsNoSubcommandAnyMore pins the unknown-subcommand refusal.",
+      "The diff shows no direct regression. The only residual risk is a compile dependency on the deleted helpers in files outside the diff."
+    ]
+  }
+}

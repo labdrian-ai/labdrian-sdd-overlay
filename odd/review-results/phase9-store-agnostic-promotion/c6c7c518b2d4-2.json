@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "2eec9d1130106f1ff10d8f50c33b31a20f1d7857",
+    "head": "c6c7c518b2d43c860837844f98479b5b358d2c98",
+    "diff_sha256": "be5dbb7b528084ef80fd5f91db4cdd94c579dea9f9c06d522fd9d5f8dcee62fa",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "2eec9d1130106f1ff10d8f50c33b31a20f1d7857",
+      "head": "c6c7c518b2d43c860837844f98479b5b358d2c98",
+      "diff_sha256": "be5dbb7b528084ef80fd5f91db4cdd94c579dea9f9c06d522fd9d5f8dcee62fa"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:887",
+        "claim": "L104 says the third review produced 8 findings, but the entry answers only 7: 70137c5b F1 (warning), F1 (2nd), F2 and F2 (2nd) make four, and 1624a674 F1 (warning), F2 and F3 make three. The previous review round criticised the tally of L102, and this entry introduces another count that does not reconcile. A finding may be unanswered, or the number is wrong.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:887"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:123",
+        "claim": "The T7 task line is not updated for this round. It still says it records the first review (L97-L102) and the second (L103) and lists the review follow-up commits. L104 (third review) and its fix commit 2eec9d11 are missing, although L104 itself says the task line lists the commits. The new follow-up line cites L104 but the T7 line does not, so the map from the task to the third review is incomplete.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:123",
+          "odd/tasks/phase9-store-agnostic-promotion.md:887"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only the Markdown feature document changed: one new unchecked follow-up line under T7 and the new Log entry L104.",
+      "I counted the findings L104 enumerates (4 on 70137c5b, 3 on 1624a674 = 7) against its stated 8.",
+      "The T7 line, unchanged by the diff, still ends at the second review (L103)."
+    ]
+  }
+}

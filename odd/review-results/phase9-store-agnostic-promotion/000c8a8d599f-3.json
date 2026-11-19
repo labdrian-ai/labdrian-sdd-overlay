@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "20b98d4ed928acfc972cf4e4c0fc3749bd55789a",
+    "head": "000c8a8d599f4a412b07b2c0c8a3dd4e85639aad",
+    "diff_sha256": "d9dba37c3de04594dbcd6add95777a03ba5afc8987ecfa835252a4b45f6febfc",
+    "paths": [
+      "longterm-mem/README.md",
+      "longterm-mem/docs/promote-from-memorycard.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "20b98d4ed928acfc972cf4e4c0fc3749bd55789a",
+      "head": "000c8a8d599f4a412b07b2c0c8a3dd4e85639aad",
+      "diff_sha256": "d9dba37c3de04594dbcd6add95777a03ba5afc8987ecfa835252a4b45f6febfc"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/README.md",
+        "longterm-mem/docs/promote-from-memorycard.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Both hunks only remove the dated migration figure (575 of 575, 2026-11-15) and keep the remedy: remove the page or add the four keys source, source_id, source_type, source_revision.",
+      "The README and promote doc now give the same remedy, matching the commit claim.",
+      "Documentation-only change; no code, behavior or test is touched.",
+      "Long line in README.md is a formatting matter only, not a defect."
+    ]
+  }
+}

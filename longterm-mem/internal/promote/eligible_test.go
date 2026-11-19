@@ -190,40 +190,21 @@ func TestPromote_AnIneligibleObservationReportsNoActionAndWritesNothing(t *testi
 	}
 }
 
-// A page names an observation only by a positive engram_id: zero is no observation, so no page is joined
-// to an observation it does not name.
-func TestPageObservationIDNamesOnlyAPositiveID(t *testing.T) {
-	for _, tc := range []struct {
-		frontmatter string
-		wantID      int64
-		wantNamed   bool
-	}{
-		{"---\nengram_id: 12\n---\n", 12, true},
-		{"---\nengram_id: 0\n---\n", 0, false},
-		{"---\ntitle: x\n---\n", 0, false},
-	} {
-		id, named := PageObservationID(Page{Frontmatter: tc.frontmatter})
-		if id != tc.wantID || named != tc.wantNamed {
-			t.Errorf("PageObservationID(%q) = %d, %v; want %d, %v", tc.frontmatter, id, named, tc.wantID, tc.wantNamed)
-		}
-	}
-}
-
-// PageMemoryRef names the memory a page was promoted from, in either store's keys, and nothing for a page that
-// names none or a number that is not positive (S11: the join of doctor's promoted-pages-eligible).
-func TestPageMemoryRef_NamesTheMemoryOfAPageOfEitherStore(t *testing.T) {
+// PageMemoryRef names the memory a page was promoted from in the store-agnostic keys, and nothing for a page that
+// names none, a number that is not positive or only the legacy keys (S7; S11: the join of doctor's
+// promoted-pages-eligible).
+func TestPageMemoryRef_NamesTheMemoryOfAPageByItsStoreAgnosticKeys(t *testing.T) {
 	for name, tc := range map[string]struct {
 		frontmatter string
 		want        MemoryRef
 		named       bool
 	}{
-		"memorycard_id":        {"---\naddress: c-000001\nmemorycard_id: 12\n---\n", MemoryRef{Source: memorycardSource, ID: 12}, true},
 		"source memorycard":    {"---\naddress: c-000001\nsource: memorycard\nsource_id: 12\n---\n", MemoryRef{Source: memorycardSource, ID: 12}, true},
-		"engram_id":            {"---\naddress: c-000001\nengram_id: 41\n---\n", MemoryRef{Source: engramSource, ID: 41}, true},
-		"source engram":        {"---\naddress: c-000001\nsource: engram\nsource_id: 41\n---\n", MemoryRef{Source: engramSource, ID: 41}, true},
-		"memorycard wins":      {"---\nmemorycard_id: 12\nengram_id: 41\n---\n", MemoryRef{Source: memorycardSource, ID: 12}, true},
-		"zero names none":      {"---\nmemorycard_id: 0\n---\n", MemoryRef{}, false},
-		"not a number":         {"---\nmemorycard_id: x\n---\n", MemoryRef{}, false},
+		"memorycard_id only":   {"---\naddress: c-000001\nmemorycard_id: 12\n---\n", MemoryRef{}, false},
+		"engram_id only":       {"---\naddress: c-000001\nengram_id: 41\n---\n", MemoryRef{}, false},
+		"source engram":        {"---\naddress: c-000001\nsource: engram\nsource_id: 41\n---\n", MemoryRef{}, false},
+		"zero names none":      {"---\nsource: memorycard\nsource_id: 0\n---\n", MemoryRef{}, false},
+		"not a number":         {"---\nsource: memorycard\nsource_id: x\n---\n", MemoryRef{}, false},
 		"no identity":          {"---\naddress: c-000001\n---\n", MemoryRef{}, false},
 		"no frontmatter block": {"Body only.\n", MemoryRef{}, false},
 	} {

@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "b799f6934ca53e8dd12a4a061341e07dd181f800",
+    "head": "a6333f65742c5a40532fdf15f23f3cc17f6b90b3",
+    "diff_sha256": "4931c22d7d23934466d9d20d82b1b8db60bb241fd58a161da23eb11c34830100",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "b799f6934ca53e8dd12a4a061341e07dd181f800",
+      "head": "a6333f65742c5a40532fdf15f23f3cc17f6b90b3",
+      "diff_sha256": "4931c22d7d23934466d9d20d82b1b8db60bb241fd58a161da23eb11c34830100"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:122",
+        "claim": "In the T7 line's list of review follow-up commits, the new sha `b799f693` is appended after `c6c7c518` with no comma separator, unlike every other entry in the list. The two shas read as one item, which makes the commit map harder to read and to parse.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:122 (`... `2eec9d11`, `c6c7c518` `b799f693` and the commit that holds L106`)"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only odd/tasks/phase9-store-agnostic-promotion.md, a documentation file, and I read all of it.",
+      "The L106 claims are consistent with L104 and L105. L105 does say 'names the third review in L104 and L105', which L106 corrects. L106 lists three findings and answers three.",
+      "The follow-up line's new attribution matches L104 and L105: `c6c7c518` is the commit that holds L104, and L105 tied T9 to the item."
+    ]
+  }
+}

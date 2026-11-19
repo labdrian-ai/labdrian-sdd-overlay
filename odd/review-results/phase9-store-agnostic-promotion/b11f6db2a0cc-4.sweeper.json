@@ -1,0 +1,15 @@
+{
+  "kind": "sweeper",
+  "base": "6db6d5849c810d55bd58ae12a5bed2675d5ceaaf",
+  "head": "b11f6db2a0cc9cd4bf618712b9f7d94027ef72a8",
+  "diff_sha256": "1235fb37331afd05eccd78329960cde258990631bd1aaa079aa938df73076052",
+  "sweep": "b11f6db2a0cc-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 name: EngramMemory",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. rg -F: 0 occurrences outside odd/ and openspec/changes/archive/ at HEAD"
+    }
+  ]
+}

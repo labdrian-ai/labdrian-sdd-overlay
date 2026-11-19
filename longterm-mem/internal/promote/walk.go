@@ -45,8 +45,7 @@ type walkReport struct {
 //
 // They differ in one input only, whether a page that is at its memory's revision is rewritten. A sync never
 // rewrites it: walk calls decide with rewriteCurrent false. An explicit promote does for the stores whose
-// pageStyle says so (pageStyle.rewriteCurrent, which Writer.Promote reads), as the explicit promote of an Engram
-// observation always has.
+// pageStyle says so (pageStyle.rewriteCurrent, which Writer.Promote reads).
 //
 // With apply the walk writes each memory the decision says needs a page (Writer.apply); without, it names the
 // memory by title and writes nothing, so a dry run predicts the run. One memory that cannot be processed does not

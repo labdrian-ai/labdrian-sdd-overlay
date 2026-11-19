@@ -39,7 +39,7 @@ func TestCmdDoctor_ChecksThePagesAgainstTheVaultsAddressMap(t *testing.T) {
 		title   = "Widget Decision"
 	)
 	vaultRoot := realTempDir(t)
-	page := opstest.WritePromotedPage(t, vaultRoot, address, title)
+	page := writeCardPage(t, vaultRoot, address, title)
 	opstest.WriteAddressMap(t, vaultRoot, map[string]string{page.Path: address})
 	opstest.WritePrecedenceEntry(t, vaultRoot, page)
 	opstest.RegisterPage(t, vaultRoot, address, title)

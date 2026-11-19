@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "25d9a4c75f287b64b3a6ce7e64b07e221ce9d071",
+    "head": "69044743e54813f58f56b0d64b18df8a4981e764",
+    "diff_sha256": "2faac0840361f6f205203921a801acbcb924ca2c361b58ab96c31bb6d53fdc69",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "25d9a4c75f287b64b3a6ce7e64b07e221ce9d071",
+      "head": "69044743e54813f58f56b0d64b18df8a4981e764",
+      "diff_sha256": "2faac0840361f6f205203921a801acbcb924ca2c361b58ab96c31bb6d53fdc69"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:122",
+        "claim": "The T7 tick drops the 'NOT TICKED' note but does not carry the open items that L93 admits: spec rules about the sidecar's recorded revision and the remaining `engram_id` wording are left as they were, and F-T7-1 is pre-existing and unresolved. T5 says 'open at the tick, not hidden by it', but T7's task line names none of these, so a reader of the task list sees a clean tick. The line also does not record that the D2 precondition (the owner's live migration dry run reporting zero legacy pages) was met, nor does it mention independent verification, although the Risk is items 1 and 6.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:122",
+          "odd/tasks/phase9-store-agnostic-promotion.md:859"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:856",
+        "claim": "L93 says the full-suite proof and differential were run on the working tree, and the commit holding L93 is described only as 'the commit that holds this entry', with no sha. The T7 line's commit list therefore cannot be tied to a head, and the differential is not shown to cover the final commit. The same entry also reports the S7 acceptance `rg` only for non-test hits, which makes the retirement check harder to reproduce.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:856",
+          "odd/tasks/phase9-store-agnostic-promotion.md:861"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only the feature document changed: the T7 line flips from '-- [ ]' to '- [x]' and L93 is appended.",
+      "Compared against the T5 and T6 tick lines, which list open items and verification status explicitly; the T7 line does not."
+    ]
+  }
+}

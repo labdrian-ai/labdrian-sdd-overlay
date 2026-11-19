@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "308c8c7110c803d5b00eec9968fec08c69430122",
+    "head": "1624a674a71492b1d58e2b4ac50cd52370ae5b0f",
+    "diff_sha256": "72fbefde95400d100c28d11c1c7ec0d0605d7c74e4c33154fcbcaedcaf599524",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "308c8c7110c803d5b00eec9968fec08c69430122",
+      "head": "1624a674a71492b1d58e2b4ac50cd52370ae5b0f",
+      "diff_sha256": "72fbefde95400d100c28d11c1c7ec0d0605d7c74e4c33154fcbcaedcaf599524"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:881-883",
+        "claim": "L102's tally of the first review is not self-consistent. Counting the enumerated items gives fixed-earlier 12 (fa8d5183 F2(2nd)=1, 12e307fb F1=1, 874c5b95 four, 1edf8e79 two, 69044743 two = 10 plus the 'earlier' count), but the 'answered' list does not add up to 30 as written: '01bffae7 3, a280d7b8 3, 811abcb4 5, 25d9a4c7 3' already give 14, and the named items add roughly 20 more, so the claimed 30 and the claimed total of 56 cannot be checked from the text. Also fa8d5183 F2(2nd) is placed in 'fixed earlier' by fa8d5183 itself, while the 'answered' list contains fa8d5183 F1, F2, F4, F1(2nd), so F2 appears in both classes unless the two F2 are distinct. The entry exists to make the tally auditable, yet an audit by count is ambiguous.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:882"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:122",
+        "claim": "The T7 line is now one very long single line that carries the review commit list, the L97-L103 answer map and an OPEN note about isOwnUnrecordedWrite. The open note is buried at the end of a roughly 1,500-character line, where it is easy to miss, which defeats the stated aim of making it visible. It also names the decision as 'a later cleanup' with no task owner or id.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:122"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:883",
+        "claim": "L103 says the T7 line carries 'the commits of the review', but the T7 line lists them only as bare shas with no mapping to the findings they answer. L102 holds that map only at the entry level. The two-review chain therefore has to be reconstructed from L102 and L103 together. The text also says the commit that holds L103 fixed the T7 line without giving its sha, which is the same placeholder pattern the earlier entries had to correct afterwards.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:122",
+          "odd/tasks/phase9-store-agnostic-promotion.md:883"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only odd/tasks/phase9-store-agnostic-promotion.md changed (a documentation file): one line modified, two Log entries appended.",
+      "The figures in L102 were recounted by hand from the text of the entry; no test or code is touched.",
+      "Risk none per the commit; no behavior regression is possible from this diff."
+    ]
+  }
+}

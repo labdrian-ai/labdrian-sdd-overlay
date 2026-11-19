@@ -1,0 +1,82 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a280d7b826e3b4350c58afa15df474ede78c3f46",
+    "head": "811abcb44304ae0451d6bffd255bb126a4938227",
+    "diff_sha256": "29ee7e3142eefe87ef224583b6416b6069277febb104e8836487a43d83ffe7a3",
+    "paths": [
+      "longterm-mem/internal/memorycard/source.go",
+      "longterm-mem/internal/memorycard/source_cache_test.go",
+      "longterm-mem/internal/memorycard/source_hash_test.go",
+      "longterm-mem/internal/memorycard/source_kin_test.go",
+      "longterm-mem/internal/memorycard/source_test.go",
+      "longterm-mem/internal/memorycard/store.go",
+      "longterm-mem/internal/memorycard/store_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "a280d7b826e3b4350c58afa15df474ede78c3f46",
+      "head": "811abcb44304ae0451d6bffd255bb126a4938227",
+      "diff_sha256": "29ee7e3142eefe87ef224583b6416b6069277febb104e8836487a43d83ffe7a3"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/memorycard/source.go",
+        "longterm-mem/internal/memorycard/source_cache_test.go",
+        "longterm-mem/internal/memorycard/source_hash_test.go",
+        "longterm-mem/internal/memorycard/source_kin_test.go",
+        "longterm-mem/internal/memorycard/source_test.go",
+        "longterm-mem/internal/memorycard/store.go",
+        "longterm-mem/internal/memorycard/store_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/memorycard/source.go:201-211",
+        "claim": "lineageOf now returns only sibling parts of the same observation. A memory imported as a single part, or one whose siblings were deleted, gets an empty lineage, so a persisted legacy page keyed by the Engram observation (or by that memory) can no longer be bridged to it through lineage. The commit states pages no longer carry engram keys, but the diff cannot show that every persisted page was migrated. If any legacy page still holds an engram key, promotion will silently stop matching it, and the removal of MemoryByEngramID removes the only lookup that could resolve it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "behavior-activated",
+        "proof_refs": [
+          "longterm-mem/internal/memorycard/source.go:201-211",
+          "longterm-mem/internal/memorycard/store.go:151"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/memorycard/source.go:213-226",
+        "claim": "mirrorsOf drops the observation identity, so mirrors no longer distinguish which observation the imported parts came from. Two different observations whose parts hold the same content now yield a flat list of memory identities. Promotion consumers that relied on the engram identity to group or dedupe mirrors by observation lose that signal. The diff does not show whether any consumer does.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/memorycard/source.go:213-226"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/memorycard/store.go:151",
+        "claim": "MemoryByEngramID is deleted along with its tests, including the test that a dangling first part does not hide later parts. The same semantics live on in MemoryIDsByEngramIDs, which still has its own dangling-row test. If any caller outside the changed paths still uses MemoryByEngramID, the build breaks. The diff does not show callers, so this cannot be confirmed.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/memorycard/store.go:151"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff removes the engramSource constant and every use of it in lineageOf and mirrorsOf.",
+      "The diff removes MemoryByEngramID and its two tests from store.go and store_test.go.",
+      "The tests were updated to expect lineage and mirrors without engram observation identities.",
+      "No caller of MemoryByEngramID is visible in the diff, so any caller outside the changed paths would fail to compile."
+    ]
+  }
+}

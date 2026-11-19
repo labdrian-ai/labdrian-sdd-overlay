@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "893fd3cf34b1fdb13fa4b6c01055c5216a3c4412",
+    "head": "e4e59773c20a7243cf563e165b93a393e2cf2434",
+    "diff_sha256": "a347bacc887e624577feb1560d4164e51b6fb2e7542eaad5667a348617ee0e6c",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "893fd3cf34b1fdb13fa4b6c01055c5216a3c4412",
+      "head": "e4e59773c20a7243cf563e165b93a393e2cf2434",
+      "diff_sha256": "a347bacc887e624577feb1560d4164e51b6fb2e7542eaad5667a348617ee0e6c"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The change is documentation only, in the feature document. It fixes the stray leading '--' on the T7 task line, widens the T7 surfaces list, adds the three follow-up shas, and appends log entry L95.",
+      "The T7 line's new shas (a956237c, 558d53bb, effc8832, f389ff91) match what L95 describes, and the evidence range is extended to L95 consistently.",
+      "I found no inconsistency introduced by the diff. I could not check the claimed commits' contents because only this one diff is visible."
+    ]
+  }
+}

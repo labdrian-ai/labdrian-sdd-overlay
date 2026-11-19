@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/opstest"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
 )
 
@@ -34,7 +33,7 @@ func TestCmdPromoteReconcile_ExitCodesAreTheContract(t *testing.T) {
 	t.Run("another project's page is a registration conflict", func(t *testing.T) {
 		const address = "c-000702"
 		vaultRoot := t.TempDir()
-		page, err := promote.EmitPage(opstest.EngramMemory(memory.Observation{
+		page, err := promote.EmitPage(cardPageMemory(memory.Observation{
 			ID: 702, Type: "decision", Title: "Other Project", Content: "Body.",
 			Project: "someone-elses-project", RevisionCount: 3,
 		}), address, nil, fixtureInstant)
@@ -52,14 +51,14 @@ func TestCmdPromoteReconcile_ExitCodesAreTheContract(t *testing.T) {
 	t.Run("a page with no readable revision is a registration conflict", func(t *testing.T) {
 		const address = "c-000703"
 		vaultRoot := t.TempDir()
-		page, err := promote.EmitPage(opstest.EngramMemory(memory.Observation{
+		page, err := promote.EmitPage(cardPageMemory(memory.Observation{
 			ID: 703, Type: "decision", Title: "Unreadable", Content: "Body.",
 			Project: project, RevisionCount: 3,
 		}), address, nil, fixtureInstant)
 		if err != nil {
 			t.Fatalf("EmitPage: %v", err)
 		}
-		stripped := strings.Replace(page.Frontmatter, "engram_revision: 3\n", "", 1)
+		stripped := strings.Replace(page.Frontmatter, "source_revision: 3\n", "", 1)
 		if stripped == page.Frontmatter {
 			t.Fatalf("fixture did not strip the revision line; frontmatter was:\n%s", page.Frontmatter)
 		}

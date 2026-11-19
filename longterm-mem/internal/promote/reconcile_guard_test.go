@@ -126,7 +126,7 @@ func TestReconcile_MalformedAddressesCarryTheInvalidAddressSentinel(t *testing.T
 }
 
 // TestReconcile_AnUnreadableRevisionCarriesTheUnusablePageSentinel pins the
-// refusal for a page whose own engram_revision cannot be read.
+// refusal for a page whose own source_revision cannot be read.
 //
 // It was a bare fmt.Errorf, so the command surface fell through to its
 // default branch and answered exit 1 (internal) -- for a vault-data
@@ -137,14 +137,14 @@ func TestReconcile_AnUnreadableRevisionCarriesTheUnusablePageSentinel(t *testing
 	clock := &fakeClock{at: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)}
 
 	for name, mutate := range map[string]func(string) string{
-		"the engram_revision line is stripped": func(fm string) string {
-			return strings.Replace(fm, "engram_revision: 2\n", "", 1)
+		"the source_revision line is stripped": func(fm string) string {
+			return strings.Replace(fm, "source_revision: 2\n", "", 1)
 		},
 		"the revision is not a number": func(fm string) string {
-			return strings.Replace(fm, "engram_revision: 2", "engram_revision: not-a-number", 1)
+			return strings.Replace(fm, "source_revision: 2", "source_revision: not-a-number", 1)
 		},
 		"the revision is negative": func(fm string) string {
-			return strings.Replace(fm, "engram_revision: 2", "engram_revision: -1", 1)
+			return strings.Replace(fm, "source_revision: 2", "source_revision: -1", 1)
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -171,7 +171,7 @@ func TestReconcile_AnUnreadableRevisionCarriesTheUnusablePageSentinel(t *testing
 // TestReconcile_APageWithNoFrontmatterBlockCarriesTheUnusablePageSentinel
 // pins the SECOND arm that carries ErrUnusablePage.
 //
-// Two refusals share that sentinel: an unreadable engram_revision, and a
+// Two refusals share that sentinel: an unreadable source_revision, and a
 // file with no parseable frontmatter block at all. Only the first was
 // pinned. Unwrapping this one back to a bare fmt.Errorf left BOTH
 // ./internal/promote and ./cmd/longterm-mem green, while the refusal fell

@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "000c8a8d599f4a412b07b2c0c8a3dd4e85639aad",
+    "head": "0f34ace9ed602d8c47ac8196541c81f227ebfcd0",
+    "diff_sha256": "f5c8a29fe7870e5a17cfb338452dc88afbaaea212053b94440b1d5b9a6695134",
+    "paths": [
+      "longterm-mem/internal/promote/writer_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "000c8a8d599f4a412b07b2c0c8a3dd4e85639aad",
+      "head": "0f34ace9ed602d8c47ac8196541c81f227ebfcd0",
+      "diff_sha256": "f5c8a29fe7870e5a17cfb338452dc88afbaaea212053b94440b1d5b9a6695134"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/internal/promote/writer_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/writer_test.go:680-682",
+        "claim": "The page-unchanged check reads the page only after the retry and compares it with the first read. It cannot detect a retry that rewrites the page with identical bytes (for example a rewrite that changes only mtime), so the 'writes nothing' claim is only partly pinned. The test also never asserts that the sidecar/precedence store stays empty beyond Get on one address, so a write under a different address would go unnoticed.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/writer_test.go:680-682",
+          "longterm-mem/internal/promote/writer_test.go:687"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/promote/writer_test.go:656-669",
+        "claim": "The test asserts the lost-registration state indirectly. It uses a fresh memPrecedence and memAddressMap for the second writer, which simulates a lost sidecar, but it never confirms that the precondition holds (that the first Promote actually wrote the entry, index and log before they were removed). If the first promote stopped registering, the test would still pass for the wrong reason.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/promote/writer_test.go:656-662"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only a test file changed; no production code is touched, so no runtime regression is possible.",
+      "The new test is self-consistent: it removes the index and log, retries on a later day with fresh in-memory stores, then asserts ActionAlreadyPromoted, an unchanged page, no precedence entry, and no index/log files.",
+      "The removed Writer-level adoption test is not visible in this diff, so I could not check whether the adoption path (isOwnUnrecordedWrite) is still covered elsewhere."
+    ]
+  }
+}

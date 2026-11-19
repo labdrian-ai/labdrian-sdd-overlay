@@ -1,0 +1,40 @@
+{
+  "kind": "polisher",
+  "base": "811abcb44304ae0451d6bffd255bb126a4938227",
+  "head": "fc7617c46c24b83bf01920c934826c002614cf94",
+  "diff_sha256": "fcbe5d18e8a83669389d7a684ff06c985fa355b891dc8da8779dc2542dcb1627",
+  "findings": {
+    "findings": [
+      {
+        "location": "longterm-mem/internal/promote/reconcile.go:26-32,109-115,193",
+        "severity": "WARNING",
+        "claim": "The target removes isOwnUnrecordedUpdate, but reconcile.go still tells the operator that promotion adopts a page whose engram_revision is above the entry's. The ErrLocalEditPreserved error text also says this, and it is now false. The new update.go comment says `promote reconcile` is the way to adopt such a page. For a tracked entry with a positive revision and a diverged page, Reconcile returns ErrLocalEditPreserved, so it refuses too. Such an interrupted update followed by a newer revision therefore stays skipped_local_edit with no adoption path. The error message sends the operator to a rule that no longer exists.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "The diff deletes isOwnUnrecordedUpdate (update.go) and its tests, and leaves UpdateInPlace with only `!isOwnUnrecordedWrite(...)` as the reconciliation test.",
+          "reconcile.go:192-193 still has `case tracked && entry.PromotedRevision > 0:` returning ErrLocalEditPreserved. Its message reads \"promotion adopts such a page only when the page's own engram_revision stands above %d ... reconcile does not override that refusal\".",
+          "The new update.go header comment says a retry rendering a different revision \"is refused as a local edit ... `promote reconcile` is the way to adopt such a page\", which the reconcile.go:192 branch contradicts for positive-revision entries.",
+          "Reach is narrow, because it needs a legacy Engram-era page with a positive-revision entry. S7 expects zero such pages after the live dry run, so the impact is mostly a wrong message and comment."
+        ]
+      },
+      {
+        "location": "longterm-mem/internal/promote/store.go:18",
+        "severity": "SUGGESTION",
+        "claim": "Comments still cite the deleted symbols isOwnUnrecordedUpdate and revisionsAllowAdoption (store.go:18, reconcile.go:29, ops/doctor.go:368,377-379). The doctor.go comment still says adoption happens when the page's engram_revision stands above the entry's.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "evidence": [
+          "Grep over longterm-mem at the head found references to isOwnUnrecordedUpdate in store.go:18 and reconcile.go:29, and to revisionsAllowAdoption in doctor.go:368 and doctor_test.go:276.",
+          "The diff removes both functions, so these comments point at code that no longer exists."
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff /home/labdrian/.cache/t7-fc7617c4.diff. It removes isOwnUnrecordedUpdate, revisionsAllowAdoption, corroboratingFrontmatter and blankFrontmatterListSection plus their tests, and simplifies the UpdateInPlace guard.",
+      "Grepped the T7/S7 lines of odd/tasks/phase9-store-agnostic-promotion.md in the review worktree.",
+      "Grepped the worktree for references to the removed symbols. Read reconcile.go:1-50 and 76-229, and doctor.go:360-380.",
+      "Ran no tests or builds."
+    ]
+  }
+}

@@ -23,12 +23,7 @@ var ErrPageNotFound = errors.New("promote: no promoted page at that address")
 // that page and leaves it byte-identical, and the page is held rather than
 // lost.
 //
-// The refusal is not unconditional, and saying it is would be untrue: when
-// the page's OWN engram_revision stands strictly above the revision the
-// entry records, promotion attributes it to one of its own interrupted
-// updates and adopts it (update.go's isOwnUnrecordedUpdate) -- only our own
-// renders advance that field. What reconcile declines to do is override the
-// refusal in the case where that evidence is absent, which is where an
+// Reconcile declines to override this refusal: a page that diverged from an entry recording a revision is where an
 // edit would actually be destroyed.
 var ErrLocalEditPreserved = errors.New("promote: page has a local edit the precedence rule preserves")
 
@@ -48,7 +43,7 @@ var ErrNotThatPage = errors.New("promote: the file at that address is not that p
 
 // ErrUnusablePage is Reconcile's refusal for a file that occupies a
 // promoted page's path but cannot be read as one: no parseable frontmatter
-// block, or an engram_revision that is missing, non-numeric or negative.
+// block, or a source_revision that is missing, non-numeric or negative.
 // There is no revision to record, so nothing can be adopted.
 //
 // It exists because the refusal used to be a bare fmt.Errorf, which left
@@ -79,9 +74,8 @@ type ReconcileOutcome struct {
 //
 // It exists for the residue the automatic path deliberately refuses.
 // Promotion cannot attribute a diverged page to one of its own interrupted
-// writes unless the page's own engram_revision stands above the revision
-// its entry records; an entry that records no revision, or no entry at all,
-// carries no such evidence, so the page is refused -- and that refusal is a
+// writes of the same revision; an entry that records no revision, or no entry
+// at all, carries no such evidence, so the page is refused -- and that refusal is a
 // SKIP, which suppresses the very store write that would have repaired the
 // entry. Every later run repeats it identically. `doctor`'s
 // precedence-sidecar check names exactly those pages, and until now naming
@@ -108,14 +102,13 @@ type ReconcileOutcome struct {
 //   - An entry recording a POSITIVE revision whose page has diverged is an
 //     ordinary local edit, and it is REFUSED (ErrLocalEditPreserved). That
 //     page is not wedged: R-030 is holding a human's edit, and promotion
-//     either adopts it (when the page's own engram_revision stands above
-//     the entry's, which is our own interrupted update) or names it on
-//     every run, so the edit is preserved rather than lost. Adopting
+//     names it on every run, so the edit is
+//     preserved rather than lost. Adopting
 //     it here would overwrite that edit on the next promotion while
 //     reporting an ordinary update -- which is precisely the silent
 //     adoption this design removed, and being asked for it by name does not
 //     change what would be destroyed. The remedy is the human's: keep the
-//     edit (and leave the page refused), or fold it into Engram and let the
+//     edit (and leave the page refused), or fold it into memorycard and let the
 //     ordinary promotion path rewrite the page.
 func Reconcile(pages PageReader, project, address string, precedence PrecedenceRepository) (ReconcileOutcome, error) {
 	if memory.IsMissing(precedence) {
@@ -190,7 +183,7 @@ func Reconcile(pages PageReader, project, address string, precedence PrecedenceR
 	case tracked && entry.MatchesPage(raw):
 		return ReconcileOutcome{Address: address, Path: rel, PromotedRevision: entry.PromotedRevision}, nil
 	case tracked && entry.PromotedRevision > 0:
-		return ReconcileOutcome{}, fmt.Errorf("%w: %s records revision %d for %s and the page no longer matches it; promotion adopts such a page only when the page's own engram_revision stands above %d (which only longterm-mem's own writes advance) and otherwise refuses it to keep the edit, and reconcile does not override that refusal", ErrLocalEditPreserved, vaultlayout.PrecedenceFile, entry.PromotedRevision, address, entry.PromotedRevision)
+		return ReconcileOutcome{}, fmt.Errorf("%w: %s records revision %d for %s and the page no longer matches it; promotion refuses it to keep the edit, and reconcile does not override that refusal", ErrLocalEditPreserved, vaultlayout.PrecedenceFile, entry.PromotedRevision, address)
 	}
 
 	// The revision is read off the PAGE, never supplied by the caller: the
@@ -214,7 +207,7 @@ func Reconcile(pages PageReader, project, address string, precedence PrecedenceR
 	// revision to record. So is a negative one.
 	revision, ok := pageRevision(fmBlock)
 	if !ok || revision < 0 {
-		return ReconcileOutcome{}, fmt.Errorf("%w: %s carries no readable revision (memorycard_revision or engram_revision, or source_revision beside the source it names), so there is no revision to record for it; a page promoted at revision 0 is adopted, but a missing or non-numeric one is corruption", ErrUnusablePage, full)
+		return ReconcileOutcome{}, fmt.Errorf("%w: %s carries no readable revision (source_revision beside the source: memorycard it names), so there is no revision to record for it; a page promoted at revision 0 is adopted, but a missing or non-numeric one is corruption", ErrUnusablePage, full)
 	}
 
 	store.Set(address, PrecedenceEntry{

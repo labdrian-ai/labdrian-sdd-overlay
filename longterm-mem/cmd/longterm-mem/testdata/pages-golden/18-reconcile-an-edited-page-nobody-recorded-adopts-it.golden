@@ -10,8 +10,8 @@ longterm-mem: reconciled c-000901 at revision 1
 === .raw/.longterm-mem-manifest.json (-rw-------) ===
 {
   "c-000901": {
-    "body_hash": "09e246176a0439fc4c0bbefb1d52079158c56390678a7ea5caa53b47dd7747ee",
-    "frontmatter_hash": "1b21326f72b961a3fbb0960a4364c0fba15144fd63a59f907350fd1e30a3a65b",
+    "body_hash": "6da0880f482b1da9c0e9127f01707b5fbcf0999401011920a34bfb25493e738b",
+    "frontmatter_hash": "c9f991ef7798f53d8d0967ec292613c26b63e981a466ed526e0fbd7aa9150f0b",
     "promoted_revision": 1
   }
 }
@@ -66,10 +66,10 @@ tags:
 status: mature
 related: []
 sources: []
-engram_id: 1
-engram_sync_id: sync-1
-engram_type: decision
-engram_revision: 1
+source: memorycard
+source_id: 2
+source_type: decision
+source_revision: 1
 project: golden-project
 ---
 # Pinned Decision
@@ -77,6 +77,6 @@ project: golden-project
 A decision somebody pinned.
 
 ---
-Promoted from Engram observation 1, revision 1.
+Promoted from memorycard memory 2, revision 1.
 
 A line a person added.

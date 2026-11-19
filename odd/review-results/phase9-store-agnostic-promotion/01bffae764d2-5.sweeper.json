@@ -1,0 +1,195 @@
+{
+  "kind": "sweeper",
+  "base": "87f26495f03d65b7423a2d8d787eb56f36cf75d0",
+  "head": "01bffae764d2d6ab2b4179a320dcd067772b3b21",
+  "diff_sha256": "d8fb134857022d09036e47fc4c786acbf6472f616213aabbfe6d3c4a00388982",
+  "sweep": "01bffae764d2-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 path: longterm-mem/cmd/longterm-mem/cmd_migrate_card_pages.go",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. deleted by the commit; absent at HEAD, no non-odd/ reference to it remains"
+    },
+    {
+      "candidate": "T1 path: longterm-mem/cmd/longterm-mem/migrate_card_pages_backup_durable_test.go",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. deleted by the commit; absent at HEAD, no non-odd/ reference to it remains"
+    },
+    {
+      "candidate": "T1 path: longterm-mem/cmd/longterm-mem/migrate_card_pages_backup_more_test.go",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. deleted by the commit; absent at HEAD, no non-odd/ reference to it remains"
+    },
+    {
+      "candidate": "T1 path: longterm-mem/cmd/longterm-mem/migrate_card_pages_backup_sync_test.go",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. deleted by the commit; absent at HEAD, no non-odd/ reference to it remains"
+    },
+    {
+      "candidate": "T1 path: longterm-mem/cmd/longterm-mem/migrate_card_pages_backup_test.go",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. deleted by the commit; absent at HEAD, no non-odd/ reference to it remains"
+    },
+    {
+      "candidate": "T1 path: longterm-mem/cmd/longterm-mem/migrate_card_pages_halfmigrated_test.go",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. deleted by the commit; absent at HEAD, no non-odd/ reference to it remains"
+    },
+    {
+      "candidate": "T1 path: longterm-mem/cmd/longterm-mem/migrate_card_pages_scan_test.go",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. deleted by the commit; absent at HEAD, no non-odd/ reference to it remains"
+    },
+    {
+      "candidate": "T1 path: longterm-mem/cmd/longterm-mem/migrate_card_pages_test.go",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. deleted by the commit; absent at HEAD, no non-odd/ reference to it remains"
+    },
+    {
+      "candidate": "T1 name: --apply",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. rg -F: 0 occurrences outside odd/ and openspec/changes/archive/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: --json",
+      "disposition": "live",
+      "evidence": "different live symbol or generic word/flag: 134 occurrences outside odd/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: --vault",
+      "disposition": "live",
+      "evidence": "different live symbol or generic word/flag: 26 occurrences outside odd/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: BackUp",
+      "disposition": "live",
+      "evidence": "different live symbol or generic word/flag: 2 occurrences outside odd/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: TestALegacyCardPageUpdatedInPlaceBecomesAStoreAgnosticPage",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. rg -F: 0 occurrences outside odd/ and openspec/changes/archive/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: TestALegacyCardPageWhoseStatusAlreadyMatchesIsNotAPatchTarget",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. rg -F: 0 occurrences outside odd/ and openspec/changes/archive/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: TestALegacyCardPageWhoseStatusIsPatchedKeepsItsIdentityLines",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. rg -F: 0 occurrences outside odd/ and openspec/changes/archive/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: TestMigrateCardPages_ApplyGivesEveryLegacyPageTheStoreAgnosticKeysAndNothingElse",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. rg -F: 0 occurrences outside odd/ and openspec/changes/archive/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: TestToleratedDirectorySyncError",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. rg -F: 0 occurrences outside odd/ and openspec/changes/archive/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: TestVaultBackup_AFailedCopyLeavesNoPartialDirectory",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. rg -F: 0 occurrences outside odd/ and openspec/changes/archive/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: TestVaultBackup_TwoBackupsAtOneInstantDoNotCollide",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. rg -F: 0 occurrences outside odd/ and openspec/changes/archive/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: changedPaths",
+      "disposition": "live",
+      "evidence": "different live symbol or generic word/flag: 35 occurrences outside odd/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: copyInto",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. rg -F: 0 occurrences outside odd/ and openspec/changes/archive/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: mustJSON",
+      "disposition": "live",
+      "evidence": "different live symbol or generic word/flag: 50 occurrences outside odd/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: newDirectory",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. rg -F: 0 occurrences outside odd/ and openspec/changes/archive/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: printNoProjectNote",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. rg -F: 0 occurrences outside odd/ and openspec/changes/archive/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: readWithMode",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. rg -F: 0 occurrences outside odd/ and openspec/changes/archive/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: refusalReason",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. rg -F: 0 occurrences outside odd/ and openspec/changes/archive/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: reportMigration",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. rg -F: 0 occurrences outside odd/ and openspec/changes/archive/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: runMigrate",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. rg -F: 0 occurrences outside odd/ and openspec/changes/archive/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: sha",
+      "disposition": "live",
+      "evidence": "different live symbol or generic word/flag: 7060 occurrences outside odd/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: syncDirectories",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. rg -F: 0 occurrences outside odd/ and openspec/changes/archive/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: syncDirectory",
+      "disposition": "live",
+      "evidence": "different live symbol or generic word/flag: 8 occurrences outside odd/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: toleratedDirectorySyncError",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. rg -F: 0 occurrences outside odd/ and openspec/changes/archive/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: vaultBackup",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. rg -F: 0 occurrences outside odd/ and openspec/changes/archive/ at HEAD"
+    },
+    {
+      "candidate": "T2 deadcode longterm-mem: cmd/longterm-mem/page_keys_test.go: unreachable func: cardPageMemory",
+      "disposition": "live",
+      "evidence": "still used at HEAD (cardPageMemory, writeCardPage have callers in cmd/longterm-mem tests); errcheck item is a pre-existing test defer pattern, not dead code"
+    },
+    {
+      "candidate": "T2 deadcode longterm-mem: cmd/longterm-mem/page_keys_test.go: unreachable func: writeCardPage",
+      "disposition": "live",
+      "evidence": "still used at HEAD (cardPageMemory, writeCardPage have callers in cmd/longterm-mem tests); errcheck item is a pre-existing test defer pattern, not dead code"
+    },
+    {
+      "candidate": "T2 staticcheck longterm-mem: cmd/longterm-mem/page_keys_test.go: func cardPageMemory is unused (U1000)",
+      "disposition": "live",
+      "evidence": "still used at HEAD (cardPageMemory, writeCardPage have callers in cmd/longterm-mem tests); errcheck item is a pre-existing test defer pattern, not dead code"
+    },
+    {
+      "candidate": "T2 staticcheck longterm-mem: cmd/longterm-mem/page_keys_test.go: func writeCardPage is unused (U1000)",
+      "disposition": "live",
+      "evidence": "still used at HEAD (cardPageMemory, writeCardPage have callers in cmd/longterm-mem tests); errcheck item is a pre-existing test defer pattern, not dead code"
+    }
+  ]
+}

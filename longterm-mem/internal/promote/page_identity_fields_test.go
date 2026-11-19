@@ -23,16 +23,15 @@ func writeIdentityPage(t *testing.T, vaultRoot, name, content string) {
 	}
 }
 
-// A revision is read off the page with or without an id beside it, as it was before the reader existed: reconcile
-// and update corroboration adopt such a page, and the refusal of a page with no revision still names what it needs.
+// A revision is read off the page with or without an id beside it: reconcile adopts such a page, and the refusal of
+// a page with no revision still names what it needs.
 func TestPageIdentity_ARevisionIsReadWithoutAnID(t *testing.T) {
-	block := "---\nengram_revision: 4\nproject: p-one\naddress: c-000801\n---\n"
-	if got, ok := frontmatterRevision(block); !ok || got != 4 {
-		t.Fatalf("frontmatterRevision(engram_revision only) = %d, %v; want 4, true", got, ok)
+	block := "---\nsource: memorycard\nsource_revision: 4\nproject: p-one\naddress: c-000801\n---\n"
+	if got, ok := pageRevision(block); !ok || got != 4 {
+		t.Fatalf("pageRevision(source_revision, no source_id) = %d, %v; want 4, true", got, ok)
 	}
-	agnostic := "---\nsource: engram\nsource_revision: 5\n---\n"
-	if got, ok := frontmatterRevision(agnostic); !ok || got != 5 {
-		t.Fatalf("frontmatterRevision(source_revision, no source_id) = %d, %v; want 5, true", got, ok)
+	if got, ok := pageRevision("---\nsource_revision: 5\n---\n"); ok {
+		t.Fatalf("pageRevision(source_revision with no source) = %d, true; want none: the revision belongs to the source it names", got)
 	}
 
 	vaultRoot := t.TempDir()
@@ -47,78 +46,68 @@ func TestPageIdentity_ARevisionIsReadWithoutAnID(t *testing.T) {
 
 	writeIdentityPage(t, vaultRoot, "c-000802.md", "---\nproject: p-one\naddress: c-000802\n---\n\nBody.\n")
 	_, err = Reconcile(pagesIn(vaultRoot), "p-one", "c-000802", &memPrecedence{})
-	if !errors.Is(err, ErrUnusablePage) || !strings.Contains(err.Error(), "engram_revision") || !strings.Contains(err.Error(), "source_revision") {
-		t.Fatalf("Reconcile of a page with no revision = %v; want ErrUnusablePage naming engram_revision and source_revision", err)
+	if !errors.Is(err, ErrUnusablePage) || !strings.Contains(err.Error(), "source_revision") || strings.Contains(err.Error(), "engram") || strings.Contains(err.Error(), "memorycard_revision") {
+		t.Fatalf("Reconcile of a page with no revision = %v; want ErrUnusablePage naming source_revision alone", err)
 	}
 }
 
-// The card scan reads the memory's own page revision from the memorycard keys alone: a page that also names an
-// Engram identity gives its Engram match no revision of the memorycard's.
-func TestPageIdentity_CardScanKeepsTheRevisionSlotsApart(t *testing.T) {
+// The card scan reads the memory's own page revision from the store-agnostic keys alone: the legacy keys a page
+// still carries beside them name nothing and give no revision.
+func TestPageIdentity_CardScanReadsTheStoreAgnosticRevisionAlone(t *testing.T) {
 	vaultRoot := t.TempDir()
-	writeIdentityPage(t, vaultRoot, "c-000803.md", "---\nmemorycard_id: 7\nmemorycard_revision: 3\nengram_id: 402\nproject: memorycard\naddress: c-000803\n---\n\nBody.\n")
+	writeIdentityPage(t, vaultRoot, "c-000803.md", "---\nsource: memorycard\nsource_id: 7\nsource_revision: 3\nmemorycard_revision: 9\nengram_id: 402\nengram_revision: 8\nproject: memorycard\naddress: c-000803\n---\n\nBody.\n")
 	index, err := readPages(pagesIn(vaultRoot))
 	if err != nil {
 		t.Fatalf("readPages: %v", err)
 	}
-	if got := index.ownPage("memorycard", memory.Identity{Source: memorycardSource, ID: "7"}); got == nil || got.RawRevision != "3" || got.RevisionKey != "memorycard_revision" {
-		t.Fatalf("own page of memory 7 = %+v; want its memorycard revision 3", got)
+	if got := index.ownPage("memorycard", memory.Identity{Source: memorycardSource, ID: "7"}); got == nil || got.RawRevision != "3" || got.RevisionKey != "source_revision" {
+		t.Fatalf("own page of memory 7 = %+v; want its store-agnostic revision 3", got)
 	}
-	if got := index.ownPage("memorycard", memory.Identity{Source: engramSource, ID: "402"}); got == nil || got.RawRevision != "" {
-		t.Fatalf("page of observation 402 = %+v; want the page with no revision of the memory's", got)
+	if len(index.carriers) != 1 {
+		t.Fatalf("carriers = %d identities; want only memorycard 7: the page names no other memory", len(index.carriers))
 	}
 }
 
-// Precedence between the key families is per field: a store-agnostic key wins for its field, and a field the
-// page names only in the legacy keys of the same store is still read from them; never from another store's.
-func TestPageIdentity_ReaderFallsBackPerFieldToTheSameStoresLegacyKey(t *testing.T) {
+// The reader reads the store-agnostic keys of the store the page names, and nothing else: no legacy key fills a field,
+// and a page that names another store names no memory of this one.
+func TestPageIdentity_ReaderReadsTheStoreAgnosticKeysAlone(t *testing.T) {
 	for _, tc := range []struct {
-		name   string
-		block  string
-		source string
-		want   PageIdentity
+		name      string
+		block     string
+		want      PageIdentity
+		wantNamed bool
 	}{
-		{"revision and type from the legacy keys", "---\nsource: engram\nsource_id: 9\nengram_revision: 3\nengram_type: pattern\n---\n", "engram", PageIdentity{Source: "engram", ID: "9", Revision: "3", Type: "pattern"}},
-		{"the agnostic revision wins, the type falls back", "---\nsource: engram\nsource_id: 9\nsource_revision: 6\nengram_revision: 3\nengram_type: pattern\n---\n", "engram", PageIdentity{Source: "engram", ID: "9", Revision: "6", Type: "pattern"}},
-		{"the same for memorycard", "---\nsource: memorycard\nsource_id: 7\nmemorycard_revision: 2\nmemorycard_type: decision\n---\n", "memorycard", PageIdentity{Source: "memorycard", ID: "7", Revision: "2", Type: "decision"}},
-		{"never across stores", "---\nsource: memorycard\nsource_id: 9\nsource_revision: 4\nsource_type: decision\nengram_id: 5\nengram_revision: 2\nengram_type: pattern\n---\n", "engram", PageIdentity{Source: "engram", ID: "5", Revision: "2", Type: "pattern"}},
-		{"another store's legacy keys do not fill this one's", "---\nsource: engram\nsource_id: 9\nmemorycard_revision: 8\nmemorycard_type: decision\n---\n", "engram", PageIdentity{Source: "engram", ID: "9"}},
+		{"every store-agnostic key", "---\nsource: memorycard\nsource_id: 7\nsource_revision: 2\nsource_type: decision\n---\n", PageIdentity{Source: "memorycard", ID: "7", Revision: "2", Type: "decision"}, true},
+		{"the legacy revision and type fill nothing", "---\nsource: memorycard\nsource_id: 7\nmemorycard_revision: 2\nmemorycard_type: decision\n---\n", PageIdentity{Source: "memorycard", ID: "7"}, true},
+		{"another store's legacy keys fill nothing", "---\nsource: memorycard\nsource_id: 9\nsource_revision: 4\nengram_id: 5\nengram_revision: 2\nengram_type: pattern\n---\n", PageIdentity{Source: "memorycard", ID: "9", Revision: "4"}, true},
+		{"a page of the legacy memorycard keys", "---\nmemorycard_id: 7\nmemorycard_revision: 2\nmemorycard_type: decision\n---\n", PageIdentity{}, false},
+		{"a page of the legacy engram keys", "---\nengram_id: 9\nengram_revision: 3\nengram_type: pattern\n---\n", PageIdentity{}, false},
+		{"a page of another store", "---\nsource: engram\nsource_id: 9\nsource_revision: 3\n---\n", PageIdentity{}, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			got, named := identityOf(parseFrontmatterFields(tc.block), tc.source)
-			if !named || got != tc.want {
-				t.Fatalf("identityOf = %+v, %v; want %+v, true", got, named, tc.want)
+			got, named := identityOf(parseFrontmatterFields(tc.block), memorycardSource)
+			if named != tc.wantNamed || got != tc.want {
+				t.Fatalf("identityOf = %+v, %v; want %+v, %v", got, named, tc.want, tc.wantNamed)
 			}
 		})
 	}
 }
 
-// An unparseable revision is reported under the key it was read from.
+// An unparseable revision is reported under the key it was read from, by the scan and by the promotion of the
+// memory itself.
 func TestPageIdentity_AnUnparseableRevisionNamesTheKeyRead(t *testing.T) {
-	for _, tc := range []struct{ name, fields, key string }{
-		{"legacy", "engram_id: 810\nengram_revision: nope", "engram_revision"},
-		{"store-agnostic", "source: engram\nsource_id: 810\nsource_revision: nope", "source_revision"},
-	} {
-		t.Run("engram page, "+tc.name, func(t *testing.T) {
-			vaultRoot := t.TempDir()
-			writeIdentityPage(t, vaultRoot, "c-000810.md", "---\n"+tc.fields+"\nproject: p-one\naddress: c-000810\n---\n\nBody.\n")
-			_, _, err := findPromotedPage(pagesIn(vaultRoot), "p-one", 810)
-			if err == nil || !strings.Contains(err.Error(), tc.key+` "nope"`) {
-				t.Fatalf("findPromotedPage err = %v; want it to name %s", err, tc.key)
-			}
-		})
+	const fields = "source: memorycard\nsource_id: 7\nsource_revision: nope"
+	vaultRoot := t.TempDir()
+	writeIdentityPage(t, vaultRoot, "c-000810.md", "---\nsource: memorycard\nsource_id: 810\nsource_revision: nope\nproject: p-one\naddress: c-000810\n---\n\nBody.\n")
+	_, _, err := findPromotedPage(pagesIn(vaultRoot), "p-one", 810)
+	if err == nil || !strings.Contains(err.Error(), `source_revision "nope"`) {
+		t.Fatalf("findPromotedPage err = %v; want it to name source_revision", err)
 	}
-	for _, tc := range []struct{ name, fields, key string }{
-		{"legacy", "memorycard_id: 7\nmemorycard_revision: nope", "memorycard_revision"},
-		{"store-agnostic", "source: memorycard\nsource_id: 7\nsource_revision: nope", "source_revision"},
-	} {
-		t.Run("memorycard page, "+tc.name, func(t *testing.T) {
-			vaultRoot := t.TempDir()
-			writeIdentityPage(t, vaultRoot, "c-000007.md", "---\n"+tc.fields+"\nproject: memorycard\naddress: c-000007\n---\n\nBody.\n")
-			_, err := cardWriter(vaultRoot, PrecedenceStore{}).PromoteCard(t.Context(), cardMemory())
-			if err == nil || !strings.Contains(err.Error(), tc.key+` "nope"`) {
-				t.Fatalf("PromoteCard err = %v; want it to name %s", err, tc.key)
-			}
-		})
+
+	cardRoot := t.TempDir()
+	writeIdentityPage(t, cardRoot, "c-000007.md", "---\n"+fields+"\nproject: memorycard\naddress: c-000007\n---\n\nBody.\n")
+	_, err = cardWriter(cardRoot, PrecedenceStore{}).PromoteCard(t.Context(), cardMemory())
+	if err == nil || !strings.Contains(err.Error(), `source_revision "nope"`) {
+		t.Fatalf("PromoteCard err = %v; want it to name source_revision", err)
 	}
 }

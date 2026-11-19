@@ -1,9 +1,14 @@
 package main
 
 import (
-	"encoding/json"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/opstest"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
 )
 
 // The pages longterm-mem writes name their memory with the store-agnostic keys only (S6 (b), D1 of the store-agnostic
@@ -80,78 +85,88 @@ func TestAPageWhoseStatusIsPatchedCarriesOnlyTheStoreAgnosticKeys(t *testing.T) 
 	requireStoreAgnosticIdentity(t, page, "3")
 }
 
-// legacyCardWorld is the memorycard world with the page of memory 1 written as an older release wrote it: the
-// memorycard_* keys, tracked in the precedence sidecar.
-func legacyCardWorld(t *testing.T) (*promoteGoldenWorld, string) {
-	t.Helper()
-	w, db := memorycardWorld(t)
-	recordPage(t, w, "c-000901", legacyCardPage("c-000901", "Card Only", 1, "learning", "3"), true)
-	return w, db
+// legacyCardPage is a page as `promote --source memorycard` wrote it before the store-agnostic keys: the memorycard_*
+// keys of memory 1. The legacy keys are retired (S7), so it names no memory.
+func legacyCardPage(address string) string {
+	return "---\ntype: concept\ntitle: \"Card Only\"\naddress: " + address + "\naliases:\n  - \"Card Only\"\ncreated: 2026-09-01\nupdated: 2026-09-02\ntags:\n  - \"memory\"\n  - \"learning\"\nstatus: developing\nrelated: []\nsources: []\n" +
+		"memorycard_id: 1\nmemorycard_type: learning\nmemorycard_revision: 3\nproject: " + promoteGoldenProject + "\n---\n# Card Only\n\nLives only in memorycard.\n\n---\nPromoted from memorycard memory 1, revision 3.\n"
 }
 
-func requireSidecarHolds(t *testing.T, w *promoteGoldenWorld, address string) {
+// A page of the legacy keys is no promoted page: a dry run counts its memory as one to promote, the explicit promote
+// of the memory writes it a page of its own at the next address, and the legacy page stays as it was.
+func TestALegacyCardPageIsNoPromotedPageOfItsMemory(t *testing.T) {
+	w, _ := syncMemorycardWorld(t)
+	legacy := legacyCardPage("c-000950")
+	writeVaultFile(t, w, "wiki/memory/c-000950.md", legacy)
+
+	code, stdout, stderr := runPromoteGolden(t, []string{"sync", "--dry-run", "--project", promoteGoldenProject, "--source", "memorycard"})
+	if code != exitOK || !strings.Contains(stdout, "would promote: Card Only") || strings.Contains(stdout, "already promoted") {
+		t.Fatalf("sync --dry-run: exit %d, stdout %q, stderr %q, want memory 1 among those to promote", code, stdout, stderr)
+	}
+
+	code, stdout, stderr = runPromoteGolden(t, []string{"promote", "--project", promoteGoldenProject, "--source", "memorycard", "--id", "1"})
+	if code != exitOK || !strings.Contains(stdout, "(created)") || strings.Contains(stdout, "already promoted") {
+		t.Fatalf("promote --id 1: exit %d, stdout %q, stderr %q, want a page created", code, stdout, stderr)
+	}
+	if got := readVaultFile(t, w, "wiki/memory/c-000950.md"); got != legacy {
+		t.Errorf("the legacy page changed:\n%s", got)
+	}
+	names := pageNames(t, w)
+	if len(names) != 2 {
+		t.Fatalf("pages = %v, want the legacy page and the new one", names)
+	}
+	requireStoreAgnosticIdentity(t, readVaultFile(t, w, "wiki/memory/c-000901.md"), "3")
+}
+
+// A legacy page is no patch target either: the status of its memory moves to archived and `sync` patches nothing of
+// it, so the page keeps the status it had.
+func TestALegacyCardPageIsNotPatchedWhenItsMemoryIsArchived(t *testing.T) {
+	w, db := syncMemorycardWorld(t)
+	legacy := legacyCardPage("c-000950")
+	writeVaultFile(t, w, "wiki/memory/c-000950.md", legacy)
+	execOn(t, db, `UPDATE memories SET status = 'archived' WHERE id = 1`)
+
+	code, stdout, stderr := runPromoteGolden(t, []string{"sync", "--project", promoteGoldenProject, "--source", "memorycard"})
+	if code != exitOK || strings.Contains(stdout, "patched 1 page(s)") {
+		t.Fatalf("sync: exit %d, stdout %q, stderr %q, want no page patched", code, stdout, stderr)
+	}
+	if got := readVaultFile(t, w, "wiki/memory/c-000950.md"); got != legacy {
+		t.Errorf("the legacy page changed:\n%s", got)
+	}
+}
+
+// The one-time migration of the legacy pages is retired with them: its command is no subcommand any more.
+func TestMigrateCardPagesIsNoSubcommandAnyMore(t *testing.T) {
+	_, _ = memorycardWorld(t)
+	code, stdout, stderr := runPromoteGolden(t, []string{"migrate-card-pages", "--project", promoteGoldenProject})
+	if code != exitUsage || stdout != "" || !strings.Contains(stderr, `unknown subcommand "migrate-card-pages"`) {
+		t.Errorf("migrate-card-pages: exit %d, stdout %q, stderr %q, want exit %d and the unknown subcommand refusal", code, stdout, stderr, exitUsage)
+	}
+}
+
+// cardPageMemory is a memorycard memory as promotion reads it, built from the observation-shaped rows the fixtures of
+// the commands' tests are written in: what a test needs to render the page of a memory (promote.EmitPage).
+func cardPageMemory(o memory.Observation) memory.Memory {
+	m := opstest.CardMemory(o)
+	m.Identity.Source = "memorycard"
+	return m
+}
+
+// writeCardPage writes the minimal promoted page of a memorycard memory under address and title, the way promote
+// renders it, and returns it: doctor's address-map and registration checks read exactly this on-disk shape.
+func writeCardPage(t *testing.T, vaultRoot, address, title string) promote.Page {
 	t.Helper()
-	var entries map[string]map[string]any
-	if err := json.Unmarshal([]byte(readVaultFile(t, w, ".raw/.longterm-mem-manifest.json")), &entries); err != nil {
+	m := memory.Memory{Identity: memory.Identity{Source: "memorycard", ID: "1"}, Type: "decision", Title: title, Body: "Body content.", Project: "labdrian-sdd-overlay", Revision: 1}
+	page, err := promote.EmitPage(m, address, nil, opstest.Instant())
+	if err != nil {
+		t.Fatalf("EmitPage: %v", err)
+	}
+	full := filepath.Join(vaultRoot, page.Path)
+	if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	page := readVaultFile(t, w, "wiki/memory/"+address+".md")
-	end := strings.Index(page[4:], "---\n") + 4 + 4
-	if got := entries[address]["frontmatter_hash"]; got != sha(page[:end]) {
-		t.Errorf("the sidecar's frontmatter hash of %s is %v, want %s (the page as written)", address, got, sha(page[:end]))
+	if err := os.WriteFile(full, []byte(page.Frontmatter+page.Body), 0o644); err != nil {
+		t.Fatal(err)
 	}
-}
-
-// A status patch changes status and related and nothing else: a legacy page keeps its identity lines byte for byte
-// (S6 (c): only the migration, with its backup and its refusals, rewrites the identity of an existing page).
-func TestALegacyCardPageWhoseStatusIsPatchedKeepsItsIdentityLines(t *testing.T) {
-	w, db := legacyCardWorld(t)
-	before := readVaultFile(t, w, "wiki/memory/c-000901.md")
-	execOn(t, db, `UPDATE memories SET status = 'archived' WHERE id = 1`)
-	code, stdout, stderr := runPromoteGolden(t, []string{"sync", "--project", promoteGoldenProject, "--source", "memorycard"})
-	if code != exitOK || !strings.Contains(stdout, "patched 1 page(s)") {
-		t.Fatalf("sync: exit %d, stdout %q, stderr %q, want one page patched", code, stdout, stderr)
-	}
-	want := strings.Replace(before, "status: developing\n", "status: archived\n", 1)
-	if got := readVaultFile(t, w, "wiki/memory/c-000901.md"); got != want {
-		t.Errorf("the patched page =\n%s\nwant the page with only its status changed:\n%s", got, want)
-	}
-	requireSidecarHolds(t, w, "c-000901")
-	// The page is in step with the sidecar: the next sync patches nothing.
-	if code, stdout, stderr := runPromoteGolden(t, []string{"sync", "--project", promoteGoldenProject, "--source", "memorycard"}); code != exitOK || strings.Contains(stdout, "patched 1 page(s)") {
-		t.Errorf("second sync: exit %d, stdout %q, stderr %q, want nothing patched", code, stdout, stderr)
-	}
-}
-
-// A legacy page of a retired memory whose status already says so is no patch target: it is not written and not counted.
-func TestALegacyCardPageWhoseStatusAlreadyMatchesIsNotAPatchTarget(t *testing.T) {
-	w, db := memorycardWorld(t)
-	archived := strings.Replace(legacyCardPage("c-000901", "Card Only", 1, "learning", "3"), "status: developing\n", "status: archived\n", 1)
-	recordPage(t, w, "c-000901", archived, true)
-	execOn(t, db, `UPDATE memories SET status = 'archived' WHERE id = 1`)
-	for _, args := range [][]string{{"sync", "--dry-run"}, {"sync"}} {
-		code, stdout, stderr := runPromoteGolden(t, append(append([]string{}, args...), "--project", promoteGoldenProject, "--source", "memorycard"))
-		if code != exitOK || strings.Contains(stdout, "patched 1 page(s)") || strings.Contains(stdout, "patch 1 page(s)") {
-			t.Errorf("%v: exit %d, stdout %q, stderr %q, want no page patched", args, code, stdout, stderr)
-		}
-	}
-	if got := readVaultFile(t, w, "wiki/memory/c-000901.md"); got != archived {
-		t.Errorf("the page was written:\n%s", got)
-	}
-}
-
-func TestALegacyCardPageUpdatedInPlaceBecomesAStoreAgnosticPage(t *testing.T) {
-	w, db := legacyCardWorld(t)
-	execOn(t, db, `INSERT INTO memory_versions (memory_id, version, title, body, saved_at) VALUES (1, 3, 'Card Only', 'Lives only in memorycard.', '')`)
-	execOn(t, db, `UPDATE memories SET body = ? WHERE id = 1`, "A body revised once.")
-	code, stdout, stderr := runPromoteGolden(t, []string{"promote", "--project", promoteGoldenProject, "--source", "memorycard", "--id", "1"})
-	if code != exitOK || !strings.Contains(stdout, "(updated)") {
-		t.Fatalf("promote: exit %d, stdout %q, stderr %q, want the page updated", code, stdout, stderr)
-	}
-	page := readVaultFile(t, w, "wiki/memory/c-000901.md")
-	requireStoreAgnosticIdentity(t, page, "4")
-	if !strings.Contains(page, "A body revised once.") {
-		t.Errorf("the page does not hold the revised body:\n%s", page)
-	}
-	requireSidecarHolds(t, w, "c-000901")
+	return page
 }

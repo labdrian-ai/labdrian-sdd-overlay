@@ -79,14 +79,15 @@ func TestSyncSourceMemorycard_PromotesANeverPromotedEligibleMemory(t *testing.T)
 }
 
 func TestSyncSourceMemorycard_ABridgedMemoryIsCountedAndExitsZero(t *testing.T) {
-	w, _ := syncMemorycardWorld(t)
-	// Observation 1 gets its page the way it always has; memory 2 is bridged to it.
-	seedLegacyPromotedPage(t, w)
+	w, db := syncMemorycardWorld(t)
+	// Memory 1 gets its page; memory 2 is bridged to it, the other part of the same observation.
+	bridgeMemory2To1(t, db)
+	promoteMemory(t, 1)
 	pagePath := filepath.Join(w.vaultRoot, "wiki", "memory", "c-000901.md")
 	before := fileHash(t, pagePath)
 
 	// The dry run decides it the same way: the bridged memory is counted, and no page is planned for it.
-	if code, so, se := runSync(t, "--source", "memorycard", "--dry-run"); code != exitOK || !strings.Contains(so, "would promote 2 memory(ies)") || !strings.Contains(so, "1 bridged") {
+	if code, so, se := runSync(t, "--source", "memorycard", "--dry-run"); code != exitOK || !strings.Contains(so, "would promote 1 memory(ies)") || !strings.Contains(so, "1 bridged") {
 		t.Fatalf("dry run: exit %d\nstdout: %s\nstderr: %s", code, so, se)
 	}
 
@@ -106,8 +107,8 @@ func TestSyncSourceMemorycard_ABridgedMemoryIsCountedAndExitsZero(t *testing.T) 
 			cards++
 		}
 	}
-	if cards != 3 {
-		t.Errorf("pages = %v, want the bridged page and the two eligible memories' pages, and none for memory 2", pageNames(t, w))
+	if cards != 2 {
+		t.Errorf("pages = %v, want the page of memory 1 and the page of memory 3, and none for memory 2", pageNames(t, w))
 	}
 }
 
@@ -125,11 +126,11 @@ func TestSyncSourceMemorycard_ASameContentMemoryIsCountedAsBridged(t *testing.T)
 	if _, err := conn.Exec(`update memories set pinned = 1 where id = 5`); err != nil {
 		t.Fatal(err)
 	}
-	seedLegacyPromotedPage(t, w)
+	promoteMemory(t, 2)
 
 	code, stdout, stderr := runSync(t, "--source", "memorycard")
-	if code != exitOK || !strings.Contains(stdout, "2 bridged") {
-		t.Fatalf("exit %d, stdout %q, want exit 0 and memories 2 and 5 counted as bridged\nstderr: %s", code, stdout, stderr)
+	if code != exitOK || !strings.Contains(stdout, "1 bridged") {
+		t.Fatalf("exit %d, stdout %q, want exit 0 and memory 5 counted as bridged\nstderr: %s", code, stdout, stderr)
 	}
 	for _, name := range pageNames(t, w) {
 		if strings.HasPrefix(name, "c-") && strings.Contains(readVaultFile(t, w, "wiki/memory/"+name), "source_id: 5\n") {
@@ -606,25 +607,24 @@ func TestSyncWithoutASourceIsSyncFromMemorycard(t *testing.T) {
 	}
 }
 
-// A vault whose pages were written by a release that promoted from Engram (they carry engram_id and
-// engram_revision) is read by plain `sync` as it reads any page: the page of observation 1 is memory 2's, so
-// memory 2 is bridged, and no page is written for it (S10 d). (Previously: plain `sync` read Engram, and a page
-// without memorycard_id was one of an observation.)
-func TestSyncWithoutASourceReadsLegacyKeyedPagesFromMemorycard(t *testing.T) {
-	w, _ := syncMemorycardWorld(t)
-	seedLegacyPromotedPage(t, w)
+// Plain `sync` reads the pages of the vault as `sync --source memorycard` does: the page of memory 1 is the page of
+// memory 2, the other part of its observation, so memory 2 is bridged and no page is written for it (S10 (d)).
+func TestSyncWithoutASourceReadsThePagesFromMemorycard(t *testing.T) {
+	w, db := syncMemorycardWorld(t)
+	bridgeMemory2To1(t, db)
+	promoteMemory(t, 1)
 	pagePath := filepath.Join(w.vaultRoot, "wiki", "memory", "c-000901.md")
 	before := fileHash(t, pagePath)
 
 	code, so, se := runSync(t, "--dry-run")
-	if code != exitOK || !strings.Contains(so, "sync --source memorycard --dry-run: would promote 2 memory(ies)") || !strings.Contains(so, "1 bridged") {
+	if code != exitOK || !strings.Contains(so, "sync --source memorycard --dry-run: would promote 1 memory(ies)") || !strings.Contains(so, "1 bridged") {
 		t.Fatalf("dry run: exit %d\nstdout: %s\nstderr: %s", code, so, se)
 	}
 	code, so, se = runSync(t)
-	if code != exitOK || !strings.Contains(so, "promoted 2 memory(ies)") || !strings.Contains(so, "1 bridged") {
+	if code != exitOK || !strings.Contains(so, "promoted 1 memory(ies)") || !strings.Contains(so, "1 bridged") {
 		t.Fatalf("run: exit %d\nstdout: %s\nstderr: %s", code, so, se)
 	}
 	if fileHash(t, pagePath) != before {
-		t.Errorf("the legacy page was rewritten")
+		t.Errorf("the page of memory 1 was rewritten")
 	}
 }

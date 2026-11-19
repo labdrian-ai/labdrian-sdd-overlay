@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "c6c7c518b2d43c860837844f98479b5b358d2c98",
+    "head": "b799f6934ca53e8dd12a4a061341e07dd181f800",
+    "diff_sha256": "2760d04c8311587480476a68890abaf32693a3b07738b63805c8fe1efb120b73",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "c6c7c518b2d43c860837844f98479b5b358d2c98",
+      "head": "b799f6934ca53e8dd12a4a061341e07dd181f800",
+      "diff_sha256": "2760d04c8311587480476a68890abaf32693a3b07738b63805c8fe1efb120b73"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:124",
+        "claim": "The T7 line says 'the third in L104 and L105', but L105 answers the fourth review (1624a674..c6c7c518), not the third. The line never names the fourth review, so the review-to-entry map is wrong, and L105 itself claims the line 'names the third review in L104 and L105'. A reader following the line gets the wrong entry for the fourth review.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:124",
+          "odd/tasks/phase9-store-agnostic-promotion.md:888"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:125",
+        "claim": "The follow-up line says it was 'raised by `c6c7c518`, L104'. L104 answers the third review, which covers 1f02cd0a..1624a674 and does not include c6c7c518. The attribution is muddled: c6c7c518 is the commit that was reviewed in the fourth review, and the follow-up line itself first appeared in the L104 commit. The reference should be L105, which answers the fourth review.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:125",
+          "odd/tasks/phase9-store-agnostic-promotion.md:887"
+        ]
+      }
+    ],
+    "evidence": [
+      "The only changed path is the odd/tasks feature document, and the whole diff was read.",
+      "L105 counts 4 findings (F1, F1 (2nd), F2, F2 (2nd)), which matches the finding ids it answers.",
+      "The T7 checkbox is fixed from the malformed '-- [x]' to '- [x]'.",
+      "The T9 line now points at the open T7 follow-up line, as L105 says."
+    ]
+  }
+}

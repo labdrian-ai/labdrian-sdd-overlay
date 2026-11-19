@@ -18,7 +18,7 @@ func TestScanFor_ASuccessorPageWithNoAddressIsLinkedByTheNameItsOwnPageResolvesT
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(path, []byte("---\nmemorycard_id: 9\nmemorycard_revision: 1\nproject: memorycard\n---\n# Successor\n"), 0o644); err != nil {
+	if err := os.WriteFile(path, []byte("---\nsource: memorycard\nsource_id: 9\nsource_revision: 1\nproject: memorycard\n---\n# Successor\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	index, err := readPages(pagesIn(root))

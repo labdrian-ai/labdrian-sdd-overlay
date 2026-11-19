@@ -1,0 +1,80 @@
+{
+  "kind": "sweeper",
+  "base": "fc7617c46c24b83bf01920c934826c002614cf94",
+  "head": "fa8d5183ce34bce805a7b5cbc1330b739a6a0b0b",
+  "diff_sha256": "95568a6b0f67fb45fbe20549ade16b5a6574209d3e5060c8b328f6f85fa7e2f0",
+  "sweep": "fa8d5183ce34-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 name: PageObservationID",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. rg -F: 0 occurrences outside odd/ and openspec/changes/archive/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: Render",
+      "disposition": "live",
+      "evidence": "different live symbol or generic word/flag: 180 occurrences outside odd/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: TestPageIdentity_CardScanKeepsTheRevisionSlotsApart",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. rg -F: 0 occurrences outside odd/ and openspec/changes/archive/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: TestPageIdentity_ReaderFallsBackPerFieldToTheSameStoresLegacyKey",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. rg -F: 0 occurrences outside odd/ and openspec/changes/archive/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: TestPageObservationIDNamesOnlyAPositiveID",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. rg -F: 0 occurrences outside odd/ and openspec/changes/archive/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: TestReconcile_ReadsTheMemorycardRevisionFirstAndNeverFallsBackFromAMalformedOne",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. rg -F: 0 occurrences outside odd/ and openspec/changes/archive/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: emitEngramPage",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. rg -F: 0 occurrences outside odd/ and openspec/changes/archive/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: frontmatter",
+      "disposition": "live",
+      "evidence": "different live symbol or generic word/flag: 943 occurrences outside odd/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: frontmatterEngramID",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. rg -F: 0 occurrences outside odd/ and openspec/changes/archive/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: frontmatterRevision",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. rg -F: 0 occurrences outside odd/ and openspec/changes/archive/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: legacyKeys",
+      "disposition": "live",
+      "evidence": "Removed by the reviewed commit itself; no dangling reference remains at the branch head outside odd/ and openspec/changes/archive/, so nothing is left to sweep. rg -F: 0 occurrences outside odd/ and openspec/changes/archive/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: promotionFooter",
+      "disposition": "live",
+      "evidence": "different live symbol or generic word/flag: 1 occurrences outside odd/ at HEAD"
+    },
+    {
+      "candidate": "T1 name: renderBody",
+      "disposition": "finding",
+      "evidence": "Corrected later in the chain by chore(sweep) 11641b08 (the record cannot name it as its commit: it is not a direct child). page_style.go comment on renderCardBody rewritten; remaining hits are openspec/decisions history; go test ./internal/promote ok"
+    },
+    {
+      "candidate": "T1 name: spellings",
+      "disposition": "live",
+      "evidence": "different live symbol or generic word/flag: 36 occurrences outside odd/ at HEAD"
+    }
+  ]
+}

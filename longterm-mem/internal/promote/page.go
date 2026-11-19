@@ -3,7 +3,6 @@ package promote
 import (
 	"fmt"
 	"regexp"
-	"strings"
 	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/memory"
@@ -32,13 +31,11 @@ type Page struct {
 	Body        string
 }
 
-// EmitPage renders m as a contract-conformant vault page at address
-// (R-027), in the style of the pages of the store m comes from (pageStyle): the
-// frontmatter with the store's type mapped onto the vault's own type contract
-// (concept, D7) plus flat extras that name the memory (engram_*, memorycard_*),
-// related links from the caller-resolved related slice, and a body carrying the
-// memory's content behind an H1 title (omitted when the content already opens
-// with one) plus a footer naming the store.
+// EmitPage renders m as a contract-conformant vault page at address (R-027), in the style of the pages of the
+// store m comes from (pageStyle): the frontmatter with the store's type mapped onto the vault's own type
+// contract (concept, D7) plus the flat store-agnostic keys that name the memory (source, source_id, source_type,
+// source_revision), related links from the caller-resolved related slice, and a body carrying the memory's content
+// behind an H1 title (omitted when the content already opens with one) plus a footer naming the store.
 //
 // at is the instant the page is rendered at: its created and updated dates
 // are the day it is in UTC, whatever zone at carries. The caller reads the
@@ -65,16 +62,6 @@ func pageTags(m memory.Memory) []string {
 	return tags
 }
 
-// statusFor derives the fresh-promotion status: mature for a pinned
-// observation, developing otherwise; R-033 (slice 7) is the only place
-// that later sets superseded/archived.
-func statusFor(m memory.Memory) string {
-	if m.Pinned {
-		return "mature"
-	}
-	return "developing"
-}
-
 func relatedWikilinks(related []Link) []string {
 	links := make([]string, 0, len(related))
 	for _, l := range related {
@@ -86,30 +73,4 @@ func relatedWikilinks(related []Link) []string {
 // wikilink renders the D7 alias wikilink form.
 func wikilink(address, title string) string {
 	return fmt.Sprintf("[[%s|%s]]", address, title)
-}
-
-// renderBody renders the content of an Engram observation behind an H1 title (omitted when the
-// content already opens with one) plus a footer naming the Engram source.
-func renderBody(m memory.Memory, id int64) string {
-	content := strings.TrimRight(m.Body, "\n")
-	var b strings.Builder
-	if !strings.HasPrefix(strings.TrimSpace(content), "# ") {
-		b.WriteString("# ")
-		b.WriteString(m.Title)
-		b.WriteString("\n\n")
-	}
-	b.WriteString(content)
-	b.WriteString("\n\n")
-	b.WriteString(promotionFooter(id, m.Revision))
-	return b.String()
-}
-
-// promotionFooter is the provenance line every rendered body closes with:
-// which Engram observation, at which revision, the page was rendered from.
-// It is named rather than inlined because update.go reads it back as
-// evidence -- a body that does not end in this exact line, for the revision
-// its own frontmatter claims, is not a body this renderer produced -- and
-// two spellings of it would make that check quietly stop matching.
-func promotionFooter(obsID int64, revision int) string {
-	return fmt.Sprintf("---\nPromoted from Engram observation %d, revision %d.\n", obsID, revision)
 }

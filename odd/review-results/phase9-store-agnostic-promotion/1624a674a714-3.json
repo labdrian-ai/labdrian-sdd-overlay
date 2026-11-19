@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "308c8c7110c803d5b00eec9968fec08c69430122",
+    "head": "1624a674a71492b1d58e2b4ac50cd52370ae5b0f",
+    "diff_sha256": "72fbefde95400d100c28d11c1c7ec0d0605d7c74e4c33154fcbcaedcaf599524",
+    "paths": [
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "308c8c7110c803d5b00eec9968fec08c69430122",
+      "head": "1624a674a71492b1d58e2b4ac50cd52370ae5b0f",
+      "diff_sha256": "72fbefde95400d100c28d11c1c7ec0d0605d7c74e4c33154fcbcaedcaf599524"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The change only edits one documentation file: it rewrites the T7 line and appends log entries L102 and L103.",
+      "L102's tally adds up: fixed earlier is 1+1+4+2+2 = 10, fixed now is 3+1+3+1+4+2+2 = 16, and answered is 11+3+4+1+2+1+3+2+1+2 = 30, giving 56.",
+      "L103's per-commit counts add up to the 17 findings it claims: 4+1+4+2+4+2 = 17.",
+      "The commit shas listed on the T7 line match those used in L102 and L103.",
+      "The T7 line cites L98 for the isOwnUnrecordedWrite open note, but L98 is outside the diff, so that citation cannot be checked here."
+    ]
+  }
+}
