@@ -101,8 +101,8 @@ func TestReviewCIRefusesEachMarkerOfTheListAndNamesIt(t *testing.T) {
 
 func TestReviewCIDoesNotReadAMarkerBelowTheRoot(t *testing.T) {
 	w := newReviewWorld(t)
-	landing := w.land("sub/.github/workflows/x.yml")
-	landing = w.land("sub/Jenkinsfile")
+	w.land("sub/.github/workflows/x.yml")
+	landing := w.land("sub/Jenkinsfile")
 
 	stdout, stderr, exits := w.ci("--landing", "HEAD", "--head", w.head)
 
