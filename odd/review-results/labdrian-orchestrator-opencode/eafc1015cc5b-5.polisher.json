@@ -1,0 +1,23 @@
+{
+  "kind": "polisher",
+  "base": "c0fa35a7a0dd8b5945bedbf8d954cf9236cd2fbf",
+  "head": "eafc1015cc5b11382f34cd847cae394eb7453bbe",
+  "diff_sha256": "8efbf8e2917e30a71c29bbbe0307f16848051c8ecd230c1b97c0a5a31efcf3e8",
+  "findings": {
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/runtime/opencode_contracts.go:19-26",
+        "claim": "Relative OverlayDir would yield relative contract paths. Answered, no change: locateOverlay (opencode_contracts.go:106-112) rejects a non-absolute configured overlay with an error, and the fallback walks up from os.Getwd, which is absolute; so source.root is always absolute and the comment holds.",
+        "evidence": [
+          "engine/runtime/opencode_contracts.go:106-128"
+        ]
+      }
+    ],
+    "evidence": [
+      "series review of eafc1015",
+      "T17 live run 2: contract_path resolved to <overlay>/skills/_shared/minimalism-contract.md"
+    ]
+  }
+}

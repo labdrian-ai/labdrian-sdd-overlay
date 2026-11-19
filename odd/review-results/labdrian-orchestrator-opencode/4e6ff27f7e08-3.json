@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f4cf6b53940bf9f8d37b5d33663e6e09dd746e44",
+    "head": "4e6ff27f7e086b6c62ac187dc7ccd57f044ca5e1",
+    "diff_sha256": "cf0877338072f1bb4948e39fab8aee8102c47953f3ff44b08ab6c8a278d4d462",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f4cf6b53940bf9f8d37b5d33663e6e09dd746e44",
+      "head": "4e6ff27f7e086b6c62ac187dc7ccd57f044ca5e1",
+      "diff_sha256": "cf0877338072f1bb4948e39fab8aee8102c47953f3ff44b08ab6c8a278d4d462"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff changes only the T25b row, the T8 row and the new L39 entry in the feature document; it touches no code.",
+      "L39 matches the rewritten T25b row: commit (a) rewords usage.go:129, and commit (b) deletes engramexport and the Engram wording of candidate_source.go:3,9,15 and skills_candidates_cli.go:15.",
+      "The T8 row now names T25a and T25b, which is the fix L39 records for F2.",
+      "The forecast ranges for commits (a) and (b) are unchanged. Moving one help-line reword between the two commits does not visibly break them.",
+      "L37 is not in this diff, so I could not check whether its wording still conflicts with the T25b row. L39 says the row is the authority, and the log is append-only."
+    ]
+  }
+}

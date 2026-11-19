@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "c132652e73c2bbe8252593766993f98ee558bfa5",
+    "head": "45212078ae1db021c4f7e22b87dab9a67e219a27",
+    "diff_sha256": "f7d389c05555cf87deca67e5a454554242efaabe4c4806bc56e299f2ec7fdd85",
+    "paths": [
+      "engine/runtime/opencode_memorycard_plugin_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "c132652e73c2bbe8252593766993f98ee558bfa5",
+      "head": "45212078ae1db021c4f7e22b87dab9a67e219a27",
+      "diff_sha256": "f7d389c05555cf87deca67e5a454554242efaabe4c4806bc56e299f2ec7fdd85"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/runtime/opencode_memorycard_plugin_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode_memorycard_plugin_test.go:185",
+        "claim": "The diff removes only the waitCalls helper. If the helper was the last user of the fmt import in this test file, the removal leaves an unused import and the package's tests fail to compile. The diff does not show the import block or the other uses of fmt, so this cannot be confirmed from the diff alone. The commit claims the helper was unused, which suggests the author compiled the package, but that is not shown.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "engine/runtime/opencode_memorycard_plugin_test.go:185 (removed line used fmt.Sprintf)"
+        ]
+      }
+    ],
+    "evidence": [
+      "The change deletes one unused test helper, memorycardFixture.waitCalls, and touches nothing else.",
+      "The only risk visible in the diff is the fmt import, which is unverifiable here.",
+      "The waitFor and waitStdin helpers are unchanged."
+    ]
+  }
+}

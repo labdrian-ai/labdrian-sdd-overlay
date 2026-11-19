@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ecdd5a183f666f1d2fee00460bb013afc3a356f1",
+    "head": "dad2ea34e8ccfb967161b428bf79e7540d255849",
+    "diff_sha256": "b27d700d26b64699218c31e70911274a55fa040cf97dff5bd6b21b4388c0ecb9",
+    "paths": [
+      "engine/oddtask/oddtask.go",
+      "engine/oddtask/oddtask_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "ecdd5a183f666f1d2fee00460bb013afc3a356f1",
+      "head": "dad2ea34e8ccfb967161b428bf79e7540d255849",
+      "diff_sha256": "b27d700d26b64699218c31e70911274a55fa040cf97dff5bd6b21b4388c0ecb9"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/oddtask/oddtask.go",
+        "engine/oddtask/oddtask_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/oddtask/oddtask.go:145-154",
+        "claim": "fenceRun treats any line starting with three or more backticks or tildes as a fence, whatever follows. Under CommonMark, a backtick fence whose info string contains a backtick is not a fence, e.g. an inline-code line such as ```x``` text. Such a line now opens a fence that never closes, so every later '## ' heading, including '## Log', is swallowed. This is the same invisible-shaper-entry failure the commit set out to fix. Indentation is also unbounded, although CommonMark allows at most 3 spaces.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/oddtask/oddtask.go:119-126",
+          "engine/oddtask/oddtask.go:145-154"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/oddtask/oddtask.go:116-126",
+        "claim": "A fence left unclosed anywhere before '## Log', for example in the Tasks section, now hides the '## Log' heading and every later heading. The parser does not reset the fence state at end of section, and nothing reports the problem. Before the change, such a document parsed correctly. Nothing in the added tests covers an unclosed fence.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/oddtask/oddtask.go:119-126"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff. The fence state machine only ever changes inside the fenceRun branch, and the '## ' check is gated on fence == \"\".",
+      "The unclosed-fence and inline-code cases are inferred from the code; they are not exercised by the added tests."
+    ]
+  }
+}

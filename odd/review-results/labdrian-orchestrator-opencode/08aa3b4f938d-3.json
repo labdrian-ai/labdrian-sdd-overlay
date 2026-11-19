@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "8307f9ab3c48e7cd0bdb4803e1923675ae20363e",
+    "head": "08aa3b4f938dac9b8ccfe953b3ecb66f848b177f",
+    "diff_sha256": "b29c80b95ec3d22f4c75715a9cdaeafe02dcf744d7f8d5ea33163fa433658a22",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "8307f9ab3c48e7cd0bdb4803e1923675ae20363e",
+      "head": "08aa3b4f938dac9b8ccfe953b3ecb66f848b177f",
+      "diff_sha256": "b29c80b95ec3d22f4c75715a9cdaeafe02dcf744d7f8d5ea33163fa433658a22"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff changes only the feature document: T25d is ticked with commit 8307f9ab, and Log entry L54 is appended.",
+      "The T25d row's commit field changes from '-' to '8307f9ab (L54)', consistent with the L54 entry, which names 8307f9ab as the T25d commit.",
+      "L54 records builder checks and answers to review findings, and its claims agree with the T25d row's contract (resolver port, translated distinct-occurrence count, a single resolver call, refusals).",
+      "No code is changed, so no defect from this commit's behavior can be shown."
+    ]
+  }
+}

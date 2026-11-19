@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "56300ca2da6619dc5008006e0943159e54ffb4d4",
+    "head": "201a28d2154f0e939efd40c25d9c838566039225",
+    "diff_sha256": "0017e95c8bfdbc7c5dc226862a9156bc3beee0e2b7eedf9669dc7fb1abc3ba46",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "56300ca2da6619dc5008006e0943159e54ffb4d4",
+      "head": "201a28d2154f0e939efd40c25d9c838566039225",
+      "diff_sha256": "0017e95c8bfdbc7c5dc226862a9156bc3beee0e2b7eedf9669dc7fb1abc3ba46"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:16",
+        "claim": "S9 now adds read->Read and skill->Skill mappings, but its Acceptance line still says only 'one test per mapping; one test that claude and codex map as before'. Fine in count terms, yet the plugin's path->file_path and id->skill argument translation, which S9 now states as part of the mapping, has no stated acceptance test. Also S9 says 'every other name passes unchanged' while S7 gives the foreman 'skill' and roles deny 'skill'; no conflict, but the doc does not say that edit/write/multiedit stay unmapped (only L65 does).",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:16"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:619",
+        "claim": "L66 says the pause length 'prints 60' from raw division, an unexplained claim whose referent (the note text pinned by a test) is not stated in S#; it also refers to 'L65 commit' review without a commit id, reducing traceability. Documentation-only, no behavioral harm.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:619"
+        ]
+      }
+    ],
+    "evidence": [
+      "Diff changes only one markdown spec file; no code or behavior altered.",
+      "S9 addition matches the mapping described in L65 (read->Read, skill->Skill, path->file_path, id->skill).",
+      "Pointer 'added by review, L65' resolves to L65 present in the same file."
+    ]
+  }
+}

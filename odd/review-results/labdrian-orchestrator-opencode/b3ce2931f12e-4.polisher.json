@@ -1,0 +1,112 @@
+{
+  "kind": "polisher",
+  "base": "27efff37265a06d7c66c24d9d8b8b0f100f757f8",
+  "head": "b3ce2931f12e01ae3256ada57dffd544d8aa585c",
+  "diff_sha256": "af72560b5d1f70bb425f9cf0ce083181942b6ab65cb97f50213a8d3c5403f0bc",
+  "findings": {
+    "findings": [
+      {
+        "id": "A-F1",
+        "severity": "WARNING",
+        "location": "engine/runtime/memorycard-opencode-plugin.mjs:77-82",
+        "claim": "Child output decoded chunk by chunk corrupted multi-byte UTF-8. Fixed in b9594a97 (UTF-8 decoded across chunks); recheck C5 identical bytes, 0 replacement chars.",
+        "evidence": [
+          "judge A F1; recheck C5."
+        ]
+      },
+      {
+        "id": "A-F2",
+        "severity": "WARNING",
+        "location": "engine/runtime/memorycard-opencode-plugin.mjs:133-139",
+        "claim": "execute.after awaited memorycard capture, delaying each subagent result. Fixed in b9594a97 (capture detached, unref, not awaited, input capped at 256 KiB); recheck C4 hook returns in 5 ms.",
+        "evidence": [
+          "judge A F2; judge B F4; recheck C4."
+        ]
+      },
+      {
+        "id": "A-F3",
+        "severity": "WARNING",
+        "location": "engine/runtime/memorycard-opencode-plugin.mjs:107-131",
+        "claim": "Every child session spawned memorycard context and got the block. Fixed in b9594a97 (child sessions skipped; roles query memorycard themselves, an owner-reversible choice logged in L86); recheck C2.",
+        "evidence": [
+          "judge A F3; recheck C2."
+        ]
+      },
+      {
+        "id": "A-F5",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode_memorycard.go:84-94,140-150",
+        "claim": "Ownership by substring match anywhere in the file. Fixed in c132652e (mark must be the first line); recheck C7.",
+        "evidence": [
+          "judge A F5; recheck C7."
+        ]
+      },
+      {
+        "id": "A-F6",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/memorycard-opencode-plugin.mjs:31-38",
+        "claim": "stderr logging and an unbounded sessions map. Answered and fixed: OpenCode sends plugin stderr to its log, and drift lines are once per kind and process; b9594a97 bounds sessions at 128.",
+        "evidence": [
+          "judge A F6; b9594a97 body; recheck C6."
+        ]
+      },
+      {
+        "id": "B-F1",
+        "severity": "WARNING",
+        "location": "engine/runtime/memorycard-opencode-plugin.mjs:94-139",
+        "claim": "execute.after shape assumed, not named unverified. Fixed in b9594a97: header and README say the shapes were read from the 2.2.7 binary and stay unverified with a model until T17.",
+        "evidence": [
+          "judge B F1; b9594a97 body."
+        ]
+      },
+      {
+        "id": "B-F2",
+        "severity": "WARNING",
+        "location": "engine/runtime/opencode_plugin_live_test.go:22-54",
+        "claim": "S11 acceptance not exercised against a real model. Answered: deferred to T17 (live OpenCode session with a model), logged in L86; the live test proves load and active marker.",
+        "evidence": [
+          "judge B F2; L86; recheck C8 live test PASS."
+        ]
+      },
+      {
+        "id": "B-F3",
+        "severity": "WARNING",
+        "location": "engine/runtime/memorycard-opencode-plugin.mjs:128-139",
+        "claim": "Guards returned silently on unexpected shapes. Fixed in b9594a97 (logged once per kind and process); recheck C6 three lines.",
+        "evidence": [
+          "judge B F3; recheck C6."
+        ]
+      },
+      {
+        "id": "B-F5",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode_memorycard_plugin_test.go:270-295",
+        "claim": "Swallow test could not show capture was attempted. Fixed in b9594a97: the fake memorycard logs its calls and the tests assert them.",
+        "evidence": [
+          "judge B F5; recheck C2-C4 call logs."
+        ]
+      },
+      {
+        "id": "B-F6",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/memorycard-opencode-plugin.mjs:105-125",
+        "claim": "sessions map never pruned; context cached for the session. Fixed (bounded at 128 in b9594a97); the per-session cache is kept on purpose: the same bytes on every call keep the prompt cache.",
+        "evidence": [
+          "judge B F6; b9594a97 body."
+        ]
+      },
+      {
+        "id": "B-F8",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode_memorycard.go",
+        "claim": "First commit 466 lines bundles separable units. Answered: already split into f5c4607d, 27efff37, b3ce2931, 88fe1989; history is not rewritten.",
+        "evidence": [
+          "judge B F8; git log f5c4607d~1..88fe1989."
+        ]
+      }
+    ],
+    "evidence": [
+      "judge A and judge B on f5c4607d~1..0e85d847; bounded recheck C1-C8 not-reproduced at 45212078, all reproduced at base."
+    ]
+  }
+}

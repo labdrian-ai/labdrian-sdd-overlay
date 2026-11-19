@@ -1,0 +1,100 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "febe2457f509a47df424cbfae2e1e4fd0ce9d366",
+    "head": "34028c8ed56251e8d6c5b5bee6cc42a21b4bb4ab",
+    "diff_sha256": "79644781730bb3186c3a70271954d163505140095c499b7f677696e5dd275264",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "bin/lib/hooks.sh",
+      "bin/lib/skill_registry.sh",
+      "engine/cmd/registry.go",
+      "engine/cmd/registry_refresh_test.go",
+      "engine/cmd/runtime_registry_refresh_test.go",
+      "engine/cmd/usage.go",
+      "engine/installer/testdata/registry_pins.golden",
+      "engine/settings/registry_refresh.go",
+      "engine/settings/registry_refresh_test.go",
+      "engine/skillregistry/compose.go",
+      "engine/skillregistry/compose_test.go",
+      "engine/skillregistry/frontmatter.go",
+      "engine/skillregistry/fsscan/fsscan_test.go",
+      "engine/skillregistry/skill_test.go",
+      "engine/skillregistry/skillregistry.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "febe2457f509a47df424cbfae2e1e4fd0ce9d366",
+      "head": "34028c8ed56251e8d6c5b5bee6cc42a21b4bb4ab",
+      "diff_sha256": "79644781730bb3186c3a70271954d163505140095c499b7f677696e5dd275264"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "bin/lib/hooks.sh",
+        "bin/lib/skill_registry.sh",
+        "engine/cmd/registry.go",
+        "engine/cmd/registry_refresh_test.go",
+        "engine/cmd/runtime_registry_refresh_test.go",
+        "engine/cmd/usage.go",
+        "engine/installer/testdata/registry_pins.golden",
+        "engine/settings/registry_refresh.go",
+        "engine/settings/registry_refresh_test.go",
+        "engine/skillregistry/compose.go",
+        "engine/skillregistry/compose_test.go",
+        "engine/skillregistry/frontmatter.go",
+        "engine/skillregistry/fsscan/fsscan_test.go",
+        "engine/skillregistry/skill_test.go",
+        "engine/skillregistry/skillregistry.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/skillregistry/compose.go:166",
+        "claim": "In headLines, once the sources section is entered, every line starting with '- ' directly after the generated bullets is treated as a generated source bullet and dropped. A foreign bullet list placed right after the sources list in the head is silently deleted by a refresh, which contradicts the commit's goal of keeping foreign head lines byte for byte.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skillregistry/compose.go:166"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/skillregistry/compose.go:112",
+        "claim": "`out = out[:0]` discards whatever `out` held just before. Resetting a slice that was filled earlier in the function and then rebuilt is confusing and looks like a leftover. Declare `out` once, or drop the earlier fill.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skillregistry/compose.go:112"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "engine/skillregistry/frontmatter.go:100",
+        "claim": "The mappingKey check cuts a quoted multi-line description at any continuation line that begins with a lowercase word and a colon (for example `see: the docs`). That line is ordinary prose inside a legitimate quoted description. The description then silently falls back to its first line only.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skillregistry/frontmatter.go:100"
+        ]
+      }
+    ],
+    "evidence": [
+      "Diff-only review of the compose.go head handling, the frontmatter mappingKey rule, and the skip-if-busy path.",
+      "The skip-if-busy path relies on filelock.ErrBusy surviving through service.Refresh. A test covers it, so I raised no finding."
+    ]
+  }
+}

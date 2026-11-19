@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "fcf39a17d81a813ee8db35ad47b09b2b72138496",
+    "head": "eb18c799e7a1f0f4f6d2a39ac368cc28d59bbd14",
+    "diff_sha256": "33bb4ad35797f5c1f511a5930c2a0355449a23eda521a7cfd10b45bc5b20726b",
+    "paths": [
+      "engine/hookwire/source_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "fcf39a17d81a813ee8db35ad47b09b2b72138496",
+      "head": "eb18c799e7a1f0f4f6d2a39ac368cc28d59bbd14",
+      "diff_sha256": "33bb4ad35797f5c1f511a5930c2a0355449a23eda521a7cfd10b45bc5b20726b"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/hookwire/source_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff removes one table-test case in engine/hookwire/source_test.go whose input and expected output (memorycard_mem_search -> mcp__memorycard__mem_search) are identical to the first case at line 50 ('server_tool is an mcp name'), so no coverage is lost.",
+      "No production code changed; the change cannot alter runtime behavior."
+    ]
+  }
+}

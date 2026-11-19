@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "4196e145bdf2c4d2c3b5ea1ce7c0efff579c48d2",
+    "head": "12ed029296bb54975f29c88daa0c95b464e9f5eb",
+    "diff_sha256": "f04001fa864dba10722e5344832540dfb46f9e48d9d98f475d5a49c923a25f10",
+    "paths": [
+      "bin/lib/common.sh",
+      "engine/shelltest/apply_push_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "4196e145bdf2c4d2c3b5ea1ce7c0efff579c48d2",
+      "head": "12ed029296bb54975f29c88daa0c95b464e9f5eb",
+      "diff_sha256": "f04001fa864dba10722e5344832540dfb46f9e48d9d98f475d5a49c923a25f10"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "bin/lib/common.sh",
+        "engine/shelltest/apply_push_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "bin/lib/common.sh:107-114",
+        "claim": "Only the exact `ssh://` scheme is narrowed to the host check. Every other scheme now returns network, including `ssh+git://localhost/...` and `git+ssh://localhost/...`, which the base treated as local. The commit message says only ssh URLs naming localhost are local, so this is arguably intended, but no test pins these variants. Separately, a Gitea reached over ssh on localhost (`ssh://git@localhost:2222/...`) is still a git server on this machine. Depending on how the unseen host comparison handles a `:port` suffix, such a URL may be classified inconsistently with the new http(s) rule.",
+        "evidence_class": "inferential",
+        "causal_disposition": "behavior-activated",
+        "proof_refs": [
+          "bin/lib/common.sh:107-114"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff; the host comparison after the case statement is not in the diff, so port handling for ssh://localhost:PORT is unverified.",
+      "The new tests cover http, https and an upper-case ssh localhost URL, but not git+ssh variants or ssh with a port."
+    ]
+  }
+}

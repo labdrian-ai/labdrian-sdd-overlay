@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "6d7c04f737593a3ed5af9c9e41c1f3737cdc6744",
+    "head": "4f1cfd61d4505c1db572199b8cf0b8dd5025fd73",
+    "diff_sha256": "f347761eb11f1c2951b74239844b7effd4a6b63066466dd5df3a3768a2bf4505",
+    "paths": [
+      "bin/lib/apply.sh",
+      "bin/lib/deploy_state.sh",
+      "engine/shelltest/apply_opencode_runtime_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "6d7c04f737593a3ed5af9c9e41c1f3737cdc6744",
+      "head": "4f1cfd61d4505c1db572199b8cf0b8dd5025fd73",
+      "diff_sha256": "f347761eb11f1c2951b74239844b7effd4a6b63066466dd5df3a3768a2bf4505"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "bin/lib/apply.sh",
+        "bin/lib/deploy_state.sh",
+        "engine/shelltest/apply_opencode_runtime_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "bin/lib/deploy_state.sh:137-139",
+        "claim": "state_rewrite_target now omits the target's row whenever the version is empty, and state_write_target delegates to it unchanged. A caller that passes an empty version (for example, when a version lookup fails) used to get a row with an empty version. It now gets no row and a success return, so the deploy is silently recorded as never deployed. The diff does not show whether any caller can pass an empty version, so this is unproven. The 'forget' behavior is selected by an overloaded empty-string sentinel instead of a separate parameter.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "bin/lib/deploy_state.sh:102-104",
+          "bin/lib/deploy_state.sh:137-139"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "bin/lib/apply.sh:211",
+        "claim": "state_forget_target is called unguarded in the failure path. If the rewrite fails (mktemp or mv error), a set -e shell would abort before the `continue`. That would skip the remaining targets and the runtime_install_failed handling that exits non-zero with the intended message. The diff does not show whether cmd_apply runs under set -e or how state_rewrite_target reports failure.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "bin/lib/apply.sh:210-212"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff of the three changed files. The truncated body of state_rewrite_target is not visible, so the assumption that it skips the target's own existing row when copying other entries is unverified.",
+      "The new test covers the forget path after a successful first apply. It does not cover a state_write_target call with an empty version."
+    ]
+  }
+}

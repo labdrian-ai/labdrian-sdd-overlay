@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a2f43dceed86379b8637082ae7071755f4090469",
+    "head": "f5c4607dbf8c0427dd6956310d860dc5fe52005c",
+    "diff_sha256": "46153b898c3b74d7368c3c6a32be973b4c3603b991f9a9225b163f1e10689669",
+    "paths": [
+      "engine/runtime/memorycard-opencode-plugin.mjs",
+      "engine/runtime/opencode_memorycard_plugin_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "a2f43dceed86379b8637082ae7071755f4090469",
+      "head": "f5c4607dbf8c0427dd6956310d860dc5fe52005c",
+      "diff_sha256": "46153b898c3b74d7368c3c6a32be973b4c3603b991f9a9225b163f1e10689669"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/runtime/memorycard-opencode-plugin.mjs",
+        "engine/runtime/opencode_memorycard_plugin_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/memorycard-opencode-plugin.mjs:75-77",
+        "claim": "stdout is accumulated with `stdout += chunk` on Buffer chunks, so each chunk is decoded to UTF-8 separately. A multi-byte character split across two chunks in a large context is corrupted into replacement characters. Beyond OUTPUT_LIMIT the output is silently cut off, with no log and no failure, and the truncated text is still injected as the full context.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/memorycard-opencode-plugin.mjs:75-77"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff of both new files. The timeout, retry, single-flight, swallow-failure and active-marker paths look consistent with the commit's claims, and the tests cover them.",
+      "The only defect found is the chunk-wise decoding and silent truncation of stdout."
+    ]
+  }
+}

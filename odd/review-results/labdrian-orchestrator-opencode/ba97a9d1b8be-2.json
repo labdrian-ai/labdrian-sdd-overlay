@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "cb3b8bca6b81a0262efd1bff4d3b192bc2ada487",
+    "head": "ba97a9d1b8be77f1f5b3ca641ab051b90daba359",
+    "diff_sha256": "dfcb2e5d9ba9c10c2eb14ae42efdf07dbcf14b3ab286bfba5637f0714fe91f75",
+    "paths": [
+      "bin/labdrian-overlay",
+      "bin/lib/skill_registry.sh",
+      "bin/lib/usage.sh",
+      "engine/cmd/registry_test.go",
+      "engine/installer/registry_engine_absent_test.go",
+      "engine/installer/registry_pins_doctor_test.go",
+      "engine/installer/registry_pins_repair_test.go",
+      "engine/installer/registry_pins_world_test.go",
+      "engine/installer/routing_pins_golden_test.go",
+      "engine/installer/testdata/registry_pins.golden",
+      "engine/shelltest/copies_skills_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "cb3b8bca6b81a0262efd1bff4d3b192bc2ada487",
+      "head": "ba97a9d1b8be77f1f5b3ca641ab051b90daba359",
+      "diff_sha256": "dfcb2e5d9ba9c10c2eb14ae42efdf07dbcf14b3ab286bfba5637f0714fe91f75"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "bin/labdrian-overlay",
+        "bin/lib/skill_registry.sh",
+        "bin/lib/usage.sh",
+        "engine/cmd/registry_test.go",
+        "engine/installer/registry_engine_absent_test.go",
+        "engine/installer/registry_pins_doctor_test.go",
+        "engine/installer/registry_pins_repair_test.go",
+        "engine/installer/registry_pins_world_test.go",
+        "engine/installer/routing_pins_golden_test.go",
+        "engine/installer/testdata/registry_pins.golden",
+        "engine/shelltest/copies_skills_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "bin/lib/usage.sh:113-115",
+        "claim": "The usage text says --no-repair and --target are accepted and do nothing. --target is still validated: an unknown target, or the package target pi, still makes the command die. The text is slightly misleading. It should say that --target is only validated.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "bin/lib/usage.sh:113-115",
+          "bin/lib/skill_registry.sh:57"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "bin/lib/skill_registry.sh:32-33",
+        "claim": "The wrapper comment says 'It used to repair...' and describes history rather than behavior. The `local target` variable is still assigned and validated but never used afterwards. That is dead state and makes the code harder to read.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "bin/lib/skill_registry.sh:32-33",
+          "bin/lib/skill_registry.sh:41"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff removes the cmd_repair_sdd_registry dispatch, the function, and the repair step of cmd_skill_registry consistently.",
+      "The golden entries and test files that held the repair pins were removed in step with the command.",
+      "I could not see other callers of `repair-sdd-registry` (docs, hooks, other scripts) from the diff, so I raise no finding for them."
+    ]
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "kind": "polisher",
+  "base": "0d30f1b8a07ced6b2454d312764eafd060618a11",
+  "head": "2c4eb2b7060d8c3f44d12c20faf9764996a2cfd0",
+  "diff_sha256": "576e9aa313b986be102a6ac2b508a64625b42259ea2d267c67e4b50f40ab7c91",
+  "findings": {
+    "findings": [
+      {
+        "id": "S-4",
+        "severity": "WARNING",
+        "location": "opencode.go:95-98",
+        "claim": "Register fails when opencode.json does not exist. Answered: base exits 1 the same way (verifier probe a), not a regression.",
+        "evidence": [
+          "series review of 2c4eb2b7; verifier probe a on base and new."
+        ]
+      },
+      {
+        "id": "S-5",
+        "severity": "SUGGESTION",
+        "location": "cmd_register.go:38-39",
+        "claim": "Register bypassed machineRuntimes wiring. Fixed in 5d453747 and 148ac548 (shared machineWriter, no type assertion).",
+        "evidence": [
+          "series review of 2c4eb2b7 and 5d453747."
+        ]
+      },
+      {
+        "id": "S-6",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/longtermmem.go:307-309",
+        "claim": "The 1.x override replaces a more specific status. Answered: an owned 1.x entry needs migration first; register then yields the specific v2 status.",
+        "evidence": [
+          "series review."
+        ]
+      },
+      {
+        "id": "S-7",
+        "severity": "SUGGESTION",
+        "location": "jsonnested.go:76-78",
+        "claim": "removeNested ignores a locate error and falls through to Remove, giving a less specific error. Answered: the error still names the file and member; no wrong write.",
+        "evidence": [
+          "series review."
+        ]
+      },
+      {
+        "id": "R-D2",
+        "severity": "SUGGESTION",
+        "location": "decide.go:98-101",
+        "claim": "With an opencode record present, an edited or foreign v2 entry is replaced/removed. Answered: the same rule base applies to every target (an entry under our record is ours).",
+        "evidence": [
+          "recheck D2."
+        ]
+      }
+    ],
+    "evidence": [
+      "Bounded recheck D1-D6 not reproduced; longterm-mem suite 32 ok; engine runtime/installer ok."
+    ]
+  }
+}

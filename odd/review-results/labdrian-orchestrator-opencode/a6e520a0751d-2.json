@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "c1a92bb67cde655b0c9985e4a0c015c954f58286",
+    "head": "a6e520a0751d14be30c04d1d522d51c4047ec861",
+    "diff_sha256": "b231e95a2d195317c413affda2a70df5bccf36c22f0e9fa2650aa741fe88db01",
+    "paths": [
+      "bin/lib/apply.sh",
+      "bin/lib/capture.sh",
+      "bin/lib/common.sh",
+      "engine/shelltest/capture_push_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "c1a92bb67cde655b0c9985e4a0c015c954f58286",
+      "head": "a6e520a0751d14be30c04d1d522d51c4047ec861",
+      "diff_sha256": "b231e95a2d195317c413affda2a70df5bccf36c22f0e9fa2650aa741fe88db01"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "bin/lib/apply.sh",
+        "bin/lib/capture.sh",
+        "bin/lib/common.sh",
+        "engine/shelltest/capture_push_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "bin/lib/capture.sh:152-160",
+        "claim": "The original comment block describing the push ('sync never strands local-only commits... skip loudly') stays in cmd_capture above the bare call, while the function that does the work now has a different comment. The explanation is detached from the code it describes and no longer mentions the local-path skip, which hurts readability.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "bin/lib/capture.sh:152-156"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "bin/lib/capture.sh:165-167",
+        "claim": "Skip message 'The origin remote is on this machine (origin is not a network remote)' is redundant and circular. The test also asserts on the parenthetical, coupling it to wording.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "bin/lib/capture.sh:165-167",
+          "engine/shelltest/capture_push_test.go:63"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "engine/shelltest/capture_push_test.go:21-23",
+        "claim": "The test stubs git as a shell function and sources only the push step, so it checks push_upstream_to_origin in isolation. Nothing verifies that cmd_capture calls it or that common.sh is sourced before capture.sh uses origin_is_network_remote. If capture.sh is run without common.sh being loaded, the missing function makes `! origin_is_network_remote` true, so the push is silently skipped.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "bin/lib/capture.sh:166",
+          "engine/shelltest/capture_push_test.go:21-23"
+        ]
+      }
+    ],
+    "evidence": [
+      "Diff moves origin_is_network_remote unchanged from apply.sh to common.sh; the logic is identical.",
+      "push_upstream_to_origin keeps the original push branches and only adds the network-remote guard.",
+      "The trap and checkout remain in cmd_capture after the call, so the branch-return behavior is preserved.",
+      "If the function is undefined, the command-not-found status makes the `elif !` branch take the skip path silently, which is the basis of F3."
+    ]
+  }
+}

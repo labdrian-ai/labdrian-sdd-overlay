@@ -1,0 +1,22 @@
+{
+  "kind": "polisher",
+  "base": "12ed029296bb54975f29c88daa0c95b464e9f5eb",
+  "head": "d12ce674a16895508d379436465b6c848f768193",
+  "diff_sha256": "b221ba98a874869e2381fb8be8fcc360ae54ffe17cd019a92e05fc60466ff14c",
+  "findings": {
+    "findings": [
+      {
+        "id": "S-18",
+        "severity": "SUGGESTION",
+        "location": "bin/lib/common.sh:109-112",
+        "claim": "Port and [::1] in compound schemes. Refuted: the host case matches localhost:*, 127.0.0.1:* and [::1]:* for every branch.",
+        "evidence": [
+          "series x2; common.sh host case."
+        ]
+      }
+    ],
+    "evidence": [
+      "RED observed for both rows, then GREEN; shelltest ok."
+    ]
+  }
+}

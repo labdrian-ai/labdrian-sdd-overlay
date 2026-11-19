@@ -1,0 +1,31 @@
+{
+  "kind": "polisher",
+  "base": "4ee2cccbec59217fa63581813568192e62737c01",
+  "head": "f82925ffbc4ac9ce858fc0fca93411d100937352",
+  "diff_sha256": "bdd5057879a6a955632abcba6590fbdc70ebe7a958f242efccc6504dfc3a3c99",
+  "findings": {
+    "findings": [
+      {
+        "id": "C-S1",
+        "severity": "SUGGESTION",
+        "location": "engine/cmd/projection_hook.go:234",
+        "claim": "Inner out shadowed the named result. Fixed in 513c8f51 (named reply).",
+        "evidence": [
+          "series review f82925ff."
+        ]
+      },
+      {
+        "id": "C-S2",
+        "severity": "SUGGESTION",
+        "location": "CHANGELOG.md:7",
+        "claim": "Store path note still said sha256 of the session, and bridge behaviour stated as fact. Fixed in 513c8f51.",
+        "evidence": [
+          "series review f82925ff."
+        ]
+      }
+    ],
+    "evidence": [
+      "differential against 8df8f69a: only suppressed repeats differ (123 inputs)."
+    ]
+  }
+}

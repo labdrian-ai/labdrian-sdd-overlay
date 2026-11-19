@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f5c4607dbf8c0427dd6956310d860dc5fe52005c",
+    "head": "27efff37265a06d7c66c24d9d8b8b0f100f757f8",
+    "diff_sha256": "5b988c84e4b8c74bc6e72a7fa59973d1e816f493e375a4aa39231eff766c113c",
+    "paths": [
+      "engine/runtime/memorycard-opencode-plugin.mjs",
+      "engine/runtime/opencode_memorycard_plugin_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f5c4607dbf8c0427dd6956310d860dc5fe52005c",
+      "head": "27efff37265a06d7c66c24d9d8b8b0f100f757f8",
+      "diff_sha256": "5b988c84e4b8c74bc6e72a7fa59973d1e816f493e375a4aa39231eff766c113c"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/runtime/memorycard-opencode-plugin.mjs",
+        "engine/runtime/opencode_memorycard_plugin_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/runtime/memorycard-opencode-plugin.mjs:94-102",
+        "claim": "textOf falls through to the content text parts when result.output is a whitespace-only string, but the claimed contract is output else content. More notably, a non-empty output is returned untrimmed while content parts are joined, which is fine; however the output check uses trim() so an output of whitespace plus real content silently switches source. Minor inconsistency, low risk.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/memorycard-opencode-plugin.mjs:94-102"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "engine/runtime/memorycard-opencode-plugin.mjs:133-139",
+        "claim": "toolFinished awaits runMemorycard inside the execute.after hook, so every completed subagent call is blocked up to the memorycard timeout (default 20s) before the tool call returns to the model. Unlike context, there is no cached failure or RETRY_AFTER_MS backoff, so a hanging or absent memorycard delays every subagent call by the full timeout each time. The capture is not fire-and-forget.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/memorycard-opencode-plugin.mjs:133-139",
+          "engine/runtime/memorycard-opencode-plugin.mjs:22"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode_memorycard_plugin_test.go:286",
+        "claim": "The swallow-failure test now also fires a capture call but only asserts the context output is []; it never asserts the capture hook itself did not throw or was attempted, so the added line adds weak coverage for the capture failure path (guarded hides throws either way).",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/opencode_memorycard_plugin_test.go:283-289"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff of both changed paths; toolFinished is awaited synchronously in the hook with the existing runMemorycard timeout and no failure backoff."
+    ]
+  }
+}

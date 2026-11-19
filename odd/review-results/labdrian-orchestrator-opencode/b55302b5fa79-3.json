@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ac9601e231297e036001bd34d2ff4b5e24786068",
+    "head": "b55302b5fa7966acb56ce904937c82e68af6e0b8",
+    "diff_sha256": "c3ea2cf4c9ee87f7021032f01968354426ff936154740aa716e848b1965fa6e3",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "ac9601e231297e036001bd34d2ff4b5e24786068",
+      "head": "b55302b5fa7966acb56ce904937c82e68af6e0b8",
+      "diff_sha256": "c3ea2cf4c9ee87f7021032f01968354426ff936154740aa716e848b1965fa6e3"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:279",
+        "claim": "The L21 entry says `5caf9593` F3 is answered for T20 because T20's line no longer asks for a `gentle-ai sync` check, and that T22 confirms no remaining hook invokes the binary. This commit does not touch T20 or T22. The claim therefore rests on the base text. If T20 still carries the sync check, the log asserts a fix that is not in the document.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:279"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:50",
+        "claim": "T8 already lists T25 in its `after` list. The new 'BLOCKED on the owner's T25 adapter decision' clause adds a second place to maintain the same dependency. The clause is also not tied to any status field a tool reads, so it can go stale once the owner decides.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:50"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only the feature document. S7, S14, S17, T8, T12 and the new L21 entry were read against each other.",
+      "S7's foreman acceptance row (no deny on edit, shell, subagent, execute or skill; deny on exactly question, webfetch, websearch and experimental_image_generate) matches the foreman set in S7's body and T12 (b).",
+      "T12 (a) now limits the edit/shell deny to the eight roles, consistent with S7 and S16 B8.",
+      "S14 now names B8 as prose-only, consistent with S16 B8.",
+      "S17's settings.json identification by content and its single acceptance check on the gentle-ai binary are consistent with deliverable (c)."
+    ]
+  }
+}

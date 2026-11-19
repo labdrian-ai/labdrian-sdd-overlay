@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "451cd0da31cfa9369b9ed25b35f71c1748a46f8b",
+    "head": "59fe2fb3616080da43d442f7ea59bad0025da04c",
+    "diff_sha256": "ed5f4cf8cf799ce2f498cac90986b0ab7bd3ca18caa3080806c4a8a89fb998ef",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/capability/declarations.go",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+      "engine/cmd/usage.go",
+      "engine/runtime/opencode.go",
+      "engine/runtime/opencode_json.go",
+      "engine/runtime/opencode_json_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "451cd0da31cfa9369b9ed25b35f71c1748a46f8b",
+      "head": "59fe2fb3616080da43d442f7ea59bad0025da04c",
+      "diff_sha256": "ed5f4cf8cf799ce2f498cac90986b0ab7bd3ca18caa3080806c4a8a89fb998ef"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/capability/declarations.go",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+        "engine/cmd/usage.go",
+        "engine/runtime/opencode.go",
+        "engine/runtime/opencode_json.go",
+        "engine/runtime/opencode_json_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/runtime/opencode_json.go:86",
+        "claim": "The trailing-content check only detects a second valid JSON token (decoder.Token() returning nil). Trailing garbage such as `{} x` or `{...} }` makes Token() return an error, so the check passes and the file is accepted. The install then rewrites the file and silently drops the trailing text, which contradicts the promise that a file that is not one JSON object is left as it is. The check should require io.EOF.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/opencode_json.go:86-88"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode_json.go:179-186",
+        "claim": "When uninstall removes any owned entry (for example default_agent) and the owner already had an empty `mcp.servers: {}`, the cleanup deletes that empty container (and `mcp` if it is then empty). The container was not created by labdrian, so this removes owner structure.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/opencode_json.go:179-186"
+        ]
+      }
+    ],
+    "evidence": [
+      "Diff read in full; the trailing-content check follows Go's json.Decoder.Token semantics, where an error is returned on invalid trailing input.",
+      "The backup is written before the main file, and a refused parse never reaches it, which matches the tests."
+    ]
+  }
+}

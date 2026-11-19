@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "8168f840c060a189f10f9a4a4c972ac8f75a71fb",
+    "head": "0e85d8475ac8407ccafc2ac56beb1ab107affbf4",
+    "diff_sha256": "839e61c759b3854a5cf7213a8965532ea8d62087fe1ba9a7dd918967c0d789f1",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/cmd/usage.go",
+      "engine/runtime/opencode_plugin_live_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "8168f840c060a189f10f9a4a4c972ac8f75a71fb",
+      "head": "0e85d8475ac8407ccafc2ac56beb1ab107affbf4",
+      "diff_sha256": "839e61c759b3854a5cf7213a8965532ea8d62087fe1ba9a7dd918967c0d789f1"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/cmd/usage.go",
+        "engine/runtime/opencode_plugin_live_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The test loop in opencode_plugin_live_test.go checks both plugin ids for a 'failed to load plugin' line and for the active marker file; the check logic is sound.",
+      "MEMORYCARD_DB is added to the environment of every opencode invocation, so no plugin call can reach a real store.",
+      "The CHANGELOG, README and usage text agree on the record name, the marker name, the partial/foreign file handling and the restart-owed behavior. The diff has no code to contradict them."
+    ]
+  }
+}

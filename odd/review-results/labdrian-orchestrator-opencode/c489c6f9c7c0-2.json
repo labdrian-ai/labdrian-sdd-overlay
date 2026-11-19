@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ff7fd1d1813af8bc82d39643ecd9f1755b863dec",
+    "head": "c489c6f9c7c0990af746df1a54abc9c66f6ff96c",
+    "diff_sha256": "4d7f928edcd3e7658d452de0824ed7ff28851c505fdfb2dc254e35f61c17c69a",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "ff7fd1d1813af8bc82d39643ecd9f1755b863dec",
+      "head": "c489c6f9c7c0990af746df1a54abc9c66f6ff96c",
+      "diff_sha256": "4d7f928edcd3e7658d452de0824ed7ff28851c505fdfb2dc254e35f61c17c69a"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The S17 check now names ~/.claude/CLAUDE.md and ~/.claude/settings.json as the two files searched whole, which answers the L27 finding about whether CLAUDE.md is covered.",
+      "'The inventory accounts for every row above.' is now its own sentence, as L27 says.",
+      "I read the regex against the listed examples: gentle-ai-overlay is excluded by the trailing '-', ~/.gentle-ai/y by the leading '.', and /opt/gentle-ai/bin by the trailing '/'. Bare and wrapped calls still match. The pattern text is unchanged by this commit.",
+      "The new L27 entry is append-only and matches the change it describes. I found no inconsistency introduced by this commit."
+    ]
+  }
+}

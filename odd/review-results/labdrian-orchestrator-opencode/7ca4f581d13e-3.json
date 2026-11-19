@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ddced25ef0dde1a6c1a57429c80084de462b8281",
+    "head": "7ca4f581d13e0d87f1bac2d056cef22d914a3010",
+    "diff_sha256": "1aef3a0abaac0e634512334eb1e14c81283c233d1c217b8cbadbc60f6898db33",
+    "paths": [
+      "engine/skills/procedural_candidate_memorycard_test.go",
+      "skills/_shared/procedural-candidate-detection.md",
+      "skills/procedural-candidates/SKILL.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "ddced25ef0dde1a6c1a57429c80084de462b8281",
+      "head": "7ca4f581d13e0d87f1bac2d056cef22d914a3010",
+      "diff_sha256": "1aef3a0abaac0e634512334eb1e14c81283c233d1c217b8cbadbc60f6898db33"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skills/procedural_candidate_memorycard_test.go",
+        "skills/_shared/procedural-candidate-detection.md",
+        "skills/procedural-candidates/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/skills/procedural_candidate_memorycard_test.go:140",
+        "claim": "The new forbidText guard only rejects the exact phrase \"once for all of them\" in the contract. It does not protect against other reintroduced wording duplicating the resolve ask, and the SKILL.md side has no equivalent guard. The regression protection for the single-call statement is therefore narrow.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/procedural_candidate_memorycard_test.go:140"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "skills/_shared/procedural-candidate-detection.md:146-150",
+        "claim": "The resolve-failure clause now sits in the middle of the rewrite sentence, before the merge rules, and says nothing is rewritten. The later sentence 'An id reported unknown stays as written' follows the merge text, so a reader may not see that the failure case also skips the merge and recount. The behavior is stated, but the dependency on item 2 is easy to miss.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/_shared/procedural-candidate-detection.md:146-150"
+        ]
+      }
+    ],
+    "evidence": [
+      "Diff reviewed in full: the three changed files only reword the resolve instruction and move the failure clause, plus update the test strings to match.",
+      "The contract and SKILL.md wording are consistent with the updated test assertions, including 'sorted as strings' now present in SKILL.md.",
+      "No behavior change to the code beyond the test assertions; no regression on previously valid input was found."
+    ]
+  }
+}

@@ -1,0 +1,99 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "6b2a2043a2984a734f86cc4a096884eb995d8e1e",
+    "head": "dd99e6e57ccee870faca20715f6d2a11691daaaf",
+    "diff_sha256": "07767d5efc151493181b38a2366394f10cc9e1eea842a5de60ce0039dc0bceb6",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/cmd/opencode_bridge_e2e_test.go",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+      "engine/hookwire/source.go",
+      "engine/hookwire/source_test.go",
+      "engine/runtime/labdrian-runtime-parity-plugin.mjs",
+      "engine/runtime/opencode_bridge_failure_test.go",
+      "engine/runtime/opencode_bridge_session_test.go",
+      "engine/runtime/opencode_plugin.go",
+      "engine/runtime/opencode_plugin_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "6b2a2043a2984a734f86cc4a096884eb995d8e1e",
+      "head": "dd99e6e57ccee870faca20715f6d2a11691daaaf",
+      "diff_sha256": "07767d5efc151493181b38a2366394f10cc9e1eea842a5de60ce0039dc0bceb6"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/cmd/opencode_bridge_e2e_test.go",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+        "engine/hookwire/source.go",
+        "engine/hookwire/source_test.go",
+        "engine/runtime/labdrian-runtime-parity-plugin.mjs",
+        "engine/runtime/opencode_bridge_failure_test.go",
+        "engine/runtime/opencode_bridge_session_test.go",
+        "engine/runtime/opencode_plugin.go",
+        "engine/runtime/opencode_plugin_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/runtime/labdrian-runtime-parity-plugin.mjs:356-366",
+        "claim": "toolInputFor keeps an existing file_path (read) or skill (skill) when the call also carries OpenCode's own path or id. The engine's policy then sees the Claude-named value while OpenCode executes the other one. A call with path=/protected/SKILL.md and file_path=/innocent would be judged on /innocent, so the procedural-skill gate could be bypassed, and the same holds for id vs skill. Whether OpenCode's schema tolerates the extra key is not shown in the diff. The test asserts this precedence on purpose.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/labdrian-runtime-parity-plugin.mjs:358-363",
+          "engine/runtime/opencode_bridge_failure_test.go: 'a file_path the call already has is not overwritten'"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "engine/runtime/labdrian-runtime-parity-plugin.mjs:316-326",
+        "claim": "After one timeout, every PreToolUse, PostToolUse and Stop check fails open for twice the timeout (60s by default), so guard policies are unenforced for that whole window. Anything that can make the engine slow, such as load or a huge input, opens a guard-free window. The note is told only once, so later windows are silent to the model.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/labdrian-runtime-parity-plugin.mjs: askEngine pausedUntil branch returns noteFailure without asking the engine"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/labdrian-runtime-parity-plugin.mjs:480-487",
+        "claim": "ownText is set before ctx.session.synthetic and cleared only when a prompt with identical text arrives. If synthetic does not fire the prompt hook, or if the user later types the same text, that user prompt is silently swallowed (no UserPromptSubmit, guard not cleared).",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/labdrian-runtime-parity-plugin.mjs: promptSubmitted ownText comparison"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full plugin diff: runEngine kill/limit handling, parseAnswer, the note lifecycle, session start dedupe, child-session detection and the input renaming.",
+      "hookwire adaptOpencode maps read and skill; tests were updated to match."
+    ]
+  }
+}

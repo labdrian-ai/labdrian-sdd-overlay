@@ -1,0 +1,73 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "7ca4f581d13e0d87f1bac2d056cef22d914a3010",
+    "head": "094353a71ccf56c1f5d5ef59168a05f4ff43ce31",
+    "diff_sha256": "10e3fb87908241bc36734dc2822fd43ad6a3e7a7a07ed3f1b3522a6a7a602884",
+    "paths": [
+      "engine/skills/procedural_candidate_memorycard_test.go",
+      "skills/_shared/procedural-candidate-detection.md",
+      "skills/procedural-candidates/SKILL.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "7ca4f581d13e0d87f1bac2d056cef22d914a3010",
+      "head": "094353a71ccf56c1f5d5ef59168a05f4ff43ce31",
+      "diff_sha256": "10e3fb87908241bc36734dc2822fd43ad6a3e7a7a07ed3f1b3522a6a7a602884"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skills/procedural_candidate_memorycard_test.go",
+        "skills/_shared/procedural-candidate-detection.md",
+        "skills/procedural-candidates/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "skills/_shared/procedural-candidate-detection.md:126-132",
+        "claim": "The exception says a lifecycle transition is saved 'with its Status and the History evidence and fields its section 9 row requires', while also saying stop occurrence work including 'rewrite'. A transition save that includes legacy ids in Occurrences cannot do the per-save legacy-to-memorycard rewrite, and the text does not state that the stored Occurrences stay unrewritten while other fields are updated. The read-side derivation could also differ from the saved counts if merge ties are not applied. Reader may be unsure which fields count as 'occurrence work'.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/_shared/procedural-candidate-detection.md:126-132"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "skills/_shared/procedural-candidate-detection.md:142-144",
+        "claim": "New read-side rule says entries translating to one id count once 'by the merge rule of item 6', but the failure path (resolve unavailable) cannot translate, so the claim that a read and a later save derive the same counts does not hold when resolve fails. The sentence is unqualified.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/_shared/procedural-candidate-detection.md:142-144"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "skills/procedural-candidates/SKILL.md:20",
+        "claim": "Step 5 now points forward to step 6 for the resolve command, and the SKILL step 6 exception wording ('a lifecycle transition ... is still saved') omits the Status/History/section 9 fields that the shared contract requires, so the skill under-specifies the widened exception and relies on the contract. The tests only assert the shorter phrase.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/procedural-candidates/SKILL.md:21",
+          "engine/skills/procedural_candidate_memorycard_test.go:137"
+        ]
+      }
+    ],
+    "evidence": [
+      "Diff reviewed in full: three files, text-contract edits plus matching test assertions.",
+      "Test strings match the new contract and SKILL text exactly as quoted in the diff."
+    ]
+  }
+}

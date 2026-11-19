@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "4e96003dbffc56ee2042b62e2b5065a935c4907d",
+    "head": "54b0cbdd04dc498fd6fb6a07be1ddcbd98a4e309",
+    "diff_sha256": "fffcd38d8b62c7d440c7a3fcfba0a8901432193466053dc0743c22ae89762e45",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+      "engine/runtime/labdrian-runtime-parity-plugin.mjs",
+      "engine/runtime/opencode_bridge_failure_test.go",
+      "engine/runtime/opencode_plugin.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "4e96003dbffc56ee2042b62e2b5065a935c4907d",
+      "head": "54b0cbdd04dc498fd6fb6a07be1ddcbd98a4e309",
+      "diff_sha256": "fffcd38d8b62c7d440c7a3fcfba0a8901432193466053dc0743c22ae89762e45"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+        "engine/runtime/labdrian-runtime-parity-plugin.mjs",
+        "engine/runtime/opencode_bridge_failure_test.go",
+        "engine/runtime/opencode_plugin.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/labdrian-runtime-parity-plugin.mjs:316",
+        "claim": "The pause length is formatted as a raw float division, (ENGINE_PAUSE_FACTOR * timeoutMs) / 1000. A timeout that is not a whole number of milliseconds, or a factor that does not divide evenly, can render long decimals in the model-facing note (for example 0.6000000000000001). The test only pins the 0.6 case that happens to be exact.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/labdrian-runtime-parity-plugin.mjs:316",
+          "engine/runtime/opencode_bridge_failure_test.go:213"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes one interpolation in the plugin. It replaces the literal '-e' with the computed seconds. The pause value is the same expression already assigned to state.pausedUntil on the previous line, so the note matches the actual pause.",
+      "The plugin version, the CHANGELOG and the golden files are bumped consistently from parity-11 to parity-12, and the Go constant is updated.",
+      "The test now asserts the whole sentence, with 0.6 seconds derived from the test's timeout and factor; I found no mismatch in the diff."
+    ]
+  }
+}

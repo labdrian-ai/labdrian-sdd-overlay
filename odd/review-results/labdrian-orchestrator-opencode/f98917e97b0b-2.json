@@ -1,0 +1,81 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "000433822b6412ef3bd3f11d89eaf72b3384d279",
+    "head": "f98917e97b0b3e1662c8fddcab6dcbcd2e155fab",
+    "diff_sha256": "d718c4f417b4834a26d61ddcb40a4a2567eb92b994e998ad9b1457a22d279ebd",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/cmd/runtime_golden_test.go",
+      "engine/cmd/runtime_registry.go",
+      "engine/cmd/runtime_test.go",
+      "engine/cmd/testdata/runtime-golden/runtime-claude-families-present-and-absent.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-claude-owner-rules.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-claude-with-settings-that-cannot-be-used.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-lifecycle-of-all-the-targets.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-lifecycle-of-claude.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-roots-come-from-the-environment.golden",
+      "engine/cmd/usage.go",
+      "engine/runtime/claude.go",
+      "engine/runtime/claude_register.go",
+      "engine/runtime/ownerrules.go",
+      "engine/runtime/ownerrules_block.go",
+      "engine/runtime/ownerrules_block_test.go",
+      "engine/runtime/ownerrules_claude_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "000433822b6412ef3bd3f11d89eaf72b3384d279",
+      "head": "f98917e97b0b3e1662c8fddcab6dcbcd2e155fab",
+      "diff_sha256": "d718c4f417b4834a26d61ddcb40a4a2567eb92b994e998ad9b1457a22d279ebd"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/cmd/runtime_golden_test.go",
+        "engine/cmd/runtime_registry.go",
+        "engine/cmd/runtime_test.go",
+        "engine/cmd/testdata/runtime-golden/runtime-claude-families-present-and-absent.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-claude-owner-rules.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-claude-with-settings-that-cannot-be-used.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-lifecycle-of-all-the-targets.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-lifecycle-of-claude.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-roots-come-from-the-environment.golden",
+        "engine/cmd/usage.go",
+        "engine/runtime/claude.go",
+        "engine/runtime/claude_register.go",
+        "engine/runtime/ownerrules.go",
+        "engine/runtime/ownerrules_block.go",
+        "engine/runtime/ownerrules_block_test.go",
+        "engine/runtime/ownerrules_claude_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/runtime/ownerrules_block.go:214-218",
+        "claim": "readBlockFile treats a dangling CLAUDE.md symlink as an absent file because os.Stat reports not-exist. WriteFile then cannot resolve the link (EvalSymlinks fails), so it renames the temp file over the symlink itself. This replaces the owner's link instead of following it, contrary to the documented behavior of following symbolic links.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/ownerrules_block.go readBlockFile os.Stat/IsNotExist and writeBlockFile EvalSymlinks fallback to target=path"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the diff for Apply/Remove/State, atomic write, adapter wiring and the golden changes; the only defect found is the dangling-symlink handling.",
+      "A Claude install outside an overlay checkout now reports partial with exit 1; the commit and CHANGELOG state this deliberately, so it is not a finding."
+    ]
+  }
+}

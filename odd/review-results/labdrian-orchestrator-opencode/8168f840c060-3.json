@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "88fe1989f37494e90d584c3bc5d634acd7df9897",
+    "head": "8168f840c060a189f10f9a4a4c972ac8f75a71fb",
+    "diff_sha256": "6509590a0609eb1128e4b7e0d38e770323f2ec39b2f3f82476e4ae76e40bef4e",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "88fe1989f37494e90d584c3bc5d634acd7df9897",
+      "head": "8168f840c060a189f10f9a4a4c972ac8f75a71fb",
+      "diff_sha256": "6509590a0609eb1128e4b7e0d38e770323f2ec39b2f3f82476e4ae76e40bef4e"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:74",
+        "claim": "T34 declares Risk: 5 (installed hooks) but, unlike T31 and T29, names no independent verifier after it, and it has no commit-count or minutes forecast. Task shaping is inconsistent with how the document treats high-risk installer work, so the risk may not be gated.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:74"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:74",
+        "claim": "T34(a) assumes labdrian installs the `codegraph prompt-hook` entry in the Claude settings and can wrap it. The diff does not show that labdrian owns that entry; if codegraph installs it, the wrap may be overwritten or may not apply. The task-notification marker ('harness system-notification marker') is also left unspecified, so the acceptance 'no codegraph exploration on a task-notification prompt' is not testable as written. The dependency 'after T15' (the memorycard OpenCode plugin) is unexplained.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:74",
+          "odd/tasks/labdrian-orchestrator-opencode.md:36"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:74",
+        "claim": "T34 is inserted between T33 and T31, breaking the numeric order of tasks. Its interaction with T22 (which edits the same settings hooks and runs install-hooks) is not stated, so a one-slice-at-a-time sequence is not defined.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:74"
+        ]
+      }
+    ],
+    "evidence": [
+      "Docs-only change to one feature document; no code behavior changed.",
+      "Findings concern the shaping of T34 against conventions visible in neighbouring tasks T29, T31, T32 and T33."
+    ]
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "18b989fb097cb5453e57c9d9079b62ef12d3b044",
+    "head": "f68b765a121f2e5baf8dd9dd5b488278cd0efed9",
+    "diff_sha256": "f75376e4f9b82da41cc465982cc51ccaed5567c3edd4c0579ed2c7ffcda79100",
+    "paths": [
+      "overlay.manifest",
+      "skills/_shared/engram-convention.md",
+      "skills/_shared/openspec-convention.md",
+      "skills/_shared/persistence-contract.md",
+      "skills/_shared/review-ledger-contract.md",
+      "skills/_shared/sdd-orchestrator-workflow.md",
+      "skills/_shared/sdd-phase-common.md",
+      "skills/_shared/sdd-status-contract.md",
+      "skills/_shared/skill-resolver.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "18b989fb097cb5453e57c9d9079b62ef12d3b044",
+      "head": "f68b765a121f2e5baf8dd9dd5b488278cd0efed9",
+      "diff_sha256": "f75376e4f9b82da41cc465982cc51ccaed5567c3edd4c0579ed2c7ffcda79100"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "overlay.manifest",
+        "skills/_shared/engram-convention.md",
+        "skills/_shared/openspec-convention.md",
+        "skills/_shared/persistence-contract.md",
+        "skills/_shared/review-ledger-contract.md",
+        "skills/_shared/sdd-orchestrator-workflow.md",
+        "skills/_shared/sdd-phase-common.md",
+        "skills/_shared/sdd-status-contract.md",
+        "skills/_shared/skill-resolver.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "overlay.manifest:91-94",
+        "claim": "Several deleted files hold overlay-authored, non-gentle content that live ODD/overlay skills may still depend on. persistence-contract.md and engram-convention.md define the ODD task persistence and recovery protocol (odd/tasks/{feature}.md plus the Engram mirror odd/{feature}/tasks). skill-resolver.md defines the always-on adhd-output rule and the ODD Orchestrator integration. The commit asserts that no file or test reads them, but the diff does not show that. Any remaining SKILL.md, test or registry that references these paths (for example 'See skill-resolver.md', or 'Follow ~/.claude/skills/_shared/skill-resolver.md') would now point at a missing file, and the ODD task and skill-resolution contracts would be lost. Manifest rows are removed, so sync will also no longer install them. This cannot be confirmed from the diff; a repo-wide search for these filenames should be run before merge.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "overlay.manifest:91-94",
+          "skills/_shared/persistence-contract.md deleted: 'See `skill-resolver.md` for matching and reporting.'",
+          "skills/_shared/skill-resolver.md deleted: 'adhd-output is always on' and the ODD Orchestrator integration point"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff only deletes files and manifest rows; I could not search the rest of the tree for remaining references.",
+      "The deleted persistence-contract.md and engram-convention.md describe the ODD task persistence protocol, which is not purely a gentle SDD convention.",
+      "The manifest rows removed match exactly the eight deleted files, so manifest and tree stay consistent with each other."
+    ]
+  }
+}

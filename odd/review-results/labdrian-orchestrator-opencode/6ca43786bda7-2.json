@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "2bf126211283fadb29bb4d34a89231125a0a2a96",
+    "head": "6ca43786bda767a89de266e982b9c1a31937c9b9",
+    "diff_sha256": "5971a91fe6698e963766a3a7e7b04ae4b46935b28dd360c2da25f623eb538242",
+    "paths": [
+      "engine/agentgen/agentgen.go",
+      "engine/agentgen/messages_pin_test.go",
+      "engine/agentgen/models.go",
+      "engine/agentgen/models_test.go",
+      "engine/agentgen/roles.go",
+      "engine/agentgen/roles_test.go",
+      "skills/role-chain/references/models.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "2bf126211283fadb29bb4d34a89231125a0a2a96",
+      "head": "6ca43786bda767a89de266e982b9c1a31937c9b9",
+      "diff_sha256": "5971a91fe6698e963766a3a7e7b04ae4b46935b28dd360c2da25f623eb538242"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/agentgen/agentgen.go",
+        "engine/agentgen/messages_pin_test.go",
+        "engine/agentgen/models.go",
+        "engine/agentgen/models_test.go",
+        "engine/agentgen/roles.go",
+        "engine/agentgen/roles_test.go",
+        "skills/role-chain/references/models.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/agentgen/models.go:73-86",
+        "claim": "The table parser accepts malformed input without complaint. It skips the line after the header unconditionally as the separator, so a table missing its separator row silently drops the first tier row (and the failure then surfaces as a misleading 'no frontier row'). A duplicate tier row silently overwrites the earlier one (ids[cells[0]] is reassigned), so a stray second row changes generated model ids with no error. The commit claims the generator refuses a table that is malformed, but these cases pass.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/agentgen/models.go:73-86"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/agentgen/models.go:19-31",
+        "claim": "The comment says the opencode runtime is 'read by the generator of its agent files', but no such generator exists in this change. requiredRuntimes nonetheless makes the opencode column mandatory, so Generate and Check on the existing Claude, Pi and Codex files fail whenever that column is missing or has an empty id, even though nothing consumes it. The comment describes code that is not present.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/agentgen/models.go:19-31"
+        ]
+      }
+    ],
+    "evidence": [
+      "The commit reads the Claude and Pi ids through ModelTable.ID in role.project. The Check and build error paths handle modelsPath separately from role sources.",
+      "I verified the line numbers in models.go by counting from the head-side hunk header (+1)."
+    ]
+  }
+}

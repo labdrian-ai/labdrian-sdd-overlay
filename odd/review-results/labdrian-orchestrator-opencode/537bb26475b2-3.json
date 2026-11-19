@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f3089ea17e1c788170b77c2ec8402590db06653a",
+    "head": "537bb26475b2db7b216246a8878bb5e61484ea00",
+    "diff_sha256": "764bc1e5a68dfcf417422d75731751cbd057268e8fdef79946e9e454d04c400d",
+    "paths": [
+      "odd/goals/labdrian-orchestrator-opencode.json",
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f3089ea17e1c788170b77c2ec8402590db06653a",
+      "head": "537bb26475b2db7b216246a8878bb5e61484ea00",
+      "diff_sha256": "764bc1e5a68dfcf417422d75731751cbd057268e8fdef79946e9e454d04c400d"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/goals/labdrian-orchestrator-opencode.json",
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The goal JSON change only rewords the scope and runtime_scope strings. The rewording matches the commit message: scope now names every S# instead of S1-S18, and runtime_scope names OpenCode v2 beside Claude Code. The JSON structure is unchanged and no field was added or removed.",
+      "The tasks document change is an append-only Log entry L41 after L40. It states that the goal rewrite was deferred until workflow t19 closed. It also records that memory_directive is left unchanged, with a reason. No existing text was altered.",
+      "The diff shows nothing that contradicts the L41 claims, so I found no defect this commit introduced."
+    ]
+  }
+}

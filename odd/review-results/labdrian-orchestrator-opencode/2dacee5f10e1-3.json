@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "872148eb17f5ba44df3b455c1d8d37e14813fb36",
+    "head": "2dacee5f10e1299e86fe1c4246fbe13df0e80c91",
+    "diff_sha256": "7a6befc902f9511244a9efa0f5a986d8bc03b8816ff6f30bdd34aec017366ae5",
+    "paths": [
+      "engine/runtime/opencode.go",
+      "engine/runtime/opencode_results_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "872148eb17f5ba44df3b455c1d8d37e14813fb36",
+      "head": "2dacee5f10e1299e86fe1c4246fbe13df0e80c91",
+      "diff_sha256": "7a6befc902f9511244a9efa0f5a986d8bc03b8816ff6f30bdd34aec017366ae5"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/runtime/opencode.go",
+        "engine/runtime/opencode_results_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode.go:122-129",
+        "claim": "When writeOpenCodeJSON fails, the install now continues to writeAgents and shadowingSkillsNote. If writeAgents depends on the opencode.json having been written (for example it references a default agent that the config sets), AGENTS.md may be written in a state inconsistent with the refused config. The diff cannot show whether that dependency exists, so this is unverified. The new test only shows AGENTS.md gets written, not that its content is coherent without the config.",
+        "evidence_class": "inferential",
+        "causal_disposition": "behavior-activated",
+        "proof_refs": [
+          "engine/runtime/opencode.go:122-132"
+        ]
+      }
+    ],
+    "evidence": [
+      "The uninstall change joins both failure messages with '; ' and keeps CapabilityPartial; the legacyErr early return is unchanged.",
+      "The install change sets partial on a config error and replaces jsonMessage with the failure text, so message still gets it appended once. The final status is Partial when partial or agentsPartial is true.",
+      "The three new tests cover the claimed behaviors: a refused config with AGENTS.md and the skills report, a refused AGENTS.md with config written, and an uninstall naming both failures.",
+      "The helpers used by the tests (overlayWith, installIn, writeOpenCodeJSON, agentsPath and others) are not in the diff and I could not confirm they exist in the package; I assume they are defined in sibling test files."
+    ]
+  }
+}

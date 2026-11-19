@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "275328171b959d8dcc8e58530365d2d8f883c12d",
+    "head": "7dd3482e684c66349a4fee47b53234766e2553a2",
+    "diff_sha256": "6b65b51648257fc31438b6ba85d26dd3bcc11bcaefdc0dfeace1072ba996eff2",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/runtime/labdrian-runtime-parity-plugin.mjs",
+      "engine/runtime/opencode_bridge_test.go",
+      "engine/skills/role_chain_artifact_test.go",
+      "overlay.manifest",
+      "skills/role-chain/SKILL.md",
+      "skills/role-chain/references/launch.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "275328171b959d8dcc8e58530365d2d8f883c12d",
+      "head": "7dd3482e684c66349a4fee47b53234766e2553a2",
+      "diff_sha256": "6b65b51648257fc31438b6ba85d26dd3bcc11bcaefdc0dfeace1072ba996eff2"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/runtime/labdrian-runtime-parity-plugin.mjs",
+        "engine/runtime/opencode_bridge_test.go",
+        "engine/skills/role_chain_artifact_test.go",
+        "overlay.manifest",
+        "skills/role-chain/SKILL.md",
+        "skills/role-chain/references/launch.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/skills/role_chain_artifact_test.go:509-513",
+        "claim": "The old comment 'own-rdd S9 (d): on Codex the parent pipes the brief to review launch...' is now followed directly by the new T41 comment and no longer sits on the function it describes. The stacked comments read as one confused block, and the first one is stale because the Codex line moved to references/launch.md.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/role_chain_artifact_test.go:509-513"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/labdrian-runtime-parity-plugin.mjs:407-412",
+        "claim": "frozenContextRefusal tells the verb's own refusal from other failures by matching the literal prefix 'error: review frozen-context:' in the runEngine failure text. If runEngine wraps or reformats stderr, a real refusal falls through to the generic sentence and loses its reason. The coupling is implicit and only the fake engine test covers it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/labdrian-runtime-parity-plugin.mjs:407-412"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read only the diff. The gate-then-rewrite-then-inject order is correct and the denial paths throw Tool.Error. The only issues found are a stale stacked comment and the implicit stderr-prefix coupling."
+    ]
+  }
+}

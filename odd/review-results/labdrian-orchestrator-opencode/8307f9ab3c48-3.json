@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f5600a8d93b2c27933215ef412c339fe8de543e3",
+    "head": "8307f9ab3c48e7cd0bdb4803e1923675ae20363e",
+    "diff_sha256": "69063a39a7b3e113370b3f0d78a497e1b851cf27433e52cd737a8ddc1a39e25b",
+    "paths": [
+      "engine/cmd/skills_candidates_cli.go",
+      "engine/cmd/skills_candidates_legacy_test.go",
+      "engine/cmd/skills_deps.go",
+      "engine/skills/app/list_candidates.go",
+      "engine/skills/app/list_candidates_legacy_test.go",
+      "engine/skills/app/list_candidates_test.go",
+      "engine/skills/candidate_legacy_test.go",
+      "engine/skills/candidate_record.go",
+      "engine/skills/candidate_source.go",
+      "engine/skills/deps.go",
+      "engine/skills/memorycardcli/resolver.go",
+      "engine/skills/memorycardcli/resolver_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f5600a8d93b2c27933215ef412c339fe8de543e3",
+      "head": "8307f9ab3c48e7cd0bdb4803e1923675ae20363e",
+      "diff_sha256": "69063a39a7b3e113370b3f0d78a497e1b851cf27433e52cd737a8ddc1a39e25b"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/skills_candidates_cli.go",
+        "engine/cmd/skills_candidates_legacy_test.go",
+        "engine/cmd/skills_deps.go",
+        "engine/skills/app/list_candidates.go",
+        "engine/skills/app/list_candidates_legacy_test.go",
+        "engine/skills/app/list_candidates_test.go",
+        "engine/skills/candidate_legacy_test.go",
+        "engine/skills/candidate_record.go",
+        "engine/skills/candidate_source.go",
+        "engine/skills/deps.go",
+        "engine/skills/memorycardcli/resolver.go",
+        "engine/skills/memorycardcli/resolver_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The resolver is called only when legacyNumbers is non-empty, so a listing with no legacy id behaves as before; this is covered by the 'never calls resolver' tests.",
+      "The translation maps a legacy id only when its number is in the resolver's map. An id the import never mapped counts as itself, and Occurrences keep the ids as written.",
+      "A resolver failure, or a legacy id with no resolver wired, returns an error, and the CLI's existing error path should turn that into exit 2 with the cause. The CLI test covers this.",
+      "decodeResolve checks source, the key count, and key order against what was asked. Strict ordering relies on memorycard answering in request order, which the tests assume.",
+      "I found no change-caused defect in the diff."
+    ]
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "22e597e7b356843d4b57a2620c55d407ed349f26",
+    "head": "e9f96e0129cc231e1a7cc35431873ecb8d889186",
+    "diff_sha256": "a69094a190db5cba7fef68046c73425037d255b11d112ac6a2cfdafc2899810a",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/cmd/usage.go",
+      "engine/runtime/claude.go",
+      "engine/runtime/claude_output_style_test.go",
+      "engine/runtime/claude_ports.go",
+      "engine/runtime/claude_ports_test.go",
+      "engine/runtime/missing_test.go",
+      "engine/settings/main_agent.go",
+      "engine/settings/merge.go",
+      "engine/settings/output_style.go",
+      "engine/settings/output_style_test.go",
+      "engine/settings/owned_key.go",
+      "engine/settings/settingsfile/golden_unix_test.go",
+      "engine/settings/settingsfile/installer.go",
+      "engine/settings/settingsfile/output_style_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "22e597e7b356843d4b57a2620c55d407ed349f26",
+      "head": "e9f96e0129cc231e1a7cc35431873ecb8d889186",
+      "diff_sha256": "a69094a190db5cba7fef68046c73425037d255b11d112ac6a2cfdafc2899810a"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/cmd/usage.go",
+        "engine/runtime/claude.go",
+        "engine/runtime/claude_output_style_test.go",
+        "engine/runtime/claude_ports.go",
+        "engine/runtime/claude_ports_test.go",
+        "engine/runtime/missing_test.go",
+        "engine/settings/main_agent.go",
+        "engine/settings/merge.go",
+        "engine/settings/output_style.go",
+        "engine/settings/output_style_test.go",
+        "engine/settings/owned_key.go",
+        "engine/settings/settingsfile/golden_unix_test.go",
+        "engine/settings/settingsfile/installer.go",
+        "engine/settings/settingsfile/output_style_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The ownedKey refactor keeps the old agent-key logic unchanged: state, valueJSON, add and remove match the removed code, and the state types are aliases.",
+      "The outputStyle key is written only when absent and removed only when it holds exactly labdrian, so a foreign value is never overwritten, which matches the stated behavior.",
+      "The status order is the agent key, then the outputStyle key, then the rules block, as claimed.",
+      "The install and update notices list the agent notice first, then the outputStyle notice, as the tests expect.",
+      "I found no change-caused defect from the diff alone."
+    ]
+  }
+}

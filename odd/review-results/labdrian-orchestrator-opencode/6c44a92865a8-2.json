@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "85eac22f40c00b51a95101b58a2ce9fa26b47c57",
+    "head": "6c44a92865a80aeb270261a251c3f5550fb75dcb",
+    "diff_sha256": "1de1ee9af2228f09d89db30b443523b8cff85404c7e48b94381bf1459c867543",
+    "paths": [
+      "skills/role-chain/.approval.json"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "85eac22f40c00b51a95101b58a2ce9fa26b47c57",
+      "head": "6c44a92865a80aeb270261a251c3f5550fb75dcb",
+      "diff_sha256": "1de1ee9af2228f09d89db30b443523b8cff85404c7e48b94381bf1459c867543"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "skills/role-chain/.approval.json"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff only changes the sha256 and approved_at fields in skills/role-chain/.approval.json; version, skill and approver are unchanged.",
+      "The new approved_at (2026-11-16T13:30:35Z) is later than the previous value and matches the review date, consistent with the claimed approval after the T19 tier table landed.",
+      "The new sha256 is a well-formed 64-hex string. Whether it matches the current skill content cannot be checked from this diff, so no defect is claimed."
+    ]
+  }
+}

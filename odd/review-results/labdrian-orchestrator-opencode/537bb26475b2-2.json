@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f3089ea17e1c788170b77c2ec8402590db06653a",
+    "head": "537bb26475b2db7b216246a8878bb5e61484ea00",
+    "diff_sha256": "764bc1e5a68dfcf417422d75731751cbd057268e8fdef79946e9e454d04c400d",
+    "paths": [
+      "odd/goals/labdrian-orchestrator-opencode.json",
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f3089ea17e1c788170b77c2ec8402590db06653a",
+      "head": "537bb26475b2db7b216246a8878bb5e61484ea00",
+      "diff_sha256": "764bc1e5a68dfcf417422d75731751cbd057268e8fdef79946e9e454d04c400d"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/goals/labdrian-orchestrator-opencode.json",
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The goal JSON change rewords only the scope and runtime_scope strings. The scope now says 'Every S#' in place of the fixed S1-S18 range, and the runtime_scope names OpenCode v2 beside Claude Code. The JSON stays syntactically valid and no other key changes.",
+      "The tasks file change appends L41 after L40 in append-only order. It adds no edits to earlier entries and no claim in it contradicts the diff. I could not check L19, L39, L40 or the memory_directive statement against the files, because only the diff was visible."
+    ]
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "3b0cc4eef3f45440f3dd981ea70865eb0994be89",
+    "head": "447ac5cddcdb4d00266937a63119ecda582bf166",
+    "diff_sha256": "ed40a24168d98da28ac135e163a1948a0b14604e6aa0ecbd078586fb46dcf670",
+    "paths": [
+      "engine/runtime/opencode_plugin_live_test.go",
+      "engine/runtime/opencode_stub_guard_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "3b0cc4eef3f45440f3dd981ea70865eb0994be89",
+      "head": "447ac5cddcdb4d00266937a63119ecda582bf166",
+      "diff_sha256": "ed40a24168d98da28ac135e163a1948a0b14604e6aa0ecbd078586fb46dcf670"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/runtime/opencode_plugin_live_test.go",
+        "engine/runtime/opencode_stub_guard_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode_plugin_live_test.go:96",
+        "claim": "The source is matched by exact string equality between source.Path and the configPath the test built. If OpenCode reports a resolved or symlinked path (for example a temp directory behind a symlink), no source matches and the test fails with 'does not list ... among its sources', a false failure that hides whether the config was actually kept. A comparison after filepath.EvalSymlinks on both sides, or by base name, would avoid it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/opencode_plugin_live_test.go:96"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode_plugin_live_test.go:96",
+        "claim": "The helper hard-codes XDG_CONFIG_HOME as filepath.Join(sandbox, \"config\") instead of using the configHome variable the test passed before. If configHome is defined differently in the unchanged part of the test, the opencode run would read a different config directory than the one Install wrote into. The diff does not show configHome's definition, so this cannot be confirmed.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "engine/runtime/opencode_plugin_live_test.go:96"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed both changed files from the diff only; no code was run.",
+      "The stub-guard change only edits a comment, and the new comment describes how to observe the module's exports again.",
+      "The new assertion path fails on a missing source, a wrong default_agent, or a wrong MCP server, so it does not silently succeed."
+    ]
+  }
+}

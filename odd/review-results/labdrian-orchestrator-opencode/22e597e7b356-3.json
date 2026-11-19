@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "881afe7a5d930e7fa949f973a4cb543de9e4b607",
+    "head": "22e597e7b356843d4b57a2620c55d407ed349f26",
+    "diff_sha256": "3bbc31cd4a59304cbb1b8d0b047f549256a4d345cd7af6d3b52b0b070681227a",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "bin/lib/manifest_routes.sh",
+      "engine/cmd/usage.go",
+      "engine/runtime/outputstyle_text_test.go",
+      "engine/skills/routes.go",
+      "engine/skills/routes_output_style_test.go",
+      "output-styles/labdrian.md",
+      "overlay.manifest"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "881afe7a5d930e7fa949f973a4cb543de9e4b607",
+      "head": "22e597e7b356843d4b57a2620c55d407ed349f26",
+      "diff_sha256": "3bbc31cd4a59304cbb1b8d0b047f549256a4d345cd7af6d3b52b0b070681227a"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "bin/lib/manifest_routes.sh",
+        "engine/cmd/usage.go",
+        "engine/runtime/outputstyle_text_test.go",
+        "engine/skills/routes.go",
+        "engine/skills/routes_output_style_test.go",
+        "output-styles/labdrian.md",
+        "overlay.manifest"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "engine/skills/routes.go: the bare-file exemption now covers RouteOutputStyle, and the new case sets RepoRel and RepoSource from output-styles/<path>. The destination is only computed for the claude target, through pathpkg.Join(pathpkg.Dir(AgentsRoot), \"output-styles\", name). A claude target with no AgentsRoot returns a MissingRootError, and other targets get an empty Dest. This matches the new tests.",
+      "The longterm-mem guard and its error message are untouched, and the added test pins the unchanged wording.",
+      "The new overlay.manifest row `labdrian.md custom output-style` resolves through the new route. A bare `labdrian.md` with no route stays non-deployable, as the added test checks.",
+      "Docs, usage text and the shell comment are consistent with the code. I found no change-caused defect in the diff."
+    ]
+  }
+}

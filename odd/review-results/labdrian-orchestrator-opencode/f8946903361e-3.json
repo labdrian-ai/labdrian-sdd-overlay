@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "eafc1015cc5b11382f34cd847cae394eb7453bbe",
+    "head": "f8946903361eecda4a27068086da5fa7b1870135",
+    "diff_sha256": "a9a2518d824d35aee1254c387b9ff8d2d2225ddf6b942fc974644ec528035681",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "bin/lib/apply.sh",
+      "bin/lib/usage.sh",
+      "engine/shelltest/apply_codex_runtime_test.go",
+      "engine/shelltest/apply_opencode_runtime_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "eafc1015cc5b11382f34cd847cae394eb7453bbe",
+      "head": "f8946903361eecda4a27068086da5fa7b1870135",
+      "diff_sha256": "a9a2518d824d35aee1254c387b9ff8d2d2225ddf6b942fc974644ec528035681"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "bin/lib/apply.sh",
+        "bin/lib/usage.sh",
+        "engine/shelltest/apply_codex_runtime_test.go",
+        "engine/shelltest/apply_opencode_runtime_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "bin/lib/apply.sh:206-208",
+        "claim": "For opencode, runtime_install_and_report runs after state_write_target has already recorded the target as deployed. When the install fails, the state still says deployed, and the once-per-apply longterm-mem step still runs without the opencode.json that a failed install may not have written. That step then adds a second, derived failure (the 'no such file' error from L99 B1) on top of the real one. The state row is therefore wrong for opencode, and a rerun may see the target as already deployed. Codex had the same ordering, but it has no downstream consumer that reads the file.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "bin/lib/apply.sh:206-208"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff adds the call to runtime_install_and_report after state_write_target, and apply only records runtime_install_failed to exit non-zero at the end.",
+      "The commit message and CHANGELOG say the target state semantics are unchanged, so a failed opencode install still leaves a deployed state row.",
+      "The tests cover a failing install with no longterm-mem module, so the interaction with the longterm-mem step on failure is not exercised."
+    ]
+  }
+}

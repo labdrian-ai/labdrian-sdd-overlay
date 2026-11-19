@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "5fb02384f8dde106079115f2f8e5e96f06287016",
+    "head": "392b1d2378f8d5d6b246b6a59a5c767f3b7ab2e4",
+    "diff_sha256": "9bdc2606010497f4326033331d8f1273e27d9e0090d74f3c136919043b6164a4",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "5fb02384f8dde106079115f2f8e5e96f06287016",
+      "head": "392b1d2378f8d5d6b246b6a59a5c767f3b7ab2e4",
+      "diff_sha256": "9bdc2606010497f4326033331d8f1273e27d9e0090d74f3c136919043b6164a4"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff adds one append-only log entry (L48) to odd/tasks/labdrian-orchestrator-opencode.md; no code or behavior changes.",
+      "L48 follows L47, which says L46's risks 1 and 2 were put to the owner. L48 records the answer to risk 1 and says risk 2 is still open, so the two entries are consistent.",
+      "The entry gives the date, the owner's verbatim answer and its consequence (T25d and T23 count them once), so it is readable and complete for a log record."
+    ]
+  }
+}

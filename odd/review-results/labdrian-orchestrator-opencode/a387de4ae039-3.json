@@ -1,0 +1,82 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "558d9a721e12faa160b06189b2e3f343930268d9",
+    "head": "a387de4ae039bf5f1f4f7e853dfd92fa52d461ca",
+    "diff_sha256": "2ca1fc592532e44a70cc9c20aec92fdced89eb443b8b5dfc46079a10d8def813",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "558d9a721e12faa160b06189b2e3f343930268d9",
+      "head": "a387de4ae039bf5f1f4f7e853dfd92fa52d461ca",
+      "diff_sha256": "2ca1fc592532e44a70cc9c20aec92fdced89eb443b8b5dfc46079a10d8def813"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:68",
+        "claim": "T30 (b) says the verb `engine registry refresh` writes through the existing `sddregistry/fsstore.Registry`, and T29 (a) says that adapter stays. But T29 (a) also removes the domain `engine/sddregistry` (including `NewRegistry`, `Row`, `Note`) and `engine/sddregistry/app`. `fsstore.Registry` was built against those types and may import them. The task text does not show that it can survive their removal. A builder following T29 (a) could be forced to delete or rewrite the adapter T30 depends on. The 'what stays' list is unverified and the Grep at T29's base is only a deferred check.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:68",
+          "odd/tasks/labdrian-orchestrator-opencode.md:69"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:69",
+        "claim": "T29 (a) is sized at 1,500-2,600 lines and is said to leave the suite green, yet it is called 'pure deletion over one ~400-line slice by nature', which conflicts with the owner's per-commit budget (~400 lines, lens_context_budget_exceeded has no override). The log defers the split decision ('the parent decides'), so the review of (a) and (c) may fail on context budget.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:69"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "WARNING",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:66",
+        "claim": "T30 depends on the owner's answer to L62 risk 1 and is BLOCKED, but T28 is only declared 'after T30 (c)' and T22 'after T30'. If the owner answers 'retire', T28's refresh edits, T22's hook check and the whole T30 chain must be reopened. The dependency chain is documented, but no fallback text is kept for T28 and T22, so they hold wording that presumes a labdrian refresh. T28 is not itself marked BLOCKED.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:66",
+          "odd/tasks/labdrian-orchestrator-opencode.md:67",
+          "odd/tasks/labdrian-orchestrator-opencode.md:70"
+        ]
+      },
+      {
+        "id": "F4",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:66",
+        "claim": "T30 (d) forces the hook exit to 0 and runs on every prompt, scanning about 15 directories, while (b) only avoids writing when just the `Last updated:` line would change. There is no stated latency bound or timeout for the per-prompt hook. The parity test is recorded from gentle-ai 4.2.0, whose behavior can drift. Neither is pinned to an acceptance criterion.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:66"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only odd/tasks/labdrian-orchestrator-opencode.md changed; docs-only shaping commit, no code behavior altered.",
+      "Findings concern internal consistency of the shaped tasks (T30/T28/T29/T22 dependencies and sizing), not runtime defects.",
+      "T29 (a) lists removal of domain types in engine/sddregistry while T30 (b) relies on fsstore.Registry from the same tree; compatibility is asserted but not shown in the diff."
+    ]
+  }
+}

@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "d0442fec62d4b7f4ac7562f89d8886df310afa12",
+    "head": "a610792c389d10edd5916c56c445c081b9b0ac62",
+    "diff_sha256": "13eecfe4cb496ee60e9fb92b52f8ac51235de69016eae1714f79dcd7bfe38aff",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/skills/issue_creation_artifact_test.go",
+      "overlay.manifest",
+      "skills/issue-creation/SKILL.md",
+      "skills/issue-creation/references/procedure.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "d0442fec62d4b7f4ac7562f89d8886df310afa12",
+      "head": "a610792c389d10edd5916c56c445c081b9b0ac62",
+      "diff_sha256": "13eecfe4cb496ee60e9fb92b52f8ac51235de69016eae1714f79dcd7bfe38aff"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/skills/issue_creation_artifact_test.go",
+        "overlay.manifest",
+        "skills/issue-creation/SKILL.md",
+        "skills/issue-creation/references/procedure.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "skills/issue-creation/references/procedure.md:18",
+        "claim": "The read-back requires the title and body to 'equal' the submitted files, with no normalization rule. GitHub can alter line endings and trailing whitespace, so a successful write could read back as a mismatch and be reported `unknown`. `unknown` stops every later write and retry, so the run halts even though the write succeeded. The comparison needs a defined normalization, or it will give false `unknown` results.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/issue-creation/references/procedure.md:18"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "skills/issue-creation/references/procedure.md:10",
+        "claim": "Step 2 says 'Read each candidate' but does not carry the SKILL.md bound (only title-matching candidates, at most 10, stop if more). A reader of the procedure alone could read up to 1000 search results. The two files split one rule and the procedure's wording is unbounded.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/issue-creation/references/procedure.md:10",
+          "skills/issue-creation/SKILL.md"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "skills/issue-creation/references/procedure.md:13",
+        "claim": "Step 5 does not say what happens when the printed URL is missing or unparsable, so NUMBER or COMMENT_ID cannot be derived. The read-back cannot run in that case. Only the 'read-back that fails' sentence at line 18 might cover it, and it does not say so explicitly.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/issue-creation/references/procedure.md:13"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff of all five changed paths for the recall and readability lenses.",
+      "The read-back comparison is defined as exact equality (procedure.md line 18). The diff says nothing about normalizing text that GitHub may alter.",
+      "SKILL.md bounds duplicate reads to 10 title-matching candidates, while procedure.md step 2 says 'each candidate' and step 1 uses --limit 1000."
+    ]
+  }
+}

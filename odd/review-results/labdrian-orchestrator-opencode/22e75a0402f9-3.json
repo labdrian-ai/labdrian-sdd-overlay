@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "14bbfc55807d4a7579e042db2bbd224d38ed3e0b",
+    "head": "22e75a0402f9650ca2acaa25750311af9d05acb6",
+    "diff_sha256": "75bbeb4068f00a7c52345357ca788c3468ad0c7496729cb5466fda5c38c756f3",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "14bbfc55807d4a7579e042db2bbd224d38ed3e0b",
+      "head": "22e75a0402f9650ca2acaa25750311af9d05acb6",
+      "diff_sha256": "75bbeb4068f00a7c52345357ca788c3468ad0c7496729cb5466fda5c38c756f3"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:47",
+        "claim": "T25b's row adds scope-key reading and per-scope distinct-row handling, but its forecast (200-330 lines for commit (a), 435-580 total) and its 'shaped: L37' marker are unchanged. The extra requirement is not reflected in the estimate, which can skew the recorded actuals comparison. The row also omits the ordering contract that L42 says T25b relies on.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:47"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff only touches the feature document: T6 is ticked, T25b's row gains the scope clause, and L42 is appended.",
+      "T6's commit shas and the verifier results are recorded as prose; I cannot check them against the repository because only the diff was visible.",
+      "I found no internal contradiction beyond the forecast and marker mismatch in F1."
+    ]
+  }
+}

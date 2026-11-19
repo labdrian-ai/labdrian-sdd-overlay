@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f6356231d3360a89385f9b5eeca6542f3702e49f",
+    "head": "85eac22f40c00b51a95101b58a2ce9fa26b47c57",
+    "diff_sha256": "d379b1b45bf902c07367b74fabfc593358840172f89e29362217ec99842bb1ff",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f6356231d3360a89385f9b5eeca6542f3702e49f",
+      "head": "85eac22f40c00b51a95101b58a2ce9fa26b47c57",
+      "diff_sha256": "d379b1b45bf902c07367b74fabfc593358840172f89e29362217ec99842bb1ff"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff only appends one log entry (L34) to odd/tasks/labdrian-orchestrator-opencode.md; no code, spec, or task text is changed.",
+      "L34 is append-only, follows L33 in sequence, and states no change was made, which matches the diff contents.",
+      "No behavior, requirement, or prior valid input is affected by a documentation-only log append, so there is no change-caused defect."
+    ]
+  }
+}

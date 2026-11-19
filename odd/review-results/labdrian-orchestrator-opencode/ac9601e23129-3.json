@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "7ff8826fd115475677b53afc75a012790305b98b",
+    "head": "ac9601e231297e036001bd34d2ff4b5e24786068",
+    "diff_sha256": "c1de7e369fcc649f703f1b946b3f821c97fbfbe951eb10bd73f0bce99a4c0363",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "7ff8826fd115475677b53afc75a012790305b98b",
+      "head": "ac9601e231297e036001bd34d2ff4b5e24786068",
+      "diff_sha256": "c1de7e369fcc649f703f1b946b3f821c97fbfbe951eb10bd73f0bce99a4c0363"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:34",
+        "claim": "The S17 acceptance now says no remaining hook or entry invokes the `gentle-ai` binary, but the same paragraph says the `gentle-ai-overlay` hook commands stay. A literal check, such as a grep for `gentle-ai`, would match those commands. The criterion should name the exact binary or command, for example `gentle-ai <subcommand>` excluding `gentle-ai-overlay`. Without that, T21 or a verifier could read the criterion as failing, or as satisfied only by removing hooks that must stay.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:34"
+        ]
+      }
+    ],
+    "evidence": [
+      "The only changed path is the feature document; the change is documentation only, with no code behaviour at risk.",
+      "The S6, S7, S16 B8, S17, T12, T19 and T25 edits are consistent with each other. The T12 split is (a) 140-260 plus (b) 80-180, which matches the 220-440 forecast. The foreman's own deny set in S7 matches what T12 carries.",
+      "I found no regression. The one wording ambiguity is the `gentle-ai` versus `gentle-ai-overlay` check in the S17 acceptance."
+    ]
+  }
+}

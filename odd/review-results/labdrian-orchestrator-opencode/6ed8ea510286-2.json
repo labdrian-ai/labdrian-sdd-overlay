@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a610792c389d10edd5916c56c445c081b9b0ac62",
+    "head": "6ed8ea51028630bc0d897ac9aa85f201e91ce1de",
+    "diff_sha256": "be0b4124471b6ddf150d45559b00c9c8573991cadd851d37e45c5353632b3fc0",
+    "paths": [
+      "skills/issue-creation/references/procedure.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "a610792c389d10edd5916c56c445c081b9b0ac62",
+      "head": "6ed8ea51028630bc0d897ac9aa85f201e91ce1de",
+      "diff_sha256": "be0b4124471b6ddf150d45559b00c9c8573991cadd851d37e45c5353632b3fc0"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "skills/issue-creation/references/procedure.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "skills/issue-creation/references/procedure.md:10",
+        "claim": "Step 2 says to take only candidates whose title matches the request, but never defines 'matches'. Duplicate detection also depends on body content, so title-only filtering can drop real duplicates. The 10 bound is applied after the filter, so a search with many body-only matches silently reads none of them. The stop on more than 10 gives no instruction on what 'asks the owner' should offer.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/issue-creation/references/procedure.md:10 'take only the candidates whose title matches the request, at most 10'"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "skills/issue-creation/references/procedure.md:17",
+        "claim": "The normalization rule says to drop trailing white space at the end of each line and of the text, but does not say whether leading or trailing blank lines or a final newline are covered. 'Trailing white space at the end of the text' is ambiguous for a trailing newline, so two readers could reach different equal/unknown outcomes. Also, it does not state that the same normalization applies to the title.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/issue-creation/references/procedure.md:17 'dropping trailing white space at the end of each line and of the text'"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "skills/issue-creation/references/procedure.md:14",
+        "claim": "The unknown outcome for a missing or unparsable URL is stated only in step 5. The comment case, where gh issue comment prints a URL without an #issuecomment- fragment, is covered only implicitly. The Read-back comparison section, which lists the unknown conditions, was not updated to mention it, so the two places can drift.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/issue-creation/references/procedure.md:14 'A missing or unparsable URL is `unknown`'"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only skills/issue-creation/references/procedure.md changed; the diff modifies steps 2 and 5 and the Read-back comparison paragraph.",
+      "Findings are about ambiguity introduced by the new wording; no behavioral regression is demonstrable from the diff alone."
+    ]
+  }
+}

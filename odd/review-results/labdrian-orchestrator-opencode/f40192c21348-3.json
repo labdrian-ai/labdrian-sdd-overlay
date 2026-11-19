@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "98df66f8d3bbe9f8acf8626b654d4554b001e687",
+    "head": "f40192c21348e4574fe0ba4529b56282b9b5ddb2",
+    "diff_sha256": "68ebbf20e760dccf03c99674de4897842e917a14857c487a1b54fe3387f7241c",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "98df66f8d3bbe9f8acf8626b654d4554b001e687",
+      "head": "f40192c21348e4574fe0ba4529b56282b9b5ddb2",
+      "diff_sha256": "68ebbf20e760dccf03c99674de4897842e917a14857c487a1b54fe3387f7241c"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The change appends a single log entry (L75) to a documentation file; no code or behavior is altered.",
+      "L75 is consistent with L74, which asked which of the three skills to rewrite, and it records the owner's reply and the next step.",
+      "The 'Risk: none' claim in the commit message matches a docs-only append."
+    ]
+  }
+}

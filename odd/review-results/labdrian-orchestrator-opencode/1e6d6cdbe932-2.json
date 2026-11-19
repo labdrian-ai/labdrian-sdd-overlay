@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "92f6558883de0159c7ec7cb9dab3431c5ef34584",
+    "head": "1e6d6cdbe93247d5ad8ee6ca56cdace3de9efdd9",
+    "diff_sha256": "9fa775a77e8fb6e386a6f3a3fdec05533ada21291bdc910deb825bf8fec438e7",
+    "paths": [
+      "engine/runtime/claude.go",
+      "engine/runtime/claude_ports.go",
+      "engine/runtime/claude_ports_test.go",
+      "engine/runtime/missing_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "92f6558883de0159c7ec7cb9dab3431c5ef34584",
+      "head": "1e6d6cdbe93247d5ad8ee6ca56cdace3de9efdd9",
+      "diff_sha256": "9fa775a77e8fb6e386a6f3a3fdec05533ada21291bdc910deb825bf8fec438e7"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/runtime/claude.go",
+        "engine/runtime/claude_ports.go",
+        "engine/runtime/claude_ports_test.go",
+        "engine/runtime/missing_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/claude_ports.go:26-29",
+        "claim": "The new InspectMainAgent method carries two stacked doc comments: the port-level paragraph and then a second 'InspectMainAgent returns...' line. This reads as duplicated documentation on one method; merging them would be clearer.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/claude_ports.go:26-29"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/claude_ports_test.go:5",
+        "claim": "The settings import is placed between the standard library imports (errors and path/filepath) in the same block rather than grouped with the other module imports, which breaks the import grouping used in missing_test.go in the same change.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/claude_ports_test.go:5"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/claude_ports_test.go:41-49",
+        "claim": "fakeHooks.InspectMainAgent returns the shared inspectErr, so a test that sets inspectErr to exercise the Inspect failure path also makes the main-agent inspection fail. The two failure paths cannot be set apart, and an error on the hooks inspection can be masked or confused with the key inspection error. A separate agentErr field would keep them independent.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/claude_ports_test.go:41-49"
+        ]
+      }
+    ],
+    "evidence": [
+      "The production change in claude.go removes the type assertion, so every HookInstaller now answers the key; the call sites compile only if all implementers gained the method, and the test fakes in the diff were all updated.",
+      "The updated call-order expectation in TestClaudeAdapterHandsThePortTheFileAndTheBinaryOfItsRoot matches the new fake that records inspect-agent calls after install, install and status.",
+      "No behavioral defect found in the production code; findings are readability and test-fake concerns only."
+    ]
+  }
+}

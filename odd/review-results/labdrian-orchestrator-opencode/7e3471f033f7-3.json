@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f8946903361eecda4a27068086da5fa7b1870135",
+    "head": "7e3471f033f7229cc477adee130285433203aaa3",
+    "diff_sha256": "a0d7d7c734b8339c5e8192e2c326a70831a8c80f7237a3fd0f0640f578def783",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "bin/lib/apply.sh",
+      "bin/lib/longterm_mem.sh",
+      "bin/lib/usage.sh",
+      "engine/shelltest/apply_opencode_runtime_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f8946903361eecda4a27068086da5fa7b1870135",
+      "head": "7e3471f033f7229cc477adee130285433203aaa3",
+      "diff_sha256": "a0d7d7c734b8339c5e8192e2c326a70831a8c80f7237a3fd0f0640f578def783"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "bin/lib/apply.sh",
+        "bin/lib/longterm_mem.sh",
+        "bin/lib/usage.sh",
+        "engine/shelltest/apply_opencode_runtime_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "bin/lib/apply.sh:206-212",
+        "claim": "On a failed opencode runtime install, apply skips state_write_target but has already deployed the target's files. If a state row exists from an earlier successful apply, it is left unchanged. The new text (CHANGELOG, README, usage) says the target 'reads as never deployed'. That holds only for the first apply. After a later failed apply, status keeps showing the old version and digest for a target whose files were just overwritten, so state and live content disagree. The change does not clear or invalidate the old row.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "bin/lib/apply.sh:206-212",
+          "bin/lib/apply.sh:214-216"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff. The `continue` in the opencode failure branch skips only the state write; nothing else in the loop body follows the codex block.",
+      "The LONGTERM_MEM_SKIP_TARGETS variable is set unexported inside cmd_apply and read in cmd_longterm_mem. This works only if the longterm-mem step runs in the same shell process. The new test exercises this path and implies it does.",
+      "Codex order is unchanged and covered by a test."
+    ]
+  }
+}

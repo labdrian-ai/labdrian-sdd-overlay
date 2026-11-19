@@ -1,0 +1,31 @@
+{
+  "kind": "polisher",
+  "base": "2358cf21a7d89e27d00bfb68a8995f2bf0cfdcb9",
+  "head": "558d9a721e12faa160b06189b2e3f343930268d9",
+  "diff_sha256": "f6d250d74bf711f496b3cf6ee5860612c80a4073d4c1b024c9139feb705d26e3",
+  "findings": {
+    "findings": [
+      {
+        "id": "S2",
+        "severity": "WARNING",
+        "location": "engine/runtime/opencode.go:124-127",
+        "claim": "The legacy check returns partial before the restart and mismatch checks. Kept: the leftover file breaks the load, so it is the first thing to fix; the message names update, which removes it, after which status shows the restart owed.",
+        "evidence": [
+          "series review of 558d9a72; answered in L63."
+        ]
+      },
+      {
+        "id": "S3",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode.go:184",
+        "claim": "Ownership needs the active-marker name; an older 1.x without it would be left. Answered: every historical version (131dd2f2, 30a3282a, 16825fd3) holds both strings.",
+        "evidence": [
+          "git show of each version, rg count 2."
+        ]
+      }
+    ],
+    "evidence": [
+      "Bounded recheck A and B on 558d9a72: findings []."
+    ]
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "e4ed0244bad085e8b7fcd8519035ee66e691ca8d",
+    "head": "caa0f5234cc43fb04f060043d1087ee8ff6ccdac",
+    "diff_sha256": "211caf0de31d1715fa94991f42fff4d61e1bb0de0a741763e8889afb05109a9a",
+    "paths": [
+      "engine/runtime/codex_ownerrules.go",
+      "engine/runtime/codex_ownerrules_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "e4ed0244bad085e8b7fcd8519035ee66e691ca8d",
+      "head": "caa0f5234cc43fb04f060043d1087ee8ff6ccdac",
+      "diff_sha256": "211caf0de31d1715fa94991f42fff4d61e1bb0de0a741763e8889afb05109a9a"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/runtime/codex_ownerrules.go",
+        "engine/runtime/codex_ownerrules_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "removeOwnerRules now de-duplicates every path with handled.has before the first RemoveFile call, so os.Stat still sees all the files and the link-to-removed-file case is settled correctly.",
+      "The removal loop and its status and message handling are unchanged apart from using the collected path, so partial and removed reporting keep their earlier behavior.",
+      "The sameFiles comment change is wording only.",
+      "The new test covers the symlink case; it assumes the sandbox yields exactly two removals, which I could not check from the diff alone."
+    ]
+  }
+}

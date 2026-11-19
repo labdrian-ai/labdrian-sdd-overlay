@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "5097b163de294c48b5b542347d031df056a8d33a",
+    "head": "fc84aacc5e90fe780834d53acf05a3186f25b1f0",
+    "diff_sha256": "dcfb1394d7965f7193de52d6187b5104e65afbe6a5db37061689d56bd6978f66",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "5097b163de294c48b5b542347d031df056a8d33a",
+      "head": "fc84aacc5e90fe780834d53acf05a3186f25b1f0",
+      "diff_sha256": "dcfb1394d7965f7193de52d6187b5104e65afbe6a5db37061689d56bd6978f66"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:469",
+        "claim": "L49 records T18 as built and its review rounds answered, but the Tasks list has no T18 line changed in this diff to tick it or record its commit range. The log entry and the task state may disagree. This cannot be confirmed from the diff, since the T18 line is outside the hunks shown.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:469"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:469",
+        "claim": "L49 states that the T25c range `259cb77..fca475d` is merged as `3d41c89` and cites `fca475d`, which is also the head of this review candidate. Because the head is a docs commit in this repository and the range is in the memorycard repository, the same abbreviation could be misread, and the L47 and L49 pointers could not be checked from this diff. The L49 text says 'fixed here' while the T25c line gives the final sha. This is a cross-reference clarity risk only.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:48",
+          "odd/tasks/labdrian-orchestrator-opencode.md:469"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only odd/tasks/labdrian-orchestrator-opencode.md: it replaces the T25c commit placeholder with a concrete range and merge sha, and appends the log entry L49.",
+      "The change is documentation only, with no code or behavior change, and it matches the 'Risk: none' claim.",
+      "L49's claims about body-token counts and the stale-approval test failure could not be verified from the diff alone."
+    ]
+  }
+}

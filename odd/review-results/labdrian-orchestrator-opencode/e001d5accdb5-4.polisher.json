@@ -1,0 +1,13 @@
+{
+  "kind": "polisher",
+  "base": "537bb26475b2db7b216246a8878bb5e61484ea00",
+  "head": "e001d5accdb5e3b60c93ff021dffd8bebc079891",
+  "diff_sha256": "a334f9853effc8e2bd88a74627f393b1b35491b4bf41535b4cb768e801e2d4fb",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Judge A: read the full diff; engine/agentgen/agentgen.go lines 45-182 and roles.go lines 200-270 at e001d5ac: build reads, projects and appends the eight roles in the same order, project's claudeFile keeps the same string concatenation, the foreman is appended last and only when its source and the models table loaded; a missing foreman source is reported after the role problems and Generate writes nothing; searched the other consumers of agents/*.md (engine/skills/role_agents_artifact_test.go, engine/pipkg, installer tests): none enumerates agents/foreman.md. Not run: tests, builds, generator.",
+      "Judge B: read the full diff, agentgen.go (build, Generate, Check) and roles.go (body, project, claudeFile, projectClaude) at e001d5ac; grepped engine/ for code assuming three files per role or reading agents/ as a directory (engine/skills/role_agents_artifact_test.go, engine/pipkg, engine/runtime/pi_agents.go, engine/installer): all use roleAgentSpecs, explicit names or pi/agents; overlay.manifest lines 137-153: foreman.md is a custom agent row beside the other eight, no codex-agent row, matching the Claude-only design. Not run: tests, gadu-generate, build."
+    ]
+  }
+}

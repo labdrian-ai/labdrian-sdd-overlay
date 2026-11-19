@@ -1,0 +1,28 @@
+{
+  "kind": "sweep",
+  "base": "18b989fb097cb5453e57c9d9079b62ef12d3b044",
+  "head": "f68b765a121f2e5baf8dd9dd5b488278cd0efed9",
+  "diff_sha256": "f75376e4f9b82da41cc465982cc51ccaed5567c3edd4c0579ed2c7ffcda79100",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [
+      "skills/_shared/engram-convention.md",
+      "skills/_shared/openspec-convention.md",
+      "skills/_shared/persistence-contract.md",
+      "skills/_shared/review-ledger-contract.md",
+      "skills/_shared/sdd-orchestrator-workflow.md",
+      "skills/_shared/sdd-phase-common.md",
+      "skills/_shared/sdd-status-contract.md",
+      "skills/_shared/skill-resolver.md"
+    ],
+    "removed_names": []
+  },
+  "t2": [],
+  "t3": [
+    " M odd/tasks/labdrian-orchestrator-opencode.md"
+  ],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "22e75a0402f9650ca2acaa25750311af9d05acb6",
+    "head": "646bc13d0de2998c45953d1cff8cb7d34a3ff2f4",
+    "diff_sha256": "5f4aaec443074decaee800798761e666e8ff0ce1ae67d92de0d7d11f04a50e91",
+    "paths": [
+      "engine/agentgen/foreman_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "22e75a0402f9650ca2acaa25750311af9d05acb6",
+      "head": "646bc13d0de2998c45953d1cff8cb7d34a3ff2f4",
+      "diff_sha256": "5f4aaec443074decaee800798761e666e8ff0ce1ae67d92de0d7d11f04a50e91"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/agentgen/foreman_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "effortField: lines[0] must be \"---\"; slices.Index(lines[1:], \"---\") returns an offset into the sub-slice, so the closing fence sits at lines[end+1] and lines[1:end+1] covers exactly the frontmatter lines. This is correct, including when the closing fence is the last line with no newline.",
+      "CR is trimmed from every line, so CRLF files are handled. A missing opening fence or a missing closing fence returns found=false, and the main test fails in both cases.",
+      "effortKey `^\\s*[\"']?(effort|thinking)[\"']?\\s*:` matches indented, quoted and space-before-colon keys, and does not match longer keys such as `effortless:`. All ten table cases agree with this logic.",
+      "The change touches only a test file, so it cannot affect production behavior."
+    ]
+  }
+}

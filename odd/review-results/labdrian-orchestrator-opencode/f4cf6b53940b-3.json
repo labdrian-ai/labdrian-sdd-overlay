@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "79bf40d9ed9831d4f6252b4758083adea5d9e556",
+    "head": "f4cf6b53940bf9f8d37b5d33663e6e09dd746e44",
+    "diff_sha256": "bf22ff033fde920d512ce2a5f7c015228157b2bb430974bb7bbd055c0203d9b9",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "79bf40d9ed9831d4f6252b4758083adea5d9e556",
+      "head": "f4cf6b53940bf9f8d37b5d33663e6e09dd746e44",
+      "diff_sha256": "bf22ff033fde920d512ce2a5f7c015228157b2bb430974bb7bbd055c0203d9b9"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:46",
+        "claim": "The T25b row and L37 disagree on which commit changes the `skills candidates` help line `usage.go:129`. The T25b row puts it in commit (a) (\"adapter, domain family function, wiring, help and tests\"), and commit (b) is described only as deleting `engramexport` and the Engram wording of `candidate_source.go:3,9,15`. L37 says commit (b) removes the Engram wording of `skills_candidates_cli.go:15` and `usage.go:129`. The two commits' line forecasts (200-330 and 235-250) and their review-unit boundaries rest on this split, and the builder gets conflicting instructions. The row also leaves out `skills_candidates_cli.go:15` altogether.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:46 (T25b row, commit (a) lists \"help\")",
+          "odd/tasks/labdrian-orchestrator-opencode.md:415 (L37 Adapter, commit (b) lists `usage.go:129`)"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:52",
+        "claim": "The T8 row says it is BLOCKED on \"T25's delivery\", but this commit removes the T25 row and replaces it with T25a and T25b. Other entries in the document (L16 and L19, not shown in the diff) may still name T25 and now point at nothing. The reference is only traceable through L37.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:52"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only the feature document: S3, the T24, T25a, T25b, T19 and T8 rows, and the new L37 and L38 entries.",
+      "The line forecasts in T25b are consistent: 200-330 plus 235-250 gives 435-580.",
+      "The T25b row and L37 name different commits for the `usage.go:129` help-line change (F1)."
+    ]
+  }
+}

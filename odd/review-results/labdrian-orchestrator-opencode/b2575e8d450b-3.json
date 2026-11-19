@@ -1,0 +1,100 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "9dfb5525130409f640e384b8429e547e3c898490",
+    "head": "b2575e8d450bbb688f6e5ed61a2bdfa0751b76ce",
+    "diff_sha256": "fb82add2b3c8c3db9f1dbe6c92e6b9dd05ec3766894c3621b74b3d6a0f21d3fa",
+    "paths": [
+      "engine/skills/foreman_skills_test.go",
+      "engine/skills/odd_role_skills_artifact_test.go",
+      "engine/skills/role_chain_artifact_test.go",
+      "skills/inception-pipeline/SKILL.md",
+      "skills/odd-feature-doc/SKILL.md",
+      "skills/role-chain/SKILL.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "9dfb5525130409f640e384b8429e547e3c898490",
+      "head": "b2575e8d450bbb688f6e5ed61a2bdfa0751b76ce",
+      "diff_sha256": "fb82add2b3c8c3db9f1dbe6c92e6b9dd05ec3766894c3621b74b3d6a0f21d3fa"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skills/foreman_skills_test.go",
+        "engine/skills/odd_role_skills_artifact_test.go",
+        "engine/skills/role_chain_artifact_test.go",
+        "skills/inception-pipeline/SKILL.md",
+        "skills/odd-feature-doc/SKILL.md",
+        "skills/role-chain/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "skills/odd-feature-doc/SKILL.md:37",
+        "claim": "The builder's duty to log 'anything found that the task did not ask for' was deleted only to fit a lint budget. Builders are no longer told to surface out-of-scope findings, which weakens the chain's feedback channel. Any existing test or prompt that relied on this clause is not covered by the changed tests.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/odd-feature-doc/SKILL.md:37"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "skills/odd-feature-doc/SKILL.md:38",
+        "claim": "Delivery's final Log entry no longer has to list each task as [x] or not with its commit. It now only names unfinished tasks and missing artifacts. The closing state is less verifiable, and the existing delivery-part test may not check the dropped content.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/odd-feature-doc/SKILL.md:38"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "skills/odd-feature-doc/SKILL.md:14-15",
+        "claim": "The blank line between the Activation Contract text and '## Hard Rules' was removed. Strict markdown parsers still accept the heading, but any line- or paragraph-based section parser may misread it. The sentence 'The shaper writes it, the builder works from it, delivery closes it' was also dropped, so the activation contract no longer states who owns the document.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/odd-feature-doc/SKILL.md:14-15"
+        ]
+      },
+      {
+        "id": "F4",
+        "severity": "SUGGESTION",
+        "location": "skills/role-chain/SKILL.md:37",
+        "claim": "The phrase 'the file as ledger' was dropped from the rework rule. The spec that the feature file is the ledger for review rework is no longer stated, and this is not covered by the commit message.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/role-chain/SKILL.md:37"
+        ]
+      },
+      {
+        "id": "F5",
+        "severity": "SUGGESTION",
+        "location": "skills/inception-pipeline/SKILL.md:40",
+        "claim": "The note that prev_sha256 has 64 zeros was removed, and the shaped-line example was removed from odd-feature-doc. The first-record example now carries an unexplained genesis hash. Separately, the foreman is told to write Log entries, yet the surrounding rules still say the shaper writes L1, with no rule for how the foreman's entries are numbered or attributed.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/inception-pipeline/SKILL.md:40",
+          "skills/odd-feature-doc/SKILL.md:39"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the diff only; I could not check which other tests assert on the removed wording.",
+      "The new foreman tests match the strings added in the skill files: the description, the Parent line, the Chain entry sentence, and the foreman table row."
+    ]
+  }
+}

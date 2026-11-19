@@ -1,0 +1,81 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "0c82ec6750d5f4f72ee43cc0cd6c8a55ce56dd73",
+    "head": "bc881e69d2b46beb5b25933291b290397eba521c",
+    "diff_sha256": "d841978f9e53a749be372fbb3ad8dc8ba299b1b1c45beae810602f68919fb1a1",
+    "paths": [
+      "bin/lib/bootstrap.sh",
+      "bin/overlay",
+      "engine/cmd/skills_approve_cli_test.go",
+      "engine/installer/manifest_routes_test.go",
+      "engine/shelltest/overlay_longterm_mem_test.sh",
+      "engine/skills/adhd_output_test.go",
+      "engine/skills/app/approve_test.go",
+      "engine/skills/approval_gate_test.go",
+      "engine/skills/approval_write.go",
+      "engine/skills/routes_test.go",
+      "skills/_shared/SKILL.md",
+      "skills/_shared/entry-contract.schema.json",
+      "skills/_shared/pre-sdd-contracts.md",
+      "skills/inception-pipeline/references/closure-feedback.md",
+      "skills/skill-registry/SKILL.md",
+      "tools/deterministic-check-runner/main.go",
+      "tools/deterministic-check-runner/main_test.go",
+      "tools/entry-contract-validator/pipeline_vocabulary_pins_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "0c82ec6750d5f4f72ee43cc0cd6c8a55ce56dd73",
+      "head": "bc881e69d2b46beb5b25933291b290397eba521c",
+      "diff_sha256": "d841978f9e53a749be372fbb3ad8dc8ba299b1b1c45beae810602f68919fb1a1"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "bin/lib/bootstrap.sh",
+        "bin/overlay",
+        "engine/cmd/skills_approve_cli_test.go",
+        "engine/installer/manifest_routes_test.go",
+        "engine/shelltest/overlay_longterm_mem_test.sh",
+        "engine/skills/adhd_output_test.go",
+        "engine/skills/app/approve_test.go",
+        "engine/skills/approval_gate_test.go",
+        "engine/skills/approval_write.go",
+        "engine/skills/routes_test.go",
+        "skills/_shared/SKILL.md",
+        "skills/_shared/entry-contract.schema.json",
+        "skills/_shared/pre-sdd-contracts.md",
+        "skills/inception-pipeline/references/closure-feedback.md",
+        "skills/skill-registry/SKILL.md",
+        "tools/deterministic-check-runner/main.go",
+        "tools/deterministic-check-runner/main_test.go",
+        "tools/entry-contract-validator/pipeline_vocabulary_pins_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "tools/entry-contract-validator/pipeline_vocabulary_pins_test.go:1",
+        "claim": "The whole test file is deleted, including its shared helpers (readRepoDoc, schemaEnum, markdownSection, markdownTableWithHeader, splitTableRow, equalCells, backtickPattern). If any other _test.go file in package main of the entry-contract-validator uses one of them, the package's tests stop compiling. The diff cannot show whether any such file exists. The pins on the chain_strategy enum against the schema also disappear in this commit, while the skills that carry sdd-tasks, sdd-apply and the orchestrator workflow still exist until the next commit.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "tools/entry-contract-validator/pipeline_vocabulary_pins_test.go:1-800 (deleted)"
+        ]
+      }
+    ],
+    "evidence": [
+      "The lint baseline had 28 ids and 12 are removed, leaving 16, which matches the new pinned size in approval_gate_test.go.",
+      "The test fixtures switched to go-testing, which remains in lintBaselineSkills, so the baseline-membership assertions still hold.",
+      "The shell test still checks the sync-trigger call site in inception-pipeline's closure reference, minus the sdd-archive leak check.",
+      "The bootstrap mkdir changes are identical in bin/overlay and bin/lib/bootstrap.sh."
+    ]
+  }
+}

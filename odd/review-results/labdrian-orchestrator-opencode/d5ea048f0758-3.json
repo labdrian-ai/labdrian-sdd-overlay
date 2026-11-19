@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "0cdda1fdfedc706677cdd7d7e464590ea36fdb6c",
+    "head": "d5ea048f075856b4956ba17d0d0701650e9fdd7b",
+    "diff_sha256": "fc8d13fc2c6fd8874defab74d6b443714a5888f8af4a718ed12fc17069a92f48",
+    "paths": [
+      "engine/runtime/opencode.go",
+      "engine/runtime/opencode_agents.go",
+      "engine/runtime/opencode_style_status_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "0cdda1fdfedc706677cdd7d7e464590ea36fdb6c",
+      "head": "d5ea048f075856b4956ba17d0d0701650e9fdd7b",
+      "diff_sha256": "fc8d13fc2c6fd8874defab74d6b443714a5888f8af4a718ed12fc17069a92f48"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/runtime/opencode.go",
+        "engine/runtime/opencode_agents.go",
+        "engine/runtime/opencode_style_status_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "styleBody: traced the four frontmatter shapes (empty '---\\n---\\n', empty at EOF '---\\n---', closing '---' at EOF without newline, normal). Each returns the intended body, and text without frontmatter is returned unchanged.",
+      "status now wraps statusOf and appends shadowingSkillsNote once on every outcome. The note was removed from the supported return in statusOf, so it is not appended twice.",
+      "I could not see a.result, shadowingSkillsNote or the SyncCheck/Install callers, so I did not check whether anything else calls status and appends the note again."
+    ]
+  }
+}

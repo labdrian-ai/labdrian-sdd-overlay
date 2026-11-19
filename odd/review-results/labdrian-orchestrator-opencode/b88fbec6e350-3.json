@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "052d446962ff288ead60e8e4357035d3ed0b42f3",
+    "head": "b88fbec6e350e17624f6d9f713ffede365c57e61",
+    "diff_sha256": "7bdc4c4eb38fecd1d64644b84c326ae9b06ffa12a3ed30e6072d056bb206aeae",
+    "paths": [
+      "engine/runtime/claude.go",
+      "engine/runtime/opencode_contracts.go",
+      "engine/runtime/ownerrules.go",
+      "engine/runtime/ownerrules_block.go",
+      "engine/runtime/ownerrules_claude_edges_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "052d446962ff288ead60e8e4357035d3ed0b42f3",
+      "head": "b88fbec6e350e17624f6d9f713ffede365c57e61",
+      "diff_sha256": "7bdc4c4eb38fecd1d64644b84c326ae9b06ffa12a3ed30e6072d056bb206aeae"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/runtime/claude.go",
+        "engine/runtime/opencode_contracts.go",
+        "engine/runtime/ownerrules.go",
+        "engine/runtime/ownerrules_block.go",
+        "engine/runtime/ownerrules_claude_edges_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/runtime/ownerrules.go:41",
+        "claim": "The benign-case test changed from 'no configured OverlayDir' to 'locateOverlay returned overlayNotFoundError'. If locateOverlay can reach its final not-found return when a non-empty OverlayDir was configured (for example by falling through to the upward search), a wrongly configured directory is now reported as the benign ErrNoOverlayCheckout. Before, that case returned the real error. The diff does not show the configured-path handling in locateOverlay, so I cannot confirm this path is reachable.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "engine/runtime/ownerrules.go:41",
+          "engine/runtime/opencode_contracts.go:105"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only the tail of locateOverlay is visible, so whether a configured directory can reach the not-found return is unverified.",
+      "The Claude status refactor preserves the earlier messages: the current, not-checked and failure cases map to the same results as before.",
+      "errors.As with new(overlayNotFoundError) is valid because the value type implements error.",
+      "The block writer's explicit _ = discards only silence the linter. The tmp.Close error on the success path was already checked."
+    ]
+  }
+}

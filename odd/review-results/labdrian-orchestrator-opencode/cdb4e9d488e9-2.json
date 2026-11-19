@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "40bdd4edf0f97d0c678be4b248583a2729585057",
+    "head": "cdb4e9d488e99f07e17a149d5d0a3cd142cba9cb",
+    "diff_sha256": "066883a063a0cfd62f536afd7c74964beaac1c26d346e0f69580312648c03304",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "40bdd4edf0f97d0c678be4b248583a2729585057",
+      "head": "cdb4e9d488e99f07e17a149d5d0a3cd142cba9cb",
+      "diff_sha256": "066883a063a0cfd62f536afd7c74964beaac1c26d346e0f69580312648c03304"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff adds one log entry (L64) to odd/tasks/labdrian-orchestrator-opencode.md and changes nothing else.",
+      "The entry records the owner's approval of the L60 texts and says T26 and T27 may start; it changes no code, behavior or requirement.",
+      "I found no defect the commit causes; I could not check the L62 line 585 claim because only the diff is visible."
+    ]
+  }
+}

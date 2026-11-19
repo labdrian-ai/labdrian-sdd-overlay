@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "c17f1a23020e015f1eb447756bdb9d6181cc6827",
+    "head": "451cd0da31cfa9369b9ed25b35f71c1748a46f8b",
+    "diff_sha256": "7d0b8ef133749151210c42215f6228419c2875727e3b5059bc73531f4c87af64",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "c17f1a23020e015f1eb447756bdb9d6181cc6827",
+      "head": "451cd0da31cfa9369b9ed25b35f71c1748a46f8b",
+      "diff_sha256": "7d0b8ef133749151210c42215f6228419c2875727e3b5059bc73531f4c87af64"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:63",
+        "claim": "T27 is ticked [x] and its commit field cites the three T27 commits, but the task text still lists only the pre-correction scope. The delivered correction (keep-coding-instructions, install-hooks announcement, status check, CLI tests, trailing-slash handling) is described only in L80/L81, so a reader of the task row alone sees a scope that no longer matches what landed. T26's row has the same shape, so this is a minor readability point, not a regression.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:63"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:704",
+        "claim": "L81 states the style reaches ~/.claude/output-styles only after the branch merges, and that a foreign outputStyle value (the live Gentleman) leaves claude status partial until T22. Both are open follow-ups and neither is recorded as a routed task or dependency. T14 depends on T27 (a) existing, but nothing here ties the live-deploy gap to a task, so it could be lost.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:704"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only odd/tasks/labdrian-orchestrator-opencode.md: it flips T27 from [ ] to [x], fills the commit field with three hashes and an L81 pointer, and appends the L81 log entry.",
+      "No code is touched, so I found no behavioral defect from this commit.",
+      "I could not check the three cited commit hashes against the repository from the diff alone."
+    ]
+  }
+}

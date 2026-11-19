@@ -1,0 +1,22 @@
+{
+  "kind": "polisher",
+  "base": "7e3471f033f7229cc477adee130285433203aaa3",
+  "head": "6d7c04f737593a3ed5af9c9e41c1f3737cdc6744",
+  "diff_sha256": "b22deaa63524567945caf18c07ff12f6ac073fba37d88455439477edb947f5d1",
+  "findings": {
+    "findings": [
+      {
+        "id": "G1",
+        "severity": "WARNING",
+        "location": "engine/capability/declarations.go:284",
+        "claim": "Context sentence dropped while its test is cited. Fixed in 643f9683.",
+        "evidence": [
+          "capability tests green"
+        ]
+      }
+    ],
+    "evidence": [
+      "series review of 6d7c04f7"
+    ]
+  }
+}

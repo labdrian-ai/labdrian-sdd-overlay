@@ -1,0 +1,83 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "6ed8ea51028630bc0d897ac9aa85f201e91ce1de",
+    "head": "c2dd90fb0422a1413366c40e0be3d31c05d07b87",
+    "diff_sha256": "51a7f1e020fa9ef159a7a0fed0f17174a942c3cd7546ff01be0ef5e48f75d324",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "bin/lib/apply.sh",
+      "bin/lib/usage.sh",
+      "engine/cmd/runtime_golden_test.go",
+      "engine/cmd/runtime_registry.go",
+      "engine/cmd/testdata/runtime-golden/runtime-codex-manifest-states.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-codex-owner-rules.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-lifecycle-of-all-the-targets.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-lifecycle-of-codex.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-roots-come-from-the-environment.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-status-in-an-empty-home.golden",
+      "engine/runtime/codex.go",
+      "engine/runtime/codex_ownerrules.go",
+      "engine/runtime/codex_ownerrules_test.go",
+      "engine/runtime/codex_register.go",
+      "engine/shelltest/apply_codex_blocks_test.go",
+      "engine/shelltest/apply_codex_runtime_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "6ed8ea51028630bc0d897ac9aa85f201e91ce1de",
+      "head": "c2dd90fb0422a1413366c40e0be3d31c05d07b87",
+      "diff_sha256": "51a7f1e020fa9ef159a7a0fed0f17174a942c3cd7546ff01be0ef5e48f75d324"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "bin/lib/apply.sh",
+        "bin/lib/usage.sh",
+        "engine/cmd/runtime_golden_test.go",
+        "engine/cmd/runtime_registry.go",
+        "engine/cmd/testdata/runtime-golden/runtime-codex-manifest-states.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-codex-owner-rules.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-lifecycle-of-all-the-targets.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-lifecycle-of-codex.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-roots-come-from-the-environment.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-status-in-an-empty-home.golden",
+        "engine/runtime/codex.go",
+        "engine/runtime/codex_ownerrules.go",
+        "engine/runtime/codex_ownerrules_test.go",
+        "engine/runtime/codex_register.go",
+        "engine/shelltest/apply_codex_blocks_test.go",
+        "engine/shelltest/apply_codex_runtime_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/codex_ownerrules.go:36-47",
+        "claim": "rulesFiles does not de-duplicate paths. When CODEX_HOME equals the home directory, ~/AGENTS.md and <root>/AGENTS.md are the same file. On a case-insensitive filesystem, <root>/AGENTS.md and <root>/agents.md are also the same file. Each is then written, reported and checked twice. The install message says 'written' and then 'already current' for one file, and a file-level note ('Codex reads no file named agents.md') can be attached to a file that Codex does read. This is harmless to the bytes but misleading.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/codex_ownerrules.go:36-47"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff was read in full. Only the lines of codex.go shown in the diff were visible, so the early-return paths of Uninstall and SyncCheck were not examined.",
+      "The apply.sh step has correct errexit handling: the call sits behind `||`, and a missing engine binary or a checkout without owner rules returns 0.",
+      "The partial-failure path continues to the other files and sets the status to partial, as the commit claims.",
+      "The golden files match the new messages."
+    ]
+  }
+}

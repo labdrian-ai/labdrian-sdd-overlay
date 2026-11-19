@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "052d446962ff288ead60e8e4357035d3ed0b42f3",
+    "head": "b88fbec6e350e17624f6d9f713ffede365c57e61",
+    "diff_sha256": "7bdc4c4eb38fecd1d64644b84c326ae9b06ffa12a3ed30e6072d056bb206aeae",
+    "paths": [
+      "engine/runtime/claude.go",
+      "engine/runtime/opencode_contracts.go",
+      "engine/runtime/ownerrules.go",
+      "engine/runtime/ownerrules_block.go",
+      "engine/runtime/ownerrules_claude_edges_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "052d446962ff288ead60e8e4357035d3ed0b42f3",
+      "head": "b88fbec6e350e17624f6d9f713ffede365c57e61",
+      "diff_sha256": "7bdc4c4eb38fecd1d64644b84c326ae9b06ffa12a3ed30e6072d056bb206aeae"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/runtime/claude.go",
+        "engine/runtime/opencode_contracts.go",
+        "engine/runtime/ownerrules.go",
+        "engine/runtime/ownerrules_block.go",
+        "engine/runtime/ownerrules_claude_edges_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/runtime/ownerrules.go:41",
+        "claim": "The base returned the raw error when OverlayDir was explicitly configured and no checkout was found, and returned ErrNoOverlayCheckout only for an empty OverlayDir. The change keys on the error type alone, so a configured but wrong OverlayDir that reaches the final return in locateOverlay is now reported as the benign 'owner rules not checked' note. Status stays supported instead of partial, and the explicit configuration is silently ignored. Whether a configured path can reach that return is not visible in the diff, since the top of locateOverlay is not shown.",
+        "evidence_class": "inferential",
+        "causal_disposition": "behavior-activated",
+        "proof_refs": [
+          "engine/runtime/ownerrules.go:41",
+          "engine/runtime/opencode_contracts.go:105"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/claude.go:216-238",
+        "claim": "ownerRulesStatus now returns a (result, ok, note) triple. The third value is meaningful only when ok is false, and ok=false is overloaded to mean both 'block current' and 'no checkout'. The signature is harder to read and easy to misuse, because a caller cannot tell the two cases apart except by parsing the note text.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/claude.go:216-238"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only the tail of locateOverlay appears in the diff, so the configured-directory path cannot be confirmed.",
+      "The test covers only a removed working directory with an empty OverlayDir, not a configured directory that has no checkout."
+    ]
+  }
+}

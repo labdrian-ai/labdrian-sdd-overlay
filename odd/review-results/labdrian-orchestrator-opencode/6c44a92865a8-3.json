@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "85eac22f40c00b51a95101b58a2ce9fa26b47c57",
+    "head": "6c44a92865a80aeb270261a251c3f5550fb75dcb",
+    "diff_sha256": "1de1ee9af2228f09d89db30b443523b8cff85404c7e48b94381bf1459c867543",
+    "paths": [
+      "skills/role-chain/.approval.json"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "85eac22f40c00b51a95101b58a2ce9fa26b47c57",
+      "head": "6c44a92865a80aeb270261a251c3f5550fb75dcb",
+      "diff_sha256": "1de1ee9af2228f09d89db30b443523b8cff85404c7e48b94381bf1459c867543"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "skills/role-chain/.approval.json"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff changes only skills/role-chain/.approval.json: the sha256 and approved_at fields are updated, while version, skill and approver are unchanged.",
+      "The diff does not include the skill content, so I cannot check whether the new sha256 matches the current skill files. A mismatch would show up in the approval check, not in this diff.",
+      "The change is consistent with its commit message, which describes an approval refresh after the tier table was added. I found no defect caused by this change."
+    ]
+  }
+}

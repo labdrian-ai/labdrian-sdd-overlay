@@ -1,0 +1,24 @@
+{
+  "kind": "sweep",
+  "base": "22e597e7b356843d4b57a2620c55d407ed349f26",
+  "head": "e9f96e0129cc231e1a7cc35431873ecb8d889186",
+  "diff_sha256": "a69094a190db5cba7fef68046c73425037d255b11d112ac6a2cfdafc2899810a",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": [
+      {
+        "name": "foreignAgentNotice",
+        "hits": [
+          "engine/runtime/claude_main_agent_test.go"
+        ]
+      }
+    ]
+  },
+  "t2": [],
+  "t3": [],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

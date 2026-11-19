@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "8ffaa62fa554f88bd67fcf6d91aa330609e3c813",
+    "head": "4c4a682a93fc1588abba726b39998439b9b0dfbd",
+    "diff_sha256": "aa67ec3c32c9897e96e059ab47283ee9c16cbc7d8e4dc95c9321c22b0da4134b",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "8ffaa62fa554f88bd67fcf6d91aa330609e3c813",
+      "head": "4c4a682a93fc1588abba726b39998439b9b0dfbd",
+      "diff_sha256": "aa67ec3c32c9897e96e059ab47283ee9c16cbc7d8e4dc95c9321c22b0da4134b"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:45",
+        "claim": "The T23 line now ends with a dangling \"commit: -\" followed immediately by a second \"commit: `98b99970`, ...\" field. The old placeholder was not replaced, so the line carries two contradictory commit fields (none vs eight hashes), which makes the line harder to read and to parse mechanically.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:45 \"— shaped: L46 — commit: - commit: `98b99970`, ...\""
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:45",
+        "claim": "The tick cites \"approval re-recorded by the owner (L55)\" and eight commit hashes, but the diff adds no Log entry L55 and no verifier result. The line's own Risk: 1 clause requires an independent verifier after the builder's checks. The reference cannot be confirmed from this change, and the verifier outcome is not recorded on the line.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:45 \"approval re-recorded by the owner (L55)\""
+        ]
+      }
+    ],
+    "evidence": [
+      "Single-file docs change: T23 checkbox flipped from [ ] to [x] and a commit/approval clause appended.",
+      "The old 'commit: -' placeholder remains in the line directly before the new 'commit:' field.",
+      "No Log section lines appear in the diff, so L55 cannot be verified here."
+    ]
+  }
+}

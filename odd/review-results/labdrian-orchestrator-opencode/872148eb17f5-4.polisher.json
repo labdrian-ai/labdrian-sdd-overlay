@@ -1,0 +1,31 @@
+{
+  "kind": "polisher",
+  "base": "2e22df056080bb4d90ae83fe7454cb139c7d71d6",
+  "head": "872148eb17f5ba44df3b455c1d8d37e14813fb36",
+  "diff_sha256": "18ba0914fbde334fa03c11410767aa1e21c8e840738d85cda7e5a4a28a0a4b9f",
+  "findings": {
+    "findings": [
+      {
+        "id": "S-8",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode_splice.go",
+        "claim": "Inserted lines LF in a CRLF file; space indent in a tab file. Fixed in a10c3d44.",
+        "evidence": [
+          "series; recheck R1 advisory."
+        ]
+      },
+      {
+        "id": "S-9",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode_json.go:105-115",
+        "claim": "A non-object mcp.servers is refused on every path. Answered: intended; refusing an unknown shape keeps the hash unchanged.",
+        "evidence": [
+          "series."
+        ]
+      }
+    ],
+    "evidence": [
+      "Independent verifier (Risk 3,5) on 451cd0da..2e22df05: suite 85 ok; seeds a-f held; real OpenCode 2.2.7 loads the plugin and parses the config; claude/codex/pi identical; no change-caused blocker. Bounded recheck R1-R7 on a6e520a0: none reproduced (all reproduced at base)."
+    ]
+  }
+}

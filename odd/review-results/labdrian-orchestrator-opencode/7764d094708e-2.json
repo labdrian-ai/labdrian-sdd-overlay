@@ -1,0 +1,94 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "fbd629c6d6fcabc70af3f6ec4ab8e1d10e3db93c",
+    "head": "7764d094708e8ce5c73125956a69aa23fb8214dc",
+    "diff_sha256": "03f769b22be2e8f1cb1e7a080c75ab8fae3caca1161c1dd01e0ced26b48641cf",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/cmd/codegraph_prompt_hook.go",
+      "engine/cmd/codegraph_prompt_hook_test.go",
+      "engine/cmd/settings_hooks.go",
+      "engine/cmd/usage.go",
+      "engine/hookwire/prompt.go",
+      "engine/hookwire/prompt_test.go",
+      "engine/settings/codegraph_prompt.go",
+      "engine/settings/codegraph_prompt_shape_test.go",
+      "engine/settings/codegraph_prompt_test.go",
+      "engine/settings/merge.go",
+      "engine/status/codegraph_prompt_test.go",
+      "engine/status/status.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "fbd629c6d6fcabc70af3f6ec4ab8e1d10e3db93c",
+      "head": "7764d094708e8ce5c73125956a69aa23fb8214dc",
+      "diff_sha256": "03f769b22be2e8f1cb1e7a080c75ab8fae3caca1161c1dd01e0ced26b48641cf"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/cmd/codegraph_prompt_hook.go",
+        "engine/cmd/codegraph_prompt_hook_test.go",
+        "engine/cmd/settings_hooks.go",
+        "engine/cmd/usage.go",
+        "engine/hookwire/prompt.go",
+        "engine/hookwire/prompt_test.go",
+        "engine/settings/codegraph_prompt.go",
+        "engine/settings/codegraph_prompt_shape_test.go",
+        "engine/settings/codegraph_prompt_test.go",
+        "engine/settings/merge.go",
+        "engine/status/codegraph_prompt_test.go",
+        "engine/status/status.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/settings/codegraph_prompt.go:143-145",
+        "claim": "restoreCodegraphPrompt no longer takes the engine path, so uninstalling one engine's hooks rewrites the codegraph wrapper of any other engine path back to the bare command. Before the change, uninstall touched only the wrapper of the engine being uninstalled. This is a behaviour change that the commit message does not call out as scoped; if another engine install shares the settings file, its wrapper is silently removed.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/settings/codegraph_prompt.go:143-145",
+          "engine/settings/merge.go:116"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/cmd/settings_hooks.go:83",
+        "claim": "The hookCommand parameter of codegraphPromptIsBare is now unused after CodegraphPrompt dropped its engine argument. The signature still implies a per-engine check, which misleads readers. noticeCodegraphPromptReplaced probably has the same leftover.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/settings_hooks.go:83-85"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "engine/hookwire/prompt.go:57-62",
+        "claim": "A system-reminder prompt with leading whitespace or a BOM before the tag is no longer recognised, because the tag is matched with a strict prefix. A real notification with such a prefix now reaches codegraph, where the old Contains check skipped it. The reduced recall is intended for quoting, but this narrow variant is not covered by a test.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/hookwire/prompt.go:53-64"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the diff only; no tools were available.",
+      "shellExitCode correctly maps a signal-ended codegraph to 128+signal, and the too-much-output case is now checked before the exit code.",
+      "The wrapper shape parser handles shellQuote's quoted words, and the install rewrite drops an old wrapper when the current one stands."
+    ]
+  }
+}

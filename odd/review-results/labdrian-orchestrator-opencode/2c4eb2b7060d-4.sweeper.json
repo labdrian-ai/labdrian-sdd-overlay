@@ -1,0 +1,20 @@
+{
+  "kind": "sweeper",
+  "base": "0d30f1b8a07ced6b2454d312764eafd060618a11",
+  "head": "2c4eb2b7060d8c3f44d12c20faf9764996a2cfd0",
+  "diff_sha256": "576e9aa313b986be102a6ac2b508a64625b42259ea2d267c67e4b50f40ab7c91",
+  "sweep": "2c4eb2b7060d-1.sweep.json",
+  "commit": "5ed63e405407cded4f845443589034dce7802757",
+  "candidates": [
+    {
+      "candidate": "T2 deadcode longterm-mem: cmd/longterm-mem/cmd_register.go: unreachable func: reportRegister",
+      "disposition": "removed",
+      "evidence": "Removed by the sweeper; deadcode and staticcheck clean after."
+    },
+    {
+      "candidate": "T2 staticcheck longterm-mem: cmd/longterm-mem/cmd_register.go: func reportRegister is unused (U1000)",
+      "disposition": "removed",
+      "evidence": "Removed by the sweeper."
+    }
+  ]
+}

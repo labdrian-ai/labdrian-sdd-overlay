@@ -1,0 +1,85 @@
+{
+  "kind": "polisher",
+  "base": "000433822b6412ef3bd3f11d89eaf72b3384d279",
+  "head": "f98917e97b0b3e1662c8fddcab6dcbcd2e155fab",
+  "diff_sha256": "d718c4f417b4834a26d61ddcb40a4a2567eb92b994e998ad9b1457a22d279ebd",
+  "findings": {
+    "findings": [
+      {
+        "id": "V-1",
+        "severity": "CRITICAL",
+        "location": "engine/runtime/claude_register.go, ownerrules.go",
+        "claim": "With no overlay checkout, claude install/update/status turned partial with exit 1 where base gave restart_required/supported exit 0. Fixed in 052d4469 (a note, base status and exit); recheck B1 identical to base.",
+        "evidence": [
+          "verifier check 4; judges A F1, B F1; recheck B1."
+        ]
+      },
+      {
+        "id": "V-2",
+        "severity": "WARNING",
+        "location": "engine/runtime/ownerrules_block.go Apply/Remove",
+        "claim": "Uninstall did not restore pre-install bytes (missing final newline, owner blank lines, absent file left empty). Fixed in 052d4469; recheck B2 a-d identical.",
+        "evidence": [
+          "verifier seeds a,b; judge A F2; recheck B2."
+        ]
+      },
+      {
+        "id": "A-F3",
+        "severity": "WARNING",
+        "location": "ownerrules_block.go read/write",
+        "claim": "No concurrent-edit check, no fsync, dangling symlink replaced. Fixed in 052d4469 (hash recheck before rename, Sync, dangling link refused); recheck W3.",
+        "evidence": [
+          "judge A F3; series; recheck W3."
+        ]
+      },
+      {
+        "id": "A-F4",
+        "severity": "SUGGESTION",
+        "location": "ownerrules_block.go locate",
+        "claim": "Markers with trailing whitespace not matched; error did not name lines. Fixed in 052d4469; recheck W6.",
+        "evidence": [
+          "judge A F4; recheck W6."
+        ]
+      },
+      {
+        "id": "B-F2",
+        "severity": "WARNING",
+        "location": "ownerrules_text_test.go",
+        "claim": "Text tests did not pin the L78 rule placement or the section order; inOrder cascaded. Fixed in 052d4469.",
+        "evidence": [
+          "judge B F2; series."
+        ]
+      },
+      {
+        "id": "B-F3",
+        "severity": "SUGGESTION",
+        "location": "ownerrules_block.go, ownerrules.go",
+        "claim": "Claude-specific docs on the reusable writer; CRLF mixed endings. Fixed in 052d4469.",
+        "evidence": [
+          "judge B F3."
+        ]
+      },
+      {
+        "id": "B-F4",
+        "severity": "SUGGESTION",
+        "location": "ownerrules.go",
+        "claim": "The no-checkout message named the minimalism contract. Fixed: Claude reports its own no-checkout note; the shared locateOverlay text is kept so opencode output is unchanged.",
+        "evidence": [
+          "judge B F4."
+        ]
+      },
+      {
+        "id": "S-1",
+        "severity": "SUGGESTION",
+        "location": "ownerrules_text_test.go",
+        "claim": "Forbidden-name test matches engram/gentle-ai anywhere. Answered: a later prose mention is caught on purpose (S17 forbids them in this source).",
+        "evidence": [
+          "series review."
+        ]
+      }
+    ],
+    "evidence": [
+      "Independent verifier (Risk 1,5): suite 85 ok; owner-rules.md byte-equal to L60/L78 and the live CLAUDE.md lines; probes a-f; codex/pi/opencode identical to base. Correction 052d4469; bounded recheck B1, B2, W3, W6 not reproduced."
+    ]
+  }
+}

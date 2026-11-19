@@ -1,0 +1,83 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "2b9943d451cd99da6188ad5e068bb403cadbeb11",
+    "head": "6b2a2043a2984a734f86cc4a096884eb995d8e1e",
+    "diff_sha256": "d4ad0fcaf23f41ad65264d96f63da187ab916c5d2f8ade91b0b965e60427d279",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/cmd/opencode_bridge_e2e_test.go",
+      "engine/cmd/opencode_bridge_session_e2e_test.go",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+      "engine/runtime/labdrian-runtime-parity-plugin.mjs",
+      "engine/runtime/opencode_bridge_session_test.go",
+      "engine/runtime/opencode_plugin.go",
+      "engine/runtime/opencode_plugin_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "2b9943d451cd99da6188ad5e068bb403cadbeb11",
+      "head": "6b2a2043a2984a734f86cc4a096884eb995d8e1e",
+      "diff_sha256": "d4ad0fcaf23f41ad65264d96f63da187ab916c5d2f8ade91b0b965e60427d279"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/cmd/opencode_bridge_e2e_test.go",
+        "engine/cmd/opencode_bridge_session_e2e_test.go",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+        "engine/runtime/labdrian-runtime-parity-plugin.mjs",
+        "engine/runtime/opencode_bridge_session_test.go",
+        "engine/runtime/opencode_plugin.go",
+        "engine/runtime/opencode_plugin_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/runtime/labdrian-runtime-parity-plugin.mjs:407",
+        "claim": "The SessionStart answer is cached for the whole session as a promise, including a failed answer. If the engine times out or errors on the first model call, the session never retries and never gets its memory block; the guard context stays missing for the rest of the session. The 'not running' note is claimed only once, so later model calls get nothing. The cached note is also not the same as a prompt note: a failure claimed in promptSubmitted is stored in session.promptLines and re-pushed on every model call until the next prompt, so the 'told once' claim does not hold. A rejected promise would also be cached and rethrown every call, swallowed silently by the guard.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/labdrian-runtime-parity-plugin.mjs:407",
+          "engine/runtime/labdrian-runtime-parity-plugin.mjs:393-400"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/labdrian-runtime-parity-plugin.mjs:367-369",
+        "claim": "The session envelope uses process.cwd() as cwd, not the session's own directory. In a multi-project OpenCode process the engine could bind the wrong workflow, memory block or stop-hook repository for a session. The sessions map is also never pruned.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/labdrian-runtime-parity-plugin.mjs:367-369"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the plugin's session hooks (promptSubmitted, askSessionStart, contextRequested, sessionIdle, registerSessionHooks) for caching, failure, and state behaviour.",
+      "Stop handling, stop_hook_active tracking, and the fail-open guard match the stated design; the other files are version bumps, docs and tests."
+    ]
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "bc881e69d2b46beb5b25933291b290397eba521c",
+    "head": "9593f57bf11915c9daa4d63bddb509f159aa03fd",
+    "diff_sha256": "65ab4d588c635d54d6b95901946bea50b21876b4d209d34955a67bef5d15adb6",
+    "paths": [
+      "overlay.manifest",
+      "skills.registry.yaml",
+      "skills/gentle-ai-bench/.approval.json",
+      "skills/gentle-ai-bench/SKILL.md",
+      "skills/rdd-defect-workflow/.approval.json",
+      "skills/rdd-defect-workflow/SKILL.md",
+      "skills/sdd-apply/.approval.json",
+      "skills/sdd-apply/SKILL.md",
+      "skills/sdd-apply/strict-tdd.md",
+      "skills/sdd-archive/.approval.json",
+      "skills/sdd-archive/SKILL.md",
+      "skills/sdd-verify/.approval.json",
+      "skills/sdd-verify/SKILL.md",
+      "skills/sdd-verify/references/report-format.md",
+      "skills/sdd-verify/strict-tdd-verify.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "bc881e69d2b46beb5b25933291b290397eba521c",
+      "head": "9593f57bf11915c9daa4d63bddb509f159aa03fd",
+      "diff_sha256": "65ab4d588c635d54d6b95901946bea50b21876b4d209d34955a67bef5d15adb6"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "overlay.manifest",
+        "skills.registry.yaml",
+        "skills/gentle-ai-bench/.approval.json",
+        "skills/gentle-ai-bench/SKILL.md",
+        "skills/rdd-defect-workflow/.approval.json",
+        "skills/rdd-defect-workflow/SKILL.md",
+        "skills/sdd-apply/.approval.json",
+        "skills/sdd-apply/SKILL.md",
+        "skills/sdd-apply/strict-tdd.md",
+        "skills/sdd-archive/.approval.json",
+        "skills/sdd-archive/SKILL.md",
+        "skills/sdd-verify/.approval.json",
+        "skills/sdd-verify/SKILL.md",
+        "skills/sdd-verify/references/report-format.md",
+        "skills/sdd-verify/strict-tdd-verify.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The manifest removes 10 rows: sdd-verify (3 files), gentle-ai-bench, rdd-defect-workflow, sdd-apply (2 files) and sdd-archive. Each removed row matches a skill file deleted in this diff.",
+      "The registry removes the five entries sdd-verify, gentle-ai-bench, rdd-defect-workflow, sdd-apply and sdd-archive. Each has its SKILL.md and .approval.json deleted.",
+      "The deleted skills only reference each other and the shared _shared files, which are not touched. The diff shows no remaining skill that points at a deleted path.",
+      "I could not check other readers outside the diff, such as engine assets, tests or orchestrator prompts. I found no defect from the diff alone."
+    ]
+  }
+}

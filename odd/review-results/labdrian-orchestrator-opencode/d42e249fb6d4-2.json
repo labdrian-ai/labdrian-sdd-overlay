@@ -1,0 +1,111 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "34e0c09f4c5f166ed89281013f3031c9e77bfea0",
+    "head": "d42e249fb6d40cc6939e643975e7d502022dfa22",
+    "diff_sha256": "fa301a92064cb87e92967bb33899ed0230a3bcd0286355e16a846cc6107be853",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/skills/approval_gate_test.go",
+      "engine/skills/approval_write.go",
+      "engine/skills/gentle_detach_test.go",
+      "engine/skills/issue_creation_artifact_test.go",
+      "overlay.manifest",
+      "skills.registry.yaml",
+      "skills/issue-creation/SKILL.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "34e0c09f4c5f166ed89281013f3031c9e77bfea0",
+      "head": "d42e249fb6d40cc6939e643975e7d502022dfa22",
+      "diff_sha256": "fa301a92064cb87e92967bb33899ed0230a3bcd0286355e16a846cc6107be853"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/skills/approval_gate_test.go",
+        "engine/skills/approval_write.go",
+        "engine/skills/gentle_detach_test.go",
+        "engine/skills/issue_creation_artifact_test.go",
+        "overlay.manifest",
+        "skills.registry.yaml",
+        "skills/issue-creation/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "skills/issue-creation/SKILL.md:41",
+        "claim": "The single read-back step uses `gh issue view \"$NUMBER\" ... --json number,url,title,body` and demands title and body match. For the comment path (step 3 also offers `gh issue comment`) this read-back never inspects the comment, and the comment body cannot match the issue body. The base's comment read-back via `repos/$REPO/issues/comments/$COMMENT_ID` with a parent-issue identity check is dropped. A comment write therefore cannot be confirmed correctly. The step also does not say where NUMBER comes from after a create.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/issue-creation/SKILL.md:40-41"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "skills/issue-creation/SKILL.md:45",
+        "claim": "The Output Contract and Hard Rules still demand exactly one of `confirmed | no_write | unknown`, but the rewrite drops every definition of when each applies. The base had them: authoritative rejection means `no_write`, and timeout, lost response, missing identity or mismatch means `unknown`. The agent is left to guess the classification, and a read-back mismatch is never mapped to an outcome. This weakens the requested one-attempt read-back guarantee.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/issue-creation/SKILL.md:23-24",
+          "skills/issue-creation/SKILL.md:41",
+          "skills/issue-creation/SKILL.md:45"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "skills/issue-creation/SKILL.md:18",
+        "claim": "The skill is installed globally and the target is any `[HOST/]OWNER/REPO`, yet the rule hardcodes `.github/ISSUE_TEMPLATE/feature.yml` as the form for 'this repository'. That conflicts with 'the selected YAML Issue Form' on line 12, because bug reports on other targets would use the wrong form. The rewrite also drops the form-selection and control-materialization rules (dropdown, checkbox and required handling), leaving step 2 ('Fill the body from the form's controls') vague.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/issue-creation/SKILL.md:12",
+          "skills/issue-creation/SKILL.md:18",
+          "skills/issue-creation/SKILL.md:39"
+        ]
+      },
+      {
+        "id": "F4",
+        "severity": "WARNING",
+        "location": "skills/issue-creation/SKILL.md:36",
+        "claim": "The new test TestIssueCreationSkillHasTheFourSectionsInOrder expects the H2 headings to be exactly Activation Contract, Hard Rules, Decision Gates and Output Contract. The file still has a `## Execution Steps` H2 between Decision Gates and Output Contract. Unless roleChainSections filters that heading, the test fails. I cannot see that helper in the diff, so this is unproven.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "skills/issue-creation/SKILL.md:36",
+          "engine/skills/issue_creation_artifact_test.go:30-36"
+        ]
+      },
+      {
+        "id": "F5",
+        "severity": "SUGGESTION",
+        "location": "skills/issue-creation/SKILL.md:32",
+        "claim": "The duplicate-decision gates lost the nonconforming-candidate row (request an in-place repair) and the instruction to read each candidate from the target host and compare it with the form. 'A conforming duplicate exists' is no longer defined by any step, and step 1 only lists search results, so the duplicate decision has no procedure.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/issue-creation/SKILL.md:32-33",
+          "skills/issue-creation/SKILL.md:38"
+        ]
+      }
+    ],
+    "evidence": [
+      "Compared the base SKILL.md text (removed lines) with the head text (added lines) in the diff.",
+      "Counted head-side line numbers from the @@ -1,113 +1,45 @@ header.",
+      "Bookkeeping changes (manifest, registry, lint baseline list and its pinned count of 14, test lists) are consistent with each other. The test assertions on required phrases match the new SKILL.md text."
+    ]
+  }
+}

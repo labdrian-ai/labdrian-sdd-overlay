@@ -1,0 +1,40 @@
+{
+  "kind": "polisher",
+  "base": "ed82b5381b06dce4ef1f9f63ae6c3bc28edf04cf",
+  "head": "2e22df056080bb4d90ae83fe7454cb139c7d71d6",
+  "diff_sha256": "507de05783e89566ec7b31a095d3a590e3ec8907ae1e2f518969a9514e20fcf8",
+  "findings": {
+    "findings": [
+      {
+        "id": "B-F4",
+        "severity": "WARNING",
+        "location": "engine/runtime/opencode_plugin_live_test.go",
+        "claim": "Live test checked only the marker. Fixed in 447ac5cd (debug config asserts default_agent and servers) and a10c3d44 (stdout only, EvalSymlinks).",
+        "evidence": [
+          "judge B F4."
+        ]
+      },
+      {
+        "id": "B-F7",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode_stub_guard_test.go",
+        "claim": "Guard cited a personal path. Fixed in 447ac5cd; the literal-form blind spot is accepted, the live test is the real check.",
+        "evidence": [
+          "judge B F7."
+        ]
+      },
+      {
+        "id": "B-F6",
+        "severity": "WARNING",
+        "location": "engine/runtime tests",
+        "claim": "No CLI-level tests. Fixed in 3b0cc4ee.",
+        "evidence": [
+          "judge B F6."
+        ]
+      }
+    ],
+    "evidence": [
+      "Independent verifier (Risk 3,5) on 451cd0da..2e22df05: suite 85 ok; seeds a-f held; real OpenCode 2.2.7 loads the plugin and parses the config; claude/codex/pi identical; no change-caused blocker. Bounded recheck R1-R7 on a6e520a0: none reproduced (all reproduced at base)."
+    ]
+  }
+}

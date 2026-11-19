@@ -1,0 +1,22 @@
+{
+  "kind": "polisher",
+  "base": "e4ed0244bad085e8b7fcd8519035ee66e691ca8d",
+  "head": "caa0f5234cc43fb04f060043d1087ee8ff6ccdac",
+  "diff_sha256": "211caf0de31d1715fa94991f42fff4d61e1bb0de0a741763e8889afb05109a9a",
+  "findings": {
+    "findings": [
+      {
+        "id": "G1",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/codex_ownerrules_test.go:430",
+        "claim": "Substring check on the link path. Answered: the link path is <root>/.codex/AGENTS.md, which no other reported path contains; the count check pins the two removals.",
+        "evidence": [
+          "series review of caa0f523"
+        ]
+      }
+    ],
+    "evidence": [
+      "series review of caa0f523"
+    ]
+  }
+}

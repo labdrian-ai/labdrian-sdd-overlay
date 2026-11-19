@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "88e57ea1a20eb5f8a9389458393960a3dfce92c2",
+    "head": "9298a428c03289c389d6ecadf6690be2bbb9ef18",
+    "diff_sha256": "deb40cfeb3c1fefda929b8a8a571b474e96847e5e4dd2da92a53da5ce6d5b18c",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "88e57ea1a20eb5f8a9389458393960a3dfce92c2",
+      "head": "9298a428c03289c389d6ecadf6690be2bbb9ef18",
+      "diff_sha256": "deb40cfeb3c1fefda929b8a8a571b474e96847e5e4dd2da92a53da5ce6d5b18c"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff changes only the document: it ticks T18, fills in its commit list, and appends Log entry L51. No code or behavior is touched.",
+      "The commit list for T18 matches the shas named in L49 and L50 (b2575e8d, 368afea2, 99169444, 4f7d93d9, 5097b163, a12d37a6, 2d3dc66b, 09c38855). It adds 88e57ea1, which L51 describes as the approvals commit and which is the base of this diff, so the references are consistent.",
+      "L51 follows the append-only convention and claims no more than the earlier entries support. T8's dependency on T18 is left unchanged, which is correct."
+    ]
+  }
+}

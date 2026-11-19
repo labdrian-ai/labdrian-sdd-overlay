@@ -1,0 +1,12 @@
+{
+  "kind": "polisher",
+  "base": "9091d9ce8978010a5f7120ee8b2b88b6dfb8a50c",
+  "head": "92f6558883de0159c7ec7cb9dab3431c5ef34584",
+  "diff_sha256": "e67291cc5071f582543bc2a12a21eb794144b5055a3d1cf60407d385350ad3ec",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Bounded recheck by two blind polisher judges on 65894e6f: runtime status reports the key through settings.MainAgent and agrees with checkMainAgent; install/update carry the shared notice; declarations.go names the key; command-level tests read the file back; the inspection is a HookInstaller method with no type assertion; no path can change or lose a foreign value. Neither ran tests; the suite passed (85 ok)."
+    ]
+  }
+}

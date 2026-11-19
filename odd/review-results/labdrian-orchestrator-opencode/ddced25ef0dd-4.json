@@ -1,0 +1,73 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "afb10297085cc474b423c30bb3fa18ccaecfbb84",
+    "head": "ddced25ef0dde1a6c1a57429c80084de462b8281",
+    "diff_sha256": "41f8c8e9702aae5ed19aa5dd25c3b2614238094414ca2e5e92cd9995e32b1adf",
+    "paths": [
+      "engine/skills/procedural_candidate_memorycard_test.go",
+      "skills/_shared/procedural-candidate-detection.md",
+      "skills/procedural-candidates/SKILL.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "afb10297085cc474b423c30bb3fa18ccaecfbb84",
+      "head": "ddced25ef0dde1a6c1a57429c80084de462b8281",
+      "diff_sha256": "41f8c8e9702aae5ed19aa5dd25c3b2614238094414ca2e5e92cd9995e32b1adf"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skills/procedural_candidate_memorycard_test.go",
+        "skills/_shared/procedural-candidate-detection.md",
+        "skills/procedural-candidates/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "skills/_shared/procedural-candidate-detection.md:112-119",
+        "claim": "Item 2 now says 'once for all of them' and then adds a second sentence 'Ask resolve once with each distinct legacy number', which is redundant and slightly ambiguous: it could be read as one call per number rather than one call with all distinct keys. The instruction to deduplicate and sort is not clearly tied to the single-call envelope, so an agent could issue repeated calls or send duplicate keys, and the response-order check ('one entry per key asked, in the order asked') depends on the exact ordering the agent chose.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/_shared/procedural-candidate-detection.md:112-119"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "skills/procedural-candidates/SKILL.md:21",
+        "claim": "The SKILL.md item 6 says 'sorted and as written' while the contract says 'sorted as strings'. The skill's shorter wording omits 'as strings', so a numeric sort could be applied (e.g. 10 before 9 differs), which disagrees with the engine's string sort and could make the order check against the answer fail. The test only pins the shortened skill phrase, so it does not catch the divergence.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/procedural-candidates/SKILL.md:21",
+          "engine/skills/procedural_candidate_memorycard_test.go:138-141"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "skills/_shared/procedural-candidate-detection.md:149-158",
+        "claim": "The new text 'unless resolve failed (item 2), in which case nothing is rewritten and the lifecycle exception of item 2 applies' is placed mid-paragraph after the merge rules, so 'This applies' has an ambiguous referent (the whole rewrite, or only the unknown-id sentence). Also the line carrying 'on equal timestamps keep the entry listed first' is left unwrapped and long, unlike the surrounding hard-wrapped prose.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/_shared/procedural-candidate-detection.md:149-158"
+        ]
+      }
+    ],
+    "evidence": [
+      "Diff changes only two markdown contract files and one test that asserts substrings of them.",
+      "The new test pins exact phrases, so the wording is locked, but the pinned skill phrase 'sorted and as written' drops 'as strings' from the contract.",
+      "No executable behavior changes; findings concern ambiguity of instructions to the agent."
+    ]
+  }
+}

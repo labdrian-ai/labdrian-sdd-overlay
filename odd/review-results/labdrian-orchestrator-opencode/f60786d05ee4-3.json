@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "dad2ea34e8ccfb967161b428bf79e7540d255849",
+    "head": "f60786d05ee498ffb914de46d00acfc74b15f8c0",
+    "diff_sha256": "6d49609a58a35dc76c337625461cc937dcccd233e4e00112ad2f705478e9ce68",
+    "paths": [
+      "engine/oddtask/oddtask.go",
+      "engine/oddtask/oddtask_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "dad2ea34e8ccfb967161b428bf79e7540d255849",
+      "head": "f60786d05ee498ffb914de46d00acfc74b15f8c0",
+      "diff_sha256": "6d49609a58a35dc76c337625461cc937dcccd233e4e00112ad2f705478e9ce68"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/oddtask/oddtask.go",
+        "engine/oddtask/oddtask_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "ParseDocument parses with fences first and falls back to a fence-free parse only when a fence is still open at the end. The fallback pass cannot report an open fence, so it cannot loop or recurse.",
+      "fenceRun now rejects a backtick run whose trailing text contains a backtick, which matches CommonMark for opening fences. Tilde fences are unaffected, and a closing fence carries no info text, so the new check does not change closing behaviour.",
+      "The new test covers the three stray forms (```go, ```x``` text, ~~~) in Tasks and expects Decide to allow T1, which holds under the fallback.",
+      "One accepted trade-off, not a defect this commit introduces: a document with a real fence quoting a '## ' line plus a stray unclosed fence falls back to the pre-fence behaviour. That is exactly what the commit message and doc comment say."
+    ]
+  }
+}

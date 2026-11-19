@@ -1,0 +1,95 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "cdb4e9d488e99f07e17a149d5d0a3cd142cba9cb",
+    "head": "2b9943d451cd99da6188ad5e068bb403cadbeb11",
+    "diff_sha256": "7f4616f417df5665dda451f0d854e244771af9951bb967ad9e7ba7a39531fe88",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/cmd/opencode_bridge_e2e_test.go",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+      "engine/runtime/labdrian-runtime-parity-plugin.mjs",
+      "engine/runtime/opencode_bridge_test.go",
+      "engine/runtime/opencode_plugin.go",
+      "engine/runtime/opencode_plugin_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "cdb4e9d488e99f07e17a149d5d0a3cd142cba9cb",
+      "head": "2b9943d451cd99da6188ad5e068bb403cadbeb11",
+      "diff_sha256": "7f4616f417df5665dda451f0d854e244771af9951bb967ad9e7ba7a39531fe88"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/cmd/opencode_bridge_e2e_test.go",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+        "engine/runtime/labdrian-runtime-parity-plugin.mjs",
+        "engine/runtime/opencode_bridge_test.go",
+        "engine/runtime/opencode_plugin.go",
+        "engine/runtime/opencode_plugin_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/runtime/labdrian-runtime-parity-plugin.mjs:243",
+        "claim": "JSON.stringify(envelope) runs inside the Promise executor after spawn. If the tool input cannot be serialized (circular reference or BigInt), the executor throws and the promise rejects, which contradicts the documented 'never rejects'. In execute.before, gateToolCall has no try/catch, so the tool call fails with a raw TypeError instead of failing open. The spawned engine child is left running and its timer is never cleared. execute.after swallows the same error, so only the gate path is affected.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/labdrian-runtime-parity-plugin.mjs:243",
+          "execute.before handler calls gateToolCall without try/catch"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "engine/runtime/labdrian-runtime-parity-plugin.mjs:300-345",
+        "claim": "unavailableReported is set to true when the failure is first seen, but the note is delivered only if appendToResult can attach it. If the first call's result is not a record, has neither a content array nor a string output, or the call ends in a non-completed status, the note is dropped and the 'hooks are not running' message is never shown for the rest of the session. The user is told the hooks work when they do not, which the commit says it prevents. Notes stored for calls whose execute.after never fires also stay in the Map.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "gateToolCall sets state.unavailableReported = true before delivery",
+          "appendToResult returns silently when result is not a record or has no content or output"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/labdrian-runtime-parity-plugin.mjs:247-258",
+        "claim": "parseAnswer treats unparseable or non-object engine stdout from an exit-0 engine as an empty answer. A truncated or corrupt deny therefore lets the call through with no 'hooks not running' notice, which is a silent fail-open on a security gate.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "parseAnswer returns {} in the catch branch and for non-record values"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the plugin bridge code: runEngine, askEngine, gateToolCall, reportToolResult and appendToResult.",
+      "Counted head line numbers from the @@ -176,9 +179,184 @@ hunk header; the ranges for F2 and F3 are approximate.",
+      "The remaining changes (goldens, version bump, docs, tests) look consistent with each other."
+    ]
+  }
+}

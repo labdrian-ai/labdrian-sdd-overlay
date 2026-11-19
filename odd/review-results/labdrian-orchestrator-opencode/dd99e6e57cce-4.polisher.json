@@ -1,0 +1,49 @@
+{
+  "kind": "polisher",
+  "base": "6b2a2043a2984a734f86cc4a096884eb995d8e1e",
+  "head": "dd99e6e57ccee870faca20715f6d2a11691daaaf",
+  "diff_sha256": "07767d5efc151493181b38a2366394f10cc9e1eea842a5de60ce0039dc0bceb6",
+  "findings": {
+    "findings": [
+      {
+        "id": "R-1",
+        "severity": "WARNING",
+        "location": "labdrian-runtime-parity-plugin.mjs:306-313",
+        "claim": "The pause after a timeout skipped the gate, letting through calls the engine denies. Fixed in 4e96003d: PreToolUse is asked on every call.",
+        "evidence": [
+          "recheck A R1; series review of dd99e6e5."
+        ]
+      },
+      {
+        "id": "R-2",
+        "severity": "WARNING",
+        "location": "labdrian-runtime-parity-plugin.mjs toolInputFor",
+        "claim": "A Claude-named file_path/skill was kept over OpenCode path/id, so the engine judged a different value than OpenCode acts on. Fixed in 4e96003d.",
+        "evidence": [
+          "series review of dd99e6e5 (two judges)."
+        ]
+      },
+      {
+        "id": "R-3",
+        "severity": "SUGGESTION",
+        "location": "labdrian-runtime-parity-plugin.mjs end()",
+        "claim": "end() repeated on every chunk past the cap. Fixed in 4e96003d; grandchildren of a shell engine are not signalled: answered, the engine is a Go binary.",
+        "evidence": [
+          "series review of dd99e6e5."
+        ]
+      },
+      {
+        "id": "R-4",
+        "severity": "SUGGESTION",
+        "location": "labdrian-runtime-parity-plugin.mjs ownText",
+        "claim": "A stale own text could swallow a later identical user prompt. Fixed in 4e96003d.",
+        "evidence": [
+          "series review of dd99e6e5."
+        ]
+      }
+    ],
+    "evidence": [
+      "Bounded recheck A and B on dd99e6e5."
+    ]
+  }
+}

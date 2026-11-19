@@ -1,0 +1,25 @@
+{
+  "kind": "sweep",
+  "base": "2bf126211283fadb29bb4d34a89231125a0a2a96",
+  "head": "6ca43786bda767a89de266e982b9c1a31937c9b9",
+  "diff_sha256": "5971a91fe6698e963766a3a7e7b04ae4b46935b28dd360c2da25f623eb538242",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": [
+      {
+        "name": "piSonnetModel",
+        "hits": [
+          "odd/review-receipts/role-agents-slice5/review-c66bc0978f2f2235.review-state.json",
+          "odd/tasks/role-agents-slice5.md"
+        ]
+      }
+    ]
+  },
+  "t2": [],
+  "t3": [],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

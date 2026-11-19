@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "2358cf21a7d89e27d00bfb68a8995f2bf0cfdcb9",
+    "head": "558d9a721e12faa160b06189b2e3f343930268d9",
+    "diff_sha256": "f6d250d74bf711f496b3cf6ee5860612c80a4073d4c1b024c9139feb705d26e3",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/runtime/opencode.go",
+      "engine/runtime/opencode_legacy_test.go",
+      "engine/runtime/opencode_plugin.go",
+      "engine/runtime/testdata/legacy-runtime-parity-plugin-1x.mjs"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "2358cf21a7d89e27d00bfb68a8995f2bf0cfdcb9",
+      "head": "558d9a721e12faa160b06189b2e3f343930268d9",
+      "diff_sha256": "f6d250d74bf711f496b3cf6ee5860612c80a4073d4c1b024c9139feb705d26e3"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/runtime/opencode.go",
+        "engine/runtime/opencode_legacy_test.go",
+        "engine/runtime/opencode_plugin.go",
+        "engine/runtime/testdata/legacy-runtime-parity-plugin-1x.mjs"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/runtime/opencode.go:125-127",
+        "claim": "The legacy-file check returns partial before the config is read. A remaining 1.x file therefore hides the more specific states reported after it, such as restart_required, a version mismatch or a prompt mismatch. A user who has both a stale file and a pending restart sees only the 'partial' message and loses the restart-owed signal that install deliberately preserves.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/opencode.go:125-127 returns CapabilityPartial ahead of a.readConfig()"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode.go:184",
+        "claim": "Ownership now requires the active marker file name as well as the export. A 1.x plugin file written by an earlier adapter version that predates the active marker, or that names it differently, is no longer recognised and is silently left in place. Status then reports it as partial with advice to remove it by hand. The tests pin only the 16825fd3 bytes, so older 1.x variants are unverified.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/opencode.go:184 adds the openCodeActiveFile condition to the ownership check"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff of opencode.go, the tests, the testdata file and the comments.",
+      "The install path now keeps restart_required and appends the cleanup error, which matches the commit claim.",
+      "The testdata file contains both the 1.x export string and the active marker name, so the real-bytes test is consistent with the new ownership check."
+    ]
+  }
+}

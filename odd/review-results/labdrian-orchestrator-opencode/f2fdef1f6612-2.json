@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "8048bc87764d993feecc893cf4b435097b873447",
+    "head": "f2fdef1f6612172cd3e49a5f092d9a76203e85c0",
+    "diff_sha256": "7f4e4308b41f4e8d1f920b8dfe98e2c1c5342a797bcc3781f6981ce31182c943",
+    "paths": [
+      "engine/agentgen/models.go",
+      "engine/agentgen/models_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "8048bc87764d993feecc893cf4b435097b873447",
+      "head": "f2fdef1f6612172cd3e49a5f092d9a76203e85c0",
+      "diff_sha256": "7f4e4308b41f4e8d1f920b8dfe98e2c1c5342a797bcc3781f6981ce31182c943"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/agentgen/models.go",
+        "engine/agentgen/models_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The idShape regex now permits `@`, `[` and `]` only after a first letter or digit, so a value starting with `[` or `@` is still rejected, which is what the new comment claims.",
+      "In a YAML block scalar these characters are plain-scalar characters, and the regex still forbids spaces, quotes and commas, so the widened set introduces no YAML defect that the diff shows.",
+      "The new test checks that the table read returns the bracketed id and that the generated Claude and Pi files carry the ids verbatim.",
+      "The comment on the OpenCode runtime constants is documentation only and changes no behavior."
+    ]
+  }
+}

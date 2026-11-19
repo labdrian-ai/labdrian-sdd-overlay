@@ -1,0 +1,91 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "febe2457f509a47df424cbfae2e1e4fd0ce9d366",
+    "head": "34028c8ed56251e8d6c5b5bee6cc42a21b4bb4ab",
+    "diff_sha256": "79644781730bb3186c3a70271954d163505140095c499b7f677696e5dd275264",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "bin/lib/hooks.sh",
+      "bin/lib/skill_registry.sh",
+      "engine/cmd/registry.go",
+      "engine/cmd/registry_refresh_test.go",
+      "engine/cmd/runtime_registry_refresh_test.go",
+      "engine/cmd/usage.go",
+      "engine/installer/testdata/registry_pins.golden",
+      "engine/settings/registry_refresh.go",
+      "engine/settings/registry_refresh_test.go",
+      "engine/skillregistry/compose.go",
+      "engine/skillregistry/compose_test.go",
+      "engine/skillregistry/frontmatter.go",
+      "engine/skillregistry/fsscan/fsscan_test.go",
+      "engine/skillregistry/skill_test.go",
+      "engine/skillregistry/skillregistry.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "febe2457f509a47df424cbfae2e1e4fd0ce9d366",
+      "head": "34028c8ed56251e8d6c5b5bee6cc42a21b4bb4ab",
+      "diff_sha256": "79644781730bb3186c3a70271954d163505140095c499b7f677696e5dd275264"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "bin/lib/hooks.sh",
+        "bin/lib/skill_registry.sh",
+        "engine/cmd/registry.go",
+        "engine/cmd/registry_refresh_test.go",
+        "engine/cmd/runtime_registry_refresh_test.go",
+        "engine/cmd/usage.go",
+        "engine/installer/testdata/registry_pins.golden",
+        "engine/settings/registry_refresh.go",
+        "engine/settings/registry_refresh_test.go",
+        "engine/skillregistry/compose.go",
+        "engine/skillregistry/compose_test.go",
+        "engine/skillregistry/frontmatter.go",
+        "engine/skillregistry/fsscan/fsscan_test.go",
+        "engine/skillregistry/skill_test.go",
+        "engine/skillregistry/skillregistry.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/skillregistry/frontmatter.go:100-102",
+        "claim": "mappingKey matches any continuation line of a multi-line quoted description that starts with a lowercase word followed by a colon and a space (for example `  note: see the docs` or `  when: the user asks`). That is ordinary prose, not a key. Such a description is now cut back to its first line, which is the old gentle-ai behaviour this reader was meant to improve on. The registry row loses the rest of the description and the trigger text, with no diagnostic.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skillregistry/frontmatter.go:9-11",
+          "engine/skillregistry/frontmatter.go:100-102"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/skillregistry/compose.go:44-47",
+        "claim": "generatedRow is a regular expression that decides which table lines Compose deletes. A foreign row that happens to have the shape `| `x` | ... | user | `y` |`, such as a hand-written row with scope user or project, is treated as generated and dropped on refresh. This is much narrower than before, but ownership is decided by shape alone. A line with CRLF endings would also fail the `$` anchor and be kept as foreign, so it would stay next to its regenerated copy as a duplicate.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skillregistry/compose.go:44-47",
+          "engine/skillregistry/compose.go:105-109"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff. Nothing in it shows that filelock.Options{NoWait} or filelock.ErrBusy exist, or that Refresh wraps the lock error with %w. The new tests do cover the busy path.",
+      "headLines and the generatedRow filtering preserve the head blank lines and foreign rows as the tests claim.",
+      "The shell changes (repair-sdd-registry and skill-registry refresh skipping a non-project directory) match the golden output changes."
+    ]
+  }
+}

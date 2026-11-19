@@ -1,0 +1,22 @@
+{
+  "kind": "polisher",
+  "base": "8de9550a548d3e3a84e8b2bcbf10891cd412697d",
+  "head": "6bd701ddf2ec8110b613b2f8acf07e70b66c5795",
+  "diff_sha256": "ed7d4a05a27a55200563c7063c9cffcb4438f49b43114fabc140f994151c6294",
+  "findings": {
+    "findings": [
+      {
+        "id": "A-F3",
+        "severity": "SUGGESTION",
+        "location": "engine/cmd/settings_hooks.go noticeForeignMainAgent",
+        "claim": "The notice re-reads the file and says nothing when the re-read fails. Kept: documented in the comment; the install just read and wrote the file, and status reports the conflict.",
+        "evidence": [
+          "judge A round 1; answered in the Log."
+        ]
+      }
+    ],
+    "evidence": [
+      "Two blind polisher judges read the 9091d9ce tree; this commit added the merge-settings notice and the install remedy notes; its notice was extended to the runtime path in 92f65588 (B-F1, recorded on f95a3624)."
+    ]
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ff7fd1d1813af8bc82d39643ecd9f1755b863dec",
+    "head": "c489c6f9c7c0990af746df1a54abc9c66f6ff96c",
+    "diff_sha256": "4d7f928edcd3e7658d452de0824ed7ff28851c505fdfb2dc254e35f61c17c69a",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "ff7fd1d1813af8bc82d39643ecd9f1755b863dec",
+      "head": "c489c6f9c7c0990af746df1a54abc9c66f6ff96c",
+      "diff_sha256": "4d7f928edcd3e7658d452de0824ed7ff28851c505fdfb2dc254e35f61c17c69a"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The commit changes only documentation in the feature document: the S17 Check sentence now names ~/.claude/CLAUDE.md and ~/.claude/settings.json, and the inventory clause is its own sentence. A new L27 log entry is appended.",
+      "The search pattern is unchanged, and it still excludes gentle-ai-overlay and gentle-ai directory paths as the sentence describes.",
+      "The L27 entry matches the S17 edit, is append-only, and contradicts no other line in the diff."
+    ]
+  }
+}

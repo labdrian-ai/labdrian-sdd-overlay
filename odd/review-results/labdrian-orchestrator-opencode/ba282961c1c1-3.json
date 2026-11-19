@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "bf421c581e83c4b3a491cb3f7e3704022d66b2e9",
+    "head": "ba282961c1c1c2a98f9ac9fb4a886d3022d190eb",
+    "diff_sha256": "06827fe3804f3ef678adecd0e9f0db7c217fa50326ca5a3ee3e3d51fcb3facd3",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "bf421c581e83c4b3a491cb3f7e3704022d66b2e9",
+      "head": "ba282961c1c1c2a98f9ac9fb4a886d3022d190eb",
+      "diff_sha256": "06827fe3804f3ef678adecd0e9f0db7c217fa50326ca5a3ee3e3d51fcb3facd3"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff adds a single log entry L72 to the feature document's Log, a docs-only change that follows the L69-L71 format; no code, specs, or tasks are altered.",
+      "The entry records the owner's verbatim answer and a follow-up scheduling decision; nothing in the diff contradicts the 'Risk: none' claim."
+    ]
+  }
+}

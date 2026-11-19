@@ -1,0 +1,84 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "392b1d2378f8d5d6b246b6a59a5c767f3b7ab2e4",
+    "head": "9916944454b0427eb16da95defa47d2a5d4c4032",
+    "diff_sha256": "c1cd86662f80812fcee9460a0747c75d7caab07efae5988ea00cae6dfbb8e9fc",
+    "paths": [
+      "engine/cmd/inception_chain_entry_test.go",
+      "engine/skills/foreman_restored_duties_test.go",
+      "engine/skills/odd_role_skills_artifact_test.go",
+      "engine/skills/role_chain_artifact_test.go",
+      "overlay.manifest",
+      "skills/odd-feature-doc/SKILL.md",
+      "skills/role-chain/SKILL.md",
+      "skills/role-chain/references/review-record.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "392b1d2378f8d5d6b246b6a59a5c767f3b7ab2e4",
+      "head": "9916944454b0427eb16da95defa47d2a5d4c4032",
+      "diff_sha256": "c1cd86662f80812fcee9460a0747c75d7caab07efae5988ea00cae6dfbb8e9fc"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/inception_chain_entry_test.go",
+        "engine/skills/foreman_restored_duties_test.go",
+        "engine/skills/odd_role_skills_artifact_test.go",
+        "engine/skills/role_chain_artifact_test.go",
+        "overlay.manifest",
+        "skills/odd-feature-doc/SKILL.md",
+        "skills/role-chain/SKILL.md",
+        "skills/role-chain/references/review-record.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/skills/odd_role_skills_artifact_test.go:182",
+        "claim": "The shaper row of the role table no longer says the shaper writes the Log entry (<date>, shaper) holding its design, and the test assertion for it was removed. The `shaped: L<n>` mark requires exactly one such shaper Log entry, so the instruction that the shaper must write that entry is now stated nowhere in the body. A shaper may then mark tasks with `shaped: L<n>` without writing the entry, and no test catches it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/odd-feature-doc/SKILL.md:34",
+          "engine/skills/odd_role_skills_artifact_test.go:182"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/cmd/inception_chain_entry_test.go:130-139",
+        "claim": "inceptionReferenceJSONBlock counts only the exact opener \"```json\\n\". A reference using CRLF line endings or \"```json \" would count as zero blocks (fails loudly, acceptable), but a second block written with a different opener would not be detected as several, so the 'fails on several blocks' guarantee covers only the exact fence spelling.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/inception_chain_entry_test.go:130-139"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "engine/skills/role_chain_artifact_test.go:217",
+        "claim": "The role-chain duty list no longer requires the body to contain `candidate`, `inspection.status` or `completed`. The check for them moved to a separate test that reads references/review-record.md. The duty list itself now only requires the pointer, so the exit-2 rule's content is guarded only in the reference file, which the body reaches by a single pointer.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/role_chain_artifact_test.go:217",
+          "engine/skills/foreman_restored_duties_test.go:30-41"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff; the change moves the exit-2 explanation to a new reference file and registers it in overlay.manifest as custom.",
+      "The new JSON-block helper has its own table test covering no block, two blocks and an unclosed block.",
+      "The body text of both SKILL.md files still carries the rules the new tests assert (task-line format, prototyper criteria, pointer to review-record.md)."
+    ]
+  }
+}

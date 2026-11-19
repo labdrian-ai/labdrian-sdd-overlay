@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "22e597e7b356843d4b57a2620c55d407ed349f26",
+    "head": "e9f96e0129cc231e1a7cc35431873ecb8d889186",
+    "diff_sha256": "a69094a190db5cba7fef68046c73425037d255b11d112ac6a2cfdafc2899810a",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/cmd/usage.go",
+      "engine/runtime/claude.go",
+      "engine/runtime/claude_output_style_test.go",
+      "engine/runtime/claude_ports.go",
+      "engine/runtime/claude_ports_test.go",
+      "engine/runtime/missing_test.go",
+      "engine/settings/main_agent.go",
+      "engine/settings/merge.go",
+      "engine/settings/output_style.go",
+      "engine/settings/output_style_test.go",
+      "engine/settings/owned_key.go",
+      "engine/settings/settingsfile/golden_unix_test.go",
+      "engine/settings/settingsfile/installer.go",
+      "engine/settings/settingsfile/output_style_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "22e597e7b356843d4b57a2620c55d407ed349f26",
+      "head": "e9f96e0129cc231e1a7cc35431873ecb8d889186",
+      "diff_sha256": "a69094a190db5cba7fef68046c73425037d255b11d112ac6a2cfdafc2899810a"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/cmd/usage.go",
+        "engine/runtime/claude.go",
+        "engine/runtime/claude_output_style_test.go",
+        "engine/runtime/claude_ports.go",
+        "engine/runtime/claude_ports_test.go",
+        "engine/runtime/missing_test.go",
+        "engine/settings/main_agent.go",
+        "engine/settings/merge.go",
+        "engine/settings/output_style.go",
+        "engine/settings/output_style_test.go",
+        "engine/settings/owned_key.go",
+        "engine/settings/settingsfile/golden_unix_test.go",
+        "engine/settings/settingsfile/installer.go",
+        "engine/settings/settingsfile/output_style_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/settings/output_style.go:22-23",
+        "claim": "MainAgentState and OutputStyleState are both aliases of KeyState, so they are the same type to the compiler. A state from InspectMainAgent can be compared against OutputStyleConflict, or passed where an output style state is expected, and it will still compile. The two port methods no longer give distinct return types, which weakens the type-level separation the previous distinct MainAgentState type gave.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/settings/main_agent.go:19",
+          "engine/settings/output_style.go:22",
+          "engine/settings/owned_key.go:11"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff: the ownedKey refactor keeps the previous agent-key semantics (missing, owned, conflict, add only when missing, remove only when owned).",
+      "Install and update notices: the agent notice comes first, then the output style notice, matching the new test that expects both.",
+      "Status order is hooks, agent key, output style key, then the rules block, as the commit message claims.",
+      "I found no behavior regression for the agent key and no observable defect in the new output style key."
+    ]
+  }
+}

@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "b2575e8d450bbb688f6e5ed61a2bdfa0751b76ce",
+    "head": "368afea25facf89a2b6194338d88e48e2d105a0b",
+    "diff_sha256": "00760da9203bfcde5d1364509e9470f3b1bc0b3fee7180bb5ca28bae2f690edc",
+    "paths": [
+      "engine/cmd/inception_chain_entry_test.go",
+      "engine/skills/foreman_restored_duties_test.go",
+      "engine/skills/foreman_skills_test.go",
+      "engine/skills/odd_role_skills_artifact_test.go",
+      "engine/skills/role_chain_artifact_test.go",
+      "overlay.manifest",
+      "skills/inception-pipeline/SKILL.md",
+      "skills/inception-pipeline/references/chain-entry.md",
+      "skills/odd-feature-doc/SKILL.md",
+      "skills/odd-feature-doc/references/format.md",
+      "skills/role-chain/SKILL.md",
+      "skills/role-chain/references/prototyper.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "b2575e8d450bbb688f6e5ed61a2bdfa0751b76ce",
+      "head": "368afea25facf89a2b6194338d88e48e2d105a0b",
+      "diff_sha256": "00760da9203bfcde5d1364509e9470f3b1bc0b3fee7180bb5ca28bae2f690edc"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/inception_chain_entry_test.go",
+        "engine/skills/foreman_restored_duties_test.go",
+        "engine/skills/foreman_skills_test.go",
+        "engine/skills/odd_role_skills_artifact_test.go",
+        "engine/skills/role_chain_artifact_test.go",
+        "overlay.manifest",
+        "skills/inception-pipeline/SKILL.md",
+        "skills/inception-pipeline/references/chain-entry.md",
+        "skills/odd-feature-doc/SKILL.md",
+        "skills/odd-feature-doc/references/format.md",
+        "skills/role-chain/SKILL.md",
+        "skills/role-chain/references/prototyper.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "skills/odd-feature-doc/SKILL.md:20",
+        "claim": "The task-line rule in the body is cut down to 'One line per task, its commit `-` until the task is committed'. The task-line format, the meaning of the box (status) and the route values `inline`/`delegated` now exist only in references/format.md. The body-level Log rule also drops what a later entry holds (a user correction verbatim, a decision or evidence). An agent that does not open the reference loses the exact format and these semantics. The commit claims to restore rules and move only examples, but this rule text moved out of the always-loaded body, and the updated tests weaken their assertions to match.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/odd-feature-doc/SKILL.md:20",
+          "skills/odd-feature-doc/SKILL.md:24",
+          "engine/skills/odd_role_skills_artifact_test.go:142"
+        ]
+      }
+    ],
+    "evidence": [
+      "The restored duties (builder extra findings, delivery per-task list, Activation sentence, ledger and trust clauses, foreman numbering) are present in the diff and asserted by the new tests.",
+      "The inception chain-entry example was moved to the reference and the cmd test splices it back, so the existing checks still run over it.",
+      "The overlay.manifest gains rows for the three new reference files."
+    ]
+  }
+}

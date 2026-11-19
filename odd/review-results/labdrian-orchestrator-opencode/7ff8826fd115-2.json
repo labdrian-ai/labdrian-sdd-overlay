@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "143b4b6d50d20dbee31150a172febc29989fa14a",
+    "head": "7ff8826fd115475677b53afc75a012790305b98b",
+    "diff_sha256": "e902976488b561e08c0fdb240ff224e2e33c2ac8736118b1aa539bba3f40c899",
+    "paths": [
+      "engine/agentgen/models_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "143b4b6d50d20dbee31150a172febc29989fa14a",
+      "head": "7ff8826fd115475677b53afc75a012790305b98b",
+      "diff_sha256": "e902976488b561e08c0fdb240ff224e2e33c2ac8736118b1aa539bba3f40c899"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/agentgen/models_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/agentgen/models_test.go:155-161",
+        "claim": "The test claims Generate and Check both report the malformed table and the missing source, but the loop only checks error text. If Generate partially writes files before failing, the test would not detect it. The assertion that the error does not contain 'roles/shaper' is a weak proxy for 'roles whose sources were read have nothing to report', since an error might mention shaper under a different path form (e.g. backslashes or a different path prefix) and still pass.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/agentgen/models_test.go:158-160"
+        ]
+      }
+    ],
+    "evidence": [
+      "Single test-only change; reviewed the added test for recall and readability. The test body is coherent: it removes the separator row and a builder body, then asserts both errors are surfaced for Generate and Check. No production code changed, so no regression risk. Only the weak negative assertion noted."
+    ]
+  }
+}

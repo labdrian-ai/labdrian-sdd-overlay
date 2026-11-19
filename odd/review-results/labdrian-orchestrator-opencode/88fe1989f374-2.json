@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "b3ce2931f12e01ae3256ada57dffd544d8aa585c",
+    "head": "88fe1989f37494e90d584c3bc5d634acd7df9897",
+    "diff_sha256": "7455fed43e22be31861f90d32cf2e67e30b07a7dd6e350cab0a9902e46b3c9fe",
+    "paths": [
+      "engine/cmd/runtime_test.go",
+      "engine/runtime/opencode.go",
+      "engine/runtime/opencode_memorycard.go",
+      "engine/runtime/opencode_memorycard_test.go",
+      "engine/runtime/opencode_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "b3ce2931f12e01ae3256ada57dffd544d8aa585c",
+      "head": "88fe1989f37494e90d584c3bc5d634acd7df9897",
+      "diff_sha256": "7455fed43e22be31861f90d32cf2e67e30b07a7dd6e350cab0a9902e46b3c9fe"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/runtime_test.go",
+        "engine/runtime/opencode.go",
+        "engine/runtime/opencode_memorycard.go",
+        "engine/runtime/opencode_memorycard_test.go",
+        "engine/runtime/opencode_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/runtime/opencode.go:192-198",
+        "claim": "The memorycard install check runs before the runtime-parity active-marker checks (missing marker, version, hash, prompt config and config root), not after them as the commit message says. When both plugins have a problem, a missing or broken memorycard plugin hides the parity restart-required message, and a memorycard 'artifact changed' restart message takes precedence over the parity mismatch messages. So the order of the parity messages relative to the memorycard messages is not what is claimed. Only the memorycard active-marker check runs last.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/opencode.go:192-198 placed before readActiveMarker at line 199",
+          "engine/runtime/opencode.go:220-222 memorycardActiveProblem placed after the parity checks"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff shows memorycardPluginProblem called right after agentsStatus and before readActiveMarker and the parity comparisons, while memorycardActiveProblem is called after the last parity check."
+    ]
+  }
+}

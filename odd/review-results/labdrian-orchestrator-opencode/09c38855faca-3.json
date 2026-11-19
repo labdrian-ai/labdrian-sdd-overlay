@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "2d3dc66b968fdd782e5ed006a3f76bba9d432bc8",
+    "head": "09c38855faca14b83bdb5e07db6d057c1e80b544",
+    "diff_sha256": "6e31c50b38c8eae31a92bb43821b2bb237aab9b3648bbc0747b354c1f9decd6e",
+    "paths": [
+      "engine/skills/foreman_restored_duties_test.go",
+      "engine/skills/foreman_skills_test.go",
+      "engine/skills/odd_role_skills_artifact_test.go",
+      "skills/odd-feature-doc/SKILL.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "2d3dc66b968fdd782e5ed006a3f76bba9d432bc8",
+      "head": "09c38855faca14b83bdb5e07db6d057c1e80b544",
+      "diff_sha256": "6e31c50b38c8eae31a92bb43821b2bb237aab9b3648bbc0747b354c1f9decd6e"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skills/foreman_restored_duties_test.go",
+        "engine/skills/foreman_skills_test.go",
+        "engine/skills/odd_role_skills_artifact_test.go",
+        "skills/odd-feature-doc/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/skills/foreman_skills_test.go:36",
+        "claim": "The negative guard that the foreman row must not claim the shaper's header or L1 was weakened. It used to reject any occurrence of \"header\" and of \"`L1`\". It now rejects only the exact strings \"header and `L1`\" and \"`L1`,\". A foreman row that says \"the header\" or mentions \"`L1`\" in any other phrasing would pass, so the test no longer enforces that the shaper owns the header and L1. The comment above it, which names the builder as owner of the box and commit, was not updated to match the new wording.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/foreman_skills_test.go:36"
+        ]
+      }
+    ],
+    "evidence": [
+      "The four changed paths in the diff were read in full.",
+      "The SKILL.md rows for builder and foreman agree with the updated test fragments.",
+      "The new isRecommendedTokenWarning helper matches the linter message by prefix and suffix. I could not check the actual linter message format from the diff, so I raised no finding on it."
+    ]
+  }
+}

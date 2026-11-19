@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "c60a653e46f3245811789023505eac56e0c15c35",
+    "head": "79bf40d9ed9831d4f6252b4758083adea5d9e556",
+    "diff_sha256": "bbe3b9468fcd5c4c766b1a174c573aa614ccf5e9f2d10584b4a8ee5b0e7b29ef",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "c60a653e46f3245811789023505eac56e0c15c35",
+      "head": "79bf40d9ed9831d4f6252b4758083adea5d9e556",
+      "diff_sha256": "bbe3b9468fcd5c4c766b1a174c573aa614ccf5e9f2d10584b4a8ee5b0e7b29ef"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Docs-only change to one feature document; no code or behavior is affected.",
+      "T19 and T24 rows now name commits, matching the L36 claim; the removed 'done:' notes are the ones L36 says it removes.",
+      "The full sha256 recorded in L36 is 64 hex characters and its prefix matches the b11700f1bb3f digest from L35.",
+      "The T19 sha range 6ca43786..f2fdef1f cannot be checked from the diff, since L28 is not shown, so no defect is asserted."
+    ]
+  }
+}

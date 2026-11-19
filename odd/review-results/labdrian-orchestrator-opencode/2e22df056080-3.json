@@ -1,0 +1,92 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ed82b5381b06dce4ef1f9f63ae6c3bc28edf04cf",
+    "head": "2e22df056080bb4d90ae83fe7454cb139c7d71d6",
+    "diff_sha256": "507de05783e89566ec7b31a095d3a590e3ec8907ae1e2f518969a9514e20fcf8",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/cmd/opencode_bridge_e2e_test.go",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+      "engine/runtime/labdrian-runtime-parity-plugin.mjs",
+      "engine/runtime/opencode_plugin.go",
+      "engine/runtime/opencode_plugin_live_test.go",
+      "engine/runtime/opencode_plugin_test.go",
+      "engine/runtime/opencode_stub_guard_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "ed82b5381b06dce4ef1f9f63ae6c3bc28edf04cf",
+      "head": "2e22df056080bb4d90ae83fe7454cb139c7d71d6",
+      "diff_sha256": "507de05783e89566ec7b31a095d3a590e3ec8907ae1e2f518969a9514e20fcf8"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/cmd/opencode_bridge_e2e_test.go",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+        "engine/runtime/labdrian-runtime-parity-plugin.mjs",
+        "engine/runtime/opencode_plugin.go",
+        "engine/runtime/opencode_plugin_live_test.go",
+        "engine/runtime/opencode_plugin_test.go",
+        "engine/runtime/opencode_stub_guard_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/runtime/opencode_plugin_live_test.go:33-52",
+        "claim": "The live test runs a real opencode with HOME and XDG dirs redirected to a sandbox but inherits the rest of the environment (os.Environ), so provider API keys or OPENCODE_* config variables, such as an OPENCODE_CONFIG_DIR or OPENCODE_CONFIG, can leak in and redirect where the plugin is loaded from or the marker is written. A 2-minute timeout also makes the test slow when the binary hangs on network or first-run setup (e.g. downloading dependencies for the plugin package). The result is a possibly flaky or environment-dependent test.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/opencode_plugin_live_test.go:38-47"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode_stub_guard_test.go:14-20",
+        "claim": "The guard regex only matches stubs written as a `\"tool.js\": ` backtick literal on one key and only counts `export class|const|let|var|function` declarations. A stub using `export { X }`, `export default`, a double-quoted string, or a differently keyed file would escape the guard, so the claim that it fails when any stub exports other names is weaker than stated. Paired with the `stubs < 2` check, which fails if a third legitimate stub is added elsewhere in the form that does not match, the guard is brittle.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/opencode_stub_guard_test.go:15-18"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode_stub_guard_test.go:12-14",
+        "claim": "The comment cites a developer-local probe path (/home/labdrian/.cache/t15-oc-T9SG/probe-exports.json) as the evidence for the real module's exports; that file is not in the repo and cannot be verified by other contributors or CI.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/opencode_stub_guard_test.go:12-14"
+        ]
+      }
+    ],
+    "evidence": [
+      "The plugin change from a named import to a namespace import is consistent with the stated real exports (CallID, Error), and `new Tool.Error(...)` stays valid under the namespace import.",
+      "The stubs now export Error and CallID, matching the claimed real module, and the version string and goldens are updated consistently.",
+      "The live test skips when opencode is absent, so CI without the binary is unaffected."
+    ]
+  }
+}

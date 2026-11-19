@@ -1,0 +1,72 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "b88a3c8ae3f8bd4de114b8bbc2b1bdd518d9828f",
+    "head": "000433822b6412ef3bd3f11d89eaf72b3384d279",
+    "diff_sha256": "50d852989a738555214bc087f0a7e67709400d05ac7fc6938c8a464914daf354",
+    "paths": [
+      "engine/runtime/ownerrules_text_test.go",
+      "instructions/owner-rules.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "b88a3c8ae3f8bd4de114b8bbc2b1bdd518d9828f",
+      "head": "000433822b6412ef3bd3f11d89eaf72b3384d279",
+      "diff_sha256": "50d852989a738555214bc087f0a7e67709400d05ac7fc6938c8a464914daf354"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/runtime/ownerrules_text_test.go",
+        "instructions/owner-rules.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/ownerrules_text_test.go:31-46",
+        "claim": "inOrder keeps going after a missing line: the inner loop runs `at` to the end of the file when a line is not found, so every later expected line is then reported missing too. One real defect (a single reworded or deleted rule) produces a cascade of false 'missing' errors and hides which line actually broke. It should stop at the first miss or restore `at`.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/ownerrules_text_test.go:34-46"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/ownerrules_text_test.go:84-90",
+        "claim": "The lint-rule test accepts the rule only when it sits between two newlines, but the Known errors rule is a whole line, not a bullet. It does not pin the `## Known errors` heading, so the rule could be moved under another section and the test would still pass. It also skips the leading-newline check for a rule at the start of the file. Weak pin relative to the other tests.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/ownerrules_text_test.go:84-90",
+          "instructions/owner-rules.md:19-21"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/ownerrules_text_test.go:94-103",
+        "claim": "The forbidden-name check covers gentle-ai, engram and mem_*, but the tests claim the file is the one source for the adapters. Nothing in this commit pins the Claude, OpenCode and Codex adapters to read it, and no test checks the file is non-empty beyond the verbatim lines. The 'Risk: none' claim holds, but the file is unreferenced by any code in this diff.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "engine/runtime/ownerrules_text_test.go:9-11"
+        ]
+      }
+    ],
+    "evidence": [
+      "Both changed paths were read in full from the diff; the markdown file is 45 added lines and the test file 125.",
+      "Each verbatim line asserted in the test matches the corresponding line in instructions/owner-rules.md character for character, and the section order matches the order the tests expect.",
+      "The test file pins rules, headings, LF endings and a single trailing newline, and the forbidden-name regexes do not match anything in the markdown.",
+      "No runtime behavior changes: the commit adds a static text file and a test that reads it."
+    ]
+  }
+}

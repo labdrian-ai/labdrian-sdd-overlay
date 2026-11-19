@@ -1,0 +1,58 @@
+{
+  "kind": "polisher",
+  "base": "d94eb991178ef17812f48543dc5809d85f5d6e5e",
+  "head": "fbd629c6d6fcabc70af3f6ec4ab8e1d10e3db93c",
+  "diff_sha256": "833a2fc0cba675f30bcd7a3175d0da4812a0cb47258e2279f32447d6333ba25f",
+  "findings": {
+    "findings": [
+      {
+        "id": "V-ADV1",
+        "severity": "SUGGESTION",
+        "location": "labdrian status",
+        "claim": "Independent verifier advisory: settings that still hold the bare command make labdrian status exit 2 (degraded) until install-hooks runs. Answered: requested by S19/L88 (status warns when the entry is bare).",
+        "evidence": [
+          "verifier probe 5."
+        ]
+      },
+      {
+        "id": "D-F1",
+        "severity": "SUGGESTION",
+        "location": "engine/cmd/codegraph_prompt_hook.go:55-62",
+        "claim": "ErrOutputTooLarge checked after ExitCode (series review of d94eb991). Fixed in 7764d094.",
+        "evidence": [
+          "series d94eb991 reviewer F1; RED/GREEN TestCodegraphPromptHookReportsTooMuchOutputBeforeAnExitCode."
+        ]
+      },
+      {
+        "id": "D-F2",
+        "severity": "SUGGESTION",
+        "location": "engine/hookwire/prompt.go:49-51",
+        "claim": "System notification mark matched anywhere (series review of d94eb991, both reviewers). Fixed in 7764d094: only as the first non-empty line after a leading system-reminder tag.",
+        "evidence": [
+          "RED/GREEN TestCodegraphPromptHookPassesAPromptThatQuotesTheNotificationMarkThrough."
+        ]
+      },
+      {
+        "id": "D-F3",
+        "severity": "SUGGESTION",
+        "location": "engine/cmd/codegraph_prompt_hook.go:54-58",
+        "claim": "Signal-killed codegraph exited 1, not 128+signal (series review of d94eb991). Fixed in 7764d094.",
+        "evidence": [
+          "RED/GREEN TestCodegraphPromptHookExitsLikeAShellForASignal; differential signal-exit=143."
+        ]
+      },
+      {
+        "id": "F-F1",
+        "severity": "WARNING",
+        "location": "engine/settings/codegraph_prompt.go:24-27,47-57",
+        "claim": "Wrapper recognised only for the current engine path (series review of fbd629c6, both reviewers). Fixed in 7764d094: recognised by shape; install rewrites an old-path wrapper in place, uninstall restores from any wrapper, status reports it wrapped.",
+        "evidence": [
+          "RED/GREEN 4 settings/status tests."
+        ]
+      }
+    ],
+    "evidence": [
+      "independent verifier probes 1-8 pass, no blockers; series review d94eb991..fbd629c6."
+    ]
+  }
+}

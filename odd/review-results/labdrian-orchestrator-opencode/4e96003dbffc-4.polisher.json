@@ -1,0 +1,31 @@
+{
+  "kind": "polisher",
+  "base": "dd99e6e57ccee870faca20715f6d2a11691daaaf",
+  "head": "4e96003dbffc56ee2042b62e2b5065a935c4907d",
+  "diff_sha256": "5cc6994014775e7b6185fa69201f831921ca85a3d5623018b325a5978470bcc2",
+  "findings": {
+    "findings": [
+      {
+        "id": "S-3",
+        "severity": "WARNING",
+        "location": "labdrian-runtime-parity-plugin.mjs:316",
+        "claim": "The pause note lost its interpolation (\"-e seconds\"). Fixed in 54b0cbdd and pinned by the test.",
+        "evidence": [
+          "series review of 4e96003d (two judges)."
+        ]
+      },
+      {
+        "id": "S-4",
+        "severity": "SUGGESTION",
+        "location": "labdrian-runtime-parity-plugin.mjs:310",
+        "claim": "With the gate never paused, each tool call waits a full timeout on a hung engine. Kept: the gate cannot fail open silently for a window; the note now says tool calls each wait.",
+        "evidence": [
+          "series review of 4e96003d."
+        ]
+      }
+    ],
+    "evidence": [
+      "RED observed for both 4e96003d rules (the hung-engine timings and the path/id values); suite 85 ok, vet and gofmt clean."
+    ]
+  }
+}

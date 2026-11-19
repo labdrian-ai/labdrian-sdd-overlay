@@ -1,0 +1,40 @@
+{
+  "kind": "polisher",
+  "base": "caa0f5234cc43fb04f060043d1087ee8ff6ccdac",
+  "head": "27afd80bb00557426c97b275e710a907d7f36906",
+  "diff_sha256": "541d9c547a00859cd3557238ab70916410883f276ff9d5ee74414aa5cc2a38c3",
+  "findings": {
+    "findings": [
+      {
+        "id": "P1",
+        "severity": "WARNING",
+        "location": "engine/agentgen/opencode.go:37-47",
+        "claim": "Doc comment said every tool is denied without a Claude equivalent while (a) denied only edit and shell. Resolved by the planned second commit 59457396, which adds the other denies the comment describes.",
+        "evidence": [
+          "59457396 opencode.go openCodeDenies"
+        ]
+      },
+      {
+        "id": "P2",
+        "severity": "SUGGESTION",
+        "location": "engine/agentgen",
+        "claim": "Stale foreman \"Claude file only\" comments, message and test name. Fixed in c0fa35a7; the permissions comment was already rewritten in 59457396.",
+        "evidence": [
+          "c0fa35a7"
+        ]
+      },
+      {
+        "id": "P3",
+        "severity": "SUGGESTION",
+        "location": "engine/agentgen/roles.go:308",
+        "claim": "projectClaude comment repeats no Pi or Codex file. Answered: kept, the first clause names which role, the second what the function leaves out.",
+        "evidence": [
+          "series review of c0fa35a7"
+        ]
+      }
+    ],
+    "evidence": [
+      "series reviews caa0f523..c0fa35a7"
+    ]
+  }
+}

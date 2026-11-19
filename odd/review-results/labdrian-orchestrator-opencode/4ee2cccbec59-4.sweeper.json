@@ -1,0 +1,15 @@
+{
+  "kind": "sweeper",
+  "base": "8df8f69a8b11dea3ea9fa254c10a01c283444981",
+  "head": "4ee2cccbec59217fa63581813568192e62737c01",
+  "diff_sha256": "972c836bd4d325fd50c6088483eb7f3e331dfb403ba651f77966d84558c87ea8",
+  "sweep": "4ee2cccbec59-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T2 errcheck engine: statestore/lastline.go: unchecked error: defer f.Close()",
+      "disposition": "finding",
+      "evidence": "Fixed by the later commit f82925ff: the read-only Close is ignored explicitly with a comment (defer func() { _ = f.Close() }()); the sweep on f82925ff is clean."
+    }
+  ]
+}

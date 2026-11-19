@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "b4f5adec4e7c1aa909fd49b13347b4215e12aa3a",
+    "head": "f5600a8d93b2c27933215ef412c339fe8de543e3",
+    "diff_sha256": "cf65de2b7bd30c29114c38178f9852a7be34f3cb8b36bdb37a7234e2e12c6eb1",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "b4f5adec4e7c1aa909fd49b13347b4215e12aa3a",
+      "head": "f5600a8d93b2c27933215ef412c339fe8de543e3",
+      "diff_sha256": "cf65de2b7bd30c29114c38178f9852a7be34f3cb8b36bdb37a7234e2e12c6eb1"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The change only touches the feature document: it ticks T25b with commits a5b877f2 and 83a671b8 and adds Log entry L53.",
+      "The T23 row edit follows L52 (translate on read, rewrite on next save, Risk: 1, independent verifier). The forecast widens from 130-320 to 150-360 lines, and the row now says what L53 claims it says.",
+      "L53 names b4f5adec as the inline fix, which matches the base commit. The 85-package test counts are consistent.",
+      "I found no internal contradiction or dangling reference that this commit introduces."
+    ]
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "kind": "sweeper",
+  "base": "16825fd3c345f8f0c10c4f96a10e5512f59fdc19",
+  "head": "cd1e23274c3ed77433c31b34b767c728e1ae44f2",
+  "diff_sha256": "36dc3cf54706093874ec9b037372f4df9d57d5672037e358cdfe61ce2c6d94c2",
+  "sweep": "cd1e23274c3e-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 name: TestLabdrianRuntimeParityPluginEvaluatesContextAwareContracts",
+      "disposition": "live",
+      "evidence": "Renamed when the node-run tests moved to opencode_plugin_test.go (TestOpenCodePluginEvaluatesContextAwareContracts); the only hit is the archived openspec verify report, which records history."
+    },
+    {
+      "candidate": "T1 name: TestLabdrianRuntimeParityPluginSkipsMalformedLegacyContextMetadata",
+      "disposition": "live",
+      "evidence": "Moved and renamed with the node-run tests; the only hit is the archived openspec verify report (history)."
+    },
+    {
+      "candidate": "T1 name: base",
+      "disposition": "live",
+      "evidence": "A local identifier removed from a test; the 2354 hits are the common word in unrelated files."
+    },
+    {
+      "candidate": "T1 name: marker",
+      "disposition": "live",
+      "evidence": "A local identifier removed from a test; the hits are the common word in unrelated files."
+    },
+    {
+      "candidate": "T1 name: output",
+      "disposition": "live",
+      "evidence": "A local identifier removed from a test; the hits are the common word in unrelated files."
+    }
+  ]
+}

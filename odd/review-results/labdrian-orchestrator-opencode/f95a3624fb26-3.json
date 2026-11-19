@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f3cbdc308e5698d3c15f6d4ca97703e5f52f623e",
+    "head": "f95a3624fb26b61e886b3ce3aa2f7df5159b13a8",
+    "diff_sha256": "7501a91e801c67efbf4bf4447405f510d14ffbab3219705f39c3748d0965c742",
+    "paths": [
+      "engine/settings/main_agent.go",
+      "engine/settings/main_agent_test.go",
+      "engine/settings/merge.go",
+      "engine/settings/settingsfile/golden_unix_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f3cbdc308e5698d3c15f6d4ca97703e5f52f623e",
+      "head": "f95a3624fb26b61e886b3ce3aa2f7df5159b13a8",
+      "diff_sha256": "7501a91e801c67efbf4bf4447405f510d14ffbab3219705f39c3748d0965c742"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/settings/main_agent.go",
+        "engine/settings/main_agent_test.go",
+        "engine/settings/merge.go",
+        "engine/settings/settingsfile/golden_unix_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/settings/main_agent.go:46-53",
+        "claim": "Ownership is decided by value alone. If a user had already set \"agent\": \"foreman\" before install, Merge treats it as owned (no change), and uninstall-hooks then deletes it, removing a key the overlay never wrote. The commit says a foreign value is never removed, but nothing distinguishes a pre-existing \"foreman\" value from one the overlay wrote.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/settings/main_agent.go:46-53",
+          "engine/settings/main_agent.go:36-42"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/settings/main_agent.go:36-43",
+        "claim": "When the agent key holds a foreign value, Merge skips it and reports success, with no signal that the foreman main-session agent was not enabled. The comment says status reports the conflict, but nothing in this change consumes MainAgent, so the install is silently partial until that lands. The new tests also do not assert Merge's changed result for the foreign case.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/settings/main_agent.go:36-43",
+          "engine/settings/main_agent_test.go:46-52"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed all four changed paths from the diff alone.",
+      "MainAgent compares the interface{} value with the string constant, so non-string values such as 7 or null count as conflict and are preserved, which matches the stated behavior.",
+      "removeHooks now returns the main-agent change when the hooks map is absent, so uninstall still removes the key in that case."
+    ]
+  }
+}

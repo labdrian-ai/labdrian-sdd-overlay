@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "08038624e08c52c0161b3a55374be12f1641cdb9",
+    "head": "14bbfc55807d4a7579e042db2bbd224d38ed3e0b",
+    "diff_sha256": "aa86536f7f25261aa9d90060b7d2e3c11ec7037f8e0e3764f7e84e6af6e516e3",
+    "paths": [
+      "engine/agentgen/foreman_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "08038624e08c52c0161b3a55374be12f1641cdb9",
+      "head": "14bbfc55807d4a7579e042db2bbd224d38ed3e0b",
+      "diff_sha256": "aa86536f7f25261aa9d90060b7d2e3c11ec7037f8e0e3764f7e84e6af6e516e3"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/agentgen/foreman_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/agentgen/foreman_test.go:82-87",
+        "claim": "The frontmatter check can pass without finding the frontmatter. If the file does not begin with \"---\\n\", TrimPrefix leaves it unchanged. Cut then splits at the first later \"\\n---\\n\", so the checked region may be only a pre-fence preamble or an arbitrary slice. The test never asserts that the opening and closing fences were found (Cut's found result is discarded). A malformed or moved frontmatter therefore lets an effort field go undetected. Also, HasPrefix on the raw line no longer catches an indented key such as \"  thinking: x\" or a spaced key such as \"effort :\". The old Contains check caught the indented form, so recall drops.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/agentgen/foreman_test.go:82",
+          "engine/agentgen/foreman_test.go:85"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/agentgen/foreman_test.go:82",
+        "claim": "If the closing fence is the last line with no trailing newline, \"\\n---\\n\" is not found. Cut then returns the whole file as the frontmatter, so body prose lines starting with \"thinking:\" would fail the test. That is the false positive this commit set out to remove. CRLF line endings would behave the same way.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/agentgen/foreman_test.go:82"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only engine/agentgen/foreman_test.go changed; the whole diff was read.",
+      "The new parsing relies on exact \"---\\n\" and \"\\n---\\n\" delimiters and discards Cut's found flag."
+    ]
+  }
+}

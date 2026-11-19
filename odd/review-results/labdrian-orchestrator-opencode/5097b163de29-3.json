@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "4f7d93d949a7ff1786622903c5f5f7c8716d206d",
+    "head": "5097b163de294c48b5b542347d031df056a8d33a",
+    "diff_sha256": "9ebc3140e2a0af095f4c04a0133770ab1139561d91a4742483076ab955470bf8",
+    "paths": [
+      "engine/cmd/inception_chain_entry_test.go",
+      "engine/skills/foreman_restored_duties_test.go",
+      "engine/skills/foreman_skills_test.go",
+      "engine/skills/odd_role_skills_artifact_test.go",
+      "skills/odd-feature-doc/SKILL.md",
+      "skills/odd-feature-doc/references/format.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "4f7d93d949a7ff1786622903c5f5f7c8716d206d",
+      "head": "5097b163de294c48b5b542347d031df056a8d33a",
+      "diff_sha256": "9ebc3140e2a0af095f4c04a0133770ab1139561d91a4742483076ab955470bf8"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/inception_chain_entry_test.go",
+        "engine/skills/foreman_restored_duties_test.go",
+        "engine/skills/foreman_skills_test.go",
+        "engine/skills/odd_role_skills_artifact_test.go",
+        "skills/odd-feature-doc/SKILL.md",
+        "skills/odd-feature-doc/references/format.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/cmd/inception_chain_entry_test.go:151-153",
+        "claim": "The closer scan now treats any later line starting with a fence as an unclosed-block error, but the new opener check only strips spaces, not tabs. A tab-indented fence is neither an opener nor a closer here. Markdown allows at most 3 leading spaces for a fence, yet TrimLeft accepts any number of spaces, so a 4+ space indented line (an indented code block) is treated as a fence. This is a minor parser looseness in a test helper.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/inception_chain_entry_test.go:139",
+          "engine/cmd/inception_chain_entry_test.go:150-153"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/skills/foreman_restored_duties_test.go:101-114",
+        "claim": "The new headroom test asserts the body is at most 690 estimated tokens, a threshold tied to the current wording. The added `L<n>` clause and `memorycard` word in the body consume headroom, so future legitimate edits to the Hard Rules will fail this test with a token-count message rather than a behavioral one. The check is brittle but intentional.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/foreman_restored_duties_test.go:104-107"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed all six changed paths in the diff.",
+      "The SKILL.md wording changes match the strings asserted by the updated tests (`L<n>` is its shaper Log entry; commit `-` until the task is committed; memorycard mirror `odd/<feature>/tasks`).",
+      "The overview sentence was moved to references/format.md and the new test asserts it is present there.",
+      "The chain-entry closer logic returns the first exact fence line and errors on another opening fence, with tests covering the indented, unclosed-then-text, and indented-second-block cases."
+    ]
+  }
+}

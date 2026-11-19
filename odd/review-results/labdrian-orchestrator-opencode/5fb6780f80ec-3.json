@@ -1,0 +1,73 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ebdac5b14c68c2ac61f72619f8eaac032d485e67",
+    "head": "5fb6780f80ecf9c072dab70a63be576109ea896f",
+    "diff_sha256": "92a30dad7748d91cd909b63c595935922136adde738a148979dd8ebdb057471c",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/skills/approval_gate_test.go",
+      "engine/skills/approval_write.go",
+      "engine/skills/branch_pr_artifact_test.go",
+      "engine/skills/gentle_detach_test.go",
+      "overlay.manifest",
+      "skills.registry.yaml",
+      "skills/branch-pr/SKILL.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "ebdac5b14c68c2ac61f72619f8eaac032d485e67",
+      "head": "5fb6780f80ecf9c072dab70a63be576109ea896f",
+      "diff_sha256": "92a30dad7748d91cd909b63c595935922136adde738a148979dd8ebdb057471c"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/skills/approval_gate_test.go",
+        "engine/skills/approval_write.go",
+        "engine/skills/branch_pr_artifact_test.go",
+        "engine/skills/gentle_detach_test.go",
+        "overlay.manifest",
+        "skills.registry.yaml",
+        "skills/branch-pr/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "skills/branch-pr/SKILL.md:30",
+        "claim": "The merge gate disagrees with the hard rule. The Hard Rule says a merge needs `gh pr checks` showing no failing line. The Decision Gate also stops on a pending line. An agent or owner reading only one of the two gets different merge conditions, and the test only checks for the phrase 'no failing line'.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/branch-pr/SKILL.md:18",
+          "skills/branch-pr/SKILL.md:30"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "CHANGELOG.md:12",
+        "claim": "The adjacent, earlier CHANGELOG entry still says `branch-pr` is unchanged. This commit rewrites it, so the two entries now contradict each other.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "CHANGELOG.md:11",
+          "CHANGELOG.md:12"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff. The branch-pr skill text, the manifest row, the registry row, the lint baseline list and its pinned size (16 to 15) are consistent with one another.",
+      "The new tests' required phrases (`only on an owner message that asks for`, `exited 0`, `closing entry`, `no failing line`, both regexes, `Risk:`, `Co-Authored-By`) all appear in the new SKILL.md body.",
+      "None of the banned strings appear in the new SKILL.md."
+    ]
+  }
+}

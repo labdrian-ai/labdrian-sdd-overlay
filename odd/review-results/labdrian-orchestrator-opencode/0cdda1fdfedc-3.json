@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "2dacee5f10e1299e86fe1c4246fbe13df0e80c91",
+    "head": "0cdda1fdfedc706677cdd7d7e464590ea36fdb6c",
+    "diff_sha256": "4c3a71bc48790533ffe8a31b214456eae58fdf2f16ced60ef7d4b060c5d7f7d2",
+    "paths": [
+      "engine/cmd/runtime_registry.go",
+      "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+      "engine/runtime/core/config.go",
+      "engine/runtime/opencode.go",
+      "engine/runtime/opencode_json.go",
+      "engine/runtime/opencode_json_write.go",
+      "engine/runtime/opencode_lookup.go",
+      "engine/runtime/opencode_lookup_test.go",
+      "engine/runtime/opencode_servers_test.go",
+      "engine/runtime/register.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "2dacee5f10e1299e86fe1c4246fbe13df0e80c91",
+      "head": "0cdda1fdfedc706677cdd7d7e464590ea36fdb6c",
+      "diff_sha256": "4c3a71bc48790533ffe8a31b214456eae58fdf2f16ced60ef7d4b060c5d7f7d2"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/runtime_registry.go",
+        "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+        "engine/runtime/core/config.go",
+        "engine/runtime/opencode.go",
+        "engine/runtime/opencode_json.go",
+        "engine/runtime/opencode_json_write.go",
+        "engine/runtime/opencode_lookup.go",
+        "engine/runtime/opencode_lookup_test.go",
+        "engine/runtime/opencode_servers_test.go",
+        "engine/runtime/register.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/runtime/opencode_json_write.go:55-58",
+        "claim": "An install over an existing bare-name entry from an earlier install skips the server because it is present, so it never upgrades it to the absolute path. Users who already installed keep the launcher-PATH failure this commit sets out to fix, and the install message does not mention it. Because owns() now treats both forms as current, Status also reports supported for the bare entry, so the problem is invisible.",
+        "evidence_class": "inferential",
+        "causal_disposition": "behavior-activated",
+        "proof_refs": [
+          "engine/runtime/opencode_json_write.go:55-58",
+          "engine/runtime/opencode_json.go:185"
+        ]
+      }
+    ],
+    "evidence": [
+      "Diff-only review. The write loop continues when serversOf(root)[server.name] is present and never compares the existing form against the resolved one.",
+      "The new test TestOpenCodeOwnsOurEntryInEitherFormAndNothingElse asserts the bare entry is kept after Install, which confirms the behavior is intended but leaves existing installs unfixed."
+    ]
+  }
+}

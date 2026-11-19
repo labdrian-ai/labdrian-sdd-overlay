@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "dec120a460c8fdd408fffb7f5b9d62c7bebf3cb1",
+    "head": "ed82b5381b06dce4ef1f9f63ae6c3bc28edf04cf",
+    "diff_sha256": "3c4702527473c78d82a61162047907c8834debf31771d70f1c6f5231cbd91d82",
+    "paths": [
+      "CHANGELOG.md",
+      "bin/lib/sync_check.sh",
+      "engine/installer/agent_deploy_test.go",
+      "engine/installer/testdata/routing_pins.golden"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "dec120a460c8fdd408fffb7f5b9d62c7bebf3cb1",
+      "head": "ed82b5381b06dce4ef1f9f63ae6c3bc28edf04cf",
+      "diff_sha256": "3c4702527473c78d82a61162047907c8834debf31771d70f1c6f5231cbd91d82"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "bin/lib/sync_check.sh",
+        "engine/installer/agent_deploy_test.go",
+        "engine/installer/testdata/routing_pins.golden"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "bin/lib/sync_check.sh:91",
+        "claim": "With the skip now limited to copies_skills targets, a non-skills target whose tpath is missing proceeds into the checks. For opencode the header still prints the absent skills directory as the target path, and any code after this line that walks $tpath (for example a find or a digest over the skills directory) is run on a nonexistent directory. The diff does not show those later lines, so whether they tolerate a missing directory is unproven. The golden output shows a clean in-sync verdict for opencode, which suggests they do, but the case where agents are also missing is not pinned.",
+        "evidence_class": "inferential",
+        "causal_disposition": "behavior-activated",
+        "proof_refs": [
+          "bin/lib/sync_check.sh:91"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/installer/agent_deploy_test.go:44",
+        "claim": "The test asserts only that GADU.md is reported as OVERLAY_NOT_DEPLOYED after the agent is removed. It does not check the exit status or the verdict line, so it would still pass if the removed-agent case produced an inconsistent verdict. The first sync-check call also requires a nil error, while the removed-agent case is expected to report drift, so a nonzero exit on drift would fail the test at the second call's err check.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/installer/agent_deploy_test.go:44"
+        ]
+      }
+    ],
+    "evidence": [
+      "The only production change is one condition in bin/lib/sync_check.sh: the skip now requires copies_skills \"$t\" as well as a missing directory.",
+      "The golden pins now show opencode reaching its IN_SYNC and UPSTREAM_CHANGED agent rows with a VERDICT line, so the agent drift check runs when the skills directory is absent.",
+      "The CHANGELOG entry matches the code change. The earlier line that said sync-check skips opencode while the directory is absent was removed, so it no longer contradicts the new behavior."
+    ]
+  }
+}

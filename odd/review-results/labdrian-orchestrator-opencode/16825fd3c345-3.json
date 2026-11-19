@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "5c22600b0406b1708279b0170b3f46b69e5df772",
+    "head": "16825fd3c345f8f0c10c4f96a10e5512f59fdc19",
+    "diff_sha256": "bcd85bd5657f0b7cc86c6ce3601761127865e5b732749bcf161739fc16d2618b",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "5c22600b0406b1708279b0170b3f46b69e5df772",
+      "head": "16825fd3c345f8f0c10c4f96a10e5512f59fdc19",
+      "diff_sha256": "bcd85bd5657f0b7cc86c6ce3601761127865e5b732749bcf161739fc16d2618b"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:484",
+        "claim": "L59 states `review check 87f26495..HEAD after T9: clear` as a fact, but this very commit is a new head after that check. A review of this log-only commit cannot already be recorded, so the claim may describe a range that does not include the commit that wrote it. The log entry also leaves L58's earlier text 'the ./cmd process test RED not captured' unamended, so the record contains a contradictory statement resolved only by the later L59 entry.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:484"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff is documentation only (one Log entry appended); no code or behavior changes.",
+      "The L59 entry cites test names and a revert-to-4d34b336 procedure that cannot be verified from the diff.",
+      "The 'review check clear' statement is self-referential about the head and cannot be confirmed from the diff."
+    ]
+  }
+}

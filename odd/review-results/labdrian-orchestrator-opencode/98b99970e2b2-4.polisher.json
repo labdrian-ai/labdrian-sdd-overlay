@@ -1,0 +1,67 @@
+{
+  "kind": "polisher",
+  "base": "d3227f9c66b1db58c5621bd2c8ffcef369e86dcd",
+  "head": "98b99970e2b26196a3d723308e7e00878bc87d5a",
+  "diff_sha256": "8521c2e320b1dbd1f23511ad4c2cd23a87a5ee65d5d74478befb0bace75a27ba",
+  "findings": {
+    "findings": [
+      {
+        "id": "A-F1",
+        "severity": "WARNING",
+        "location": "skills/_shared/procedural-candidate-detection.md section 3 item 6",
+        "claim": "Merging two legacy entries into one id kept 'the earlier entry' without defining earlier and without recomputing FirstObserved/LastObserved, so OccurrencesSincePromotion could miss an occurrence. Fixed in afb10297 (earliest timestamp, recompute, counts after the merge) and ddced25e (ties keep the entry listed first; entries straddling a Registered/Promoted at: count once, before the baseline, as one observation per L48).",
+        "evidence": [
+          "judge A round 1 on the 069c0d73 tree; parent check: TestProceduralCandidateContractRewritesLegacyOccurrenceIDsOnSave and TestProceduralCandidateContractCarriesTheExceptionAndTheMergeTies pin the fixed text at 7ca4f581."
+        ]
+      },
+      {
+        "id": "A-F5",
+        "severity": "WARNING",
+        "location": "skills/_shared/procedural-candidate-detection.md acceptance item 3",
+        "claim": "Acceptance item 3 said OccurrenceCount 'incremented', against item 4 'always derived'. Pre-existing on the base; fixed anyway in afb10297 ('re-derived').",
+        "evidence": [
+          "judge A round 1; parent check: forbidText on '`OccurrenceCount` incremented' in TestProceduralCandidateContractCountIsRederivedAndMergeKeepsTheLatch."
+        ]
+      },
+      {
+        "id": "A-F6",
+        "severity": "SUGGESTION",
+        "location": "skills/_shared/procedural-candidate-detection.md section 4",
+        "claim": "A count below Threshold after a merge on a latched record was not stated as valid. Fixed in afb10297 (latch sentence) and ddced25e (emission-table note: an emitted or rejected record at or below N after a merge keeps its Status and is never re-emitted).",
+        "evidence": [
+          "judge A round 1; parent check: pinned in TestProceduralCandidateContractCountIsRederivedAndMergeKeepsTheLatch and TestProceduralCandidateContractCarriesTheExceptionAndTheMergeTies."
+        ]
+      },
+      {
+        "id": "A-F7",
+        "severity": "SUGGESTION",
+        "location": "skills/_shared/procedural-candidate-detection.md section 8",
+        "claim": "Informational: drafts hold no Occurrences and their History is never rewritten, so drafts are not touched by the rewrite. No change needed.",
+        "evidence": [
+          "judge A round 1, deterministic from the text."
+        ]
+      },
+      {
+        "id": "B-F2",
+        "severity": "SUGGESTION",
+        "location": "skills/_shared/procedural-candidate-detection.md acceptance checklists",
+        "claim": "No acceptance items for translate on read, rewrite on save, merge, unknown ids and resolve failure. Fixed in afb10297 (legacy-id acceptance checklist).",
+        "evidence": [
+          "judge B round 1; parent check: TestProceduralCandidateContractHasALegacyIDAcceptanceChecklist."
+        ]
+      },
+      {
+        "id": "B-F3",
+        "severity": "SUGGESTION",
+        "location": "skills/_shared/procedural-candidate-detection.md section 3 item 6",
+        "claim": "Same as A-F1 (undefined 'earlier', FirstObserved/LastObserved not recomputed). Fixed in afb10297 and ddced25e.",
+        "evidence": [
+          "judge B round 1; parent check as A-F1."
+        ]
+      }
+    ],
+    "evidence": [
+      "Two blind polisher judges read the 069c0d73 tree (which holds 98b99970 and 069c0d73) on a detached worktree; this record holds the findings the parent attributed to 98b99970 by its diff (git show 98b99970). Judge A read the shared contract and SKILL.md in full and grepped the engine; judge B also read candidate_record.go, list_candidates.go and resolver.go. Neither ran tests. The independent verifier (Risk 1) passed the suite, vet, gofmt, the engine/text consistency probe, the projection differential and the History append-only check on 069c0d73."
+    ]
+  }
+}

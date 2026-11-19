@@ -1,0 +1,55 @@
+{
+  "kind": "sweeper",
+  "base": "18b989fb097cb5453e57c9d9079b62ef12d3b044",
+  "head": "f68b765a121f2e5baf8dd9dd5b488278cd0efed9",
+  "diff_sha256": "f75376e4f9b82da41cc465982cc51ccaed5567c3edd4c0579ed2c7ffcda79100",
+  "sweep": "f68b765a121f-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 path: skills/_shared/engram-convention.md",
+      "disposition": "live",
+      "evidence": "Deleted on purpose by T29 (S17, L68); Grep at the head finds no live reader outside docs/architecture history and CHANGELOG."
+    },
+    {
+      "candidate": "T1 path: skills/_shared/openspec-convention.md",
+      "disposition": "live",
+      "evidence": "Deleted on purpose by T29 (S17, L68); Grep at the head finds no live reader outside docs/architecture history and CHANGELOG."
+    },
+    {
+      "candidate": "T1 path: skills/_shared/persistence-contract.md",
+      "disposition": "live",
+      "evidence": "Deleted on purpose by T29 (S17, L68); Grep at the head finds no live reader outside docs/architecture history and CHANGELOG."
+    },
+    {
+      "candidate": "T1 path: skills/_shared/review-ledger-contract.md",
+      "disposition": "live",
+      "evidence": "Deleted on purpose by T29 (S17, L68); Grep at the head finds no live reader outside docs/architecture history and CHANGELOG."
+    },
+    {
+      "candidate": "T1 path: skills/_shared/sdd-orchestrator-workflow.md",
+      "disposition": "live",
+      "evidence": "Deleted on purpose by T29 (S17, L68); Grep at the head finds no live reader outside docs/architecture history and CHANGELOG."
+    },
+    {
+      "candidate": "T1 path: skills/_shared/sdd-phase-common.md",
+      "disposition": "live",
+      "evidence": "Deleted on purpose by T29 (S17, L68); Grep at the head finds no live reader outside docs/architecture history and CHANGELOG."
+    },
+    {
+      "candidate": "T1 path: skills/_shared/sdd-status-contract.md",
+      "disposition": "live",
+      "evidence": "Deleted on purpose by T29 (S17, L68); Grep at the head finds no live reader outside docs/architecture history and CHANGELOG."
+    },
+    {
+      "candidate": "T1 path: skills/_shared/skill-resolver.md",
+      "disposition": "live",
+      "evidence": "Deleted on purpose by T29 (S17, L68); Grep at the head finds no live reader outside docs/architecture history and CHANGELOG."
+    },
+    {
+      "candidate": "T3:  M odd/tasks/labdrian-orchestrator-opencode.md",
+      "disposition": "live",
+      "evidence": "The feature document is the parent logbook, edited between commits; committed with the review records at delivery."
+    }
+  ]
+}

@@ -1,0 +1,73 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "18b989fb097cb5453e57c9d9079b62ef12d3b044",
+    "head": "f68b765a121f2e5baf8dd9dd5b488278cd0efed9",
+    "diff_sha256": "f75376e4f9b82da41cc465982cc51ccaed5567c3edd4c0579ed2c7ffcda79100",
+    "paths": [
+      "overlay.manifest",
+      "skills/_shared/engram-convention.md",
+      "skills/_shared/openspec-convention.md",
+      "skills/_shared/persistence-contract.md",
+      "skills/_shared/review-ledger-contract.md",
+      "skills/_shared/sdd-orchestrator-workflow.md",
+      "skills/_shared/sdd-phase-common.md",
+      "skills/_shared/sdd-status-contract.md",
+      "skills/_shared/skill-resolver.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "18b989fb097cb5453e57c9d9079b62ef12d3b044",
+      "head": "f68b765a121f2e5baf8dd9dd5b488278cd0efed9",
+      "diff_sha256": "f75376e4f9b82da41cc465982cc51ccaed5567c3edd4c0579ed2c7ffcda79100"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "overlay.manifest",
+        "skills/_shared/engram-convention.md",
+        "skills/_shared/openspec-convention.md",
+        "skills/_shared/persistence-contract.md",
+        "skills/_shared/review-ledger-contract.md",
+        "skills/_shared/sdd-orchestrator-workflow.md",
+        "skills/_shared/sdd-phase-common.md",
+        "skills/_shared/sdd-status-contract.md",
+        "skills/_shared/skill-resolver.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "overlay.manifest:93-94",
+        "claim": "The deleted sdd-orchestrator-workflow.md says that pipeline_vocabulary_pins_test.go (TestChainingSpellingsTableCountsEverySurface and related tests) pins prose in it. The diff does not show whether those tests read this file. If they do, deleting it breaks them. The commit's 'no file or test reads them' claim is unverified from the diff.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "skills/_shared/sdd-orchestrator-workflow.md: 'TestChainingSpellingsTableCountsEverySurface in tools/entry-contract-validator/pipeline_vocabulary_pins_test.go ... fails when this table's own headline count stops matching its row count'"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "overlay.manifest:93-94",
+        "claim": "The deleted files hold the ODD task persistence and recovery rules (odd/tasks mirror, Engram topic odd/{feature}/tasks) and the skill-resolver protocol, which includes the always-on adhd-output rule. Remaining skills, agents or _shared/SKILL.md that point to persistence-contract.md, engram-convention.md or skill-resolver.md would now have dangling references. The diff cannot show whether any remain.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "skills/_shared/persistence-contract.md: 'See skill-resolver.md for matching and reporting.'",
+          "skills/_shared/skill-resolver.md: 'adhd-output is always on for user-facing replies'"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff only deletes files and their manifest rows, and the manifest rows match the deleted paths one to one.",
+      "Consumers outside the diff could not be inspected; both findings rest on references visible in the deleted text."
+    ]
+  }
+}

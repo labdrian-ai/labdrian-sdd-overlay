@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ed11ad29e08f978b680227dce345103de00ffa9e",
+    "head": "094e2053e7b8726ed7848f1ad0b3c1ac213e5226",
+    "diff_sha256": "41110da0d33044338abc4c192c830e52528036ce135ea94ec8bd6f1b48492bd4",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/cmd/dispatch_routes_test.go",
+      "engine/cmd/review.go",
+      "engine/cmd/review_exempt_test.go",
+      "engine/cmd/review_frozen_context.go",
+      "engine/cmd/review_frozen_context_test.go",
+      "engine/cmd/review_test.go",
+      "engine/cmd/usage.go",
+      "engine/review/app/launch.go",
+      "engine/review/launch.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "ed11ad29e08f978b680227dce345103de00ffa9e",
+      "head": "094e2053e7b8726ed7848f1ad0b3c1ac213e5226",
+      "diff_sha256": "41110da0d33044338abc4c192c830e52528036ce135ea94ec8bd6f1b48492bd4"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/cmd/dispatch_routes_test.go",
+        "engine/cmd/review.go",
+        "engine/cmd/review_exempt_test.go",
+        "engine/cmd/review_frozen_context.go",
+        "engine/cmd/review_frozen_context_test.go",
+        "engine/cmd/review_test.go",
+        "engine/cmd/usage.go",
+        "engine/review/app/launch.go",
+        "engine/review/launch.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "FrozenContext in engine/review/app/launch.go reuses Bind, OverLimitError, CheckBrief and withContext unchanged, so launch and bind bytes are untouched by the diff.",
+      "The verb list strings in review.go, usage.go and the three tests were updated consistently.",
+      "Exit-code mapping in review_frozen_context.go sends ErrInvalidBrief and ErrOverLimit to 2 and everything else to 1, as the commit claims. Each refusal named in the commit has a test in review_frozen_context_test.go.",
+      "I could not see Service.Bind, CheckBrief or withContext, so I did not verify that CheckBrief and withContext errors wrap ErrInvalidBrief; the tests assume it.",
+      "I found no defect that this change introduces."
+    ]
+  }
+}

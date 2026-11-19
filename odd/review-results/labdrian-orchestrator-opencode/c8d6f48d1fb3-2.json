@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "e9f96e0129cc231e1a7cc35431873ecb8d889186",
+    "head": "c8d6f48d1fb309b904016d0c011ebcaa07ccff93",
+    "diff_sha256": "d1b2e670483ba6600c49d4d78083fecc2d6cff16228a0a1af1c169fbdaaaf565",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "e9f96e0129cc231e1a7cc35431873ecb8d889186",
+      "head": "c8d6f48d1fb309b904016d0c011ebcaa07ccff93",
+      "diff_sha256": "d1b2e670483ba6600c49d4d78083fecc2d6cff16228a0a1af1c169fbdaaaf565"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:702",
+        "claim": "The L80 entry says 'The L78 text gains that one frontmatter line' and that the T27 correction batch 'also closes' judge B F1-F4 and judge A F1. This commit only adds the log line and does not touch output-styles/labdrian.md. 'L78 text' is ambiguous: it could mean the style text in this document or the style file. The 'closes' claims point at changes that are not in this commit, so a reader cannot tell which commit carries them. The '\"so\" (read: \"si\")' quote is also cryptic. Naming the file and commit and writing 'yes' for the owner reply would be clearer.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:702"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff is a single appended log paragraph (L80) in the feature document.",
+      "No code or style file is changed, so the only possible defects are in the clarity of the record."
+    ]
+  }
+}

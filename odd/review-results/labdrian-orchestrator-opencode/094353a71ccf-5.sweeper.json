@@ -1,0 +1,25 @@
+{
+  "kind": "sweeper",
+  "base": "7ca4f581d13e0d87f1bac2d056cef22d914a3010",
+  "head": "094353a71ccf56c1f5d5ef59168a05f4ff43ce31",
+  "diff_sha256": "10e3fb87908241bc36734dc2822fd43ad6a3e7a7a07ed3f1b3522a6a7a602884",
+  "sweep": "094353a71ccf-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 name: --json",
+      "disposition": "live",
+      "evidence": "The flag is still used: 094353a7 moved the resolve command from SKILL.md step 5 to step 6 (`memorycard resolve --source engram --key <n> [--key <n2> ...] --json`), and the shared contract section 3 item 2 shows the same form; memorycard resolve keeps the flag."
+    },
+    {
+      "candidate": "T1 name: --key",
+      "disposition": "live",
+      "evidence": "The flag is still used: 094353a7 moved the resolve command from SKILL.md step 5 to step 6 (`memorycard resolve --source engram --key <n> [--key <n2> ...] --json`), and the shared contract section 3 item 2 shows the same form; memorycard resolve keeps the flag."
+    },
+    {
+      "candidate": "T1 name: --source",
+      "disposition": "live",
+      "evidence": "The flag is still used: 094353a7 moved the resolve command from SKILL.md step 5 to step 6 (`memorycard resolve --source engram --key <n> [--key <n2> ...] --json`), and the shared contract section 3 item 2 shows the same form; memorycard resolve keeps the flag."
+    }
+  ]
+}

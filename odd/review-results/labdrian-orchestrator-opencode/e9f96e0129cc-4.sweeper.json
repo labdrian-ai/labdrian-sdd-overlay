@@ -1,0 +1,15 @@
+{
+  "kind": "sweeper",
+  "base": "22e597e7b356843d4b57a2620c55d407ed349f26",
+  "head": "e9f96e0129cc231e1a7cc35431873ecb8d889186",
+  "diff_sha256": "a69094a190db5cba7fef68046c73425037d255b11d112ac6a2cfdafc2899810a",
+  "sweep": "e9f96e0129cc-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 name: foreignAgentNotice",
+      "disposition": "live",
+      "evidence": "The hit is the test helper foreignAgentNotice in engine/runtime/claude_main_agent_test.go:27, still used by claude_main_agent_test.go:72 and claude_output_style_test.go:63; the removed name was the production function, moved to engine/settings/owned_key.go."
+    }
+  ]
+}

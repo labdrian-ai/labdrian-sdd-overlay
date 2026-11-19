@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "b88fbec6e350e17624f6d9f713ffede365c57e61",
+    "head": "881afe7a5d930e7fa949f973a4cb543de9e4b607",
+    "diff_sha256": "275ee179db62786aedd285beea56b7f704c38d81c3491cc6c6948a03241d27d9",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "b88fbec6e350e17624f6d9f713ffede365c57e61",
+      "head": "881afe7a5d930e7fa949f973a4cb543de9e4b607",
+      "diff_sha256": "275ee179db62786aedd285beea56b7f704c38d81c3491cc6c6948a03241d27d9"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:62",
+        "claim": "The T26 row is ticked [x] but its commit field lists `b88fbec6`, which is the base of this very commit. That commit is the series review receipt per L79, not a delivery commit. The task text promises two commits (a) and (b), and the list now has four hashes without saying which is which; a reader must open L79 to learn that `052d4469` is the correction and `b88fbec6` is a review. The field is hard to read.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:62"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:700",
+        "claim": "L79 is one dense paragraph of about 20 clauses, mixing delivery facts, verifier blockers, the correction, the review, answers and a routed follow-up. Its sentence 'Bounded recheck B1, B2, W3, W6: none reproduced' uses labels (B1, B2, W3, W6) that are defined nowhere in the document, so the reader cannot tell what was rechecked. The forecast overshoot (about 1,130 against 290-530) is stated without saying whether the forecast should be revised.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:700"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only odd/tasks/labdrian-orchestrator-opencode.md: one row ticked with commit hashes, one log entry L79 appended.",
+      "I could not check the cited commit hashes or the claimed test results, because no tools were available.",
+      "The 'routed' note in L79 says the live block lands only through `engine runtime install --target claude` until T31/T22. T26's own task text lists no such wiring, so this looks like deliberate follow-up work and I report no defect."
+    ]
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "094353a71ccf56c1f5d5ef59168a05f4ff43ce31",
+    "head": "9cbee989c981e440fab7720bba3f5c97a626b54c",
+    "diff_sha256": "3319631345a52f13a7c97a1f7b4b1441f8a87564a406c1774508141b08a2ebb6",
+    "paths": [
+      "engine/skills/procedural_candidate_memorycard_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "094353a71ccf56c1f5d5ef59168a05f4ff43ce31",
+      "head": "9cbee989c981e440fab7720bba3f5c97a626b54c",
+      "diff_sha256": "3319631345a52f13a7c97a1f7b4b1441f8a87564a406c1774508141b08a2ebb6"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skills/procedural_candidate_memorycard_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/skills/procedural_candidate_memorycard_test.go:139",
+        "claim": "The new pinned string repeats the phrase 'sorted as strings and as written', which already appears inside the preceding pinned sentence. The two assertions overlap, so a drift in the skill text may fail one while the other still passes, which makes the failure less precise. The pinned command form also hard-codes the exact flag spelling and placeholder text, so any harmless rewording of the example fails the test. I could not see the SKILL.md text, so I cannot confirm the string matches the skill as it stands. If it does not match, the test fails.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/procedural_candidate_memorycard_test.go:138-139"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff adds one requireText argument in a test file only, with no production code change.",
+      "The pinned string cannot be checked against SKILL.md because the diff does not show it; the commit's claim that it pins the existing one-call form is consistent with this."
+    ]
+  }
+}

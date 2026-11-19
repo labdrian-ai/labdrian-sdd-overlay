@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "b55302b5fa7966acb56ce904937c82e68af6e0b8",
+    "head": "9b575a9b7671438fd1a723a3239d6c83323bf236",
+    "diff_sha256": "76c7cbe76619a9e68098ad08fa92e42ee2528de43e53b9c81b2ba91f4f037b9a",
+    "paths": [
+      "engine/agentgen/models.go",
+      "engine/agentgen/models_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "b55302b5fa7966acb56ce904937c82e68af6e0b8",
+      "head": "9b575a9b7671438fd1a723a3239d6c83323bf236",
+      "diff_sha256": "76c7cbe76619a9e68098ad08fa92e42ee2528de43e53b9c81b2ba91f4f037b9a"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/agentgen/models.go",
+        "engine/agentgen/models_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/agentgen/models_test.go:175-177",
+        "claim": "The assertion that Generate wrote nothing checks only for a directory named \"agents\" under root. The diff does not show that this is where Generate writes. If the output lives elsewhere, the check passes vacuously and does not prove that nothing was written. The same Check run after Generate also depends on this assumption.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/agentgen/models_test.go:175-177"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed both changed paths in full.",
+      "models.go: the heading match now uses TrimSpace, which covers CRLF and trailing space. The len(head)==0 guard prevents an index panic on an empty header row. No defect found there.",
+      "Tests: the new cases are consistent with the code changes shown. The only weakness found is the unverified output path in the Generate-wrote-nothing check."
+    ]
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "c489c6f9c7c0990af746df1a54abc9c66f6ff96c",
+    "head": "1bca84239795537ec1ab3e44aa4767402f38c798",
+    "diff_sha256": "7121f88cb654243bb97dd658165f792e613849e292864840accc5f7ec20b556e",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "c489c6f9c7c0990af746df1a54abc9c66f6ff96c",
+      "head": "1bca84239795537ec1ab3e44aa4767402f38c798",
+      "diff_sha256": "7121f88cb654243bb97dd658165f792e613849e292864840accc5f7ec20b556e"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:318",
+        "claim": "The L28 entry is a single dense paragraph with an 20-pair sha mapping inline, which is hard to scan or look up. A table or one pair per line would read better. Also the entry says 'L16-L27 keep the shas they were written with' but does not say which sha form earlier entries (e.g. L26, L27 citing a8d15223, 5cd96066) refer to, so a reader must cross-map manually; the mapping does cover those, so this is only a readability concern.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:318"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:318",
+        "claim": "The entry says the old head is kept only as a local tag `fm-pre-retrailer`; the old shas in L16-L27 and the review logs become unresolvable on other clones once the rebuilt branch is pushed, so the recorded mapping is the only recovery path. The note does not state whether the tag will be pushed or retained, a recall gap for a future reader.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:318"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff only appends the L28 log entry to the feature document; no code is changed.",
+      "The mapping lists 20 old-to-new pairs, covering the commits named in L26 and L27 (a8d15223, 5cd96066), and e331f7f4 -> c489c6f9 matches the stated base of this review."
+    ]
+  }
+}

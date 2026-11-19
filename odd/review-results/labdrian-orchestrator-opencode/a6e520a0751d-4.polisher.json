@@ -1,0 +1,31 @@
+{
+  "kind": "polisher",
+  "base": "c1a92bb67cde655b0c9985e4a0c015c954f58286",
+  "head": "a6e520a0751d14be30c04d1d522d51c4047ec861",
+  "diff_sha256": "b231e95a2d195317c413affda2a70df5bccf36c22f0e9fa2650aa741fe88db01",
+  "findings": {
+    "findings": [
+      {
+        "id": "S-12",
+        "severity": "WARNING",
+        "location": "bin/lib/capture.sh:163-170",
+        "claim": "Capture skips a local bare origin. Answered: intended, same as apply.",
+        "evidence": [
+          "series."
+        ]
+      },
+      {
+        "id": "S-13",
+        "severity": "SUGGESTION",
+        "location": "bin/lib/capture.sh",
+        "claim": "Detached comment and circular skip message. Fixed in 4196e145.",
+        "evidence": [
+          "series."
+        ]
+      }
+    ],
+    "evidence": [
+      "Independent verifier (Risk 3,5) on 451cd0da..2e22df05: suite 85 ok; seeds a-f held; real OpenCode 2.2.7 loads the plugin and parses the config; claude/codex/pi identical; no change-caused blocker. Bounded recheck R1-R7 on a6e520a0: none reproduced (all reproduced at base)."
+    ]
+  }
+}

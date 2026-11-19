@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "8d4c88d5564aa1bba579f2522e7555e5a2859fb9",
+    "head": "664e126a5e40f0a09622f5e0901213cf66225c9e",
+    "diff_sha256": "f36b668bea296728579493136414d572f8e0c2a73c197e87b6d54da2486578e6",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "8d4c88d5564aa1bba579f2522e7555e5a2859fb9",
+      "head": "664e126a5e40f0a09622f5e0901213cf66225c9e",
+      "diff_sha256": "f36b668bea296728579493136414d572f8e0c2a73c197e87b6d54da2486578e6"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:34",
+        "claim": "The new binary definition (first token after env assignments has basename exactly `gentle-ai`) misses invocations through a wrapper such as `bash -c 'gentle-ai ...'`, `sh -c`, `env` as a command or `npx`/`exec`. The acceptance 'no remaining hook invokes the gentle-ai binary' could pass while a hook still runs it. The definition is also narrower than the deliverable (c), which requires that no remaining hook or entry invokes the binary.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:34"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:34",
+        "claim": "The acceptance requires `theme` to stop naming `custom:gentleman` and the plugin source `Gentleman-Programming/engram` to be gone. It does not say what replaces them or whether the engram plugin is adopted or dropped. The owner's memory notes show Engram in active use, so removing its plugin source with no stated replacement could leave the mem_* tooling without a source. The acceptance is checkable only as absence.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:34"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only the S17 acceptance sentence and appends the L23 log entry, both in odd/tasks/labdrian-orchestrator-opencode.md.",
+      "L23 claims about the T20/T22 wording and the d900ab96 checks cannot be verified from this diff, and nothing in the diff contradicts them."
+    ]
+  }
+}

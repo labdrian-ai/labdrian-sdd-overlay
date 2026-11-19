@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "45113b5a4aa55bca8d138d521222bbb662b9a37c",
+    "head": "dcdf610e24df7d4ee0347445092611669430ee39",
+    "diff_sha256": "4b255ddaa9e4ecc677563d3d1eefc26a0914af4dc9f0e22023830c85b450e087",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "45113b5a4aa55bca8d138d521222bbb662b9a37c",
+      "head": "dcdf610e24df7d4ee0347445092611669430ee39",
+      "diff_sha256": "4b255ddaa9e4ecc677563d3d1eefc26a0914af4dc9f0e22023830c85b450e087"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:58",
+        "claim": "L16 applies the rule that a high bound over one ~400-line slice must be split (T10, T11 and T14 each get two named commits). T12 is widened to a 220-440 forecast, above that bound, and gets no split. T25 (200-400, design pending) is also unsplit. The reconciliation is inconsistent with its own stated rule, and a 440-line unit risks lens_context_budget_exceeded in review.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "T12 line: 'forecast 220-440 lines — shaped: L16' with no commit split",
+          "L16 verdicts: 'T10, T11, T14: each high bound exceeds one ~400-line slice ... so each now names its two commits'"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:239",
+        "claim": "L16 says none of its risks needs an owner answer now, but Risk 1 offers dropping the procedural-candidates sweep from the foreman's Close row as the owner's choice if T8 must come sooner. That is an owner decision, so the statement contradicts itself.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "L16 Risks header: 'none needs an owner answer now'",
+          "L16 Risk 1: 'is the owner's to choose if T8 must come sooner'"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only the one doc file changed; checked the Specs, Tasks and Log entries for internal consistency.",
+      "Task dependencies are consistent: T23 after T24, T25 after T24 and T23, T8 after T25.",
+      "L16 sizes T23 + T25 at 300-660 lines against L12's 80-200 for T23, which gives +220-460, and that arithmetic is consistent.",
+      "The file and line citations into the repository cannot be verified from the diff alone."
+    ]
+  }
+}

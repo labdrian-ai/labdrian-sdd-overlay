@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "65894e6fbe5f86493b59f2a6dddb7b26eb3a33f3",
+    "head": "4d34b33684b544382ffe2101849bf9d7888f87fa",
+    "diff_sha256": "846bdf8ed24d382d87f0832dbf1300acb52e6e07af0d2a09c7f63ae6c6dd2be2",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md",
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "65894e6fbe5f86493b59f2a6dddb7b26eb3a33f3",
+      "head": "4d34b33684b544382ffe2101849bf9d7888f87fa",
+      "diff_sha256": "846bdf8ed24d382d87f0832dbf1300acb52e6e07af0d2a09c7f63ae6c6dd2be2"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md",
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:133",
+        "claim": "The T20 line now says it is narrowed to the linter work, but its forecast (~200-300 lines), its description of a memorycard adapter and engramexport deletion, and its surfaces list are unchanged. The delivered parts are still described as pending work, so a reader of the task body gets contradictory scope and a forecast that no longer matches the narrowed scope. The reference to L91 as the place that records the narrowing cannot be confirmed from this diff, because no L91 log entry is added here.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:133",
+          "odd/tasks/labdrian-orchestrator-opencode.md:480"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only two markdown task documents: it ticks T7 with its commit list, fixes the dangling 'commit: -' on T23, adds log entry L57, and adds a narrowing note to T20.",
+      "No code or behavior is touched, so there is no observable-harm defect.",
+      "The L57 claim that L91 exists in the other document cannot be verified from the diff."
+    ]
+  }
+}

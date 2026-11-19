@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "5600e5c3da61bd0a2960ff7fab9cb1fbeef69006",
+    "head": "ff7fd1d1813af8bc82d39643ecd9f1755b863dec",
+    "diff_sha256": "a30f7a45a71d4c9e83bb5f2a931e8191c6724741069aa7cbf856cad0daec09be",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "5600e5c3da61bd0a2960ff7fab9cb1fbeef69006",
+      "head": "ff7fd1d1813af8bc82d39643ecd9f1755b863dec",
+      "diff_sha256": "a30f7a45a71d4c9e83bb5f2a931e8191c6724741069aa7cbf856cad0daec09be"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:34",
+        "claim": "The whole-file check pattern `(^|[^\\w.-])gentle-ai([^\\w/-]|$)` is now the sole acceptance control. It misses a call that follows a JSON escape sequence in the raw file text, such as `\"echo x\\ngentle-ai y\"`, because the `n` of `\\n` is a word character. Since the check now claims to cover every value in the file, this false negative is not noted. It is an unlikely edge case.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:34 (Check: run `rg -n '(^|[^\\w.-])gentle-ai([^\\w/-]|$)'` over the whole of each file)"
+        ]
+      }
+    ],
+    "evidence": [
+      "The only changed path is a documentation file. The S17 rewrite keeps the earlier acceptance items: the CLAUDE.md marker check, the outputStyle and theme values, the plugin source, and the inventory accounting.",
+      "The pattern matches `\"gentle-ai x\"` after the quote, matches the wrapped forms listed in S17, and excludes `gentle-ai-overlay`, `~/.gentle-ai/` and `/opt/gentle-ai/bin`, so the L26 claim holds.",
+      "The L26 entry is appended after L25 and keeps the log append-only."
+    ]
+  }
+}

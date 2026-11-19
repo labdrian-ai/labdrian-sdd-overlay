@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "98b99970e2b26196a3d723308e7e00878bc87d5a",
+    "head": "b8b6ca8bf08248feb34ed94c5235034016f80b03",
+    "diff_sha256": "fe7d526103d69e52bba5e16c3cca6c38040a9b8bd3b2d1401c3909c31d32c99d",
+    "paths": [
+      "engine/cmd/memory_acceptance_test.go",
+      "engine/cmd/plan_instructions_test.go",
+      "engine/projection/instructions_test.go",
+      "engine/projection/render.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "98b99970e2b26196a3d723308e7e00878bc87d5a",
+      "head": "b8b6ca8bf08248feb34ed94c5235034016f80b03",
+      "diff_sha256": "fe7d526103d69e52bba5e16c3cca6c38040a9b8bd3b2d1401c3909c31d32c99d"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/memory_acceptance_test.go",
+        "engine/cmd/plan_instructions_test.go",
+        "engine/projection/instructions_test.go",
+        "engine/projection/render.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff replaces the single token mem_session_summary with mem_session in one production string (engine/projection/render.go) and in three test expectations that mirror it exactly.",
+      "The production string and all three test constants are textually identical after the change, so the golden comparisons stay consistent.",
+      "No other logic, signature or control flow changed; the commit message matches the diff, so no defect is attributable to this change."
+    ]
+  }
+}

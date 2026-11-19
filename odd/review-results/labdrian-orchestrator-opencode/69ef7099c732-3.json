@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "87f26495f03d65b7423a2d8d787eb56f36cf75d0",
+    "head": "69ef7099c732ff09f020407e0eb9e8d910170dfe",
+    "diff_sha256": "fa4ac499de04c2b626ec2a248ebab8eaecdf56e5e07666b2df1fa2b268dc996c",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "87f26495f03d65b7423a2d8d787eb56f36cf75d0",
+      "head": "69ef7099c732ff09f020407e0eb9e8d910170dfe",
+      "diff_sha256": "fa4ac499de04c2b626ec2a248ebab8eaecdf56e5e07666b2df1fa2b268dc996c"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:3",
+        "claim": "The header states the branch base as `origin/main` e25f0bfe, but the commit under review has base 87f26495. The feature document therefore records a base that does not match the actual candidate base, which can mislead chain/delivery tooling and later reviewers that bind on the base.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:3"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:15",
+        "claim": "S3 says skills `inception-pipeline` and `procedural-candidates` 'are moved to memorycard before T8', but T8 depends on T23 only through prose; T7 and T8 task lines list 'after T6, T18, T23 and T7', while S6's removal of the gentle orchestrator block relies on the foreman standing alone. Meanwhile the L9 body tells the foreman to start with `inception-pipeline`, which per S3 still reads 'in engram' until T23. T6 (the body) is ordered before T23, so a foreman body shipped by T6 instructs loading a skill that still tells it to use Engram. The ordering risk is stated only in L12 prose, not enforced by task dependencies on T6.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:15",
+          "odd/tasks/labdrian-orchestrator-opencode.md:46"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "WARNING",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:33",
+        "claim": "S16 B8 allows the foreman to write only under `odd/tasks/` plus the memorycard mirror save, but the foreman's L7 generator row gives it Edit and Write with no path restriction, and the S2 requirement of 'never source' is enforced only by prose. A spec asserting enforceable discipline with an unguarded tool list leaves the 'writes only the feature document' guarantee unprotected; the S7 permissions mapping would grant `edit` to the foreman.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:33",
+          "odd/tasks/labdrian-orchestrator-opencode.md:119"
+        ]
+      },
+      {
+        "id": "F4",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:109",
+        "claim": "The L9 body draft's Stages table has the Close row stating 'the merge commit, and CI read green' as evidence while the Never section forbids merging and S3 says merge is the owner's; and the Deliver row stops for the owner always. Close has no explicit stop or owner hand-back for the merge, so the foreman could reach Close without a defined trigger that the owner merged.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:109"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff adds one new markdown feature document; no code is changed, so no runtime regression is possible from it.",
+      "Findings concern internal consistency of the spec and task ordering, judged from the document text only; paths and line references cited in the document were not verifiable without tools."
+    ]
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "kind": "polisher",
+  "base": "ac6b16c021171b78c9c699c7f4818723a97f7d1f",
+  "head": "ed11ad29e08f978b680227dce345103de00ffa9e",
+  "diff_sha256": "9aad7612cc0e8a76fc99fd728b385985a74fcc4b0615aa944834c6ad0c19d008",
+  "findings": {
+    "findings": [
+      {
+        "id": "P1",
+        "severity": "WARNING",
+        "location": "engine/agentgen/opencode.go:80-89",
+        "claim": "No evidence the <server>_* deny refuses calls through execute or that longterm-mem_* matches. Answered: S12/S15 keep that a live check of the T17 re-run with a bound workflow (L103); the generator change cannot show it.",
+        "evidence": [
+          "L102 (2)",
+          "L103"
+        ]
+      },
+      {
+        "id": "P2",
+        "severity": "SUGGESTION",
+        "location": "engine/agentgen/opencode_server_rules_test.go:14",
+        "claim": "Test copy of the server list. Fixed in ed11ad29 (export_test.go exposes the production list).",
+        "evidence": [
+          "go test ./agentgen ok"
+        ]
+      },
+      {
+        "id": "P3",
+        "severity": "SUGGESTION",
+        "location": "engine/agentgen/export_test.go:5",
+        "claim": "Package clause and slice type unseen. Answered: the test file is package agentgen_test (line 1) and openCodeMCPServers is []string (opencode.go:50).",
+        "evidence": [
+          "opencode.go:50"
+        ]
+      }
+    ],
+    "evidence": [
+      "series reviews 64b46bbe..ed11ad29"
+    ]
+  }
+}

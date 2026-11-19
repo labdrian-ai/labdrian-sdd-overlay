@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "c132652e73c2bbe8252593766993f98ee558bfa5",
+    "head": "45212078ae1db021c4f7e22b87dab9a67e219a27",
+    "diff_sha256": "f7d389c05555cf87deca67e5a454554242efaabe4c4806bc56e299f2ec7fdd85",
+    "paths": [
+      "engine/runtime/opencode_memorycard_plugin_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "c132652e73c2bbe8252593766993f98ee558bfa5",
+      "head": "45212078ae1db021c4f7e22b87dab9a67e219a27",
+      "diff_sha256": "f7d389c05555cf87deca67e5a454554242efaabe4c4806bc56e299f2ec7fdd85"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/runtime/opencode_memorycard_plugin_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff only deletes the memorycardFixture.waitCalls test helper (6 lines). Nothing else changes.",
+      "The remaining waitFor and waitStdin helpers stay intact.",
+      "The diff cannot show whether another test in the package calls waitCalls, or whether fmt is still used elsewhere in the file. The commit claims the helper was unused. A leftover caller or an orphaned fmt import would fail compilation, so CI would catch either immediately. Nothing in the diff indicates either problem, so I report no finding."
+    ]
+  }
+}

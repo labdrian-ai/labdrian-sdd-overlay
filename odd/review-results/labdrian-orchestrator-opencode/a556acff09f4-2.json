@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f40192c21348e4574fe0ba4529b56282b9b5ddb2",
+    "head": "a556acff09f4fa4ec4804f136d4e67d424b46034",
+    "diff_sha256": "514bc0c4540580a76693d4340713e992d84583cc65eceb6bddab16817408b9a9",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f40192c21348e4574fe0ba4529b56282b9b5ddb2",
+      "head": "a556acff09f4fa4ec4804f136d4e67d424b46034",
+      "diff_sha256": "514bc0c4540580a76693d4340713e992d84583cc65eceb6bddab16817408b9a9"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:647",
+        "claim": "Evidence item 5 says the grep found '365 hits in 9 files, 331 of them the installer golden', but the same item then names ten distinct locations: the installer golden, pipeline_vocabulary_pins_test.go, entry-contract.schema.json, _shared/SKILL.md, skill-registry/SKILL.md, bootstrap.sh, routes_test.go, manifest_routes_test.go, the shelltest file and deterministic-check-runner/main.go. The stated count does not match the enumeration. A builder reconciling T29 (b)'s reader list against the evidence cannot tell whether a file was missed.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:647"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only the feature document; the findings come from reading the added text.",
+      "Checked the forecasts. T29's total of 6,000-7,400 matches (a) 1,500-2,600 + (b) 200-450 + (c) about 4,300.",
+      "Checked the task ordering. T31, T32 and T33 are all placed before T22, and T22's after-clause lists them.",
+      "Checked the L76 evidence 5 count against the files it names; they disagree, which is F1."
+    ]
+  }
+}

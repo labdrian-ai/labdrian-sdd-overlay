@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "34028c8ed56251e8d6c5b5bee6cc42a21b4bb4ab",
+    "head": "b38a989854083799e499d73a2e86ef5c1ded86a3",
+    "diff_sha256": "91aeea445ea4c3aecacce4f2360f5d943b83d1bbd2f81a93d9424a39dbd5d30f",
+    "paths": [
+      "engine/skillregistry/frontmatter.go",
+      "engine/skillregistry/skill_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "34028c8ed56251e8d6c5b5bee6cc42a21b4bb4ab",
+      "head": "b38a989854083799e499d73a2e86ef5c1ded86a3",
+      "diff_sha256": "91aeea445ea4c3aecacce4f2360f5d943b83d1bbd2f81a93d9424a39dbd5d30f"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skillregistry/frontmatter.go",
+        "engine/skillregistry/skill_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/skillregistry/frontmatter.go:11",
+        "claim": "mappingKey now stops a quoted value only at a lower-case key with nothing after its colon. An unclosed quoted description followed by an ordinary top-level key with a value (e.g. `license: \"x\"` or `name: \"y\"`) is no longer cut at that key. The scan can read on into later lines and take a quote from a following key as the closing quote. That would swallow sibling keys into the description instead of keeping the first line. The tests only cover an unclosed quote followed by an unquoted `license: x` line up to `---`, not a later quoted value.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skillregistry/frontmatter.go:11"
+        ]
+      }
+    ],
+    "evidence": [
+      "The regex changed from `:(\\s|$)` to `:\\s*$`, so `key: value` lines no longer terminate the multi-line quoted scan.",
+      "The new test covers only the prose case `note: see the docs` inside a closed quote.",
+      "I could not see the parser loop in this diff, so the swallowing behavior is inferred."
+    ]
+  }
+}

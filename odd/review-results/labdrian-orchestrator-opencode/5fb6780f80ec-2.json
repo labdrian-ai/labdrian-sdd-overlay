@@ -1,0 +1,84 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ebdac5b14c68c2ac61f72619f8eaac032d485e67",
+    "head": "5fb6780f80ecf9c072dab70a63be576109ea896f",
+    "diff_sha256": "92a30dad7748d91cd909b63c595935922136adde738a148979dd8ebdb057471c",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/skills/approval_gate_test.go",
+      "engine/skills/approval_write.go",
+      "engine/skills/branch_pr_artifact_test.go",
+      "engine/skills/gentle_detach_test.go",
+      "overlay.manifest",
+      "skills.registry.yaml",
+      "skills/branch-pr/SKILL.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "ebdac5b14c68c2ac61f72619f8eaac032d485e67",
+      "head": "5fb6780f80ecf9c072dab70a63be576109ea896f",
+      "diff_sha256": "92a30dad7748d91cd909b63c595935922136adde738a148979dd8ebdb057471c"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/skills/approval_gate_test.go",
+        "engine/skills/approval_write.go",
+        "engine/skills/branch_pr_artifact_test.go",
+        "engine/skills/gentle_detach_test.go",
+        "overlay.manifest",
+        "skills.registry.yaml",
+        "skills/branch-pr/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "skills/branch-pr/SKILL.md:30",
+        "claim": "The merge condition is stated two ways. The Hard Rule says a merge needs `gh pr checks` showing no failing line. The Decision Gate stops the merge on a failing or pending line. An agent reading only the Hard Rule could merge while checks are still pending, which is the red-merge case the owner's memory records. The test pins only the 'no failing line' wording, so the inconsistency passes unnoticed.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/branch-pr/SKILL.md:18",
+          "skills/branch-pr/SKILL.md:30"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "CHANGELOG.md:12",
+        "claim": "The adjacent T28 entry still says `branch-pr`, `issue-creation` and `systemic-issue-triage` are unchanged. The new entry directly above it rewrites `branch-pr`, so the two entries contradict each other.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "CHANGELOG.md:11",
+          "CHANGELOG.md:12"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "skills/branch-pr/SKILL.md:17",
+        "claim": "The skill uses 'delivery's closing entry' without defining it or naming the feature document where it is written. The reader cannot tell where to look for the entry, and the skill gives no way to resolve `<f>` and `<base>` in the `review check` command.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/branch-pr/SKILL.md:17"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the whole diff. The skill text, manifest, registry and lint-baseline changes are consistent with each other.",
+      "The new test file calls helpers (roleChainSections, readRepoFile, skillsRepoRoot, assertStringValue, parseYAMLScalar, inLintBaseline) that are not in the diff. I could not confirm they exist in package skills."
+    ]
+  }
+}

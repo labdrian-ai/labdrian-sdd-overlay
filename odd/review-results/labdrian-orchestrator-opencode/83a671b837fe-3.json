@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ec682bc33e3e9f1a44730b1f1d501a85a92d5b19",
+    "head": "83a671b837fea952a05718111dafe77ebbce92a2",
+    "diff_sha256": "375858f44723f4ac6b7e231514866d354e5604ca61eec8c296ed6ec40882484a",
+    "paths": [
+      "engine/architecture_test.go",
+      "engine/cmd/skills_candidates_cli.go",
+      "engine/skills/app/list_candidates.go",
+      "engine/skills/app/list_candidates_test.go",
+      "engine/skills/candidate_source.go",
+      "engine/skills/deps.go",
+      "engine/skills/engramexport/source.go",
+      "engine/skills/engramexport/source_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "ec682bc33e3e9f1a44730b1f1d501a85a92d5b19",
+      "head": "83a671b837fea952a05718111dafe77ebbce92a2",
+      "diff_sha256": "375858f44723f4ac6b7e231514866d354e5604ca61eec8c296ed6ec40882484a"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/architecture_test.go",
+        "engine/cmd/skills_candidates_cli.go",
+        "engine/skills/app/list_candidates.go",
+        "engine/skills/app/list_candidates_test.go",
+        "engine/skills/candidate_source.go",
+        "engine/skills/deps.go",
+        "engine/skills/engramexport/source.go",
+        "engine/skills/engramexport/source_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/skills/candidate_source.go:12",
+        "claim": "The comment now calls CandidateObservations 'the two memorycard topic families used by M10', but the topic-family filtering ('procedural/candidates/', 'procedural/drafts/', optional goal: prefix) lived in the deleted engramexport adapter. The port comment no longer says that the adapter, not the port, owns the topic-key semantics. The wording is accurate only if memorycardcli applies the same families, which cannot be confirmed from this diff.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "engine/skills/candidate_source.go:12",
+          "engine/skills/engramexport/source.go:81-90"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff deletes only skills/engramexport and its ring entry in architecture_test.go; the remaining changes are comment and test-string rewording with no behavior change.",
+      "The commit message says the composition root was already moved to memorycardcli in a5b877f2. The diff shows no remaining import of engramexport, so a dangling reference cannot be seen here.",
+      "The architecture_test.go ring-map entry and the doc comment were removed together, so no stale ring entry remains for a missing package."
+    ]
+  }
+}

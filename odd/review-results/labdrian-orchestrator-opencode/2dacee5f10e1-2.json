@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "872148eb17f5ba44df3b455c1d8d37e14813fb36",
+    "head": "2dacee5f10e1299e86fe1c4246fbe13df0e80c91",
+    "diff_sha256": "7a6befc902f9511244a9efa0f5a986d8bc03b8816ff6f30bdd34aec017366ae5",
+    "paths": [
+      "engine/runtime/opencode.go",
+      "engine/runtime/opencode_results_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "872148eb17f5ba44df3b455c1d8d37e14813fb36",
+      "head": "2dacee5f10e1299e86fe1c4246fbe13df0e80c91",
+      "diff_sha256": "7a6befc902f9511244a9efa0f5a986d8bc03b8816ff6f30bdd34aec017366ae5"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/runtime/opencode.go",
+        "engine/runtime/opencode_results_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "install: on writeOpenCodeJSON error, jsonMessage is replaced by the 'OpenCode config not written: ...' text, partial is set, and the flow continues to writeAgents and shadowingSkillsNote; the final status is Partial if either part is partial. This matches the commit claim.",
+      "uninstall: legacyErr still returns early (unchanged); jsonErr and agentsErr are combined with '; ' into one partial message. strings is already used elsewhere in the file's package, and the diff adds no import, so I could not confirm the import from the diff alone; the compile risk is low because the removed code did not use strings either, but the test suite would catch it.",
+      "The new tests cover the three behaviors claimed: refused config still writes AGENTS.md and reports skills, refused AGENTS.md still writes the config, and uninstall names both failures."
+    ]
+  }
+}

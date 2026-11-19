@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "d8d7bb766e021be91e05b48ba06960b7d011a58d",
+    "head": "5600e5c3da61bd0a2960ff7fab9cb1fbeef69006",
+    "diff_sha256": "e5805ce9c0ad4d6fd4f8963254250fc28ce02b1d43384ebbce75e43240e979b4",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "d8d7bb766e021be91e05b48ba06960b7d011a58d",
+      "head": "5600e5c3da61bd0a2960ff7fab9cb1fbeef69006",
+      "diff_sha256": "e5805ce9c0ad4d6fd4f8963254250fc28ce02b1d43384ebbce75e43240e979b4"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The change only edits the S17 acceptance prose and appends the L25 log entry in the feature document.",
+      "I traced the new regex `(^|[^\\w.-])gentle-ai([^\\w/-]|$)` by hand against the claimed cases. It matches bare, `sh -c 'gentle-ai x'`, `&& gentle-ai`, `/usr/local/bin/gentle-ai` and `|gentle-ai`. It does not match `gentle-ai-overlay`, `~/.gentle-ai/y` or `/opt/gentle-ai/bin/foo`.",
+      "The acceptance now covers every command-bearing value, which resolves the earlier hook-only narrowing. It also requires the parent to read each match, which covers the `echo gentle-ai` false positive.",
+      "I found no defect that this commit introduces."
+    ]
+  }
+}

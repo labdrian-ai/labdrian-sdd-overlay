@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "45113b5a4aa55bca8d138d521222bbb662b9a37c",
+    "head": "dcdf610e24df7d4ee0347445092611669430ee39",
+    "diff_sha256": "4b255ddaa9e4ecc677563d3d1eefc26a0914af4dc9f0e22023830c85b450e087",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "45113b5a4aa55bca8d138d521222bbb662b9a37c",
+      "head": "dcdf610e24df7d4ee0347445092611669430ee39",
+      "diff_sha256": "4b255ddaa9e4ecc677563d3d1eefc26a0914af4dc9f0e22023830c85b450e087"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:15",
+        "claim": "S7 says 'each role gets question, skill, webfetch, websearch and experimental_image_generate denied'. T12 applies the deny set to the nine agents, including the foreman. S2 and S16 have the foreman converse with and clarify things for the owner, and the foreman launches roles. If a builder reads 'each role' to include the foreman, it will deny `question`, and the foreman may lose its way to ask the owner. The spec does not say that the foreman is exempt from these denies, nor that it keeps the subagent tool. Only the eight roles are named for the `subagent` deny, so the scope of the other denies is ambiguous.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:15",
+          "odd/tasks/labdrian-orchestrator-opencode.md:58"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:46",
+        "claim": "T25 has no 'shaped:' marker, unlike the other tasks, and it has no forecast line count. L16 says it is 'unshaped until T24 answers', yet T8 already depends on it and the L16 estimate includes it as 200-400 lines. A task that the gate depends on carries a forecast whose basis is 'no-actuals n=0' and a design that is pending.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:46",
+          "odd/tasks/labdrian-orchestrator-opencode.md:48"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:45",
+        "claim": "T23 prescribes `mem_session` as the memorycard replacement for `mem_session_summary`, but the diff cites no evidence that this tool name exists. T24 is the task meant to settle the memorycard store premise, yet T23 hard-codes the tool name before T24's answer is in.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:45"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only odd/tasks/labdrian-orchestrator-opencode.md and has no code.",
+      "Checked the internal consistency of the dependencies and estimate arithmetic: T8 now depends on T25, the T23+T25 range of 300-660 matches the sum of the two forecasts, and L17's commit count of 22 matches 5+7+10."
+    ]
+  }
+}

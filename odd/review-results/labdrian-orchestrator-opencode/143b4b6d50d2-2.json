@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "e5abaf3a3a469e607504a72ddaaddec7b7b797fd",
+    "head": "143b4b6d50d20dbee31150a172febc29989fa14a",
+    "diff_sha256": "4679ee0564e129a393ce4de05394a3757f070c6b3405f3e4f51fdc0cdbdc9448",
+    "paths": [
+      "engine/agentgen/agentgen.go",
+      "engine/agentgen/models.go",
+      "engine/agentgen/models_test.go",
+      "engine/cmd/agentgen_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "e5abaf3a3a469e607504a72ddaaddec7b7b797fd",
+      "head": "143b4b6d50d20dbee31150a172febc29989fa14a",
+      "diff_sha256": "4679ee0564e129a393ce4de05394a3757f070c6b3405f3e4f51fdc0cdbdc9448"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/agentgen/agentgen.go",
+        "engine/agentgen/models.go",
+        "engine/agentgen/models_test.go",
+        "engine/cmd/agentgen_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the whole diff. Every new check in parseModelTable has a matching test case: duplicate tier row, missing separator, duplicate runtime column, id with a space, table outside its heading.",
+      "The slice bound lines[header+2:] is safe because the separator check already requires header+1 < len(lines).",
+      "build() marks a table failure as parsing only when errors.As finds a *tableError, and ReadModelTable wraps only parse errors. A file read failure keeps the reading verb.",
+      "I could not see the import block of agentgen.go, so I could not confirm that errors is already imported. The new test would fail to compile if it is not.",
+      "I could not see the body of splitRow. I did not report a possible head[0] panic on a header line that is only '|', because I could not confirm it."
+    ]
+  }
+}

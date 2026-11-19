@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "fc33b7bc5c6559cd5cecaf11253a7ca66f3ad47a",
+    "head": "8ffaa62fa554f88bd67fcf6d91aa330609e3c813",
+    "diff_sha256": "f130ddfc4badaae9ce7b052fed8b2577dd4cf5906e1a3b07979cfc770b6d1e68",
+    "paths": [
+      "skills/procedural-candidates/.approval.json"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "fc33b7bc5c6559cd5cecaf11253a7ca66f3ad47a",
+      "head": "8ffaa62fa554f88bd67fcf6d91aa330609e3c813",
+      "diff_sha256": "f130ddfc4badaae9ce7b052fed8b2577dd4cf5906e1a3b07979cfc770b6d1e68"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "skills/procedural-candidates/.approval.json"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff only updates the sha256 and approved_at fields in skills/procedural-candidates/.approval.json; version, skill and approver are unchanged and the JSON stays well-formed.",
+      "Whether the new sha256 matches the current skill content cannot be checked from the diff alone, since the skill files are not part of this change; no defect is shown."
+    ]
+  }
+}

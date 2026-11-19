@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "6ca43786bda767a89de266e982b9c1a31937c9b9",
+    "head": "ca99713030c505f9382db75a0291d9447955a826",
+    "diff_sha256": "4ae152ceab7f2764b0ea8f3c4643cfcf19855f1048e14a7a11bea4fac4eca9e7",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "6ca43786bda767a89de266e982b9c1a31937c9b9",
+      "head": "ca99713030c505f9382db75a0291d9447955a826",
+      "diff_sha256": "4ae152ceab7f2764b0ea8f3c4643cfcf19855f1048e14a7a11bea4fac4eca9e7"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:243",
+        "claim": "L18 is a single very long dense paragraph that packs RED, GREEN, byte-identical proof, message change, models.md change, an assumption note and two OPEN items into one bullet. The two OPEN items needing owner or follow-up action (the seedRoleSources fix and the stale .approval.json approval) are buried at the end, which makes them easy to miss when scanning the Log.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:243"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:243",
+        "claim": "L18 cites commit `dbae346c` as the T19 work, while this docs commit is a different one. The entry gives no way to tell from the log that the evidence refers to a prior commit, and the claim that `go test ./agentgen/...` is ok sits beside two named failing tests in engine/cmd, so a reader could take 'GREEN' as covering the whole suite. The scope of the GREEN claim (agentgen package only) is not stated against the known failures.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:243"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff only appends one Log entry (L18) to odd/tasks/labdrian-orchestrator-opencode.md; no code or specs are changed.",
+      "The entry is internally consistent with its stated partial status: T19 is declared unticked and the two blocking items are named with their causes and remedies.",
+      "Only readability concerns found; I could not verify the claims about dbae346c or test outcomes since only the diff is visible."
+    ]
+  }
+}

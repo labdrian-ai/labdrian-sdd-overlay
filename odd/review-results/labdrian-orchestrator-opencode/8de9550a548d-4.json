@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f95a3624fb26b61e886b3ce3aa2f7df5159b13a8",
+    "head": "8de9550a548d3e3a84e8b2bcbf10891cd412697d",
+    "diff_sha256": "1aea54b0ec7e08e7fd7aef31bd05f1429d6a860848870ea200e5be399b16cde4",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/cmd/status_command_test.go",
+      "engine/cmd/testdata/status-golden/status-binary-states.golden",
+      "engine/cmd/testdata/status-golden/status-contract-states.golden",
+      "engine/cmd/testdata/status-golden/status-families-missing-or-drifted.golden",
+      "engine/cmd/testdata/status-golden/status-in-an-empty-home.golden",
+      "engine/cmd/testdata/status-golden/status-of-a-complete-install.golden",
+      "engine/cmd/testdata/status-golden/status-registry-states.golden",
+      "engine/cmd/testdata/status-golden/status-settings-that-are-not-an-object.golden",
+      "engine/cmd/testdata/status-golden/status-settings-without-the-hooks.golden",
+      "engine/cmd/testdata/status-golden/status-with-no-home.golden",
+      "engine/status/codex_test.go",
+      "engine/status/main_agent_test.go",
+      "engine/status/status.go",
+      "engine/status/status_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f95a3624fb26b61e886b3ce3aa2f7df5159b13a8",
+      "head": "8de9550a548d3e3a84e8b2bcbf10891cd412697d",
+      "diff_sha256": "1aea54b0ec7e08e7fd7aef31bd05f1429d6a860848870ea200e5be399b16cde4"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/cmd/status_command_test.go",
+        "engine/cmd/testdata/status-golden/status-binary-states.golden",
+        "engine/cmd/testdata/status-golden/status-contract-states.golden",
+        "engine/cmd/testdata/status-golden/status-families-missing-or-drifted.golden",
+        "engine/cmd/testdata/status-golden/status-in-an-empty-home.golden",
+        "engine/cmd/testdata/status-golden/status-of-a-complete-install.golden",
+        "engine/cmd/testdata/status-golden/status-registry-states.golden",
+        "engine/cmd/testdata/status-golden/status-settings-that-are-not-an-object.golden",
+        "engine/cmd/testdata/status-golden/status-settings-without-the-hooks.golden",
+        "engine/cmd/testdata/status-golden/status-with-no-home.golden",
+        "engine/status/codex_test.go",
+        "engine/status/main_agent_test.go",
+        "engine/status/status.go",
+        "engine/status/status_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/status/status.go:449",
+        "claim": "When the agent key is missing, the note reuses the shared remediation 'run uninstall-hooks then install-hooks'. That is heavier than needed: re-running install-hooks alone adds the key, while uninstall-hooks removes every overlay hook first. The other families share this remediation, so the issue is inherited rather than new, but this check adds a new place where it applies.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "engine/status/status.go:449"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff adds one check, checkMainAgent, placed after the builder guard and before the contract check. The golden files and the check-count tests were updated to match.",
+      "The three branches are covered by tests: key owned (OK), key missing (warn with remediation), foreign value (warn naming the conflict).",
+      "settings.MainAgent and its constants are not defined in this diff. I assumed they exist from an earlier commit and did not verify them.",
+      "Settings that cannot be read produce a FAIL line through beforeEntries, as the goldens show."
+    ]
+  }
+}

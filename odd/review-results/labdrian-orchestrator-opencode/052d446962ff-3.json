@@ -1,0 +1,92 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f98917e97b0b3e1662c8fddcab6dcbcd2e155fab",
+    "head": "052d446962ff288ead60e8e4357035d3ed0b42f3",
+    "diff_sha256": "c10e6053e504445f0ef9211bcce78aef2bd5e2ca5b7d63bd2d620622a892c179",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/cmd/testdata/runtime-golden/runtime-claude-owner-rules.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-claude-with-settings-that-cannot-be-used.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-lifecycle-of-all-the-targets.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-lifecycle-of-claude.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-roots-come-from-the-environment.golden",
+      "engine/cmd/usage.go",
+      "engine/runtime/claude.go",
+      "engine/runtime/core/config.go",
+      "engine/runtime/ownerrules.go",
+      "engine/runtime/ownerrules_block.go",
+      "engine/runtime/ownerrules_block_edges_test.go",
+      "engine/runtime/ownerrules_block_test.go",
+      "engine/runtime/ownerrules_claude_edges_test.go",
+      "engine/runtime/ownerrules_race_test.go",
+      "engine/runtime/ownerrules_text_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f98917e97b0b3e1662c8fddcab6dcbcd2e155fab",
+      "head": "052d446962ff288ead60e8e4357035d3ed0b42f3",
+      "diff_sha256": "c10e6053e504445f0ef9211bcce78aef2bd5e2ca5b7d63bd2d620622a892c179"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/cmd/testdata/runtime-golden/runtime-claude-owner-rules.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-claude-with-settings-that-cannot-be-used.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-lifecycle-of-all-the-targets.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-lifecycle-of-claude.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-roots-come-from-the-environment.golden",
+        "engine/cmd/usage.go",
+        "engine/runtime/claude.go",
+        "engine/runtime/core/config.go",
+        "engine/runtime/ownerrules.go",
+        "engine/runtime/ownerrules_block.go",
+        "engine/runtime/ownerrules_block_edges_test.go",
+        "engine/runtime/ownerrules_block_test.go",
+        "engine/runtime/ownerrules_claude_edges_test.go",
+        "engine/runtime/ownerrules_race_test.go",
+        "engine/runtime/ownerrules_text_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/runtime/ownerrules_block.go:245-249",
+        "claim": "RemoveFile deletes any regular file whose content becomes empty after removal. A pre-existing, empty CLAUDE.md that install appended the block to is therefore deleted on uninstall rather than given back. The commit claims byte-exact restoration, and the file's existence is part of what the owner had. The Remove-level test covers the empty-content case but no file-level test does. The blockFile.existed flag is read but not used to tell an install-created file from an empty owner file.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/ownerrules_block.go:245-249",
+          "engine/runtime/ownerrules_block_test.go: 'empty file' case exercises Remove only"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/ownerrules.go:41-46",
+        "claim": "Any locateOverlay error with an empty OverlayDir is mapped to ErrNoOverlayCheckout, not only 'no checkout found'. A different failure, such as the working directory being unreadable, is reported as the benign 'no overlay checkout' note with restart_required status instead of partial.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/ownerrules.go:41-46"
+        ]
+      }
+    ],
+    "evidence": [
+      "Traced Apply and Remove for LF, CRLF, no-final-newline and trailing-blank-line contents; they round-trip at the string level.",
+      "The file-level RemoveFile path deletes any regular file whose updated content is empty, regardless of blockFile.existed, so an owner's empty file does not survive install then uninstall.",
+      "The no-checkout path in claude.go returns restart_required with a note, and status returns supported without checking the block, as the commit message specifies."
+    ]
+  }
+}

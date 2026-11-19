@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "2d3dc66b968fdd782e5ed006a3f76bba9d432bc8",
+    "head": "09c38855faca14b83bdb5e07db6d057c1e80b544",
+    "diff_sha256": "6e31c50b38c8eae31a92bb43821b2bb237aab9b3648bbc0747b354c1f9decd6e",
+    "paths": [
+      "engine/skills/foreman_restored_duties_test.go",
+      "engine/skills/foreman_skills_test.go",
+      "engine/skills/odd_role_skills_artifact_test.go",
+      "skills/odd-feature-doc/SKILL.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "2d3dc66b968fdd782e5ed006a3f76bba9d432bc8",
+      "head": "09c38855faca14b83bdb5e07db6d057c1e80b544",
+      "diff_sha256": "6e31c50b38c8eae31a92bb43821b2bb237aab9b3648bbc0747b354c1f9decd6e"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skills/foreman_restored_duties_test.go",
+        "engine/skills/foreman_skills_test.go",
+        "engine/skills/odd_role_skills_artifact_test.go",
+        "skills/odd-feature-doc/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/skills/odd_role_skills_artifact_test.go:112-114",
+        "claim": "isRecommendedTokenWarning matches the linter's message by hard-coded prefix and suffix text. If the linter's wording for the body-recommended token finding changes, the helper stops matching and the raised-bound skip silently stops applying, so TestOddRoleSkillsAreWithinTheLintBudget fails for odd-feature-doc. The only fixture for it is a literal copy of the same string in the new test, so that test passes while the real linter output has drifted. Nothing ties the helper to the linter's real message.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/odd_role_skills_artifact_test.go:112-114",
+          "engine/skills/foreman_restored_duties_test.go:117-119"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/skills/foreman_skills_test.go:35-38",
+        "claim": "The negative fragments \"header and `L1`\" and \"`L1`,\" are narrow substrings. They no longer reject the plain words \"header\" or \"`L1`\" in the foreman row, which the previous check did. A reworded row that lets the foreman write the header or L1 (for example \"the header\") would pass. The assertion's message still says the shaper owns it, so the check is weaker than it claims.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/foreman_skills_test.go:35-38"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes four files: three tests and the odd-feature-doc SKILL.md.",
+      "The SKILL.md builder and foreman rows now agree: the builder ticks the box unless its brief keeps it off the document, and the foreman ticks it from the builder's report when it did.",
+      "The odd-feature-doc body bound check drops the hard-limit clause from the body test and moves it to a separate bounds test, so the 750 invariant is still asserted.",
+      "I did not see the linter source, so the exact message text of the body-recommended finding is unverified from the diff."
+    ]
+  }
+}

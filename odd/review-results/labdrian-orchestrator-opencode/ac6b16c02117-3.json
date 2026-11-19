@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "64b46bbed6d841eb26c8bd4aaee3ffad9f5161ea",
+    "head": "ac6b16c021171b78c9c699c7f4818723a97f7d1f",
+    "diff_sha256": "4a194d5a143985915111f7d1ac1ccc1811e994ce34b6cb518ab014d158a66059",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/agentgen/opencode.go",
+      "engine/agentgen/opencode_server_rules_test.go",
+      "engine/agentgen/opencode_test.go",
+      "engine/runtime/opencode_server_rules_test.go",
+      "opencode/agents/builder.md",
+      "opencode/agents/delivery.md",
+      "opencode/agents/foreman.md",
+      "opencode/agents/polisher.md",
+      "opencode/agents/prototyper.md",
+      "opencode/agents/reviewer.md",
+      "opencode/agents/shaper.md",
+      "opencode/agents/sweeper.md",
+      "opencode/agents/verifier.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "64b46bbed6d841eb26c8bd4aaee3ffad9f5161ea",
+      "head": "ac6b16c021171b78c9c699c7f4818723a97f7d1f",
+      "diff_sha256": "4a194d5a143985915111f7d1ac1ccc1811e994ce34b6cb518ab014d158a66059"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/agentgen/opencode.go",
+        "engine/agentgen/opencode_server_rules_test.go",
+        "engine/agentgen/opencode_test.go",
+        "engine/runtime/opencode_server_rules_test.go",
+        "opencode/agents/builder.md",
+        "opencode/agents/delivery.md",
+        "opencode/agents/foreman.md",
+        "opencode/agents/polisher.md",
+        "opencode/agents/prototyper.md",
+        "opencode/agents/reviewer.md",
+        "opencode/agents/shaper.md",
+        "opencode/agents/sweeper.md",
+        "opencode/agents/verifier.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "openCodeRules emits the built-in denies first, then for each server a deny on <server>_* followed by an allow for each mcp__<server>__<tool> in the Claude list. The generated files match this order, so the last-match-wins premise (L102 (2)) holds for every file.",
+      "The execute rule is still produced by deny(\"execute\", r.hasMCPTool()), so its behavior is unchanged.",
+      "The rows in the table test match the generated files for the eight roles and the foreman.",
+      "I found no regression in the diff. The changelog states that whether a <server>_* deny also blocks an inner call made through execute is left to the T17 re-run, so it is not a hidden claim."
+    ]
+  }
+}

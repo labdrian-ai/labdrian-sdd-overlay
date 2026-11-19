@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "6c44a92865a80aeb270261a251c3f5550fb75dcb",
+    "head": "c60a653e46f3245811789023505eac56e0c15c35",
+    "diff_sha256": "f4a48444729aaf3f64f6a57a705db20f1eabc0d428ad46bb76ee89ea6574d639",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "6c44a92865a80aeb270261a251c3f5550fb75dcb",
+      "head": "c60a653e46f3245811789023505eac56e0c15c35",
+      "diff_sha256": "f4a48444729aaf3f64f6a57a705db20f1eabc0d428ad46bb76ee89ea6574d639"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:47",
+        "claim": "T19 is ticked and marked done, but its own text said it ticks only after (2) the owner re-records approval and TestRegistryLockE2E_ValidateLeavesTheRealTreeUntouched passes, and (1) the two TestGaduGenerate tests pass. L35 records the approval and a clean full engine suite, which implies but does not name those tests. The closure evidence for the named conditions is indirect. Also the commit field still reads '-' while the done note cites shas.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:47",
+          "odd/tasks/labdrian-orchestrator-opencode.md:390"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:389",
+        "claim": "L35 says the review check was clear at 85eac22f, a different commit than 6c44a928 where the suite ran. The head of the review check does not match the approval commit, so the closure evidence spans two commits without stating that nothing changed between them.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:390"
+        ]
+      }
+    ],
+    "evidence": [
+      "Diff is docs-only, touching one feature document; no code behavior changes.",
+      "T24 tick and T25 decision (B) are consistent with L35 content; T25 line still says 'NOT SHAPED' and 'owner's adapter decision' pending, which is stale text but is still accurate that no builder launches until shaped.",
+      "T25 task text still lists the owner decision as an open precondition and says parent recommends B, while L35 closes it; mild staleness only."
+    ]
+  }
+}

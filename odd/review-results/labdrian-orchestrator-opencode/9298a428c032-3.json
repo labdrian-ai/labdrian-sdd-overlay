@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "88e57ea1a20eb5f8a9389458393960a3dfce92c2",
+    "head": "9298a428c03289c389d6ecadf6690be2bbb9ef18",
+    "diff_sha256": "deb40cfeb3c1fefda929b8a8a571b474e96847e5e4dd2da92a53da5ce6d5b18c",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "88e57ea1a20eb5f8a9389458393960a3dfce92c2",
+      "head": "9298a428c03289c389d6ecadf6690be2bbb9ef18",
+      "diff_sha256": "deb40cfeb3c1fefda929b8a8a571b474e96847e5e4dd2da92a53da5ce6d5b18c"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:52",
+        "claim": "The T18 tick lists the commit range as nine individual shas but omits the L50 and L49 fix commits such as fc84aacc and 5fb02384, which the Log mentions as T18-related; the commit field may therefore be incomplete. The Log L50 also says fc84aacc was this branch's commit, yet it is absent from the field. Inferential only.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:52",
+          "odd/tasks/labdrian-orchestrator-opencode.md:471"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff is a document-only change: it ticks T18 and appends Log entry L51.",
+      "L51 records the owner's re-recorded approvals and the passing tests, which satisfies the condition L50 set for ticking T18.",
+      "The commit field lists b2575e8d through 88e57ea1 and does not list fc84aacc, which L50 names as this branch's commit."
+    ]
+  }
+}

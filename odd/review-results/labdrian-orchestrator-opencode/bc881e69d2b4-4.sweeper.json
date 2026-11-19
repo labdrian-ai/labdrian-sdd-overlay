@@ -1,0 +1,40 @@
+{
+  "kind": "sweeper",
+  "base": "0c82ec6750d5f4f72ee43cc0cd6c8a55ce56dd73",
+  "head": "bc881e69d2b46beb5b25933291b290397eba521c",
+  "diff_sha256": "d841978f9e53a749be372fbb3ad8dc8ba299b1b1c45beae810602f68919fb1a1",
+  "sweep": "bc881e69d2b4-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 path: tools/entry-contract-validator/pipeline_vocabulary_pins_test.go",
+      "disposition": "live",
+      "evidence": "Deleted on purpose by T29 (S17, L68); Grep at the head finds no live reader outside docs/architecture history and CHANGELOG."
+    },
+    {
+      "candidate": "T1 name: TestChainingSpellingsTableCountsEverySurface",
+      "disposition": "live",
+      "evidence": "Still named in 1 files by design: a flag or test name kept elsewhere or a history record, e.g. skills/_shared/sdd-orchestrator-workflow.md."
+    },
+    {
+      "candidate": "T1 name: TestSddApplyChainStrategyConsumerDomainMatchesSchema",
+      "disposition": "live",
+      "evidence": "Still named in 1 files by design: a flag or test name kept elsewhere or a history record, e.g. skills/_shared/sdd-orchestrator-workflow.md."
+    },
+    {
+      "candidate": "T1 name: TestSddTasksChainStrategyEmitDomainMatchesSchema",
+      "disposition": "live",
+      "evidence": "Still named in 1 files by design: a flag or test name kept elsewhere or a history record, e.g. skills/_shared/sdd-orchestrator-workflow.md."
+    },
+    {
+      "candidate": "T1 name: markdownSection",
+      "disposition": "live",
+      "evidence": "Still named in 1 files by design: a flag or test name kept elsewhere or a history record, e.g. engine/assets/assets_test.go."
+    },
+    {
+      "candidate": "T3:  M odd/tasks/labdrian-orchestrator-opencode.md",
+      "disposition": "live",
+      "evidence": "The feature document is the parent logbook, edited between commits; committed with the review records at delivery."
+    }
+  ]
+}

@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f6e43bf593b7352ad6100b15cf149dd899bfb31e",
+    "head": "b88a3c8ae3f8bd4de114b8bbc2b1bdd518d9828f",
+    "diff_sha256": "7863138111c351287d4632547bfd060a9b2d71f0121a12525489d57690ea4f54",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f6e43bf593b7352ad6100b15cf149dd899bfb31e",
+      "head": "b88a3c8ae3f8bd4de114b8bbc2b1bdd518d9828f",
+      "diff_sha256": "7863138111c351287d4632547bfd060a9b2d71f0121a12525489d57690ea4f54"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:662",
+        "claim": "L78 records the owner's reply as the verbatim word \"aprieno\" and reads it as \"apruebo\" by interpretation. The approval of a byte-for-byte artifact therefore rests on a typo read, which is a weak audit trail. L77 handled the same kind of typo (\"si me fyst\") with the same \"read:\" convention, so this is consistent, but a reader cannot tell whether the approval covers the Learning section the parent added in the same turn.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:660"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:696",
+        "claim": "The closing line says T27's L60-based description is superseded, but the diff does not edit T27 or L60 themselves. Readers of T27 further up the file get the stale Gentleman-based description unless they reach L78. The same applies to T26 and the Codex persona part of T31/T22, which L77 still describes as waiting. The cross-reference lives only in the Log.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:696"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff only appends L78 to the Log of odd/tasks/labdrian-orchestrator-opencode.md; no code or config changes.",
+      "The embedded style text matches the L77 summary: Principle, Replies, Rigor and Language are all present, plus the new Learning section, which L78 attributes to the owner's \"no me gusta repetir errores\".",
+      "The rule text quoted for owner-rules matches the L77 wording verbatim.",
+      "L78 uses a four-backtick fence around a block that itself contains only a three-dash front matter, so the nesting is valid."
+    ]
+  }
+}

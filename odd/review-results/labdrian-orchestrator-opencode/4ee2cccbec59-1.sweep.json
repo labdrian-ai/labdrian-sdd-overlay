@@ -1,0 +1,25 @@
+{
+  "kind": "sweep",
+  "base": "8df8f69a8b11dea3ea9fa254c10a01c283444981",
+  "head": "4ee2cccbec59217fa63581813568192e62737c01",
+  "diff_sha256": "972c836bd4d325fd50c6088483eb7f3e331dfb403ba651f77966d84558c87ea8",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": []
+  },
+  "t2": [
+    {
+      "tool": "errcheck",
+      "module": "engine",
+      "new": [
+        "statestore/lastline.go: unchecked error: defer f.Close()"
+      ]
+    }
+  ],
+  "t3": [],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

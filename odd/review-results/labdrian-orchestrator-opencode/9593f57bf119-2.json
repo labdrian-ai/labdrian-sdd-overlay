@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "bc881e69d2b46beb5b25933291b290397eba521c",
+    "head": "9593f57bf11915c9daa4d63bddb509f159aa03fd",
+    "diff_sha256": "65ab4d588c635d54d6b95901946bea50b21876b4d209d34955a67bef5d15adb6",
+    "paths": [
+      "overlay.manifest",
+      "skills.registry.yaml",
+      "skills/gentle-ai-bench/.approval.json",
+      "skills/gentle-ai-bench/SKILL.md",
+      "skills/rdd-defect-workflow/.approval.json",
+      "skills/rdd-defect-workflow/SKILL.md",
+      "skills/sdd-apply/.approval.json",
+      "skills/sdd-apply/SKILL.md",
+      "skills/sdd-apply/strict-tdd.md",
+      "skills/sdd-archive/.approval.json",
+      "skills/sdd-archive/SKILL.md",
+      "skills/sdd-verify/.approval.json",
+      "skills/sdd-verify/SKILL.md",
+      "skills/sdd-verify/references/report-format.md",
+      "skills/sdd-verify/strict-tdd-verify.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "bc881e69d2b46beb5b25933291b290397eba521c",
+      "head": "9593f57bf11915c9daa4d63bddb509f159aa03fd",
+      "diff_sha256": "65ab4d588c635d54d6b95901946bea50b21876b4d209d34955a67bef5d15adb6"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "overlay.manifest",
+        "skills.registry.yaml",
+        "skills/gentle-ai-bench/.approval.json",
+        "skills/gentle-ai-bench/SKILL.md",
+        "skills/rdd-defect-workflow/.approval.json",
+        "skills/rdd-defect-workflow/SKILL.md",
+        "skills/sdd-apply/.approval.json",
+        "skills/sdd-apply/SKILL.md",
+        "skills/sdd-apply/strict-tdd.md",
+        "skills/sdd-archive/.approval.json",
+        "skills/sdd-archive/SKILL.md",
+        "skills/sdd-verify/.approval.json",
+        "skills/sdd-verify/SKILL.md",
+        "skills/sdd-verify/references/report-format.md",
+        "skills/sdd-verify/strict-tdd-verify.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Every deleted skill file has its manifest row removed: sdd-verify (3 rows), gentle-ai-bench, rdd-defect-workflow, sdd-apply (2 rows) and sdd-archive. Nothing is left in the manifest for files that no longer exist.",
+      "The five registry entries (sdd-verify, gentle-ai-bench, rdd-defect-workflow, sdd-apply, sdd-archive) are removed, and the surrounding entries (sdd-design, branch-pr, go-testing) are untouched.",
+      "The diff shows no live reader of the deleted skills. Readers outside the diff, such as skills/_shared docs or other skills' cross-references, cannot be checked from the diff alone, so no finding is raised."
+    ]
+  }
+}

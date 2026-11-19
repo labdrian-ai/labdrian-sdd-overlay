@@ -1,0 +1,60 @@
+{
+  "kind": "sweeper",
+  "base": "ec682bc33e3e9f1a44730b1f1d501a85a92d5b19",
+  "head": "83a671b837fea952a05718111dafe77ebbce92a2",
+  "diff_sha256": "375858f44723f4ac6b7e231514866d354e5604ca61eec8c296ed6ec40882484a",
+  "sweep": "83a671b837fe-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 name: --project",
+      "disposition": "live",
+      "evidence": "A generic name used across the repository (564 hits); the deletion removes only the engramexport use."
+    },
+    {
+      "candidate": "T1 name: CommandRunner",
+      "disposition": "live",
+      "evidence": "Defined again in the new engine/skills/memorycardcli package that replaces engramexport (rg hits: engine/skills/memorycardcli/source.go)."
+    },
+    {
+      "candidate": "T1 name: ListCandidateObservations",
+      "disposition": "live",
+      "evidence": "Defined again in the new engine/skills/memorycardcli package that replaces engramexport (rg hits: engine/cmd/skills_candidates_test.go, engine/skills/memorycardcli/source.go, engine/skills/memorycardcli/source_test.go)."
+    },
+    {
+      "candidate": "T1 name: Output",
+      "disposition": "live",
+      "evidence": "A generic name used across the repository (171 hits); the deletion removes only the engramexport use."
+    },
+    {
+      "candidate": "T1 name: Source",
+      "disposition": "live",
+      "evidence": "Defined again in the new engine/skills/memorycardcli package that replaces engramexport (rg hits: engine/cmd/skills_candidates_wiring_test.go, engine/skills/memorycardcli/source.go, engine/skills/memorycardcli/source_test.go)."
+    },
+    {
+      "candidate": "T1 name: TestSourceRejectsMissingConfigurationBeforeStartingCommand",
+      "disposition": "live",
+      "evidence": "Defined again in the new engine/skills/memorycardcli package that replaces engramexport (rg hits: engine/skills/memorycardcli/source_test.go)."
+    },
+    {
+      "candidate": "T1 name: runnerFunc",
+      "disposition": "live",
+      "evidence": "Defined again in the new engine/skills/memorycardcli package that replaces engramexport (rg hits: engine/skills/memorycardcli/source_test.go)."
+    },
+    {
+      "candidate": "T1 name: topicFamily",
+      "disposition": "live",
+      "evidence": "Only odd/tasks/labdrian-orchestrator-opencode.md names it, as history of the deleted engramexport adapter; no code uses it."
+    },
+    {
+      "candidate": "T1 path: engine/skills/engramexport/source.go",
+      "disposition": "live",
+      "evidence": "An intended deletion (T25b commit b); no leftover references it: Deleted by this commit as T25b (b) asks; its only importer, engine/cmd/skills_deps.go, moved to memorycardcli in a5b877f2; rg finds no remaining import."
+    },
+    {
+      "candidate": "T1 path: engine/skills/engramexport/source_test.go",
+      "disposition": "live",
+      "evidence": "An intended deletion (T25b commit b); no leftover references it: The deleted package test; its cases are rewritten against memorycardcli in engine/skills/memorycardcli/source_test.go (a5b877f2)."
+    }
+  ]
+}

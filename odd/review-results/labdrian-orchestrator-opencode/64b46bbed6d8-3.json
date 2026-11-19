@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "643f96837dad8e34f0267986e153eefa441f24c9",
+    "head": "64b46bbed6d841eb26c8bd4aaee3ffad9f5161ea",
+    "diff_sha256": "69c8df446537cbe9ea7448c2672338ac0d8560143d637a5dc6cad80fec8e8eab",
+    "paths": [
+      "bin/lib/apply.sh",
+      "bin/lib/deploy_state.sh"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "643f96837dad8e34f0267986e153eefa441f24c9",
+      "head": "64b46bbed6d841eb26c8bd4aaee3ffad9f5161ea",
+      "diff_sha256": "69c8df446537cbe9ea7448c2672338ac0d8560143d637a5dc6cad80fec8e8eab"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "bin/lib/apply.sh",
+        "bin/lib/deploy_state.sh"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "state_rewrite_target now takes an explicit mode as its first argument. Both callers visible in the diff (state_write_target and state_forget_target) pass it. Only 'write' appends the target's row, so an empty version no longer drops the row.",
+      "state_forget_target keeps its early return 0 when the state file is absent. Its rewrite failure now returns non-zero, and the '|| warn' in apply.sh turns that into a warning instead of an abort, as the commit claims.",
+      "The diff shows no other caller of state_rewrite_target and does not show whether 'warn' is defined in apply.sh. I could not check either, so I report no finding for them."
+    ]
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ca99713030c505f9382db75a0291d9447955a826",
+    "head": "e5abaf3a3a469e607504a72ddaaddec7b7b797fd",
+    "diff_sha256": "5b41e9e87d0ac95d15504a39d6b1a574f397e0d7c31b045b25b818846fb183e1",
+    "paths": [
+      "engine/cmd/agentgen_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "ca99713030c505f9382db75a0291d9447955a826",
+      "head": "e5abaf3a3a469e607504a72ddaaddec7b7b797fd",
+      "diff_sha256": "5b41e9e87d0ac95d15504a39d6b1a574f397e0d7c31b045b25b818846fb183e1"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/agentgen_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff only adds a test helper step in seedRoleSources that reads models.md from the repo (relative ../../skills/role-chain/references/models.md, consistent with the existing relative-source pattern for roles) and writes it under the temp root with MkdirAll and WriteFile; all errors are checked via t.Fatalf.",
+      "No production code is touched; the path uses filepath.Join consistently and err is reused from the earlier declaration in scope, so it compiles as long as err was declared earlier (the preceding 'if err != nil' implies it was).",
+      "No defect caused by this change was found."
+    ]
+  }
+}

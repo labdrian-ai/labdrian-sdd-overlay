@@ -1,0 +1,31 @@
+{
+  "kind": "polisher",
+  "base": "ecdd5a183f666f1d2fee00460bb013afc3a356f1",
+  "head": "dad2ea34e8ccfb967161b428bf79e7540d255849",
+  "diff_sha256": "b27d700d26b64699218c31e70911274a55fa040cf97dff5bd6b21b4388c0ecb9",
+  "findings": {
+    "findings": [
+      {
+        "id": "S-F1",
+        "severity": "WARNING",
+        "location": "engine/oddtask/oddtask.go fenceRun",
+        "claim": "Series review of dad2ea34: a backtick run followed by text holding a backtick (\"```x``` text\") opened a fence and hid later headings. Fixed in f60786d0 (not a fence, as CommonMark); test TestParseDocumentIgnoresAFenceThatNeverCloses RED then GREEN.",
+        "evidence": [
+          "series review dad2ea34 reviewers F1."
+        ]
+      },
+      {
+        "id": "S-F2",
+        "severity": "SUGGESTION",
+        "location": "engine/oddtask/oddtask.go ParseDocument",
+        "claim": "Series review of dad2ea34: an unclosed fence anywhere hid ## Tasks and ## Log silently. Fixed in f60786d0: a fence open at the end makes the document parse without fences, as before. Any indent is kept on purpose: fences inside list items of the feature documents are indented 4-6 spaces.",
+        "evidence": [
+          "series review dad2ea34 reviewers F2; feature doc fences at lines 117-182, 546-573."
+        ]
+      }
+    ],
+    "evidence": [
+      "series review dad2ea34..f60786d0: reviewers no findings."
+    ]
+  }
+}

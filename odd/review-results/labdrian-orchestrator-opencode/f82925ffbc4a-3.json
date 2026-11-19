@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "4ee2cccbec59217fa63581813568192e62737c01",
+    "head": "f82925ffbc4ac9ce858fc0fca93411d100937352",
+    "diff_sha256": "bdd5057879a6a955632abcba6590fbdc70ebe7a958f242efccc6504dfc3a3c99",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/cmd/projection_hook.go",
+      "engine/cmd/projection_prompt_once_test.go",
+      "engine/cmd/usage.go",
+      "engine/statestore/lastline.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "4ee2cccbec59217fa63581813568192e62737c01",
+      "head": "f82925ffbc4ac9ce858fc0fca93411d100937352",
+      "diff_sha256": "bdd5057879a6a955632abcba6590fbdc70ebe7a958f242efccc6504dfc3a3c99"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/cmd/projection_hook.go",
+        "engine/cmd/projection_prompt_once_test.go",
+        "engine/cmd/usage.go",
+        "engine/statestore/lastline.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "CHANGELOG.md:7",
+        "claim": "The CHANGELOG entry still documents the store path as `<sha256 of the session>/last`, but this commit keys the store by source and session together (README and usage were updated to say so). The same entry now also states as fact that the bridge asks SessionStart once per session and that each prompt answer stays in history. The previous text marked this as 'Not verified', and the new Limit sentence itself defers OpenCode behavior to T17. The docs now contradict each other and overstate what has been verified.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "CHANGELOG.md:7",
+          "README.md:1298"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff of the six changed paths.",
+      "In projection_hook.go the closure returned by addOncePerChange runs only after stdout.Write returns nil, so a failed write is not recorded.",
+      "sessionKey returns empty for an empty session, so the no-session path is unchanged.",
+      "sessionStart and the prompt path both use sessionKey(source, id), so their keys match.",
+      "The record is skipped when the write fails, which is the intended behavior."
+    ]
+  }
+}

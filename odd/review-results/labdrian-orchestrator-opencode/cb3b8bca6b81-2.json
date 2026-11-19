@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ac151d719da4c8a375800233b8fe64c1f2284ec2",
+    "head": "cb3b8bca6b81a0262efd1bff4d3b192bc2ada487",
+    "diff_sha256": "5ab8cbb4aa683ffcd94bcffcb4a999abe96a3da81ba82009e5644738bd022872",
+    "paths": [
+      "engine/skills/gentle_detach_test.go",
+      "overlay.manifest"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "ac151d719da4c8a375800233b8fe64c1f2284ec2",
+      "head": "cb3b8bca6b81a0262efd1bff4d3b192bc2ada487",
+      "diff_sha256": "5ab8cbb4aa683ffcd94bcffcb4a999abe96a3da81ba82009e5644738bd022872"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skills/gentle_detach_test.go",
+        "overlay.manifest"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The five retagged manifest rows are chained-pr, go-testing, judgment-day, skill-creator and skill-improver reference files, all under adopted skill directories.",
+      "The new test loop skips _shared and checks every other manifest path under an adopted directory for the custom tag. The prefix match uses dir+\"/\", so a directory whose name merely starts with an adopted name cannot match.",
+      "The SKILL.md rows are now checked twice (by the older loop and the new one). This is harmless and not a defect.",
+      "_shared's non-SKILL.md rows stay managed, as the comment says, because T29 removes them."
+    ]
+  }
+}

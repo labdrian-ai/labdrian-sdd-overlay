@@ -1,0 +1,136 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "201a28d2154f0e939efd40c25d9c838566039225",
+    "head": "0d30f1b8a07ced6b2454d312764eafd060618a11",
+    "diff_sha256": "dd65b0c93ae541a2111ef169c0c1e9588405a6a0dd593a0126fd4d71eb2b01d7",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/runtime/longtermmem_config.go",
+      "engine/runtime/longtermmem_test.go",
+      "longterm-mem/README.md",
+      "longterm-mem/cmd/longterm-mem/register_golden_test.go",
+      "longterm-mem/cmd/longterm-mem/testdata/register-golden/09-register-codex-and-opencode.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/register-golden/17-register-all-with-pi-installed.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/register-golden/18-register-all-with-pi-listed-but-not-built.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/register-golden/19-register-all-with-a-conflict.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/register-golden/21-register-all-with-an-unresolvable-root-and-a-conflict.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/register-golden/30-unregister-what-register-all-put.golden",
+      "longterm-mem/internal/register/emptyconfig_test.go",
+      "longterm-mem/internal/register/jsonnested.go",
+      "longterm-mem/internal/register/jsonwrite.go",
+      "longterm-mem/internal/register/opencode.go",
+      "longterm-mem/internal/register/opencode_v2_test.go",
+      "longterm-mem/internal/register/ownership_test.go",
+      "longterm-mem/internal/register/testdata/opencode/after-install-no-container.json",
+      "longterm-mem/internal/register/testdata/opencode/after-install.json",
+      "longterm-mem/internal/register/testdata/opencode/after-migrate.json",
+      "longterm-mem/internal/register/testdata/opencode/after-reinstall.json",
+      "longterm-mem/internal/register/testdata/opencode/after-uninstall.json",
+      "longterm-mem/internal/register/testdata/opencode/before.json",
+      "longterm-mem/internal/register/testdata/opencode/legacy-1x.json",
+      "longterm-mem/internal/register/testdata/opencode/untagged.json",
+      "longterm-mem/internal/register/unregister.go",
+      "longterm-mem/internal/register/unregister_test.go",
+      "longterm-mem/internal/register/writer.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "201a28d2154f0e939efd40c25d9c838566039225",
+      "head": "0d30f1b8a07ced6b2454d312764eafd060618a11",
+      "diff_sha256": "dd65b0c93ae541a2111ef169c0c1e9588405a6a0dd593a0126fd4d71eb2b01d7"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/runtime/longtermmem_config.go",
+        "engine/runtime/longtermmem_test.go",
+        "longterm-mem/README.md",
+        "longterm-mem/cmd/longterm-mem/register_golden_test.go",
+        "longterm-mem/cmd/longterm-mem/testdata/register-golden/09-register-codex-and-opencode.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/register-golden/17-register-all-with-pi-installed.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/register-golden/18-register-all-with-pi-listed-but-not-built.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/register-golden/19-register-all-with-a-conflict.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/register-golden/21-register-all-with-an-unresolvable-root-and-a-conflict.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/register-golden/30-unregister-what-register-all-put.golden",
+        "longterm-mem/internal/register/emptyconfig_test.go",
+        "longterm-mem/internal/register/jsonnested.go",
+        "longterm-mem/internal/register/jsonwrite.go",
+        "longterm-mem/internal/register/opencode.go",
+        "longterm-mem/internal/register/opencode_v2_test.go",
+        "longterm-mem/internal/register/ownership_test.go",
+        "longterm-mem/internal/register/testdata/opencode/after-install-no-container.json",
+        "longterm-mem/internal/register/testdata/opencode/after-install.json",
+        "longterm-mem/internal/register/testdata/opencode/after-migrate.json",
+        "longterm-mem/internal/register/testdata/opencode/after-reinstall.json",
+        "longterm-mem/internal/register/testdata/opencode/after-uninstall.json",
+        "longterm-mem/internal/register/testdata/opencode/before.json",
+        "longterm-mem/internal/register/testdata/opencode/legacy-1x.json",
+        "longterm-mem/internal/register/testdata/opencode/untagged.json",
+        "longterm-mem/internal/register/unregister.go",
+        "longterm-mem/internal/register/unregister_test.go",
+        "longterm-mem/internal/register/writer.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/register/opencode.go:131-134",
+        "claim": "Unregister removes the recorded 1.x entry before jsonUninstall runs. If jsonUninstall then fails or refuses (for example the v2 entry is a foreign or conflicting one), the legacy entry is already gone and the record is not cleared. The operation is not atomic and leaves a half-unregistered state.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/register/unregister.go:61-64",
+          "longterm-mem/internal/register/opencode.go:131-134"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/register/jsonnested.go:48-52",
+        "claim": "An existing 1.x user MCP server named \"servers\" is itself an object (mcp.servers = {type:local,...}). The nested container logic treats it as the v2 servers container and splices longterm-mem into that server's definition. nestedValueStart only checks that the value is an object, so no conflict is detected and the user's server entry is corrupted. This was valid input before the change.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/register/jsonnested.go:48-52",
+          "longterm-mem/internal/register/jsonnested.go:84-88"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/longtermmem_test.go:305-316",
+        "claim": "The new test was inserted between the explanatory comment about foreign entries and the test it documents (TestLongtermMemAdapter_ForeignEntryIsNeverAdoptedAsOurOwn). The comment now sits above the wrong test, which is misleading.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/longtermmem_test.go:305-316"
+        ]
+      },
+      {
+        "id": "F4",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/internal/register/emptyconfig_test.go:29-43",
+        "claim": "The memberAt helper was inserted between the long doc comment of TestRegister_EmptyJSONConfigIsInstalledInto and that test, detaching the comment from the function it describes.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/register/emptyconfig_test.go:29-43"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the whole diff. Writes, migration, unregister and engine status are consistent for the main paths; goldens match the new shape.",
+      "F1 follows from the order of the two calls in the unregister path.",
+      "F2 follows from nestedValueStart accepting any object value for the inner key."
+    ]
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "15a0ae1a0fd16b9e9c421c3015b1318eb991a0fa",
+    "head": "65894e6fbe5f86493b59f2a6dddb7b26eb3a33f3",
+    "diff_sha256": "43699a6df292358e69658fe707ab1b7786703937e62708a6af046f8b7a8867e1",
+    "paths": [
+      "engine/runtime/claude_ports.go",
+      "engine/runtime/claude_ports_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "15a0ae1a0fd16b9e9c421c3015b1318eb991a0fa",
+      "head": "65894e6fbe5f86493b59f2a6dddb7b26eb3a33f3",
+      "diff_sha256": "43699a6df292358e69658fe707ab1b7786703937e62708a6af046f8b7a8867e1"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/runtime/claude_ports.go",
+        "engine/runtime/claude_ports_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "claude_ports.go: the two overlapping comment blocks on InspectMainAgent are merged into one; no code changes.",
+      "claude_ports_test.go: the import is reordered (gofmt grouping, no behavior change); fakeHooks gains agentErr and InspectMainAgent returns it instead of inspectErr. This decouples the agent-key fake from the Inspect error, so no existing test that sets inspectErr could expect InspectMainAgent to fail. That coupling is not visible in this diff, so the removal is unverified, but nothing in the diff shows a test that relied on it.",
+      "No defect found that this commit introduces."
+    ]
+  }
+}

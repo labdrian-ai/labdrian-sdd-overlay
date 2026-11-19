@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "7e3471f033f7229cc477adee130285433203aaa3",
+    "head": "6d7c04f737593a3ed5af9c9e41c1f3737cdc6744",
+    "diff_sha256": "b22deaa63524567945caf18c07ff12f6ac073fba37d88455439477edb947f5d1",
+    "paths": [
+      "engine/capability/declarations.go",
+      "engine/capability/opencode_declaration_test.go",
+      "engine/cmd/codex_source_test.go",
+      "engine/runtime/opencode_bridge_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "7e3471f033f7229cc477adee130285433203aaa3",
+      "head": "6d7c04f737593a3ed5af9c9e41c1f3737cdc6744",
+      "diff_sha256": "b22deaa63524567945caf18c07ff12f6ac073fba37d88455439477edb947f5d1"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/capability/declarations.go",
+        "engine/capability/opencode_declaration_test.go",
+        "engine/cmd/codex_source_test.go",
+        "engine/runtime/opencode_bridge_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/capability/declarations.go:284",
+        "claim": "The rewritten MemoryEnforcement claim drops the sentence 'The memorycard plugin adds memorycard context to new main sessions', yet the evidence list still cites runtime:TestMemorycardPluginPutsTheMemorycardContextOnTheSystemPromptOfANewSession. That test now backs no stated claim text, and the claim-text test (opencode_declaration_test.go) does not require the sentence, so the removal goes unnoticed. The commit says it adds only one declaration sentence, but it also removed a behavior statement.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/capability/declarations.go:284",
+          "engine/capability/declarations.go:291"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff replaces the whole claim string and omits the 'adds memorycard context to new main sessions' statement while keeping its test in the cited list.",
+      "The new cmd and bridge tests look internally consistent: the fake engine answers the n-th call alone, so the outer execute passes and the inner call is denied with the engine reason."
+    ]
+  }
+}

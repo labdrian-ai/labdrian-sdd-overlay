@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a6e520a0751d14be30c04d1d522d51c4047ec861",
+    "head": "a10c3d441a9aea56c22947abaefe3b6a5bcdf585",
+    "diff_sha256": "adf0806e4061bd360eb260348a829a810ab069c804d52e920ec39101db95c8cc",
+    "paths": [
+      "README.md",
+      "engine/capability/declarations.go",
+      "engine/runtime/opencode_json.go",
+      "engine/runtime/opencode_json_style_test.go",
+      "engine/runtime/opencode_json_write.go",
+      "engine/runtime/opencode_plugin_live_test.go",
+      "engine/runtime/opencode_servers_test.go",
+      "engine/runtime/opencode_splice.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "a6e520a0751d14be30c04d1d522d51c4047ec861",
+      "head": "a10c3d441a9aea56c22947abaefe3b6a5bcdf585",
+      "diff_sha256": "adf0806e4061bd360eb260348a829a810ab069c804d52e920ec39101db95c8cc"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "README.md",
+        "engine/capability/declarations.go",
+        "engine/runtime/opencode_json.go",
+        "engine/runtime/opencode_json_style_test.go",
+        "engine/runtime/opencode_json_write.go",
+        "engine/runtime/opencode_plugin_live_test.go",
+        "engine/runtime/opencode_servers_test.go",
+        "engine/runtime/opencode_splice.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/runtime/opencode_json_write.go:56-65",
+        "claim": "The bare-entry upgrade replaces the whole server value with server.entry. If owns() accepts a bare entry carrying extra owner-set members (for example enabled:false, environment, or a changed codemode), those members are silently discarded when the command is upgraded. The commit says only the command is upgraded. Nothing in this diff confines the replacement to command[0].",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/opencode_json_write.go:56-65",
+          "engine/runtime/opencode_splice.go:200-215"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode_splice.go:176-196",
+        "claim": "indentUnit decides tabs versus spaces from the indent of the nearby sibling. When that indent is empty (an empty root object, or members at column 0) it falls back to two spaces, even in a file that uses tabs elsewhere. The inserted member can then be indented with spaces in a tab file.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/opencode_splice.go:176-196"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the diff only; owns() and objectAt are not visible, so the extent of F1 is inferred from the full-value replace call.",
+      "The isBlankJSON, rootObject whitespace and CRLF handling look consistent with their tests."
+    ]
+  }
+}

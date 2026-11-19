@@ -1,0 +1,76 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "45212078ae1db021c4f7e22b87dab9a67e219a27",
+    "head": "bfc2ed7d9fc91a886386f6a031801f6c778236fd",
+    "diff_sha256": "38bf4230d960f35ee7d80c6d01d7e60f3ba94c08248d0ebfcd613f33db10b6ab",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+      "engine/runtime/labdrian-runtime-parity-plugin.mjs",
+      "engine/runtime/opencode_bridge_session_test.go",
+      "engine/runtime/opencode_plugin.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "45212078ae1db021c4f7e22b87dab9a67e219a27",
+      "head": "bfc2ed7d9fc91a886386f6a031801f6c778236fd",
+      "diff_sha256": "38bf4230d960f35ee7d80c6d01d7e60f3ba94c08248d0ebfcd613f33db10b6ab"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+        "engine/runtime/labdrian-runtime-parity-plugin.mjs",
+        "engine/runtime/opencode_bridge_session_test.go",
+        "engine/runtime/opencode_plugin.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/runtime/opencode_bridge_session_test.go:146-148",
+        "claim": "The new test was inserted between the existing doc comment ('The system prompt comes before every message... Two prompts answered differently leave it identical.') and the function it described, TestOpenCodeBridgeKeepsTheSystemPromptByteStableAcrossPrompts. The comment now sits on the new log-once test, where it does not describe it, and the byte-stability test loses its comment.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/opencode_bridge_session_test.go:146-148 (comment lines are context, new func added directly after them)",
+          "engine/runtime/opencode_bridge_session_test.go:176 (the byte-stable test follows the new test without a comment)"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode_bridge_session_test.go:167-169",
+        "claim": "The assertion on the logged line is weak: it only checks that the line contains the substrings 'prompt' and 'string'. The fixed message prefix already contains 'prompt' and the fallback wording contains 'string' (via '{ text: string }'), so any shape message would pass. It does not verify that the shape actually seen is named.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/labdrian-runtime-parity-plugin.mjs:497-507 (the message always contains 'prompt' and 'want { text: string }')"
+        ]
+      }
+    ],
+    "evidence": [
+      "Diff inspected in full; the plugin logic change (early return when lines is empty, a single warn per process, system untouched) matches the commit claim.",
+      "The golden and version-constant changes are consistent with the bump to runtime-parity-15."
+    ]
+  }
+}

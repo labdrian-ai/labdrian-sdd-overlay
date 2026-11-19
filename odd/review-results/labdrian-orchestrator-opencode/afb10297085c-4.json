@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "069c0d7309f00fa43dca3426112dc8367a253ed6",
+    "head": "afb10297085cc474b423c30bb3fa18ccaecfbb84",
+    "diff_sha256": "80e3b1a7d306769f2b2af3d33588804ef09a4dd7f7bc22e8638d28e852ffb5dd",
+    "paths": [
+      "engine/skills/procedural_candidate_memorycard_test.go",
+      "skills/_shared/procedural-candidate-detection.md",
+      "skills/procedural-candidates/SKILL.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "069c0d7309f00fa43dca3426112dc8367a253ed6",
+      "head": "afb10297085cc474b423c30bb3fa18ccaecfbb84",
+      "diff_sha256": "80e3b1a7d306769f2b2af3d33588804ef09a4dd7f7bc22e8638d28e852ffb5dd"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skills/procedural_candidate_memorycard_test.go",
+        "skills/_shared/procedural-candidate-detection.md",
+        "skills/procedural-candidates/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "skills/_shared/procedural-candidate-detection.md:148-151",
+        "claim": "The merge rule keeps the entry with the earliest timestamp but does not say what to do when the two merged entries have equal timestamps, so different agents may keep different summaries. It also drops the other entry's summary without saying so, so that evidence is lost silently. The acceptance checklist item 3 inherits the same gap.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/_shared/procedural-candidate-detection.md:148-151",
+          "skills/_shared/procedural-candidate-detection.md:1027-1030"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff contains only prose changes and tests that assert that prose. I traced each new requireText phrase to the added contract text and found them consistent, assuming requireText normalizes whitespace; the multi-line phrases the base already asserted point the same way.",
+      "The forbidText on `OccurrenceCount` incremented matches the acceptance item 3 rewrite to re-derived.",
+      "The new fail-closed exception for lifecycle History lines does not contradict the stop rule, because it explicitly scopes the stop to occurrence work."
+    ]
+  }
+}

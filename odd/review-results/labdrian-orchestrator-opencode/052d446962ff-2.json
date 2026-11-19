@@ -1,0 +1,102 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f98917e97b0b3e1662c8fddcab6dcbcd2e155fab",
+    "head": "052d446962ff288ead60e8e4357035d3ed0b42f3",
+    "diff_sha256": "c10e6053e504445f0ef9211bcce78aef2bd5e2ca5b7d63bd2d620622a892c179",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/cmd/testdata/runtime-golden/runtime-claude-owner-rules.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-claude-with-settings-that-cannot-be-used.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-lifecycle-of-all-the-targets.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-lifecycle-of-claude.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-roots-come-from-the-environment.golden",
+      "engine/cmd/usage.go",
+      "engine/runtime/claude.go",
+      "engine/runtime/core/config.go",
+      "engine/runtime/ownerrules.go",
+      "engine/runtime/ownerrules_block.go",
+      "engine/runtime/ownerrules_block_edges_test.go",
+      "engine/runtime/ownerrules_block_test.go",
+      "engine/runtime/ownerrules_claude_edges_test.go",
+      "engine/runtime/ownerrules_race_test.go",
+      "engine/runtime/ownerrules_text_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f98917e97b0b3e1662c8fddcab6dcbcd2e155fab",
+      "head": "052d446962ff288ead60e8e4357035d3ed0b42f3",
+      "diff_sha256": "c10e6053e504445f0ef9211bcce78aef2bd5e2ca5b7d63bd2d620622a892c179"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/cmd/testdata/runtime-golden/runtime-claude-owner-rules.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-claude-with-settings-that-cannot-be-used.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-lifecycle-of-all-the-targets.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-lifecycle-of-claude.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-roots-come-from-the-environment.golden",
+        "engine/cmd/usage.go",
+        "engine/runtime/claude.go",
+        "engine/runtime/core/config.go",
+        "engine/runtime/ownerrules.go",
+        "engine/runtime/ownerrules_block.go",
+        "engine/runtime/ownerrules_block_edges_test.go",
+        "engine/runtime/ownerrules_block_test.go",
+        "engine/runtime/ownerrules_claude_edges_test.go",
+        "engine/runtime/ownerrules_race_test.go",
+        "engine/runtime/ownerrules_text_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/runtime/ownerrules_block.go:245-249",
+        "claim": "RemoveFile deletes any file whose content becomes empty after the block is removed. A CLAUDE.md the owner had as an existing empty file before install is deleted on uninstall, so the pre-install state is not restored. blockFile.existed does not record whether install created the file, and an empty original file is indistinguishable from a created one.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/ownerrules_block.go:245-249"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "engine/runtime/ownerrules.go:42-44",
+        "claim": "Every locateOverlay failure with a blank OverlayDir (including a whitespace-only value, or a failure that is not 'no checkout') is mapped to ErrNoOverlayCheckout. Install then reports restart_required with only a note instead of partial. Previously such a case, such as a whitespace-only LABDRIAN_OVERLAY_DIR, may have been reported as an error; the config comment says the value is 'not trimmed or judged'. This can hide a misconfiguration.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/ownerrules.go:42-44"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/claude.go:126-133",
+        "claim": "status() calls OwnerRules() a second time right after ownerRulesStatus() already called it, to re-detect ErrNoOverlayCheckout. This reads and locates the checkout twice. The two answers can differ, and the 'not checked' decision is split across two functions.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/claude.go:126-133"
+        ]
+      }
+    ],
+    "evidence": [
+      "Remove/Apply byte round-trip traced for no-final-newline, CRLF and blank-line cases: correct.",
+      "The golden diffs match the new no-checkout behavior."
+    ]
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "967dd4eb2e5d4aa83bad2bb5b8e98c905a7f8913",
+    "head": "348afec1360ec1220caa698ae0890de434bb9667",
+    "diff_sha256": "a98ca14f538883dd690acdb360f950ab70b348701cb099186b0d3f2d8b09182d",
+    "paths": [
+      "engine/architecture_test.go",
+      "engine/skillregistry/compose.go",
+      "engine/skillregistry/compose_test.go",
+      "engine/skillregistry/frontmatter.go",
+      "engine/skillregistry/rows_test.go",
+      "engine/skillregistry/skill_test.go",
+      "engine/skillregistry/skillregistry.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "967dd4eb2e5d4aa83bad2bb5b8e98c905a7f8913",
+      "head": "348afec1360ec1220caa698ae0890de434bb9667",
+      "diff_sha256": "a98ca14f538883dd690acdb360f950ab70b348701cb099186b0d3f2d8b09182d"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/architecture_test.go",
+        "engine/skillregistry/compose.go",
+        "engine/skillregistry/compose_test.go",
+        "engine/skillregistry/frontmatter.go",
+        "engine/skillregistry/rows_test.go",
+        "engine/skillregistry/skill_test.go",
+        "engine/skillregistry/skillregistry.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "Read the whole diff. The new package is not called anywhere yet, so no existing input can regress.",
+      "Traced Compose for a first-time, a gentle-written and an already-composed registry: idempotent, and the executor rows, Hermes section, loading protocol and propagate blocks are kept as claimed.",
+      "Traced ParseSkill: block scalars, quoted multi-line values, an unclosed quote, CRLF, and a missing or unclosed frontmatter. Every index access is guarded, and the fallback paths terminate.",
+      "The new rings entry for skillregistry is consistent with the neighbouring entries."
+    ]
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "56300ca2da6619dc5008006e0943159e54ffb4d4",
+    "head": "201a28d2154f0e939efd40c25d9c838566039225",
+    "diff_sha256": "0017e95c8bfdbc7c5dc226862a9156bc3beee0e2b7eedf9669dc7fb1abc3ba46",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "56300ca2da6619dc5008006e0943159e54ffb4d4",
+      "head": "201a28d2154f0e939efd40c25d9c838566039225",
+      "diff_sha256": "0017e95c8bfdbc7c5dc226862a9156bc3beee0e2b7eedf9669dc7fb1abc3ba46"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:16",
+        "claim": "S9 now adds read→Read and skill→Skill mappings, but its Acceptance line still says only 'one test per mapping; claude and codex map as before'. It does not name the two new mappings or the plugin's path→file_path and id→skill parameter renames, so those are not pinned by the S9 acceptance. The acceptance wording is ambiguous for the newly added mappings.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:16"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:617",
+        "claim": "L66 states that the pause length is 'whole seconds for the integer-millisecond timeouts' and that 'the raw division prints 60'. This is an unexplained fragment without a stated value or referent, so it is hard to verify against L65's note. The claim is not checkable from the diff.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:617"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only the S9 text and appends L66 in a documentation file; no code or behavior is touched.",
+      "The S9 text adds read→Read and skill→Skill and cites L65, which L65 does record as accepted.",
+      "S7 still states the foreman keeps `skill` and the eight roles deny it, which is consistent with the mapping and not contradicted by this change."
+    ]
+  }
+}

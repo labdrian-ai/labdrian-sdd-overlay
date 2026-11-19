@@ -1,0 +1,12 @@
+{
+  "kind": "polisher",
+  "base": "6bd701ddf2ec8110b613b2f8acf07e70b66c5795",
+  "head": "9091d9ce8978010a5f7120ee8b2b88b6dfb8a50c",
+  "diff_sha256": "23e69497acf30a5916b7606bbe9303131c067318f967d00e52973a0a09540acd",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Two blind polisher judges read the 9091d9ce tree; no finding was attributed to 9091d9ce; the status disagreement (A-F1/B-F2) concerned the runtime adapter, recorded on f95a3624. The independent verifier passed on 9091d9ce."
+    ]
+  }
+}

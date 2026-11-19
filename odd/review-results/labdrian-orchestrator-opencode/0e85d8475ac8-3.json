@@ -1,0 +1,72 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "8168f840c060a189f10f9a4a4c972ac8f75a71fb",
+    "head": "0e85d8475ac8407ccafc2ac56beb1ab107affbf4",
+    "diff_sha256": "839e61c759b3854a5cf7213a8965532ea8d62087fe1ba9a7dd918967c0d789f1",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/cmd/usage.go",
+      "engine/runtime/opencode_plugin_live_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "8168f840c060a189f10f9a4a4c972ac8f75a71fb",
+      "head": "0e85d8475ac8407ccafc2ac56beb1ab107affbf4",
+      "diff_sha256": "839e61c759b3854a5cf7213a8965532ea8d62087fe1ba9a7dd918967c0d789f1"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/cmd/usage.go",
+        "engine/runtime/opencode_plugin_live_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode_plugin_live_test.go:40",
+        "claim": "The loop iterates over a Go map, so the order of checks and error output is nondeterministic between runs. Failures remain correct but reporting order varies. A slice of structs would give stable output.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/opencode_plugin_live_test.go:40"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode_plugin_live_test.go:42-46",
+        "claim": "The 'failed to load plugin' check matches by substring of the id. The id 'memorycard' is a substring of other log text (for example a path or a memorycard mcp server line containing 'failed to load plugin'), and 'labdrian-runtime-parity' lines are unaffected. A failed-load line for an unrelated plugin whose path mentions memorycard could produce a false failure. Low likelihood.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/opencode_plugin_live_test.go:42-46"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode_plugin_live_test.go:73-74",
+        "claim": "MEMORYCARD_DB is set only on the opencode child environment. The test does not verify that the memorycard binary the plugin spawns honors MEMORYCARD_DB, so the claim that nothing can reach a real store relies on an unchecked assumption; other store-location variables such as HOME-based defaults are only isolated if HOME is sandboxed.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/opencode_plugin_live_test.go:73-74"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed all four changed paths; docs and usage text are descriptive only. The test change is the only executable change and has no regression on previously valid input."
+    ]
+  }
+}

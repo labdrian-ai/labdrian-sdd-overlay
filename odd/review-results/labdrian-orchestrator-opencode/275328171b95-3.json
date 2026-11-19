@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "094e2053e7b8726ed7848f1ad0b3c1ac213e5226",
+    "head": "275328171b959d8dcc8e58530365d2d8f883c12d",
+    "diff_sha256": "3ebf012c7c77e75f6a0764e27d54027d07515bbf2f47b60c1a5e1317347b6f83",
+    "paths": [
+      "bin/lib/usage.sh"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "094e2053e7b8726ed7848f1ad0b3c1ac213e5226",
+      "head": "275328171b959d8dcc8e58530365d2d8f883c12d",
+      "diff_sha256": "3ebf012c7c77e75f6a0764e27d54027d07515bbf2f47b60c1a5e1317347b6f83"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "bin/lib/usage.sh"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff only adds help-text lines inside the usage heredoc in bin/lib/usage.sh; no executable logic changes.",
+      "Added lines contain no shell metacharacters (backticks, $, unbalanced quotes) that could break an unquoted heredoc; the text uses plain words, parentheses and a hyphenated number.",
+      "I could not verify against the implementation that the documented behaviors (150000-byte limit, exit codes) match the verb, since the diff does not show it."
+    ]
+  }
+}

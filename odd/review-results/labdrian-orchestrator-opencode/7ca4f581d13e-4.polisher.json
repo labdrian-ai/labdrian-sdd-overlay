@@ -1,0 +1,12 @@
+{
+  "kind": "polisher",
+  "base": "ddced25ef0dde1a6c1a57429c80084de462b8281",
+  "head": "7ca4f581d13e0d87f1bac2d056cef22d914a3010",
+  "diff_sha256": "1aef3a0abaac0e634512334eb1e14c81283c233d1c217b8cbadbc60f6898db33",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "Two blind polisher judges rechecked the 7ca4f581 tree; 7ca4f581 only rewords item 2 (one resolve call, each distinct number once, sorted as strings), moves item 6's failure clause next to the rewrite and adds 'as strings' to SKILL.md. Judge B found the sort and distinct rule matching legacyNumbers and the resolver; the findings J1-J3 concern text ddced25e added and are recorded on ddced25e. No judge ran tests."
+    ]
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "kind": "polisher",
+  "base": "ba97a9d1b8be77f1f5b3ca641ab051b90daba359",
+  "head": "0c82ec6750d5f4f72ee43cc0cd6c8a55ce56dd73",
+  "diff_sha256": "63641df3b2a59129bf2fdab828b1866c45ff6bc0eec4a36aad766c4034986ef6",
+  "findings": {
+    "findings": [
+      {
+        "id": "a2-F1",
+        "severity": "SUGGESTION",
+        "location": "engine/sddregistry/fsstore/fsstore.go:1-2",
+        "claim": "Adapter path named a gone domain. Fixed in 4748e19a: moved to engine/skillregistry/fsstore.",
+        "evidence": [
+          "4748e19a"
+        ]
+      },
+      {
+        "id": "a2-F2",
+        "severity": "SUGGESTION",
+        "location": "engine/skillregistry/compose.go:121-134",
+        "claim": "Implicit block-end rule. Answered: the rule is documented in the compose doc comment and pinned by TestComposeDropsTheExecutorRowsOnlyInTheTableBlock; a foreign # or <!-- line inside the table block ends the migration early, which errs on keeping bytes.",
+        "evidence": [
+          "4748e19a tests"
+        ]
+      }
+    ],
+    "evidence": [
+      "Independent verifier on ba3fbd34 (= a1+a2 tree before the B1 fix): no live reader of removed symbols; differential only requested changes; B1 found, fixed in 0c82ec67, recheck not-reproduced with the probe reproducing at ba3fbd34; A1 fixed."
+    ]
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "kind": "sweeper",
+  "base": "2bf126211283fadb29bb4d34a89231125a0a2a96",
+  "head": "6ca43786bda767a89de266e982b9c1a31937c9b9",
+  "diff_sha256": "5971a91fe6698e963766a3a7e7b04ae4b46935b28dd360c2da25f623eb538242",
+  "sweep": "6ca43786bda7-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 name: piSonnetModel",
+      "disposition": "live",
+      "evidence": "Removed from engine/agentgen/roles.go by dbae346c. At branch HEAD 4c810cf6, rg finds no code reference. The only two hits are historical records, not live prose. odd/tasks/role-agents-slice5.md:125 is a past review-round log entry about a comment that was already reworded. odd/review-receipts/role-agents-slice5/review-c66bc0978f2f2235.review-state.json is an immutable review receipt. Neither describes current behaviour, so there is nothing dangling to fix."
+    }
+  ]
+}

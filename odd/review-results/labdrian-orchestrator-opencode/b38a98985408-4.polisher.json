@@ -1,0 +1,22 @@
+{
+  "kind": "polisher",
+  "base": "34028c8ed56251e8d6c5b5bee6cc42a21b4bb4ab",
+  "head": "b38a989854083799e499d73a2e86ef5c1ded86a3",
+  "diff_sha256": "91aeea445ea4c3aecacce4f2360f5d943b83d1bbd2f81a93d9424a39dbd5d30f",
+  "findings": {
+    "findings": [
+      {
+        "id": "G-W1",
+        "severity": "WARNING",
+        "location": "engine/skillregistry/frontmatter.go:100",
+        "claim": "Both reviewers: the narrowed mappingKey no longer stops an unclosed quote at a top-level key with a value. Answered with evidence: frontmatter.go:96 breaks on any line that does not start with a space or tab, so a top-level key (license: x, name: y) still ends the value; the case a quote that never closes keeps its first line (description \"a / b / license: x) passes, and the other keys after it are read passes.",
+        "evidence": [
+          "go test ./skillregistry/... ok at b38a9898."
+        ]
+      }
+    ],
+    "evidence": [
+      "series review 34028c8e..b38a9898"
+    ]
+  }
+}

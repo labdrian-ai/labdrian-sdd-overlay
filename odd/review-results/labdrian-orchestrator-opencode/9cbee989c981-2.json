@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "094353a71ccf56c1f5d5ef59168a05f4ff43ce31",
+    "head": "9cbee989c981e440fab7720bba3f5c97a626b54c",
+    "diff_sha256": "3319631345a52f13a7c97a1f7b4b1441f8a87564a406c1774508141b08a2ebb6",
+    "paths": [
+      "engine/skills/procedural_candidate_memorycard_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "094353a71ccf56c1f5d5ef59168a05f4ff43ce31",
+      "head": "9cbee989c981e440fab7720bba3f5c97a626b54c",
+      "diff_sha256": "3319631345a52f13a7c97a1f7b4b1441f8a87564a406c1774508141b08a2ebb6"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skills/procedural_candidate_memorycard_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/skills/procedural_candidate_memorycard_test.go:139",
+        "claim": "The new assertion starts with the same substring 'sorted as strings and as written' as the previous line, so the two pins overlap; the earlier line is now redundant for that phrase. If the skill text is reworded, a failure may report either line, which makes the diagnosis less clear. The exact command string is also pinned character for character, so any harmless flag reordering breaks the test.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/procedural_candidate_memorycard_test.go:138-139"
+        ]
+      }
+    ],
+    "evidence": [
+      "Single added line in requireText call; overlaps the phrase in the preceding line.",
+      "Could not verify that SKILL.md contains the pinned text; the diff shows only the test file, so the test may fail if the skill text differs."
+    ]
+  }
+}

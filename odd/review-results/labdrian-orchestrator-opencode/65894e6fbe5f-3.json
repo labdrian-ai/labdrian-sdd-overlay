@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "15a0ae1a0fd16b9e9c421c3015b1318eb991a0fa",
+    "head": "65894e6fbe5f86493b59f2a6dddb7b26eb3a33f3",
+    "diff_sha256": "43699a6df292358e69658fe707ab1b7786703937e62708a6af046f8b7a8867e1",
+    "paths": [
+      "engine/runtime/claude_ports.go",
+      "engine/runtime/claude_ports_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "15a0ae1a0fd16b9e9c421c3015b1318eb991a0fa",
+      "head": "65894e6fbe5f86493b59f2a6dddb7b26eb3a33f3",
+      "diff_sha256": "43699a6df292358e69658fe707ab1b7786703937e62708a6af046f8b7a8867e1"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/runtime/claude_ports.go",
+        "engine/runtime/claude_ports_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "claude_ports.go change merges two duplicate doc comments into one; no code change.",
+      "claude_ports_test.go: adds agentErr field and InspectMainAgent now returns f.agentErr instead of f.inspectErr; the field is declared and used consistently. Existing tests that set inspectErr expecting InspectMainAgent to fail would change behavior, but the diff shows no such callers and the commit intends this decoupling.",
+      "Import reordering is gofmt-style only; no behavior change."
+    ]
+  }
+}

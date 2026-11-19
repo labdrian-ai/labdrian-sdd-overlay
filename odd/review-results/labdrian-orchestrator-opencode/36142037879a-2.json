@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ba282961c1c1c2a98f9ac9fb4a886d3022d190eb",
+    "head": "36142037879ada9c334715fb9d276a400130e67a",
+    "diff_sha256": "8420b3719cdd6e10f7f106d1c144864ce9d5efcdfd2afae9c1996b3cd97fa872",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "ba282961c1c1c2a98f9ac9fb4a886d3022d190eb",
+      "head": "36142037879ada9c334715fb9d276a400130e67a",
+      "diff_sha256": "8420b3719cdd6e10f7f106d1c144864ce9d5efcdfd2afae9c1996b3cd97fa872"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff changes one T30 line, replacing the BLOCKED clause with 'L62 risk 1 answered \"keep\" (L73)'. It also appends the L73 entry, which numbers correctly after L72.",
+      "The remaining 'until the owner answers L62 risk 2' references in T29 and T22 concern a different risk, so they are not stale.",
+      "No inconsistency with the commit claim (a docs-only record of the owner's keep decision) was found."
+    ]
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "09c38855faca14b83bdb5e07db6d057c1e80b544",
+    "head": "a87253e73094f58d8de877527b39aea320f0c485",
+    "diff_sha256": "3174de6e282e847667ea37669e642afaa09c8870f8056397aae591579a3b70ef",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "09c38855faca14b83bdb5e07db6d057c1e80b544",
+      "head": "a87253e73094f58d8de877527b39aea320f0c485",
+      "diff_sha256": "3174de6e282e847667ea37669e642afaa09c8870f8056397aae591579a3b70ef"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:470",
+        "claim": "L50 says `fca475d` is the memorycard PR #29 head. L47 names `d57c2be` as the last commit of that branch (the review fixes) and gives no `fca475d`. The log therefore names two different PR heads, and the diff does not show a later commit that reconciles them. A reader cannot tell which is the real head without checking memorycard.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:470",
+          "L47 (context, line 467 region): 'd57c2be review fixes'"
+        ]
+      }
+    ],
+    "evidence": [
+      "The change adds one append-only Log entry (L50) to a feature document and touches no code.",
+      "The token figures are consistent with L49: 723/750, 695/700 and 849/950 against L49's earlier 690/700, 695/700 and 849/950, and the 750 bound is explained in the entry.",
+      "The only discrepancy I found is the PR #29 head SHA cited in L50 versus L47."
+    ]
+  }
+}

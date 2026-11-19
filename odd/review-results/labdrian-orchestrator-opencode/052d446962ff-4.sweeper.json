@@ -1,0 +1,15 @@
+{
+  "kind": "sweeper",
+  "base": "f98917e97b0b3e1662c8fddcab6dcbcd2e155fab",
+  "head": "052d446962ff288ead60e8e4357035d3ed0b42f3",
+  "diff_sha256": "c10e6053e504445f0ef9211bcce78aef2bd5e2ca5b7d63bd2d620622a892c179",
+  "sweep": "052d446962ff-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T2 errcheck engine: runtime/ownerrules_block.go: unchecked error: tmp.Close()",
+      "disposition": "finding",
+      "evidence": "Fixed in b88fbec6."
+    }
+  ]
+}

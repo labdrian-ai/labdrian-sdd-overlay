@@ -1,0 +1,36 @@
+{
+  "kind": "sweep",
+  "base": "9593f57bf11915c9daa4d63bddb509f159aa03fd",
+  "head": "18b989fb097cb5453e57c9d9079b62ef12d3b044",
+  "diff_sha256": "d4cbf475e11cabc14b19f974d890eec88efdf99e6af384d6049477efc1cfebda",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [
+      "skills/sdd-design/.approval.json",
+      "skills/sdd-design/SKILL.md",
+      "skills/sdd-design/references/threat-matrix.md",
+      "skills/sdd-explore/.approval.json",
+      "skills/sdd-explore/SKILL.md",
+      "skills/sdd-init/.approval.json",
+      "skills/sdd-init/SKILL.md",
+      "skills/sdd-init/references/init-details.md",
+      "skills/sdd-onboard/.approval.json",
+      "skills/sdd-onboard/SKILL.md",
+      "skills/sdd-propose/.approval.json",
+      "skills/sdd-propose/SKILL.md",
+      "skills/sdd-spec/.approval.json",
+      "skills/sdd-spec/SKILL.md",
+      "skills/sdd-tasks/.approval.json",
+      "skills/sdd-tasks/SKILL.md"
+    ],
+    "removed_names": []
+  },
+  "t2": [],
+  "t3": [
+    " M odd/tasks/labdrian-orchestrator-opencode.md"
+  ],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

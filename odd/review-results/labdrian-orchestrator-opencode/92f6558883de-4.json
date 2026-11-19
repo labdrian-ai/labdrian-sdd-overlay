@@ -1,0 +1,96 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "9091d9ce8978010a5f7120ee8b2b88b6dfb8a50c",
+    "head": "92f6558883de0159c7ec7cb9dab3431c5ef34584",
+    "diff_sha256": "e67291cc5071f582543bc2a12a21eb794144b5055a3d1cf60407d385350ad3ec",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/capability/declarations.go",
+      "engine/cmd/main_agent_files_test.go",
+      "engine/cmd/settings_hooks.go",
+      "engine/runtime/claude.go",
+      "engine/runtime/claude_main_agent_test.go",
+      "engine/runtime/claude_ports.go",
+      "engine/settings/main_agent.go",
+      "engine/settings/settingsfile/installer.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "9091d9ce8978010a5f7120ee8b2b88b6dfb8a50c",
+      "head": "92f6558883de0159c7ec7cb9dab3431c5ef34584",
+      "diff_sha256": "e67291cc5071f582543bc2a12a21eb794144b5055a3d1cf60407d385350ad3ec"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/capability/declarations.go",
+        "engine/cmd/main_agent_files_test.go",
+        "engine/cmd/settings_hooks.go",
+        "engine/runtime/claude.go",
+        "engine/runtime/claude_main_agent_test.go",
+        "engine/runtime/claude_ports.go",
+        "engine/settings/main_agent.go",
+        "engine/settings/settingsfile/installer.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/runtime/claude.go:106-125",
+        "claim": "mainAgentStatus runs after the hooks Inspect succeeded and reads the file a second time. A parse or read error from InspectMainAgent is reported as CapabilityUnsupported with a 'read settings file' message, while the hooks Inspect error path may use a different status. A TOCTOU race between the two reads is also possible, but the main effect is two inconsistent status classifications for the same file condition.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/claude.go:106-125"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "engine/settings/settingsfile/installer.go:58-72",
+        "claim": "InspectMainAgent returns MainAgentMissing together with the error when parsing fails, and for a JSON null file (Inspect treats it as 'holds nothing') it calls MainAgent on a nil root. Callers that ignore err (foreignAgentNotice checks err first, so fine) could misread the state as missing. A JSON-null settings file is handled differently from Inspect, which reports found=false; the adapter's status would not reach this path, but Install/Update on a null file depends on whether settings.Parse and doc.Root() tolerate it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/settings/settingsfile/installer.go:58-72"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/claude_ports.go:27-34",
+        "claim": "MainAgentInspector is an optional interface discovered by type assertion. If the composition-root installer is wrapped, or stops implementing the method, the main-agent check is silently skipped and status reports supported with no signal. The behavior depends on a runtime type assertion rather than the compile-time port.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/claude.go:107-110",
+          "engine/runtime/claude_ports.go:27-34"
+        ]
+      },
+      {
+        "id": "F4",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/claude.go:70-80",
+        "claim": "Uninstall and Rollback still report status from hooks only, while status now returns partial for a missing agent key. After uninstall the 'unhealthy' result is unchanged, but the test list for the capability claim does not pin uninstall behavior with the new key, so the uninstall path of the adapter is not covered for the agent key.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "engine/runtime/claude.go:70-80"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the diff only; no tools were available to run the tests.",
+      "The shared ForeignMainAgentNotice reproduces the previous stderr text exactly, so the cmd notice is unchanged for the same input.",
+      "Existing consumers of ClaudeAdapter.Status that treated an installed-and-owned state as supported now get partial when the agent key is missing, which is the requested behavior of the commit."
+    ]
+  }
+}

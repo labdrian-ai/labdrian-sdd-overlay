@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "9dc48fdd3d5b6221b294342b1f616d1e44559c51",
+    "head": "ab3d36b1fd789cfc2c663e2328b256ad0d3c17ee",
+    "diff_sha256": "4ef50317f377bbbb325ec08e400b1e074d1608f8f6feafeeba98b368b1d5b734",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/capability/declarations.go",
+      "engine/capability/declarations_test.go",
+      "engine/capability/memory_enforcement_detail_test.go",
+      "engine/capability/opencode_declaration_test.go",
+      "engine/capability/testdata/codex-declaration.golden",
+      "engine/cmd/phase7_acceptance_test.go",
+      "engine/cmd/runtime_capabilities_test.go",
+      "engine/cmd/usage.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "9dc48fdd3d5b6221b294342b1f616d1e44559c51",
+      "head": "ab3d36b1fd789cfc2c663e2328b256ad0d3c17ee",
+      "diff_sha256": "4ef50317f377bbbb325ec08e400b1e074d1608f8f6feafeeba98b368b1d5b734"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/capability/declarations.go",
+        "engine/capability/declarations_test.go",
+        "engine/capability/memory_enforcement_detail_test.go",
+        "engine/capability/opencode_declaration_test.go",
+        "engine/capability/testdata/codex-declaration.golden",
+        "engine/cmd/phase7_acceptance_test.go",
+        "engine/cmd/runtime_capabilities_test.go",
+        "engine/cmd/usage.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/capability/declarations.go:283",
+        "claim": "OpenCode's memory-enforcement claim cites cmd:TestCodexSourceProcesses, a test of the Codex hook source, as evidence for the `--source opencode` gate. The `partial` status names the tests that prove it, so a test that does not drive the opencode source overstates what is proven. The new pin test requires this citation, so the mismatch is locked in. The claim's own text says no memory write is blocked, which makes `partial` memory enforcement an optimistic status.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/capability/declarations.go:281-288",
+          "engine/capability/opencode_declaration_test.go:139-145"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/capability/declarations.go:270",
+        "claim": "The Cancellation claim cites cmd:TestPreToolUseDeniesTheEditToolsOfAPausedWorkflow. That test is not shown to go through the opencode source or `patch`, and the detail itself says no single test drives a paused workflow through patch. The citation may imply more coverage than exists.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/capability/declarations.go:268-273"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only the diff was inspected; I could not check that the cited test names exist or what they cover. The repository's guard test is meant to check that they exist.",
+      "I did not recompute the Codex golden; byte-identity is pinned only by the new test."
+    ]
+  }
+}

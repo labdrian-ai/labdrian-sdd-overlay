@@ -1,0 +1,31 @@
+{
+  "kind": "polisher",
+  "base": "a6e520a0751d14be30c04d1d522d51c4047ec861",
+  "head": "a10c3d441a9aea56c22947abaefe3b6a5bcdf585",
+  "diff_sha256": "adf0806e4061bd360eb260348a829a810ab069c804d52e920ec39101db95c8cc",
+  "findings": {
+    "findings": [
+      {
+        "id": "S-14",
+        "severity": "WARNING",
+        "location": "engine/runtime/opencode_json_write.go:56-65",
+        "claim": "The bare-to-absolute upgrade might discard owner members. Refuted: owns() (opencode_json.go:63-80) requires canonical equality with our entry after normalizing the command, so an entry with any extra member is foreign and never upgraded.",
+        "evidence": [
+          "read of owns()."
+        ]
+      },
+      {
+        "id": "S-15",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode_splice.go:176-196",
+        "claim": "An empty object at column 0 gets two-space indent in a tab file. Answered: there is no sibling to read the style from; two spaces is the documented fallback.",
+        "evidence": [
+          "series x2."
+        ]
+      }
+    ],
+    "evidence": [
+      "Independent verifier (Risk 3,5) on 451cd0da..2e22df05: suite 85 ok; seeds a-f held; real OpenCode 2.2.7 loads the plugin and parses the config; claude/codex/pi identical; no change-caused blocker. Bounded recheck R1-R7 on a6e520a0: none reproduced (all reproduced at base)."
+    ]
+  }
+}

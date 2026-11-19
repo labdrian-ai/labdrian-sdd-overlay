@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "c0fa35a7a0dd8b5945bedbf8d954cf9236cd2fbf",
+    "head": "eafc1015cc5b11382f34cd847cae394eb7453bbe",
+    "diff_sha256": "8efbf8e2917e30a71c29bbbe0307f16848051c8ecd230c1b97c0a5a31efcf3e8",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/cmd/runtime_test.go",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+      "engine/runtime/opencode_contracts.go",
+      "engine/runtime/opencode_overlay_test.go",
+      "engine/runtime/opencode_plugin_test.go",
+      "engine/runtime/opencode_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "c0fa35a7a0dd8b5945bedbf8d954cf9236cd2fbf",
+      "head": "eafc1015cc5b11382f34cd847cae394eb7453bbe",
+      "diff_sha256": "8efbf8e2917e30a71c29bbbe0307f16848051c8ecd230c1b97c0a5a31efcf3e8"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/cmd/runtime_test.go",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+        "engine/runtime/opencode_contracts.go",
+        "engine/runtime/opencode_overlay_test.go",
+        "engine/runtime/opencode_plugin_test.go",
+        "engine/runtime/opencode_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/runtime/opencode_contracts.go:19-26",
+        "claim": "The new comment says the overlay root is always absolute, but the code only joins source.root under each contract path and never calls filepath.Abs. If OpenCodeOptions.OverlayDir is given as a relative path (not shown to be validated in this diff), the written contract paths stay relative to the invoking cwd. That brings back the 'File not found' failure in the subagent's project, and the tests only use absolute overlays.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "engine/runtime/opencode_contracts.go:19-26",
+          "engine/runtime/opencode_overlay_test.go:150-175"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff does not show contractFile or overlayContracts.root, so absoluteness of root for a relative OverlayDir cannot be confirmed.",
+      "The rest of the change (copying the contracts slice, shared promptConfig for install and status, the updated goldens and tests) looks consistent."
+    ]
+  }
+}

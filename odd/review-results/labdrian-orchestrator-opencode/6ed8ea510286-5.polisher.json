@@ -1,0 +1,40 @@
+{
+  "kind": "polisher",
+  "base": "a610792c389d10edd5916c56c445c081b9b0ac62",
+  "head": "6ed8ea51028630bc0d897ac9aa85f201e91ce1de",
+  "diff_sha256": "be0b4124471b6ddf150d45559b00c9c8573991cadd851d37e45c5353632b3fc0",
+  "findings": {
+    "findings": [
+      {
+        "id": "Z1",
+        "severity": "WARNING",
+        "location": "skills/issue-creation/references/procedure.md:10",
+        "claim": "Title match undefined; title-only filter may miss duplicates whose title differs. Answered, no change: the search query is built from the request, so candidates already match its terms; the title filter only bounds reads, and a stop with more than 10 hands the choice to the owner, who may name candidates or allow creation. Correction bound for this unit reached; logged as a follow-up in L96.",
+        "evidence": [
+          "series review of 6ed8ea51"
+        ]
+      },
+      {
+        "id": "Z2",
+        "severity": "WARNING",
+        "location": "skills/issue-creation/references/procedure.md:18",
+        "claim": "Normalization side and scope unclear. Answered: the rule normalizes the compare (both sides); other GitHub transformations fall to unknown, which is the safe outcome. Follow-up in L96.",
+        "evidence": [
+          "series review of 6ed8ea51"
+        ]
+      },
+      {
+        "id": "Z3",
+        "severity": "SUGGESTION",
+        "location": "skills/issue-creation/references/procedure.md",
+        "claim": "Owner-stop exit undefined, URL-failure only in step 5, normalization wording. Answered: any owner answer is a new instruction the skill already requires for a write; step 5 states the URL rule where the URL is read. Follow-up in L96.",
+        "evidence": [
+          "series review of 6ed8ea51"
+        ]
+      }
+    ],
+    "evidence": [
+      "series reviews a610792c..6ed8ea51"
+    ]
+  }
+}

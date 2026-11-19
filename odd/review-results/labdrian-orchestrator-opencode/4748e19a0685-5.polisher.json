@@ -1,0 +1,12 @@
+{
+  "kind": "polisher",
+  "base": "f68b765a121f2e5baf8dd9dd5b488278cd0efed9",
+  "head": "4748e19a0685220f03735056599458041561cfc0",
+  "diff_sha256": "90ff23ff740f2c6d7e1752d12063425bb38e82e1080d8feba135821a280524c0",
+  "findings": {
+    "findings": [],
+    "evidence": [
+      "series review f68b765a..4748e19a: no findings; RED/GREEN 7 compose tests; differential against cb3b8bca only requested changes."
+    ]
+  }
+}

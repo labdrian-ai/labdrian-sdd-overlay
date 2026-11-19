@@ -1,0 +1,67 @@
+{
+  "kind": "polisher",
+  "base": "451cd0da31cfa9369b9ed25b35f71c1748a46f8b",
+  "head": "59fe2fb3616080da43d442f7ea59bad0025da04c",
+  "diff_sha256": "ed5f4cf8cf799ce2f498cac90986b0ab7bd3ca18caa3080806c4a8a89fb998ef",
+  "findings": {
+    "findings": [
+      {
+        "id": "A-F1",
+        "severity": "WARNING",
+        "location": "engine/runtime/opencode_json.go",
+        "claim": "opencode.json was re-encoded from a map: key order, indent and duplicates lost; uninstall not byte-exact. Fixed in 872148eb (splice) and a10c3d44 (line ending and indent kept).",
+        "evidence": [
+          "judge A F1; recheck R1."
+        ]
+      },
+      {
+        "id": "S-1",
+        "severity": "WARNING",
+        "location": "engine/runtime/opencode_json.go:86",
+        "claim": "Trailing garbage after the object accepted. Fixed in 872148eb and a10c3d44 (JSON whitespace only).",
+        "evidence": [
+          "series x2; recheck R1."
+        ]
+      },
+      {
+        "id": "A-F5",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode_json.go:45-50",
+        "claim": "Bare MCP command names fail under a launcher PATH. Fixed in 0cdda1fd and a10c3d44 (absolute path; bare entries of ours upgraded).",
+        "evidence": [
+          "judge A F5; verifier spawn NotFound; recheck R4."
+        ]
+      },
+      {
+        "id": "A-F6",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode_json.go:177-200",
+        "claim": "default_agent owned by value. Answered: documented design, as the settings agent key.",
+        "evidence": [
+          "judge A F6."
+        ]
+      },
+      {
+        "id": "B-F8",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode_json.go:13-19",
+        "claim": "No plugin/provider/model key written. Answered: OpenCode 2.2.7 loads plugins/<id>/index.js with no entry (live test); the subscription is the built-in openai provider, checked live in T17; longterm-mem is written by T13 register.",
+        "evidence": [
+          "judge B F8; verifier check 3."
+        ]
+      },
+      {
+        "id": "S-2",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode_json.go:182-188",
+        "claim": "Uninstall deleted an owner empty servers container. Fixed by the splice in 872148eb: only owned members are removed.",
+        "evidence": [
+          "series x2."
+        ]
+      }
+    ],
+    "evidence": [
+      "Independent verifier (Risk 3,5) on 451cd0da..2e22df05: suite 85 ok; seeds a-f held; real OpenCode 2.2.7 loads the plugin and parses the config; claude/codex/pi identical; no change-caused blocker. Bounded recheck R1-R7 on a6e520a0: none reproduced (all reproduced at base)."
+    ]
+  }
+}

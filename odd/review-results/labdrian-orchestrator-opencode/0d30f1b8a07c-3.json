@@ -1,0 +1,122 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "201a28d2154f0e939efd40c25d9c838566039225",
+    "head": "0d30f1b8a07ced6b2454d312764eafd060618a11",
+    "diff_sha256": "dd65b0c93ae541a2111ef169c0c1e9588405a6a0dd593a0126fd4d71eb2b01d7",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/runtime/longtermmem_config.go",
+      "engine/runtime/longtermmem_test.go",
+      "longterm-mem/README.md",
+      "longterm-mem/cmd/longterm-mem/register_golden_test.go",
+      "longterm-mem/cmd/longterm-mem/testdata/register-golden/09-register-codex-and-opencode.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/register-golden/17-register-all-with-pi-installed.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/register-golden/18-register-all-with-pi-listed-but-not-built.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/register-golden/19-register-all-with-a-conflict.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/register-golden/21-register-all-with-an-unresolvable-root-and-a-conflict.golden",
+      "longterm-mem/cmd/longterm-mem/testdata/register-golden/30-unregister-what-register-all-put.golden",
+      "longterm-mem/internal/register/emptyconfig_test.go",
+      "longterm-mem/internal/register/jsonnested.go",
+      "longterm-mem/internal/register/jsonwrite.go",
+      "longterm-mem/internal/register/opencode.go",
+      "longterm-mem/internal/register/opencode_v2_test.go",
+      "longterm-mem/internal/register/ownership_test.go",
+      "longterm-mem/internal/register/testdata/opencode/after-install-no-container.json",
+      "longterm-mem/internal/register/testdata/opencode/after-install.json",
+      "longterm-mem/internal/register/testdata/opencode/after-migrate.json",
+      "longterm-mem/internal/register/testdata/opencode/after-reinstall.json",
+      "longterm-mem/internal/register/testdata/opencode/after-uninstall.json",
+      "longterm-mem/internal/register/testdata/opencode/before.json",
+      "longterm-mem/internal/register/testdata/opencode/legacy-1x.json",
+      "longterm-mem/internal/register/testdata/opencode/untagged.json",
+      "longterm-mem/internal/register/unregister.go",
+      "longterm-mem/internal/register/unregister_test.go",
+      "longterm-mem/internal/register/writer.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "201a28d2154f0e939efd40c25d9c838566039225",
+      "head": "0d30f1b8a07ced6b2454d312764eafd060618a11",
+      "diff_sha256": "dd65b0c93ae541a2111ef169c0c1e9588405a6a0dd593a0126fd4d71eb2b01d7"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/runtime/longtermmem_config.go",
+        "engine/runtime/longtermmem_test.go",
+        "longterm-mem/README.md",
+        "longterm-mem/cmd/longterm-mem/register_golden_test.go",
+        "longterm-mem/cmd/longterm-mem/testdata/register-golden/09-register-codex-and-opencode.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/register-golden/17-register-all-with-pi-installed.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/register-golden/18-register-all-with-pi-listed-but-not-built.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/register-golden/19-register-all-with-a-conflict.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/register-golden/21-register-all-with-an-unresolvable-root-and-a-conflict.golden",
+        "longterm-mem/cmd/longterm-mem/testdata/register-golden/30-unregister-what-register-all-put.golden",
+        "longterm-mem/internal/register/emptyconfig_test.go",
+        "longterm-mem/internal/register/jsonnested.go",
+        "longterm-mem/internal/register/jsonwrite.go",
+        "longterm-mem/internal/register/opencode.go",
+        "longterm-mem/internal/register/opencode_v2_test.go",
+        "longterm-mem/internal/register/ownership_test.go",
+        "longterm-mem/internal/register/testdata/opencode/after-install-no-container.json",
+        "longterm-mem/internal/register/testdata/opencode/after-install.json",
+        "longterm-mem/internal/register/testdata/opencode/after-migrate.json",
+        "longterm-mem/internal/register/testdata/opencode/after-reinstall.json",
+        "longterm-mem/internal/register/testdata/opencode/after-uninstall.json",
+        "longterm-mem/internal/register/testdata/opencode/before.json",
+        "longterm-mem/internal/register/testdata/opencode/legacy-1x.json",
+        "longterm-mem/internal/register/testdata/opencode/untagged.json",
+        "longterm-mem/internal/register/unregister.go",
+        "longterm-mem/internal/register/unregister_test.go",
+        "longterm-mem/internal/register/writer.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/register/opencode.go:62-69",
+        "claim": "Migration of the 1.x entry runs after jsonInstall has already overwritten the install-state record with the v2 fingerprint. If the legacy removal fails (I/O or splice error), register returns an error but the record that proved ownership of an older-binary 1.x entry is gone. A retry can then only match by canonical equality with the current binary's 1.x entry, so a 1.x entry written by an earlier binary path is never migrated and stays as an orphan.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/register/opencode.go:62-69",
+          "longterm-mem/internal/register/opencode.go:58-61"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "longterm-mem/internal/register/unregister.go:60-63",
+        "claim": "unregister removes the recorded 1.x entry before jsonUninstall runs. If jsonUninstall then fails (for example, a foreign or untagged v2 entry is a conflict), the 1.x entry has already been deleted while the install-state record stays, so the operation is partial and not atomic. A failed unregister has changed the config.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/internal/register/unregister.go:60-63"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/longtermmem_config.go:103-109",
+        "claim": "When the v2 entry is absent, the observer falls back to a 1.x mcp.longterm-mem. A foreign 1.x entry, which OpenCode v2 does not read, is then reported as a present non-owned entry (a foreign conflict) even though nothing registers in the v2 location. A stale owned 1.x entry for a different binary path is also reported as foreign rather than as migratable.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/longtermmem_config.go:103-109"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the diff only; helper bodies for locate/apply, jsonInstall and jsonUninstall are not visible, so the findings are inferential.",
+      "Migration order in RegisterOpencode: recordedFingerprint is read, then jsonInstall rewrites the record, then migrateLegacyOpencode runs."
+    ]
+  }
+}

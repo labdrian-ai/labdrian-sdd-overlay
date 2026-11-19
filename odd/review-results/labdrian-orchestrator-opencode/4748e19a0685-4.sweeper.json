@@ -1,0 +1,25 @@
+{
+  "kind": "sweeper",
+  "base": "f68b765a121f2e5baf8dd9dd5b488278cd0efed9",
+  "head": "4748e19a0685220f03735056599458041561cfc0",
+  "diff_sha256": "90ff23ff740f2c6d7e1752d12063425bb38e82e1080d8feba135821a280524c0",
+  "sweep": "4748e19a0685-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 path: engine/sddregistry/fsstore/fsstore.go",
+      "disposition": "live",
+      "evidence": "Moved with git mv to engine/skillregistry/fsstore/fsstore.go (review suggestion); import and ring updated."
+    },
+    {
+      "candidate": "T1 path: engine/sddregistry/fsstore/fsstore_test.go",
+      "disposition": "live",
+      "evidence": "Moved with its package to engine/skillregistry/fsstore."
+    },
+    {
+      "candidate": "T3:  M odd/tasks/labdrian-orchestrator-opencode.md",
+      "disposition": "live",
+      "evidence": "Parent logbook, committed with the review records at delivery."
+    }
+  ]
+}

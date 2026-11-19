@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "7e3471f033f7229cc477adee130285433203aaa3",
+    "head": "6d7c04f737593a3ed5af9c9e41c1f3737cdc6744",
+    "diff_sha256": "b22deaa63524567945caf18c07ff12f6ac073fba37d88455439477edb947f5d1",
+    "paths": [
+      "engine/capability/declarations.go",
+      "engine/capability/opencode_declaration_test.go",
+      "engine/cmd/codex_source_test.go",
+      "engine/runtime/opencode_bridge_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "7e3471f033f7229cc477adee130285433203aaa3",
+      "head": "6d7c04f737593a3ed5af9c9e41c1f3737cdc6744",
+      "diff_sha256": "b22deaa63524567945caf18c07ff12f6ac073fba37d88455439477edb947f5d1"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/capability/declarations.go",
+        "engine/capability/opencode_declaration_test.go",
+        "engine/cmd/codex_source_test.go",
+        "engine/runtime/opencode_bridge_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/capability/declarations.go:284",
+        "claim": "The rewrite of the MemoryEnforcement text drops the sentence that the memorycard plugin adds memorycard context to new main sessions. The claim still cites runtime:TestMemorycardPluginPutsTheMemorycardContextOnTheSystemPromptOfANewSession, so that test now backs behaviour the text no longer describes. The commit says it adds only one declaration sentence, but this edit also removes an existing statement. The required-phrase list in opencode_declaration_test.go no longer pins the dropped sentence, so nothing catches the removal.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/capability/declarations.go:284",
+          "engine/capability/declarations.go:291",
+          "engine/capability/opencode_declaration_test.go:145-148"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only the diff was reviewed; the helper functions it calls (queryArgs, gateInput, sourceHook, assertDenied, encoded, newFakeEngine, runPluginWithEngine) are not visible, so their existence and signatures are assumed.",
+      "The fake engine script change keeps the old answer.<event> fallback, and the per-call answer.<event>.<n> file takes precedence only when it exists, so existing tests are unaffected.",
+      "The new bridge test and the new cmd subtest look consistent with their stated purpose."
+    ]
+  }
+}

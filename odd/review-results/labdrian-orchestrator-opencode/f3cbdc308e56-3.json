@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "4c4a682a93fc1588abba726b39998439b9b0dfbd",
+    "head": "f3cbdc308e5698d3c15f6d4ca97703e5f52f623e",
+    "diff_sha256": "47d5248a5eb371b81cd72ddd62982b81acf6d3bf60267d5801499383da8e354c",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md",
+      "odd/tasks/phase9-store-agnostic-promotion.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "4c4a682a93fc1588abba726b39998439b9b0dfbd",
+      "head": "f3cbdc308e5698d3c15f6d4ca97703e5f52f623e",
+      "diff_sha256": "47d5248a5eb371b81cd72ddd62982b81acf6d3bf60267d5801499383da8e354c"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md",
+        "odd/tasks/phase9-store-agnostic-promotion.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:478",
+        "claim": "L56 says T23 was ticked, but this diff changes no task checkbox line; the tick is asserted in the log only, so the Tasks section may still show T23 unticked. Also L56 says the S14/S15 items are 'already owned' by phase9 S14/S15 'moved to the next phase (its L42)', which this diff does not show; the claim cannot be verified from the change.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:478"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/phase9-store-agnostic-promotion.md:847",
+        "claim": "L91 narrows T20 to the linter and declares S16's 'never rewritten' assumption replaced, but only appends a log line; the S16 spec text and T20 task text are not amended, so the living spec still states the superseded assumption and a reader of S16 alone sees a contradiction (append-only log versus spec of record).",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/phase9-store-agnostic-promotion.md:847"
+        ]
+      }
+    ],
+    "evidence": [
+      "Diff only appends log entries L56 and L91 to two docs; no code changed.",
+      "Line references (lint.go:264, :499) and cross-references to S14-S17, T18-T21 and L42 could not be checked from the diff."
+    ]
+  }
+}

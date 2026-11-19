@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f8946903361eecda4a27068086da5fa7b1870135",
+    "head": "7e3471f033f7229cc477adee130285433203aaa3",
+    "diff_sha256": "a0d7d7c734b8339c5e8192e2c326a70831a8c80f7237a3fd0f0640f578def783",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "bin/lib/apply.sh",
+      "bin/lib/longterm_mem.sh",
+      "bin/lib/usage.sh",
+      "engine/shelltest/apply_opencode_runtime_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f8946903361eecda4a27068086da5fa7b1870135",
+      "head": "7e3471f033f7229cc477adee130285433203aaa3",
+      "diff_sha256": "a0d7d7c734b8339c5e8192e2c326a70831a8c80f7237a3fd0f0640f578def783"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "bin/lib/apply.sh",
+        "bin/lib/longterm_mem.sh",
+        "bin/lib/usage.sh",
+        "engine/shelltest/apply_opencode_runtime_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "bin/lib/apply.sh:206-212",
+        "claim": "On a failed opencode install apply `continue`s without touching state. When an earlier successful apply already left an opencode row, that stale row stays with the old version and digest. status then keeps reporting the target as deployed at the old version, not as 'never deployed'. The comments, CHANGELOG, README and usage text all say a failure 'records no state row' and that status reads 'never deployed'. That holds only on the first apply. The new test covers only the first-apply case.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "bin/lib/apply.sh:206-212",
+          "engine/shelltest/apply_opencode_runtime_test.go:296-299"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff shows state_write_target is skipped by `continue` and nothing clears an existing row, so a prior row would persist. Only the first-apply path is tested.",
+      "The longterm-mem skip uses a plain shell variable set in cmd_apply and read in the same process; no defect found there from the diff."
+    ]
+  }
+}

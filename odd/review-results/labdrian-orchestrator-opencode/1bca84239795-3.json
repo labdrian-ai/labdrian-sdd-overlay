@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "c489c6f9c7c0990af746df1a54abc9c66f6ff96c",
+    "head": "1bca84239795537ec1ab3e44aa4767402f38c798",
+    "diff_sha256": "7121f88cb654243bb97dd658165f792e613849e292864840accc5f7ec20b556e",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "c489c6f9c7c0990af746df1a54abc9c66f6ff96c",
+      "head": "1bca84239795537ec1ab3e44aa4767402f38c798",
+      "diff_sha256": "7121f88cb654243bb97dd658165f792e613849e292864840accc5f7ec20b556e"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:318",
+        "claim": "The L28 entry says the chain is reviewed again but does not state that the old shas in L16-L27 are now unresolvable on the rebuilt branch, and only the local tag fm-pre-retrailer keeps the old head. A reader or tool resolving the older log shas against the new branch will not find them. The mapping partly mitigates this, but L16-L27 are not annotated with the mapping pointer.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:318"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:318",
+        "claim": "The claim that the rebuild changed only the shaping commit (git diff of old and new heads is empty) is unverifiable from the diff, and the mapping lists 20 pairs without the count being stated, so a transcription error in any sha would go unnoticed. The final mapping entry e331f7f4 -> c489c6f9 equals this commit's base, which is consistent.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:318"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff only appends one log entry (L28) to a markdown feature document; no code is changed.",
+      "The final mapping entry e331f7f4 -> c489c6f9 matches the stated base, supporting internal consistency.",
+      "The commit claims Risk: none, which fits a docs-only change."
+    ]
+  }
+}

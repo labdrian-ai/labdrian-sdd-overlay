@@ -1,0 +1,58 @@
+{
+  "kind": "polisher",
+  "base": "9ef28e097083b2ac1ec6366b629b94b4fa17f7f9",
+  "head": "dec120a460c8fdd408fffb7f5b9d62c7bebf3cb1",
+  "diff_sha256": "afb77c7d3626eef431f03aa75765b3271305c7845436cf8cd8fb7b9d56a9eeda",
+  "findings": {
+    "findings": [
+      {
+        "id": "A-F3",
+        "severity": "WARNING",
+        "location": "bin/lib/skill_registry.sh:23-30",
+        "claim": "repair-sdd-registry for opencode read the emptied skills root and dropped rows. Fixed in 8929470c.",
+        "evidence": [
+          "judge A F3; recheck R5."
+        ]
+      },
+      {
+        "id": "A-F4",
+        "severity": "SUGGESTION",
+        "location": "bin/lib/usage.sh:503-506",
+        "claim": "Help text still named the opencode skills dir. Fixed in c1a92bb6.",
+        "evidence": [
+          "judge A F4."
+        ]
+      },
+      {
+        "id": "B-F1",
+        "severity": "WARNING",
+        "location": "engine/capability/declarations.go:233",
+        "claim": "Skills claim stale. Fixed in c1a92bb6 and a10c3d44.",
+        "evidence": [
+          "judge B F1."
+        ]
+      },
+      {
+        "id": "S-6",
+        "severity": "WARNING",
+        "location": "engine/installer/testdata/routing_pins.golden:202",
+        "claim": "sync-check opencode skipped the agents. Fixed in ed82b538.",
+        "evidence": [
+          "series."
+        ]
+      },
+      {
+        "id": "S-7",
+        "severity": "WARNING",
+        "location": "CHANGELOG.md:60",
+        "claim": "Earlier copies in ~/.config/opencode/skills stay. Answered: install/update/status name them for removal by hand; removing user files unasked is out of scope; T22 cleans the live config with the owner.",
+        "evidence": [
+          "series; verifier seed f."
+        ]
+      }
+    ],
+    "evidence": [
+      "Independent verifier (Risk 3,5) on 451cd0da..2e22df05: suite 85 ok; seeds a-f held; real OpenCode 2.2.7 loads the plugin and parses the config; claude/codex/pi identical; no change-caused blocker. Bounded recheck R1-R7 on a6e520a0: none reproduced (all reproduced at base)."
+    ]
+  }
+}

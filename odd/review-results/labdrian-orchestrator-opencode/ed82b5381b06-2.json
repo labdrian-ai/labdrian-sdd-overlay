@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "dec120a460c8fdd408fffb7f5b9d62c7bebf3cb1",
+    "head": "ed82b5381b06dce4ef1f9f63ae6c3bc28edf04cf",
+    "diff_sha256": "3c4702527473c78d82a61162047907c8834debf31771d70f1c6f5231cbd91d82",
+    "paths": [
+      "CHANGELOG.md",
+      "bin/lib/sync_check.sh",
+      "engine/installer/agent_deploy_test.go",
+      "engine/installer/testdata/routing_pins.golden"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "dec120a460c8fdd408fffb7f5b9d62c7bebf3cb1",
+      "head": "ed82b5381b06dce4ef1f9f63ae6c3bc28edf04cf",
+      "diff_sha256": "3c4702527473c78d82a61162047907c8834debf31771d70f1c6f5231cbd91d82"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "bin/lib/sync_check.sh",
+        "engine/installer/agent_deploy_test.go",
+        "engine/installer/testdata/routing_pins.golden"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "bin/lib/sync_check.sh:91 now skips only when copies_skills is true for the target and the directory is missing, which matches the commit claim.",
+      "The new test and golden pins show the opencode agent row being checked with no skills directory.",
+      "The diff does not show the rest of sync_check.sh, so I could not check whether later code reads $tpath when it is absent. That would be a base-level exposure not visible here, so I report no finding."
+    ]
+  }
+}

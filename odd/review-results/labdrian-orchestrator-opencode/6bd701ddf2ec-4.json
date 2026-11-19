@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "8de9550a548d3e3a84e8b2bcbf10891cd412697d",
+    "head": "6bd701ddf2ec8110b613b2f8acf07e70b66c5795",
+    "diff_sha256": "ed7d4a05a27a55200563c7063c9cffcb4438f49b43114fabc140f994151c6294",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/cmd/main_agent_notice_test.go",
+      "engine/cmd/settings_hooks.go",
+      "engine/cmd/testdata/status-golden/status-in-an-empty-home.golden",
+      "engine/cmd/testdata/status-golden/status-settings-that-are-not-an-object.golden",
+      "engine/cmd/testdata/status-golden/status-settings-without-the-hooks.golden",
+      "engine/cmd/testdata/status-golden/status-with-no-home.golden",
+      "engine/settings/main_agent.go",
+      "engine/status/main_agent_test.go",
+      "engine/status/status.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "8de9550a548d3e3a84e8b2bcbf10891cd412697d",
+      "head": "6bd701ddf2ec8110b613b2f8acf07e70b66c5795",
+      "diff_sha256": "ed7d4a05a27a55200563c7063c9cffcb4438f49b43114fabc140f994151c6294"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/cmd/main_agent_notice_test.go",
+        "engine/cmd/settings_hooks.go",
+        "engine/cmd/testdata/status-golden/status-in-an-empty-home.golden",
+        "engine/cmd/testdata/status-golden/status-settings-that-are-not-an-object.golden",
+        "engine/cmd/testdata/status-golden/status-settings-without-the-hooks.golden",
+        "engine/cmd/testdata/status-golden/status-with-no-home.golden",
+        "engine/settings/main_agent.go",
+        "engine/status/main_agent_test.go",
+        "engine/status/status.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/settings/main_agent.go:30-42",
+        "claim": "MainAgentValueJSON uses json.Marshal, which escapes <, > and & as \\u003c, \\u003e and \\u0026. The doc comment says the value is printed \"as it would be written in the file\", so a foreign agent value containing those characters is shown differently from what the file holds. The notice and status note are still understandable; the mismatch is cosmetic. An encoder with SetEscapeHTML(false) would match the comment.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/settings/main_agent.go:30-42"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff. noticeForeignMainAgent runs only after a successful merge, re-reads the settings, and prints to stderr without changing the exit code.",
+      "The new tests cover a string value, a non-string value and the no-conflict cases.",
+      "The golden files and status.go change only the missing-key remedy, and they are consistent with each other and with the updated status tests.",
+      "I found no regression on input that was valid before the change."
+    ]
+  }
+}

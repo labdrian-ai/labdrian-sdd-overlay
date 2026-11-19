@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "54b0cbdd04dc498fd6fb6a07be1ddcbd98a4e309",
+    "head": "56300ca2da6619dc5008006e0943159e54ffb4d4",
+    "diff_sha256": "4a4e144e7b8632985f946a12914bc7b70f890206cba42cdcc568c16cf0670471",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "54b0cbdd04dc498fd6fb6a07be1ddcbd98a4e309",
+      "head": "56300ca2da6619dc5008006e0943159e54ffb4d4",
+      "diff_sha256": "4a4e144e7b8632985f946a12914bc7b70f890206cba42cdcc568c16cf0670471"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:57",
+        "claim": "T11 is ticked as done while the log (L65) states that the v2 payload shapes the bridge depends on (execute.after status/result, ctx.session.get parentID, synthetic firing prompt, Tool.Error constructor) and the cwd are unverified against a live OpenCode and deferred to T17. The tick carries no marker of this open verification, unlike T10 whose live load was explicitly noted in L64. A reader of the checklist alone sees T11 as fully delivered.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:57",
+          "odd/tasks/labdrian-orchestrator-opencode.md:615"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:615",
+        "claim": "L65 records that S9 was amended by review (read->Read and skill->Skill mapped, path->file_path, id->skill), but the diff does not update S9 or the L10 map text in the Specs; the amendment lives only in the log. T9 (ticked, shaped by L12) still describes the map without read/skill. The spec and the implementation can drift. Also the open routing that Claude Code's other PreToolUse guards have no OpenCode bridge is deferred to T16 only in prose, with no edit to T16.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:615",
+          "odd/tasks/labdrian-orchestrator-opencode.md:54"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only one documentation file: ticks T11, fills its commit list, and appends log entry L65.",
+      "No code is changed, so no runtime regression can come from this commit; findings are limited to documentation consistency.",
+      "L65 cites five commits matching the T11 row; the forecast, two-commit plan and the later correction commits are consistent with the recorded history."
+    ]
+  }
+}

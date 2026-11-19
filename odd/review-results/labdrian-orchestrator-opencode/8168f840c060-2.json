@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "88fe1989f37494e90d584c3bc5d634acd7df9897",
+    "head": "8168f840c060a189f10f9a4a4c972ac8f75a71fb",
+    "diff_sha256": "6509590a0609eb1128e4b7e0d38e770323f2ec39b2f3f82476e4ae76e40bef4e",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "88fe1989f37494e90d584c3bc5d634acd7df9897",
+      "head": "8168f840c060a189f10f9a4a4c972ac8f75a71fb",
+      "diff_sha256": "6509590a0609eb1128e4b7e0d38e770323f2ec39b2f3f82476e4ae76e40bef4e"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:714",
+        "claim": "L85 says the two `gentle-ai-overlay propagate` hooks leave with T30/T22 along with the gentle-ai refresh hook. S17 in the same document says the `gentle-ai-overlay` hook commands are labdrian's own engine and stay, and T22 removes only the five hook entries that run the `gentle-ai` binary. The Log entry contradicts the spec, so a reader could remove or expect removal of hooks that must stay, and the hook-count reasoning behind S19 is muddied.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:714",
+          "odd/tasks/labdrian-orchestrator-opencode.md:36"
+        ]
+      }
+    ],
+    "evidence": [
+      "Docs-only diff; the only contradiction found is between the new L85 text and the existing S17 and T22 text for the gentle-ai-overlay propagate hooks.",
+      "The L85 claim that moshi-hook leaves with T22 (L70) could not be checked from the diff; T22's visible text does not name moshi-hook."
+    ]
+  }
+}

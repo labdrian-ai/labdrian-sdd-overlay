@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "d42e249fb6d40cc6939e643975e7d502022dfa22",
+    "head": "d0442fec62d4b7f4ac7562f89d8886df310afa12",
+    "diff_sha256": "866c6d85193a6085157d27858457e12dbfa76e459de93f5b8ca35e41fce706d4",
+    "paths": [
+      "engine/skills/issue_creation_artifact_test.go",
+      "skills/issue-creation/SKILL.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "d42e249fb6d40cc6939e643975e7d502022dfa22",
+      "head": "d0442fec62d4b7f4ac7562f89d8886df310afa12",
+      "diff_sha256": "866c6d85193a6085157d27858457e12dbfa76e459de93f5b8ca35e41fce706d4"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skills/issue_creation_artifact_test.go",
+        "skills/issue-creation/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "skills/issue-creation/SKILL.md:44",
+        "claim": "The comment read-back command uses $HOST, $REPO and $COMMENT_ID, but no step defines them. The skill's own variables are $TARGET and $NUMBER. `gh issue comment` prints only a comment URL, and the skill never says to extract the comment ID from it or to split $TARGET into host and repo. An agent following step 4 literally may run the command with empty variables. That fails or reads the wrong resource, and the outcome becomes unknown or a false mismatch.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/issue-creation/SKILL.md:44 (`gh api --hostname \"$HOST\" \"repos/$REPO/issues/comments/$COMMENT_ID\"`)"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "skills/issue-creation/SKILL.md:44",
+        "claim": "The comment read-back says \"compare its body\" without naming what to compare against. The issue read-back says title and body must match, and this commit removed that sentence. Issue read-back now has no explicit match requirement, only the outcome line 'the read-back matches'. The test only checks for the phrase 'compare its body'.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/issue-creation/SKILL.md:44 (replaced 'title and body must match')"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "skills/issue-creation/SKILL.md:12",
+        "claim": "The commit drops the 'never print their contents' rule for body files and the 'Return ... say no write occurred' wording. It also drops 'browser route' and 'no Markdown fallback' from the Hard Rules, and removes 'stale' from the target/form gate. These are weakened guardrails the commit message does not mention, and no test pins them. The privacy-oriented 'never print contents' rule is the most notable loss.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/issue-creation/SKILL.md:20 (removed 'never print their contents')",
+          "skills/issue-creation/SKILL.md:12 (activation contract no longer states the form is the authority)"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed both changed files in the diff; no tool access beyond the diff.",
+      "The new tests only check substring presence, so they would not catch the undefined variables in the comment read-back command."
+    ]
+  }
+}

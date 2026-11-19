@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "447ac5cddcdb4d00266937a63119ecda582bf166",
+    "head": "c1a92bb67cde655b0c9985e4a0c015c954f58286",
+    "diff_sha256": "e429d8e45f9e917b958aebbe7aafa1011823da0e12b74c7528ba5b2458a232ab",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/capability/declarations.go",
+      "engine/capability/declarations_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "447ac5cddcdb4d00266937a63119ecda582bf166",
+      "head": "c1a92bb67cde655b0c9985e4a0c015c954f58286",
+      "diff_sha256": "e429d8e45f9e917b958aebbe7aafa1011823da0e12b74c7528ba5b2458a232ab"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/capability/declarations.go",
+        "engine/capability/declarations_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff only changes documentation, usage text and capability claim wording; I found no defect it introduces.",
+      "The OpenCode skills claim and its test phrases in declarations_test.go match the new declarations.go wording (copies no skill, a copy in its own directory would shadow that one, never write or remove one).",
+      "I could not confirm from the diff that the newly cited test names exist, so any missing one is not shown as a defect here."
+    ]
+  }
+}

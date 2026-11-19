@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "b18e45030ff0a9d0afb1fa315d603d300318a9b6",
+    "head": "f6356231d3360a89385f9b5eeca6542f3702e49f",
+    "diff_sha256": "0a67bdc61ffd988a250543e524df10c69d7f302195b3d8d07d2531b4631d4893",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "b18e45030ff0a9d0afb1fa315d603d300318a9b6",
+      "head": "f6356231d3360a89385f9b5eeca6542f3702e49f",
+      "diff_sha256": "0a67bdc61ffd988a250543e524df10c69d7f302195b3d8d07d2531b4631d4893"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff changes one sentence in S17 of odd/tasks/labdrian-orchestrator-opencode.md, from 'it counts only when that value runs the binary' to 'a gentle-ai match counts only when the value runs the binary; a Gentleman-Programming/engram match always counts', and appends log entry L33.",
+      "The new wording matches the check's two patterns: the first finds gentle-ai calls, the second finds the plugin source. It is consistent with the acceptance clause that no plugin source names Gentleman-Programming/engram.",
+      "L33 is appended after L32, in keeping with the append-only rule, and its description of the fix matches the diff.",
+      "The change is documentation only. It touches no code or runtime behavior, so I found no regression or violated requested behavior."
+    ]
+  }
+}

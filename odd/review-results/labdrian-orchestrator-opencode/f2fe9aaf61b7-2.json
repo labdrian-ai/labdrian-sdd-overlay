@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "9b575a9b7671438fd1a723a3239d6c83323bf236",
+    "head": "f2fe9aaf61b74ff5e3cb469854a2ed90bb6c4c3d",
+    "diff_sha256": "610e818489a191b191282e9cad2d3a33ca8399f74de07244aca5dfbddd712681",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "9b575a9b7671438fd1a723a3239d6c83323bf236",
+      "head": "f2fe9aaf61b74ff5e3cb469854a2ed90bb6c4c3d",
+      "diff_sha256": "610e818489a191b191282e9cad2d3a33ca8399f74de07244aca5dfbddd712681"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:284",
+        "claim": "The L22 entry labels findings ambiguously: the identifiers F1, F2 and F1 (2nd) are reused under two different commits (cd637480 and 6c1ddfce), so a reader cannot tell which F1 is meant when cross-referencing the review. The whole entry is also one dense paragraph, unlike the bulleted entries before it, which makes the six-finding mapping hard to follow.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:284"
+        ]
+      }
+    ],
+    "evidence": [
+      "Docs-only change that appends one log entry (L22) to the feature document. It touches no code or specs.",
+      "The entry reports six findings (three under cd637480, three under 6c1ddfce), which matches its 'All six resolved' claim.",
+      "The only defect found is a readability one: the reused finding IDs and the single dense paragraph."
+    ]
+  }
+}

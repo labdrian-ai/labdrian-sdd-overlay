@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ba97a9d1b8be77f1f5b3ca641ab051b90daba359",
+    "head": "0c82ec6750d5f4f72ee43cc0cd6c8a55ce56dd73",
+    "diff_sha256": "63641df3b2a59129bf2fdab828b1866c45ff6bc0eec4a36aad766c4034986ef6",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/architecture_test.go",
+      "engine/cmd/dispatch_routes_test.go",
+      "engine/cmd/doc.go",
+      "engine/cmd/registry.go",
+      "engine/cmd/registry_refresh_parity_test.go",
+      "engine/cmd/registry_refresh_test.go",
+      "engine/cmd/registry_test.go",
+      "engine/cmd/status_run_test.go",
+      "engine/cmd/usage.go",
+      "engine/installer/testdata/registry_pins.golden",
+      "engine/sddregistry/app/app.go",
+      "engine/sddregistry/app/app_test.go",
+      "engine/sddregistry/fsstore/fsstore.go",
+      "engine/sddregistry/fsstore/fsstore_test.go",
+      "engine/sddregistry/sddregistry.go",
+      "engine/sddregistry/sddregistry_test.go",
+      "engine/skillregistry/compose.go",
+      "engine/skillregistry/compose_test.go",
+      "engine/skillregistry/rows_test.go",
+      "engine/skillregistry/skillregistry.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "ba97a9d1b8be77f1f5b3ca641ab051b90daba359",
+      "head": "0c82ec6750d5f4f72ee43cc0cd6c8a55ce56dd73",
+      "diff_sha256": "63641df3b2a59129bf2fdab828b1866c45ff6bc0eec4a36aad766c4034986ef6"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/architecture_test.go",
+        "engine/cmd/dispatch_routes_test.go",
+        "engine/cmd/doc.go",
+        "engine/cmd/registry.go",
+        "engine/cmd/registry_refresh_parity_test.go",
+        "engine/cmd/registry_refresh_test.go",
+        "engine/cmd/registry_test.go",
+        "engine/cmd/status_run_test.go",
+        "engine/cmd/usage.go",
+        "engine/installer/testdata/registry_pins.golden",
+        "engine/sddregistry/app/app.go",
+        "engine/sddregistry/app/app_test.go",
+        "engine/sddregistry/fsstore/fsstore.go",
+        "engine/sddregistry/fsstore/fsstore_test.go",
+        "engine/sddregistry/sddregistry.go",
+        "engine/sddregistry/sddregistry_test.go",
+        "engine/skillregistry/compose.go",
+        "engine/skillregistry/compose_test.go",
+        "engine/skillregistry/rows_test.go",
+        "engine/skillregistry/skillregistry.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The new supersededExecutorRow in engine/skillregistry/compose.go only drops an executor row when the same skill is now listed as an ordinary row, and only in the table block, which stops at the first heading or comment line. A Hermes section starts with a comment, so it is kept byte for byte. Compose tests cover the idempotence of a second compose.",
+      "The refresh verb's usage error text and exit code are covered by TestRegistryVerbErrorsNameTheOneVerb.",
+      "The architecture rings drop sddregistry and sddregistry/app, and sddregistry/fsstore stays as an adapter. Its test now asserts the port of skillregistry/app, and the registryStore interface embeds that port.",
+      "Not provable from the diff: that executorRow is defined elsewhere in compose.go, and that registry.go still uses the errors and io imports. The diff context does not show either import being removed, so I report no finding."
+    ]
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "kind": "polisher",
+  "base": "643f96837dad8e34f0267986e153eefa441f24c9",
+  "head": "64b46bbed6d841eb26c8bd4aaee3ffad9f5161ea",
+  "diff_sha256": "69c8df446537cbe9ea7448c2672338ac0d8560143d637a5dc6cad80fec8e8eab",
+  "findings": {
+    "findings": [
+      {
+        "id": "A1",
+        "severity": "WARNING",
+        "location": "bin/lib/apply.sh",
+        "claim": "State recorded before a failed opencode install; register ran after it; trivial stderr assert. Fixed in 7e3471f0 (install before the state row, register skipped, exact indented assert), 4f1cfd61 (an earlier row is forgotten) and 64b46bbe (explicit write/forget mode, guarded forget).",
+        "evidence": [
+          "TestApplyTargetOpencodeWithAFailingRuntimeInstallRecordsNoStateAndSkipsTheRegister",
+          "TestApplyTargetOpencodeWithAFailingRuntimeInstallForgetsAnEarlierStateRow"
+        ]
+      },
+      {
+        "id": "A2",
+        "severity": "SUGGESTION",
+        "location": "bin/lib/deploy_state.sh",
+        "claim": "Positional mode could shift other callers; empty version on write is recorded. Answered: rg shows state_rewrite_target is called only by state_write_target and state_forget_target; recording an empty version is the behaviour before 4f1cfd61, kept on purpose.",
+        "evidence": [
+          "rg state_rewrite_target"
+        ]
+      }
+    ],
+    "evidence": [
+      "series reviews eafc1015..64b46bbe"
+    ]
+  }
+}

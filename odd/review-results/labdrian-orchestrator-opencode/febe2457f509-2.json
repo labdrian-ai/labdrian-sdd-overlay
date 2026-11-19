@@ -1,0 +1,83 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "8f485b3d54b2cf2740433b20215f5e89ff4a77e2",
+    "head": "febe2457f509a47df424cbfae2e1e4fd0ce9d366",
+    "diff_sha256": "0fef079e78d2e9f987178a3700e029ff76d2e9fbc834853458fb0281933836fb",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/cmd/main_test.go",
+      "engine/cmd/phase7_acceptance_test.go",
+      "engine/cmd/status_command_test.go",
+      "engine/cmd/status_golden_test.go",
+      "engine/cmd/testdata/status-golden/status-binary-states.golden",
+      "engine/cmd/testdata/status-golden/status-contract-states.golden",
+      "engine/cmd/testdata/status-golden/status-families-missing-or-drifted.golden",
+      "engine/cmd/testdata/status-golden/status-in-an-empty-home.golden",
+      "engine/cmd/testdata/status-golden/status-of-a-complete-install.golden",
+      "engine/cmd/testdata/status-golden/status-registry-states.golden",
+      "engine/cmd/testdata/status-golden/status-settings-that-are-not-an-object.golden",
+      "engine/cmd/testdata/status-golden/status-settings-without-the-hooks.golden",
+      "engine/cmd/testdata/status-golden/status-with-no-home.golden",
+      "engine/settings/legacy_families_test.go",
+      "engine/settings/merge.go",
+      "engine/settings/registry_refresh.go",
+      "engine/settings/registry_refresh_test.go",
+      "engine/settings/settingsfile/golden_unix_test.go",
+      "engine/settings/settingsfile/settings_test.go",
+      "engine/settings/status.go",
+      "engine/status/codex_test.go",
+      "engine/status/status.go",
+      "engine/status/status_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "8f485b3d54b2cf2740433b20215f5e89ff4a77e2",
+      "head": "febe2457f509a47df424cbfae2e1e4fd0ce9d366",
+      "diff_sha256": "0fef079e78d2e9f987178a3700e029ff76d2e9fbc834853458fb0281933836fb"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/cmd/main_test.go",
+        "engine/cmd/phase7_acceptance_test.go",
+        "engine/cmd/status_command_test.go",
+        "engine/cmd/status_golden_test.go",
+        "engine/cmd/testdata/status-golden/status-binary-states.golden",
+        "engine/cmd/testdata/status-golden/status-contract-states.golden",
+        "engine/cmd/testdata/status-golden/status-families-missing-or-drifted.golden",
+        "engine/cmd/testdata/status-golden/status-in-an-empty-home.golden",
+        "engine/cmd/testdata/status-golden/status-of-a-complete-install.golden",
+        "engine/cmd/testdata/status-golden/status-registry-states.golden",
+        "engine/cmd/testdata/status-golden/status-settings-that-are-not-an-object.golden",
+        "engine/cmd/testdata/status-golden/status-settings-without-the-hooks.golden",
+        "engine/cmd/testdata/status-golden/status-with-no-home.golden",
+        "engine/settings/legacy_families_test.go",
+        "engine/settings/merge.go",
+        "engine/settings/registry_refresh.go",
+        "engine/settings/registry_refresh_test.go",
+        "engine/settings/settingsfile/golden_unix_test.go",
+        "engine/settings/settingsfile/settings_test.go",
+        "engine/settings/status.go",
+        "engine/status/codex_test.go",
+        "engine/status/status.go",
+        "engine/status/status_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The new family reuses hookFamily and is registered in installedFamilies, so install, uninstall and status all pick it up.",
+      "The identity is told apart from gentle-ai's 'skill-registry refresh' entry by the binary path, and the tests cover a foreign entry being left alone.",
+      "The command forces its exit to 0 with '|| true' and passes --quiet, so it neither blocks a prompt nor adds to the prompt context.",
+      "The status check and golden outputs are consistent with the new family.",
+      "I found no change-caused defect in the diff."
+    ]
+  }
+}

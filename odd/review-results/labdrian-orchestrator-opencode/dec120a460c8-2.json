@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "9ef28e097083b2ac1ec6366b629b94b4fa17f7f9",
+    "head": "dec120a460c8fdd408fffb7f5b9d62c7bebf3cb1",
+    "diff_sha256": "afb77c7d3626eef431f03aa75765b3271305c7845436cf8cd8fb7b9d56a9eeda",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "bin/lib/apply.sh",
+      "bin/lib/targets.sh",
+      "engine/cmd/manifest_test.go",
+      "engine/installer/agent_deploy_test.go",
+      "engine/installer/manifest_routes_test.go",
+      "engine/installer/testdata/routing_pins.golden",
+      "engine/skills/routes.go",
+      "engine/skills/routes_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "9ef28e097083b2ac1ec6366b629b94b4fa17f7f9",
+      "head": "dec120a460c8fdd408fffb7f5b9d62c7bebf3cb1",
+      "diff_sha256": "afb77c7d3626eef431f03aa75765b3271305c7845436cf8cd8fb7b9d56a9eeda"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "bin/lib/apply.sh",
+        "bin/lib/targets.sh",
+        "engine/cmd/manifest_test.go",
+        "engine/installer/agent_deploy_test.go",
+        "engine/installer/manifest_routes_test.go",
+        "engine/installer/testdata/routing_pins.golden",
+        "engine/skills/routes.go",
+        "engine/skills/routes_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/installer/testdata/routing_pins.golden:202",
+        "claim": "The golden pins `sync-check --target opencode` as 'target dir not found ... skipping'. The skills directory is no longer created, so sync-check stops looking at the OpenCode native agents in ~/.config/opencode/agents. Drift in those agents used to be reported as UPSTREAM_CHANGED or OVERLAY_NOT_DEPLOYED and now goes unreported. The agents are still deployed, so this is lost coverage for files that are still managed.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "bin/lib/apply.sh:96",
+          "engine/installer/testdata/routing_pins.golden:202"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "CHANGELOG.md:60",
+        "claim": "The commit exists to stop OpenCode skill copies from shadowing the Claude skills, but it leaves the copies an earlier apply made in ~/.config/opencode/skills in place. The changelog admits this. Existing installs keep the shadowing, and apply no longer touches that directory, so nothing in labdrian repairs it or even flags it. Only a manual cleanup fixes it.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "CHANGELOG.md:60",
+          "bin/lib/apply.sh:96"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff gates only the mkdir in apply.sh on copies_skills; the engine routing change makes opencode skill rows have an empty destination.",
+      "The golden shows the opencode sync-check output reduced to a skip line, and the status output reduced to the agents row only."
+    ]
+  }
+}

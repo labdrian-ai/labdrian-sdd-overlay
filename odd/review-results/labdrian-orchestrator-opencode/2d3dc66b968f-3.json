@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a12d37a609942e7a76a0ff3074c89aaf89b7db64",
+    "head": "2d3dc66b968fdd782e5ed006a3f76bba9d432bc8",
+    "diff_sha256": "1bad4551ce0e75d94ead19dfdf146fa79b121ba8c9ffc49f286726518e8b2233",
+    "paths": [
+      "engine/skills/foreman_restored_duties_test.go",
+      "engine/skills/foreman_skills_test.go",
+      "engine/skills/odd_role_skills_artifact_test.go",
+      "skills/odd-feature-doc/SKILL.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "a12d37a609942e7a76a0ff3074c89aaf89b7db64",
+      "head": "2d3dc66b968fdd782e5ed006a3f76bba9d432bc8",
+      "diff_sha256": "1bad4551ce0e75d94ead19dfdf146fa79b121ba8c9ffc49f286726518e8b2233"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skills/foreman_restored_duties_test.go",
+        "engine/skills/foreman_skills_test.go",
+        "engine/skills/odd_role_skills_artifact_test.go",
+        "skills/odd-feature-doc/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "skills/odd-feature-doc/SKILL.md:37",
+        "claim": "The foreman clause says it ticks `[x]` with `commit:` only for a task whose builder did not edit the document. The builder row says every builder writes `[x]`, the commit and a Log entry, so the builder always edits the document. The condition is therefore either never true, or it leaves the foreman's role undefined when the builder edits the document but leaves the box or commit blank. The commit hash is also only known after the commit, so the builder may be unable to write it. The row now says the foreman may tick a box while its never-does column forbids touching 'a task line'. The wording is ambiguous for an agent following it and may leave boxes or commits unwritten.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/odd-feature-doc/SKILL.md:37",
+          "skills/odd-feature-doc/SKILL.md:35"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/skills/foreman_restored_duties_test.go:107",
+        "claim": "The assertion combines a runtime token check with a constant-vs-constant comparison (`oddFeatureDocBodyBound >= BodyHardTokens`). If the constant ever breaks that invariant, the failure message reports the body's token count as if it were over its bound, which is misleading. Splitting the two conditions would make the failure clear.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/foreman_restored_duties_test.go:107"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed all four changed paths from the diff alone.",
+      "The foreman row no longer contains 'header' or 'L1', so the new negative test passes.",
+      "The header-rule and task-line assertions still match the edited SKILL.md text.",
+      "I could not verify the 750-token body bound at runtime from the diff."
+    ]
+  }
+}

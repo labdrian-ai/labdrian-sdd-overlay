@@ -1,0 +1,85 @@
+{
+  "kind": "polisher",
+  "base": "9dc48fdd3d5b6221b294342b1f616d1e44559c51",
+  "head": "ab3d36b1fd789cfc2c663e2328b256ad0d3c17ee",
+  "diff_sha256": "4ef50317f377bbbb325ec08e400b1e074d1608f8f6feafeeba98b368b1d5b734",
+  "findings": {
+    "findings": [
+      {
+        "id": "V-B1",
+        "severity": "CRITICAL",
+        "location": "engine/capability/declarations.go Cancellation",
+        "claim": "Claimed the denied call does not run, which only the L10 recording shows. Fixed in 82898575: named as an L10 recording, unproven with a model until T17; recheck of the printed detail confirms.",
+        "evidence": [
+          "verifier check 2; runtime capabilities --target opencode after 82898575."
+        ]
+      },
+      {
+        "id": "S-W1",
+        "severity": "WARNING",
+        "location": "engine/capability/declarations.go memory enforcement",
+        "claim": "Cites cmd:TestCodexSourceProcesses for the opencode gate (both series reviewers). Answered and clarified in 82898575: its subtest OpencodeAdaptsBeforeGate (codex_source_test.go:123) drives --source opencode; the detail now names it.",
+        "evidence": [
+          "verifier read codex_source_test.go:123-139."
+        ]
+      },
+      {
+        "id": "S-S1",
+        "severity": "SUGGESTION",
+        "location": "engine/capability/declarations.go Cancellation",
+        "claim": "Cites a paused-gate test that does not go through opencode. Fixed in 82898575: the detail says it proves the gate for Claude Code tool names and cites the patch→Edit mapping separately.",
+        "evidence": [
+          "series review ab3d36b1."
+        ]
+      },
+      {
+        "id": "S-S2",
+        "severity": "SUGGESTION",
+        "location": "engine/capability/memory_enforcement_detail_test.go",
+        "claim": "OpenCode branch of memoryEnforcementDetail possibly dead. Answered: there is no OpenCode-only path; the non-Codex branch serves Pi via declaredOnlyClaims and its Pi test covers it.",
+        "evidence": [
+          "builder report 82898575."
+        ]
+      },
+      {
+        "id": "V-A1",
+        "severity": "SUGGESTION",
+        "location": "Dispatch",
+        "claim": "Said each prompt projects; T35 omits repeats. Fixed in 82898575.",
+        "evidence": [
+          "verifier advisory A1."
+        ]
+      },
+      {
+        "id": "V-A2",
+        "severity": "SUGGESTION",
+        "location": "Memory enforcement",
+        "claim": "Said the plugin captures Key Learnings. Fixed in 82898575: sends the final text to a fake memorycard capture; the saved item is T17.",
+        "evidence": [
+          "verifier advisory A2."
+        ]
+      },
+      {
+        "id": "V-A3",
+        "severity": "SUGGESTION",
+        "location": "Claude skills claim",
+        "claim": "installer:TestUnrelatedSkillUnchanged lost since T14 c1a92bb6. Restored in 82898575 and pinned by TestClaudeSkillsClaimKeepsTheUnrelatedSkillTest.",
+        "evidence": [
+          "verifier advisory A3."
+        ]
+      },
+      {
+        "id": "B-DEV",
+        "severity": "SUGGESTION",
+        "location": "Claude skills claim",
+        "claim": "Four OpenCode tests sat on Claude skills claim (T14). Moved to OpenCode, pinned by TestNoOtherRuntimeCitesAnOpenCodeTest; accepted as a correction of a mis-citation.",
+        "evidence": [
+          "verifier check 4."
+        ]
+      }
+    ],
+    "evidence": [
+      "verifier: 65 cited tests exist and pass alone, none skipped, live opencode 2.2.7 test ran; codex and pi byte-identical to base."
+    ]
+  }
+}

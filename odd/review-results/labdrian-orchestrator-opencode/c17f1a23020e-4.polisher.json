@@ -1,0 +1,49 @@
+{
+  "kind": "polisher",
+  "base": "c8d6f48d1fb309b904016d0c011ebcaa07ccff93",
+  "head": "c17f1a23020e015f1eb447756bdb9d6181cc6827",
+  "diff_sha256": "8e7d558abc16cfb04e2b2efd656a366a5dd14db7acf019b1845342804cd26da6",
+  "findings": {
+    "findings": [
+      {
+        "id": "S-3",
+        "severity": "WARNING",
+        "location": "engine/skills/routes.go:304-308",
+        "claim": "A bare relative agents root (\"agents\", \"./agents\") is now refused where it placed the style relative to the cwd. Answered: intended; the only caller passes an absolute root (bin/lib/targets.sh), and a cwd-relative destination was the defect.",
+        "evidence": [
+          "series review of c17f1a23."
+        ]
+      },
+      {
+        "id": "S-4",
+        "severity": "SUGGESTION",
+        "location": "engine/skills/routes_test.go:52-56",
+        "claim": "Size arithmetic obscures that output-style is the one extra member. Answered: accepted as is; the test names output-style in its message.",
+        "evidence": [
+          "series review."
+        ]
+      },
+      {
+        "id": "S-5",
+        "severity": "SUGGESTION",
+        "location": "engine/cmd/settings_hooks.go:69-77",
+        "claim": "The outputStyle notice re-reads the settings file and swallows a read error. Answered: mirrors noticeForeignMainAgent; a read error already failed the merge before the notice runs.",
+        "evidence": [
+          "series review."
+        ]
+      },
+      {
+        "id": "S-6",
+        "severity": "SUGGESTION",
+        "location": "engine/skills/ondisk.go:33-38",
+        "claim": "nonSkillRoutes membership might validate a longterm-mem/ row. Refuted: nonSkillRoutes is read only at ondisk.go:116 to skip non-skill rows; longterm-mem rows are validated by validLongtermMemRoutes.",
+        "evidence": [
+          "rg nonSkillRoutes."
+        ]
+      }
+    ],
+    "evidence": [
+      "Parent spot check: go test ./skills ./status ./settings/... ./cmd ok; builder suite 85 ok, vet, gofmt, staticcheck clean; differential runtime identical, CLI only the new line and notice."
+    ]
+  }
+}

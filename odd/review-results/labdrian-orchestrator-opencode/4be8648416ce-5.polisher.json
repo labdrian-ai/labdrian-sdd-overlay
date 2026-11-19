@@ -1,0 +1,22 @@
+{
+  "kind": "polisher",
+  "base": "5fb6780f80ecf9c072dab70a63be576109ea896f",
+  "head": "4be8648416ce364eb15e13324a169ff9d477b7bb",
+  "diff_sha256": "190c607dfec6e472c3180a2c0304f4052bd1671f907ed514ea4cdb5aff557996",
+  "findings": {
+    "findings": [
+      {
+        "id": "F1-F4",
+        "severity": "SUGGESTION",
+        "location": "engine/skills/branch_pr_artifact_test.go, CHANGELOG.md:12",
+        "claim": "Test did not tie the phrase to the merge rule nor pin the closing-entry location; changelog left systemic-issue-triage unexplained. Fixed in 34e0c09f.",
+        "evidence": [
+          "34e0c09f"
+        ]
+      }
+    ],
+    "evidence": [
+      "series review 5fb6780f..4be86484"
+    ]
+  }
+}

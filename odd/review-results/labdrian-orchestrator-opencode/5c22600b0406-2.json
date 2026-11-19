@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "eb18c799e7a1f0f4f6d2a39ac368cc28d59bbd14",
+    "head": "5c22600b0406b1708279b0170b3f46b69e5df772",
+    "diff_sha256": "313e70f61f340c50472e90c3b7cf95bfa8f80c9049da44a3643032b9df803355",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "eb18c799e7a1f0f4f6d2a39ac368cc28d59bbd14",
+      "head": "5c22600b0406b1708279b0170b3f46b69e5df772",
+      "diff_sha256": "313e70f61f340c50472e90c3b7cf95bfa8f80c9049da44a3643032b9df803355"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:481",
+        "claim": "L58 records that the './cmd' process test RED was not captured, so the test-first evidence for the cmd-level behavior is missing while T9 is ticked as done. This is disclosed, but the tick does not carry the gap forward to any later task or check.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:481"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:481",
+        "claim": "L58 is a single very long paragraph mixing delivery, assumptions, review answers and differential results. It is hard to scan, and it cites review findings 'F1'/'F2' of `bd6a9526` ambiguously next to `4d34b336` F1/F2, which risks confusing which review each answer belongs to.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:481"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only the odd feature document changed: the T9 checkbox is ticked, the commit hashes are filled in with a pointer to L58, and L58 is appended.",
+      "The L58 pointer in the T9 row matches the appended entry, and the L10/L12 references are consistent with the surrounding text.",
+      "No code is touched, so there is no behavioral regression; both findings concern documentation recall and readability only."
+    ]
+  }
+}

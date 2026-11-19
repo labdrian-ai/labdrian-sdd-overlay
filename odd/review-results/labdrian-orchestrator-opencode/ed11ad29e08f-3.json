@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ac6b16c021171b78c9c699c7f4818723a97f7d1f",
+    "head": "ed11ad29e08f978b680227dce345103de00ffa9e",
+    "diff_sha256": "9aad7612cc0e8a76fc99fd728b385985a74fcc4b0615aa944834c6ad0c19d008",
+    "paths": [
+      "engine/agentgen/export_test.go",
+      "engine/agentgen/opencode_server_rules_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "ac6b16c021171b78c9c699c7f4818723a97f7d1f",
+      "head": "ed11ad29e08f978b680227dce345103de00ffa9e",
+      "diff_sha256": "9aad7612cc0e8a76fc99fd728b385985a74fcc4b0615aa944834c6ad0c19d008"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/agentgen/export_test.go",
+        "engine/agentgen/opencode_server_rules_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/agentgen/export_test.go:5",
+        "claim": "The export copies openCodeMCPServers by value at package init. If it is a slice, this is only a header copy and is fine; but the diff does not show that the production variable is a []string. The test iterates it with range and the import of 'slices' remains, so a different type (e.g. map or a struct slice) would fail to compile rather than silently drift. This cannot be verified from the diff alone. Also, the test no longer pins the expected server set, so an accidental removal of a server from the production list would shrink the checks silently instead of failing.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/agentgen/export_test.go:5",
+          "engine/agentgen/opencode_server_rules_test.go:21"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only test files changed; the removed local list is replaced by the production list via an export_test.go alias.",
+      "The test's serverRuleLines and deny/allow ordering loops now iterate the production list, so a dropped server would reduce coverage without a failure."
+    ]
+  }
+}

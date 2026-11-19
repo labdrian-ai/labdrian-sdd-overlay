@@ -1,0 +1,22 @@
+{
+  "kind": "polisher",
+  "base": "4196e145bdf2c4d2c3b5ea1ce7c0efff579c48d2",
+  "head": "12ed029296bb54975f29c88daa0c95b464e9f5eb",
+  "diff_sha256": "f04001fa864dba10722e5344832540dfb46f9e48d9d98f475d5a49c923a25f10",
+  "findings": {
+    "findings": [
+      {
+        "id": "S-17",
+        "severity": "SUGGESTION",
+        "location": "bin/lib/common.sh:115",
+        "claim": "git+ssh/ssh+git of localhost became network. Fixed in d12ce674.",
+        "evidence": [
+          "series x2."
+        ]
+      }
+    ],
+    "evidence": [
+      "RED observed for the two http rows, then GREEN; shelltest ok."
+    ]
+  }
+}

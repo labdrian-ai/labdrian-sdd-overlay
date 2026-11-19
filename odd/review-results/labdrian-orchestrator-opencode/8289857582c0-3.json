@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ab3d36b1fd789cfc2c663e2328b256ad0d3c17ee",
+    "head": "8289857582c00435f83c5a388e1c96e5a76a6373",
+    "diff_sha256": "110d6c20441e5700d526e5bba2414c254a1374e59b40010e1ea65287fc3751aa",
+    "paths": [
+      "engine/capability/declarations.go",
+      "engine/capability/opencode_declaration_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "ab3d36b1fd789cfc2c663e2328b256ad0d3c17ee",
+      "head": "8289857582c00435f83c5a388e1c96e5a76a6373",
+      "diff_sha256": "110d6c20441e5700d526e5bba2414c254a1374e59b40010e1ea65287fc3751aa"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/capability/declarations.go",
+        "engine/capability/opencode_declaration_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/capability/declarations.go:204",
+        "claim": "The Installation claim now says the real-opencode test loads both installed plugins. The only cited live test is runtime:TestOpenCodeLoadsTheInstalledPluginAndItWritesItsActiveMarker, whose singular name suggests it loads one plugin. The diff does not show the test changed, and the new declaration test only checks that the wording appears. The claim may therefore overstate what the test proves, which is the defect this commit sets out to fix.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "engine/capability/declarations.go:204",
+          "engine/capability/opencode_declaration_test.go:111"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the diff only; the cited tests' bodies are not visible, so the claim about loading both plugins is unverified.",
+      "The wording changes are pinned by substring checks, and the stale-phrase test and the Claude skills citation test are consistent with the declarations."
+    ]
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "720b2f9ccf6b86a8a684362ab7e6c03ba4da0aec",
+    "head": "b50d9da2b31c9b73421bb5c1f0c319c2d58a44ec",
+    "diff_sha256": "382eb239cf29b86c0b38a824902cbf7fb7096d1c45ba93705f60e056ccf6c51e",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/runtime/opencode_agents.go",
+      "engine/runtime/opencode_agents_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "720b2f9ccf6b86a8a684362ab7e6c03ba4da0aec",
+      "head": "b50d9da2b31c9b73421bb5c1f0c319c2d58a44ec",
+      "diff_sha256": "382eb239cf29b86c0b38a824902cbf7fb7096d1c45ba93705f60e056ccf6c51e"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/runtime/opencode_agents.go",
+        "engine/runtime/opencode_agents_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode_agents_test.go:138",
+        "claim": "The Engram ban checks only the memorycard block (text from its start to end of file), so Engram mentioned in the owner rules or output style parts of the same AGENTS.md block is not caught, while the commit claims the AGENTS.md block no longer mentions the retired store. Also, the test name and the banned list still carry older wording, a minor readability gap.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/opencode_agents_test.go:129-138"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode_agents.go:28-30",
+        "claim": "The comment says 'no other store is named' yet the block now tells the model nothing about the Engram tools it may still have wired (mem_* names overlap with Engram). Dropping the id-space warning removes the guard against passing an old Engram id to memorycard; the new wording is an owner-approved choice, but the loss of that guard is a recall risk worth noting.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/opencode_agents.go:28-37"
+        ]
+      }
+    ],
+    "evidence": [
+      "Diff covers only the memorycard block text, its test assertions and a CHANGELOG line; the CHANGELOG sentence matches the new block wording.",
+      "The test now requires 'is the only memory store', which matches the new block text exactly, and forbids 'engram' case-insensitively within the block slice."
+    ]
+  }
+}

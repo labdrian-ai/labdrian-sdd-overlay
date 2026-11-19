@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "5097b163de294c48b5b542347d031df056a8d33a",
+    "head": "fc84aacc5e90fe780834d53acf05a3186f25b1f0",
+    "diff_sha256": "dcfb1394d7965f7193de52d6187b5104e65afbe6a5db37061689d56bd6978f66",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "5097b163de294c48b5b542347d031df056a8d33a",
+      "head": "fc84aacc5e90fe780834d53acf05a3186f25b1f0",
+      "diff_sha256": "dcfb1394d7965f7193de52d6187b5104e65afbe6a5db37061689d56bd6978f66"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The only change is documentation in the feature document: T25c's commit range placeholder is replaced with `259cb77..fca475d, merged as PR #29 (3d41c89)`, and a new Log entry L49 is appended.",
+      "The T25c update is consistent with L47, which records the verb commit `259cb77` and the merge of PR #29. L49 explicitly says the placeholder was fixed in this commit.",
+      "L49 is appended after L48 and does not edit any earlier Log entry, so the append-only rule holds. It adds no executable code and no behavior change."
+    ]
+  }
+}

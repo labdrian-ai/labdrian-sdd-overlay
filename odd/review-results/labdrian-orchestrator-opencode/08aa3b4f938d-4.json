@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "8307f9ab3c48e7cd0bdb4803e1923675ae20363e",
+    "head": "08aa3b4f938dac9b8ccfe953b3ecb66f848b177f",
+    "diff_sha256": "b29c80b95ec3d22f4c75715a9cdaeafe02dcf744d7f8d5ea33163fa433658a22",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "8307f9ab3c48e7cd0bdb4803e1923675ae20363e",
+      "head": "08aa3b4f938dac9b8ccfe953b3ecb66f848b177f",
+      "diff_sha256": "b29c80b95ec3d22f4c75715a9cdaeafe02dcf744d7f8d5ea33163fa433658a22"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The change only ticks T25d and appends Log entry L54 in a documentation file; no code or behavior is altered.",
+      "The T25d row's commit reference (8307f9ab) matches the stated base commit, consistent with the work being delivered before this tick.",
+      "L54 is append-only and follows L53; no existing log entries were modified.",
+      "L54 states a known operational caveat (older memorycard without resolve makes skills candidates exit 2) openly, so the tick does not hide a regression."
+    ]
+  }
+}

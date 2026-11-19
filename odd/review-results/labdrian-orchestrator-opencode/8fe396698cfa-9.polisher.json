@@ -1,0 +1,49 @@
+{
+  "kind": "polisher",
+  "base": "348afec1360ec1220caa698ae0890de434bb9667",
+  "head": "8fe396698cfa91873f30322c081637fbc4ae0cf0",
+  "diff_sha256": "11bc287c09423d0f6be6da9ac1771f22b3339eefdfb92cc48e3d15e7b20907c2",
+  "findings": {
+    "findings": [
+      {
+        "id": "A-F3",
+        "severity": "WARNING",
+        "location": "engine/skillregistry/compose.go:90-95",
+        "claim": "Table-end scan dropped a foreign table placed right under the rows. Fixed in 34028c8e: only rows shaped as generated skill rows are replaced.",
+        "evidence": [
+          "series 348afec1; RED/GREEN TestComposeKeepsAForeignRowRightUnderTheTable."
+        ]
+      },
+      {
+        "id": "A-F4",
+        "severity": "SUGGESTION",
+        "location": "engine/skillregistry/frontmatter.go:76-92",
+        "claim": "An unclosed quote swallowed a nested mapping. Fixed in 34028c8e and narrowed in b38a9898 (only a key opening a mapping, or a line without indentation, ends the value; prose with a colon goes on).",
+        "evidence": [
+          "RED/GREEN skill_test cases."
+        ]
+      },
+      {
+        "id": "A-F1F2",
+        "severity": "SUGGESTION",
+        "location": "compose.go:43, skillregistry.go:5",
+        "claim": "Referenced a verb and a test not yet in commit (a). Answered: both exist from (b); the package doc names TestRegistryRefreshWritesWhatGentleWroteForTheSameSkills since 34028c8e.",
+        "evidence": [
+          "34028c8e."
+        ]
+      },
+      {
+        "id": "B-S1",
+        "severity": "SUGGESTION",
+        "location": "engine/cmd/registry.go:208-211",
+        "claim": "An unresolvable home silently drops user-scope rows. Answered: os.UserHomeDir fails only when HOME is unset; the project rows stay correct and the next refresh with a home restores the user rows (the table is regenerated whole). Kept silent because the prompt hook runs with --quiet; logged as a follow-up in L92.",
+        "evidence": [
+          "series rerun of 8fe39669 (-5.json)."
+        ]
+      }
+    ],
+    "evidence": [
+      "verifier probes 1-8 pass, no blockers: rows equal gentle-ai 4.2.0 but the requested multi-line quoted descriptions, preserved content byte-identical, lock honoured under 60 concurrent processes, hook exits 0 silently."
+    ]
+  }
+}

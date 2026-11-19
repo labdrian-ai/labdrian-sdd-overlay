@@ -1,0 +1,59 @@
+{
+  "kind": "polisher",
+  "base": "9dfb5525130409f640e384b8429e547e3c898490",
+  "head": "b2575e8d450bbb688f6e5ed61a2bdfa0751b76ce",
+  "diff_sha256": "fb82add2b3c8c3db9f1dbe6c92e6b9dd05ec3766894c3621b74b3d6a0f21d3fa",
+  "findings": {
+    "findings": [
+      {
+        "id": "A-F1",
+        "severity": "WARNING",
+        "location": "skills/inception-pipeline/SKILL.md:3",
+        "claim": "The description lost trigger vocabulary. Not caused by this commit: git diff b2575e8d~1 b2575e8d shows no change to the description line; the judge compared against another branch's checkout. Pre-existing on the base; follow-up, not a blocker.",
+        "evidence": [
+          "judge A; parent check: The description lost trigger vocabulary. Not caused by this commit: git diff b2575e8d~1 b2575e8d shows no change to the description line; the judge compared against another branch's checkout. Pre-existing on the base; follow-up, not a blocker."
+        ]
+      },
+      {
+        "id": "A-F2",
+        "severity": "SUGGESTION",
+        "location": "skills/odd-feature-doc/SKILL.md:14",
+        "claim": "Concrete guides cut to fit the budget. Restored in 368afea2 (builder duty, delivery per-task list, Activation sentence) and kept through 09c38855.",
+        "evidence": [
+          "judge A; parent check: Concrete guides cut to fit the budget. Restored in 368afea2 (builder duty, delivery per-task list, Activation sentence) and kept through 09c38855."
+        ]
+      },
+      {
+        "id": "A-F3",
+        "severity": "SUGGESTION",
+        "location": "skills/inception-pipeline/.approval.json:4",
+        "claim": "Approval digests stale after the edit. Confirmed by TestRegistryLockE2E_ValidateLeavesTheRealTreeUntouched (APPROVAL_STALE); the owner re-records the three approvals.",
+        "evidence": [
+          "judge A; parent check: Approval digests stale after the edit. Confirmed by TestRegistryLockE2E_ValidateLeavesTheRealTreeUntouched (APPROVAL_STALE); the owner re-records the three approvals."
+        ]
+      },
+      {
+        "id": "B-F1",
+        "severity": "SUGGESTION",
+        "location": "skills/role-chain/SKILL.md:3,13",
+        "claim": "The foreman has a Claude file only, so a Codex or Pi parent has no foreman agent. By design: S5 makes the foreman Claude-only; OpenCode parity is S1's scope through its own tasks.",
+        "evidence": [
+          "judge B; parent check: The foreman has a Claude file only, so a Codex or Pi parent has no foreman agent. By design: S5 makes the foreman Claude-only; OpenCode parity is S1's scope through its own tasks."
+        ]
+      },
+      {
+        "id": "B-F2",
+        "severity": "SUGGESTION",
+        "location": "skills/odd-feature-doc/SKILL.md:37",
+        "claim": "The foreman row allowed only Log entries while S2 says the foreman writes the feature document. Fixed in a12d37a6, 2d3dc66b and 09c38855: the foreman writes Log entries and, when the brief kept the builder off the document, [x], commit: and a Log entry from the builder's report; the builder row states the same condition.",
+        "evidence": [
+          "judge B; parent check: The foreman row allowed only Log entries while S2 says the foreman writes the feature document. Fixed in a12d37a6, 2d3dc66b and 09c38855: the foreman writes Log entries and, when the brief kept the builder off the document, [x], commit: and a Log entry from the builder's report; the builder row states the same condition."
+        ]
+      }
+    ],
+    "evidence": [
+      "Judge A read the three SKILL.md files at b2575e8d in a detached worktree, the tests that consume them (engine/skills/inception_chain_entry_test.go, engine/cmd/inception_chain_entry_test.go, role_chain_artifact_test.go, foreman_skills_test.go, odd_role_skills_artifact_test.go, actuals_instrumentation_contract_test.go) and role bodies; it used another branch's checkout as baseline, so its F1 was checked by the parent with git diff and found not candidate-caused. Not run: tests, lint, git diff.",
+      "Judge B read the three SKILL.md files, engine/skills/foreman_skills_test.go, roles/foreman/body.md, engine/roles/roles.go:100,129 and roles_test.go:92,115 (delivery stays terminal; the text names only the envelope returning to the parent), overlay.manifest, roles/delivery/body.md; grepped for removed phrases: no other dependent. Not run: tests, builds."
+    ]
+  }
+}

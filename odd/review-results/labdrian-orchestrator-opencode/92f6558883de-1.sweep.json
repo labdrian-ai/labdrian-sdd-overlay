@@ -1,0 +1,25 @@
+{
+  "kind": "sweep",
+  "base": "9091d9ce8978010a5f7120ee8b2b88b6dfb8a50c",
+  "head": "92f6558883de0159c7ec7cb9dab3431c5ef34584",
+  "diff_sha256": "e67291cc5071f582543bc2a12a21eb794144b5055a3d1cf60407d385350ad3ec",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": []
+  },
+  "t2": [
+    {
+      "tool": "staticcheck",
+      "module": "engine",
+      "new": [
+        "cmd/main_agent_files_test.go: should replace this if statement with an unconditional strings.Replace (S1017)"
+      ]
+    }
+  ],
+  "t3": [],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

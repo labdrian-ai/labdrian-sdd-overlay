@@ -1,0 +1,76 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "2e22df056080bb4d90ae83fe7454cb139c7d71d6",
+    "head": "872148eb17f5ba44df3b455c1d8d37e14813fb36",
+    "diff_sha256": "18ba0914fbde334fa03c11410767aa1e21c8e840738d85cda7e5a4a28a0a4b9f",
+    "paths": [
+      "engine/runtime/opencode_json.go",
+      "engine/runtime/opencode_json_bytes_test.go",
+      "engine/runtime/opencode_json_write.go",
+      "engine/runtime/opencode_splice.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "2e22df056080bb4d90ae83fe7454cb139c7d71d6",
+      "head": "872148eb17f5ba44df3b455c1d8d37e14813fb36",
+      "diff_sha256": "18ba0914fbde334fa03c11410767aa1e21c8e840738d85cda7e5a4a28a0a4b9f"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/runtime/opencode_json.go",
+        "engine/runtime/opencode_json_bytes_test.go",
+        "engine/runtime/opencode_json_write.go",
+        "engine/runtime/opencode_splice.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode_splice.go:243-263",
+        "claim": "removeOpenCodeMember cuts from the key start through the trailing comma when a trailing comma exists, so the whitespace before the key and the whitespace after the comma both stay. Removing a first or middle member, such as an owned entry the owner has reordered, leaves a blank line with trailing indentation. This is a cosmetic gap against the 'only owned bytes are cut' claim, and the install-then-uninstall round trip is unaffected because install appends last.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/opencode_splice.go:251-262"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode_splice.go:196-213",
+        "claim": "insertMember hardcodes \\n line breaks and, for an empty object, a two-space child indent. A CRLF file gets mixed line endings, and a tab-indented file gets space-indented entries inside an empty container. This falls short of preserving the owner's style.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/opencode_splice.go:197-212"
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode_json.go:105-115",
+        "claim": "checkOpenCodeKeys calls objectAt on mcp.servers, which returns an error if that value is not a JSON object. A file with a non-object `mcp.servers` (a string or array) is now refused by parseOpenCodeJSON on every path. The refusal is raised before isServersContainer classifies the value, so whether the base accepted this input is unclear from the diff.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "engine/runtime/opencode_json.go:105-115",
+          "engine/runtime/opencode_splice.go:140-143"
+        ]
+      }
+    ],
+    "evidence": [
+      "Traced scanObject offsets (keyStart, valueStart, valueEnd, close) against json.Decoder.InputOffset; they are consistent.",
+      "Traced install appends followed by uninstall removals of a last member with no trailing comma; the owner's bytes are restored as claimed.",
+      "Traced removal of a first or middle member: a blank line is left (F1).",
+      "parseOpenCodeJSON's handling of empty content is outside the shown hunk, so I assumed it returns early before checkOpenCodeKeys runs."
+    ]
+  }
+}

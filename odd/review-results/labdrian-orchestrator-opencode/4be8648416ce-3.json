@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "5fb6780f80ecf9c072dab70a63be576109ea896f",
+    "head": "4be8648416ce364eb15e13324a169ff9d477b7bb",
+    "diff_sha256": "190c607dfec6e472c3180a2c0304f4052bd1671f907ed514ea4cdb5aff557996",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/skills/branch_pr_artifact_test.go",
+      "skills/branch-pr/SKILL.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "5fb6780f80ecf9c072dab70a63be576109ea896f",
+      "head": "4be8648416ce364eb15e13324a169ff9d477b7bb",
+      "diff_sha256": "190c607dfec6e472c3180a2c0304f4052bd1671f907ed514ea4cdb5aff557996"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/skills/branch_pr_artifact_test.go",
+        "skills/branch-pr/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/skills/branch_pr_artifact_test.go:104-106",
+        "claim": "The test asserts the substring \"no failing or pending line\" and the `gh pr checks` token independently, anywhere in the body. It does not tie the phrase to the merge rule, so a Decision Gate or other text could satisfy it while the Hard Rule drifts. This is a weak guard for the exact inconsistency the commit fixes (Hard Rule vs Decision Gate).",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/branch_pr_artifact_test.go:104-106"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "skills/branch-pr/SKILL.md:17-18",
+        "claim": "The new closing-entry rule defines the entry as the last `## Log` entry written by the delivery role, but the test only checks for the review-check wording. Nothing guards the new location clause, so it can be removed unnoticed. Also, the rule leaves open how a 'pending' line is told apart from a skipped or neutral check in `gh pr checks` output, so the merge gate is only partly specified.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/branch-pr/SKILL.md:17-18"
+        ]
+      }
+    ],
+    "evidence": [
+      "Diff reviewed in full: SKILL.md Hard Rules now say 'no failing or pending line' and name the closing entry location; the CHANGELOG T32 entry and T28 'unchanged' wording are updated consistently; the test string is updated to match the skill text.",
+      "No behavior regression found: the change tightens a documentation rule and its matching test, and the test string matches the new skill text exactly."
+    ]
+  }
+}

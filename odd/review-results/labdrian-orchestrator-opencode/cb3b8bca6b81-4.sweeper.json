@@ -1,0 +1,15 @@
+{
+  "kind": "sweeper",
+  "base": "ac151d719da4c8a375800233b8fe64c1f2284ec2",
+  "head": "cb3b8bca6b81a0262efd1bff4d3b192bc2ada487",
+  "diff_sha256": "5ab8cbb4aa683ffcd94bcffcb4a999abe96a3da81ba82009e5644738bd022872",
+  "sweep": "cb3b8bca6b81-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T3:  M odd/tasks/labdrian-orchestrator-opencode.md",
+      "disposition": "live",
+      "evidence": "The feature document is the parent's logbook, edited on purpose between commits (L92 and the T28/T30 ticks); it is committed with the review records at delivery."
+    }
+  ]
+}

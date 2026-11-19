@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "fcf39a17d81a813ee8db35ad47b09b2b72138496",
+    "head": "eb18c799e7a1f0f4f6d2a39ac368cc28d59bbd14",
+    "diff_sha256": "33bb4ad35797f5c1f511a5930c2a0355449a23eda521a7cfd10b45bc5b20726b",
+    "paths": [
+      "engine/hookwire/source_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "fcf39a17d81a813ee8db35ad47b09b2b72138496",
+      "head": "eb18c799e7a1f0f4f6d2a39ac368cc28d59bbd14",
+      "diff_sha256": "33bb4ad35797f5c1f511a5930c2a0355449a23eda521a7cfd10b45bc5b20726b"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/hookwire/source_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff removes one table-test case whose input and expected output are identical to the preceding 'server_tool is an mcp name' case (memorycard_mem_search -> mcp__memorycard__mem_search), so no coverage is lost.",
+      "The removed case's name described tool-name underscores, but the retained case with the same input already exercises that behavior; no production code changed."
+    ]
+  }
+}

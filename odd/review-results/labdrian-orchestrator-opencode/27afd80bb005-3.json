@@ -1,0 +1,82 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "caa0f5234cc43fb04f060043d1087ee8ff6ccdac",
+    "head": "27afd80bb00557426c97b275e710a907d7f36906",
+    "diff_sha256": "541d9c547a00859cd3557238ab70916410883f276ff9d5ee74414aa5cc2a38c3",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/agentgen/agentgen.go",
+      "engine/agentgen/foreman_test.go",
+      "engine/agentgen/messages_pin_test.go",
+      "engine/agentgen/opencode.go",
+      "engine/agentgen/opencode_test.go",
+      "engine/agentgen/roles.go",
+      "opencode/agents/builder.md",
+      "opencode/agents/delivery.md",
+      "opencode/agents/foreman.md",
+      "opencode/agents/polisher.md",
+      "opencode/agents/prototyper.md",
+      "opencode/agents/reviewer.md",
+      "opencode/agents/shaper.md",
+      "opencode/agents/sweeper.md",
+      "opencode/agents/verifier.md",
+      "overlay.manifest"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "caa0f5234cc43fb04f060043d1087ee8ff6ccdac",
+      "head": "27afd80bb00557426c97b275e710a907d7f36906",
+      "diff_sha256": "541d9c547a00859cd3557238ab70916410883f276ff9d5ee74414aa5cc2a38c3"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/agentgen/agentgen.go",
+        "engine/agentgen/foreman_test.go",
+        "engine/agentgen/messages_pin_test.go",
+        "engine/agentgen/opencode.go",
+        "engine/agentgen/opencode_test.go",
+        "engine/agentgen/roles.go",
+        "opencode/agents/builder.md",
+        "opencode/agents/delivery.md",
+        "opencode/agents/foreman.md",
+        "opencode/agents/polisher.md",
+        "opencode/agents/prototyper.md",
+        "opencode/agents/reviewer.md",
+        "opencode/agents/shaper.md",
+        "opencode/agents/sweeper.md",
+        "opencode/agents/verifier.md",
+        "overlay.manifest"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/agentgen/opencode.go:37-47",
+        "claim": "The doc comment says every OpenCode tool is denied unless the Claude list holds an equivalent. In fact only edit and shell are ever denied. The eight role agents are told never to launch sub-agents and have no Agent tool in their Claude lists. Their OpenCode files carry no deny on the task/sub-agent tool, so the Claude restriction is not carried over and rests on prompt text alone. The same applies to any other OpenCode tool, such as web fetch, that the Claude lists omit. The permission set of the OpenCode agents is therefore wider than the Claude one.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/agentgen/opencode.go:37-47 (openCodeDenies returns only edit and shell)",
+          "opencode/agents/builder.md:1-5 (no permissions block, though the body says never launch sub-agents)"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the whole diff: the generator, the build ordering, the tests, the nine generated files and the manifest rows.",
+      "Checked the YAML quoting of the description and the unquoted #variant model id.",
+      "Checked that the artifact order matches the tests (34 artifacts, foreman Claude file tenth from the end).",
+      "Checked that each role's Claude, Pi and Codex projection path is unchanged."
+    ]
+  }
+}

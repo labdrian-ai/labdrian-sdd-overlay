@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "27efff37265a06d7c66c24d9d8b8b0f100f757f8",
+    "head": "b3ce2931f12e01ae3256ada57dffd544d8aa585c",
+    "diff_sha256": "af72560b5d1f70bb425f9cf0ce083181942b6ab65cb97f50213a8d3c5403f0bc",
+    "paths": [
+      "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-lifecycle-of-all-the-targets.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+      "engine/runtime/opencode.go",
+      "engine/runtime/opencode_memorycard.go",
+      "engine/runtime/opencode_memorycard_plugin_test.go",
+      "engine/runtime/opencode_memorycard_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "27efff37265a06d7c66c24d9d8b8b0f100f757f8",
+      "head": "b3ce2931f12e01ae3256ada57dffd544d8aa585c",
+      "diff_sha256": "af72560b5d1f70bb425f9cf0ce083181942b6ab65cb97f50213a8d3c5403f0bc"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-lifecycle-of-all-the-targets.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+        "engine/runtime/opencode.go",
+        "engine/runtime/opencode_memorycard.go",
+        "engine/runtime/opencode_memorycard_plugin_test.go",
+        "engine/runtime/opencode_memorycard_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode.go:92",
+        "claim": "The uninstall message always says the memorycard plugin's active marker remains, even when no memorycard plugin was ever installed or a foreign plugin was left in place. A foreign file at the plugin path is left silently, and uninstall still reports restart_required with no mention of it, although install does say so.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/opencode.go:92",
+          "engine/runtime/opencode_memorycard.go:127-141"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/opencode_memorycard.go:83-91",
+        "claim": "The ownership mark is matched anywhere in the file (strings.Contains), but the comment says it is in the first line. A foreign file that mentions the mark anywhere would be treated as ours, then overwritten on install and deleted on uninstall.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/opencode_memorycard.go:83-91",
+          "engine/runtime/opencode_memorycard.go:19-21"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the diff only; the plugin source file memorycard-opencode-plugin.mjs and Status were not in the diff.",
+      "Install and uninstall control flow, the partial path for a foreign file, and record and directory removal looked consistent with the claim."
+    ]
+  }
+}

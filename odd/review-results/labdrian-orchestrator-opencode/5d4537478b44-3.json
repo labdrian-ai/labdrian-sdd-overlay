@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "5ed63e405407cded4f845443589034dce7802757",
+    "head": "5d4537478b4485233c5641a43ca0af852943148e",
+    "diff_sha256": "c337401c7bb3970790c2138dc3826b1dc1a9de5f0460f32e63ef2addbdc35876",
+    "paths": [
+      "longterm-mem/cmd/longterm-mem/cmd_register.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "5ed63e405407cded4f845443589034dce7802757",
+      "head": "5d4537478b4485233c5641a43ca0af852943148e",
+      "diff_sha256": "c337401c7bb3970790c2138dc3826b1dc1a9de5f0460f32e63ef2addbdc35876"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "longterm-mem/cmd/longterm-mem/cmd_register.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "longterm-mem/cmd/longterm-mem/cmd_register.go:40-41",
+        "claim": "The unchecked type assertion rt.Registrar.(register.Writer) panics at runtime if machineRuntimes ever returns a Registrar that is not a register.Writer value (e.g. a pointer *register.Writer, or a wrapper added later, which is exactly the extension the commit anticipates). The previous code constructed the concrete type directly and could not panic. The diff cannot show machineRuntimes' current return type, so whether it panics today is unknown; the coupling is new and fails at runtime rather than compile time.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/cmd_register.go:40"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "longterm-mem/cmd/longterm-mem/cmd_register.go:40-42",
+        "claim": "The register path previously used Machine: thisMachine{} explicitly and register.FileInstallState{} as state. It now relies on whatever machineRuntimes supplies for Machine and the writer's State. If those differ (e.g. different state or machine implementations) register behaviour changes silently. This is not verifiable from the diff.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "longterm-mem/cmd/longterm-mem/cmd_register.go:40-42"
+        ]
+      }
+    ],
+    "evidence": [
+      "Only cmd_register.go changed; the diff replaces the direct construction of register.Writer and thisMachine with machineRuntimes() plus a type assertion to register.Writer.",
+      "machineRuntimes' definition is not in the diff, so the dynamic type of Registrar and the equivalence of Machine/State with the previous wiring are unverified."
+    ]
+  }
+}

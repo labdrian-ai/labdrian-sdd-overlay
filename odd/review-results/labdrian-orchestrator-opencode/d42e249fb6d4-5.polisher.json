@@ -1,0 +1,31 @@
+{
+  "kind": "polisher",
+  "base": "34e0c09f4c5f166ed89281013f3031c9e77bfea0",
+  "head": "d42e249fb6d40cc6939e643975e7d502022dfa22",
+  "diff_sha256": "fa301a92064cb87e92967bb33899ed0230a3bcd0286355e16a846cc6107be853",
+  "findings": {
+    "findings": [
+      {
+        "id": "R1",
+        "severity": "WARNING",
+        "location": "skills/issue-creation/SKILL.md",
+        "claim": "Outcome definitions, comment read-back, duplicate procedure dropped; form hardcoded (both reviewers). Fixed in d0442fec, completed in a610792c (variables, comparison, guardrails restored, bounded reads, procedure file) and 6ed8ea51 (procedure carries the bound, URL failure and normalization).",
+        "evidence": [
+          "RED/GREEN issue_creation_artifact_test in each commit"
+        ]
+      },
+      {
+        "id": "R2",
+        "severity": "WARNING",
+        "location": "engine/skills/issue_creation_artifact_test.go",
+        "claim": "Four-sections test with Execution Steps present. Answered: roleChainSections records every H2 and equalStrings checks the four as an ordered subsequence, so extra sections are allowed by design.",
+        "evidence": [
+          "skills/role_chain_artifact_test.go:37"
+        ]
+      }
+    ],
+    "evidence": [
+      "series reviews d42e249f..a610792c"
+    ]
+  }
+}

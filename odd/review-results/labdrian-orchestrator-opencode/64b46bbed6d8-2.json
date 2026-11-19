@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "643f96837dad8e34f0267986e153eefa441f24c9",
+    "head": "64b46bbed6d841eb26c8bd4aaee3ffad9f5161ea",
+    "diff_sha256": "69c8df446537cbe9ea7448c2672338ac0d8560143d637a5dc6cad80fec8e8eab",
+    "paths": [
+      "bin/lib/apply.sh",
+      "bin/lib/deploy_state.sh"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "643f96837dad8e34f0267986e153eefa441f24c9",
+      "head": "64b46bbed6d841eb26c8bd4aaee3ffad9f5161ea",
+      "diff_sha256": "69c8df446537cbe9ea7448c2672338ac0d8560143d637a5dc6cad80fec8e8eab"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "bin/lib/apply.sh",
+        "bin/lib/deploy_state.sh"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "bin/lib/deploy_state.sh:112-135",
+        "claim": "state_rewrite_target now has a positional mode argument, but its other callers are not visible in this diff. Any caller outside this diff that still passes <target> <version> <digest> would take the target as the mode and shift every argument. Because the mode check is `== write` and no other value is rejected, such a call would silently drop the row instead of failing. The function does not validate that mode is write or forget.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "bin/lib/deploy_state.sh:117-122",
+          "bin/lib/deploy_state.sh:137"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "bin/lib/deploy_state.sh:92-98",
+        "claim": "state_write_target with an empty version now records a row with version \"\". Before this change the row was dropped. The commit message says this is intended, but nothing rejects an empty version on the write path. A caller with an unset version would therefore persist a bogus deployed row that status may read as deployed.",
+        "evidence_class": "inferential",
+        "causal_disposition": "behavior-activated",
+        "proof_refs": [
+          "bin/lib/deploy_state.sh:137"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff covers only apply.sh and deploy_state.sh; state_rewrite_target's other callers and the definition of `warn` are not visible, so those points stay inferential.",
+      "The change from `-n \"$version\"` to `mode == write` correctly separates forget from write for the two visible callers."
+    ]
+  }
+}

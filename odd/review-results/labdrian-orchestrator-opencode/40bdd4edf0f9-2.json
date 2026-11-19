@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a387de4ae039bf5f1f4f7e853dfd92fa52d461ca",
+    "head": "40bdd4edf0f97d0c678be4b248583a2729585057",
+    "diff_sha256": "ec4be5de3f49c5d54a2d241fe2d4727d4e7af80ddca473fdbf5d73581c47a5b6",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "a387de4ae039bf5f1f4f7e853dfd92fa52d461ca",
+      "head": "40bdd4edf0f97d0c678be4b248583a2729585057",
+      "diff_sha256": "ec4be5de3f49c5d54a2d241fe2d4727d4e7af80ddca473fdbf5d73581c47a5b6"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:611",
+        "claim": "L63 refers to \"L62 risk 1\", but the open risks it points at (the skill-registry retire/keep question) appear in the diff context under the L61 entry, and no L62 entry is visible in the file's log before L63. The cross-reference may be dangling, so a reader cannot find the owner question whose answer would trigger rewriting T28 and T22. Separately, the entry has stray backticks where apostrophes were intended (\"owner`s budget\", \"T30 (b)`s\").",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:607-611"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff touches only the feature document: T10 is ticked with its commit list and a log entry L63 is appended.",
+      "The hunk header attributes the risk lines at 607-609 to L61, and the hunk ends at the end of the file, so the L62 reference in L63 cannot be resolved from the diff."
+    ]
+  }
+}

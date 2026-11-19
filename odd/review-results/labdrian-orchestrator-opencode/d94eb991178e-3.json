@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f60786d05ee498ffb914de46d00acfc74b15f8c0",
+    "head": "d94eb991178ef17812f48543dc5809d85f5d6e5e",
+    "diff_sha256": "e7436b31ab7460785adc382039e7dba32b22bc5e3b35763931290181e754c65e",
+    "paths": [
+      "engine/cmd/codegraph_prompt_hook.go",
+      "engine/cmd/codegraph_prompt_hook_test.go",
+      "engine/cmd/dispatch.go",
+      "engine/cmd/testdata/codegraph_prompt_hook/ordinary_prompt.json",
+      "engine/cmd/testdata/codegraph_prompt_hook/system_notification.json",
+      "engine/cmd/testdata/codegraph_prompt_hook/task_notification.json",
+      "engine/cmd/usage.go",
+      "engine/hookwire/prompt.go",
+      "engine/hookwire/prompt_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f60786d05ee498ffb914de46d00acfc74b15f8c0",
+      "head": "d94eb991178ef17812f48543dc5809d85f5d6e5e",
+      "diff_sha256": "e7436b31ab7460785adc382039e7dba32b22bc5e3b35763931290181e754c65e"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/cmd/codegraph_prompt_hook.go",
+        "engine/cmd/codegraph_prompt_hook_test.go",
+        "engine/cmd/dispatch.go",
+        "engine/cmd/testdata/codegraph_prompt_hook/ordinary_prompt.json",
+        "engine/cmd/testdata/codegraph_prompt_hook/system_notification.json",
+        "engine/cmd/testdata/codegraph_prompt_hook/task_notification.json",
+        "engine/cmd/usage.go",
+        "engine/hookwire/prompt.go",
+        "engine/hookwire/prompt_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/hookwire/prompt.go:50",
+        "claim": "IsTaskNotification matches the system-notification mark with strings.Contains anywhere in the prompt, unlike the tag, which is matched only at the start. A real user prompt that quotes or pastes that marker, for example while discussing or debugging this hook, is silently treated as a notification, and codegraph never explores it. The doc comment protects the tag against mentions but not the mark.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/hookwire/prompt.go:50"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/cmd/codegraph_prompt_hook.go:54-58",
+        "claim": "A codegraph process killed by a signal is reported as exit 1. The bare `sh -c codegraph prompt-hook` command would give 128+signal, so the claim that the exit code comes back unchanged does not hold for signalled children.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/codegraph_prompt_hook.go:54-58"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff. The wrapper control flow, the PromptText bounds, the dispatch wiring and the fixtures are consistent with the stated behavior. I could not see execrunner, so its ExitCode and nil-env semantics are unverified."
+    ]
+  }
+}

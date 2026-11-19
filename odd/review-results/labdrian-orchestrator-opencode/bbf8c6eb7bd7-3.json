@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "72a8ccabda19d8d1d7166fd5c21354db04f0a620",
+    "head": "bbf8c6eb7bd727737c3d0d2afff4997790991f71",
+    "diff_sha256": "9e728959ab08b9744743f90a76103ad96ab3cfb3510b830591c3ba5934da1cdf",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "72a8ccabda19d8d1d7166fd5c21354db04f0a620",
+      "head": "bbf8c6eb7bd727737c3d0d2afff4997790991f71",
+      "diff_sha256": "9e728959ab08b9744743f90a76103ad96ab3cfb3510b830591c3ba5934da1cdf"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:69",
+        "claim": "T29 (a) deletes the whole `engine/sddregistry/` package and the `registry repair-sdd` verb. L61, added in this same commit, calls the executor rows (`engine registry repair-sdd`) and the Hermes section (`refresh-hermes` in `engine/sddregistry/app/hermes.go`) labdrian's own. It also names `sddregistry.FrontmatterDescription` as the helper a new registry generator needs. The deletion would remove the parts of the registry that L61 says stay, and the parser the replacement generator would reuse. Nothing in T29 or L60 reconciles the two. T29 (a) also removes `bin/lib/skill_registry.sh` while I11 and I31 are still pending on T20's outcome.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:69 (T29 (a): engine/sddregistry/ 1,067 lines, engine/cmd/registry.go, bin/lib/skill_registry.sh)",
+          "L61: executor rows `engine registry repair-sdd`, Hermes `refresh-hermes` at engine/sddregistry/app/hermes.go:23, FrontmatterDescription at engine/sddregistry/sddregistry.go:94"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "WARNING",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:68",
+        "claim": "T28 is gated only on T20 (\"after T20\", and T20 is now marked [x]). It requires replacing `gentle-ai skill-registry refresh` with \"T20's refresh\". T20 produced no refresh: its answer in L61 only says a new verb would be needed and that I11 and I31 wait on a later shaper entry. No task builds that generator, so T28's three edits have no defined replacement. T28 is marked ready to build, and T29 and T22 depend on it.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:60 (T20 marked [x], commit: no code; answer in L61)",
+          "odd/tasks/labdrian-orchestrator-opencode.md:68 (T28: `gentle-ai skill-registry refresh` replaced by T20's refresh)",
+          "L61: \"rows I11 and I31 wait on a shaper entry that turns this into a task\""
+        ]
+      },
+      {
+        "id": "F3",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:69",
+        "claim": "T29 (c) deletes `branch-pr`, `issue-creation` and `systemic-issue-triage`, but L60 marks all three \"drop (leaning)\". T29 is blocked only on risk 2 (the `sdd-*` skills). None of the owner questions L60 lists covers those three skills, so their drop is unconfirmed. The same applies to the \"leaning\" retags in I29.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:69 (T29 (c) list; BLOCKED only on L60 risk 2)",
+          "L60 inventory rows I24-I26 \"drop (leaning)\""
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only the feature document; I checked the task-line dependencies and the L60 and L61 claims against each other, and found no code to run.",
+      "Counts reconcile: the ten `sdd-*` skills and the eight `_shared` files match between I18, I19, I20 and T29 (c); the T29 forecast sums to about 6,410-6,710 lines."
+    ]
+  }
+}

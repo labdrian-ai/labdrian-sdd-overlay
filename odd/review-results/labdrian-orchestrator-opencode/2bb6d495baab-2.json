@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "0e85d8475ac8407ccafc2ac56beb1ab107affbf4",
+    "head": "2bb6d495baab709cc0c8fe4e0264fe0018c8f47e",
+    "diff_sha256": "b013bf20450d13f98d57fac1cee1a8d755021c9dea7d77133829a0b6d5bef218",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/cmd/opencode_bridge_session_e2e_test.go",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+      "engine/runtime/labdrian-runtime-parity-plugin.mjs",
+      "engine/runtime/opencode_bridge_session_test.go",
+      "engine/runtime/opencode_plugin.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "0e85d8475ac8407ccafc2ac56beb1ab107affbf4",
+      "head": "2bb6d495baab709cc0c8fe4e0264fe0018c8f47e",
+      "diff_sha256": "b013bf20450d13f98d57fac1cee1a8d755021c9dea7d77133829a0b6d5bef218"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/cmd/opencode_bridge_session_e2e_test.go",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+        "engine/runtime/labdrian-runtime-parity-plugin.mjs",
+        "engine/runtime/opencode_bridge_session_test.go",
+        "engine/runtime/opencode_plugin.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/runtime/labdrian-runtime-parity-plugin.mjs:483-488",
+        "claim": "The engine's answer is now dropped silently when event.prompt is not a record or its text is not a string. Previously the answer was stored in session.promptLines and reached the model through the system prompt regardless of the prompt's shape. Nothing is logged or noted when the answer is dropped, so a UserPromptSubmit warning or context can vanish while the hook reports success. The prompt text sent to the engine is computed before this guard, so the two may come from different sources. An empty prompt text also yields a message that begins with a blank gap (\"\\n\\n...\").",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/labdrian-runtime-parity-plugin.mjs:485-488"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/labdrian-runtime-parity-plugin.mjs:444-446",
+        "claim": "The sessionState comment was edited mechanically and now reads as a broken sentence: \"whether the last\" ends one line and \"stop was blocked\" starts the next, with the removed clause's wrapping left behind.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/labdrian-runtime-parity-plugin.mjs:444-446"
+        ]
+      }
+    ],
+    "evidence": [
+      "The system-prompt change, the new prompt-hook append and the version bump are consistent across the plugin, the Go constant and the goldens.",
+      "The new tests cover the byte-stable system prompt and the answer appended to the user's text.",
+      "The case where the answer cannot be appended (non-record prompt, non-string text) has no test."
+    ]
+  }
+}

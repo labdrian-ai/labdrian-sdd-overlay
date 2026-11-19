@@ -1,0 +1,23 @@
+{
+  "kind": "sweep",
+  "base": "dad2ea34e8ccfb967161b428bf79e7540d255849",
+  "head": "f60786d05ee498ffb914de46d00acfc74b15f8c0",
+  "diff_sha256": "6d49609a58a35dc76c337625461cc937dcccd233e4e00112ad2f705478e9ce68",
+  "outcome": "fired",
+  "t1": {
+    "deleted_or_renamed": [],
+    "removed_names": []
+  },
+  "t2": [],
+  "t3": [
+    "?? engine/cmd/codegraph_prompt_hook_test.go",
+    "?? engine/cmd/testdata/codegraph_prompt_hook/ordinary_prompt.json",
+    "?? engine/cmd/testdata/codegraph_prompt_hook/system_notification.json",
+    "?? engine/cmd/testdata/codegraph_prompt_hook/task_notification.json",
+    "?? engine/hookwire/prompt_test.go"
+  ],
+  "t4": {
+    "leftovers": [],
+    "orphaned_fixtures": []
+  }
+}

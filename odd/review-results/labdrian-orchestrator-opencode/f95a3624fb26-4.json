@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "f3cbdc308e5698d3c15f6d4ca97703e5f52f623e",
+    "head": "f95a3624fb26b61e886b3ce3aa2f7df5159b13a8",
+    "diff_sha256": "7501a91e801c67efbf4bf4447405f510d14ffbab3219705f39c3748d0965c742",
+    "paths": [
+      "engine/settings/main_agent.go",
+      "engine/settings/main_agent_test.go",
+      "engine/settings/merge.go",
+      "engine/settings/settingsfile/golden_unix_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "f3cbdc308e5698d3c15f6d4ca97703e5f52f623e",
+      "head": "f95a3624fb26b61e886b3ce3aa2f7df5159b13a8",
+      "diff_sha256": "7501a91e801c67efbf4bf4447405f510d14ffbab3219705f39c3748d0965c742"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/settings/main_agent.go",
+        "engine/settings/main_agent_test.go",
+        "engine/settings/merge.go",
+        "engine/settings/settingsfile/golden_unix_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/settings/main_agent.go:46-52",
+        "claim": "Ownership is decided by value alone, with no install-time record. If the user already had \"agent\": \"foreman\" before install-hooks (for example a hand-written foreman agent), uninstall-hooks deletes their key even though the overlay never wrote it. This contradicts the stated intent that only what the overlay installed is removed.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/settings/main_agent.go:46-52",
+          "engine/settings/main_agent.go:36-42"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff shows addMainAgent writing only when the key is absent, and removeMainAgent deleting on an exact \"foreman\" match.",
+      "Nothing records whether the overlay or the user wrote the key, so the two cases cannot be told apart at removal.",
+      "I found no other defect in the diff. Whether every Merge path reaches mergeHooks is not visible in the diff, so I could not check it."
+    ]
+  }
+}

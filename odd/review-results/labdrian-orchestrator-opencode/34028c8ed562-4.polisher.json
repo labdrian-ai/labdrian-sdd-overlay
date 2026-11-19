@@ -1,0 +1,49 @@
+{
+  "kind": "polisher",
+  "base": "febe2457f509a47df424cbfae2e1e4fd0ce9d366",
+  "head": "34028c8ed56251e8d6c5b5bee6cc42a21b4bb4ab",
+  "diff_sha256": "79644781730bb3186c3a70271954d163505140095c499b7f677696e5dd275264",
+  "findings": {
+    "findings": [
+      {
+        "id": "E-W1",
+        "severity": "WARNING",
+        "location": "engine/skillregistry/compose.go:166",
+        "claim": "A foreign bullet list placed right after the generated sources bullets is taken as generated and dropped. Answered: the sources list is the generated head that gentle-ai always wrote and replaced whole; a foreign list glued to it with no blank line or heading is not a layout any writer produces (propagate, repair-sdd and hermes write their own headings). Known limit, logged in L92.",
+        "evidence": [
+          "series 34028c8e."
+        ]
+      },
+      {
+        "id": "E-S2",
+        "severity": "SUGGESTION",
+        "location": "engine/skillregistry/compose.go:44-47",
+        "claim": "Ownership of rows decided by shape. Answered: a hand-written row with scope user or project and the generated shape is indistinguishable from a generated one; gentle-ai replaced all rows. Known limit, logged in L92.",
+        "evidence": [
+          "series 34028c8e."
+        ]
+      },
+      {
+        "id": "E-S3",
+        "severity": "SUGGESTION",
+        "location": "engine/skillregistry/compose.go:112",
+        "claim": "out reset with out[:0] reads as a leftover. Answered: readability only, no behaviour; left for the next edit of compose.go.",
+        "evidence": [
+          "series 34028c8e."
+        ]
+      },
+      {
+        "id": "E-W2",
+        "severity": "WARNING",
+        "location": "engine/skillregistry/frontmatter.go:100",
+        "claim": "Prose continuation with a colon cut the description. Fixed in b38a9898 (RED/GREEN a continuation line may say note: in prose). Its review warned that a top-level key would no longer stop an unclosed quote: answered, frontmatter.go:96 breaks on any line without indentation; case a quote that never closes keeps its first line passes.",
+        "evidence": [
+          "series 34028c8e and b38a9898."
+        ]
+      }
+    ],
+    "evidence": [
+      "series review febe2457..b38a9898; skillregistry and cmd tests pass."
+    ]
+  }
+}

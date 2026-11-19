@@ -1,0 +1,84 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "8df8f69a8b11dea3ea9fa254c10a01c283444981",
+    "head": "4ee2cccbec59217fa63581813568192e62737c01",
+    "diff_sha256": "972c836bd4d325fd50c6088483eb7f3e331dfb403ba651f77966d84558c87ea8",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "engine/cmd/codex_source_test.go",
+      "engine/cmd/phase7_acceptance_test.go",
+      "engine/cmd/projection_hook.go",
+      "engine/cmd/projection_hook_test.go",
+      "engine/cmd/projection_prompt_once_test.go",
+      "engine/cmd/prompt_store_test.go",
+      "engine/cmd/state_stores.go",
+      "engine/cmd/usage.go",
+      "engine/hookwire/decode.go",
+      "engine/hookwire/decode_test.go",
+      "engine/hookwire/sessionstart_test.go",
+      "engine/statestore/lastline.go",
+      "engine/statestore/lastline_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "8df8f69a8b11dea3ea9fa254c10a01c283444981",
+      "head": "4ee2cccbec59217fa63581813568192e62737c01",
+      "diff_sha256": "972c836bd4d325fd50c6088483eb7f3e331dfb403ba651f77966d84558c87ea8"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "engine/cmd/codex_source_test.go",
+        "engine/cmd/phase7_acceptance_test.go",
+        "engine/cmd/projection_hook.go",
+        "engine/cmd/projection_hook_test.go",
+        "engine/cmd/projection_prompt_once_test.go",
+        "engine/cmd/prompt_store_test.go",
+        "engine/cmd/state_stores.go",
+        "engine/cmd/usage.go",
+        "engine/hookwire/decode.go",
+        "engine/hookwire/decode_test.go",
+        "engine/hookwire/sessionstart_test.go",
+        "engine/statestore/lastline.go",
+        "engine/statestore/lastline_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "CHANGELOG.md:7",
+        "claim": "The CHANGELOG says that if OpenCode fires its context hook every turn, the bridge 'saves nothing and prints what it printed'. That is wrong given the new code. The bridge sends session_id on both events, so from the second turn on the hook prints nothing. If the bridge rebuilds the system prompt for each call, the workflow block then disappears from every turn after the first, with no SessionStart to reset it. The dedup assumes the block persists in the conversation, which the commit itself says is unverified. Claude Code is not affected, because its additionalContext persists in the transcript.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/projection_hook.go:233-237",
+          "CHANGELOG.md:7"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/cmd/projection_hook.go:262-262",
+        "claim": "The hash is recorded before the block is printed. If writing stdout fails after the record call, the session's next prompt finds the same hash and is silent, so the block is lost for that session. The comment 'printed again, never lost' covers only a failed record, not a failed print.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/projection_hook.go:262-263"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the diff only. The OpenCode plugin file is not in the diff, so how it assembles the system prompt is unknown."
+    ]
+  }
+}

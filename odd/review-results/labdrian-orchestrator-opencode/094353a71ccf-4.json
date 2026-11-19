@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "7ca4f581d13e0d87f1bac2d056cef22d914a3010",
+    "head": "094353a71ccf56c1f5d5ef59168a05f4ff43ce31",
+    "diff_sha256": "10e3fb87908241bc36734dc2822fd43ad6a3e7a7a07ed3f1b3522a6a7a602884",
+    "paths": [
+      "engine/skills/procedural_candidate_memorycard_test.go",
+      "skills/_shared/procedural-candidate-detection.md",
+      "skills/procedural-candidates/SKILL.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "7ca4f581d13e0d87f1bac2d056cef22d914a3010",
+      "head": "094353a71ccf56c1f5d5ef59168a05f4ff43ce31",
+      "diff_sha256": "10e3fb87908241bc36734dc2822fd43ad6a3e7a7a07ed3f1b3522a6a7a602884"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/skills/procedural_candidate_memorycard_test.go",
+        "skills/_shared/procedural-candidate-detection.md",
+        "skills/procedural-candidates/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "skills/_shared/procedural-candidate-detection.md:139-144",
+        "claim": "The new read rule says entries that translate to one id count once 'by the merge rule of item 6', but item 6 is the shared contract's merge rule only if the numbered items match; the SKILL.md step 6 holds the earliest-timestamp rule and the contract item 6 is not visible in this diff. If item 6 is not the merge rule, the cross-reference is dangling. Also on resolve failure the read cannot translate ids, so the read-count rule and the resolve-failure rule (counts unchanged) are unreconciled for a record mixing engram and memorycard ids of the same occurrence.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "skills/_shared/procedural-candidate-detection.md:142-144"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "skills/procedural-candidates/SKILL.md:21",
+        "claim": "Step 5 now defers to 'step 6' for the resolve invocation, and the one-call form with `--key <n> [--key <n2> ...]` is shown only there. The removed command in step 5 was the form tested by the contract; the test now only asserts the indirect text, so nothing pins the exact command in step 6, and the new command form is not covered by any requireText.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/skills/procedural_candidate_memorycard_test.go:85",
+          "skills/procedural-candidates/SKILL.md:22"
+        ]
+      }
+    ],
+    "evidence": [
+      "Diff reviewed in full: three files, prose contract and its text-pinning tests.",
+      "The test assertions were updated to match the new wording in both the contract and SKILL.md; the strings visible in the diff are consistent with the edits.",
+      "The test no longer checks the 'The stop covers occurrence work' sentence; it was replaced by wording merged into the earlier sentence, which is consistent."
+    ]
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "kind": "polisher",
+  "base": "ab3d36b1fd789cfc2c663e2328b256ad0d3c17ee",
+  "head": "8289857582c00435f83c5a388e1c96e5a76a6373",
+  "diff_sha256": "110d6c20441e5700d526e5bba2414c254a1374e59b40010e1ea65287fc3751aa",
+  "findings": {
+    "findings": [
+      {
+        "id": "C-W1",
+        "severity": "WARNING",
+        "location": "engine/capability/declarations.go:204",
+        "claim": "Both plugins claimed loaded by a singular-named live test. Answered: the test loads both (opencode_plugin_live_test.go:39-48 loops over labdrian-runtime-parity and memorycard, failing if either does not load or write its active marker).",
+        "evidence": [
+          "read opencode_plugin_live_test.go:39-48."
+        ]
+      },
+      {
+        "id": "C-S1",
+        "severity": "SUGGESTION",
+        "location": "engine/capability/opencode_declaration_test.go:179-215",
+        "claim": "Stale-wording substring test is brittle. Answered: intentional guard so the overclaims removed by the verifier do not come back; a reword that trips it is reviewed then.",
+        "evidence": [
+          "series review 82898575."
+        ]
+      },
+      {
+        "id": "C-S2",
+        "severity": "SUGGESTION",
+        "location": "engine/capability/declarations.go:284",
+        "claim": "Subtest name cited as a bare string, unchecked. Answered: the subtest exists (codex_source_test.go:123); a reference format cannot cite subtests, so the name lives in the detail text.",
+        "evidence": [
+          "rg codex_source_test.go:123."
+        ]
+      }
+    ],
+    "evidence": [
+      "series review ab3d36b1..82898575: sweep clean."
+    ]
+  }
+}

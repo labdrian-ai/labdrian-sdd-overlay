@@ -1,0 +1,102 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "8f485b3d54b2cf2740433b20215f5e89ff4a77e2",
+    "head": "febe2457f509a47df424cbfae2e1e4fd0ce9d366",
+    "diff_sha256": "0fef079e78d2e9f987178a3700e029ff76d2e9fbc834853458fb0281933836fb",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/cmd/main_test.go",
+      "engine/cmd/phase7_acceptance_test.go",
+      "engine/cmd/status_command_test.go",
+      "engine/cmd/status_golden_test.go",
+      "engine/cmd/testdata/status-golden/status-binary-states.golden",
+      "engine/cmd/testdata/status-golden/status-contract-states.golden",
+      "engine/cmd/testdata/status-golden/status-families-missing-or-drifted.golden",
+      "engine/cmd/testdata/status-golden/status-in-an-empty-home.golden",
+      "engine/cmd/testdata/status-golden/status-of-a-complete-install.golden",
+      "engine/cmd/testdata/status-golden/status-registry-states.golden",
+      "engine/cmd/testdata/status-golden/status-settings-that-are-not-an-object.golden",
+      "engine/cmd/testdata/status-golden/status-settings-without-the-hooks.golden",
+      "engine/cmd/testdata/status-golden/status-with-no-home.golden",
+      "engine/settings/legacy_families_test.go",
+      "engine/settings/merge.go",
+      "engine/settings/registry_refresh.go",
+      "engine/settings/registry_refresh_test.go",
+      "engine/settings/settingsfile/golden_unix_test.go",
+      "engine/settings/settingsfile/settings_test.go",
+      "engine/settings/status.go",
+      "engine/status/codex_test.go",
+      "engine/status/status.go",
+      "engine/status/status_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "8f485b3d54b2cf2740433b20215f5e89ff4a77e2",
+      "head": "febe2457f509a47df424cbfae2e1e4fd0ce9d366",
+      "diff_sha256": "0fef079e78d2e9f987178a3700e029ff76d2e9fbc834853458fb0281933836fb"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/cmd/main_test.go",
+        "engine/cmd/phase7_acceptance_test.go",
+        "engine/cmd/status_command_test.go",
+        "engine/cmd/status_golden_test.go",
+        "engine/cmd/testdata/status-golden/status-binary-states.golden",
+        "engine/cmd/testdata/status-golden/status-contract-states.golden",
+        "engine/cmd/testdata/status-golden/status-families-missing-or-drifted.golden",
+        "engine/cmd/testdata/status-golden/status-in-an-empty-home.golden",
+        "engine/cmd/testdata/status-golden/status-of-a-complete-install.golden",
+        "engine/cmd/testdata/status-golden/status-registry-states.golden",
+        "engine/cmd/testdata/status-golden/status-settings-that-are-not-an-object.golden",
+        "engine/cmd/testdata/status-golden/status-settings-without-the-hooks.golden",
+        "engine/cmd/testdata/status-golden/status-with-no-home.golden",
+        "engine/settings/legacy_families_test.go",
+        "engine/settings/merge.go",
+        "engine/settings/registry_refresh.go",
+        "engine/settings/registry_refresh_test.go",
+        "engine/settings/settingsfile/golden_unix_test.go",
+        "engine/settings/settingsfile/settings_test.go",
+        "engine/settings/status.go",
+        "engine/status/codex_test.go",
+        "engine/status/status.go",
+        "engine/status/status_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/settings/status.go:54-58",
+        "claim": "HasSupportedClaudeLifecycleState now also requires the new registry refresh hook. A settings file from a previous install, which had every other family and was reported supported, becomes unsupported until install-hooks is run again. Any caller that gates on this predicate (apply or sync gates, for example) will change its behaviour for existing installs. The diff does not show those callers, so the impact is unverified.",
+        "evidence_class": "inferential",
+        "causal_disposition": "behavior-activated",
+        "proof_refs": [
+          "engine/settings/status.go:57-58"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/settings/registry_refresh.go:41-47",
+        "claim": "The hook runs a synchronous `registry refresh` on every UserPromptSubmit with no timeout and no backgrounding. Forcing the exit to 0 stops an error from blocking a prompt, but a slow or hung refresh still delays or stalls every prompt. The comment's 'never blocks' claim covers only the exit status.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/settings/registry_refresh.go:41-47"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff. The family is registered in installedFamilies and in namedFamilies, and the tests cover install, uninstall and the status golden files.",
+      "I did not find a collision between the identity token 'registry refresh' and the other families' identities, and the entry is told from foreign entries by the binary path."
+    ]
+  }
+}

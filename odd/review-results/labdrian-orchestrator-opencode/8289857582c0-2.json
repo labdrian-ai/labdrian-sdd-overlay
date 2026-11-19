@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "ab3d36b1fd789cfc2c663e2328b256ad0d3c17ee",
+    "head": "8289857582c00435f83c5a388e1c96e5a76a6373",
+    "diff_sha256": "110d6c20441e5700d526e5bba2414c254a1374e59b40010e1ea65287fc3751aa",
+    "paths": [
+      "engine/capability/declarations.go",
+      "engine/capability/opencode_declaration_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "ab3d36b1fd789cfc2c663e2328b256ad0d3c17ee",
+      "head": "8289857582c00435f83c5a388e1c96e5a76a6373",
+      "diff_sha256": "110d6c20441e5700d526e5bba2414c254a1374e59b40010e1ea65287fc3751aa"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/capability/declarations.go",
+        "engine/capability/opencode_declaration_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/capability/opencode_declaration_test.go:179-215",
+        "claim": "The stale-wording test pins 'repository bound to a workflow' and similar phrases as absent from every OpenCode text, which is a brittle substring check. A harmless future rewording that reuses one of these phrases (for example 'a repository bound to a workflow' in an unrelated claim) fails the test even when the claim is accurate. The test also does not cover the Claude skills claim, which is pinned separately.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/capability/opencode_declaration_test.go:196-203"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/capability/declarations.go:284",
+        "claim": "The memory-enforcement claim names a subtest ('OpencodeAdaptsBeforeGate') by a bare string. The test only checks that the claim text contains this name. Nothing verifies the subtest exists in cmd:TestCodexSourceProcesses, so renaming it leaves the claim citing a nonexistent proof while the declaration test still passes.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/capability/declarations.go:284",
+          "engine/capability/opencode_declaration_test.go:144"
+        ]
+      }
+    ],
+    "evidence": [
+      "Both changed paths were read in the diff. Every wording change in declarations.go has a matching pin in the declaration test.",
+      "The added Claude skills test reference installer:TestUnrelatedSkillUnchanged is pinned by TestClaudeSkillsClaimKeepsTheUnrelatedSkillTest.",
+      "No behavior, runtime or installer code changed, so no regression on previously valid input is visible."
+    ]
+  }
+}

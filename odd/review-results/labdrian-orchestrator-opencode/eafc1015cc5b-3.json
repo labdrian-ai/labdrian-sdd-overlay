@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "c0fa35a7a0dd8b5945bedbf8d954cf9236cd2fbf",
+    "head": "eafc1015cc5b11382f34cd847cae394eb7453bbe",
+    "diff_sha256": "8efbf8e2917e30a71c29bbbe0307f16848051c8ecd230c1b97c0a5a31efcf3e8",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/cmd/runtime_test.go",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+      "engine/runtime/opencode_contracts.go",
+      "engine/runtime/opencode_overlay_test.go",
+      "engine/runtime/opencode_plugin_test.go",
+      "engine/runtime/opencode_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "c0fa35a7a0dd8b5945bedbf8d954cf9236cd2fbf",
+      "head": "eafc1015cc5b11382f34cd847cae394eb7453bbe",
+      "diff_sha256": "8efbf8e2917e30a71c29bbbe0307f16848051c8ecd230c1b97c0a5a31efcf3e8"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/cmd/runtime_test.go",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+        "engine/runtime/opencode_contracts.go",
+        "engine/runtime/opencode_overlay_test.go",
+        "engine/runtime/opencode_plugin_test.go",
+        "engine/runtime/opencode_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "The diff shows promptConfig() deriving the config once and joining every contract path under source.root through withAbsoluteContractPaths. Install and Status both call promptConfig(), so they agree.",
+      "withAbsoluteContractPaths copies the Contracts slice, so the derived config is not mutated.",
+      "The goldens and tests are updated consistently with the absolute-path output.",
+      "I could not see the contractFile or source.root definitions, which are outside the diff. The new tests and the <OVERLAY> goldens show root is populated after Derive. No change-caused defect is provable from the diff."
+    ]
+  }
+}

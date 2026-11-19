@@ -1,0 +1,55 @@
+{
+  "kind": "sweeper",
+  "base": "cb3b8bca6b81a0262efd1bff4d3b192bc2ada487",
+  "head": "ba97a9d1b8be77f1f5b3ca641ab051b90daba359",
+  "diff_sha256": "dfcb2e5d9ba9c10c2eb14ae42efdf07dbcf14b3ab286bfba5637f0714fe91f75",
+  "sweep": "ba97a9d1b8be-1.sweep.json",
+  "commit": null,
+  "candidates": [
+    {
+      "candidate": "T1 path: engine/installer/registry_pins_repair_test.go",
+      "disposition": "live",
+      "evidence": "Deleted on purpose by T29 (S17, L68); Grep at the head finds no live reader outside docs/architecture history and CHANGELOG."
+    },
+    {
+      "candidate": "T1 name: --cwd",
+      "disposition": "live",
+      "evidence": "Still named in 164 files by design: a flag or test name kept elsewhere or a history record, e.g. CHANGELOG.md, README.md."
+    },
+    {
+      "candidate": "T1 name: --frobnicate",
+      "disposition": "live",
+      "evidence": "Still named in 28 files by design: a flag or test name kept elsewhere or a history record, e.g. engine/cmd/registry_refresh_test.go, engine/cmd/skills_argv_golden_test.go."
+    },
+    {
+      "candidate": "T1 name: --no-refresh",
+      "disposition": "live",
+      "evidence": "Still named in 1 files by design: a flag or test name kept elsewhere or a history record, e.g. odd/tasks/labdrian-orchestrator-opencode.md."
+    },
+    {
+      "candidate": "T1 name: --registry",
+      "disposition": "live",
+      "evidence": "Still named in 294 files by design: a flag or test name kept elsewhere or a history record, e.g. .github/workflows/ci.yml, CHANGELOG.md."
+    },
+    {
+      "candidate": "T1 name: --skills-root",
+      "disposition": "live",
+      "evidence": "Still named in 11 files by design: a flag or test name kept elsewhere or a history record, e.g. README.md, bin/lib/manifest_routes.sh."
+    },
+    {
+      "candidate": "T1 name: cmd_repair_sdd_registry",
+      "disposition": "live",
+      "evidence": "Still named in 3 files by design: a flag or test name kept elsewhere or a history record, e.g. odd/tasks/labdrian-orchestrator-opencode.md, openspec/changes/archive/2026-09-11-pi-runtime-target/apply-progress.md."
+    },
+    {
+      "candidate": "T1 name: repair_sdd_registry_file",
+      "disposition": "live",
+      "evidence": "Still named in 3 files by design: a flag or test name kept elsewhere or a history record, e.g. docs/architecture/hexagonal-target.md, odd/tasks/consolidation-phase9.md."
+    },
+    {
+      "candidate": "T3:  M odd/tasks/labdrian-orchestrator-opencode.md",
+      "disposition": "live",
+      "evidence": "The feature document is the parent logbook, edited between commits; committed with the review records at delivery."
+    }
+  ]
+}

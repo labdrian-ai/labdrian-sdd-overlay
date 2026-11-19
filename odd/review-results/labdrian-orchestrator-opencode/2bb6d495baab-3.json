@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "0e85d8475ac8407ccafc2ac56beb1ab107affbf4",
+    "head": "2bb6d495baab709cc0c8fe4e0264fe0018c8f47e",
+    "diff_sha256": "b013bf20450d13f98d57fac1cee1a8d755021c9dea7d77133829a0b6d5bef218",
+    "paths": [
+      "CHANGELOG.md",
+      "engine/cmd/opencode_bridge_session_e2e_test.go",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+      "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+      "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+      "engine/runtime/labdrian-runtime-parity-plugin.mjs",
+      "engine/runtime/opencode_bridge_session_test.go",
+      "engine/runtime/opencode_plugin.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "0e85d8475ac8407ccafc2ac56beb1ab107affbf4",
+      "head": "2bb6d495baab709cc0c8fe4e0264fe0018c8f47e",
+      "diff_sha256": "b013bf20450d13f98d57fac1cee1a8d755021c9dea7d77133829a0b6d5bef218"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "engine/cmd/opencode_bridge_session_e2e_test.go",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-context-lists-quotes-and-case.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-minimalism-context-metadata-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-phases-quoted-items-accepted-today.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-reads-the-contracts-of-the-overlay.golden",
+        "engine/cmd/testdata/contract-golden/runtime-opencode-without-the-oo-contract.golden",
+        "engine/cmd/testdata/runtime-golden/runtime-opencode-and-pi-with-an-overlay.golden",
+        "engine/runtime/labdrian-runtime-parity-plugin.mjs",
+        "engine/runtime/opencode_bridge_session_test.go",
+        "engine/runtime/opencode_plugin.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "WARNING",
+        "location": "engine/runtime/labdrian-runtime-parity-plugin.mjs:483-488",
+        "claim": "The engine's per-prompt answer is now written into the user's prompt text, which OpenCode stores as the message. Before, it was transient system context that lasted only until the next prompt. Now each prompt's context and warning is persisted in the conversation history, shown in the transcript and possibly used for the session title, and it keeps costing tokens in every later turn. The diff does not show whether OpenCode re-runs the prompt hook on retries or resubmits, which would append the block twice. The change trades the cache problem for history growth and a changed user-visible message.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/labdrian-runtime-parity-plugin.mjs:483-488"
+        ]
+      },
+      {
+        "id": "F2",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/labdrian-runtime-parity-plugin.mjs:444-447",
+        "claim": "The sessionState comment was edited into a broken sentence ('whether the last' now starts a line without its subject, after the 'what the last prompt's answer said' clause was removed). The comment no longer reads correctly.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/labdrian-runtime-parity-plugin.mjs:444-447"
+        ]
+      }
+    ],
+    "evidence": [
+      "Reviewed the full diff only; I could not inspect isRecord or the early-return paths of promptSubmitted, so the ownText and child-session behavior is unverified.",
+      "The tests cover the new behavior: the answer is appended after the user's text, system stays byte-stable across prompts, and a prompt with no answer is left unchanged.",
+      "Version bump and golden updates are consistent with each other."
+    ]
+  }
+}

@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "8fe396698cfa91873f30322c081637fbc4ae0cf0",
+    "head": "8f485b3d54b2cf2740433b20215f5e89ff4a77e2",
+    "diff_sha256": "e1f2cb54d1266d228cb86b6ceb6501238f0372160d780c3f6a98eff7738340d7",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "bin/lib/skill_registry.sh",
+      "bin/lib/usage.sh",
+      "engine/cmd/skill_registry_skill_test.go",
+      "engine/installer/registry_engine_absent_test.go",
+      "engine/installer/registry_pins_doctor_test.go",
+      "engine/installer/testdata/registry_pins.golden",
+      "overlay.manifest",
+      "skills.registry.yaml",
+      "skills/skill-registry/SKILL.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "8fe396698cfa91873f30322c081637fbc4ae0cf0",
+      "head": "8f485b3d54b2cf2740433b20215f5e89ff4a77e2",
+      "diff_sha256": "e1f2cb54d1266d228cb86b6ceb6501238f0372160d780c3f6a98eff7738340d7"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "bin/lib/skill_registry.sh",
+        "bin/lib/usage.sh",
+        "engine/cmd/skill_registry_skill_test.go",
+        "engine/installer/registry_engine_absent_test.go",
+        "engine/installer/registry_pins_doctor_test.go",
+        "engine/installer/testdata/registry_pins.golden",
+        "overlay.manifest",
+        "skills.registry.yaml",
+        "skills/skill-registry/SKILL.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "README.md:1030",
+        "claim": "The reworded README line points to `registry refresh` \"(below)\", but this diff adds no `registry refresh` documentation to the README. If the README has no such section, the reference dangles for readers of the engine verb docs. The diff cannot show whether a section exists elsewhere.",
+        "evidence_class": "inferential",
+        "causal_disposition": "unknown",
+        "proof_refs": [
+          "README.md:1030"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only one README line, which refers to `registry refresh` as documented below.",
+      "In bin/lib/skill_registry.sh, `refresh_skill_registry` runs the engine verb with `--force` and `--quiet` mapped as before. `--no-gitignore` is accepted and does nothing, as the commit states.",
+      "Golden pins and tests cover the engine-absent case and the case where gentle-ai is no longer called."
+    ]
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "22e75a0402f9650ca2acaa25750311af9d05acb6",
+    "head": "646bc13d0de2998c45953d1cff8cb7d34a3ff2f4",
+    "diff_sha256": "5f4aaec443074decaee800798761e666e8ff0ce1ae67d92de0d7d11f04a50e91",
+    "paths": [
+      "engine/agentgen/foreman_test.go"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "22e75a0402f9650ca2acaa25750311af9d05acb6",
+      "head": "646bc13d0de2998c45953d1cff8cb7d34a3ff2f4",
+      "diff_sha256": "5f4aaec443074decaee800798761e666e8ff0ce1ae67d92de0d7d11f04a50e91"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/agentgen/foreman_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [],
+    "evidence": [
+      "effortField splits on \\n and trims \\r, so CRLF files are read correctly. An empty file yields [\"\"], which fails the opening-fence check without panicking.",
+      "slices.Index(lines[1:], \"---\") returns an offset into the subslice. lines[1:end+1] therefore covers exactly the frontmatter lines between the fences and excludes the closing fence.",
+      "Each table case traces to its expected result. For the no-newline closing fence, lines is [---, name: x, ---], end is 1, and no effort key is found, so the result is (\"\", true). The two missing-fence cases return false.",
+      "The regex does not match effort_level or a commented key such as '# effort:'. It matches indented, quoted and space-before-colon keys, as the commit claims."
+    ]
+  }
+}

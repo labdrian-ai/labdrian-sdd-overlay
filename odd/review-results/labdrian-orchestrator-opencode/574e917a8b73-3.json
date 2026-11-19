@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "622213470409eca7a9956f5dc339eeeb9c88ac7a",
+    "head": "574e917a8b73fb6e78465ef0b5d407ca2b140fcc",
+    "diff_sha256": "261c820fec7829adb1dc5c9a543198ff99544ca86d5b4c39fe03896bcbb18d5c",
+    "paths": [
+      "odd/tasks/labdrian-orchestrator-opencode.md"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "622213470409eca7a9956f5dc339eeeb9c88ac7a",
+      "head": "574e917a8b73fb6e78465ef0b5d407ca2b140fcc",
+      "diff_sha256": "261c820fec7829adb1dc5c9a543198ff99544ca86d5b4c39fe03896bcbb18d5c"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "odd/tasks/labdrian-orchestrator-opencode.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "odd/tasks/labdrian-orchestrator-opencode.md:71",
+        "claim": "L68 says T22 removes the live copies under ~/.claude/skills and ~/.config/opencode/skills. The T22 task line was not updated: it lists only ~/.claude/skills and its backup list omits the opencode skills directory. An implementer working from the task line could leave the opencode copies behind, and they would not be backed up.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/labdrian-orchestrator-opencode.md:71 (T22 line unchanged in the diff)",
+          "odd/tasks/labdrian-orchestrator-opencode.md:619 (L68 text)"
+        ]
+      }
+    ],
+    "evidence": [
+      "The diff changes only a documentation file: the T29 task line and the new L68 log entry.",
+      "T29 drops its BLOCKED clause and cites L68, which matches the owner's recorded answer.",
+      "T22 still names only ~/.claude/skills, while L68 adds ~/.config/opencode/skills."
+    ]
+  }
+}

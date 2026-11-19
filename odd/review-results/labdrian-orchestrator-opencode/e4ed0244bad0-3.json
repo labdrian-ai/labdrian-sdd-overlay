@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "c2dd90fb0422a1413366c40e0be3d31c05d07b87",
+    "head": "e4ed0244bad085e8b7fcd8519035ee66e691ca8d",
+    "diff_sha256": "b2c3f2252afa56d8e68253535e841e5635cfe2b62926aaddae9e9ba211738edb",
+    "paths": [
+      "CHANGELOG.md",
+      "README.md",
+      "bin/lib/apply.sh",
+      "engine/runtime/codex_ownerrules.go",
+      "engine/runtime/codex_ownerrules_test.go",
+      "engine/shelltest/apply_codex_runtime_test.go"
+    ]
+  },
+  "rows": [
+    "risk-line"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "c2dd90fb0422a1413366c40e0be3d31c05d07b87",
+      "head": "e4ed0244bad085e8b7fcd8519035ee66e691ca8d",
+      "diff_sha256": "b2c3f2252afa56d8e68253535e841e5635cfe2b62926aaddae9e9ba211738edb"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "CHANGELOG.md",
+        "README.md",
+        "bin/lib/apply.sh",
+        "engine/runtime/codex_ownerrules.go",
+        "engine/runtime/codex_ownerrules_test.go",
+        "engine/shelltest/apply_codex_runtime_test.go"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "severity": "SUGGESTION",
+        "location": "engine/runtime/codex_ownerrules.go:109-117",
+        "claim": "In removeOwnerRules, sameFiles.has relies on os.Stat of the earlier path. When the first file is removed (for example one that install created and uninstall deletes once empty), a later path that is a symlink or case-variant of it no longer resolves, so os.SameFile cannot match. That path is then processed again and can be reported a second time. This is the same-file-once claim not holding for the uninstall case where a file was created by install; it is unproven for the hard-link and dangling cases. The tests only cover a pre-existing shared file.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/runtime/codex_ownerrules.go:109-117",
+          "engine/runtime/codex_ownerrules.go:188-200"
+        ]
+      }
+    ],
+    "evidence": [
+      "The identity check in sameFiles.has is evaluated against the file system at call time. It matches on the cleaned path first, and otherwise on os.SameFile of two successful stats.",
+      "The apply.sh indent_lines change is correct for multi-line and empty results; the here-string supplies the final newline.",
+      "install and status check after the first write, so a newly created shared file is detected there."
+    ]
+  }
+}
