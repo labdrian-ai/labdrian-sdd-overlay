@@ -72,6 +72,12 @@ func TestDeclaredRiskReadsTheOneRiskTrailerOfACommit(t *testing.T) {
 		{"the key in another case", "feat: x\n\nrisk: 2\n", []review.Trailer{{Key: "risk", Value: "2"}}, []int{2}},
 		{"among other trailers", "feat: x\n\nSigned-off-by: A\nRisk: none\nReviewed-by: B\n",
 			[]review.Trailer{{Key: "Signed-off-by", Value: "A"}, {Key: "Risk", Value: "none"}, {Key: "Reviewed-by", Value: "B"}}, []int{}},
+		// A reason in parentheses after the value, one space apart, is read past (T52, L142).
+		{"items with a reason", "feat: x\n\nRisk: 3 (a renderer two hooks share)\n",
+			[]review.Trailer{{Key: "Risk", Value: "3 (a renderer two hooks share)"}}, []int{3}},
+		{"none with a reason", "feat: x\n\nRisk: none (docs only)\n", []review.Trailer{{Key: "Risk", Value: "none (docs only)"}}, []int{}},
+		{"a reason holding parentheses", "feat: x\n\nRisk: 2,3 (the parser (shared) and the guard)\n",
+			[]review.Trailer{{Key: "Risk", Value: "2,3 (the parser (shared) and the guard)"}}, []int{2, 3}},
 	} {
 		got, err := review.DeclaredRisk(riskCommit, tc.message, tc.trailers)
 		if err != nil || !reflect.DeepEqual(got, tc.want) {
@@ -101,6 +107,19 @@ func TestDeclaredRiskFailsFourWaysAndNamesTheCommit(t *testing.T) {
 			`its "Risk:" trailer "3, 5" is not "none" or a list of the numbers 1 to 6 separated by commas with no space (for example "2,4")`},
 		{"a value that is empty", "feat: x\n\nRisk:\n", []review.Trailer{{Key: "Risk", Value: ""}},
 			`its "Risk:" trailer "" is not "none"`},
+		// The reason form is the value, one space and a parenthesized text that is not empty; nothing else (T52).
+		{"a bad value with a reason", "feat: x\n\nRisk: 3, 5 (two)\n", []review.Trailer{{Key: "Risk", Value: "3, 5 (two)"}},
+			`its "Risk:" trailer "3, 5 (two)" is not "none"`},
+		{"an empty reason", "feat: x\n\nRisk: 3 ()\n", []review.Trailer{{Key: "Risk", Value: "3 ()"}},
+			`its "Risk:" trailer "3 ()" is not "none"`},
+		{"a reason with no space before it", "feat: x\n\nRisk: 3(why)\n", []review.Trailer{{Key: "Risk", Value: "3(why)"}},
+			`its "Risk:" trailer "3(why)" is not "none"`},
+		{"a reason not closed", "feat: x\n\nRisk: 3 (why\n", []review.Trailer{{Key: "Risk", Value: "3 (why"}},
+			`its "Risk:" trailer "3 (why" is not "none"`},
+		{"text after the reason", "feat: x\n\nRisk: 3 (why) more\n", []review.Trailer{{Key: "Risk", Value: "3 (why) more"}},
+			`its "Risk:" trailer "3 (why) more" is not "none"`},
+		{"only a reason", "feat: x\n\nRisk: (why)\n", []review.Trailer{{Key: "Risk", Value: "(why)"}},
+			`its "Risk:" trailer "(why)" is not "none"`},
 	} {
 		got, err := review.DeclaredRisk(riskCommit, tc.message, tc.trailers)
 		if got != nil || !errors.Is(err, review.ErrRiskTrailer) {
