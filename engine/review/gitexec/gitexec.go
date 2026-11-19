@@ -411,9 +411,12 @@ const originRefs = "refs/remotes/origin/"
 // one ahead of it, both leave their commits out; a branch that merged the default branch lists its own line of
 // commits and not the ones merged in.
 //
-// When the branch tracks a branch of another name, a stacked branch, the commits that branch holds are not the
-// branch's own either (T50, L148): the tip of that upstream is one more ^<tip>. No upstream, one of the branch's own
-// name, one that does not exist and any read that fails add nothing, so the range is then what it was.
+// When the branch tracks a local branch of another name, a stacked branch, the commits of that branch up to the fork
+// point are not the branch's own either (T50, L148, L153): the merge base of HEAD and the tip of that upstream is one
+// more ^<base>, never the tip. No upstream, a remote one of any name, one of the branch's own name, one that does not
+// exist, one whose tip already holds HEAD and any read that fails add nothing, so the range is then what it was.
+// Residual: a parent that merged some of the child's commits, with the child adding more after, leaves the merged ones
+// out, which the parent's own chain then holds.
 func (g Git) Standing(repo app.Repository) (app.Standing, error) {
 	out, err := g.output(repo.Root, "rev-parse", []string{"rev-parse", "--abbrev-ref", "HEAD"})
 	if err != nil {
@@ -438,7 +441,7 @@ func (g Git) Standing(repo app.Repository) (app.Standing, error) {
 	for _, tip := range tips {
 		args = append(args, "^"+tip)
 	}
-	if tip := g.upstreamTip(repo.Root, branch); tip != "" {
+	if tip := g.upstreamFork(repo, branch, head); tip != "" {
 		args = append(args, "^"+tip)
 	}
 	out, err = g.output(repo.Root, "rev-list", args)
@@ -1041,14 +1044,25 @@ func (g Git) defaultBranch(dir string) (string, []string, error) {
 	return "", nil, nil
 }
 
-// upstreamTip is the commit of the branch that branch tracks when that is a branch of another name, else "". It reads
-// what git keeps for the branch (the ref it tracks and the branch it merges with) and never returns an error: what it
-// cannot read, or finds odd, leaves the range of Standing as it was, so that no commit is left out by accident.
-func (g Git) upstreamTip(dir, branch string) string {
+// upstreamFork is the commit up to which the branch's own commits start, when branch is stacked on a local branch of
+// another name, else "". The branch is stacked when git keeps "." as the remote it tracks (the upstream is a branch of
+// this repository, as `git switch -c <child> --track <parent>` makes it) and a branch of another name as the branch it
+// merges with. The fork point is the merge base of head and the tip of that branch, never the tip: what the parent
+// gained after the fork, and the commits of the branch it already holds, are not left out. When the tip holds head
+// (the parent took the child's commits), there is no fork to stand at, and nothing is left out. It never returns an
+// error: what it cannot read, or finds odd (no upstream, a remote one of any name, one of the branch's own name, one
+// that does not exist, several merge bases), leaves the range of Standing as it was, so that no commit is left out by
+// accident.
+func (g Git) upstreamFork(repo app.Repository, branch, head string) string {
+	dir := repo.Root
 	if strings.ContainsAny(branch, "*?[\\\n") {
 		return ""
 	}
-	out, err := g.output(dir, "config", []string{"config", "--get", "branch." + branch + ".merge"})
+	out, err := g.output(dir, "config", []string{"config", "--get", "branch." + branch + ".remote"})
+	if err != nil || strings.TrimSuffix(string(out), "\n") != "." {
+		return ""
+	}
+	out, err = g.output(dir, "config", []string{"config", "--get", "branch." + branch + ".merge"})
 	if err != nil {
 		return ""
 	}
@@ -1072,7 +1086,14 @@ func (g Git) upstreamTip(dir, branch string) string {
 	if err != nil || len(tips) != 1 {
 		return ""
 	}
-	return tips[0]
+	if held, err := g.IsAncestor(repo, head, tips[0]); err != nil || held {
+		return ""
+	}
+	bases, err := g.MergeBases(repo, head, tips[0])
+	if err != nil || len(bases) != 1 {
+		return ""
+	}
+	return bases[0]
 }
 
 // commitNames reads out, what git printed for command, as a list of full object names, one on each line, and none

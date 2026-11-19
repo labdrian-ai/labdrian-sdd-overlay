@@ -65,9 +65,10 @@ type Standing struct {
 	// which it is, which is all that is told then besides Branch.
 	Default string
 	// Commits are the commits of HEAD that the default branch does not have, whether it is the local branch or the
-	// one the remote keeps, and that the branch HEAD tracks does not have either when that is a branch of another name
-	// (a stacked branch, L148): the first-parent line of HEAD down to the commit it was made on, oldest first, each a
-	// full object name. None when HEAD is on the default branch or behind it.
+	// one the remote keeps, and, when HEAD's branch tracks a local branch of another name (branch.<b>.remote is ".", a
+	// stacked branch, L148), the commits of that branch up to the merge base of HEAD and its tip (L153): the first-parent
+	// line of HEAD down to the commit it was made on, oldest first, each a full object name. None when HEAD is on the
+	// default branch or behind it.
 	Commits []string
 }
 
@@ -110,8 +111,11 @@ type Git interface {
 	// Standing says which branch HEAD is on, which branch is the default one (the branch origin/HEAD names, else main,
 	// else master, whichever the repository has) and the commits of HEAD the default branch does not have. It asks
 	// no more than it needs: a detached HEAD, and a repository with no default branch, are told without the commits.
-	// A branch that tracks a branch of another name leaves that branch's commits out of Commits too; no upstream, one
-	// of the branch's own name or one that cannot be read leaves the range as the default branch alone makes it.
+	// A branch that tracks a local branch of another name (branch.<b>.remote is ".") leaves that branch's commits up to
+	// the merge base of HEAD and its tip out of Commits too, never the tip. No upstream, a remote upstream of any name,
+	// one of the branch's own name, a tip that already holds HEAD, or one that cannot be read leaves the range as the
+	// default branch alone makes it. Residual: a parent that merged some of the child's commits, with the child adding
+	// more after, leaves the merged ones out, which the parent's own chain then holds.
 	Standing(repo Repository) (Standing, error)
 	// Message returns the raw message of commit, a full object name, as git stores it, with no trailing newline
 	// added or removed beyond the one git ends a message with (own-rdd T6b1, S6 a).

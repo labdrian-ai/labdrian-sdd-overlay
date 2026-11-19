@@ -383,6 +383,18 @@ func TestStopHookDoesNotAskAStackedBranchForItsParentsCommits(t *testing.T) {
 
 		s.requireNothingRemembered(t)
 	})
+	t.Run("the parent holds the child's commit by fast-forward", func(t *testing.T) {
+		s, parent := stacked(t, "--track", "feature/parent")
+		s.git("switch", "-q", "feature/parent")
+		s.git("merge", "-q", "--ff-only", "feature/stop")
+		s.git("switch", "-q", "feature/stop")
+
+		reason := s.blocked("s1")
+
+		if want := "Commit " + parent + " of branch feature/stop has unfinished review steps."; !strings.HasPrefix(reason, want) {
+			t.Errorf("reason = %q, want it to start %q", reason, want)
+		}
+	})
 	t.Run("the child tracks nothing", func(t *testing.T) {
 		s, parent := stacked(t, "--no-track", "feature/parent")
 
@@ -685,6 +697,11 @@ func TestUsageDocumentsReviewStopHook(t *testing.T) {
 		"is never asked",
 		"labdrian review sweep",
 		"for one commit and never the whole branch",
+		"when the branch tracks a local branch of another name (its upstream",
+		"the commits of that branch up to the fork point",
+		"never the tip",
+		"a remote upstream of any name",
+		"leaves the merged ones out",
 		"whatever its outcome",
 		"once for each session and commit",
 		"stop_hook_active",

@@ -1514,9 +1514,14 @@ gentle-ai-overlay review stop-hook
     working tree that keeps features (odd/tasks or odd/review-results) with HEAD on a branch other than the default one
     (origin/HEAD, else main, else master), it walks the first-parent line of the branch, from the commit the branch was
     made on, and blocks the stop for the first commit that misses anything `review check` asks of it. The commits are
-    those of the branch that the default branch lacks and, when the branch tracks a branch of another name (its
-    upstream), that branch lacks too, so a branch made with `git switch -c <child> --track <parent>` is asked only for its
-    own commits; with no upstream, or one of the branch's own name, it is asked as before. The reason lists
+    those of the branch that the default branch lacks and, when the branch tracks a local branch of another name (its
+    upstream, `branch.<b>.remote` being `.`), the commits of that branch up to the fork point (`git merge-base HEAD
+    <upstream tip>`, never the tip) lack too, so a branch made with `git switch -c <child> --track <parent>` is asked only
+    for its own commits. It is asked as before with no upstream, a remote upstream of any name (`git push -u` included),
+    an upstream of the branch's own name, an upstream tip that already holds HEAD (the parent took the child's commits by
+    fast-forward or merge), a branch that does not exist, or any read that fails. Residual: a parent that merged some of
+    the child's commits, with the child adding more after, leaves the merged ones out, which the parent's own chain then
+    holds. The reason lists
     each thing the commit misses with the command that answers it: the `Risk:` trailer (`git commit --amend --trailer`
     when the commit is HEAD), `labdrian review sweep --feature <feature> --base <base> --head <head>`, `labdrian review
     record --role sweeper` for a sweep that fired, `labdrian review record --role polisher` for a trailer that names an
