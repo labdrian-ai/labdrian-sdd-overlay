@@ -268,7 +268,7 @@ func TestTheCloseRowAcceptsTheNoCIFindingBesideGreenCI(t *testing.T) {
 	if row == "" {
 		t.Fatal("roles/foreman/body.md has no Close row")
 	}
-	want := "the merge commit, and CI read green; or, when `labdrian review ci --landing <commit> --head <delivered head>` exits 0, the landing commit, its `CI: none configured` line and the local test results in delivery's entry"
+	want := "the merge commit, and CI read green; or, when `labdrian review ci --landing <commit> --head <delivered head>` exits 0, the landing commit, its `CI: none configured` line and delivery's entry holding the test runner's command run at the delivered head with a passing result; not run or failed is no closure"
 	if !strings.Contains(row, "| "+want+" |") {
 		t.Errorf("the Close row is %q, want its advance cell to be %q", row, want)
 	}
