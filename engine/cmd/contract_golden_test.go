@@ -220,6 +220,16 @@ func (w *contractWorld) opencodeInstall(minimalism, oo string) {
 	w.t.Setenv("LABDRIAN_OVERLAY_DIR", overlay)
 	w.name(overlay, "<OVERLAY>")
 	w.name(configRoot, "<CONFIG>")
+	// The MCP programs opencode.json names are found on a PATH of the case's own, so the transcript
+	// does not depend on what the machine running the tests has installed.
+	bin := w.t.TempDir()
+	for _, program := range []string{"memorycard", "codegraph"} {
+		if err := os.WriteFile(filepath.Join(bin, program), []byte("#!/bin/sh\n"), 0o755); err != nil {
+			w.t.Fatal(err)
+		}
+	}
+	w.t.Setenv("PATH", bin)
+	w.name(bin, "<BIN>")
 
 	var stdout, stderr bytes.Buffer
 	exitCode := -1
