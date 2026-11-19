@@ -46,7 +46,7 @@ func TestRewriteSkillPathsMakesABareIdItsAbsolutePath(t *testing.T) {
 
 	got, err := gate.RewriteSkillPaths(prompt, root, isRegularFile)
 
-	want := "Build T1.\n\n" + skillsHeader + "\n" + testFirst + "\n" + goTesting + "\n\n## Rules\ntest-first\n"
+	want := "Build T1.\n\n" + skillsHeader + "\n" + testFirst + "\n  " + goTesting + "  \n\n## Rules\ntest-first\n"
 	if err != nil || got != want {
 		t.Fatalf("RewriteSkillPaths = %q, %v; want %q (the ids under the header become paths, the text after the next heading stays)", got, err, want)
 	}
@@ -106,15 +106,15 @@ func TestRewriteSkillPathsRefusesWhatItCannotMakeAPathOf(t *testing.T) {
 		},
 		"a list marker": {
 			skillsHeader + "\n- test-first\n",
-			`line 2 "- test-first" is neither a skill id nor an absolute path: write one skill id or absolute SKILL.md path per line`,
+			`line 2 "- test-first" is neither a skill id nor an absolute path: a skill id is lowercase letters, digits and hyphens; write one skill id or absolute SKILL.md path per line`,
 		},
 		"a relative path": {
 			skillsHeader + "\nskills/test-first/SKILL.md\n",
-			`line 2 "skills/test-first/SKILL.md" is neither a skill id nor an absolute path: write one skill id or absolute SKILL.md path per line`,
+			`line 2 "skills/test-first/SKILL.md" is neither a skill id nor an absolute path: a skill id is lowercase letters, digits and hyphens; write one skill id or absolute SKILL.md path per line`,
 		},
 		"a comma list": {
 			skillsHeader + "\ntest-first, go-testing\n",
-			`line 2 "test-first, go-testing" is neither a skill id nor an absolute path: write one skill id or absolute SKILL.md path per line`,
+			`line 2 "test-first, go-testing" is neither a skill id nor an absolute path: a skill id is lowercase letters, digits and hyphens; write one skill id or absolute SKILL.md path per line`,
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -126,6 +126,18 @@ func TestRewriteSkillPathsRefusesWhatItCannotMakeAPathOf(t *testing.T) {
 				t.Fatalf("a refusal returns no prompt and one line, got %q and %q", got, err)
 			}
 		})
+	}
+}
+
+func TestRewriteSkillPathsKeepsTheIndentAndTheLineEndOfAnIdLine(t *testing.T) {
+	root, testFirst := skillsRoot(t)
+	prompt := skillsHeader + "\r\n  test-first\r\n\ttest-first  \r\n"
+
+	got, err := gate.RewriteSkillPaths(prompt, root, isRegularFile)
+
+	want := skillsHeader + "\r\n  " + testFirst + "\r\n\t" + testFirst + "  \r\n"
+	if err != nil || got != want {
+		t.Fatalf("RewriteSkillPaths = %q, %v; want %q (the id becomes its path, the indent and the carriage return stay)", got, err, want)
 	}
 }
 

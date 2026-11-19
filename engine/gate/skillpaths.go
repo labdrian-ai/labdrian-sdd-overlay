@@ -59,9 +59,9 @@ func RewriteSkillPaths(prompt, skillsRoot string, isFile func(path string) bool)
 			if !isFile(path) {
 				return "", fmt.Errorf("line %d %s names no skill: write a skill id of %s (a directory with a SKILL.md) or the absolute path of its SKILL.md", i+1, quoteLine(entry), skillsRoot)
 			}
-			lines[i] = path
+			lines[i] = strings.Replace(lines[i], entry, path, 1)
 		default:
-			return "", fmt.Errorf("line %d %s is neither a skill id nor an absolute path: write one skill id or absolute SKILL.md path per line", i+1, quoteLine(entry))
+			return "", fmt.Errorf("line %d %s is neither a skill id nor an absolute path: a skill id is lowercase letters, digits and hyphens; write one skill id or absolute SKILL.md path per line", i+1, quoteLine(entry))
 		}
 	}
 	return strings.Join(lines, "\n"), nil
