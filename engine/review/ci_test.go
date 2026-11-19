@@ -10,7 +10,7 @@ import (
 )
 
 // ciMarkerPaths is one path for each entry of the list of S3 L123: a file under each of the five directories and each
-// of the nine files.
+// of the ten files.
 var ciMarkerPaths = []string{
 	".github/workflows/ci.yml", ".gitea/workflows/ci.yml", ".forgejo/workflows/ci.yml", ".buildkite/pipeline.yml",
 	".woodpecker/build.yml", ".gitlab-ci.yml", ".circleci/config.yml", ".travis.yml", "azure-pipelines.yml",

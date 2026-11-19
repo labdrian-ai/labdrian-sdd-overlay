@@ -429,8 +429,8 @@ func TestOpenCodeBridgeThrowsTheEnginesReasonForADeniedInnerMemorycardRead(t *te
 	requireNode(t)
 	binary := enginetest.Binary(t)
 	home, state := t.TempDir(), t.TempDir()
-	// The workflow is created from a directory outside any repository: the project it names is that
-	// directory's basename.
+	// The workflow is created from a directory outside any repository, so BindRunning names its project
+	// with --project, the same name as the repository's.
 	workDir := filepath.Join(t.TempDir(), "proj-1")
 	if err := os.MkdirAll(workDir, 0o755); err != nil {
 		t.Fatal(err)

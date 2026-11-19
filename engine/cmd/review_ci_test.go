@@ -32,8 +32,12 @@ func (w *reviewWorld) ciState() string {
 	var b strings.Builder
 	b.WriteString(w.git("status", "--porcelain", "--untracked-files=all") + w.git("for-each-ref") + w.git("remote", "-v"))
 	for _, root := range []string{w.parent, os.Getenv("HOME")} {
-		filepath.WalkDir(root, func(path string, e fs.DirEntry, err error) error {
-			if err != nil || path == filepath.Join(w.root, ".git", "index.lock") {
+		walked := filepath.WalkDir(root, func(path string, e fs.DirEntry, err error) error {
+			if err != nil {
+				fmt.Fprintf(&b, "path error %v\n", err)
+				return nil
+			}
+			if path == filepath.Join(w.root, ".git", "index.lock") {
 				return nil
 			}
 			if e.IsDir() {
@@ -44,6 +48,9 @@ func (w *reviewWorld) ciState() string {
 			fmt.Fprintf(&b, "%s %x\n", path, sha256.Sum256(data))
 			return nil
 		})
+		if walked != nil {
+			w.t.Fatalf("walking %s: %v", root, walked)
+		}
 	}
 	return b.String()
 }
