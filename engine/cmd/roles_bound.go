@@ -6,7 +6,10 @@ package main
 
 import (
 	"errors"
+	"path"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/oddtask"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/oddtask/fsdoc"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection"
 	projapp "github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection/app"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/roles"
@@ -54,6 +57,22 @@ func boundWorkflowHere(workingDir func() (string, error)) (roles.BoundWorkflow, 
 	return roles.BoundWorkflow{
 		ID: bound.WorkflowID, Project: bound.ProjectID, Goal: state.GoalID, Chain: state.RoleChainID, Status: string(state.Status),
 	}, nil
+}
+
+// hasFeatureDocument is whether the record with seq 1 of goal names a feature of the checkout of the working
+// directory: the goal is a feature name and odd/tasks/<goal>.md at the worktree root is read through the
+// documents port the builder guard reads with. A cwd that cannot be read, a directory outside any
+// repository and a document the port refuses all answer false: the verb goes as it did.
+func hasFeatureDocument(workingDir func() (string, error), seq int, goal string) bool {
+	if workingDir == nil || seq != 1 || !oddtask.ValidFeature(goal) {
+		return false
+	}
+	cwd, err := workingDir()
+	if err != nil {
+		return false
+	}
+	_, err = fsdoc.Reader{Root: worktreeRoot}.Read(path.Join("odd", "tasks", goal+".md"), cwd)
+	return err == nil
 }
 
 // boundReadRefusal is the refusal of 'roles resume' and 'roles next' for a goal and chain, "" to go on. A binding

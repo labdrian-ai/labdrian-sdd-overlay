@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -168,12 +169,13 @@ func TestRolesResumeAndNextRefuseTheBoundWorkflowsGoalUnderAnotherChain(t *testi
 func TestRolesVerbsAnswerAsBeforeWhereNothingIsBoundToOpenChain(t *testing.T) {
 	stored := func(t *testing.T, dir string) {
 		t.Helper()
-		got := boundIn(t, dir, boundAppendArgs("proj-1", "f", "f"), boundFirstRecord("proj-1", "f", "f"))
+		// The goal g has no feature document, so T57's first-record rule does not apply to it.
+		got := boundIn(t, dir, boundAppendArgs("proj-1", "g", "g"), boundFirstRecord("proj-1", "g", "g"))
 		if got.code != 0 || got.stderr != "" || !strings.Contains(got.stdout, "stored record at ") {
 			t.Errorf("code=%d stdout=%q stderr=%q, want a stored record", got.code, got.stdout, got.stderr)
 		}
 		for _, verb := range []string{"resume", "next"} {
-			r := boundIn(t, dir, []string{verb, "--project", "proj-1", "--goal", "f", "--chain", "f"}, "")
+			r := boundIn(t, dir, []string{verb, "--project", "proj-1", "--goal", "g", "--chain", "g"}, "")
 			if r.code != 0 || r.stderr != "" {
 				t.Errorf("%s: code=%d stderr=%q, want exit 0", verb, r.code, r.stderr)
 			}
@@ -237,16 +239,24 @@ func describedBindingClass(t *testing.T, root string) string {
 	return string(described.Binding.Classification)
 }
 
-// unreadable makes path unreadable for the test and restores it when the test ends.
-func unreadable(t *testing.T, path string) {
+// symlinkedToACopy replaces the file at path with a symbolic link to a copy of itself. The stores classify a
+// symlinked file unavailable before any read, so the world is the same whoever runs the test (a mode 000 file
+// is still readable by root).
+func symlinkedToACopy(t *testing.T, path string) {
 	t.Helper()
-	if err := os.Chmod(path, 0); err != nil {
+	data, err := os.ReadFile(path)
+	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { _ = os.Chmod(path, 0o600) })
-	if f, err := os.Open(path); err == nil {
-		_ = f.Close()
-		t.Skip("the file is readable with mode 000 (running as root?)")
+	target := filepath.Join(t.TempDir(), filepath.Base(path))
+	if err := os.WriteFile(target, data, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(path); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(target, path); err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -254,7 +264,8 @@ func unreadable(t *testing.T, path string) {
 // binding: exit 1, no stdout, the sentence with detail, and the chain store as it was.
 func assertBoundUnreadableRefusal(t *testing.T, root, detail string, before map[string]string) {
 	t.Helper()
-	got := boundIn(t, root, boundAppendArgs("proj-1", "f", "other"), boundFirstRecord("proj-1", "f", "other"))
+	// The goal g has no feature document, so only the unreadable binding stands between the record and the store.
+	got := boundIn(t, root, boundAppendArgs("proj-1", "g", "g"), boundFirstRecord("proj-1", "g", "g"))
 	want := "error: roles append: the binding of this checkout could not be read (" + detail + ")\n"
 	if got.code != 1 || got.stdout != "" || got.stderr != want {
 		t.Errorf("code=%d stdout=%q stderr=%q, want exit 1, no stdout and %q", got.code, got.stdout, got.stderr, want)
@@ -267,10 +278,11 @@ func assertBoundUnreadableRefusal(t *testing.T, root, detail string, before map[
 func TestRolesAppendRefusesWhenTheBindingFileIsUnavailable(t *testing.T) {
 	root := bgRepo(t)
 	before := boundChainStore(t)
-	unreadable(t, filepath.Join(os.Getenv("XDG_STATE_HOME"), "labdrian", "bindings", mustRepoKey(t, root)+".json"))
+	path := filepath.Join(os.Getenv("XDG_STATE_HOME"), "labdrian", "bindings", mustRepoKey(t, root)+".json")
+	symlinkedToACopy(t, path)
 	described, err := describeBinding(root)
-	if err != nil || described.Binding.Classification != "unavailable" || described.Binding.Detail == "" {
-		t.Fatalf("the world is not the one under test: %+v, err=%v", described.Binding, err)
+	if want := "refusing symlinked binding file " + strconv.Quote(path); err != nil || described.Binding.Classification != "unavailable" || described.Binding.Detail != want {
+		t.Fatalf("the world is not the one under test: %+v, err=%v, want detail %q", described.Binding, err, want)
 	}
 	assertBoundUnreadableRefusal(t, root, described.Binding.Detail, before)
 	for _, verb := range []string{"resume", "next"} {
@@ -284,10 +296,12 @@ func TestRolesAppendRefusesWhenTheBindingFileIsUnavailable(t *testing.T) {
 func TestRolesAppendRefusesWhenTheBoundWorkflowLogIsUnavailable(t *testing.T) {
 	root := bgRepo(t)
 	before := boundChainStore(t)
-	unreadable(t, filepath.Join(os.Getenv("XDG_STATE_HOME"), "labdrian", "workflows", "proj-1", "f-t1.jsonl"))
+	path := filepath.Join(os.Getenv("XDG_STATE_HOME"), "labdrian", "workflows", "proj-1", "f-t1.jsonl")
+	symlinkedToACopy(t, path)
 	described, err := describeBinding(root)
-	if err != nil || described.Workflow == nil || described.Workflow.Classification != "unavailable" || described.Workflow.Detail == "" {
-		t.Fatalf("the world is not the one under test: %+v, err=%v", described.Workflow, err)
+	want := "refusing symlinked workflow log " + strconv.Quote(path)
+	if err != nil || described.Workflow == nil || described.Workflow.Classification != "unavailable" || described.Workflow.Detail != want {
+		t.Fatalf("the world is not the one under test: %+v, err=%v, want detail %q", described.Workflow, err, want)
 	}
 	assertBoundUnreadableRefusal(t, root, described.Workflow.Detail, before)
 	for _, verb := range []string{"resume", "next"} {

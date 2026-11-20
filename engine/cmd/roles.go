@@ -324,6 +324,11 @@ func runRolesAppend(workingDir func() (string, error), args []string, stdin io.R
 		fail("%s", refusal)
 		return
 	}
+	// The first record of a feature's chain is written by 'workflow open', not by this verb (S16 B5, T57).
+	if refusal := roles.FeatureEntryRefusal(h.Seq, h.GoalID, hasFeatureDocument(workingDir, h.Seq, h.GoalID)); refusal != "" {
+		fail("%s", refusal)
+		return
+	}
 	// A record that closes a review is held to the files the review stored before anything is written.
 	if err := evidence(h); err != nil {
 		fail("%v", err)

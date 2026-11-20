@@ -28,6 +28,27 @@ func TestBoundAppendRefusal(t *testing.T) {
 	}
 }
 
+func TestFeatureEntryRefusal(t *testing.T) {
+	const refusal = "odd/tasks/f.md is a feature document, so its role chain starts with labdrian workflow open --feature f --task <T>, " +
+		"which writes its first two records; run it, then append the next hops with the --chain it prints"
+	for _, c := range []struct {
+		name        string
+		seq         int
+		goal        string
+		hasDocument bool
+		want        string
+	}{
+		{"the first record of a goal with a document", 1, "f", true, refusal},
+		{"the first record of a goal with no document", 1, "f", false, ""},
+		{"the second record of a goal with a document", 2, "f", true, ""},
+		{"no sequence number", 0, "f", true, ""},
+	} {
+		if got := FeatureEntryRefusal(c.seq, c.goal, c.hasDocument); got != c.want {
+			t.Errorf("%s: got %q, want %q", c.name, got, c.want)
+		}
+	}
+}
+
 func TestBoundReadRefusal(t *testing.T) {
 	const refusal = "this checkout is bound to workflow f-t1, whose role chain for goal f is f-t1: use --chain f-t1"
 	for _, c := range []struct {

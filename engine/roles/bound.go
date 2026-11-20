@@ -30,6 +30,18 @@ func BoundAppendRefusal(b BoundWorkflow, project, goal, chain string) string {
 		b.ID, b.Project, b.Goal, b.Chain)
 }
 
+// FeatureEntryRefusal is the sentence that refuses the first record (seq 1) of the chain of a goal that is a
+// feature of the checkout, whose document is odd/tasks/<goal>.md: such a chain starts with 'workflow open',
+// which writes its first two records. "" for any other seq and for a goal with no document. The caller
+// reads the disk and passes hasDocument; the rule does no I/O.
+func FeatureEntryRefusal(seq int, goal string, hasDocument bool) string {
+	if seq != 1 || !hasDocument {
+		return ""
+	}
+	return fmt.Sprintf("odd/tasks/%s.md is a feature document, so its role chain starts with labdrian workflow open --feature %s --task <T>, "+
+		"which writes its first two records; run it, then append the next hops with the --chain it prints", goal, goal)
+}
+
 // BoundReadRefusal is the sentence that refuses a read (resume or next) of the bound workflow's goal
 // under a chain that is not its role chain; "" for any other goal, the workflow's own chain, or a
 // workflow that does not hold the parent to a chain.
