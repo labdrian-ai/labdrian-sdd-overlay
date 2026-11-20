@@ -325,6 +325,9 @@ func InstructionsBlock(b Binding, state workflow.State, engramName func(identity
 		}
 		lines = append(lines, "- Read memory only from: "+orElse(strings.Join(sources, ", "), noneField)+". A read from any other source is denied.")
 		lines = append(lines, degradationLines(plan.Sources, probe)...)
+		if slices.Contains(plan.Sources, memoryscope.SourceEngram) {
+			lines = append(lines, memorycardLine)
+		}
 		if line := instructionsProjectLine(plan, state.ProjectIdentity, engramName); line != "" {
 			lines = append(lines, line)
 		}
@@ -339,6 +342,10 @@ func InstructionsBlock(b Binding, state workflow.State, engramName func(identity
 		"- Procedural candidates: T1 right after a proactive mem_save of type bugfix, pattern, discovery or decision; T2 at session close, beside mem_session (skills/_shared/procedural-candidate-detection.md, section 5). Load skills/procedural-candidates/SKILL.md for the procedure; run `skills candidates` before creating or updating a candidate.")
 	return boundContext(strings.Join(lines, "\n"))
 }
+
+// memorycardLine tells an agent that memorycard is the source the plan calls engram, so a
+// memorycard read is not refused as a source outside the plan; the plan and the gate are unchanged.
+const memorycardLine = "- memorycard is the source engram: its reads (mem_search, mem_context, mem_get) go ahead while engram is listed, and a memorycard record you write may be read back."
 
 // instructionsProjectLine names the project each source of plan that names one
 // must be read with: Engram reads the Engram name of identity, longterm-mem the

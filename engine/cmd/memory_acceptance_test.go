@@ -75,6 +75,7 @@ func TestMemoryWiringAcceptance(t *testing.T) {
 
 	const block = "labdrian memory instructions (workflow wf-1, scope project):\n" +
 		"- Read memory only from: engram. A read from any other source is denied.\n" +
+		"- memorycard is the source engram: its reads (mem_search, mem_context, mem_get) go ahead while engram is listed, and a memorycard record you write may be read back.\n" +
 		"- Engram reads (mem_search, mem_context) name project \"proj-1\".\n" +
 		"- Memory writes (mem_save, promote) are not limited by the plan.\n" +
 		"- Procedural candidates: T1 right after a proactive mem_save of type bugfix, pattern, discovery or decision; T2 at session close, beside mem_session (skills/_shared/procedural-candidate-detection.md, section 5). Load skills/procedural-candidates/SKILL.md for the procedure; run `skills candidates` before creating or updating a candidate."
@@ -101,7 +102,7 @@ func TestMemoryWiringAcceptance(t *testing.T) {
 	claudeInstructions := func(t *testing.T) {
 		instructions(t)
 		before := w.stateSnapshot()
-		degraded := strings.Replace(block, "- Engram reads", unavailable+"- Engram reads", 1)
+		degraded := strings.Replace(block, "- memorycard is", unavailable+"- memorycard is", 1)
 		check(t, "SessionStart", w.engine(w.dir, sessionStartInput(t, w.repo, "startup"), "projection", "hook", "--event", "SessionStart"), sessionOutput(degraded))
 		contract := writeMemoryTestFile(t, w.dir, "contract.md", contractContentForE2E)
 		prompt := "Do the task.\n\n## Skills to load before work\n" + contract + "\n\n" + block + "\n"
@@ -329,7 +330,7 @@ func TestMemoryWiringAcceptance(t *testing.T) {
 			t.Fatal(err)
 		}
 		line := "- Do not read engram: it is unavailable in this session (the engram program failed: exit status 1).\n"
-		want := sessionOutput(strings.Replace(block, "- Engram reads", line+"- Engram reads", 1))
+		want := sessionOutput(strings.Replace(block, "- memorycard is", line+"- memorycard is", 1))
 		check(t, "codex SessionStart availability", hw.run(hw.dir, sessionStartInput(t, hw.repo, "startup"), "sh", "-c", codexCommand), want)
 	}
 	codexTool := func(t *testing.T, event, tool string, input any) phase7Run {

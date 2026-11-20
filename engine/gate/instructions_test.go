@@ -13,7 +13,7 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gate"
 )
 
-const instructionsBlock = "labdrian memory instructions (workflow wf-1, scope project):\n- Read memory only from: engram. A read from any other source is denied."
+const instructionsBlock = "labdrian memory instructions (workflow wf-1, scope project):\n- Read memory only from: engram. A read from any other source is denied.\n- memorycard is the source engram: its reads (mem_search, mem_context, mem_get) go ahead while engram is listed, and a memorycard record you write may be read back."
 
 func withInstructions(cfg gate.Config) gate.Config {
 	cfg.Instructions = instructionsBlock

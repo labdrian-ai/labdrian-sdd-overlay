@@ -46,6 +46,7 @@ func TestAnUnavailableSourceOfThePlanGetsOneDegradationLine(t *testing.T) {
 		projectSourcesLine,
 		"- Do not read longterm-mem: it is unavailable in this session (the longterm-mem binary did not answer).",
 		"- Do not read procedural-skills: it is unavailable in this session (no procedural skills lock: none installed).",
+		instructionsMemorycard,
 		`- Engram reads (mem_search, mem_context) name project "proj-1"; longterm-mem query and get name project "github.com/acme/proj-1".`,
 		instructionsWrites,
 		instructionsProcedural,

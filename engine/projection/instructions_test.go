@@ -16,6 +16,7 @@ import (
 )
 
 const (
+	instructionsMemorycard = "- memorycard is the source engram: its reads (mem_search, mem_context, mem_get) go ahead while engram is listed, and a memorycard record you write may be read back."
 	instructionsWrites     = "- Memory writes (mem_save, promote) are not limited by the plan."
 	instructionsProcedural = "- Procedural candidates: T1 right after a proactive mem_save of type bugfix, pattern, discovery or decision; T2 at session close, beside mem_session (skills/_shared/procedural-candidate-detection.md, section 5). Load skills/procedural-candidates/SKILL.md for the procedure; run `skills candidates` before creating or updating a candidate."
 )
@@ -38,6 +39,7 @@ func TestTheInstructionsUnderScopeGoalAreTheADRBlockExactly(t *testing.T) {
 	want := strings.Join([]string{
 		"labdrian memory instructions (workflow wf-1, scope goal):",
 		"- Read memory only from: engram, longterm-mem. A read from any other source is denied.",
+		instructionsMemorycard,
 		`- Engram reads (mem_search, mem_context) name project "proj-1"; longterm-mem query and get name project "github.com/acme/proj-1".`,
 		`- Under goal "goal-1": pass goal "goal-1" to every longterm-mem query, and give every Engram record you create for this goal a topic_key that begins with "goal:goal-1/", for example "goal:goal-1/architecture/auth".`,
 		instructionsWrites,
@@ -54,6 +56,7 @@ func TestTheInstructionsUnderScopeProjectHaveNoGoalLine(t *testing.T) {
 	want := strings.Join([]string{
 		"labdrian memory instructions (workflow wf-1, scope project):",
 		"- Read memory only from: engram, longterm-mem, procedural-skills. A read from any other source is denied.",
+		instructionsMemorycard,
 		`- Engram reads (mem_search, mem_context) name project "proj-1"; longterm-mem query and get name project "github.com/acme/proj-1".`,
 		instructionsWrites,
 		instructionsProcedural,
@@ -74,6 +77,33 @@ func TestTheInstructionsUnderScopeNoneSayToReadNoMemory(t *testing.T) {
 	}, "\n")
 	if got := block(loadedWorkflow("standalone-minimal", workflow.StatusRunning)); got != want {
 		t.Errorf("InstructionsBlock() =\n%s\nwant\n%s", got, want)
+	}
+}
+
+// A plan that holds engram says once, right after the sources line, that memorycard is the source
+// engram; a plan without engram and a scope-none plan say nothing of it.
+func TestTheInstructionsSayMemorycardIsTheSourceEngram(t *testing.T) {
+	with := lines(block(withIdentity(loadedWorkflow("odd", workflow.StatusRunning), "github.com/acme/proj-1")))
+	at := -1
+	for i, line := range with {
+		if strings.HasPrefix(line, "- Read memory only from:") {
+			at = i
+		}
+	}
+	if at < 0 || at+1 >= len(with) || with[at+1] != instructionsMemorycard {
+		t.Errorf("a plan with engram: the line after the sources line is not %q:\n%s", instructionsMemorycard, strings.Join(with, "\n"))
+	}
+	if n := strings.Count(strings.Join(with, "\n"), instructionsMemorycard); n != 1 {
+		t.Errorf("a plan with engram holds the memorycard line %d times, want once", n)
+	}
+	ltm := withIdentity(narrowedWorkflow(narrowerDirective(memoryscope.ScopeProject, memoryscope.SourceLongtermMem), nil, nil), "github.com/acme/proj-1")
+	for name, w := range map[string]*workflow.Loaded{
+		"a plan without engram": ltm,
+		"a scope-none plan":     loadedWorkflow("standalone-minimal", workflow.StatusRunning),
+	} {
+		if got := block(w); strings.Contains(got, "memorycard") {
+			t.Errorf("%s names memorycard:\n%s", name, got)
+		}
 	}
 }
 
