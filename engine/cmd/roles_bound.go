@@ -15,13 +15,19 @@ import (
 
 // boundWorkflowHere is the workflow the checkout of the working directory is bound to, in the form the rule of
 // engine/roles reads: the zero value for a directory outside any repository and for every binding or workflow
-// that is not owned. The error is a binding store that could not be read.
+// that is absent, foreign, malformed or not owned. The error is a binding that could not be read: a working
+// directory that cannot be determined, a binding store that cannot be built or whose file is unavailable, or
+// the log of an owned binding's workflow that is unavailable. The repository is resolved first, so outside any
+// repository no binding is read.
 func boundWorkflowHere(workingDir func() (string, error)) (roles.BoundWorkflow, error) {
 	if workingDir == nil {
 		return roles.BoundWorkflow{}, nil
 	}
 	cwd, err := workingDir()
 	if err != nil {
+		return roles.BoundWorkflow{}, err
+	}
+	if _, inRepository := newRepoLocator().RepoKey(cwd); !inRepository {
 		return roles.BoundWorkflow{}, nil
 	}
 	described, err := describeBinding(cwd)
@@ -32,8 +38,16 @@ func boundWorkflowHere(workingDir func() (string, error)) (roles.BoundWorkflow, 
 	if err != nil {
 		return roles.BoundWorkflow{}, err
 	}
-	if described.Binding.Classification != projection.ClassificationOwned || described.Workflow == nil ||
-		described.Workflow.Classification != workflow.ClassificationOwned {
+	if described.Binding.Classification == projection.ClassificationUnavailable {
+		return roles.BoundWorkflow{}, errors.New(described.Binding.Detail)
+	}
+	if described.Binding.Classification != projection.ClassificationOwned || described.Workflow == nil {
+		return roles.BoundWorkflow{}, nil
+	}
+	if described.Workflow.Classification == workflow.ClassificationUnavailable {
+		return roles.BoundWorkflow{}, errors.New(described.Workflow.Detail)
+	}
+	if described.Workflow.Classification != workflow.ClassificationOwned {
 		return roles.BoundWorkflow{}, nil
 	}
 	bound, state := described.Binding.Binding, described.Workflow.State

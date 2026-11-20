@@ -8,6 +8,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -16,6 +17,7 @@ import (
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/roles"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/sha256hex"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow"
 )
 
 const (
@@ -191,14 +193,19 @@ func TestRolesVerbsAnswerAsBeforeWhereNothingIsBoundToOpenChain(t *testing.T) {
 		bgWorkflowCmd(t, root, "bind", "--project", "proj-1", "--workflow", "plain")
 		stored(t, root)
 	})
-	t.Run("a binding that is not ours", func(t *testing.T) {
+	t.Run("a malformed binding", func(t *testing.T) {
 		root := bgBareRepo(t)
-		dir := filepath.Join(os.Getenv("XDG_STATE_HOME"), "labdrian", "bindings")
-		if err := os.MkdirAll(dir, 0o700); err != nil {
-			t.Fatal(err)
+		writeBindingFile(t, root, "not json")
+		if got := describedBindingClass(t, root); got != "malformed" {
+			t.Fatalf("the binding is %q, want malformed", got)
 		}
-		if err := os.WriteFile(filepath.Join(dir, mustRepoKey(t, root)+".json"), []byte("not json"), 0o600); err != nil {
-			t.Fatal(err)
+		stored(t, root)
+	})
+	t.Run("a foreign binding", func(t *testing.T) {
+		root := bgBareRepo(t)
+		writeBindingFile(t, root, `{"version":1,"repo_key":"`+strings.Repeat("0", 64)+`","project_id":"proj-1","workflow_id":"f-t1","bound_at":"2026-01-01T00:00:00Z"}`)
+		if got := describedBindingClass(t, root); got != "foreign" {
+			t.Fatalf("the binding is %q, want foreign", got)
 		}
 		stored(t, root)
 	})
@@ -206,6 +213,166 @@ func TestRolesVerbsAnswerAsBeforeWhereNothingIsBoundToOpenChain(t *testing.T) {
 		bgBareRepo(t)
 		stored(t, t.TempDir())
 	})
+}
+
+// writeBindingFile stores content as the binding file of the repository at root.
+func writeBindingFile(t *testing.T, root, content string) {
+	t.Helper()
+	dir := filepath.Join(os.Getenv("XDG_STATE_HOME"), "labdrian", "bindings")
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, mustRepoKey(t, root)+".json"), []byte(content), 0o600); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// describedBindingClass is the classification of the binding of the repository at root, as the verbs read it.
+func describedBindingClass(t *testing.T, root string) string {
+	t.Helper()
+	described, err := describeBinding(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(described.Binding.Classification)
+}
+
+// unreadable makes path unreadable for the test and restores it when the test ends.
+func unreadable(t *testing.T, path string) {
+	t.Helper()
+	if err := os.Chmod(path, 0); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(path, 0o600) })
+	if f, err := os.Open(path); err == nil {
+		_ = f.Close()
+		t.Skip("the file is readable with mode 000 (running as root?)")
+	}
+}
+
+// assertBoundUnreadableRefusal requires the verb's refusal of a hop of another chain for an unreadable
+// binding: exit 1, no stdout, the sentence with detail, and the chain store as it was.
+func assertBoundUnreadableRefusal(t *testing.T, root, detail string, before map[string]string) {
+	t.Helper()
+	got := boundIn(t, root, boundAppendArgs("proj-1", "f", "other"), boundFirstRecord("proj-1", "f", "other"))
+	want := "error: roles append: the binding of this checkout could not be read (" + detail + ")\n"
+	if got.code != 1 || got.stdout != "" || got.stderr != want {
+		t.Errorf("code=%d stdout=%q stderr=%q, want exit 1, no stdout and %q", got.code, got.stdout, got.stderr, want)
+	}
+	if after := boundChainStore(t); !reflect.DeepEqual(before, after) {
+		t.Errorf("the chain store changed: %v -> %v", before, after)
+	}
+}
+
+func TestRolesAppendRefusesWhenTheBindingFileIsUnavailable(t *testing.T) {
+	root := bgRepo(t)
+	before := boundChainStore(t)
+	unreadable(t, filepath.Join(os.Getenv("XDG_STATE_HOME"), "labdrian", "bindings", mustRepoKey(t, root)+".json"))
+	described, err := describeBinding(root)
+	if err != nil || described.Binding.Classification != "unavailable" || described.Binding.Detail == "" {
+		t.Fatalf("the world is not the one under test: %+v, err=%v", described.Binding, err)
+	}
+	assertBoundUnreadableRefusal(t, root, described.Binding.Detail, before)
+	for _, verb := range []string{"resume", "next"} {
+		r := boundIn(t, root, []string{verb, "--project", "proj-1", "--goal", "f", "--chain", "f-t1"}, "")
+		if r.code != 0 || r.stderr != "" {
+			t.Errorf("%s: code=%d stderr=%q, want exit 0 as before", verb, r.code, r.stderr)
+		}
+	}
+}
+
+func TestRolesAppendRefusesWhenTheBoundWorkflowLogIsUnavailable(t *testing.T) {
+	root := bgRepo(t)
+	before := boundChainStore(t)
+	unreadable(t, filepath.Join(os.Getenv("XDG_STATE_HOME"), "labdrian", "workflows", "proj-1", "f-t1.jsonl"))
+	described, err := describeBinding(root)
+	if err != nil || described.Workflow == nil || described.Workflow.Classification != "unavailable" || described.Workflow.Detail == "" {
+		t.Fatalf("the world is not the one under test: %+v, err=%v", described.Workflow, err)
+	}
+	assertBoundUnreadableRefusal(t, root, described.Workflow.Detail, before)
+	for _, verb := range []string{"resume", "next"} {
+		r := boundIn(t, root, []string{verb, "--project", "proj-1", "--goal", "f", "--chain", "f-t1"}, "")
+		if r.code != 0 || r.stderr != "" {
+			t.Errorf("%s: code=%d stderr=%q, want exit 0 as before", verb, r.code, r.stderr)
+		}
+	}
+}
+
+func TestRolesAppendRefusesWhenTheWorkingDirectoryCannotBeDetermined(t *testing.T) {
+	bgRepo(t)
+	before := boundChainStore(t)
+	run := func(args []string, stdin string) rolesRun {
+		var out, errBuf bytes.Buffer
+		code, exited := -1, false
+		runRolesIn(func() (string, error) { return "", errors.New("getcwd: no such file or directory") }, args, strings.NewReader(stdin), &out, &errBuf, func(c int) {
+			if !exited {
+				code, exited = c, true
+			}
+		}, reviewEvidenceCheck(deps{}))
+		if !exited {
+			code = 0
+		}
+		return rolesRun{code: code, stdout: out.String(), stderr: errBuf.String()}
+	}
+	got := run(boundAppendArgs("proj-1", "f", "other"), boundFirstRecord("proj-1", "f", "other"))
+	want := "error: roles append: the binding of this checkout could not be read (getcwd: no such file or directory)\n"
+	if got.code != 1 || got.stdout != "" || got.stderr != want {
+		t.Errorf("code=%d stdout=%q stderr=%q, want exit 1, no stdout and %q", got.code, got.stdout, got.stderr, want)
+	}
+	if after := boundChainStore(t); !reflect.DeepEqual(before, after) {
+		t.Errorf("the chain store changed: %v -> %v", before, after)
+	}
+	for _, verb := range []string{"resume", "next"} {
+		r := run([]string{verb, "--project", "proj-1", "--goal", "f", "--chain", "f-t1"}, "")
+		if r.code != 0 || r.stderr != "" {
+			t.Errorf("%s: code=%d stderr=%q, want exit 0 as before", verb, r.code, r.stderr)
+		}
+	}
+}
+
+func TestRolesAppendOutsideAnyRepositoryReadsNoBinding(t *testing.T) {
+	bgBareRepo(t)
+	outside := t.TempDir()
+	t.Setenv("XDG_STATE_HOME", "relstate")
+	args, record := boundAppendArgs("proj-1", "f", "f"), boundFirstRecord("proj-1", "f", "f")
+	got := boundIn(t, outside, args, record)
+	want := "error: roles append: role chain store: XDG_STATE_HOME \"relstate\" is not absolute\n"
+	if got.code != 1 || got.stdout != "" || got.stderr != want {
+		t.Errorf("code=%d stdout=%q stderr=%q, want exit 1, no stdout and %q", got.code, got.stdout, got.stderr, want)
+	}
+	if base := runRolesTest(args, record); base != got {
+		t.Errorf("with the working directory %+v, without it %+v, want the same answer", got, base)
+	}
+}
+
+// The builder guard shares the binding reader and keeps its own answer where no repository holds the directory
+// and the state home is not absolute: the binding store's error, quoted as its denial.
+func TestBuilderGuardKeepsItsAnswerOutsideARepositoryWithARelativeStateHome(t *testing.T) {
+	root := bgBareRepo(t)
+	outside := t.TempDir()
+	t.Setenv("XDG_STATE_HOME", "relstate")
+	got := decodeGuardDenial(t, bgRun(bgCall(t, outside, "builder", "Spec: "+filepath.Join(root, "odd", "tasks", "f.md")+", T1")))
+	want := wantWorkflowDenial("the workflow of the repository cannot be read (projection store: XDG_STATE_HOME \"relstate\" is not absolute)", "f", "T1")
+	if got != want {
+		t.Errorf("reason = %q, want %q", got, want)
+	}
+}
+
+// roles.closedStatus copies workflow.StatusClosed (the rule's package does not import the workflow package);
+// the copy holds while a workflow of that status does not hold the parent to its chain.
+func TestRolesRuleClosedStatusIsTheWorkflowsClosedStatus(t *testing.T) {
+	open := roles.BoundWorkflow{ID: "f-t1", Project: "proj-1", Goal: "f", Chain: "f-t1", Status: string(workflow.StatusRunning)}
+	if roles.BoundAppendRefusal(open, "proj-1", "f", "other") == "" {
+		t.Fatal("a running workflow does not refuse a hop of another chain: the premise is wrong")
+	}
+	closed := open
+	closed.Status = string(workflow.StatusClosed)
+	if got := roles.BoundAppendRefusal(closed, "proj-1", "f", "other"); got != "" {
+		t.Errorf("a workflow of status %q refuses with %q, want no refusal", workflow.StatusClosed, got)
+	}
+	if got := roles.BoundReadRefusal(closed, "f", "other"); got != "" {
+		t.Errorf("a workflow of status %q refuses a read with %q, want no refusal", workflow.StatusClosed, got)
+	}
 }
 
 func TestRolesAppendRefusesWhenTheBindingCannotBeRead(t *testing.T) {
