@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "991f1db0a57cdf6083b6d6551062509524c8fa95",
+    "head": "720f1676034079a59847a534c75df5bc024d1a34",
+    "diff_sha256": "763e035c17406bc5ed02ede05e6d477c2e067b2fd1f0bdfcf519809baf2188c6",
+    "paths": [
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/cmd/review_test.go",
+      "engine/cmd/usage.go",
+      "engine/review/app/findings.go",
+      "engine/review/app/findings_test.go",
+      "odd/review-results/README.md",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "hunt",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "991f1db0a57cdf6083b6d6551062509524c8fa95",
+      "head": "720f1676034079a59847a534c75df5bc024d1a34",
+      "diff_sha256": "763e035c17406bc5ed02ede05e6d477c2e067b2fd1f0bdfcf519809baf2188c6"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/cmd/review_test.go",
+        "engine/cmd/usage.go",
+        "engine/review/app/findings.go",
+        "engine/review/app/findings_test.go",
+        "odd/review-results/README.md",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/review/app/findings.go:107-109",
+        "severity": "SUGGESTION",
+        "claim": "The change alters the output that 'labdrian review findings' prints, a contract other code reads (Risk 3). A BLOCKER or CRITICAL finding of unknown disposition whose verdict has base_result reproduced moved from kept to left_out, with a new reason 'verdict base-reproduced'. CHANGELOG.md 'Unreleased' has no entry for this change, although the file records other behavior changes there. A consumer of kept or left_out (T4 and T17, planned) gets no change notice outside the task log L19.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "diff: engine/review/app/findings.go hunk @@ -93,9 +98,15 @@ adds the ReasonBaseReproduced return",
+          "Grep 'findings --feature|findings feed|left_out' in CHANGELOG.md at head: 0 matches"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff t19.diff (8 files)",
+      "Read engine/review/app/findings.go at head: leftOutReason checks pre-existing and base-only first, then for Severe() only, a verdict with result not-reproduced, then unknown disposition with Base == Reproduced",
+      "Read engine/reviewverdict/decide.go: severeFinding for unknown returns fateRefuted on head not-reproduced, fateOfTheBase on base reproduced, else fateUnchecked or decides by head. leftOutReason now keeps a finding exactly when Decide lists it as blocking or unverified, for severities BLOCKER and CRITICAL. This holds for no verdict, head not-run with base reproduced, and the not-reproduced precedence",
+      "Checked Severity.Severe() in engine/reviewresult/reviewresult.go:136. It covers BLOCKER and CRITICAL only, while Decide reads an unlisted severity as severe. The base has the same behavior and this diff does not change it, so it is not reported",
+      "Checked docSection and normalizeDocText in engine/cmd/approve_guard_docs_test.go. In bin/lib/usage.sh the first 'findings --feature' is at line 387 and the next 'stop-hook' at line 406, so the parity test reads only the findings block. In README.md the section runs from 823 to the stop-hook entry",
+      "Checked that the new pair strings match the engine usage line at engine/cmd/usage.go:269 and the reflowed wrapper text once whitespace is flattened",
+      "Searched for other help or docs that state the skip reasons ('verdict not-reproduced'). All documentation copies in the repo are updated: engine usage, wrapper, README.md, odd/review-results/README.md",
+      "Looked for a test that limits line width in engine/cmd. None found, so the overlong reflowed lines in README.md:833 and usage.go:89 are style only and not reported",
+      "Tests were not run (the reviewer does not execute). The GREEN claim in L19 is not verified here"
+    ]
+  }
+}
