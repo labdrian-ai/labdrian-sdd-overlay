@@ -71,7 +71,7 @@ func TestParseRuntimeArgsRefusesWhatItCannotUseInTheWordsItAlwaysHad(t *testing.
 		{"a target nobody registered", []string{"status", "--target", "vim"}, `unknown target "vim"`},
 		{"--config-root with no value", []string{"status", "--config-root"}, "error: --config-root requires a value"},
 		{"--component with no value", []string{"status", "--component"}, "error: --component requires a value"},
-		{"a component that does not exist", []string{"status", "--component", "x"}, `error: unknown --component "x" (expected "runtime-parity" or "longterm-mem")`},
+		{"a component that does not exist", []string{"status", "--component", "x"}, `error: unknown --component "x" (expected "runtime-parity", "longterm-mem" or "owner-rules")`},
 		{"--state-dir with no value", []string{"status", "--state-dir"}, "error: --state-dir requires a value"},
 		{"a flag that does not exist", []string{"status", "--unknown"}, `error: unknown flag "--unknown"`},
 		{"a word that is not a flag", []string{"status", "extra"}, `error: unexpected runtime argument "extra"`},

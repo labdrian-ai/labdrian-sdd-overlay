@@ -27,6 +27,7 @@ func runRuntime(p process, d deps, args []string) {
 const (
 	componentRuntimeParity = "runtime-parity"
 	componentLongtermMem   = "longterm-mem"
+	componentOwnerRules    = "owner-rules"
 )
 
 // runRuntimeCore is the testable core for the 'runtime' subcommand. commands is how the Pi
@@ -68,6 +69,11 @@ func runRuntimeCore(d deps, commands runtimepkg.CommandRunner, source pipkg.Sour
 
 	if opts.Component == componentLongtermMem {
 		runLongtermMemComponent(opts, cfg, stdout, stderr, exit)
+		return
+	}
+	if opts.Component == componentOwnerRules {
+		cfg.ConfigRoot = opts.ConfigRoot
+		runOwnerRulesComponent(opts, cfg, stdout, stderr, exit)
 		return
 	}
 
@@ -135,6 +141,25 @@ func runLongtermMemComponent(opts runtimeOptions, cfg runtimecore.Config, stdout
 	exit(0)
 }
 
+// runOwnerRulesComponent runs the action of 'runtime --component owner-rules': the owner rules block of the Claude
+// CLAUDE.md alone, which never opens settings.json. Only --target claude names a runtime that has
+// one, so any other target, the default included, is refused before anything is built or written.
+func runOwnerRulesComponent(opts runtimeOptions, cfg runtimecore.Config, stdout, stderr io.Writer, exit func(int)) {
+	if opts.Target != runtimecore.TargetClaude {
+		fmt.Fprintln(stderr, "error: --component owner-rules supports --target claude only")
+		exit(1)
+		return
+	}
+	adapter := runtimepkg.NewClaudeOwnerRulesAdapter(cfg.ClaudeRoot(), runtimepkg.OverlayOwnerRules{OverlayDir: cfg.LabdrianOverlayDir})
+	result := runtimecore.Perform(adapter, opts.Action)
+	fmt.Fprintln(stdout, result.String())
+	if runtimecore.ComponentFailed(opts.Action, result) {
+		exit(1)
+		return
+	}
+	exit(0)
+}
+
 // runtimeOptions is what the command line of 'runtime <action>' asks for. The zero value of a
 // field means the flag was not given; Target and Component carry their defaults after parsing.
 type runtimeOptions struct {
@@ -144,7 +169,7 @@ type runtimeOptions struct {
 	Target runtimecore.Target
 	// ConfigRoot, when it is not empty, is the one directory every runtime works in (--config-root).
 	ConfigRoot string
-	// Component is componentRuntimeParity or componentLongtermMem.
+	// Component is componentRuntimeParity or componentLongtermMem or componentOwnerRules.
 	Component string
 	// StateDir is the state directory of the longterm-mem component (--state-dir).
 	StateDir string
@@ -188,10 +213,10 @@ func parseRuntimeArgs(args []string, registry *runtimecore.Registry) (runtimeOpt
 				return runtimeOptions{}, fmt.Errorf("error: --component requires a value")
 			}
 			switch args[i] {
-			case componentRuntimeParity, componentLongtermMem:
+			case componentRuntimeParity, componentLongtermMem, componentOwnerRules:
 				opts.Component = args[i]
 			default:
-				return runtimeOptions{}, fmt.Errorf("error: unknown --component %q (expected %q or %q)", args[i], componentRuntimeParity, componentLongtermMem)
+				return runtimeOptions{}, fmt.Errorf("error: unknown --component %q (expected %q, %q or %q)", args[i], componentRuntimeParity, componentLongtermMem, componentOwnerRules)
 			}
 		case "--state-dir":
 			i++

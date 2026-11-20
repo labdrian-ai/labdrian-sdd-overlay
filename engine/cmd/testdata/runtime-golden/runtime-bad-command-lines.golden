@@ -83,7 +83,7 @@ $ runtime status --component nonsense
 exit: 1
 --- stdout ---
 --- stderr ---
-error: unknown --component "nonsense" (expected "runtime-parity" or "longterm-mem")
+error: unknown --component "nonsense" (expected "runtime-parity", "longterm-mem" or "owner-rules")
 <USAGE>
 
 # runtime status --unknown
