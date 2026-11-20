@@ -96,19 +96,40 @@ func TestClaudeOwnerRulesStatus(t *testing.T) {
 	}
 }
 
-func TestClaudeOwnerRulesWithNoCheckoutLeavesClaudeMDAsItWasWithTheNote(t *testing.T) {
+func TestClaudeOwnerRulesWithNoCheckoutIsUnsupportedForInstallUpdateAndStatusAndLeavesClaudeMD(t *testing.T) {
 	root := t.TempDir()
 	if err := os.WriteFile(claudeMD(root), []byte(liveShapedFile), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	adapter := ownerRulesOnly(root, &rulesSource{err: engineRuntime.ErrNoOverlayCheckout})
-	for name, r := range map[string]core.LifecycleResult{"install": adapter.Install(), "update": adapter.Update(), "uninstall": adapter.Uninstall()} {
-		if name != "uninstall" && (r.Status != core.CapabilityRestartRequired || !strings.Contains(r.Message, "owner rules not installed: "+engineRuntime.ErrNoOverlayCheckout.Error())) {
-			t.Errorf("%s = %v %q", name, r.Status, r.Message)
+	for name, r := range map[string]struct {
+		result core.LifecycleResult
+		note   string
+	}{
+		"install": {adapter.Install(), "owner rules not installed: " + engineRuntime.ErrNoOverlayCheckout.Error()},
+		"update":  {adapter.Update(), "owner rules not installed: " + engineRuntime.ErrNoOverlayCheckout.Error()},
+		"status":  {adapter.Status(), "owner rules not checked: " + engineRuntime.ErrNoOverlayCheckout.Error()},
+	} {
+		if r.result.Status != core.CapabilityUnsupported || r.result.Message != r.note {
+			t.Errorf("%s = %v %q, want unsupported %q", name, r.result.Status, r.result.Message, r.note)
 		}
 	}
 	if got := readFileText(t, claudeMD(root)); got != liveShapedFile {
 		t.Errorf("CLAUDE.md = %q", got)
+	}
+}
+
+func TestClaudeOwnerRulesUninstallWithNoCheckoutStillRemovesTheBlock(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(claudeMD(root), []byte(liveShapedFile+"\n"+rulesBlock(rulesV1)+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	r := ownerRulesOnly(root, &rulesSource{err: engineRuntime.ErrNoOverlayCheckout}).Uninstall()
+	if r.Status != core.CapabilityRestartRequired || r.Message != "owner rules removed from "+claudeMD(root) {
+		t.Errorf("Uninstall = %v %q", r.Status, r.Message)
+	}
+	if got := readFileText(t, claudeMD(root)); got != liveShapedFile {
+		t.Errorf("CLAUDE.md after uninstall = %q, want %q", got, liveShapedFile)
 	}
 }
 

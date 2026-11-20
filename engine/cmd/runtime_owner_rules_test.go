@@ -61,6 +61,46 @@ func TestRuntimeOwnerRulesComponentRunsTheFourActionsOnClaudeMDAlone(t *testing.
 	}
 }
 
+func TestRuntimeOwnerRulesComponentWithNoCheckoutExitsOneForInstallUpdateAndStatusButUninstallRemoves(t *testing.T) {
+	s := newOpenCodeSandbox(t)
+	s.overlay = ""
+	old, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir(t.TempDir()); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chdir(old) })
+	claudeDir := filepath.Join(s.home, ".claude")
+	if err := os.MkdirAll(claudeDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	claudeMD := filepath.Join(claudeDir, "CLAUDE.md")
+	const foreign = "mine\n"
+	if err := os.WriteFile(claudeMD, []byte(foreign), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	const noCheckout = "no overlay checkout found; set LABDRIAN_OVERLAY_DIR"
+	run := func(action string, wantExit int, wantOut string) {
+		t.Helper()
+		out, errOut, exit := ownerRulesRun(t, s, action, "--component", "owner-rules", "--target", "claude")
+		if exit != wantExit || errOut != "" || out != wantOut {
+			t.Errorf("%s: exit %d stderr %q stdout %q, want exit %d stdout %q", action, exit, errOut, out, wantExit, wantOut)
+		}
+	}
+	run("install", 1, "[claude] install: unsupported — owner rules not installed: "+noCheckout+"\n")
+	run("update", 1, "[claude] update: unsupported — owner rules not installed: "+noCheckout+"\n")
+	run("status", 1, "[claude] status: unsupported — owner rules not checked: "+noCheckout+"\n")
+	if got := readFileText(t, claudeMD); got != foreign {
+		t.Errorf("CLAUDE.md = %q, want it untouched", got)
+	}
+	block := "<!-- labdrian:owner-rules -->\n## Rules\n<!-- /labdrian:owner-rules -->\n"
+	if err := os.WriteFile(claudeMD, []byte(foreign+"\n"+block), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	run("uninstall", 0, "[claude] uninstall: restart_required — owner rules removed from "+claudeMD+"\n")
+}
 func TestRuntimeOwnerRulesComponentHonoursConfigRoot(t *testing.T) {
 	s := newOpenCodeSandbox(t)
 	root := filepath.Join(t.TempDir(), "elsewhere")

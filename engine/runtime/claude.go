@@ -123,7 +123,7 @@ func (a ClaudeAdapter) status() core.LifecycleResult {
 	}
 	message := "Claude lifecycle hooks are installed and owned"
 	if a.rules != nil {
-		partial, ok, note := a.ownerRules().status()
+		partial, ok, note, _ := a.ownerRules().status()
 		if ok {
 			return a.result(core.ActionStatus, core.CapabilityPartial, partial)
 		}
@@ -214,7 +214,7 @@ func (a ClaudeAdapter) withOwnerRules(action core.Action, message string) core.L
 	if a.rules == nil {
 		return a.result(action, core.CapabilityRestartRequired, message)
 	}
-	clause, status := a.ownerRules().write()
+	clause, status, _ := a.ownerRules().write()
 	return a.result(action, status, message+"; "+clause)
 }
 

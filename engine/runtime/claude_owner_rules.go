@@ -25,27 +25,27 @@ func (c claudeOwnerRules) path() string { return filepath.Join(c.root, "CLAUDE.m
 
 // write writes the owner rules block: the clause says what it did, and the status is partial when
 // the rules could not be read or the file could not be written (CLAUDE.md stays as it was), else
-// restart_required. No checkout is not a failure: the clause says nothing was installed.
-func (c claudeOwnerRules) write() (string, core.CapabilityStatus) {
+// restart_required. No checkout is not a failure: the clause says nothing was installed, and noCheckout is true so a caller that has only the block to write can report it unsupported.
+func (c claudeOwnerRules) write() (clause string, status core.CapabilityStatus, noCheckout bool) {
 	path := c.path()
 	body, err := c.rules.OwnerRules()
 	if errors.Is(err, ErrNoOverlayCheckout) {
-		return "owner rules not installed: " + err.Error(), core.CapabilityRestartRequired
+		return "owner rules not installed: " + err.Error(), core.CapabilityRestartRequired, true
 	}
 	if err != nil {
-		return "owner rules could not be read: " + err.Error(), core.CapabilityPartial
+		return "owner rules could not be read: " + err.Error(), core.CapabilityPartial, false
 	}
 	change, err := OwnerRulesBlock.WriteFile(path, body)
 	if err != nil {
-		return "owner rules could not be written: " + err.Error(), core.CapabilityPartial
+		return "owner rules could not be written: " + err.Error(), core.CapabilityPartial, false
 	}
 	switch change {
 	case BlockAdded:
-		return "owner rules written to " + path, core.CapabilityRestartRequired
+		return "owner rules written to " + path, core.CapabilityRestartRequired, false
 	case BlockReplaced:
-		return "owner rules updated in " + path, core.CapabilityRestartRequired
+		return "owner rules updated in " + path, core.CapabilityRestartRequired, false
 	}
-	return "owner rules already current in " + path, core.CapabilityRestartRequired
+	return "owner rules already current in " + path, core.CapabilityRestartRequired, false
 }
 
 // remove takes the owner rules block out of CLAUDE.md. The clause is empty when there was no block
@@ -63,27 +63,27 @@ func (c claudeOwnerRules) remove() (string, core.CapabilityStatus) {
 
 // status is the status message of a block that is not current: partial, naming the file and the
 // verb that fixes it. ok is false when the block is current or no checkout was found; note then
-// says which, for the supported message.
-func (c claudeOwnerRules) status() (message string, ok bool, note string) {
+// says which, for the supported message, and noCheckout is true for the no checkout case.
+func (c claudeOwnerRules) status() (message string, ok bool, note string, noCheckout bool) {
 	path := c.path()
 	body, err := c.rules.OwnerRules()
 	if errors.Is(err, ErrNoOverlayCheckout) {
-		return "", false, "owner rules not checked: " + err.Error()
+		return "", false, "owner rules not checked: " + err.Error(), true
 	}
 	if err != nil {
-		return "Claude owner rules could not be read: " + err.Error(), true, ""
+		return "Claude owner rules could not be read: " + err.Error(), true, "", false
 	}
 	state, err := OwnerRulesBlock.StateOfFile(path, body)
 	if err != nil {
-		return "Claude owner rules block could not be checked: " + err.Error(), true, ""
+		return "Claude owner rules block could not be checked: " + err.Error(), true, "", false
 	}
 	switch state {
 	case BlockMissing:
-		return "Claude owner rules block is missing in " + path + "; run 'engine runtime install --target claude'", true, ""
+		return "Claude owner rules block is missing in " + path + "; run 'engine runtime install --target claude'", true, "", false
 	case BlockStale:
-		return "Claude owner rules block is stale in " + path + "; run 'engine runtime update --target claude'", true, ""
+		return "Claude owner rules block is stale in " + path + "; run 'engine runtime update --target claude'", true, "", false
 	}
-	return "", false, "owner rules block is current in " + path
+	return "", false, "owner rules block is current in " + path, false
 }
 
 // ClaudeOwnerRulesAdapter is the Claude runtime reduced to the owner rules block of CLAUDE.md. It is
@@ -120,11 +120,11 @@ func (a ClaudeOwnerRulesAdapter) Status() core.LifecycleResult {
 	if err := a.usable(); err != nil {
 		return a.result(core.ActionStatus, core.CapabilityUnsupported, err.Error())
 	}
-	message, partial, note := a.rules.status()
+	message, partial, note, noCheckout := a.rules.status()
 	switch {
 	case partial:
 		return a.result(core.ActionStatus, core.CapabilityPartial, message)
-	case strings.HasPrefix(note, "owner rules not checked"):
+	case noCheckout:
 		return a.result(core.ActionStatus, core.CapabilityUnsupported, note)
 	}
 	return a.result(core.ActionStatus, core.CapabilitySupported, note)
@@ -134,7 +134,10 @@ func (a ClaudeOwnerRulesAdapter) write(action core.Action) core.LifecycleResult 
 	if err := a.usable(); err != nil {
 		return a.result(action, core.CapabilityUnsupported, err.Error())
 	}
-	clause, status := a.rules.write()
+	clause, status, noCheckout := a.rules.write()
+	if noCheckout {
+		status = core.CapabilityUnsupported
+	}
 	return a.result(action, status, clause)
 }
 
