@@ -1,0 +1,18 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "Head: in /home/labdrian/labdrian-sdd-overlay-playbook-merge-worktrees/review-0afaf0cf5ca1/engine, wrote the throwaway test review/app/zz_verify_throwaway_test.go. Its TestZZF1 uses the fixtures newFakeResults, reviewed(t, store, baseSHA, headSHA, 1) with no findings, and newFakeGit. It calls app.New(...).Findings(\"/work/wt/feature\", \"own-rdd\", name) and logs json.Marshal(got.Kept) and json.Marshal(got.LeftOut). Ran `go test ./review/app/ -run 'TestZZ' -count=1 -v`. Base: `S=$(mktemp -d); git -C <worktree> archive a6bee44f3e1ce9f15104c5daa08000285621ade7 engine | tar -x -C $S`, copied the same test file into $S/engine/review/app/, and ran `go test ./review/app/ -run 'TestZZ' -count=1 -v` in $S/engine.",
+      "output": "Head: `zz_verify_throwaway_test.go:18: F1 err=<nil> kept=null left_out=null`, then `--- PASS: TestZZF1`. Base: the build failed with `app.New(newFakeGit(), store).Findings undefined (type app.Service has no field or method Findings)`, then `FAIL ... [build failed]`. engine/review/app/findings.go does not exist at base. This diff introduces the issue.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "Head: the same throwaway file also holds TestZZF2. It stores a result with disposed(\"F1\", \"BLOCKER\", \"unknown\") and a verdict {\"id\":\"F1\",\"result\":\"reproduced\",\"command\":\"go test ./engine/\",\"output\":\"the output\",\"base_result\":\"reproduced\"} through withVerdict, then calls Findings. It also calls reviewverdict.Decide(reviewresult.Result{Findings: [{ID:F1, Severity:BLOCKER, Disposition:unknown}]}, [{ID:F1, Result:Reproduced, Base:Reproduced}]). Ran `go test ./review/app/ -run 'TestZZ' -count=1 -v`. Base: ran the same command on the same file in the mktemp -d export of a6bee44f.",
+      "output": "Head: `F2 Findings err=<nil> verdict=\"odd/review-results/own-rdd/222222222222-1.verifier.json\" kept=[F1] left_out=map[]` and `F2 Decide = {Outcome:clear Blocking:[] Unverified:[] Fix:[] Carry:[F1]}`, then `--- PASS: TestZZF2`. Findings keeps F1, while Decide carries it as a fate of the base. Base: the build failed; Findings is undefined on app.Service, so the disagreement cannot occur at base and this diff introduces it. Cleanup: deleted the throwaway test and the scratch dir; worktree status empty; final `go test ./review/app/ -count=1`: ok.",
+      "base_result": "not-reproduced"
+    }
+  ]
+}

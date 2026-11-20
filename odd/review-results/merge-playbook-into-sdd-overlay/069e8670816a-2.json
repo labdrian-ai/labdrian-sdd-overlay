@@ -1,0 +1,76 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "5ef3eeb46dd2842f4775797d81fd741095f0c068",
+    "head": "069e8670816a781a6d4ee42ae12480c128f269ec",
+    "diff_sha256": "6597015e2380fa01ab451b69323a63ac4507d194be8a76fdc7fa6cb2b8b28aac",
+    "paths": [
+      "README.md",
+      "bin/lib/usage.sh",
+      "engine/cmd/review_findings_test.go",
+      "engine/cmd/review_test.go",
+      "engine/cmd/usage.go",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "5ef3eeb46dd2842f4775797d81fd741095f0c068",
+      "head": "069e8670816a781a6d4ee42ae12480c128f269ec",
+      "diff_sha256": "6597015e2380fa01ab451b69323a63ac4507d194be8a76fdc7fa6cb2b8b28aac"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "README.md",
+        "bin/lib/usage.sh",
+        "engine/cmd/review_findings_test.go",
+        "engine/cmd/review_test.go",
+        "engine/cmd/usage.go",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/cmd/review_test.go:1243-1253",
+        "severity": "SUGGESTION",
+        "claim": "The new parity test searches the whole flattened bin/lib/usage.sh instead of only the `findings` block. So a phrase that also appears elsewhere in the file does not catch drift. The pair \"HEAD12-N.json\" already appears at bin/lib/usage.sh:269, in the help of another verb. If someone removed or changed `HEAD12-N.json` in the findings help (bin/lib/usage.sh:388), the test would still pass. The test also does not pin the identifier wording `review is NAME/HEAD12-N` against the engine's `<feature>/<head12>-<n>`. Fix: cut the wrapper text down to the lines from `findings --feature` to the next verb (`stop-hook`) before the Contains checks, and add the identifier pair.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/cmd/review_test.go:1250 flattens the whole wrapper file",
+          "bin/lib/usage.sh:269 contains HEAD12-N.json outside the findings block",
+          "bin/lib/usage.sh:388 is the findings occurrence"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "README.md:823-832",
+        "severity": "SUGGESTION",
+        "claim": "The new README `findings` entry has no test tying it to the engine or wrapper usage. The task ledger says this on purpose: \"No test (documentation only)\". But other README sections are already pinned by tests in engine/cmd (for example approve_guard_docs_test.go, codex_hooks_docs_test.go and edit_tools_docs_test.go). Without a test, this entry can drift from engine/cmd/usage.go the same way the wrapper did before this round, and nothing would fail.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "odd/tasks/merge-playbook-into-sdd-overlay.md L16 F3: 'No test (documentation only)'",
+          "engine/cmd/approve_guard_docs_test.go:29 reads README.md (an existing README docs test)"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay-playbook-merge/926ae9a6-d413-46b3-9d4c-1be2e9937b47/scratchpad/t1b-fix.diff",
+      "Read bin/lib/usage.sh:370-399 in the worktree. The findings block now says: verdict is left out when the verifier did not run, the fields of kept and left_out, both lists are always there, and a result whose verdict does not hold is refused. This matches the engine usage diff",
+      "Searched bin/lib/usage.sh for each parity-test phrase. Only HEAD12-N.json also appears outside the findings block (line 269)",
+      "Read engine/cmd/review_test.go:1240-1271 (the new parity test). Each engine phrase in it matches the engine/cmd/usage.go lines 265-268 shown in the diff",
+      "Checked the engine/cmd/usage.go change ('causal_disposition is pre-existing or base-only') and the updated phrase in TestUsageDocumentsReviewFindings (engine/cmd/review_findings_test.go:167)",
+      "Read README.md:790-834. The findings entry sits between proposals and stop-hook, as in the wrapper usage order, and its text matches the engine usage",
+      "Searched engine/cmd/*_test.go for README.md readers to see which README docs are pinned by tests",
+      "Tests were not run (reviewer contract: no execution)"
+    ]
+  }
+}

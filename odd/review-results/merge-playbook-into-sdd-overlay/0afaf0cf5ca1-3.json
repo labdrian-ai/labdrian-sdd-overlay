@@ -1,0 +1,72 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "a6bee44f3e1ce9f15104c5daa08000285621ade7",
+    "head": "0afaf0cf5ca10dd8403a88e12eabe6663bbb7e78",
+    "diff_sha256": "e8cba6f6b764d80c57ca6eef48982084af783ebc86aa8ec45b9e882dcac267ea",
+    "paths": [
+      "engine/review/app/findings.go",
+      "engine/review/app/findings_test.go",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "hunt",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "a6bee44f3e1ce9f15104c5daa08000285621ade7",
+      "head": "0afaf0cf5ca10dd8403a88e12eabe6663bbb7e78",
+      "diff_sha256": "e8cba6f6b764d80c57ca6eef48982084af783ebc86aa8ec45b9e882dcac267ea"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "engine/review/app/findings.go",
+        "engine/review/app/findings_test.go",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "engine/review/app/findings.go:82-90",
+        "severity": "SUGGESTION",
+        "claim": "Findings leaves Kept and LeftOut nil when nothing goes into them. A result with no findings, or one where every finding is kept or every one is left out, therefore returns nil slices. If T1b marshals this struct directly (or through a mirror struct with the same nil values), the output carries \"kept\": null or \"left_out\": null instead of the [] in the decided shape {review, verdict?, kept[], left_out[]}. A consumer that iterates the arrays, such as the classifier or T4's check for kept findings, would then get null. TestFindingsListsAResultWithNoFindingAsEmpty only checks len(), which is 0 for both nil and empty, so it would not catch this. Initializing both fields as empty slices, or asserting non-nil, would pin the shape at the engine level.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/review/app/findings.go:82",
+          "engine/review/app/findings_test.go:182-191",
+          "odd/tasks/merge-playbook-into-sdd-overlay.md L14 (output shape kept[], left_out[])"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/review/app/findings.go:94-108",
+        "severity": "SUGGESTION",
+        "claim": "leftOutReason applies its own skip rule, separate from reviewverdict.severeFinding, and the two disagree in one case. Take a BLOCKER or CRITICAL finding with causal_disposition unknown, and a verdict with result reproduced (or not-run) and base_result reproduced. Decide puts it in Carry as fateOfTheBase, meaning the base already has it. Findings keeps it as evidence that this change made a mistake. This matches the letter of S3, which skips only a declared pre-existing or base-only disposition. Still, the learning loop can count a defect the verifier showed exists on base, and nothing in the code or tests records that the difference from Decide is intentional. No test covers a severe finding with an unknown disposition and a base_result.",
+        "evidence_class": "inferential",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "engine/reviewverdict/decide.go:98-112",
+          "engine/review/app/findings.go:94-108"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the full diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay-playbook-merge/926ae9a6-d413-46b3-9d4c-1be2e9937b47/scratchpad/t1a.diff (findings.go, findings_test.go, task doc hunks).",
+      "Checked the reused readers in the worktree without modifying them: judged and judgedStored (engine/review/app/verify.go:170-192), verdictsOf (engine/review/app/check.go:185-203), and how check and Verify call them. ErrNotFound for a missing verdict means the verifier did not run; every other read or parse error is returned.",
+      "Checked name validation: review.CheckResultName (engine/review/names.go:96) refuses verdict and exemption names and paths. The test at findings_test.go:281-298 confirms the refusal happens before any git or store call.",
+      "Checked the enums: Severity.Severe() covers BLOCKER and CRITICAL only (reviewresult.go:136), and reviewresult rules.go:191,220 refuse any severity outside the enum when the result is parsed, so an unknown severity cannot reach leftOutReason. The verdict Result enum is enforced by reviewverdict.Parse (reviewverdict.go:138-155), and a finding left without an answer is refused (ErrUnanswered).",
+      "Compared leftOutReason with reviewverdict.Decide/severeFinding (decide.go:60-122).",
+      "Checked the test helpers finding, reviewed, verdict, verdictReply, storedWithoutRows and candidateOf (verify_test.go:22-66, fakes_test.go) to confirm the fixtures behind each skip-rule and refusal test.",
+      "Checked that the review identifier comes only from the feature and the stored name (feature/<head12>-<n>), so it is the same on every run. Verify does not cross-check the name against the stored binding either, so this matches the existing readers.",
+      "Found no file writes, deletes, exec or network imports in the change. All paths come from review.ResultPath after CheckFeature and CheckResultName.",
+      "Did not run go test, go vet or any other command; the reviewer contract forbids running anything."
+    ]
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "verdicts": [
+    {
+      "id": "F1",
+      "result": "reproduced",
+      "command": "head (worktree /home/labdrian/labdrian-sdd-overlay-playbook-merge-worktrees/review-069e8670816a at 069e8670816a781a6d4ee42ae12480c128f269ec): perl -i -pe 's/HEAD12-N\\.json/HEAD12-X.json/ if $. == 388' bin/lib/usage.sh; cd engine && go test ./cmd/ -run TestWrapperUsageOfReviewFindings -count=1 -v; git -C <worktree> checkout -- bin/lib/usage.sh. Identifier pin: rg -n \"NAME/HEAD12|head12>-<n>\\b|review is\" engine/cmd/*_test.go. base: git show 5ef3eeb46dd2842f4775797d81fd741095f0c068:engine/cmd/review_test.go | rg -c TestWrapperUsageOfReviewFindings",
+      "output": "The diff changed only usage.sh:388 ('stored result HEAD12-N.json' became 'HEAD12-X.json'). The test still passed: '--- PASS: TestWrapperUsageOfReviewFindingsSaysWhatTheEngineUsageSays (0.00s) PASS ok .../engine/cmd 0.006s'. It passes because HEAD12-N.json still appears at usage.sh:269, and the test checks the whole flattened file. The identifier wording NAME/HEAD12-N (usage.sh:391) is not pinned: the test's pair list (review_test.go:1252-1263) has no NAME/HEAD12-N or <feature>/<head12>-<n> entry. usage.sh was restored and git status --short was empty. Base: rg -c printed nothing (0 matches), so the test does not exist at 5ef3eeb4.",
+      "base_result": "not-reproduced"
+    },
+    {
+      "id": "F2",
+      "result": "reproduced",
+      "command": "head: rg -n \"README.md\" engine/cmd/*_test.go; rg -n '\"    findings|findings --feature <name>' engine/cmd/*_test.go; perl -i -ne 'if (/^    findings --feature/){$s=1; print \"    zzz-removed-entry\\n\"; next} if ($s && /^    stop-hook$/){$s=0} print unless $s' README.md; cd engine && go test ./cmd/ -count=1; git -C <worktree> checkout -- README.md. base: git show 5ef3eeb46dd2842f4775797d81fd741095f0c068:README.md | rg -n \"findings --feature\"",
+      "output": "Many tests read README.md, but none anchors on the findings entry. The only test matches for the 'findings --feature <name>' signature are review_test.go:1252 and review_findings_test.go:166, and both check the engine usage or bin/lib/usage.sh, not README.md. With the whole README findings entry replaced by 'zzz-removed-entry', go test ./cmd/ -count=1 printed 'ok github.com/labdrian-ai/labdrian-sdd-overlay/engine/cmd 91.368s'. README.md was restored. Final checks: go test ./cmd/ -count=1 printed 'ok ... engine/cmd 83.009s', and git -C <worktree> status --short was empty. Base: rg found no 'findings --feature' (rc=1), so there is no entry at 5ef3eeb4.",
+      "base_result": "not-reproduced"
+    }
+  ]
+}
