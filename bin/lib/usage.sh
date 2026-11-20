@@ -20,6 +20,10 @@ Commands:
                                    Merge upstream and deploy to target(s) (default: all).
                                    Pushes 'main' to origin immediately after the merge, so a
                                    local apply never strands main ahead of origin.
+                                   For claude it then runs 'engine runtime install --target claude'
+                                   with --component owner-rules, which writes only the owner rules
+                                   block of ~/.claude/CLAUDE.md, never settings.json (install-hooks
+                                   owns it); a failed install makes apply exit non-zero.
                                    For codex it then runs 'engine runtime install --target codex',
                                    which keeps the owner rules block in ~/AGENTS.md,
                                    <codex root>/AGENTS.md and <codex root>/agents.md; a failed

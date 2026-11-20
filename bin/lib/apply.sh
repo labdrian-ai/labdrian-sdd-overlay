@@ -17,13 +17,15 @@ indent_lines() {
 }
 
 # runtime_install_and_report TARGET runs `engine runtime install --target TARGET` over this checkout, the
-# step `apply --target pi` has in pipkg_apply_and_report, for the two copy targets whose runtime adapter
-# writes more than a copy of the manifest rows reaches. codex: the adapter keeps the owner rules
+# step `apply --target pi` has in pipkg_apply_and_report, for the three copy targets whose runtime adapter
+# writes more than a copy of the manifest rows reaches. claude: only the owner rules block of
+# ~/.claude/CLAUDE.md (the call carries --component owner-rules); settings.json stays install-hooks'
+# alone. codex: the adapter keeps the owner rules
 # (instructions/owner-rules.md) in one marked block of ~/AGENTS.md, $CODEX_HOME/AGENTS.md and
 # $CODEX_HOME/agents.md (CODEX_HOME defaults to ~/.codex). opencode: it writes the plugins, opencode.json
 # (the default agent and the MCP servers) and the AGENTS.md block, which longterm-mem register then
 # reads (opencode.json must exist). Two cases have nothing to run and do not fail the deploy: a
-# checkout without the source its adapter reads (instructions/owner-rules.md for codex,
+# checkout without the source its adapter reads (instructions/owner-rules.md for claude and codex,
 # skills/_shared/minimalism-contract.md for opencode: an older main; silent, so its output is what it
 # was), and an engine binary that is not installed yet (the note names the recovery). `apply` never
 # reaches that note: manifest_routes_load calls ensure_engine_binary, which builds or rebuilds the binary
@@ -31,7 +33,13 @@ indent_lines() {
 # Non-zero when the engine ran and did not report an install that took effect.
 runtime_install_and_report() {
   local target="$1" what="runtime" source_file
+  local -a component_args=()
   case "$target" in
+    claude)
+      source_file="instructions/owner-rules.md"
+      what="owner rules"
+      component_args=(--component owner-rules)
+      ;;
     codex)
       source_file="instructions/owner-rules.md"
       what="owner rules"
@@ -45,7 +53,7 @@ runtime_install_and_report() {
     return 0
   fi
   local result
-  if ! result="$(LABDRIAN_OVERLAY_DIR="$OVERLAY_DIR" "$ENGINE_BINARY" runtime install --target "$target" 2>&1)"; then
+  if ! result="$(LABDRIAN_OVERLAY_DIR="$OVERLAY_DIR" "$ENGINE_BINARY" runtime install --target "$target" ${component_args[@]+"${component_args[@]}"} 2>&1)"; then
     indent_lines <<<"$result" >&2
     return 1
   fi
@@ -121,7 +129,7 @@ cmd_apply() {
   # explicit --target pi and for pi riding along inside --target all.
   local pi_stub_included=""
 
-  # Set when `engine runtime install --target codex|opencode` ran and failed: apply still deploys every
+  # Set when `engine runtime install --target claude|codex|opencode` ran and failed: apply still deploys every
   # target, then exits non-zero, so a block that was not written never reads as a clean apply.
   local runtime_install_failed=""
   # Targets the longterm-mem step leaves alone because their runtime install failed (see the deploy loop).
@@ -216,9 +224,13 @@ cmd_apply() {
     target_digest="$(compute_target_digest "$t" live)"
     state_write_target "$t" "$release_version" "$target_digest"
 
-    # The owner rules block of the three Codex AGENTS files is not a manifest row: the Codex runtime
-    # adapter writes it, after the state row. A failure is reported like pi's and fails apply's own exit
+    # The owner rules block of ~/.claude/CLAUDE.md and of the three Codex AGENTS files is not a manifest row:
+    # the runtime adapter writes it, after the state row (claude: the owner-rules component alone, never
+    # settings.json). A failure is reported like pi's and fails apply's own exit
     # below.
+    if [[ "$t" == "claude" ]]; then
+      runtime_install_and_report claude || runtime_install_failed=1
+    fi
     if [[ "$t" == "codex" ]]; then
       runtime_install_and_report codex || runtime_install_failed=1
     fi

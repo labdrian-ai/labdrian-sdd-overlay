@@ -1218,8 +1218,12 @@ gentle-ai-overlay runtime install|update|uninstall|status --target codex
     and the AGENTS.md block exist when `longterm-mem register --target opencode` reads `opencode.json`; a failed install
     is shown on stderr, no state row is recorded for the target (status keeps saying it was never deployed, and the
     next apply runs the install again), the longterm-mem step leaves opencode alone so the failure is shown once, and
-    apply exits non-zero after every target is deployed. For codex the install still runs after the state row; `claude`,
-    `codex` and `pi` are unchanged. The `gentle-ai:` blocks leave the live files only through the owner-approved
+    apply exits non-zero after every target is deployed. For codex the install still runs after the state row; `pi` is unchanged. `labdrian apply --target claude` (and `--target all`) runs
+    `engine runtime install --target claude --component owner-rules` after the state row, through the same step: it writes
+    the owner rules block of `~/.claude/CLAUDE.md` and nothing else of the Claude adapter, so `settings.json` (the hooks,
+    `permissions.deny`, `agent`, `outputStyle`) stays `labdrian install-hooks`' alone; a checkout without
+    `instructions/owner-rules.md` is silent, a missing engine binary prints the note, and a failed install is shown on
+    stderr and makes apply exit non-zero. The `gentle-ai:` blocks leave the live files only through the owner-approved
     removal of the gentle-ai detach (S17), never through this adapter.
 
 gentle-ai-overlay runtime install|update|uninstall|status --target opencode
