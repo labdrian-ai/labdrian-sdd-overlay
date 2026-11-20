@@ -100,3 +100,95 @@ func TestRewriteSkillPathsReturnsAPromptWithNoMentionByteIdentical(t *testing.T)
 		})
 	}
 }
+
+func TestRewriteSkillPathsFollowsThePromptsLineEnding(t *testing.T) {
+	root := proseRoot(t)
+	p := filepath.Join(root, "test-first", "SKILL.md")
+	want := "Use test-first.\r\n\r\n" + skillsHeader + "\r\n" + p + "\r\n"
+	for name, prompt := range map[string]string{
+		"one crlf":  "Use test-first.\r\n",
+		"two crlfs": "Use test-first.\r\n\r\n",
+	} {
+		t.Run(name, func(t *testing.T) {
+			got, err := gate.RewriteSkillPaths(prompt, root, isRegularFile)
+			if err != nil || got != want {
+				t.Fatalf("RewriteSkillPaths = %q, %v; want %q", got, err, want)
+			}
+		})
+	}
+}
+
+func TestRewriteSkillPathsReadsFencesAsCommonMarkOpensThem(t *testing.T) {
+	root := proseRoot(t)
+	p := filepath.Join(root, "go-testing", "SKILL.md")
+	for name, body := range map[string]string{
+		"an indented fence":                   "  ```\ntest-first\n  ```\n",
+		"a tilde fence":                       "~~~\ntest-first\n~~~\n",
+		"a fence in a list item":              "- item\n    ```\n    test-first\n    ```\n",
+		"a four-backtick fence holding three": "````\n```\ntest-first\n```\n````\n",
+	} {
+		t.Run(name, func(t *testing.T) {
+			prompt := "Run:\n" + body + "then go-testing\n"
+			want := prompt + "\n" + skillsHeader + "\n" + p + "\n"
+			got, err := gate.RewriteSkillPaths(prompt, root, isRegularFile)
+			if err != nil || got != want {
+				t.Fatalf("RewriteSkillPaths = %q, %v; want %q", got, err, want)
+			}
+		})
+	}
+}
+
+func TestRewriteSkillPathsAddsNothingAfterAnUnclosedFence(t *testing.T) {
+	root := proseRoot(t)
+	prompt := "Run:\n```\ntest-first\nand go-testing\n"
+	got, err := gate.RewriteSkillPaths(prompt, root, isRegularFile)
+	if err != nil || got != prompt {
+		t.Fatalf("RewriteSkillPaths = %q, %v; want the prompt byte for byte", got, err)
+	}
+}
+
+func TestRewriteSkillPathsListsEntriesByTheirSkillID(t *testing.T) {
+	root := proseRoot(t)
+	link := filepath.Join(t.TempDir(), "link")
+	if err := os.Symlink(root, link); err != nil {
+		t.Fatal(err)
+	}
+	for name, entry := range map[string]string{
+		"a dot element in the path":    root + "/./test-first/SKILL.md",
+		"a path through a linked root": filepath.Join(link, "test-first", "SKILL.md"),
+	} {
+		t.Run(name, func(t *testing.T) {
+			prompt := "Use test-first.\n" + skillsHeader + "\n" + entry + "\n"
+			got, err := gate.RewriteSkillPaths(prompt, root, isRegularFile)
+			if err != nil || got != prompt {
+				t.Fatalf("RewriteSkillPaths = %q, %v; want the prompt byte for byte", got, err)
+			}
+		})
+	}
+}
+
+func TestRewriteSkillPathsTakesALowerHeadingForNoHeader(t *testing.T) {
+	root := proseRoot(t)
+	p := filepath.Join(root, "test-first", "SKILL.md")
+	prompt := "### Skills to load before work\ntest-first\n"
+	want := prompt + "\n" + skillsHeader + "\n" + p + "\n"
+	got, err := gate.RewriteSkillPaths(prompt, root, isRegularFile)
+	if err != nil || got != want {
+		t.Fatalf("RewriteSkillPaths = %q, %v; want %q", got, err, want)
+	}
+}
+
+func TestRewriteSkillPathsAsksTheDiskOncePerWord(t *testing.T) {
+	root := proseRoot(t)
+	calls := 0
+	counting := func(path string) bool {
+		calls++
+		return isRegularFile(path)
+	}
+	if _, err := gate.RewriteSkillPaths("go-test go-test go-test, test-first and test-first\n", root, counting); err != nil {
+		t.Fatal(err)
+	}
+	if calls != 2 {
+		t.Fatalf("isFile was asked %d times, want 2 (one per distinct word)", calls)
+	}
+}

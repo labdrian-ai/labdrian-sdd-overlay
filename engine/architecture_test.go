@@ -160,6 +160,8 @@ import (
 //     feature document it names (the Documents port) and the decision of oddtask.
 //   - oddtask/fsdoc is the adapter of the Documents port of oddtask/app: it reads the feature document from the
 //     file system, as a regular file that is not a link and is at most 8 MiB.
+//   - skillid is a leaf domain package (labdrian-orchestrator-opencode T60): the form of a skill id and the
+//     characters of a word that holds one, which gate and roles share. It imports nothing of the module.
 //   - workflow/app is the application layer of the workflow (own-rdd S19 b): the use case 'workflow open'
 //     composes the role chain log, workflow.Lifecycle and the binding use case, and writes none of their rules.
 //   - repotest is test support: the hand-made repositories the tests of gitfs and cmd share.
@@ -247,6 +249,7 @@ var rings = map[string]archguard.Ring{
 	"shaper/fsadapter":          archguard.Adapter,
 	"shaper/shapertest":         archguard.Support,
 	"shelltest":                 archguard.Support,
+	"skillid":                   archguard.Domain,
 	"skills":                    archguard.Domain,
 	"skillregistry":             archguard.Domain,
 	"skillregistry/app":         archguard.Application,

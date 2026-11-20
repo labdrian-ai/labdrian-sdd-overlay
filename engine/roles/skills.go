@@ -1,16 +1,15 @@
 package roles
 
-import "regexp"
+import (
+	"regexp"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skillid"
+)
 
 // skillMention is the one form in which a role body names a skill: the id in backticks, then the
 // word skill. The id is the form of a directory under skills/. SkillsNamed also requires that the word
 // ends there (RE2 has no lookahead, so it reads the byte after the match).
-var skillMention = regexp.MustCompile("`([a-z0-9][a-z0-9-]*)` skill")
-
-// wordChar is whether b continues a word, the characters of a skill id and the underscore.
-func wordChar(b byte) bool {
-	return b == '_' || b == '-' || b >= '0' && b <= '9' || b >= 'a' && b <= 'z' || b >= 'A' && b <= 'Z'
-}
+var skillMention = regexp.MustCompile("`(" + skillid.Pattern + ")` skill")
 
 // BodyPath is where the source of a role is, as a slash path under the root of the repository.
 func BodyPath(r Role) string { return "roles/" + string(r) + "/body.md" }
@@ -24,7 +23,7 @@ func SkillsNamed(body string) []string {
 	var ids []string
 	seen := map[string]bool{}
 	for _, m := range skillMention.FindAllStringSubmatchIndex(body, -1) {
-		if m[1] < len(body) && wordChar(body[m[1]]) {
+		if m[1] < len(body) && skillid.WordChar(body[m[1]]) {
 			continue
 		}
 		id := body[m[2]:m[3]]

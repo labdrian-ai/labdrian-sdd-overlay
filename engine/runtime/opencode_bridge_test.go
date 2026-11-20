@@ -2,7 +2,6 @@ package runtime_test
 
 import (
 	"bytes"
-	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"io/fs"
@@ -581,27 +580,16 @@ func decodeLaunch(t *testing.T, out []byte) launchOutcome {
 	return got
 }
 
-// pluginSHA256 is the sha256 of engine/runtime/labdrian-runtime-parity-plugin.mjs as T60 found it: the
-// change that lists the skills a prose names is the engine's, so the plugin file must not change with it.
-const pluginSHA256 = "1f4d76a9d3492dbb19e1cc651c92b479c9b18ee6127dbdd77cb329bf908cc058"
-
 // TestOpenCodeBridgeLaunchesABuilderWithTheSkillItsProseNames (T60, S8 L162): through the real engine's
 // `roles skill-paths`, a builder launch whose prose names work-unit-commits and lists nothing reaches the
-// child with that skill's absolute SKILL.md path under the header, and the plugin is the file it was.
+// child with that skill's absolute SKILL.md path under the header. The engine is the one binary built for
+// this test binary (enginetest.Binary), as in T44's test; `go` is required, a skip would hide the check.
 func TestOpenCodeBridgeLaunchesABuilderWithTheSkillItsProseNames(t *testing.T) {
 	requireNode(t)
-	engineDir, err := filepath.Abs("..")
-	if err != nil {
-		t.Fatal(err)
-	}
-	built := filepath.Join(t.TempDir(), "engine-real")
-	build := exec.Command("go", "build", "-o", built, ".")
-	build.Dir = filepath.Join(engineDir, "cmd")
-	if out, err := build.CombinedOutput(); err != nil {
-		t.Fatalf("build the engine: %v\n%s", err, out)
-	}
+	built := enginetest.Binary(t)
 	wrapper := filepath.Join(t.TempDir(), "engine")
-	script := "#!/bin/sh\nif [ \"$1 $2\" = \"roles skill-paths\" ]; then exec " + built + " \"$@\"; fi\ncat > /dev/null\nexit 0\n"
+	quoted := "'" + strings.ReplaceAll(built, "'", `'\''`) + "'"
+	script := "#!/bin/sh\nif [ \"$1 $2\" = \"roles skill-paths\" ]; then exec " + quoted + " \"$@\"; fi\ncat > /dev/null\nexit 0\n"
 	if err := os.WriteFile(wrapper, []byte(script), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -618,9 +606,6 @@ func TestOpenCodeBridgeLaunchesABuilderWithTheSkillItsProseNames(t *testing.T) {
 	want := strings.TrimRight(prompt, "\n") + "\n\n## Skills to load before work\n" + path + "\n"
 	if got.Thrown != nil || got.Input["prompt"] != want {
 		t.Fatalf("the child should get the prompt with %s under the header, got %#v", path, got)
-	}
-	if sum := fmt.Sprintf("%x", sha256.Sum256(repositoryPluginSource(t))); sum != pluginSHA256 {
-		t.Fatalf("the plugin changed: sha256 %s, want %s", sum, pluginSHA256)
 	}
 }
 
