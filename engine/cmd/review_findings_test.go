@@ -164,7 +164,7 @@ func TestUsageDocumentsReviewFindings(t *testing.T) {
 
 	for _, want := range []string{
 		"engine review findings --feature <name> --stored <result> [--cwd <repo>]",
-		"<feature>/<head12>-<n>", "causal_disposition pre-existing or base-only", "not-reproduced",
+		"<feature>/<head12>-<n>", "causal_disposition is pre-existing or base-only", "not-reproduced",
 		"never an empty list", "exit 0 listed, 1 usage error, a result that cannot be read or any other failure",
 	} {
 		if !strings.Contains(text, want) {

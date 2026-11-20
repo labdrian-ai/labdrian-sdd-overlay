@@ -1237,6 +1237,40 @@ func TestWrapperUsageOfReviewVerifySaysWhatTheEngineUsageSays(t *testing.T) {
 	}
 }
 
+// The wrapper help of review findings says the same facts as the engine usage: the signature, the shape of the
+// output, when verdict is left out, the fields of both lists, the refusal of a verdict that does not hold, the exits.
+func TestWrapperUsageOfReviewFindingsSaysWhatTheEngineUsageSays(t *testing.T) {
+	wrapper, err := os.ReadFile("../../bin/lib/usage.sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out bytes.Buffer
+	usage(&out)
+	flatEngine := strings.Join(strings.Fields(out.String()), " ")
+	flat := strings.Join(strings.Fields(string(wrapper)), " ")
+	for _, pair := range []struct{ engine, inWrapper string }{
+		{"engine review findings --feature <name> --stored <result> [--cwd <repo>]", "findings --feature NAME --stored RESULT [--cwd REPO]"},
+		{"(<head12>-<n>.json)", "HEAD12-N.json"},
+		{"{review, verdict, kept, left_out}", "{review, verdict, kept, left_out}"},
+		{"is left out when the verifier did not run", "is left out when the verifier did not run"},
+		{"(id, location, severity, claim, evidence_class, causal_disposition, proof_refs), in the order of the reply", "(id, location, severity, claim, evidence_class, causal_disposition, proof_refs), in the order of the reply"},
+		{"(id, severity, reason)", "(id, severity, reason)"},
+		{"causal_disposition is pre-existing or base-only", "causal_disposition is pre-existing or base-only"},
+		{"BLOCKER or CRITICAL that the verdict found not-reproduced", "BLOCKER or CRITICAL the verdict found not-reproduced"},
+		{"Both lists are always there", "Both lists are always there"},
+		{"whose verdict does not hold is refused", "whose verdict does not hold is refused"},
+		{"never an empty list", "never an empty list"},
+		{"exit 0 listed, 1 usage error, a result that cannot be read or any other failure", "exit 0 listed, 1 usage error, a result that cannot be read or any other failure"},
+	} {
+		if !strings.Contains(flatEngine, pair.engine) {
+			t.Errorf("the engine usage lacks %q", pair.engine)
+		}
+		if !strings.Contains(flat, pair.inWrapper) {
+			t.Errorf("bin/lib/usage.sh lacks %q, which the engine usage says as %q", pair.inWrapper, pair.engine)
+		}
+	}
+}
+
 func TestUsageDocumentsReviewVerify(t *testing.T) {
 	var out bytes.Buffer
 	usage(&out)
