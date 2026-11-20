@@ -1387,12 +1387,16 @@ gentle-ai-overlay projection hook --event UserPromptSubmit|PreToolUse|SessionSta
     instructions of the workflow the repository is bound to into its context, once, as
     {"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"..."}}: the block
     `labdrian memory plan --instructions` prints, plus (C23 M8) one line for each source of the plan that
-    the hook found it cannot read, "Do not call the memorycard tools: memorycard is unavailable in this
-    session (<reason>), though the plan allows its reads." for engram and "Do not read <source>: it is
-    unavailable in this session (<reason>)." for longterm-mem and procedural-skills, without " (<reason>)"
-    when the probe gives no reason: for engram it checks that memorycard's store (`MEMORYCARD_DB`, else
-    `~/.memorycard/memory.db`) is a file and then runs `memorycard list`, never creating the store and
-    never running `engram`; it runs the longterm-mem binary and looks for a longterm-mem MCP entry in any
+    the hook found it cannot read, "memorycard has no store yet (<reason>): memorycard creates it when it
+    first opens it, so its reads find nothing until a record is saved." for engram when memorycard's store
+    does not exist or is empty, "Do not call the memorycard tools: memorycard is unavailable in this
+    session (<reason>), though the plan allows its reads and does not limit its writes." for engram
+    otherwise and "Do not read <source>: it is unavailable in this session (<reason>)." for longterm-mem
+    and procedural-skills, without " (<reason>)" when the probe gives no reason: for engram it checks that
+    memorycard's store (`MEMORYCARD_DB`, else `~/.memorycard/memory.db`) is a regular file that is not
+    empty and only then runs `memorycard list`, so it runs nothing on a missing or empty store and never
+    runs `engram` (best-effort: a store removed between the check and the run is created by memorycard);
+    it runs the longterm-mem binary and looks for a longterm-mem MCP entry in any
     runtime and for the project's procedural skills lock, each with a three-second deadline, all at once. The line
     only informs; the gate is unchanged. Silent when no workflow is bound, and for a binding or
     workflow it cannot follow, a closed one, a store it cannot read, or input it cannot use (the next

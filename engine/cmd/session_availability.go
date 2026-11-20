@@ -33,9 +33,13 @@ type programRunner interface {
 //
 //   - engram: memorycard is the store of source engram (Engram is frozen), so the probe asks it. The
 //     store file (MEMORYCARD_DB, else ~/.memorycard/memory.db) is statted first and must be a regular
-//     file, because every memorycard command that opens the store creates a missing one and a probe
-//     must never write; then 'memorycard list' on a probe-only prefix, which records no use count and
-//     opens the database (the engine has no SQLite driver, so the program does the opening);
+//     file that is not empty, because every memorycard command that opens the store creates a missing
+//     one and initialises an empty one, and a probe should not write; then 'memorycard list' on a
+//     probe-only prefix, which records no use count and opens the database (the engine has no SQLite
+//     driver, so the program does the opening). The stat and the run are not atomic, so a store
+//     removed between them is still created: the check is best-effort over the milliseconds between
+//     the stat and memorycard's open. A missing or empty store is Uncreated: memorycard has not made
+//     it yet, which is not a broken store;
 //   - longterm-mem: its binary answers 'longterm-mem status' and an MCP entry for it is registered in
 //     the config of any runtime (Claude Code, OpenCode, Codex);
 //   - procedural-skills: the procedural skills lock of the session's project exists and is valid.
@@ -116,8 +120,8 @@ func (p sessionAvailability) probeOne(dir string, source memoryscope.Source) pro
 	defer cancel()
 	switch source {
 	case memoryscope.SourceEngram:
-		if reason := p.storeProblem(); reason != "" {
-			return unavailableSource(source, reason)
+		if reason, uncreated := p.storeProblem(); reason != "" {
+			return projection.SourceAvailability{Source: source, Detail: reason, Uncreated: uncreated}
 		}
 		return p.unlessFailed(source, p.runs(ctx, "memorycard", "memorycard", memorycardProbeArgs...))
 	case memoryscope.SourceLongtermMem:
@@ -141,21 +145,25 @@ func (p sessionAvailability) probeOne(dir string, source memoryscope.Source) pro
 	return unavailableSource(source, "no availability check exists for this source")
 }
 
-// storeProblem says why the memorycard store cannot be asked, "" when it is a regular file.
-func (p sessionAvailability) storeProblem() string {
+// storeProblem says why the memorycard store cannot be asked, "" when it is a regular file that is not
+// empty. uncreated is true when the store does not exist or is empty: memorycard has not created it
+// yet, which is not a broken store.
+func (p sessionAvailability) storeProblem() (reason string, uncreated bool) {
 	if p.memorycardStore == "" {
-		return "the memorycard store cannot be located: MEMORYCARD_DB is not set and no home directory is known"
+		return "the memorycard store cannot be located: MEMORYCARD_DB is unset or empty and no home directory is known", false
 	}
 	info, err := p.stat(p.memorycardStore)
 	switch {
 	case errors.Is(err, fs.ErrNotExist):
-		return fmt.Sprintf("the memorycard store %s does not exist", p.memorycardStore)
+		return fmt.Sprintf("the memorycard store %s does not exist", p.memorycardStore), true
 	case err != nil:
-		return fmt.Sprintf("the memorycard store %s cannot be read: %v", p.memorycardStore, err)
+		return fmt.Sprintf("the memorycard store %s cannot be read: %v", p.memorycardStore, err), false
 	case !info.Mode().IsRegular():
-		return fmt.Sprintf("the memorycard store %s is not a regular file", p.memorycardStore)
+		return fmt.Sprintf("the memorycard store %s is not a regular file", p.memorycardStore), false
+	case info.Size() == 0:
+		return fmt.Sprintf("the memorycard store %s is empty", p.memorycardStore), true
 	}
-	return ""
+	return "", false
 }
 
 func (p sessionAvailability) unlessFailed(source memoryscope.Source, reason string) projection.SourceAvailability {

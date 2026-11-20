@@ -93,9 +93,9 @@ func TestMemoryWiringAcceptance(t *testing.T) {
 	withStore := func(t *testing.T) {
 		t.Helper()
 		withoutStore(t)
-		writeFixtureFile(t, store, "")
+		writeFixtureFile(t, store, "SQLite format 3\x00")
 	}
-	unavailable := "- Do not call the memorycard tools: memorycard is unavailable in this session (the memorycard store " + store + " does not exist), though the plan allows its reads.\n"
+	unavailable := "- memorycard has no store yet (the memorycard store " + store + " does not exist): memorycard creates it when it first opens it, so its reads find nothing until a record is saved.\n"
 	sessionOutput := func(instructions string) string {
 		return `{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":` + strconv.Quote(instructions) + "}}\n"
 	}
@@ -196,6 +196,18 @@ func TestMemoryWiringAcceptance(t *testing.T) {
 		}
 		if _, err := os.Stat(memorycardDir); !errors.Is(err, fs.ErrNotExist) {
 			t.Fatalf("the probe created %s (stat: %v)", memorycardDir, err)
+		}
+		// An empty store is no store: memorycard would initialise the file, so the probe runs nothing
+		// and says memorycard has no store yet.
+		withoutStore(t)
+		writeFixtureFile(t, store, "")
+		emptyLine := strings.Replace(unavailable, "does not exist", "is empty", 1)
+		check(t, "SessionStart with an empty store", w.engine(w.dir, sessionStartInput(t, w.repo, "startup"), "projection", "hook", "--event", "SessionStart"), sessionOutput(strings.Replace(block, "- memorycard is", emptyLine+"- memorycard is", 1)))
+		if _, err := os.Stat(marker); !errors.Is(err, fs.ErrNotExist) {
+			t.Fatalf("memorycard ran on an empty store (marker stat: %v)", err)
+		}
+		if info, err := os.Stat(store); err != nil || info.Size() != 0 {
+			t.Fatalf("the probe changed the empty store: %v, %v", info, err)
 		}
 		withStore(t)
 		check(t, "available SessionStart", w.engine(w.dir, sessionStartInput(t, w.repo, "resume"), "projection", "hook", "--event", "SessionStart"), sessionOutput(block))
@@ -360,7 +372,7 @@ func TestMemoryWiringAcceptance(t *testing.T) {
 		if err := os.WriteFile(filepath.Join(hw.bin, "memorycard"), []byte("#!/bin/sh\nexit 1\n"), 0o700); err != nil {
 			t.Fatal(err)
 		}
-		line := "- Do not call the memorycard tools: memorycard is unavailable in this session (the memorycard program failed: exit status 1), though the plan allows its reads.\n"
+		line := "- Do not call the memorycard tools: memorycard is unavailable in this session (the memorycard program failed: exit status 1), though the plan allows its reads and does not limit its writes.\n"
 		want := sessionOutput(strings.Replace(block, "- memorycard is", line+"- memorycard is", 1))
 		check(t, "codex SessionStart availability", hw.run(hw.dir, sessionStartInput(t, hw.repo, "startup"), "sh", "-c", codexCommand), want)
 	}

@@ -61,7 +61,7 @@ func TestCodexHookVerbsAndInstalledSessionStart(t *testing.T) {
 	assert(w.run(w.dir, input(w.repo, "startup"), "/bin/sh", "-c", command), 0, "", "")
 	w.bindRunning("proj-1", "wf-1", "odd", "authorize")
 	// Availability is real but deterministic: this world's PATH contains no source binaries and its repo has no lock.
-	block := strings.Replace(oddInstructions, "\n- memorycard is", "\n- Do not call the memorycard tools: memorycard is unavailable in this session (the memorycard store "+filepath.Join(w.home, ".memorycard", "memory.db")+" does not exist), though the plan allows its reads.\n- Do not read longterm-mem: it is unavailable in this session (the longterm-mem program was not found).\n- Do not read procedural-skills: it is unavailable in this session (no procedural skills lock: none installed).\n- memorycard is", 1)
+	block := strings.Replace(oddInstructions, "\n- memorycard is", "\n- memorycard has no store yet (the memorycard store "+filepath.Join(w.home, ".memorycard", "memory.db")+" does not exist): memorycard creates it when it first opens it, so its reads find nothing until a record is saved.\n- Do not read longterm-mem: it is unavailable in this session (the longterm-mem program was not found).\n- Do not read procedural-skills: it is unavailable in this session (no procedural skills lock: none installed).\n- memorycard is", 1)
 	expected, _ := json.Marshal(struct {
 		Output struct {
 			Event   string `json:"hookEventName"`
