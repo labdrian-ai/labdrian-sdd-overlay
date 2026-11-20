@@ -73,7 +73,7 @@ func (s Service) Findings(dir, feature, stored string) (Findings, error) {
 	if err != nil {
 		return Findings{}, err
 	}
-	out := Findings{Review: feature + "/" + strings.TrimSuffix(stored, ".json"), Verdict: verdictPath}
+	out := Findings{Review: feature + "/" + strings.TrimSuffix(stored, ".json"), Verdict: verdictPath, Kept: []reviewresult.Finding{}, LeftOut: []LeftOut{}}
 	for _, f := range result.Findings {
 		if reason := leftOutReason(f, verdicts); reason != "" {
 			out.LeftOut = append(out.LeftOut, LeftOut{ID: f.ID, Severity: f.Severity, Reason: reason})

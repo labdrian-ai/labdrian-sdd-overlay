@@ -74,6 +74,9 @@ func TestFindingsListsAResultWithNoFindingAsEmpty(t *testing.T) {
 	if err != nil || len(got.Kept) != 0 || len(got.LeftOut) != 0 {
 		t.Errorf("Findings() = %+v, %v; want an empty listing and no error", got, err)
 	}
+	if got.Kept == nil || got.LeftOut == nil {
+		t.Errorf("Kept nil = %v, LeftOut nil = %v; want both empty and not nil, so a listing never marshals as null", got.Kept == nil, got.LeftOut == nil)
+	}
 }
 
 // A finding the diff did not cause is not evidence, whatever its severity.
