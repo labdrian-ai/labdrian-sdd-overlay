@@ -47,7 +47,7 @@ func TestAnUnavailableSourceOfThePlanGetsOneDegradationLine(t *testing.T) {
 		"- Do not read longterm-mem: it is unavailable in this session (the longterm-mem binary did not answer).",
 		"- Do not read procedural-skills: it is unavailable in this session (no procedural skills lock: none installed).",
 		instructionsMemorycard,
-		`- Engram reads (mem_search, mem_context) name project "proj-1"; longterm-mem query and get name project "github.com/acme/proj-1".`,
+		`- Engram and memorycard reads (mem_search, mem_context) name project "proj-1"; longterm-mem query and get name project "github.com/acme/proj-1".`,
 		instructionsWrites,
 		instructionsProcedural,
 	}
@@ -57,6 +57,42 @@ func TestAnUnavailableSourceOfThePlanGetsOneDegradationLine(t *testing.T) {
 	wantAsked := []memoryscope.Source{memoryscope.SourceEngram, memoryscope.SourceLongtermMem, memoryscope.SourceProceduralSkills}
 	if !reflect.DeepEqual(asked, wantAsked) {
 		t.Errorf("the probe was asked about %v, want the sources of the plan %v", asked, wantAsked)
+	}
+}
+
+// The probe of source engram asks the engram program, never memorycard, so when it is unavailable
+// the block names the Engram tools and says that does not apply to memorycard, whose reads the gate
+// allows whatever the probe said. A source other than engram keeps its own line.
+func TestAnUnavailableEngramNamesTheEngramToolsAndSparesMemorycard(t *testing.T) {
+	w := withIdentity(loadedWorkflow("odd", workflow.StatusRunning), "github.com/acme/proj-1")
+	for name, tt := range map[string]struct{ detail, line string }{
+		"with a detail": {"the engram program failed: exit status 1", "- Do not call the Engram tools: Engram is unavailable in this session (the engram program failed: exit status 1); this does not apply to memorycard."},
+		"no detail":     {"", "- Do not call the Engram tools: Engram is unavailable in this session; this does not apply to memorycard."},
+	} {
+		var asked []memoryscope.Source
+		probe := probeAnswering(&asked,
+			projection.SourceAvailability{Source: memoryscope.SourceEngram, Available: false, Detail: tt.detail},
+			projection.SourceAvailability{Source: memoryscope.SourceLongtermMem, Available: true},
+			projection.SourceAvailability{Source: memoryscope.SourceProceduralSkills, Available: true},
+		)
+		got := lines(blockWith(w, probe))
+		want := []string{
+			"labdrian memory instructions (workflow wf-1, scope project):",
+			projectSourcesLine,
+			tt.line,
+			instructionsMemorycard,
+			`- Engram and memorycard reads (mem_search, mem_context) name project "proj-1"; longterm-mem query and get name project "github.com/acme/proj-1".`,
+			instructionsWrites,
+			instructionsProcedural,
+		}
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("%s: InstructionsBlock() lines =\n%q\nwant\n%q", name, got, want)
+		}
+		for _, line := range got {
+			if strings.HasPrefix(line, "- Do not read ") {
+				t.Errorf("%s: the block still says not to read a source, though only Engram is down: %q", name, line)
+			}
+		}
 	}
 }
 
@@ -123,7 +159,7 @@ func TestADegradationReasonIsSanitizedAndBounded(t *testing.T) {
 		Detail:    "line one\nline two\x1b[31m" + strings.Repeat("x", 4000),
 	})
 	for _, line := range lines(blockWith(w, probe)) {
-		if strings.HasPrefix(line, "- Do not read engram") {
+		if strings.HasPrefix(line, "- Do not call the Engram tools") {
 			if strings.ContainsAny(line, "\x1b\r") || len([]rune(line)) > 600 {
 				t.Errorf("the degradation line is not one bounded line: %q", line)
 			}

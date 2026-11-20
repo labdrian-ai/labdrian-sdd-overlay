@@ -54,10 +54,11 @@ the skill say the same thing. Under scope goal it reads:
 ```
 labdrian memory instructions (workflow <wf>, scope goal):
 - Read memory only from: engram, longterm-mem. A read from any other source is denied.
-- Engram reads (mem_search, mem_context) name project "<engram name>"; longterm-mem query and get name project "<project id>".
+- memorycard is the source engram: its reads (mem_search, mem_context, mem_get) go ahead while engram is listed, and a memorycard record you write may be read back.
+- Engram and memorycard reads (mem_search, mem_context) name project "<engram name>"; longterm-mem query and get name project "<project id>".
 - Under goal "<goal id>": pass goal "<goal id>" to every longterm-mem query, and give every Engram record you create for this goal a topic_key that begins with "goal:<goal id>/", for example "goal:<goal id>/architecture/auth".
 - Memory writes (mem_save, promote) are not limited by the plan.
-- Procedural candidates: T1 right after a proactive mem_save of type bugfix, pattern, discovery or decision; T2 at session close, beside mem_session_summary (skills/_shared/procedural-candidate-detection.md, section 5).
+- Procedural candidates: T1 right after a proactive mem_save of type bugfix, pattern, discovery or decision; T2 at session close, beside mem_session (skills/_shared/procedural-candidate-detection.md, section 5). Load skills/procedural-candidates/SKILL.md for the procedure; run `skills candidates` before creating or updating a candidate.
 ```
 
 The goal line appears only under scope goal. Under scope none the second line says to read no

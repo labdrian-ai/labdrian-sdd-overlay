@@ -218,7 +218,7 @@ func TestSessionStartSaysWhichSourcesOfThePlanCannotBeRead(t *testing.T) {
 	}
 	r := runProjectionArgsWith(d, []string{"hook", "--event", "SessionStart"}, sessionStartInput(t, e.repo, "startup"), e.dir)
 	want := "- Do not read longterm-mem: it is unavailable in this session (down in the test)."
-	if len(r.codes) != 1 || r.codes[0] != 0 || !strings.Contains(r.stdout, want) || strings.Contains(r.stdout, "Do not read engram") {
+	if len(r.codes) != 1 || r.codes[0] != 0 || !strings.Contains(r.stdout, want) || strings.Contains(r.stdout, "Do not call the Engram tools") {
 		t.Errorf("exits %v, stdout %s, want exit 0 and exactly the line %q", r.codes, r.stdout, want)
 	}
 

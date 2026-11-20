@@ -303,7 +303,8 @@ func memoryPlanLines(state workflow.State, projectID string) []string {
 // the SessionStart hook, the gate-task rewrite and 'memory plan --instructions'
 // say the same thing. A project is named only for a source the plan includes;
 // the Engram name is engramName of the identity the workflow recorded, the rule
-// the gate's Engram project check compares with, and is left out when there is
+// the gate's Engram project check compares with (memorycard's project reads
+// included, gate.go), and is left out when there is
 // no identity or no rule, as the gate then checks no Engram project. The goal
 // line appears only under scope goal; under scope none the block says to read
 // no memory. A plan that cannot be computed is one line saying so. The block
@@ -348,13 +349,14 @@ func InstructionsBlock(b Binding, state workflow.State, engramName func(identity
 const memorycardLine = "- memorycard is the source engram: its reads (mem_search, mem_context, mem_get) go ahead while engram is listed, and a memorycard record you write may be read back."
 
 // instructionsProjectLine names the project each source of plan that names one
-// must be read with: Engram reads the Engram name of identity, longterm-mem the
+// must be read with: Engram and memorycard reads the Engram name of identity (the gate checks
+// memorycard's mem_search and mem_context against the same name, gate.go), longterm-mem the
 // plan's project. It is "" when no source of the plan names a known project.
 func instructionsProjectLine(plan memoryscope.Plan, identity string, engramName func(string) string) string {
 	var parts []string
 	if slices.Contains(plan.Sources, memoryscope.SourceEngram) && identity != "" && engramName != nil {
 		if name := sanitizeLine(engramName(identity)); name != "" {
-			parts = append(parts, "Engram reads (mem_search, mem_context) name project "+strconv.Quote(name))
+			parts = append(parts, "Engram and memorycard reads (mem_search, mem_context) name project "+strconv.Quote(name))
 		}
 	}
 	if project := sanitizeLine(plan.Filters.ProjectID); slices.Contains(plan.Sources, memoryscope.SourceLongtermMem) && project != "" {

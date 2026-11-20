@@ -19,7 +19,7 @@ import (
 const oddInstructions = "labdrian memory instructions (workflow wf-1, scope project):\n" +
 	"- Read memory only from: engram, longterm-mem, procedural-skills. A read from any other source is denied.\n" +
 	"- memorycard is the source engram: its reads (mem_search, mem_context, mem_get) go ahead while engram is listed, and a memorycard record you write may be read back.\n" +
-	`- Engram reads (mem_search, mem_context) name project "proj-1"; longterm-mem query and get name project "proj-1".` + "\n" +
+	`- Engram and memorycard reads (mem_search, mem_context) name project "proj-1"; longterm-mem query and get name project "proj-1".` + "\n" +
 	"- Memory writes (mem_save, promote) are not limited by the plan.\n" +
 	"- Procedural candidates: T1 right after a proactive mem_save of type bugfix, pattern, discovery or decision; T2 at session close, beside mem_session (skills/_shared/procedural-candidate-detection.md, section 5). Load skills/procedural-candidates/SKILL.md for the procedure; run `skills candidates` before creating or updating a candidate."
 
