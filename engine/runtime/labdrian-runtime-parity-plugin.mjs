@@ -420,16 +420,18 @@ const SKILL_PATHS_USAGE_EXIT = 1;
 
 // skillPathsRefusal takes the engine's reply. Its line is the verb's own refusal of the prompt (one line that
 // names the verb and says what to write) only on exit 2 with the verb's prefix, and then it is passed through.
-// On exit 1 (a usage error such as `unknown flag "--agent"`, or no such verb: what an engine older than the
-// plugin answers) the sentence names the engine binary and both remedies, and never starts with the verb's
-// prefix, so the agent does not read it as a refusal of its prompt. Any other failure (the engine missing,
-// hung, or silent) gets a sentence that says what was not checked.
+// Exit 1 is a usage error (an engine older than the plugin gives one for `--agent` or the verb) or any other
+// failure of the verb (a skills root that is not a directory, the prompt unread, stdout unwritten,
+// roles_skill_paths.go:56-58,75-78,89-91), so its sentence names the engine binary and the exit and offers the
+// remedy without claiming the cause, and never starts with the verb's prefix, so the agent does not read it as
+// a refusal of its prompt. Any other failure (the engine missing, hung, or silent) gets a sentence that says
+// what was not checked.
 function skillPathsRefusal(reply) {
   const failure = reply.failure;
   if (reply.code === SKILL_PATHS_REFUSED_EXIT && failure.startsWith(`error: ${SKILL_PATHS_VERB}:`)) return failure;
   const unchecked = `this launch was denied: its skill list could not be checked: ${failure}`;
   if (reply.code === SKILL_PATHS_USAGE_EXIT) {
-    return `${unchecked}; the engine ${engineBinary()} does not accept this plugin's call, as an engine older than the plugin does: run \`labdrian apply --target opencode\`, or rebuild the engine ${ENGINE_VARIABLE} names`;
+    return `${unchecked}; the engine ${engineBinary()} exited 1 on this plugin's call: if that engine is older than the plugin, run \`labdrian apply --target opencode\`, or rebuild the engine ${ENGINE_VARIABLE} names`;
   }
   return unchecked;
 }
@@ -441,8 +443,8 @@ function skillPathsRefusal(reply) {
 // plugin) leaves every prompt as it is, and so does a call that is not a launch with a prompt. It hands the verb
 // the launch's agent (`--agent <id>`) when that field is a non-empty string; the engine decides which agents get
 // a skill added from prose (a reviewer or polisher gets none). `--agent` is always handed, with no retry
-// without it: an engine older than the plugin exits 1 on it and the launch is denied with its remedy
-// (skillPathsRefusal), so the confinement of a reviewer or polisher holds for every engine.
+// without it: an engine older than the plugin exits 1 on it and the launch is denied naming the remedy
+// for an older engine (skillPathsRefusal), so the confinement of a reviewer or polisher holds for every engine.
 async function resolveSkillPaths(call, config) {
   if (!isRecord(call) || call.tool !== INJECTED_TOOL) return;
   const root = isRecord(config) ? config.skills_root : undefined;

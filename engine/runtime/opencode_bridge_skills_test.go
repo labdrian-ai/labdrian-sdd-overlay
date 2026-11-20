@@ -117,67 +117,81 @@ func TestOpenCodeBridgeDeniesALaunchWhenTheEngineCannotCheckItsSkillList(t *test
 	hung := newFakeEngine(t, map[string][]byte{skillsEvent: []byte(pathsPrompt)})
 	hung.hangEventFor(t, skillsEvent, 2)
 	silent := newFakeEngine(t, nil)
-	old := newFakeEngine(t, nil)
-	old.failEventWith(t, skillsEvent, 1, "error: roles: unknown verb \"skill-paths\" (expected validate, next, resume, append, or match-shaper)\n")
 
-	for name, run := range map[string]func() []byte{
-		"missing": func() []byte {
+	const unchecked = "this launch was denied: its skill list could not be checked: "
+	for name, tc := range map[string]struct {
+		run  func() []byte
+		want string // the whole message, or "" when only the prefix is checked (Node words the spawn error)
+	}{
+		"missing": {run: func() []byte {
 			return runPluginWithEngine(t, pluginPath, filepath.Join(t.TempDir(), "no-engine"), launchOf("subagent", "builder", listedPrompt))
-		},
-		"timeout": func() []byte {
+		}},
+		"timeout": {run: func() []byte {
 			return runPluginWithEnv(t, pluginPath, []string{engineEnvironment + "=" + hung.path, "LABDRIAN_ENGINE_TIMEOUT_MS=400"}, launchOf("subagent", "builder", listedPrompt))
-		},
-		"empty answer": func() []byte {
+		}, want: unchecked + "the engine did not answer within 0.4 seconds"},
+		"empty answer": {run: func() []byte {
 			return runPluginWithEngine(t, pluginPath, silent.path, launchOf("subagent", "builder", listedPrompt))
-		},
-		"engine too old": func() []byte {
-			return runPluginWithEngine(t, pluginPath, old.path, launchOf("subagent", "builder", listedPrompt))
-		},
+		}, want: unchecked + "the engine printed nothing"},
 	} {
 		t.Run(name, func(t *testing.T) {
-			got := decodeLaunch(t, run())
-			if got.Thrown == nil || got.Thrown.Name != "Tool.Error" || !strings.HasPrefix(got.Thrown.Message, "this launch was denied: its skill list could not be checked: ") {
+			got := decodeLaunch(t, tc.run())
+			if got.Thrown == nil || got.Thrown.Name != "Tool.Error" || !strings.HasPrefix(got.Thrown.Message, unchecked) {
 				t.Fatalf("a launch whose skill list the engine cannot check must be denied with a sentence naming it, got %#v", got.Thrown)
 			}
 			if got.Input["prompt"] != listedPrompt {
 				t.Fatalf("a denied launch keeps its prompt, got %#v", got.Input)
 			}
-			if name == "engine too old" && !strings.Contains(got.Thrown.Message, olderEngineRemedy) {
-				t.Fatalf("an engine with no such verb should be named with its remedy %q, got %q", olderEngineRemedy, got.Thrown.Message)
+			// T60 correction D (S8 L177, -5 F2): a failure with no exit code names no exit and no remedy.
+			for _, banned := range []string{olderEngineRemedy, "exited 1"} {
+				if strings.Contains(got.Thrown.Message, banned) {
+					t.Errorf("a failure with no exit code must not hold %q, got %q", banned, got.Thrown.Message)
+				}
+			}
+			if tc.want != "" && got.Thrown.Message != tc.want {
+				t.Errorf("the denial should be exactly %q, got %q", tc.want, got.Thrown.Message)
 			}
 		})
 	}
 }
 
-// olderEngineRemedy is the command the denial of an engine that does not accept the plugin's call names.
+// olderEngineRemedy is the command the denial of an exit 1 offers for an engine older than the plugin.
 const olderEngineRemedy = "labdrian apply --target opencode"
 
-// T60 correction C (S8 L175): the verb exits 2 for a refused prompt and 1 for a usage error or any other
-// failure, so a usage error of the plugin's own call (an engine older than the plugin does not know
-// `--agent`) is named with its remedy and never read as a refusal of the prompt.
-func TestOpenCodeBridgeNamesAnEngineOlderThanThePluginWithItsRemedy(t *testing.T) {
+// exitOneDenial is the exact sentence a launch is denied with when the verb exits 1 (S8 L177): what the engine
+// reported (binary, exit, line), the remedy for an older engine offered on a condition, the cause never claimed.
+func exitOneDenial(enginePath, line string) string {
+	return "this launch was denied: its skill list could not be checked: " + line + "; the engine " + enginePath +
+		" exited 1 on this plugin's call: if that engine is older than the plugin, run `" + olderEngineRemedy +
+		"`, or rebuild the engine " + engineEnvironment + " names"
+}
+
+// T60 correction D (S8 L177, replacing correction C's test of L175): the verb exits 1 for a usage error
+// (an engine older than the plugin does not know `--agent`) and for any other failure of the verb, so the
+// denial states the exit and offers the remedy on a condition; it never claims an older engine as the cause.
+func TestOpenCodeBridgeDeniesAnExitOneWithTheRemedyForAnOlderEngineAndNoClaimOfIt(t *testing.T) {
 	requireNode(t)
 	for name, line := range map[string]string{
-		"an unknown flag": `error: roles skill-paths: unknown flag "--agent"`,
-		"a usage error":   "error: roles skill-paths: --skills-root " + skillsRootFixture + " is not a directory",
+		"an unknown flag":                       `error: roles skill-paths: unknown flag "--agent"`,
+		"a skills root that is not a directory": "error: roles skill-paths: --skills-root /overlay/skills is not a directory",
+		"an unread prompt":                      "error: roles skill-paths: read the prompt: input/output error",
+		"an unwritten stdout":                   "error: roles skill-paths: write to stdout: broken pipe",
+		"an unknown verb":                       `error: roles: unknown verb "skill-paths" (expected validate, next, resume, append, or match-shaper)`,
+		"no line from the engine":               "the engine ended with exit 1",
 	} {
 		t.Run(name, func(t *testing.T) {
 			engine := newFakeEngine(t, map[string][]byte{skillsEvent: []byte(pathsPrompt)})
-			engine.failEventWith(t, skillsEvent, 1, line+"\n")
+			message := ""
+			if !strings.HasPrefix(line, "the engine ended with") {
+				message = line + "\n"
+			}
+			engine.failEventWith(t, skillsEvent, 1, message)
 			got := decodeLaunch(t, runPluginWithEngine(t, skillsFixture(t), engine.path, launchOf("subagent", "builder", listedPrompt)))
-			if got.Thrown == nil || got.Thrown.Name != "Tool.Error" {
-				t.Fatalf("the launch should be denied with a Tool.Error, got %#v", got.Thrown)
+			if want := exitOneDenial(engine.path, line); got.Thrown == nil || got.Thrown.Name != "Tool.Error" || got.Thrown.Message != want {
+				t.Fatalf("an exit 1 should be denied with exactly %q, got %#v", want, got.Thrown)
 			}
-			message := got.Thrown.Message
-			if !strings.HasPrefix(message, "this launch was denied: its skill list could not be checked: ") {
-				t.Errorf("the denial should say the skill list was not checked, got %q", message)
-			}
-			if strings.HasPrefix(message, "error: roles skill-paths:") {
-				t.Errorf("the denial must not read as the verb's refusal of the prompt, got %q", message)
-			}
-			for _, want := range []string{line, engine.path, olderEngineRemedy} {
-				if !strings.Contains(message, want) {
-					t.Errorf("the denial should hold %q, got %q", want, message)
+			for _, banned := range []string{"does not accept this plugin's call", "as an engine older than the plugin does"} {
+				if strings.Contains(got.Thrown.Message, banned) {
+					t.Errorf("the denial must not claim the cause, it holds %q: %q", banned, got.Thrown.Message)
 				}
 			}
 			if got.Input["prompt"] != listedPrompt {
@@ -187,15 +201,26 @@ func TestOpenCodeBridgeNamesAnEngineOlderThanThePluginWithItsRemedy(t *testing.T
 	}
 }
 
-// An exit 2 whose line is not the verb's own keeps today's sentence, and names no remedy for an old engine.
+// An exit that is not the verb's refusal (exit 2 without the verb's prefix, or another number) keeps today's
+// sentence: the line as the engine said it, no exit named, no remedy (S8 L175; L177, -5 F2).
 func TestOpenCodeBridgeKeepsTheSentenceForAnExitTwoThatIsNotTheVerbsLine(t *testing.T) {
 	requireNode(t)
-	const line = "error: something else entirely"
-	engine := newFakeEngine(t, map[string][]byte{skillsEvent: []byte(pathsPrompt)})
-	engine.failEventWith(t, skillsEvent, 2, line+"\n")
-	got := decodeLaunch(t, runPluginWithEngine(t, skillsFixture(t), engine.path, launchOf("subagent", "builder", listedPrompt)))
-	if want := "this launch was denied: its skill list could not be checked: " + line; got.Thrown == nil || got.Thrown.Message != want {
-		t.Fatalf("an exit 2 that is not the verb's line should be denied with %q, got %#v", want, got.Thrown)
+	for name, tc := range map[string]struct {
+		code int
+		line string
+	}{
+		"exit 2 that is not the verb's line": {2, "error: something else entirely"},
+		"exit 3 with the verb's prefix":      {3, "error: roles skill-paths: something"},
+		"exit 3 with another line":           {3, "error: something else entirely"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			engine := newFakeEngine(t, map[string][]byte{skillsEvent: []byte(pathsPrompt)})
+			engine.failEventWith(t, skillsEvent, tc.code, tc.line+"\n")
+			got := decodeLaunch(t, runPluginWithEngine(t, skillsFixture(t), engine.path, launchOf("subagent", "builder", listedPrompt)))
+			if want := "this launch was denied: its skill list could not be checked: " + tc.line; got.Thrown == nil || got.Thrown.Message != want {
+				t.Fatalf("exit %d should be denied with %q, got %#v", tc.code, want, got.Thrown)
+			}
+		})
 	}
 }
 

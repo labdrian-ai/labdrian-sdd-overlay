@@ -40,35 +40,35 @@ exit: 1
 $ runtime install --target opencode
 exit: 0
 --- stdout ---
-[opencode] install: restart_required — OpenCode plugin changed; restart OpenCode to load version 2026-11-20-runtime-parity-19; memorycard plugin written to <WORLD>/home/.config/opencode/plugins/memorycard/index.js (version 2026-11-17-memorycard-2); opencode.json written to <WORLD>/home/.config/opencode/opencode.json; memorycard not found on PATH, so its bare name is written and OpenCode must find it on its own PATH; codegraph not found on PATH, so its bare name is written and OpenCode must find it on its own PATH; AGENTS.md not written: no overlay checkout holds the instruction sources: read the owner rules: open <WORLD>/overlay/instructions/owner-rules.md: no such file or directory
+[opencode] install: restart_required — OpenCode plugin changed; restart OpenCode to load version 2026-11-20-runtime-parity-20; memorycard plugin written to <WORLD>/home/.config/opencode/plugins/memorycard/index.js (version 2026-11-17-memorycard-2); opencode.json written to <WORLD>/home/.config/opencode/opencode.json; memorycard not found on PATH, so its bare name is written and OpenCode must find it on its own PATH; codegraph not found on PATH, so its bare name is written and OpenCode must find it on its own PATH; AGENTS.md not written: no overlay checkout holds the instruction sources: read the owner rules: open <WORLD>/overlay/instructions/owner-rules.md: no such file or directory
 --- stderr ---
 
 # opencode again
 $ runtime install --target opencode
 exit: 0
 --- stdout ---
-[opencode] install: restart_required — OpenCode plugin changed; restart OpenCode to load version 2026-11-20-runtime-parity-19; memorycard plugin already current in <WORLD>/home/.config/opencode/plugins/memorycard/index.js (version 2026-11-17-memorycard-2); opencode.json already current in <WORLD>/home/.config/opencode/opencode.json; AGENTS.md not written: no overlay checkout holds the instruction sources: read the owner rules: open <WORLD>/overlay/instructions/owner-rules.md: no such file or directory
+[opencode] install: restart_required — OpenCode plugin changed; restart OpenCode to load version 2026-11-20-runtime-parity-20; memorycard plugin already current in <WORLD>/home/.config/opencode/plugins/memorycard/index.js (version 2026-11-17-memorycard-2); opencode.json already current in <WORLD>/home/.config/opencode/opencode.json; AGENTS.md not written: no overlay checkout holds the instruction sources: read the owner rules: open <WORLD>/overlay/instructions/owner-rules.md: no such file or directory
 --- stderr ---
 
 # status opencode
 $ runtime status --target opencode
 exit: 1
 --- stdout ---
-[opencode] status: restart_required — OpenCode restart required to load plugin version 2026-11-20-runtime-parity-19
+[opencode] status: restart_required — OpenCode restart required to load plugin version 2026-11-20-runtime-parity-20
 --- stderr ---
 
 # update opencode
 $ runtime update --target opencode
 exit: 0
 --- stdout ---
-[opencode] update: restart_required — OpenCode plugin changed; restart OpenCode to load version 2026-11-20-runtime-parity-19; memorycard plugin already current in <WORLD>/home/.config/opencode/plugins/memorycard/index.js (version 2026-11-17-memorycard-2); opencode.json already current in <WORLD>/home/.config/opencode/opencode.json; AGENTS.md not written: no overlay checkout holds the instruction sources: read the owner rules: open <WORLD>/overlay/instructions/owner-rules.md: no such file or directory
+[opencode] update: restart_required — OpenCode plugin changed; restart OpenCode to load version 2026-11-20-runtime-parity-20; memorycard plugin already current in <WORLD>/home/.config/opencode/plugins/memorycard/index.js (version 2026-11-17-memorycard-2); opencode.json already current in <WORLD>/home/.config/opencode/opencode.json; AGENTS.md not written: no overlay checkout holds the instruction sources: read the owner rules: open <WORLD>/overlay/instructions/owner-rules.md: no such file or directory
 --- stderr ---
 
 # status opencode
 $ runtime status --target opencode
 exit: 1
 --- stdout ---
-[opencode] status: restart_required — OpenCode restart required to load plugin version 2026-11-20-runtime-parity-19
+[opencode] status: restart_required — OpenCode restart required to load plugin version 2026-11-20-runtime-parity-20
 --- stderr ---
 
 # pi with an overlay that holds no registry
@@ -104,7 +104,7 @@ $ runtime status --target all
 exit: 1
 --- stdout ---
 [claude] status: partial — Claude owner rules could not be read: read the owner rules: open <WORLD>/overlay/instructions/owner-rules.md: no such file or directory
-[opencode] status: restart_required — OpenCode restart required to load plugin version 2026-11-20-runtime-parity-19
+[opencode] status: restart_required — OpenCode restart required to load plugin version 2026-11-20-runtime-parity-20
 [codex] status: partial — Codex lifecycle manifest is present and managed, but activation/reload state is unverified — reasons: activation/reload proof unavailable until Codex session lifecycle integration is implemented; Codex owner rules could not be read: read the owner rules: open <WORLD>/overlay/instructions/owner-rules.md: no such file or directory
 [pi] status: unsupported — labdrian-pi package is not built at <WORLD>/home/.labdrian-overlay/pi/labdrian-pi (run: labdrian-overlay apply --target pi). 'pi --no-extensions' disables the before_agent_start contract-gate extension for that session, and 'pi --no-skills' disables skill discovery, for that session only; neither flag's use is detected at runtime (short aliases: -ne and -ns)
 --- stderr ---
