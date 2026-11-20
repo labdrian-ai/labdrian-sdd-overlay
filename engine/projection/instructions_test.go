@@ -148,13 +148,13 @@ func TestTheInstructionsNameAProjectOnlyForASourceThePlanIncludes(t *testing.T) 
 	}
 	noIdentity := withIdentity(loadedWorkflow("odd", workflow.StatusRunning), "")
 	got := block(noIdentity)
-	if strings.Contains(got, "memorycard reads (") {
+	if strings.Contains(got, "- Engram and memorycard reads (") {
 		t.Errorf("a workflow with no identity names an Engram project:\n%s", got)
 	}
 	if line := lineWithPrefix(t, got, "- longterm-mem"); line != `- longterm-mem query and get name project "proj-1".` {
 		t.Errorf("a workflow with no identity: project line %q", line)
 	}
-	if got := projection.InstructionsBlock(validBinding(), engramOnly.State, nil, nil); strings.Contains(got, "memorycard reads (") {
+	if got := projection.InstructionsBlock(validBinding(), engramOnly.State, nil, nil); strings.Contains(got, "- Engram and memorycard reads (") {
 		t.Errorf("with no naming rule the block names an Engram project:\n%s", got)
 	}
 }

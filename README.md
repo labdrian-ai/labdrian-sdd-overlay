@@ -1386,8 +1386,11 @@ gentle-ai-overlay projection hook --event UserPromptSubmit|PreToolUse|SessionSta
     SessionStart (C23 M6): when a session starts, resumes, is cleared or is compacted, put the memory
     instructions of the workflow the repository is bound to into its context, once, as
     {"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"..."}}: the block
-    `labdrian memory plan --instructions` prints, plus (C23 M8) one line, "Do not read <source>: it is
-    unavailable in this session (<reason>).", for each source of the plan that the hook found it cannot read:
+    `labdrian memory plan --instructions` prints, plus (C23 M8) one line for each source of the plan that
+    the hook found it cannot read, "Do not call the Engram tools: Engram is unavailable in this session
+    (<reason>); this does not apply to memorycard." for engram (its probe asks the engram program, never
+    memorycard) and "Do not read <source>: it is unavailable in this session (<reason>)." for longterm-mem
+    and procedural-skills:
     it runs `engram stats` and the longterm-mem binary and looks for a longterm-mem MCP entry in any runtime
     and for the project's procedural skills lock, each with a three-second deadline, all at once. The line
     only informs; the gate is unchanged. Silent when no workflow is bound, and for a binding or

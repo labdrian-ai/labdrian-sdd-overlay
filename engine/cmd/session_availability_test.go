@@ -6,7 +6,9 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"os"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -228,5 +230,54 @@ func TestSessionStartSaysWhichSourcesOfThePlanCannotBeRead(t *testing.T) {
 	}
 	if got := boundInstructions(d, e.dir)(e.repo); strings.Contains(got, "Do not read") {
 		t.Errorf("the gate-task and 'memory plan' route probes: %q", got)
+	}
+}
+
+// The help of 'projection hook' and the README describe the degradation lines the hook gives: each
+// line the SessionStart hook gives with every source unavailable is in both texts, with the source
+// of the generic line standing for longterm-mem and procedural-skills.
+func TestUsageAndReadmeGiveTheDegradationLinesTheHookGives(t *testing.T) {
+	e := newHookEnv(t)
+	e.running(t, "proj-1", "wf-1", "odd")
+	d := e.deps
+	d.sourceProber = func() app.SourceAvailabilityProber {
+		return fixedProber{unavailable: map[memoryscope.Source]string{
+			memoryscope.SourceEngram:           "<reason>",
+			memoryscope.SourceLongtermMem:      "<reason>",
+			memoryscope.SourceProceduralSkills: "<reason>",
+		}}
+	}
+	r := runProjectionArgsWith(d, []string{"hook", "--event", "SessionStart"}, sessionStartInput(t, e.repo, "startup"), e.dir)
+	var out struct {
+		HookSpecificOutput struct {
+			AdditionalContext string `json:"additionalContext"`
+		} `json:"hookSpecificOutput"`
+	}
+	if err := json.Unmarshal([]byte(r.stdout), &out); err != nil {
+		t.Fatalf("stdout %q is not the hook's JSON: %v", r.stdout, err)
+	}
+	var lines []string
+	for _, line := range strings.Split(out.HookSpecificOutput.AdditionalContext, "\n") {
+		if strings.HasPrefix(line, "- Do not") {
+			lines = append(lines, line)
+		}
+	}
+	if len(lines) != 3 {
+		t.Fatalf("the hook gave %d lines starting %q, want one for each of the three sources: %q", len(lines), "- Do not", lines)
+	}
+	readme, err := os.ReadFile("../../README.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	flat := func(s string) string { return strings.Join(strings.Fields(strings.ReplaceAll(s, "`", "")), " ") }
+	texts := map[string]string{"usage()": flat(captureUsage(t)), "README": flat(string(readme))}
+	generic := strings.NewReplacer("Do not read longterm-mem", "Do not read <source>", "Do not read procedural-skills", "Do not read <source>")
+	for _, line := range lines {
+		want := generic.Replace(strings.TrimPrefix(line, "- "))
+		for name, text := range texts {
+			if !strings.Contains(text, want) {
+				t.Errorf("%s does not contain the line the hook gives, %q", name, want)
+			}
+		}
 	}
 }
