@@ -26,8 +26,9 @@ var OpenCodeInstructionsBlock = MarkedBlock{
 const openCodeStyleSourcePath = "output-styles/labdrian.md"
 
 // openCodeMemorycardBlock is the memory store block of the owner's rules for OpenCode, as the owner
-// approved it (L83): memorycard is the only memory store, and no other store is named. It leaves out
-// what only Claude Code does (the capture hook that reads a worker's Key Learnings).
+// approved it (L83): memorycard is the only memory store, and no other store is named. It also holds
+// the capture rule, adapted from the owner's Claude Code block (S13 L166): the plugin, not a hook,
+// captures a worker's Key Learnings.
 const openCodeMemorycardBlock = `## memorycard is the memory store
 
 memorycard (the MCP server ` + "`memorycard`" + `) is the only memory store.
@@ -35,7 +36,8 @@ memorycard (the MCP server ` + "`memorycard`" + `) is the only memory store.
 - Save with ` + "`mem_save`" + ` (` + "`title`" + `, ` + "`body`" + `, ` + "`type`" + `, ` + "`topic_key`" + `, ` + "`scope`" + `, ` + "`project`" + `): the same ` + "`topic_key`" + ` updates the memory in place, and ` + "`supersedes`" + ` marks an older id as replaced.
 - Find with ` + "`mem_search`" + `, read one memory in full with ` + "`mem_get`" + `, and list the pinned, stale and recent ones with ` + "`mem_context`" + `.
 - Edit, pin, archive (never delete) or mark a stale memory reviewed with ` + "`mem_update`" + `, only after the user confirms a review; record a session summary with ` + "`mem_session`" + `.
-- A memory proven wrong is superseded, never left beside its correction. Record a supersession without asking when the evidence is in this session, and say which memory, by which, and why; ask first when it would rest on titles alone or overturn a position the user stated.`
+- A memory proven wrong is superseded, never left beside its correction. Record a supersession without asking when the evidence is in this session, and say which memory, by which, and why; ask first when it would rest on titles alone or overturn a position the user stated.
+- The ` + "`## Key Learnings`" + ` block → automatic: when a subagent returns, the memorycard plugin runs ` + "`memorycard capture`" + ` on the subagent's final text. Keep closing worker reports with that block. Each item must be at least 60 characters: ` + "`capture`" + ` silently skips shorter items and items with a probe marker.`
 
 // errNoInstructionSource says the overlay checkout holds no source of the instructions: there is
 // none, or it lacks one of the files. The install is then the one without AGENTS.md, with a note,

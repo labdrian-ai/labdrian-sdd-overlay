@@ -136,10 +136,64 @@ func TestOpenCodeMemorycardBlockNamesTheToolsAndNeverTheOldStore(t *testing.T) {
 	if strings.Contains(strings.ToLower(block), "engram") {
 		t.Errorf("the memorycard block names Engram:\n%s", block)
 	}
-	for _, banned := range []string{"gentle-ai", "mem_capture_passive", "mem_get_observation", "mem_session_summary"} {
+	for _, banned := range []string{"gentle-ai", "mem_capture_passive", "mem_get_observation", "mem_session_summary", "subagent-stop", "orchestrator"} {
 		if strings.Contains(block, banned) {
 			t.Errorf("the memorycard block names %s, which is not a memorycard tool", banned)
 		}
+	}
+}
+
+// keyLearningsBullet is the capture rule S13 (L166) adds to the memorycard block, adapted from the
+// owner's Claude Code block: the plugin, not a hook, runs the capture.
+const keyLearningsBullet = "- The `## Key Learnings` block → automatic: when a subagent returns, the memorycard plugin runs `memorycard capture` on the subagent's final text. Keep closing worker reports with that block. Each item must be at least 60 characters: `capture` silently skips shorter items and items with a probe marker."
+
+func TestOpenCodeMemorycardBlockTellsWorkersToCloseWithKeyLearnings(t *testing.T) {
+	root := t.TempDir()
+	adapter := engineRuntime.NewOpenCodeAdapter(root, engineRuntime.OpenCodeOptions{OverlayDir: overlayWith(t, fakeRules, fakeStyle)})
+	adapter.Install()
+
+	text := readText(t, agentsPath(root))
+	start := strings.Index(text, "## memorycard is the memory store")
+	end := strings.Index(text, agentsClose)
+	if start < 0 || end < start {
+		t.Fatalf("AGENTS.md has no memorycard block before the close marker:\n%s", text)
+	}
+	block := text[start:end]
+	if got := strings.Count(block, keyLearningsBullet); got != 1 {
+		t.Errorf("the memorycard block holds the Key Learnings bullet %d times, want once:\n%s", got, block)
+	}
+	if !strings.HasSuffix(strings.TrimRight(block, "\n"), "\n"+keyLearningsBullet) {
+		t.Errorf("the Key Learnings bullet is not the last line of the block:\n%s", block)
+	}
+	for _, kept := range []string{"Keep closing worker reports with that block.", "Each item must be at least 60 characters: `capture` silently skips shorter items and items with a probe marker."} {
+		if !strings.Contains(block, kept) {
+			t.Errorf("the memorycard block lost %q:\n%s", kept, block)
+		}
+	}
+}
+
+func TestOpenCodeStatusReadsABlockWithoutTheKeyLearningsRuleAsStale(t *testing.T) {
+	root := t.TempDir()
+	overlay := overlayWith(t, fakeRules, fakeStyle)
+	adapter := engineRuntime.NewOpenCodeAdapter(root, engineRuntime.OpenCodeOptions{OverlayDir: overlay})
+	adapter.Install()
+	writeMatchingActiveMarker(t, root)
+	current := readText(t, agentsPath(root))
+	old := strings.Replace(current, "\n"+keyLearningsBullet, "", 1)
+	if old == current {
+		t.Fatalf("the installed block holds no Key Learnings bullet to take out:\n%s", current)
+	}
+	writeText(t, agentsPath(root), "# Mine\n\n"+old+"\nText after the block.\n")
+
+	stale := adapter.Status()
+	if stale.Status != core.CapabilityPartial || !strings.Contains(stale.Message, "stale") || !strings.Contains(stale.Message, "engine runtime update --target opencode") {
+		t.Errorf("Status() = %#v, want partial, stale, and the update verb", stale)
+	}
+	adapter.Update()
+
+	updated := readText(t, agentsPath(root))
+	if want := "# Mine\n\n" + current + "\nText after the block.\n"; updated != want {
+		t.Errorf("Update() did not replace the block in place and keep every byte outside it:\n%s", updated)
 	}
 }
 
