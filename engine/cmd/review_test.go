@@ -1247,10 +1247,12 @@ func TestWrapperUsageOfReviewFindingsSaysWhatTheEngineUsageSays(t *testing.T) {
 	var out bytes.Buffer
 	usage(&out)
 	flatEngine := strings.Join(strings.Fields(out.String()), " ")
-	flat := strings.Join(strings.Fields(string(wrapper)), " ")
+	flat := docSection(t, string(wrapper), "findings --feature", "stop-hook")
 	for _, pair := range []struct{ engine, inWrapper string }{
 		{"engine review findings --feature <name> --stored <result> [--cwd <repo>]", "findings --feature NAME --stored RESULT [--cwd REPO]"},
 		{"(<head12>-<n>.json)", "HEAD12-N.json"},
+		{"review is the identifier <feature>/<head12>-<n>", "review is NAME/HEAD12-N"},
+		{"BLOCKER or CRITICAL of causal_disposition unknown that the verdict found reproduced on base (reason verdict base-reproduced)", "BLOCKER or CRITICAL of causal_disposition unknown the verdict found reproduced on base (reason verdict base-reproduced)"},
 		{"{review, verdict, kept, left_out}", "{review, verdict, kept, left_out}"},
 		{"is left out when the verifier did not run", "is left out when the verifier did not run"},
 		{"(id, location, severity, claim, evidence_class, causal_disposition, proof_refs), in the order of the reply", "(id, location, severity, claim, evidence_class, causal_disposition, proof_refs), in the order of the reply"},
@@ -1267,6 +1269,24 @@ func TestWrapperUsageOfReviewFindingsSaysWhatTheEngineUsageSays(t *testing.T) {
 		}
 		if !strings.Contains(flat, pair.inWrapper) {
 			t.Errorf("bin/lib/usage.sh lacks %q, which the engine usage says as %q", pair.inWrapper, pair.engine)
+		}
+	}
+}
+
+// The findings entry of the README says the signature, the identifier, the four reasons and that both lists are there.
+func TestReadmeFindingsEntrySaysWhatTheEngineUsageSays(t *testing.T) {
+	readme, err := os.ReadFile(filepath.Join("..", "..", "README.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	entry := docSection(t, string(readme), "findings --feature <name>", "stop-hook")
+	for _, want := range []string{
+		"findings --feature <name> --stored <result> [--cwd <repo>]", "<feature>/<head12>-<n>",
+		"causal_disposition pre-existing", "causal_disposition base-only", "verdict not-reproduced", "verdict base-reproduced",
+		"Both lists are always there",
+	} {
+		if !strings.Contains(entry, want) {
+			t.Errorf("the findings entry of README.md lacks %q", want)
 		}
 	}
 }

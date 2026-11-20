@@ -827,8 +827,10 @@ overlay review <verb>
         read and is left out when the verifier did not run, `kept` lists the findings that count as evidence (id,
         location, severity, claim, evidence_class, causal_disposition, proof_refs), in the order of the reply, and
         `left_out` lists each of the others (id, severity, reason). A finding is left out when its causal_disposition is
-        pre-existing or base-only, or when it is a BLOCKER or CRITICAL that the verdict found not-reproduced. Both lists
-        are always there. A result that is not stored, is not one, or whose verdict does not hold is refused, never an
+        pre-existing or base-only (reason `causal_disposition pre-existing` or `causal_disposition base-only`), or when
+        it is a BLOCKER or CRITICAL that the verdict found not-reproduced (reason `verdict not-reproduced`), or when it
+        is a BLOCKER or CRITICAL of causal_disposition unknown that the verdict found reproduced on base (reason
+        `verdict base-reproduced`). Both lists are always there. A result that is not stored, is not one, or whose verdict does not hold is refused, never an
         empty list. Nothing is stored. Exit 0 listed, 1 usage error, a result that cannot be read or any other failure.
     stop-hook
         Not run by a person: the Claude Code Stop hook that `install-hooks` wires (the review stop-hook, described

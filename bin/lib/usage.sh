@@ -394,8 +394,12 @@ Commands:
                                              evidence_class, causal_disposition, proof_refs), in the order of the
                                              reply; left_out lists each of the others (id, severity, reason). A
                                              finding is left out when its causal_disposition is pre-existing or
-                                             base-only, or when it is a BLOCKER or CRITICAL the verdict found
-                                             not-reproduced. Both lists are always there. A result that is not
+                                             base-only (reason causal_disposition pre-existing or
+                                             causal_disposition base-only), or when it is a BLOCKER or CRITICAL the
+                                             verdict found not-reproduced (reason verdict not-reproduced), or when
+                                             it is a BLOCKER or CRITICAL of causal_disposition unknown the verdict
+                                             found reproduced on base (reason verdict base-reproduced). Both lists
+                                             are always there. A result that is not
                                              stored, is not one, or whose verdict does not hold is refused, never an
                                              empty list; store nothing
                                              (exit 0 listed, 1 usage error, a result that cannot be read or any other failure)

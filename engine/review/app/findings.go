@@ -16,6 +16,9 @@ const (
 	ReasonPreExisting   = "causal_disposition pre-existing"
 	ReasonBaseOnly      = "causal_disposition base-only"
 	ReasonNotReproduced = "verdict not-reproduced"
+	// ReasonBaseReproduced is a severe finding of unknown disposition that the verifier found on base too: the diff
+	// did not cause it, and reviewverdict.Decide carries it as a follow-up.
+	ReasonBaseReproduced = "verdict base-reproduced"
 )
 
 // Findings is the listing of one stored result for the learning loop: the findings that count as evidence and the
@@ -47,8 +50,10 @@ type LeftOut struct {
 // nothing and asks git only where the repository is.
 //
 // A finding is left out when its causal disposition is pre-existing or base-only, whatever its severity (read
-// first), or when it is BLOCKER or CRITICAL and the verdict found it not-reproduced on head. Every other finding is
-// kept: a verdict that reproduced it or did not run, and a WARNING or SUGGESTION, which a verdict does not judge.
+// first), or when it is BLOCKER or CRITICAL and the verdict found it not-reproduced on head, or when it is BLOCKER
+// or CRITICAL of unknown disposition and the verdict found it on base (reviewverdict.Decide carries it as a fate of
+// the base). Every other finding is kept: a verdict that reproduced it or did not run, and a WARNING or SUGGESTION,
+// which a verdict does not judge.
 func (s Service) Findings(dir, feature, stored string) (Findings, error) {
 	if err := review.CheckFeature(feature); err != nil {
 		return Findings{}, err
@@ -93,8 +98,14 @@ func leftOutReason(f reviewresult.Finding, verdicts []reviewverdict.Verdict) str
 		return ReasonBaseOnly
 	case f.Severity.Severe():
 		for _, v := range verdicts {
-			if v.ID == f.ID && v.Result == reviewverdict.NotReproduced {
+			if v.ID != f.ID {
+				continue
+			}
+			if v.Result == reviewverdict.NotReproduced {
 				return ReasonNotReproduced
+			}
+			if f.Disposition == reviewresult.DispositionUnknown && v.Base == reviewverdict.Reproduced {
+				return ReasonBaseReproduced
 			}
 		}
 	}

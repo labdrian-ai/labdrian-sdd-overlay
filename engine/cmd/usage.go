@@ -266,7 +266,7 @@ func usage(w io.Writer) {
 	fmt.Fprintln(w, "    stdout is one JSON object {review, verdict, kept, left_out}: review is the identifier <feature>/<head12>-<n>, the same on every run; verdict is the stored verdict that was read and is left out when the")
 	fmt.Fprintln(w, "    verifier did not run; kept lists the findings that count as evidence (id, location, severity, claim, evidence_class, causal_disposition, proof_refs), in the order of the reply; left_out lists each of the others")
 	fmt.Fprintln(w, "    (id, severity, reason). A finding is left out when its causal_disposition is pre-existing or base-only (reason causal_disposition pre-existing or causal_disposition base-only), or when it is a BLOCKER or CRITICAL")
-	fmt.Fprintln(w, "    that the verdict found not-reproduced (reason verdict not-reproduced). Both lists are always there. A result that is not stored, is not one, or whose verdict does not hold is refused with one line on stderr and")
+	fmt.Fprintln(w, "    that the verdict found not-reproduced (reason verdict not-reproduced), or when it is a BLOCKER or CRITICAL of causal_disposition unknown that the verdict found reproduced on base (reason verdict base-reproduced). Both lists are always there. A result that is not stored, is not one, or whose verdict does not hold is refused with one line on stderr and")
 	fmt.Fprintln(w, "    nothing on stdout, never an empty list. Nothing is stored. exit 0 listed, 1 usage error, a result that cannot be read or any other failure")
 	fmt.Fprintln(w, "  engine review stop-hook")
 	fmt.Fprintln(w, "    internal Claude Code Stop hook command (install-hooks installs it; on an existing install, re-run install-hooks and restart Claude Code to load it): reads the hook JSON on stdin and, in a working")

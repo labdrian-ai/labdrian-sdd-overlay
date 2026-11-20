@@ -2,12 +2,14 @@ package app_test
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/review/app"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/reviewresult"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/reviewverdict"
 )
 
@@ -182,6 +184,89 @@ func TestFindingsRefusesAnUnsafeFeatureOrNameBeforeAskingAnyone(t *testing.T) {
 
 		if !errors.Is(err, tc.want) || len(g.calls) != 0 || len(store.calls) != 0 {
 			t.Errorf("Findings(%q, %q) error = %v with git calls %q and store calls %q, want one that is %v and no call", tc.feature, tc.stored, err, g.calls, store.calls, tc.want)
+		}
+	}
+}
+
+// verdictOnBase is the verdict of a check that ran on head with result and on base with base.
+func verdictOnBase(id, result, base string) string {
+	command := "go test ./engine/"
+	if result == "not-run" && base == "not-run" {
+		command = ""
+	}
+	return fmt.Sprintf(`{"id":%q,"result":%q,"command":%q,"output":"the output","base_result":%q}`, id, result, command, base)
+}
+
+// A severe finding of unknown disposition that the verifier found on base too is a fate of the base, as
+// reviewverdict.Decide reads it: it is left out, whether the check found it on head or did not run there.
+func TestFindingsLeavesOutASevereUnknownFindingTheVerdictFoundOnBase(t *testing.T) {
+	for _, headResult := range []string{"reproduced", "not-run"} {
+		t.Run("result "+headResult, func(t *testing.T) {
+			store := newFakeResults()
+			name := reviewed(t, store, baseSHA, headSHA, 1, disposed("F1", "BLOCKER", "unknown"))
+			withVerdict(t, store, verdictReply(verdictOnBase("F1", headResult, "reproduced")))
+
+			got, err := app.New(newFakeGit(), store).Findings("/work/wt/feature", "own-rdd", name)
+
+			kept, left := idsOf(got)
+			if err != nil || len(kept) != 0 || left["F1"] != app.ReasonBaseReproduced || app.ReasonBaseReproduced != "verdict base-reproduced" {
+				t.Errorf("kept %v, left out %v, %v; want F1 left out with verdict base-reproduced", kept, left, err)
+			}
+		})
+	}
+}
+
+// The cases the fourth rule does not touch stay as they were.
+func TestFindingsKeepsWhatTheBaseRuleDoesNotReach(t *testing.T) {
+	store := newFakeResults()
+	name := reviewed(t, store, baseSHA, headSHA, 1,
+		disposed("F1", "BLOCKER", "unknown"), disposed("F2", "BLOCKER", "unknown"),
+		disposed("F3", "CRITICAL", "introduced"), disposed("F4", "WARNING", "unknown"))
+	withVerdict(t, store, verdictReply(verdictOnBase("F1", "not-reproduced", "reproduced"), verdictOnBase("F2", "reproduced", "not-run"),
+		verdictOnBase("F3", "reproduced", "reproduced"), verdictOnBase("F4", "reproduced", "reproduced")))
+
+	got, err := app.New(newFakeGit(), store).Findings("/work/wt/feature", "own-rdd", name)
+
+	kept, left := idsOf(got)
+	wantLeft := map[string]string{"F1": "verdict not-reproduced"}
+	if err != nil || !reflect.DeepEqual(kept, []string{"F2", "F3", "F4"}) || !reflect.DeepEqual(left, wantLeft) {
+		t.Errorf("kept %v, left out %v, %v; want F2, F3 and F4 kept and %v left out", kept, left, err, wantLeft)
+	}
+}
+
+// A severe finding is kept exactly when reviewverdict.Decide lists it as blocking or unverified, over every
+// disposition, result and base_result, and with no verdict at all.
+func TestFindingsKeepsASevereFindingExactlyWhenDecideListsItAsBlockingOrUnverified(t *testing.T) {
+	dispositions := []reviewresult.Disposition{
+		reviewresult.DispositionIntroduced, reviewresult.DispositionBehaviorActivated, reviewresult.DispositionWorsened,
+		reviewresult.DispositionPreExisting, reviewresult.DispositionBaseOnly, reviewresult.DispositionUnknown,
+	}
+	reproductions := []reviewverdict.Reproduction{reviewverdict.Reproduced, reviewverdict.NotReproduced, reviewverdict.NotRun}
+	for _, severity := range []string{"BLOCKER", "CRITICAL"} {
+		for _, d := range dispositions {
+			for _, result := range append([]reviewverdict.Reproduction{""}, reproductions...) {
+				for _, base := range reproductions {
+					if result == "" && base != reviewverdict.NotRun {
+						continue // no verdict has no base_result to vary
+					}
+					name := fmt.Sprintf("%s %s result %q base %q", severity, d, result, base)
+					store := newFakeResults()
+					stored := reviewed(t, store, baseSHA, headSHA, 1, disposed("F1", severity, string(d)))
+					var verdicts []reviewverdict.Verdict
+					if result != "" {
+						withVerdict(t, store, verdictReply(verdictOnBase("F1", string(result), string(base))))
+						verdicts = []reviewverdict.Verdict{{ID: "F1", Result: result, Base: base}}
+					}
+					decision := reviewverdict.Decide(reviewresult.Result{Findings: []reviewresult.Finding{{ID: "F1", Severity: reviewresult.Severity(severity), Disposition: d}}}, verdicts)
+
+					got, err := app.New(newFakeGit(), store).Findings("/work/wt/feature", "own-rdd", stored)
+
+					want := len(decision.Blocking)+len(decision.Unverified) == 1
+					if err != nil || (len(got.Kept) == 1) != want {
+						t.Errorf("%s: kept %d (%v), Decide blocking %v unverified %v; want kept exactly when Decide lists it", name, len(got.Kept), err, decision.Blocking, decision.Unverified)
+					}
+				}
+			}
 		}
 	}
 }
