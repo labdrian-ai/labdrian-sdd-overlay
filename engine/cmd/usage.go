@@ -328,7 +328,7 @@ func usage(w io.Writer) {
 	fmt.Fprintln(w, "    While the checkout of the working directory is bound to an open workflow with a role chain, 'append' stores only a record of that workflow's project, goal and chain (a record of another one is exit 1,")
 	fmt.Fprintln(w, "    nothing stored, and the message names the --project, --goal and --chain to use), and 'resume' and 'next' refuse the workflow's goal under another --chain, naming its chain. A directory outside a repository,")
 	fmt.Fprintln(w, "    no binding, a closed workflow and one with no role chain go as before; a binding store that cannot be read refuses 'append' only.")
-	fmt.Fprintln(w, "    The first record (seq 1) of a goal whose feature document odd/tasks/<goal>.md is at the worktree root of the working directory is exit 1, nothing stored: that chain starts with 'workflow open', which writes its first two records.")
+	fmt.Fprintln(w, "    With no open workflow bound, a record of chain <goal> from any role but the prototyper, when odd/tasks/<goal>.md is at the worktree root of the working directory, is exit 1, nothing stored: 'workflow open' writes the shaper's and the estimator's records under its own chain.")
 	fmt.Fprintln(w, "    Any other record, and a review-report or a review-exemption that is interrupted, is stored as before. exit 0 stored, 1 any other outcome")
 	fmt.Fprintln(w, "  engine roles skill-paths --skills-root <dir>")
 	fmt.Fprintln(w, "    internal OpenCode plugin command: reads a launch prompt on stdin and prints it with each bare skill id under the line \"## Skills to load before work\" made the absolute path")

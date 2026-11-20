@@ -324,8 +324,13 @@ func runRolesAppend(workingDir func() (string, error), args []string, stdin io.R
 		fail("%s", refusal)
 		return
 	}
-	// The first record of a feature's chain is written by 'workflow open', not by this verb (S16 B5, T57).
-	if refusal := roles.FeatureEntryRefusal(h.Seq, h.GoalID, hasFeatureDocument(workingDir, h.Seq, h.GoalID)); refusal != "" {
+	// The shaper's and the estimator's records of a feature are written by 'workflow open', under its own chain
+	// (S16 B5, T57); the document is read only for a record the rule can refuse.
+	hasDocument := false
+	if !bound.Holds() && h.ChainID == h.GoalID && h.FromRole != roles.RolePrototyper {
+		hasDocument = hasFeatureDocument(workingDir, h.GoalID)
+	}
+	if refusal := roles.FeatureChainRefusal(bound, h.GoalID, h.ChainID, h.FromRole, hasDocument); refusal != "" {
 		fail("%s", refusal)
 		return
 	}

@@ -28,22 +28,30 @@ func TestBoundAppendRefusal(t *testing.T) {
 	}
 }
 
-func TestFeatureEntryRefusal(t *testing.T) {
-	const refusal = "odd/tasks/f.md is a feature document, so its role chain starts with labdrian workflow open --feature f --task <T>, " +
-		"which writes its first two records; run it, then append the next hops with the --chain it prints"
+func TestFeatureChainRefusal(t *testing.T) {
+	const refusal = "odd/tasks/f.md is a feature document: from the shaper on, its role chain is the one " +
+		"labdrian workflow open --feature f --task <T> writes, with the shaper's and the estimator's records; run it, then append the next hops " +
+		"with the --chain it prints (chain f takes only the prototyper's hops)"
+	closed := withStatus(boundSample, "closed")
 	for _, c := range []struct {
 		name        string
-		seq         int
-		goal        string
+		bound       BoundWorkflow
+		goal, chain string
+		from        Role
 		hasDocument bool
 		want        string
 	}{
-		{"the first record of a goal with a document", 1, "f", true, refusal},
-		{"the first record of a goal with no document", 1, "f", false, ""},
-		{"the second record of a goal with a document", 2, "f", true, ""},
-		{"no sequence number", 0, "f", true, ""},
+		{"a shaper hop, no workflow", BoundWorkflow{}, "f", "f", RoleShaper, true, refusal},
+		{"an estimator hop, no workflow", BoundWorkflow{}, "f", "f", RoleEstimator, true, refusal},
+		{"a builder hop, no workflow", BoundWorkflow{}, "f", "f", RoleBuilder, true, refusal},
+		{"a reviewer hop, a closed workflow", closed, "f", "f", RoleReviewer, true, refusal},
+		{"a prototyper hop", BoundWorkflow{}, "f", "f", RolePrototyper, true, ""},
+		{"another chain of the feature", BoundWorkflow{}, "f", "f-t1", RoleShaper, true, ""},
+		{"no document", BoundWorkflow{}, "f", "f", RoleShaper, false, ""},
+		{"an open workflow, chain of the feature", boundSample, "f", "f", RoleShaper, true, ""},
+		{"an open workflow, another chain", boundSample, "f", "f-t1", RoleShaper, true, ""},
 	} {
-		if got := FeatureEntryRefusal(c.seq, c.goal, c.hasDocument); got != c.want {
+		if got := FeatureChainRefusal(c.bound, c.goal, c.chain, c.from, c.hasDocument); got != c.want {
 			t.Errorf("%s: got %q, want %q", c.name, got, c.want)
 		}
 	}

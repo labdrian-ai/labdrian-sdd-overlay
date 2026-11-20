@@ -59,20 +59,26 @@ func boundWorkflowHere(workingDir func() (string, error)) (roles.BoundWorkflow, 
 	}, nil
 }
 
-// hasFeatureDocument is whether the record with seq 1 of goal names a feature of the checkout of the working
-// directory: the goal is a feature name and odd/tasks/<goal>.md at the worktree root is read through the
-// documents port the builder guard reads with. A cwd that cannot be read, a directory outside any
-// repository and a document the port refuses all answer false: the verb goes as it did.
-func hasFeatureDocument(workingDir func() (string, error), seq int, goal string) bool {
-	if workingDir == nil || seq != 1 || !oddtask.ValidFeature(goal) {
+// hasFeatureDocument is whether goal names a feature of the checkout of the working directory: odd/tasks/<goal>.md
+// at the worktree root, read through the documents port the builder guard reads with. It is false only when the
+// goal is no feature name, or the read finds no file (oddtask.CauseNotFound) or no repository holds the working
+// directory (oddtask.CauseNoRepository). Every other outcome is true, so the rule fails closed: a document
+// read, a symbolic link, a file that is not regular or is too large, an open or read error, an error that is
+// no ReadError, and a working directory that cannot be read.
+func hasFeatureDocument(workingDir func() (string, error), goal string) bool {
+	if workingDir == nil || !oddtask.ValidFeature(goal) {
 		return false
 	}
 	cwd, err := workingDir()
 	if err != nil {
-		return false
+		return true
 	}
 	_, err = fsdoc.Reader{Root: worktreeRoot}.Read(path.Join("odd", "tasks", goal+".md"), cwd)
-	return err == nil
+	var refused *oddtask.ReadError
+	if errors.As(err, &refused) {
+		return refused.Cause != oddtask.CauseNotFound && refused.Cause != oddtask.CauseNoRepository
+	}
+	return true
 }
 
 // boundReadRefusal is the refusal of 'roles resume' and 'roles next' for a goal and chain, "" to go on. A binding
