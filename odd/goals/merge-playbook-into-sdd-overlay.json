@@ -1,0 +1,45 @@
+{
+  "version": 3,
+  "project_id": "labdrian-sdd-overlay",
+  "goal_id": "merge-playbook-into-sdd-overlay",
+  "objective": "Deliver the branch feat/playbook-merge so labdrian-sdd-overlay carries the playbook wiki and agents (snapshot 6de8566, v3.6.0, MIT) as one tool with the overlay's roles, learning loop first, per odd/tasks/merge-playbook-into-sdd-overlay.md.",
+  "scope": "The specs S1-S15 of odd/tasks/merge-playbook-into-sdd-overlay.md; tasks T1-T18 in the document's execution order, the learning loop (T1-T6, T16, T17) first, each task blocked by an open decision waiting for the owner's answer.",
+  "constraints": [
+    "No new standalone repository; every imported playbook capability is listed in overlay.manifest.",
+    "The dev checkout ~/labdrian-sdd-overlay is never written; work happens in ~/labdrian-sdd-overlay-playbook-merge.",
+    "Commits use Conventional Commits with no AI attribution or Co-Authored-By.",
+    "Push, pull request and merge happen only on the owner's explicit decision.",
+    "Persisted artifacts hold no persona text.",
+    "No merged artifact names Engram as a write target; memorycard is the one memory store.",
+    "Absorbed playbook code carries the MIT LICENSE notice and a provenance note naming snapshot 6de8566 from the first commit that absorbs it.",
+    "Nothing is consolidated or promoted in the evidence loop without the owner's answer or a delegation the owner gave.",
+    "A task blocked by an open decision is not built until the owner answers it."
+  ],
+  "non_goals": [
+    "Renaming the tool to trysm.",
+    "Upstream tracking or a vendor branch for the playbook.",
+    "Writing to Engram.",
+    "Replay or backtest of a rule on past reviews, rule retirement, rule pinning, scoring, and parallel candidate generation.",
+    "Any number from arXiv 2611.18856 or 2611.23476 as an acceptance criterion."
+  ],
+  "acceptance_criteria": [
+    "Each task of odd/tasks/merge-playbook-into-sdd-overlay.md that is built is checked off with its commits.",
+    "A stored review result with kept findings yields Evidence rows on docs/wiki/evidence.md once, and a result with no kept finding is never asked about.",
+    "With no level-2+ kind, rule injection adds no text to the builder or reviewer prompt; with one, the index reaches both.",
+    "After a consolidation, the history of the kind holds the replaced rule, its period and its review identifiers.",
+    "gadu-generate --check is green in CI with the classifier and explorer agents generated.",
+    "No merged artifact names Engram as a write target, and the MIT notice and provenance note are present from the first commit that absorbs playbook content."
+  ],
+  "memory_directive": {
+    "version": 1,
+    "scope": "project",
+    "sources": [
+      "engram",
+      "longterm-mem",
+      "procedural-skills"
+    ],
+    "write": "none"
+  },
+  "runtime_scope": "Claude Code, as the parent that runs the labdrian workflow and the role agents; other runtime targets wait on OD-7.",
+  "delivery_boundary": "Work-unit commits on feat/playbook-merge in ~/labdrian-sdd-overlay-playbook-merge; push, pull requests and merges remain the owner's explicit decisions."
+}

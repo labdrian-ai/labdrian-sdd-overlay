@@ -164,7 +164,7 @@ Branch: `feat/playbook-merge` (from origin/main ce22eb3f) in the clone `~/labdri
 
 ## Tasks
 
-Order is execution order: the learning loop (T1-T6, T16, T17) first, per S2, then the roadmap slices re-ordered behind it. Each task is shaped as one reviewable work unit of about 400 authored changed lines. Line forecasts are pending the estimator. S1 and S15 are constraints every task is held to.
+Order is execution order: the learning loop (T1-T6, T16, T17) first, per S2, then the roadmap slices re-ordered behind it. Each task is shaped as one reviewable work unit of about 400 authored changed lines. Line forecasts are filled for every task in L13 (ranges, basis and confidence per task; several high bounds exceed one slice, flagged there). S1 and S15 are constraints every task is held to.
 
 - [ ] T1 — S2-S3 — inline — findings feed: an engine function and a read-only verb (assumption: `labdrian review findings --feature <f> --stored <head12>-<n>.json`) that reads a stored result and its verdict through the existing store readers. It prints the kept findings with the review identifier and the left-out findings with their reason. Tests cover each skip rule and an unreadable result. Help text and `odd/review-results/README.md` are updated. Depends on no open decision. Risk expectation: none (adds a command; reuses the result/verdict readers `check` uses, so it must not change them) — shaped: L6 — commit: -
 - [ ] T2 — S2, S4, S9 — inline — evidence store: absorb `evidence.sh` and `evidence-rules.md` from snapshot `6de8566` as overlay-owned code, with tests; detail in S4 (T2 detail) and L8. Risk expectation: item 5 — shaped: L8 — commit: -
@@ -367,3 +367,57 @@ Order is execution order: the learning loop (T1-T6, T16, T17) first, per S2, the
   - OD-11 blocks T5's cap, T16, and through T16 also T17.
   - OD-12 blocks nothing.
   - Assumptions to confirm: the names `classifier` and `explorer`, write -> builder / review -> reviewer, and explorer outside the chain.
+- **L13** (2026-11-20, shaper): Role-chain continuation and T1 size, decided by the owner.
+
+  **Attribution, corrected.** The new chain `merge-playbook-into-sdd-overlay-r2` was proposed by the foreman and recommended by another agent session (rea-sandbox). The owner relayed that session's text into the foreman session. It is the rea-sandbox session's recommendation, not the owner's words. Verbatim as relayed: "ecomiendo la cadena nueva merge-playbook-into-sdd-overlay-r2. Es lo único que deja una cadena honesta: el registro 1 queda huérfano, pero ninguno de los dos digests miente. Rompe la convención de que el nombre de la cadena iguale al del cambio, y es el costo menor frente a certificar un documento falso." The foreman first recorded this text as the owner's decision; this entry corrects that misattribution.
+
+  **Owner decision.** Typed by the owner in the foreman session on 2026-11-20, verbatim: "si las 2". It answers this foreman question (paraphrased in English): confirm (1) continuing on a new chain `merge-playbook-into-sdd-overlay-r2` starting at the final document, and (2) building T1 whole now, splitting only if it passes about 400 authored lines.
+
+  **Context.** Role-chain record 000001 of chain `merge-playbook-into-sdd-overlay` (shaper -> estimator) holds payload digest `5299a693…`, a document of 15 tasks all marked L6, which no longer exists. The role-chain rule requires the shaper -> estimator and estimator -> builder records to carry the same digest, so that chain cannot continue honestly on this document. As relayed by the coordinator; the shaper did not read the record.
+
+  **Settled.**
+  - Decision (1), owner: "si las 2". The chain continues as `merge-playbook-into-sdd-overlay-r2`, starting at shaper -> estimator on the document this entry closes. Record 000001 stays orphaned. The chain name no longer equals the change name; that convention break is the accepted cost.
+  - Decision (2), owner: "entera" (relayed by the rea-sandbox session), confirmed by "si las 2". T1 is built whole, not split. The other large tasks are not split now; each is revisited when it is reached. If T1 grows past one reviewable slice (~400 authored lines) while it is built, the builder stops and reports status `partial`, and the split is decided then.
+
+  **Also in this entry.**
+  - The per-task line forecasts below fill the Tasks note that said they were pending the estimator. That note now points here. No task line, spec, order, dependency or open decision was changed, and no `shaped:` mark was added or moved.
+  - The goal file `odd/goals/merge-playbook-into-sdd-overlay.json` (version 3) was created from the `labdrian workflow goal-base` output, with its other fields taken from this document.
+
+  **Forecast method** (`sdd-time-estimation`, shaper row):
+  - Authored changed lines: additions plus deletions, tests included, generated agent files excluded.
+  - Lines copied from snapshot `6de8566` are listed apart, as "copied". They are in the diff but are not authored. Sizes are from line counts of the local playbook clone, whose reflog shows a fast-forward to `6de8566` (v3.6.0); its working tree was not checked.
+  - Basis for every line range: `lines-ref n=7`, the repository reference class. Features landed at 0.7-4.2x their line forecast, five of seven above 2x. Units under 200 lines landed at 0.85-1.22x their high bound, and went over only when heavy in tests or fixtures. So test-heavy Go tasks get high bounds of about 2x a first guess.
+  - Minutes are agent-compute-time only, `no-actuals n=0`, and are derived as lines/10 to lines/3. This divisor is an assumption with no actuals behind it. The minutes are not a calendar time and not a checkpoint count.
+  - A blocked task gets a wider range, and the open decision that blocks it is named as the reason.
+
+  **Forecast per task** (task: pieces; lines low-high; basis; confidence; low_minutes-high_minutes, agent-compute-time):
+  - T1: 3 (feed function, verb, tests with help and README); 300-600; lines-ref n=7; low; 30-200. It is test-heavy: `engine/reviewresult` tests are 60-469 lines per file.
+  - T2: 3 (absorbed script and rules with LICENSE and provenance, manifest entry, shell tests and lint); 150-350 authored plus about 265 copied (`evidence.sh` 215, `evidence-rules.md` 27, the notice); lines-ref n=7; low; 15-120.
+  - T3: 2 (`roles/classifier/body.md` adapted from `classify.md`, 69 lines; the `roles.go` row and the `roles_test.go` row); 90-200; lines-ref n=7; medium; 9-70.
+  - T4: 3 (role-chain skill step, stop-hook check, four test cases); 250-500; lines-ref n=7; low; 25-170.
+  - T5: 3 (gate-task injection, reviewer body line, golden tests and size measurement); 200-500; lines-ref n=7; low; 20-170. Widened for OD-11 (the cap is undecided). The range covers Claude Code only; other runtimes wait on OD-7 and are not sized.
+  - T6: 3 (close step in the role-chain skill, `evidence.sh` History check and `history` mode, tests); 300-600; lines-ref n=7; low; 30-200.
+  - T16: 3 (`engine/reviewresult` schema and rules, reviewer body and README, T1 feed extension with tests including an old result); 300-650; lines-ref n=7; low; 30-220. Widened for OD-11.
+  - T17: 3 (classifier body, `evidence.sh` Exposure check and `exposure` mode, tests); 200-500; lines-ref n=7; low; 20-170. Widened for OD-11, through T16.
+  - T18: 2 (`roles/explorer/body.md` from the S14 draft; the `roles.go` row and the `roles_test.go` row); 40-150; lines-ref n=7; medium; 4-50.
+  - T7: 2 (Engram to memorycard in absorbed text, where `rules.md` is 36 lines; persona and provenance check); 20-100; lines-ref n=7; medium; 2-35.
+  - T8: 3 (gate merge with `review-before-commit.sh`, 90 lines; Risk trailer path; tests); 250-700; lines-ref n=7; low; 25-235. Widened for OD-6: which gate wins decides the design.
+  - T9: 3 (feature-document place for ids, builder guard parsing kept, resolver with tests); 200-600; lines-ref n=7; low; 20-200. Widened for OD-5.
+  - T10: 2 (absorbed wiki skills and hooks; manifest, LICENSE and provenance); 80-250 authored plus about 1,260-1,750 copied; lines-ref n=7; low; 8-85.
+    - The copied range is a sum of line counts: prepare-project with its references 408, doctor with references and script 292, write-docs 42, init 26, `format.md` 147, commit-check and merge-step hooks 86, `git-hook-lib.sh` 158, `merge-step.sh` 102. The high end adds `check-wiki.sh` 488, if the commit check needs it.
+    - Widened for OD-7.
+  - T11: 3 (deploy of T10 and the loop pieces, replacing the marketplace install, tests); 300-800; lines-ref n=7; low; 30-270. Widened for OD-7.
+  - T12: 3 (owned hook families in `engine/settings`, removal by owner, tests); 300-700; lines-ref n=7; low; 30-235. Widened for OD-6 and OD-7.
+  - T13: 2 (merged session text, word-count check); 100-350; lines-ref n=7; low; 10-120. Widened for OD-8.
+  - T14: 1 (mapping table and the `models.conf` reconciliation, documentation only); 30-80; lines-ref n=7; medium; 3-30.
+  - T15: 1 (check that every mapped role is generated and `gadu-generate --check` is green; generation only if T14 changes); 0-250; lines-ref n=7; low; 0-85. Widened for OD-7 and for a possible change to T14.
+  - Total: about 3,110-7,880 authored lines, plus about 1,525-2,015 copied lines.
+
+  **Steelman.** Per-task ranges taken from the repository's own record show the owner the real size. The `ask-on-risk` threshold in the header (above 400 authored lines) is then visible task by task, not only for the whole feature.
+
+  **Strongest counter-argument.** Ranges for blocked tasks (T5's cap, T8, T9, T10-T13, T15, T16, T17) size designs that do not exist yet, so a number can read as a commitment. Tradeoff accepted: they are given wide and at low confidence, each names its blocker, and each is re-forecast when its open decision is answered.
+
+  **Risks, not decided here:**
+  - The skill says a package whose high bound is above one slice (~400 lines), or which has more than two pieces, is split, not estimated. T1, T2 with its copies, T4, T5, T6, T8, T9, T10 with its copies, T11, T12, T16 and T17 meet that rule. This pass was told not to change task scope, so none was split. For T1 the owner decided to build it whole (Settled, decision (2)); for the others, whether to split is decided when each is reached.
+  - T10's copied volume alone is about 3-4 slices of diff.
+  - The rea-sandbox quote above starts with "ecomiendo"; this is the text as relayed, kept unchanged.
