@@ -67,8 +67,8 @@ func TestRewriteSkillPathsReturnsAPromptWithNoHeaderUnchanged(t *testing.T) {
 	root, _ := skillsRoot(t)
 	for name, prompt := range map[string]string{
 		"empty":            "",
-		"no header":        "Build T1.\ntest-first\n",
-		"a lower heading":  "### Skills to load before work\ntest-first\n",
+		"no header":        "Build T1.\nplain text\n",
+		"a lower heading":  "### Skills to load before work\nplain text\n",
 		"header in a text": "Write ## Skills to load before work on its own line.\n",
 	} {
 		t.Run(name, func(t *testing.T) {

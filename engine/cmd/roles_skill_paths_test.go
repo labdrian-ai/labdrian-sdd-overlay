@@ -50,9 +50,21 @@ func TestRolesSkillPathsPrintsThePromptWithTheIdsAsPaths(t *testing.T) {
 	}
 }
 
+func TestRolesSkillPathsAddsTheSkillAPromptNamesInProse(t *testing.T) {
+	root, skillFile := skillPathsRoot(t)
+	prompt := "Build T1 with the test-first skill.\n"
+
+	stdout, stderr, exits := runSkillPaths(prompt, "--skills-root", root)
+
+	want := prompt + "\n" + skillPathsHeader + "\n" + skillFile + "\n"
+	if stdout != want || stderr != "" || !reflect.DeepEqual(exits, []int{0}) {
+		t.Fatalf("skill-paths printed %q / %q, exits %v; want %q, nothing on stderr, exit 0", stdout, stderr, exits, want)
+	}
+}
+
 func TestRolesSkillPathsPrintsAPromptWithNoHeaderAsItCame(t *testing.T) {
 	root, _ := skillPathsRoot(t)
-	for name, prompt := range map[string]string{"text": "Build T1.\r\n\ttest-first  \nno final newline", "empty": ""} {
+	for name, prompt := range map[string]string{"text": "Build T1.\r\n\tplain  \nno final newline", "empty": ""} {
 		t.Run(name, func(t *testing.T) {
 			stdout, stderr, exits := runSkillPaths(prompt, "--skills-root", root)
 			if stdout != prompt || stderr != "" || !reflect.DeepEqual(exits, []int{0}) {
