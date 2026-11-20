@@ -80,10 +80,11 @@ func TestRewriteSkillPathsReturnsAPromptWithNoHeaderUnchanged(t *testing.T) {
 	}
 }
 
-func TestRewriteSkillPathsRefusesWhatItCannotMakeAPathOf(t *testing.T) {
-	root, _ := skillsRoot(t)
+// refusalCases are the prompts the header-section rewrite refuses and the one line it says for each. Both
+// entry points, RewriteSkillPaths and RewriteListedSkillPaths, are ranged over it, so they cannot drift.
+func refusalCases(root string) map[string]struct{ prompt, want string } {
 	missing := filepath.Join(root, "absent", "SKILL.md")
-	for name, c := range map[string]struct{ prompt, want string }{
+	return map[string]struct{ prompt, want string }{
 		"the colon form": {
 			"Build.\n" + skillsHeader + ": test-first, go-test\n",
 			`line 2 "## Skills to load before work: test-first, go-test" is not the header alone: write "## Skills to load before work" alone on its line, then one skill id or absolute SKILL.md path per line`,
@@ -116,7 +117,12 @@ func TestRewriteSkillPathsRefusesWhatItCannotMakeAPathOf(t *testing.T) {
 			skillsHeader + "\ntest-first, go-testing\n",
 			`line 2 "test-first, go-testing" is neither a skill id nor an absolute path: a skill id is lowercase letters, digits and hyphens; write one skill id or absolute SKILL.md path per line`,
 		},
-	} {
+	}
+}
+
+func TestRewriteSkillPathsRefusesWhatItCannotMakeAPathOf(t *testing.T) {
+	root, _ := skillsRoot(t)
+	for name, c := range refusalCases(root) {
 		t.Run(name, func(t *testing.T) {
 			got, err := gate.RewriteSkillPaths(c.prompt, root, isRegularFile)
 			if err == nil || err.Error() != c.want {

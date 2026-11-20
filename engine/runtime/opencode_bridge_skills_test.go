@@ -142,7 +142,60 @@ func TestOpenCodeBridgeDeniesALaunchWhenTheEngineCannotCheckItsSkillList(t *test
 			if got.Input["prompt"] != listedPrompt {
 				t.Fatalf("a denied launch keeps its prompt, got %#v", got.Input)
 			}
+			if name == "engine too old" && !strings.Contains(got.Thrown.Message, olderEngineRemedy) {
+				t.Fatalf("an engine with no such verb should be named with its remedy %q, got %q", olderEngineRemedy, got.Thrown.Message)
+			}
 		})
+	}
+}
+
+// olderEngineRemedy is the command the denial of an engine that does not accept the plugin's call names.
+const olderEngineRemedy = "labdrian apply --target opencode"
+
+// T60 correction C (S8 L175): the verb exits 2 for a refused prompt and 1 for a usage error or any other
+// failure, so a usage error of the plugin's own call (an engine older than the plugin does not know
+// `--agent`) is named with its remedy and never read as a refusal of the prompt.
+func TestOpenCodeBridgeNamesAnEngineOlderThanThePluginWithItsRemedy(t *testing.T) {
+	requireNode(t)
+	for name, line := range map[string]string{
+		"an unknown flag": `error: roles skill-paths: unknown flag "--agent"`,
+		"a usage error":   "error: roles skill-paths: --skills-root " + skillsRootFixture + " is not a directory",
+	} {
+		t.Run(name, func(t *testing.T) {
+			engine := newFakeEngine(t, map[string][]byte{skillsEvent: []byte(pathsPrompt)})
+			engine.failEventWith(t, skillsEvent, 1, line+"\n")
+			got := decodeLaunch(t, runPluginWithEngine(t, skillsFixture(t), engine.path, launchOf("subagent", "builder", listedPrompt)))
+			if got.Thrown == nil || got.Thrown.Name != "Tool.Error" {
+				t.Fatalf("the launch should be denied with a Tool.Error, got %#v", got.Thrown)
+			}
+			message := got.Thrown.Message
+			if !strings.HasPrefix(message, "this launch was denied: its skill list could not be checked: ") {
+				t.Errorf("the denial should say the skill list was not checked, got %q", message)
+			}
+			if strings.HasPrefix(message, "error: roles skill-paths:") {
+				t.Errorf("the denial must not read as the verb's refusal of the prompt, got %q", message)
+			}
+			for _, want := range []string{line, engine.path, olderEngineRemedy} {
+				if !strings.Contains(message, want) {
+					t.Errorf("the denial should hold %q, got %q", want, message)
+				}
+			}
+			if got.Input["prompt"] != listedPrompt {
+				t.Errorf("a denied launch keeps its prompt, got %#v", got.Input)
+			}
+		})
+	}
+}
+
+// An exit 2 whose line is not the verb's own keeps today's sentence, and names no remedy for an old engine.
+func TestOpenCodeBridgeKeepsTheSentenceForAnExitTwoThatIsNotTheVerbsLine(t *testing.T) {
+	requireNode(t)
+	const line = "error: something else entirely"
+	engine := newFakeEngine(t, map[string][]byte{skillsEvent: []byte(pathsPrompt)})
+	engine.failEventWith(t, skillsEvent, 2, line+"\n")
+	got := decodeLaunch(t, runPluginWithEngine(t, skillsFixture(t), engine.path, launchOf("subagent", "builder", listedPrompt)))
+	if want := "this launch was denied: its skill list could not be checked: " + line; got.Thrown == nil || got.Thrown.Message != want {
+		t.Fatalf("an exit 2 that is not the verb's line should be denied with %q, got %#v", want, got.Thrown)
 	}
 }
 

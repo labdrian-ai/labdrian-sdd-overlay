@@ -29,8 +29,6 @@ func TestRewriteListedSkillPathsRewritesTheSectionAndAddsNoProse(t *testing.T) {
 		})
 	}
 	for name, prompt := range map[string]string{
-		"the colon form": "x\n" + skillsHeader + ": test-first, go-test\n",
-		"an unknown id":  skillsHeader + "\nno-such\n",
 		"an absent path": skillsHeader + "\n/nowhere/SKILL.md\n",
 		"other text":     skillsHeader + "\nWhat Is This\n",
 	} {
@@ -39,6 +37,16 @@ func TestRewriteListedSkillPathsRewritesTheSectionAndAddsNoProse(t *testing.T) {
 			got, err := gate.RewriteListedSkillPaths(prompt, root, isRegularFile)
 			if want == nil || err == nil || err.Error() != want.Error() || got != "" {
 				t.Fatalf("RewriteListedSkillPaths = %q, %v; want no prompt and %v", got, err, want)
+			}
+		})
+	}
+	// The same eight refusals as RewriteSkillPaths, each with its exact sentence, on the same root.
+	refusalRoot, _ := skillsRoot(t)
+	for name, c := range refusalCases(refusalRoot) {
+		t.Run("refuses as RewriteSkillPaths does: "+name, func(t *testing.T) {
+			got, err := gate.RewriteListedSkillPaths(c.prompt, refusalRoot, isRegularFile)
+			if err == nil || err.Error() != c.want || got != "" {
+				t.Fatalf("RewriteListedSkillPaths = %q, %v; want no prompt and %q", got, err, c.want)
 			}
 		})
 	}

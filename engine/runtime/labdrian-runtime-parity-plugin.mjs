@@ -224,7 +224,9 @@ function describeFailure(error) {
 // runEngine runs the engine with the envelope on stdin. A string envelope is sent as it is. It resolves to {stdout} when the engine
 // exited 0, and to {failure} when it could not be started, could not be given its input, timed out
 // ({hung: true}), printed more than ENGINE_OUTPUT_LIMIT or exited otherwise (an engine too old for a
-// flag exits 1); it never rejects. An engine that outlives its timeout gets SIGTERM, then SIGKILL.
+// flag exits 1); it never rejects. An exit with a number also carries it as `code` ({failure, code}), so
+// that a caller can tell a verb's refusal from a usage error; a spawn error, a signal, a timeout and the
+// output limit carry none. An engine that outlives its timeout gets SIGTERM, then SIGKILL.
 function runEngine(args, envelope, timeoutMs) {
   let input;
   try {
@@ -283,7 +285,8 @@ function runEngine(args, envelope, timeoutMs) {
         return;
       }
       const said = Buffer.concat(stderr).toString("utf8").trim();
-      settle({ failure: said || `the engine ended with ${code === null ? `signal ${signal}` : `exit ${code}`}` });
+      const failure = said || `the engine ended with ${code === null ? `signal ${signal}` : `exit ${code}`}`;
+      settle(typeof code === "number" ? { failure, code } : { failure });
     });
     child.stdin.end(input);
   });
@@ -411,11 +414,24 @@ function frozenContextRefusal(failure) {
 // skill tool, so a skill reaches it as the path of its SKILL.md under the header the contracts use.
 const SKILL_PATHS_VERB = "roles skill-paths";
 
-function skillPathsRefusal(failure) {
-  // The verb's own refusal is one line that names the verb and says what to write; anything else (the engine
-  // missing, hung, or too old for the verb) gets a sentence that says what was not checked.
-  if (failure.startsWith(`error: ${SKILL_PATHS_VERB}:`)) return failure;
-  return `this launch was denied: its skill list could not be checked: ${failure}`;
+// The verb exits 2 for a refused prompt and 1 for a usage error or any other failure (roles_skill_paths.go).
+const SKILL_PATHS_REFUSED_EXIT = 2;
+const SKILL_PATHS_USAGE_EXIT = 1;
+
+// skillPathsRefusal takes the engine's reply. Its line is the verb's own refusal of the prompt (one line that
+// names the verb and says what to write) only on exit 2 with the verb's prefix, and then it is passed through.
+// On exit 1 (a usage error such as `unknown flag "--agent"`, or no such verb: what an engine older than the
+// plugin answers) the sentence names the engine binary and both remedies, and never starts with the verb's
+// prefix, so the agent does not read it as a refusal of its prompt. Any other failure (the engine missing,
+// hung, or silent) gets a sentence that says what was not checked.
+function skillPathsRefusal(reply) {
+  const failure = reply.failure;
+  if (reply.code === SKILL_PATHS_REFUSED_EXIT && failure.startsWith(`error: ${SKILL_PATHS_VERB}:`)) return failure;
+  const unchecked = `this launch was denied: its skill list could not be checked: ${failure}`;
+  if (reply.code === SKILL_PATHS_USAGE_EXIT) {
+    return `${unchecked}; the engine ${engineBinary()} does not accept this plugin's call, as an engine older than the plugin does: run \`labdrian apply --target opencode\`, or rebuild the engine ${ENGINE_VARIABLE} names`;
+  }
+  return unchecked;
 }
 
 // resolveSkillPaths replaces the prompt of a `subagent` launch with the verb's stdout: the same prompt, each bare
@@ -424,7 +440,9 @@ function skillPathsRefusal(failure) {
 // the verb refuses, fails, times out or prints nothing. A config with no skills_root (an install older than this
 // plugin) leaves every prompt as it is, and so does a call that is not a launch with a prompt. It hands the verb
 // the launch's agent (`--agent <id>`) when that field is a non-empty string; the engine decides which agents get
-// a skill added from prose (a reviewer or polisher gets none).
+// a skill added from prose (a reviewer or polisher gets none). `--agent` is always handed, with no retry
+// without it: an engine older than the plugin exits 1 on it and the launch is denied with its remedy
+// (skillPathsRefusal), so the confinement of a reviewer or polisher holds for every engine.
 async function resolveSkillPaths(call, config) {
   if (!isRecord(call) || call.tool !== INJECTED_TOOL) return;
   const root = isRecord(config) ? config.skills_root : undefined;
@@ -433,8 +451,8 @@ async function resolveSkillPaths(call, config) {
   if (!isRecord(input) || typeof input.prompt !== "string" || input.prompt === "") return;
   const agent = typeof input[AGENT_FIELD] === "string" && input[AGENT_FIELD] !== "" ? ["--agent", input[AGENT_FIELD]] : [];
   const reply = await runEngine([...SKILL_PATHS_VERB.split(" "), "--skills-root", root, ...agent], input.prompt, engineTimeoutMs());
-  if (reply.failure !== undefined) throw new Tool.Error({ message: skillPathsRefusal(reply.failure) });
-  if (reply.stdout.trim() === "") throw new Tool.Error({ message: skillPathsRefusal("the engine printed nothing") });
+  if (reply.failure !== undefined) throw new Tool.Error({ message: skillPathsRefusal(reply) });
+  if (reply.stdout.trim() === "") throw new Tool.Error({ message: skillPathsRefusal({ failure: "the engine printed nothing" }) });
   input.prompt = reply.stdout;
 }
 
