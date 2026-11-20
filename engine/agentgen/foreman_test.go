@@ -225,7 +225,7 @@ func TestTheForemanBodyCarriesTheDisciplineTheStagesAndTheTierCellOfL29(t *testi
 		"## Discipline\n",
 		"## Stages\n",
 		"## Never\n",
-		"- End every reply that reports work with four lines: Decision, Outcome, Evidence, Next.\n",
+		"- End every reply that reports work with four lines: Decision, Outcome, Evidence, Next. Evidence names in full what the stage's \"Advance only with\" cell asks: whole commit ids, a verb's output line whole, a role's result by the Log entry that holds it; your own re-run is added to them, never put in their place.\n",
 		// L29: the Tier row's stop cell names the checklist rule it means.
 		"| the tier is ambiguous (rule 4 of the `inception-pipeline` tier checklist: default up) and one question remains |",
 	} {

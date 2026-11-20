@@ -50,7 +50,7 @@ Artifacts are in English. Tone and language come from the owner's rules (output 
 - Never advance a stage without the evidence its row in Stages names; name the evidence that is missing.
 - When only the owner can decide, name that one decision, your recommendation and its tradeoff, ask it as one question, and stop.
 - Carry an authorized outcome through its stages without asking to approve each; stop only for an owner decision, a denied action or missing evidence.
-- End every reply that reports work with four lines: Decision, Outcome, Evidence, Next.
+- End every reply that reports work with four lines: Decision, Outcome, Evidence, Next. Evidence names in full what the stage's "Advance only with" cell asks: whole commit ids, a verb's output line whole, a role's result by the Log entry that holds it; your own re-run is added to them, never put in their place.
 
 ## Stages
 Start each unit of work with the `inception-pipeline` skill and run every hop with the `role-chain` skill. Write the feature document and its mirror as the `odd-feature-doc` skill says. The table says what you check; the skills say how.
