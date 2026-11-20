@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
+	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -28,8 +31,11 @@ type programRunner interface {
 // (C23 M8, docs/architecture/adr-c23-m8-session-availability.md). It asks each source of the plan
 // whether it can be read, instead of looking for a file:
 //
-//   - engram: the engram program is on PATH and 'engram stats' succeeds, which opens its database
-//     (the engine has no SQLite driver, so the program does the opening);
+//   - engram: memorycard is the store of source engram (Engram is frozen), so the probe asks it. The
+//     store file (MEMORYCARD_DB, else ~/.memorycard/memory.db) is statted first and must be a regular
+//     file, because every memorycard command that opens the store creates a missing one and a probe
+//     must never write; then 'memorycard list' on a probe-only prefix, which records no use count and
+//     opens the database (the engine has no SQLite driver, so the program does the opening);
 //   - longterm-mem: its binary answers 'longterm-mem status' and an MCP entry for it is registered in
 //     the config of any runtime (Claude Code, OpenCode, Codex);
 //   - procedural-skills: the procedural skills lock of the session's project exists and is valid.
@@ -43,6 +49,10 @@ type sessionAvailability struct {
 	// runtime has its MCP entry.
 	longtermBinary  string
 	entryRegistered func() bool
+	// memorycardStore is the path of memorycard's store, "" when none can be located; stat is how
+	// the probe looks at it (os.Stat in the program, following links).
+	memorycardStore string
+	stat            func(string) (fs.FileInfo, error)
 	// procedural reads the lock of the project a directory belongs to.
 	procedural app.ProceduralSkillsReader
 }
@@ -57,9 +67,28 @@ func newSessionAvailability(d deps) sessionAvailability {
 		runner:          execrunner.New(),
 		timeout:         sessionProbeTimeout,
 		longtermBinary:  adapter.BinaryPath,
+		memorycardStore: memorycardStorePath(d.env, d.homeDir),
+		stat:            os.Stat,
 		entryRegistered: adapter.EntryInAnyRuntime,
 		procedural:      newProceduralLockReader(),
 	}
+}
+
+// memorycardProbeArgs is what the probe asks memorycard: a list on a prefix and project only the
+// probe uses, which prints "no results" and records no use count.
+var memorycardProbeArgs = []string{"list", "--topic-prefix", "labdrian/session-probe/", "--project", "labdrian-session-probe"}
+
+// memorycardStorePath is where memorycard keeps its store: the path MEMORYCARD_DB names when it is
+// not empty, else .memorycard/memory.db under the home, else "" when neither is known.
+func memorycardStorePath(getenv func(string) string, home func() (string, error)) string {
+	if path := getenv("MEMORYCARD_DB"); path != "" {
+		return path
+	}
+	dir, err := home()
+	if err != nil {
+		return ""
+	}
+	return filepath.Join(dir, ".memorycard", "memory.db")
 }
 
 func (p sessionAvailability) Probe(dir string, sources []memoryscope.Source) []projection.SourceAvailability {
@@ -87,7 +116,10 @@ func (p sessionAvailability) probeOne(dir string, source memoryscope.Source) pro
 	defer cancel()
 	switch source {
 	case memoryscope.SourceEngram:
-		return p.unlessFailed(source, p.runs(ctx, "engram", "engram", "stats"))
+		if reason := p.storeProblem(); reason != "" {
+			return unavailableSource(source, reason)
+		}
+		return p.unlessFailed(source, p.runs(ctx, "memorycard", "memorycard", memorycardProbeArgs...))
 	case memoryscope.SourceLongtermMem:
 		if reason := p.runs(ctx, "longterm-mem", p.longtermBinary, "status"); reason != "" {
 			return unavailableSource(source, reason)
@@ -107,6 +139,23 @@ func (p sessionAvailability) probeOne(dir string, source memoryscope.Source) pro
 		return projection.SourceAvailability{Source: source, Available: true}
 	}
 	return unavailableSource(source, "no availability check exists for this source")
+}
+
+// storeProblem says why the memorycard store cannot be asked, "" when it is a regular file.
+func (p sessionAvailability) storeProblem() string {
+	if p.memorycardStore == "" {
+		return "the memorycard store cannot be located: MEMORYCARD_DB is not set and no home directory is known"
+	}
+	info, err := p.stat(p.memorycardStore)
+	switch {
+	case errors.Is(err, fs.ErrNotExist):
+		return fmt.Sprintf("the memorycard store %s does not exist", p.memorycardStore)
+	case err != nil:
+		return fmt.Sprintf("the memorycard store %s cannot be read: %v", p.memorycardStore, err)
+	case !info.Mode().IsRegular():
+		return fmt.Sprintf("the memorycard store %s is not a regular file", p.memorycardStore)
+	}
+	return ""
 }
 
 func (p sessionAvailability) unlessFailed(source memoryscope.Source, reason string) projection.SourceAvailability {

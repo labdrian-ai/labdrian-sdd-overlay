@@ -27,9 +27,9 @@ type SourceProber func(sources []memoryscope.Source) []SourceAvailability
 // They are information only: they change neither the plan nor what the gate allows. With no probe
 // or no source there are none, and a probe that panics costs these lines and never the block.
 //
-// The line for engram names the Engram tools, not the source: the probe asks the engram program
-// (engine/cmd/session_availability.go), while memorycard reads are of source engram, are not probed
-// and stay allowed by the gate, so the line says it does not apply to memorycard.
+// The line for engram names the memorycard tools, not the source: the probe of source engram asks
+// memorycard (engine/cmd/session_availability.go), whose reads are of source engram. The gate reads
+// no probe, so the plan still allows those reads and the line says so.
 func degradationLines(sources []memoryscope.Source, probe SourceProber) (lines []string) {
 	if probe == nil || len(sources) == 0 {
 		return nil
@@ -47,7 +47,7 @@ func degradationLines(sources []memoryscope.Source, probe SourceProber) (lines [
 		}
 		line, tail := "- Do not read "+sanitizeLine(string(source))+": it is unavailable in this session", "."
 		if source == memoryscope.SourceEngram {
-			line, tail = "- Do not call the Engram tools: Engram is unavailable in this session", "; this does not apply to memorycard."
+			line, tail = "- Do not call the memorycard tools: memorycard is unavailable in this session", ", though the plan allows its reads."
 		}
 		if detail := clip(sanitizeLine(answers[i].Detail), maxDetailRunes); detail != "" {
 			line += " (" + detail + ")"

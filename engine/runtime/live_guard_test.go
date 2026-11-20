@@ -32,6 +32,10 @@ func TestMain(m *testing.M) {
 	os.Setenv("HOME", home)
 	os.Setenv("STATE_DIR", filepath.Join(home, ".labdrian-overlay"))
 	os.Unsetenv("OVERLAY_DIR")
+	// The OpenCode bridge tests start the engine's SessionStart hook with this environment, whose
+	// probe of source engram asks memorycard: it must never see the store of whoever runs the tests
+	// (the path is never created).
+	os.Setenv("MEMORYCARD_DB", filepath.Join(home, "memorycard", "memory.db"))
 
 	code := m.Run()
 	if message, ok := guard.Verdict(); !ok {
@@ -42,6 +46,20 @@ func TestMain(m *testing.M) {
 	enginetest.Cleanup()
 	os.RemoveAll(home)
 	os.Exit(code)
+}
+
+// TestLiveGuard_MemorycardStoreIsUnderTheTestHome proves the TestMain guard points MEMORYCARD_DB at a
+// path under the temporary home that nothing created: the OpenCode bridge tests start the engine's
+// SessionStart hook with the process environment, which probes that path, never the store of whoever
+// runs the tests.
+func TestLiveGuard_MemorycardStoreIsUnderTheTestHome(t *testing.T) {
+	store := os.Getenv("MEMORYCARD_DB")
+	if store == "" || !strings.HasPrefix(store, os.Getenv("HOME")+string(filepath.Separator)) {
+		t.Fatalf("MEMORYCARD_DB is %q, want a path under the temporary HOME %q", store, os.Getenv("HOME"))
+	}
+	if _, err := os.Stat(store); err == nil {
+		t.Fatalf("the memorycard store %s exists: the guard path must never be created", store)
+	}
 }
 
 // TestLiveGuard_IsolatesHomeAndPi proves the TestMain guard is in force for this package: the

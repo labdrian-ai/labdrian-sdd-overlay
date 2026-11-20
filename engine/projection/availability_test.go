@@ -60,14 +60,14 @@ func TestAnUnavailableSourceOfThePlanGetsOneDegradationLine(t *testing.T) {
 	}
 }
 
-// The probe of source engram asks the engram program, never memorycard, so when it is unavailable
-// the block names the Engram tools and says that does not apply to memorycard, whose reads the gate
-// allows whatever the probe said. A source other than engram keeps its own line.
-func TestAnUnavailableEngramNamesTheEngramToolsAndSparesMemorycard(t *testing.T) {
+// The probe of source engram asks memorycard, whose reads are of source engram, so when it is
+// unavailable the block names the memorycard tools and says the plan still allows its reads: the gate
+// reads no probe. A source other than engram keeps its own line.
+func TestAnUnavailableEngramSourceNamesTheMemorycardTools(t *testing.T) {
 	w := withIdentity(loadedWorkflow("odd", workflow.StatusRunning), "github.com/acme/proj-1")
 	for name, tt := range map[string]struct{ detail, line string }{
-		"with a detail": {"the engram program failed: exit status 1", "- Do not call the Engram tools: Engram is unavailable in this session (the engram program failed: exit status 1); this does not apply to memorycard."},
-		"no detail":     {"", "- Do not call the Engram tools: Engram is unavailable in this session; this does not apply to memorycard."},
+		"with a detail": {"the memorycard program failed: exit status 1", "- Do not call the memorycard tools: memorycard is unavailable in this session (the memorycard program failed: exit status 1), though the plan allows its reads."},
+		"no detail":     {"", "- Do not call the memorycard tools: memorycard is unavailable in this session, though the plan allows its reads."},
 	} {
 		var asked []memoryscope.Source
 		probe := probeAnswering(&asked,
@@ -89,8 +89,8 @@ func TestAnUnavailableEngramNamesTheEngramToolsAndSparesMemorycard(t *testing.T)
 			t.Errorf("%s: InstructionsBlock() lines =\n%q\nwant\n%q", name, got, want)
 		}
 		for _, line := range got {
-			if strings.HasPrefix(line, "- Do not read ") {
-				t.Errorf("%s: the block still says not to read a source, though only Engram is down: %q", name, line)
+			if strings.HasPrefix(line, "- Do not read ") || (strings.HasPrefix(line, "- Do not call the ") && !strings.HasPrefix(line, "- Do not call the memorycard tools")) {
+				t.Errorf("%s: the block says not to read a source or names tools other than memorycard's, though only the engram source is down: %q", name, line)
 			}
 		}
 	}
@@ -159,7 +159,7 @@ func TestADegradationReasonIsSanitizedAndBounded(t *testing.T) {
 		Detail:    "line one\nline two\x1b[31m" + strings.Repeat("x", 4000),
 	})
 	for _, line := range lines(blockWith(w, probe)) {
-		if strings.HasPrefix(line, "- Do not call the Engram tools") {
+		if strings.HasPrefix(line, "- Do not call the memorycard tools") {
 			if strings.ContainsAny(line, "\x1b\r") || len([]rune(line)) > 600 {
 				t.Errorf("the degradation line is not one bounded line: %q", line)
 			}

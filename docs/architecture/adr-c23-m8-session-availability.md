@@ -55,3 +55,29 @@ a file or starts a process. Two defects follow:
 - A new port in `projection/app` and an adapter in `cmd`; the gate (`engine/projection/gate.go`) and the
   `UserPromptSubmit` plan line do not change.
 - A session can still read a source the probe called unavailable, and the gate still allows it.
+
+## Amendment (2026-11-20, labdrian-orchestrator-opencode T64)
+
+The question (the foreman's, L184 of `odd/tasks/labdrian-orchestrator-opencode.md`): "¿Cambiamos esa
+comprobación para que mire memorycard, en una unidad propia después de T59?" The owner's answer,
+verbatim: "Sí, después de T59 (Recommended)".
+
+For the source `engram` the session probe now asks memorycard (S3, L186), not the engram program,
+because Engram is frozen and memorycard is the store new memories go to (`~/.claude/CLAUDE.md`,
+"memorycard is the memory store"):
+
+- The path is `MEMORYCARD_DB` when it is set and not empty, else `~/.memorycard/memory.db`, read through
+  the deps, never the process.
+- The probe stats that path before it runs anything, following links. With no path, a path that does not
+  exist, cannot be stat'ed or is not a regular file, the source is unavailable with that reason and
+  memorycard is not run: every memorycard command that opens the store opens it read-write and creates
+  a missing one, so asking it on an absent path would make the probe a write.
+- Otherwise `memorycard list --topic-prefix labdrian/session-probe/ --project labdrian-session-probe`
+  runs within the probe's deadline: a read that records no use count. A missing program, a failure and a
+  timeout are unavailable with the reason the other programs get.
+- The line for engram is `- Do not call the memorycard tools: memorycard is unavailable in this session
+  (<reason>), though the plan allows its reads.`, because the gate reads no probe and the plan still
+  allows those reads.
+
+Decisions 1 to 6 stay as written; read them with this amendment for engram: "Engram's database is
+opened read-only" and "the read-only `engram stats`" now mean the stat and the `memorycard list` above.
