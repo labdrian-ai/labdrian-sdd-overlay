@@ -504,3 +504,23 @@ Order is execution order: the learning loop (T1, T19, T2-T6, T16, T17) first, pe
   - Text: the rule and reason in `engine/cmd/usage.go`, `bin/lib/usage.sh`, the `findings` entry of `README.md` and "The findings feed" of `odd/review-results/README.md`.
   - Parity test cut to the findings block (`docSection`, `findings --feature` to `stop-hook`), with the pairs `review is NAME/HEAD12-N` and the new reason. Mutations: only the block's `HEAD12-N.json` changed fails ("lacks HEAD12-N.json"); the wrapper reason changed fails. New `TestReadmeFindingsEntrySaysWhatTheEngineUsageSays`: fails when the entry is removed ("marker not found"), and failed RED on the four reasons before the README was updated.
   - Closes the carried T1a F2 (`0afaf0cf5ca1-3`) and `069e8670816a-2` F1 and F2. The reason string stays an assumption.
+- **L20** (2026-11-20, delivery): T19 delivered and closed. T2 to T18 are not started.
+  - **Delivered head.** `a69e703db868c00e2f7d76cd099e4dc0902ca8b8` (`chore(review): record the review of T19 and its shaping commit`), onto `origin/main` ce22eb3f. T19 is commit `720f1676034079a59847a534c75df5bc024d1a34` (`feat(review): leave out a severe finding the verdict found on base`), shaped in `991f1db0`. Nothing was pushed, no pull request was opened and nothing was merged. Push, PR and merge are the owner's decision.
+  - **Records.** Commit `a69e703d` stores sweep `720f16760340-1.sweep.json` (clean), polisher `720f16760340-2.polisher.json` (no findings), review `720f16760340-3.json` and its verifier `720f16760340-3.verifier.json`. The shaping commit `991f1db0` has sweep `991f1db0a57c-1` and exemption `991f1db0a57c-2.exempt.json`.
+  - **Review check.** `labdrian review check --feature merge-playbook-into-sdd-overlay --head a69e703db868c00e2f7d76cd099e4dc0902ca8b8 --onto origin/main` exited 0 and printed `"outcome": "clear"`, base `ce22eb3f81a7c9a2ffcba2219c1370ac4766e5ab`. Per range:
+    - `991f1db0..720f1676` has result `720f16760340-3`, carrying F1 (below).
+    - `720f1676..a69e703d` (the records commit) has no result and no exemption.
+    - Exemptions printed: `a6bee44f3e1c-2.exempt.json` (`95fb4b16..a6bee44f`, diff `9ecbf5dc…`) and `991f1db0a57c-2.exempt.json` (`4e3ceb27..991f1db0`, diff `caa16cbf…`).
+    - The earlier T1 ranges print the results recorded in L17 unchanged: `0afaf0cf5ca1-3` (carry F1, F2), `5ef3eeb46dd2-2` (fix F1, carry F2, F3) and `069e8670816a-2` (carry F1, F2).
+  - **Tests.** `go test ./... -count=1` in `engine/`, at `a69e703d` (the worktree was clean at that head before this entry): exit 0. Every package reported `ok` or `[no test files]` (`engine/enginetest`, `engine/repotest`); no `FAIL`.
+  - **CI line.** `labdrian review ci --landing a69e703db868c00e2f7d76cd099e4dc0902ca8b8 --head a69e703db868c00e2f7d76cd099e4dc0902ca8b8` exited 1 with the stderr line `error: review ci: the tree of the landing a69e703db868c00e2f7d76cd099e4dc0902ca8b8 holds CI markers: .github/workflows/ci.yml, .github/workflows/release.yml; the repository has remotes: origin; the no-CI closure does not apply`. The no-CI closure does not apply, and CI was not run, since nothing was pushed.
+  - **Carried.** F1 (SUGGESTION, review `720f16760340-3`; the verifier reproduced it at head and at base): `CHANGELOG.md` "## Unreleased" has no entry for the `labdrian review findings` verb or its skip reasons, including `verdict base-reproduced`. The gap has existed since T1. Open at close.
+  - **Assumption.** The reason string `verdict base-reproduced` remains an assumption (L18, L19).
+  - **Unfinished at close.**
+    - T19 `[x]`, commit `720f1676`. Its task line still reads `commit: -`; that line is not rewritten, and this entry carries the SHA.
+    - T1 `[x]`, commits `0afaf0cf` (T1a), `5ef3eeb4` (T1b) and `069e8670` (correction), as in L17.
+    - T2 to T18: not started; their boxes stay `[ ]`.
+    - Carried F1 (CHANGELOG) above: open.
+    - `docs/wiki` does not exist in this worktree, so no wiki page was read or written.
+    - Open decisions from L6 to L13 are unchanged; this delivery answered none of them.
+  - The memorycard mirror `odd/merge-playbook-into-sdd-overlay/tasks` was refreshed from this file on disk after this entry.
