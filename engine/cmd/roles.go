@@ -28,12 +28,19 @@ const rolesAuthorityNote = "Role data carries no execution authority; no roles c
 
 // runRoles implements the 'roles <verb>' subcommand.
 func runRoles(p process, d deps, args []string) {
-	runRolesCore(args, p.stdin, p.stdout, p.stderr, p.exit, reviewEvidenceCheck(d))
+	runRolesIn(d.workingDir, args, p.stdin, p.stdout, p.stderr, p.exit, reviewEvidenceCheck(d))
 }
 
-// runRolesCore is the testable core of the roles subcommand. Every exit(n)
-// is followed by a return, because tests inject a non-terminating exit.
+// runRolesCore is runRolesIn with no working directory: the verbs that hold the parent to the workflow the
+// checkout is bound to find no checkout, so they go as they did before that rule.
 func runRolesCore(args []string, stdin io.Reader, stdout, stderr io.Writer, exit func(int), evidence evidenceCheck) {
+	runRolesIn(nil, args, stdin, stdout, stderr, exit, evidence)
+}
+
+// runRolesIn is the testable core of the roles subcommand; workingDir is the working directory of the process
+// (deps.workingDir), where the checkout whose binding the role-chain verbs read is. Every exit(n)
+// is followed by a return, because tests inject a non-terminating exit.
+func runRolesIn(workingDir func() (string, error), args []string, stdin io.Reader, stdout, stderr io.Writer, exit func(int), evidence evidenceCheck) {
 	if len(args) == 0 {
 		fmt.Fprintln(stderr, "error: roles requires a verb: validate, next, resume, append, match-shaper, skill-paths")
 		exit(1)
@@ -43,11 +50,11 @@ func runRolesCore(args []string, stdin io.Reader, stdout, stderr io.Writer, exit
 	case "validate":
 		runRolesValidate(args[1:], stdout, stderr, exit)
 	case "next":
-		runRolesNext(args[1:], stdout, stderr, exit)
+		runRolesNext(workingDir, args[1:], stdout, stderr, exit)
 	case "resume":
-		runRolesResume(args[1:], stdout, stderr, exit)
+		runRolesResume(workingDir, args[1:], stdout, stderr, exit)
 	case "append":
-		runRolesAppend(args[1:], stdin, stdout, stderr, exit, evidence)
+		runRolesAppend(workingDir, args[1:], stdin, stdout, stderr, exit, evidence)
 	case "match-shaper":
 		runRolesMatchShaper(args[1:], stdout, stderr, exit)
 	case "skill-paths":
@@ -180,10 +187,15 @@ func readRoleRecordFile(path string) ([]byte, error) {
 
 // runRolesNext implements 'roles next --project --goal --chain'. It is
 // read-only.
-func runRolesNext(args []string, stdout, stderr io.Writer, exit func(int)) {
+func runRolesNext(workingDir func() (string, error), args []string, stdout, stderr io.Writer, exit func(int)) {
 	o, err := parseRolesArgs(args, false, []string{"--project", "--goal", "--chain"})
 	if err != nil {
 		fmt.Fprintf(stderr, "error: roles next: %v\n", err)
+		exit(1)
+		return
+	}
+	if refusal := boundReadRefusal(workingDir, o.goal, o.chain); refusal != "" {
+		fmt.Fprintf(stderr, "error: roles next: %s\n", refusal)
 		exit(1)
 		return
 	}
@@ -213,10 +225,15 @@ func runRolesNext(args []string, stdout, stderr io.Writer, exit func(int)) {
 
 // runRolesResume implements 'roles resume --project --goal --chain'. It is
 // read-only.
-func runRolesResume(args []string, stdout, stderr io.Writer, exit func(int)) {
+func runRolesResume(workingDir func() (string, error), args []string, stdout, stderr io.Writer, exit func(int)) {
 	o, err := parseRolesArgs(args, false, []string{"--project", "--goal", "--chain"})
 	if err != nil {
 		fmt.Fprintf(stderr, "error: roles resume: %v\n", err)
+		exit(1)
+		return
+	}
+	if refusal := boundReadRefusal(workingDir, o.goal, o.chain); refusal != "" {
+		fmt.Fprintf(stderr, "error: roles resume: %s\n", refusal)
 		exit(1)
 		return
 	}
@@ -253,7 +270,7 @@ func runRolesResume(args []string, stdout, stderr io.Writer, exit func(int)) {
 // runRolesAppend implements 'roles append --project --goal --chain --stdin'.
 // The record is accepted only from stdin, mirroring the shaper clearance
 // record command, so content never arrives through argv.
-func runRolesAppend(args []string, stdin io.Reader, stdout, stderr io.Writer, exit func(int), evidence evidenceCheck) {
+func runRolesAppend(workingDir func() (string, error), args []string, stdin io.Reader, stdout, stderr io.Writer, exit func(int), evidence evidenceCheck) {
 	fail := func(format string, a ...any) {
 		fmt.Fprintf(stderr, "error: roles append: "+format+"\n", a...)
 		exit(1)
@@ -296,6 +313,16 @@ func runRolesAppend(args []string, stdin io.Reader, stdout, stderr io.Writer, ex
 			fail("--%s %q does not match the record's %s %q", strings.TrimSuffix(f.name, "_id"), f.flag, f.name, f.record)
 			return
 		}
+	}
+	// While the checkout is bound to an open workflow with a role chain, the hop goes to that chain (S16 B5).
+	bound, err := boundWorkflowHere(workingDir)
+	if err != nil {
+		fail("the binding of this checkout could not be read (%v)", err)
+		return
+	}
+	if refusal := roles.BoundAppendRefusal(bound, h.ProjectID, h.GoalID, h.ChainID); refusal != "" {
+		fail("%s", refusal)
+		return
 	}
 	// A record that closes a review is held to the files the review stored before anything is written.
 	if err := evidence(h); err != nil {
