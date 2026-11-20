@@ -609,6 +609,32 @@ func TestOpenCodeBridgeLaunchesABuilderWithTheSkillItsProseNames(t *testing.T) {
 	}
 }
 
+// TestOpenCodeBridgeAddsNoProseSkillToAReviewerLaunch (T60 correction B, S8 L173): through the real engine, a
+// reviewer brief that names work-unit-commits in prose reaches the child byte-identical, the plugin having
+// handed the verb --agent reviewer. The stand-in answers `review frozen-context` with the brief back.
+func TestOpenCodeBridgeAddsNoProseSkillToAReviewerLaunch(t *testing.T) {
+	requireNode(t)
+	built := enginetest.Binary(t)
+	wrapper := filepath.Join(t.TempDir(), "engine")
+	quoted := "'" + strings.ReplaceAll(built, "'", `'\''`) + "'"
+	script := "#!/bin/sh\nif [ \"$1 $2\" = \"roles skill-paths\" ]; then exec " + quoted + " \"$@\"; fi\nif [ \"$1 $2\" = \"review frozen-context\" ]; then exec cat; fi\ncat > /dev/null\nexit 0\n"
+	if err := os.WriteFile(wrapper, []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	overlay := shippedOverlay(t)
+	root, pluginPath := writePluginFixture(t)
+	config := minimalismConfig(pluginPath, root)
+	config["skills_root"] = filepath.Join(overlay, "skills")
+	writeJSONFile(t, filepath.Join(root, "labdrian-runtime-parity.json"), config)
+	brief := reviewerBrief + "Criteria: the builder must follow the work-unit-commits skill.\n"
+
+	got := decodeLaunch(t, runPluginWithEngine(t, pluginPath, wrapper, launchOf("subagent", "reviewer", brief)))
+
+	if got.Thrown != nil || got.Input["prompt"] != brief {
+		t.Fatalf("the reviewer should get its brief byte for byte, got %#v", got)
+	}
+}
+
 func TestOpenCodeBridgeLaunchesTheReviewerWithTheFrozenContextOfItsBrief(t *testing.T) {
 	requireNode(t)
 	engine := newFakeEngine(t, map[string][]byte{frozenEvent: []byte(frozenReply)})

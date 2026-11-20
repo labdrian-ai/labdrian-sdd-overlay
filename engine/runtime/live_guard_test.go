@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/enginetest"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/piguard"
 )
 
@@ -38,6 +39,7 @@ func TestMain(m *testing.M) {
 		code = 1
 	}
 	guard.Close()
+	enginetest.Cleanup()
 	os.RemoveAll(home)
 	os.Exit(code)
 }

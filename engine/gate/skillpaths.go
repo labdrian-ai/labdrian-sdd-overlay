@@ -27,15 +27,36 @@ const maxQuotedLine = 240
 // section is added to it as its path (addProseMentions). A prompt with neither the header nor a prose
 // mention is returned unchanged.
 func RewriteSkillPaths(prompt, skillsRoot string, isFile func(path string) bool) (string, error) {
+	lines, start, end, err := rewriteListed(prompt, skillsRoot, isFile)
+	if err != nil {
+		return "", err
+	}
+	return addProseMentions(lines, start, end, skillsRoot, isFile), nil
+}
+
+// RewriteListedSkillPaths is RewriteSkillPaths without the prose mentions: the header section rewritten and
+// its refusals alone, for a role that reads only its candidate (roles.ReadsOnlyItsCandidate), whose brief may
+// quote or negate a skill it must not load. A prompt with no header is returned unchanged.
+func RewriteListedSkillPaths(prompt, skillsRoot string, isFile func(path string) bool) (string, error) {
+	lines, _, _, err := rewriteListed(prompt, skillsRoot, isFile)
+	if err != nil {
+		return "", err
+	}
+	return strings.Join(lines, "\n"), nil
+}
+
+// rewriteListed is the part both functions share: the lines of prompt with the section under the header
+// rewritten (lines[start:end], start -1 when there is none), or the refusal.
+func rewriteListed(prompt, skillsRoot string, isFile func(path string) bool) (lines []string, start, end int, err error) {
 	header := contract.DefaultInjectionPoint
-	lines := strings.Split(prompt, "\n")
+	lines = strings.Split(prompt, "\n")
 	for i, line := range lines {
 		trimmed := strings.TrimSpace(line)
 		if trimmed != header && strings.HasPrefix(trimmed, header) {
-			return "", fmt.Errorf("line %d %s is not the header alone: write %q alone on its line, then one skill id or absolute SKILL.md path per line", i+1, quoteLine(trimmed), header)
+			return nil, 0, 0, fmt.Errorf("line %d %s is not the header alone: write %q alone on its line, then one skill id or absolute SKILL.md path per line", i+1, quoteLine(trimmed), header)
 		}
 	}
-	start := -1
+	start = -1
 	if hasExactHeader(prompt, header) {
 		for i, line := range lines {
 			if strings.TrimSpace(line) == header {
@@ -44,7 +65,7 @@ func RewriteSkillPaths(prompt, skillsRoot string, isFile func(path string) bool)
 			}
 		}
 	}
-	end := start
+	end = start
 	for end >= 0 && end < len(lines) && !strings.HasPrefix(lines[end], "#") {
 		end++
 	}
@@ -54,19 +75,19 @@ func RewriteSkillPaths(prompt, skillsRoot string, isFile func(path string) bool)
 		case entry == "":
 		case filepath.IsAbs(entry):
 			if !isFile(entry) {
-				return "", fmt.Errorf("line %d %s is an absolute path to no file: write the absolute path of an existing SKILL.md or a skill id of %s", i+1, quoteLine(entry), skillsRoot)
+				return nil, 0, 0, fmt.Errorf("line %d %s is an absolute path to no file: write the absolute path of an existing SKILL.md or a skill id of %s", i+1, quoteLine(entry), skillsRoot)
 			}
 		case skillid.Valid(entry):
 			path := filepath.Join(skillsRoot, entry, "SKILL.md")
 			if !isFile(path) {
-				return "", fmt.Errorf("line %d %s names no skill: write a skill id of %s (a directory with a SKILL.md) or the absolute path of its SKILL.md", i+1, quoteLine(entry), skillsRoot)
+				return nil, 0, 0, fmt.Errorf("line %d %s names no skill: write a skill id of %s (a directory with a SKILL.md) or the absolute path of its SKILL.md", i+1, quoteLine(entry), skillsRoot)
 			}
 			lines[i] = strings.Replace(lines[i], entry, path, 1)
 		default:
-			return "", fmt.Errorf("line %d %s is neither a skill id nor an absolute path: a skill id is lowercase letters, digits and hyphens; write one skill id or absolute SKILL.md path per line", i+1, quoteLine(entry))
+			return nil, 0, 0, fmt.Errorf("line %d %s is neither a skill id nor an absolute path: a skill id is lowercase letters, digits and hyphens; write one skill id or absolute SKILL.md path per line", i+1, quoteLine(entry))
 		}
 	}
-	return addProseMentions(lines, start, end, skillsRoot, isFile), nil
+	return lines, start, end, nil
 }
 
 // addProseMentions is the text of lines (the section under the header is lines[start:end], start -1 when
@@ -126,11 +147,13 @@ func addProseMentions(lines []string, start, end int, skillsRoot string, isFile 
 		return strings.Join(lines, "\n")
 	}
 	if start < 0 {
-		ending, trim := "\n", "\n"
+		ending := "\n"
 		if len(lines) > 1 && strings.HasSuffix(lines[0], "\r") {
-			ending, trim = "\r\n", "\r\n"
+			ending = "\r\n"
 		}
-		body := strings.TrimRight(strings.Join(lines, "\n"), trim)
+		// A trailing carriage return goes with the trailing newlines, so a prompt ending in a lone "\r"
+		// gets one ending throughout.
+		body := strings.TrimRight(strings.Join(lines, "\n"), "\r\n")
 		return body + ending + ending + contract.DefaultInjectionPoint + ending + strings.Join(added, ending) + ending
 	}
 	anchor := start - 1
@@ -151,14 +174,15 @@ func addProseMentions(lines []string, start, end int, skillsRoot string, isFile 
 }
 
 // fenceOpening is the character and length of the fence line opens, after leading spaces and tabs: three or
-// more backticks or three or more tildes. The length is 0 when line opens none.
+// more backticks or three or more tildes. A backtick fence whose info string (the rest of the line) holds a
+// backtick opens none, as in CommonMark. The length is 0 when line opens none.
 func fenceOpening(line string) (byte, int) {
 	line = strings.TrimLeft(line, " \t")
 	if line == "" || line[0] != '`' && line[0] != '~' {
 		return 0, 0
 	}
 	n := len(line) - len(strings.TrimLeft(line, line[:1]))
-	if n < 3 {
+	if n < 3 || line[0] == '`' && strings.Contains(line[n:], "`") {
 		return 0, 0
 	}
 	return line[0], n

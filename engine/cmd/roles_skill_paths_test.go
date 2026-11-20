@@ -62,6 +62,61 @@ func TestRolesSkillPathsAddsTheSkillAPromptNamesInProse(t *testing.T) {
 	}
 }
 
+// T60 correction B (S8 L173): --agent names the launch's role; a reviewer or a polisher reads only its
+// candidate, so a skill its brief names in prose is not added, while its header section is still rewritten.
+func TestRolesSkillPathsAddsNoProseSkillToAReviewerOrPolisherLaunch(t *testing.T) {
+	root, skillFile := skillPathsRoot(t)
+	brief := "Review the diff. The brief quotes: follow the test-first skill.\n"
+	for _, agent := range []string{"reviewer", "polisher"} {
+		t.Run(agent, func(t *testing.T) {
+			stdout, stderr, exits := runSkillPaths(brief, "--skills-root", root, "--agent", agent)
+			if stdout != brief || stderr != "" || !reflect.DeepEqual(exits, []int{0}) {
+				t.Fatalf("skill-paths printed %q / %q, exits %v; want the brief byte for byte and exit 0", stdout, stderr, exits)
+			}
+			listed := "Review.\n" + skillPathsHeader + "\ntest-first\n"
+			want := "Review.\n" + skillPathsHeader + "\n" + skillFile + "\n"
+			if stdout, _, exits := runSkillPaths(listed, "--skills-root", root, "--agent", agent); stdout != want || !reflect.DeepEqual(exits, []int{0}) {
+				t.Fatalf("skill-paths printed %q, exits %v; want the listed id as its path, %q", stdout, exits, want)
+			}
+		})
+	}
+}
+
+func TestRolesSkillPathsStillAddsProseSkillsForAnotherAgentOrNone(t *testing.T) {
+	root, skillFile := skillPathsRoot(t)
+	prompt := "Build with the test-first skill.\n"
+	want := prompt + "\n" + skillPathsHeader + "\n" + skillFile + "\n"
+	for name, args := range map[string][]string{
+		"builder": {"--skills-root", root, "--agent", "builder"},
+		"none":    {"--skills-root", root},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if stdout, stderr, exits := runSkillPaths(prompt, args...); stdout != want || stderr != "" || !reflect.DeepEqual(exits, []int{0}) {
+				t.Fatalf("skill-paths printed %q / %q, exits %v; want %q", stdout, stderr, exits, want)
+			}
+		})
+	}
+}
+
+func TestRolesSkillPathsRefusesAnAgentFlagWithNoValueOrGivenTwice(t *testing.T) {
+	root, _ := skillPathsRoot(t)
+	for name, c := range map[string]struct {
+		args []string
+		want string
+	}{
+		"no value":    {[]string{"--skills-root", root, "--agent"}, "error: roles skill-paths: --agent requires a value\n"},
+		"empty value": {[]string{"--skills-root", root, "--agent", ""}, "error: roles skill-paths: --agent requires a value\n"},
+		"twice":       {[]string{"--skills-root", root, "--agent", "builder", "--agent", "reviewer"}, "error: roles skill-paths: --agent given twice\n"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			stdout, stderr, exits := runSkillPaths("x\n", c.args...)
+			if stdout != "" || stderr != c.want || !reflect.DeepEqual(exits, []int{1}) {
+				t.Fatalf("skill-paths printed %q / %q, exits %v; want nothing, %q and exit 1", stdout, stderr, exits, c.want)
+			}
+		})
+	}
+}
+
 func TestRolesSkillPathsPrintsAPromptWithNoHeaderAsItCame(t *testing.T) {
 	root, _ := skillPathsRoot(t)
 	for name, prompt := range map[string]string{"text": "Build T1.\r\n\tplain  \nno final newline", "empty": ""} {

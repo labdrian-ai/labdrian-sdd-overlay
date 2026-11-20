@@ -11,6 +11,14 @@ import (
 // ends there (RE2 has no lookahead, so it reads the byte after the match).
 var skillMention = regexp.MustCompile("`(" + skillid.Pattern + ")` skill")
 
+// ReadsOnlyItsCandidate is whether the role named agent reads only the candidate it is given, so a skill its
+// brief names in prose is a quotation or a negation (a criterion, a "do not use") and not a skill to load:
+// the reviewer and the polisher (roles/reviewer/body.md:8, roles/polisher/body.md:9). On OpenCode a launch of
+// such a role gets no skill added from prose (labdrian-orchestrator-opencode T60 correction B, S8 L173).
+func ReadsOnlyItsCandidate(agent string) bool {
+	return agent == "reviewer" || agent == "polisher"
+}
+
 // BodyPath is where the source of a role is, as a slash path under the root of the repository.
 func BodyPath(r Role) string { return "roles/" + string(r) + "/body.md" }
 

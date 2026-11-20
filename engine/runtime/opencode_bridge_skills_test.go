@@ -52,11 +52,41 @@ func TestOpenCodeBridgeLaunchesARoleWithTheSkillPathsTheVerbPrinted(t *testing.T
 	if len(calls) != 2 || calls[0].Event != eventPreToolUse || calls[1].Event != skillsEvent {
 		t.Fatalf("the gate should be asked first, then the verb, got %#v", calls)
 	}
-	if want := "roles skill-paths --skills-root " + skillsRootFixture; calls[1].Args != want {
+	if want := "roles skill-paths --skills-root " + skillsRootFixture + " --agent builder"; calls[1].Args != want {
 		t.Errorf("the verb should run as %q, got %q", want, calls[1].Args)
 	}
 	if calls[1].Raw != listedPrompt {
 		t.Errorf("the verb should be handed the prompt as the agent wrote it, as plain text, got %q", calls[1].Raw)
+	}
+}
+
+// T60 correction B (S8 L173): the plugin hands the verb the launch's agent, which decides whether a prose
+// skill is added; a launch with no agent field hands it none.
+func TestOpenCodeBridgeHandsTheVerbTheAgentOfALaunchAndNoneWhenThereIsNone(t *testing.T) {
+	requireNode(t)
+	pluginPath := skillsFixture(t)
+
+	engine := newFakeEngine(t, map[string][]byte{skillsEvent: []byte(reviewerBrief), frozenEvent: []byte(frozenReply)})
+	got := decodeLaunch(t, runPluginWithEngine(t, pluginPath, engine.path, launchOf("subagent", "reviewer", reviewerBrief)))
+	if got.Thrown != nil {
+		t.Fatalf("the launch should not be denied, got %#v", got.Thrown)
+	}
+	calls := engine.calls(t)
+	if want := "roles skill-paths --skills-root " + skillsRootFixture + " --agent reviewer"; len(calls) < 2 || calls[1].Args != want {
+		t.Errorf("a reviewer launch should run the verb as %q, got %#v", want, calls)
+	}
+
+	noAgent := newFakeEngine(t, map[string][]byte{skillsEvent: []byte(pathsPrompt)})
+	call := `const call = { tool: "subagent", sessionID: "ses_1", id: "call_1", input: { prompt: ` + `"x" } };
+let thrown = null;
+try { await beforeHook(call); } catch (error) { thrown = { name: error.name, message: error.message, fields: error.fields }; }
+console.log(JSON.stringify({ thrown, input: call.input }));`
+	if got := decodeLaunch(t, runPluginWithEngine(t, pluginPath, noAgent.path, call)); got.Thrown != nil {
+		t.Fatalf("a launch with no agent should not be denied, got %#v", got.Thrown)
+	}
+	calls = noAgent.calls(t)
+	if want := "roles skill-paths --skills-root " + skillsRootFixture; len(calls) < 2 || calls[1].Args != want {
+		t.Errorf("a launch with no agent should run the verb as %q, got %#v", want, calls)
 	}
 }
 

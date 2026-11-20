@@ -422,14 +422,17 @@ function skillPathsRefusal(failure) {
 // skill id under the skills header made the path of its SKILL.md. It runs after the gate and before the frozen
 // context, so that the diff appended to a reviewer brief is never read as a skill list. It denies the launch when
 // the verb refuses, fails, times out or prints nothing. A config with no skills_root (an install older than this
-// plugin) leaves every prompt as it is, and so does a call that is not a launch with a prompt.
+// plugin) leaves every prompt as it is, and so does a call that is not a launch with a prompt. It hands the verb
+// the launch's agent (`--agent <id>`) when that field is a non-empty string; the engine decides which agents get
+// a skill added from prose (a reviewer or polisher gets none).
 async function resolveSkillPaths(call, config) {
   if (!isRecord(call) || call.tool !== INJECTED_TOOL) return;
   const root = isRecord(config) ? config.skills_root : undefined;
   if (typeof root !== "string" || root === "") return;
   const input = call.input;
   if (!isRecord(input) || typeof input.prompt !== "string" || input.prompt === "") return;
-  const reply = await runEngine([...SKILL_PATHS_VERB.split(" "), "--skills-root", root], input.prompt, engineTimeoutMs());
+  const agent = typeof input[AGENT_FIELD] === "string" && input[AGENT_FIELD] !== "" ? ["--agent", input[AGENT_FIELD]] : [];
+  const reply = await runEngine([...SKILL_PATHS_VERB.split(" "), "--skills-root", root, ...agent], input.prompt, engineTimeoutMs());
   if (reply.failure !== undefined) throw new Tool.Error({ message: skillPathsRefusal(reply.failure) });
   if (reply.stdout.trim() === "") throw new Tool.Error({ message: skillPathsRefusal("the engine printed nothing") });
   input.prompt = reply.stdout;

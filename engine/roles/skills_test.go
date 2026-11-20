@@ -41,3 +41,15 @@ func TestSkillsNamedEndsAMentionAtAWordEnd(t *testing.T) {
 		})
 	}
 }
+
+func TestReadsOnlyItsCandidateIsTrueForTheReviewerAndThePolisherOnly(t *testing.T) {
+	for agent, want := range map[string]bool{
+		"reviewer": true, "polisher": true,
+		"builder": false, "shaper": false, "prototyper": false, "sweeper": false, "verifier": false,
+		"delivery": false, "foreman": false, "": false, "sdd-tasks": false,
+	} {
+		if got := ReadsOnlyItsCandidate(agent); got != want {
+			t.Errorf("ReadsOnlyItsCandidate(%q) = %v, want %v", agent, got, want)
+		}
+	}
+}

@@ -192,3 +192,41 @@ func TestRewriteSkillPathsAsksTheDiskOncePerWord(t *testing.T) {
 		t.Fatalf("isFile was asked %d times, want 2 (one per distinct word)", calls)
 	}
 }
+
+func TestRewriteSkillPathsOpensNoBacktickFenceOnALineWhoseInfoStringHoldsABacktick(t *testing.T) {
+	root := proseRoot(t)
+	p := func(id string) string { return filepath.Join(root, id, "SKILL.md") }
+	prompt := "```test-first``` is a skill\nalso go-testing here\n"
+	want := prompt + "\n" + skillsHeader + "\n" + p("test-first") + "\n" + p("go-testing") + "\n"
+	got, err := gate.RewriteSkillPaths(prompt, root, isRegularFile)
+	if err != nil || got != want {
+		t.Fatalf("RewriteSkillPaths = %q, %v; want %q", got, err, want)
+	}
+	// A tilde fence may hold a backtick in its info string, so it still opens one.
+	tilde := "~~~ `x`\ntest-first\n~~~\nthen go-testing\n"
+	if got, err := gate.RewriteSkillPaths(tilde, root, isRegularFile); err != nil || got != tilde+"\n"+skillsHeader+"\n"+p("go-testing")+"\n" {
+		t.Fatalf("RewriteSkillPaths(tilde) = %q, %v", got, err)
+	}
+}
+
+func TestRewriteSkillPathsGivesALoneTrailingCarriageReturnTheSameEndingAsTheRest(t *testing.T) {
+	root := proseRoot(t)
+	p := filepath.Join(root, "test-first", "SKILL.md")
+	want := "Use test-first.\n\n" + skillsHeader + "\n" + p + "\n"
+	got, err := gate.RewriteSkillPaths("Use test-first.\r", root, isRegularFile)
+	if err != nil || got != want {
+		t.Fatalf("RewriteSkillPaths = %q, %v; want %q", got, err, want)
+	}
+}
+
+func TestRewriteSkillPathsKeepsAPromptNamingASkillOfAnotherRootListedByItsDirectory(t *testing.T) {
+	root := proseRoot(t)
+	// The rule is by directory name (S8 L173 (3)), not by the skills root: an existing SKILL.md of another
+	// root, in a directory named for the id, lists that id.
+	other := proseRoot(t)
+	prompt := "Use test-first.\n" + skillsHeader + "\n" + filepath.Join(other, "test-first", "SKILL.md") + "\n"
+	got, err := gate.RewriteSkillPaths(prompt, root, isRegularFile)
+	if err != nil || got != prompt {
+		t.Fatalf("RewriteSkillPaths = %q, %v; want the prompt byte for byte", got, err)
+	}
+}
