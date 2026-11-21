@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "95fb4b167eee70954834edd8c5e5b00c7dfce114",
+    "head": "a6bee44f3e1ce9f15104c5daa08000285621ade7",
+    "diff_sha256": "9ecbf5dc65653b8adc4f084cf1cd17388586516081c475de5a2a236854b0f862",
+    "paths": [
+      "odd/goals/merge-playbook-into-sdd-overlay.json",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git -C /home/labdrian/labdrian-sdd-overlay-playbook-merge diff --name-only 95fb4b16 a6bee44f",
+        "result": "pass",
+        "output": "odd/goals/merge-playbook-into-sdd-overlay.json\nodd/tasks/merge-playbook-into-sdd-overlay.md (only these two paths; no code, test, hook or deployed content)"
+      },
+      {
+        "command": "git -C /home/labdrian/labdrian-sdd-overlay-playbook-merge log -1 --format=%B a6bee44f",
+        "result": "pass",
+        "output": "Subject 'docs(odd): forecast the playbook merge tasks and add its goal file', one body paragraph, then a final trailer block holding the single line 'Risk: none'. There is no Co-Authored-By line and no AI attribution line."
+      },
+      {
+        "command": "git -C /home/labdrian/labdrian-sdd-overlay-playbook-merge show a6bee44f:odd/goals/merge-playbook-into-sdd-overlay.json | jq empty; cd /home/labdrian/labdrian-sdd-overlay-playbook-merge && labdrian workflow goal-base --feature merge-playbook-into-sdd-overlay",
+        "result": "pass",
+        "output": "jq exit=0. goal-base (exit 0) printed {\"version\":3,\"project_id\":\"labdrian-sdd-overlay\",\"goal_id\":\"merge-playbook-into-sdd-overlay\",\"memory_directive\":{\"version\":1,\"scope\":\"project\",\"sources\":[\"engram\",\"longterm-mem\",\"procedural-skills\"],\"write\":\"none\"}}. The committed file has version 3, project_id labdrian-sdd-overlay, goal_id merge-playbook-into-sdd-overlay and the same memory_directive (version 1, scope project, sources [engram, longterm-mem, procedural-skills], write none). I compared the two by reading both outputs, not by running a programmatic diff."
+      },
+      {
+        "command": "git -C /home/labdrian/labdrian-sdd-overlay-playbook-merge show a6bee44f:odd/tasks/merge-playbook-into-sdd-overlay.md > /tmp/tmp.T81Il8UaLj/doc.md; python3 -I /tmp/claude-1000/-home-labdrian-rea-sandbox/3847fe2b-25fa-4615-957c-991396ca8c5a/scratchpad/check_doc.py /tmp/tmp.T81Il8UaLj/doc.md; cross-check: git archive a6bee44f engine extracted into /tmp/tmp.T81Il8UaLj/src, an internal test /tmp/tmp.T81Il8UaLj/src/engine/oddtask/zz_verify_test.go calling ParseDocument, run with cd /tmp/tmp.T81Il8UaLj/src/engine && DOC=/tmp/tmp.T81Il8UaLj/doc.md go test ./oddtask -run TestZZVerify -v -count=1",
+        "result": "pass",
+        "output": "check_doc.py (exit 0): 'tasks parsed: 18 | '## Tasks' headings: 1 | duplicate ids: []', 'shaper log entries: [6, 7, 8, 9, 10, 11, 12, 13]', 'problems: none'. Go ParseDocument cross-check: PASS, tasks=18, ids=[T1 T10 T11 T12 T13 T14 T15 T16 T17 T18 T2 T3 T4 T5 T6 T7 T8 T9], dupLines=[], shapers=map[6:1 7:1 8:1 9:1 10:1 11:1 12:1 13:1]."
+      },
+      {
+        "command": "git -C /home/labdrian/labdrian-sdd-overlay-playbook-merge diff 95fb4b16 a6bee44f -- odd/tasks/",
+        "result": "pass",
+        "output": "The diff has two hunks. Hunk 1 removes and replaces only the Tasks note line: 'Line forecasts are pending the estimator.' becomes 'Line forecasts are filled for every task in L13 (...)'. Hunk 2 (@@ -367,3 +367,57 @@) only adds lines: the new Log entry '- **L13** (2026-11-20, shaper)' with its forecasts. No Spec or task line is removed, and no task's scope, dependency or 'shaped:' mark is changed."
+      }
+    ]
+  }
+}

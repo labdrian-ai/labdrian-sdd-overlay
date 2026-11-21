@@ -1,0 +1,104 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "0afaf0cf5ca10dd8403a88e12eabe6663bbb7e78",
+    "head": "5ef3eeb46dd2842f4775797d81fd741095f0c068",
+    "diff_sha256": "4ba4fdf4fd72fb6bd352f7ae2e6266ffaa13c5ed2fd424b5129edbb90bf361a9",
+    "paths": [
+      "bin/lib/usage.sh",
+      "engine/cmd/dispatch_routes_test.go",
+      "engine/cmd/review.go",
+      "engine/cmd/review_exempt_test.go",
+      "engine/cmd/review_findings.go",
+      "engine/cmd/review_findings_test.go",
+      "engine/cmd/review_test.go",
+      "engine/cmd/usage.go",
+      "engine/review/app/findings.go",
+      "engine/review/app/findings_test.go",
+      "odd/review-results/README.md",
+      "odd/tasks/merge-playbook-into-sdd-overlay.md"
+    ]
+  },
+  "rows": [
+    "recall",
+    "hunt",
+    "readability"
+  ],
+  "reply": {
+    "candidate": {
+      "base": "0afaf0cf5ca10dd8403a88e12eabe6663bbb7e78",
+      "head": "5ef3eeb46dd2842f4775797d81fd741095f0c068",
+      "diff_sha256": "4ba4fdf4fd72fb6bd352f7ae2e6266ffaa13c5ed2fd424b5129edbb90bf361a9"
+    },
+    "inspection": {
+      "status": "completed",
+      "paths": [
+        "bin/lib/usage.sh",
+        "engine/cmd/dispatch_routes_test.go",
+        "engine/cmd/review.go",
+        "engine/cmd/review_exempt_test.go",
+        "engine/cmd/review_findings.go",
+        "engine/cmd/review_findings_test.go",
+        "engine/cmd/review_test.go",
+        "engine/cmd/usage.go",
+        "engine/review/app/findings.go",
+        "engine/review/app/findings_test.go",
+        "odd/review-results/README.md",
+        "odd/tasks/merge-playbook-into-sdd-overlay.md"
+      ],
+      "reason": ""
+    },
+    "findings": [
+      {
+        "id": "F1",
+        "location": "bin/lib/usage.sh:387-395",
+        "severity": "WARNING",
+        "claim": "The new wrapper help does not match the engine help in engine/cmd/usage.go, which the task requires. The wrapper prints the output shape as `{review, verdict, kept, left_out}` and never says that `verdict` is left out when the verifier did not run. The engine help and odd/review-results/README.md both say it is left out, and the JSON tag is `omitempty`. A caller reading the wrapper help would expect `verdict` in every listing, but a result with no verifier verdict prints none. The wrapper help also leaves out the fields of `kept` and `left_out` and the refusal of a stored verdict that does not hold. No test catches this drift: `verify` has a wrapper-against-engine parity test (TestWrapperUsageOfReviewVerifySaysWhatTheEngineUsageSays in engine/cmd/review_test.go:1205), and the new findings verb has no equivalent.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "diff hunk bin/lib/usage.sh @@ -384,6 +384,15 @@: '{review, verdict, kept, left_out}' with no optional marker",
+          "diff hunk engine/cmd/usage.go @@ -261,6 +261,13 @@: 'verdict is the stored verdict that was read and is left out when the verifier did not run'",
+          "engine/cmd/review_findings.go:108 `json:\"verdict,omitempty\"`",
+          "engine/cmd/review_test.go:1203-1238 parity test exists only for verify"
+        ]
+      },
+      {
+        "id": "F2",
+        "location": "engine/cmd/usage.go:264-270",
+        "severity": "SUGGESTION",
+        "claim": "A sentence in the new engine help is missing its verb: 'A finding is left out when its causal_disposition pre-existing or base-only'. The new test TestUsageDocumentsReviewFindings checks for the substring 'causal_disposition pre-existing or base-only'. So the test pins the broken wording, and fixing the sentence to 'causal_disposition is pre-existing or base-only' would make that test fail. The help is the contract callers read, so the test should check for the corrected sentence instead.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "diff hunk engine/cmd/usage.go: 'A finding is left out when its causal_disposition pre-existing or base-only'",
+          "diff engine/cmd/review_findings_test.go TestUsageDocumentsReviewFindings wants \"causal_disposition pre-existing or base-only\""
+        ]
+      },
+      {
+        "id": "F3",
+        "location": "README.md:811-823",
+        "severity": "SUGGESTION",
+        "claim": "The root README.md has a section that documents every `labdrian review` verb (bind through proposals and stop-hook). This change adds the `findings` verb but does not add it to that section, so the project's main command reference leaves out a user-facing verb. The task names only odd/review-results/README.md and the help texts, so this gap is in documentation completeness, not in the stated criteria.",
+        "evidence_class": "deterministic",
+        "causal_disposition": "introduced",
+        "proof_refs": [
+          "README.md:811 lists 'proposals [--cwd <repo>]' followed by 'stop-hook' at 823, with no findings entry; README.md is not among the changed paths"
+        ]
+      }
+    ],
+    "evidence": [
+      "Read the complete diff at /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay-playbook-merge/926ae9a6-d413-46b3-9d4c-1be2e9937b47/scratchpad/t1b.diff (all 456 lines)",
+      "Read engine/review/app/findings.go at head: Service.Findings now starts Kept and LeftOut as empty slices; validates the feature and result name, reads through judged and verdictsOf, and returns every error",
+      "Read engine/review/app/check.go verdictsOf: a missing verdict gives empty verdicts with no error; any other read or parse failure is an error, so the verdict is never silently ignored",
+      "Read engine/cmd/review.go parseReviewFlags, require, reviewPath, reviewFailed and writeReviewJSON: unknown flags and empty required values are refused; Findings never returns ReplyRefusedError, so the verb exits 1 as documented and never 2",
+      "Read the new findingsJSON: both lists and proof_refs are normalised to [] so the output never contains null; no write path is computed (read-only)",
+      "Checked the verb-list messages in review.go against the three updated tests (dispatch_routes_test, review_exempt_test, review_test): they match",
+      "Read bin/lib/usage.sh:360-395 and compared it with the usage.go hunk and the odd/review-results/README.md hunk",
+      "Searched for the existing wrapper/engine usage parity tests (engine/cmd/review_test.go:1203-1238)",
+      "Read README.md:780-824 (root command reference) for the review verbs",
+      "Did not report the skip-rule disagreement with reviewverdict.Decide (T1a F2) because the owner decision on it is still open",
+      "No commands were run (the reviewer contract forbids it); go test was not run"
+    ]
+  }
+}

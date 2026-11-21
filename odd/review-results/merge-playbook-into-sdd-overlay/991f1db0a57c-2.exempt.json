@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "binding": {
+    "base": "4e3ceb2761004e302ac756b2620bbbeb0bad5699",
+    "head": "991f1db0a57cdf6083b6d6551062509524c8fa95",
+    "diff_sha256": "caa16cbf8acb7a00249806dc263394124de5c9c48037da5c6912fee7f8698f55",
+    "paths": [
+      "odd/tasks/merge-playbook-into-sdd-overlay.md"
+    ]
+  },
+  "risk": "none",
+  "report": {
+    "checks": [
+      {
+        "command": "git -C /home/labdrian/labdrian-sdd-overlay-playbook-merge diff --name-only 4e3ceb27 991f1db0",
+        "result": "pass",
+        "output": "odd/tasks/merge-playbook-into-sdd-overlay.md (the only path listed)"
+      },
+      {
+        "command": "git -C /home/labdrian/labdrian-sdd-overlay-playbook-merge log -1 --format=%B 991f1db0",
+        "result": "pass",
+        "output": "Subject 'docs(odd): shape T19, align the findings feed with Decide', one body paragraph, then a final trailer block that holds only 'Risk: none'. The message has no Co-Authored-By line and no AI attribution line."
+      },
+      {
+        "command": "D=$(mktemp -d) (/tmp/tmp.tugOqzt8VI); git -C /home/labdrian/labdrian-sdd-overlay-playbook-merge show 991f1db0:odd/tasks/merge-playbook-into-sdd-overlay.md > $D/doc.md; python3 -I /tmp/claude-1000/-home-labdrian-rea-sandbox/3847fe2b-25fa-4615-957c-991396ca8c5a/scratchpad/check_doc.py $D/doc.md; rg -n 'T19|L18' $D/doc.md",
+        "result": "pass",
+        "output": "tasks parsed: 19 | '## Tasks' headings: 1 | duplicate ids: [] / shaper log entries: [6, 7, 8, 9, 10, 11, 12, 13, 18] / problems: none / exit=0. In the rg output, line 191 is the T19 task line and ends in '— shaped: L18 — commit: -', and line 484 is '- **L18** (2026-11-20, shaper): Owner decision on the carried T1 findings; S3 amended; new task T19.'"
+      },
+      {
+        "command": "git -C /home/labdrian/labdrian-sdd-overlay-playbook-merge diff 4e3ceb27 991f1db0 -- odd/tasks/ | rg -n '^[-+]'",
+        "result": "pass",
+        "output": "The diff removes exactly 2 lines: the old S3 bullet and the Tasks order note. Each is replaced by a rewritten line: the S3 bullet adds the third clause about a severe unknown finding found on base, and the order note now reads '(T1, T19, T2-T6, T16, T17)'. Every other line is an addition: the S3 sub-bullets, the new T19 task line and the L18 log entry. No existing task line is removed or modified, so no existing task's scope, dependency, checkbox or shaped: mark changes."
+      },
+      {
+        "command": "git -C /home/labdrian/labdrian-sdd-overlay-playbook-merge show 991f1db0:engine/reviewverdict/decide.go > /tmp/tmp.tugOqzt8VI/decide.go; Read lines 50-123, compared with the S3 sub-bullets from the diff above",
+        "result": "pass",
+        "output": "In severeFinding (lines 98-121), DispositionUnknown: v.Result == NotReproduced returns fateRefuted; otherwise v.Base Reproduced returns fateOfTheBase (Carry), NotReproduced falls through to the head switch, default returns fateUnchecked. pre-existing and base-only return fateOfTheBase. The S3 text gives the same order. A finding with no verdict is the zero Verdict and lands in the default branch as unverified, matching 'read as not run'."
+      }
+    ]
+  }
+}
