@@ -405,6 +405,21 @@ Commands:
                                              the parent relays each proposal to the owner and runs a proposed
                                              command only after the owner confirms it
                                              (exit 0 listed, 1 usage error, refusal or any other failure)
+                                   ci --landing REV --head REV [--cwd REPO]
+                                             say whether the repository has no CI for the commit a delivery landed: exit 0
+                                             with one stdout line that starts CI: none configured and names the full
+                                             landing and head ids, only when the landing holds the head, git remote lists
+                                             no remote and the tree of the landing commit (never the working tree) holds
+                                             no CI marker, a path from the root of the tree: a file under
+                                             .github/workflows/, .gitea/workflows/, .forgejo/workflows/, .buildkite/ or
+                                             .woodpecker/, or .gitlab-ci.yml, .circleci/config.yml, .travis.yml,
+                                             azure-pipelines.yml, Jenkinsfile, bitbucket-pipelines.yml, .drone.yml,
+                                             .woodpecker.yml, appveyor.yml or .appveyor.yml; any other case is exit 1 with
+                                             one stderr line naming the head the landing does not hold, the markers (tree
+                                             order) or the remotes, and saying the no-CI closure does not apply; a missing
+                                             flag, a revision git cannot resolve or a failing git is non-zero too, never
+                                             CI: none configured; store nothing
+                                             (exit 0 no CI configured, 1 refusal, usage error or any other failure)
                                    findings --feature NAME --stored RESULT [--cwd REPO]
                                              list the findings of the stored result HEAD12-N.json that count as
                                              evidence for the learning loop, reading it and the verdict beside it as

@@ -25,6 +25,8 @@ package main
 // (review_frozen_context.go) prints the brief on stdin followed by the frozen context of its candidate, the bytes
 // launch hands a Claude reviewer, and starts and stores nothing. 'review proposals [--cwd <repo>]' prints the worktrees
 // and branches the owner may remove and the git command for each, and deletes and stores nothing (review_proposals.go).
+// 'review ci --landing <rev> --head <rev> [--cwd <repo>]' says whether the repository has no CI for the landing commit
+// that holds the delivered head, and stores nothing (review_ci.go).
 // 'review findings --feature <name> --stored <result> [--cwd <repo>]' lists the findings of a stored result that count
 // as evidence and the ones left out, with the reason, and stores nothing (review_findings.go).
 // 'review stop-hook' is the odd one out: the
